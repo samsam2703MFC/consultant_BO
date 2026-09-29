@@ -5,7 +5,7 @@
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
-import { render as tplRender } from './templates.js';
+import { render as tplRender, tplPsImpression } from './templates.js';
 import { Scouting } from './scouting.js';
 
 function escHtml(v){
@@ -674,8 +674,11 @@ class App {
     // Échap ferme la recherche du rail. Le panneau de résultats recouvre le
     // rail : sans sortie au clavier, il fallait viser la croix pour retrouver
     // la navigation.
-    this.root.addEventListener('keydown', e => {
+    // Sur le document : après un clic qui redessine l'écran, le focus retombe sur <body>, hors de la racine.
+    document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') { return; }
+      if (this.state.psCrop) { this.setState({ psCrop: null }); e.stopPropagation(); return; }
+      if (this.state.psSel) { this.setState({ psSel: null, psFicheMom: null }); e.stopPropagation(); return; }
       if (this.state.gq) { this.setState({ gq: '' }); e.stopPropagation(); }
     });
     this.root.addEventListener('mouseover', e => {
@@ -935,7 +938,7 @@ class App {
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
-      planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
+      planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
       exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], plan: ['Plan de développement', 'Comment chaque franchisé va développer son chiffre : la rampe à 5 ans de l’étude, l’engagement de l’année déposé par le franchisé et validé par le consultant, les actions pour y arriver, puis le rituel trimestriel — constat, annotations du franchisé, du consultant et de la marque, et ce qui est mis en route. Le PDF reprend l’ensemble.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], performance: ['Performance', 'Comment évoluent les magasins, sur le temps long : le dernier mois clos (marge, CA contre cible, tickets, panier, douze mois de clients par jour et de ticket moyen), l\u2019année et les horizons à 3 et 5 ans, puis la marge et la maîtrise des coûts avec les leviers à traiter. Pour la journée, la semaine et le mois en cours : Résultat.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
@@ -1725,11 +1728,11 @@ class App {
     }
 
     // --- référentiel produit (partie franchiseur)
-    if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
+    if (common.isCat || common.isAsso) this.valsReferentiel(common);
     // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
     // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
     // n'aurait aucun emplacement à proposer.
-    if (common.isPlano || this.state.plFiche) { this.plCharge(); this.valsPlano(common); }
+    if (common.isPlano) { this.valsPlanoStd(common); this._psCommon = common; }
     if (common.isFonds) this.valsFonds(common);
     if (common.isMktCal || common.isMktCamp || common.isMktTypes) this.valsMkt(common);
     if (common.isProd) this.valsProduction(common);
@@ -4481,7 +4484,6 @@ class App {
       (!q || (p.nom || '').toLowerCase().indexOf(q) >= 0 || String(p.ref).indexOf(q) >= 0));
 
     if (common.isAsso) { lignes = lignes.filter(p => p.must || S.refToutes); }
-    if (common.isPlano) { lignes = lignes.filter(p => p.zone || S.refToutes); }
     common.refToutes = !!S.refToutes;
     common.refBascule = () => this.setState({ refToutes: !S.refToutes });
     common.refTotal = cat.length;
@@ -4536,7 +4538,7 @@ class App {
       voir: [
         { nom: 'gamme', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
         { nom: 'où ça se vend', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
-        { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : l’attribuer au comptoir', go: () => this.setState({ screen: 'planogramme', refQ: String(p.nom || p.ref), refToutes: !p.zone }) }],
+        { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : la poser sur le comptoir standard', go: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }) }],
       groupe: p.groupe || '',
       gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
       prix: this.fEd(p.prix), cout: this.fEd(p.mat),
@@ -4593,19 +4595,12 @@ class App {
         : '',
       // Le même geste depuis les deux écrans : la fiche de présentation porte
       // le plan du comptoir, on y choisit l'emplacement sur le plan.
-      planoGo: () => this.plFicheOuvrir(String(p.ref)),
+      planoGo: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }),
       planoBtn: p.zone ? 'Modifier' : 'Attribuer',
       dlv: p.dlv ? p.dlv + ' h' : '',
       parametre: !!p.parametre,
-      // Au planogramme, la ligne ouvre la FICHE de présentation : c'est là que
-      // se choisit l'emplacement, sur le plan, et non dans un formulaire où il
-      // fallait retaper « Vitrine 1 » sans savoir ce qui était libre.
-      ouvrir: common.isPlano
-        ? () => this.plFicheOuvrir(String(p.ref))
-        : () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche'),
-      // Au planogramme, la ligne se PREND : on la glisse sur un emplacement du
-      // plan plutôt que d'ouvrir une fiche pour y choisir une case.
-      prendre: common.isPlano ? this.plPrendre(String(p.ref)) : null
+      ouvrir: () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche'),
+      prendre: null
     }));
     common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
     common.refEchelle = this.paliersMarge();
@@ -7309,7 +7304,7 @@ class App {
       readOne('/production/catalogue').then(c => { this._gCatEnCours = false;
         if (c) { this.D.prodCatalogue = c; this.setState({}); } });
     }
-    if (!D.plano && !this._plEnCours) { this.plCharge(); }
+    if (!D.ps && !this._psEnCours) { this.psCharge(); }
 
     const colle = (...v) => v.filter(Boolean).join(' ').toLowerCase();
     const trouve = t => t.indexOf(q) >= 0;
@@ -7343,15 +7338,15 @@ class App {
         aller: () => this.setState({ screen: 'catalogue', refQ: String(p.ref), gq: '' }) }));
     ajoute('Références produit', coupe(refs));
 
-    // 3. Emplacements du comptoir.
-    const slots = ((D.plano || {}).slots || []).filter(s =>
-      trouve(colle(s.zone, s.meuble, s.niveau, String(s.position),
-        (s.occupants || []).map(o => o.nom + ' ' + o.ref).join(' ')))).map(s => ({
-        titre: s.meuble + ' · ' + s.niveau + ' · ' + s.position,
-        detail: s.zone + ((s.occupants || [])[0] ? ' — ' + s.occupants[0].nom : ''),
-        marque: (s.occupants || []).length ? '' : 'libre',
-        aller: () => this.setState({ screen: 'planogramme', plVue: 'tableau',
-          plQ: s.meuble + ' ' + s.niveau, plCible: s.id, gq: '' }) }));
+    // 3. Emplacements du comptoir standard.
+    const psZ = {}; (((D.ps || {}).layout || {}).zones || []).forEach(z => { for (let s = z.de; s <= z.a; s++) { psZ[s] = z.nom; } });
+    const psN = { e3: 'Étage 3', e2: 'Étage 2', e1b: 'Étage 1 · arrière', e1a: 'Étage 1 · avant' };
+    const slots = ((D.ps || {}).emplacements || []).filter(e =>
+      trouve(colle('S' + e.section, 'section ' + e.section, psZ[e.section], psN[e.niveau], e.nom, e.ref))).map(e => ({
+        titre: 'S' + e.section + ' · ' + psN[e.niveau],
+        detail: (psZ[e.section] || '') + (e.nom ? ' — ' + e.nom : ''),
+        marque: e.ref ? '' : 'libre',
+        aller: () => this.setState({ screen: 'planogramme', psVue: 'plan', psHl: e.cle, psSel: null, gq: '' }) }));
     ajoute('Comptoir', coupe(slots));
 
     // 4. Magasins.
@@ -7399,7 +7394,7 @@ class App {
     common.gRien = total === 0;
     // Dire ce qui n'est pas encore chargé vaut mieux que laisser croire à une
     // absence : un catalogue en cours de lecture ne veut pas dire « rien ».
-    common.gAttente = [!D.prodCatalogue ? 'catalogue produit' : '', !D.plano ? 'comptoir' : '']
+    common.gAttente = [!D.prodCatalogue ? 'catalogue produit' : '', !D.ps ? 'comptoir' : '']
       .filter(Boolean).join(' et ');
   }
 
@@ -9683,1383 +9678,553 @@ class App {
     };
   }
 
-  plCharge(force){
-    if (this._plEnCours) { return; }
-    if (this.D.plano && !force) { return; }
-    this._plEnCours = true;
-    readOne('/planogramme').then(d => { this._plEnCours = false;
-      this.D.plano = d || { etat: 'erreur' }; this.setState({}); });
-  }
-  valsPlano(common){
-    const S = this.state, D = this.D;
-    const pl = D.plano;
-    common.plChargement = !pl;
-    if (!pl) { common.plZones = []; return; }
-    common.plManque = (pl.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source, type: m.type }));
-    // La photo d'une cible — référence, meuble, niveau, zone. Elle est lue ici,
-    // avant le plan : c'est le plan qui en a le plus besoin.
-    const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
-    // Pour une RÉFÉRENCE, le visuel du panel complète : la même chaîne que le
-    // contrôle qualité (recette de la référence), mémorisée côté serveur. La
-    // photo annexée dans le cockpit prime — c'est celle qu'on a choisie.
-    if (!this.D.planoPhotos && !this._plPhEnCours) {
-      this._plPhEnCours = true;
-      readOne('/planogramme/photos').then(d => { this._plPhEnCours = false;
-        this.D.planoPhotos = d || { photos: {} }; this.setState({ plPhMaj: Date.now() }); });
-    }
-    const phPanel = (this.D.planoPhotos || {}).photos || {};
-    const photoProduit = ref => photoDe('ref', ref)
-      || ((phPanel[String(ref)] || {}).url || null);
-    const T = pl.totaux || {};
-    common.plTot = { slots: T.slots || 0, libres: T.libres || 0, places: T.places || 0 };
-    common.plVide = (T.slots || 0) === 0;
-
-    // Zone affichée : la première déclarée, sauf choix explicite.
-    const zones = pl.zones || [];
-    const zid = S.plZone && zones.some(z => z.id === S.plZone) ? S.plZone : (zones[0] ? zones[0].id : null);
-    common.plZoneId = zid;
-    common.plZonesOpts = zones.map(z => ({ id: z.id, nom: z.nom, on: z.id === zid,
-      go: () => this.setState({ plZone: z.id }) }));
-    const zone = zones.find(z => z.id === zid) || null;
-
-    // Le plan : une colonne par meuble, une ligne par niveau. Les niveaux d'un
-    // meuble à l'autre ne coïncident pas forcément — on prend donc le rang
-    // maximal et on laisse les cases manquantes vides, plutôt que de forcer
-    // une grille qui mentirait sur la forme du comptoir.
-    // Moment de la journée : le comptoir se regarde à une heure donnée. Un
-    // meuble sans période déclarée est monté toute la journée — il apparaît
-    // donc à tous les moments, jamais à aucun.
-    const refPer = ((pl.referentiels || {}).periodes || []);
-    const perSel = S.plPeriode && refPer.some(p2 => p2.slug === S.plPeriode) ? S.plPeriode : '';
-    common.plPeriodesOpts = [{ slug: '', nom: 'Toute la journée', aide: '', on: !perSel,
-      go: () => this.setState({ plPeriode: '' }) }].concat(refPer.map(p2 => ({
-      slug: p2.slug, nom: p2.nom || p2.slug, aide: p2.aide || '', on: p2.slug === perSel,
-      go: () => this.setState({ plPeriode: p2.slug }) })));
-    common.plPeriodeSel = perSel;
-    const montE = m => !perSel || !(m.periodes || []).length || (m.periodes || []).indexOf(perSel) >= 0;
-    const tousMeubles = zone ? (zone.meubles || []) : [];
-    const meubles = tousMeubles.filter(montE);
-    common.plPeriodeMasques = tousMeubles.length - meubles.length;
-    common.plPeriodeTxt = perSel
-      ? ((refPer.find(p2 => p2.slug === perSel) || {}).nom || perSel)
-      : '';
-    const nMax = meubles.reduce((a, m) => Math.max(a, (m.niveaux || []).length), 0);
-    const cible = S.plCible || null;
-    const perNoms = l => refPer.filter(p2 => (l || []).indexOf(p2.slug) >= 0)
-      .map(p2 => p2.nom || p2.slug).join(' · ');
-    common.plMeubles = meubles.map(m => ({ id: m.id, nom: m.nom,
-      // « toute la journée » ne s'affiche pas : c'est le cas courant, l'écrire
-      // sur chaque meuble noierait ceux qui ont vraiment une contrainte.
-      periodes: (m.periodes || []).length ? perNoms(m.periodes) : '',
-      renommer: () => this.plRenommer('meuble', m.id, m.nom),
-      assistant: () => this.plMwOuvrir(zid, m),
-      supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
-    common.plLignes = [];
-    for (let i = 0; i < nMax; i++) {
-      const noms = meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean);
-      common.plLignes.push({
-        nom: noms.length ? noms[0] : '',
-        cases: meubles.map(m => {
-          const niv = (m.niveaux || [])[i];
-          if (!niv) { return { absent: true, slots: [] }; }
-          return { absent: false, niveauId: niv.id,
-            ajouter: () => this.plAjouterSlots(niv.id, niv.nom),
-            slots: (niv.slots || []).map(s => {
-              // Au moment regardé, l'occupant est celui qui y EST : les
-              // croissants du matin ne se dessinent pas sur le comptoir de
-              // midi. Sans moment choisi, le premier — et les autres comptés.
-              const auMoment = o => !perSel || !(o.periodes || []).length
-                || (o.periodes || []).indexOf(perSel) >= 0;
-              const occs = (s.occupants || []).filter(auMoment);
-              const occ = occs[0] || null;
-              const autres = Math.max(0, (s.occupants || []).length - (occ ? 1 : 0));
-              const vise = cible === s.id;
-              return { id: s.id, position: s.position, libre: !occ, vise,
-                nom: occ ? occ.nom : '', ref: occ ? occ.ref : '',
-                // Une case occupée se prend ; toute case se reçoit. Déposer sur
-                // une case occupée depuis le plan ÉCHANGE les deux références —
-                // c'est le geste du comptoir, et il ne laisse personne nulle part.
-                prendre: occ ? this.plPrendre(occ.ref) : null,
-                deposer: this.plDeposerSur(s.id),
-                // La photo, répétée autant de fois que la grille le dit : c'est
-                // ce qui fait la différence entre une case étiquetée et un
-                // planogramme. Sans photo, la case reste en texte et le dit.
-                photo: occ ? photoProduit(occ.ref) : null,
-                photoN: occ ? Math.min(36, Math.max(1, (occ.cols || 1) * (occ.rangs || 1))) : 0,
-                photoCols: occ ? Math.max(1, occ.cols || 1) : 1,
-                photoRangs: occ ? Math.max(1, occ.rangs || 1) : 1,
-                photoTxt: occ && occ.cols && occ.rangs ? (occ.cols + ' × ' + occ.rangs) : '',
-                // Vignette 1:1, texte DESSOUS : la photo n'est plus recadrée à
-                // la forme du meuble et le nom ne recouvre plus l'image. La
-                // forme réelle du slot reste lisible dans la ligne de texte
-                // (grille, format) — c'est elle qui dit la vitrine, pas le
-                // cadre de la vignette.
-                stPhoto: 'overflow:hidden;border-radius:7px;cursor:pointer;background:var(--color-surface);'
-                  + (vise ? 'border:1.5px solid var(--color-primary)'
-                    : 'border:0.5px solid var(--color-border-tertiary)'),
-                // La grille quand elle est connue — elle dit ce que les fronts
-                // seuls ne disent pas : 6 × 1 et 3 × 2 font six produits, pas
-                // la même vitrine. Sinon, les fronts, comme avant.
-                detail: occ
-                  ? ((occ.cols && occ.rangs
-                      ? (occ.cols + ' × ' + occ.rangs + (occ.parSlot ? ' · ' + occ.parSlot : ''))
-                      : (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : '')))
-                      + ((occ.periodes || []).length ? ' · ' + perNoms(occ.periodes) : '')
-                      + (autres ? ' · +' + autres + ' autre(s) moment(s)' : ''))
-                  : ([s.format || (s.largeurMm ? s.largeurMm + ' mm' : ''), s.contenant,
-                      s.capacite ? String(s.capacite) : ''].filter(Boolean).join(' · ')),
-                st: 'border-radius:7px;padding:6px 7px;min-height:50px;display:flex;flex-direction:column;'
-                  + 'justify-content:space-between;gap:3px;font-size:10.5px;line-height:1.3;cursor:pointer;'
-                  + (vise ? 'border:1.5px solid var(--color-primary);background:var(--color-primary);color:#fff;font-weight:600'
-                    : occ ? 'border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text)'
-                          : 'border:1.5px dashed var(--color-primary);background:rgba(141,29,44,0.04);color:var(--color-primary);font-weight:500'),
-                clic: occ ? () => this.plFicheOuvrir(occ.ref) : () => this.setState({ plCible: vise ? null : s.id }) };
-            }) };
-        }) });
-    }
-    // --- impression : TOUT le comptoir, pas seulement la zone regardée.
-    //
-    // Une feuille qu'on emporte en boutique doit porter l'ensemble : à quoi bon
-    // imprimer la vitrine qu'on a sous les yeux. La feuille est construite ici,
-    // en HTML simple, et le navigateur s'occupe de la pagination.
-    common.plImprimer = (pl.zones || []).length ? () => this.plImprimer() : null;
-    // Le magasin de la vue tablette : celui de l'écran s'il en a un, sinon le premier ouvert.
-    common.plShopTablette = String(this.state.shop || this.state.shopId || (this.D.stores && this.D.stores[0] && this.D.stores[0].id) || '4');
-    common.plExporter = (pl.slots || []).length ? () => this.plExporter() : null;
-
-    common.plCible = cible;
-    const sC = (pl.slots || []).find(s => s.id === cible) || null;
-    common.plCibleTxt = sC ? (sC.meuble + ' · ' + sC.niveau + ' · position ' + sC.position) : '';
-
-    // --- la même chose en TABLEAU.
-    //
-    // Le plan montre la forme du comptoir, le tableau la porte en entier : à
-    // douze emplacements le dessin suffit, à deux cents il ne tient plus à
-    // l'écran et on ne peut ni trier, ni chercher, ni voir toutes les zones à
-    // la fois. Les deux vues lisent la MÊME donnée — aucun calcul n'est refait
-    // ici, sinon les deux finiraient par ne plus dire la même chose.
-    const vue = S.plVue === 'tableau' ? 'tableau' : 'plan';
-    common.plVue = vue;
-    common.plVueBtns = [['plan', 'Plan'], ['tableau', 'Tableau']].map(([v, nom]) => ({
-      nom, on: vue === v, go: () => this.setState({ plVue: v }) }));
-    // Le plan avec les photos : c'est le planogramme tel qu'il se monte. Il
-    // reste débrayable — une case sans photo se lit mieux en texte, et on veut
-    // parfois voir la structure sans le décor.
-    const photosOn = S.plPhotos !== false;
-    common.plPhotosOn = photosOn;
-    common.plPhotosGo = () => this.setState({ plPhotos: !photosOn });
-    const placees = (pl.placements || []).filter(p2 => p2.slotId !== null);
-    const avecPhoto = placees.filter(p2 => photoProduit(p2.ref)).length;
-    common.plPhotosN = avecPhoto;
-    common.plPhotosManque = placees.length - avecPhoto;
-
-    const libresSeules = !!S.plLibres;
-    common.plLibresSeules = libresSeules;
-    common.plLibresGo = () => this.setState({ plLibres: !libresSeules });
-    const q = (S.plQ || '').trim().toLowerCase();
-    common.plQ = S.plQ || '';
-    common.plSetQ = e => this.setState({ plQ: e.target.value });
-
-    const tri = S.plTri || 'lieu';
-    common.plTri = tri;
-    const cols = [['lieu', 'Emplacement'], ['ref', 'Référence'], ['etat', 'État']];
-    common.plCols = cols.map(([k, nom]) => ({ nom, k, on: tri === k,
-      go: () => this.setState({ plTri: k }) }));
-
-    // --- Les deux listes de choix du comptoir : format d'emplacement, contenant.
-    // Elles viennent des tables et s'éditent d'ici : on tape pour filtrer, on
-    // ajoute ce qui manque, la croix retire une position de la LISTE — les
-    // emplacements qui la portaient gardent leur valeur.
-    const refFmt = ((pl.referentiels || {}).formats || []);
-    const refCont = ((pl.referentiels || {}).contenants || []);
-    const cbx = S.plCbx || null;
-    const cbxQ = e => { const v = e.target.value;
-      this.setState(s2 => ({ plCbx: Object.assign({}, s2.plCbx, { q: v }) })); };
-    const combo = (sl, quoi) => {
-      const liste = quoi === 'format' ? refFmt : refCont;
-      const type = quoi === 'format' ? 'formats' : 'contenants';
-      const val = String((quoi === 'format' ? sl.format : sl.contenant) || '');
-      const ouvert = !!(cbx && cbx.slot === sl.id && cbx.quoi === quoi);
-      const saisie = ouvert ? String(cbx.q || '') : '';
-      const q = saisie.trim().toLowerCase();
-      const items = q ? liste.filter(o => o.nom.toLowerCase().indexOf(q) >= 0) : liste;
-      const exact = liste.some(o => o.nom.toLowerCase() === q);
-      return {
-        val: val || '', vide: !val, ouvert, q: saisie, quoi,
-        ouvrir: () => this.setState({ plCbx: ouvert ? null : { slot: sl.id, quoi, q: '' } }),
-        setQ: cbxQ,
-        items: items.map(o => ({ id: o.id, nom: o.nom, on: o.nom === val,
-          choisir: () => this.plSlotMaj(sl.id, quoi, o.nom),
-          supprimer: () => this.plRefSupprimer(type, o.id, o.nom, quoi) })),
-        vider: val ? () => this.plSlotMaj(sl.id, quoi, '') : null,
-        // Ce qui n'est pas dans la liste s'y ajoute : on finit d'écrire, on
-        // clique, et la position sert aussitôt pour cet emplacement.
-        ajouter: (q && !exact) ? () => this.plRefAjouter(type, saisie.trim(), sl.id, quoi) : null,
-        ajoutTxt: saisie.trim(),
-      };
-    };
-
-    // La grille en cours de saisie vit dans l'état tant qu'elle n'est pas
-    // écrite : sans cela, le nombre tapé repartirait à chaque rendu.
-    const brouillons = S.plGr || {};
-
-    // Les moments du référentiel, pour les pastilles du tableau.
-    const refPerT = ((pl.referentiels || {}).periodes || []);
-    let rangs = (pl.slots || []).map(s => {
-      const occ = (s.occupants || [])[0] || null;
-      const autresOcc = Math.max(0, (s.occupants || []).length - 1);
-      const br = occ ? (brouillons[occ.ref] || {}) : {};
-      const nSaisi = br.n != null ? br.n : (occ && occ.parSlot != null ? String(occ.parSlot) : '');
-      const colsSaisi = br.cols != null ? br.cols : (occ && occ.cols != null ? occ.cols : null);
-      const g = occ && String(nSaisi).trim() !== ''
-        ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, colsSaisi) : null;
-      // La ligne juste : celle qui divise exactement. Elle est proposée
-      // d'office ; quand une ligne imposée laisse un reste, il est écrit.
-      const juste = g && g.reste > 0
-        ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, null) : null;
-      return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
-        taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '',
-        format: combo(s, 'format'), contenant: combo(s, 'contenant'),
-        photo: occ ? photoProduit(occ.ref) : null,
-        photoSet: occ ? e => this.plPhoto('ref', occ.ref, (e.target.files || [])[0]) : null,
-        photoDel: occ && photoDe('ref', occ.ref) ? () => this.plPhotoRetirer('ref', occ.ref) : null,
-        formatTxt: s.format || '',
-        // Les dimensions ne sont dites que si le format ne les dit pas déjà :
-        // « 60 × 15 cm » écrit deux fois de suite n'apprend rien.
-        dims: (!s.format && s.largeurMm && s.hauteurMm)
-          ? (s.largeurMm / 10) + ' × ' + (s.hauteurMm / 10) + ' cm' : '',
-        parSlot: nSaisi,
-        parSlotSet: occ ? e => { const v = e.target.value;
-          this.setState(s2 => ({ plGr: Object.assign({}, s2.plGr,
-            { [occ.ref]: Object.assign({}, (s2.plGr || {})[occ.ref], { n: v, cols: null }) }) })); } : null,
-        parSlotEcrire: occ ? e => this.plGrilleEcrire(occ.ref, s.id, e.target.value, null) : null,
-        grille: g ? { cols: g.cols, rangs: g.rangs, poses: g.poses, reste: g.reste,
-          txt: g.cols + ' × ' + g.rangs,
-          // Taille d'un produit : le garde-fou. Quand elle devient absurde,
-          // c'est la grille qui est fausse, pas la vitrine.
-          taille: (s.largeurMm && s.hauteurMm)
-            ? this.plCm(s.largeurMm / g.cols) + ' × ' + this.plCm(s.hauteurMm / g.rangs) + ' cm' : '',
-          justeTxt: juste ? ('ligne de ' + juste.cols + ' : ' + juste.cols + ' × ' + juste.rangs + ' les prend tous') : '',
-          justeGo: juste ? () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, juste.cols) : null,
-          opts: [1, 2, 3, 4, 5, 6].map(c => ({ c, on: c === g.cols,
-            go: () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, c) })) } : null,
-        ref: occ ? occ.ref : '', nom: occ ? occ.nom : '',
-        prendre: occ ? this.plPrendre(occ.ref) : null,
-        deposer: this.plDeposerSur(s.id),
-        autresOcc,
-        // Les moments où CETTE référence est présentée ici. Tout coché =
-        // toute la journée ; décocher le dernier y revient aussi — une
-        // référence présentée à aucun moment ne serait nulle part.
-        periodesRef: occ ? refPerT.map(p2 => ({ slug: p2.slug, nom: p2.nom || p2.slug,
-          on: !(occ.periodes || []).length || (occ.periodes || []).indexOf(p2.slug) >= 0,
-          bascule: () => { const dej = (occ.periodes || []).length ? occ.periodes.slice()
-              : refPerT.map(p3 => p3.slug);
-            const i = dej.indexOf(p2.slug);
-            if (i >= 0) { dej.splice(i, 1); } else { dej.push(p2.slug); }
-            write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(occ.ref),
-              { slotId: s.id, periodes: dej.length ? dej : refPerT.map(p3 => p3.slug) })
-              .then(r => { if (r && r.ok !== false) { this.plCharge(true); }
-                else { this.notify('Moment refusé — ' + ((r && r.error) || 'écriture impossible')); } }); } })) : [],
-        fronts: occ ? String(occ.fronts) : '', libre: !occ,
-        etat: occ ? 'occupé' : 'libre',
-        vise: cible === s.id,
-        ouvrir: occ ? () => this.plFicheOuvrir(occ.ref) : () => this.setState({ plCible: cible === s.id ? null : s.id }) };
-    });
-    if (libresSeules) { rangs = rangs.filter(r => r.libre); }
-    if (q) {
-      rangs = rangs.filter(r => (r.nom + ' ' + r.ref + ' ' + r.zone + ' ' + r.meuble + ' ' + r.niveau
-        + ' ' + (r.formatTxt || '') + ' ' + ((r.contenant || {}).vide ? '' : (r.contenant || {}).val || ''))
-        .toLowerCase().indexOf(q) >= 0);
-    }
-    const cmp = { lieu: (a, b) => (a.zone + a.meuble + a.niveau).localeCompare(b.zone + b.meuble + b.niveau) || a.position - b.position,
-      ref: (a, b) => (a.nom || 'zzz').localeCompare(b.nom || 'zzz'),
-      etat: (a, b) => (a.libre === b.libre ? 0 : (a.libre ? -1 : 1)) };
-    rangs.sort(cmp[tri] || cmp.lieu);
-    common.plRangs = rangs.map(r => Object.assign({}, r, {
-      etatSt: 'display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;'
-        + (r.libre ? 'background:rgba(141,29,44,0.08);color:var(--color-primary)'
-                   : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
-      trSt: 'border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;'
-        + (r.vise ? 'background:rgba(141,29,44,0.05)' : '') }));
-    common.plRangsN = rangs.length;
-
-    // Déclaration de la structure : ouverte tant que rien n'existe, replaçable
-    // ensuite — on ne fait pas chercher un formulaire à qui démarre de zéro.
-    //
-    // Tout se saisit EN LIGNE. La première version passait par window.prompt :
-    // une boîte que le navigateur peut bloquer, qui n'affiche pas ce qui existe
-    // déjà, et qui ne dit rien quand l'écriture a réussi. Résultat mesuré — deux
-    // zones « Tartes » créées coup sur coup, l'écran continuant d'annoncer un
-    // comptoir non déclaré parce qu'il ne comptait que les emplacements.
-    common.plOrg = S.plOrg == null ? common.plVide : !!S.plOrg;
-    common.plOrgGo = () => this.setState({ plOrg: !common.plOrg });
-
-    const champ = (k, val) => ({ val: S[k] == null ? val : S[k],
-      set: e => this.setState({ [k]: e.target.value }) });
-    common.plNZone = champ('plNZone', '');
-
-    common.plZoneAdd = () => this.plAjouter('zone', null, S.plNZone, 'plNZone');
-    // Le meuble passe par un ASSISTANT : type, température, présentation et
-    // dimensions d'emplacement décident de ce qu'on peut y poser. Les demander
-    // sur une ligne de saisie unique revenait à ne jamais les demander.
-    common.plMeubleAdd = zid ? () => this.plMwOuvrir(zid) : null;
-    common.plMw = S.plMw ? this.valsPlMw(S.plMw, pl, zone) : false;
-
-    // Liste de ce qui existe, éditable sur place : c'est aussi la seule façon de
-    // voir — et de corriger — un doublon créé par mégarde.
-    common.plZonesListe = zones.map(z => ({ id: z.id, nom: z.nom,
-      nMeubles: (z.meubles || []).length,
-      on: z.id === zid,
-      choisir: () => this.setState({ plZone: z.id, plMeubleSel: null }),
-      renommer: e => this.plRenommer('zone', z.id, e.target.value),
-      supprimer: () => this.plSupprimer('zone', z.id, z.nom) }));
-
-    // Une photo peut être posée, remplacée ou retirée à tout moment, sur un
-    // meuble comme sur un niveau : l'assistant n'est pas le seul moment où
-    // l'on en dispose d'une.
-    const photoCtrl = (cible, id) => ({
-      photo: photoDe(cible, id),
-      photoSet: e => this.plPhoto(cible, id, (e.target.files || [])[0]),
-      photoDel: photoDe(cible, id) ? () => this.plPhotoRetirer(cible, id) : null,
-    });
-
-    common.plMeublesListe = meubles.map(m => Object.assign({ id: m.id, nom: m.nom,
-      nNiveaux: (m.niveaux || []).length,
-      nSlots: (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0),
-      detail: [m.type, m.temperature, m.presentation,
-        (m.periodes || []).length ? perNoms(m.periodes) : 'toute la journée'].filter(Boolean).join(' · '),
-      periodesRef: refPer.map(p2 => ({ slug: p2.slug, nom: p2.nom || p2.slug,
-        on: !(m.periodes || []).length || (m.periodes || []).indexOf(p2.slug) >= 0,
-        // Décocher le dernier moment laisserait un meuble monté nulle part :
-        // on repasse alors à « toute la journée », qui est l'état neutre.
-        bascule: () => { const dej = (m.periodes || []).length ? m.periodes.slice()
-            : refPer.map(p3 => p3.slug);
-          const i = dej.indexOf(p2.slug);
-          if (i >= 0) { dej.splice(i, 1); } else { dej.push(p2.slug); }
-          this.plMeublePeriodes(m.id, dej); } })),
-      renommer: e => this.plRenommer('meuble', m.id, e.target.value),
-      assistant: () => this.plMwOuvrir(zid, m),
-      supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }, photoCtrl('meuble', m.id)));
-
-    const msel = S.plMeubleSel && meubles.some(m => m.id === S.plMeubleSel)
-      ? S.plMeubleSel : (meubles[0] ? meubles[0].id : null);
-    common.plMeubleSel = msel;
-    common.plMeubleOpts = meubles.map(m => ({ id: m.id, nom: m.nom, on: m.id === msel }));
-    common.plMeubleSetSel = e => this.setState({ plMeubleSel: +e.target.value });
-    common.plNiveauAdd = msel ? () => this.plAjouterNiveau(msel) : null;
-
-    const mSel = meubles.find(m => m.id === msel) || null;
-    common.plNiveauxListe = mSel ? (mSel.niveaux || []).map(n => Object.assign({ id: n.id, nom: n.nom,
-      nSlots: (n.slots || []).length,
-      renommer: e => this.plRenommer('niveau', n.id, e.target.value),
-      ajouter: () => this.plAjouterSlots(n.id),
-      supprimer: () => this.plSupprimer('niveau', n.id, n.nom) }, photoCtrl('niveau', n.id))) : [];
-
-    // Où en est la déclaration : dire l'étape suivante plutôt qu'un « pas encore
-    // déclaré » qui ne bouge pas quand on avance.
-    common.plEtape = !zones.length ? 'zone'
-      : (!meubles.length ? 'meuble'
-        : (!(mSel && (mSel.niveaux || []).length) ? 'niveau'
-          : (common.plTot.slots === 0 ? 'slots' : 'fait')));
-    common.plEtapeTxt = {
-      zone: 'Commencez par une zone — « vitrine réfrigérée », « comptoir sec », « îlot boissons ».',
-      meuble: 'Zone créée. Ajoutez maintenant un meuble : la vitrine, la gondole, le présentoir.',
-      niveau: 'Meuble créé. Ajoutez un niveau — haut, médian, bas — avec son nombre d’emplacements.',
-      slots: 'Niveau créé, mais sans emplacement. Ajoutez-en pour pouvoir y placer des références.',
-      fait: '',
-    }[common.plEtape];
-
-    // Références placées / à placer, dans la zone regardée.
-    const parRef = {};
-    (pl.placements || []).forEach(p => { parRef[p.ref] = p; });
-    common.plParRef = parRef;
-    common.plFiche = S.plFiche ? this.valsPlFiche(S.plFiche, pl) : false;
-  }
-  /**
-   * Imprime le planogramme entier.
-   *
-   * La feuille est écrite dans une fenêtre à part plutôt que dans l'écran :
-   * imprimer l'application obligerait à masquer le rail, les modales et chaque
-   * bouton en `@media print`, et le moindre écran ajouté ensuite ressortirait
-   * sur le papier. Une page à part ne dit que ce qu'elle doit dire.
-   *
-   * Les photos annexées y figurent : c'est ce qui rend la feuille utilisable
-   * au comptoir, où l'on compare ce qu'on voit à ce qui est attendu.
+  /* --- planogramme standard : un comptoir pour tout le réseau --------------------
+   * 25 sections, trois étages, cinq zones — le plan vient du serveur (layout),
+   * l'écran ne le code pas en dur. Chaque emplacement reçoit UN produit du
+   * catalogue et la quantité qu'il contient plein ; c'est cette quantité qui
+   * fait les rotations (unités vendues au comptoir ÷ ce que la section contient).
    */
-  plImprimer(){
-    const pl = this.D.plano || {};
-    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
-      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const notes = pl.notes || {};
-    // La feuille porte la MÊME photo que l'écran : celle du cockpit si on en a
-    // annexé une, sinon celle de la recette du panel. Celui qui monte le
-    // comptoir compare ce qu'il a en main à ce qui est attendu.
-    const phPanel = (this.D.planoPhotos || {}).photos || {};
-    const photoRef = ref => ((notes['ref:' + ref] || {}).photo)
-      || ((phPanel[String(ref)] || {}).url || null);
-    const refPerI = ((pl.referentiels || {}).periodes || []);
-    const perTxt = l => (l || []).length
-      ? refPerI.filter(p2 => l.indexOf(p2.slug) >= 0).map(p2 => p2.nom || p2.slug).join(', ')
-      : '';
-    const jour = new Date().toLocaleDateString('fr-BE');
-    const bloc = [];
-    (pl.zones || []).forEach(z => {
-      const nz = notes['zone:' + z.id];
-      bloc.push('<section><h2>' + esc(z.nom) + '</h2>'
-        + (nz && nz.texte ? '<p class="note">' + esc(nz.texte) + '</p>' : ''));
-      (z.meubles || []).forEach(m => {
-        const nm = notes['meuble:' + m.id];
-        // Sur la feuille, le moment de la journée compte autant que la
-        // température : c'est elle qui dit à quelle heure ce meuble est monté.
-        const perM = ((pl.referentiels || {}).periodes || [])
-          .filter(p2 => (m.periodes || []).indexOf(p2.slug) >= 0)
-          .map(p2 => p2.nom || p2.slug).join(' · ');
-        const meta = [m.type, m.temperature, m.presentation,
-          (m.periodes || []).length ? perM : 'toute la journée'].filter(Boolean).join(' · ');
-        bloc.push('<h3>' + esc(m.nom) + (meta ? ' <span class="meta">' + esc(meta) + '</span>' : '') + '</h3>');
-        if (nm && nm.texte) { bloc.push('<p class="note">' + esc(nm.texte) + '</p>'); }
-        if (nm && nm.photo) { bloc.push('<img class="ph" src="' + esc(nm.photo) + '" alt="">'); }
-        (m.niveaux || []).forEach(n => {
-          const nn = notes['niveau:' + n.id];
-          // Une CARTE par emplacement, photo d'abord — la feuille se lit comme
-          // le comptoir se monte : on regarde la vitrine, pas un tableau.
-          const nCol = Math.max(1, Math.min(6, (n.slots || []).length));
-          const cases = (n.slots || []).map(s => {
-            // TOUS les occupants, pas seulement le premier : un emplacement
-            // qui en porte deux n'en montrait qu'un, sans le dire.
-            const occ = (s.occupants || []);
-            const dim = [s.longueurMm, s.largeurMm].filter(Boolean).join('×');
-            const corps = occ.length
-              ? occ.map(o => { const nr = notes['ref:' + o.ref];
-                // La photo du produit sur la feuille : celui qui monte le
-                // comptoir compare ce qu'il a en main à ce qui est attendu —
-                // celle du cockpit si elle existe, sinon celle de la recette du
-                // panel, comme à l'écran. Répétée selon la grille : la feuille
-                // montre neuf croissants en 3 × 3, pas un croissant et un chiffre.
-                const photo = photoRef(o.ref);
-                const cols = Math.max(1, o.cols || 1), rangs = Math.max(1, o.rangs || 1);
-                const nTuiles = Math.min(36, cols * rangs);
-                const pave = photo
-                  ? '<span class="mosaique" style="grid-template-columns:repeat(' + cols + ',1fr);'
-                    + 'grid-template-rows:repeat(' + rangs + ',1fr)">'
-                    + new Array(nTuiles).fill('<img class="pr" src="' + esc(photo) + '" alt="">').join('')
-                    + '</span>'
-                  : '<span class="sansphoto">sans photo</span>';
-                const per = perTxt(o.periodes);
-                return pave
-                  + '<span class="nom">' + esc(o.nom) + '</span>'
-                  + '<span class="f">' + (o.parSlot
-                      ? o.parSlot + ' par emplacement · ' + cols + ' × ' + rangs
-                      : o.fronts + ' front(s)') + '</span>'
-                  + (per ? '<span class="f per">' + esc(per) + '</span>' : '')
-                  + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : ''); }).join('<span class="et"></span>')
-              : '<span class="libre">libre</span>';
-            const pied = [s.format || (dim ? dim + ' mm' : ''), s.contenant].filter(Boolean).join(' · ');
-            return '<div class="case' + (occ.length ? '' : ' vide') + '">'
-              + '<span class="pos">' + s.position + '</span>' + corps
-              + (pied ? '<span class="f pied">' + esc(pied) + '</span>' : '')
-              + '</div>';
-          }).join('');
-          // Le niveau est la SECTION du meuble : sa photo de présentation et
-          // sa consigne se lisent avec sa rangée, pas trois pages plus loin.
-          bloc.push('<div class="niveau">'
-            + '<div class="nivnom">' + esc(n.nom) + '</div>'
-            + (nn && nn.texte ? '<p class="note">' + esc(nn.texte) + '</p>' : '')
-            + (nn && nn.photo ? '<img class="phn" src="' + esc(nn.photo) + '" alt="">' : '')
-            + (cases
-              ? '<div class="rangee" style="grid-template-columns:repeat(' + nCol + ',1fr)">' + cases + '</div>'
-              : '<p class="libre">aucun emplacement</p>')
-            + '</div>');
-        });
-      });
-      bloc.push('</section>');
-    });
-    const t = pl.totaux || {};
-    // La fenêtre part d'une page vierge : sans `base`, aucun chemin relatif n'y
-    // résout — ni la feuille de style de la marque, ni ses polices, ni les
-    // photos annexées, qui sortaient donc en cadres vides.
-    const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-    const marque = (this.meta && this.meta.reseau) || {};
-    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-      + '<base href="' + esc(base) + '">'
-      + '<title>Planogramme comptoir — ' + esc(jour) + '</title>'
-      + '<link rel="stylesheet" href="assets/ds/global.css">'
-      + '<style>'
-      // Les couleurs et les aplats doivent SORTIR à l'impression : sans cette
-      // règle le navigateur les retire, et la feuille perd ses repères.
-      + '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-      + 'body{font-family:var(--font-ui),Helvetica,Arial,sans-serif;color:var(--color-text);'
-      + 'background:#fff;margin:0;font-size:11px;line-height:1.5;font-weight:var(--weight-regular,400)}'
-      + '.tete{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;'
-      + 'border-bottom:2px solid var(--color-primary);padding-bottom:8px;margin-bottom:14px}'
-      + '.tete img{height:13mm;width:auto;display:block}'
-      + 'h1{font-family:var(--font-display),var(--font-ui),serif;font-size:21px;font-weight:400;margin:0;'
-      + 'color:var(--color-primary);line-height:1.15}'
-      + '.sous{color:var(--color-text-muted);margin:3px 0 0;font-size:10.5px}'
-      + 'h2{font-family:var(--font-ui);font-size:13px;font-weight:600;margin:14px 0 5px;padding:4px 8px;'
-      + 'background:var(--color-secondary);color:var(--color-on-abricot);border-radius:4px;'
-      + 'text-transform:uppercase;letter-spacing:.07em}'
-      + 'h3{font-size:12px;font-weight:600;margin:9px 0 3px}'
-      + '.meta{font-weight:400;color:var(--color-text-muted)}'
-      + '.note{margin:2px 0 6px;color:var(--color-text);font-style:italic;'
-      + 'border-left:2px solid var(--color-secondary);padding-left:7px}'
-      + 'table{width:100%;border-collapse:collapse;margin:0 0 5px;table-layout:fixed}'
-      + 'th{width:62px;text-align:left;font-size:8.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;'
-      + 'color:var(--color-text-muted);background:var(--color-background-secondary);'
-      + 'border:0.5px solid var(--color-border-secondary);padding:5px 6px;vertical-align:top}'
-      + 'td{border:0.5px solid var(--color-border-secondary);padding:5px 6px;vertical-align:top;font-size:10px}'
-      + 'td b{font-weight:600;color:var(--color-primary)}'
-      + '.f{display:block;color:var(--color-text-muted);font-size:8.5px;font-weight:400}'
-      + '.n{font-style:italic}.libre{color:#9a938c;font-weight:400}'
-      + '.ph{max-width:74mm;max-height:52mm;border:0.5px solid var(--color-border-secondary);'
-      + 'border-radius:3px;margin:3px 0 7px;display:block}'
-      // Photo de la SECTION (le niveau) : plus petite que celle du meuble, elle
-      // accompagne sa rangée sans la repousser sur la page suivante.
-      + '.phn{max-width:58mm;max-height:36mm;border:0.5px solid var(--color-border-secondary);'
-      + 'border-radius:3px;margin:2px 0 4px;display:block}'
-      // Photo du PRODUIT, dans sa case : assez grande pour reconnaître le
-      // produit, assez petite pour qu'une rangée de six tienne en largeur.
-      + '.nivnom{font-size:8.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;'
-      + 'color:var(--color-text-muted);margin:5px 0 2px}'
-      + '.rangee{display:grid;gap:2.5mm;align-items:start}'
-      + '.case{border:0.5px solid var(--color-border-secondary);border-radius:3px;padding:2mm;position:relative}'
-      + '.case.vide{border-style:dashed;color:#9a938c;min-height:14mm}'
-      + '.pos{position:absolute;top:1mm;right:1.6mm;font-weight:600;font-size:9px;color:var(--color-primary)}'
-      + '.mosaique{display:grid;gap:0.4mm;aspect-ratio:1;margin-bottom:1.6mm;background:var(--color-border-secondary)}'
-      + '.pr{width:100%;height:100%;object-fit:cover;display:block;background:#fff}'
-      // « Sans photo » n'occupe pas la place d'une photo : un bandeau suffit —
-      // un grand carré vide ferait chercher une image qui n'existe pas.
-      + '.sansphoto{height:9mm;border:0.5px dashed var(--color-border-secondary);'
-      + 'border-radius:2px;margin-bottom:1.6mm;color:#9a938c;font-size:8.5px;'
-      + 'display:flex;align-items:center;justify-content:center}'
-      + '.et{display:block;height:1.4mm;border-top:0.5px dashed var(--color-border-secondary);margin:1.4mm 0 0}'
-      + '.per{color:var(--color-primary);font-weight:500}'
-      + '.pied{margin-top:1mm;border-top:0.5px solid var(--color-border-tertiary,#e5e0da);padding-top:0.8mm}'
-      + '.nom{display:block;font-weight:500}'
-      + 'section{break-inside:auto}h3,.niveau{break-inside:avoid}'
-      + '@page{size:A4;margin:14mm}</style></head><body>'
-      + '<div class="tete"><div>'
-      + '<h1>Planogramme comptoir</h1>'
-      + '<p class="sous">' + esc(marque.nom || '') + (marque.nom ? ' · ' : '') + esc(jour) + ' · '
-      + (t.slots || 0) + ' emplacement(s), ' + (t.places || 0) + ' référence(s) placée(s), '
-      + (t.libres || 0) + ' libre(s)</p></div>'
-      + '<img src="assets/img/logo.png" alt="' + esc(marque.nom || '') + '"></div>'
-      + bloc.join('') + '</body></html>';
-
-    const w = window.open('', '_blank');
-    if (!w) { this.notify('Le navigateur a bloqué la fenêtre d’impression.'); return; }
-    w.document.write(html);
-    w.document.close();
-    // Attendre les images ET les polices : imprimer trop tôt sortirait des
-    // cadres vides à la place des photos, et le texte dans la police de repli.
-    let lance = false;
-    const lancer = () => { if (lance) { return; } lance = true;
-      try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } };
-    const pret = () => {
-      const polices = w.document.fonts && w.document.fonts.ready;
-      if (polices && typeof polices.then === 'function') { polices.then(lancer); setTimeout(lancer, 3000); }
-      else { setTimeout(lancer, 400); }
-    };
-    // Le filet de sécurité ne doit pas COUPER les images : avec une photo par
-    // produit et par section, quatre secondes ne suffisent plus, et imprimer
-    // trop tôt sort des cadres vides. On ne force qu'une fois les images
-    // chargées — ou au bout de quinze secondes, quoi qu'il arrive.
-    const filet = () => { try {
-      if (Array.prototype.every.call(w.document.images, i => i.complete)) { pret(); }
-    } catch (e) { lancer(); } };
-    if (w.document.readyState === 'complete') { pret(); }
-    else { w.onload = pret; setTimeout(filet, 4000); setTimeout(lancer, 15000); }
-  }
-
-  /* --- assistant de création d'un meuble ------------------------------------- */
-
-  /**
-   * Lit un fichier image et rend une data-URL réduite, sans l'envoyer.
-   *
-   * L'assistant collecte des photos AVANT que le meuble et ses niveaux
-   * existent : il n'a pas encore d'identifiant à leur donner. On garde donc
-   * l'image en main et on l'envoie une fois la création faite.
-   */
-  plImageLire(file){
-    return new Promise((ok, non) => {
-      if (!file) { non(new Error('aucun fichier')); return; }
-      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { non(new Error('format non accepté')); return; }
-      const fr = new FileReader();
-      fr.onerror = () => non(new Error('lecture impossible'));
-      fr.onload = () => {
-        const img = new Image();
-        img.onerror = () => non(new Error('image illisible'));
-        img.onload = () => {
-          const max = 1600;
-          const ech = Math.min(1, max / Math.max(img.width, img.height));
-          if (ech >= 1 && file.size < 1.5 * 1024 * 1024) { ok(fr.result); return; }
-          const cv = document.createElement('canvas');
-          cv.width = Math.round(img.width * ech); cv.height = Math.round(img.height * ech);
-          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-          ok(cv.toDataURL('image/jpeg', 0.85));
-        };
-        img.src = fr.result;
-      };
-      fr.readAsDataURL(file);
+  psCharge(force){
+    if (this._psEnCours || (this.D.ps && !this.D.ps.erreur && !force)) { return; }
+    this._psEnCours = true;
+    readOne('/planogramme/standard').then(d => {
+      this._psEnCours = false;
+      this.D.ps = d && Array.isArray(d.emplacements) ? d : { erreur: true };
+      this.setState({});
+      this.psPhotos();
     });
   }
-  /** Envoie une data-URL déjà préparée. */
-  plPhotoEnvoyer(cible, cibleId, data){
-    return write(this.source, 'POST', '/planogramme/photo', { cible, cibleId: String(cibleId), data });
+  /** Les photos du panel, téléchargées par lots au serveur : on rappelle tant qu'il en reste. */
+  psPhotos(refs, essai){
+    const q = refs && refs.length ? '?refs=' + refs.map(encodeURIComponent).join(',') : '';
+    readOne('/planogramme/standard/photos' + q).then(d => {
+      if (!d || !d.photos) { return; }
+      this.D.psPh = Object.assign({}, this.D.psPh || {}, d.photos);
+      this.setState({});
+      if (d.restants > 0 && (essai || 0) < 6) { setTimeout(() => this.psPhotos(refs, (essai || 0) + 1), 1500); }
+    });
   }
-  /**
-   * L'assistant : neuf sans `meuble`, ÉDITION préremplie avec. En édition, la
-   * structure (niveaux, emplacements) ne bouge pas d'ici — la refaire à
-   * l'aveugle déplacerait ce qui est posé ; elle se retouche dans le panneau
-   * d'organisation, et les dimensions passent par le format, au tableau.
-   */
-  plMwOuvrir(zoneId, meuble){
-    const r = ((this.D.plano || {}).referentiels) || {};
-    const d = r.slotDefaut || {};
-    const m = meuble || null;
-    const s1 = m ? (((m.niveaux || [])[0] || {}).slots || [])[0] || {} : {};
-    this.setState({ plMw: { zoneId, etape: 1, busy: false, err: '',
-      meubleId: m ? m.id : null,
-      nom: m ? m.nom : '',
-      type: m ? (m.type || '') : ((r.types || [])[0] || ''),
-      temperature: m ? (m.temperature || '') : ((r.temperatures || [])[0] || ''),
-      presentation: m ? (m.presentation || '') : ((r.presentations || [])[0] || ''),
-      longueur: String((m ? s1.longueurMm : 0) || d.longueur || 300),
-      largeur: String((m ? s1.largeurMm : 0) || d.largeur || 300),
-      hauteur: String((m ? s1.hauteurMm : 0) || d.hauteur || 250), capacite: '',
-      nNiveaux: m ? String((m.niveaux || []).length || 1) : '3',
-      nSlots: m ? String((((m.niveaux || [])[0] || {}).slots || []).length || 0) : '4',
-      // Toute la journée par défaut : c'est le cas courant, et un meuble
-      // décoché partout ne serait monté à aucun moment — un plan vide.
-      periodes: m
-        ? ((m.periodes || []).length ? m.periodes.slice() : (r.periodes || []).map(p => p.slug))
-        : ((r.periodes || []).map(p => p.slug)),
-      // Photos collectées avant la création : une pour le meuble, une par
-      // niveau, indexées par le rang du niveau. Elles partent une fois les
-      // identifiants connus.
-      photoMeuble: null, photosNiveau: {} } });
+  /** Les photos des produits que le sélecteur montre, demandées une fois. */
+  psPhotosVoulues(refs){
+    if (!this._psPhDemandees) { this._psPhDemandees = new Set(); }
+    const connues = this.D.psPh || {};
+    const neuves = refs.filter(r => r && !(r in connues) && !this._psPhDemandees.has(r)).slice(0, 24);
+    if (!neuves.length) { return; }
+    neuves.forEach(r => this._psPhDemandees.add(r));
+    this.psPhotos(neuves);
   }
-  plMwPatch(patch){ this.setState(s => ({ plMw: Object.assign({}, s.plMw, patch) })); }
-  /**
-   * Change les moments de la journée d'un meuble déjà déclaré.
-   *
-   * Le PATCH ne touche que cette colonne : refaire passer le meuble par
-   * l'assistant pour corriger une case obligerait à resaisir ses niveaux.
-   */
-  plMeublePeriodes(id, liste){
-    write(this.source, 'PATCH', '/planogramme/meuble/' + id, { periodes: liste })
-      .then(r => {
-        if (!r || r.ok === false) { this.notify('Non enregistré : ' + ((r && r.error) || 'refusé')); return; }
-        this.plCharge(true);
-      });
+  psVentesCharge(){
+    if (this.D.psVentes || this._psVtEnCours) { return; }
+    this._psVtEnCours = true;
+    readOne('/planogramme/standard/ventes?jours=14').then(d => { this._psVtEnCours = false; this.D.psVentes = (d && d.ventes) || {}; this.setState({}); });
   }
-  /**
-   * Les niveaux proposés portent des noms parlants quand ils sont peu nombreux.
-   * « Haut / Médian / Bas » se lit sur un plan ; « Niveau 2 » demande de
-   * compter. Au-delà de trois, la numérotation redevient la plus claire.
-   */
-  plMwNiveaux(n){
-    const noms = { 1: ['Unique'], 2: ['Haut', 'Bas'], 3: ['Haut', 'Médian', 'Bas'] };
-    if (noms[n]) { return noms[n]; }
-    return Array.from({ length: n }, (_, i) => 'Niveau ' + (i + 1));
+  psCatalogue(){
+    if (this.D.prodCatalogue || this._psCatEnCours) { return; }
+    this._psCatEnCours = true;
+    readOne('/production/catalogue').then(c => { this._psCatEnCours = false; if (c) { this.D.prodCatalogue = c; } this.setState({}); });
   }
-  valsPlMw(w, pl, zone){
-    const r = (pl.referentiels) || {};
-    const nb = k => Math.max(0, Math.min(40, parseInt(w[k], 10) || 0));
-    const nNiveaux = Math.max(1, nb('nNiveaux'));
-    const nSlots = nb('nSlots');
-    const dims = [w.longueur, w.largeur, w.hauteur].map(v => parseInt(v, 10) || 0);
-    const listeNiv = this.plMwNiveaux(nNiveaux);
-    const opt = (liste, val, k) => (liste || []).map(v => ({ v, on: v === val,
-      pick: () => this.plMwPatch({ [k]: v }) }));
-    return {
-      etape: w.etape, busy: !!w.busy, err: w.err || '',
-      // En édition, l'assistant corrige l'identité du meuble ; la structure se
-      // retouche ailleurs, et l'écran le dit plutôt que de la refaire en douce.
-      edition: !!w.meubleId,
-      structTxt: (() => { if (!w.meubleId) { return ''; }
-        const m = ((pl.zones || []).flatMap(z => z.meubles || [])).find(m2 => m2.id === w.meubleId);
-        if (!m) { return ''; }
-        return (m.niveaux || []).length + ' niveau(x), '
-          + (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0) + ' emplacement(s)'; })(),
-      zone: zone ? zone.nom : '',
-      nom: w.nom, type: w.type, temperature: w.temperature, presentation: w.presentation,
-      longueur: w.longueur, largeur: w.largeur, hauteur: w.hauteur, capacite: w.capacite,
-      nNiveaux: w.nNiveaux, nSlots: w.nSlots,
-      types: opt(r.types, w.type, 'type'),
-      temperatures: opt(r.temperatures, w.temperature, 'temperature'),
-      presentations: opt(r.presentations, w.presentation, 'presentation'),
-      // Moments de la journée : plusieurs à la fois, donc des cases, pas un
-      // choix unique. Le comptoir chaud n'est monté qu'à midi ; la vitrine à
-      // viennoiseries, le matin.
-      periodes: (r.periodes || []).map(pr => ({
-        slug: pr.slug, nom: pr.nom || pr.slug, aide: pr.aide || '',
-        on: (w.periodes || []).indexOf(pr.slug) >= 0,
-        bascule: () => { const l = (this.state.plMw.periodes || []).slice();
-          const i = l.indexOf(pr.slug);
-          if (i >= 0) { l.splice(i, 1); } else { l.push(pr.slug); }
-          this.plMwPatch({ periodes: l }); },
-      })),
-      // Aucun moment coché : le meuble n'existerait à aucune heure. On le dit
-      // à l'étape plutôt que de créer un meuble invisible.
-      periodesVide: (r.periodes || []).length > 0 && (w.periodes || []).length === 0,
-      periodesTxt: (() => { const ref = r.periodes || [];
-        const l = (w.periodes || []);
-        if (!ref.length || l.length === ref.length) { return 'toute la journée'; }
-        if (!l.length) { return 'aucun moment'; }
-        return ref.filter(pr => l.indexOf(pr.slug) >= 0).map(pr => pr.nom || pr.slug).join(' · '); })(),
-      set: k => e => this.plMwPatch({ [k]: e.target.value }),
-      // Ce que l'assistant s'apprête à créer, en toutes lettres : on valide ce
-      // qu'on a compris, pas un formulaire qu'on a rempli de mémoire.
-      recap: [
-        { k: 'Meuble', v: (w.nom || '(sans nom)') + (w.type ? ' — ' + w.type : '') },
-        { k: 'Zone', v: zone ? zone.nom : '' },
-        { k: 'Température', v: w.temperature || '' },
-        { k: 'Présentation', v: w.presentation || '' },
-        { k: 'Moments de la journée', v: (() => { const ref = r.periodes || [];
-          const l = (w.periodes || []);
-          if (!ref.length || l.length === ref.length) { return 'toute la journée'; }
-          if (!l.length) { return 'aucun — le meuble ne serait monté à aucune heure'; }
-          return ref.filter(pr => l.indexOf(pr.slug) >= 0).map(pr => pr.nom || pr.slug).join(', '); })() },
-        { k: 'Niveaux', v: nNiveaux + ' (' + listeNiv.join(', ') + ')' },
-        { k: 'Emplacements', v: nSlots ? (nSlots + ' par niveau, soit ' + (nSlots * nNiveaux) + ' au total')
-          : 'aucun pour l’instant' },
-        { k: 'Un emplacement', v: dims[0] && dims[1]
-          ? dims[0] + ' × ' + dims[1] + (dims[2] ? ' × ' + dims[2] : '') + ' mm'
-          : 'dimensions non renseignées' },
-        { k: 'Photos', v: (() => { const n = (w.photoMeuble ? 1 : 0)
-            + Object.keys(w.photosNiveau || {}).filter(k2 => (w.photosNiveau || {})[k2]).length;
-          return n ? n + ' à joindre' : 'aucune'; })() },
-      ],
-      niveauxTxt: listeNiv.join(' · '),
-      total: nSlots * nNiveaux,
-      // Photos : celle du meuble, puis une par niveau. Facultatives, ajoutables
-      // aussi APRÈS coup depuis « Retoucher un meuble » — l'assistant ne doit
-      // pas être le seul moment où l'on peut en poser une.
-      photoMeuble: w.photoMeuble || null,
-      photoMeubleSet: e => this.plMwPhoto('meuble', null, (e.target.files || [])[0]),
-      photoMeubleDel: w.photoMeuble ? () => this.plMwPatch({ photoMeuble: null }) : null,
-      photosNiveau: listeNiv.map((nom, i) => ({ nom, rang: i + 1,
-        data: (w.photosNiveau || {})[i + 1] || null,
-        set: e => this.plMwPhoto('niveau', i + 1, (e.target.files || [])[0]),
-        del: (w.photosNiveau || {})[i + 1]
-          ? () => this.plMwPatch({ photosNiveau: Object.assign({}, w.photosNiveau, { [i + 1]: null }) })
-          : null })),
-      nPhotos: (w.photoMeuble ? 1 : 0) + Object.keys(w.photosNiveau || {})
-        .filter(k => (w.photosNiveau || {})[k]).length,
-      precedent: w.etape > 1 ? () => this.plMwPatch({ etape: w.etape - 1, err: '' }) : null,
-      suivant: w.etape < 5 ? () => {
-        if (w.etape === 1 && !String(this.plLire('plmw-nom', w.nom) || '').trim()) {
-          this.plMwPatch({ err: 'Donnez un nom à ce meuble — « Vitrine 1 », « Gondole A ».' });
-          return;
-        }
-        this.plMwPatch({ nom: this.plLire('plmw-nom', w.nom), etape: w.etape + 1, err: '' });
-      } : null,
-      creer: w.etape === 5 ? () => this.plMwCreer() : null,
-      fermer: () => this.setState({ plMw: null }),
-    };
+  psRotCle(){ return (this.state.psRotShop || 'reseau') + '|' + (this.state.psRotJours || 14) + '|' + (this.state.psRotPlan || ''); }
+  psRotCharge(force){
+    const k = this.psRotCle();
+    if (!this.D.psRot) { this.D.psRot = {}; }
+    if (!this._psRotEnCours) { this._psRotEnCours = {}; }
+    if (this._psRotEnCours[k] || (this.D.psRot[k] && !force)) { return; }
+    this._psRotEnCours[k] = true;
+    const S = this.state;
+    readOne('/planogramme/rotations?shop=' + encodeURIComponent(S.psRotShop || 'reseau') + '&jours=' + (S.psRotJours || 14) + (S.psRotPlan ? '&plan=actuel' : '')).then(d => {
+      this._psRotEnCours[k] = false;
+      this.D.psRot[k] = d && Array.isArray(d.magasins) ? d : { erreur: true };
+      this.setState({});
+    });
   }
-  /** Retient une photo de l'assistant, sans l'envoyer : rien n'existe encore. */
-  plMwPhoto(quoi, rang, file){
-    if (!file) { return; }
-    this.plImageLire(file).then(data => {
-      const w = this.state.plMw;
-      if (!w) { return; }
-      if (quoi === 'meuble') { this.plMwPatch({ photoMeuble: data }); }
-      else { this.plMwPatch({ photosNiveau: Object.assign({}, w.photosNiveau, { [rang]: data }) }); }
-    }).catch(e => this.notify('Photo non retenue : ' + e.message));
-  }
-  plMwCreer(){
-    const w = this.state.plMw;
-    if (!w || w.busy) { return; }
-    // Les champs sont relus DANS L'ÉCRAN au moment de créer. Mesuré : la
-    // capacité saisie n'arrivait pas au serveur — l'état ne l'avait pas gardée,
-    // alors qu'elle était bien affichée. Ce que l'utilisateur voit est ce qui
-    // part ; c'est la seule règle qui ne dépend d'aucune plomberie.
-    const lu = (id, val) => this.plLire(id, val);
-    const nb = (v, min, max) => Math.max(min, Math.min(max, parseInt(v, 10) || 0));
-    const ent = v => { const n = parseInt(v, 10); return (isFinite(n) && n > 0) ? n : null; };
-    const nNiveaux = nb(lu('plmw-nniv', w.nNiveaux), 1, 40);
-    const nSlots = nb(lu('plmw-nslot', w.nSlots), 0, 40);
-    const nom = String(lu('plmw-nom', w.nom) || '').trim();
-    if (!nom) { this.plMwPatch({ etape: 1, err: 'Donnez un nom à ce meuble.' }); return; }
-    this.plMwPatch({ busy: true, err: '' });
-
-    // ÉDITION : l'identité change, la structure reste. Les photos collectées
-    // partent sur les identifiants déjà connus — meuble et niveaux existants.
-    if (w.meubleId) {
-      write(this.source, 'PATCH', '/planogramme/meuble/' + w.meubleId, {
-        nom, type: w.type, temperature: w.temperature, presentation: w.presentation,
-        periodes: w.periodes || [],
-      }).then(res => {
-        if (!res || res.ok === false) {
-          this.plMwPatch({ busy: false, err: (res && res.error) || 'modification refusée' });
-          return;
-        }
-        const meuble = ((this.D.plano || {}).zones || [])
-          .flatMap(z => z.meubles || []).find(m => m.id === w.meubleId) || {};
-
-        // La structure s'ÉTEND depuis l'assistant : les niveaux existants sont
-        // complétés jusqu'au nombre demandé, les niveaux manquants créés avec
-        // leurs emplacements. Jamais l'inverse — demander moins ne retire
-        // rien, et la notification le dit plutôt que de laisser croire.
-        const dims = { largeurMm: ent(lu('plmw-lar', w.largeur)),
-          longueurMm: ent(lu('plmw-lon', w.longueur)), hauteurMm: ent(lu('plmw-hau', w.hauteur)),
-          capacite: ent(lu('plmw-cap', w.capacite)) };
-        const niveaux = meuble.niveaux || [];
-        const chaine = [];
-        let plusSlots = 0, plusNiveaux = 0, enMoins = 0;
-        niveaux.forEach(n => { const dej = (n.slots || []).length;
-          if (nSlots > dej) { plusSlots += nSlots - dej;
-            chaine.push(() => write(this.source, 'POST', '/planogramme/emplacement',
-              Object.assign({ niveauId: n.id, nombre: nSlots - dej }, dims))); }
-          if (nSlots < dej) { enMoins++; } });
-        for (let r2 = niveaux.length + 1; r2 <= nNiveaux; r2++) {
-          plusNiveaux++; plusSlots += nSlots;
-          const nomNiv = this.plMwNiveaux(nNiveaux)[r2 - 1] || ('Niveau ' + r2);
-          chaine.push(() => write(this.source, 'POST', '/planogramme/niveau',
-            Object.assign({ parentId: w.meubleId, nom: nomNiv, rang: r2, slots: nSlots }, dims)));
-        }
-        if (nNiveaux < niveaux.length) { enMoins++; }
-
-        const envois = [];
-        if (w.photoMeuble) { envois.push(this.plPhotoEnvoyer('meuble', w.meubleId, w.photoMeuble)); }
-        niveaux.forEach((n, i) => {
-          const d2 = (w.photosNiveau || {})[i + 1];
-          if (d2) { envois.push(this.plPhotoEnvoyer('niveau', n.id, d2)); }
-        });
-        // Les créations partent l'une APRÈS l'autre : les positions d'un même
-        // niveau se numérotent au fil de l'eau, deux envois croisés se
-        // marcheraient dessus.
-        const suite = i2 => i2 < chaine.length ? chaine[i2]().then(() => suite(i2 + 1)) : Promise.resolve();
-        suite(0).then(() => Promise.all(envois)).then(rs => {
-          const rates = (rs || []).filter(r2 => !r2 || r2.ok === false).length;
-          this.setState({ plMw: null });
-          this.plCharge(true);
-          this.notify('« ' + nom + ' » modifié'
-            + (plusNiveaux ? ' · +' + plusNiveaux + ' niveau(x)' : '')
-            + (plusSlots ? ' · +' + plusSlots + ' emplacement(s)' : '')
-            + (enMoins ? ' — rien n’est retiré d’ici : la suppression se fait dans « Organiser le comptoir »' : '')
-            + (envois.length ? ' · ' + (envois.length - rates) + '/' + envois.length + ' photo(s)' : '')
-            + (rates ? ' — ' + rates + ' photo(s) non enregistrée(s)' : ''));
-        });
-      });
-      return;
-    }
-    write(this.source, 'POST', '/planogramme/meuble', {
-      nom, parentId: w.zoneId, type: w.type, temperature: w.temperature, presentation: w.presentation,
-      periodes: w.periodes || [],
-      longueurMm: ent(lu('plmw-lon', w.longueur)), largeurMm: ent(lu('plmw-lar', w.largeur)),
-      hauteurMm: ent(lu('plmw-hau', w.hauteur)),
-      capacite: ent(lu('plmw-cap', w.capacite)),
-      niveaux: this.plMwNiveaux(nNiveaux).map(n => ({ nom: n, slots: nSlots })),
-    }).then(res => {
-      if (!res || res.ok === false) {
-        this.plMwPatch({ busy: false, err: (res && res.error) || 'création refusée' });
-        return;
+  /** Toutes les écritures du plan : la réponse EST le plan frais. */
+  psEcrire(method, path, body, msg){
+    return this.api(method, path, body).then(r => {
+      if (r && r.ok && Array.isArray(r.emplacements)) {
+        this.D.ps = r; this.D.psRot = {}; this.psMajCatalogue();
+        if (msg) { this.notify(msg); }
+        this.setState({});
+        this.psPhotos();
       }
-      // Les photos partent APRÈS, une fois les identifiants connus. Le meuble
-      // est déjà créé : un envoi de photo qui échoue ne doit pas défaire ce qui
-      // a réussi — on le dit, on ne revient pas en arrière.
-      const envois = [];
-      if (w.photoMeuble && res.id) { envois.push(this.plPhotoEnvoyer('meuble', res.id, w.photoMeuble)); }
-      (res.niveaux || []).forEach(n => {
-        const d2 = (w.photosNiveau || {})[n.rang];
-        if (d2) { envois.push(this.plPhotoEnvoyer('niveau', n.id, d2)); }
-      });
-      Promise.all(envois).then(rs => {
-        const rates = rs.filter(r => !r || r.ok === false).length;
-        this.setState({ plMw: null });
-        this.plCharge(true);
-        this.notify('« ' + nom + ' » créé — ' + (res.slots || 0) + ' emplacement(s)'
-          + (envois.length ? ' · ' + (envois.length - rates) + '/' + envois.length + ' photo(s)' : '')
-          + (rates ? ' — ' + rates + ' photo(s) non enregistrée(s)' : ''));
-      });
+      return r;
     });
-  }
-
-  /** La fiche de présentation d'une référence : sa photo, sa consigne, sa place. */
-  valsPlFiche(f, pl){
-    const d = f.d || {};
-    const cat = d.catalogue || {};
-    const n = f.note || {};
-    const slots = (pl.slots || []);
-    const place = (pl.placements || []).find(p => p.ref === f.ref) || null;
-    const cible = f.cible != null ? f.cible : (place ? place.slotId : null);
-    const sC = slots.find(s => s.id === cible) || null;
-    // Zone du mini-plan : celle de l'emplacement visé, sinon la première.
-    const zones = pl.zones || [];
-    const zid = f.zone || (sC ? sC.zoneId : (zones[0] ? zones[0].id : null));
-    const zone = zones.find(z => z.id === zid) || null;
-    const meubles = zone ? (zone.meubles || []) : [];
-    const nMax = meubles.reduce((a, m) => Math.max(a, (m.niveaux || []).length), 0);
-    const lignes = [];
-    for (let i = 0; i < nMax; i++) {
-      lignes.push({ nom: (meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean)[0]) || '',
-        cases: meubles.map(m => { const niv = (m.niveaux || [])[i];
-          if (!niv) { return { absent: true, slots: [] }; }
-          return { absent: false, slots: (niv.slots || []).map(s => {
-            const occ = (s.occupants || []).filter(o => o.ref !== f.ref)[0] || null;
-            const vise = cible === s.id;
-            return { id: s.id, position: s.position, libre: !occ, vise,
-              nom: vise ? 'ici' : (occ ? occ.nom : 'libre'),
-              st: 'border-radius:6px;padding:5px 6px;min-height:44px;display:flex;flex-direction:column;'
-                + 'justify-content:space-between;font-size:10px;line-height:1.25;cursor:pointer;'
-                + (vise ? 'border:1.5px solid var(--color-primary);background:var(--color-primary);color:#fff;font-weight:600'
-                  : occ ? 'border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-muted)'
-                        : 'border:1.5px dashed var(--color-primary);background:rgba(141,29,44,0.04);color:var(--color-primary);font-weight:500'),
-              clic: () => this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { cible: s.id }) })) };
-          }) }; }) });
-    }
-    return {
-      ref: f.ref, nom: cat.nom || f.ref, chargement: !!f.chargement, busy: !!f.busy,
-      err: f.err || '', ok: f.ok || '',
-      sous: [cat.categorie, cat.groupe, (cat.periods || [])[0]].filter(Boolean).join(' · '),
-      placeTxt: place && place.slotId
-        ? (place.zone + ' · ' + place.meuble + ' · ' + place.niveau + ' · position ' + place.position)
-        : '',
-      zonesOpts: zones.map(z => ({ id: z.id, nom: z.nom, on: z.id === zid })),
-      zoneSet: e => { const v = +e.target.value;
-        this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { zone: v }) })); },
-      meubles: meubles.map(m => m.nom), lignes,
-      cibleTxt: sC ? (sC.meuble + ' · ' + sC.niveau + ' · ' + sC.position) : '',
-      fronts: f.fronts != null ? f.fronts : (place ? place.fronts : 1),
-      ordre: f.ordre != null ? f.ordre : (place ? place.ordre : 1),
-      qmin: f.qmin != null ? f.qmin : (cat.qmin || 0),
-      set: k => e => { const v = e.target.value;
-        this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { [k]: v }) })); },
-      technique: (d.technique || []).map(t => ({ k: t.champ, v: t.valeur })),
-      techniqueVide: !(d.technique || []).length,
-      manque: (d.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source })),
-      // Photo annexée dans le cockpit. Elle ne remplace pas celle du panel — on
-      // dit l'un ET l'autre : ce visuel-ci ne partira pas en boutique tant que
-      // la route de dépôt n'existe pas côté panel.
-      // Le chemin est relatif au dossier de l'application : il se résout tout
-      // seul, quelle que soit la base d'URL du déploiement.
-      photo: (d.note || {}).photo || null,
-      photoDepose: ev => this.plPhoto('ref', f.ref, (ev.target.files || [])[0]),
-      photoRetirer: (d.note || {}).photo ? () => this.plPhotoRetirer('ref', f.ref) : null,
-      // Consigne de présentation : un texte, rien d'autre. La gravité,
-      // l'épinglage et la période ont été retirés de la fiche ; ce que le
-      // serveur porte est relu et RENVOYÉ tel quel, pour qu'enregistrer un
-      // texte n'efface pas ce qui a été posé ailleurs.
-      noteTxt: n.texte != null ? n.texte : ((d.note || {}).texte || ''),
-      notePin: n.epinglee != null ? !!n.epinglee : !!(d.note || {}).epinglee,
-      noteGrav: n.gravite != null ? n.gravite : ((d.note || {}).gravite || 3),
-      noteDu: n.du != null ? n.du : ((d.note || {}).du || ''),
-      noteAu: n.au != null ? n.au : ((d.note || {}).au || ''),
-      noteMaj: (d.note || {}).majLe ? ('modifiée par ' + ((d.note || {}).auteur || '') + ', ' + (d.note || {}).majLe) : '',
-      noteSet: k => e => { const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
-          { note: Object.assign({}, s2.plFiche.note, { [k]: v }) }) }));
-        // La consigne part d'elle-même après la frappe ; le bouton reste, il
-        // confirme et relit la fiche.
-        this.autoEnreg('consigne', () => this.plNoteAuto()); },
-      noteAuto: this.autoTxt('consigne'),
-      placer: cible ? () => this.plPlacer() : null,
-      retirer: place && place.slotId ? () => this.plRetirer() : null,
-      enregistrerNote: () => this.plNote(),
-      close: () => this.setState({ plFiche: null }),
-    };
-  }
-  plFicheOuvrir(ref){
-    this.setState({ plFiche: { ref, chargement: true, d: null, note: {} } });
-    readOne('/production/produit/fiche?ref=' + encodeURIComponent(ref))
-      .then(d => this.setState(s => (s.plFiche && s.plFiche.ref === ref)
-        ? { plFiche: Object.assign({}, s.plFiche, { chargement: false, d: d || null }) } : {}));
-  }
-  plFPatch(patch){
-    this.setState(s => ({ plFiche: Object.assign({}, s.plFiche, patch) }));
-  }
-  /** Place la référence sur l'emplacement visé. Un refus est RENDU tel quel. */
-  plPlacer(){
-    const f = this.state.plFiche;
-    if (!f || f.busy) { return; }
-    const pl = this.D.plano || {};
-    const place = (pl.placements || []).find(p => p.ref === f.ref) || null;
-    const cible = f.cible != null ? f.cible : (place ? place.slotId : null);
-    if (!cible) { return; }
-    const cat = (f.d || {}).catalogue || {};
-    this.plFPatch({ busy: true, err: '', ok: '' });
-    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(f.ref), {
-      slotId: cible, nom: cat.nom || f.ref,
-      fronts: Math.max(1, Math.round(+f.fronts || (place ? place.fronts : 1))),
-      ordre: Math.max(1, Math.round(+f.ordre || (place ? place.ordre : 1))),
-      qmin: Math.max(0, Math.round(+(f.qmin != null ? f.qmin : (cat.qmin || 0)) || 0)),
-    }).then(r => {
-      if (!r || r.ok === false) {
-        this.plFPatch({ busy: false, err: (r && r.error) || 'placement refusé' });
-        return;
-      }
-      this.plFPatch({ busy: false, ok: 'Placée au comptoir.' });
-      this.plCharge(true);
-      this.D.prodCatalogue = null; this.plRechargeCatalogue();
-    });
-  }
-  plRetirer(){
-    const f = this.state.plFiche;
-    if (!f || f.busy) { return; }
-    this.plFPatch({ busy: true, err: '', ok: '' });
-    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(f.ref), { slotId: null })
-      .then(r => {
-        if (!r || r.ok === false) { this.plFPatch({ busy: false, err: (r && r.error) || 'échec' }); return; }
-        this.plFPatch({ busy: false, ok: 'Retirée du comptoir.', cible: null });
-        this.plCharge(true); this.D.prodCatalogue = null; this.plRechargeCatalogue();
-      });
   }
   /**
-   * Prendre une référence — depuis le catalogue, le plan ou le tableau.
-   *
-   * Rien n'est mis en état : un `setState` au départ du glisser redessine le
-   * nœud qu'on tient, et le navigateur abandonne le geste. Ce qui voyage est
-   * la référence, dans le presse-papier du glisser.
+   * Après une écriture : la place au comptoir de chaque fiche du catalogue, recalculée ici
+   * (même règle que le serveur : le premier emplacement dans l'ordre des sections).
+   * Recharger tout le catalogue vidait le sélecteur de produits à chaque dépôt.
    */
-  plPrendre(ref){
-    return e => {
-      try {
-        e.dataTransfer.setData('text/plain', 'ref:' + ref);
-        e.dataTransfer.effectAllowed = 'move';
-      } catch (e2) { /* navigateur sans glisser-déposer : le clic reste */ }
-    };
+  psMajCatalogue(){
+    const cat = this.D.prodCatalogue, ps = this.D.ps; if (!cat || !ps) { return; }
+    const nomZ = {}; ((ps.layout || {}).zones || []).forEach(z => { nomZ[z.id] = z.nom; });
+    const nomN = {}; ((ps.layout || {}).niveaux || []).forEach(n => { nomN[n.k] = n.nom; });
+    const ordre = { e3: 0, e2: 1, e1b: 2, e1a: 3 };
+    const pl = {};
+    (ps.emplacements || []).slice().sort((a, b) => a.section - b.section || ordre[a.niveau] - ordre[b.niveau]).forEach(e => (e.occupants || []).forEach(o => {
+      const r = String(o.ref); if (!r || pl[r]) { return; }
+      pl[r] = { zone: nomZ[e.zone] || null, meuble: 'Section ' + e.section, niveau: nomN[e.niveau] || e.niveau, slot: e.section };
+    }));
+    cat.forEach(p => { const x = pl[String(p.ref)]; p.zone = x ? x.zone : null; p.meuble = x ? x.meuble : null; p.niveau = x ? x.niveau : null; p.slot = x ? x.slot : null; });
   }
-  plDeposerSur(slotId){
+  psEmpl(cle){ return ((this.D.ps || {}).emplacements || []).find(e => e.cle === cle) || null; }
+  /** Les moments choisis en tête du plan : « journee », ou un seul moment. */
+  psMoment(){ return this.state.psMoment || 'journee'; }
+  psMomentsCourants(){ const m = this.psMoment(); return m === 'journee' ? 'journee' : [m]; }
+  /** L'occupant qu'on voit : celui du moment choisi, ou en « toute la journée » celui qui tient le plus de moments. */
+  psVu(e){
+    if (!e || !Array.isArray(e.occupants) || !e.occupants.length) { return null; }
+    const m = this.psMoment();
+    if (m !== 'journee') { return e.occupants.find(o => o.periodes.indexOf(m) >= 0) || null; }
+    return e.occupants.reduce((a, o) => o.periodes.length > a.periodes.length ? o : a);
+  }
+  psMomentNom(per){
+    const P = ((this.D.ps || {}).layout || {}).periodes || [];
+    if (!per || per === 'journee' || per.length >= P.length) { return 'toute la journée'; }
+    return per.map(k => (P.find(p => p.k === k) || {}).nom || k).join(' + ').toLowerCase();
+  }
+  psProduit(ref){ return (this.D.prodCatalogue || []).find(p => String(p.ref) === String(ref)) || null; }
+  /** Poser un produit sur un emplacement (la quantité reste à régler si le produit change). */
+  psPoser(cle, ref, extra){
+    const [s, n] = cle.split('|'); const p = this.psProduit(ref);
+    const corps = Object.assign({ section: +s, niveau: n, periodes: this.psMomentsCourants(), ref: String(ref),
+      nom: p ? p.nom : undefined, groupe: p ? p.groupe : undefined }, extra || {});
+    return this.psEcrire('PUT', '/planogramme/standard/emplacement', corps,
+      (p ? '« ' + p.nom + ' »' : 'Produit') + ' posé en S' + s + ' — ' + this.psMomentNom(corps.periodes));
+  }
+  psVider(cle, per){
+    const [s, n] = cle.split('|'); const pr = per || this.psMomentsCourants();
+    return this.psEcrire('PUT', '/planogramme/standard/emplacement', { section: +s, niveau: n, periodes: pr, ref: null }, 'S' + s + ' vidé — ' + this.psMomentNom(pr));
+  }
+  psPrendreRef(ref){ return e => { try { e.dataTransfer.setData('text/plain', 'ref:' + ref); e.dataTransfer.effectAllowed = 'copyMove'; } catch (e2) { /* le clic reste */ } }; }
+  psPrendreSlot(cle){ return e => { try { e.dataTransfer.setData('text/plain', 'slot:' + cle); e.dataTransfer.effectAllowed = 'move'; } catch (e2) { /* le clic reste */ } }; }
+  /** Déposer : un produit du sélecteur, ou un emplacement (déplacement, échange s'il est occupé). */
+  psDeposer(cle){
     return e => {
       e.preventDefault();
       const t = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
-      if (!t || t.indexOf('ref:') !== 0) { return; }
-      this.plDeposer(t.slice(4), slotId);
+      if (t.indexOf('ref:') === 0) { this.psPoser(cle, t.slice(4)); return; }
+      if (t.indexOf('slot:') !== 0) { return; }
+      const src = t.slice(5); if (src === cle) { return; }
+      // On déplace ce qu'on voit : le produit du moment choisi, sur SES moments.
+      const a = this.psVu(this.psEmpl(src)), b = this.psVu(this.psEmpl(cle));
+      if (!a) { return; }
+      const [sa, na] = src.split('|'), [sb, nb] = cle.split('|');
+      const corps = (s, n, o) => ({ section: +s, niveau: n, periodes: a.periodes, ref: o.ref, nom: o.nom, groupe: o.groupe, qte: o.qte });
+      this.api('PUT', '/planogramme/standard/emplacement', corps(sb, nb, a)).then(r => {
+        if (!r || !r.ok) { return; }
+        const suite = b ? corps(sa, na, b) : { section: +sa, niveau: na, periodes: a.periodes, ref: null };
+        this.psEcrire('PUT', '/planogramme/standard/emplacement', suite, b ? 'Emplacements échangés' : 'Produit déplacé en S' + sb);
+      });
     };
   }
-  /**
-   * Déposer une référence sur un emplacement.
-   *
-   * Trois cas, et un seul est refusé : l'emplacement libre reçoit ; deux
-   * références déjà placées permutent ; une référence qui n'est nulle part et
-   * qu'on lâche sur une case occupée ne délogerait personne sans le dire — on
-   * nomme l'occupant et on ne touche à rien.
-   */
-  plDeposer(ref, slotId){
-    const pl = this.D.plano || {};
-    const place = (pl.placements || []).find(p => p.ref === ref) || null;
-    if (place && place.slotId === slotId) { return; }
-    const cible = (pl.slots || []).find(s2 => s2.id === slotId) || null;
-    if (!cible) { return; }
-    // Le conflit se juge par chevauchement de moments : les croissants du
-    // matin et le traiteur de midi partagent la même case sans s'y croiser.
-    // Une liste vide vaut « toute la journée » et croise tout.
-    const mesPer = (place ? place.periodes : []) || [];
-    const croise = o => { const lo = o.periodes || [];
-      return !mesPer.length || !lo.length || lo.some(x => mesPer.indexOf(x) >= 0); };
-    const occ = (cible.occupants || []).filter(o => o.ref !== ref && croise(o));
-    const venaitDe = place ? place.slotId : null;
-    if (occ.length && !venaitDe) {
-      this.notify('Emplacement occupé par ' + occ[0].nom + ' — déposez sur un emplacement libre, ou échangez depuis le plan.');
-      return;
-    }
-    if (occ.length > 1) {
-      this.notify('Emplacement partagé — l’échange ne saurait pas laquelle déplacer.');
-      return;
-    }
-    // Le nom, pour le dire à l'écran : celui du comptoir s'il y est déjà, sinon
-    // celui du catalogue. La référence nue ne reste qu'en dernier recours.
-    const nom = ((pl.slots || []).flatMap(s2 => s2.occupants || []).find(o => o.ref === ref)
-      || (this.D.prodCatalogue || []).find(c2 => String(c2.ref) === String(ref)) || {}).nom || ref;
-    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(ref),
-      { slotId, echange: occ.length > 0, nom })
-      .then(r => {
-        if (!r || r.ok === false) {
-          this.notify('Déplacement refusé — ' + ((r && r.error) || 'écriture impossible'));
-          return;
-        }
-        const ou = cible.meuble + ' · ' + cible.niveau + ' · ' + cible.position;
-        // Ce qui a changé est DIT : un échange déplace deux références, et une
-        // grille refaite n'est pas celle qu'on avait posée.
-        this.notify((r.echange ? 'Échangées : ' + nom + ' ↔ ' + occ[0].nom + ' — ' + nom + ' en ' + ou
-          : nom + ' placée en ' + ou)
-          + (r.regrille ? ' · grille refaite : ' + r.regrille.cols + ' × ' + r.regrille.rangs : ''));
-        this.plCharge(true);
-        this.D.prodCatalogue = null; this.plRechargeCatalogue();
-      });
+  psQte(cle, per){
+    return e => {
+      const v = String(e.target.value).trim().replace(',', '.');
+      const q = v === '' ? null : Number(v);
+      if (q !== null && !(q >= 0 && q <= 9999)) { this.notify('Quantité : un nombre entre 0 et 9 999'); return; }
+      const [s, n] = cle.split('|');
+      this.psEcrire('PUT', '/planogramme/standard/emplacement', { section: +s, niveau: n, periodes: per, qte: q });
+    };
   }
-  /**
-   * Export CSV du comptoir : une ligne par occupant, une par emplacement
-   * libre. Point-virgule et BOM — c'est ce qu'Excel en Belgique ouvre sans
-   * assistant d'import. Ce fichier sert à la centrale et aux boutiques : il
-   * dit QUOI, OÙ, COMBIEN et À QUEL MOMENT, pas comment l'écran le dessine.
-   */
-  plExporter(){
-    const pl = this.D.plano || {};
-    const refPer = ((pl.referentiels || {}).periodes || []);
-    const nomsPer = l => (l || []).length
-      ? refPer.filter(p => l.indexOf(p.slug) >= 0).map(p => p.nom || p.slug).join(', ')
-      : 'toute la journée';
-    const c = v => { const t = String(v == null ? '' : v);
-      return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-    const lignes = [['Zone', 'Meuble', 'Niveau', 'Position', 'Format', 'Contenant',
-      'Dimensions (mm)', 'Référence', 'Nom', 'Par emplacement', 'Grille', 'Moments', 'État'].join(';')];
-    (pl.slots || []).forEach(s2 => {
-      const dims = (s2.largeurMm && s2.hauteurMm) ? s2.largeurMm + ' × ' + s2.hauteurMm : '';
-      const socle = [s2.zone, s2.meuble, s2.niveau, s2.position,
-        s2.format || '', s2.contenant || '', dims];
-      const occs = s2.occupants || [];
-      if (!occs.length) { lignes.push(socle.concat(['', '', '', '', '', 'libre']).map(c).join(';')); return; }
-      occs.forEach(o => lignes.push(socle.concat([o.ref, o.nom,
-        o.parSlot != null ? o.parSlot : '',
-        (o.cols && o.rangs) ? o.cols + ' × ' + o.rangs : '',
-        nomsPer(o.periodes), 'occupé']).map(c).join(';')));
-    });
-    // BOM : sans lui, Excel lit l'UTF-8 comme du latin et casse les accents.
-    const blob = new Blob(['\ufeff' + lignes.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'planogramme-' + new Date().toISOString().slice(0, 10) + '.csv';
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
-    this.notify(((pl.slots || []).length) + ' emplacement(s) exportés — ' + a.download);
+  psPhotoFichier(cle, per){
+    return e => {
+      const f = e.target.files && e.target.files[0]; if (!f) { return; }
+      if (f.size > 6 * 1024 * 1024) { this.notify('Photo trop lourde — 6 Mo au maximum'); return; }
+      const lr = new FileReader();
+      lr.onload = () => { const [s, n] = cle.split('|'); this.psEcrire('POST', '/planogramme/standard/photo', { section: +s, niveau: n, periodes: per, data: String(lr.result) }, 'Photo déposée'); };
+      lr.readAsDataURL(f);
+    };
   }
-  /** Une longueur en millimètres, dite en centimètres, sans décimale inutile. */
-  plCm(mm){ const v = Math.round(mm / 10 * 10) / 10; return String(v).replace('.', ','); }
-
-  /**
-   * La grille d'un produit dans son emplacement — la même règle qu'au serveur.
-   *
-   * Une ligne va jusqu'à SIX ; les rangées se déduisent par division arrondie
-   * vers le bas. Sans ligne imposée, on propose la LIGNE JUSTE : celle qui
-   * divise exactement, et parmi celles-là celle qui donne la case la plus
-   * proche du carré dans les dimensions réelles de l'emplacement.
-   */
-  plGrilleCalc(n, largeurMm, hauteurMm, colsVoulues){
-    n = Math.max(0, Math.min(400, Math.round(+n || 0)));
-    if (!n) { return { n: 0, cols: 0, rangs: 0, poses: 0, reste: 0 }; }
-    const lar = largeurMm > 0 ? largeurMm : 1, hau = hauteurMm > 0 ? hauteurMm : 1;
-    if (colsVoulues > 0) {
-      const c = Math.min(6, n, Math.round(colsVoulues));
-      const r = Math.max(1, Math.floor(n / c));
-      return { n, cols: c, rangs: r, poses: c * r, reste: Math.max(0, n - c * r) };
-    }
-    let best = [1, n], bs = null;
-    for (let c = 1; c <= 6 && c <= n; c++) {
-      if (n % c) { continue; }
-      const r = n / c, l = lar / c, h = hau / r;
-      const sc = Math.max(l / h, h / l);
-      if (bs === null || sc < bs - 1e-9 || (Math.abs(sc - bs) <= 1e-9 && c > best[0])) { best = [c, r]; bs = sc; }
-    }
-    return { n, cols: best[0], rangs: best[1], poses: n, reste: 0 };
+  psPhotoRetirer(cle, per){ const [s, n] = cle.split('|'); this.psEcrire('POST', '/planogramme/standard/photo', { section: +s, niveau: n, periodes: per, data: '' }, 'Photo retirée — retour à la photo du panel'); }
+  /** L'image d'un emplacement : la photo déposée, sinon celle du panel ; null = vignette. */
+  psImage(e){
+    if (!e || !e.ref) { return null; }
+    if (e.photo) { return e.photo; }
+    const p = (this.D.psPh || {})[e.ref];
+    return p && p.url ? p.url : null;
   }
-  /** Format ou contenant d'un emplacement. Une valeur vide EFFACE le choix. */
-  plSlotMaj(id, quoi, nom){
-    write(this.source, 'PATCH', '/planogramme/emplacement/' + id, { [quoi]: nom })
-      .then(r => { this.setState({ plCbx: null });
-        if (r && r.ok !== false) { this.plCharge(true); } });
+  /** Le style d'une photo recadrée (1:1) : cadrage par object-position, zoom par transform. */
+  psImgStyle(crop){
+    const c = crop || { x: 0.5, y: 0.5, s: 1 };
+    const px = (100 * c.x).toFixed(1) + '%', py = (100 * c.y).toFixed(1) + '%';
+    return `position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${px} ${py};transform:scale(${c.s});transform-origin:${px} ${py}`;
   }
-  /** Ajouter une position à la liste, et l'utiliser aussitôt. */
-  plRefAjouter(type, nom, slotId, quoi){
-    if (!nom) { return; }
-    write(this.source, 'POST', '/planogramme/referentiel/' + type, { nom })
-      .then(r => { if (!r || r.ok === false) { this.setState({ plCbx: null }); return; }
-        this.plSlotMaj(slotId, quoi, nom); });
+  psCropOuvrir(cle, per){
+    const e = this.psEmpl(cle);
+    const o = e ? (per ? (e.occupants || []).find(x => x.periodes.join() === per.join()) : this.psVu(e)) : null;
+    if (!o || !this.psImage(o)) { this.notify('Pas de photo à recadrer sur cet emplacement'); return; }
+    this.setState({ psCrop: Object.assign({ cle, periodes: o.periodes }, o.crop || { x: 0.5, y: 0.5, s: 1 }) });
   }
-  /**
-   * Retirer une position de la liste. Ce qui disparaît est la PROPOSITION :
-   * les emplacements qui la portent gardent leur valeur — on le dit avant.
-   */
-  plRefSupprimer(type, id, nom, quoi){
-    const pl = this.D.plano || {};
-    const cle = quoi === 'format' ? 'format' : 'contenant';
-    const n = (pl.slots || []).filter(s => (s[cle] || '') === nom).length;
-    if (n > 0 && !window.confirm(nom + ' est utilisé par ' + n + ' emplacement(s).\n'
-      + 'Les retirer de la liste ne les change pas : ils gardent cette valeur. Continuer ?')) { return; }
-    write(this.source, 'DELETE', '/planogramme/referentiel/' + type + '/' + id)
-      .then(r => { this.setState({ plCbx: null }); if (r && r.ok !== false) { this.plCharge(true); } });
-  }
-  /**
-   * Le nombre par emplacement, et la ligne. Un nombre vide n'écrit rien : il
-   * n'y a pas de grille par défaut, et zéro ne veut pas dire « un ».
-   */
-  plGrilleEcrire(ref, slotId, n, cols){
-    const v = String(n == null ? '' : n).trim();
-    if (v === '') { return; }
-    this.setState(s2 => ({ plGr: Object.assign({}, s2.plGr,
-      { [ref]: { n: v, cols: cols || null } }) }));
-    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(ref),
-      { slotId, parSlot: Math.max(0, Math.round(+v || 0)), cols: cols || 0 })
-      .then(r => { if (r && r.ok !== false) {
-        // Le brouillon a fait son temps : la vérité revient du serveur.
-        this.setState(s2 => { const g = Object.assign({}, s2.plGr); delete g[ref]; return { plGr: g }; });
-        this.plCharge(true);
-      } });
-  }
-  /** Le référentiel lit le placement : il doit être relu après une écriture. */
-  plRechargeCatalogue(){
-    readOne('/production/catalogue').then(c => { if (c) { this.D.prodCatalogue = c; } this.setState({}); });
-  }
-  /**
-   * Annexe une photo. Le fichier est lu dans le navigateur et envoyé en
-   * data-URL : toute l'application parle JSON, et basculer une seule route en
-   * multipart pour cette occasion aurait coûté un chemin de plus à maintenir.
-   *
-   * L'image est réduite avant l'envoi — une photo de téléphone pèse 4 à 8 Mo et
-   * n'apporte rien au-delà de 1600 px sur un plan de comptoir. Réduire ici
-   * évite un refus du serveur que l'utilisateur ne saurait pas corriger.
-   */
-  plPhoto(cible, cibleId, file, apres){
-    if (!file) { return; }
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-      this.notify('Format non accepté — JPEG, PNG ou WebP.'); return;
-    }
-    const envoi = data => write(this.source, 'POST', '/planogramme/photo', { cible, cibleId, data })
-      .then(r => {
-        if (!r || r.ok === false) { this.notify('Photo non enregistrée : ' + ((r && r.error) || 'échec')); return; }
-        this.plCharge(true);
-        if (typeof apres === 'function') { apres(r.photo || null); }
-        this.notify(r.photo ? 'Photo annexée' : 'Photo retirée');
-      });
-    const fr = new FileReader();
-    fr.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const max = 1600;
-        const ech = Math.min(1, max / Math.max(img.width, img.height));
-        if (ech >= 1 && file.size < 1.5 * 1024 * 1024) { envoi(fr.result); return; }
-        const cv = document.createElement('canvas');
-        cv.width = Math.round(img.width * ech); cv.height = Math.round(img.height * ech);
-        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-        envoi(cv.toDataURL('image/jpeg', 0.85));
+  /** Le glisser du recadrage : suivi au pointeur sur la fenêtre, l'état ne change qu'au lâcher. */
+  psCropPd(){
+    return e => {
+      const C = this.state.psCrop; if (!C) { return; }
+      e.preventDefault();
+      const cadre = e.target.closest('[data-pscadre]'); const img = cadre && cadre.querySelector('img');
+      if (!cadre || !img) { return; }
+      const W = cadre.clientWidth, x0 = e.clientX, y0 = e.clientY, cx = C.x, cy = C.y;
+      let x = cx, y = cy;
+      const bouge = ev => {
+        x = Math.max(0, Math.min(1, cx - (ev.clientX - x0) / (W * C.s)));
+        y = Math.max(0, Math.min(1, cy - (ev.clientY - y0) / (W * C.s)));
+        img.setAttribute('style', this.psImgStyle({ x, y, s: C.s }));
       };
-      img.onerror = () => this.notify('Image illisible.');
-      img.src = fr.result;
+      const lache = () => { window.removeEventListener('pointermove', bouge); window.removeEventListener('pointerup', lache); this.setState({ psCrop: Object.assign({}, this.state.psCrop, { x, y }) }); };
+      window.addEventListener('pointermove', bouge); window.addEventListener('pointerup', lache);
     };
-    fr.onerror = () => this.notify('Lecture du fichier impossible.');
-    fr.readAsDataURL(file);
   }
-  plPhotoRetirer(cible, cibleId, apres){
-    write(this.source, 'POST', '/planogramme/photo', { cible, cibleId, data: '' })
-      .then(r => { if (!r || r.ok === false) { this.notify('Non retirée : ' + ((r && r.error) || 'échec')); return; }
-        this.plCharge(true);
-        if (typeof apres === 'function') { apres(null); }
-        this.notify('Photo retirée'); });
+  psCropEnreg(){
+    const C = this.state.psCrop; if (!C) { return; }
+    const [s, n] = C.cle.split('|');
+    this.setState({ psCrop: null });
+    this.psEcrire('PUT', '/planogramme/standard/emplacement', { section: +s, niveau: n, periodes: C.periodes, crop: { x: C.x, y: C.y, s: C.s } }, 'Recadrage enregistré');
   }
-  /** La consigne, écrite sans le clic : même PUT, sans relire la fiche. */
-  plNoteAuto(){
-    const f = this.state.plFiche;
-    if (!f) { return false; }
-    const v = this.valsPlFiche(f, this.D.plano || {});
-    return write(this.source, 'PUT', '/planogramme/note', { cible: 'ref', cibleId: f.ref,
-      texte: v.noteTxt, epinglee: v.notePin ? 1 : 0, gravite: v.noteGrav,
-      du: v.noteDu || '', au: v.noteAu || '' }).then(r => !(!r || r.ok === false));
+  /** Un clic sur un emplacement ouvre sa fiche ; deux clics rapprochés sur sa photo, le recadrage. */
+  psClic(cle){
+    return e => {
+      const surPhoto = e.target.closest && e.target.closest('[data-psphoto]');
+      const ouvre = () => this.setState({ psSel: this.state.psSel === cle ? null : cle, psPopQ: '' });
+      if (!surPhoto) { ouvre(); return; }
+      // Sur une photo, la fiche attend un quart de seconde : un second clic
+      // dans ce délai ouvre le recadrage (la fiche aurait recouvert la photo).
+      if (this._psClicT && this._psClicCle === cle) {
+        clearTimeout(this._psClicT); this._psClicT = null; this.psCropOuvrir(cle); return;
+      }
+      clearTimeout(this._psClicT);
+      this._psClicCle = cle;
+      this._psClicT = setTimeout(() => { this._psClicT = null; ouvre(); }, 260);
+    };
+  }
+  /** L'impression A4 paysage : la face (deux parties), le tableau, la vue de dessus — photos comprises, sans champs ni boutons. */
+  psImprimer(){
+    const c = this._psCommon; if (!c || !c.psParties) { this.notify('Ouvrez le plan pour l’imprimer'); return; }
+    const w = window.open('', '_blank'); if (!w) { this.notify('Fenêtre d’impression bloquée par le navigateur'); return; }
+    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+    const css = [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => `<link rel="stylesheet" href="${new URL(l.getAttribute('href'), base).href}">`).join('');
+    const muet = () => '';
+    const xm = { A: muet, C: muet, I: muet, DS: muet, DP: muet, EN: muet, SB: muet, PD: muet, esc: escHtml };
+    const t = (this.D.ps || {}).totaux || {};
+    w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Planogramme — comptoir standard</title><base href="${base}">${css}
+      <style>@page{size:A4 landscape;margin:8mm}html,body{background:#fff!important;margin:0;padding:0}.ps .ps-face{zoom:.62}.ps .ps-dessus{zoom:.57}.ps .ps-tab{font-size:10px}.pb{break-before:page}.ps-imp{gap:6px}</style></head>
+      <body><div style="padding:0 0 8px;font-family:var(--font-ui)"><div class="ps-cap">Planogramme · Comptoir standard — le même plan pour tous les magasins</div>
+      <div style="font-family:var(--font-display);font-size:24px;color:var(--color-primary)">Comptoir standard</div>
+      <div style="font-size:11px;color:#666">25 sections × 30 cm = 7,50 m · ${t.remplis || 0} / ${t.emplacements || 0} emplacements remplis · imprimé le ${new Date().toLocaleDateString('fr-BE')}</div></div>
+      ${tplPsImpression(c, xm)}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),500));<\/script></body></html>`);
+    w.document.close();
+  }
+  psViderTout(){
+    if (!window.confirm('Vider tous les emplacements du comptoir standard ? Le plan d’avant reste dans l’historique (les rotations passées ne changent pas).')) { return; }
+    this.psEcrire('POST', '/planogramme/standard/vider', { confirmer: true }, 'Plan vidé');
   }
 
-  plNote(){
-    const f = this.state.plFiche;
-    if (!f || f.busy) { return; }
-    const v = this.valsPlFiche(f, this.D.plano || {});
-    this.plFPatch({ busy: true, err: '', ok: '' });
-    write(this.source, 'PUT', '/planogramme/note', { cible: 'ref', cibleId: f.ref,
-      texte: v.noteTxt, epinglee: v.notePin ? 1 : 0, gravite: v.noteGrav,
-      du: v.noteDu || '', au: v.noteAu || '' })
-      .then(r => {
-        if (!r || r.ok === false) { this.plFPatch({ busy: false, err: (r && r.error) || 'échec' }); return; }
-        this.plFPatch({ busy: false, ok: v.noteTxt.trim() ? 'Consigne enregistrée.' : 'Consigne effacée.' });
-        this.plCharge(true);
-      });
+  /** Les couleurs des rotations (maquette validée) : ce qui dort, ce qui tourne, ce qui se vide plusieurs fois. */
+  psEchelle(){
+    return [[0.25, '#EFE3D6', '#6b4420', 'moins de 0,25 — dort'], [0.5, '#F2C9A0', '#6b4420', '0,25 – 0,5'], [1, '#E3A27F', '#222', '0,5 – 1'],
+      [1.5, '#C8665C', '#fff', '1 – 1,5 — se vide une fois'], [2, '#A83A3E', '#fff', '1,5 – 2'], [Infinity, '#6E1420', '#fff', '2 et plus — réassort en journée']];
   }
-  /* --- déclaration de la structure ------------------------------------------- */
+  psCouleur(v){
+    if (v == null) { return ['var(--color-background-secondary)', 'var(--color-text-muted)']; }
+    const e = this.psEchelle().find(x => v < x[0]);
+    return [e[1], e[2]];
+  }
 
-  /**
-   * Ajoute un élément de structure, depuis le champ en ligne.
-   *
-   * Le champ est vidé au succès et l'écran RECHARGÉ : sans confirmation
-   * visible, on reclique — deux zones identiques ont été créées ainsi avant que
-   * cet écran ne dise ce qu'il avait enregistré.
-   */
-  /**
-   * Ce que le champ AFFICHE fait foi, pas ce que l'état croit savoir.
-   *
-   * L'état se met à jour sur un événement du navigateur, et cette plomberie a
-   * suffi à perdre une saisie : après avoir touché le nombre d'emplacements, le
-   * bouton « Ajouter » du niveau ne voyait plus le nom pourtant visible à
-   * l'écran, et ne faisait plus rien — sans message. On lit donc le champ.
-   */
-  plLire(id, defaut){
-    const el = document.getElementById(id);
-    return el ? String(el.value) : String(defaut == null ? '' : defaut);
+  valsPlanoStd(common){
+    const S = this.state, D = this.D;
+    this.psCharge(); this.psCatalogue(); this.psVentesCharge();
+    const ps = D.ps;
+    common.psChargement = !ps;
+    common.psErreur = !!(ps && ps.erreur);
+    const vue = S.psVue || 'plan';
+    common.psVue = vue;
+    common.psOnglets = [['plan', 'Plan du comptoir'], ['tableau', 'Tableau par section'], ['dessus', 'Vue de dessus'], ['rotations', 'Rotations']]
+      .map(o => ({ nom: o[1], on: vue === o[0], go: () => this.setState({ psVue: o[0], psSel: null }) }));
+    if (!ps || ps.erreur) { return; }
+    const esc0 = v => v == null ? '' : String(v);
+    const nf1 = v => (Math.round(v * 10) / 10).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const nf2 = v => v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const L = ps.layout, Z = L.zones;
+    const zoneDe = s => Z.find(z => s >= z.de && s <= z.a);
+    const caisse = s => (L.caisse || []).indexOf(s) >= 0;
+    const E = {}; ps.emplacements.forEach(e => { E[e.cle] = e; });
+    const dispo = (s, n) => !!E[s + '|' + n];
+    const cat = D.prodCatalogue || [];
+    const catDe = {}; cat.forEach(p => { catDe[String(p.ref)] = p; });
+    const GC = { 'Viennoiserie': '#D9A24B', 'Boulangerie': '#B98A52', 'Traiteur': '#6F9A6A', 'Pâtisserie': '#C9778F', 'Tartes': '#B8654F', 'Biscuiterie': '#9C7446', 'Épicerie': '#8676A8', 'Quiches': '#C9A93E', 'Boissons': '#5E8FB0' };
+    const ini = n => String(n || '').replace(/[^\wÀ-ÿ\s&-]/g, ' ').split(/[\s-]+/).filter(w => w.length > 1 && !/^(au|aux|de|du|la|le|les|et|à)$/i.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '·';
+    const vignette = e => {
+      const g = e.groupe || (catDe[e.ref] || {}).groupe || '';
+      return { img: this.psImage(e), style: this.psImgStyle(e.crop), fond: GC[g] || '#9a8f84', ini: ini(e.nom) };
+    };
+    const totaux = ps.totaux || {};
+    const modif = ps.modifie ? ' · modifié le ' + this.fD(String(ps.modifie.le).slice(0, 10)) + (ps.modifie.par ? ' par ' + ps.modifie.par : '') : '';
+    common.psEntete = { remplis: totaux.remplis || 0, total: totaux.emplacements || 0, modif,
+      sansQ: totaux.sansQuantite || 0,
+      imprimer: () => this.psImprimer(), vider: () => this.psViderTout(),
+      tablette: 'planogramme/?shop=' + encodeURIComponent(String(((D.stores || [])[0] || {}).id || '2')) };
+    common.psLegende = [
+      ['var(--color-secondary)', 'Sec · table bois', '5 sections · 1,50 m'],
+      ['var(--color-surface);border:1px solid var(--color-border-secondary)', 'Sec · mortex blanc', '10 sections · 3,00 m'],
+      ['var(--color-text)', 'Caisse', '2 sections · 60 cm'],
+      ['var(--color-primary)', 'Frigo', '8 sections · 2,40 m']];
+    const fill = z => z.type === 'frigo' ? 'var(--color-primary)' : z.mat === 'bois' ? 'var(--color-secondary)' : 'var(--color-surface)';
+    const ink = z => z.type === 'frigo' ? '#fff' : z.mat === 'bois' ? 'var(--color-on-abricot)' : 'var(--color-text)';
+
+    // --- les moments de la journée : le plan se lit (et se remplit) pour toute la journée ou pour un moment
+    const PER = L.periodes || [];
+    const mom = this.psMoment();
+    common.psMoments = [{ k: 'journee', nom: 'Toute la journée' }].concat(PER).map(o => ({ nom: o.nom, on: mom === o.k, go: () => this.setState({ psMoment: o.k, psSel: null }) }));
+    common.psMomentTxt = mom === 'journee' ? 'Un produit glissé se pose pour toute la journée.' : 'Un produit glissé se pose pour le ' + (PER.find(p => p.k === mom) || {}).nom.toLowerCase() + ' seulement.';
+    const COUL = ['#8D1D2C', '#1f5f8b', '#2d7a3e'];
+    const tags = per => PER.map(p => ({ t: p.court, on: per.indexOf(p.k) >= 0, titre: p.nom }));
+    const nomNiv = { e3: 'Étage 3', e2: 'Étage 2', e1b: 'Étage 1 arrière', e1a: 'Étage 1 avant' };
+
+    // --- le plan, vue de face : trois parties qui ne coupent aucune zone
+    const partie = (a, b) => {
+      const bands = [];
+      for (let s = a; s <= b; s++) { const z = zoneDe(s), l = bands[bands.length - 1]; if (l && l.z.id === z.id) { l.n++; } else { bands.push({ z, n: 1 }); } }
+      return {
+        titre: 'Sections ' + a + ' – ' + b,
+        bandes: bands.map(x => ({ id: x.z.id, nom: x.z.nom, defaut: x.z.nomDefaut, w: x.n * 66 + (x.n - 1) * 2, fond: fill(x.z), encre: ink(x.z), bord: x.z.mat === 'mortex',
+          len: x.n < 3 ? (x.n * 30) + ' cm' : x.n + ' × 30 = ' + (x.n * 30) + ' cm',
+          renommer: ev => this.psEcrire('PUT', '/planogramme/standard/zone', { zone: x.z.id, nom: ev.target.value }, 'Zone renommée') })),
+        lignes: [['e3', 'Étage 3', 'Top picking · 10 cm', 84], ['e2', 'Étage 2', '20 cm', 84], ['e1', 'Étage 1', '60 cm · arrière / avant', 166]].map(([k, nom, sub, h]) => ({
+          nom, sub, h,
+          cellules: (() => {
+            const out = [];
+            for (let s = a; s <= b; s++) {
+              if (caisse(s)) { if (k === 'e1' && s === (L.caisse || [])[0]) { out.push({ caisse: true, w: 66 * (L.caisse || []).length + 2 * ((L.caisse || []).length - 1) }); } else if (k !== 'e1') { out.push({ hach: true }); } continue; }
+              const niveaux = k === 'e1' ? ['e1b', 'e1a'] : [k];
+              if (!niveaux.some(n => dispo(s, n))) { out.push({ hach: true }); continue; }
+              const z = zoneDe(s);
+              out.push({ cls: z.type === 'frigo' ? 'f' : (z.mat === 'bois' ? 'b' : 'm'), slots: niveaux.map(n => {
+                const e = E[s + '|' + n];
+                const cle = s + '|' + n;
+                const o = this.psVu(e);
+                const occ = e.occupants || [];
+                // Plusieurs produits selon le moment : la bande dit qui tient quoi (en « toute la journée »).
+                const bande = mom === 'journee' && occ.length > 1 ? PER.map(p => { const i = occ.findIndex(x => x.periodes.indexOf(p.k) >= 0); return { t: p.court, fond: i >= 0 ? COUL[i % 3] : 'var(--color-border-secondary)' }; }) : null;
+                const libreTxt = mom === 'journee' ? 'glisser un produit' : 'libre · ' + (PER.find(p => p.k === mom) || {}).nom.toLowerCase();
+                return { cle, vide: !o, libreTxt, nom: o ? o.nom || '' : '', qte: o ? o.qte : null, sansQ: !!o && !(o.qte > 0), v: o ? vignette(o) : null, sel: S.psSel === cle, hl: S.psHl === cle, bande,
+                  titre: o ? (occ.map(x => x.nom + (x.qte > 0 ? ' ×' + x.qte : ' (quantité à régler)') + ' — ' + this.psMomentNom(x.periodes)).join(' · ') + ' — S' + s + ' · ' + nomNiv[n] + ' — clic : modifier · double-clic sur la photo : recadrer') : 'S' + s + ' · ' + nomNiv[n] + ' — libre ' + (mom === 'journee' ? '' : 'à ce moment ') + ': glissez un produit ou cliquez pour choisir',
+                  clic: this.psClic(cle), deposer: this.psDeposer(cle), prendre: o ? this.psPrendreSlot(cle) : null };
+              }) });
+            }
+            return out;
+          })(),
+        })),
+        regle: (() => { const r = []; for (let s = a; s <= b; s++) { if (caisse(s)) { if (s === (L.caisse || [])[0]) { r.push({ t: (L.caisse || []).join(' – '), w: 66 * (L.caisse || []).length + 2 * ((L.caisse || []).length - 1) }); } continue; } r.push({ t: String(s), w: 66 }); } return r; })(),
+      };
+    };
+    // Trois parties qui ne coupent aucune zone : elles tiennent à côté du sélecteur sur un écran de portable.
+    common.psParties = [partie(1, 8), partie(9, 16), partie(17, 25)];
+
+    // --- la fiche d'un emplacement (clic) : ses produits par moment, et poser sur les moments choisis
+    const sel = S.psSel ? E[S.psSel] : null;
+    common.psFiche = null;
+    if (sel) {
+      const q = String(S.psPopQ || '').trim().toLowerCase();
+      const res = q.length >= 2 ? cat.filter(p => (String(p.nom || '') + ' ' + p.ref + ' ' + (p.groupe || '') + ' ' + (p.categorie || '')).toLowerCase().indexOf(q) >= 0).slice(0, 8) : [];
+      const tous = PER.map(p => p.k);
+      const choix = Array.isArray(S.psFicheMom) && S.psFicheMom.length ? S.psFicheMom : (mom === 'journee' ? tous : [mom]);
+      const bascule = k => { const l = choix.indexOf(k) >= 0 ? choix.filter(x => x !== k) : choix.concat([k]); this.setState({ psFicheMom: l.length ? tous.filter(x => l.indexOf(x) >= 0) : choix }); };
+      common.psFiche = {
+        titre: 'S' + sel.section + ' · ' + ({ e3: 'Étage 3 · top picking', e2: 'Étage 2', e1b: 'Étage 1 · arrière', e1a: 'Étage 1 · avant' })[sel.niveau] + ' — ' + zoneDe(sel.section).nom,
+        occupants: (sel.occupants || []).map((o, i) => ({
+          nom: o.nom, ref: o.ref, v: vignette(o), tags: tags(o.periodes), journee: o.journee, momentTxt: this.psMomentNom(o.periodes), du: o.du ? this.fD(o.du) : '',
+          qte: o.qte == null ? '' : String(o.qte).replace('.', ','), id: 'ps-fq-' + i, setQte: this.psQte(sel.cle, o.periodes),
+          fichier: this.psPhotoFichier(sel.cle, o.periodes), retirerPhoto: o.photo ? () => this.psPhotoRetirer(sel.cle, o.periodes) : null,
+          recadrer: this.psImage(o) ? () => this.psCropOuvrir(sel.cle, o.periodes) : null,
+          etendre: !o.journee ? () => this.psPoser(sel.cle, o.ref, { periodes: 'journee', nom: o.nom, groupe: o.groupe, qte: o.qte }) : null,
+          retirer: () => this.psVider(sel.cle, o.periodes) })),
+        choix: [{ nom: 'Toute la journée', on: choix.length === tous.length, go: () => this.setState({ psFicheMom: tous }) }]
+          .concat(PER.map(p => ({ nom: p.nom, on: choix.indexOf(p.k) >= 0, go: () => bascule(p.k) }))),
+        choixTxt: this.psMomentNom(choix),
+        q: S.psPopQ || '', setQ: e => this.setState({ psPopQ: e.target.value }),
+        resultats: res.map(p => ({ nom: p.nom, detail: [p.groupe, p.categorie].filter(Boolean).join(' · '), choisir: () => { this.setState({ psPopQ: '' }); this.psPoser(sel.cle, p.ref, { periodes: choix.length === tous.length ? 'journee' : choix }); } })),
+        fermer: () => this.setState({ psSel: null, psFicheMom: null }),
+      };
+    }
+
+    // --- le sélecteur de produits : les meilleures ventes d'abord
+    const V = D.psVentes || {};
+    const places = {}; ps.emplacements.forEach(e => (e.occupants || []).forEach(o => { if (o.ref) { (places[o.ref] = places[o.ref] || []).push('S' + e.section + ' ' + ({ e3: 'É3', e2: 'É2', e1b: 'É1 arr.', e1a: 'É1 av.' })[e.niveau] + (o.journee ? '' : ' (' + PER.filter(p => o.periodes.indexOf(p.k) >= 0).map(p => p.court).join('+') + ')')); } }));
+    const hors = ['Boissons', 'Bundle & Promotion', 'Bundle', 'B. 2 B.'];
+    const grp = S.psG || 'Tous';
+    const qP = String(S.psQ || '').trim().toLowerCase();
+    const libres = S.psLibres !== false;
+    let liste = cat.filter(p => hors.indexOf(p.groupe) < 0 && !/extra|frais de livraison/i.test(String(p.categorie || '') + ' ' + String(p.nom || '')));
+    if (grp !== 'Tous') { liste = liste.filter(p => p.groupe === grp); }
+    if (qP) { liste = liste.filter(p => (String(p.nom || '') + ' ' + p.ref + ' ' + (p.categorie || '')).toLowerCase().indexOf(qP) >= 0); }
+    if (libres && !qP) { liste = liste.filter(p => !places[String(p.ref)]); }
+    liste = liste.map(p => ({ p, v: V[String(p.ref)] || 0 })).sort((a, b) => b.v - a.v || String(a.p.nom).localeCompare(String(b.p.nom), 'fr')).slice(0, 40);
+    this.psPhotosVoulues(liste.slice(0, 16).map(x => String(x.p.ref)));
+    const groupes = ['Tous'].concat([...new Set(cat.map(p => p.groupe).filter(g => g && hors.indexOf(g) < 0))].sort((a, b) => a.localeCompare(b, 'fr')));
+    common.psPicker = {
+      n: cat.length, q: S.psQ || '', setQ: e => this.setState({ psQ: e.target.value }),
+      groupes: groupes.map(g => ({ nom: g, on: g === grp, go: () => this.setState({ psG: g }) })),
+      libres, basculer: () => this.setState({ psLibres: !libres }),
+      chargement: !D.prodCatalogue,
+      lignes: liste.map(x => { const r = String(x.p.ref); const ph = (D.psPh || {})[r];
+        return { nom: x.p.nom, groupe: x.p.groupe || '', vendus: x.v ? Math.round(x.v).toLocaleString('fr-BE') + ' vendus en 14 j' : 'pas de vente relevée en 14 j',
+          place: (places[r] || []).join(', '), v: { img: ph && ph.url ? ph.url : null, style: this.psImgStyle(null), fond: GC[x.p.groupe] || '#9a8f84', ini: ini(x.p.nom) },
+          prendre: this.psPrendreRef(r), poser: S.psSel && !this.psVu(E[S.psSel]) ? () => this.psPoser(S.psSel, r) : null }; }),
+    };
+
+    // --- le recadrage
+    common.psCrop = null;
+    if (S.psCrop) {
+      const C = S.psCrop, e = E[C.cle];
+      const o = e ? ((e.occupants || []).find(x => x.periodes.join() === (C.periodes || []).join()) || this.psVu(e)) : null;
+      common.psCrop = { img: this.psImage(o), style: this.psImgStyle(C), nom: o ? o.nom + ' — ' + this.psMomentNom(o.periodes) : '', s: C.s,
+        pd: this.psCropPd(), zoom: ev => this.setState({ psCrop: Object.assign({}, this.state.psCrop, { s: Math.max(1, Math.min(4, Number(ev.target.value) || 1)) }) }),
+        plus: () => this.setState({ psCrop: Object.assign({}, C, { s: Math.min(4, Math.round((C.s + 0.25) * 100) / 100) }) }),
+        moins: () => this.setState({ psCrop: Object.assign({}, C, { s: Math.max(1, Math.round((C.s - 0.25) * 100) / 100) }) }),
+        enreg: () => this.psCropEnreg(), fermer: () => this.setState({ psCrop: null }) };
+    }
+
+    // --- le tableau par section
+    common.psTableau = [];
+    for (let s = 1; s <= L.sections; s++) {
+      const z = zoneDe(s);
+      if (caisse(s)) { common.psTableau.push({ s, zone: 'Caisse', pastille: 'var(--color-text)', caisse: true, cellules: [], total: '' }); continue; }
+      // Chaque produit de l'emplacement, avec ses moments et sa quantité.
+      const cells = ['e3', 'e2', 'e1b', 'e1a'].map(n => { const e = E[s + '|' + n]; if (!e) { return { off: true }; }
+        const occ = e.occupants || [];
+        return { cle: e.cle, vide: !occ.length, occ: occ.map((o, i) => ({ nom: o.nom || '', tags: tags(o.periodes), journee: o.journee,
+          qte: o.qte == null ? '' : String(o.qte).replace('.', ','), id: 'psq-' + s + '-' + n + '-' + i, setQte: this.psQte(e.cle, o.periodes) })) }; });
+      // Le total de la section : ce qu'elle contient au moment regardé (en « toute la journée », le produit principal de chaque emplacement).
+      const tot = ps.emplacements.filter(e => e.section === s).reduce((a, e) => { const o = this.psVu(e); return a + (o && o.qte > 0 ? o.qte : 0); }, 0);
+      common.psTableau.push({ s, zone: z.nom, pastille: fill(z) + (z.mat === 'mortex' ? ';border:1px solid var(--color-border-secondary)' : ''), cellules: cells, total: tot ? String(Math.round(tot * 100) / 100).replace('.', ',') : '' });
+    }
+
+    // --- la vue de dessus : mêmes largeurs, profondeurs à l'échelle (66 px pour 30 cm)
+    const SC = 66 / 30;
+    const segs = [{ caisse: true, n: (L.caisse || []).length }].concat(Z.map((z, i) => Object.assign({}, z, { n: z.a - z.de + 1 - (i === 0 ? (L.caisse || []).length : 0) })));
+    common.psDessus = [['e3', 'Étage 3 · 10 cm', 10], ['e2', 'Étage 2 · 20 cm', 20], ['e1', 'Étage 1 · 60 cm', 60]].map(([k, nom, cm]) => ({
+      nom, h: Math.round(cm * SC),
+      segs: segs.map(z => {
+        const on = z.caisse ? k === 'e1' : (k === 'e1' || (z.type === 'sec' && z.mat !== 'bois'));
+        const w = z.n * 66 + (z.n - 1) * 2;
+        return { w, on, caisse: !!z.caisse, fond: z.caisse ? 'var(--color-text)' : (on ? fill(z) : 'transparent'), encre: z.caisse ? '#fff' : ink(z),
+          nom: z.caisse ? 'Caisse' : (k === 'e1' && on ? z.nom : ''), n: z.n, grille: k === 'e1' && on && !z.caisse, bord: on };
+      }),
+    }));
+    common.psDessusEchelle = segs.map(z => ({ w: z.n * 66 + (z.n - 1) * 2, t: (z.n * 30) + ' cm' }));
+
+    // --- les rotations
+    if (vue === 'rotations') { this.valsPsRotations(common, { E, zoneDe, vignette, fill, ink, nf1, nf2, esc0, L }); }
   }
-  plAjouter(type, parentId, nom, champ){
-    const ids = { plNZone: 'pl-nzone', plNMeuble: 'pl-nmeuble' };
-    const v = String(this.plLire(ids[champ] || '', nom) || '').trim();
-    if (!v) { this.notify('Donnez un nom avant d’ajouter.'); return; }
-    write(this.source, 'POST', '/planogramme/' + type, { nom: v, parentId })
-      .then(r => {
-        if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
-        // Une zone créée devient la zone REGARDÉE. Sans cela, le meuble
-        // suivant s'ajoutait à la zone restée affichée — mesuré : deux
-        // « Gondole A » atterries dans « Tartes » au lieu du comptoir voulu.
-        const suite = { [champ]: '' };
-        if (type === 'zone' && r.id) { suite.plZone = r.id; suite.plMeubleSel = null; }
-        this.setState(suite);
-        this.plCharge(true);
-        this.notify(type === 'zone' ? 'Zone « ' + v + ' » créée' : 'Meuble « ' + v + ' » créé');
+
+  valsPsRotations(common, u){
+    const S = this.state, D = this.D;
+    this.psRotCharge();
+    const R = (D.psRot || {})[this.psRotCle()];
+    const shop = S.psRotShop || 'reseau', jours = S.psRotJours || 14;
+    const mags = (D.stores || []).filter(s => s && s.id != null);
+    const court = n => { const m = String(n || '').match(/-\s*([^-]+)$/); return m ? m[1].trim() : String(n || ''); };
+    common.psRot = {
+      chargement: !R, erreur: !!(R && R.erreur),
+      magasins: [{ id: 'reseau', nom: 'Réseau' }].concat((R && R.magasins && shop === 'reseau' ? R.magasins.map(m => ({ id: m.id, nom: m.court })) : mags.map(m => ({ id: String(m.id), nom: court(m.nom) })))).map(m => ({ nom: m.nom, on: String(m.id) === String(shop), go: () => this.setState({ psRotShop: String(m.id), psRotSel: null }) })),
+      periodes: [7, 14, 30].map(n => ({ nom: n + ' jours', on: n === jours, go: () => this.setState({ psRotJours: n, psRotSel: null }) })),
+      simuler: { on: !!S.psRotPlan, go: () => this.setState({ psRotPlan: !S.psRotPlan }) },
+      echelle: this.psEchelle().map(e => ({ fond: e[1], t: e[3] })),
+    };
+    if (!R || R.erreur) { return; }
+    const X = common.psRot;
+    const JC = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'];
+    const jl = j => { const d = new Date(j + 'T12:00:00'); return JC[d.getDay()] + ' ' + d.getDate(); };
+    X.periodeTxt = jl(R.du) + ' → ' + jl(R.au) + ' · moyenne par jour ouvert';
+    X.simulation = !!R.simulation;
+    X.sansQ = (R.sansQuantite || []).length;
+    const zoneDe = u.zoneDe;
+    const nomsSec = s => ['e3', 'e2', 'e1b', 'e1a'].map(n => u.E[s + '|' + n]).filter(e => e && e.occupants).flatMap(e => e.occupants.map(o => o.nom + (o.journee ? '' : ' (' + this.psMomentNom(o.periodes) + ')'))).join(' · ');
+    const secs = []; for (let s = 1; s <= u.L.sections; s++) { if ((u.L.caisse || []).indexOf(s) < 0) { secs.push(s); } }
+    const coul = v => this.psCouleur(v);
+    const f1 = v => v == null ? '—' : u.nf1(v), f2 = v => v == null ? '—' : u.nf2(v);
+
+    if (shop !== 'reseau') {
+      const M = R.magasins[0]; if (!M) { X.vide = 'Aucun relevé pour ce magasin.'; return; }
+      X.un = true;
+      const secM = M.sections || {};
+      const vals = secs.map(s => ({ s, v: (secM[s] || {}).moyenne })).filter(x => x.v != null);
+      const vite = vals.length ? vals.reduce((a, b) => b.v > a.v ? b : a) : null;
+      const lent = vals.length ? vals.reduce((a, b) => b.v < a.v ? b : a) : null;
+      const EM = M.emplacements || {};
+      let dort = 0, nE = 0; Object.values(EM).forEach(e => { if (e.rotation != null) { nE++; if (e.rotation < 0.25) { dort++; } } });
+      X.tuiles = [
+        ['Rotation du comptoir', f2(M.comptoir), 'par jour, sur ' + (M.ouverts || []).length + ' jour(s) ouvert(s) lu(s)'],
+        ['La plus rapide', vite ? 'S' + vite.s + ' · ' + f1(vite.v) : '—', vite ? zoneDe(vite.s).nom + ' — ' + nomsSec(vite.s) : ''],
+        ['La plus lente', lent ? 'S' + lent.s + ' · ' + f2(lent.v) : '—', lent ? zoneDe(lent.s).nom + ' — ' + nomsSec(lent.s) : ''],
+        ['Emplacements qui dorment', dort + ' / ' + nE, 'moins de 0,25 rotation par jour : quantité à réduire ou produit à déplacer'],
+        ['Vendu hors comptoir', M.horsComptoir == null ? '—' : f1(M.horsComptoir) + ' %', 'des unités vendues au comptoir : produits absents du plan'],
+      ];
+      X.attente = [(M.sansB2b || []).length ? (M.sansB2b.length + ' jour(s) attendent la part des clients pro (relevée au cron, chaque heure)') : '',
+        (M.nonLus || []).length ? (M.nonLus.length + ' jour(s) sans relevé des ventes') : ''].filter(Boolean).join(' · ');
+      // la carte : la face du comptoir, chaque emplacement coloré
+      X.carte = [['e3', 'Étage 3'], ['e2', 'Étage 2'], ['e1b', 'Étage 1 arrière'], ['e1a', 'Étage 1 avant']].map(([n, nom]) => ({
+        nom, cases: Array.from({ length: u.L.sections }, (_, i) => {
+          const s = i + 1;
+          if ((u.L.caisse || []).indexOf(s) >= 0) { return n.startsWith('e1') ? { caisse: true, t: n === 'e1b' ? 'CAISSE' : '' } : { hach: true }; }
+          const e = u.E[s + '|' + n];
+          if (!e) { return { hach: true }; }
+          if (!e.ref) { return { vide: true }; }
+          const r = (EM[s + '|' + n] || {}).rotation;
+          const [f, c] = coul(r);
+          return { t: f1(r), fond: f, encre: c, titre: e.nom + (e.qte > 0 ? ' · ×' + e.qte : ' · quantité à régler') };
+        }) }));
+      X.bandes = (() => { const b = []; for (let s = 1; s <= u.L.sections; s++) { const z = zoneDe(s), l = b[b.length - 1]; if (l && l.id === z.id) { l.n++; } else { b.push({ id: z.id, nom: z.nom, n: 1, fond: u.fill(z), encre: u.ink(z), bord: z.mat === 'mortex' }); } } return b.map(x => Object.assign(x, { w: x.n * 41 + (x.n - 1) * 2 })); })();
+      X.jours = (R.jours || []).map(j => ({ t: jl(j) }));
+      const ferme = new Set(M.fermes || []), nonLu = new Set((M.nonLus || []).concat(M.sansB2b || []));
+      let zc = null;
+      X.lignes = [];
+      secs.forEach(s => {
+        const z = zoneDe(s);
+        if (!zc || zc !== z.id) { zc = z.id; X.lignes.push({ zone: true, nom: z.nom, fond: u.fill(z) }); }
+        const sm = secM[s] || {};
+        const [mf, mc] = coul(sm.moyenne);
+        X.lignes.push({ s: 'S' + s, produits: nomsSec(s), cap: sm.capacite ? String(sm.capacite).replace('.', ',') : '—',
+          cases: (R.jours || []).map(j => { const v = (sm.jours || {})[j]; if (ferme.has(j)) { return { t: 'fermé', fond: 'transparent', encre: 'var(--color-text-muted)' }; } if (nonLu.has(j)) { return { t: '·', fond: 'transparent', encre: 'var(--color-text-muted)', titre: 'jour pas encore relevé (ou part pro en attente)' }; } const [f, c] = coul(v); return { t: f1(v), fond: f, encre: c }; }),
+          moy: f2(sm.moyenne), mf, mc });
       });
-  }
-  /**
-   * Un niveau naît avec ses emplacements : les créer un par un ferait douze
-   * saisies pour une étagère.
-   */
-  /**
-   * Un niveau de plus sur un meuble EXISTANT.
-   *
-   * Ni nom ni nombre à saisir : le niveau suit ce que le meuble fait déjà —
-   * même nombre d'emplacements que son dernier niveau, nom numéroté à la
-   * suite. Redemander ces deux valeurs à chaque ajout dupliquait l'assistant,
-   * qui les a posées une fois pour toutes.
-   */
-  plAjouterNiveau(meubleId){
-    const pl = this.D.plano || {};
-    let meuble = null;
-    (pl.zones || []).forEach(z => (z.meubles || []).forEach(m => { if (m.id === meubleId) { meuble = m; } }));
-    const niveaux = (meuble && meuble.niveaux) || [];
-    const dernier = niveaux[niveaux.length - 1];
-    const slots = dernier ? (dernier.slots || []).length : 4;
-    const nom = 'Niveau ' + (niveaux.length + 1);
-    write(this.source, 'POST', '/planogramme/niveau', { nom, parentId: meubleId, slots })
-      .then(r => {
-        if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
-        this.plCharge(true);
-        this.notify('« ' + nom + ' » ajouté' + (slots ? ' avec ' + slots + ' emplacement(s)' : ''));
+      return;
+    }
+
+    // --- le réseau : magasins × sections, et le détail d'une case
+    X.un = false;
+    const zs = []; let zc = null;
+    secs.forEach(s => { const z = zoneDe(s); if (zc !== z.id) { zc = z.id; zs.push({ nom: z.nom, n: 0, fond: u.fill(z), encre: u.ink(z), bord: z.mat === 'mortex' }); } zs[zs.length - 1].n++; });
+    X.zones = zs; X.secs = secs.map(s => 'S' + s);
+    const sel = S.psRotSel;
+    X.matrice = (R.magasins || []).map(M => ({ nom: M.court, comptoir: f2(M.comptoir), cf: coul(M.comptoir), hors: M.horsComptoir == null ? '' : f1(M.horsComptoir) + ' %',
+      cases: secs.map(s => { const v = ((M.sections || {})[s] || {}).moyenne; const [f, c] = coul(v); return { t: f1(v), fond: f, encre: c, on: sel && sel.shop === M.id && sel.s === s, go: () => this.setState({ psRotSel: { shop: M.id, s } }) }; }) }));
+    X.reseau = { comptoir: f2((R.reseau || {}).comptoir), cases: secs.map(s => { const v = ((R.reseau || {}).sections || {})[s]; const [f, c] = coul(v); return { t: f1(v), fond: f, encre: c }; }) };
+    X.detail = null;
+    const cible = sel ? (R.magasins || []).find(M => M.id === sel.shop) : null;
+    if (cible) {
+      const s = sel.s, sm = (cible.sections || {})[s] || {};
+      const EM = cible.emplacements || {};
+      // Une ligne par produit posé : un emplacement partagé entre deux moments en donne deux.
+      const lignes = [];
+      ['e3', 'e2', 'e1b', 'e1a'].filter(n => EM[s + '|' + n]).forEach(n => {
+        const e = EM[s + '|' + n], pe = u.E[s + '|' + n] || {};
+        (e.blocs && e.blocs.length ? e.blocs : [e]).forEach(bl => {
+          const vals = (R.jours || []).map(j => (bl.jours || {})[j]);
+          const mx = Math.max(0.5, ...vals.filter(v => v != null));
+          const po = (pe.occupants || []).find(o => o.ref === bl.ref) || null;
+          lignes.push({ nom: bl.nom, niveau: ({ e3: 'Étage 3 · top picking', e2: 'Étage 2', e1b: 'Étage 1 · arrière', e1a: 'Étage 1 · avant' })[n] + ' · ' + this.psMomentNom(bl.periodes) + (bl.groupe ? ' · ' + bl.groupe : ''),
+            qte: bl.qte == null ? '—' : String(bl.qte).replace('.', ','), vendus: f1(bl.vendusMoyen), rot: f2(bl.rotation), r: bl.rotation,
+            v: po ? u.vignette(po) : { img: null, fond: '#9a8f84', ini: '·', style: '' },
+            barres: vals.map(v => v == null ? { h: 2, fond: 'var(--color-border-secondary)' } : { h: Math.max(2, Math.round(34 * v / mx)), fond: coul(v)[0] }) });
+        });
       });
-  }
-  plAjouterSlots(niveauId){
-    write(this.source, 'POST', '/planogramme/emplacement', { niveauId, nombre: 1 })
-      .then(r => { if (!r || r.ok === false) { this.notify('Non ajouté : ' + ((r && r.error) || 'échec')); return; }
-        this.plCharge(true); });
-  }
-  /** Renomme depuis le champ en ligne — au changement, pas à chaque frappe. */
-  plRenommer(type, id, nom){
-    const v = String(nom || '').trim();
-    if (!v) { this.plCharge(true); return; }   // champ vidé : on remet l'ancien nom
-    write(this.source, 'PATCH', '/planogramme/' + type + '/' + id, { nom: v })
-      .then(r => { if (!r || r.ok === false) { this.notify('Non renommé : ' + ((r && r.error) || 'échec')); }
-        this.plCharge(true); });
-  }
-  /**
-   * Supprimer un élément de structure. Le serveur REFUSE d'abord s'il porte des
-   * références ; on demande alors confirmation en disant combien seraient
-   * retirées du comptoir, plutôt que de forcer d'emblée.
-   */
-  plSupprimer(type, id, nom){
-    write(this.source, 'DELETE', '/planogramme/' + type + '/' + id, {})
-      .then(r => {
-        if (r && r.ok !== false) { this.setState({ plCible: null }); this.plCharge(true); return; }
-        const msg = (r && r.error) || 'échec';
-        if (r && r.status === 409) {
-          if (!window.confirm('« ' + nom + ' » : ' + msg + '.\n\nSupprimer quand même ?')) { return; }
-          write(this.source, 'DELETE', '/planogramme/' + type + '/' + id, { force: 1 })
-            .then(r2 => { if (!r2 || r2.ok === false) { this.notify('Non supprimé : ' + ((r2 && r2.error) || 'échec')); return; }
-              this.setState({ plCible: null }); this.plCharge(true); });
-          return;
-        }
-        this.notify('Non supprimé : ' + msg);
-      });
+      const notes = lignes.filter(l => l.r != null).sort((a, b) => b.r - a.r).map(l => l.r >= 2
+        ? { cls: 'r', txt: '« ' + l.nom + ' » se vide ' + f1(l.r) + ' fois par jour : ' + l.vendus + ' vendus pour ' + l.qte + ' au plan. Réassort avant midi, ou un deuxième emplacement.' }
+        : (l.r < 0.25 ? { cls: 'o', txt: '« ' + l.nom + ' » : ' + (Number(String(l.vendus).replace(',', '.')) < 0.05 ? 'aucune vente sur la période' : l.vendus + ' vendu(s) par jour') + ' pour ' + l.qte + ' en rayon. Réduire la quantité, ou libérer la place pour un produit qui tourne.' }
+          : { cls: 'g', txt: '« ' + l.nom + ' » tourne ' + f1(l.r) + ' fois par jour : ' + l.qte + ' au plan tiennent la journée.' }));
+      X.detail = { titre: 'Section ' + s + ' · ' + zoneDe(s).nom, sous: cible.court + ' · ' + f2(sm.moyenne) + ' rotation par jour · capacité ' + (sm.capacite ? String(sm.capacite).replace('.', ',') : '—') + ' unités',
+        lignes, notes, autres: (R.magasins || []).filter(M => M.id !== cible.id).map(M => M.court + ' ' + f2(((M.sections || {})[s] || {}).moyenne)).join(' · '),
+        fermer: () => this.setState({ psRotSel: null }) };
+    }
   }
 
   caCharge(){

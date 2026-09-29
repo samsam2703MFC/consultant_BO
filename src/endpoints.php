@@ -1049,8 +1049,9 @@ function ep_prod_catalogue(): array
         $parRef[(string) $r['ref']] = $r;
         if ($r['pwa_id'] !== null) { $enrich[(int) $r['pwa_id']] = $r; }
     }
-    $plano = [];
-    foreach (Db::rows('SELECT * FROM pla_placement') as $p) { $plano[(string) $p['ref']] = $p; }
+    // Où chaque produit est posé : le planogramme STANDARD (zone, « Section N »,
+    // étage). L'ancienne table des placements n'est plus lue.
+    $plano = function_exists('psPlacements') ? psPlacements() : [];
 
     $reel = ep_prod_catalogue_reel($enrich, $parRef, $plano);
     if ($reel !== null) { return $reel; }
@@ -5147,7 +5148,9 @@ function ep_prod_produit_fiche(): array
         } catch (PDOException $e) { /* table de caisse absente : fiche réduite */ }
     }
 
-    $n = Db::row('SELECT * FROM pla_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]);
+    // La consigne de présentation de l'ancien planogramme, si elle existe encore.
+    try { $n = Db::row('SELECT * FROM pla_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]); }
+    catch (PDOException $e) { $n = null; }
     if ($n !== null) {
         $out['note'] = ['texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
             'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],

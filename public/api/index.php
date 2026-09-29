@@ -40,6 +40,7 @@ require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
+require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -219,9 +220,16 @@ function route(string $method, string $path): mixed
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
             $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
-            $path === '/planogramme'                   => ep_planogramme(),
-            $path === '/planogramme/photos'            => ep_plano_photos(),
-            $path === '/planogramme/montage'           => ep_plano_montage(),
+            // Le planogramme STANDARD (un plan pour le réseau) ; les anciennes
+            // adresses rendent désormais le même plan.
+            $path === '/planogramme'                   => ep_plano_std(),
+            $path === '/planogramme/standard'          => ep_plano_std(),
+            $path === '/planogramme/photos'            => ep_plano_std_photos(),
+            $path === '/planogramme/standard/photos'   => ep_plano_std_photos(),
+            $path === '/planogramme/standard/ventes'   => ep_plano_std_ventes(),
+            $path === '/planogramme/rotations'         => ep_plano_std_rotations(),
+            $path === '/planogramme/montage'           => ep_plano_std_montage(),
+            $path === '/planogramme/standard/montage'  => ep_plano_std_montage(),
             $path === '/fonds'                         => ep_fonds(),
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
@@ -457,20 +465,12 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/admin/marketing-restaure') { return wr_mar_restaure(); }
     if ($method === 'POST' && $path === '/admin/erp-token') { return wr_erp_token(); }
     if ($method === 'PUT' && preg_match('#^/production/produit/([\w-]+)$#', $path, $m)) { return wr_prod_produit($m[1]); }
-    if ($method === 'PUT' && preg_match('#^/production/planogramme/([\w-]+)$#', $path, $m)) { return wr_prod_planogramme($m[1]); }
-    // --- planogramme : structure du comptoir, placements, consignes
-    if ($method === 'POST' && preg_match('#^/planogramme/(zone|meuble|niveau)$#', $path, $m)) { return wr_plano_creer($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/planogramme/(zone|meuble|niveau)/(\d+)$#', $path, $m)) { return wr_plano_patch($m[1], (int) $m[2]); }
-    if ($method === 'DELETE' && preg_match('#^/planogramme/(zone|meuble|niveau)/(\d+)$#', $path, $m)) { return wr_plano_supprimer($m[1], (int) $m[2]); }
-    if ($method === 'POST' && $path === '/planogramme/emplacement') { return wr_plano_slots(); }
-    if ($method === 'DELETE' && preg_match('#^/planogramme/emplacement/(\d+)$#', $path, $m)) { return wr_plano_slot_supprimer((int) $m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/planogramme/emplacement/(\d+)$#', $path, $m)) { return wr_plano_slot_maj((int) $m[1]); }
-    if ($method === 'POST' && preg_match('#^/planogramme/referentiel/(formats|contenants)$#', $path, $m)) { return wr_plano_referentiel_creer($m[1]); }
-    if ($method === 'DELETE' && preg_match('#^/planogramme/referentiel/(formats|contenants)/(\d+)$#', $path, $m)) { return wr_plano_referentiel_supprimer($m[1], (int) $m[2]); }
-    if ($method === 'PUT' && preg_match('#^/planogramme/placement/([\w-]+)$#', $path, $m)) { return wr_plano_placer($m[1]); }
-    if ($method === 'PUT' && $path === '/planogramme/note') { return wr_plano_note(); }
-    if ($method === 'POST' && $path === '/planogramme/photo') { return wr_plano_photo(); }
-    if ($method === 'POST' && $path === '/planogramme/montage') { return wr_plano_montage(); }
+    // --- planogramme standard : un plan pour le réseau, un produit par emplacement, l'histoire gardée
+    if ($method === 'PUT' && $path === '/planogramme/standard/emplacement') { return wr_plano_std_emplacement(); }
+    if ($method === 'POST' && $path === '/planogramme/standard/photo') { return wr_plano_std_photo(); }
+    if ($method === 'PUT' && $path === '/planogramme/standard/zone') { return wr_plano_std_zone(); }
+    if ($method === 'POST' && $path === '/planogramme/standard/vider') { return wr_plano_std_vider(); }
+    if ($method === 'POST' && ($path === '/planogramme/standard/montage' || $path === '/planogramme/montage')) { return wr_plano_std_montage(); }
     // --- fonds & redevances : le cockpit ÉCRIT dans le module marketing, qui
     //     reste le seul tenant du grand livre. Aucune écriture locale.
     if ($method === 'POST' && $path === '/fonds/mouvement') { return wr_fonds_mouvement(null); }

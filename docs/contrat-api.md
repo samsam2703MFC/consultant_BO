@@ -417,6 +417,92 @@ plus `proJours` (jours ouverts de l'étendue), `proJoursLus` et `proComplet` : l
 gravés, complétés par au plus 30 listes lues en parallèle, les plus récentes d'abord) ; le comptoir et la part ne sont
 rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand rien n'est lu.
 
+### `/planogramme/standard` — le comptoir standard : un seul plan, ses moments, ses rotations
+
+Un seul plan pour tous les magasins. La géométrie est fixe (`src/plano_std.php`) : 25 sections de 30 cm, sections 1–2 =
+caisse ; zones `z0` sec mortex blanc (1–8), `z1` frigo (9–12), `z2` sec mortex (13–16), `z3` frigo (17–20), `z4` sec
+table bois (21–25) ; niveaux `e3` top picking, `e2`, `e1b` étage 1 arrière, `e1a` étage 1 avant (les frigos et la table
+bois n'ont que l'étage 1) — 66 emplacements. Les produits viennent du catalogue (API panel) ; un emplacement porte **un
+produit par moment** de la journée : `matin` (jusqu'à 10 h), `midi` (11–14 h), `aprem` (dès 15 h), les mêmes heures que les
+ventes du dashboard. Un produit « toute la journée » tient les trois moments.
+
+`GET /planogramme/standard?date=2026-09-20` (sans `date` : aujourd'hui ; `GET /planogramme` est un alias) :
+
+```json
+{ "date": "2026-09-29",
+  "layout": { "sections": 25, "largeurCm": 30, "caisse": [1, 2],
+              "zones": [ { "id": "z1", "nom": "Frigo sandwichs", "nomDefaut": "Frigo", "type": "frigo", "mat": null, "de": 9, "a": 12 } ],
+              "niveaux": [ { "k": "e3", "nom": "Étage 3", "court": "É3", "sub": "Top picking · 10 cm", "cm": 10 } ],
+              "periodes": [ { "k": "matin", "nom": "Matin", "court": "M", "de": 0, "a": 10 } ] },
+  "emplacements": [ { "cle": "3|e2", "section": 3, "niveau": "e2", "zone": "z0", "journee": false, "moments": 2,
+      "occupants": [ { "periodes": ["matin", "aprem"], "journee": false, "ref": "1610006", "nom": "Croissant", "groupe": "Viennoiserie",
+                       "qte": 24, "photo": null, "crop": null, "du": "2026-09-29", "par": "CEO", "le": "2026-09-29 19:12:15" },
+                     { "periodes": ["midi"], "journee": false, "ref": "1620004", "nom": "Mini - Rhubarbe", "qte": 18, "…": "…" } ],
+      "ref": "1610006", "nom": "Croissant", "qte": 24, "…": "le produit principal (celui qui tient le plus de moments)" } ],
+  "totaux": { "emplacements": 66, "remplis": 65, "partages": 1, "sansQuantite": 2, "unites": 924 },
+  "modifie": { "le": "2026-09-29 19:12:20", "par": "CEO" }, "enVigueurDepuis": "2026-09-29", "source": "…" }
+```
+
+`qte` est ce que l'emplacement contient plein ; c'est elle qui fait les rotations. `photo` est une photo déposée au
+cockpit (sinon la photo de la recette du panel), `crop` son recadrage carré `{x, y, s}`.
+
+**Écrire** (chaque écriture rend le plan complet, comme le `GET`) :
+
+| Route | Corps | Effet |
+|---|---|---|
+| `PUT /planogramme/standard/emplacement` | `{section, niveau, periodes?, ref, nom?, groupe?, qte?, crop?}` | pose `ref` sur les moments `periodes` (`"journee"` ou absent = les trois, sinon `["midi"]`, `["matin","aprem"]`…). Les produits déjà là cèdent ces moments et gardent les autres ; un produit déjà posé ailleurs n'est pas retiré. |
+| idem | `{section, niveau, periodes?, qte?, crop?}` sans `ref` | règle le produit qui tient exactement ces moments, ou le seul qui les croise ; `409` si l'emplacement est ambigu ou vide. |
+| idem | `{section, niveau, periodes?, ref: null}` | vide l'emplacement sur ces moments. |
+| `POST /planogramme/standard/photo` | `{section, niveau, periodes?, data}` | photo en data-URL (jpeg, png, webp, 6 Mo) ; `data: ""` revient à la photo du panel. |
+| `PUT /planogramme/standard/zone` | `{zone: "z1", nom}` | renomme une zone (vide = nom par défaut). |
+| `POST /planogramme/standard/vider` | `{confirmer: true}` | vide tout le plan (historique gardé). |
+
+**Historique.** Chaque ligne a `du` / `au`. Changer de produit ou de quantité ferme la ligne en cours à la veille
+(`au`) et en ouvre une nouvelle datée du jour ; une ligne ouverte le jour même est modifiée sur place. La photo et le
+recadrage se modifient sur place. `?date=` relit le plan d'un jour passé ; les rotations d'un jour lisent le plan de ce
+jour-là.
+
+`GET /planogramme/standard/photos?refs=1610006,1620004` — la photo de recette du panel par référence, téléchargée une
+fois sous `uploads/plano/panel/` : `{ "photos": { "1610006": { "url": "uploads/plano/panel/1610006.jpg", "nom": "…" } },
+"restants": 0 }`. 24 références par appel ; `restants` dit combien il en reste à télécharger.
+
+`GET /planogramme/standard/ventes?jours=14` — les unités vendues au comptoir par référence sur le réseau (le sélecteur de
+produits les classe par ventes).
+
+**Les rotations.** `GET /planogramme/rotations?shop=2&jours=7&au=2026-09-28` (`shop=reseau` pour tous les magasins ;
+`jours` 7, 14 ou 30 ; `au` par défaut hier) :
+
+```json
+{ "du": "2026-09-22", "au": "2026-09-28", "jours": ["2026-09-22", "…"], "simulation": false, "appels": 0,
+  "periodes": [ { "k": "matin", "nom": "Matin", "court": "M", "de": 0, "a": 10 } ], "sansQuantite": ["8|e3"],
+  "magasins": [ { "id": "2", "nom": "Atelier by Berlo - Corbais", "court": "Corbais",
+      "ouverts": ["2026-09-22"], "nonLus": [], "fermes": [], "sansB2b": ["2026-09-26"], "comptoir": 0.74, "horsComptoir": 29.5,
+      "sections": { "5": { "zone": "z0", "capacite": 74, "jours": { "2026-09-22": 0.85, "2026-09-26": null }, "moyenne": 1.04 } },
+      "emplacements": { "3|e2": { "ref": "1610006", "qte": 24, "vendus": { "2026-09-22": 31 }, "vendusMoyen": 29.4, "rotation": 1.62,
+          "blocs": [ { "ref": "1610006", "periodes": ["matin", "aprem"], "journee": false, "qte": 24, "jours": { "2026-09-22": 22 },
+                       "vendusMoyen": 21.0, "rotation": 0.88 } ] } } } ],
+  "reseau": { "sections": { "5": 1.04 }, "comptoir": 0.74 }, "source": "…" }
+```
+
+- **Ventes comptées.** Les unités vendues au comptoir, relevé horaire du panel (`svP`). Le B2B est retiré : les unités
+  des tickets pro (`pb` dans le relevé) sont ôtées produit par produit, au prorata de chaque heure. Un jour dont le pro
+  n'est pas encore lu (`sansB2b`) est laissé hors de la moyenne ; le cron le complète (`svB2bMoisson`, « produits pro »
+  dans la sortie de `svCron`).
+- **Rotation d'un produit** = unités vendues pendant les heures de ses moments ÷ `qte`. Celle d'un emplacement =
+  la somme de ses produits ; celle d'une section = la moyenne des emplacements pondérée par leur capacité
+  (`qte` × moments tenus / 3) ; celle du comptoir, idem sur tout le plan.
+- **Plan lu.** Chaque jour se calcule avec le plan en vigueur ce jour-là. Si aucun plan n'existait sur la fenêtre,
+  le plan actuel sert de simulation (`simulation: true`) ; `plan=actuel` force ce mode.
+- `comptoir` : la rotation moyenne du comptoir du magasin sur ses jours lus (au réseau : la moyenne des magasins) ;
+  `horsComptoir` : la part (en %) des unités vendues au comptoir qui sont des produits absents du plan.
+
+**Le montage en magasin (tablette).** La page `planogramme/?shop=2` montre le plan zone par zone au moment de la journée
+(choisi à l'heure de la tablette). `GET /planogramme/standard/montage?shop=2&date=2026-09-29` →
+`{ "zones": { "z0": { "photo": "uploads/plano/montage/…jpg", "auteur": "Tablette", "quand": "2026-09-29 07:42:10" } } }` ;
+`POST /planogramme/standard/montage` `{shop, zone: "z0", date?, data, auteur?}` pose la photo de la zone montée
+(`data: ""` la retire). La tâche du panel « Photo du comptoir - <zone> » est retrouvée par le nom de la zone.
+`GET /visites/conformite` lit ce plan : emplacements tenus, zones photographiées montées le jour même.
+
 ### `/scoring` — le scoring du trimestre : quatre postes de cinq points par magasin
 
 `GET /scoring?trimestre=2026-T3` (sans `trimestre` : le trimestre en cours) :

@@ -1,10 +1,10 @@
-/* La vue tablette du planogramme.
+/* La vue tablette du comptoir standard.
  *
- * Du plus large au plus proche : les comptoirs (zones) › un comptoir et ses
- * meubles › un meuble en grand, niveau par niveau › la fiche d'un produit.
- * À chaque niveau, le « pourquoi » : la note posée dans le cockpit sur la
- * zone, le meuble, le niveau ou le produit. Une fois le comptoir dressé, on
- * pousse sur « comptoir monté » : la tablette prend la photo, le cockpit la
+ * Le même plan pour tous les magasins, lu zone par zone : les cinq zones du
+ * comptoir › une zone vue de face, étage par étage › la fiche d'un produit.
+ * Le moment de la journée (matin, midi, après-midi) se choisit tout seul à
+ * l'heure de la tablette : on voit ce qui doit être en place maintenant.
+ * Une fois une zone dressée, « Zone montée » prend la photo ; le cockpit la
  * garde pour la journée, à côté de la tâche « Photo du comptoir » du panel.
  *
  * Tout est relatif : la page vit sous /planogramme/, l'API sous ../api/cockpit.
@@ -15,13 +15,15 @@
   const $ = document.getElementById('pg');
   const q = new URLSearchParams(location.search);
   const AUJ = (function () { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
-  const S = { shop: q.get('shop') || '4', vue: 'zones', zone: null, meuble: null, fiche: null, zoom: null,
-    periode: q.get('periode') || periodeAuto(), pl: null, photos: {}, taches: [], montage: {}, err: null, enCours: false, envoi: false };
+  const S = { shop: q.get('shop') || '4', zone: q.get('zone') || null, fiche: null, zoom: null, moment: q.get('moment') || null,
+    ps: null, photos: {}, taches: [], nomShop: '', montage: {}, err: null, enCours: false, envoi: false };
+  const NIV = { e3: 'Étage 3', e2: 'Étage 2', e1b: 'Étage 1 · arrière', e1a: 'Étage 1 · avant' };
+  const GC = { 'Viennoiserie': '#D4A04A', 'Boulangerie': '#A87B4F', 'Pâtisserie': '#C46A7A', 'Tartes': '#B5654A', 'Tartes · Pâtisserie': '#B5654A', 'Biscuiterie': '#B08850', 'Épicerie': '#7A6FA8', 'Traiteur': '#5E8C61', 'Quiches': '#9A7B3C', 'Fêtes & Occasions': '#8D1D2C' };
 
-  function periodeAuto() { const h = new Date().getHours(); return h < 11 ? 'matin' : (h < 14 ? 'midi' : 'apresmidi'); }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
-  const hh = q => q ? q.slice(11, 16) : '';
+  const hh = x => x ? String(x).slice(11, 16) : '';
+  const ini = n => String(n || '?').split(/[\s\-–·]+/).filter(w => w && /^[A-Za-zÀ-ÿ0-9]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+  const qte = v => v == null ? '' : String(v).replace('.', ',');
 
   function lire(path) {
     return fetch(API + path, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
@@ -35,151 +37,173 @@
   function charger() {
     S.enCours = true; S.err = null; rendre();
     Promise.all([
-      lire('/planogramme?shop=' + encodeURIComponent(S.shop)),
-      lire('/planogramme/photos').catch(() => ({ photos: {} })),
+      lire('/planogramme/standard'),
       lire('/pwa/tasks?date=' + AUJ).catch(() => null),
-      lire('/planogramme/montage?shop=' + encodeURIComponent(S.shop) + '&date=' + AUJ).catch(() => ({ zones: {} })),
-    ]).then(([pl, ph, tk, mo]) => {
-      S.pl = pl; S.photos = (ph && ph.photos) || {};
+      lire('/planogramme/standard/montage?shop=' + encodeURIComponent(S.shop) + '&date=' + AUJ).catch(() => ({ zones: {} })),
+    ]).then(([ps, tk, mo]) => {
+      S.ps = ps;
       const sh = tk && Array.isArray(tk.shops) ? tk.shops.find(x => String(x.shopId || x.id) === String(S.shop)) : null;
       S.taches = sh && Array.isArray(sh.taches) ? sh.taches : [];
+      S.nomShop = sh ? String(sh.nom || sh.name || sh.shop || '') : '';
       S.montage = (mo && mo.zones) || {};
-      // La première zone s'ouvre d'elle-même quand l'URL en nomme une.
-      const z = q.get('zone'); if (z && (pl.zones || []).some(x => String(x.id) === z)) { S.zone = +z; S.vue = 'zone'; }
+      if (!S.moment) { S.moment = momentAuto(); }
+      if (S.zone && !zones().some(z => z.id === S.zone)) { S.zone = null; }
+      photos(refsDuPlan(), 0);
     }).catch(e => { S.err = e.message; }).finally(() => { S.enCours = false; rendre(); });
+  }
+  /** Les photos des recettes du panel, 24 par appel ; le serveur les garde une fois téléchargées. */
+  function photos(refs, essai) {
+    const manque = refs.filter(r => !(r in S.photos)).slice(0, 24);
+    if (!manque.length || essai > 8) { return; }
+    lire('/planogramme/standard/photos?refs=' + manque.map(encodeURIComponent).join(',')).then(d => {
+      Object.assign(S.photos, (d && d.photos) || {});
+      manque.forEach(r => { if (!(r in S.photos)) { S.photos[r] = { url: null }; } });
+      rendre();
+      photos(refs, essai + 1);
+    }).catch(() => { /* les vignettes restent en initiales */ });
   }
 
   /* --- ce que l'on sait --------------------------------------------------- */
-  const zones = () => (S.pl && S.pl.zones) || [];
-  const notes = () => (S.pl && S.pl.notes) || {};
-  const note = (cible, id) => { const n = notes()[cible + ':' + id]; return n && (n.texte || n.photo) ? n : null; };
-  const periodes = () => ((S.pl && S.pl.referentiels && S.pl.referentiels.periodes) || []);
-  const nomPeriode = slug => { const p = periodes().find(x => x.slug === slug); return p ? (p.nom || slug) : slug; };
-  /** Un meuble est là à ce moment s'il n'en déclare aucun, ou s'il déclare celui-ci. */
-  const meubleVisible = m => !S.periode || !(m.periodes || []).length || m.periodes.indexOf(S.periode) >= 0;
-  const occVisible = o => !S.periode || !(o.periodes || []).length || o.periodes.indexOf(S.periode) >= 0;
-  const occupants = s => (s.occupants || []).filter(occVisible);
-  const photoRef = ref => ((notes()['ref:' + ref] || {}).photo ? '../' + notes()['ref:' + ref].photo : null) || ((S.photos[String(ref)] || {}).url || null);
-  const meublesDe = z => (z.meubles || []).filter(meubleVisible);
-  const compte = z => { let s = 0, p = 0; meublesDe(z).forEach(m => (m.niveaux || []).forEach(n => (n.slots || []).forEach(sl => { s++; if (occupants(sl).length) { p++; } }))); return { slots: s, places: p }; };
+  const L = () => (S.ps && S.ps.layout) || {};
+  const zones = () => L().zones || [];
+  const periodes = () => L().periodes || [];
+  const E = () => { const o = {}; ((S.ps && S.ps.emplacements) || []).forEach(e => { o[e.cle] = e; }); return o; };
+  const refsDuPlan = () => [...new Set(((S.ps && S.ps.emplacements) || []).flatMap(e => (e.occupants || []).map(o => String(o.ref))))];
+  /** Le moment de la tablette : mêmes heures que les ventes (matin jusqu'à 10 h, midi 11–14 h, après-midi dès 15 h). */
+  function momentAuto() {
+    const h = new Date().getHours();
+    const p = periodes().find(x => h >= x.de && h <= x.a);
+    return p ? p.k : 'journee';
+  }
+  const nomMoment = k => { const p = periodes().find(x => x.k === k); return p ? p.nom : 'Toute la journée'; };
+  const momentsTxt = per => (!per || per.length >= periodes().length) ? 'toute la journée' : per.map(k => nomMoment(k).toLowerCase()).join(' + ');
+  /** Ce qui doit être en place : le produit du moment ; en « journée », celui qui tient le plus de moments. */
+  function vu(e) {
+    const O = (e && e.occupants) || []; if (!O.length) { return null; }
+    if (S.moment && S.moment !== 'journee') { return O.find(o => o.periodes.indexOf(S.moment) >= 0) || null; }
+    return O.reduce((a, o) => o.periodes.length > a.periodes.length ? o : a);
+  }
+  function image(o) {
+    if (!o) { return null; }
+    if (o.photo) { return '../' + o.photo; }
+    const p = S.photos[String(o.ref)];
+    return p && p.url ? '../' + p.url : null;
+  }
+  function imgStyle(c) {
+    c = c || { x: 0.5, y: 0.5, s: 1 };
+    const px = (100 * c.x).toFixed(1) + '%', py = (100 * c.y).toFixed(1) + '%';
+    return `object-position:${px} ${py};transform:scale(${c.s});transform-origin:${px} ${py}`;
+  }
+  const vignette = o => { const u = image(o); return u ? `<img src="${esc(u)}" alt="" style="${imgStyle(o.crop)}" loading="lazy">` : `<span class="ini" style="background:${GC[o.groupe] || '#9a8f84'}">${esc(ini(o.nom))}</span>`; };
+  const sectionsDe = z => { const out = []; for (let s = z.de; s <= z.a; s++) { out.push(s); } return out; };
+  const estCaisse = s => (L().caisse || []).indexOf(s) >= 0;
+  function compte(z) {
+    const e = E(); let n = 0, p = 0;
+    sectionsDe(z).forEach(s => ['e3', 'e2', 'e1b', 'e1a'].forEach(k => { const x = e[s + '|' + k]; if (x) { n++; if (vu(x)) { p++; } } }));
+    return { n, p };
+  }
   /** La tâche « Photo du comptoir - <zone> » du panel, si elle existe pour ce magasin aujourd'hui. */
   const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   function tacheDe(z) {
     const nz = norm(z.nom); if (!nz) { return null; }
-    return S.taches.find(t => { const nt = norm(t.tache); if (!/^photo du comptoir/.test(nt)) { return false; } const reste = nt.replace(/^photo du comptoir\s*/, ''); const sing = x => x.replace(/s\b/g, ''); if (reste === nz || sing(reste) === sing(nz)) { return true; } return nz.length >= 4 && (reste.indexOf(nz) === 0 || nz.indexOf(reste) === 0); }) || null;
+    return S.taches.find(t => { const nt = norm(t.tache); if (!/^photo du comptoir/.test(nt)) { return false; } const reste = nt.replace(/^photo du comptoir\s*/, ''); const sing = x => x.replace(/s\b/g, ''); if (reste === nz || sing(reste) === sing(nz)) { return true; } return nz.length >= 4 && reste.length >= 4 && (reste.indexOf(nz) === 0 || nz.indexOf(reste) === 0); }) || null;
   }
   const libStatut = t => !t ? null : (t.statut === 'nonRendue' ? ['ko', 'photo à rendre'] : (t.statut === 'aControler' || t.statut === 'aValider' || t.statut === 'notee' ? ['wa', 'photo rendue · à contrôler'] : (t.statut === 'valide' ? ['ok', 'photo validée'] : ['wa', t.statut])));
 
   /* --- rendu -------------------------------------------------------------- */
   function rendre() {
-    let h = '';
-    if (S.vue === 'zones') { h = rendZones(); }
-    else if (S.vue === 'zone') { h = rendZone(); }
-    else if (S.vue === 'meuble') { h = rendMeuble(); }
+    let h = S.zone ? rendZone() : rendZones();
     if (S.fiche) { h += rendFiche(S.fiche); }
     if (S.zoom) { h += `<div class="pg-zoom" data-zoomx="1"><img src="${esc(S.zoom.url)}" alt="">${S.zoom.cap ? `<div class="cap">${esc(S.zoom.cap)}</div>` : ''}</div>`; }
     $.innerHTML = h; brancher();
   }
 
   function top(titre, sous, retour, extra) {
-    return `<div class="pg-top">${retour ? `<span class="pg-ico" data-retour="1" title="Revenir">‹</span>` : `<a class="pg-ico" href="../#/planogramme" title="Revenir au cockpit">✕</a>`}
+    const P = periodes();
+    const auto = S.ps ? momentAuto() : null;
+    return `<div class="pg-top">${retour ? `<span class="pg-ico" data-retour="1" title="Revenir aux zones">‹</span>` : `<a class="pg-ico" href="../#/planogramme" title="Revenir au cockpit">✕</a>`}
       <div class="t">${titre}${sous ? `<small>${sous}</small>` : ''}</div><span style="flex:1"></span>
-      <div class="pg-seg">${periodes().map(p => `<button data-periode="${esc(p.slug)}" class="${S.periode === p.slug ? 'on' : ''}" title="${esc(p.aide || '')}">${esc(p.nom || p.slug)}</button>`).join('')}<button data-periode="" class="${!S.periode ? 'on' : ''}" title="Tous les meubles, quel que soit le moment">Tout</button></div>
-      ${extra || ''}<span class="pg-ico" data-recharger="1" title="Relire">↻</span></div>`;
+      ${P.length ? `<div class="pg-seg">${P.map(p => `<button data-moment="${esc(p.k)}" class="${S.moment === p.k ? 'on' : ''}" title="${p.de}h – ${p.a}h">${esc(p.nom)}${auto === p.k ? ' <i class="mnt">maintenant</i>' : ''}</button>`).join('')}<button data-moment="journee" class="${S.moment === 'journee' ? 'on' : ''}" title="Le produit principal de chaque emplacement">Journée</button></div>` : ''}
+      ${extra || ''}<span class="pg-ico" data-recharger="1" title="Relire le plan">↻</span></div>`;
   }
 
-  function miniMeuble(m) {
-    return `<div class="m">${(m.niveaux || []).map(n => `<div class="lv" style="grid-template-columns:repeat(${Math.max(1, (n.slots || []).length)},1fr)">${(n.slots || []).map(sl => { const o = occupants(sl)[0]; const u = o ? photoRef(o.ref) : null; return `<i class="${o ? (u ? 'ph' : '') : 'v'}" style="${u ? 'background-image:url(' + esc(u) + ')' : ''}"></i>`; }).join('')}</div>`).join('')}</div>`;
-  }
-
-  // Niveau 0 : les comptoirs.
+  // Niveau 0 : les zones du comptoir.
   function rendZones() {
-    let h = top('Le comptoir', 'du plus large au plus proche : comptoir › meuble › produit', false);
+    let h = top('Le comptoir' + (S.nomShop ? ' · ' + esc(S.nomShop) : ''), 'le plan standard, zone par zone — ' + esc(nomMoment(S.moment).toLowerCase()), false);
     if (S.err) { h += `<div class="pg-err">${esc(S.err)}</div>`; }
-    if (!S.pl) { return h + (S.enCours ? '<div class="pg-attente">Lecture du planogramme…</div>' : ''); }
-    const Z = zones();
-    if (!Z.length) { return h + '<div class="pg-note mu">Aucun comptoir n’est déclaré dans le cockpit. Il se dessine dans Cockpit › Catalogue › Planogramme › Organiser le comptoir.</div>'; }
-    h += `<div class="pg-zones">${Z.map((z, i) => { const c = compte(z), nz = note('zone', z.id), t = tacheDe(z), st = libStatut(t), mo = S.montage[String(z.id)];
-      return `<div class="pg-zc" data-zone="${z.id}"><div class="h"><b>${i + 1}. ${esc(z.nom)}</b><span>${meublesDe(z).length} meuble${meublesDe(z).length > 1 ? 's' : ''} · ${c.places} / ${c.slots} placés</span></div>
-        <div class="mini" style="grid-template-columns:repeat(${Math.max(1, Math.min(3, meublesDe(z).length))},1fr)">${meublesDe(z).slice(0, 3).map(miniMeuble).join('') || '<div class="pg-note mu" style="margin:0">aucun meuble à ce moment</div>'}</div>
-        ${nz && nz.texte ? `<div class="why">${esc(nz.texte)}</div>` : ''}
-        <div class="st">${mo ? `<span class="pg-chip ok">✓ monté à ${hh(mo.quand)}</span>` : `<span class="pg-chip">à monter</span>`}${st ? `<span class="pg-chip ${st[0]}">panel : ${esc(st[1])}</span>` : ''}</div></div>`; }).join('')}</div>`;
+    if (!S.ps) { return h + (S.enCours ? '<div class="pg-attente">Lecture du plan…</div>' : ''); }
+    const e = E();
+    h += `<div class="pg-zones">${zones().map((z, i) => {
+      const c = compte(z), t = tacheDe(z), st = libStatut(t), mo = S.montage[z.id];
+      const S2 = sectionsDe(z).filter(s => !estCaisse(s));
+      const mini = ['e3', 'e2', 'e1b', 'e1a'].map(k => `<div class="lv" style="grid-template-columns:repeat(${S2.length},1fr)">${S2.map(s => { const x = e[s + '|' + k]; if (!x) { return '<i class="off"></i>'; } const o = vu(x); const u = image(o); return `<i class="${o ? (u ? 'ph' : '') : 'v'}" style="${u ? 'background-image:url(' + esc(u) + ')' : (o ? 'background:' + (GC[o.groupe] || '#9a8f84') : '')}"></i>`; }).join('')}</div>`).join('');
+      return `<div class="pg-zc" data-zone="${esc(z.id)}"><div class="h"><b>${i + 1}. ${esc(z.nom)}</b><span>sections ${z.de} – ${z.a}</span></div>
+        <div class="mini">${mini}</div>
+        <div class="st"><span>${c.p} / ${c.n} emplacements</span>${mo ? `<span class="pg-chip ok">✓ montée à ${hh(mo.quand)}</span>` : `<span class="pg-chip">à monter</span>`}${st ? `<span class="pg-chip ${st[0]}">panel : ${esc(st[1])}</span>` : ''}</div></div>`; }).join('')}</div>`;
     return h;
   }
 
-  // Niveau 1 : un comptoir, ses meubles en cartes, la photo du montage.
+  // Niveau 1 : une zone de face, étage par étage.
   function rendZone() {
     const Z = zones(), idx = Z.findIndex(z => z.id === S.zone), z = Z[idx];
-    if (!z) { S.vue = 'zones'; return rendZones(); }
-    const c = compte(z), nz = note('zone', z.id), t = tacheDe(z), st = libStatut(t), mo = S.montage[String(z.id)];
-    let h = top(`<span class="crumb">Comptoir ${idx + 1} / ${Z.length} ›</span> ${esc(z.nom)}`, `${meublesDe(z).length} meuble(s) · ${c.places} / ${c.slots} placés`, true,
-      `<button class="pg-btn ${mo ? 'ok' : 'p'}" data-monter="${z.id}" ${S.envoi ? 'disabled' : ''}>${S.envoi ? 'envoi…' : (mo ? '✓ Comptoir monté · reprendre la photo' : '📷 Comptoir monté · photo')}</button>`);
+    if (!z) { S.zone = null; return rendZones(); }
+    const c = compte(z), t = tacheDe(z), st = libStatut(t), mo = S.montage[z.id], e = E();
+    let h = top(`<span class="crumb">Zone ${idx + 1} / ${Z.length} ›</span> ${esc(z.nom)}`, `sections ${z.de} – ${z.a} · ${c.p} / ${c.n} emplacements · ${esc(nomMoment(S.moment).toLowerCase())}`, true,
+      `<button class="pg-btn ${mo ? 'ok' : 'p'}" data-monter="${esc(z.id)}" ${S.envoi ? 'disabled' : ''}>${S.envoi ? 'envoi…' : (mo ? '✓ Zone montée · reprendre la photo' : '📷 Zone montée · photo')}</button>`);
     if (S.err) { h += `<div class="pg-err">${esc(S.err)}</div>`; }
-    if (nz && nz.texte) { h += `<div class="pg-note"><b>Pourquoi ce comptoir.</b> ${esc(nz.texte)}</div>`; }
-    if (mo || st) { h += `<div class="pg-montage" style="margin-top:12px">${mo ? `<img src="../${esc(mo.photo)}" alt="" data-zoom="../${esc(mo.photo)}" data-cap="${esc(z.nom)} · monté à ${hh(mo.quand)}${mo.auteur ? ' par ' + esc(mo.auteur) : ''}">` : ''}<div class="t">${mo ? 'Comptoir monté à ' + hh(mo.quand) + (mo.auteur ? ' par ' + esc(mo.auteur) : '') : 'Comptoir pas encore photographié aujourd’hui'}<small>${st ? 'Tâche du panel « ' + esc(t.tache) + ' » : ' + esc(st[1]) + ' — la photo se rend dans l’application du panel.' : 'Pas de tâche « Photo du comptoir » pour ce comptoir dans le panel.'}</small></div><span class="sp"></span>${mo ? `<button class="pg-btn" data-demonter="${z.id}">retirer</button>` : ''}</div>`; }
-    const M = meublesDe(z);
-    h += `<div class="pg-car"><div class="pg-arr ${idx > 0 ? '' : 'off'}" data-zone="${idx > 0 ? Z[idx - 1].id : ''}">‹</div><div class="pg-meubles">${M.length ? M.map(m => { const nm = note('meuble', m.id); const meta = [m.type, m.temperature, m.presentation, (m.periodes || []).length ? m.periodes.map(nomPeriode).join(' · ') : 'toute la journée'].filter(Boolean).join(' · '); let np = 0, ns = 0; (m.niveaux || []).forEach(n => (n.slots || []).forEach(sl => { ns++; if (occupants(sl).length) { np++; } }));
-      return `<div class="pg-mc" data-meuble="${m.id}"><div class="h"><b>${esc(m.nom)}</b><span>${esc(meta)}<br>${(m.niveaux || []).length} niv. · ${np} / ${ns} placés</span></div>
-        <div class="pg-shelf">${(m.niveaux || []).map(n => `<div class="pg-lvl" style="grid-template-columns:${(n.slots || []).map(sl => Math.max(1, (occupants(sl)[0] || {}).fronts || 1) + 'fr').join(' ') || '1fr'}">${(n.slots || []).map(sl => tuileSlot(sl, false)).join('')}</div>`).join('')}</div>
-        ${nm && nm.texte ? `<div class="why">${esc(nm.texte)}</div>` : ''}</div>`; }).join('') : '<div class="pg-note mu" style="margin:0">Aucun meuble monté à ce moment de la journée sur ce comptoir.</div>'}</div><div class="pg-arr ${idx < Z.length - 1 ? '' : 'off'}" data-zone="${idx < Z.length - 1 ? Z[idx + 1].id : ''}">›</div></div>
-      <div class="pg-dots">${Z.map(x => `<i class="${x.id === z.id ? 'on' : ''}" data-zone="${x.id}"></i>`).join('')}</div>`;
+    if (mo || st) { h += `<div class="pg-montage" style="margin-top:12px">${mo ? `<img src="../${esc(mo.photo)}" alt="" data-zoom="../${esc(mo.photo)}" data-cap="${esc(z.nom)} · montée à ${hh(mo.quand)}${mo.auteur ? ' par ' + esc(mo.auteur) : ''}">` : ''}<div class="t">${mo ? 'Zone montée à ' + hh(mo.quand) + (mo.auteur ? ' par ' + esc(mo.auteur) : '') : 'Zone pas encore photographiée aujourd’hui'}<small>${st ? 'Tâche du panel « ' + esc(t.tache) + ' » : ' + esc(st[1]) + ' — la photo se rend dans l’application du panel.' : 'Pas de tâche « Photo du comptoir » pour cette zone dans le panel.'}</small></div><span class="sp"></span>${mo ? `<button class="pg-btn" data-demonter="${esc(z.id)}">retirer</button>` : ''}</div>`; }
+    const secs = sectionsDe(z);
+    // Des tuiles carrées, plafonnées : une zone de quatre sections ne devient pas un mur de photos.
+    const cols = secs.map(s => estCaisse(s) ? 'minmax(0,110px)' : 'minmax(0,165px)').join(' ');
+    const tuile = (s, k) => {
+      const x = e[s + '|' + k];
+      if (!x) { return `<div class="pg-sl off" title="Pas d’étage ici"></div>`; }
+      const o = vu(x), O = x.occupants || [];
+      if (!o) { return `<div class="pg-sl v" title="S${s} · ${NIV[k]} — libre ${S.moment === 'journee' ? '' : 'à ce moment'}"><span class="lib">libre</span></div>`; }
+      const partage = O.length > 1;
+      return `<div class="pg-sl" data-fiche="${esc(x.cle)}" title="${esc(o.nom)}">${vignette(o)}${o.qte > 0 ? `<span class="f">×${esc(qte(o.qte))}</span>` : ''}${partage ? `<span class="mo">${esc(S.moment === 'journee' ? O.length + ' moments' : momentsTxt(o.periodes))}</span>` : ''}<span class="n">${esc(o.nom)}</span></div>`;
+    };
+    // La caisse : un seul bloc sur ses sections, rien au-dessus.
+    const nC = (L().caisse || []).length;
+    const caisse = (s, e1) => s !== (L().caisse || [])[0] ? '' : (e1 ? `<div class="pg-caisse" style="grid-column:span ${nC}">caisse</div>` : `<div style="grid-column:span ${nC}"></div>`);
+    const ligne = (lab, sub, cellule) => `<div class="pg-lv"><div class="lab"><b>${lab}</b>${sub}</div><div class="pg-row" style="grid-template-columns:${cols}">${secs.map(s => estCaisse(s) ? caisse(s, lab === 'Étage 1') : cellule(s)).join('')}</div></div>`;
+    h += `<div class="pg-car"><div class="pg-arr ${idx > 0 ? '' : 'off'}" data-zone="${idx > 0 ? esc(Z[idx - 1].id) : ''}">‹</div><div class="pg-vit">
+      ${ligne('Étage 3', 'top picking', s => tuile(s, 'e3'))}
+      ${ligne('Étage 2', '20 cm', s => tuile(s, 'e2'))}
+      ${ligne('Étage 1', 'arrière / avant', s => `<div class="pg-e1">${tuile(s, 'e1b')}${tuile(s, 'e1a')}</div>`)}
+      <div class="pg-lv"><span></span><div class="pg-regle" style="grid-template-columns:${cols}">${secs.map(s => `<span>${estCaisse(s) ? '' : 'S' + s}</span>`).join('')}</div></div>
+    </div><div class="pg-arr ${idx < Z.length - 1 ? '' : 'off'}" data-zone="${idx < Z.length - 1 ? esc(Z[idx + 1].id) : ''}">›</div></div>
+      <div class="pg-dots">${Z.map(x => `<i class="${x.id === z.id ? 'on' : ''}" data-zone="${esc(x.id)}"></i>`).join('')}</div>`;
     return h;
   }
 
-  function tuileSlot(sl, grand) {
-    const O = occupants(sl), o = O[0];
-    if (!o) { return `<div class="pg-sl v" title="Emplacement ${sl.position} · libre"></div>`; }
-    const u = photoRef(o.ref), nr = note('ref', o.ref);
-    return `<div class="pg-sl ${u ? '' : 'pl'}" data-fiche="${sl.id}" style="${u ? 'background-image:url(' + esc(u) + ')' : ''}" title="${esc(o.nom)}${O.length > 1 ? ' + ' + (O.length - 1) : ''}"><span class="n">${esc(o.nom)}${O.length > 1 ? ' + ' + (O.length - 1) : ''}</span>${o.fronts > 1 ? `<span class="f">×${o.fronts}</span>` : ''}${nr && nr.texte ? '<span class="why" title="il y a une consigne">i</span>' : ''}</div>`;
+  // Niveau 2 : la fiche de l'emplacement, produit par moment.
+  function rendFiche(cle) {
+    const x = E()[cle]; if (!x) { return ''; }
+    const z = zones().find(zz => x.section >= zz.de && x.section <= zz.a) || { nom: '' };
+    const o0 = vu(x);
+    const bloc = o => { const u = image(o);
+      return `<div class="b${o === o0 ? ' now' : ''}"><div class="ph ${u ? '' : 'v'}" ${u ? `data-zoom="${esc(u)}" data-cap="${esc(o.nom)}"` : ''}>${u ? `<img src="${esc(u)}" alt="" style="${imgStyle(o.crop)}">` : `<span class="ini" style="background:${GC[o.groupe] || '#9a8f84'}">${esc(ini(o.nom))}</span>`}</div><div class="c">
+        ${o === o0 && S.moment !== 'journee' ? '<span class="pg-chip ok" style="align-self:flex-start">en place maintenant</span>' : ''}
+        <h2>${esc(o.nom)}</h2><div class="ref">réf. ${esc(o.ref)}${o.groupe ? ' · ' + esc(o.groupe) : ''}</div>
+        <div class="kv"><b>Où</b><span>${esc(z.nom)} › section ${x.section} › ${NIV[x.niveau]}</span>
+          <b>Quand</b><span>${esc(momentsTxt(o.periodes))}</span>
+          <b>Quantité</b><span>${o.qte > 0 ? esc(qte(o.qte)) + ' pièce(s) quand l’emplacement est plein' : 'pas encore fixée au cockpit'}</span></div></div></div>`; };
+    return `<div class="pg-fiche" data-fermerx="1"><div class="pile">${(x.occupants || []).slice().sort((a, b) => (b === o0) - (a === o0)).map(bloc).join('')}<button class="pg-btn x" data-fermer="1">Fermer</button></div></div>`;
   }
 
-  // Niveau 2 : un meuble en grand.
-  function rendMeuble() {
-    const Z = zones(), z = Z.find(x => x.id === S.zone), m = z && (z.meubles || []).find(x => x.id === S.meuble);
-    if (!m) { S.vue = 'zone'; return rendZone(); }
-    const M = meublesDe(z), mi = M.findIndex(x => x.id === m.id), nm = note('meuble', m.id);
-    const meta = [m.type, m.temperature, m.presentation, (m.periodes || []).length ? m.periodes.map(nomPeriode).join(' · ') : 'toute la journée'].filter(Boolean).join(' · ');
-    let h = top(`<span class="crumb">${esc(z.nom)} ›</span> ${esc(m.nom)}`, esc(meta), true,
-      `<span class="pg-ico ${mi > 0 ? '' : 'off'}" data-meuble="${mi > 0 ? M[mi - 1].id : ''}" title="meuble précédent">‹</span><span class="pg-ico ${mi < M.length - 1 ? '' : 'off'}" data-meuble="${mi < M.length - 1 ? M[mi + 1].id : ''}" title="meuble suivant">›</span>`);
-    if (nm && nm.texte) { h += `<div class="pg-note"><b>Pourquoi ce meuble.</b> ${esc(nm.texte)}</div>`; }
-    if (nm && nm.photo) { h += `<div class="pg-montage" style="margin-top:12px"><img src="../${esc(nm.photo)}" alt="" data-zoom="../${esc(nm.photo)}" data-cap="${esc(m.nom)} · photo de référence"><div class="t">La photo de référence du meuble<small>c’est à ça que le meuble doit ressembler une fois dressé</small></div></div>`; }
-    h += `<div class="pg-vit">${(m.niveaux || []).map(n => { const nn = note('niveau', n.id); let np = 0; (n.slots || []).forEach(sl => { if (occupants(sl).length) { np++; } });
-      return `<div class="pg-lv"><div class="lab"><b>${esc(n.nom)}</b>${np} / ${(n.slots || []).length} placés${nn && nn.texte ? `<span class="nn">${esc(nn.texte)}</span>` : ''}</div><div class="pg-row" style="grid-template-columns:${(n.slots || []).map(sl => Math.max(1, (occupants(sl)[0] || {}).fronts || 1) + 'fr').join(' ') || '1fr'}">${(n.slots || []).map(sl => tuileSlot(sl, true)).join('')}</div></div>`; }).join('')}</div>`;
-    h += `<div class="pg-meta" style="margin-bottom:14px"><span><b>Lire la vitrine :</b> une tuile = un emplacement, sa largeur = le nombre de fronts</span><span class="mu">×2 = deux fronts · <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#C9A227;color:#fff;font:700 10px/14px var(--font-ui);text-align:center">i</span> = une consigne · hachuré = libre</span><span class="mu">toucher un produit : sa fiche et son pourquoi</span></div>`;
-    return h;
-  }
-
-  // Niveau 3 : la fiche du produit, et pourquoi il est là.
-  function rendFiche(slotId) {
-    let sl = null, zn = null, mb = null, nv = null;
-    zones().forEach(z => (z.meubles || []).forEach(m => (m.niveaux || []).forEach(n => (n.slots || []).forEach(s => { if (s.id === slotId) { sl = s; zn = z; mb = m; nv = n; } }))));
-    if (!sl) { return ''; }
-    const O = occupants(sl);
-    const bloc = o => { const u = photoRef(o.ref), nr = note('ref', o.ref), nn = note('niveau', nv.id), nm = note('meuble', mb.id);
-      const pos = `${esc(zn.nom)} › ${esc(mb.nom)} › ${esc(nv.nom)} · emplacement ${sl.position}`;
-      return `<div class="b"><div class="ph ${u ? '' : 'v'}" style="${u ? 'background-image:url(' + esc(u) + ')' : ''}" ${u ? `data-zoom="${esc(u)}" data-cap="${esc(o.nom)}"` : ''}></div><div class="c"><h2>${esc(o.nom)}</h2><div class="ref">réf. ${esc(o.ref)} · ${pos}</div>
-        <div class="kv"><b>Fronts</b><span>${o.fronts || 1}${o.cols && o.rangs ? ' · ' + o.cols + ' colonne(s) × ' + o.rangs + ' rang(s)' : ''}${o.parSlot ? ' · ' + o.parSlot + ' pièce(s) par emplacement' : ''}</span>
-          <b>Moment</b><span>${(o.periodes || []).length ? o.periodes.map(nomPeriode).join(', ') : 'toute la journée'}</span>
-          ${sl.format || sl.contenant ? `<b>Emplacement</b><span>${esc([sl.format, sl.contenant].filter(Boolean).join(' · '))}${sl.capacite ? ' · capacité ' + sl.capacite : ''}</span>` : ''}
-          <b>Meuble</b><span>${esc([mb.type, mb.temperature, mb.presentation].filter(Boolean).join(' · ') || '—')}</span></div>
-        ${nr && nr.texte ? `<div class="why"><b>Pourquoi ce produit ici</b>${esc(nr.texte)}</div>` : `<div class="why mu"><b>Pourquoi ce produit ici</b>aucune consigne posée sur ce produit — elle se pose dans le cockpit, sur la fiche du produit au planogramme.</div>`}
-        ${nn && nn.texte ? `<div class="why"><b>Le niveau</b>${esc(nn.texte)}</div>` : ''}${nm && nm.texte ? `<div class="why"><b>Le meuble</b>${esc(nm.texte)}</div>` : ''}
-        <button class="pg-btn x" data-fermer="1">Fermer</button></div></div>`; };
-    return `<div class="pg-fiche" data-fermerx="1">${O.map(bloc).join('')}</div>`;
-  }
-
-  /* --- la photo du comptoir monté ------------------------------------------ */
+  /* --- la photo de la zone montée ------------------------------------------ */
   function prendrePhoto(zoneId) {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment');
     inp.addEventListener('change', () => {
       const f = inp.files && inp.files[0]; if (!f) { return; }
-      // On réduit sur la tablette : 1600 px de large suffisent à juger un comptoir, et l'envoi reste léger.
+      // On réduit sur la tablette : 1600 px de large suffisent à juger une zone, et l'envoi reste léger.
       const img = new Image(); const url = URL.createObjectURL(f);
       img.onload = () => { const k = Math.min(1, 1600 / img.width); const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
         const data = cv.toDataURL('image/jpeg', 0.82);
         S.envoi = true; S.err = null; rendre();
-        ecrire('/planogramme/montage', { shop: S.shop, zoneId, date: AUJ, data, auteur: q.get('qui') || '' })
-          .then(r => { S.montage[String(zoneId)] = { photo: r.photo, auteur: r.auteur, quand: r.quand }; })
+        ecrire('/planogramme/standard/montage', { shop: S.shop, zone: zoneId, date: AUJ, data, auteur: q.get('qui') || '' })
+          .then(r => { S.montage[zoneId] = { photo: r.photo, auteur: r.auteur, quand: r.quand }; })
           .catch(e => { S.err = 'Photo non enregistrée : ' + e.message; })
           .finally(() => { S.envoi = false; rendre(); }); };
       img.onerror = () => { S.err = 'Photo illisible.'; rendre(); };
@@ -190,21 +214,24 @@
 
   /* --- les gestes --------------------------------------------------------- */
   function brancher() {
-    $.querySelectorAll('[data-zone]').forEach(el => el.addEventListener('click', () => { const id = +el.dataset.zone; if (!id) { return; } S.zone = id; S.meuble = null; S.vue = 'zone'; window.scrollTo(0, 0); rendre(); }));
-    $.querySelectorAll('[data-meuble]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); const id = +el.dataset.meuble; if (!id) { return; } S.meuble = id; S.vue = 'meuble'; window.scrollTo(0, 0); rendre(); }));
-    $.querySelectorAll('[data-fiche]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); S.fiche = +el.dataset.fiche; rendre(); }));
+    $.querySelectorAll('[data-zone]').forEach(el => el.addEventListener('click', () => { const id = el.dataset.zone; if (!id) { return; } S.zone = id; window.scrollTo(0, 0); rendre(); }));
+    $.querySelectorAll('[data-fiche]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); S.fiche = el.dataset.fiche; rendre(); }));
     $.querySelectorAll('[data-fermer]').forEach(el => el.addEventListener('click', () => { S.fiche = null; rendre(); }));
     $.querySelectorAll('[data-fermerx]').forEach(el => el.addEventListener('click', e => { if (e.target === el) { S.fiche = null; rendre(); } }));
-    $.querySelectorAll('[data-retour]').forEach(el => el.addEventListener('click', () => { if (S.vue === 'meuble') { S.vue = 'zone'; S.meuble = null; } else { S.vue = 'zones'; S.zone = null; } window.scrollTo(0, 0); rendre(); }));
-    $.querySelectorAll('[data-periode]').forEach(el => el.addEventListener('click', () => { S.periode = el.dataset.periode || ''; rendre(); }));
+    $.querySelectorAll('[data-retour]').forEach(el => el.addEventListener('click', () => { S.zone = null; window.scrollTo(0, 0); rendre(); }));
+    $.querySelectorAll('[data-moment]').forEach(el => el.addEventListener('click', () => { S.moment = el.dataset.moment; rendre(); }));
     $.querySelectorAll('[data-recharger]').forEach(el => el.addEventListener('click', () => charger()));
-    $.querySelectorAll('[data-monter]').forEach(el => el.addEventListener('click', () => prendrePhoto(+el.dataset.monter)));
-    $.querySelectorAll('[data-demonter]').forEach(el => el.addEventListener('click', () => { const id = +el.dataset.demonter; if (!confirm('Retirer la photo du montage d’aujourd’hui ?')) { return; } ecrire('/planogramme/montage', { shop: S.shop, zoneId: id, date: AUJ, data: '' }).then(() => { delete S.montage[String(id)]; }).catch(e => { S.err = e.message; }).finally(rendre); }));
+    $.querySelectorAll('[data-monter]').forEach(el => el.addEventListener('click', () => prendrePhoto(el.dataset.monter)));
+    $.querySelectorAll('[data-demonter]').forEach(el => el.addEventListener('click', () => { const id = el.dataset.demonter; if (!confirm('Retirer la photo du montage d’aujourd’hui ?')) { return; } ecrire('/planogramme/standard/montage', { shop: S.shop, zone: id, date: AUJ, data: '' }).then(() => { delete S.montage[id]; }).catch(e => { S.err = e.message; }).finally(rendre); }));
     $.querySelectorAll('[data-zoom]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); S.zoom = { url: el.dataset.zoom, cap: el.dataset.cap || '' }; rendre(); }));
     $.querySelectorAll('[data-zoomx]').forEach(el => el.addEventListener('click', () => { S.zoom = null; rendre(); }));
-    // Balayer à gauche ou à droite change de comptoir.
-    let x0 = null; $.ontouchstart = e => { x0 = e.touches[0].clientX; }; $.ontouchend = e => { if (x0 == null || S.vue !== 'zone' || S.fiche || S.zoom) { x0 = null; return; } const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) < 70) { return; } const Z = zones(), i = Z.findIndex(z => z.id === S.zone); const j = dx < 0 ? i + 1 : i - 1; if (Z[j]) { S.zone = Z[j].id; S.meuble = null; window.scrollTo(0, 0); rendre(); } };
+    // Balayer à gauche ou à droite change de zone.
+    let x0 = null; $.ontouchstart = e => { x0 = e.touches[0].clientX; }; $.ontouchend = e => { if (x0 == null || !S.zone || S.fiche || S.zoom) { x0 = null; return; } const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) < 70) { return; } const Z = zones(), i = Z.findIndex(z => z.id === S.zone); const j = dx < 0 ? i + 1 : i - 1; if (Z[j]) { S.zone = Z[j].id; window.scrollTo(0, 0); rendre(); } };
   }
+  // Le moment suit l'horloge : on relit l'heure toutes les cinq minutes, sans toucher au choix fait à la main.
+  let momentVu = null;
+  setInterval(() => { if (!S.ps) { return; } const m = momentAuto(); if (momentVu !== null && m !== momentVu && S.moment === momentVu) { S.moment = m; rendre(); } momentVu = m; }, 300000);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && (S.fiche || S.zoom)) { S.fiche = null; S.zoom = null; rendre(); } });
 
   charger();
 })();

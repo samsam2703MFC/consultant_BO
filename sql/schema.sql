@@ -622,6 +622,63 @@ CREATE TABLE IF NOT EXISTS pla_note (
   PRIMARY KEY (cible, cible_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Les tables pla_* ci-dessus ne sont plus lues depuis le comptoir standard
+-- (ci-dessous) ; elles restent en base pour l'historique.
+
+-- ---------------------------------------------------------------------------
+-- Comptoir standard : un seul plan pour tous les magasins.
+-- 25 sections de 30 cm, quatre niveaux (e3 top picking, e2, e1b arrière,
+-- e1a avant) ; la géométrie (zones, caisse, étages présents) est fixée dans
+-- src/plano_std.php. Une ligne = un produit sur un emplacement pour un ou
+-- plusieurs moments de la journée, versionnée : du / au (au NULL = en vigueur).
+-- periodes : NULL = toute la journée, sinon « matin,midi », « aprem »…
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_plano_std_emplacement (
+  id       INT AUTO_INCREMENT PRIMARY KEY,
+  section  TINYINT NOT NULL,
+  niveau   VARCHAR(4) NOT NULL,
+  ref      VARCHAR(40) NOT NULL,
+  nom      VARCHAR(200) NULL,
+  groupe   VARCHAR(80) NULL,
+  qte      DECIMAL(8,2) NULL,              -- ce que l'emplacement contient plein
+  photo    VARCHAR(255) NULL,              -- photo déposée (sinon celle du panel)
+  crop     VARCHAR(120) NULL,              -- recadrage 1:1 {x,y,s}
+  periodes VARCHAR(24) NULL,
+  du       DATE NOT NULL,
+  au       DATE NULL,
+  par      VARCHAR(120) NULL,
+  le       DATETIME NULL,
+  KEY k_ps_slot (section, niveau, au),
+  KEY k_ps_ref (ref)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Le nom donné à une zone (z0…z4) ; sans ligne, le nom par défaut.
+CREATE TABLE IF NOT EXISTS ceo_plano_std_zone (
+  id  VARCHAR(4) NOT NULL PRIMARY KEY,
+  nom VARCHAR(80) NULL,
+  par VARCHAR(120) NULL,
+  le  DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- La photo de recette du panel, téléchargée une fois sous uploads/plano/panel.
+CREATE TABLE IF NOT EXISTS ceo_plano_std_photo (
+  ref     VARCHAR(40) NOT NULL PRIMARY KEY,
+  nom     VARCHAR(200) NULL,
+  fichier VARCHAR(255) NULL,
+  maj     DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Le montage en magasin : une photo par magasin, zone et jour (tablette).
+CREATE TABLE IF NOT EXISTS ceo_plano_std_montage (
+  shop_id VARCHAR(32) NOT NULL,
+  zone    VARCHAR(4) NOT NULL,
+  jour    DATE NOT NULL,
+  photo   VARCHAR(255) NOT NULL,
+  auteur  VARCHAR(190) NULL,
+  quand   DATETIME NULL,
+  PRIMARY KEY (shop_id, zone, jour)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ----------------------------------------------------------------------------
 -- Réputation digitale — avis Google par magasin
 --
