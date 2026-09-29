@@ -183,6 +183,31 @@ CREATE TABLE IF NOT EXISTS ceo_promo (
   maj_le       DATETIME     NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Scoring du trimestre : le rapport du client mystère (obtenu / maximum, PDF joint) et la note
+-- Google gelée en fin de trimestre. Les tâches et le budget se relisent là où ils vivent.
+CREATE TABLE IF NOT EXISTS ceo_scoring_msp (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  shop_id     VARCHAR(32)  NOT NULL,
+  trimestre   CHAR(7)      NOT NULL,           -- 2026-T3
+  obtenu      DECIMAL(8,2) NOT NULL,
+  maximum     DECIMAL(8,2) NOT NULL,
+  rubriques   TEXT         NULL,               -- JSON { "Accueil & conseil": "17 / 20" }
+  commentaire TEXT         NULL,
+  fichier     VARCHAR(200) NULL,               -- uploads/scoring/msp/<shop>-<trimestre>.pdf
+  par         VARCHAR(120) NULL,
+  le          DATETIME     NULL,
+  UNIQUE KEY uq_sq_msp (shop_id, trimestre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scoring_google (
+  shop_id   VARCHAR(32)  NOT NULL,
+  trimestre CHAR(7)      NOT NULL,
+  note      DECIMAL(3,2) NULL,
+  avis      INT          NULL,
+  le        DATETIME     NULL,
+  PRIMARY KEY (shop_id, trimestre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Budget validé une fois par exercice avec le consultant
 CREATE TABLE IF NOT EXISTS ceo_shop_budget (
   shop_id                  VARCHAR(8) NOT NULL,

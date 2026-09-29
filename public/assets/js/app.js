@@ -259,7 +259,7 @@ class App {
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
-      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', creux: 'jours-creux',
+      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', creux: 'jours-creux', scoringTri: 'scoring-trimestre',
       suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
@@ -930,6 +930,7 @@ class App {
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
+      scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
       creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
@@ -1304,6 +1305,7 @@ class App {
       // réputation), quel budget il tient, où il va sur trois ans.
       ['Magasins', [
         ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements', 'reputation']],
+        ['scoringTri', 'Scoring du trimestre', 0],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
         ['creux', 'Jours creux', 0],
         ['plan', 'Plan de développement', 0],
@@ -1370,10 +1372,10 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1764,6 +1766,7 @@ class App {
     if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isCreux) this.valsCreux(common);
+    if (common.isScoringTri) this.valsScoring(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
@@ -2852,6 +2855,152 @@ class App {
       out[champ] = { id: 'cx-q-' + objKey + '-' + champ, q, saisir: e => this.cxRecherche(cle, e.target.value), enCours: q.trim().length >= 2 && !res, groupes, vide: !!res && !res.resultats.length, fermer: () => this.setState({ cxQ: null, cxRes: null }) };
     });
     return out;
+  }
+
+  /* --- Scoring du trimestre : quatre postes de cinq points par magasin ------------- */
+  sqCharge(force){
+    const cle = String(this.state.sqTri || '');
+    const b = this.state.sq;
+    if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
+    if (this._sqEnCours === cle && !force) { return; }
+    this._sqEnCours = cle;
+    this.setState({ sq: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
+    readOne('/scoring' + (cle ? '?trimestre=' + encodeURIComponent(cle) : '')).then(d => {
+      this._sqEnCours = null;
+      this.setState({ sq: { cle, chargement: false, d: d || null } });
+    });
+  }
+  sqHistCharge(shop, force){
+    const b = this.state.sqHist;
+    if (!force && b && b.cle === shop && (b.d || b.chargement)) { return; }
+    if (this._sqHistEnCours === shop && !force) { return; }
+    this._sqHistEnCours = shop;
+    this.setState({ sqHist: { cle: shop, chargement: true, d: null } });
+    readOne('/scoring/msp?shop=' + encodeURIComponent(shop)).then(d => { this._sqHistEnCours = null; this.setState({ sqHist: { cle: shop, chargement: false, d: d || null } }); });
+  }
+  sqFichierUrl(f){ return f ? API_BASE.replace(/\/api\/cockpit\/?$/, '/') + f : null; }
+  sqRubDefaut(){ return [['Accueil & conseil', ''], ['Propreté & hygiène', ''], ['Produits & vitrine', ''], ['Caisse & encaissement', '']]; }
+  /** Le formulaire du client mystère, pré-rempli avec ce qui est déjà encodé pour ce magasin et ce trimestre. */
+  sqMspForm(shop, tri){
+    const d = (this.state.sq || {}).d || {};
+    const l = (d.magasins || []).find(m => m.id === shop);
+    const m = l && d.trimestre && d.trimestre.cle === tri ? l.postes.msp : null;
+    const enc = m && m.v != null;
+    let par = ''; try { par = localStorage.getItem('sq.par') || ''; } catch (e) { /* navigation privée */ }
+    return { shop, trimestre: tri, obtenu: enc ? String(m.obtenu) : '', maximum: enc ? String(m.maximum) : '', par: enc && m.par ? m.par : par,
+      rubriques: enc && m.rubriques && Object.keys(m.rubriques).length ? Object.keys(m.rubriques).map(k => [k, m.rubriques[k]]) : this.sqRubDefaut(),
+      commentaire: enc ? (m.commentaire || '') : '', fichier: null, fichierNom: '', fichierActuel: enc ? m.fichier : null, le: enc ? m.le : null, id: enc ? m.id : null };
+  }
+  sqMspOuvrir(shop, tri){
+    this.setState({ sqVue: 'msp', sqMspForm: this.sqMspForm(shop, tri) });
+    this.sqHistCharge(shop, true);
+  }
+  sqMspChamp(patch){ this.setState({ sqMspForm: Object.assign({}, this.state.sqMspForm, patch) }); }
+  sqMspFichier(e){
+    const f = e.target.files && e.target.files[0];
+    if (!f) { return; }
+    if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { this.notify('Le rapport doit être un PDF'); return; }
+    if (f.size > 8 * 1024 * 1024) { this.notify('PDF de plus de 8 Mo — trop lourd'); return; }
+    const r = new FileReader();
+    r.onload = () => this.sqMspChamp({ fichier: r.result, fichierNom: f.name });
+    r.readAsDataURL(f);
+  }
+  sqMspEnreg(){
+    const f = this.state.sqMspForm; if (!f) { return; }
+    const ob = parseFloat(String(f.obtenu).replace(',', '.')), mx = parseFloat(String(f.maximum).replace(',', '.'));
+    if (!(mx > 0) || !(ob >= 0) || ob > mx) { this.notify('La note : obtenu et maximum, avec 0 ≤ obtenu ≤ maximum'); return; }
+    const rub = {}; (f.rubriques || []).forEach(r => { if (String(r[0]).trim() && String(r[1]).trim()) { rub[String(r[0]).trim()] = String(r[1]).trim(); } });
+    try { localStorage.setItem('sq.par', f.par || ''); } catch (e) { /* navigation privée */ }
+    this.setState({ sqBusy: true });
+    this.api('POST', '/scoring/msp', { shop: f.shop, trimestre: f.trimestre, obtenu: ob, maximum: mx, rubriques: rub, commentaire: f.commentaire || '', par: f.par || '', fichier: f.fichier || null }).then(r => {
+      this.setState({ sqBusy: false });
+      if (r && r.ok) {
+        this.notify('Client mystère enregistré — ' + (r.msp ? (Math.round(r.msp.v * 10) / 10).toLocaleString('fr-BE') + ' / 5' : ''));
+        this.sqMspChamp({ fichier: null, fichierNom: '', fichierActuel: r.msp ? r.msp.fichier : f.fichierActuel, le: r.msp ? r.msp.le : f.le, id: r.msp ? r.msp.id : f.id });
+        this.sqCharge(true); this.sqHistCharge(f.shop, true);
+      }
+    });
+  }
+  sqMspSuppr(){
+    const f = this.state.sqMspForm; if (!f || !f.id) { return; }
+    if (!window.confirm('Effacer le rapport client mystère de ce trimestre ?')) { return; }
+    this.api('DELETE', '/scoring/msp/' + f.id, {}).then(r => { if (r && r.ok) { this.notify('Rapport effacé'); this.setState({ sqMspForm: Object.assign({}, f, { id: null, obtenu: '', maximum: '', fichierActuel: null, le: null, commentaire: '', rubriques: this.sqRubDefaut() }) }); this.sqCharge(true); this.sqHistCharge(f.shop, true); } });
+  }
+  sqEnvoyer(essai){
+    const d = (this.state.sq || {}).d; if (!d || !d.trimestre) { return; }
+    if (!essai && !window.confirm('Envoyer le scoring ' + d.trimestre.court + ' à chaque magasin du carnet, avec copie aux adresses réseau ?')) { return; }
+    this.setState({ sqBusy: true, sqBilan: null });
+    const corps = { trimestre: d.trimestre.cle }; if (essai) { corps.essai = essai; }
+    this.api('POST', '/scoring/envoyer', corps).then(r => { this.setState({ sqBusy: false, sqBilan: r || { error: 'sans réponse' } }); });
+  }
+  /** Le détail d'un poste en une ligne — ce qui fait la note. */
+  sqDetail(k, x, nf){
+    const fE = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €';
+    if (k === 'google') { return x.v == null ? 'pas de fiche Google reliée' : nf(x.note) + ' · ' + x.avis + ' avis' + (x.gele ? ' · gelée en fin de trimestre' : ''); }
+    if (k === 'taches') { return x.v == null ? (x.motif || 'aucune journée relevée') : x.part + ' % faites · ' + nf(x.faites, 0) + ' / ' + nf(x.attendues, 0) + ' · ' + x.jours + ' jours'; }
+    if (k === 'msp') { return x.v == null ? 'à encoder' : nf(x.obtenu, 0) + ' / ' + nf(x.maximum, 0) + (x.le ? ' · reçu le ' + x.le.slice(8, 10) + '/' + x.le.slice(5, 7) : ''); }
+    if (k === 'budget') { return x.v == null ? 'budget non encodé' : nf(x.ratio) + ' % · ' + fE(x.ca) + ' / ' + fE(x.budget) + (x.mois < 3 ? ' · ' + x.mois + ' mois budgété' + (x.mois > 1 ? 's' : '') : ''); }
+    return '';
+  }
+  valsScoring(common){
+    const S = this.state;
+    const vue = S.sqVue || 'tableau';
+    common.sqVue = vue;
+    common.sqVues = [['tableau', 'Le classement'], ['msp', 'Client mystère']].map(([v, nom]) => ({ v, nom, on: vue === v, choisir: () => { if (v === 'msp' && !S.sqMspForm) { const d = (S.sq || {}).d || {}; const l = (d.magasins || [])[0]; if (l && d.trimestre) { this.sqMspOuvrir(l.id, d.trimestre.cle); return; } } this.setState({ sqVue: v }); } }));
+    this.sqCharge(false);
+    const b = S.sq || {}, d = b.d || {};
+    common.sqChargement = !!b.chargement && !b.d;
+    common.sqIndispo = !b.chargement && !b.d && S.sq ? 'Lecture impossible — API injoignable.' : (d.error || '');
+    const nf = (n, dec) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: dec == null ? 1 : dec, maximumFractionDigits: dec == null ? 1 : dec });
+    const jf = s => (s || '').split('-').reverse().join('/');
+    const tri = d.trimestre || null;
+    common.sqTrimestres = (d.trimestres || []).map(t => ({ cle: t.cle, lib: t.lib + (t.enCours ? ' — en cours' : ''), on: !!(tri && t.cle === tri.cle) }));
+    common.setSqTrimestre = e => this.setState({ sqTri: e.target.value, sqBilan: null });
+    if (!tri) { return; }
+    const precCourt = 'T' + (tri.n === 1 ? 4 : tri.n - 1) + ' ' + (tri.n === 1 ? tri.annee - 1 : tri.annee);
+    common.sqTri = { cle: tri.cle, lib: tri.lib, court: tri.court, arrete: jf(tri.arrete), enCours: !!tri.enCours, prec: precCourt };
+    const POSTES = d.postes || {};
+    common.sqPostes = Object.keys(POSTES).map((k, i) => ({ n: i + 1, cle: k, nom: POSTES[k].nom, regle: POSTES[k].regle }));
+    const deltaTxt = v => v == null ? 'sans comparaison' : (v >= 0 ? '+ ' : '− ') + nf(Math.abs(v)) + ' ★ vs ' + precCourt;
+    common.sqLignes = (d.magasins || []).map(l => ({
+      rang: l.rang, top: l.rang === 1, court: l.court, nom: l.nom, fr: l.fr, total: nf(l.total), sur: l.sur, n: l.n, manque: 4 - l.n,
+      pct: l.etoiles == null ? 0 : l.etoiles / 5 * 100, na: l.etoiles == null, delta: deltaTxt(l.delta), deltaCls: l.delta == null ? 'mu' : (l.delta >= 0.05 ? 'ok' : (l.delta <= -0.05 ? 'ko' : 'mu')),
+      postes: Object.keys(POSTES).map(k => { const x = l.postes[k] || { v: null }; return { cle: k, nom: POSTES[k].nom, v: x.v == null ? '—' : nf(x.v), na: x.v == null, pct: x.v == null ? 0 : x.v / 5 * 100, d: this.sqDetail(k, x, nf),
+        alerte: k === 'taches' && x.joursZero ? x.joursZero + ' jour' + (x.joursZero > 1 ? 's' : '') + ' à 0 — obligatoire manquée' : '',
+        encoder: k === 'msp' ? () => this.sqMspOuvrir(l.id, tri.cle) : null, fichier: k === 'msp' && x.fichier ? this.sqFichierUrl(x.fichier) : null }; }) }));
+    common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles) } : null;
+    const src = d.sources || {};
+    common.sqSources = (src.googleSynchro ? 'Google synchronisé le ' + jf(src.googleSynchro.slice(0, 10)) : 'Google : pas de synchro') + ' · tâches relevées du ' + jf(tri.du) + ' au ' + jf(tri.arrete) + ' · ' + (src.obligatoires || 0) + ' tâche' + (src.obligatoires > 1 ? 's' : '') + ' obligatoire' + (src.obligatoires > 1 ? 's' : '') + ' (CO-)' + ' · CA face au budget des trois mois · client mystère encodé à la main';
+    common.sqRapportHref = API_BASE + '/scoring/rapport?trimestre=' + encodeURIComponent(tri.cle);
+    common.sqPdfHref = common.sqRapportHref + '&format=pdf';
+    common.sqEnvoi = d.rapport ? { smtp: !!d.rapport.smtp, copies: (d.rapport.copies || []).length, carnet: (d.magasins || []).map(l => ({ nom: l.court, n: (d.rapport.carnet || {})[l.id] || 0 })) } : null;
+    common.sqEnvoyer = () => this.sqEnvoyer(null);
+    common.sqEssai = S.sqEssai || ''; common.setSqEssai = e => this.setState({ sqEssai: e.target.value });
+    common.sqEnvoyerEssai = () => this.sqEnvoyer(S.sqEssai);
+    common.sqBusy = !!S.sqBusy;
+    common.sqBilan = S.sqBilan ? (S.sqBilan.error ? { ko: true, txt: S.sqBilan.error } : { txt: S.sqBilan.resume || 'envoyé', lignes: (S.sqBilan.magasins || []).map(m => (m.magasin || '').split(' - ').pop() + ' — ' + m.statut + (m.envoyes && m.envoyes.length ? ' (' + m.envoyes.join(', ') + ')' : '') + (m.note ? ' · ' + m.note : '')).concat((S.sqBilan.copies || []).map(c => 'copie ' + c.a + ' — ' + c.statut + (c.note ? ' · ' + c.note : ''))) }) : null;
+    if (vue === 'msp') {
+      const f = S.sqMspForm || this.sqMspForm(((d.magasins || [])[0] || {}).id || '', tri.cle);
+      if (f.shop) { this.sqHistCharge(f.shop, false); }
+      const ob = parseFloat(String(f.obtenu).replace(',', '.')), mx = parseFloat(String(f.maximum).replace(',', '.'));
+      const sur5 = mx > 0 && ob >= 0 ? Math.min(5, ob / mx * 5) : null;
+      const lig = (d.magasins || []).find(m => m.id === f.shop) || {};
+      const hb = S.sqHist || {}, hd = hb.cle === f.shop ? (hb.d || {}) : {};
+      common.sqMsp = {
+        shops: (d.magasins || []).map(m => ({ id: m.id, nom: m.nom, on: m.id === f.shop })), setShop: e => this.sqMspOuvrir(e.target.value, f.trimestre),
+        tris: (d.trimestres || []).map(t => ({ cle: t.cle, lib: t.lib, on: t.cle === f.trimestre })), setTri: e => { this.setState({ sqTri: e.target.value }); this.setState({ sqMspForm: null, sqVue: 'msp' }); },
+        shopCourt: lig.court || '', obtenu: f.obtenu, setObtenu: e => this.sqMspChamp({ obtenu: e.target.value }), maximum: f.maximum, setMaximum: e => this.sqMspChamp({ maximum: e.target.value }),
+        sur5: sur5 == null ? '—' : nf(sur5), pct: sur5 == null ? 0 : sur5 / 5 * 100,
+        calcul: sur5 == null ? 'obtenu ÷ maximum × 5 — c’est ce qui entre dans le scoring du ' + tri.court : nf(ob, 0) + ' ÷ ' + nf(mx, 0) + ' × 5 = ' + nf(ob / mx * 5, 2) + ' — c’est ce qui entre dans le scoring du ' + tri.court,
+        rubriques: (f.rubriques || []).map((r, i) => ({ k: r[0], v: r[1], setK: e => { const l2 = f.rubriques.slice(); l2[i] = [e.target.value, l2[i][1]]; this.sqMspChamp({ rubriques: l2 }); }, setV: e => { const l2 = f.rubriques.slice(); l2[i] = [l2[i][0], e.target.value]; this.sqMspChamp({ rubriques: l2 }); } })),
+        addRub: () => this.sqMspChamp({ rubriques: (f.rubriques || []).concat([['', '']]) }),
+        fichierNom: f.fichierNom || '', setFichier: e => this.sqMspFichier(e), fichierActuel: this.sqFichierUrl(f.fichierActuel), fichierActuelNom: f.fichierActuel ? f.fichierActuel.split('/').pop() : '', le: f.le ? jf((f.le || '').slice(0, 10)) : '',
+        commentaire: f.commentaire || '', setCommentaire: e => this.sqMspChamp({ commentaire: e.target.value }), par: f.par || '', setPar: e => this.sqMspChamp({ par: e.target.value }),
+        enreg: () => this.sqMspEnreg(), suppr: f.id ? () => this.sqMspSuppr() : null, busy: !!S.sqBusy,
+        etat: f.id ? 'encodé' + (f.le ? ' le ' + jf((f.le || '').slice(0, 10)) : '') + ' · réencoder remplace' : 'pas encore encodé pour ce trimestre',
+        histChargement: !!hb.chargement, hist: (hd.msp || []).map(h => ({ tri: 'T' + h.trimestre.slice(6) + ' ' + h.trimestre.slice(0, 4), recu: nf(h.obtenu, 0) + ' / ' + nf(h.maximum, 0), sur5: nf(h.v), pct: h.v == null ? 0 : h.v / 5 * 100, fichier: this.sqFichierUrl(h.fichier) })),
+      };
+    }
   }
 
   bxcEcrire(campagneId){

@@ -38,6 +38,7 @@ require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
+require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -142,6 +143,9 @@ function route(string $method, string $path): mixed
             $path === '/promo/propositions'            => ep_promo_propositions(),
             $path === '/promo'                         => ep_promos(),
             $path === '/exploitation/promos'           => ep_promos_magasin(),
+            $path === '/scoring'                       => ep_scoring(),
+            $path === '/scoring/msp'                   => ep_scoring_msp(),
+            $path === '/scoring/rapport'               => ep_scoring_rapport(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
@@ -370,6 +374,9 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/produits$#', $path, $m)) { return wr_objectifs_produits((int) $m[1]); }
     if ($method === 'POST' && $path === '/promo/mecaniques') { return wr_promo_mecanique(null); }
+    if ($method === 'POST' && $path === '/scoring/msp') { return wr_scoring_msp(); }
+    if ($method === 'DELETE' && preg_match('#^/scoring/msp/(\d+)$#', $path, $m) === 1) { return wr_scoring_msp_suppr((int) $m[1]); }
+    if ($method === 'POST' && $path === '/scoring/envoyer') { return wr_scoring_envoyer(); }
     if ($method === 'PUT' && $path === '/promo/mecaniques/ordre') { return wr_promo_mecaniques_ordre(); }
     if ($method === 'PUT' && preg_match('#^/promo/mecaniques/(\d+)$#', $path, $m)) { return wr_promo_mecanique((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/promo/mecaniques/(\d+)/dupliquer$#', $path, $m)) { return wr_promo_mecanique_dupliquer((int) $m[1]); }

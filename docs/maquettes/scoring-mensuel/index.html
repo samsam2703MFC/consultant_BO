@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Scoring du trimestre par magasin</title>
+<!-- Trois écrans d'une même proposition : un scoring trimestriel par magasin, cinq postes de cinq points,
+     lu en étoiles, avec le rapport A4 qui part aux franchisés. Quatre postes de cinq points : le total est sur 20.
+       ?v=1  Cockpit › Magasins › Scoring du trimestre : le tableau des magasins, une étoile par poste, le total, le rang
+       ?v=2  L'encodage du client mystère : note obtenue / note maximale, le PDF joint, l'historique
+       ?v=3  Le rapport A4 : la page réseau (classement) et la page d'un magasin, et la barre d'envoi
+     Chiffres : T3 2026 (juillet → septembre) réel pour la note Google (synchro du 14/09), les tâches faites (relevé du
+     panel, trois mois) et le CA du trimestre face au budget des trois mois ; le client mystère et la visite du consultant ne sont pas encore encodés — les
+     valeurs sont posées pour la maquette et signalées comme telles. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+  #ecran{max-width:1300px;margin:0 auto}
+  .prop{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 8px}
+  .ok{color:#2d7a3e}.ko{color:#C0182B}.mu{color:var(--color-text-muted)}.att{color:#B26A00}
+  .tab{font-variant-numeric:tabular-nums}
+  .ck-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .ck-hd .t{font-family:var(--font-display);font-size:26px;line-height:1.1}
+  .ck-hd .s{font-size:12px;color:var(--color-text-muted);max-width:760px}
+  .carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;margin-bottom:12px}
+  .carte>.ct{padding:11px 16px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .carte>.ct .db-mini{margin-left:auto}
+  .corps{padding:14px 16px}
+  .lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:block;margin-bottom:5px}
+  .inp{width:100%;box-sizing:border-box;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font:500 13px var(--font-ui)}
+  .sel{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 10px;font:500 12.5px var(--font-ui);background:var(--color-surface);color:var(--color-text)}
+  .btn{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 14px;font:500 12px var(--font-ui);color:var(--color-text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn.prim{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+  .etat{font:600 10px var(--font-ui);padding:2px 8px;border-radius:999px;background:var(--color-background-secondary)}
+  .etat.ok{background:rgba(45,122,62,.12);color:#2d7a3e}.etat.att{background:#fff2e3;color:#B26A00}.etat.ko{background:#fbe9ec;color:#C0182B}.etat.nv{background:#222;color:#fff}
+  /* --- le rail, pour montrer la place du module --- */
+  .avec-rail{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;align-items:start}
+  .rail{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 0;font-size:12.5px}
+  .rail .g{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);padding:10px 16px 4px}
+  .rail .e{padding:6px 16px;color:var(--color-text)}
+  .rail .e.on{background:#fdf4f5;color:var(--color-primary);font-weight:600;border-left:3px solid var(--color-primary);padding-left:13px}
+  .rail .e.sub{padding-left:28px;color:var(--color-text-muted);font-size:11.5px}
+  .rail .e.new{position:relative}.rail .e.new:after{content:'nouveau';position:absolute;right:12px;top:7px;font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;background:#222;color:#fff;border-radius:999px;padding:2px 7px}
+  /* --- les étoiles --- */
+  .stars{position:relative;display:inline-block;font-size:15px;line-height:1;letter-spacing:1px;color:#ddd4c6;white-space:nowrap;vertical-align:middle}
+  .stars .fg{position:absolute;left:0;top:0;overflow:hidden;color:#e2b93b;white-space:nowrap}
+  .stars.gd{font-size:20px;letter-spacing:1.5px}
+  .stars.sm{font-size:12px;letter-spacing:.5px}
+  .stars.na{opacity:.45}
+  /* --- le tableau du scoring --- */
+  table.sc{width:100%;border-collapse:collapse}
+  table.sc th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 10px 8px;vertical-align:bottom}
+  table.sc th small{display:block;font-weight:400;letter-spacing:0;text-transform:none;font-size:10px;margin-top:2px}
+  table.sc th.n,table.sc td.n{text-align:right}
+  table.sc td{padding:10px 7px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px;vertical-align:middle}
+  table.sc td.nom{font-weight:600}
+  table.sc td.nom small{display:block;font-weight:400;color:var(--color-text-muted);font-size:10.5px;white-space:nowrap}
+  table.sc tr.top td{background:#fffbe9}
+  .rang{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--color-background-secondary);align-items:center;justify-content:center;font:700 11px var(--font-ui)}
+  .rang.or{background:linear-gradient(135deg,#f7e7a1,#e2b93b);color:#5c4200}
+  .poste{display:flex;flex-direction:column;gap:2px;min-width:92px}
+  .poste .p{font-family:var(--font-display);font-size:17px;line-height:1}
+  .poste .p small{font-family:var(--font-ui);font-size:10px;color:var(--color-text-muted);font-weight:400}
+  .poste .d{font-size:10px;color:var(--color-text-muted);line-height:1.25}
+  .poste .d b.ko{color:#C0182B}
+  .glob{display:flex;align-items:center;gap:10px}
+  .glob .n{font-family:var(--font-display);font-size:26px;line-height:1;white-space:nowrap}
+  .glob .n small{font-family:var(--font-ui);font-size:11px;color:var(--color-text-muted);font-weight:400}
+  .delta{font-size:11px;font-weight:600}.delta.ok{color:#2d7a3e}.delta.ko{color:#C0182B}.delta.mu{color:var(--color-text-muted);font-weight:400}
+  .regles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .regles>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 12px}
+  .regles .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .regles .t{font-weight:600;font-size:12.5px;margin-top:2px}
+  .regles .r{font-size:11px;color:var(--color-text-muted);margin-top:3px;line-height:1.35}
+  .regles .prop{margin:0 0 4px;color:#B26A00}
+  /* --- l'encodage --- */
+  .deux{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:12px;align-items:start}
+  .conv{background:var(--color-background-secondary);border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+  .conv .v{font-family:var(--font-display);font-size:34px;line-height:1}
+  .conv .v small{font-family:var(--font-ui);font-size:11px;color:var(--color-text-muted);font-weight:400}
+  .conv .fl{font-size:22px;color:var(--color-text-muted)}
+  .drop{border:1.5px dashed var(--color-border-secondary);border-radius:12px;padding:18px;text-align:center;color:var(--color-text-muted);font-size:12px}
+  .drop b{display:block;color:var(--color-text);font-size:13px;margin-bottom:3px}
+  .fichier{display:flex;align-items:center;gap:10px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:12px;margin-top:8px}
+  .fichier .ic{width:30px;height:36px;border-radius:5px;background:#C0182B;color:#fff;font:700 9px var(--font-ui);display:flex;align-items:center;justify-content:center}
+  table.hist{width:100%;border-collapse:collapse}
+  table.hist th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 10px 6px}
+  table.hist td{padding:8px 10px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px}
+  table.hist td.n,table.hist th.n{text-align:right}
+  .lien{color:var(--color-primary);font-weight:600;text-decoration:none}
+  /* --- le rapport A4 --- */
+  .envoi{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 16px;margin-bottom:14px;font-size:12.5px}
+  .pages{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .a4{width:794px;min-height:1123px;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.14);transform:scale(.79);transform-origin:top left;padding:52px 56px 48px;box-sizing:border-box;color:#222;font-size:12px;line-height:1.45;position:relative}
+  .a4-wrap{height:890px;overflow:hidden}
+  .a4 .tete{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:18px}
+  .a4 .tete img{height:38px}
+  .a4 .tete .m{font:600 10px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:#7a7268}
+  .a4 h1{font-family:var(--font-display);font-size:30px;margin:0 0 4px;line-height:1.05}
+  .a4 h2{font-family:var(--font-display);font-size:17px;margin:18px 0 8px;line-height:1.1}
+  .a4 .sous{color:#7a7268;font-size:11.5px}
+  .a4 table.sc td{padding:8px 8px;font-size:11.5px}
+  .a4 table.sc th{padding:0 8px 6px;font-size:9px}
+  .a4 .poste{min-width:88px}.a4 .poste .p{font-size:15px}.a4 .poste .d{font-size:9.5px}
+  .a4 .stars{font-size:12px}.a4 .stars.gd{font-size:20px}
+  .a4 .glob .n{font-size:24px}
+  .a4 .pied{position:absolute;left:56px;right:56px;bottom:26px;font-size:9.5px;color:#7a7268;border-top:.5px solid #ddd;padding-top:6px;display:flex;justify-content:space-between}
+  .podium{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 4px}
+  .podium>div{border:.5px solid #e6e0d6;border-radius:10px;padding:10px 12px}
+  .podium .r{font:700 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#7a7268}
+  .podium .nm{font-weight:700;font-size:13px;margin:2px 0}
+  .podium .pt{font-family:var(--font-display);font-size:22px;line-height:1}
+  .podium .pt small{font-family:var(--font-ui);font-size:10px;color:#7a7268;font-weight:400}
+  .lecture{background:#f6f2ec;border-radius:10px;padding:10px 14px;font-size:11.5px;margin-top:10px}
+  .fiche{display:grid;grid-template-columns:1fr;gap:8px}
+  .fiche>div{display:grid;grid-template-columns:150px 120px minmax(0,1fr);gap:12px;align-items:center;border:.5px solid #e6e0d6;border-radius:10px;padding:10px 14px}
+  .fiche .k{font-weight:700;font-size:12.5px}.fiche .k small{display:block;font-weight:400;color:#7a7268;font-size:10px}
+  .fiche .v{font-family:var(--font-display);font-size:22px;line-height:1}.fiche .v small{font-family:var(--font-ui);font-size:10px;color:#7a7268;font-weight:400}
+  .fiche .x{font-size:11px;color:#444}
+  .fiche .x b.ko{color:#C0182B}.fiche .x b.ok{color:#2d7a3e}
+  .actions li{margin:3px 0;font-size:11.5px}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+/* Les magasins et les cinq postes — septembre 2026, au 27/09. Réel : Google, tâches, budget. Posé : client mystère, visite. */
+const MOIS = 'T3 2026 — juillet → septembre', MOIS_PREC = 'T2';
+const POSTES = [
+  { cle: 'google', nom: 'Note Google', regle: 'La note de la fiche Google au dernier relevé du trimestre, telle quelle : 4,8 = 4,8 / 5.' },
+  { cle: 'taches', nom: 'Tâches', regle: 'Moyenne des résultats des tâches des trois mois, relevées dans le panel. Une tâche obligatoire (CO-) non faite vaut 0 pour le jour.' },
+  { cle: 'msp', nom: 'Client mystère', regle: 'La note reçue au trimestre, encodée « obtenu / maximum » avec le rapport PDF, ramenée sur 5 : 68 / 80 = 4,3.' },
+  { cle: 'budget', nom: 'Budget', regle: 'CA du trimestre face au budget des trois mois, × 5, plafonné à 5 : 80 % = 4 / 5, 100 % et plus = 5.' },
+];
+const SHOPS = [
+  { id: '3', nom: 'Atelier by Max & Sandra - Gosselies', court: 'Gosselies', fr: 'Max & Sandra',
+    google: { v: 4.5, d: '4,5 · 148 avis' }, taches: { v: 708 / 1684 * 5, d: '42 % faites · 708 / 1 684', ob: 0 }, msp: { v: 71 / 80 * 5, d: '71 / 80 · reçu le 22/09', pose: true },
+    budget: { v: Math.min(5, 143397 / 172000 * 5), d: '83,4 % · 143 397 € / 172 000 €' }, visite: { v: 29 / 36 * 5, d: '29 / 36 · visite du 11/09', pose: true },
+    prec: { google: 4.5, taches: 0, msp: 66 / 80 * 5, budget: Math.min(5, 169261 / 171000 * 5), visite: 27 / 36 * 5 } },
+  { id: '5', nom: 'Atelier by Harmonie - Sombreffe', court: 'Sombreffe', fr: 'Harmonie',
+    google: { v: 4.8, d: '4,8 · 69 avis' }, taches: { v: 0, d: '0 % faites · 0 / 1 686', ob: 12 }, msp: { v: 68 / 80 * 5, d: '68 / 80 · reçu le 18/09', pose: true },
+    budget: { v: Math.min(5, 144790 / 161280 * 5), d: '89,8 % · 144 790 € / 161 280 €' }, visite: { v: 31 / 36 * 5, d: '31 / 36 · visite du 04/09', pose: true },
+    prec: { google: 4.8, taches: 0, msp: 64 / 80 * 5, budget: Math.min(5, 158478 / 168000 * 5), visite: 30 / 36 * 5 } },
+  { id: '4', nom: 'Atelier by - Halle', court: 'Halle', fr: 'Halle',
+    google: { v: 4.5, d: '4,5 · 46 avis' }, taches: { v: 560 / 1687 * 5, d: '33 % faites · 560 / 1 687', ob: 4 }, msp: { v: 58 / 80 * 5, d: '58 / 80 · reçu le 25/09', pose: true },
+    budget: { v: Math.min(5, 146847 / 184000 * 5), d: '79,8 % · 146 847 € / 184 000 €' }, visite: { v: 27 / 36 * 5, d: '27 / 36 · visite du 16/09', pose: true },
+    prec: { google: 4.5, taches: 0, msp: 62 / 80 * 5, budget: Math.min(5, 163060 / 186000 * 5), visite: 28 / 36 * 5 } },
+  { id: '2', nom: 'Atelier by Berlo - Corbais', court: 'Corbais', fr: 'Berdiff s.a.',
+    google: { v: 4.1, d: '4,1 · 754 avis' }, taches: { v: 4 / 1684 * 5, d: '0 % faites · 4 / 1 684', ob: 12 }, msp: { v: null, d: 'à encoder' },
+    budget: { v: null, d: 'budget T3 non encodé' }, visite: { v: 24 / 36 * 5, d: '24 / 36 · visite du 09/09', pose: true },
+    prec: { google: 4.1, taches: 0, msp: null, budget: null, visite: 25 / 36 * 5 } },
+];
+const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d == null ? 1 : d, maximumFractionDigits: d == null ? 1 : d });
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function stars(v, cls) { const pct = v == null ? 0 : Math.max(0, Math.min(100, v / 5 * 100)); return `<span class="stars ${cls || ''}${v == null ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${pct.toFixed(1)}%">★★★★★</span></span>`; }
+function bilan(s) {
+  const notes = POSTES.filter(p => s[p.cle].v != null).map(p => s[p.cle].v);
+  const total = notes.reduce((a, b) => a + b, 0), n = notes.length;
+  const etoiles = n ? total / n : null;
+  const pn = POSTES.filter(p => s.prec[p.cle] != null).map(p => s.prec[p.cle]);
+  const etPrec = pn.length ? pn.reduce((a, b) => a + b, 0) / pn.length : null;
+  return { total, n, etoiles, etPrec, delta: etoiles != null && etPrec != null ? etoiles - etPrec : null };
+}
+SHOPS.forEach(s => { s.b = bilan(s); });
+const CLASSE = SHOPS.slice().sort((a, b) => (b.b.etoiles || 0) - (a.b.etoiles || 0));
+CLASSE.forEach((s, i) => { s.rang = i + 1; });
+function deltaTxt(d) { return d == null ? '<span class="delta mu">—</span>' : `<span class="delta ${d >= 0.05 ? 'ok' : (d <= -0.05 ? 'ko' : 'mu')}">${d >= 0 ? '+ ' : '− '}${nf(Math.abs(d))} ★ vs ${MOIS_PREC}</span>`; }
+function cellule(s, p) {
+  const x = s[p.cle];
+  if (x.v == null) { return `<div class="poste">${stars(null, 'sm')}<div class="p mu">—</div><div class="d">${esc(x.d)}</div></div>`; }
+  return `<div class="poste">${stars(x.v, 'sm')}<div class="p">${nf(x.v)}<small> / 5</small></div><div class="d">${esc(x.d)}${x.ob ? ` · <b class="ko">${x.ob} obligatoire${x.ob > 1 ? 's' : ''} manquée${x.ob > 1 ? 's' : ''}</b>` : ''}${x.pose ? ' <span class="att">· posé</span>' : ''}</div></div>`;
+}
+const rail = `<div class="rail">
+  <div class="g">Pilotage</div><div class="e">Résultat</div><div class="e">Performance</div><div class="e">Dashboard magasin ↗</div>
+  <div class="g">Magasins</div><div class="e">Analyse magasin</div><div class="e sub">Leviers · Équipe &amp; ventes · Panier · Réputation</div>
+  <div class="e on new">Scoring du trimestre</div><div class="e">Budget</div><div class="e">Jours creux</div><div class="e">Plan de développement</div><div class="e">Scouting — où ouvrir</div>
+  <div class="g">Produits</div><div class="e">Catalogue</div><div class="e">Gamme · scoring</div><div class="e">Où ça se vend</div><div class="e">Dans le temps</div>
+  <div class="g">Marque &amp; marketing</div><div class="e">Campagnes</div><div class="e">Projets de développement</div><div class="e">Fonds &amp; Royalties</div></div>`;
+
+/* --- écran 1 : le tableau --- */
+function ecran1() {
+  return `<div class="avec-rail">${rail}<div>
+  <div class="ck-hd"><div><div class="t">Scoring du trimestre</div><div class="s">Quatre postes de cinq points, sur 20, magasin par magasin et par trimestre : la note Google, les tâches, le client mystère, le budget. Les étoiles sont la moyenne des postes notés ; un poste sans donnée ne compte pas, il se dit.</div></div>
+    </div><div class="ck-hd" style="margin-top:-4px"><span class="mu">Trimestre</span><select class="sel"><option>T3 2026 — juillet → septembre, au 27/09</option><option>T2 2026 — avril → juin</option><option>T1 2026 — janvier → mars</option></select>
+    <span style="margin-left:auto"></span><span class="btn">Encoder le client mystère</span><span class="btn">Rapport A4</span><span class="btn prim">Envoyer aux magasins</span></div>
+  <div class="carte"><div class="ct"><span class="lab" style="margin:0">Le classement — ${MOIS}</span><span class="db-mini">Google synchronisé le 14/09 · tâches relevées du 01/07 au 27/09 · CA du trimestre au 27/09 face au budget des trois mois · client mystère : encodé à la main</span></div>
+    <div class="corps" style="padding-top:8px;overflow-x:auto"><table class="sc"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = moyenne des postes notés</small></th>${POSTES.map(p => `<th>${esc(p.nom)}${p.prop ? ' <span class="att">· proposé</span>' : ''}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
+      ${CLASSE.map(s => `<tr class="${s.rang === 1 ? 'top' : ''}"><td><span class="rang${s.rang === 1 ? ' or' : ''}">${s.rang}</span></td><td class="nom">${esc(s.court)}<small>${esc(s.fr)}</small></td>
+        <td><div class="glob"><div class="n">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div><div>${stars(s.b.etoiles, 'gd')}<div style="margin-top:3px">${deltaTxt(s.b.delta)}${s.b.n < 4 ? ` · <span class="att">${4 - s.b.n} poste${4 - s.b.n > 1 ? 's' : ''} sans donnée</span>` : ''}</div></div></div></td>
+        ${POSTES.map(p => `<td>${cellule(s, p)}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    <div class="corps" style="padding-top:0"><div class="db-mini">Réseau : <b>${nf(SHOPS.filter(s => s.b.n === 4).reduce((a, s) => a + s.b.total, 0) / SHOPS.filter(s => s.b.n === 4).length)} / 20</b> en moyenne sur les magasins notés partout · la note Google réseau est 4,4 pour une cible 4,5 · les tâches sont le poste qui coûte le plus : le panel n'a démarré qu'en juillet, deux magasins n'y rendent encore rien et leur poste vaut 0 tant que les obligatoires ne sont pas faites.</div></div></div>
+  <div class="carte"><div class="ct"><span class="lab" style="margin:0">Les règles — quatre postes, cinq points chacun, 20 en tout</span><span class="db-mini">modifiables dans Paramètres › Scoring · le rapport reprend ces règles en pied de page · un trimestre se clôture le 1er jour du suivant</span></div>
+    <div class="corps"><div class="regles">${POSTES.map((p, i) => `<div>${p.prop ? '<div class="prop">proposition — à confirmer</div>' : ''}<div class="k">Poste ${i + 1}</div><div class="t">${esc(p.nom)}</div><div class="r">${esc(p.regle)}</div></div>`).join('')}</div>
+      <div class="db-mini" style="margin-top:10px">Un magasin sans budget encodé ou sans client mystère est noté sur ce qu'on a (Corbais : 2 postes, sur 10) et le tableau le dit plutôt que de lui compter un 0.</div></div></div>
+  </div></div>`;
+}
+
+/* --- écran 2 : l'encodage du client mystère --- */
+function ecran2() {
+  const hist = [['T3 2026', 68, 80, 'Sombreffe-2026-T3.pdf', '18/09', 'Sam'], ['T2 2026', 64, 80, 'Sombreffe-2026-T2.pdf', '21/06', 'Sam'], ['T1 2026', 61, 80, 'Sombreffe-2026-T1.pdf', '19/03', 'Sam'], ['T4 2025', 66, 80, 'Sombreffe-2025-T4.pdf', '17/12', 'Sam']];
+  return `<div class="ck-hd"><div><div class="t">Scoring du trimestre — encoder le client mystère</div><div class="s">La note arrive sur papier ou en PDF, dans le barème du prestataire, une fois par trimestre. On encode ce qu'on a reçu, tel quel — obtenu et maximum — et le cockpit la ramène sur 5 pour le scoring. Le PDF reste joint au trimestre.</div></div><span class="btn" style="margin-left:auto">‹ Retour au tableau</span></div>
+  <div class="deux">
+    <div class="carte"><div class="ct"><span class="lab" style="margin:0">Le rapport reçu</span><span class="db-mini">un rapport par magasin et par trimestre · réencoder remplace</span></div>
+      <div class="corps">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px"><div><span class="lab">Magasin</span><select class="sel" style="width:100%"><option>Atelier by Harmonie - Sombreffe</option><option>Atelier by - Halle</option><option>Atelier by Max &amp; Sandra - Gosselies</option><option>Atelier by Berlo - Corbais</option></select></div><div><span class="lab">Trimestre</span><select class="sel" style="width:100%"><option>T3 2026 — juillet → septembre</option><option>T2 2026 — avril → juin</option></select></div></div>
+        <span class="lab">La note reçue</span>
+        <div class="conv"><div><div class="mu" style="font-size:11px;margin-bottom:4px">obtenu</div><input class="inp" value="68" style="font-family:var(--font-display);font-size:26px;height:52px"></div><div class="fl">/</div><div><div class="mu" style="font-size:11px;margin-bottom:4px">maximum du barème</div><input class="inp" value="80" style="font-family:var(--font-display);font-size:26px;height:52px"></div>
+          <div style="grid-column:1/4;display:flex;align-items:center;gap:14px;border-top:.5px solid var(--color-border-secondary);padding-top:12px;margin-top:4px"><div class="v">4,3<small> / 5</small></div>${stars(4.25, 'gd')}<div class="mu" style="font-size:11.5px">68 ÷ 80 × 5 = <b style="color:var(--color-text)">4,25</b>, arrondi 4,3 · c'est ce qui entre dans le scoring du T3</div></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px"><div><span class="lab">Rubriques du rapport — facultatif, pour le détail</span><div style="display:grid;grid-template-columns:1fr 84px;gap:4px 8px;font-size:12.5px;align-items:center"><span>Accueil &amp; conseil</span><input class="inp" value="17 / 20" style="height:28px"><span>Propreté &amp; hygiène</span><input class="inp" value="18 / 20" style="height:28px"><span>Produits &amp; vitrine</span><input class="inp" value="16 / 20" style="height:28px"><span>Caisse &amp; encaissement</span><input class="inp" value="17 / 20" style="height:28px"></div></div>
+          <div><span class="lab">Le rapport en PDF</span><div class="drop"><b>Déposer le PDF ici</b>ou cliquer pour choisir · 8 Mo au plus · il reste joint au trimestre et part avec le rapport A4 du magasin</div><div class="fichier"><span class="ic">PDF</span><span><b>Sombreffe-2026-T3.pdf</b><br><span class="mu">412 Ko · déposé le 18/09 par Sam</span></span><span class="lien" style="margin-left:auto">ouvrir</span></div></div></div>
+        <span class="lab" style="margin-top:12px">Commentaire pour le franchisé</span><textarea class="inp" rows="2" style="height:auto;padding:8px 10px;font-weight:400">Accueil très bon, vitrine des tartes un peu vide à 16 h. Refaire le point sur l'affichage des allergènes.</textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px"><span class="btn prim">Enregistrer</span><span class="btn">Effacer le trimestre</span><span class="db-mini">encodé le 18/09 par Sam · visible dans le scoring et dans la fiche visite du magasin</span></div>
+      </div></div>
+    <div class="carte" style="margin:0"><div class="ct"><span class="lab" style="margin:0">Sombreffe — les trimestres précédents</span></div>
+      <div class="corps" style="padding-top:8px"><table class="hist"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${hist.map(h => `<tr><td>${h[0]}</td><td class="n tab">${h[1]} / ${h[2]}</td><td class="n"><b>${nf(h[1] / h[2] * 5)}</b> ${stars(h[1] / h[2] * 5, 'sm')}</td><td><a class="lien">${h[3]}</a></td></tr>`).join('')}</tbody></table>
+        <div class="db-mini" style="margin-top:10px">Tendance : <b class="ok">+ 0,2 ★ en un an</b>. La propreté tient à 18 / 20 ; c'est la vitrine de fin d'après-midi qui bouge le score.</div>
+        <div style="margin-top:14px"><span class="lab">Où ça arrive ensuite</span><ul class="actions" style="margin:0;padding-left:18px"><li>le tableau du scoring, poste « Client mystère », dès l'enregistrement ;</li><li>la fiche visite du magasin (module Visites), rubrique MSP — le consultant y voit le PDF ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
+  </div>`;
+}
+
+/* --- écran 3 : le rapport A4 --- */
+function pageReseau() {
+  return `<div class="a4"><div class="tete"><div><img src="../../../public/assets/img/logo.png" alt=""><div class="m" style="margin-top:6px">Scoring trimestriel des magasins — réseau</div></div><div style="text-align:right"><div class="m">${MOIS}</div><div class="sous">arrêté au 27/09/2026 · envoyé le 1er octobre</div></div></div>
+    <h1>Le scoring du trimestre</h1><div class="sous">Quatre postes de cinq points, 20 en tout : Google, tâches, client mystère, budget. Les étoiles sont la moyenne des postes notés.</div>
+    <h2>Le classement</h2>
+    <div class="podium">${CLASSE.map(s => `<div><div class="r">${s.rang === 1 ? '🏆 ' : ''}${s.rang}${s.rang === 1 ? 'er' : 'e'}</div><div class="nm">${esc(s.court)}</div><div class="pt">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div>${stars(s.b.etoiles, 'sm')}<div class="sous" style="margin-top:3px">${s.b.delta == null ? 'sans comparaison' : (s.b.delta >= 0 ? '+ ' : '− ') + nf(Math.abs(s.b.delta)) + ' vs ' + MOIS_PREC}</div></div>`).join('')}</div>
+    <table class="sc" style="margin-top:10px"><thead><tr><th>Magasin</th><th>Note</th>${POSTES.map(p => `<th>${esc(p.nom)}</th>`).join('')}</tr></thead><tbody>
+      ${CLASSE.map(s => `<tr><td class="nom">${s.rang}. ${esc(s.court)}</td><td><div class="glob"><div class="n">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div>${stars(s.b.etoiles, 'sm')}</div></td>${POSTES.map(p => { const x = s[p.cle]; return `<td><div class="poste">${stars(x.v, 'sm')}<div class="p">${x.v == null ? '—' : nf(x.v)}</div><div class="d">${esc(x.d.split(' · ')[0])}</div></div></td>`; }).join('')}</tr>`).join('')}
+    </tbody></table>
+    <div class="lecture"><b>Ce que dit le trimestre.</b> Gosselies prend la tête grâce aux tâches (42 % faites) et au client mystère (71 / 80). Sombreffe a la meilleure note Google du réseau (4,8) et tient son budget à 90 %, mais son poste Tâches vaut 0 : rien n'est rendu dans le panel. Halle est à 80 % de son budget, juste 4 / 5, et ses tâches ont décroché en septembre (26 % après 71 % en août). Corbais n'a ni budget encodé ni client mystère ce trimestre : deux postes sur quatre ne sont pas notés, il est sur 10.</div>
+    <h2>Les règles</h2>
+    <div style="columns:2;column-gap:24px;font-size:10.5px;color:#444">${POSTES.map((p, i) => `<div style="break-inside:avoid;margin-bottom:5px"><b>${i + 1}. ${esc(p.nom)}</b> — ${esc(p.regle)}</div>`).join('')}</div>
+    <div class="pied"><span>L'Atelier — pilotage réseau · scoring du trimestre</span><span>page 1 / 5</span></div></div>`;
+}
+function pageMagasin() {
+  const s = SHOPS.find(x => x.id === '5');
+  const conseils = ['<b>Tâches — le poste à 0.</b> Aucune tâche du panel n\'est rendue depuis son démarrage en juillet : les photos du comptoir, la clôture de caisse et les contrôles qualité sont attendus chaque jour. Rendre les 12 obligatoires suffit à remonter le poste au-dessus de 3.', '<b>Client mystère 68 / 80, + 4 points sur le T2.</b> Accueil et propreté sont bons ; la vitrine des tartes était vide à 16 h. À lier au créneau creux de l\'après-midi et à la promotion « Le goûter de 16 h ».', '<b>Budget 90 %.</b> Le trimestre finit à 144 790 € pour 161 280 € : il manque 16 500 €, et l\'écart se creuse de mois en mois (96 % en juillet, 89 % en août, 86 % en septembre). Octobre porte les tartes aux pommes — l\'objectif produits est de 500 pièces.', '<b>Google 4,8 — la meilleure note du réseau.</b> 69 avis ; le dernier avis à 1 étoile date d\'octobre 2025 et n\'a pas de réponse.'];
+  return `<div class="a4"><div class="tete"><div><img src="../../../public/assets/img/logo.png" alt=""><div class="m" style="margin-top:6px">Scoring du trimestre — ${esc(s.nom)}</div></div><div style="text-align:right"><div class="m">${MOIS}</div><div class="sous">arrêté au 27/09/2026 · ${s.rang}e sur 4</div></div></div>
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:6px"><div><h1 style="margin:0">${esc(s.court)}</h1><div class="sous">${esc(s.fr)} · franchisé depuis 2025</div></div><div style="margin-left:auto;text-align:right"><div class="glob" style="justify-content:flex-end"><div class="n" style="font-size:36px">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div></div>${stars(s.b.etoiles, 'gd')}<div class="sous">${nf(s.b.etoiles)} ★ · ${s.b.delta >= 0 ? '+ ' : '− '}${nf(Math.abs(s.b.delta))} ★ vs ${MOIS_PREC}</div></div></div>
+    <h2>Les quatre postes</h2>
+    <div class="fiche">${POSTES.map(p => { const x = s[p.cle]; const pr = s.prec[p.cle]; const d = x.v != null && pr != null ? x.v - pr : null; return `<div><div class="k">${esc(p.nom)}<small>${p.prop ? 'poste proposé' : 'sur 5'}</small></div><div><div class="v">${x.v == null ? '—' : nf(x.v)}<small> / 5</small></div>${stars(x.v, 'sm')}</div><div class="x">${esc(x.d)}${x.ob ? ` · <b class="ko">${x.ob} obligatoires manquées</b>` : ''}<br><span class="sous">${d == null ? 'sans comparaison' : (Math.abs(d) < 0.05 ? 'stable' : (d > 0 ? '<b class="ok">+ ' : '<b class="ko">− ') + nf(Math.abs(d)) + '</b>') + ' vs ' + MOIS_PREC}</span></div></div>`; }).join('')}</div>
+    <h2>Ce qu'on en fait</h2>
+    <ul class="actions" style="margin:0;padding-left:18px">${conseils.map(c => `<li>${c}</li>`).join('')}</ul>
+    <div class="lecture" style="margin-top:14px"><b>Client mystère — commentaire du rapport.</b> Accueil très bon, vitrine des tartes un peu vide à 16 h. Refaire le point sur l'affichage des allergènes. <span class="sous">Le rapport complet est joint (Sombreffe-2026-T3.pdf).</span></div>
+    <div class="pied"><span>L'Atelier — pilotage réseau · scoring du trimestre · ${esc(s.court)}</span><span>page 3 / 5</span></div></div>`;
+}
+function ecran3() {
+  return `<div class="ck-hd"><div><div class="t">Scoring du trimestre — le rapport A4</div><div class="s">Une page réseau avec le classement, puis une page par magasin avec ses quatre postes et ce qu'on en fait. Chaque franchisé reçoit le réseau et sa page ; le consultant reçoit tout.</div></div></div>
+  <div class="envoi"><span class="etat nv">PDF · 5 pages</span><span><b>Envoyer</b> — à chaque magasin : le classement + sa page + son rapport client mystère · en copie : Sam, le consultant</span><span class="mu" style="margin-left:auto">destinataires : le carnet d'adresses des magasins (4 actifs)</span><span class="btn">Aperçu</span><span class="btn">Télécharger</span><span class="btn prim">Envoyer maintenant</span><span class="db-mini">ou le 1er jour du trimestre suivant à 8 h, automatiquement, par le reporting</span></div>
+  <div class="pages"><div class="a4-wrap">${pageReseau()}</div><div class="a4-wrap">${pageMagasin()}</div></div>`;
+}
+const v = new URLSearchParams(location.search).get('v') || '1';
+document.getElementById('ecran').innerHTML = `<div class="prop">Maquette ${v} / 3 — ${v === '1' ? 'Cockpit › Magasins › Scoring du trimestre : le tableau' : (v === '2' ? 'L\'encodage du client mystère' : 'Le rapport A4 à envoyer')}</div>` + (v === '1' ? ecran1() : (v === '2' ? ecran2() : ecran3()));
+</script>
+</body>
+</html>
