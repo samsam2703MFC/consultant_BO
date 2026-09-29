@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maquette — Scoring du trimestre par magasin</title>
 <!-- Trois écrans d'une même proposition : un scoring trimestriel par magasin, cinq postes de cinq points,
-     lu en étoiles, avec le rapport A4 qui part aux franchisés.
+     lu en étoiles, avec le rapport A4 qui part aux franchisés. Quatre postes de cinq points : le total est sur 20.
        ?v=1  Cockpit › Magasins › Scoring du trimestre : le tableau des magasins, une étoile par poste, le total, le rang
        ?v=2  L'encodage du client mystère : note obtenue / note maximale, le PDF joint, l'historique
        ?v=3  Le rapport A4 : la page réseau (classement) et la page d'un magasin, et la barre d'envoi
@@ -65,10 +65,10 @@
   .poste .d{font-size:10px;color:var(--color-text-muted);line-height:1.25}
   .poste .d b.ko{color:#C0182B}
   .glob{display:flex;align-items:center;gap:10px}
-  .glob .n{font-family:var(--font-display);font-size:26px;line-height:1}
+  .glob .n{font-family:var(--font-display);font-size:26px;line-height:1;white-space:nowrap}
   .glob .n small{font-family:var(--font-ui);font-size:11px;color:var(--color-text-muted);font-weight:400}
   .delta{font-size:11px;font-weight:600}.delta.ok{color:#2d7a3e}.delta.ko{color:#C0182B}.delta.mu{color:var(--color-text-muted);font-weight:400}
-  .regles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .regles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .regles>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 12px}
   .regles .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
   .regles .t{font-weight:600;font-size:12.5px;margin-top:2px}
@@ -132,7 +132,6 @@ const POSTES = [
   { cle: 'taches', nom: 'Tâches', regle: 'Moyenne des résultats des tâches des trois mois, relevées dans le panel. Une tâche obligatoire (CO-) non faite vaut 0 pour le jour.' },
   { cle: 'msp', nom: 'Client mystère', regle: 'La note reçue au trimestre, encodée « obtenu / maximum » avec le rapport PDF, ramenée sur 5 : 68 / 80 = 4,3.' },
   { cle: 'budget', nom: 'Budget', regle: 'CA du trimestre face au budget des trois mois, × 5, plafonné à 5 : 80 % = 4 / 5, 100 % et plus = 5.' },
-  { cle: 'visite', nom: 'Visite du consultant', regle: 'Points conformes de la checklist à la dernière visite du trimestre, sur 5. Proposition pour le 5e poste — à confirmer.', prop: true },
 ];
 const SHOPS = [
   { id: '3', nom: 'Atelier by Max & Sandra - Gosselies', court: 'Gosselies', fr: 'Max & Sandra',
@@ -182,20 +181,19 @@ const rail = `<div class="rail">
 /* --- écran 1 : le tableau --- */
 function ecran1() {
   return `<div class="avec-rail">${rail}<div>
-  <div class="ck-hd"><div><div class="t">Scoring du trimestre</div><div class="s">Cinq postes de cinq points, magasin par magasin et par trimestre : la note Google, les tâches, le client mystère, le budget, la visite. La note en étoiles est la moyenne des postes notés ; un poste sans donnée ne compte pas, il se dit.</div></div>
+  <div class="ck-hd"><div><div class="t">Scoring du trimestre</div><div class="s">Quatre postes de cinq points, sur 20, magasin par magasin et par trimestre : la note Google, les tâches, le client mystère, le budget. Les étoiles sont la moyenne des postes notés ; un poste sans donnée ne compte pas, il se dit.</div></div>
     </div><div class="ck-hd" style="margin-top:-4px"><span class="mu">Trimestre</span><select class="sel"><option>T3 2026 — juillet → septembre, au 27/09</option><option>T2 2026 — avril → juin</option><option>T1 2026 — janvier → mars</option></select>
     <span style="margin-left:auto"></span><span class="btn">Encoder le client mystère</span><span class="btn">Rapport A4</span><span class="btn prim">Envoyer aux magasins</span></div>
-  <div class="carte"><div class="ct"><span class="lab" style="margin:0">Le classement — ${MOIS}</span><span class="db-mini">Google synchronisé le 14/09 · tâches relevées du 01/07 au 27/09 · CA du trimestre au 27/09 face au budget des trois mois · client mystère et visite : encodés à la main</span></div>
-    <div class="corps" style="padding-top:8px;overflow-x:auto"><table class="sc"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>moyenne des postes notés</small></th>${POSTES.map(p => `<th>${esc(p.nom)}${p.prop ? ' <span class="att">· proposé</span>' : ''}<small>/ 5</small></th>`).join('')}<th class="n">Total<small>points / postes notés</small></th></tr></thead><tbody>
+  <div class="carte"><div class="ct"><span class="lab" style="margin:0">Le classement — ${MOIS}</span><span class="db-mini">Google synchronisé le 14/09 · tâches relevées du 01/07 au 27/09 · CA du trimestre au 27/09 face au budget des trois mois · client mystère : encodé à la main</span></div>
+    <div class="corps" style="padding-top:8px;overflow-x:auto"><table class="sc"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = moyenne des postes notés</small></th>${POSTES.map(p => `<th>${esc(p.nom)}${p.prop ? ' <span class="att">· proposé</span>' : ''}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
       ${CLASSE.map(s => `<tr class="${s.rang === 1 ? 'top' : ''}"><td><span class="rang${s.rang === 1 ? ' or' : ''}">${s.rang}</span></td><td class="nom">${esc(s.court)}<small>${esc(s.fr)}</small></td>
-        <td><div class="glob"><div>${stars(s.b.etoiles, 'gd')}<div style="margin-top:3px">${deltaTxt(s.b.delta)}</div></div><div class="n">${nf(s.b.etoiles)}<small> / 5</small></div></div></td>
-        ${POSTES.map(p => `<td>${cellule(s, p)}</td>`).join('')}
-        <td class="n tab" style="white-space:nowrap"><b style="font-family:var(--font-display);font-size:17px">${nf(s.b.total)}</b><span class="mu"> / ${s.b.n * 5}</span>${s.b.n < 5 ? `<div class="db-mini att">${5 - s.b.n} poste${5 - s.b.n > 1 ? 's' : ''} sans donnée</div>` : ''}</td></tr>`).join('')}
+        <td><div class="glob"><div class="n">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div><div>${stars(s.b.etoiles, 'gd')}<div style="margin-top:3px">${deltaTxt(s.b.delta)}${s.b.n < 4 ? ` · <span class="att">${4 - s.b.n} poste${4 - s.b.n > 1 ? 's' : ''} sans donnée</span>` : ''}</div></div></div></td>
+        ${POSTES.map(p => `<td>${cellule(s, p)}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
-    <div class="corps" style="padding-top:0"><div class="db-mini">Réseau : <b>${nf(SHOPS.reduce((a, s) => a + (s.b.etoiles || 0), 0) / SHOPS.length)} ★</b> en moyenne · la note Google réseau est 4,4 pour une cible 4,5 · les tâches sont le poste qui coûte le plus : le panel n'a démarré qu'en juillet, deux magasins n'y rendent encore rien et leur poste vaut 0 tant que les obligatoires ne sont pas faites.</div></div></div>
-  <div class="carte"><div class="ct"><span class="lab" style="margin:0">Les règles — cinq postes, cinq points chacun</span><span class="db-mini">modifiables dans Paramètres › Scoring · le rapport reprend ces règles en pied de page · un trimestre se clôture le 1er jour du suivant</span></div>
+    <div class="corps" style="padding-top:0"><div class="db-mini">Réseau : <b>${nf(SHOPS.filter(s => s.b.n === 4).reduce((a, s) => a + s.b.total, 0) / SHOPS.filter(s => s.b.n === 4).length)} / 20</b> en moyenne sur les magasins notés partout · la note Google réseau est 4,4 pour une cible 4,5 · les tâches sont le poste qui coûte le plus : le panel n'a démarré qu'en juillet, deux magasins n'y rendent encore rien et leur poste vaut 0 tant que les obligatoires ne sont pas faites.</div></div></div>
+  <div class="carte"><div class="ct"><span class="lab" style="margin:0">Les règles — quatre postes, cinq points chacun, 20 en tout</span><span class="db-mini">modifiables dans Paramètres › Scoring · le rapport reprend ces règles en pied de page · un trimestre se clôture le 1er jour du suivant</span></div>
     <div class="corps"><div class="regles">${POSTES.map((p, i) => `<div>${p.prop ? '<div class="prop">proposition — à confirmer</div>' : ''}<div class="k">Poste ${i + 1}</div><div class="t">${esc(p.nom)}</div><div class="r">${esc(p.regle)}</div></div>`).join('')}</div>
-      <div class="db-mini" style="margin-top:10px">Alternatives pour le cinquième poste, toutes lisibles sans saisie : les non-conformités du panel (photos refusées, contrôles ratés), ou le panier moyen face à l'engagement du budget. La visite du consultant a l'avantage d'être le regard du réseau, quand le client mystère est celui du client.</div></div></div>
+      <div class="db-mini" style="margin-top:10px">Un magasin sans budget encodé ou sans client mystère est noté sur ce qu'on a (Corbais : 2 postes, sur 10) et le tableau le dit plutôt que de lui compter un 0.</div></div></div>
   </div></div>`;
 }
 
@@ -225,13 +223,13 @@ function ecran2() {
 /* --- écran 3 : le rapport A4 --- */
 function pageReseau() {
   return `<div class="a4"><div class="tete"><div><img src="../../../public/assets/img/logo.png" alt=""><div class="m" style="margin-top:6px">Scoring trimestriel des magasins — réseau</div></div><div style="text-align:right"><div class="m">${MOIS}</div><div class="sous">arrêté au 27/09/2026 · envoyé le 1er octobre</div></div></div>
-    <h1>Le scoring du trimestre</h1><div class="sous">Cinq postes de cinq points : Google, tâches, client mystère, budget, visite. La note en étoiles est la moyenne des postes notés.</div>
+    <h1>Le scoring du trimestre</h1><div class="sous">Quatre postes de cinq points, 20 en tout : Google, tâches, client mystère, budget. Les étoiles sont la moyenne des postes notés.</div>
     <h2>Le classement</h2>
-    <div class="podium">${CLASSE.map(s => `<div><div class="r">${s.rang === 1 ? '🏆 ' : ''}${s.rang}${s.rang === 1 ? 'er' : 'e'}</div><div class="nm">${esc(s.court)}</div><div class="pt">${nf(s.b.etoiles)}<small> / 5</small></div>${stars(s.b.etoiles, 'sm')}<div class="sous" style="margin-top:3px">${s.b.delta == null ? 'sans comparaison' : (s.b.delta >= 0 ? '+ ' : '− ') + nf(Math.abs(s.b.delta)) + ' vs ' + MOIS_PREC}</div></div>`).join('')}</div>
+    <div class="podium">${CLASSE.map(s => `<div><div class="r">${s.rang === 1 ? '🏆 ' : ''}${s.rang}${s.rang === 1 ? 'er' : 'e'}</div><div class="nm">${esc(s.court)}</div><div class="pt">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div>${stars(s.b.etoiles, 'sm')}<div class="sous" style="margin-top:3px">${s.b.delta == null ? 'sans comparaison' : (s.b.delta >= 0 ? '+ ' : '− ') + nf(Math.abs(s.b.delta)) + ' vs ' + MOIS_PREC}</div></div>`).join('')}</div>
     <table class="sc" style="margin-top:10px"><thead><tr><th>Magasin</th><th>Note</th>${POSTES.map(p => `<th>${esc(p.nom)}</th>`).join('')}</tr></thead><tbody>
-      ${CLASSE.map(s => `<tr><td class="nom">${s.rang}. ${esc(s.court)}</td><td><div class="glob"><div class="n">${nf(s.b.etoiles)}</div>${stars(s.b.etoiles, 'sm')}</div></td>${POSTES.map(p => { const x = s[p.cle]; return `<td><div class="poste">${stars(x.v, 'sm')}<div class="p">${x.v == null ? '—' : nf(x.v)}</div><div class="d">${esc(x.d.split(' · ')[0])}</div></div></td>`; }).join('')}</tr>`).join('')}
+      ${CLASSE.map(s => `<tr><td class="nom">${s.rang}. ${esc(s.court)}</td><td><div class="glob"><div class="n">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div>${stars(s.b.etoiles, 'sm')}</div></td>${POSTES.map(p => { const x = s[p.cle]; return `<td><div class="poste">${stars(x.v, 'sm')}<div class="p">${x.v == null ? '—' : nf(x.v)}</div><div class="d">${esc(x.d.split(' · ')[0])}</div></div></td>`; }).join('')}</tr>`).join('')}
     </tbody></table>
-    <div class="lecture"><b>Ce que dit le trimestre.</b> Gosselies prend la tête grâce aux tâches (42 % faites) et au client mystère (71 / 80). Sombreffe a la meilleure note Google du réseau (4,8) et tient son budget à 90 %, mais son poste Tâches vaut 0 : rien n'est rendu dans le panel. Halle est à 80 % de son budget, juste 4 / 5, et ses tâches ont décroché en septembre (26 % après 71 % en août). Corbais n'a ni budget encodé ni client mystère ce trimestre : deux postes sur cinq ne sont pas notés.</div>
+    <div class="lecture"><b>Ce que dit le trimestre.</b> Gosselies prend la tête grâce aux tâches (42 % faites) et au client mystère (71 / 80). Sombreffe a la meilleure note Google du réseau (4,8) et tient son budget à 90 %, mais son poste Tâches vaut 0 : rien n'est rendu dans le panel. Halle est à 80 % de son budget, juste 4 / 5, et ses tâches ont décroché en septembre (26 % après 71 % en août). Corbais n'a ni budget encodé ni client mystère ce trimestre : deux postes sur quatre ne sont pas notés, il est sur 10.</div>
     <h2>Les règles</h2>
     <div style="columns:2;column-gap:24px;font-size:10.5px;color:#444">${POSTES.map((p, i) => `<div style="break-inside:avoid;margin-bottom:5px"><b>${i + 1}. ${esc(p.nom)}</b> — ${esc(p.regle)}</div>`).join('')}</div>
     <div class="pied"><span>L'Atelier — pilotage réseau · scoring du trimestre</span><span>page 1 / 5</span></div></div>`;
@@ -240,8 +238,8 @@ function pageMagasin() {
   const s = SHOPS.find(x => x.id === '5');
   const conseils = ['<b>Tâches — le poste à 0.</b> Aucune tâche du panel n\'est rendue depuis son démarrage en juillet : les photos du comptoir, la clôture de caisse et les contrôles qualité sont attendus chaque jour. Rendre les 12 obligatoires suffit à remonter le poste au-dessus de 3.', '<b>Client mystère 68 / 80, + 4 points sur le T2.</b> Accueil et propreté sont bons ; la vitrine des tartes était vide à 16 h. À lier au créneau creux de l\'après-midi et à la promotion « Le goûter de 16 h ».', '<b>Budget 90 %.</b> Le trimestre finit à 144 790 € pour 161 280 € : il manque 16 500 €, et l\'écart se creuse de mois en mois (96 % en juillet, 89 % en août, 86 % en septembre). Octobre porte les tartes aux pommes — l\'objectif produits est de 500 pièces.', '<b>Google 4,8 — la meilleure note du réseau.</b> 69 avis ; le dernier avis à 1 étoile date d\'octobre 2025 et n\'a pas de réponse.'];
   return `<div class="a4"><div class="tete"><div><img src="../../../public/assets/img/logo.png" alt=""><div class="m" style="margin-top:6px">Scoring du trimestre — ${esc(s.nom)}</div></div><div style="text-align:right"><div class="m">${MOIS}</div><div class="sous">arrêté au 27/09/2026 · ${s.rang}e sur 4</div></div></div>
-    <div style="display:flex;align-items:center;gap:18px;margin-bottom:6px"><div><h1 style="margin:0">${esc(s.court)}</h1><div class="sous">${esc(s.fr)} · franchisé depuis 2025</div></div><div style="margin-left:auto;text-align:right"><div class="glob" style="justify-content:flex-end"><div class="n" style="font-size:36px">${nf(s.b.etoiles)}<small> / 5</small></div></div>${stars(s.b.etoiles, 'gd')}<div class="sous">${s.b.delta >= 0 ? '+ ' : '− '}${nf(Math.abs(s.b.delta))} ★ vs ${MOIS_PREC} · ${nf(s.b.total)} points sur ${s.b.n * 5}</div></div></div>
-    <h2>Les cinq postes</h2>
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:6px"><div><h1 style="margin:0">${esc(s.court)}</h1><div class="sous">${esc(s.fr)} · franchisé depuis 2025</div></div><div style="margin-left:auto;text-align:right"><div class="glob" style="justify-content:flex-end"><div class="n" style="font-size:36px">${nf(s.b.total)}<small> / ${s.b.n * 5}</small></div></div>${stars(s.b.etoiles, 'gd')}<div class="sous">${nf(s.b.etoiles)} ★ · ${s.b.delta >= 0 ? '+ ' : '− '}${nf(Math.abs(s.b.delta))} ★ vs ${MOIS_PREC}</div></div></div>
+    <h2>Les quatre postes</h2>
     <div class="fiche">${POSTES.map(p => { const x = s[p.cle]; const pr = s.prec[p.cle]; const d = x.v != null && pr != null ? x.v - pr : null; return `<div><div class="k">${esc(p.nom)}<small>${p.prop ? 'poste proposé' : 'sur 5'}</small></div><div><div class="v">${x.v == null ? '—' : nf(x.v)}<small> / 5</small></div>${stars(x.v, 'sm')}</div><div class="x">${esc(x.d)}${x.ob ? ` · <b class="ko">${x.ob} obligatoires manquées</b>` : ''}<br><span class="sous">${d == null ? 'sans comparaison' : (Math.abs(d) < 0.05 ? 'stable' : (d > 0 ? '<b class="ok">+ ' : '<b class="ko">− ') + nf(Math.abs(d)) + '</b>') + ' vs ' + MOIS_PREC}</span></div></div>`; }).join('')}</div>
     <h2>Ce qu'on en fait</h2>
     <ul class="actions" style="margin:0;padding-left:18px">${conseils.map(c => `<li>${c}</li>`).join('')}</ul>
@@ -249,7 +247,7 @@ function pageMagasin() {
     <div class="pied"><span>L'Atelier — pilotage réseau · scoring du trimestre · ${esc(s.court)}</span><span>page 3 / 5</span></div></div>`;
 }
 function ecran3() {
-  return `<div class="ck-hd"><div><div class="t">Scoring du trimestre — le rapport A4</div><div class="s">Une page réseau avec le classement, puis une page par magasin avec ses cinq postes et ce qu'on en fait. Chaque franchisé reçoit le réseau et sa page ; le consultant reçoit tout.</div></div></div>
+  return `<div class="ck-hd"><div><div class="t">Scoring du trimestre — le rapport A4</div><div class="s">Une page réseau avec le classement, puis une page par magasin avec ses quatre postes et ce qu'on en fait. Chaque franchisé reçoit le réseau et sa page ; le consultant reçoit tout.</div></div></div>
   <div class="envoi"><span class="etat nv">PDF · 5 pages</span><span><b>Envoyer</b> — à chaque magasin : le classement + sa page + son rapport client mystère · en copie : Sam, le consultant</span><span class="mu" style="margin-left:auto">destinataires : le carnet d'adresses des magasins (4 actifs)</span><span class="btn">Aperçu</span><span class="btn">Télécharger</span><span class="btn prim">Envoyer maintenant</span><span class="db-mini">ou le 1er jour du trimestre suivant à 8 h, automatiquement, par le reporting</span></div>
   <div class="pages"><div class="a4-wrap">${pageReseau()}</div><div class="a4-wrap">${pageMagasin()}</div></div>`;
 }
