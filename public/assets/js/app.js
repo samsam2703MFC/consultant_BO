@@ -2883,7 +2883,8 @@ class App {
   /** Le formulaire du client mystère, pré-rempli avec ce qui est déjà encodé pour ce magasin et ce trimestre. */
   sqMspForm(shop, tri){
     const d = (this.state.sq || {}).d || {};
-    const l = (d.magasins || []).find(m => m.id === shop);
+    shop = String(shop);
+    const l = (d.magasins || []).find(m => String(m.id) === shop);
     const m = l && d.trimestre && d.trimestre.cle === tri ? l.postes.msp : null;
     const enc = m && m.v != null;
     let par = ''; try { par = localStorage.getItem('sq.par') || ''; } catch (e) { /* navigation privée */ }
@@ -2892,6 +2893,7 @@ class App {
       commentaire: enc ? (m.commentaire || '') : '', fichier: null, fichierNom: '', fichierActuel: enc ? m.fichier : null, le: enc ? m.le : null, id: enc ? m.id : null };
   }
   sqMspOuvrir(shop, tri){
+    shop = String(shop);
     this.setState({ sqVue: 'msp', sqMspForm: this.sqMspForm(shop, tri) });
     this.sqHistCharge(shop, true);
   }
@@ -2946,7 +2948,7 @@ class App {
     const S = this.state;
     const vue = S.sqVue || 'tableau';
     common.sqVue = vue;
-    common.sqVues = [['tableau', 'Le classement'], ['msp', 'Client mystère']].map(([v, nom]) => ({ v, nom, on: vue === v, choisir: () => { if (v === 'msp' && !S.sqMspForm) { const d = (S.sq || {}).d || {}; const l = (d.magasins || [])[0]; if (l && d.trimestre) { this.sqMspOuvrir(l.id, d.trimestre.cle); return; } } this.setState({ sqVue: v }); } }));
+    common.sqVues = [['tableau', 'Le classement'], ['msp', 'Client mystère']].map(([v, nom]) => ({ v, nom, on: vue === v, choisir: () => { if (v === 'msp' && !S.sqMspForm) { const d = (S.sq || {}).d || {}; const l = (d.magasins || [])[0]; if (l && d.trimestre) { this.sqMspOuvrir(String(l.id), d.trimestre.cle); return; } } this.setState({ sqVue: v }); } }));
     this.sqCharge(false);
     const b = S.sq || {}, d = b.d || {};
     common.sqChargement = !!b.chargement && !b.d;
@@ -2967,8 +2969,8 @@ class App {
       pct: l.etoiles == null ? 0 : l.etoiles / 5 * 100, na: l.etoiles == null, delta: deltaTxt(l.delta), deltaCls: l.delta == null ? 'mu' : (l.delta >= 0.05 ? 'ok' : (l.delta <= -0.05 ? 'ko' : 'mu')),
       postes: Object.keys(POSTES).map(k => { const x = l.postes[k] || { v: null }; return { cle: k, nom: POSTES[k].nom, v: x.v == null ? '—' : nf(x.v), na: x.v == null, pct: x.v == null ? 0 : x.v / 5 * 100, d: this.sqDetail(k, x, nf),
         alerte: k === 'taches' && x.joursZero ? x.joursZero + ' jour' + (x.joursZero > 1 ? 's' : '') + ' à 0 — obligatoire manquée' : '',
-        encoder: k === 'msp' ? () => this.sqMspOuvrir(l.id, tri.cle) : null, fichier: k === 'msp' && x.fichier ? this.sqFichierUrl(x.fichier) : null }; }) }));
-    common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles) } : null;
+        encoder: k === 'msp' ? () => this.sqMspOuvrir(String(l.id), tri.cle) : null, fichier: k === 'msp' && x.fichier ? this.sqFichierUrl(x.fichier) : null }; }) }));
+    common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles), sur: d.reseau.complets === 1 ? 'sur le seul magasin noté partout' : (d.reseau.complets ? 'sur les ' + d.reseau.complets + ' magasins notés partout' : 'aucun magasin noté partout') } : null;
     const src = d.sources || {};
     common.sqSources = (src.googleSynchro ? 'Google synchronisé le ' + jf(src.googleSynchro.slice(0, 10)) : 'Google : pas de synchro') + ' · tâches relevées du ' + jf(tri.du) + ' au ' + jf(tri.arrete) + ' · ' + (src.obligatoires || 0) + ' tâche' + (src.obligatoires > 1 ? 's' : '') + ' obligatoire' + (src.obligatoires > 1 ? 's' : '') + ' (CO-)' + ' · CA face au budget des trois mois · client mystère encodé à la main';
     common.sqRapportHref = API_BASE + '/scoring/rapport?trimestre=' + encodeURIComponent(tri.cle);
@@ -2980,16 +2982,16 @@ class App {
     common.sqBusy = !!S.sqBusy;
     common.sqBilan = S.sqBilan ? (S.sqBilan.error ? { ko: true, txt: S.sqBilan.error } : { txt: S.sqBilan.resume || 'envoyé', lignes: (S.sqBilan.magasins || []).map(m => (m.magasin || '').split(' - ').pop() + ' — ' + m.statut + (m.envoyes && m.envoyes.length ? ' (' + m.envoyes.join(', ') + ')' : '') + (m.note ? ' · ' + m.note : '')).concat((S.sqBilan.copies || []).map(c => 'copie ' + c.a + ' — ' + c.statut + (c.note ? ' · ' + c.note : ''))) }) : null;
     if (vue === 'msp') {
-      const f = S.sqMspForm || this.sqMspForm(((d.magasins || [])[0] || {}).id || '', tri.cle);
+      const f = S.sqMspForm || this.sqMspForm(String(((d.magasins || [])[0] || {}).id || ''), tri.cle);
       if (f.shop) { this.sqHistCharge(f.shop, false); }
       const ob = parseFloat(String(f.obtenu).replace(',', '.')), mx = parseFloat(String(f.maximum).replace(',', '.'));
       const sur5 = mx > 0 && ob >= 0 ? Math.min(5, ob / mx * 5) : null;
-      const lig = (d.magasins || []).find(m => m.id === f.shop) || {};
-      const hb = S.sqHist || {}, hd = hb.cle === f.shop ? (hb.d || {}) : {};
+      const lig = (d.magasins || []).find(m => String(m.id) === String(f.shop)) || {};
+      const hb = S.sqHist || {}, hd = String(hb.cle) === String(f.shop) ? (hb.d || {}) : {};
       common.sqMsp = {
-        shops: (d.magasins || []).map(m => ({ id: m.id, nom: m.nom, on: m.id === f.shop })), setShop: e => this.sqMspOuvrir(e.target.value, f.trimestre),
+        shops: (d.magasins || []).map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === String(f.shop) })), setShop: e => this.sqMspOuvrir(e.target.value, f.trimestre),
         tris: (d.trimestres || []).map(t => ({ cle: t.cle, lib: t.lib, on: t.cle === f.trimestre })), setTri: e => { this.setState({ sqTri: e.target.value }); this.setState({ sqMspForm: null, sqVue: 'msp' }); },
-        shopCourt: lig.court || '', obtenu: f.obtenu, setObtenu: e => this.sqMspChamp({ obtenu: e.target.value }), maximum: f.maximum, setMaximum: e => this.sqMspChamp({ maximum: e.target.value }),
+        shopCourt: lig.court || lig.nom || '', obtenu: f.obtenu, setObtenu: e => this.sqMspChamp({ obtenu: e.target.value }), maximum: f.maximum, setMaximum: e => this.sqMspChamp({ maximum: e.target.value }),
         sur5: sur5 == null ? '—' : nf(sur5), pct: sur5 == null ? 0 : sur5 / 5 * 100,
         calcul: sur5 == null ? 'obtenu ÷ maximum × 5 — c’est ce qui entre dans le scoring du ' + tri.court : nf(ob, 0) + ' ÷ ' + nf(mx, 0) + ' × 5 = ' + nf(ob / mx * 5, 2) + ' — c’est ce qui entre dans le scoring du ' + tri.court,
         rubriques: (f.rubriques || []).map((r, i) => ({ k: r[0], v: r[1], setK: e => { const l2 = f.rubriques.slice(); l2[i] = [e.target.value, l2[i][1]]; this.sqMspChamp({ rubriques: l2 }); }, setV: e => { const l2 = f.rubriques.slice(); l2[i] = [l2[i][0], e.target.value]; this.sqMspChamp({ rubriques: l2 }); } })),

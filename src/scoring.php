@@ -291,7 +291,8 @@ function sqCalcul(array $tri): array
     $lignes = [];
     foreach ($magasins as $sid => $mag) {
         $a = $now[$sid]; $b = $prec[$sid];
-        $lignes[] = ['id' => $sid, 'nom' => $mag['nom'], 'court' => $mag['court'], 'fr' => $mag['fr'] ?? '',
+        // Les clés numériques d'un tableau PHP deviennent des entiers : l'identifiant repart en chaîne, comme partout.
+        $lignes[] = ['id' => (string) $sid, 'nom' => $mag['nom'], 'court' => $mag['court'], 'fr' => $mag['fr'] ?? '',
             'postes' => $a['postes'], 'total' => $a['total'], 'n' => $a['n'], 'sur' => $a['sur'], 'etoiles' => $a['etoiles'],
             'prec' => ['total' => $b['total'], 'n' => $b['n'], 'etoiles' => $b['etoiles'], 'postes' => array_map(fn ($x) => $x['v'], $b['postes'])],
             'delta' => $a['etoiles'] !== null && $b['etoiles'] !== null ? round($a['etoiles'] - $b['etoiles'], 2) : null];
