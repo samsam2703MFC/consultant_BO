@@ -115,6 +115,7 @@ function ensureRapports(): void
         }
         rapVentesSemer();
     rapAfficheSemer();
+    if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
         return;
     }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
@@ -137,6 +138,7 @@ function ensureRapports(): void
     }
     rapVentesSemer();
     rapAfficheSemer();
+    if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
 }
 
 /**
@@ -2297,6 +2299,14 @@ function ep_rapports_cron(): array
             $bilan = ventesClotureDistribuer($rep);
             $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue',
                 'envoi' => count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s)'];
+            continue;
+        }
+        if ((string) $rep['code'] === 'scoring-trimestre') {
+            // Le scoring part le premier jour d'un trimestre — les autres mois, rien n'est dû.
+            $bilan = function_exists('scoringCron') ? scoringCron($rep) : null;
+            if ($bilan === null) { continue; }
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => isset($bilan['error']) ? 'erreur' : 'distribue',
+                'envoi' => $bilan['error'] ?? (count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s)')];
             continue;
         }
         if ((string) $rep['code'] === 'affiche-vente-mois') {

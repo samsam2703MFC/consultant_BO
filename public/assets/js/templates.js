@@ -154,6 +154,7 @@ export function render(c, x){
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isCreux ? tplCreux(c, x) : ''}
+      ${c.isScoringTri ? tplScoringTri(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
@@ -2193,6 +2194,68 @@ function tplMesure(c, x){
     ${(c.mesMotifs || []).length ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${(c.mesMotifs || []).map(m => esc(m)).join(' · ')}</div>` : ''}
     <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.mesSource)}</div>
   </div>`;
+}
+
+/* Scoring du trimestre : quatre postes de cinq points par magasin, le classement
+   en étoiles, les règles, l'encodage du client mystère, le rapport A4 et son envoi. */
+function tplScoringTri(c, x){
+  const { esc } = x;
+  const st = (pct, na, cls) => `<span class="sq-st ${cls || ''}${na ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${(pct || 0).toFixed(1)}%">★★★★★</span></span>`;
+  const entete = `
+    <div class="mko-hd">
+      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
+      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
+      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
+      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
+    </div>`;
+  let corps = '';
+  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
+  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
+  else if (c.sqVue === 'tableau') {
+    corps = `
+    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = moyenne des postes notés</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
+        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
+          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée</span>` : ''}</div></div></div></td>
+          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur les ${c.sqReseau.complets} magasin${c.sqReseau.complets > 1 ? 's' : ''} noté${c.sqReseau.complets > 1 ? 's' : ''} partout · ${esc(c.sqReseau.etoiles)} ★ en moyenne` : ''} · un poste sans donnée ne compte pas : le magasin est noté sur ce qu’on a, et le tableau le dit.</div></div>
+    <div class="cx-deux" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)">
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les règles — quatre postes, cinq points chacun, 20 en tout</span><span class="mko-mini">un trimestre se clôture le 1er jour du suivant</span></div>
+        <div class="mko-corps"><div class="sq-regles">${c.sqPostes.map(p => `<div><div class="k">Poste ${p.n}</div><div class="t">${esc(p.nom)}</div><div class="r">${esc(p.regle)}</div></div>`).join('')}</div></div></div>
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">L’envoi — le rapport A4 aux magasins</span></div>
+        <div class="mko-corps" style="font-size:12.5px">
+          ${c.sqEnvoi ? `<div>Chaque magasin reçoit <b>le classement du réseau et sa page</b>, avec son rapport client mystère s’il est joint. Les adresses réseau (${c.sqEnvoi.copies}) reçoivent le document complet.</div>
+          <div class="cx-puces" style="margin-top:8px">${c.sqEnvoi.carnet.map(m => `<span class="cx-pu${m.n ? ' on' : ''}" title="adresses du carnet">${esc(m.nom)} · ${m.n ? m.n + ' adresse' + (m.n > 1 ? 's' : '') : 'sans adresse'}</span>`).join('')}</div>
+          <div class="mko-mu" style="margin-top:8px">${c.sqEnvoi.smtp ? 'Le carnet d’adresses se règle dans Reporting, ligne « Scoring du trimestre ». Envoi automatique le 1er jour du trimestre suivant à 8 h.' : 'SMTP non configuré (Paramètres) : le rapport se télécharge, il ne part pas par mail.'}</div>
+          <div class="cx-ligne" style="margin-top:10px"><input id="sq-essai" class="mko-inp" style="width:220px" placeholder="adresse d’essai" value="${esc(c.sqEssai)}" ${x.C(c.setSqEssai)}><button ${x.A(c.sqEnvoyerEssai)} class="mko-pied-btn" ${c.sqBusy || !c.sqEnvoi.smtp || !c.sqEssai ? 'disabled' : ''}>Envoyer un essai (le 1er magasin)</button></div>` : '<div class="mko-mu">Le reporting n’est pas installé ici : le rapport se télécharge, il ne part pas par mail.</div>'}
+          ${c.sqBilan ? `<div class="sq-bilan${c.sqBilan.ko ? ' ko' : ''}"><b>${esc(c.sqBilan.txt)}</b>${c.sqBilan.lignes && c.sqBilan.lignes.length ? '<br>' + c.sqBilan.lignes.map(esc).join('<br>') : ''}</div>` : ''}
+        </div></div>
+    </div>`;
+  } else {
+    const F = c.sqMsp;
+    corps = `
+    <div class="cx-deux" style="grid-template-columns:minmax(0,1fr) 420px">
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le rapport reçu</span><span class="mko-mini">un rapport par magasin et par trimestre · réencoder remplace</span></div>
+        <div class="mko-corps">
+          <div class="cx-ligne" style="margin-bottom:12px"><div><label class="mko-lab" style="display:block;margin-bottom:4px">Magasin</label><select class="mko-sel" ${x.C(F.setShop)}>${F.shops.map(s => `<option value="${esc(s.id)}"${s.on ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select></div><div><label class="mko-lab" style="display:block;margin-bottom:4px">Trimestre</label><select class="mko-sel" ${x.C(F.setTri)}>${F.tris.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select></div></div>
+          <label class="mko-lab" style="display:block;margin-bottom:6px">La note reçue</label>
+          <div class="sq-conv"><div><div class="mko-mu" style="font-size:11px;margin-bottom:4px">obtenu</div><input id="sq-obtenu" class="mko-inp sq-gros" value="${esc(F.obtenu)}" ${x.I(F.setObtenu)} inputmode="decimal"></div><div class="fl">/</div><div><div class="mko-mu" style="font-size:11px;margin-bottom:4px">maximum du barème</div><input id="sq-max" class="mko-inp sq-gros" value="${esc(F.maximum)}" ${x.I(F.setMaximum)} inputmode="decimal"></div>
+            <div class="res"><div class="v">${esc(F.sur5)}<small> / 5</small></div>${st(F.pct, F.sur5 === '—', 'gd')}<div class="mko-mu">${esc(F.calcul)}</div></div></div>
+          <div class="cx-deux" style="margin-top:12px;grid-template-columns:1fr 1fr">
+            <div><label class="mko-lab" style="display:block;margin-bottom:6px">Rubriques du rapport — facultatif</label><div class="sq-rub">${F.rubriques.map((r, i) => `<input id="sq-rk${i}" class="mko-inp" value="${esc(r.k)}" ${x.I(r.setK)} placeholder="rubrique"><input id="sq-rv${i}" class="mko-inp" value="${esc(r.v)}" ${x.I(r.setV)} placeholder="17 / 20">`).join('')}</div><button ${x.A(F.addRub)} class="mko-pied-btn" style="margin-top:6px">+ rubrique</button></div>
+            <div><label class="mko-lab" style="display:block;margin-bottom:6px">Le rapport en PDF</label><label class="sq-drop"><b>${F.fichierNom ? esc(F.fichierNom) : 'Choisir le PDF'}</b>${F.fichierNom ? 'prêt à joindre · 8 Mo au plus' : '8 Mo au plus · il reste joint au trimestre et part avec le rapport A4'}<input type="file" accept="application/pdf,.pdf" ${x.C(F.setFichier)} style="display:none"></label>
+              ${F.fichierActuel ? `<div class="sq-fichier"><span class="ic">PDF</span><span><b>${esc(F.fichierActuelNom)}</b><br><span class="mko-mu">déjà joint${F.le ? ' · déposé le ' + esc(F.le) : ''}</span></span><a class="sq-lien" style="margin-left:auto" href="${esc(F.fichierActuel)}" target="_blank" rel="noopener">ouvrir</a></div>` : ''}</div>
+          </div>
+          <label class="mko-lab" style="display:block;margin:12px 0 4px">Commentaire pour le franchisé</label><textarea id="sq-com" rows="2" class="cx-ta" ${x.I(F.setCommentaire)}>${esc(F.commentaire)}</textarea>
+          <div class="cx-ligne" style="margin-top:10px"><input id="sq-par" class="mko-inp" style="width:160px" placeholder="encodé par" value="${esc(F.par)}" ${x.I(F.setPar)}><button ${x.A(F.enreg)} class="cx-btn prim" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Enregistrement…' : 'Enregistrer'}</button>${F.suppr ? `<button ${x.A(F.suppr)} class="mko-pied-btn" style="color:#C0182B">Effacer le trimestre</button>` : ''}<span class="mko-mu">${esc(F.etat)}</span></div>
+        </div></div>
+      <div class="mko-carte" style="margin:0"><div class="mko-ct"><span class="mko-lab">${esc(F.shopCourt)} — les trimestres</span></div>
+        <div class="mko-corps" style="padding-top:8px">${F.histChargement ? '<div class="mko-mu">Lecture…</div>' : (F.hist.length ? `<table class="mko-tab"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${F.hist.map(h => `<tr><td>${esc(h.tri)}</td><td class="n">${esc(h.recu)}</td><td class="n"><b>${esc(h.sur5)}</b> ${st(h.pct, false, 'sm')}</td><td>${h.fichier ? `<a class="sq-lien" href="${esc(h.fichier)}" target="_blank" rel="noopener">ouvrir</a>` : '<span class="mko-mu">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="mko-mu">Aucun rapport encodé pour ce magasin.</div>')}
+          <div style="margin-top:14px"><span class="mko-lab">Où ça arrive ensuite</span><ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted)"><li>le classement, poste « Client mystère », dès l’enregistrement ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
+    </div>`;
+  }
+  return `<div data-screen="scoring" class="mko">${entete}${corps}</div>`;
 }
 
 /* Jours creux : la carte jour × heure d'un magasin, l'assistant en cinq

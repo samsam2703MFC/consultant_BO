@@ -382,6 +382,53 @@ référence calculée). `PUT /promo/{id}` change `statut`, `note`, `cible`, `can
 ceJour, effet, creneau } ] }`, les promotions en cours dont la période couvre la date ; `ceJour` dit si ce jour de
 semaine est un jour du créneau.
 
+### `/scoring` — le scoring du trimestre : quatre postes de cinq points par magasin
+
+`GET /scoring?trimestre=2026-T3` (sans `trimestre` : le trimestre en cours) :
+
+```json
+{ "trimestre": { "cle": "2026-T3", "annee": 2026, "n": 3, "mois": [7, 8, 9], "du": "2026-07-01", "au": "2026-09-30", "arrete": "2026-09-28",
+                 "clos": false, "enCours": true, "court": "T3 2026", "lib": "T3 2026 — juillet → septembre", "prec": "2026-T2", "suiv": "2026-T4" },
+  "trimestres": [ { "cle": "2026-T3", "lib": "…", "enCours": true } ],
+  "postes": { "google": { "nom": "Note Google", "regle": "…" }, "taches": { … }, "msp": { … }, "budget": { … } },
+  "magasins": [ { "id": "5", "nom": "Atelier by Harmonie - Sombreffe", "court": "Sombreffe", "fr": "Harmonie", "rang": 1,
+      "postes": { "google": { "v": 4.8, "note": 4.8, "avis": 69, "le": "2026-09-14 19:07", "gele": false },
+                  "taches": { "v": 0, "part": 0, "faites": 0, "attendues": 1068, "jours": 89, "manquees": 356, "joursZero": 89 },
+                  "msp":    { "v": 4.25, "obtenu": 68, "maximum": 80, "rubriques": { "Accueil": "17 / 20" }, "commentaire": "…", "fichier": "uploads/scoring/msp/5-2026-T3.pdf", "par": "Sam", "le": "2026-09-18 10:12" },
+                  "budget": { "v": 4.49, "ratio": 89.8, "ca": 144790, "budget": 161280, "mois": 3 } },
+      "total": 13.54, "n": 4, "sur": 20, "etoiles": 3.39,
+      "prec": { "total": 17.4, "n": 4, "etoiles": 4.36, "postes": { "google": 4.8, "taches": null, "msp": 4, "budget": 4.72 } }, "delta": -0.97 } ],
+  "reseau": { "sur20": 13.1, "complets": 3, "etoiles": 2.98 },
+  "sources": { "obligatoires": 4, "obligatoiresLues": "2026-09-28", "googleSynchro": "2026-09-14 19:07" },
+  "rapport": { "id": 12, "actif": true, "copies": [ "ceo@…" ], "carnet": { "5": 2, "4": 0 }, "smtp": true } }
+```
+
+Les règles : **Google**, la note de la fiche (`ceo_shop_reputation`) telle quelle, **gelée** dans `ceo_scoring_google` à chaque
+lecture du trimestre en cours — un trimestre clos relit ce qui a été gelé. **Tâches**, la moyenne des journées relevées
+(`ceo_tache_jour`) : un jour vaut la part des tâches rendues (une tâche notée vaut sa cote / 5), et un jour où une tâche
+**obligatoire** manque vaut 0 ; les obligatoires sont les tâches dont la checklist du panel commence par `CO-`, lues une fois
+par jour dans `/pwa/tasks` et gardées dans le réglage `scoringObligatoires`. **Client mystère**, `obtenu / maximum × 5`.
+**Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`), × 5 plafonné à 5 ; un mois sans budget ne
+compte pas, aucun mois budgété : poste sans donnée. Le total est la somme des postes notés (`sur` = 5 × `n`) ; `etoiles`
+en est la moyenne ; le classement suit les étoiles puis le total. Un poste `v: null` ne compte pas.
+
+`GET /scoring/msp?shop=5` — l'historique des rapports client mystère d'un magasin (tout le réseau sans `shop`) : `{ msp: [ … ] }`.
+
+`POST /scoring/msp` — `{ shop, trimestre, obtenu, maximum, rubriques: { "Accueil": "17 / 20" }, commentaire, par,
+fichier: "data:application/pdf;base64,…" }` → `{ ok, msp }`. Réencoder remplace ; le PDF (8 Mo au plus) est gardé s'il
+n'est pas renvoyé, sous `public/uploads/scoring/msp/<shop>-<trimestre>.pdf`. `DELETE /scoring/msp/{id}` efface le rapport et
+son PDF. Tables `ceo_scoring_msp` et `ceo_scoring_google`, créées au premier appel.
+
+`GET /scoring/rapport?trimestre=2026-T3&shop=5&format=html|pdf` — le rapport A4 : la page réseau (podium, tableau, lecture,
+règles) puis une page par magasin (sans `shop`) ou celle du magasin demandé. `html` s'imprime depuis le navigateur ;
+`pdf` passe par le moteur du serveur (501 s'il manque).
+
+`POST /scoring/envoyer` — `{ trimestre, essai?: "adresse" }` : chaque magasin dont le carnet du reporting (ligne
+`scoring-trimestre`, `dest_par_magasin`) porte une adresse reçoit le classement réseau et sa page en PDF, plus son rapport
+client mystère s'il est joint ; les `destinataires` de la ligne reçoivent le document complet. `essai` envoie le premier
+magasin à cette seule adresse, sans journal. Réponse : `{ ok, resume, magasins: [ { magasin, statut: envoye|sans-adresse|echec|erreur, envoyes, note } ], copies, runId }`.
+Le cron du reporting fait la même chose le **1er jour de chaque trimestre à 8 h** pour le trimestre révolu (`scoringCron`).
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json
