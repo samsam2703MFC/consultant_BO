@@ -164,6 +164,25 @@ function ep_ventes_clients_sonde(): array
                 FROM `transaction` t JOIN client c ON c.id = t.id_client WHERE c.is_b2b = 1 AND t.insert_timestamp >= ? GROUP BY t.id_shop, c.company_name ORDER BY ca DESC LIMIT 15', [$depuis]);
         } catch (Throwable $e) { $out['erreurs'][] = 'societesB2b : ' . $e->getMessage(); }
     }
+    // Le détail (?detail=1) : le profil B2B par heure et par jour, les tickets pro d'une journée, les comptes d'un magasin.
+    if ((int) ($_GET['detail'] ?? 0) === 1 && $has('id_client')) {
+        $shopD = trim((string) ($_GET['shop'] ?? '2'));
+        try {
+            $out['heures'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_shop shop, HOUR(t.insert_timestamp) h, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca, SUM(c.is_b2b = 1) b2b, ROUND(SUM(CASE WHEN c.is_b2b = 1 THEN t.total_gross_amount_after_discount ELSE 0 END)) caB2b
+                FROM `transaction` t LEFT JOIN client c ON c.id = t.id_client WHERE t.insert_timestamp >= ? AND t.insert_timestamp < DATE_ADD(?, INTERVAL 1 DAY) GROUP BY t.id_shop, HOUR(t.insert_timestamp) ORDER BY t.id_shop, h', [$depuis, $fin]);
+            $out['jours'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_shop shop, DATE(t.insert_timestamp) j, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca, SUM(c.is_b2b = 1) b2b, ROUND(SUM(CASE WHEN c.is_b2b = 1 THEN t.total_gross_amount_after_discount ELSE 0 END)) caB2b
+                FROM `transaction` t LEFT JOIN client c ON c.id = t.id_client WHERE t.insert_timestamp >= ? AND t.insert_timestamp < DATE_ADD(?, INTERVAL 1 DAY) GROUP BY t.id_shop, DATE(t.insert_timestamp) ORDER BY t.id_shop, j', [$depuis, $fin]);
+            $jour = trim((string) ($_GET['date'] ?? ''));
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) {
+                $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(6000) */ DATE(t.insert_timestamp) j, SUM(c.is_b2b = 1) b2b FROM `transaction` t LEFT JOIN client c ON c.id = t.id_client WHERE t.id_shop = ? AND t.insert_timestamp >= ? GROUP BY DATE(t.insert_timestamp) ORDER BY b2b DESC LIMIT 1', [(int) $shopD, $depuis]);
+                $jour = (string) ($r['j'] ?? $fin);
+            }
+            $out['journee'] = ['shop' => $shopD, 'date' => $jour, 'tickets' => Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ DATE_FORMAT(t.insert_timestamp, "%H:%i") heure, c.company_name societe, ROUND(t.total_gross_amount_after_discount, 2) montant, t.will_be_invoiced facture, t.deferral_payment differe, t.id_payment_type paiement, (SELECT COUNT(*) FROM transaction_product tp WHERE tp.id_transaction = t.id) lignes
+                FROM `transaction` t JOIN client c ON c.id = t.id_client WHERE t.id_shop = ? AND c.is_b2b = 1 AND DATE(t.insert_timestamp) = ? ORDER BY t.insert_timestamp', [(int) $shopD, $jour])];
+            $out['comptes'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ c.company_name societe, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca, ROUND(AVG(t.total_gross_amount_after_discount)) panier, MAX(DATE(t.insert_timestamp)) dernier, MIN(DATE(t.insert_timestamp)) premier, SUM(t.will_be_invoiced = 1) factures
+                FROM `transaction` t JOIN client c ON c.id = t.id_client WHERE t.id_shop = ? AND c.is_b2b = 1 AND t.insert_timestamp >= DATE_SUB(?, INTERVAL 90 DAY) GROUP BY c.company_name ORDER BY ca DESC LIMIT 12', [(int) $shopD, $fin]);
+        } catch (Throwable $e) { $out['erreurs'][] = 'detail : ' . $e->getMessage(); }
+    }
     // Les commandes au comptoir et la boutique en ligne : part des clients B2B.
     try {
         $out['commandes'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(6000) */ co.id_shop shop, COUNT(*) n, SUM(c.is_b2b = 1) b2b, MAX(co.pick_up_datetime) derniere FROM client_order co LEFT JOIN client c ON c.id = co.id_client GROUP BY co.id_shop ORDER BY co.id_shop');
