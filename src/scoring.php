@@ -225,6 +225,62 @@ function sqTaches(array $tri): array
     return $out;
 }
 
+/**
+ * Les tâches obligatoires d'un magasin sur le trimestre, jour par jour :
+ * faite (1), manquée (0), pas attendue (absente). Les plus manquées d'abord.
+ */
+function sqObligatoiresDetail(array $tri, string $shop): array
+{
+    $ids = array_map('strval', sqObligatoires()['ids'] ?? []);
+    $jours = [];
+    for ($ts = strtotime($tri['du']); $ts <= strtotime($tri['arrete']); $ts += 86400) { $jours[] = date('Y-m-d', $ts); }
+    if ($ids === []) { return ['taches' => [], 'jours' => $jours]; }
+    $in = implode(',', array_fill(0, count($ids), '?'));
+    try {
+        $rows = Db::rows("SELECT jour, id_task, nom, fait FROM ceo_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ? AND id_task IN ($in) ORDER BY jour",
+            array_merge([(int) $shop, $tri['du'], $tri['arrete']], $ids));
+    } catch (PDOException $e) { return ['taches' => [], 'jours' => $jours]; }
+    $t = [];
+    foreach ($rows as $r) {
+        $id = (string) $r['id_task'];
+        $t[$id] = $t[$id] ?? ['id' => $id, 'nom' => (string) $r['nom'], 'jours' => [], 'manquees' => 0, 'attendues' => 0];
+        $fait = (int) $r['fait'] === 1;
+        $t[$id]['jours'][(string) $r['jour']] = $fait ? 1 : 0;
+        $t[$id]['attendues']++;
+        if (!$fait) { $t[$id]['manquees']++; }
+    }
+    uasort($t, fn ($a, $b) => $b['manquees'] <=> $a['manquees'] ?: strcmp($a['nom'], $b['nom']));
+    return ['taches' => array_values($t), 'jours' => $jours];
+}
+
+/** Le tableau jour par jour des obligatoires — une ligne par tâche, une case par jour. */
+function sqObligatoiresHtml(array $tri, array $l): string
+{
+    $det = sqObligatoiresDetail($tri, (string) $l['id']);
+    if ($det['taches'] === []) { return ''; }
+    $jours = $det['jours'];
+    $case = fn (string $cls) => '<i class="' . $cls . '"></i>';
+    // Les mois en tête, à la largeur de leurs jours (6 px la case, 4 px de plus au premier jour d'un mois).
+    $mois = [];
+    foreach ($jours as $j) { $m = substr($j, 0, 7); $mois[$m] = ($mois[$m] ?? 0) + 1; }
+    $tete = '';
+    foreach ($mois as $m => $n) { $tete .= '<span style="display:inline-block;width:' . ($n * 6 + 3) . 'px;font-size:8.5px;color:#7a7268;letter-spacing:.05em;text-transform:uppercase">' . SQ_MOIS[(int) substr($m, 5, 2)] . '</span>'; }
+    $h = '<h2>Les tâches obligatoires — jour par jour</h2><div class="sous">Une case par jour du ' . date('d/m', strtotime($tri['du'])) . ' au ' . date('d/m', strtotime($tri['arrete'])) . ' : <i class="dm" style="display:inline-block;width:8px;height:8px;vertical-align:-1px"></i> manquée — le jour vaut 0 au poste Tâches, <i class="df" style="display:inline-block;width:8px;height:8px;vertical-align:-1px"></i> faite, <i class="dx" style="display:inline-block;width:8px;height:8px;vertical-align:-1px"></i> pas attendue ce jour.</div>';
+    $h .= '<table class="oblig"><tr><td></td><td class="s">' . $tete . '</td></tr>';
+    foreach ($det['taches'] as $t) {
+        $strip = ''; $prevM = '';
+        foreach ($jours as $j) {
+            $m = substr($j, 0, 7);
+            $sep = $prevM !== '' && $m !== $prevM ? ' style="margin-left:5px"' : '';
+            $prevM = $m;
+            $v = $t['jours'][$j] ?? null;
+            $strip .= '<i class="' . ($v === null ? 'dx' : ($v ? 'df' : 'dm')) . '"' . $sep . '></i>';
+        }
+        $h .= '<tr><td class="n">' . sqH($t['nom']) . '<small>' . ($t['manquees'] ? '<b style="color:#C0182B">manquée ' . $t['manquees'] . ' jour' . ($t['manquees'] > 1 ? 's' : '') . '</b> sur ' . $t['attendues'] : 'faite les ' . $t['attendues'] . ' jours') . '</small></td><td class="s">' . $strip . '</td></tr>';
+    }
+    return $h . '</table>';
+}
+
 /** Le poste Budget : le CA des mois du trimestre face à leur budget — lu là où le cockpit le lit. */
 function sqBudget(array $tri): array
 {
@@ -424,7 +480,7 @@ function sqConseils(array $l): array
     if ($t['v'] !== null && $t['v'] < 2.5) {
         $c[] = '<b>Tâches — ' . sqNf($t['v']) . ' / 5.</b> ' . ($t['part'] === 0 ? 'Aucune tâche du panel n’est rendue' : 'Seulement ' . (int) $t['part'] . ' % des tâches sont rendues')
             . (!empty($t['joursZero']) ? ' ; ' . (int) $t['joursZero'] . ' journée' . ($t['joursZero'] > 1 ? 's' : '') . ' à 0 parce qu’une obligatoire manquait' : '')
-            . '. Rendre chaque jour les obligatoires (photos du comptoir, clôture de caisse, contrôles qualité) est le levier le plus rapide du scoring.';
+            . '. Rendre chaque jour les obligatoires est le levier le plus rapide du scoring — le tableau ci-dessus dit lesquelles manquent et quand.';
     } elseif ($t['v'] !== null) { $c[] = '<b>Tâches — ' . sqNf($t['v']) . ' / 5.</b> ' . (int) $t['part'] . ' % des tâches rendues sur ' . (int) $t['jours'] . ' jours ; tenir le rythme.'; }
     $b = $p['budget'];
     if ($b['v'] !== null) {
@@ -511,7 +567,7 @@ function sqPageMagasin(array $sc, array $l, int $page, int $pages): string
         $h .= '<tr><td class="k">' . sqH($p['nom']) . '<small>sur 5</small></td><td class="v"><b class="n">' . ($x['v'] === null ? '—' : sqNf($x['v'])) . '</b><small> / 5</small><br>' . sqEtoiles($x['v'], 11) . '</td>'
             . '<td class="x">' . sqH(sqDetail($cle, $x)) . '<br><span class="sous">' . ($d === null ? 'sans comparaison' : (abs($d) < 0.05 ? 'stable' : ($d > 0 ? '<b style="color:#2d7a3e">+ ' : '<b style="color:#C0182B">− ') . sqNf(abs($d)) . '</b>') . ' vs ' . sqH($prec)) . '</span></td></tr>';
     }
-    $h .= '</table><h2>Ce qu’on en fait</h2><ul class="actions">';
+    $h .= '</table>' . sqObligatoiresHtml($tri, $l) . '<h2>Ce qu’on en fait</h2><ul class="actions">';
     foreach (sqConseils($l) as $c) { $h .= '<li>' . $c . '</li>'; }
     $h .= '</ul>';
     $m = $l['postes']['msp'];
@@ -543,6 +599,10 @@ function sqRapportHtml(array $sc, ?string $shop = null): string
         . 'table.fiche td.k{width:140px;font-weight:700;font-size:12.5px;border-left:.5px solid #e6e0d6;border-radius:8px 0 0 8px}table.fiche td.k small{display:block;font-weight:400;color:#7a7268;font-size:9.5px}'
         . 'table.fiche td.v{width:110px}table.fiche td.v b{font-size:20px}table.fiche td.v small{font-size:10px;color:#7a7268}table.fiche td.x{font-size:11px;color:#444;border-right:.5px solid #e6e0d6;border-radius:0 8px 8px 0}'
         . 'ul.actions{margin:0;padding-left:18px}ul.actions li{margin:4px 0;font-size:11.5px}'
+        . 'table.oblig{width:100%;border-collapse:collapse;margin-top:6px}table.oblig td{padding:4px 6px 4px 0;border-top:.5px solid #eee7dc;vertical-align:middle}'
+        . 'table.oblig td.n{width:190px;font-size:10.5px;font-weight:700;line-height:1.25}table.oblig td.n small{display:block;font-weight:400;font-size:9px;color:#7a7268}'
+        . 'table.oblig td.s{white-space:nowrap;line-height:0}table.oblig i{display:inline-block;width:5px;height:10px;margin-right:1px;border-radius:1px}'
+        . '.df{background:#2d7a3e}.dm{background:#C0182B}.dx{background:#e6e0d6}'
         . '.pied{position:absolute;left:0;right:0;bottom:0;font-size:9px;color:#7a7268;border-top:.5px solid #ddd;padding-top:5px;display:flex;justify-content:space-between}'
         . '@media screen{body{background:#EAE4DC;padding:20px}.page{background:#fff;width:794px;min-height:1123px;margin:0 auto 20px;padding:52px 56px 60px;box-sizing:border-box;box-shadow:0 8px 30px rgba(0,0,0,.14)}.pied{left:56px;right:56px;bottom:26px}}'
         . '</style>';
