@@ -470,3 +470,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-29T05:06:50Z scoring : note sur 20 d office, echelle du budget par paliers
 2026-09-29T05:15:52Z scoring : les obligatoires jour par jour dans le rapport magasin
 2026-09-29T05:58:16Z scoring : obligatoires = checklist CQ-02, photos des comptoirs
+2026-09-29T06:15:11Z scoring : obligatoire = le drapeau du panel, garde par le releve
