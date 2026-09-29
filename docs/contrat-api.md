@@ -408,7 +408,7 @@ lecture du trimestre en cours — un trimestre clos relit ce qui a été gelé. 
 (`ceo_tache_jour`) : un jour vaut la part des tâches rendues (une tâche notée vaut sa cote / 5), et un jour où une tâche
 **obligatoire** manque vaut 0 ; les obligatoires sont les tâches dont la checklist du panel commence par `CO-`, lues une fois
 par jour dans `/pwa/tasks` et gardées dans le réglage `scoringObligatoires`. **Client mystère**, `obtenu / maximum × 5`.
-**Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`), × 5 plafonné à 5 ; un mois sans budget ne
+**Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`, la fonction `ep_perf`), × 5 plafonné à 5 ; un mois sans budget ne
 compte pas, aucun mois budgété : poste sans donnée. Le total est la somme des postes notés (`sur` = 5 × `n`) ; `etoiles`
 en est la moyenne ; le classement suit les étoiles puis le total. Un poste `v: null` ne compte pas.
 
