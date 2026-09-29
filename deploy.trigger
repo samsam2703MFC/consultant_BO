@@ -468,3 +468,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-29T04:37:57Z scoring : le poste budget lit ep_perf
 2026-09-29T05:01:20Z scoring : identifiants magasin en chaines, historique dans sa carte
 2026-09-29T05:06:50Z scoring : note sur 20 d office, echelle du budget par paliers
+2026-09-29T05:15:52Z scoring : les obligatoires jour par jour dans le rapport magasin
