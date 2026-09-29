@@ -95,8 +95,12 @@ function aoPermanente(array $g): bool
 {
     if ($g['debut'] === null || $g['fin'] === null) { return true; }
     $d = substr($g['debut'], 5, 5); $f = substr($g['fin'], 5, 5);
-    if ($g['recurrente']) { return $d === $f || ($d === '01-01' && $f === '12-31'); }
-    return (strtotime($g['fin']) - strtotime($g['debut'])) >= 364 * 86400;
+    $an = (strtotime($g['fin']) - strtotime($g['debut'])) >= 364 * 86400;
+    // Récurrente : l'année entière (01/01 → 31/12), ou une date qui revient sur elle-même un an plus
+    // tard ou plus (B2B : 17/03/2026 → 17/03/2036). Une gamme d'un seul jour reste une saison ;
+    // « Fête des Mères » saisie du 07/05/2025 au 14/05/2026 reste la semaine du 07/05 au 14/05.
+    if ($g['recurrente']) { return ($d === '01-01' && $f === '12-31') || ($d === $f && $an); }
+    return $an;
 }
 
 /** Une date « année-MM-JJ » valide (le 29 février d'une année courte devient le 28). */
@@ -120,9 +124,11 @@ function aoFenetre(array $g, string $jour): ?array
     $t = strtotime($jour);
     if (!$g['recurrente']) {
         $du = $g['debut']; $au = $g['fin'];
-        $ouverte = $jour >= $du && $jour <= $au;
+        // Terminée et jamais récurrente : elle ne rouvrira pas.
+        if ($jour > $au) { return ['du' => $du, 'au' => $au, 'ouverte' => false, 'jours' => 0, 'passee' => true]; }
+        $ouverte = $jour >= $du;
         return ['du' => $du, 'au' => $au, 'ouverte' => $ouverte,
-            'jours' => (int) round(abs(strtotime($ouverte ? $au : $du) - $t) / 86400)];
+            'jours' => (int) round((strtotime($ouverte ? $au : $du) - $t) / 86400)];
     }
     $md1 = substr($g['debut'], 5, 5); $md2 = substr($g['fin'], 5, 5);
     $y = (int) substr($jour, 0, 4);
@@ -166,12 +172,16 @@ function aoAlerteDates(array $g): ?string
  *
  * @return array{le:?string,source:?string,gammes:array<string,array{lu:bool,ids:list<int>,erreur:?string}>}
  */
-function aoContenu(bool $forcer = false): array
+function aoContenu(bool $forcer = false, bool $cacheSuffit = false): array
 {
     $c = setting(AO_CACHE_CLE);
     $c = is_array($c) ? $c : ['le' => null, 'source' => null, 'gammes' => []];
     $frais = !empty($c['le']) && strtotime((string) $c['le']) > time() - AO_CACHE_HEURES * 3600;
     if ($frais && !$forcer) { return $c; }
+    // Le catalogue se charge au démarrage du cockpit : il se contente d'une lecture
+    // ancienne plutôt que d'attendre le panel (l'écran des saisons, lui, rafraîchit).
+    $luQuelque = static fn (array $x) => (bool) array_filter($x['gammes'] ?? [], static fn ($g) => !empty($g['lu']));
+    if ($cacheSuffit && !$forcer && $luQuelque($c)) { return $c; }
 
     $gammes = aoGammesBrutes();
     $neuf = ['le' => date('Y-m-d H:i:s'), 'source' => null, 'gammes' => []];
@@ -179,13 +189,18 @@ function aoContenu(bool $forcer = false): array
         $chemins = [];
         foreach ($gammes as $id => $g) { if ($g['active']) { $chemins[(string) $id] = '/product-availability-periods/' . $id . '/products'; } }
         $rep = PanelApi::getParallele($chemins, 4);
+        // Tout muet : souvent un jeton expiré, que la lecture en parallèle ne renouvelle pas. Une
+        // lecture simple (qui se reconnecte) sur une gamme ; si elle répond, on relit toutes les gammes.
+        if ($chemins && !array_filter($rep, static fn ($r) => is_array($r)) && method_exists('PanelApi', 'periodProducts')) {
+            if (PanelApi::periodProducts((int) array_key_first($chemins)) !== []) { $rep = PanelApi::getParallele($chemins, 4); }
+        }
         foreach ($chemins as $id => $ch) {
             $r = $rep[$id] ?? null;
             $l = is_array($r) ? (method_exists('PanelApi', 'liste') ? PanelApi::liste($r) : (array_is_list($r) ? $r : [])) : null;
             if ($l === null) {
                 $ancien = $c['gammes'][$id] ?? null;
                 $neuf['gammes'][$id] = $ancien !== null && !empty($ancien['lu'])
-                    ? array_merge($ancien, ['erreur' => 'panel muet — lecture du ' . substr((string) $c['le'], 0, 10) . ' gardée'])
+                    ? array_merge($ancien, ['erreur' => 'panel muet — lecture du ' . substr((string) ($ancien['luLe'] ?? $c['le']), 0, 10) . ' gardée'])
                     : ['lu' => false, 'ids' => [], 'erreur' => 'le panel ne rend pas les produits de cette gamme'];
                 continue;
             }
@@ -195,7 +210,7 @@ function aoContenu(bool $forcer = false): array
                     if (isset($p[$k]) && is_numeric($p[$k])) { $ids[] = (int) $p[$k]; break; }
                 }
             }
-            $neuf['gammes'][$id] = ['lu' => true, 'ids' => array_values(array_unique($ids)), 'erreur' => null];
+            $neuf['gammes'][$id] = ['lu' => true, 'ids' => array_values(array_unique($ids)), 'erreur' => null, 'luLe' => $neuf['le']];
         }
         $neuf['source'] = 'api';
     }
@@ -208,12 +223,14 @@ function aoContenu(bool $forcer = false): array
             }
             if ($parG) {
                 $neuf['gammes'] = [];
-                foreach ($gammes as $id => $g) { $neuf['gammes'][(string) $id] = ['lu' => true, 'ids' => $parG[(string) $id] ?? [], 'erreur' => null]; }
+                foreach ($gammes as $id => $g) { $neuf['gammes'][(string) $id] = ['lu' => true, 'ids' => $parG[(string) $id] ?? [], 'erreur' => null, 'luLe' => $neuf['le']]; }
                 $neuf['source'] = 'base';
             }
         } catch (Throwable $e) { /* pas de liaison lisible */ }
     }
     if (!$neuf['gammes']) { return $c; }
+    // Rien de lu : on le garde un quart d'heure seulement, pour réessayer bientôt sans marteler le panel.
+    if (!$luQuelque($neuf)) { $neuf['le'] = date('Y-m-d H:i:s', time() - AO_CACHE_HEURES * 3600 + 900); }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         [AO_CACHE_CLE, json_encode($neuf, JSON_UNESCAPED_UNICODE)]);
     return $neuf;
@@ -246,9 +263,10 @@ function aoExigible(bool $must, ?int $saison, string $jour, array $gammes): bool
     if (!$must) { return false; }
     if ($saison === null) { return true; }
     $g = $gammes[$saison] ?? null;
-    if ($g === null) { return false; }   // saison disparue du panel : plus rien à exiger
+    // Saison disparue ou désactivée au panel : plus rien à exiger (l'écran le dit, et propose d'en choisir une autre).
+    if ($g === null || !$g['active']) { return false; }
     $f = aoFenetre($g, $jour);
-    return $f !== null ? $f['ouverte'] : true;
+    return $f !== null ? $f['ouverte'] : true;   // gamme devenue permanente : toute l'année
 }
 
 /**
@@ -260,11 +278,11 @@ function aoExigible(bool $must, ?int $saison, string $jour, array $gammes): bool
 function aoEnrichir(array $cat, ?string $jour = null): array
 {
     $jour = $jour ?? date('Y-m-d');
-    try {
-        $gammes = aoGammesBrutes();
-        $parP = aoParProduit(aoContenu());
-        $sf = aoSaisonsFiches();
-    } catch (Throwable $e) { return $cat; }
+    // Chaque source à part : un panel muet ne doit pas faire disparaître la saison des obligatoires,
+    // sans quoi le premier minimum saisi la réécrirait « toute l'année ».
+    $sf = aoSaisonsFiches();
+    try { $gammes = aoGammesBrutes(); } catch (Throwable $e) { $gammes = []; }
+    try { $parP = aoParProduit(aoContenu(false, true)); } catch (Throwable $e) { $parP = []; }
     foreach ($cat as &$p) {
         $pid = isset($p['pwaId']) && $p['pwaId'] !== null ? (int) $p['pwaId'] : (ctype_digit((string) $p['ref']) ? (int) $p['ref'] : 0);
         $gs = array_values(array_filter($parP[$pid] ?? [], static fn ($g) => isset($gammes[$g]) && $gammes[$g]['active']));
@@ -276,6 +294,7 @@ function aoEnrichir(array $cat, ?string $jour = null): array
             $p['periods'] = array_map(static fn ($g) => trim($gammes[$g]['emoji'] . ' ' . $gammes[$g]['nom']), $gs);
         }
         $s = !empty($p['must']) ? ($sf[(string) $p['ref']] ?? null) : null;
+        if ($s !== null && isset($gammes[$s]) && $gammes[$s]['permanente']) { $s = null; }
         $p['saison'] = $s;
         $p['exigible'] = aoExigible(!empty($p['must']), $s, $jour, $gammes);
         $p['saisonFenetre'] = $s !== null && isset($gammes[$s]) ? aoFenetre($gammes[$s], $jour) : null;
@@ -299,7 +318,9 @@ function aoObligatoires(string $jour): array
             $s = $r['saison_id'] !== null ? (int) $r['saison_id'] : null;
             $pwa = $r['pwa_id'] === null || (string) $r['pwa_id'] === '' ? null : (string) $r['pwa_id'];
             if (aoExigible(true, $s, $jour, $gammes)) {
-                $out['exigibles'][] = ['ref' => (string) $r['ref'], 'nom' => (string) $r['nom'], 'pwa' => $pwa, 'saison' => $s];
+                $f = $s !== null && isset($gammes[$s]) ? aoFenetre($gammes[$s], $jour) : null;
+                $out['exigibles'][] = ['ref' => (string) $r['ref'], 'nom' => (string) $r['nom'], 'pwa' => $pwa, 'saison' => $s,
+                    'ouverteLe' => $f !== null ? $f['du'] : null];
             } else {
                 $out['horsSaison'][] = ['ref' => (string) $r['ref'], 'nom' => (string) $r['nom'], 'saison' => (int) $s];
             }
@@ -330,7 +351,8 @@ function ep_prod_saisons(): array
     try {
         foreach (Db::rows('SELECT ref, saison_id FROM ceo_prod_product WHERE must = 1 AND actif = 1') as $r) {
             $s = $r['saison_id'] !== null ? (int) $r['saison_id'] : null;
-            if ($s === null) { $annee++; } else { $oblig[$s] = ($oblig[$s] ?? 0) + 1; if (!isset($gammes[$s])) { $inconnue++; } }
+            if ($s === null || (isset($gammes[$s]) && $gammes[$s]['permanente'])) { $annee++; }
+            else { $oblig[$s] = ($oblig[$s] ?? 0) + 1; if (!isset($gammes[$s]) || !$gammes[$s]['active']) { $inconnue++; } }
             if (aoExigible(true, $s, $jour, $gammes)) { $exig++; }
         }
     } catch (Throwable $e) { /* pas de fiches cockpit */ }
@@ -341,12 +363,15 @@ function ep_prod_saisons(): array
         $c = $contenu['gammes'][(string) $id] ?? null;
         $refs = $c !== null ? array_map(static fn ($pid) => $refDe[$pid] ?? (string) $pid, $c['ids']) : [];
         if ($g['permanente']) { $permanentes[] = ['id' => $id, 'emoji' => $g['emoji'], 'nom' => $g['nom'], 'produits' => count($refs)]; continue; }
+        $fen = aoFenetre($g, $jour);
+        if ($fen !== null && !empty($fen['passee'])) { continue; }   // non récurrente et terminée : ne rouvrira pas
         $al = aoAlerteDates($g);
         if ($al !== null) { $alertes[] = $al; }
         if ($c !== null && !$c['lu']) { $alertes[] = $g['emoji'] . ' ' . $g['nom'] . ' : ' . ($c['erreur'] ?? 'produits non lus'); }
         $saisons[] = ['id' => $id, 'emoji' => $g['emoji'], 'nom' => $g['nom'], 'nomPanel' => $g['nomPanel'],
             'debut' => $g['debut'] !== null ? substr($g['debut'], 5, 5) : null, 'fin' => $g['fin'] !== null ? substr($g['fin'], 5, 5) : null,
-            'recurrente' => $g['recurrente'], 'fenetre' => aoFenetre($g, $jour),
+            'debutDate' => $g['debut'], 'finDate' => $g['fin'],
+            'recurrente' => $g['recurrente'], 'fenetre' => $fen,
             'produits' => $refs, 'lu' => $c !== null && $c['lu'], 'alerte' => $al, 'obligatoires' => $oblig[$id] ?? 0];
     }
     // Les saisons ouvertes d'abord (celle qui ferme le plus tôt en tête), puis celles qui ouvrent.
@@ -355,7 +380,7 @@ function ep_prod_saisons(): array
         if ($fa === null || $fb === null) { return ($fa === null) <=> ($fb === null); }
         return ($fb['ouverte'] <=> $fa['ouverte']) ?: ($fa['jours'] <=> $fb['jours']);
     });
-    if ($inconnue > 0) { $alertes[] = $inconnue . ' obligatoire(s) rattachée(s) à une saison que le panel ne rend plus : elles ne sont plus exigées.'; }
+    if ($inconnue > 0) { $alertes[] = $inconnue . ' obligatoire(s) rattachée(s) à une saison désactivée ou disparue au panel : elles ne sont plus exigées.'; }
     return ['aujourdhui' => $jour, 'saisons' => $saisons, 'permanentes' => $permanentes,
         'obligatoires' => ['annee' => $annee, 'parSaison' => (object) $oblig, 'exigibles' => $exig, 'saisonInconnue' => $inconnue],
         'alertes' => $alertes, 'contenuLe' => $contenu['le'], 'contenuSource' => $contenu['source'],
@@ -374,16 +399,21 @@ function wr_prod_obligatoire(string $ref): array
     $ref = trim($ref);
     if ($ref === '' || !preg_match('/^[\w-]{1,24}$/', $ref)) { http_response_code(400); return ['error' => 'référence requise']; }
     $must = !empty($b['must']);
+    $ancien = null;
+    try { $ancien = Db::row('SELECT qmin, saison_id FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
     $saison = null;
-    if ($must && isset($b['saison']) && $b['saison'] !== null && $b['saison'] !== '') {
+    if ($must && !array_key_exists('saison', $b)) {
+        // Sans clé « saison » (une quantité seule), la saison en place est gardée.
+        $saison = $ancien !== null && $ancien['saison_id'] !== null ? (int) $ancien['saison_id'] : null;
+    } elseif ($must && $b['saison'] !== null && $b['saison'] !== '') {
         if (!is_numeric($b['saison'])) { http_response_code(422); return ['error' => 'saison inconnue']; }
         $saison = (int) $b['saison'];
         $g = aoGammesBrutes()[$saison] ?? null;
         if ($g === null || !$g['active']) { http_response_code(422); return ['error' => 'saison inconnue du panel']; }
+        $fen = aoFenetre($g, date('Y-m-d'));
+        if ($fen !== null && !empty($fen['passee'])) { http_response_code(422); return ['error' => 'cette gamme est terminée et ne rouvrira pas']; }
         if ($g['permanente']) { $saison = null; }   // « Standard » = toute l'année
     }
-    $ancien = null;
-    try { $ancien = Db::row('SELECT qmin FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
     $qmin = 0;
     if ($must) {
         $q = $b['qmin'] ?? ($ancien['qmin'] ?? 0);
@@ -404,7 +434,7 @@ function wr_prod_obligatoire(string $ref): array
         [$ref, mb_substr($nom, 0, 160), mb_substr($cat, 0, 60), ctype_digit($ref) ? (int) $ref : null, $must ? 1 : 0, $qmin, $saison]);
 
     $gammes = aoGammesBrutes();
-    $g = $saison !== null ? $gammes[$saison] : null;
+    $g = $saison !== null ? ($gammes[$saison] ?? null) : null;
     $quand = !$must ? 'retirée de l’assortiment obligatoire'
         : ($g !== null ? 'obligatoire pendant ' . $g['nom'] : 'obligatoire toute l’année') . ($qmin > 0 ? ' — minimum ' . $qmin : '');
     journalAdd('CEO', 'Assortiment obligatoire', $nom, $quand);

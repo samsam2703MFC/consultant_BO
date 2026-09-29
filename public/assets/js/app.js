@@ -4631,7 +4631,8 @@ class App {
   refMustPut(ref, val){
     const cat = (this.D.prodCatalogue || []).find(p => p.ref === ref);
     if (!cat) { return; }
-    this.aoPoser(ref, { must: !!val, saison: val && cat.saison != null ? cat.saison : null, qmin: val ? (cat.qmin || 0) : 0 });
+    // Cocher garde la saison en place (le serveur la conserve quand la clé est absente).
+    this.aoPoser(ref, val ? { must: true, qmin: cat.qmin || 0 } : { must: false });
   }
   /**
    * Écrit la quantité minimale d'assortiment, sans passer par la fiche.
@@ -4641,7 +4642,7 @@ class App {
     const n = Math.max(0, Math.round(+val || 0));
     const cat = (this.D.prodCatalogue || []).find(p => p.ref === ref);
     if (!cat) { return; }
-    this.aoPoser(ref, { must: n > 0 || !!cat.must, saison: cat.saison != null ? cat.saison : null, qmin: n });
+    this.aoPoser(ref, { must: n > 0 || !!cat.must, qmin: n });
   }
   /* --- Assortiment obligatoire : toute l'année, ou pendant une saison du panel ------------------ */
   /** Une couleur par saison, reconnue à son nom (les identifiants du panel ne disent rien). */
@@ -4654,20 +4655,24 @@ class App {
   }
   aoDm(d){ return d ? String(d).slice(8, 10) + '/' + String(d).slice(5, 7) : ''; }
   /** L'écriture de l'obligatoire seul (toute l'année, saison, minimum) ; la fiche de production n'est pas réécrite. */
-  aoPoser(ref, corps, msg){
+  aoPoser(ref, corps, msg, fermer){
     return this.api('PUT', '/production/obligatoire/' + encodeURIComponent(ref), corps).then(r => {
       if (!r || !r.ok) { return r; }
       const p = (this.D.prodCatalogue || []).find(x => String(x.ref) === String(ref));
       if (p) { Object.assign(p, { must: !!r.must, qmin: r.qmin, saison: r.saison, exigible: !!r.exigible, saisonFenetre: r.saisonFenetre || null }); }
       if (msg) { this.notify(msg); }
-      this.setState(s => (s.aoPop && String(s.aoPop.ref) === String(ref) ? { aoPop: null } : {}));
+      // Seules les écritures du popover le referment : une quantité saisie ailleurs ne doit pas le fermer.
+      this.setState(fermer ? { aoPop: null } : {});
       return r;
     });
   }
-  aoSaisonsCharge(){
-    if (this.D.prodSaisons || this._aoSaisEnCours) { return; }
+  aoSaisonsCharge(forcer){
+    const SA = this.D.prodSaisons;
+    // Une erreur ne reste pas : on réessaie au bout d'une minute (ou tout de suite sur « Réessayer »).
+    if (this._aoSaisEnCours || (SA && !SA.erreur) || (SA && SA.erreur && !forcer && Date.now() - SA.le < 60000)) { return; }
     this._aoSaisEnCours = true;
-    readOne('/production/saisons').then(r => { this._aoSaisEnCours = false; this.D.prodSaisons = r || { saisons: [], alertes: [], erreur: true }; this.setState({}); });
+    readOne('/production/saisons').then(r => { this._aoSaisEnCours = false;
+      this.D.prodSaisons = r && Array.isArray(r.saisons) ? r : { saisons: [], alertes: [], erreur: true, le: Date.now() }; this.setState({}); });
   }
   aoVentesCharge(){
     if (this.D.aoVentes || this._aoVtEnCours) { return; }
@@ -4689,6 +4694,7 @@ class App {
     common.aoVues = [['liste', 'Liste'], ['saisons', 'Saisons']].map(([k, n]) => ({ nom: n, on: vue === k, go: () => this.setState({ aoVue: k, aoPop: null }) }));
     common.aoChargement = !D.prodSaisons;
     common.aoErreur = !!SA.erreur;
+    common.aoReessayer = () => this.aoSaisonsCharge(true);
     common.aoAlertes = SA.alertes || [];
     const exig = p => (p.exigible !== undefined ? !!p.exigible : !!p.must);
     const nObl = id => cat.filter(p => p.must && p.saison === id).length;
@@ -4729,16 +4735,17 @@ class App {
           const n = q === '' ? 0 : Number(q);
           if (!(n >= 0 && n <= 9999)) { this.notify('Quantité minimale : un nombre entre 0 et 9 999'); return; }
           const sid = choix === 'annee' ? null : +choix;
+          if (sid && !G[sid]) { this.notify('Cette saison n’est plus rendue par le panel — choisissez-en une autre'); return; }
           this.aoPoser(p.ref, { must: true, saison: sid, qmin: Math.round(n) },
-            '« ' + p.nom + ' » obligatoire ' + (sid ? 'pendant ' + G[sid].nom : 'toute l’année'));
+            '« ' + p.nom + ' » obligatoire ' + (sid ? 'pendant ' + G[sid].nom : 'toute l’année'), true);
         },
         validerTxt: p.must ? 'Enregistrer' : 'Ajouter à l’assortiment',
-        retirer: p.must ? () => this.aoPoser(p.ref, { must: false }, '« ' + p.nom + ' » retirée de l’assortiment') : null,
+        retirer: p.must ? () => this.aoPoser(p.ref, { must: false }, '« ' + p.nom + ' » retirée de l’assortiment', true) : null,
       };
     };
     const ouvrirPop = (p, depuis) => () => {
       if (S.aoPop && String(S.aoPop.ref) === String(p.ref) && S.aoPop.depuis === depuis) { this.setState({ aoPop: null }); return; }
-      const def = p.must ? (p.saison != null ? String(p.saison) : 'annee')
+      const def = p.must ? (p.saison != null && G[p.saison] ? String(p.saison) : 'annee')
         : (cible ? String(cible.id) : (p.saisonnier && (p.saisons || []).length && G[p.saisons[0]] ? String(p.saisons[0]) : 'annee'));
       this.setState({ aoPop: { ref: String(p.ref), depuis, choix: def, q: String(p.qmin || p.bmin || 1) } });
     };
@@ -4747,16 +4754,16 @@ class App {
     const ligne = p => {
       const s = p.saison != null ? G[p.saison] : null, f = s ? s.fenetre : null;
       const quand = p.saison == null ? { cls: 'an', txt: 'toute l’année' }
-        : !s ? { cls: 'ko', txt: 'saison inconnue du panel' }
+        : !s ? (SA.erreur || !D.prodSaisons ? { cls: 'lig', txt: 'de saison' } : { cls: 'ko', txt: 'saison désactivée au panel' })
         : f && f.ouverte ? { cls: 'ok', txt: nomS(s) + ' · jusqu’au ' + dm(f.au) } : { cls: 'wa', txt: (s.emoji || '') + ' dès le ' + dm(f && f.du) };
       const v = V[String(p.ref)] || 0;
       return { ref: String(p.ref), nom: p.nom, sous: String(p.ref) + ' · ' + (p.groupe || p.categorie || ''), quand, avenir: !!(s && f && !f.ouverte),
         v30: v ? fr(v) : (s && f && !f.ouverte ? 'hors saison' : '0'), v30Mu: !v,
         qmin: String(p.qmin || 0), qId: 'ao-q-' + p.ref,
         qminSet: e => { const n = Number(String(e.target.value).trim().replace(',', '.') || 0); if (!(n >= 0 && n <= 9999)) { this.notify('Quantité minimale : un nombre entre 0 et 9 999'); return; }
-          this.aoPoser(p.ref, { must: true, saison: p.saison == null ? null : p.saison, qmin: Math.round(n) }); },
+          this.aoPoser(p.ref, { must: true, qmin: Math.round(n) }); },
         batchTxt: p.bmin ? 'batch ' + p.bmin + (p.bmult > 1 ? ' × ' + p.bmult : '') : '',
-        qminBatch: p.bmin ? () => this.aoPoser(p.ref, { must: true, saison: p.saison == null ? null : p.saison, qmin: p.bmin }) : null,
+        qminBatch: p.bmin ? () => this.aoPoser(p.ref, { must: true, qmin: p.bmin }) : null,
         sousBatch: !!(p.bmin && (p.qmin || 0) > 0 && (p.qmin || 0) < p.bmin),
         place: p.zone ? [p.zone, p.meuble, p.niveau].filter(Boolean).join(' · ') : '',
         planoGo: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }),
@@ -4774,7 +4781,8 @@ class App {
     fermees.forEach(s => { const l = tri(cat.filter(p => p.must && p.saison === s.id)); if (l.length) {
       avenir.push({ titre: 'À venir — ' + nomS(s) + ' · ' + l.length, sous: '— exigées du ' + dm(s.fenetre.du) + ' au ' + dm(s.fenetre.au) + ' · ouvre dans ' + s.fenetre.jours + ' j', avenir: true, lignes: l.map(ligne) }); } });
     const perdues = cat.filter(p => p.must && p.saison != null && !G[p.saison]);
-    if (D.prodSaisons && perdues.length) { avenir.push({ titre: 'Saison inconnue du panel · ' + perdues.length, sous: '— plus exigées : choisissez une saison ou « toute l’année »', avenir: true, lignes: perdues.map(ligne) }); }
+    if (perdues.length && D.prodSaisons && !SA.erreur) { avenir.push({ titre: 'Saison désactivée ou inconnue du panel · ' + perdues.length, sous: '— plus exigées : choisissez une saison ou « toute l’année »', avenir: true, lignes: perdues.map(ligne) }); }
+    else if (perdues.length) { avenir.push({ titre: 'De saison · ' + perdues.length, sous: '— les saisons du panel ne sont pas lues pour l’instant', avenir: true, lignes: perdues.map(ligne) }); }
     common.aoExigibles = nExig;
     common.aoSections = sections.concat(avenir);
     const nAnneeSansPlace = annee.filter(p => !p.zone).length;
@@ -4820,7 +4828,7 @@ class App {
 
     // --- les saisons : la frise de l'année et la saison choisie
     common.aoFrise = null; common.aoDetail = null;
-    if (vue === 'saisons' && D.prodSaisons) {
+    if (vue === 'saisons' && D.prodSaisons && !SA.erreur) {
       const auj = new Date((SA.aujourdhui || new Date().toISOString().slice(0, 10)) + 'T12:00:00');
       const deb = new Date(auj.getFullYear(), auj.getMonth(), 1, 12), fin = new Date(auj.getFullYear() + 1, auj.getMonth(), 1, 12);
       const tot = (fin - deb) / 864e5;
@@ -4828,6 +4836,10 @@ class App {
       const mois = []; for (let i = 0; i < 12; i++) { const d = new Date(deb.getFullYear(), deb.getMonth() + i, 1, 12); mois.push({ t: d.toLocaleDateString('fr-BE', { month: 'short' }).replace('.', ''), l: x(d) }); }
       const refsCat = new Set(cat.map(p => String(p.ref)));
       const occ = s => { const out = []; if (!s.debut || !s.fin) { return out; }
+        if (s.recurrente === false && s.debutDate && s.finDate) {
+          const du = new Date(s.debutDate + 'T12:00:00'), au = new Date(s.finDate + 'T12:00:00');
+          if (au >= deb && du < fin) { out.push({ l: x(du), w: Math.max(0.6, x(au) - x(du)) }); }
+          return out; }
         for (const a of [auj.getFullYear() - 1, auj.getFullYear(), auj.getFullYear() + 1]) {
           const du = new Date(a + '-' + s.debut + 'T12:00:00'), au = new Date((s.fin < s.debut ? a + 1 : a) + '-' + s.fin + 'T12:00:00');
           if (au >= deb && du < fin) { out.push({ l: x(du), w: Math.max(0.6, x(au) - x(du)) }); } }
@@ -4859,15 +4871,22 @@ class App {
                 this.aoPoser(p.ref, { must: true, saison: cible.id, qmin: Math.round(n) }); },
               v30: v ? fr(v) : (f.ouverte ? '0' : 'hors saison'),
               place: p.zone ? [p.zone, p.meuble, p.niveau].filter(Boolean).join(' · ') : '', planoGo: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }),
-              basculer: an ? null : () => (on ? this.aoPoser(p.ref, { must: false }, '« ' + p.nom + ' » retirée de ' + cible.nom)
-                : this.aoPoser(p.ref, { must: true, saison: cible.id, qmin: qmin0(p) }, '« ' + p.nom + ' » obligatoire pendant ' + cible.nom)) };
+              basculer: an ? null : () => {
+                if (on) { return this.aoPoser(p.ref, { must: false }, '« ' + p.nom + ' » retirée de ' + cible.nom); }
+                // Une référence n'a qu'une saison : la déplacer se confirme.
+                if (autre && !window.confirm('« ' + p.nom + ' » est obligatoire pendant ' + autre.nom + '. La déplacer vers ' + cible.nom + ' ? (une référence n’a qu’une saison)')) { return null; }
+                return this.aoPoser(p.ref, { must: true, saison: cible.id, qmin: qmin0(p) }, '« ' + p.nom + ' » obligatoire pendant ' + cible.nom); } };
           }),
           toutCocher: () => {
+            if (this._aoToutEnCours) { return; }
             const l = prods.filter(p => dans.has(String(p.ref)) && !p.must);
             if (!l.length) { this.notify('Tous les produits de la gamme sont déjà obligatoires'); return; }
-            l.reduce((pr, p) => pr.then(() => this.aoPoser(p.ref, { must: true, saison: cible.id, qmin: qmin0(p) })), Promise.resolve())
-              .then(() => this.notify(l.length + ' produit(s) obligatoires pendant ' + cible.nom));
+            this._aoToutEnCours = true; let ok = 0;
+            l.reduce((pr, p) => pr.then(() => this.aoPoser(p.ref, { must: true, saison: cible.id, qmin: qmin0(p) }).then(r => { if (r && r.ok) { ok++; } })), Promise.resolve())
+              .then(() => { this._aoToutEnCours = false; this.setState({});
+                if (ok) { this.notify(ok + (ok < l.length ? ' / ' + l.length : '') + ' produit(s) obligatoires pendant ' + cible.nom); } });
           },
+          toutEnCours: !!this._aoToutEnCours,
           note: 'Du ' + dm(f.du) + ' au ' + dm(f.au) + ', ces références s’ajoutent aux obligatoires : la visite les contrôle et la conformité les compte. Hors saison, elles ne sont ni exigées ni signalées manquantes.'
             + (f.ouverte ? '' : ' Les ventes de la saison passée ne sont pas relevées ici.'),
         };

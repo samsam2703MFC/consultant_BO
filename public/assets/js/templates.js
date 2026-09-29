@@ -10200,7 +10200,7 @@ function tplAssortiment(c, x){
   if ((c.refFins || []).length) {
     h += `<div class="ao-fins"><b>Fins de gamme annoncées</b>${c.refFins.map(f2 => `<div>${esc(f2.nom)} <span class="mu">(${esc(f2.ref)})</span> — fin le <b class="ko">${esc(f2.date)}</b>${f2.note ? ` · <span class="mu">${esc(f2.note)}</span>` : ''}</div>`).join('')}</div>`;
   }
-  if (c.aoErreur) { h += `<div class="ps-note">Les saisons du panel ne répondent pas : les obligatoires restent affichées, sans leurs fenêtres.</div>`; }
+  if (c.aoErreur) { h += `<div class="ps-note">Les saisons du panel ne répondent pas : les obligatoires restent affichées, sans leurs fenêtres. <button class="ps-btn" ${x.A(c.aoReessayer)}>Réessayer</button></div>`; }
   if (c.aoVue === 'liste') {
     h += `<div class="ps-tuiles ao-tuiles">${c.aoTuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
     <div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:6px 8px 10px"><table class="ao-t"><thead><tr><th>Référence</th><th>Quand</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th><th></th></tr></thead><tbody>
@@ -10214,6 +10214,8 @@ function tplAssortiment(c, x){
           <td class="pl2">${l.place ? `<span>${esc(l.place)}</span>` : '<span class="mu">pas de place au comptoir</span>'} <button class="ao-pill ${l.place ? 'lig' : 'ko'}" ${x.A(l.planoGo)}>${esc(l.planoBtn)}</button></td>
           <td class="n"><button class="ao-x" ${x.A(l.retirer)} title="Retirer de l’assortiment">×</button></td></tr>${l.pop ? `<tr class="ao-poprow"><td colspan="6">${tplAoPop(l.pop, x)}</td></tr>` : ''}`).join('') : `<tr><td colspan="6" class="mu" style="font-size:12px">Aucune — ajoutez-en depuis la liste de recherche.</td></tr>`}`).join('')}
     </tbody></table></div>${tplAoRecherche(c, x)}</div>`;
+  } else if (c.aoErreur) {
+    h += '';
   } else if (c.aoChargement) {
     h += `<div class="ps-carte mu">Lecture des gammes saisonnières du panel…</div>`;
   } else {
@@ -10229,7 +10231,7 @@ function tplAssortiment(c, x){
     const D = c.aoDetail;
     if (D) {
       h += `<div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:12px 8px 10px"><div class="ao-barre" style="padding:0 8px 8px"><div><div class="ps-cap">Saison choisie</div><h2 class="ao-h2" style="color:${D.coul}">${esc(D.titre)} <small>${esc(D.sous)}</small></h2></div>
-        <button class="ps-btn" ${x.A(D.toutCocher)}>Tout cocher</button></div>
+        <button class="ps-btn" ${x.A(D.toutCocher)} ${D.toutEnCours ? 'disabled' : ''}>${D.toutEnCours ? 'En cours…' : 'Tout cocher'}</button></div>
         <table class="ao-t"><thead><tr><th style="width:26px"></th><th>Produit</th><th>Obligatoire</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th></tr></thead><tbody>
         ${D.lignes.length ? D.lignes.map(l => `<tr><td>${l.basculer ? `<button class="ao-cb${l.on ? ' on' : ''}" ${x.A(l.basculer)} title="${l.on ? 'Retirer de la saison' : 'Obligatoire pendant la saison'}">${l.on ? '✓' : ''}</button>` : '<span class="ao-cb on dis">✓</span>'}</td>
           <td class="nom"><b>${esc(l.nom)}</b><span>${esc(l.sous)}${l.horsGamme ? ' · hors gamme' : ''}</span></td>

@@ -184,12 +184,15 @@ function ep_visites_conformite(): array
     } elseif ($vendues === []) {
         $assort['motif'] = 'aucune vente sur la fenêtre : rien à conclure de l’assortiment';
     } else {
-        $manquantes = []; $sansId = 0;
+        $manquantes = []; $sansId = 0; $demarrage = 0;
         foreach ($obl as $p) {
             // Sans identifiant de caisse, une obligatoire est illisible : on la
             // compte à part plutôt que de la déclarer absente à tort.
             if ($p['pwa'] === null) { $sansId++; continue; }
             if (isset($vendues[$p['pwa']])) { $assort['presentes']++; continue; }
+            // Saison qui démarre : moins d'une semaine d'ouverture au dernier jour de vente, pas encore
+            // vendue — trop tôt pour la dire manquante (la fenêtre de 30 jours était surtout hors saison).
+            if (!empty($p['ouverteLe']) && (strtotime($au) - strtotime($p['ouverteLe'])) < 7 * 86400) { $demarrage++; continue; }
             $manquantes[] = ['ref' => $p['ref'], 'nom' => $p['nom'],
                 // Au comptoir sans passer en caisse : le plan lui donne une
                 // place, le magasin ne la vend pas.
@@ -199,10 +202,13 @@ function ep_visites_conformite(): array
         $assort['manquantes'] = count($manquantes);
         $assort['liste'] = array_slice($manquantes, 0, 40);
         $assort['sansIdentifiant'] = $sansId;
-        $lisibles = count($obl) - $sansId;
+        $assort['saisonQuiDemarre'] = $demarrage;
+        $lisibles = count($obl) - $sansId - $demarrage;
         $assort['lisibles'] = $lisibles;
         if ($lisibles > 0) { $assort['pct'] = (int) round(100 * $assort['presentes'] / $lisibles); }
-        else { $assort['motif'] = 'aucune obligatoire ne porte d’identifiant de caisse'; }
+        else { $assort['motif'] = $demarrage > 0 && $sansId < count($obl)
+            ? 'saison qui démarre : trop tôt pour juger ' . $demarrage . ' obligatoire(s) de saison'
+            : 'aucune obligatoire ne porte d’identifiant de caisse'; }
     }
 
     // --- Les obligatoires sans place au comptoir : le plan est en défaut avant
