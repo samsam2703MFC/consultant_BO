@@ -474,3 +474,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-29T14:43:57Z sonde clients des tickets : societe, facture, mode de service
 2026-09-29T14:50:01Z sonde clients : table client is_b2b, tickets b2b, commandes, webshop
 2026-09-29T16:12:08Z sonde clients : detail b2b par heure, par jour, comptes pro
+2026-09-29T16:59:48Z clients pro : carte B2B du dashboard, lue dans les tickets du panel
