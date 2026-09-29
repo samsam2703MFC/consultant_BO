@@ -226,9 +226,11 @@ function sqTaches(array $tri): array
 /** Le poste Budget : le CA des mois du trimestre face à leur budget — lu là où le cockpit le lit. */
 function sqBudget(array $tri): array
 {
-    if (!function_exists('ep_stores_perf')) { return []; }
+    // La route /stores/perf est servie par ep_perf() (ep_stores_perf sur le banc).
+    $ep = function_exists('ep_perf') ? 'ep_perf' : (function_exists('ep_stores_perf') ? 'ep_stores_perf' : null);
+    if ($ep === null) { return []; }
     $avant = $_GET; $_GET['granularite'] = 'mois'; $_GET['annees'] = (string) $tri['annee'];
-    try { $L = ep_stores_perf(); } catch (Throwable $e) { $L = []; } finally { $_GET = $avant; }
+    try { $L = $ep(); } catch (Throwable $e) { $L = []; } finally { $_GET = $avant; }
     $acc = [];
     foreach (is_array($L) ? $L : [] as $r) {
         if ((int) ($r['annee'] ?? 0) !== $tri['annee'] || !in_array((int) ($r['mois'] ?? 0), $tri['mois'], true)) { continue; }
