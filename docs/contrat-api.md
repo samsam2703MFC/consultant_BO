@@ -409,6 +409,14 @@ et se grave sous `b` dans le relevé du jour (`svP{shop}:{date}`), à côté des
 passage, le cron complète les jours gravés avant cette lecture (`vpMoisson`, 40 listes par battement), le dashboard en
 relit au plus 8 à la demande. Un jour en cours se relit toutes les dix minutes.
 
+**Le split pro / comptoir dans Résultat.** `GET /exploitation/jour` ajoute à chaque magasin ouvert et au réseau
+`caPro`, `ticketsPro`, `panierPro`, `caComptoir`, `ticketsComptoir`, `panierComptoir`, `partPro` (et `proMagasins` au
+réseau). La liste des tickets du jour part dans le même lot parallèle que le reste, sauf si le relevé `svP` l'a déjà.
+Le comptoir est le CA de la ligne moins le pro. `GET /exploitation/periode` (semaine, mois) ajoute les mêmes champs
+plus `proJours` (jours ouverts de l'étendue), `proJoursLus` et `proComplet` : le pro additionne les jours lus (relevés
+gravés, complétés par au plus 30 listes lues en parallèle, les plus récentes d'abord) ; le comptoir et la part ne sont
+rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand rien n'est lu.
+
 ### `/scoring` — le scoring du trimestre : quatre postes de cinq points par magasin
 
 `GET /scoring?trimestre=2026-T3` (sans `trimestre` : le trimestre en cours) :

@@ -56,19 +56,75 @@ function vpValide(mixed $c, string $j): bool
  */
 function vpJour(int $sid, string $j, bool $lire, int &$appels, int $budget): ?array
 {
-    $cle = 'svP' . $sid . ':' . $j;
-    $c = setting($cle);
+    $c = setting('svP' . $sid . ':' . $j);
     if (vpValide($c, $j)) { return $c['b']; }
     $ancien = is_array($c) && isset($c['b']) && is_array($c['b']) ? $c['b'] : null;
     if (!$lire || $appels >= $budget || !class_exists('PanelApi') || !PanelApi::configured()) { return $ancien; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     $appels++;
     if (!is_array($liste)) { return $ancien; }
+    return vpGraveListe($sid, $j, $liste);
+}
+
+/** Le pro gravé d'un jour s'il vaut encore (clos, ou lu il y a moins de dix minutes) ; sinon null. */
+function vpLu(int $sid, string $j): ?array
+{
+    $c = setting('svP' . $sid . ':' . $j);
+    return vpValide($c, $j) ? $c['b'] : null;
+}
+
+/** Grave sous `b` le pro d'une liste de tickets déjà lue, sans toucher au relevé des produits. */
+function vpGraveListe(int $sid, string $j, array $liste): array
+{
+    $cle = 'svP' . $sid . ':' . $j;
+    $c = setting($cle);
     $b = vpDuListe($liste);
     $c = is_array($c) ? $c : ['quand' => time()];
     $c['b'] = $b;
     svGrave($cle, $c);
     return $b;
+}
+
+/** Le split d'une journée pour un tableau : CA et tickets pro, le reste au comptoir (sur le CA de la ligne). */
+function vpSplit(?array $b, float $ca, int $tickets): array
+{
+    if ($b === null) { return ['caPro' => null, 'ticketsPro' => null, 'caComptoir' => null, 'ticketsComptoir' => null, 'partPro' => null]; }
+    $caPro = 0.0;
+    foreach ($b['t'] as $t) { $caPro += (float) $t[2]; }
+    $nPro = count($b['t']);
+    $caC = max(0.0, $ca - $caPro); $nC = max(0, $tickets - $nPro);
+    return ['caPro' => round($caPro, 2), 'ticketsPro' => $nPro,
+        'caComptoir' => round($caC, 2), 'ticketsComptoir' => $nC,
+        'partPro' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null,
+        'panierPro' => $nPro > 0 ? round($caPro / $nPro, 2) : null,
+        'panierComptoir' => $nC > 0 ? round($caC / $nC, 2) : null];
+}
+
+/**
+ * Le pro gravé de plusieurs jours pour plusieurs magasins — [sid => [date => b]] —
+ * complété par au plus $budget listes de tickets lues en parallèle, les jours
+ * les plus récents d'abord. Ce qui reste non lu le sera au cron (vpMoisson).
+ */
+function vpJoursLus(array $sids, array $jours, int $budget = 30): array
+{
+    $out = []; $manque = [];
+    foreach ($sids as $sid) {
+        foreach ($jours as $j) {
+            $b = vpLu((int) $sid, $j);
+            if ($b !== null) { $out[(int) $sid][$j] = $b; } else { $manque[] = [(int) $sid, $j]; }
+        }
+    }
+    if ($manque && $budget > 0 && class_exists('PanelApi') && PanelApi::configured()) {
+        usort($manque, static fn ($a, $b) => strcmp($b[1], $a[1]));
+        $paths = [];
+        foreach (array_slice($manque, 0, $budget) as [$sid, $j]) { $paths[$sid . '|' . $j] = '/shops/' . $sid . '/transactions?date=' . $j; }
+        foreach (PanelApi::getParallele($paths, 6) as $k => $liste) {
+            if (!is_array($liste)) { continue; }
+            [$sid, $j] = explode('|', (string) $k, 2);
+            $out[(int) $sid][$j] = vpGraveListe((int) $sid, $j, $liste);
+        }
+    }
+    return $out;
 }
 
 /** Les tickets pro d'un jour, mis en forme pour l'écran. */

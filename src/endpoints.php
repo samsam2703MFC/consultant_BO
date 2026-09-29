@@ -2145,7 +2145,24 @@ function ep_exploitation_jour(): array
         $paths['hj' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?'
             . http_build_query(['from' => $date, 'to' => $date]);
     }
+    // Les clients pro du jour : la LISTE des tickets de chaque magasin porte
+    // `is_client_b2b` — un appel par magasin, dans le même lot, sauf si le
+    // relevé du jour les a déjà (clos, ou lus il y a moins de dix minutes).
+    $proLu = [];
+    if (function_exists('vpLu')) {
+        foreach ($shops as $s) {
+            $id = (int) $s['id'];
+            $bP = vpLu($id, $date);
+            if ($bP !== null) { $proLu[$id] = $bP; } else { $paths['tkl' . $id] = '/shops/' . $id . '/transactions?date=' . $date; }
+        }
+    }
     $res = PanelApi::getParallele($paths, 6);
+    if (function_exists('vpGraveListe')) {
+        foreach ($shops as $s) {
+            $id = (int) $s['id'];
+            if (!isset($proLu[$id]) && is_array($res['tkl' . $id] ?? null)) { $proLu[$id] = vpGraveListe($id, $date, $res['tkl' . $id]); }
+        }
+    }
 
     /** La ventilation d'une réponse category-sales : [magasin => [catégorie => CA]]. */
     $lireCats = static function ($cs): array {
@@ -2682,7 +2699,10 @@ function ep_exploitation_jour(): array
             'net' => $net !== null ? round($net, 2) : null,
             'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null,
             'motifNet' => $net === null ? 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles' : null,
-            'categories' => $cats, 'serie' => $serie];
+            'categories' => $cats, 'serie' => $serie]
+            // Le split pro / comptoir : les tickets des clients pro du panel,
+            // le reste du CA de la ligne au comptoir.
+            + (function_exists('vpSplit') ? vpSplit($proLu[$id] ?? null, (float) $ca, (int) $tickets) : []);
     }
     usort($lignes, fn ($a, $b) => ($b['ca'] ?? -1) <=> ($a['ca'] ?? -1));
     $out['magasins'] = $lignes;
@@ -2691,9 +2711,14 @@ function ep_exploitation_jour(): array
     $t = ['ca' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
         'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0];
     $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = [];
+    $pro = ['ca' => 0.0, 'tickets' => 0, 'caMag' => 0.0, 'ticketsMag' => 0, 'n' => 0];
     foreach ($lignes as $l) {
         if (empty($l['ouvert'])) { continue; }
         $ouverts++;
+        if (isset($l['caPro']) && $l['caPro'] !== null) {
+            $pro['n']++; $pro['ca'] += $l['caPro']; $pro['tickets'] += (int) $l['ticketsPro'];
+            $pro['caMag'] += $l['ca']; $pro['ticketsMag'] += (int) $l['tickets'];
+        }
         $t['ca'] += $l['ca']; $t['coutMatiere'] += $l['coutMatiere']; $t['margeBrute'] += $l['margeBrute'];
         $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
         if ($l['refCa'] === null) { $refComplet = false; }
@@ -2734,6 +2759,16 @@ function ep_exploitation_jour(): array
         'overheadPct' => ($netComplet && $ca > 0) ? round($t['overhead'] / $ca * 100, 1) : null,
         'net' => $netComplet ? round($t['net'], 2) : null,
         'netPct' => ($netComplet && $ca > 0) ? round($t['net'] / $ca * 100, 1) : null,
+        // Le split du réseau sur les magasins dont les tickets sont lus :
+        // `proMagasins` < `magasins` dit qu'il en manque.
+        'caPro' => $pro['n'] ? round($pro['ca'], 2) : null,
+        'ticketsPro' => $pro['n'] ? $pro['tickets'] : null,
+        'caComptoir' => $pro['n'] ? round(max(0.0, $pro['caMag'] - $pro['ca']), 2) : null,
+        'ticketsComptoir' => $pro['n'] ? max(0, $pro['ticketsMag'] - $pro['tickets']) : null,
+        'partPro' => ($pro['n'] && $pro['caMag'] > 0) ? round(100 * $pro['ca'] / $pro['caMag'], 1) : null,
+        'proMagasins' => $pro['n'],
+        'panierPro' => $pro['tickets'] > 0 ? round($pro['ca'] / $pro['tickets'], 2) : null,
+        'panierComptoir' => ($pro['n'] && $pro['ticketsMag'] - $pro['tickets'] > 0) ? round(max(0.0, $pro['caMag'] - $pro['ca']) / ($pro['ticketsMag'] - $pro['tickets']), 2) : null,
         'categories' => $catsR];
     return $out;
 }

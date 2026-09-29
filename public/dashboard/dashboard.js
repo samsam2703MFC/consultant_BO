@@ -1007,7 +1007,17 @@
       ${comptes.length ? `<table class="db-pro-tab"><thead><tr><th>Société</th><th class="n">Tickets</th><th class="n">CA</th><th class="n">Dernier</th></tr></thead><tbody>${comptes.slice(0, mobile ? 6 : 9).map(c => { const vieux = (new Date(S.date + 'T12:00:00') - new Date(c.dernier + 'T12:00:00')) / 86400000 > 21; return `<tr><td class="nom">${esc(c.societe)}</td><td class="n">${fN(c.n)}</td><td class="n">${fE(c.ca)}</td><td class="n ${vieux ? 'att' : 'mu'}">${fD(c.dernier)}</td></tr>`; }).join('')}</tbody></table>` : '<div class="db-mini" style="margin-top:6px">Aucun compte pro sur 30 jours.</div>'}
       ${proSerie(P.serie) ? `<div style="margin-top:12px"><span class="db-lab">La part pro, jour par jour</span>${proSerie(P.serie)}<div class="db-mini" style="margin-top:4px">${M.part != null ? fP(M.part) + ' du CA sur ' + M.jours + ' jours lus' : ''}${M.panierPro != null ? ' · panier pro ' + fU(M.panierPro) : ''} · en orange, un compte sans commande depuis trois semaines</div></div>` : ''}</div>`;
     if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div></div>`; }
-    return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div></div>`;
+    // Sur ordinateur, la carte se replie : l'en-tête garde le jour en une
+    // ligne (CA pro, sa part, clients, à facturer) et le mois ; le clic
+    // déplie les chiffres, les tickets, les comptes et la série.
+    const ouvert = !!S.proOuvert;
+    const resume = J ? (J.ticketsPro
+      ? `<b class="pro">${fE(J.caPro)}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
+      : `aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} · comptoir ${fE(J.ca)}`) : 'tickets du jour non lus';
+    const mois = M.jours ? ' · 30 jours : ' + (M.part != null ? fP(M.part) + ' du CA' : fE(M.caPro)) : '';
+    return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
+      <span class="db-cdr" style="padding:0;margin-left:auto">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>
+      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div>` : ''}</div>`;
   }
   /** La tuile du mur mobile : le CA pro du jour et sa part, le tiroir en dessous. */
   function murPro() {

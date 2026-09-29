@@ -4566,22 +4566,25 @@ function tplResultatPeriode(c, x){
   if (c.rpErreur) {
     return `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rpErreurTxt)}</div>`;
   }
-  const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;white-space:nowrap;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
   const sep = 'border-left:0.5px solid var(--color-border-secondary)';
-  const nbCol = 10 + (c.rpMois ? 1 : 0);
+  const nbCol = 12 + (c.rpMois ? 1 : 0);
+  const cel2 = (v, coul, s1, s2, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s2)}</div>` : ''}</td>`;
   const rang = l => `
     <tr ${l.ouvrir ? x.A(l.ouvrir) : ''} class="${l.reseau ? '' : 'hv-bg'}" style="${l.st}">
-      <td style="padding:9px 10px;${l.reseau ? 'border-top:1px solid var(--color-border-secondary)' : bord}">
-        <div style="font-weight:500">${l.chevron ? `<span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>` : ''}${esc(l.nom)}${l.atteint ? feuLigne : ''}</div>
+      <td style="padding:9px 7px;${l.reseau ? 'border-top:1px solid var(--color-border-secondary)' : bord}">
+        <div style="font-weight:500;white-space:nowrap" title="${esc(l.nom)}">${l.chevron ? `<span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>` : ''}${esc(l.nomCourt || l.nom)}${l.atteint ? feuLigne : ''}</div>
         ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:${l.reseau ? 0 : 14}px">${esc(l.sousTitre)}</div>` : ''}
       </td>
-      ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true) + cel(l.attendu, 'var(--color-text-muted)')
+      ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true)
+          + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre)
+          + cel(l.attendu, 'var(--color-text-muted)')
           + cel(l.ecart, l.ecartCol, '', true) + cel(l.clients, l.clientsCol, l.clientsSous, true, l.clientsTitre)
           + (c.rpMois ? cel(l.mois.ecart, l.mois.ecartCol, l.mois.n1 ? 'N-1 ' + l.mois.n1 : '', false, 'même période un an plus tôt — source API') : '')
-          + `<td style="padding:9px 10px;${bord};text-align:right;${num};color:${l.fcCol};${sep}">${esc(l.fc)}</td>`
+          + `<td style="padding:9px 7px;${bord};text-align:right;${num};color:${l.fcCol};${sep}">${esc(l.fc)}</td>`
           + cel(l.lab, l.labCol) + cel(l.oh, l.ohCol)
           + cel(l.net, l.netCol, l.netPct, true, l.netTitre)
-        : `<td colspan="${nbCol - 1}" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">${esc(l.sousTitre || 'aucun chiffre')}</td>`}
+        : `<td colspan="${nbCol - 1}" style="padding:9px 7px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">${esc(l.sousTitre || 'aucun chiffre')}</td>`}
     </tr>`;
   const bloc = (titre, corps) => `<div><div style="${cap};margin-bottom:8px">${esc(titre)}</div>${corps}</div>`;
   const kv = (l, v, coul, fort) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;${bord};font-size:12.5px${fort ? ';font-weight:600' : ''}"><span>${esc(l)}</span><span style="${num};white-space:nowrap${coul ? ';color:' + coul : ''}">${esc(v)}</span></div>`;
@@ -4698,18 +4701,18 @@ function tplResultatPeriode(c, x){
       </div>
 
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1120px">
         <tr>
-          <th colspan="6" style="text-align:left;padding:0 10px 4px;${cap};font-size:9.5px">Face à l’objectif ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
+          <th colspan="8" style="text-align:left;padding:0 10px 4px;${cap};font-size:9.5px">Face à l’objectif ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
           <th colspan="${c.rpMois ? 5 : 4}" style="text-align:left;padding:0 10px 4px;${cap};font-size:9.5px;${sep}">Le compte de résultat ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
         </tr>
         <tr>
-          ${c.rpEntetes.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}</th>`).join('')}
-          ${c.rpMois ? `<th style="text-align:right;padding:0 10px 7px;${cap}">vs N-1</th>` : ''}
-          <th style="text-align:right;padding:0 10px 7px;${cap};${sep}">Coût matière</th>
-          <th style="text-align:right;padding:0 10px 7px;${cap}">Main-d’œuvre</th>
-          <th style="text-align:right;padding:0 10px 7px;${cap}">Frais généraux</th>
-          <th style="text-align:right;padding:0 10px 7px;${cap}">Résultat</th>
+          ${c.rpEntetes.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 7px 7px;${cap}">${esc(e)}</th>`).join('')}
+          ${c.rpMois ? `<th style="text-align:right;padding:0 7px 7px;${cap}">vs N-1</th>` : ''}
+          <th style="text-align:right;padding:0 7px 7px;${cap};${sep}">Coût matière</th>
+          <th style="text-align:right;padding:0 7px 7px;${cap}">Main-d’œuvre</th>
+          <th style="text-align:right;padding:0 7px 7px;${cap}">Frais généraux</th>
+          <th style="text-align:right;padding:0 7px 7px;${cap}">Résultat</th>
         </tr>
         ${lignes}
         ${c.rpReseau ? rang(c.rpReseau) : ''}
@@ -4744,9 +4747,11 @@ function tplResultatJour(c, x){
   // puis l'activité qui l'explique (tickets → panier → produits par client),
   // et la ligne finale. Marge, main-d'œuvre et frais vivent dans le détail
   // qu'on ouvre — comme le coût matière avant eux.
-  const ent = ['Magasin', 'Ventes par heure', 'CA du jour', c.rjRefEntete, 'Objectif du jour', 'Clients manquants', 'Tickets', 'Panier',
+  const ent = ['Magasin', 'Ventes par heure', 'CA du jour', c.rjRefEntete, 'CA comptoir', 'CA pro', 'Objectif du jour', 'Clients manquants', 'Tickets', 'Panier',
     'Produits / client', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
+  // Une cellule du split comptoir / pro : le CA, puis sa part et ses clients, puis le panier.
+  const cel2 = (v, coul, s1, s2, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s2)}</div>` : ''}</td>`;
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
   const cel = (v, coul, sous, fort, titre, sousCoul) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:${sousCoul || 'var(--color-text-muted)'};font-weight:400">${esc(sous)}</div>` : ''}</td>`;
   // Le (i) d'une notion qui a besoin d'être expliquée : au survol, la phrase
@@ -4799,12 +4804,12 @@ function tplResultatJour(c, x){
       </div>
 
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1040px">
         <tr>${ent.map((e, i) => `<th style="text-align:${i <= 1 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}${i === 3 ? aide(c.rjRefAide) : ''}</th>`).join('')}</tr>
         ${c.rjLignes.map(l => `
           <tr ${x.A(l.ouvrir)} class="hv-bg" style="${l.st}">
             <td style="padding:9px 10px;${bord}">
-              <div style="font-weight:500"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nom)}${l.atteint ? feuLigne : ''}</div>
+              <div style="font-weight:500;white-space:nowrap" title="${esc(l.nom)}"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nomCourt || l.nom)}${l.atteint ? feuLigne : ''}</div>
               ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>` : ''}
             </td>
             <td style="padding:6px 10px;${bord};vertical-align:middle">${l.heures
@@ -4812,18 +4817,20 @@ function tplResultatJour(c, x){
               : `<span style="font-size:10px;color:var(--color-text-muted)">—</span>`}</td>
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
+                + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre)
                 + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
                 + cel(l.manque, l.manqueCoul, l.manqueSous, true, l.manqueTitre)
                 + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
                 + cel(l.ppc, '', '', false)
                 + cel(l.net, l.netCoul, l.netPct, true)
-              : `<td colspan="8" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
+              : `<td colspan="10" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
           </tr>`).join('')}
         <tr style="background:var(--color-background-secondary)">
           <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:500">Réseau
             <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
           <td style="border-top:1px solid var(--color-border-secondary)"></td>
           ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
+          ${cel2(c.rjReseau.caCpt, '', c.rjReseau.caCptSous, c.rjReseau.caCptSous2, c.rjReseau.proTitre)}${cel2(c.rjReseau.caPro, c.rjReseau.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', c.rjReseau.caProSous, c.rjReseau.caProSous2, c.rjReseau.proTitre)}
           ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
           ${cel(c.rjReseau.manque, c.rjReseau.manqueCoul, '', true, 'somme des clients manquants de chaque magasin')}
           ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
