@@ -105,6 +105,69 @@ function ep_ventes_sonde(): array
 }
 
 /**
+ * GET /ventes/clients/sonde?jours=30 — ce que la base partagée sait du CLIENT
+ * d'un ticket : professionnel (société, facturé, paiement différé) ou
+ * particulier au comptoir, et par quel service (comptoir, livraison…).
+ * Lecture seule, agrégée, bornée : aucune donnée nominative de particulier.
+ */
+function ep_ventes_clients_sonde(): array
+{
+    $jours = max(1, min(120, (int) ($_GET['jours'] ?? 30)));
+    $out = ['jours' => $jours, 'tables' => [], 'tickets' => [], 'services' => [], 'paiements' => [], 'societes' => [], 'erreurs' => []];
+    $cols = function (string $table): array {
+        $c = [];
+        foreach (Db::rows("SELECT COLUMN_NAME n, DATA_TYPE t FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION", [$table]) as $r) { $c[(string) $r['n']] = (string) $r['t']; }
+        return $c;
+    };
+    $libelle = function (array $cols): ?string {
+        foreach (['name', 'label', 'libelle', 'title', 'description', 'code', 'company_name', 'display_name'] as $k) { if (isset($cols[$k])) { return $k; } }
+        foreach ($cols as $k => $t) { if (in_array($t, ['varchar', 'text', 'char'], true) && !str_starts_with($k, 'id')) { return $k; } }
+        return null;
+    };
+    // Les tables autour du client : colonnes et volume.
+    foreach (['customer', 'client', 'company', 'client_department', 'serving_method', 'payment_type', 'invoice', 'client_order', 'ws_orders', 'ws_office_delivery_sites'] as $t) {
+        try {
+            $c = $cols($t);
+            if ($c === []) { continue; }
+            $n = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ COUNT(*) n FROM `$t`");
+            $out['tables'][$t] = ['lignes' => (int) ($n['n'] ?? 0), 'colonnes' => array_keys($c)];
+        } catch (Throwable $e) { $out['erreurs'][] = $t . ' : ' . $e->getMessage(); }
+    }
+    $tc = [];
+    try { $tc = $cols('transaction'); } catch (Throwable $e) { $out['erreurs'][] = 'transaction : ' . $e->getMessage(); return $out; }
+    $has = fn (string $k) => isset($tc[$k]);
+    $depuis = date('Y-m-d', strtotime('-' . $jours . ' days'));
+    // Par magasin : combien de tickets portent un client, une société, une facture, un paiement différé.
+    try {
+        $sel = 'id_shop, COUNT(*) n, ROUND(SUM(total_gross_amount_after_discount)) ca';
+        foreach (['id_customer', 'id_client', 'id_company', 'id_invoice'] as $k) { if ($has($k)) { $sel .= ", SUM($k IS NOT NULL AND $k > 0) " . substr($k, 3) . ", ROUND(SUM(CASE WHEN $k IS NOT NULL AND $k > 0 THEN total_gross_amount_after_discount ELSE 0 END)) ca_" . substr($k, 3); } }
+        foreach (['will_be_invoiced', 'deferral_payment'] as $k) { if ($has($k)) { $sel .= ", SUM($k = 1) $k"; } }
+        $out['tickets'] = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ $sel FROM `transaction` WHERE insert_timestamp >= ? GROUP BY id_shop ORDER BY id_shop", [$depuis]);
+    } catch (Throwable $e) { $out['erreurs'][] = 'tickets : ' . $e->getMessage(); }
+    // Le mode de service (comptoir, emporter, livraison…) et le mode de paiement.
+    foreach ([['id_serving_method', 'serving_method', 'services'], ['id_payment_type', 'payment_type', 'paiements']] as [$k, $t, $cle]) {
+        if (!$has($k)) { continue; }
+        try {
+            $lc = $cols($t); $lib = $libelle($lc); $idc = isset($lc['id']) ? 'id' : ($lc === [] ? null : array_key_first($lc));
+            $sql = $lib !== null && $idc !== null
+                ? "SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.$k id, r.`$lib` libelle, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca FROM `transaction` t LEFT JOIN `$t` r ON r.`$idc` = t.$k WHERE t.insert_timestamp >= ? GROUP BY t.$k, r.`$lib` ORDER BY n DESC"
+                : "SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.$k id, NULL libelle, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca FROM `transaction` t WHERE t.insert_timestamp >= ? GROUP BY t.$k ORDER BY n DESC";
+            $out[$cle] = Db::rows($sql, [$depuis]);
+        } catch (Throwable $e) { $out['erreurs'][] = $cle . ' : ' . $e->getMessage(); }
+    }
+    // Les sociétés (clients professionnels) les plus servies — des entreprises, pas des particuliers.
+    if ($has('id_company')) {
+        try {
+            $cc = $cols('company'); $lib = $libelle($cc); $idc = isset($cc['id']) ? 'id' : ($cc === [] ? null : array_key_first($cc));
+            $out['societes'] = $lib !== null && $idc !== null
+                ? Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_company id, c.`$lib` nom, t.id_shop shop, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca FROM `transaction` t LEFT JOIN `company` c ON c.`$idc` = t.id_company WHERE t.insert_timestamp >= ? AND t.id_company IS NOT NULL AND t.id_company > 0 GROUP BY t.id_company, c.`$lib`, t.id_shop ORDER BY ca DESC LIMIT 15", [$depuis])
+                : Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_company id, t.id_shop shop, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca FROM `transaction` t WHERE t.insert_timestamp >= ? AND t.id_company IS NOT NULL AND t.id_company > 0 GROUP BY t.id_company, t.id_shop ORDER BY ca DESC LIMIT 15", [$depuis]);
+        } catch (Throwable $e) { $out['erreurs'][] = 'societes : ' . $e->getMessage(); }
+    }
+    return $out;
+}
+
+/**
  * GET /ventes/mensuel?shop=4&mois=24 — le CA mois par mois d'un magasin.
  *
  * TROIS sources, parce qu'aucune n'est complète à elle seule :

@@ -232,6 +232,7 @@ function route(string $method, string $path): mixed
             $path === '/magasin/analyse'              => ep_mag_analyse(),
             $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
+            $path === '/ventes/clients/sonde'         => ep_ventes_clients_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
