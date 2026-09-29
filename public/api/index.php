@@ -39,6 +39,7 @@ require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
+require __DIR__ . '/../../src/ventes_pro.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -143,6 +144,7 @@ function route(string $method, string $path): mixed
             $path === '/promo/propositions'            => ep_promo_propositions(),
             $path === '/promo'                         => ep_promos(),
             $path === '/exploitation/promos'           => ep_promos_magasin(),
+            $path === '/exploitation/pro'              => ep_exploitation_pro(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),
             $path === '/scoring/rapport'               => ep_scoring_rapport(),
