@@ -477,3 +477,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-29T16:59:48Z clients pro : carte B2B du dashboard, lue dans les tickets du panel
 2026-09-29T17:11:11Z clients pro : en-tete mobile, singulier
 2026-09-29T17:51:19Z resultat : split comptoir / pro b2b (jour, semaine, mois) ; carte clients pro repliable
+2026-09-29T18:11:52Z dashboard : split comptoir / clients pro en jour, semaine, mois
