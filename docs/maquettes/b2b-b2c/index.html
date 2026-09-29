@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Comptoir (B2C) et clients pro (B2B) dans le dashboard</title>
+<!-- Trois propositions pour lire le B2B et le B2C dans le dashboard magasin, vue Jour.
+       ?v=1  Le partage partout : chaque tuile dit sa part pro, les heures s'empilent comptoir / pro, les catégories aussi
+       ?v=2  Une section dédiée « Clients pro » : le reste du dashboard ne change pas
+       ?v=3  Un filtre Tous · Comptoir · Pro en tête, qui refiltre tout le dashboard, plus les comptes pro
+     Chiffres : Corbais, mercredi 17 juin 2026, réels (base partagée : tickets portant un client dont la fiche est B2B).
+     Les heures sont ramenées à l'heure belge (la base est en UTC). -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+  #ecran{max-width:1300px;margin:0 auto}
+  .prop{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 8px}
+  .ok{color:#2d7a3e}.ko{color:#C0182B}.mu{color:var(--color-text-muted)}.att{color:#B26A00}
+  .db-tui .s b.pro{color:#1f5f8b}
+  .pro{color:#1f5f8b}
+  .split{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--color-background-secondary);margin-top:6px}
+  .split i{display:block;height:100%}.split .c{background:#b8ad9f}.split .b{background:#1f5f8b}
+  /* les heures, comptoir + pro empilés */
+  .hh{display:grid;grid-template-columns:repeat(13,1fr);gap:6px;align-items:end;height:150px;padding:14px 16px 0}
+  .hh>div{display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:0}
+  .hh .bar{display:flex;flex-direction:column;justify-content:flex-end;border-radius:4px 4px 0 0;overflow:hidden}
+  .hh .bar .c{background:#b8ad9f}.hh .bar .b{background:#1f5f8b}
+  .hh .l{font-size:9.5px;color:var(--color-text-muted);text-align:center;margin-top:4px}
+  .hh .n{font-size:9.5px;text-align:center;font-weight:600;margin-bottom:2px;white-space:nowrap}
+  .leg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);padding:6px 16px 12px}
+  .leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  table.t{width:100%;border-collapse:collapse}
+  table.t th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 10px 6px}
+  table.t th.n,table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
+  table.t td{padding:7px 10px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px;vertical-align:middle}
+  table.t td.nom{font-weight:600}
+  .tag{font:600 9.5px var(--font-ui);padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text)}
+  .tag.f{background:#e7f0f7;color:#1f5f8b}.tag.d{background:#fff2e3;color:#B26A00}
+  /* la section pro */
+  .pro-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px 4px}
+  .pro-kpi>div{background:var(--color-background-secondary);border-radius:10px;padding:9px 11px}
+  .pro-kpi .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .pro-kpi .v{font-family:var(--font-display);font-size:22px;line-height:1.15;margin-top:2px}
+  .pro-kpi .s{font-size:10.5px;color:var(--color-text-muted)}
+  .pro-corps{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+  .pro-corps>div{padding:10px 16px 14px;min-width:0}.pro-corps>div+div{border-left:.5px solid var(--color-border-tertiary)}
+  .spark{display:flex;align-items:flex-end;gap:2px;height:36px}
+  .spark i{flex:1;background:#1f5f8b;border-radius:2px 2px 0 0;opacity:.85}.spark i.we{opacity:.35}
+  /* le filtre */
+  .filtre{display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px}
+  .filtre span{padding:7px 14px;font:600 12.5px var(--font-ui);color:var(--color-text-muted);border-radius:8px}
+  .filtre span.on{background:#1f5f8b;color:#fff}
+  .bandeau{background:#e7f0f7;border:.5px solid #cfe0ee;border-radius:10px;padding:8px 14px;font-size:12.5px;color:#1f5f8b;margin-bottom:12px;display:flex;gap:10px;align-items:center}
+  .db-tui.pro{border-color:#cfe0ee;background:#f4f8fb}.db-tui.pro .v{color:#1f5f8b}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+/* Corbais, mercredi 17/06/2026 — réel. Heures en heure belge (UTC + 2). */
+const JOUR = { ca: 5119, tickets: 296, panier: 17.3, caPro: 1110, ticketsPro: 14, panierPro: 79.3, marge: 3480, objectif: 5400, mois: { caPro: 17376, ca: 144540, ticketsPro: 181, part: 12.0 } };
+const HEURES = [[6, 495, 16, 805], [7, 636, 22, 1588], [8, 800, 19, 3179], [9, 606, 8, 1711], [10, 615, 8, 1416], [11, 1074, 37, 3395], [12, 2161, 21, 1570], [13, 744, 16, 912], [14, 355, 10, 365], [15, 310, 7, 745], [16, 236, 2, 712], [17, 235, 5, 297], [18, 79, 7, 196]]
+  .map(([h, n, b, cab]) => ({ h, ca: Math.round({ 6: 6666, 7: 10231, 8: 13756, 9: 11126, 10: 11363, 11: 21263, 12: 29284, 13: 14217, 14: 7008, 15: 6795, 16: 5637, 17: 4787, 18: 1755 }[h] / 30), caPro: Math.round(cab / 30), tk: Math.round(n / 30), tkPro: Math.round(b / 30 * 10) / 10 }));
+const TICKETS = [['05:47', 'IMI Hydronic Engineering SA', 36.0, 1, 0], ['05:47', 'Ferme de Bertinchamps SA', 76.8, 1, 1], ['08:59', 'SRL High Security', 37.5, 1, 1], ['08:59', 'NV Gom', 92.2, 1, 1], ['09:00', 'Traiteur Leonard – Double V', 400.0, 1, 1], ['09:00', 'SRA La Serpentine – Horizons neufs', 142.0, 1, 1], ['09:00', 'Odoo SA', 75.0, 1, 1], ['09:03', 'Les Viviers', 116.5, 1, 0], ['09:24', 'Geoni II', 6.1, 1, 1], ['09:28', 'Geoni II', 17.5, 1, 1], ['09:36', 'VBH & Partners', 12.5, 0, 0], ['10:44', 'Geoni II', 11.9, 1, 1], ['11:12', 'SRL High Security', 17.3, 1, 1], ['15:38', 'SRA La Lisière – Horizons neufs', 69.1, 1, 1]]
+  .map(([h, s, m, f, d]) => { const [hh, mm] = h.split(':'); return { h: String((+hh + 2) % 24).padStart(2, '0') + ':' + mm, s, m, f, d }; });
+const COMPTES = [['Traiteur Leonard – Double V', 21, 6395, 305, '10/07'], ['Odoo SA', 51, 5847, 115, '13/07'], ['NV Gom', 21, 3423, 163, '09/07'], ['SA IBA', 21, 2747, 131, '03/07'], ['Ziloo Services', 9, 2459, 273, '03/07'], ['Ferme de Bertinchamps', 6, 1910, 318, '30/06'], ['SRA La Serpentine', 13, 1523, 117, '03/07'], ['SRA La Lisière', 17, 1341, 79, '08/07'], ['Geoni II', 85, 1131, 13, '14/07']];
+const SERIE = [[4577, 194], [4349, 960], [5119, 1110], [5094, 928], [4982, 1473], [4975, 296], [4335, 39], [5157, 1057], [4443, 573], [4872, 1083], [4687, 1083], [4174, 761], [5292, 1343], [4412, 19], [5613, 477], [7207, 1163], [4823, 439], [4813, 445], [6647, 1679], [4436, 140], [4757, 129], [3479, 193], [4065, 210], [3761, 165], [4000, 435], [3740, 698], [2965, 6], [4183, 28], [3800, 222]];
+const CATS = [['Sandwichs & FlipFlap', 1480, 610], ['Pains', 940, 120], ['Viennoiseries', 620, 95], ['Tartes', 560, 140], ['Traiteur & salades', 430, 105], ['Pâtisserie', 390, 40], ['Boissons', 320, 0], ['Épicerie', 210, 0]];
+const fE = n => Math.round(n).toLocaleString('fr-BE') + ' €';
+const fU = n => n.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const fP = n => n.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const part = Math.round(1000 * JOUR.caPro / JOUR.ca) / 10;
+const entete = (sous) => `<div class="db-hd"><img src="../../../public/assets/img/logo.png" alt=""><div><div class="db-titre">Atelier by Berlo - Corbais</div><div class="db-sous">Mercredi 17 juin 2026 · vue Jour · ${sous}</div></div></div>`;
+const tuile = (k, v, s, cls) => `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+function heures(empile) {
+  const max = Math.max(...HEURES.map(h => h.ca));
+  return `<div class="db-card"><div class="ct"><span class="db-lab">Le chiffre d’affaires heure par heure</span><span class="db-mini">${empile ? 'comptoir en bas, pro empilé au-dessus · moyenne des 30 derniers jours ouverts' : 'moyenne des 30 derniers jours ouverts'}</span></div>
+    <div class="hh">${HEURES.map(h => `<div><div class="n">${empile && h.caPro >= 25 ? '<span class="pro">' + Math.round(h.caPro) + '</span> ' : ''}${h.ca}</div><div class="bar" style="height:${Math.round(100 * h.ca / max)}%">${empile ? `<i class="b" style="height:${Math.round(100 * h.caPro / h.ca)}%"></i>` : ''}<i class="c" style="flex:1"></i></div><div class="l">${h.h} h</div></div>`).join('')}</div>
+    <div class="leg"><span><i style="background:#b8ad9f"></i>comptoir (B2C)</span>${empile ? '<span><i style="background:#1f5f8b"></i>clients pro (B2B) — surtout de 8 h à 11 h : les commandes des bureaux et des écoles partent le matin</span>' : ''}</div></div>`;
+}
+function categories(avecPro) {
+  const tot = CATS.reduce((a, c) => a + c[1], 0);
+  return `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">${avecPro ? 'dont la part des clients pro' : ''}</span></div><div style="padding:6px 16px 12px"><table class="t"><thead><tr><th>Catégorie</th><th class="n">CA</th><th class="n">Part</th>${avecPro ? '<th class="n">dont pro</th><th style="width:140px">comptoir / pro</th>' : ''}</tr></thead><tbody>
+    ${CATS.map(c => `<tr><td class="nom">${esc(c[0])}</td><td class="n">${fE(c[1])}</td><td class="n mu">${fP(100 * c[1] / tot)}</td>${avecPro ? `<td class="n pro"><b>${c[2] ? fE(c[2]) : '—'}</b></td><td><div class="split"><i class="c" style="width:${100 - Math.round(100 * c[2] / c[1])}%"></i><i class="b" style="width:${Math.round(100 * c[2] / c[1])}%"></i></div></td>` : ''}</tr>`).join('')}
+  </tbody></table></div></div>`;
+}
+function sectionPro(compacte) {
+  const maxS = Math.max(...SERIE.map(s => s[1]));
+  return `<div class="db-card" style="border-left:4px solid #1f5f8b"><div class="ct"><span class="db-lab" style="color:#1f5f8b">Clients pro — B2B</span><span class="db-mini">tickets portés par un client dont la fiche est professionnelle · facturés ou payés au comptoir · juin : ${fP(JOUR.mois.part)} du CA, ${fE(JOUR.mois.caPro)}</span></div>
+    <div class="pro-kpi"><div><div class="k">CA pro du jour</div><div class="v pro">${fE(JOUR.caPro)}</div><div class="s">${fP(part)} du jour · comptoir ${fE(JOUR.ca - JOUR.caPro)}</div></div><div><div class="k">Tickets pro</div><div class="v">${JOUR.ticketsPro}</div><div class="s">sur ${JOUR.tickets} · 9 sociétés différentes</div></div><div><div class="k">Panier pro</div><div class="v">${fU(JOUR.panierPro)}</div><div class="s">contre ${fU((JOUR.ca - JOUR.caPro) / (JOUR.tickets - JOUR.ticketsPro))} au comptoir</div></div><div><div class="k">À facturer</div><div class="v">${fE(TICKETS.filter(t => t.f).reduce((a, t) => a + t.m, 0))}</div><div class="s">${TICKETS.filter(t => t.d).length} en paiement différé · ${TICKETS.filter(t => !t.d && t.f).length} réglés au comptoir</div></div></div>
+    <div class="pro-corps"><div><span class="db-lab">Les tickets pro du jour</span><table class="t" style="margin-top:6px"><thead><tr><th>Heure</th><th>Société</th><th class="n">Montant</th><th></th></tr></thead><tbody>${TICKETS.slice(0, compacte ? 7 : 14).map(t => `<tr><td class="mu">${t.h}</td><td class="nom">${esc(t.s)}</td><td class="n">${fU(t.m)}</td><td>${t.d ? '<span class="tag d">différé</span>' : (t.f ? '<span class="tag f">facturé</span>' : '<span class="tag">comptoir</span>')}</td></tr>`).join('')}${compacte ? `<tr><td colspan="4" class="mu">… et ${TICKETS.length - 7} autres — voir tout</td></tr>` : ''}</tbody></table></div>
+    <div><span class="db-lab">Les comptes du mois</span><table class="t" style="margin-top:6px"><thead><tr><th>Société</th><th class="n">Tickets</th><th class="n">CA 90 j</th><th class="n">Dernier</th></tr></thead><tbody>${COMPTES.slice(0, compacte ? 6 : 9).map(c => `<tr><td class="nom">${esc(c[0])}</td><td class="n">${c[1]}</td><td class="n">${fE(c[2])}</td><td class="n mu">${c[4]}</td></tr>`).join('')}</tbody></table>
+      <div style="margin-top:12px"><span class="db-lab">La part pro, jour par jour depuis 30 jours</span><div class="spark" style="margin-top:6px">${SERIE.map((s, i) => `<i class="${[5, 6, 12, 13, 19, 20, 26, 27].includes(i) ? 'we' : ''}" style="height:${Math.max(3, Math.round(100 * s[1] / maxS))}%" title="${fE(s[1])}"></i>`).join('')}</div><div class="db-mini" style="margin-top:4px">un pic le 19/06 (1 473 €) et le 03/07 (1 679 €) · presque rien le week-end · la fin de juin recule : trois comptes n’ont plus commandé depuis</div></div></div></div></div>`;
+}
+/* --- v1 : le partage partout --- */
+function v1() {
+  return entete('proposition 1 — le partage comptoir / pro dans chaque bloc') + `<div class="db-tuiles">
+    ${tuile('CA du jour', fE(JOUR.ca), 'objectif ' + fE(JOUR.objectif) + ' · 94,8 % atteint<br><b class="pro">dont pro ' + fE(JOUR.caPro) + ' · ' + fP(part) + '</b>')}
+    ${tuile('Marge brute', fE(JOUR.marge), '68,0 % des ventes<br><b class="pro">dont pro ' + fE(720) + ' · 64,9 %</b>')}
+    ${tuile('Clients', JOUR.tickets, 'référence 288 · + 2,8 %<br><b class="pro">dont pro ' + JOUR.ticketsPro + ' tickets</b>')}
+    ${tuile('Panier moyen', fU(JOUR.panier), 'comptoir ' + fU((JOUR.ca - JOUR.caPro) / (JOUR.tickets - JOUR.ticketsPro)) + '<br><b class="pro">pro ' + fU(JOUR.panierPro) + '</b>')}
+    ${tuile('Projection fin de journée', fE(5380), '61 % de la journée écoulée<br><b class="pro">pro déjà 1 110 € : les commandes partent le matin</b>')}
+    ${tuile('Résultat net du jour', '+ 412 €', '8,0 % des ventes', 'bon')}
+  </div>
+  <div class="db-card"><div class="in"><div class="db-lab">Objectif du jour — ${fE(JOUR.objectif)} · profil des mercredis</div><div class="db-bar"><i style="width:94.8%"></i></div><div class="db-mini" style="margin-top:5px">94,8 % réalisé · <span class="pro">le pro pèse 21,7 % du jour, contre 12 % en moyenne sur le mois</span></div></div></div>
+  ${heures(true)}${categories(true)}`;
+}
+/* --- v2 : une section dédiée --- */
+function v2() {
+  return entete('proposition 2 — une section « Clients pro », le reste ne change pas') + `<div class="db-tuiles">
+    ${tuile('CA du jour', fE(JOUR.ca), 'objectif ' + fE(JOUR.objectif) + ' · 94,8 % atteint')}
+    ${tuile('Marge brute', fE(JOUR.marge), '68,0 % des ventes · matière 1 639 €')}
+    ${tuile('Clients', JOUR.tickets, 'référence 288 · + 2,8 % · 611 produits vendus')}
+    ${tuile('Panier moyen', fU(JOUR.panier), 'réseau 13,10 € · 2,06 produits / client')}
+    ${tuile('Projection fin de journée', fE(5380), '61 % de la journée écoulée')}
+    ${tuile('Résultat net du jour', '+ 412 €', '8,0 % des ventes', 'bon')}
+  </div>
+  <div class="db-card"><div class="in"><div class="db-lab">Objectif du jour — ${fE(JOUR.objectif)} · profil des mercredis</div><div class="db-bar"><i style="width:94.8%"></i></div><div class="db-mini" style="margin-top:5px">94,8 % réalisé · le repère noir est la part de journée normalement écoulée (61 %)</div></div></div>
+  ${sectionPro(false)}
+  ${heures(false)}`;
+}
+/* --- v3 : le filtre Tous · Comptoir · Pro --- */
+function v3() {
+  const cptTk = JOUR.tickets - JOUR.ticketsPro, cptCa = JOUR.ca - JOUR.caPro;
+  return entete('proposition 3 — un filtre en tête, tout le dashboard suit') + `
+  <div class="db-nav" style="margin:0 0 12px"><span class="db-lab">Clients</span><span class="filtre"><span>Tous · ${fE(JOUR.ca)}</span><span>Comptoir · ${fE(cptCa)}</span><span class="on">Pro · ${fE(JOUR.caPro)}</span></span><span class="db-mini">le filtre tient sur la vue Jour, Semaine et Mois, et sur le mur du téléphone</span></div>
+  <div class="bandeau"><b>Filtre Pro</b> — ${JOUR.ticketsPro} tickets portés par un client professionnel, ${fP(part)} du chiffre du jour. Les tuiles, les heures et les catégories ne montrent que ces ventes.</div>
+  <div class="db-tuiles">
+    ${tuile('CA pro du jour', fE(JOUR.caPro), fP(part) + ' du jour · juin : ' + fP(JOUR.mois.part) + ' en moyenne', 'pro')}
+    ${tuile('Marge brute pro', fE(720), '64,9 % des ventes pro · traiteur et sandwichs', 'pro')}
+    ${tuile('Tickets pro', JOUR.ticketsPro, '9 sociétés · 4,7 % des tickets du jour', 'pro')}
+    ${tuile('Panier pro', fU(JOUR.panierPro), 'contre ' + fU(cptCa / cptTk) + ' au comptoir', 'pro')}
+    ${tuile('À facturer', fE(TICKETS.filter(t => t.f).reduce((a, t) => a + t.m, 0)), '11 tickets en paiement différé', 'pro')}
+    ${tuile('Comptes actifs', '38', 'sur 666 fiches pro · 9 vus aujourd’hui', 'pro')}
+  </div>
+  ${heures(true).replace('comptoir en bas, pro empilé au-dessus · moyenne des 30 derniers jours ouverts', 'filtre Pro : les barres bleues ; le comptoir reste en fond gris, pour l’échelle')}
+  <div class="db-card" style="border-left:4px solid #1f5f8b"><div class="ct"><span class="db-lab" style="color:#1f5f8b">Comptes pro — qui commande, et quand</span><span class="db-mini">90 jours · les comptes qui n’ont plus commandé depuis 3 semaines en orange</span></div>
+    <div style="padding:6px 16px 14px"><table class="t"><thead><tr><th>Société</th><th class="n">Tickets</th><th class="n">CA 90 j</th><th class="n">Panier</th><th class="n">Dernier</th><th>Aujourd’hui</th></tr></thead><tbody>
+      ${COMPTES.map(c => { const auj = TICKETS.filter(t => t.s.toLowerCase().startsWith(c[0].toLowerCase().slice(0, 12))); return `<tr><td class="nom">${esc(c[0])}</td><td class="n">${c[1]}</td><td class="n">${fE(c[2])}</td><td class="n mu">${fE(c[3])}</td><td class="n ${['30/06', '03/07'].includes(c[4]) ? 'att' : 'mu'}">${c[4]}</td><td>${auj.length ? '<span class="tag f">' + fU(auj.reduce((a, t) => a + t.m, 0)) + '</span>' : '<span class="mu">—</span>'}</td></tr>`; }).join('')}
+    </tbody></table></div></div>`;
+}
+const v = new URLSearchParams(location.search).get('v') || '1';
+document.getElementById('ecran').innerHTML = `<div class="prop">Maquette ${v} / 3 — ${v === '1' ? 'le partage comptoir / pro partout' : (v === '2' ? 'une section « Clients pro » dédiée' : 'le filtre Tous · Comptoir · Pro')}</div>` + (v === '1' ? v1() : (v === '2' ? v2() : v3()));
+</script>
+</body>
+</html>
