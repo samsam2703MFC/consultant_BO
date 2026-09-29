@@ -583,19 +583,30 @@
     }).join('')}</div>`;
   }
 
+  /**
+   * Les clients manquants du jour : au comptoir quand le serveur les a comptés
+   * ((CA comptoir − objectif) ÷ panier comptoir, le CA des clients pro exclu),
+   * sinon sur le CA total. n > 0 = il en manque.
+   */
+  function clientsJour(m) {
+    if (!m || !m.objectifJour) { return null; }
+    if (m.clientsBase === 'comptoir' && m.clientsManquants != null) { return { n: m.clientsManquants, ecart: m.ecartComptoir, panier: m.panierComptoir, comptoir: true }; }
+    if (!(m.panier > 0)) { return null; }
+    return { n: Math.round((m.objectifJour - m.ca) / m.panier), ecart: m.ca - m.objectifJour, panier: m.panier, comptoir: false };
+  }
   /** Le grand chiffre de la période regardée, avec sa jauge d'atteinte. */
   function murPeriode(m) {
     if (S.vue === 'jour') {
       const obj = m && m.objectifJour;
       const att = obj ? 100 * m.ca / obj : 0;
       const ecart = obj ? m.ca - obj : null;
-      const cl = (ecart != null && m.panier > 0) ? Math.round(Math.abs(ecart) / m.panier) : null;
+      const CJ = clientsJour(m), cl = CJ ? Math.abs(CJ.n) : null;
       // L'animation dure trois secondes ; la nouvelle, elle, doit tenir toute
       // la journée — sinon qui ouvre l'écran à 18 h ne sait pas que c'est fait.
       return murC('Chiffre d’affaires du jour' + (obj && m.ca >= obj ? ' <em class="ok">· objectif atteint</em>' : ''),
         fE(m ? m.ca : null),
         obj ? `objectif ${fE(obj)} · ${fP(att)} · <span class="${ecart >= 0 ? 'ok' : 'ko'}">${fS(ecart)}</span>`
-              + (cl ? ` · ${fN(cl)} client${cl > 1 ? 's' : ''} ${ecart >= 0 ? 'd’avance' : 'de moins'}` : '')
+              + (cl ? ` · ${fN(cl)} client${cl > 1 ? 's' : ''}${CJ.comptoir ? ' comptoir' : ''} ${CJ.n <= 0 ? 'd’avance' : 'de moins'}` : '')
             : 'pas d’objectif du jour',
         '', '', obj ? murJauge(att, att >= 100 ? '#2d7a3e' : '') : '');
     }
@@ -1256,7 +1267,7 @@
     const ref = d.reference || {};
     const att = m.objectifJour ? Math.min(100, 100 * m.ca / m.objectifJour) : 0;
     let h = `<div class="db-tuiles">
-      ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + (m.panier > 0 && m.objectifJour - m.ca > 0 ? ' · <b class="ko">−' + fN((m.objectifJour - m.ca) / m.panier) + ' clients</b> (' + fE(m.objectifJour - m.ca) + ' ÷ ' + fU(m.panier) + ')' : (m.objectifJour && m.panier > 0 ? ' · <b class="ok">+' + fN((m.ca - m.objectifJour) / m.panier) + ' clients</b> d’avance' : '')) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK)}
+      ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + ((CJ => !CJ ? '' : (CJ.n > 0 ? ' · <b class="ko">−' + fN(CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> (' + fE(Math.abs(CJ.ecart)) + ' ÷ ' + fU(CJ.panier) + ')' : ' · <b class="ok">+' + fN(-CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> d’avance'))(clientsJour(m))) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK)}
       ${tuileTend('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere), '', TJ.map(j => j.mb), m.margeBrute, fK)}
       ${tuileTend('Clients', fN(m.tickets), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : '') + (m.produits ? ' · ' + fN(m.produits) + ' produits vendus' : ''), '', TJ.map(j => j.tickets), m.tickets, fN)}
       ${tuileTend('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''), '', TJ.map(j => j.panier), m.panier, fU)}

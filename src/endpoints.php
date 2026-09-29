@@ -2703,6 +2703,11 @@ function ep_exploitation_jour(): array
             // Le split pro / comptoir : les tickets des clients pro du panel,
             // le reste du CA de la ligne au comptoir.
             + (function_exists('vpSplit') ? vpSplit($proLu[$id] ?? null, (float) $ca, (int) $tickets) : []);
+        // Les clients manquants du jour se comptent au comptoir (CA pro exclu).
+        if (function_exists('vpClientsComptoir')) {
+            $iL = count($lignes) - 1;
+            $lignes[$iL] = array_merge($lignes[$iL], vpClientsComptoir($lignes[$iL], $objJour !== null ? (float) $objJour : null));
+        }
     }
     usort($lignes, fn ($a, $b) => ($b['ca'] ?? -1) <=> ($a['ca'] ?? -1));
     $out['magasins'] = $lignes;
@@ -2769,6 +2774,10 @@ function ep_exploitation_jour(): array
         'proMagasins' => $pro['n'],
         'panierPro' => $pro['tickets'] > 0 ? round($pro['ca'] / $pro['tickets'], 2) : null,
         'panierComptoir' => ($pro['n'] && $pro['ticketsMag'] - $pro['tickets'] > 0) ? round(max(0.0, $pro['caMag'] - $pro['ca']) / ($pro['ticketsMag'] - $pro['tickets']), 2) : null,
+        // Les clients manquants du réseau : la somme de ceux de chaque magasin,
+        // comptés au comptoir quand son split est lu.
+        'clientsManquants' => (function () use ($lignes) { $n = 0; $vu = false; foreach ($lignes as $l) { if (!empty($l['ouvert']) && isset($l['clientsManquants'])) { $n += $l['clientsManquants']; $vu = true; } } return $vu ? $n : null; })(),
+        'clientsBase' => (function () use ($lignes) { $b = []; foreach ($lignes as $l) { if (!empty($l['ouvert']) && ($l['objectifJour'] ?? null) !== null) { $b[$l['clientsBase'] ?? 'total'] = true; } } return count($b) === 1 ? array_key_first($b) : ($b ? 'mixte' : null); })(),
         'categories' => $catsR];
     return $out;
 }

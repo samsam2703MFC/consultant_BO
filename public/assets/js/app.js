@@ -7414,6 +7414,11 @@ class App {
    * redemande rien au panel — chaque date coûte une volée d'appels.
    */
   rjCle(){ return this.state.rjDate || ''; }
+  /** Les clients d'avance (+) ou manquants (−) d'une ligne du jour : au comptoir quand le serveur l'a compté, sinon sur le CA total. */
+  rjClients(m){
+    if (m.clientsBase === 'comptoir' && m.clientsManquants != null) { return -m.clientsManquants; }
+    return (m.objectifJour != null && m.panier > 0) ? Math.round((m.ca - m.objectifJour) / m.panier) : 0;
+  }
   /** Le split d'une ligne du Résultat (jour, semaine, mois) : comptoir et pro, chacun avec son CA, sa part, ses clients et son panier. */
   rjSplit(m, manque){
     const fE = v => this.fE(v), fI = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
@@ -8819,7 +8824,8 @@ class App {
       { l: 'Réalisé', v: fE(res.realise), col: 'var(--color-text)',
         s: res.attendu != null ? 'attendu ' + fE(res.attendu) + ' à ce stade' : fInt(res.tickets) + ' tickets · panier ' + fU(res.panier) },
       { l: 'Écart', v: sansObj ? '—' : fS(res.ecart), col: coulEcart(res.ecart),
-        s: clientsTxt(res.clientsManquants) + ((res.ecart != null && res.panier) ? ' (' + fE(Math.abs(res.ecart)) + ' ÷ ' + fU(res.panier) + ')' : '') },
+        s: clientsTxt(res.clientsManquants) + (res.clientsBase === 'comptoir' ? ' au comptoir (somme des magasins, CA pro exclu)'
+          : ((res.ecart != null && res.panier) ? ' (' + fE(Math.abs(res.ecart)) + ' ÷ ' + fU(res.panier) + ')' : '')) },
       { l: 'Reste à faire', v: sansObj ? '—' : fE(res.reste), col: 'var(--color-text)',
         s: (res.objectif ? 'soit ' + Math.round(100 * res.reste / res.objectif) + ' % ' + (vue === 'semaine' ? 'de la semaine' : 'du mois') : '') },
     ];
@@ -8867,8 +8873,12 @@ class App {
         clients: sansO ? '' : fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart),
         // Le calcul sous le chiffre : « 7 625 € ÷ 16,65 € » — un nombre de
         // clients qui ne montre pas d'où il sort se discute, celui-ci se vérifie.
-        clientsSous: (sansO || !m.panier || m.ecart == null) ? '' : fE(Math.abs(m.ecart)) + ' ÷ ' + fU(m.panier),
-        clientsTitre: m.panier ? 'écart ÷ panier moyen de ' + fU(m.panier) : '',
+        // Au comptoir quand le split est complet : l'écart du CA comptoir à
+        // l'attendu ÷ le panier comptoir — le CA des clients pro ne compte pas.
+        clientsSous: sansO ? '' : (m.clientsBase === 'comptoir' && m.ecartComptoir != null && m.panierComptoir ? fE(Math.abs(m.ecartComptoir)) + ' ÷ ' + fU(m.panierComptoir)
+          : ((!m.panier || m.ecart == null) ? '' : fE(Math.abs(m.ecart)) + ' ÷ ' + fU(m.panier))),
+        clientsTitre: m.clientsBase === 'comptoir' ? 'clients comptoir : (CA comptoir − attendu) ÷ panier comptoir de ' + fU(m.panierComptoir) + ' — le CA des clients pro ne compte pas'
+          : (m.panier ? 'écart ÷ panier moyen de ' + fU(m.panier) + (m.proComplet === false ? ' — le comptoir attend que tous les jours soient lus' : '') : ''),
         fc: fPct(m.coutMatierePct), fcCol: feu(m.coutMatierePct, seuils.food),
         lab: fPct(m.labourPct), labCol: feu(m.labourPct, seuils.labour),
         oh: fPct(m.overheadPct), ohCol: feu(m.overheadPct, seuils.overhead),
@@ -8911,9 +8921,10 @@ class App {
         titre: m.clientsManquants > 0 ? 'Il manque ' + fInt(m.clientsManquants) + ' clients sur ' + (vue === 'semaine' ? 'la semaine' : 'le mois')
           : (m.clientsManquants < 0 ? fInt(-m.clientsManquants) + ' clients d’avance sur ' + (vue === 'semaine' ? 'la semaine' : 'le mois') : 'Dans la cible'),
         titreCol: m.clientsManquants > 0 ? '#C0182B' : '#2d7a3e',
-        ecart: fS(m.ecart), ecartCol: coulEcart(m.ecart),
-        ecartLib: 'Écart à l’attendu ' + (r.enCours ? 'à ce jour' : 'de la période'),
-        panier: fU(m.panier), clients: fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart) },
+        ecart: fS(m.clientsBase === 'comptoir' ? m.ecartComptoir : m.ecart), ecartCol: coulEcart(m.clientsBase === 'comptoir' ? m.ecartComptoir : m.ecart),
+        ecartLib: (m.clientsBase === 'comptoir' ? 'Écart du CA comptoir à l’attendu ' : 'Écart à l’attendu ') + (r.enCours ? 'à ce jour' : 'de la période'),
+        panierLib: m.clientsBase === 'comptoir' ? 'Panier moyen du comptoir' : 'Panier moyen du magasin',
+        panier: fU(m.clientsBase === 'comptoir' ? m.panierComptoir : m.panier), clients: fCl(m.clientsManquants), clientsCol: coulEcart(m.clientsBase === 'comptoir' ? m.ecartComptoir : m.ecart) },
       tenir: sansO ? null : {
         reste: fE(m.reste), resteLib: 'Reste à faire' + (restants.length ? (vue === 'semaine' ? ' (' + restants.join(' + ') + ')' : ' (' + restants.length + ' jours)') : ''),
         prevu: fE(m.prevu), prevuPct: m.objectif ? Math.round(100 * m.prevu / m.objectif) + ' %' : '',
@@ -9121,13 +9132,14 @@ class App {
         return n ? n + ' magasin(s) sans objectif encodé, exclu(s) du total' : 'somme des objectifs du jour'; })(),
       // Les clients manquants du réseau : la somme de ceux de chaque magasin,
       // chacun à son panier — pas l'écart réseau divisé par un panier moyen.
-      manque: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null && m2.panier > 0);
+      // Chaque magasin au comptoir quand son split est lu (CA pro exclu).
+      manque: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null && (m2.clientsBase === 'comptoir' || m2.panier > 0));
         if (!l.length) { return ''; }
-        const n = l.reduce((a, m2) => a + Math.round((m2.ca - m2.objectifJour) / m2.panier), 0);
+        const n = l.reduce((a, m2) => a + this.rjClients(m2), 0);
         return (n >= 0 ? '+' : '−') + fInt(Math.abs(n)); })(),
-      manqueCoul: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null && m2.panier > 0);
+      manqueCoul: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null && (m2.clientsBase === 'comptoir' || m2.panier > 0));
         if (!l.length) { return 'var(--color-text-muted)'; }
-        return l.reduce((a, m2) => a + Math.round((m2.ca - m2.objectifJour) / m2.panier), 0) >= 0 ? '#2d7a3e' : '#C0182B'; })(),
+        return l.reduce((a, m2) => a + this.rjClients(m2), 0) >= 0 ? '#2d7a3e' : '#C0182B'; })(),
       mb: fE(res.margeBrute), mbPct: fPct(res.margeBrutePct),
       labour: fE(res.labour), labourPct: fPct(res.labourPct), labourCoul: feu(res.labourPct, seuils.labour),
       oh: fE(res.overhead), ohPct: fPct(res.overheadPct), ohCoul: feu(res.overheadPct, seuils.overhead),
@@ -9203,11 +9215,15 @@ class App {
              + (m.projection != null ? ' · projection ' + fE(m.projection) : '')),
         // L'écart à l'objectif, traduit en CLIENTS : la différence divisée par
         // le panier moyen du magasin. « −71 » = il en manque 71.
-        manque: (() => { const n = (m.objectifJour != null && m.panier > 0) ? Math.round((m.ca - m.objectifJour) / m.panier) : null;
+        // Au comptoir : (CA comptoir − objectif) ÷ panier comptoir, le CA des
+        // clients pro exclu. Sans split lu, sur le CA total.
+        manque: (() => { const n = (m.objectifJour != null && (m.clientsBase === 'comptoir' || m.panier > 0)) ? this.rjClients(m) : null;
           return n == null ? '' : (n >= 0 ? '+' : '−') + fInt(Math.abs(n)); })(),
-        manqueCoul: (m.objectifJour == null) ? 'var(--color-text-muted)' : (m.ca >= m.objectifJour ? '#2d7a3e' : '#C0182B'),
-        manqueSous: (m.objectifJour != null && m.panier > 0) ? fE(Math.abs(m.ca - m.objectifJour)) + ' ÷ ' + fU(m.panier) : '',
-        manqueTitre: m.panier > 0 ? 'écart à l’objectif ÷ panier moyen de ' + fU(m.panier) : '',
+        manqueCoul: (m.objectifJour == null) ? 'var(--color-text-muted)' : (this.rjClients(m) >= 0 ? '#2d7a3e' : '#C0182B'),
+        manqueSous: m.objectifJour == null ? '' : (m.clientsBase === 'comptoir' ? fE(Math.abs(m.ecartComptoir)) + ' ÷ ' + fU(m.panierComptoir)
+          : (m.panier > 0 ? fE(Math.abs(m.ca - m.objectifJour)) + ' ÷ ' + fU(m.panier) : '')),
+        manqueTitre: m.clientsBase === 'comptoir' ? 'clients comptoir : (CA comptoir ' + fE(m.caComptoir) + ' − objectif) ÷ panier comptoir de ' + fU(m.panierComptoir) + ' — le CA des clients pro ne compte pas'
+          : (m.panier > 0 ? 'écart à l’objectif ÷ panier moyen de ' + fU(m.panier) : ''),
         mb: fE(m.margeBrute), mbPct: fPct(m.margeBrutePct),
         labour: fE(m.labour), labourPct: fPct(m.labourPct), labourCoul: feu(m.labourPct, seuils.labour),
         labourTitre: m.labourSource === 'reparti' ? 'masse salariale du mois répartie sur les jours d’ouverture' : 'mesurée sur la journée',

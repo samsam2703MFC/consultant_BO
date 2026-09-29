@@ -4601,7 +4601,7 @@ function tplResultatPeriode(c, x){
             <div style="border:1px solid ${d.manque.titreCol};border-radius:9px;padding:8px 12px 4px;background:var(--color-surface)">
               <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:${d.manque.titreCol};margin-bottom:4px">${esc(d.manque.titre)}</div>
               ${kv(d.manque.ecartLib, d.manque.ecart, d.manque.ecartCol)}
-              ${kv('Panier moyen du magasin', d.manque.panier)}
+              ${kv(d.manque.panierLib || 'Panier moyen du magasin', d.manque.panier)}
               ${kv('Clients manquants', d.manque.clients, d.manque.clientsCol, true)}
             </div>`) : `<div style="font-size:12px;color:var(--color-text-muted)">Pas d’objectif pour ce magasin sur cette période : budget non encodé, ou pondération des jours non adoptée.</div>`}
           ${d.tenir ? bloc('Pour tenir l’objectif', `

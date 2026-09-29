@@ -180,9 +180,14 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
             $effCli = $m['panier'] > 0 ? (int) round($eff / $m['panier']) : null;
             $h .= '<table width="100%" cellpadding="0" cellspacing="0"><tr><td width="49%" valign="top">'
                 . '<div class="cadre"><div class="k">' . ($m['clientsManquants'] > 0 ? 'Il manque ' . number_format((int) $m['clientsManquants'], 0, ',', ' ') . ' clients sur le mois' : ($m['clientsManquants'] < 0 ? number_format(-(int) $m['clientsManquants'], 0, ',', ' ') . ' clients d’avance' : 'Dans la cible')) . '</div>'
-                . '<span class="lg">Écart à l’attendu <b style="float:right" class="' . $cls($m['ecart']) . '">' . $sig($m['ecart']) . '</b></span>'
-                . '<span class="lg">Panier moyen du magasin <b style="float:right">' . $px2($m['panier']) . '</b></span>'
-                . '<span class="lg">Clients manquants <b style="float:right" class="' . $cls($m['ecart']) . '">' . $cli($m['clientsManquants']) . '</b></span></div></td>'
+                // Au comptoir quand le split est complet : le CA des clients pro ne compte pas.
+                . (($m['clientsBase'] ?? 'total') === 'comptoir'
+                    ? '<span class="lg">Écart du CA comptoir à l’attendu <b style="float:right" class="' . $cls($m['ecartComptoir']) . '">' . $sig($m['ecartComptoir']) . '</b></span>'
+                      . '<span class="lg">Panier moyen du comptoir <b style="float:right">' . $px2($m['panierComptoir']) . '</b></span>'
+                      . '<span class="lg">Clients comptoir manquants <b style="float:right" class="' . $cls($m['ecartComptoir']) . '">' . $cli($m['clientsManquants']) . '</b></span></div></td>'
+                    : '<span class="lg">Écart à l’attendu <b style="float:right" class="' . $cls($m['ecart']) . '">' . $sig($m['ecart']) . '</b></span>'
+                      . '<span class="lg">Panier moyen du magasin <b style="float:right">' . $px2($m['panier']) . '</b></span>'
+                      . '<span class="lg">Clients manquants <b style="float:right" class="' . $cls($m['ecart']) . '">' . $cli($m['clientsManquants']) . '</b></span></div></td>')
                 . '<td width="2%"></td><td width="49%" valign="top">'
                 . '<div class="cadre" style="border-color:#c9c1b5"><div class="k" style="color:#7a736a">Pour tenir le budget</div>'
                 . '<span class="lg">Reste à faire <b style="float:right">' . $eur($m['reste']) . '</b></span>'
