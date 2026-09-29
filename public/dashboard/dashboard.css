@@ -774,5 +774,6 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-pro-serie i{flex:1;background:#1f5f8b;border-radius:2px 2px 0 0;opacity:.85;min-width:3px}.db-pro-serie i.we{opacity:.35}.db-pro-serie i.na{height:3px;background:var(--color-border-secondary);opacity:1}
 .db-pro.mob .db-pro-kpi{padding:8px 4px 0;grid-template-columns:repeat(2,minmax(0,1fr))}
 .db-pro.mob .db-pro-tab td.nom{max-width:0;width:100%}
+.db-pro.mob .db-notej-t{display:block}.db-pro.mob .db-notej-t small{display:block;margin-top:3px}
 .db-pro.mob .db-pro-corps{grid-template-columns:1fr}.db-pro.mob .db-pro-corps>div{padding:8px 4px 6px}.db-pro.mob .db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}
 @media (max-width:900px){.db-pro-tab td.nom{max-width:0;width:100%}.db-pro-corps{grid-template-columns:1fr}.db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}.db-pro-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
