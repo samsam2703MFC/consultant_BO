@@ -114,6 +114,12 @@ function ep_exploitation_periode(): array
         }
     }
     $res = PanelApi::getParallele($paths, 6);
+    // Les clients pro de l'étendue : le relevé de chaque jour (gravé par la
+    // moisson ou le dashboard), complété par une trentaine de listes lues en
+    // parallèle. Un jour non lu se dit — le comptoir ne s'en déduit pas.
+    $joursE = [];
+    for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursE[] = $d; }
+    $proJ = function_exists('vpJoursLus') ? vpJoursLus(array_map(static fn ($s) => (int) $s['id'], $shops), $joursE, 30) : null;
 
     $joursMoisC = (int) date('t', strtotime($auj));
     $premierC   = new DateTimeImmutable(date('Y-m-01', strtotime($auj)));
@@ -184,6 +190,7 @@ function ep_exploitation_periode(): array
         $jours = []; $objectif = 0.0; $attendu = 0.0; $prevu = 0.0; $realise = 0.0; $tickets = 0; $mb = 0.0;
         $labour = 0.0; $oh = 0.0; $joursOuvertsPasses = 0; $joursHorsMoisC = 0; $sansBudget = [];
         $objAucun = true; $src = null; $ouvertUnJour = false;
+        $pro = ['ca' => 0.0, 'tk' => 0, 'lus' => 0, 'jours' => 0];
         for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
             $ym = substr($d, 0, 7); $wd = (int) date('N', strtotime($d));
             $b = $budgets[(string) $id][$ym] ?? null;
@@ -205,6 +212,9 @@ function ep_exploitation_periode(): array
             if ($obj !== null) { $objectif += $obj; if ($passe) { $attendu += $obj; } else { $prevu += $obj; } }
             if ($ouvert) {
                 $realise += $x['ca']; $tickets += $x['tickets']; $mb += $x['mb'];
+                $pro['jours']++;
+                $bP = $proJ[$id][$d] ?? null;
+                if ($bP !== null) { $pro['lus']++; $pro['tk'] += count($bP['t']); foreach ($bP['t'] as $tP) { $pro['ca'] += (float) $tP[2]; } }
                 if ($ym === $moisCourant) {
                     $joursOuvertsPasses++;
                     if ($labJ !== null) { $labour += $labJ; }
@@ -250,7 +260,7 @@ function ep_exploitation_periode(): array
                 ? 'main-d’œuvre et frais généraux connus pour le mois courant seulement'
                 : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles'),
             'joursOuverts' => array_keys($wdOuverts),
-            'jours' => $jours];
+            'jours' => $jours] + resProSplit($proJ === null ? null : $pro, $realise, $tickets);
     }
     usort($lignes, static fn ($a, $b) => ($b['realise'] ?? -1) <=> ($a['realise'] ?? -1));
     $out['magasins'] = $lignes;
@@ -261,9 +271,14 @@ function ep_exploitation_periode(): array
         'mb' => 0.0, 'labour' => 0.0, 'oh' => 0.0, 'net' => 0.0];
     $nObj = 0; $nOuv = 0; $netComplet = true; $realiseObj = 0.0;
     $parJourR = [];
+    $proR = ['ca' => 0.0, 'tk' => 0, 'lus' => 0, 'jours' => 0]; $proAucun = true;
     foreach ($lignes as $l) {
         if (empty($l['ouvert'])) { continue; }
         $nOuv++;
+        if (array_key_exists('proJours', $l) && $l['proJours'] !== null) {
+            $proAucun = false; $proR['jours'] += $l['proJours']; $proR['lus'] += $l['proJoursLus'];
+            $proR['ca'] += (float) ($l['caPro'] ?? 0); $proR['tk'] += (int) ($l['ticketsPro'] ?? 0);
+        }
         $t['realise'] += $l['realise']; $t['tickets'] += $l['tickets']; $t['fc'] += $l['coutMatiere']; $t['mb'] += $l['margeBrute'];
         if ($l['objectif'] !== null) {
             $nObj++; $t['objectif'] += $l['objectif']; $t['attendu'] += $l['attendu']; $t['prevu'] += $l['prevu']; $realiseObj += $l['realise'];
@@ -298,6 +313,26 @@ function ep_exploitation_periode(): array
         'net' => $netComplet ? round($t['net'], 2) : null, 'netPct' => $netComplet ? $pctR($t['net']) : null,
         'jours' => array_values(array_map(static fn ($e) => ['date' => $e['date'], 'court' => $e['court'],
             'objectif' => $e['aObjectif'] ? round($e['objectif'], 2) : null, 'ca' => $e['passe'] ? round($e['ca'], 2) : null,
-            'passe' => $e['passe'], 'aujourdhui' => $e['aujourdhui']], $parJourR))];
+            'passe' => $e['passe'], 'aujourdhui' => $e['aujourdhui']], $parJourR))]
+        + resProSplit($proAucun ? null : $proR, $ca, (int) $t['tickets']);
     return $out;
+}
+
+/**
+ * Le split pro / comptoir d'une étendue. Pro = la somme des tickets des clients
+ * pro sur les jours LUS ; le comptoir = le reste du réalisé, seulement si tous
+ * les jours ouverts sont lus — sinon il porterait le pro des jours manquants.
+ */
+function resProSplit(?array $p, float $realise, int $tickets): array
+{
+    if ($p === null) { return []; }
+    $complet = $p['jours'] > 0 && $p['lus'] === $p['jours'];
+    $caC = $realise - $p['ca']; $nC = $tickets - $p['tk'];
+    return ['caPro' => $p['lus'] ? round($p['ca'], 2) : null, 'ticketsPro' => $p['lus'] ? $p['tk'] : null,
+        'panierPro' => $p['tk'] > 0 ? round($p['ca'] / $p['tk'], 2) : null,
+        'proJours' => $p['jours'], 'proJoursLus' => $p['lus'], 'proComplet' => $complet,
+        'caComptoir' => $complet ? round(max(0.0, $caC), 2) : null,
+        'ticketsComptoir' => $complet ? max(0, $nC) : null,
+        'panierComptoir' => ($complet && $nC > 0) ? round($caC / $nC, 2) : null,
+        'partPro' => ($complet && $realise > 0) ? round(100 * $p['ca'] / $realise, 1) : null];
 }

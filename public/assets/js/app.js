@@ -7414,6 +7414,30 @@ class App {
    * redemande rien au panel — chaque date coûte une volée d'appels.
    */
   rjCle(){ return this.state.rjDate || ''; }
+  /** Le split d'une ligne du Résultat (jour, semaine, mois) : comptoir et pro, chacun avec son CA, sa part, ses clients et son panier. */
+  rjSplit(m, manque){
+    const fE = v => this.fE(v), fI = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
+    const fU = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
+    const pct = v => String(v).replace('.', ',') + ' %';
+    const cli = n => fI(n) + ' client' + (n > 1 ? 's' : '');
+    const base = 'Pro = tickets portés par un client dont la fiche panel est professionnelle (is_client_b2b) ; comptoir = le reste du CA.';
+    if (m.caPro == null) {
+      return { caCpt: '—', caCptSous: '', caCptSous2: '', caPro: '—', caProSous: '', caProSous2: '',
+        proTitre: m.proJours ? 'Aucun des ' + m.proJours + ' jours ouverts n’est encore lu : les tickets se relèvent au cron, chaque heure.' : 'Tickets du jour non lus chez le panel : le split attend la prochaine lecture.' };
+    }
+    const partiel = m.proComplet === false;
+    const lus = partiel ? m.proJoursLus + ' / ' + m.proJours + ' jours lus' : '';
+    const partC = m.partPro == null ? null : Math.round((100 - m.partPro) * 10) / 10;
+    return {
+      caCpt: m.caComptoir == null ? '—' : fE(m.caComptoir),
+      caCptSous: m.caComptoir == null ? lus : [partC == null ? '' : pct(partC), cli(m.ticketsComptoir)].filter(Boolean).join(' · '),
+      caCptSous2: m.panierComptoir != null ? 'panier ' + fU(m.panierComptoir) : '',
+      caPro: fE(m.caPro),
+      caProSous: [m.partPro != null ? pct(m.partPro) : lus, cli(m.ticketsPro)].filter(Boolean).join(' · '),
+      caProSous2: m.panierPro != null ? 'panier ' + fU(m.panierPro) : '',
+      proTitre: base + (partiel ? ' ' + m.proJoursLus + ' jour(s) lu(s) sur ' + m.proJours + ' : le pro est partiel, le comptoir attend les jours manquants (relevés au cron, chaque heure).' : '') + (manque ? ' ' + manque + '.' : ''),
+    };
+  }
   /**
    * Le résultat d'un jour, lu une fois puis gardé.
    *
@@ -8825,7 +8849,7 @@ class App {
     const ligne = (m, reseau) => {
       const sansO = m.objectif == null;
       return {
-        id: m.shopId, nom: reseau ? 'Réseau' : m.magasin, ouvert: reseau ? (m.magasins || 0) > 0 : !!m.ouvert, reseau: !!reseau,
+        id: m.shopId, nom: reseau ? 'Réseau' : m.magasin, nomCourt: reseau ? 'Réseau' : this.rrCourt(m.magasin), ouvert: reseau ? (m.magasins || 0) > 0 : !!m.ouvert, reseau: !!reseau,
         // L'objectif de la PÉRIODE, pas l'attendu à ce jour : être dans les
         // temps n'est pas l'avoir fait.
         avecObjectif: !reseau && !!m.ouvert && !sansO,
@@ -8837,6 +8861,7 @@ class App {
         objectif: sansO ? '' : fE(m.objectif),
         objectifTitre: sansO ? 'aucun budget encodé, ou pondération non adoptée'
           : (m.objectifSource === 'theorique' ? 'CA théorique de l’étude, faute de budget validé' : 'budget validé du mois, réparti par jour'),
+        ...this.rjSplit(m),
         realise: fE(m.realise), attendu: sansO ? '' : fE(m.attendu),
         ecart: sansO ? '' : fS(m.ecart), ecartCol: coulEcart(m.ecart),
         clients: sansO ? '' : fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart),
@@ -8861,8 +8886,8 @@ class App {
     common.rpTous = tousAtteints(common.rpLignes);
     common.rpNote = r.source || '';
     common.rpEntetes = vue === 'semaine'
-      ? ['Magasin', 'Objectif', 'Réalisé', 'Attendu à ce jour', 'Écart', 'Clients manquants']
-      : ['Magasin', 'Budget', 'Ventes', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
+      ? ['Magasin', 'Objectif', 'Réalisé', 'Comptoir', 'Pro B2B', 'Attendu à ce jour', 'Écart', 'Clients manquants']
+      : ['Magasin', 'Budget', 'Ventes', 'Comptoir', 'Pro B2B', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
     common.rpInvite = !sel ? 'Ouvrez une ligne : ce qu’il manque et en combien de clients, ce qu’il faut pour tenir l’objectif, le compte de résultat, et le mois du magasin.' : '';
     // Le résultat net jour par jour (le panel ne le sert que pour le mois en
     // cours) se lit ici, mais ne s'affiche que dans le drop du magasin : la
@@ -9070,7 +9095,9 @@ class App {
       + 'Comparaison : ' + common.rjRefLibelle + ', jours de fermeture écartés.';
 
     const res = r.reseau || {};
+    const nOuv = (r.magasins || []).filter(m2 => m2.ouvert).length;
     common.rjReseau = {
+      ...this.rjSplit(res, res.proMagasins != null && res.proMagasins < nOuv ? res.proMagasins + ' magasin(s) sur ' + nOuv + ' lus — les autres manquent au total pro' : ''),
       ca: fE(res.ca), tickets: fInt(res.tickets), panier: fU(res.panier),
       ppc: res.produitsParClient != null ? res.produitsParClient.toFixed(2).replace('.', ',') : '',
       delta: fDelta(res.caDelta), deltaCoul: coulDelta(res.caDelta),
@@ -9118,7 +9145,7 @@ class App {
     common.rjLignes = (r.magasins || []).map(m => {
       const actif = m.shopId === sel;
       return {
-        id: m.shopId, nom: m.magasin, ouvert: !!m.ouvert, actif,
+        id: m.shopId, nom: m.magasin, nomCourt: this.rrCourt(m.magasin), ouvert: !!m.ouvert, actif,
         // Objectif passé : la ligne le porte, l'écran s'en sert pour le feu.
         avecObjectif: !!m.ouvert && m.objectifAtteinte != null,
         atteint: !!m.ouvert && m.objectifAtteinte != null && m.objectifAtteinte >= 1,
@@ -9157,6 +9184,9 @@ class App {
         // comparaison ne se vérifie pas.
         deltaTitre: m.refCa == null ? 'aucun jour de référence ouvert'
           : fE(m.refCa) + ' en moyenne sur ' + m.refJours + ' ' + (ref.nom || 'jours'),
+        // Le split pro / comptoir : les tickets des clients pro du panel, le
+        // reste du CA au comptoir. « — » : la liste des tickets n'a pas répondu.
+        ...this.rjSplit(m),
         tickets: fInt(m.tickets),
         ticketsDelta: fDelta(m.ticketsDelta), ticketsCoul: coulDelta(m.ticketsDelta),
         panier: fU(m.panier),
