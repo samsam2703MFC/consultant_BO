@@ -396,7 +396,10 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     }
     $cout += count($ids);
     foreach ($p as $h => $lst) { foreach ($lst as $pid => $x) { $p[$h][$pid] = [$x[0], round($x[1], 3), round($x[2], 2), $x[3] === null ? null : round($x[3], 2)]; } }
-    svGrave($cle, ['quand' => time(), 'n' => count($ids), 'p' => $p]);
+    // Le pro du jour (tickets B2B) se grave avec les produits : la liste est déjà lue.
+    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p];
+    if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
+    svGrave($cle, $grave);
     return $p;
 }
 
@@ -635,7 +638,10 @@ function svMoisson(int $budget = SV_BUDGET_CRON): array
 function svCron(): string
 {
     $r = svMoisson();
-    return $r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'));
+    // Le pro des jours gravés avant sa lecture se complète au même battement.
+    $pro = '';
+    if (function_exists('vpMoisson')) { try { $vp = vpMoisson(); $pro = $vp['ok'] ? ' · pro : ' . $vp['joursFaits'] . ' jour(s) complétés, ' . $vp['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro = ' · pro : échec'; } }
+    return ($r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'))) . $pro;
 }
 
 /** POST /ventes/stats-moisson — forcer une passe, voir l'état. */

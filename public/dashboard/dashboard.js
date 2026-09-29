@@ -19,7 +19,7 @@
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     stockOuvert: false, stockVues: null, cmdOuvert: false,
-    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false,
+    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -107,7 +107,7 @@
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
@@ -835,7 +835,7 @@
     ]);
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
-    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); h += murR([murNote()], true); }
+    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); h += murR([murPro()], true); h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
       murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
@@ -859,6 +859,7 @@
     // qui a droit à un cadre.
     if (S.objOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
+    if (S.proOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${proCarte(true)}</div>`; }
     if (S.noteOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
     if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
     if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
@@ -965,6 +966,56 @@
       const s = esc(p.nom) + ' · ' + (e.deltaCaPct != null ? `<b class="${cls}">${promoDelta(e.deltaCaPct)}</b> sur le créneau` : 'trop tôt pour juger') + `<span class="dr"> · ${S.promoOuvert ? 'replier ▴' : 'détail ▾'}</span>`;
       return murC('Promotion en cours', val, s, p.ceJour ? 'ok' : '', 'promodrop');
     });
+  }
+
+  /* --- les clients pro (B2B) : ce que les tickets du panel disent des ventes aux sociétés --- */
+  function clePro() { return 'pro|' + S.shop + '|' + S.date; }
+  function cheminPro() { return '/exploitation/pro?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
+  function proData() { const P = S.aux[clePro()]; return P && !P.error ? P : null; }
+  /** La part pro jour par jour sur 30 jours : une barre par jour, le week-end en clair. */
+  function proSerie(serie) {
+    const L = (serie || []).filter(s => s.caPro != null);
+    if (!L.length) { return ''; }
+    const max = Math.max(1, ...L.map(s => s.caPro));
+    return `<div class="db-pro-serie">${(serie || []).map(s => { const d = new Date(s.j + 'T12:00:00').getDay(); const we = d === 0 || d === 6; return s.caPro == null ? '<i class="na" title="' + fD(s.j) + ' · non lu"></i>' : `<i class="${we ? 'we' : ''}" style="height:${Math.max(3, Math.round(100 * s.caPro / max))}%" title="${fD(s.j)} · pro ${fE(s.caPro)}${s.ca ? ' sur ' + fE(s.ca) : ''}"></i>`; }).join('')}</div>`;
+  }
+  function proCarte(mobile) {
+    const cle = clePro(), P = proData(), err = S.err[cle];
+    const auj = S.date === AUJ;
+    if (!P) {
+      if (err) { return `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini ko">${esc(err)}</span></div></div>`; }
+      return mobile ? '<div class="db-mini">lecture des tickets pro…</div>' : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">lecture des tickets…</span></div></div>`;
+    }
+    const J = P.jour, M = P.mois || {};
+    const rienJour = !J || !J.ticketsPro, rienMois = !(M.ticketsPro > 0);
+    const sous = `tickets portés par un client dont la fiche est professionnelle · ${M.jours ? '30 jours : ' + (M.part != null ? fP(M.part) + ' du CA, ' : '') + fE(M.caPro) + ' sur ' + fN(M.ticketsPro) + ' tickets' : 'aucun jour lu sur 30 jours'}${M.manquants ? ' · ' + M.manquants + ' jour' + (M.manquants > 1 ? 's' : '') + ' non lu' + (M.manquants > 1 ? 's' : '') : ''}`;
+    if (rienJour && rienMois) {
+      const t = `<div class="db-mini" style="padding:${mobile ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} ni sur les 30 derniers jours lus.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
+      return mobile ? `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${t}</div>` : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${t}</div>`;
+    }
+    const kpi = J ? `<div class="db-obj-t4 db-pro-kpi">
+        <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
+        <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">sur ${fN(J.tickets)} · ${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
+        <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'contre ' + fU(J.panierComptoir) + ' au comptoir' : ''}</div></div>
+        <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
+      </div>` : `<div class="db-mini" style="padding:10px 16px 0">Les tickets de ce jour ne sont pas lus.</div>`;
+    const tickets = J && Array.isArray(J.liste) ? J.liste : [];
+    const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
+      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th>Société</th><th class="n">Montant</th><th></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="nom">${esc(t.societe || 'sans nom')}</td><td class="n">${fU(t.montant)}</td><td>${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="4" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} autres</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
+    const comptes = Array.isArray(M.comptes) ? M.comptes : [];
+    const droite = `<div><span class="db-lab">Les comptes — 30 jours</span>
+      ${comptes.length ? `<table class="db-pro-tab"><thead><tr><th>Société</th><th class="n">Tickets</th><th class="n">CA</th><th class="n">Dernier</th></tr></thead><tbody>${comptes.slice(0, mobile ? 6 : 9).map(c => { const vieux = (new Date(S.date + 'T12:00:00') - new Date(c.dernier + 'T12:00:00')) / 86400000 > 21; return `<tr><td class="nom">${esc(c.societe)}</td><td class="n">${fN(c.n)}</td><td class="n">${fE(c.ca)}</td><td class="n ${vieux ? 'att' : 'mu'}">${fD(c.dernier)}</td></tr>`; }).join('')}</tbody></table>` : '<div class="db-mini" style="margin-top:6px">Aucun compte pro sur 30 jours.</div>'}
+      ${proSerie(P.serie) ? `<div style="margin-top:12px"><span class="db-lab">La part pro, jour par jour</span>${proSerie(P.serie)}<div class="db-mini" style="margin-top:4px">${M.part != null ? fP(M.part) + ' du CA sur ' + M.jours + ' jours lus' : ''}${M.panierPro != null ? ' · panier pro ' + fU(M.panierPro) : ''} · en orange, un compte sans commande depuis trois semaines</div></div>` : ''}</div>`;
+    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div></div>`; }
+    return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div></div>`;
+  }
+  /** La tuile du mur mobile : le CA pro du jour et sa part, le tiroir en dessous. */
+  function murPro() {
+    const P = proData(), cle = clePro();
+    if (!P) { return murC('Clients pro', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
+    const J = P.jour, M = P.mois || {};
+    if (!J) { return murC('Clients pro', '—', 'tickets du jour non lus' + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) + ' du CA' : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, '', 'prodrop'); }
+    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' ticket' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'ok' : '', 'prodrop');
   }
 
   /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
@@ -1195,6 +1246,7 @@
     }
     h += objectifsCarte(false);
     h += promosCarte(false);
+    h += proCarte(false);
     h += noteCarte(false);
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
     // Catégories et planning côte à côte.
@@ -2175,6 +2227,7 @@
     $.querySelectorAll('[data-notedrop]').forEach(b => b.addEventListener('click', () => { S.noteOuvert = !S.noteOuvert; rendre(); }));
     $.querySelectorAll('[data-objdrop]').forEach(b => b.addEventListener('click', () => { S.objOuvert = !S.objOuvert; rendre(); }));
     $.querySelectorAll('[data-promodrop]').forEach(b => b.addEventListener('click', () => { S.promoOuvert = !S.promoOuvert; rendre(); }));
+    $.querySelectorAll('[data-prodrop]').forEach(b => b.addEventListener('click', () => { S.proOuvert = !S.proOuvert; rendre(); }));
     $.querySelectorAll('[data-note-texte]').forEach(t => t.addEventListener('input', () => {
       S.noteBrouillon = { cle: cleNote(), texte: t.value };
       const N = S.aux[cleNote()], lu = N && N.note ? N.note.texte : '';
