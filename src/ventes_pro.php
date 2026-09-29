@@ -101,6 +101,20 @@ function vpSplit(?array $b, float $ca, int $tickets): array
 }
 
 /**
+ * Les clients manquants au COMPTOIR : (CA comptoir − objectif) ÷ panier
+ * comptoir. Le CA des clients pro ne compte pas — ni pour atteindre l'objectif,
+ * ni dans le panier : un client qui manque est un client du comptoir. Positif =
+ * il en manque, négatif = d'avance. Sans split lu, la ligne garde le calcul sur
+ * le CA total et le dit (`clientsBase` = total).
+ */
+function vpClientsComptoir(array $l, ?float $objectif): array
+{
+    if ($objectif === null || ($l['caComptoir'] ?? null) === null || empty($l['panierComptoir'])) { return ['clientsBase' => 'total']; }
+    $e = (float) $l['caComptoir'] - $objectif;
+    return ['ecartComptoir' => round($e, 2), 'clientsManquants' => (int) round(-$e / (float) $l['panierComptoir']), 'clientsBase' => 'comptoir'];
+}
+
+/**
  * Le pro gravé de plusieurs jours pour plusieurs magasins — [sid => [date => b]] —
  * complété par au plus $budget listes de tickets lues en parallèle, les jours
  * les plus récents d'abord. Ce qui reste non lu le sera au cron (vpMoisson).

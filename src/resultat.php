@@ -261,6 +261,12 @@ function ep_exploitation_periode(): array
                 : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles'),
             'joursOuverts' => array_keys($wdOuverts),
             'jours' => $jours] + resProSplit($proJ === null ? null : $pro, $realise, $tickets);
+        // Les clients manquants se comptent au comptoir : (CA comptoir − attendu)
+        // ÷ panier comptoir, le CA pro exclu — quand tous les jours sont lus.
+        if (!$objAucun && function_exists('vpClientsComptoir')) {
+            $iL = count($lignes) - 1;
+            $lignes[$iL] = array_merge($lignes[$iL], vpClientsComptoir($lignes[$iL], (float) $attendu));
+        }
     }
     usort($lignes, static fn ($a, $b) => ($b['realise'] ?? -1) <=> ($a['realise'] ?? -1));
     $out['magasins'] = $lignes;
@@ -292,6 +298,17 @@ function ep_exploitation_periode(): array
             $parJourR[$j['date']] = $e;
         }
     }
+    // Les clients manquants du réseau : la somme de ceux de chaque magasin
+    // (au comptoir quand son split est complet), pas l'écart réseau ÷ un panier.
+    $cmR = null; $ecR = null; $bases = [];
+    foreach ($lignes as $l) {
+        if (empty($l['ouvert']) || ($l['objectif'] ?? null) === null || !isset($l['clientsManquants'])) { continue; }
+        $cmR = ($cmR ?? 0) + (int) $l['clientsManquants'];
+        if (isset($l['ecartComptoir'])) { $ecR = ($ecR ?? 0.0) + (float) $l['ecartComptoir']; }
+        $bases[$l['clientsBase'] ?? 'total'] = true;
+    }
+    $cmBase = count($bases) === 1 ? (string) array_key_first($bases) : 'mixte';
+    if ($ecR !== null) { $ecR = round($ecR, 2); }
     $ca = $t['realise'];
     $panierR = $t['tickets'] > 0 ? $ca / $t['tickets'] : null;
     $ecartR = $nObj ? $realiseObj - $t['attendu'] : null;
@@ -305,7 +322,9 @@ function ep_exploitation_periode(): array
         'ecart' => $ecartR !== null ? round($ecartR, 2) : null,
         'atteinte' => ($nObj && $t['attendu'] > 0) ? round($realiseObj / $t['attendu'], 4) : null,
         'tickets' => $t['tickets'], 'panier' => $panierR !== null ? round($panierR, 2) : null,
-        'clientsManquants' => ($ecartR !== null && $panierR) ? (int) round(-$ecartR / $panierR) : null,
+        'clientsManquants' => $cmR !== null ? $cmR : (($ecartR !== null && $panierR) ? (int) round(-$ecartR / $panierR) : null),
+        'clientsBase' => $cmR !== null ? $cmBase : 'total',
+        'ecartComptoir' => $ecR,
         'coutMatiere' => round($t['fc'], 2), 'coutMatierePct' => $pctR($t['fc']),
         'margeBrute' => round($t['mb'], 2), 'margeBrutePct' => $pctR($t['mb']),
         'labour' => $netComplet ? round($t['labour'], 2) : null, 'labourPct' => $netComplet ? $pctR($t['labour']) : null,

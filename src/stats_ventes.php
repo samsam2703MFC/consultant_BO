@@ -368,11 +368,18 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     if ($cout >= $budget) { return null; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     if (!is_array($liste)) { return null; }
-    $ids = [];
-    foreach (analyseListe($liste) as $t) { if ((int) ($t['id'] ?? 0) > 0) { $ids[] = (int) $t['id']; } }
+    $ids = []; $pro = [];
+    foreach (analyseListe($liste) as $t) {
+        if ((int) ($t['id'] ?? 0) <= 0) { continue; }
+        $ids[] = (int) $t['id'];
+        if (!empty($t['is_client_b2b'])) { $pro[(int) $t['id']] = true; }
+    }
     if ($cout + count($ids) > $budget && $cout > 0) { return null; }   // ce jour attendra le prochain lot
     $couts = catalogueCouts();
     $p = [];
+    // La part des clients pro, produit par produit : elle ne passe pas par le
+    // comptoir, les rotations du planogramme la retirent.
+    $pb = [];
     foreach (array_chunk($ids, 40) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -391,13 +398,16 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
                 $p[$h][$pid][1] += $q;
                 $p[$h][$pid][2] += $v;
                 if ($cu !== null && $p[$h][$pid][3] !== null) { $p[$h][$pid][3] += $q * $cu; }
+                if (isset($pro[$id])) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q; }
             }
         }
     }
     $cout += count($ids);
     foreach ($p as $h => $lst) { foreach ($lst as $pid => $x) { $p[$h][$pid] = [$x[0], round($x[1], 3), round($x[2], 2), $x[3] === null ? null : round($x[3], 2)]; } }
+    foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
     // Le pro du jour (tickets B2B) se grave avec les produits : la liste est déjà lue.
-    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p];
+    // `pb` = les unités vendues aux clients pro, par produit ({} si aucune).
+    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
     return $p;
@@ -634,6 +644,73 @@ function svMoisson(int $budget = SV_BUDGET_CRON): array
         'etat' => $restants === 0 ? 'à jour' : $restants . ' jour(s)-magasin restants'];
 }
 
+/**
+ * Les unités vendues aux clients pro, par produit, pour un jour déjà relevé
+ * sans elles — [pid => unités], ou null si le jour n'est pas relevé ou si le
+ * budget ne suffit pas. Seuls les tickets pro se relisent : la liste du jour
+ * (un appel) dit lesquels, puis un appel par ticket pro — quelques-uns par jour,
+ * pas les trois cents tickets du comptoir. Le relevé des produits garde son
+ * horodatage : on n'y ajoute que `pb`.
+ */
+function svProduitsB2b(int $sid, string $j, int &$cout, int $budget): ?array
+{
+    $cle = 'svP' . $sid . ':' . $j;
+    $c = setting($cle);
+    if (!is_array($c) || !isset($c['p'])) { return null; }
+    if (isset($c['pb']) && is_array($c['pb'])) { return $c['pb']; }
+    if ($cout >= $budget || !PanelApi::configured()) { return null; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
+    $cout++;
+    if (!is_array($liste)) { return null; }
+    $ids = [];
+    foreach (analyseListe($liste) as $t) {
+        if ((int) ($t['id'] ?? 0) > 0 && !empty($t['is_client_b2b'])) { $ids[] = (int) $t['id']; }
+    }
+    if ($cout + count($ids) > $budget) { return null; }   // ce jour attendra le prochain lot
+    $pb = [];
+    foreach (array_chunk($ids, 40) as $lot) {
+        $chemins = [];
+        foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        $res = PanelApi::getParallele($chemins, 8);
+        foreach ($lot as $id) {
+            $t = $res[$id] ?? null;
+            if (!is_array($t)) { return null; }   // un ticket pro manquant : le jour ne se grave pas à moitié
+            foreach ((array) ($t['products'] ?? []) as $l) {
+                $pid = (int) ($l['id_product'] ?? 0);
+                if ($pid > 0) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + (float) ($l['quantity'] ?? 0); }
+            }
+        }
+    }
+    $cout += count($ids);
+    foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
+    $c['pb'] = (object) $pb;
+    if (!isset($c['b']) && function_exists('vpDuListe')) { $c['b'] = vpDuListe($liste); }
+    svGrave($cle, $c);
+    return $pb;
+}
+
+/**
+ * Au cron : compléter `pb` sur les jours relevés avant qu'on la lise, du plus
+ * récent au plus ancien. Un jour-magasin coûte un appel plus un par ticket pro.
+ */
+function svB2bMoisson(int $budget = 250): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
+    try { $shops = array_map(static fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
+    $cout = 0; $faits = 0; $restants = 0;
+    $hier = date('Y-m-d', strtotime('-1 day'));
+    for ($j = $hier; $j >= SV_DEBUT; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
+        foreach ($shops as $sid) {
+            $c = setting('svP' . $sid . ':' . $j);
+            if (!is_array($c) || !isset($c['p']) || isset($c['pb'])) { continue; }
+            if ($cout >= $budget) { $restants++; continue; }
+            if (svProduitsB2b($sid, $j, $cout, $budget) !== null) { $faits++; } else { $restants++; }
+        }
+    }
+    return ['ok' => true, 'joursFaits' => $faits, 'appels' => $cout, 'joursRestants' => $restants];
+}
+
 /** Le battement horaire, accroché au cron des rapports. */
 function svCron(): string
 {
@@ -641,6 +718,8 @@ function svCron(): string
     // Le pro des jours gravés avant sa lecture se complète au même battement.
     $pro = '';
     if (function_exists('vpMoisson')) { try { $vp = vpMoisson(); $pro = $vp['ok'] ? ' · pro : ' . $vp['joursFaits'] . ' jour(s) complétés, ' . $vp['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro = ' · pro : échec'; } }
+    // Et la part pro produit par produit, que les rotations du comptoir retirent.
+    try { $pb = svB2bMoisson(); $pro .= $pb['ok'] ? ' · produits pro : ' . $pb['joursFaits'] . ' jour(s) complétés, ' . $pb['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · produits pro : échec'; }
     return ($r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'))) . $pro;
 }
 
