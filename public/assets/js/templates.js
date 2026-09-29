@@ -119,7 +119,7 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
         </div>`).join('')}
       </div>` : ''}
-      ${c.isCat || c.isAsso || c.isPlano ? tplReferentiel(c, x) : ''}
+      ${c.isCat || c.isAsso ? tplReferentiel(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
@@ -184,8 +184,6 @@ export function render(c, x){
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
-  ${c.plFiche ? tplPlanoFiche(c, x) : ''}
-  ${c.plMw ? tplPlanoMeubleWizard(c, x) : ''}
   ${c.anDetail ? tplAnalyseDetail(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
@@ -494,8 +492,6 @@ function tplReferentiel(c, x){
       <span style="color:var(--color-text-muted)">(${esc(f2.ref)})</span> — fin le <span style="font-weight:600;color:var(--color-primary)">${esc(f2.date)}</span>${f2.note ? ` · <span style="color:var(--color-text-muted)">${esc(f2.note)}</span>` : ''}</div>`).join('')}
   </div>` : ''}
   ${c.isAsso ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refMust} référence(s) déclarée(s) obligatoire(s) sur ${c.refTotal}. ${c.refMust === 0 ? 'Aucune pour l’instant : affichez le catalogue et cochez celles que toute boutique doit tenir.' : ''}</div>` : ''}
-  ${c.isPlano ? tplPlanoComptoir(c, x) : ''}
-  ${c.isPlano ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refPlaces} référence(s) placée(s) au comptoir sur ${c.refTotal}. ${c.refPlaces === 0 ? 'Aucune encore : affichez le catalogue, ouvrez une référence et choisissez son emplacement.' : ''}</div>` : ''}
 
   <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;min-width:640px">
@@ -504,7 +500,6 @@ function tplReferentiel(c, x){
         <th style="${TH}">Catégorie</th>
         ${c.isCat ? `<th style="${TH};${num}" title="Même calcul que l’écran Scoring produits — volume, marge nette, perte, présence au comptoir">Score</th><th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
         ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}" title="Quantité minimale à tenir. Le bouton « batch » reprend la fournée minimale de la fiche produit.">Qté min. · batch</th><th style="${TH}" title="Où la référence est présentée au comptoir. « Attribuer » ouvre le planogramme sur le plan actuel.">Emplacement au comptoir</th>` : ''}
-        ${c.isPlano ? `<th style="${TH}">Zone</th><th style="${TH}">Meuble</th><th style="${TH}">Niveau</th><th style="${TH};${num}">Emplac.</th>` : ''}
         ${c.isCat ? `<th style="${TH}">Voir aussi</th>` : ''}
         <th style="${TH};text-align:right">Fiche</th>
       </tr></thead>
@@ -548,10 +543,6 @@ function tplReferentiel(c, x){
                   style="flex:0 0 auto;border:0.5px solid ${l.place ? 'var(--color-border-secondary)' : 'var(--color-primary)'};background:transparent;color:${l.place ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap">${esc(l.planoBtn)}</button>
               </div>
             </td>` : ''}
-          ${c.isPlano ? `<td style="${TD}">${esc(l.zone) || '<span style="color:var(--color-text-muted)"></span>'}</td>
-            <td style="${TD};color:var(--color-text-muted)">${esc(l.meuble) || ''}</td>
-            <td style="${TD};color:var(--color-text-muted)">${esc(l.niveau) || ''}</td>
-            <td style="${TD};${num}">${esc(l.slot) || ''}</td>` : ''}
           ${c.isCat ? `<td style="${TD};white-space:nowrap"><span style="display:inline-flex;gap:4px">${(l.voir || []).map(v => `<button ${x.A(v.go)} title="${esc(v.titre)}" style="font-family:var(--font-ui);font-size:10px;font-weight:600;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:2px 7px;background:var(--color-surface);color:var(--color-text);cursor:pointer">${esc(v.nom)}</button>`).join('')}</span></td>` : ''}
           <td style="${TD};text-align:right">${l.parametre ? '<span style="font-size:11px;color:#2d7a3e">remplie</span>' : '<span style="font-size:11px;color:var(--color-text-muted)">vide</span>'}</td>
         </tr>`).join('')}
@@ -7874,249 +7865,6 @@ function tplCtrlDetail(c, x){
   </div>`;
 }
 
-/* --- Le comptoir dessiné : meubles en colonnes, niveaux en lignes ------------
-   Un planogramme se regarde, il ne se lit pas en liste : un trou de facing se
-   voit sur un plan et se cherche dans un tableau. Les cases pointillées sont
-   libres, les pleines portent leur produit. La structure se déclare ici même —
-   l'API du panel n'expose ni zone, ni meuble, ni emplacement (mesuré), donc
-   attendre une API aurait laissé l'écran vide indéfiniment. */
-/**
- * Une liste de choix qui s'édite : on tape pour filtrer, on ajoute ce qui
- * manque, la croix retire une position.
- *
- * Le panneau s'ouvre DANS la ligne et non par-dessus : le tableau défile
- * horizontalement, et un panneau flottant y serait coupé net.
- */
-function plCbx(cb, x){
-  const { esc } = x;
-  if (!cb) { return ''; }
-  const champ = 'display:flex;align-items:center;gap:5px;border:0.5px solid ' + (cb.ouvert ? 'var(--color-primary)' : 'var(--color-border-secondary)')
-    + ';background:var(--color-surface);border-radius:6px;padding:4px 7px;font-size:11.5px;cursor:pointer;min-width:112px';
-  return `<div ${x.A(e => e.stopPropagation())}>
-    <div ${x.A(cb.ouvrir)} style="${champ}">
-      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${cb.vide ? 'color:var(--color-text-muted)' : 'font-weight:500'}">${esc(cb.val)}</span>
-      <span style="font-size:8px;color:var(--color-text-muted)">▾</span>
-    </div>
-    ${cb.ouvert ? `<div style="margin-top:5px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;background:var(--color-surface);min-width:172px">
-      <input id="pl-cbx" value="${esc(cb.q)}" ${x.I(cb.setQ)} placeholder="Filtrer ou écrire…" style="width:100%;box-sizing:border-box;border:none;border-bottom:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;outline:none">
-      ${cb.items.length ? cb.items.map(i => `<div style="display:flex;align-items:center;gap:4px;padding:0 4px 0 0">
-        <button ${x.A(i.choisir)} style="flex:1;text-align:left;border:none;background:none;padding:5px 8px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;color:var(--color-text);${i.on ? 'font-weight:600' : ''}">${esc(i.nom)}</button>
-        <button ${x.A(i.supprimer)} title="Retirer de la liste" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 3px">✕</button>
-      </div>`).join('') : `<div style="padding:6px 8px;font-size:10.5px;color:var(--color-text-muted)">Aucune position ne correspond.</div>`}
-      ${cb.ajouter ? `<button ${x.A(cb.ajouter)} style="width:100%;text-align:left;border:none;border-top:0.5px solid var(--color-border-tertiary);background:rgba(141,29,44,0.05);color:var(--color-primary);padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">＋ Ajouter « ${esc(cb.ajoutTxt)} » à la liste</button>` : ''}
-      ${cb.vider ? `<button ${x.A(cb.vider)} style="width:100%;text-align:left;border:none;border-top:0.5px solid var(--color-border-tertiary);background:none;color:var(--color-text-muted);padding:5px 8px;font-family:var(--font-ui);font-size:10.5px;cursor:pointer">Aucun ${esc(cb.quoi === 'format' ? 'format' : 'contenant')}</button>` : ''}
-    </div>` : ''}
-  </div>`;
-}
-
-function tplPlanoComptoir(c, x){
-  const { esc } = x;
-  // Style de cellule local : `TD` n'existe qu'à l'intérieur d'autres gabarits.
-  // Le lire d'ici passait le lint et cassait l'écran à l'exécution.
-  const TD = 'padding:9px 14px;font-size:12.5px;vertical-align:top';
-  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
-  const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
-    + 'border-radius:7px;height:29px;padding:0 9px;font-family:var(--font-ui);font-size:12px;box-sizing:border-box';
-  const btn = (on, dispo) => 'border-radius:8px;height:30px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;'
-    + 'font-weight:500;white-space:nowrap;' + (dispo === false ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;')
-    + (on ? 'border:none;background:var(--color-primary);color:#fff'
-          : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)');
-  if (c.plChargement) {
-    return `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:22px;margin-bottom:14px;font-size:12.5px;color:var(--color-text-muted)">Lecture du comptoir…</div>`;
-  }
-  return `
-  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px;margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="${lbl}">Le comptoir</div>
-      ${c.plVueBtns.map(v => `<button ${x.A(v.go)} style="${btn(v.on)}">${esc(v.nom)}</button>`).join('')}
-      ${c.plVue === 'plan' ? `<button ${x.A(c.plPhotosGo)} title="${c.plPhotosOn ? 'Revenir au plan en texte' : 'Montrer les photos, pavées selon la grille'}" style="${btn(c.plPhotosOn)}">Photos</button>` : ''}
-      ${c.plVue === 'plan' ? `<span style="width:1px;height:20px;background:var(--color-border-tertiary)"></span>
-        ${c.plZonesOpts.map(z => `<button ${x.A(z.go)} style="${btn(z.on)}">${esc(z.nom)}</button>`).join('')}
-        <!-- Le comptoir se regarde à une heure donnée : à midi, la vitrine à
-             viennoiseries n'est plus montée. Les meubles sans moment déclaré
-             sont là toute la journée. -->
-        ${(c.plPeriodesOpts || []).length > 1 ? `<span style="width:1px;height:20px;background:var(--color-border-tertiary)"></span>
-          ${c.plPeriodesOpts.map(pr => `<button ${x.A(pr.go)} title="${esc(pr.aide)}" style="${btn(pr.on)}">${esc(pr.nom)}</button>`).join('')}` : ''}` : ''}
-      <div style="flex:1"></div>
-      <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plTot.slots} emplacement(s) · ${c.plTot.libres} libre(s) · ${c.plTot.places} placée(s)</span>
-      <a href="planogramme/?shop=${esc(c.plShopTablette || '4')}" target="_blank" rel="noopener" title="Le comptoir en vue tablette : comptoir par comptoir, meuble par meuble, la fiche de chaque produit et son pourquoi, la photo du comptoir monté" style="${btn(false, !!c.plImprimer)};text-decoration:none;display:inline-flex;align-items:center">📱 Tablette</a>
-      <button ${x.A(c.plExporter)} title="Le comptoir en CSV : quoi, où, combien, à quel moment — pour la centrale et les boutiques" style="${btn(false, !!c.plExporter)}">⇩ Exporter</button>
-      <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
-    </div>
-
-    ${c.plOrg ? `<div style="margin-top:12px;padding:12px 14px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
-      ${c.plEtapeTxt ? `<div style="font-size:12px;color:var(--color-text);line-height:1.5;margin-bottom:11px"><b style="font-weight:500">Étape suivante.</b> ${esc(c.plEtapeTxt)}</div>` : ''}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:14px">
-
-        <div>
-          <div style="${lbl};margin-bottom:7px">Zones</div>
-          ${c.plZonesListe.map(z => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
-            <button ${x.A(z.choisir)} title="Regarder cette zone" style="flex:0 0 auto;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid ${z.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${z.on ? 'var(--color-primary)' : 'transparent'}"></button>
-            <input value="${esc(z.nom)}" ${x.C(z.renommer)} style="${inp};flex:1;min-width:0">
-            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${z.nMeubles} meuble(s)</span>
-            <button ${x.A(z.supprimer)} title="Supprimer cette zone" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
-          </div>`).join('')}
-          <div style="display:flex;gap:6px;margin-top:7px">
-            <input id="pl-nzone" value="${esc(c.plNZone.val)}" ${x.I(c.plNZone.set)} placeholder="Vitrine réfrigérée…" style="${inp};flex:1;min-width:0">
-            <button ${x.A(c.plZoneAdd)} style="${btn(false)}">Ajouter</button>
-          </div>
-        </div>
-
-        <div>
-          <div style="${lbl};margin-bottom:7px">Meubles${c.plZonesListe.find(z => z.on) ? ' de « ' + esc((c.plZonesListe.find(z => z.on) || {}).nom) + ' »' : ''}</div>
-          ${c.plMeublesListe.length ? c.plMeublesListe.map(m => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
-            <input value="${esc(m.nom)}" ${x.C(m.renommer)} style="${inp};flex:1;min-width:0">
-            <button ${x.A(m.assistant)} title="Modifier — type, température, présentation, moments" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✎</button>
-            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap" title="${esc(m.detail || '')}">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
-            <label title="${m.photo ? 'Remplacer la photo' : 'Annexer une photo'}" style="flex:0 0 auto;width:26px;height:26px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${m.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:13px;line-height:1'}">${m.photo ? `<img src="${esc(m.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(m.photoSet)} style="display:none"></label>${m.photoDel ? `<button ${x.A(m.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
-            <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
-          </div>
-          ${(m.periodesRef || []).length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin:-1px 0 9px 2px">
-            ${m.periodesRef.map(pr => `<button ${x.A(pr.bascule)} title="Monté ${esc(pr.nom.toLowerCase())} ?" style="border-radius:999px;padding:2px 9px;font-family:var(--font-ui);font-size:10px;font-weight:500;cursor:pointer;${pr.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">${esc(pr.nom)}</button>`).join('')}
-          </div>` : ''}`).join('') : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">Aucun meuble dans cette zone.</div>`}
-          <!-- Un meuble ne se saisit pas sur une ligne : il porte un type, une
-               température, un mode de présentation et les dimensions de ses
-               emplacements. Le champ de nom qui vivait ici ne servait plus à
-               rien et faisait chercher l'assistant. -->
-          <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)};width:100%;justify-content:center;margin-top:7px;height:34px">+ Nouveau meuble — assistant</button>
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">${c.plMeubleAdd ? 'Type, température, présentation, dimensions et niveaux — créés d’un seul geste.' : 'Créez d’abord une zone.'}</div>
-        </div>
-
-        <!-- La CRÉATION des niveaux appartient à l'assistant : elle y est
-             demandée avec le reste du meuble. Ce qui reste ici est ce que
-             l'assistant ne peut pas faire — retoucher un meuble déjà posé :
-             renommer un niveau, lui ajouter un emplacement, en retirer un. -->
-        <div>
-          <div style="${lbl};margin-bottom:7px">Retoucher un meuble</div>
-          ${c.plMeubleOpts.length ? `<select ${x.C(c.plMeubleSetSel)} style="${inp};width:100%;margin-bottom:6px">${c.plMeubleOpts.map(m => `<option value="${m.id}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>` : `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucun meuble à retoucher.</div>`}
-          ${c.plNiveauxListe.map(n => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
-            <input value="${esc(n.nom)}" ${x.C(n.renommer)} style="${inp};flex:1;min-width:0">
-            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${n.nSlots} empl.</span>
-            <label title="${n.photo ? 'Remplacer la photo' : 'Annexer une photo'}" style="flex:0 0 auto;width:26px;height:26px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${n.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:13px;line-height:1'}">${n.photo ? `<img src="${esc(l.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(n.photoSet)} style="display:none"></label>${n.photoDel ? `<button ${x.A(n.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
-            <button ${x.A(n.ajouter)} title="Ajouter un emplacement à ce niveau" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1">+</button>
-            <button ${x.A(n.supprimer)} title="Supprimer ce niveau" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
-          </div>`).join('')}
-          ${c.plMeubleOpts.length ? `<button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)};width:100%;justify-content:center;margin-top:7px">+ Un niveau de plus</button>
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">Il reprend le nombre d’emplacements du dernier niveau de ce meuble.</div>` : ''}
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:11px;line-height:1.5">Une zone contient des meubles, un meuble des niveaux, un niveau des emplacements numérotés. Renommer se fait dans le champ ; la suppression d’un élément qui porte des références est refusée puis reconfirmée.</div>
-    </div>` : ''}
-
-    ${c.plVide
-      ? `<div style="margin-top:14px;padding:24px 18px;border:1px dashed var(--color-border-secondary);border-radius:10px;text-align:center">
-          <!-- Le message SUIT l'avancement. Fixe, il disait « pas encore
-               déclaré » alors qu'une zone venait d'être créée — on croyait
-               l'écriture perdue et on recommençait. -->
-          <div style="font-size:13px;font-weight:500">${c.plEtape === 'zone' ? 'Le comptoir n’est pas encore déclaré.' : 'Déclaration en cours.'}</div>
-          <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;max-width:560px;margin-left:auto;margin-right:auto">${esc(c.plEtapeTxt || '')} Tant qu’aucun emplacement n’existe, il n’y a rien à choisir pour une référence.</div>
-          <!-- L'action de l'étape est proposée LÀ où on lit qu'il faut la faire.
-               L'assistant vivait dans un panneau replié, sous un bouton nommé
-               « Ajouter » comme deux autres : on ne le trouvait pas. -->
-          ${c.plEtape === 'meuble' && c.plMeubleAdd
-            ? `<button ${x.A(c.plMeubleAdd)} style="margin-top:12px;border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:34px;padding:0 17px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">+ Nouveau meuble — assistant</button>` : ''}
-          ${c.plEtape === 'zone'
-            ? `<button ${x.A(c.plOrgGo)} style="margin-top:12px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:34px;padding:0 15px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">${c.plOrg ? 'Saisir la première zone ci-dessus' : 'Organiser le comptoir'}</button>` : ''}
-        </div>`
-      : c.plVue === 'tableau' ? `
-        <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:13px">
-          <input id="pl-q" value="${esc(c.plQ)}" ${x.I(c.plSetQ)} placeholder="Chercher une référence, un meuble, un niveau…" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:31px;padding:0 10px;font-family:var(--font-ui);font-size:12px;flex:1;min-width:210px">
-          <button ${x.A(c.plLibresGo)} style="${btn(c.plLibresSeules)}">Emplacements libres</button>
-          <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plRangsN} ligne(s)</span>
-        </div>
-        <div style="margin-top:11px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px">
-            <thead><tr>
-              <th style="${TH}"><button ${x.A(c.plCols[0].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[0].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Emplacement</button></th>
-              <th style="${TH}">Photo</th>
-              <th style="${TH}">Format</th>
-              <th style="${TH}">Contenant</th>
-              <th style="${TH}"><button ${x.A(c.plCols[1].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[1].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Référence</button></th>
-              <th style="${TH};text-align:right">Par slot</th>
-              <th style="${TH}">Ligne × rangées</th>
-              <th style="${TH}"><button ${x.A(c.plCols[2].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[2].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">État</button></th>
-            </tr></thead>
-            <tbody>
-              ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} ${x.DP(r.deposer)} class="pl-slot" style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement, ou y glisser une référence' : esc(r.nom) + ' — cliquez pour la fiche'}">
-                <td style="${TD}"><span style="font-weight:500">${esc(r.meuble)} · ${esc(r.niveau)} · ${r.position}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.zone)}</div></td>
-                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)"></span>' : `
-                  <div ${x.A(e => e.stopPropagation())} style="display:flex;align-items:center;gap:4px">
-                    <label title="${r.photo ? 'Remplacer la photo' : 'Annexer la photo du produit'}" style="flex:0 0 auto;width:34px;height:34px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${r.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:14px;line-height:1'}">${r.photo ? `<img src="${esc(r.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.photoSet)} style="display:none"></label>
-                    ${r.photoDel ? `<button ${x.A(r.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
-                  </div>`}</td>
-                <td style="${TD}">${plCbx(r.format, x)}${r.dims ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.dims)}</div>` : ''}</td>
-                <td style="${TD}">${plCbx(r.contenant, x)}</td>
-                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)"></span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}${r.autresOcc ? ' · +' + r.autresOcc + ' autre(s) moment(s)' : ''}</div>`
-                  + ((r.periodesRef || []).length ? `<div ${x.A(e => e.stopPropagation())} style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
-                    ${r.periodesRef.map(pr => `<button ${x.A(pr.bascule)} title="Présentée ${esc(pr.nom.toLowerCase())} ?" style="border-radius:999px;padding:1px 8px;font-family:var(--font-ui);font-size:9.5px;font-weight:500;cursor:pointer;${pr.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">${esc(pr.nom)}</button>`).join('')}
-                  </div>` : '')}</td>
-                <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)"></span>'
-                  : `<input ${x.A(e => e.stopPropagation())} type="number" min="0" max="400" value="${esc(r.parSlot)}" ${x.I(r.parSlotSet)} ${x.C(r.parSlotEcrire)} placeholder="—" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:27px;width:58px;padding:0 6px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-align:right">`}</td>
-                <td style="${TD}">${r.grille ? `
-                  <div style="display:inline-flex;border:0.5px solid var(--color-border-tertiary);border-radius:999px;overflow:hidden">
-                    ${r.grille.opts.map(o => `<button ${x.A(o.go)} title="${o.c} par ligne" style="border:none;padding:3px 7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.c}</button>`).join('')}
-                  </div>
-                  <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${r.grille.txt} = <b style="font-weight:600;color:var(--color-text)">${r.grille.poses}</b> posés${r.grille.taille ? ' · ' + esc(r.grille.taille) : ''}</div>
-                  ${r.grille.reste ? `<div style="margin-top:4px;font-size:10px;background:rgba(199,158,44,0.14);color:var(--color-on-abricot);border-radius:5px;padding:2px 6px;display:inline-block">${r.grille.reste} hors grille${r.grille.justeTxt ? ` — <button ${x.A(r.grille.justeGo)} style="border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer">${esc(r.grille.justeTxt)}</button>` : ''}</div>` : ''}`
-                  : `<span style="color:var(--color-text-muted);font-size:11px">${r.libre ? '' : 'nombre à saisir'}</span>`}</td>
-                <td style="${TD}"><span style="${r.etatSt}">${r.vise ? 'visé' : esc(r.etat)}</span></td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-          ${c.plRangsN === 0 ? `<div style="padding:22px 16px;font-size:12px;color:var(--color-text-muted);text-align:center">Aucun emplacement ne correspond.</div>` : ''}
-        </div>
-        ${c.plCibleTxt ? `<div style="margin-top:10px;font-size:11.5px;color:var(--color-text)">Emplacement visé : <b style="font-weight:500">${esc(c.plCibleTxt)}</b> — ouvrez une référence pour l’y placer.</div>` : ''}`
-      : `<div style="margin-top:14px;overflow-x:auto">
-          <div style="display:grid;grid-template-columns:82px repeat(${Math.max(1, c.plMeubles.length)},minmax(190px,1fr));gap:10px;align-items:start;min-width:${82 + c.plMeubles.length * 200}px">
-            <div></div>
-            ${c.plMeubles.map(m => `<div style="text-align:center;padding-bottom:5px;border-bottom:2px solid var(--color-text)">
-              <button ${x.A(m.renommer)} title="Renommer" style="border:none;background:none;padding:0;cursor:pointer;${lbl};color:var(--color-text)">${esc(m.nom)}</button>
-              <button ${x.A(m.assistant)} title="Modifier ce meuble — type, température, moments — dans l’assistant" style="border:none;background:none;padding:0 0 0 6px;cursor:pointer;font-size:11px;color:var(--color-text-muted)">✎</button>
-              ${c.plOrg ? `<button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;padding:0 0 0 6px;cursor:pointer;font-size:10.5px;color:var(--color-text-muted)">✕</button>` : ''}
-              ${m.periodes ? `<div style="font-size:10px;font-weight:400;color:var(--color-text-muted);text-transform:none;letter-spacing:0;margin-top:2px">${esc(m.periodes)}</div>` : ''}
-            </div>`).join('')}
-            ${c.plLignes.map(l => `
-              <div style="padding-top:14px;text-align:right;font-size:10.5px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:500">${esc(l.nom)}</div>
-              ${l.cases.map(k => k.absent
-                ? `<div style="min-height:50px"></div>`
-                : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, k.slots.length)},1fr);gap:5px${c.plPhotosOn ? ';align-items:start' : ''}">
-                    ${k.slots.map(s => (c.plPhotosOn && s.photo && !s.vise)
-                      ? `<div ${x.A(s.clic)} draggable="true" ${x.DS(s.prendre)} ${x.DP(s.deposer)} class="pl-slot" title="${esc(s.nom)} — ${s.photoTxt ? s.photoTxt + ' par emplacement · ' : ''}cliquez pour la fiche, glissez pour la déplacer" style="${s.stPhoto}">
-                        <div style="aspect-ratio:1;display:grid;grid-template-columns:repeat(${s.photoCols},1fr);grid-template-rows:repeat(${s.photoRangs},1fr);gap:1px;background:var(--color-border-tertiary)">
-                          ${Array.from({ length: s.photoN }).map(() => `<img src="${esc(s.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;background:var(--color-surface)">`).join('')}
-                        </div>
-                        <div style="padding:5px 7px 6px;font-size:10px;line-height:1.35">
-                          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.nom)}</div>
-                          <div style="color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}</div>
-                        </div>
-                      </div>`
-                      : `<div ${x.A(s.clic)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} ${x.DP(s.deposer)} class="pl-slot" title="${s.libre ? 'Emplacement libre — cliquez pour le viser, ou glissez-y une référence' : esc(s.nom) + ' — cliquez pour la fiche, glissez pour la déplacer'}" style="${s.st}">
-                      <span style="overflow:hidden;text-overflow:ellipsis">${s.vise ? 'visé' : (s.libre ? 'libre' : esc(s.nom))}</span>
-                      <span style="opacity:0.8">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}${(c.plPhotosOn && !s.libre && !s.photo && !s.vise) ? ' · sans photo' : ''}</span>
-                    </div>`).join('')}
-                    ${c.plOrg ? `<button ${x.A(k.ajouter)} title="Ajouter des emplacements" style="border:1px dashed var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:7px;min-height:50px;cursor:pointer;font-family:var(--font-ui);font-size:14px">+</button>` : ''}
-                  </div>`).join('')}`).join('')}
-          </div>
-        </div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:10.5px;color:var(--color-text-muted)">
-          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;border:1.5px dashed var(--color-primary);border-radius:3px"></span>libre</span>
-          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:3px"></span>occupé — cliquez pour la fiche</span>
-          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-primary);border-radius:3px"></span>visé</span>
-          <span>Glissez une référence du catalogue sur une case ; d’une case à l’autre, elle déménage — sur une case occupée, les deux références échangent.</span>
-          ${c.plPhotosOn && c.plPhotosManque ? `<span style="color:var(--color-on-abricot)">${c.plPhotosManque} référence(s) placée(s) sans photo — la case reste en texte ; la photo s’ajoute au tableau ou dans la fiche.</span>` : ''}
-          ${c.plCibleTxt ? `<span style="margin-left:auto;font-size:11.5px;color:var(--color-text)">Emplacement visé : <b style="font-weight:500">${esc(c.plCibleTxt)}</b> — ouvrez une référence pour l’y placer.</span>` : ''}
-        </div>`}
-
-    ${(c.plManque || []).length ? `<div style="margin-top:13px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
-      <div style="${lbl};margin-bottom:7px">Ce que le comptoir ne peut pas encore diffuser</div>
-      ${c.plManque.map(m => `<div style="display:flex;gap:9px;align-items:flex-start;margin-top:6px">
-        <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
-        <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b> — ${esc(m.quoi)}<div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
-      </div>`).join('')}
-    </div>` : ''}
-  </div>`;
-}
-
 /* --- Détail d'une période d'analyse ------------------------------------------
    Deux lectures : tous les magasins sur la période choisie, puis un magasin
    choisi sur toutes les périodes. La question « est-ce un accident ou une
@@ -8197,238 +7945,6 @@ function tplAnalyseDetail(c, x){
           ${a.serie.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">${esc(a.serie.note)}</div>` : ''}
         </div>` : ''}
       </div>
-    </div>
-  </div>`;
-}
-
-/* --- Assistant de création d'un meuble --------------------------------------
-   Quatre étapes : ce que c'est, comment il conserve et présente, la taille d'un
-   emplacement, puis ce qu'on s'apprête à créer. Le meuble naît avec ses niveaux
-   et ses emplacements — le déclarer en trois écrans successifs faisait
-   abandonner à mi-chemin, et un meuble sans emplacement ne sert à rien. */
-function tplPlanoMeubleWizard(c, x){
-  const { esc } = x;
-  const w = c.plMw;
-  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
-  const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
-    + 'border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px;box-sizing:border-box';
-  const puce = o => `<button ${x.A(o.pick)} style="border-radius:999px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.v)}</button>`;
-  const etapes = ['Le meuble', 'Conservation & présentation', 'Un emplacement', 'Photos', 'Récapitulatif'];
-  // Vignette de photo : le même geste partout — déposer, remplacer, retirer.
-  const vignette = (data, poser, retirer, titre) => data
-    ? `<div style="position:relative;flex:0 0 auto">
-        <img src="${data}" alt="" style="width:104px;height:76px;object-fit:cover;border-radius:8px;border:0.5px solid var(--color-border-tertiary);display:block">
-        ${retirer ? `<button ${x.A(retirer)} title="Retirer" style="position:absolute;top:4px;right:4px;border:none;background:rgba(20,16,14,0.72);color:#fff;border-radius:999px;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">✕</button>` : ''}
-        <label style="display:block;text-align:center;font-size:10px;color:var(--color-text-muted);margin-top:3px;cursor:pointer;text-decoration:underline;text-underline-offset:2px">remplacer<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(poser)} style="display:none"></label>
-      </div>`
-    : `<label style="flex:0 0 auto;width:104px;height:76px;border:1px dashed var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:var(--color-surface)">
-        <span style="font-size:15px;line-height:1;color:var(--color-text-muted)">＋</span>
-        <span style="font-size:10px;color:var(--color-text-muted);text-align:center;padding:0 5px">${esc(titre || 'photo')}</span>
-        <input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(poser)} style="display:none">
-      </label>`;
-  return `
-  <div ${x.A(w.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:90;animation:fadeIn 160ms ease"></div>
-  <div style="position:fixed;inset:0;z-index:91;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
-    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:660px;max-width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:0.5px solid var(--color-border-tertiary)">
-        <div>
-          <div style="${lbl}">${w.edition ? 'Modifier le meuble' : 'Nouveau meuble'}${w.zone ? ' — ' + esc(w.zone) : ''}</div>
-          <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(etapes[w.etape - 1])}</div>
-        </div>
-        <button ${x.A(w.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
-      </div>
-      <div style="display:flex;gap:5px;padding:11px 19px 0">
-        ${etapes.map((e, i) => `<div title="${esc(e)}" style="flex:1;height:3px;border-radius:999px;background:${i < w.etape ? 'var(--color-primary)' : 'var(--color-border-tertiary)'}"></div>`).join('')}
-      </div>
-
-      <div style="padding:16px 19px;overflow-y:auto" data-scroll="plmw">
-        ${w.etape === 1 ? `
-          <div style="${lbl};margin-bottom:6px">Nom du meuble</div>
-          <input id="plmw-nom" value="${esc(w.nom)}" ${x.I(w.set('nom'))} placeholder="Vitrine 1, Gondole A…" style="${inp};width:100%">
-          <div style="${lbl};margin:16px 0 7px">Type</div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">${w.types.map(puce).join('')}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5">Le type sert à lire le plan d’un coup d’œil et à repérer ce qui ne peut pas y aller.</div>
-        ` : ''}
-
-        ${w.etape === 2 ? `
-          <div style="${lbl};margin-bottom:7px">Température</div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">${w.temperatures.map(puce).join('')}</div>
-          <div style="${lbl};margin:18px 0 7px">Mode de présentation</div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">${w.presentations.map(puce).join('')}</div>
-          <!-- Le comptoir du matin n'est pas celui de midi : un meuble peut
-               n'être monté qu'à certains moments, et le plan se lit alors
-               moment par moment. -->
-          ${(w.periodes || []).length ? `
-            <div style="${lbl};margin:18px 0 7px">Moments de la journée où ce meuble est monté</div>
-            <div style="display:flex;gap:7px;flex-wrap:wrap">
-              ${w.periodes.map(pr => `<button ${x.A(pr.bascule)} title="${esc(pr.aide)}" style="display:inline-flex;align-items:center;gap:7px;border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${pr.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
-                <span style="width:13px;height:13px;border-radius:4px;flex:0 0 auto;background:${pr.on ? '#fff' : 'transparent'};border:1.5px solid ${pr.on ? '#fff' : 'var(--color-border-secondary)'};display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--color-primary);line-height:1">${pr.on ? '✓' : ''}</span>
-                ${esc(pr.nom)}${pr.aide ? `<span style="font-weight:400;opacity:.75;font-size:11px">${esc(pr.aide)}</span>` : ''}</button>`).join('')}
-            </div>
-            <div style="font-size:11px;color:${w.periodesVide ? 'var(--color-primary)' : 'var(--color-text-muted)'};margin-top:7px">${w.periodesVide ? 'Aucun moment coché : le meuble ne serait monté à aucune heure.' : 'Retenu : ' + esc(w.periodesTxt) + '.'}</div>` : ''}
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">La température décide de ce qu’on peut y poser ; le mode de présentation, de la façon dont on compte les fronts — une grille et un panier ne se remplissent pas pareil.</div>
-        ` : ''}
-
-        ${w.etape === 3 && w.edition ? `
-          <div style="font-size:11.5px;line-height:1.55;color:var(--color-text);background:var(--color-background-secondary);border-radius:8px;padding:9px 12px;margin-bottom:14px">
-            Aujourd’hui : <b style="font-weight:500">${esc(w.structTxt || '')}</b>. D’ici on <b style="font-weight:500">ajoute</b> — des niveaux, des emplacements — jamais on ne retire : retirer déplacerait ce qui est posé, et se fait dans « Organiser le comptoir ». Les dimensions saisies ne valent que pour les emplacements <b style="font-weight:500">créés</b> ; celles d’un emplacement existant se changent par son format, au tableau.
-          </div>
-        ` : ''}
-        ${w.etape === 3 ? `
-          <div style="${lbl};margin-bottom:7px">Dimensions d’un emplacement, en millimètres</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Longueur</div><input id="plmw-lon" type="number" min="0" max="5000" value="${esc(w.longueur)}" ${x.I(w.set('longueur'))} style="${inp};width:96px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Largeur</div><input id="plmw-lar" type="number" min="0" max="5000" value="${esc(w.largeur)}" ${x.I(w.set('largeur'))} style="${inp};width:96px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Hauteur</div><input id="plmw-hau" type="number" min="0" max="5000" value="${esc(w.hauteur)}" ${x.I(w.set('hauteur'))} style="${inp};width:96px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Capacité (pièces)</div><input id="plmw-cap" type="number" min="0" max="999" value="${esc(w.capacite)}" ${x.I(w.set('capacite'))} placeholder="—" style="${inp};width:110px;text-align:right"></div>
-          </div>
-          <div style="${lbl};margin:20px 0 7px">Combien de niveaux, combien d’emplacements</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Niveaux</div><input id="plmw-nniv" type="number" min="1" max="40" value="${esc(w.nNiveaux)}" ${x.I(w.set('nNiveaux'))} style="${inp};width:88px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Emplacements par niveau</div><input id="plmw-nslot" type="number" min="0" max="40" value="${esc(w.nSlots)}" ${x.I(w.set('nSlots'))} style="${inp};width:130px;text-align:right"></div>
-            <div style="font-size:12px;color:var(--color-text-muted);padding-bottom:8px">→ ${w.total} emplacement(s) : ${esc(w.niveauxTxt)}</div>
-          </div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">Une dimension laissée vide reste inconnue — elle ne sera pas affichée comme un zéro. Tout se corrige ensuite, emplacement par emplacement.</div>
-        ` : ''}
-
-        ${w.etape === 4 ? `
-          <div style="${lbl};margin-bottom:7px">Photo du meuble</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            ${vignette(w.photoMeuble, w.photoMeubleSet, w.photoMeubleDel, 'le meuble')}
-            <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5;max-width:330px;align-self:center">Le meuble tel qu’il doit se présenter. C’est à elle qu’on compare ce qu’on voit en boutique.</div>
-          </div>
-          <div style="${lbl};margin:18px 0 7px">Une photo par niveau</div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            ${w.photosNiveau.map(n => `<div style="text-align:center">
-              ${vignette(n.data, n.set, n.del, esc(n.nom))}
-              <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(n.nom)}</div>
-            </div>`).join('')}
-          </div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">Tout est facultatif, et rien n’est figé : une photo s’ajoute, se remplace ou se retire ensuite depuis « Retoucher un meuble ».</div>
-        ` : ''}
-
-        ${w.etape === 5 ? `
-          <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden">
-            ${w.recap.map((r, i) => `<div style="display:flex;gap:14px;padding:9px 13px;${i ? 'border-top:0.5px solid var(--color-border-tertiary);' : ''}${i % 2 ? 'background:var(--color-background-secondary);' : ''}">
-              <span style="${lbl};flex:0 0 118px">${esc(r.k)}</span>
-              <span style="font-size:12.5px;line-height:1.45">${esc(r.v)}</span>
-            </div>`).join('')}
-          </div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5">Le meuble, ses niveaux et ses emplacements sont créés d’un seul geste.</div>
-        ` : ''}
-
-        ${w.err ? `<div style="margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(w.err)}</div>` : ''}
-      </div>
-
-      <div style="display:flex;gap:9px;align-items:center;padding:13px 19px;border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
-        ${w.precedent ? `<button ${x.A(w.precedent)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:33px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Retour</button>` : ''}
-        <div style="flex:1"></div>
-        <button ${x.A(w.fermer)} style="border:none;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;cursor:pointer;padding:0 8px">Annuler</button>
-        ${w.suivant ? `<button ${x.A(w.suivant)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Continuer</button>` : ''}
-        ${w.creer ? `<button ${x.A(w.creer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${w.busy ? 'wait' : 'pointer'};opacity:${w.busy ? '0.6' : '1'}">${w.busy ? (w.edition ? 'Enregistrement…' : 'Création…') : (w.edition ? 'Enregistrer les modifications' : 'Créer le meuble')}</button>` : ''}
-      </div>
-    </div>
-  </div>`;
-}
-
-/* --- Fiche de présentation et de vente d'une référence -----------------------
-   Où le produit se présente, comment, et avec quelles informations. Trois
-   colonnes : la consigne, l'emplacement, la fiche technique. */
-function tplPlanoFiche(c, x){
-  const { esc } = x;
-  const f = c.plFiche;
-  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
-  const k = 'font-size:10.5px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:500';
-  const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
-    + 'border-radius:8px;height:31px;padding:0 9px;font-family:var(--font-ui);font-size:12px';
-  return `
-  <div ${x.A(f.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
-  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
-    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;width:1180px;max-width:100%;max-height:100%">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
-        <div>
-          <div style="${lbl}">Fiche de présentation</div>
-          <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(f.nom)}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(f.ref)}${f.sous ? ' · ' + esc(f.sous) : ''} · ${f.placeTxt ? esc(f.placeTxt) : 'sans emplacement au comptoir'}</div>
-        </div>
-        <button ${x.A(f.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
-      </div>
-
-      ${f.chargement ? `<div style="padding:40px;font-size:12.5px;color:var(--color-text-muted)">Lecture de la fiche…</div>` : `
-      <div style="display:grid;grid-template-columns:320px 1fr 290px;min-height:0;overflow:hidden">
-
-        <div style="padding:14px 16px;border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto" data-scroll="plf1">
-          <div style="${lbl}">Photo de présentation</div>
-          ${f.photo
-            ? `<div style="margin-top:8px;position:relative">
-                <img src="${esc(f.photo)}" alt="Photo de présentation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block">
-                <button ${x.A(f.photoRetirer)} title="Retirer la photo" style="position:absolute;top:7px;right:7px;border:none;background:rgba(20,16,14,0.72);color:#fff;border-radius:999px;width:24px;height:24px;font-size:12px;cursor:pointer">✕</button>
-              </div>
-              <label style="display:inline-block;margin-top:7px;font-size:11px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px">Remplacer<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(f.photoDepose)} style="display:none"></label>`
-            : `<label style="margin-top:8px;background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer">
-                <span style="font-size:12.5px;font-weight:500;color:var(--color-text)">Annexer une photo</span>
-                <span style="font-size:11px;color:var(--color-text-muted);line-height:1.45">JPEG, PNG ou WebP — réduite avant l’envoi</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(f.photoDepose)} style="display:none">
-              </label>`}
-          ${(f.manque || []).filter(m => /photo/i.test(m.champ)).map(m => `
-            <div style="margin-top:8px;display:flex;gap:7px;align-items:flex-start">
-              <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
-              <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.45">Cette photo reste dans le cockpit. ${esc(m.source)}</div>
-            </div>`).join('')}
-
-          <div style="${lbl};margin-top:18px">Consigne de présentation</div>
-          <textarea id="plf-note" ${x.I(f.noteSet('texte'))} rows="5" placeholder="Comment ce produit doit être présenté au comptoir" style="width:100%;box-sizing:border-box;margin-top:7px;border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:8px 10px;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(f.noteTxt)}</textarea>
-          <div style="margin-top:8px;font-size:11px;color:var(--color-text-muted);text-align:right">${esc(f.noteAuto || '')}</div>
-          <button ${x.A(f.enregistrerNote)} style="margin-top:4px;width:100%;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">Enregistrer la consigne</button>
-          ${f.noteMaj ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">${esc(f.noteMaj)}</div>` : ''}
-          ${(f.manque || []).filter(m => /diffusion/i.test(m.champ)).map(m => `
-            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5"><span style="font-weight:500;color:var(--color-on-abricot)">manque API</span> — ${esc(m.source)}</div>`).join('')}
-        </div>
-
-        <div style="padding:14px 16px;border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto" data-scroll="plf2">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-            <div style="${lbl}">Emplacement au comptoir</div>
-            ${f.zonesOpts.length ? `<select ${x.C(f.zoneSet)} style="${inp}">${f.zonesOpts.map(z => `<option value="${z.id}"${z.on ? ' selected' : ''}>${esc(z.nom)}</option>`).join('')}</select>` : ''}
-          </div>
-          ${f.lignes.length ? `
-            <div style="margin-top:11px;overflow-x:auto">
-              <div style="display:grid;grid-template-columns:62px repeat(${Math.max(1, f.meubles.length)},minmax(160px,1fr));gap:8px;align-items:start">
-                <div></div>
-                ${f.meubles.map(m => `<div style="text-align:center;padding-bottom:4px;border-bottom:2px solid var(--color-text);${lbl};color:var(--color-text)">${esc(m)}</div>`).join('')}
-                ${f.lignes.map(l => `
-                  <div style="padding-top:12px;text-align:right;font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:500">${esc(l.nom)}</div>
-                  ${l.cases.map(cs => cs.absent ? `<div style="min-height:44px"></div>`
-                    : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, cs.slots.length)},1fr);gap:4px">
-                        ${cs.slots.map(s => `<div ${x.A(s.clic)} style="${s.st}"><span style="overflow:hidden;text-overflow:ellipsis">${esc(s.nom)}</span><span style="opacity:0.8">${s.position}</span></div>`).join('')}
-                      </div>`).join('')}`).join('')}
-              </div>
-            </div>`
-            : `<div style="margin-top:11px;padding:18px;border:1px dashed var(--color-border-secondary);border-radius:9px;font-size:12px;color:var(--color-text-muted);line-height:1.55">Aucun emplacement déclaré dans cette zone. Fermez la fiche et utilisez « Organiser le comptoir ».</div>`}
-
-          <div style="display:flex;gap:10px;align-items:center;margin-top:13px;flex-wrap:wrap">
-            <span style="${k}">Fronts</span><input type="number" min="1" value="${f.fronts}" ${x.C(f.set('fronts'))} style="${inp};width:60px;text-align:right">
-            <span style="${k}">Min. à tenir</span><input type="number" min="0" value="${f.qmin}" ${x.C(f.set('qmin'))} style="${inp};width:66px;text-align:right">
-            <span style="${k}">Ordre</span><input type="number" min="1" value="${f.ordre}" ${x.C(f.set('ordre'))} style="${inp};width:56px;text-align:right">
-          </div>
-          <div style="display:flex;gap:9px;align-items:center;margin-top:13px;flex-wrap:wrap">
-            <button ${x.A(f.placer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : (f.placer ? 'pointer' : 'not-allowed')};opacity:${f.placer && !f.busy ? '1' : '0.5'}">${f.cibleTxt ? 'Placer en ' + esc(f.cibleTxt) : 'Choisissez un emplacement'}</button>
-            ${f.retirer ? `<button ${x.A(f.retirer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:9px;height:33px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Retirer du comptoir</button>` : ''}
-          </div>
-          ${f.err ? `<div style="margin-top:10px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;line-height:1.45">${esc(f.err)}</div>` : ''}
-          ${!f.err && f.ok ? `<div style="margin-top:10px;font-size:11.5px;color:#2d7a3e">${esc(f.ok)}</div>` : ''}
-
-        </div>
-
-        <div style="padding:14px 16px;overflow-y:auto;background:var(--color-background-secondary)" data-scroll="plf3">
-          <div style="${lbl}">Fiche technique — de la caisse</div>
-          ${f.techniqueVide
-            ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">Aucun renseignement technique pour cette référence.</div>`
-            : `<div style="display:flex;flex-direction:column;gap:9px;margin-top:9px">
-                ${f.technique.map(t => `<div><div style="${k}">${esc(t.k)}</div><div style="font-size:12.5px">${esc(t.v)}</div></div>`).join('')}
-              </div>`}
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.45">Ces champs viennent du catalogue du réseau. Ils ne demandent aucune nouvelle API — seulement d’être renseignés à la source quand ils manquent.</div>
-        </div>
-      </div>`}
     </div>
   </div>`;
 }
@@ -10488,4 +10004,166 @@ function tplProspectionMobile(c, x){
       ${c.prMagasin ? `<div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.prLienMobile)}" title="Prospection mobile" style="width:390px;height:760px;border:none;display:block"></iframe></div>` : '<div style="font-size:12px;color:var(--color-text-muted)">Choisissez un magasin.</div>'}
     </div>
   </div>`;
+}
+
+/* ============================================================================
+   Planogramme standard — un comptoir pour tout le réseau (maquettes validées
+   docs/maquettes/planogramme-standard). La face en deux parties qui ne coupent
+   aucune zone, le sélecteur de produits à droite, le tableau par section, la
+   vue de dessus à l'échelle, et les rotations.
+   ========================================================================== */
+function psPhoto(v, cls, attrs, esc){
+  if (!v) { return ''; }
+  return v.img
+    ? `<div class="ps-ph ${cls || ''}" ${attrs || ''}><img src="${esc(v.img)}" alt="" style="${v.style}" loading="lazy" draggable="false"></div>`
+    : `<div class="ps-ph ${cls || ''}" ${attrs || ''} style="background:${v.fond}">${esc(v.ini)}</div>`;
+}
+function tplPsFace(P, x, imp){
+  const { esc } = x;
+  return `<div class="ps-carte ps-face-c"><div class="ps-cap" style="margin-bottom:7px">${esc(P.titre)}</div><div class="ps-face">
+    <div class="ps-row"><div class="ps-hd"></div>${P.bandes.map(b => `<div class="ps-band" style="width:${b.w}px;background:${b.fond};color:${b.encre};border:1px solid ${b.bord ? 'var(--color-border-secondary)' : 'transparent'}">${imp ? `<b>${esc(b.nom)}</b>` : `<input value="${esc(b.nom)}" placeholder="${esc(b.defaut)}" title="Nom de la zone — vide : ${esc(b.defaut)}" ${x.C(b.renommer)} style="color:${b.encre}">`}<span>${esc(b.len)}</span></div>`).join('')}</div>
+    ${P.lignes.map(l => `<div class="ps-row"><div class="ps-hd" style="height:${l.h}px"><b>${esc(l.nom)}</b><span>${esc(l.sub)}</span></div>${l.cellules.map(c => {
+      if (c.caisse) { return `<div class="ps-caisse" style="width:${c.w}px;height:${l.h}px">Caisse</div>`; }
+      if (c.hach) { return `<div class="ps-cell ps-hach" style="height:${l.h}px"></div>`; }
+      return `<div class="ps-cell ${c.cls}" style="height:${l.h}px">${c.slots.map(s => s.vide
+        ? `<div class="ps-slot${s.sel ? ' sel' : ''}" ${x.A(s.clic)} ${x.DP(s.deposer)} title="${esc(s.titre)}"><div class="ps-vide">${imp ? '' : esc(s.libreTxt)}</div></div>`
+        : `<div class="ps-slot${s.sel ? ' sel' : ''}${s.hl ? ' hl' : ''}" ${x.A(s.clic)} ${x.DP(s.deposer)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} title="${esc(s.titre)}">
+            <span class="ps-qt${s.sansQ ? ' manque' : ''}">${s.sansQ ? 'Qté ?' : '×' + esc(String(s.qte).replace('.', ','))}</span>${psPhoto(s.v, '', 'data-psphoto="1"', esc)}${s.bande ? `<div class="ps-bande">${s.bande.map(b => `<i style="background:${b.fond}" title="${esc(b.t)}"></i>`).join('')}</div>` : ''}<div class="ps-nm">${esc(s.nom)}</div></div>`).join('')}</div>`;
+    }).join('')}</div>`).join('')}
+    <div class="ps-row" style="margin-top:2px"><div class="ps-hd" style="font-size:10px;color:var(--color-text-muted)">Section</div>${P.regle.map(r => `<div class="ps-regle" style="width:${r.w}px">${esc(r.t)}</div>`).join('')}</div>
+  </div></div>`;
+}
+function tplPsTableau(c, x, imp){
+  const { esc } = x;
+  return `<div class="ps-carte ps-tab-c"><table class="ps-tab"><thead><tr>${['Section', 'Zone', 'Étage 3', 'Étage 2', 'Étage 1 arrière', 'Étage 1 avant', 'Total'].map((h, i) => `<th${i === 6 ? ' class="n"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>
+    ${c.psTableau.map(r => `<tr><td class="s">${r.s}</td><td class="z"><i style="background:${r.pastille}"></i>${esc(r.zone)}</td>
+      ${r.caisse ? '<td colspan="4" class="mu">caisse — pas d’étage au-dessus</td>' : r.cellules.map(cl => cl.off ? '<td class="mu">—</td>' : (cl.vide ? '<td class="mu">libre</td>'
+        : `<td>${cl.occ.map(o => `<span class="ps-tc"><span class="nm">${esc(o.nom)}${o.journee ? '' : ` <span class="ps-tags">${o.tags.map(t => `<i class="${t.on ? 'on' : ''}" title="${esc(t.titre)}">${esc(t.t)}</i>`).join('')}</span>`}</span>${imp ? `<b>${o.qte ? '×' + esc(o.qte) : 'Qté ?'}</b>` : `<input id="${o.id}" type="text" inputmode="decimal" value="${esc(o.qte)}" placeholder="Qté" ${x.C(o.setQte)} class="${o.qte ? '' : 'manque'}">`}</span>`).join('')}</td>`)).join('')}
+      <td class="n">${esc(r.total)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function tplPsDessus(c, x){
+  const { esc } = x;
+  return `<div class="ps-carte ps-dessus-c"><div class="ps-cap" style="text-align:center">Côté vendeur</div><div class="ps-dessus">
+    ${c.psDessus.map(r => `<div class="ps-row"><div class="ps-hd" style="font-size:10px;color:var(--color-text-muted)">${esc(r.nom)}</div>${r.segs.map(z => `<div class="ps-ds" style="width:${z.w}px;height:${r.h}px;background:${z.fond};color:${z.encre};border:1px solid ${z.bord ? 'var(--color-border-secondary)' : 'transparent'}">
+      ${z.grille ? `<div class="ps-grille">${Array.from({ length: z.n }, () => '<i></i>').join('')}</div>` : ''}${z.nom ? `<span style="background:${z.fond}">${esc(z.nom)}</span>` : ''}</div>`).join('')}</div>`).join('')}
+    </div><div class="ps-cap" style="text-align:center">Côté client</div>
+    <div class="ps-row"><div class="ps-hd"></div>${c.psDessusEchelle.map(z => `<div class="ps-regle" style="width:${z.w}px">${esc(z.t)}</div>`).join('')}</div></div>`;
+}
+function tplPsPicker(c, x){
+  const { esc } = x;
+  const P = c.psPicker;
+  return `<div class="ps-pick ps-carte">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Produits</h3><span class="mu" style="font-size:10.5px">${P.n} au catalogue · API</span></div>
+    <input id="ps-q" class="ps-srch" value="${esc(P.q)}" placeholder="Rechercher un produit, une référence…" ${x.I(P.setQ)}>
+    <div class="ps-chips">${P.groupes.map(g => `<button ${x.A(g.go)} class="${g.on ? 'on' : ''}">${esc(g.nom)}</button>`).join('')}</div>
+    <button class="ps-tog${P.libres ? ' on' : ''}" ${x.A(P.basculer)}><i></i>Pas encore au comptoir · classés par ventes</button>
+    <div class="ps-liste">${P.chargement ? '<div class="mu" style="font-size:12px;padding:8px 0">Lecture du catalogue…</div>' : (P.lignes.length ? P.lignes.map(l => `<div class="ps-pl" draggable="true" ${x.DS(l.prendre)} title="Glissez « ${esc(l.nom)} » sur un emplacement">
+      ${psPhoto(l.v, 'pt', '', esc)}<div class="t"><b>${esc(l.nom)}</b><span>${esc(l.groupe)}${l.groupe ? ' · ' : ''}${esc(l.vendus)}${l.place ? ' · <em>' + esc(l.place) + '</em>' : ''}</span></div>${l.poser ? `<button class="a" ${x.A(l.poser)}>+ poser</button>` : '<span class="a">⠿</span>'}</div>`).join('') : '<div class="mu" style="font-size:12px;padding:8px 0">Aucun produit ne correspond.</div>')}</div>
+    <div class="mu" style="font-size:10.5px;line-height:1.45;border-top:.5px solid var(--color-border-tertiary);padding-top:8px">Glissez un produit sur un emplacement, ou cliquez un emplacement pour chercher. Un emplacement se glisse sur un autre pour le déplacer. La photo vient de la recette du panel ; double-clic sur une photo pour la recadrer (1:1).</div>
+  </div>`;
+}
+function tplPsFiche(c, x){
+  const { esc } = x;
+  const F = c.psFiche;
+  const tagsH = t => `<span class="ps-tags">${t.map(g => `<i class="${g.on ? 'on' : ''}" title="${esc(g.titre)}">${esc(g.t)}</i>`).join('')}</span>`;
+  return `<div class="ps-fond" ${x.A(F.fermer)}></div><div class="ps-fiche">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><div class="ps-cap">Emplacement</div><h3>${esc(F.titre)}</h3></div><button class="ps-x" ${x.A(F.fermer)} title="Fermer">×</button></div>
+    ${F.occupants.length ? F.occupants.map(o => `<div class="ps-occ">
+      <div class="ps-fp">${psPhoto(o.v, 'pf', '', esc)}<div style="flex:1;min-width:0"><b>${esc(o.nom)}</b><div class="mu" style="font-size:11px">${tagsH(o.tags)} ${esc(o.momentTxt)} · réf. ${esc(o.ref)}${o.du ? ' · depuis le ' + esc(o.du) : ''}</div></div></div>
+      <label class="ps-lab">Quantité quand l’emplacement est plein <input id="${o.id}" type="text" inputmode="decimal" value="${esc(o.qte)}" placeholder="ex. 24" ${x.C(o.setQte)}></label>
+      <div class="ps-actions">${o.etendre ? `<button class="ps-btn p" ${x.A(o.etendre)} title="Le même produit sur les trois moments">Toute la journée</button>` : ''}
+        <label class="ps-btn">Photo…<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(o.fichier)} hidden></label>
+        ${o.recadrer ? `<button class="ps-btn" ${x.A(o.recadrer)}>Recadrer</button>` : ''}${o.retirerPhoto ? `<button class="ps-btn" ${x.A(o.retirerPhoto)}>Photo du panel</button>` : ''}
+        <button class="ps-btn ko" ${x.A(o.retirer)}>Retirer</button></div></div>`).join('') : '<div class="mu" style="font-size:12px;margin:4px 0">Emplacement libre.</div>'}
+    <div class="ps-poser"><div class="ps-cap">Poser un produit — ${esc(F.choixTxt)}</div>
+      <div class="ps-chips">${F.choix.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
+      <input id="ps-fsearch" class="ps-srch" value="${esc(F.q)}" placeholder="nom, référence, catégorie…" ${x.I(F.setQ)}>
+      <div>${F.resultats.map(r => `<button class="ps-res" ${x.A(r.choisir)}><b>${esc(r.nom)}</b><span>${esc(r.detail)}</span></button>`).join('')}</div></div>
+  </div>`;
+}
+function tplPsCrop(c, x){
+  const { esc } = x;
+  const C = c.psCrop;
+  return `<div class="ps-fond" ${x.A(C.fermer)}></div><div class="ps-fiche ps-cropm">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="ps-cap">Recadrer (1:1)</div><h3>${esc(C.nom)}</h3></div><button class="ps-x" ${x.A(C.fermer)} title="Fermer (Échap)">×</button></div>
+    <div class="ps-cadre" data-pscadre="1" ${x.PD(C.pd)}>${C.img ? `<img src="${esc(C.img)}" alt="" style="${C.style}" draggable="false">` : ''}</div>
+    <div class="ps-zoom"><button class="ps-btn" ${x.A(C.moins)}>−</button><input id="ps-zoom" type="range" min="1" max="4" step="0.05" value="${C.s}" ${x.I(C.zoom)}><button class="ps-btn" ${x.A(C.plus)}>+</button></div>
+    <div class="mu" style="font-size:11px;margin:6px 0 10px">Glissez l’image pour la déplacer, le curseur pour zoomer.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="ps-btn" ${x.A(C.fermer)}>Annuler</button><button class="ps-btn p" ${x.A(C.enreg)}>Enregistrer</button></div>
+  </div>`;
+}
+function tplPsRot(c, x){
+  const { esc } = x;
+  const R = c.psRot;
+  const seg = (l) => `<div class="ps-seg">${l.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const ech = `<div class="ps-ech"><span>Rotations par jour</span>${R.echelle.map(e => `<span><i style="background:${e.fond}"></i>${esc(e.t)}</span>`).join('')}</div>`;
+  let h = `<div class="ps-rbar">${seg(R.magasins)}${seg(R.periodes)}<button class="ps-tog${R.simuler.on ? ' on' : ''}" ${x.A(R.simuler.go)} title="Appliquer le plan actuel à tous les jours de la période"><i></i>Simuler avec le plan actuel</button><span class="mu" style="margin-left:auto;font-size:12px">${esc(R.periodeTxt || '')}</span></div>`;
+  if (R.chargement) { return h + '<div class="ps-carte mu">Lecture des ventes, produit par produit…</div>'; }
+  if (R.erreur) { return h + '<div class="ps-carte mu">Les rotations ne répondent pas.</div>'; }
+  if (R.simulation) { h += `<div class="ps-note">Simulation : le plan actuel appliqué à toute la période${R.simuler.on ? '' : ' — il n’était pas encore en vigueur ces jours-là'}. Les rotations « réelles » se lisent à partir du jour où le plan est posé.</div>`; }
+  if (R.sansQ) { h += `<div class="ps-note">${R.sansQ} emplacement(s) sans quantité : ils ne comptent pas dans les rotations. Réglez-les dans le tableau par section.</div>`; }
+  if (R.vide) { return h + `<div class="ps-carte mu">${esc(R.vide)}</div>`; }
+  if (R.un) {
+    h += `<div class="ps-tuiles">${R.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t[0])}</div><div class="v">${esc(t[1])}</div><div class="s">${esc(t[2])}</div></div>`).join('')}</div>`;
+    if (R.attente) { h += `<div class="ps-note">${esc(R.attente)}</div>`; }
+    h += `<div class="ps-carte"><h3 class="ps-h">La carte des rotations <small>chaque emplacement, moyenne par jour ouvert</small></h3><div class="ps-rcarte">
+      <div class="ps-row"><div class="ps-hd"></div>${R.bandes.map(b => `<div class="ps-band s" style="width:${b.w}px;background:${b.fond};color:${b.encre};border:1px solid ${b.bord ? 'var(--color-border-secondary)' : 'transparent'}">${esc(b.nom)}</div>`).join('')}</div>
+      ${R.carte.map(l => `<div class="ps-row"><div class="ps-hd" style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.nom)}</div>${l.cases.map(k => k.caisse ? `<div class="ps-rc" style="background:var(--color-text);color:#fff;font-size:8.5px">${esc(k.t)}</div>` : (k.hach ? '<div class="ps-rc ps-hach"></div>' : (k.vide ? '<div class="ps-rc vide">vide</div>' : `<div class="ps-rc" style="background:${k.fond};color:${k.encre}" title="${esc(k.titre)}">${esc(k.t)}</div>`))).join('')}</div>`).join('')}
+      <div class="ps-row"><div class="ps-hd" style="font-size:10.5px;color:var(--color-text-muted)">Section</div>${Array.from({ length: 25 }, (_, i) => `<div class="ps-rc n">${i + 1}</div>`).join('')}</div>
+      </div><div style="margin-top:10px">${ech}</div></div>`;
+    h += `<div class="ps-carte"><h3 class="ps-h">Section par section, jour par jour <small>rotation = unités vendues au comptoir ÷ quantité que la section contient</small></h3>
+      <table class="ps-rt"><tr><th class="l">Section</th><th class="l">Produits de la section</th><th>Qté</th>${R.jours.map(j => `<th>${esc(j.t)}</th>`).join('')}<th>Moy.</th></tr>
+      ${R.lignes.map(l => l.zone ? `<tr class="z"><td colspan="${R.jours.length + 4}"><i style="background:${l.fond}"></i>${esc(l.nom)}</td></tr>`
+        : `<tr><td class="l h">${esc(l.s)}</td><td class="pr" title="${esc(l.produits)}">${esc(l.produits)}</td><td class="mu">${esc(l.cap)}</td>${l.cases.map(k => `<td style="background:${k.fond};color:${k.encre}"${k.titre ? ` title="${esc(k.titre)}"` : ''}>${esc(k.t)}</td>`).join('')}<td class="h" style="background:${l.mf};color:${l.mc}">${esc(l.moy)}</td></tr>`).join('')}
+      </table><div class="ps-formule"><b>Rotation d’une section, un jour</b> = les unités vendues au comptoir ce jour-là des produits posés sur la section ÷ la somme de leurs quantités au plan. <b>1</b> = la section s’est vidée une fois. Les ventes aux clients pro ne passent pas par le comptoir : elles sont retirées. Un produit posé sur deux emplacements partage ses ventes au prorata des quantités. Les jours fermés ne comptent pas.</div></div>`;
+    return h;
+  }
+  h += `<div class="ps-carte"><h3 class="ps-h">Magasin par magasin, section par section <small>cliquez une case pour son détail</small></h3>${ech}
+    <table class="ps-rt" style="margin-top:8px"><tr><th class="l" rowspan="2">Magasin</th>${R.zones.map(z => `<th colspan="${z.n}" class="zb" style="background:${z.fond};color:${z.encre};border:1px solid ${z.bord ? 'var(--color-border-secondary)' : 'transparent'}">${esc(z.nom)}</th>`).join('')}<th rowspan="2">Comptoir</th><th rowspan="2">Hors<br>comptoir</th></tr>
+    <tr>${R.secs.map(s => `<th>${esc(s)}</th>`).join('')}</tr>
+    ${R.matrice.map(m => `<tr><td class="l h">${esc(m.nom)}</td>${m.cases.map(k => `<td class="clic${k.on ? ' sel' : ''}" style="background:${k.fond};color:${k.encre}" ${x.A(k.go)}>${esc(k.t)}</td>`).join('')}<td class="h" style="background:${m.cf[0]};color:${m.cf[1]}">${esc(m.comptoir)}</td><td class="mu">${esc(m.hors)}</td></tr>`).join('')}
+    <tr><td class="l h">Réseau</td>${R.reseau.cases.map(k => `<td style="background:${k.fond};color:${k.encre};font-weight:600">${esc(k.t)}</td>`).join('')}<td class="h">${esc(R.reseau.comptoir)}</td><td></td></tr></table></div>`;
+  if (R.detail) {
+    const D = R.detail;
+    h += `<div class="ps-carte"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 class="ps-h">${esc(D.titre)} <small>${esc(D.sous)}</small></h3><button class="ps-x" ${x.A(D.fermer)} title="Fermer">×</button></div>
+      <div class="ps-det"><div>${D.lignes.map(l => `<div class="ps-sl">${psPhoto(l.v, 'pd', '', esc)}<div><b>${esc(l.nom)}</b><div class="k">${esc(l.niveau)}</div></div>
+        <div><div class="k">Qté au plan</div><div class="v">${esc(l.qte)}</div></div><div><div class="k">Vendus / jour</div><div class="v">${esc(l.vendus)}</div></div>
+        <div><div class="k">Rotation</div><div class="v" style="color:${l.r >= 2 ? '#6E1420' : (l.r != null && l.r < 0.25 ? '#B26A00' : 'var(--color-text)')}">${esc(l.rot)}</div></div>
+        <div class="ps-bars">${l.barres.map(b => `<i style="height:${b.h}px;background:${b.fond}"></i>`).join('')}</div></div>`).join('')}</div>
+      <div><div class="ps-cap" style="margin-bottom:8px">Ce que la section dit</div><div class="ps-ins">${D.notes.map(n => `<div class="${n.cls}">${esc(n.txt)}</div>`).join('')}<div class="mu" style="font-size:11px">Les autres magasins : ${esc(D.autres)}.</div></div></div></div></div>`;
+  }
+  return h;
+}
+function tplPlanoStd(c, x){
+  const { esc } = x;
+  if (c.psChargement) { return `<div class="ps-carte mu">Lecture du comptoir standard…</div>`; }
+  if (c.psErreur) { return `<div class="ps-carte mu">Le plan du comptoir ne répond pas. Réessayez dans un instant.</div>`; }
+  const E = c.psEntete;
+  let h = `<div data-screen="planogramme" class="ps">
+    <div class="ps-ent"><div><div class="ps-cap">Catalogue · Planogramme</div><h1>Comptoir standard</h1>
+      <div class="mu" style="font-size:12.5px;margin-top:3px">Le même plan pour tous les magasins · 25 sections × 30 cm = 7,50 m · Étage 1 : 60 cm (arrière / avant) · Étage 2 : 20 cm · Étage 3 top picking : 10 cm</div></div>
+      <div class="ps-ent-d"><span class="mu" style="font-size:12px">${E.remplis} / ${E.total} emplacements remplis${esc(E.modif)}${E.sansQ ? ` · <b class="ko">${E.sansQ} sans quantité</b>` : ''}</span>
+        <a class="ps-btn" href="${esc(E.tablette)}" target="_blank" rel="noopener" title="Le montage en magasin, sur tablette">Tablette</a>
+        <button class="ps-btn p" ${x.A(E.imprimer)}>Imprimer A4</button><button class="ps-btn" ${x.A(E.vider)}>Vider</button></div></div>
+    <div class="ps-bar"><div class="ps-ongl">${c.psOnglets.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
+      ${c.psVue === 'plan' ? `<div class="ps-mom"><span class="ps-cap">Moment</span><div class="ps-seg">${c.psMoments.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div><span class="mu" style="font-size:11px">${esc(c.psMomentTxt)}</span></div>` : ''}
+      ${c.psVue === 'plan' ? `<div class="ps-leg">${c.psLegende.map(l => `<span><i style="background:${l[0]}"></i><b>${esc(l[1])}</b> <span class="mu">${esc(l[2])}</span></span>`).join('')}<span><i class="ps-hach"></i><b>Pas d’étage 2–3</b></span></div>` : ''}</div>`;
+  if (c.psVue === 'plan') {
+    h += `<div class="ps-plan"><div class="ps-faces">${c.psParties.map(P => tplPsFace(P, x, false)).join('')}</div>${tplPsPicker(c, x)}</div>`;
+  } else if (c.psVue === 'tableau') {
+    h += `<div class="ps-intro mu">Produit et quantité par emplacement — la quantité est ce que l’emplacement contient plein ; c’est elle qui fait les rotations.</div>${tplPsTableau(c, x, false)}`;
+  } else if (c.psVue === 'dessus') {
+    h += `<div class="ps-intro mu">Longueur 7,50 m · profondeurs à l’échelle · étage 1 en carrés de 30 × 30 cm.</div>${tplPsDessus(c, x)}`;
+  } else {
+    h += tplPsRot(c, x);
+  }
+  h += `</div>`;
+  if (c.psFiche) { h += tplPsFiche(c, x); }
+  if (c.psCrop) { h += tplPsCrop(c, x); }
+  return h;
+}
+/** La page imprimée (A4 paysage) : la face, le tableau, la vue de dessus — sans champs ni boutons. */
+export function tplPsImpression(c, x){
+  return `<div class="ps ps-imp">${c.psParties.map(P => tplPsFace(P, x, true)).join('')}<div class="pb"></div>${tplPsTableau(c, x, true)}<div class="pb"></div>${tplPsDessus(c, x)}</div>`;
 }

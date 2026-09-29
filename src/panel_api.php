@@ -943,6 +943,44 @@ final class PanelApi
     }
 
     /**
+     * Les visuels de plusieurs produits d'un coup — [id produit => {nom, url}].
+     * Même chaîne que productPhoto (products/available → /recipes/{id} →
+     * shop_photo_path…), mais les recettes se lisent en parallèle : le
+     * planogramme en demande des dizaines, un par un cela prenait une demi-minute.
+     */
+    public static function productPhotos(array $productIds, int $shopId): array
+    {
+        $recettes = []; $noms = [];
+        foreach (self::produitsDisponibles($shopId) as $p) {
+            $pid = null;
+            foreach (['id', 'product_id', 'id_product'] as $k) { if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; } }
+            if ($pid === null || !in_array($pid, $productIds, true)) { continue; }
+            foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) { if (!empty($p[$k]) && is_string($p[$k])) { $noms[$pid] = trim($p[$k]); break; } }
+            foreach (['id_recipe', 'recipe_id', 'idRecipe'] as $k) { if (!empty($p[$k]) && is_numeric($p[$k])) { $recettes[$pid] = (int) $p[$k]; break; } }
+        }
+        $chemins = [];
+        foreach ($recettes as $pid => $rid) { $chemins[(string) $pid] = '/recipes/' . $rid; }
+        $res = $chemins ? self::getParallele($chemins, 6) : [];
+        $out = [];
+        foreach ($productIds as $pid) {
+            $url = null;
+            $d = $res[(string) $pid] ?? null;
+            if (is_array($d)) {
+                foreach (['data', 'recipe'] as $k) { if (isset($d[$k]) && is_array($d[$k])) { $d = $d[$k]; } }
+                $rp = null;
+                foreach (['id_product', 'product_id', 'productId'] as $k) { if (isset($d[$k]) && is_numeric($d[$k])) { $rp = (int) $d[$k]; break; } }
+                if ($rp === null || $rp === $pid) {
+                    $path = null;
+                    foreach (['shop_photo_path', 'main_photo_path', 'photo_1', 'photo_2', 'photo_3'] as $k) { $path = self::texteProfond($d, $k); if ($path !== null) { break; } }
+                    if ($path !== null) { $url = preg_match('#^https?://#i', $path) ? $path : self::photosBase() . '/' . ltrim($path, '/'); }
+                }
+            }
+            $out[$pid] = ['nom' => $noms[$pid] ?? ('Produit #' . $pid), 'url' => $url];
+        }
+        return $out;
+    }
+
+    /**
      * GET /shops/{ref}/products/available — chaque ligne produit porte id ET
      * id_recipe. En cache par boutique le temps de la requête.
      */

@@ -96,42 +96,43 @@ function vcDerniereVente(string $shop): ?string
  */
 function vcComptoir(): array
 {
+    // Le planogramme STANDARD : 66 emplacements, cinq zones, un plan pour le
+    // réseau. Tenus = les emplacements qui portent un produit aujourd'hui.
     $out = ['zones' => 0, 'meubles' => 0, 'emplacements' => 0, 'tenus' => 0,
         'pct' => null, 'refs' => [], 'motif' => null];
+    if (!function_exists('psCles') || !function_exists('psLignes')) {
+        $out['motif'] = 'le planogramme standard n’est pas installé';
+        return $out;
+    }
     try {
-        $out['zones'] = (int) (Db::row('SELECT COUNT(*) AS n FROM pla_zone')['n'] ?? 0);
-        $out['meubles'] = (int) (Db::row('SELECT COUNT(*) AS n FROM pla_meuble')['n'] ?? 0);
-        $out['emplacements'] = (int) (Db::row('SELECT COUNT(*) AS n FROM pla_slot')['n'] ?? 0);
-        foreach (Db::rows('SELECT ref, slot_id FROM pla_placement WHERE slot_id IS NOT NULL') as $r) {
-            $out['refs'][(string) $r['ref']] = (int) $r['slot_id'];
+        $out['zones'] = count(PS_ZONES);
+        $out['emplacements'] = count(psCles());
+        foreach (psLignes(date('Y-m-d')) as $cle => $rs) {
+            foreach ($rs as $r) { if (!isset($out['refs'][(string) $r['ref']])) { $out['refs'][(string) $r['ref']] = $cle; } }
+            if ($rs) { $out['tenus']++; }
         }
     } catch (PDOException $e) {
         $out['motif'] = 'le comptoir n’est pas dessiné sur cette base';
         return $out;
     }
-    // Un emplacement peut porter plusieurs références : ce sont les
-    // emplacements distincts qui disent la tenue du meuble, pas les placements.
-    $out['tenus'] = count(array_unique(array_values($out['refs'])));
     if ($out['emplacements'] > 0) {
         $out['pct'] = (int) round(100 * min($out['tenus'], $out['emplacements']) / $out['emplacements']);
-    } elseif ($out['motif'] === null) {
-        $out['motif'] = 'aucun emplacement n’est dessiné dans le planogramme';
     }
+    if ($out['tenus'] === 0) { $out['motif'] = 'aucun produit n’est encore posé sur le comptoir standard'; }
     return $out;
 }
 
-/** Les comptoirs photographiés montés aujourd'hui, zone par zone. */
+/** Les zones photographiées montées ce jour-là (le montage de la tablette). */
 function vcMontage(int $shop, string $jour): array
 {
+    if (!function_exists('ensurePlanoStd')) { return []; }
     try {
-        if (function_exists('plaMontageTable')) { plaMontageTable(); }
-        $noms = [];
-        foreach (Db::rows('SELECT id, nom FROM pla_zone') as $z) { $noms[(int) $z['id']] = (string) $z['nom']; }
+        ensurePlanoStd();
+        $noms = psNomsZones();
         $out = [];
-        foreach (Db::rows('SELECT zone_id, auteur, quand FROM pla_montage WHERE shop_id = ? AND jour = ?', [$shop, $jour]) as $r) {
-            $zid = (int) $r['zone_id'];
-            $out[] = ['zone' => $zid, 'nom' => $noms[$zid] ?? ('zone ' . $zid),
-                'auteur' => (string) $r['auteur'], 'quand' => (string) $r['quand']];
+        foreach (Db::rows('SELECT zone, auteur, quand FROM ceo_plano_std_montage WHERE shop_id = ? AND jour = ?', [(string) $shop, $jour]) as $r) {
+            $z = (string) $r['zone'];
+            $out[] = ['zone' => $z, 'nom' => $noms[$z] ?? $z, 'auteur' => (string) ($r['auteur'] ?? ''), 'quand' => (string) ($r['quand'] ?? '')];
         }
         return $out;
     } catch (PDOException $e) { return []; }
@@ -206,7 +207,8 @@ function ep_visites_conformite(): array
         'pct' => $comptoir['pct'], 'motif' => $comptoir['motif'],
         'obligatoiresSansPlace' => $comptoir['motif'] === null ? count($sansPlace) : 0,
         'sansPlace' => $comptoir['motif'] === null ? array_slice($sansPlace, 0, 40) : [],
-        'montage' => vcMontage($sid, $au)];
+        // Le montage du jour de la visite (aujourd'hui), pas du dernier jour de vente.
+        'montage' => vcMontage($sid, date('Y-m-d'))];
     $plano['comptoirsMontes'] = count($plano['montage']);
 
     return ['shop' => (string) $sid, 'jour' => $auj, 'lu' => date('Y-m-d H:i'),
