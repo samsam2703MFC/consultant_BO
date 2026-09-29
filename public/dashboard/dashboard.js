@@ -18,6 +18,7 @@
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
+    calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
@@ -1490,13 +1491,30 @@
       let cases = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('');
       const t0 = new Date(jours[0].date + 'T12:00:00');
       for (let i = 0; i < (t0.getDay() + 6) % 7; i++) { cases += '<div class="d vide"></div>'; }
+      // Le sélecteur décide du chiffre en grand dans chaque case : le CA,
+      // l'atteinte de l'objectif du jour ou les clients. Les deux autres
+      // restent dessous, en petit ; la couleur dit toujours l'atteinte.
+      const cv = S.calVal;
       jours.forEach(j => {
         if (j.ferme) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>fermé</b></div>`; return; }
-        if (!j.passe && !j.ca) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>—</b>${j.objectif ? `<small>objectif ${fE(j.objectif)}</small>` : ''}</div>`; return; }
+        if (!j.passe && !j.ca) {
+          const objCli = j.objectif && m.panier ? Math.round(j.objectif / m.panier) : null;
+          const futur = cv === 'cli' ? (objCli != null ? `<small>objectif ≈ ${fN(objCli)} clients</small>` : '') : (j.objectif ? `<small>objectif ${fE(j.objectif)}</small>` : '');
+          cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>—</b>${futur}</div>`; return;
+        }
         const [fond, clair] = teinte(j); const dc = j.objectif && m.panier ? j.tickets - Math.round(j.objectif / m.panier) : null;
-        cases += `<div class="d${clair ? ' clair' : ''}${j.aujourdhui ? ' auj' : ''}" style="background:${fond}"><span class="n">${esc(j.court)}${record && j.date === record.date ? ' · record' : ''}</span><b>${fE(j.ca)}</b><small>${j.objectif ? Math.round(pc(j.ca, j.objectif)) + ' % de ' + fE(j.objectif) : 'pas d’objectif'}</small><small>${fN(j.tickets)} clients${dc == null ? '' : ' · ' + (dc >= 0 ? '+' : '−') + Math.abs(dc)}</small></div>`;
+        const att = j.objectif ? Math.round(pc(j.ca, j.objectif)) : null;
+        const lCa = `<small>${j.objectif ? att + ' % de ' + fE(j.objectif) : 'pas d’objectif'}</small>`;
+        const lCli = `<small>${fN(j.tickets)} clients${dc == null ? '' : ' · ' + (dc >= 0 ? '+' : '−') + Math.abs(dc)}</small>`;
+        const grand = cv === 'att' ? (att == null ? '—' : att + ' %') : (cv === 'cli' ? fN(j.tickets) : fE(j.ca));
+        const petits = cv === 'att' ? `<small>${fE(j.ca)}${j.objectif ? ' sur ' + fE(j.objectif) : ' · pas d’objectif'}</small>${lCli}`
+          : (cv === 'cli' ? `<small>clients${dc == null ? '' : ' · ' + (dc >= 0 ? '+' : '−') + Math.abs(dc) + ' vs objectif'}</small><small>${fE(j.ca)}${att == null ? '' : ' · ' + att + ' %'}</small>`
+            : lCa + lCli);
+        cases += `<div class="d${clair ? ' clair' : ''}${j.aujourdhui ? ' auj' : ''}" style="background:${fond}"><span class="n">${esc(j.court)}${record && j.date === record.date ? ' · record' : ''}</span><b>${grand}</b>${petits}</div>`;
       });
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">${sem ? 'La semaine' : 'Le calendrier du mois'} — CA, atteinte de l’objectif du jour, clients</span></div>
+      const CALV = [['ca', 'CA'], ['att', 'Atteinte'], ['cli', 'Clients']];
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">${sem ? 'La semaine' : 'Le calendrier du mois'} — CA, atteinte de l’objectif du jour, clients</span>
+        <div class="db-ong" style="margin-left:auto" title="le chiffre en grand dans chaque case">${CALV.map(o => `<button data-calval="${o[0]}" class="${cv === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>
         <div class="db-cal">${cases}</div>
         <div class="db-perleg"><span><i style="background:#2d7a3e"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#6aa84f"></i>100 – 110 %</span><span><i style="background:#e8c9a0"></i>90 – 100 %</span><span><i style="background:#F5B26B"></i>75 – 90 %</span><span><i style="background:#F08A2C"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div></div>`;
     }
@@ -2261,6 +2279,7 @@
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
     $.querySelectorAll('[data-perdrop]').forEach(b => b.addEventListener('click', () => { S.perOuvert = !S.perOuvert; rendre(); }));
     $.querySelectorAll('[data-percol]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.perCol = b.dataset.percol; rendre(); }));
+    $.querySelectorAll('[data-calval]').forEach(b => b.addEventListener('click', () => { S.calVal = ['ca', 'att', 'cli'].includes(b.dataset.calval) ? b.dataset.calval : 'ca'; try { localStorage.setItem('db.calVal', S.calVal); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
