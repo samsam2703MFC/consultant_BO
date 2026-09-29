@@ -119,7 +119,7 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
         </div>`).join('')}
       </div>` : ''}
-      ${c.isCat || c.isAsso ? tplReferentiel(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
+      ${c.isCat ? tplReferentiel(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
@@ -591,7 +591,7 @@ function tplRefEdit(c, x){
           <input type="checkbox" ${e.champs.must ? 'checked' : ''} ${x.C(e.set('must'))} style="width:16px;height:16px;accent-color:var(--color-primary)">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:500">Référence obligatoire</div>
-            <div style="font-size:11px;color:var(--color-text-muted)">toute boutique doit la proposer en permanence</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">${esc(e.saisonTxt || 'toute boutique doit la proposer en permanence')}</div>
           </div>
           <div style="width:110px">${champ('qmin', 'Quantité min.', '0')}</div>
         </div>
@@ -10166,4 +10166,83 @@ function tplPlanoStd(c, x){
 /** La page imprimée (A4 paysage) : la face, le tableau, la vue de dessus — sans champs ni boutons. */
 export function tplPsImpression(c, x){
   return `<div class="ps ps-imp">${c.psParties.map(P => tplPsFace(P, x, true)).join('')}<div class="pb"></div>${tplPsTableau(c, x, true)}<div class="pb"></div>${tplPsDessus(c, x)}</div>`;
+}
+
+/* --- Assortiment obligatoire : la liste (toute l'année, saisons), les saisons, la liste de recherche --- */
+function tplAoPop(P, x){
+  const { esc } = x;
+  return `<div class="ao-pop"><b class="tt">${esc(P.titre)}</b>
+    ${P.options.map(o => `<button class="ao-radio${o.on ? ' on' : ''}" ${x.A(o.go)}><i></i><span><b>${esc(o.txt)}</b><small>${esc(o.sous)}</small></span></button>`).join('')}
+    ${P.autres ? `<select class="ao-sel" ${x.C(P.autreSet)}>${P.autres.map(a => `<option value="${esc(a.id)}">${esc(a.nom)}</option>`).join('')}</select>` : ''}
+    <label class="ao-qrow">Qté minimum en magasin <input id="ao-pop-q" type="text" inputmode="numeric" value="${esc(P.q)}" ${x.I(P.setQ)}> <span class="mu">${esc(P.batch)}</span></label>
+    <div class="ao-note">${esc(P.note)}</div>
+    <div class="ao-pbtns">${P.retirer ? `<button class="ps-btn ko" ${x.A(P.retirer)}>Retirer</button>` : ''}<span style="flex:1"></span><button class="ps-btn" ${x.A(P.annuler)}>Annuler</button><button class="ps-btn p" ${x.A(P.valider)}>${esc(P.validerTxt)}</button></div></div>`;
+}
+function tplAoRecherche(c, x){
+  const { esc } = x;
+  const R = c.aoRecherche;
+  return `<div class="ps-pick ps-carte ao-pick"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h3 class="ao-h2">Liste de recherche</h3><span class="mu" style="font-size:10.5px;white-space:nowrap">${R.n} au catalogue · API</span></div>
+    ${R.cible ? `<div class="ao-cible">Ajouter à <b>${esc(R.cible)}</b> — ou toute l’année</div>` : ''}
+    <input id="ao-q" class="ps-srch" value="${esc(R.q)}" placeholder="Produit, référence, saison…" ${x.I(R.setQ)}>
+    <div class="ps-chips">${R.chips.map(g => `<button ${x.A(g.go)} class="${g.on ? 'on' : ''}">${esc(g.nom)}</button>`).join('')}</div>
+    <button class="ps-tog${R.libres ? ' on' : ''}" ${x.A(R.basculer)}><i></i><span>Pas encore obligatoires · classés par ventes 30 j</span></button>
+    <div class="ps-liste">${R.chargement ? '<div class="mu" style="font-size:12px;padding:8px 0">Lecture du catalogue…</div>' : (R.lignes.length ? R.lignes.map(l => `<div class="ao-pl${l.sel ? ' sel' : ''}">
+      <div class="ps-ph pt" style="background:${l.v.fond}">${l.v.img ? `<img src="${esc(l.v.img)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : esc(l.v.ini)}</div>
+      <div class="t"><b title="${esc(l.nom)}">${esc(l.nom)}</b><span>${esc(l.sous)}</span>${l.tags.length ? `<div class="ao-tags">${l.tags.map(t => `<i style="border-color:${t.coul};color:${t.coul}">${esc(t.txt)}</i>`).join('')}</div>` : ''}</div>
+      ${l.deja ? `<button class="ao-deja" ${x.A(l.ajouter)} title="Modifier">${esc(l.deja)}</button>` : `<button class="ao-add" ${x.A(l.ajouter)}>+ ajouter</button>`}</div>${l.pop ? tplAoPop(l.pop, x) : ''}`).join('') : '<div class="mu" style="font-size:12px;padding:8px 0">Aucun produit ne correspond.</div>')}</div>
+    <div class="ao-note">« + ajouter » rend le produit obligatoire : toute l’année, ou seulement pendant sa saison (gamme du panel). Tapez « noël », « automnale »… pour lister une saison.</div></div>`;
+}
+function tplAssortiment(c, x){
+  const { esc } = x;
+  if (c.refVide) { return `<div class="ps-carte mu">Catalogue indisponible — l’API et la base partagée n’ont rien rendu.</div>`; }
+  let h = `<div class="ao" data-screen="assortiment">
+    <div class="ao-barre"><div class="ps-seg">${c.aoVues.map(v => `<button ${x.A(v.go)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div><span class="mu" style="font-size:12px">${esc(c.aoIntro)}</span></div>`;
+  if ((c.refFins || []).length) {
+    h += `<div class="ao-fins"><b>Fins de gamme annoncées</b>${c.refFins.map(f2 => `<div>${esc(f2.nom)} <span class="mu">(${esc(f2.ref)})</span> — fin le <b class="ko">${esc(f2.date)}</b>${f2.note ? ` · <span class="mu">${esc(f2.note)}</span>` : ''}</div>`).join('')}</div>`;
+  }
+  if (c.aoErreur) { h += `<div class="ps-note">Les saisons du panel ne répondent pas : les obligatoires restent affichées, sans leurs fenêtres. <button class="ps-btn" ${x.A(c.aoReessayer)}>Réessayer</button></div>`; }
+  if (c.aoVue === 'liste') {
+    h += `<div class="ps-tuiles ao-tuiles">${c.aoTuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+    <div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:6px 8px 10px"><table class="ao-t"><thead><tr><th>Référence</th><th>Quand</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th><th></th></tr></thead><tbody>
+      <tr class="sec"><td colspan="6">Exigées aujourd’hui — ${c.aoExigibles}</td></tr>
+      ${c.aoSections.map(S => `<tr class="sec${S.avenir ? ' av' : ''}"><td colspan="6">${esc(S.titre)} <span class="mu">${esc(S.sous)}</span></td></tr>
+        ${S.lignes.length ? S.lignes.map(l => `<tr class="${l.avenir ? 'avenir' : ''}">
+          <td class="nom"><button class="hv-line" ${x.A(l.ouvrir)}>${esc(l.nom)}</button><span>${esc(l.sous)}</span></td>
+          <td><button class="ao-pill ${l.quand.cls}" ${x.A(l.changer)} title="Toute l’année ou pendant une saison">${esc(l.quand.txt)}</button></td>
+          <td class="n"><input id="${esc(l.qId)}" class="ao-qi" type="text" inputmode="numeric" value="${esc(l.qmin)}" ${x.C(l.qminSet)}>${l.batchTxt ? `<button class="ao-batch" ${x.A(l.qminBatch)} title="Reprendre la fournée minimale de la fiche">${esc(l.batchTxt)}</button>` : ''}${l.sousBatch ? '<div class="ko" style="font-size:10px">sous le batch</div>' : ''}</td>
+          <td class="n${l.v30Mu ? ' mu' : ''}">${esc(l.v30)}</td>
+          <td class="pl2">${l.place ? `<span>${esc(l.place)}</span>` : '<span class="mu">pas de place au comptoir</span>'} <button class="ao-pill ${l.place ? 'lig' : 'ko'}" ${x.A(l.planoGo)}>${esc(l.planoBtn)}</button></td>
+          <td class="n"><button class="ao-x" ${x.A(l.retirer)} title="Retirer de l’assortiment">×</button></td></tr>${l.pop ? `<tr class="ao-poprow"><td colspan="6">${tplAoPop(l.pop, x)}</td></tr>` : ''}`).join('') : `<tr><td colspan="6" class="mu" style="font-size:12px">Aucune — ajoutez-en depuis la liste de recherche.</td></tr>`}`).join('')}
+    </tbody></table></div>${tplAoRecherche(c, x)}</div>`;
+  } else if (c.aoErreur) {
+    h += '';
+  } else if (c.aoChargement) {
+    h += `<div class="ps-carte mu">Lecture des gammes saisonnières du panel…</div>`;
+  } else {
+    const F = c.aoFrise;
+    h += `<div class="ps-carte"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px"><h2 class="ao-h2">L’année des saisons <small>${esc(F.sousTitre)} · gammes du panel, récurrentes chaque année</small></h2><span class="ao-pill ko">aujourd’hui ${esc(F.aujTxt)}</span></div>
+      <div class="ao-frise"><div class="h">Saison</div><div class="h"><div class="ao-mois">${F.mois.map(m => `<span style="left:${m.l}%">${esc(m.t)}</span>`).join('')}</div></div><div class="h n">Produits</div><div class="h n">Obligatoires</div><div class="h">État</div>
+      ${F.lignes.map(l => `<div class="c lab${l.sel ? ' sel' : ''}" ${x.A(l.go)}><b>${esc(l.nom)}</b><span>${esc(l.dates)}${l.alerte ? ' <em title="' + esc(l.alerte) + '">⚠</em>' : ''}</span></div>
+        <div class="c${l.sel ? ' sel' : ''}" ${x.A(l.go)}><div class="ao-piste">${F.mois.map(m => `<i class="m" style="left:${m.l}%"></i>`).join('')}${l.barres.map(b => `<i class="b" style="left:${b.l}%;width:${b.w}%;background:${b.coul}"></i>`).join('')}<i class="auj" style="left:${F.auj}%"></i></div></div>
+        <div class="c n${l.sel ? ' sel' : ''}" ${x.A(l.go)}>${l.nonLus ? '<span class="mu" style="font-size:10.5px">non lus</span>' : esc(l.produits)}</div>
+        <div class="c n${l.sel ? ' sel' : ''}" ${x.A(l.go)} style="font-weight:600">${l.obligatoires || '<span class="mu" style="font-weight:400">—</span>'}</div>
+        <div class="c${l.sel ? ' sel' : ''}" ${x.A(l.go)}><span class="ao-pill ${l.etat.cls}">${esc(l.etat.txt)}</span></div>`).join('')}</div>
+      ${c.aoAlertes.length ? `<div class="ps-note" style="margin-top:10px">À vérifier au panel : ${c.aoAlertes.map(esc).join(' · ')}</div>` : ''}</div>`;
+    const D = c.aoDetail;
+    if (D) {
+      h += `<div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:12px 8px 10px"><div class="ao-barre" style="padding:0 8px 8px"><div><div class="ps-cap">Saison choisie</div><h2 class="ao-h2" style="color:${D.coul}">${esc(D.titre)} <small>${esc(D.sous)}</small></h2></div>
+        <button class="ps-btn" ${x.A(D.toutCocher)} ${D.toutEnCours ? 'disabled' : ''}>${D.toutEnCours ? 'En cours…' : 'Tout cocher'}</button></div>
+        <table class="ao-t"><thead><tr><th style="width:26px"></th><th>Produit</th><th>Obligatoire</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th></tr></thead><tbody>
+        ${D.lignes.length ? D.lignes.map(l => `<tr><td>${l.basculer ? `<button class="ao-cb${l.on ? ' on' : ''}" ${x.A(l.basculer)} title="${l.on ? 'Retirer de la saison' : 'Obligatoire pendant la saison'}">${l.on ? '✓' : ''}</button>` : '<span class="ao-cb on dis">✓</span>'}</td>
+          <td class="nom"><b>${esc(l.nom)}</b><span>${esc(l.sous)}${l.horsGamme ? ' · hors gamme' : ''}</span></td>
+          <td>${l.etat ? `<span class="ao-pill ${l.etat.cls}">${esc(l.etat.txt)}</span>` : '<span class="mu">non</span>'}</td>
+          <td class="n">${l.on ? `<input id="${esc(l.qId)}" class="ao-qi" type="text" inputmode="numeric" value="${esc(l.q)}" ${x.C(l.qSet)}>` : ''}</td>
+          <td class="n mu">${esc(l.v30)}</td>
+          <td class="pl2">${l.place ? esc(l.place) : (l.on ? `<span class="mu">pas de place</span> <button class="ao-pill ko" ${x.A(l.planoGo)}>Attribuer</button>` : '<span class="mu">—</span>')}</td></tr>`).join('') : '<tr><td colspan="6" class="mu">Aucun produit connu dans cette gamme.</td></tr>'}
+        </tbody></table><div class="ao-note" style="padding:8px 8px 0">${esc(D.note)}</div></div>${tplAoRecherche(c, x)}</div>`;
+    }
+  }
+  h += `</div>`;
+  if (c.refEdit) { h += tplRefEdit(c, x); }
+  return h;
 }

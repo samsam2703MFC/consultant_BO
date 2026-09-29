@@ -159,15 +159,24 @@ function ep_visites_conformite(): array
     $retard = $derniere === null ? null : (int) round((strtotime($auj) - strtotime($derniere)) / 86400);
 
     $comptoir = vcComptoir();
-    $obl = vcObligatoires();
+    // Les obligatoires EXIGÉES : toute l'année, et les saisonnières pendant leur
+    // saison seulement — au dernier jour de vente pour l'assortiment, aujourd'hui
+    // pour la place au comptoir. Hors saison, une référence n'est pas manquante.
+    $ao = function_exists('aoObligatoires') ? aoObligatoires($au) : null;
+    $obl = $ao !== null ? $ao['exigibles'] : vcObligatoires();
+    $oblAuj = $ao !== null ? ($au === $auj ? $ao['exigibles'] : aoObligatoires($auj)['exigibles']) : $obl;
     $vendues = $derniere === null ? null : vcVendues((string) $sid, $du, $au);
 
     // --- L'assortiment. Présente = vue au moins une fois sur la fenêtre.
     $assort = ['obligatoires' => count($obl), 'presentes' => 0, 'manquantes' => 0,
         'pct' => null, 'liste' => [], 'du' => $du, 'au' => $au, 'jours' => $jours,
-        'derniereVente' => $derniere, 'retard' => $retard, 'motif' => null];
+        'derniereVente' => $derniere, 'retard' => $retard, 'motif' => null,
+        'saisonnieres' => count(array_filter($obl, static fn ($p) => ($p['saison'] ?? null) !== null)),
+        'horsSaison' => $ao !== null ? count($ao['horsSaison']) : 0];
     if ($obl === []) {
-        $assort['motif'] = 'aucune référence n’est déclarée obligatoire pour le réseau';
+        $assort['motif'] = $assort['horsSaison'] > 0
+            ? 'aucune obligatoire exigée à cette date : ' . $assort['horsSaison'] . ' référence(s) saisonnière(s) hors saison'
+            : 'aucune référence n’est déclarée obligatoire pour le réseau';
     } elseif ($derniere === null) {
         $assort['motif'] = 'la caisse de ce magasin n’a remonté aucune ligne de ticket';
     } elseif ($vendues === null) {
@@ -175,12 +184,15 @@ function ep_visites_conformite(): array
     } elseif ($vendues === []) {
         $assort['motif'] = 'aucune vente sur la fenêtre : rien à conclure de l’assortiment';
     } else {
-        $manquantes = []; $sansId = 0;
+        $manquantes = []; $sansId = 0; $demarrage = 0;
         foreach ($obl as $p) {
             // Sans identifiant de caisse, une obligatoire est illisible : on la
             // compte à part plutôt que de la déclarer absente à tort.
             if ($p['pwa'] === null) { $sansId++; continue; }
             if (isset($vendues[$p['pwa']])) { $assort['presentes']++; continue; }
+            // Saison qui démarre : moins d'une semaine d'ouverture au dernier jour de vente, pas encore
+            // vendue — trop tôt pour la dire manquante (la fenêtre de 30 jours était surtout hors saison).
+            if (!empty($p['ouverteLe']) && (strtotime($au) - strtotime($p['ouverteLe'])) < 7 * 86400) { $demarrage++; continue; }
             $manquantes[] = ['ref' => $p['ref'], 'nom' => $p['nom'],
                 // Au comptoir sans passer en caisse : le plan lui donne une
                 // place, le magasin ne la vend pas.
@@ -190,16 +202,19 @@ function ep_visites_conformite(): array
         $assort['manquantes'] = count($manquantes);
         $assort['liste'] = array_slice($manquantes, 0, 40);
         $assort['sansIdentifiant'] = $sansId;
-        $lisibles = count($obl) - $sansId;
+        $assort['saisonQuiDemarre'] = $demarrage;
+        $lisibles = count($obl) - $sansId - $demarrage;
         $assort['lisibles'] = $lisibles;
         if ($lisibles > 0) { $assort['pct'] = (int) round(100 * $assort['presentes'] / $lisibles); }
-        else { $assort['motif'] = 'aucune obligatoire ne porte d’identifiant de caisse'; }
+        else { $assort['motif'] = $demarrage > 0 && $sansId < count($obl)
+            ? 'saison qui démarre : trop tôt pour juger ' . $demarrage . ' obligatoire(s) de saison'
+            : 'aucune obligatoire ne porte d’identifiant de caisse'; }
     }
 
     // --- Les obligatoires sans place au comptoir : le plan est en défaut avant
     // même qu'on regarde ce qui se vend.
     $sansPlace = [];
-    foreach ($obl as $p) {
+    foreach ($oblAuj as $p) {
         if (!isset($comptoir['refs'][$p['ref']])) { $sansPlace[] = ['ref' => $p['ref'], 'nom' => $p['nom']]; }
     }
     $plano = ['zones' => $comptoir['zones'], 'meubles' => $comptoir['meubles'],

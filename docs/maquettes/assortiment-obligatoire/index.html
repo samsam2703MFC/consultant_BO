@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Assortiment obligatoire : liste de recherche et saisons</title>
+<!-- Catalogue › Assortiment obligatoire, avec la liste de recherche et les produits saisonniers.
+       ?v=1  La liste : obligatoires toute l'année, de la saison en cours, de la saison qui vient ; la liste de recherche à droite
+       ?v=2  Les saisons : la frise de l'année (gammes du panel), le détail d'une saison et ses obligatoires
+       ?v=3  Ajouter depuis la liste de recherche : « cougnou », toute l'année ou pendant sa saison
+     Données réelles lues le 29/09/2026 : catalogue du cockpit (563 produits), ventes comptoir 30 j (pro retiré),
+     gammes saisonnières du panel et leurs produits. Les 8 obligatoires de saison sont une PROPOSITION de la simulation. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+  #ecran{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px}
+  .cap{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+  .mu{color:var(--color-text-muted)}
+  .num{font-variant-numeric:tabular-nums}
+  h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:34px;line-height:1.1}
+  h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:19px}
+  .sous{font-size:13.5px;font-weight:500;color:var(--color-text-muted);max-width:640px;margin-top:6px}
+  .simu{font-size:11.5px;background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot);padding:7px 12px;border-radius:9px}
+  .ongl{display:inline-flex;gap:2px;background:var(--color-surface);padding:4px;border-radius:12px;border:.5px solid var(--color-border-tertiary)}
+  .ongl span{font-size:13px;font-weight:600;padding:8px 16px;border-radius:9px;color:var(--color-text);display:inline-flex;gap:7px;align-items:center}
+  .ongl span.on{background:var(--color-primary);color:#fff}
+  .ongl span i{font-style:normal;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;background:rgba(0,0,0,.08)}
+  .ongl span.on i{background:rgba(255,255,255,.25)}
+  .seg{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:9px}
+  .seg span{font-size:12.5px;font-weight:500;padding:6px 14px;border-radius:7px;color:var(--color-text-muted)}
+  .seg span.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 3px rgba(34,34,34,.12)}
+  .barre{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .tuile{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:11px 13px}
+  .tuile .v{font-family:var(--font-display);font-size:24px;line-height:1.15;margin-top:3px}
+  .tuile .s{font-size:11px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
+  .grille{display:flex;gap:14px;align-items:flex-start}
+  .gauche{flex:1;min-width:0}
+  /* le tableau des obligatoires */
+  table.t{border-collapse:collapse;width:100%;font-size:12px}
+  .t th{text-align:left;font:500 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);padding:8px 8px;border-bottom:1px solid var(--color-border-secondary);white-space:nowrap}
+  .t td{padding:7px 8px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:middle}
+  .t td.pl2{white-space:nowrap}
+  .t td.n,.t th.n{text-align:right}
+  .t .nom b{font-weight:500;display:block}.t .nom span{font-size:10.5px;color:var(--color-text-muted)}
+  .t tr.sec td{background:var(--color-background-secondary);font-weight:600;font-size:11.5px;padding:7px 10px;border-bottom:none}
+  .t tr.sec td .mu{font-weight:400}
+  .t tr.avenir td:not(.act){opacity:.72}
+  .t tr.neuf td{background:#F2F8F2}
+  .q{display:inline-block;min-width:34px;text-align:center;border:.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 6px;font-weight:600}
+  .pill{display:inline-flex;align-items:center;gap:4px;font:600 10.5px var(--font-ui);border-radius:999px;padding:2px 9px;white-space:nowrap;border:.5px solid transparent}
+  .pill.an{background:var(--color-background-secondary);color:var(--color-text)}
+  .pill.ok{background:#dfeee0;color:#2d7a3e}
+  .pill.wa{background:#FBEFE0;color:#A0620C}
+  .pill.ko{background:#fbeff0;color:var(--color-primary)}
+  .pill.lig{border-color:var(--color-border-secondary);background:none;color:var(--color-text-muted);font-weight:500}
+  .btn{border-radius:999px;padding:3px 11px;font:600 10.5px var(--font-ui);border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);white-space:nowrap}
+  .btn.r{border-color:var(--color-primary);color:var(--color-primary)}
+  .btn.p{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+  .btn.g{padding:7px 14px;font-size:12px;border-radius:8px}
+  .x{color:var(--color-text-muted);font-size:15px}
+  /* la liste de recherche */
+  .pick{width:330px;flex:none;display:flex;flex-direction:column;gap:9px}
+  .pick h3{margin:0;font-family:var(--font-display);font-weight:400;font-size:19px;display:flex;justify-content:space-between;align-items:baseline}
+  .pick h3 small{font:500 10.5px var(--font-ui);color:var(--color-text-muted)}
+  .srch{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font:12px var(--font-ui);background:var(--color-background-secondary);color:var(--color-text)}
+  .srch.plein{color:var(--color-text);font-weight:500;background:var(--color-surface);outline:1.5px solid var(--color-primary)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chips span{font:10.5px var(--font-ui);padding:3px 9px;border-radius:999px;border:.5px solid var(--color-border-secondary);color:var(--color-text-muted)}
+  .chips span.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+  .tog{display:flex;align-items:center;gap:7px;font:11.5px var(--font-ui)}
+  .tog i{width:26px;height:15px;border-radius:999px;background:var(--color-border-secondary);position:relative;display:inline-block;flex:none}
+  .tog i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+  .tog.on i{background:var(--color-primary)}.tog.on i::after{left:13px}
+  .pl{display:flex;align-items:center;gap:8px;padding:7px 2px;border-top:.5px solid var(--color-border-tertiary);position:relative}
+  .pl .ph{width:32px;height:32px;border-radius:4px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font:600 10px var(--font-ui)}
+  .pl .t2{flex:1;min-width:0}
+  .pl .t2 b{display:block;font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pl .t2 span{font-size:10px;color:var(--color-text-muted)}
+  .pl .tags{display:flex;gap:4px;margin-top:2px;flex-wrap:wrap}
+  .pl .tags .pill{font-size:9.5px;padding:1px 7px}
+  .pl .a{font:600 10.5px var(--font-ui);color:var(--color-primary);white-space:nowrap;align-self:flex-start;margin-top:2px}
+  .pl>.pill{align-self:flex-start;margin-top:2px}
+  .pl.sel{background:#fbf4f5;outline:1.5px solid var(--color-primary);border-radius:6px}
+  .pop{position:relative;margin:2px 0 6px;background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:12px;box-shadow:0 14px 34px rgba(34,34,34,.18);padding:12px 13px;display:flex;flex-direction:column;gap:8px}
+  .pop::before{content:"";position:absolute;top:-6px;right:34px;width:10px;height:10px;background:var(--color-surface);border-left:1px solid var(--color-border-secondary);border-top:1px solid var(--color-border-secondary);transform:rotate(45deg)}
+  .pop b.tt{font-size:12.5px;font-weight:600}
+  .radio{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;padding:7px 8px;border-radius:8px;border:.5px solid var(--color-border-tertiary)}
+  .radio.on{border-color:var(--color-primary);background:#fbf4f5}
+  .radio i{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--color-border-secondary);flex:none;margin-top:1px;box-sizing:border-box}
+  .radio.on i{border:4px solid var(--color-primary)}
+  .radio span{display:block;font-size:10.5px;color:var(--color-text-muted)}
+  .note{font-size:11px;color:var(--color-text-muted);line-height:1.4}
+  /* la frise des saisons */
+  .frise{display:grid;grid-template-columns:210px 1fr 86px 92px 150px;align-items:center;column-gap:10px}
+  .frise .h{font:500 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:6px 0;border-bottom:1px solid var(--color-border-secondary)}
+  .frise .c{padding:7px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:12px;min-height:22px;display:flex;align-items:center}
+  .frise .c.sel{background:#fbf4f5}
+  .frise .lab b{font-weight:500}.frise .lab span{font-size:10.5px;color:var(--color-text-muted);margin-left:6px}
+  .piste{position:relative;height:22px;flex:1;align-self:stretch}
+  .piste .m{position:absolute;top:0;bottom:0;border-left:1px dashed var(--color-border-tertiary)}
+  .piste .b{position:absolute;top:4px;height:14px;border-radius:4px}
+  .piste .auj{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--color-primary);z-index:2}
+  .mois{position:relative;height:16px}
+  .mois span{position:absolute;font:500 10px var(--font-ui);color:var(--color-text-muted);transform:translateX(2px)}
+  .alerte{font-size:12px;background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot);padding:8px 12px;border-radius:9px}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script src="donnees.js"></script>
+<script>
+(function () {
+  const D = window.AO, V = new URLSearchParams(location.search).get('v') || '1';
+  const AUJ = new Date(D.aujourdhui + 'T12:00:00');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fr = n => Math.round(n).toLocaleString('fr-BE');
+  const dm = d => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+  const GC = { 'Viennoiserie': '#D4A04A', 'Boulangerie': '#A87B4F', 'Pâtisserie': '#C46A7A', 'Tartes': '#B5654A', 'Tartes · Pâtisserie': '#B5654A', 'Biscuiterie': '#B08850', 'Épicerie': '#7A6FA8', 'Traiteur': '#5E8C61', 'Quiches': '#9A7B3C', 'Fêtes & Occasions': '#8D1D2C', 'Boissons': '#4F7FA8', 'Bundle & Promotion': '#888', 'B. 2 B.': '#555' };
+  const COUL = { 6: '#B5652A', 17: '#6FA8C8', 8: '#2d7a3e', 9: '#8D1D2C', 10: '#C9A227', 7: '#5F84B0', 15: '#D08A4A', 13: '#C46A7A', 12: '#9CB84A', 4: '#D98BA8', 11: '#B07AB8', 5: '#E0A93A' };
+  const ini = n => String(n || '?').split(/[\s\-–·]+/).filter(w => w && /^[A-Za-zÀ-ÿ0-9]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+  const P = {}; D.produits.forEach(p => { P[p.ref] = p; });
+  const S = {}; D.saisons.forEach(s => { S[s.id] = s; });
+
+  /** La fenêtre d'une gamme récurrente autour d'aujourd'hui : en cours, sinon la prochaine. */
+  function fenetre(s) {
+    const y = AUJ.getFullYear();
+    for (const a of [y - 1, y, y + 1]) {
+      const du = new Date(a + '-' + s.debut + 'T12:00:00');
+      const au = new Date((s.fin < s.debut ? a + 1 : a) + '-' + s.fin + 'T12:00:00');
+      if (au >= AUJ) { return { du, au, ouverte: du <= AUJ, jours: Math.round(((du <= AUJ ? au : du) - AUJ) / 864e5) }; }
+    }
+  }
+  const etat = s => { const f = fenetre(s); return f.ouverte ? (f.jours === 1 ? ['wa', 'ferme demain'] : ['ok', 'en cours · encore ' + f.jours + ' j']) : ['lig', 'ouvre dans ' + f.jours + ' j']; };
+  const tagSaison = (id, court) => { const s = S[id]; return `<span class="pill lig" style="border-color:${COUL[id]};color:${COUL[id]}">${s.emoji} ${esc(s.nom)}${court ? '' : ''}</span>`; };
+
+  // L'assortiment simulé : les 12 obligatoires d'aujourd'hui (toute l'année) + la proposition de saison.
+  const annee = D.produits.filter(p => p.must);
+  const saisonOblig = {}; Object.entries(D.proposition).forEach(([sid, l]) => { saisonOblig[sid] = l.map(([r, q]) => Object.assign({}, P[r], { qmin: q, saison: +sid })); });
+  const nbSaison = sid => (saisonOblig[sid] || []).length;
+  const enVigueur = annee.length + Object.keys(saisonOblig).filter(sid => fenetre(S[sid]).ouverte).reduce((a, sid) => a + nbSaison(sid), 0);
+  const tousObl = new Set(annee.map(p => p.ref).concat(...Object.values(saisonOblig).map(l => l.map(p => p.ref))));
+
+  function entete(vue) {
+    return `<div><h1>Catalogue</h1><div class="sous">Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.</div></div>
+      <div class="barre"><div class="ongl"><span>Fiches</span><span class="on">Assortiment obligatoire <i>${enVigueur}</i></span><span>Comptoir <i>64</i></span></div>
+        <div class="simu">Simulation · données réelles du ${dm(AUJ)} · les ${Object.values(saisonOblig).reduce((a, l) => a + l.length, 0)} obligatoires de saison sont une proposition</div></div>
+      <div class="barre"><div class="seg"><span class="${vue === 'liste' ? 'on' : ''}">Liste</span><span class="${vue === 'saisons' ? 'on' : ''}">Saisons</span></div>
+        <span class="mu" style="font-size:12px">${vue === 'liste' ? 'Ce qui est exigé en magasin aujourd’hui, puis ce qui arrive avec la prochaine saison.' : 'Les gammes saisonnières du panel, sur l’année — une saison ouverte rend ses obligatoires exigibles en visite.'}</span></div>`;
+  }
+
+  function tuiles() {
+    const auto = S[6], noel = S[8], fa = fenetre(auto), fn = fenetre(noel);
+    const sansPlace = annee.filter(p => !p.place).length;
+    return `<div class="tuiles">
+      <div class="tuile"><div class="cap">Toute l’année</div><div class="v num">${annee.length} références</div><div class="s">${sansPlace} sans place au comptoir</div></div>
+      <div class="tuile"><div class="cap">Saison en cours</div><div class="v">${auto.emoji} ${esc(auto.nom)} · ${nbSaison(6)}</div><div class="s">obligatoires jusqu’au ${dm(fa.au)} (encore ${fa.jours} j) · 🍦 Glace ferme demain, sans obligatoire</div></div>
+      <div class="tuile"><div class="cap">Prochaine saison</div><div class="v">${noel.emoji} Noël · ${nbSaison(8)}</div><div class="s">exigés à partir du ${dm(fn.du)} (dans ${fn.jours} j) · à préparer : commande, place au comptoir</div></div>
+      <div class="tuile"><div class="cap">Exigés en magasin aujourd’hui</div><div class="v num">${enVigueur} références</div><div class="s">ce que la visite contrôle : ${annee.length} toute l’année + ${nbSaison(6)} d’Automnale</div></div></div>`;
+  }
+
+  function ligneObl(p, mode, neuf) {
+    const s = p.saison ? S[p.saison] : null, f = s ? fenetre(s) : null;
+    const quand = !s ? '<span class="pill an">toute l’année</span>'
+      : (f.ouverte ? `<span class="pill ok">${s.emoji} ${esc(s.nom)} · jusqu’au ${dm(f.au)}</span>` : `<span class="pill wa">${s.emoji} dès le ${dm(f.du)}</span>`);
+    const place = p.place ? `<span>${esc(p.place)}</span> <span class="btn" style="margin-left:6px">Modifier</span>` : `<span class="mu">pas de place au comptoir</span> <span class="btn r" style="margin-left:6px">Attribuer</span>`;
+    return `<tr class="${mode === 'avenir' ? 'avenir' : ''}${neuf ? ' neuf' : ''}"><td class="nom"><b>${esc(p.nom)}</b><span>${esc(p.ref)} · ${esc(p.groupe)}</span></td>
+      <td>${quand}</td><td class="n"><span class="q num">${p.qmin}</span></td>
+      <td class="n num">${p.v30 ? fr(p.v30) : (s && !f.ouverte ? '<span class="mu">hors saison</span>' : '0')}</td><td class="pl2">${place}</td><td class="act n">${neuf ? '<span class="pill ok">aperçu</span>' : '<span class="x">×</span>'}</td></tr>`;
+  }
+
+  function tableau(neuf) {
+    const auto = S[6], noel = S[8], fa = fenetre(auto), fn = fenetre(noel);
+    const sec = (t, sub) => `<tr class="sec"><td colspan="6">${t} <span class="mu">${sub}</span></td></tr>`;
+    let l = saisonOblig[8].slice(); if (neuf) { l = l.concat([Object.assign({}, P[neuf], { qmin: 4, saison: 8 })]); }
+    return `<div class="carte" style="padding:6px 8px 10px"><table class="t"><thead><tr><th>Référence</th><th>Quand</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th><th></th></tr></thead><tbody>
+      ${sec('Exigés aujourd’hui — ' + enVigueur, '')}
+      ${sec('Toute l’année · ' + annee.length, '— contrôlés à chaque visite')}
+      ${annee.slice().sort((a, b) => b.v30 - a.v30).map(p => ligneObl(p)).join('')}
+      ${sec(auto.emoji + ' Automnale · ' + nbSaison(6), '— du ' + dm(fa.du) + ' au ' + dm(fa.au) + ' · encore ' + fa.jours + ' j, puis plus exigés')}
+      ${saisonOblig[6].map(p => ligneObl(p)).join('')}
+      ${sec('À venir — ' + noel.emoji + ' Noël & Nouvel An · ' + l.length, '— exigés du ' + dm(fn.du) + ' au ' + dm(fn.au) + ' · ouvre dans ' + fn.jours + ' j')}
+      ${l.map(p => ligneObl(p, 'avenir', neuf && p.ref === neuf)).join('')}
+    </tbody></table></div>`;
+  }
+
+  function recherche(q, pop) {
+    const qq = String(q || '').toLowerCase();
+    let l = D.produits.filter(p => ['Boissons', 'Bundle & Promotion', 'B. 2 B.'].indexOf(p.groupe) < 0);
+    if (qq) { l = l.filter(p => (p.nom + ' ' + p.ref + ' ' + p.categorie + ' ' + p.gammes.map(g => S[g].nom).join(' ')).toLowerCase().indexOf(qq) >= 0); }
+    else { l = l.filter(p => !tousObl.has(p.ref)); }
+    l = l.slice().sort((a, b) => b.v30 - a.v30 || a.nom.localeCompare(b.nom, 'fr')).slice(0, qq ? 9 : 10);
+    const groupes = ['Tous', 'Saisonniers', 'Biscuiterie', 'Boulangerie', 'Épicerie', 'Fêtes & Occasions', 'Pâtisserie', 'Quiches', 'Tartes', 'Traiteur', 'Viennoiserie'];
+    const row = p => {
+      const saisonnier = p.gammes.length && !p.standard;
+      const tags = (saisonnier ? p.gammes.map(g => tagSaison(g)) : []).join('') + (!p.gammes.length && /cougnou|noël|noel/i.test(p.nom) ? '<span class="pill wa" style="font-size:9.5px">sans gamme au panel</span>' : '');
+      const deja = tousObl.has(p.ref) ? (annee.some(x => x.ref === p.ref) ? '<span class="pill an">✓ obligatoire</span>' : '<span class="pill ok">✓ obligatoire</span>') : '';
+      return `<div class="pl${pop === p.ref ? ' sel' : ''}"><div class="ph" style="background:${GC[p.groupe] || '#9a8f84'}">${esc(ini(p.nom))}</div>
+        <div class="t2"><b>${esc(p.nom)}</b><span>${esc(p.groupe)} · ${p.v30 ? fr(p.v30) + ' / 30 j' : '0 / 30 j'}</span>${tags ? `<div class="tags">${tags}</div>` : ''}</div>
+        ${deja || `<span class="a">+ ajouter</span>`}</div>` + (pop === p.ref ? popover(p) : '');
+    };
+    return `<div class="pick carte"><h3>Liste de recherche <small>${D.produits.length} au catalogue · API</small></h3>
+      <div class="srch${qq ? ' plein' : ''}">${qq ? esc(q) + '▏' : 'Rechercher un produit, une référence, une saison…'}</div>
+      <div class="chips">${groupes.map(g => `<span class="${g === 'Tous' ? 'on' : ''}">${g === 'Saisonniers' ? '🍂 ' + g : esc(g)}</span>`).join('')}</div>
+      <div class="tog${qq ? '' : ' on'}"><i></i><span>Pas encore obligatoires · classés par ventes 30 j</span></div>
+      <div>${l.map(row).join('')}</div>
+      <div class="note">« + ajouter » rend le produit obligatoire : toute l’année, ou seulement pendant la saison du produit (gamme du panel). ${qq ? '' : 'Tapez « noël », « automnale »… pour lister une saison.'}</div></div>`;
+  }
+
+  function popover(p) {
+    const s = S[p.gammes[0]], f = fenetre(s);
+    return `<div class="pop"><b class="tt">Rendre obligatoire — ${esc(p.nom)}</b>
+      <div class="radio"><i></i><div>Toute l’année<span>contrôlé à chaque visite, dans tous les magasins</span></div></div>
+      <div class="radio on"><i></i><div>Pendant ${s.emoji} ${esc(s.nom)} — du ${dm(f.du)} au ${dm(f.au)}<span>la gamme du panel · exigé seulement pendant la saison, jamais compté manquant hors saison</span></div></div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11.5px">Qté minimum en magasin <span class="q num">4</span> <span class="mu">batch 1</span></div>
+      <div class="note">Premier contrôle en visite : ${dm(f.du)} (dans ${f.jours} j). Pas encore de place au comptoir — à attribuer avant l’ouverture.</div>
+      <div style="display:flex;justify-content:flex-end;gap:6px"><span class="btn g">Annuler</span><span class="btn p g">Ajouter à l’assortiment</span></div></div>`;
+  }
+
+  function vueSaisons() {
+    const debut = new Date('2026-09-01T12:00:00'), fin = new Date('2027-09-01T12:00:00'), tot = (fin - debut) / 864e5;
+    const x = d => Math.max(0, Math.min(100, 100 * ((d - debut) / 864e5) / tot));
+    const mois = []; for (let i = 0; i < 12; i++) { const d = new Date(2026, 8 + i, 1, 12); mois.push({ d, t: d.toLocaleDateString('fr-BE', { month: 'short' }).replace('.', '') }); }
+    const occ = s => { const out = []; for (const a of [2025, 2026, 2027]) { const du = new Date(a + '-' + s.debut + 'T12:00:00'); const au = new Date((s.fin < s.debut ? a + 1 : a) + '-' + s.fin + 'T12:00:00'); if (au >= debut && du < fin) { out.push({ du, au }); } } return out; };
+    const L = D.saisons.slice().sort((a, b) => { const fa = fenetre(a), fb = fenetre(b); return (fb.ouverte - fa.ouverte) || (fa.ouverte ? fa.au - fb.au : fa.du - fb.du); });
+    const sel = 8;
+    const piste = s => `<div class="piste">${mois.map(m => `<i class="m" style="left:${x(m.d)}%"></i>`).join('')}${occ(s).map(o => `<i class="b" style="left:${x(o.du)}%;width:${Math.max(0.6, x(o.au) - x(o.du))}%;background:${COUL[s.id]};opacity:${fenetre(s).ouverte ? 1 : .8}"></i>`).join('')}<i class="auj" style="left:${x(AUJ)}%"></i></div>`;
+    let h = `<div class="carte"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><h2>L’année des saisons <small class="mu" style="font:500 11px var(--font-ui)">septembre 2026 → août 2027 · gammes du panel, récurrentes chaque année</small></h2><span class="pill ko">aujourd’hui ${dm(AUJ)}</span></div>
+      <div class="frise"><div class="h">Saison</div><div class="h"><div class="mois">${mois.map(m => `<span style="left:${x(m.d)}%">${m.t}</span>`).join('')}</div></div><div class="h" style="text-align:right">Produits</div><div class="h" style="text-align:right">Obligatoires</div><div class="h">État</div>
+      ${L.map(s => { const f = fenetre(s), e = etat(s), cl = s.id === sel ? ' sel' : ''; const warn = s.id === 17 ? ' <span title="date du panel : 4 janvier, le nom dit avril" style="color:#A0620C">⚠</span>' : '';
+        return `<div class="c lab${cl}"><b>${s.emoji} ${esc(s.nom)}</b><span>${s.debut.slice(3)}/${s.debut.slice(0, 2)} → ${s.fin.slice(3)}/${s.fin.slice(0, 2)}${warn}</span></div><div class="c${cl}">${piste(s)}</div>
+          <div class="c n${cl}" style="justify-content:flex-end">${s.lu ? s.produits.length : '<span class="mu" style="font-size:10.5px">non lus</span>'}</div><div class="c${cl}" style="justify-content:flex-end;font-weight:600">${nbSaison(s.id) || '<span class="mu" style="font-weight:400">—</span>'}</div>
+          <div class="c${cl}"><span class="pill ${e[0]}">${e[1]}</span></div>`; }).join('')}</div>
+      <div class="alerte" style="margin-top:10px">À vérifier au panel : 🍦 Glace commence le 04/01 alors que son nom dit « avril – septembre » ; 💝 Saint-Valentin et 🌷 Fête des Mères ne rendent pas leurs produits (erreur 404 du panel).</div></div>`;
+    // Le détail de la saison choisie
+    const s = S[sel], f = fenetre(s);
+    const choisis = new Set(saisonOblig[sel].map(p => p.ref));
+    h += `<div class="carte" style="padding:12px 8px 10px"><div class="barre" style="padding:0 8px 8px"><div><div class="cap">Saison choisie</div><h2>${s.emoji} ${esc(s.nom)} <small class="mu" style="font:500 12px var(--font-ui)">du ${dm(f.du)} au ${dm(f.au)} · ouvre dans ${f.jours} j · ${s.produits.length} produits dans la gamme du panel</small></h2></div>
+      <div style="display:flex;gap:6px"><span class="btn g">Tout cocher</span><span class="btn p g">+ Ajouter un produit hors gamme</span></div></div>
+      <table class="t"><thead><tr><th style="width:26px"></th><th>Produit de la gamme</th><th>Obligatoire</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th></tr></thead><tbody>
+      ${s.produits.map(r => P[r]).sort((a, b) => choisis.has(b.ref) - choisis.has(a.ref) || a.nom.localeCompare(b.nom, 'fr')).map(p => { const on = choisis.has(p.ref), q = on ? saisonOblig[sel].find(x => x.ref === p.ref).qmin : '';
+        return `<tr><td><span style="display:inline-block;width:15px;height:15px;border-radius:3px;border:1.5px solid ${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-primary)' : 'transparent'};color:#fff;font:700 11px/13px var(--font-ui);text-align:center">${on ? '✓' : ''}</span></td>
+          <td class="nom"><b>${esc(p.nom)}</b><span>${esc(p.ref)} · ${esc(p.categorie)}</span></td>
+          <td>${on ? `<span class="pill wa">${s.emoji} pendant la saison</span>` : '<span class="mu">non</span>'}</td><td class="n">${on ? `<span class="q num">${q}</span>` : ''}</td>
+          <td class="n"><span class="mu">hors saison</span></td><td>${p.place ? esc(p.place) : (on ? '<span class="mu">pas de place</span> <span class="btn r" style="margin-left:6px">Attribuer</span>' : '<span class="mu">—</span>')}</td></tr>`; }).join('')}
+      </tbody></table>
+      <div class="note" style="padding:8px 8px 0">Du ${dm(f.du)} au ${dm(f.au)}, ces ${choisis.size} références s’ajoutent aux obligatoires : la visite les contrôle et la conformité les compte. Hors saison, elles ne sont ni exigées ni signalées manquantes. Les ventes de la saison passée ne sont pas relevées (relevés depuis le 01/08/2026).</div></div>`;
+    return h;
+  }
+
+  let h = '';
+  if (V === '2') { h = entete('saisons') + vueSaisons(); }
+  else if (V === '3') { h = entete('liste') + `<div class="grille"><div class="gauche">${tableau('4100016')}</div>${recherche('cougnou', '4100016')}</div>`; }
+  else { h = entete('liste') + tuiles() + `<div class="grille"><div class="gauche">${tableau()}</div>${recherche('')}</div>`; }
+  document.getElementById('ecran').innerHTML = h;
+})();
+</script>
+</body>
+</html>
