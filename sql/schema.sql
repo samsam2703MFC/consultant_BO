@@ -550,6 +550,7 @@ CREATE TABLE IF NOT EXISTS ceo_prod_product (
   prix       DECIMAL(8,2) NULL,                 -- prix de vente conseillé
   must       TINYINT(1)  NOT NULL DEFAULT 0,    -- obligatoire réseau
   qmin       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  saison_id  INT NULL,                          -- obligatoire pendant cette gamme saisonnière du panel ; NULL = toute l'année
   periods    VARCHAR(120) NOT NULL DEFAULT '',
   profil     VARCHAR(120) NOT NULL DEFAULT '',  -- profil de cuisson
   pwa_id     BIGINT UNSIGNED NULL,              -- rapprochement id_product du panel

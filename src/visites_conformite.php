@@ -159,15 +159,24 @@ function ep_visites_conformite(): array
     $retard = $derniere === null ? null : (int) round((strtotime($auj) - strtotime($derniere)) / 86400);
 
     $comptoir = vcComptoir();
-    $obl = vcObligatoires();
+    // Les obligatoires EXIGÉES : toute l'année, et les saisonnières pendant leur
+    // saison seulement — au dernier jour de vente pour l'assortiment, aujourd'hui
+    // pour la place au comptoir. Hors saison, une référence n'est pas manquante.
+    $ao = function_exists('aoObligatoires') ? aoObligatoires($au) : null;
+    $obl = $ao !== null ? $ao['exigibles'] : vcObligatoires();
+    $oblAuj = $ao !== null ? ($au === $auj ? $ao['exigibles'] : aoObligatoires($auj)['exigibles']) : $obl;
     $vendues = $derniere === null ? null : vcVendues((string) $sid, $du, $au);
 
     // --- L'assortiment. Présente = vue au moins une fois sur la fenêtre.
     $assort = ['obligatoires' => count($obl), 'presentes' => 0, 'manquantes' => 0,
         'pct' => null, 'liste' => [], 'du' => $du, 'au' => $au, 'jours' => $jours,
-        'derniereVente' => $derniere, 'retard' => $retard, 'motif' => null];
+        'derniereVente' => $derniere, 'retard' => $retard, 'motif' => null,
+        'saisonnieres' => count(array_filter($obl, static fn ($p) => ($p['saison'] ?? null) !== null)),
+        'horsSaison' => $ao !== null ? count($ao['horsSaison']) : 0];
     if ($obl === []) {
-        $assort['motif'] = 'aucune référence n’est déclarée obligatoire pour le réseau';
+        $assort['motif'] = $assort['horsSaison'] > 0
+            ? 'aucune obligatoire exigée à cette date : ' . $assort['horsSaison'] . ' référence(s) saisonnière(s) hors saison'
+            : 'aucune référence n’est déclarée obligatoire pour le réseau';
     } elseif ($derniere === null) {
         $assort['motif'] = 'la caisse de ce magasin n’a remonté aucune ligne de ticket';
     } elseif ($vendues === null) {
@@ -199,7 +208,7 @@ function ep_visites_conformite(): array
     // --- Les obligatoires sans place au comptoir : le plan est en défaut avant
     // même qu'on regarde ce qui se vend.
     $sansPlace = [];
-    foreach ($obl as $p) {
+    foreach ($oblAuj as $p) {
         if (!isset($comptoir['refs'][$p['ref']])) { $sansPlace[] = ['ref' => $p['ref'], 'nom' => $p['nom']]; }
     }
     $plano = ['zones' => $comptoir['zones'], 'meubles' => $comptoir['meubles'],

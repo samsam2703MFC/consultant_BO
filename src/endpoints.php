@@ -1043,6 +1043,8 @@ function ep_pwa_probe(): array
  */
 function ep_prod_catalogue(): array
 {
+    // La saison des obligatoires (colonne ajoutée avec l'assortiment saisonnier).
+    if (function_exists('aoEnsure')) { aoEnsure(); }
     $enrich = [];   // id_product du panel → ligne cockpit
     $parRef = [];
     foreach (Db::rows('SELECT * FROM ceo_prod_product') as $r) {
@@ -1054,11 +1056,12 @@ function ep_prod_catalogue(): array
     $plano = function_exists('psPlacements') ? psPlacements() : [];
 
     $reel = ep_prod_catalogue_reel($enrich, $parRef, $plano);
-    if ($reel !== null) { return $reel; }
+    // Gammes du produit, saison de l'obligatoire, exigée aujourd'hui ou non.
+    if ($reel !== null) { return function_exists('aoEnrichir') ? aoEnrichir($reel) : $reel; }
 
     // Repli : installation autonome, sans la base de caisse.
     $rows = Db::rows('SELECT * FROM ceo_prod_product WHERE actif = 1 ORDER BY categorie, nom');
-    return array_map(function ($r) use ($plano) {
+    $repli = array_map(function ($r) use ($plano) {
         $pl = $plano[$r['ref']] ?? null;
         $mat = $r['mat'] !== null ? (float) $r['mat'] : null;
         $prix = $r['prix'] !== null ? (float) $r['prix'] : null;
@@ -1084,6 +1087,7 @@ function ep_prod_catalogue(): array
             'slot' => $pl && $pl['slot'] !== null ? (int) $pl['slot'] : null,
         ];
     }, $rows);
+    return function_exists('aoEnrichir') ? aoEnrichir($repli) : $repli;
 }
 
 /**

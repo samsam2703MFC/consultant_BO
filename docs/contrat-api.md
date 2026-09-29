@@ -503,6 +503,54 @@ produits les classe par ventes).
 (`data: ""` la retire). La tâche du panel « Photo du comptoir - <zone> » est retrouvée par le nom de la zone.
 `GET /visites/conformite` lit ce plan : emplacements tenus, zones photographiées montées le jour même.
 
+### `/production/saisons` et `/production/obligatoire` — l'assortiment obligatoire, toute l'année ou par saison
+
+Une référence obligatoire l'est **toute l'année**, ou **pendant une saison** : une gamme saisonnière du panel (Noël,
+Automnale, Saint-Nicolas…), récurrente chaque année (seuls le jour et le mois comptent, la fin est comprise). Pendant
+sa saison elle est exigée comme les autres ; hors saison elle n'est ni exigée ni comptée manquante. Une gamme qui
+couvre l'année (Standard, B2B) n'est pas une saison. Un produit n'est **saisonnier** que s'il est dans une gamme
+saisonnière et dans aucune gamme permanente.
+
+Les dates des gammes viennent de la base partagée (`product_availability_period`) ; leur contenu (quels produits)
+seulement de l'API du panel (`/product-availability-periods/{id}/products`, la table de liaison de la base est
+vide), lu pour toutes les gammes et gardé 12 h (réglage `assortimentGammes`). Une gamme que le panel ne rend pas
+garde sa dernière lecture réussie.
+
+`GET /production/saisons[?date=2026-09-29][&rafraichir=1]` :
+
+```json
+{ "aujourdhui": "2026-09-29",
+  "saisons": [ { "id": 8, "emoji": "🎄", "nom": "Noël & Nouvel An", "nomPanel": "🎄 Gamme Noël & Nouvel An (Décembre-Janvier)",
+                 "debut": "11-01", "fin": "01-15", "recurrente": true,
+                 "fenetre": { "du": "2026-11-01", "au": "2027-01-15", "ouverte": false, "jours": 33 },
+                 "produits": ["4100001", "4100002"], "lu": true, "alerte": null, "obligatoires": 4 } ],
+  "permanentes": [ { "id": 14, "emoji": "🥖", "nom": "Standard", "produits": 363 } ],
+  "obligatoires": { "annee": 12, "parSaison": { "6": 4, "8": 4 }, "exigibles": 16, "saisonInconnue": 0 },
+  "alertes": [ "🍦 Glace commence le 04/01 alors que son nom dit « avril » : jour et mois inversés au panel ?" ],
+  "contenuLe": "2026-09-29 20:09:59", "contenuSource": "api", "source": "…" }
+```
+
+Les saisons ouvertes d'abord (celle qui ferme le plus tôt en tête), puis celles qui ouvrent. `fenetre` est la saison
+en cours, sinon la prochaine ; `jours` compte jusqu'à la fermeture (ouverte) ou l'ouverture (fermée). `alertes` signale
+une date de début dont le jour et le mois semblent inversés par rapport au nom, une gamme dont le panel ne rend pas
+les produits, et les obligatoires rattachées à une saison disparue (plus exigées).
+
+`PUT /production/obligatoire/{ref}` — `{ "must": true, "saison": 8 | null, "qmin": 4 }` : ne touche que l'obligatoire,
+sa saison et son minimum (la fiche de production n'est pas réécrite). `saison: null` = toute l'année ; une gamme
+permanente vaut toute l'année ; une saison inconnue → `422`. `must: false` retire la référence (minimum et saison
+remis à zéro). `qmin` absent garde le minimum en place ; hors de 0..9 999 → `422`. Réponse :
+`{ ok, ref, must, qmin, saison, exigible, saisonFenetre }`. `PUT /production/produit/{ref}` (la fiche) garde la saison,
+et l'efface quand elle décoche l'obligatoire.
+
+**Le catalogue** (`GET /production/catalogue`) ajoute à chaque produit : `saisons` (gammes saisonnières du produit),
+`standard` (il est aussi dans une gamme permanente), `saisonnier`, `saison` (celle de son obligatoire, ou `null`),
+`exigible` (obligatoire exigée aujourd'hui) et `saisonFenetre` ; `periods` porte les noms des gammes quand la base ne
+les donne pas.
+
+**Les visites** (`GET /visites/conformite`) ne comptent que les obligatoires exigées : au dernier jour de vente pour
+l'assortiment, aujourd'hui pour les obligatoires sans place au comptoir. `assortiment` ajoute `saisonnieres` (exigées
+de saison) et `horsSaison` (obligatoires de saison non exigées à cette date).
+
 ### `/scoring` — le scoring du trimestre : quatre postes de cinq points par magasin
 
 `GET /scoring?trimestre=2026-T3` (sans `trimestre` : le trimestre en cours) :

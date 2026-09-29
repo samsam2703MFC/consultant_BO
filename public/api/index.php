@@ -41,6 +41,7 @@ require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
 require __DIR__ . '/../../src/plano_std.php';
+require __DIR__ . '/../../src/assortiment.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -217,6 +218,7 @@ function route(string $method, string $path): mixed
             $path === '/production/groupes'            => ep_prod_groupes(),
             $path === '/production/categorie/produits' => ep_prod_categorie_produits(),
             $path === '/production/periodes'           => ep_prod_periodes(),
+            $path === '/production/saisons'            => ep_prod_saisons(),
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
             $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
@@ -465,6 +467,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/admin/marketing-restaure') { return wr_mar_restaure(); }
     if ($method === 'POST' && $path === '/admin/erp-token') { return wr_erp_token(); }
     if ($method === 'PUT' && preg_match('#^/production/produit/([\w-]+)$#', $path, $m)) { return wr_prod_produit($m[1]); }
+    // L'obligatoire seul (toute l'année ou pendant une saison), sans réécrire la fiche de production.
+    if ($method === 'PUT' && preg_match('#^/production/obligatoire/([\w-]+)$#', $path, $m)) { return wr_prod_obligatoire($m[1]); }
     // --- planogramme standard : un plan pour le réseau, un produit par emplacement, l'histoire gardée
     if ($method === 'PUT' && $path === '/planogramme/standard/emplacement') { return wr_plano_std_emplacement(); }
     if ($method === 'POST' && $path === '/planogramme/standard/photo') { return wr_plano_std_photo(); }

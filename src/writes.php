@@ -1185,6 +1185,11 @@ function wr_prod_produit(string $ref): array
          (int) $num($b['bmin'] ?? 0), (int) $num($b['bmult'] ?? 1), (int) $num($b['four'] ?? 0),
          (int) $num($b['dlv'] ?? 0), (string) ($b['profil'] ?? '')]
     );
+    // Décochée, une obligatoire perd aussi sa saison : recochée plus tard, elle
+    // repartirait sinon sur une saison que personne n'a choisie.
+    if (empty($b['must'])) {
+        try { Db::exec('UPDATE ceo_prod_product SET saison_id = NULL WHERE ref = ?', [$ref]); } catch (PDOException $e) { /* colonne absente */ }
+    }
     journalAdd('CEO', 'Référentiel produit', $nom,
         (string) ($b['journal'] ?? 'Fiche de production mise à jour'));
     return ['ok' => true, 'ref' => $ref];
