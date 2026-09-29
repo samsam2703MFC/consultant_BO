@@ -7,9 +7,9 @@ declare(strict_types=1);
  *   1. Note Google      la note de la fiche au dernier relevé du trimestre, telle quelle.
  *   2. Tâches           la moyenne des journées relevées dans le panel : chaque jour vaut
  *                       la part des tâches rendues (une tâche notée vaut sa cote / 5) ;
- *                       une tâche OBLIGATOIRE non faite met le jour à 0. Les obligatoires sont
- *                       les tâches des checklists du réglage `scoringChecklistsObligatoires`
- *                       (par défaut CQ-02, le contrôle qualité d'ouverture : les photos des comptoirs).
+ *                       une tâche OBLIGATOIRE non faite met le jour à 0. Obligatoire = ce que le
+ *                       panel dit (is_mandatory, relu chaque jour et gardé par le relevé) ; le
+ *                       réglage `scoringChecklistsObligatoires` peut y ajouter des checklists.
  *   3. Client mystère   la note reçue, encodée « obtenu / maximum » avec le PDF, sur 5.
  *   4. Budget           le CA du trimestre face au budget des trois mois : 100 % = 5, 90 % = 4,
  *                       80 % = 3, 70 % = 2, 60 % = 1, 50 % et moins = 0 — au prorata entre deux.
@@ -30,7 +30,7 @@ const SQ_POSTES = [
     'google' => ['nom' => 'Note Google', 'court' => 'Google',
         'regle' => 'La note de la fiche Google au dernier relevé du trimestre, telle quelle : 4,8 = 4,8 / 5.'],
     'taches' => ['nom' => 'Tâches', 'court' => 'Tâches',
-        'regle' => 'Moyenne des journées du trimestre relevées dans le panel : chaque jour vaut la part des tâches rendues (une tâche notée vaut sa cote). Une tâche obligatoire non faite met le jour à 0 — les obligatoires sont les photos des comptoirs (checklist CQ-02).'],
+        'regle' => 'Moyenne des journées du trimestre relevées dans le panel : chaque jour vaut la part des tâches rendues (une tâche notée vaut sa cote). Une tâche obligatoire non faite met le jour à 0 — obligatoire au sens du panel (le drapeau de la tâche), photos des comptoirs comprises.'],
     'msp' => ['nom' => 'Client mystère', 'court' => 'Client mystère',
         'regle' => 'La note reçue au trimestre, encodée « obtenu / maximum » avec le rapport PDF, ramenée sur 5 : 68 / 80 = 4,3.'],
     'budget' => ['nom' => 'Budget', 'court' => 'Budget',
@@ -66,6 +66,8 @@ function ensureScoring(): void
         . 'PRIMARY KEY (shop_id, trimestre)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     sqRapportSemer();
+    // La colonne « obligatoire » du relevé des tâches, si le module est là.
+    if (function_exists('tachesJourEnsureNote')) { try { tachesJourEnsureNote(); } catch (Throwable $e) { /* base sans information_schema */ } }
 }
 
 /** La ligne de reporting du scoring — semée si le reporting est là et qu'elle manque. */
@@ -164,26 +166,28 @@ function sqGoogle(array $tri): array
     return $out;
 }
 
-/** Les checklists dont les tâches sont obligatoires — un réglage, CQ-02 par défaut (les photos des comptoirs). */
+/** Des checklists dont les tâches sont obligatoires EN PLUS du drapeau du panel — un réglage, vide par défaut. */
 function sqChecklistsObligatoires(): array
 {
     $l = setting('scoringChecklistsObligatoires');
-    $l = is_array($l) ? array_values(array_filter(array_map(fn ($x) => trim((string) $x), $l), fn ($x) => $x !== '')) : [];
-    return $l !== [] ? $l : ['CQ-02'];
+    return is_array($l) ? array_values(array_filter(array_map(fn ($x) => trim((string) $x), $l), fn ($x) => $x !== '')) : [];
 }
 
 /**
- * Les tâches obligatoires : celles dont la checklist du panel commence par
- * l'un des préfixes du réglage — lues une fois par jour sur les tâches
- * d'aujourd'hui, gardées en réglage. Le relevé quotidien ne porte pas la
- * checklist ; l'identifiant de tâche, lui, ne change pas d'un jour à l'autre.
+ * Les tâches obligatoires : celles que le panel marque obligatoires
+ * (is_mandatory, rendu `obligatoire` par /pwa/tasks), plus celles des
+ * checklists du réglage. Lues une fois par jour sur les tâches d'aujourd'hui
+ * et CUMULÉES : une tâche hebdomadaire absente du jour reste connue. Le
+ * relevé quotidien garde le drapeau jour par jour ; cette liste sert aux
+ * jours relevés avant la colonne.
  */
 function sqObligatoires(): array
 {
     $prefixes = sqChecklistsObligatoires();
     $c = setting('scoringObligatoires');
     if (is_array($c) && (string) ($c['quand'] ?? '') === date('Y-m-d') && ($c['checklists'] ?? null) === $prefixes) { return $c; }
-    $ids = []; $noms = [];
+    $ids = []; $noms = is_array($c) && is_array($c['noms'] ?? null) ? $c['noms'] : [];
+    foreach ($noms as $id => $nom) { $ids[(string) $id] = true; }
     $lu = false;
     if (class_exists('PanelApi') && PanelApi::configured() && function_exists('ep_pwa_tasks')) {
         $avant = $_GET; $_GET['date'] = date('Y-m-d');
@@ -193,9 +197,9 @@ function sqObligatoires(): array
             foreach (($d['shops'] ?? []) as $s) {
                 foreach (($s['taches'] ?? []) as $t) {
                     $cl = (string) ($t['checklist'] ?? '');
-                    foreach ($prefixes as $pf) {
-                        if (stripos($cl, $pf) === 0) { $ids[(string) $t['taskId']] = true; $noms[(string) $t['taskId']] = (string) ($t['tache'] ?? ''); break; }
-                    }
+                    $ob = !empty($t['obligatoire']);
+                    foreach ($prefixes as $pf) { if (stripos($cl, $pf) === 0) { $ob = true; break; } }
+                    if ($ob) { $ids[(string) $t['taskId']] = true; $noms[(string) $t['taskId']] = (string) ($t['tache'] ?? ''); }
                 }
             }
         }
@@ -213,7 +217,9 @@ function sqTaches(array $tri): array
     $ob = array_flip(array_map('strval', $oblig['ids'] ?? []));
     $parJour = [];
     try {
-        foreach (Db::rows('SELECT jour, id_shop, id_task, fait, note FROM ceo_tache_jour WHERE jour BETWEEN ? AND ?', [$tri['du'], $tri['arrete']]) as $r) {
+        // Le drapeau du jour quand le relevé l'a (NULL avant la colonne) — sinon la liste connue.
+        $sql = 'SELECT jour, id_shop, id_task, fait, note' . (sqColonneObligatoire() ? ', obligatoire' : ', NULL AS obligatoire') . ' FROM ceo_tache_jour WHERE jour BETWEEN ? AND ?';
+        foreach (Db::rows($sql, [$tri['du'], $tri['arrete']]) as $r) {
             $parJour[(string) $r['id_shop']][(string) $r['jour']][] = $r;
         }
     } catch (PDOException $e) { return ['indispo' => 'le relevé des tâches n’est pas là']; }
@@ -226,7 +232,7 @@ function sqTaches(array $tri): array
                 $attendues++;
                 $fait = (int) $t['fait'] === 1;
                 if ($fait) { $faites++; $sj += $t['note'] !== null && (int) $t['note'] > 0 ? min(1, (int) $t['note'] / 5) : 1; }
-                elseif (isset($ob[(string) $t['id_task']])) { $mj++; }
+                elseif ($t['obligatoire'] !== null ? (int) $t['obligatoire'] === 1 : isset($ob[(string) $t['id_task']])) { $mj++; }
             }
             if ($mj > 0) { $manq += $mj; $joursZero++; $sj = 0.0; } else { $sj = count($ts) ? $sj / count($ts) : 0.0; }
             $som += $sj; $n++;
@@ -241,15 +247,26 @@ function sqTaches(array $tri): array
  * Les tâches obligatoires d'un magasin sur le trimestre, jour par jour :
  * faite (1), manquée (0), pas attendue (absente). Les plus manquées d'abord.
  */
+/** La colonne `obligatoire` du relevé existe-t-elle ? (une base d'avant la migration, ou le banc) */
+function sqColonneObligatoire(): bool
+{
+    static $ok = null;
+    if ($ok !== null) { return $ok; }
+    try { Db::rows('SELECT obligatoire FROM ceo_tache_jour LIMIT 1'); $ok = true; } catch (PDOException $e) { $ok = false; }
+    return $ok;
+}
+
 function sqObligatoiresDetail(array $tri, string $shop): array
 {
     $ids = array_map('strval', sqObligatoires()['ids'] ?? []);
     $jours = [];
     for ($ts = strtotime($tri['du']); $ts <= strtotime($tri['arrete']); $ts += 86400) { $jours[] = date('Y-m-d', $ts); }
-    if ($ids === []) { return ['taches' => [], 'jours' => $jours]; }
-    $in = implode(',', array_fill(0, count($ids), '?'));
+    $col = sqColonneObligatoire();
+    if ($ids === [] && !$col) { return ['taches' => [], 'jours' => $jours]; }
+    // Le drapeau du jour quand le relevé l'a ; la liste connue pour les jours d'avant la colonne.
+    $cond = $ids !== [] ? ($col ? '(obligatoire = 1 OR (obligatoire IS NULL AND id_task IN (' . implode(',', array_fill(0, count($ids), '?')) . ')))' : 'id_task IN (' . implode(',', array_fill(0, count($ids), '?')) . ')') : 'obligatoire = 1';
     try {
-        $rows = Db::rows("SELECT jour, id_task, nom, fait FROM ceo_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ? AND id_task IN ($in) ORDER BY jour",
+        $rows = Db::rows("SELECT jour, id_task, nom, fait FROM ceo_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ? AND $cond ORDER BY jour",
             array_merge([(int) $shop, $tri['du'], $tri['arrete']], $ids));
     } catch (PDOException $e) { return ['taches' => [], 'jours' => $jours]; }
     $t = [];
@@ -381,7 +398,7 @@ function sqCalcul(array $tri): array
     return ['trimestre' => $tri, 'trimestres' => sqTrimestres(), 'postes' => SQ_POSTES, 'magasins' => $lignes,
         'reseau' => ['sur20' => $lignes ? round(array_sum(array_map(fn ($l) => $l['total'], $lignes)) / count($lignes), 1) : null, 'magasins' => count($lignes), 'complets' => count($complets),
             'etoiles' => $etoiles ? round(array_sum($etoiles) / count($etoiles), 2) : null],
-        'sources' => ['obligatoires' => count($oblig['ids'] ?? []), 'obligatoiresLues' => $oblig['quand'] ?? null, 'obligatoiresChecklists' => sqChecklistsObligatoires(),
+        'sources' => ['obligatoires' => count($oblig['ids'] ?? []), 'obligatoiresLues' => $oblig['quand'] ?? null, 'obligatoiresChecklists' => sqChecklistsObligatoires(), 'obligatoiresNoms' => array_values($oblig['noms'] ?? []),
             'googleSynchro' => max(array_map(fn ($l) => (string) ($l['postes']['google']['le'] ?? ''), $lignes) ?: ['']) ?: null],
         'rapport' => $rep ? ['id' => (int) $rep['id'], 'actif' => (int) $rep['actif'] === 1,
             'copies' => array_values(array_filter(json_decode((string) ($rep['destinataires'] ?? '[]'), true) ?: [], fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL))),
@@ -492,7 +509,7 @@ function sqConseils(array $l): array
     if ($t['v'] !== null && $t['v'] < 2.5) {
         $c[] = '<b>Tâches — ' . sqNf($t['v']) . ' / 5.</b> ' . ($t['part'] === 0 ? 'Aucune tâche du panel n’est rendue' : 'Seulement ' . (int) $t['part'] . ' % des tâches sont rendues')
             . (!empty($t['joursZero']) ? ' ; ' . (int) $t['joursZero'] . ' journée' . ($t['joursZero'] > 1 ? 's' : '') . ' à 0 parce qu’une obligatoire manquait' : '')
-            . '. Rendre chaque jour les obligatoires — les photos des comptoirs — est le levier le plus rapide du scoring ; le tableau ci-dessus dit lesquelles manquent et quand.';
+            . '. Rendre chaque jour les obligatoires (celles que le panel marque telles, les photos des comptoirs en tête) est le levier le plus rapide du scoring ; le tableau ci-dessus dit lesquelles manquent et quand.';
     } elseif ($t['v'] !== null) { $c[] = '<b>Tâches — ' . sqNf($t['v']) . ' / 5.</b> ' . (int) $t['part'] . ' % des tâches rendues sur ' . (int) $t['jours'] . ' jours ; tenir le rythme.'; }
     $b = $p['budget'];
     if ($b['v'] !== null) {

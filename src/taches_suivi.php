@@ -92,6 +92,15 @@ function tachesJourEnsureNote(): void
     if ((int) ($r4['n'] ?? 0) === 0) {
         Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN fait_le DATETIME NULL, ADD COLUMN fait_par VARCHAR(120) NULL');
     }
+    // Le drapeau « obligatoire » du panel (is_mandatory), jour par jour : le
+    // scoring du trimestre met à 0 un jour où une obligatoire manque. NULL sur
+    // les jours relevés avant la colonne — le scoring y applique alors la
+    // liste des tâches connues obligatoires.
+    $r6 = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour' AND column_name = 'obligatoire'");
+    if ((int) ($r6['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN obligatoire TINYINT NULL');
+    }
     // Les jours relevés AVANT ces colonnes sont marqués « faits » : sans
     // rouvrir ce drapeau, le rattrapage les sauterait et l'heure comme
     // l'opérateur resteraient vides pour toujours. Une seule fois, à la
@@ -124,11 +133,11 @@ function tachesJourReleve(string $date): ?int
             $faitLe = trim((string) ($t['faitLe'] ?? '')) !== '' ? substr((string) $t['faitLe'], 0, 19) : null;
             if ($faitLe !== null && strlen($faitLe) === 16) { $faitLe .= ':00'; }
             $faitPar = trim((string) ($t['faitePar'] ?? '')) ?: null;
-            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire, fait_le, fait_par) VALUES (?,?,?,?,?,?,?,?,?,?)
-                      ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire), fait_le = VALUES(fait_le), fait_par = VALUES(fait_par)',
+            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire, fait_le, fait_par, obligatoire) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                      ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire), fait_le = VALUES(fait_le), fait_par = VALUES(fait_par), obligatoire = VALUES(obligatoire)',
                 [$date, (int) $s['shopId'], (int) $t['taskId'], mb_substr((string) $t['tache'], 0, 200), $fait, mb_substr($st, 0, 12),
                  $note, isset($t['comment']) && $t['comment'] !== null ? mb_substr((string) $t['comment'], 0, 500) : null,
-                 $faitLe, $faitPar !== null ? mb_substr($faitPar, 0, 120) : null]);
+                 $faitLe, $faitPar !== null ? mb_substr($faitPar, 0, 120) : null, !empty($t['obligatoire']) ? 1 : 0]);
             $n++;
         }
     }

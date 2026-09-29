@@ -406,9 +406,10 @@ semaine est un jour du créneau.
 Les règles : **Google**, la note de la fiche (`ceo_shop_reputation`) telle quelle, **gelée** dans `ceo_scoring_google` à chaque
 lecture du trimestre en cours — un trimestre clos relit ce qui a été gelé. **Tâches**, la moyenne des journées relevées
 (`ceo_tache_jour`) : un jour vaut la part des tâches rendues (une tâche notée vaut sa cote / 5), et un jour où une tâche
-**obligatoire** manque vaut 0 ; les obligatoires sont les tâches dont la checklist du panel commence par l'un des préfixes du
-réglage `scoringChecklistsObligatoires` (`["CQ-02"]` par défaut : le contrôle qualité d'ouverture, les photos des comptoirs),
-lues une fois par jour dans `/pwa/tasks` et gardées dans le réglage `scoringObligatoires`. **Client mystère**, `obtenu / maximum × 5`.
+**obligatoire** manque vaut 0 ; obligatoire = le drapeau `is_mandatory` du panel (rendu `obligatoire` par `/pwa/tasks`), que le
+relevé quotidien garde jour par jour (`ceo_tache_jour.obligatoire`) ; pour les jours relevés avant cette colonne, la liste des
+tâches connues obligatoires (cumulée jour après jour dans le réglage `scoringObligatoires`) s'applique. Le réglage
+`scoringChecklistsObligatoires` (vide par défaut) ajoute au besoin des checklists entières par préfixe. **Client mystère**, `obtenu / maximum × 5`.
 **Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`, la fonction `ep_perf`) : 100 % = 5, 90 % = 4, 80 % = 3,
 70 % = 2, 60 % = 1, 50 % et moins = 0, au prorata entre deux paliers ; un mois sans budget ne
 compte pas, aucun mois budgété : poste sans donnée. Le total est **toujours sur 20** (`sur`) : un poste `v: null` vaut 0
