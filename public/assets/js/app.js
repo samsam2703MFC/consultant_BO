@@ -2970,7 +2970,7 @@ class App {
       postes: Object.keys(POSTES).map(k => { const x = l.postes[k] || { v: null }; return { cle: k, nom: POSTES[k].nom, v: x.v == null ? '—' : nf(x.v), na: x.v == null, pct: x.v == null ? 0 : x.v / 5 * 100, d: this.sqDetail(k, x, nf),
         alerte: k === 'taches' && x.joursZero ? x.joursZero + ' jour' + (x.joursZero > 1 ? 's' : '') + ' à 0 — obligatoire manquée' : '',
         encoder: k === 'msp' ? () => this.sqMspOuvrir(String(l.id), tri.cle) : null, fichier: k === 'msp' && x.fichier ? this.sqFichierUrl(x.fichier) : null }; }) }));
-    common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles), sur: d.reseau.complets === 1 ? 'sur le seul magasin noté partout' : (d.reseau.complets ? 'sur les ' + d.reseau.complets + ' magasins notés partout' : 'aucun magasin noté partout') } : null;
+    common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', magasins: d.reseau.magasins || (d.magasins || []).length, complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles) } : null;
     const src = d.sources || {};
     common.sqSources = (src.googleSynchro ? 'Google synchronisé le ' + jf(src.googleSynchro.slice(0, 10)) : 'Google : pas de synchro') + ' · tâches relevées du ' + jf(tri.du) + ' au ' + jf(tri.arrete) + ' · ' + (src.obligatoires || 0) + ' tâche' + (src.obligatoires > 1 ? 's' : '') + ' obligatoire' + (src.obligatoires > 1 ? 's' : '') + ' (CO-)' + ' · CA face au budget des trois mois · client mystère encodé à la main';
     common.sqRapportHref = API_BASE + '/scoring/rapport?trimestre=' + encodeURIComponent(tri.cle);

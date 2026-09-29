@@ -398,7 +398,7 @@ semaine est un jour du créneau.
                   "budget": { "v": 4.49, "ratio": 89.8, "ca": 144790, "budget": 161280, "mois": 3 } },
       "total": 13.54, "n": 4, "sur": 20, "etoiles": 3.39,
       "prec": { "total": 17.4, "n": 4, "etoiles": 4.36, "postes": { "google": 4.8, "taches": null, "msp": 4, "budget": 4.72 } }, "delta": -0.97 } ],
-  "reseau": { "sur20": 13.1, "complets": 3, "etoiles": 2.98 },
+  "reseau": { "sur20": 11.4, "magasins": 4, "complets": 3, "etoiles": 2.85 },
   "sources": { "obligatoires": 4, "obligatoiresLues": "2026-09-28", "googleSynchro": "2026-09-14 19:07" },
   "rapport": { "id": 12, "actif": true, "copies": [ "ceo@…" ], "carnet": { "5": 2, "4": 0 }, "smtp": true } }
 ```
@@ -408,9 +408,10 @@ lecture du trimestre en cours — un trimestre clos relit ce qui a été gelé. 
 (`ceo_tache_jour`) : un jour vaut la part des tâches rendues (une tâche notée vaut sa cote / 5), et un jour où une tâche
 **obligatoire** manque vaut 0 ; les obligatoires sont les tâches dont la checklist du panel commence par `CO-`, lues une fois
 par jour dans `/pwa/tasks` et gardées dans le réglage `scoringObligatoires`. **Client mystère**, `obtenu / maximum × 5`.
-**Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`, la fonction `ep_perf`), × 5 plafonné à 5 ; un mois sans budget ne
-compte pas, aucun mois budgété : poste sans donnée. Le total est la somme des postes notés (`sur` = 5 × `n`) ; `etoiles`
-en est la moyenne ; le classement suit les étoiles puis le total. Un poste `v: null` ne compte pas.
+**Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`, la fonction `ep_perf`) : 100 % = 5, 90 % = 4, 80 % = 3,
+70 % = 2, 60 % = 1, 50 % et moins = 0, au prorata entre deux paliers ; un mois sans budget ne
+compte pas, aucun mois budgété : poste sans donnée. Le total est **toujours sur 20** (`sur`) : un poste `v: null` vaut 0
+et se dit (`n` = postes renseignés) ; `etoiles` = total ÷ 4 ; le classement suit le total.
 
 `GET /scoring/msp?shop=5` — l'historique des rapports client mystère d'un magasin (tout le réseau sans `shop`) : `{ msp: [ … ] }`.
 

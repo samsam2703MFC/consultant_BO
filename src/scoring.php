@@ -9,10 +9,12 @@ declare(strict_types=1);
  *                       la part des tâches rendues (une tâche notée vaut sa cote / 5) ;
  *                       une tâche OBLIGATOIRE (checklist CO-) non faite met le jour à 0.
  *   3. Client mystère   la note reçue, encodée « obtenu / maximum » avec le PDF, sur 5.
- *   4. Budget           le CA du trimestre face au budget des trois mois, × 5, plafonné.
+ *   4. Budget           le CA du trimestre face au budget des trois mois : 100 % = 5, 90 % = 4,
+ *                       80 % = 3, 70 % = 2, 60 % = 1, 50 % et moins = 0 — au prorata entre deux.
  *
- * Le total est sur 20 ; les étoiles sont la moyenne des postes notés. Un poste sans
- * donnée ne compte pas et se dit — jamais un zéro silencieux.
+ * Le total est toujours sur 20 : un poste sans donnée compte 0, et il se dit — le
+ * tableau nomme ce qui manque (budget non encodé, client mystère à encoder). Les
+ * étoiles sont le total ramené sur 5.
  *
  * Tout ce qui se lit ailleurs est relu, jamais recopié : la réputation
  * (`ceo_shop_reputation`), le relevé des tâches (`ceo_tache_jour`), le budget
@@ -30,7 +32,7 @@ const SQ_POSTES = [
     'msp' => ['nom' => 'Client mystère', 'court' => 'Client mystère',
         'regle' => 'La note reçue au trimestre, encodée « obtenu / maximum » avec le rapport PDF, ramenée sur 5 : 68 / 80 = 4,3.'],
     'budget' => ['nom' => 'Budget', 'court' => 'Budget',
-        'regle' => 'CA du trimestre face au budget des trois mois, × 5, plafonné à 5 : 80 % = 4 / 5, 100 % et plus = 5.'],
+        'regle' => 'CA du trimestre face au budget des trois mois : 100 % = 5, 90 % = 4, 80 % = 3, 70 % = 2, 60 % = 1, 50 % et moins = 0 — au prorata entre deux paliers.'],
 ];
 const SQ_RAPPORT_CODE = 'scoring-trimestre';
 const SQ_MOIS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -243,7 +245,8 @@ function sqBudget(array $tri): array
     $out = [];
     foreach ($acc as $sid => $a) {
         $ratio = $a['budget'] > 0 ? $a['ca'] / $a['budget'] : null;
-        $out[$sid] = ['v' => $ratio !== null ? round(min(5, $ratio * 5), 2) : null, 'ratio' => $ratio !== null ? round(100 * $ratio, 1) : null,
+        // L'échelle : 100 % = 5, 90 % = 4 … 60 % = 1, 50 % et moins = 0, au prorata entre deux paliers.
+        $out[$sid] = ['v' => $ratio !== null ? round(max(0, min(5, ($ratio - 0.5) * 10)), 2) : null, 'ratio' => $ratio !== null ? round(100 * $ratio, 1) : null,
             'ca' => round($a['ca']), 'budget' => round($a['budget']), 'mois' => $a['mois']];
     }
     return $out;
@@ -276,7 +279,8 @@ function sqPostes(array $tri, array $magasins): array
               'msp' => $m[$sid] ?? ['v' => null], 'budget' => $b[$sid] ?? ['v' => null]];
         $notes = array_values(array_filter(array_map(fn ($x) => $x['v'], $p), fn ($v) => $v !== null));
         $n = count($notes); $total = array_sum($notes);
-        $out[$sid] = ['postes' => $p, 'total' => round($total, 2), 'n' => $n, 'sur' => $n * 5, 'etoiles' => $n ? round($total / $n, 2) : null];
+        // Toujours sur 20 : un poste sans donnée vaut 0 (et se dit), les étoiles sont le total sur 5.
+        $out[$sid] = ['postes' => $p, 'total' => round($total, 2), 'n' => $n, 'sur' => 20, 'etoiles' => round($total / 4, 2)];
     }
     return $out;
 }
@@ -301,13 +305,13 @@ function sqCalcul(array $tri): array
     foreach ($lignes as $i => &$l) { $l['rang'] = $i + 1; }
     unset($l);
     $complets = array_filter($lignes, fn ($l) => $l['n'] === 4);
-    $etoiles = array_filter(array_map(fn ($l) => $l['etoiles'], $lignes), fn ($v) => $v !== null);
+    $etoiles = array_map(fn ($l) => $l['etoiles'], $lignes);
     $oblig = sqObligatoires();
     $rep = null;
     try { $rep = Db::row('SELECT id, destinataires, dest_par_magasin, actif FROM ceo_rapport WHERE code = ?', [SQ_RAPPORT_CODE]); } catch (PDOException $e) { /* pas de reporting */ }
     $carnet = $rep ? (json_decode((string) ($rep['dest_par_magasin'] ?? ''), true) ?: []) : [];
     return ['trimestre' => $tri, 'trimestres' => sqTrimestres(), 'postes' => SQ_POSTES, 'magasins' => $lignes,
-        'reseau' => ['sur20' => $complets ? round(array_sum(array_map(fn ($l) => $l['total'], $complets)) / count($complets), 1) : null, 'complets' => count($complets),
+        'reseau' => ['sur20' => $lignes ? round(array_sum(array_map(fn ($l) => $l['total'], $lignes)) / count($lignes), 1) : null, 'magasins' => count($lignes), 'complets' => count($complets),
             'etoiles' => $etoiles ? round(array_sum($etoiles) / count($etoiles), 2) : null],
         'sources' => ['obligatoires' => count($oblig['ids'] ?? []), 'obligatoiresLues' => $oblig['quand'] ?? null,
             'googleSynchro' => max(array_map(fn ($l) => (string) ($l['postes']['google']['le'] ?? ''), $lignes) ?: ['']) ?: null],
@@ -453,7 +457,7 @@ function sqPageReseau(array $sc, int $pages): string
     $tri = $sc['trimestre']; $L = $sc['magasins'];
     $arrete = 'arrêté au ' . date('d/m/Y', strtotime($tri['arrete']));
     $h = '<div class="page">' . sqPageEntete($sc, 'Scoring trimestriel des magasins — réseau', $arrete);
-    $h .= '<h1>Le scoring du trimestre</h1><div class="sous">Quatre postes de cinq points, 20 en tout : Google, tâches, client mystère, budget. Les étoiles sont la moyenne des postes notés ; un poste sans donnée ne compte pas.</div>';
+    $h .= '<h1>Le scoring du trimestre</h1><div class="sous">Quatre postes de cinq points, 20 en tout : Google, tâches, client mystère, budget. Un poste sans donnée compte 0 et il est nommé.</div>';
     $h .= '<h2>Le classement</h2><table class="podium"><tr>';
     foreach ($L as $l) {
         $h .= '<td><div class="r">' . ($l['rang'] === 1 ? '&#127942; ' : '') . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . '</div><div class="nm">' . sqH($l['court']) . '</div>'
@@ -484,7 +488,7 @@ function sqPageReseau(array $sc, int $pages): string
     foreach (SQ_POSTES as $cle => $p) { $vs = array_filter(array_map(fn ($l) => $l['postes'][$cle]['v'], $L), fn ($v) => $v !== null); if ($vs) { $moy[$cle] = array_sum($vs) / count($vs); } }
     if ($moy) { asort($moy); $faible = array_key_first($moy); $lect[] = 'Le poste qui coûte le plus au réseau : ' . ($faible === 'google' ? 'Google' : mb_strtolower(SQ_POSTES[$faible]['nom'])) . ', ' . sqNf($moy[$faible]) . ' / 5 en moyenne.'; }
     $sans = array_filter($L, fn ($l) => $l['n'] < 4);
-    if ($sans) { $lect[] = implode(', ', array_map(fn ($l) => sqH($l['court']) . ' (' . (4 - $l['n']) . ' poste' . (4 - $l['n'] > 1 ? 's' : '') . ' sans donnée)', $sans)) . ' : la note est sur les postes disponibles.'; }
+    if ($sans) { $lect[] = implode(', ', array_map(fn ($l) => sqH($l['court']) . ' (' . (4 - $l['n']) . ' poste' . (4 - $l['n'] > 1 ? 's' : '') . ' sans donnée)', $sans)) . ' : ces postes comptent 0 tant qu’ils ne sont pas renseignés.'; }
     $h .= '<div class="lecture"><b>Ce que dit le trimestre.</b> ' . implode(' ', $lect) . '</div>';
     $h .= '<h2>Les règles</h2><div class="regles">';
     $i = 0; foreach (SQ_POSTES as $p) { $i++; $h .= '<div><b>' . $i . '. ' . sqH($p['nom']) . '</b> — ' . sqH($p['regle']) . '</div>'; }
@@ -499,7 +503,7 @@ function sqPageMagasin(array $sc, array $l, int $page, int $pages): string
     $h = '<div class="page saut">' . sqPageEntete($sc, 'Scoring du trimestre — ' . $l['nom'], 'arrêté au ' . date('d/m/Y', strtotime($tri['arrete'])) . ' · ' . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . ' sur ' . count($sc['magasins']));
     $h .= '<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tr><td style="vertical-align:top"><h1 style="margin:0">' . sqH($l['court']) . '</h1><div class="sous">' . sqH($l['nom']) . ($l['fr'] ? ' · ' . sqH($l['fr']) : '') . '</div></td>'
         . '<td style="text-align:right;vertical-align:top"><div class="n" style="font-size:34px">' . sqNf($l['total']) . '<small style="font-size:11px;color:#7a7268"> / ' . $l['sur'] . '</small></div>' . sqEtoiles($l['etoiles'], 18)
-        . '<div class="sous">' . sqNf($l['etoiles']) . ' ★' . ($l['delta'] === null ? '' : ' · ' . ($l['delta'] >= 0 ? '+ ' : '− ') . sqNf(abs($l['delta'])) . ' ★ vs ' . sqH($prec)) . ($l['n'] < 4 ? ' · ' . (4 - $l['n']) . ' poste' . (4 - $l['n'] > 1 ? 's' : '') . ' sans donnée' : '') . '</div></td></tr></table>';
+        . '<div class="sous">' . sqNf($l['etoiles']) . ' ★' . ($l['delta'] === null ? '' : ' · ' . ($l['delta'] >= 0 ? '+ ' : '− ') . sqNf(abs($l['delta'])) . ' ★ vs ' . sqH($prec)) . ($l['n'] < 4 ? ' · ' . (4 - $l['n']) . ' poste' . (4 - $l['n'] > 1 ? 's' : '') . ' sans donnée, compté 0' : '') . '</div></td></tr></table>';
     $h .= '<h2>Les quatre postes</h2><table class="fiche">';
     foreach (SQ_POSTES as $cle => $p) {
         $x = $l['postes'][$cle]; $pv = $l['prec']['postes'][$cle] ?? null;
@@ -587,7 +591,7 @@ function sqDistribuer(array $tri, ?array $rep, ?string $essai = null): array
         $lignes = '';
         foreach (SQ_POSTES as $cle => $p) { $x = $l['postes'][$cle]; $lignes .= '<tr><td style="padding:3px 10px 3px 0">' . sqH($p['nom']) . '</td><td style="padding:3px 0;font-weight:700">' . ($x['v'] === null ? '—' : sqNf($x['v']) . ' / 5') . '</td><td style="padding:3px 0 3px 10px;color:#7a7268">' . sqH(sqDetail($cle, $x)) . '</td></tr>'; }
         return '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6"><p>Bonjour,</p>'
-            . '<p>Voici le <b>scoring du trimestre ' . sqH($tri['court']) . '</b> : <b>' . sqH($l['court']) . ' obtient ' . sqNf($l['total']) . ' / ' . $l['sur'] . '</b>, ' . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . ' magasin sur ' . count(sqMagasins()) . '.</p>'
+            . '<p>Voici le <b>scoring du trimestre ' . sqH($tri['court']) . '</b> : <b>' . sqH($l['court']) . ' obtient ' . sqNf($l['total']) . ' / 20</b>, ' . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . ' magasin sur ' . count(sqMagasins()) . '.</p>'
             . '<table style="border-collapse:collapse;font-size:12.5px">' . $lignes . '</table>'
             . '<p>Le rapport A4 est joint : le classement du réseau et votre page, avec ce qu’on en fait.' . ($l['postes']['msp']['fichier'] ? ' Le rapport du client mystère est joint aussi.' : '') . '</p>'
             . '<p style="color:#7a736a;font-size:11px">Envoyé par le cockpit, le premier jour du trimestre suivant.</p></div>';
