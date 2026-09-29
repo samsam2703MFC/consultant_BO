@@ -556,7 +556,7 @@
     const T = sh ? (sh.taches || []) : [];
     if (!T.length) { return { total: 0 }; }
     const faite = t => t.statut !== 'nonRendue';
-    const bloq = t => !faite(t) && /^CO-/i.test(String(t.checklist || ''));
+    const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
     const nF = T.filter(faite).length;
     return { total: T.length, faites: nF, nonFaites: T.length - nF, bloquantes: T.filter(bloq).length };
   }
@@ -1792,7 +1792,7 @@
       const T = sh ? (sh.taches || []) : [];
       if (!T.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">${d.indispo ? 'panel injoignable' : 'aucune tâche pour ce magasin ce jour'}</div></div></div>`; }
       const faite = t => t.statut !== 'nonRendue';
-      const bloq = t => !faite(t) && /^CO-/i.test(String(t.checklist || ''));
+      const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
       const nF = T.filter(faite).length, nN = T.length - nF, nB = T.filter(bloq).length;
       const nCtrl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider').length, nSans = T.filter(t => t.statut === 'sansPhoto').length;
       const nQ = T.filter(t => !faite(t) && !bloq(t)).length;
