@@ -465,3 +465,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-28T11:55:00Z objectifs produits : identifiants magasin en chaines
 2026-09-28T19:44:01Z jours creux : carte, assistant, catalogue de mecaniques, promotions, dashboard
 2026-09-29T04:35:36Z scoring du trimestre : quatre postes, client mystere, rapport A4, envoi
+2026-09-29T04:37:57Z scoring : le poste budget lit ep_perf
