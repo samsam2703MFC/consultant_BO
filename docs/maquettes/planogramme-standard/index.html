@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Planogramme standard et rotations comptoir</title>
+<!-- Le planogramme standard (design du dossier de passation) dans le cockpit, et la page des rotations.
+       ?v=1  Le plan du comptoir : 25 sections × 3 étages, les produits du catalogue API glissés sur les emplacements
+       ?v=2  Rotations d'un magasin : section par section, jour par jour
+       ?v=3  Rotations magasin × section, et le détail d'une section
+     Produits : catalogue du cockpit (API, 563 produits). Ventes : panel, par produit et par jour, 15 → 28 septembre 2026.
+     Le remplissage du plan est une PROPOSITION (le plan en ligne ne contient que 4 placements de test).
+     Photos : vignettes de maquette — en production, la photo de recette du panel, recadrable en 1:1. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+  #ecran{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px}
+  .cap{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+  .mu{color:var(--color-text-muted)}
+  .num{font-variant-numeric:tabular-nums}
+  h1{margin:2px 0 0;font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;color:var(--color-primary)}
+  h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:19px}
+  h2 small{font-family:var(--font-ui);font-size:11.5px;color:var(--color-text-muted);margin-left:6px}
+  .ent{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .btn{border-radius:8px;padding:9px 15px;font:500 13px var(--font-ui);cursor:pointer;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)}
+  .btn.p{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+  .ongl{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px}
+  .ongl span{font-size:12.5px;font-weight:500;padding:7px 16px;border-radius:999px;color:var(--color-text-muted)}
+  .ongl span.on{background:var(--color-primary);color:#fff}
+  .leg{display:flex;flex-wrap:wrap;gap:16px;font-size:11.5px;align-items:center}
+  .leg i{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+  .hach{background:repeating-linear-gradient(135deg,transparent 0 5px,var(--color-border-tertiary) 5px 6px)}
+  /* --- le plan, vue de face (design de passation : colonne d'en-tête 92 px, sections 66 px, gap 2 px) --- */
+  .face{display:flex;flex-direction:column;gap:2px;width:max-content}
+  .face .row{display:flex;gap:2px}
+  .face .hd{width:92px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:2px}
+  .face .hd b{font-size:12px;font-weight:500}.face .hd span{font-size:10px;color:var(--color-text-muted)}
+  .band{flex:none;display:flex;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:6px 6px 0 0;font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden}
+  .band span{font-weight:400;opacity:.85}
+  .cell{width:66px;flex:none;border-radius:4px;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;position:relative}
+  .cell.m{border:1px solid var(--color-border-secondary);background:var(--color-surface)}
+  .cell.b{border:1px solid var(--color-collection-border);background:var(--color-surface)}
+  .cell.f{border:1.5px solid var(--color-primary);background:var(--color-background-secondary)}
+  .slot{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 3px 2px;min-height:0;position:relative}
+  .slot+.slot{border-top:1px dashed var(--color-text-muted)}
+  .ph{width:52px;height:52px;border-radius:3px;flex:none;display:flex;align-items:center;justify-content:center;font:600 15px var(--font-ui);color:#fff;letter-spacing:.02em;position:relative;overflow:hidden}
+  .ph::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.35),transparent 55%)}
+  .nm{font-size:8.6px;line-height:1.15;text-align:center;width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .qt{position:absolute;z-index:2;top:3px;right:3px;font:600 8.5px var(--font-ui);background:rgba(34,34,34,.78);color:#fff;border-radius:999px;padding:1px 5px}
+  .vide{flex:1;margin:4px;border:1.5px dashed var(--color-border-secondary);border-radius:4px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:8.5px;color:var(--color-text-muted);padding:2px}
+  .vide.cible{border-color:var(--color-primary);background:#F7E4E6;color:var(--color-primary);font-weight:600}
+  .caisse{background:var(--color-text);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font:500 11px var(--font-ui);letter-spacing:.08em;text-transform:uppercase}
+  .regle{width:66px;flex:none;text-align:center;font-size:10px;color:var(--color-text-muted);border-top:1px solid var(--color-border-secondary);padding-top:2px}
+  /* --- le sélecteur de produits --- */
+  .pick{width:292px;flex:none;display:flex;flex-direction:column;gap:9px;align-self:flex-start;position:sticky;top:10px}
+  .srch{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--color-text-muted);background:var(--color-background-secondary)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chips span{font-size:10.5px;padding:3px 9px;border-radius:999px;border:.5px solid var(--color-border-secondary);color:var(--color-text-muted)}
+  .chips span.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+  .pl{display:flex;align-items:center;gap:8px;padding:6px 4px;border-top:.5px solid var(--color-border-tertiary)}
+  .pl .ph{width:32px;height:32px;font-size:10px}
+  .pl .t{flex:1;min-width:0}.pl .t b{display:block;font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pl .t span{font-size:10px;color:var(--color-text-muted)}
+  .pl .a{font:600 10px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+  .pl.drag{background:#fff;box-shadow:0 6px 18px rgba(34,34,34,.18);border-radius:8px;border-top-color:transparent;transform:rotate(-1.5deg)}
+  .tog{display:flex;align-items:center;gap:7px;font-size:11.5px}
+  .tog i{width:26px;height:15px;border-radius:999px;background:var(--color-primary);position:relative;display:inline-block}
+  .tog i::after{content:"";position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+  /* --- rotations --- */
+  .tuiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .tuile{background:var(--color-background-secondary);border-radius:10px;padding:11px 13px}
+  .tuile .v{font-family:var(--font-display);font-size:26px;line-height:1.1;margin-top:3px}
+  .tuile .s{font-size:11px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
+  .seg{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:9px}
+  .seg span{font-size:12px;font-weight:500;padding:6px 13px;border-radius:7px;color:var(--color-text-muted)}
+  .seg span.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 3px rgba(34,34,34,.12)}
+  table.rt{border-collapse:separate;border-spacing:2px;font-size:11px;width:100%}
+  table.rt th{font:500 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);padding:3px 4px;text-align:center;white-space:nowrap}
+  table.rt th.l,table.rt td.l{text-align:left}
+  table.rt td{padding:5px 4px;text-align:center;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  table.rt td.h{font-weight:600}
+  table.rt tr.z td{padding:9px 4px 3px;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:left}
+  table.rt td.pr{max-width:250px;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;color:var(--color-text-muted);text-align:left}
+  table.rt td.sel{outline:2px solid var(--color-text);outline-offset:-1px}
+  .echelle{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);align-items:center}
+  .echelle i{display:inline-block;width:18px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+  .carteR{display:flex;flex-direction:column;gap:2px;width:max-content}
+  .carteR .row{display:flex;gap:2px}
+  .carteR .hd{width:92px;flex:none;font-size:10.5px;display:flex;align-items:center;color:var(--color-text-muted)}
+  .carteR .c{width:41px;height:30px;flex:none;border-radius:3px;display:flex;align-items:center;justify-content:center;font:600 10.5px var(--font-ui);font-variant-numeric:tabular-nums}
+  .carteR .band{padding:3px 6px;font-size:10px}
+  .formule{font-size:11.5px;color:var(--color-text-muted);line-height:1.55}
+  .formule b{color:var(--color-text);font-weight:600}
+  .det{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px}
+  .sl{display:grid;grid-template-columns:52px minmax(0,1fr) 64px 74px 70px 150px;gap:10px;align-items:center;padding:9px 0;border-top:.5px solid var(--color-border-tertiary)}
+  .sl .ph{width:52px;height:52px}
+  .sl b{font-size:12.5px;font-weight:500}.sl .k{font-size:10px;color:var(--color-text-muted)}
+  .sl .v{font-size:14px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+  .bars{display:flex;align-items:flex-end;gap:2px;height:34px}
+  .bars i{flex:1;border-radius:2px 2px 0 0;min-width:4px}
+  .ins{display:flex;flex-direction:column;gap:9px}
+  .ins div{background:var(--color-background-secondary);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.45}
+  .ins div b{font-weight:600}
+  .ins .r{border-left:3px solid #C0182B}.ins .o{border-left:3px solid #C17A2A}.ins .g{border-left:3px solid #2d7a3e}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script src="donnees.js"></script>
+<script>
+(function () {
+  const V = new URLSearchParams(location.search).get('v') || '1';
+  const P = window.PL, E = document.getElementById('ecran');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const f1 = v => v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
+  const f2 = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
+  const fI = v => Math.round(v).toLocaleString('fr-BE');
+  const JC = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'];
+  const jl = j => { const d = new Date(j + 'T12:00:00'); return JC[d.getDay()] + ' ' + d.getDate(); };
+  // Les zones, section par section (1 → 25), et la disponibilité des étages.
+  const SECS = []; P.zones.forEach((z, zi) => { for (let i = 0; i < z.n; i++) SECS.push(Object.assign({ zi }, z)); });
+  const avail = (lv, s) => lv === 'e1' || (s.type === 'sec' && s.mat !== 'bois');
+  const fill = z => z.type === 'frigo' ? 'var(--color-primary)' : z.mat === 'bois' ? 'var(--color-secondary)' : 'var(--color-surface)';
+  const ink = z => z.type === 'frigo' ? '#fff' : z.mat === 'bois' ? 'var(--color-on-abricot)' : 'var(--color-text)';
+  const GC = { 'Viennoiserie': '#D9A24B', 'Boulangerie': '#B98A52', 'Traiteur': '#6F9A6A', 'Pâtisserie': '#C9778F', 'Tartes': '#B8654F', 'Biscuiterie': '#9C7446', 'Épicerie': '#8676A8', 'Quiches': '#C9A93E' };
+  const ini = n => String(n).replace(/[^\wÀ-ÿ\s&-]/g, ' ').split(/[\s-]+/).filter(w => w.length > 1 && !/^(au|aux|de|du|la|le|les|et|à)$/i.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  // Un nom de catalogue trop court (« 1/4 », « 1/2 ») se lit avec sa famille.
+  Object.values(P.plan).forEach(L => Object.values(L).forEach(it => { if (it.nom.trim().length < 5) it.nom = it.nom.trim() + ' — ' + it.groupe; }));
+  const photo = (it, cls) => `<div class="ph ${cls || ''}" style="background:${GC[it.groupe] || '#999'}">${esc(ini(it.nom))}</div>`;
+  const LV = [{ k: 'e3', nom: 'Étage 3', sub: 'Top picking · 10 cm', h: 84 }, { k: 'e2', nom: 'Étage 2', sub: '20 cm', h: 84 }, { k: 'e1', nom: 'Étage 1', sub: '60 cm · arrière / avant', h: 166 }];
+  const ent = (onglet) => `
+    <div class="ent">
+      <div><div class="cap">Catalogue · Planogramme</div><h1>Comptoir standard</h1>
+        <div class="mu" style="font-size:12.5px;margin-top:3px">Le même plan pour tous les magasins · 25 sections × 30 cm = 7,50 m · Étage 1 : 60 cm (arrière / avant) · Étage 2 : 20 cm · Étage 3 top picking : 10 cm</div></div>
+      <div style="display:flex;gap:8px;align-items:center">${onglet === 'plan' ? `<span class="mu" style="font-size:12px">64 / 66 emplacements remplis · modifié le 29/09 par CEO</span><button class="btn p">Imprimer A4</button><button class="btn">Vider</button>` : `<span class="mu" style="font-size:12px">Plan en vigueur depuis le 15/09 · 64 emplacements</span><button class="btn">Exporter CSV</button><button class="btn p">Rapport PDF</button>`}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="ongl">${[['plan', 'Plan du comptoir'], ['tab', 'Tableau par section'], ['dessus', 'Vue de dessus'], ['rot', 'Rotations']].map(o => `<span class="${o[0] === onglet ? 'on' : ''}">${o[1]}</span>`).join('')}</div>
+      ${onglet === 'plan' ? `<div class="leg">${[['var(--color-secondary)', 'Sec · table bois', '5 sections'], ['var(--color-surface);border:1px solid var(--color-border-secondary)', 'Sec · mortex blanc', '10 sections'], ['var(--color-text)', 'Caisse', '2 sections'], ['var(--color-primary)', 'Frigo', '8 sections']].map(l => `<span><i style="background:${l[0]}"></i><b style="font-weight:500">${l[1]}</b> <span class="mu">${l[2]}</span></span>`).join('')}<span><i class="hach"></i><b style="font-weight:500">Pas d’étage 2–3</b></span></div>` : ''}
+    </div>`;
+
+  /* ================= ÉCRAN 1 : le plan, et les produits du catalogue ================= */
+  function partie(a, b, titre, cible) {
+    const bands = [];
+    for (let i = a; i < b; i++) { const s = SECS[i], l = bands[bands.length - 1]; if (l && l.zi === s.zi) l.n++; else bands.push(Object.assign({}, s, { n: 1 })); }
+    let h = `<div class="carte" style="padding:14px 14px 12px"><div class="cap" style="margin-bottom:7px">Sections ${a + 1} – ${b}</div><div class="face">`;
+    h += `<div class="row"><div class="hd"></div>${bands.map(z => `<div class="band" style="width:${z.n * 66 + (z.n - 1) * 2}px;background:${fill(z)};color:${ink(z)};border:1px solid ${z.mat === 'mortex' ? 'var(--color-border-secondary)' : 'transparent'}">${esc(z.nom)}<span>${z.n < 3 ? z.n * 30 + ' cm' : z.n + ' × 30 = ' + z.n * 30 + ' cm'}</span></div>`).join('')}</div>`;
+    LV.forEach(lv => {
+      h += `<div class="row"><div class="hd" style="height:${lv.h}px"><b>${lv.nom}</b><span>${lv.sub}</span></div>`;
+      for (let i = a; i < b; i++) {
+        const s = SECS[i], n = i + 1;
+        if (lv.k === 'e1' && i < 2) { if (i === 0) h += `<div class="caisse" style="width:134px;height:${lv.h}px">Caisse</div>`; continue; }
+        if (i < 2 || !avail(lv.k, s)) { h += `<div class="cell hach" style="height:${lv.h}px"></div>`; continue; }
+        const cls = s.type === 'frigo' ? 'f' : s.mat === 'bois' ? 'b' : 'm';
+        const slots = lv.k === 'e1' ? [['e1b', 'Arrière'], ['e1a', 'Avant']] : [[lv.k, 'Produit']];
+        h += `<div class="cell ${cls}" style="height:${lv.h}px">${slots.map(([k, ph]) => {
+          const it = (P.plan[n] || {})[k];
+          if (!it) { const c = cible && cible[0] === n && cible[1] === k; return `<div class="slot" style="padding:0"><div class="vide${c ? ' cible' : ''}">${c ? 'Déposer ici' : 'glisser un produit'}</div></div>`; }
+          return `<div class="slot"><span class="qt">×${it.q}</span>${photo(it)}<div class="nm">${esc(it.nom)}</div></div>`;
+        }).join('')}</div>`;
+      }
+      h += `</div>`;
+    });
+    h += `<div class="row" style="margin-top:2px"><div class="hd" style="font-size:10px;color:var(--color-text-muted)">Section</div>${Array.from({ length: b - a }, (_, j) => j === 0 && a === 0 ? `<div class="regle" style="width:134px">1 – 2</div>` : (j === 1 && a === 0 ? '' : `<div class="regle">${a + j + 1}</div>`)).join('')}</div>`;
+    return h + `</div></div>`;
+  }
+  function ecran1() {
+    const abs = P.absents.slice(0, 11);
+    const pick = `<div class="pick carte" style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="font-size:17px">Produits</h2><span class="mu" style="font-size:10.5px">${P.nCatalogue} au catalogue · API</span></div>
+      <div class="srch">🔍 Rechercher un produit, une référence…</div>
+      <div class="chips">${['Tous', 'Viennoiserie', 'Boulangerie', 'Traiteur', 'Pâtisserie', 'Tartes', 'Quiches', 'Biscuiterie', 'Épicerie'].map((g, i) => `<span class="${i === 0 ? 'on' : ''}">${g}</span>`).join('')}</div>
+      <div class="tog"><i></i> Pas encore au comptoir · classés par ventes</div>
+      <div>${abs.map((a, i) => `<div class="pl${i === 1 ? ' drag' : ''}">${photo(a)}<div class="t"><b>${esc(a.nom)}</b><span>${esc(a.groupe)} · ${fI(a.q)} vendus en 14 j</span></div><span class="a">${i === 1 ? '↗ glisser' : '+ placer'}</span></div>`).join('')}</div>
+      <div class="mu" style="font-size:10.5px;line-height:1.45;border-top:.5px solid var(--color-border-tertiary);padding-top:8px">Glisser un produit sur un emplacement, ou cliquer une case pour chercher. La photo vient de la recette du panel ; double-clic pour la recadrer (1:1). La quantité (×) se règle dans le tableau par section.</div>
+    </div>`;
+    return ent('plan') + `<div style="display:flex;gap:14px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px">${partie(0, 12, '', [8, 'e3'])}${partie(12, 25, '', null)}</div>${pick}</div>`;
+  }
+
+  /* ================= rotations : calculs ================= */
+  const secsPlan = Object.keys(P.plan).map(Number).sort((a, b) => a - b);
+  const capSec = s => Object.values(P.plan[s]).reduce((a, it) => a + it.q, 0);
+  const rotSecJour = (sid, s, j) => { const L = P.plan[s]; let v = 0; for (const k in L) v += ((P.rot[sid][s] || {})[k] || {})[j] || 0; return v / capSec(s); };
+  const rotSec = (sid, s) => { const J = P.ouverts[sid]; return J.reduce((a, j) => a + rotSecJour(sid, s, j), 0) / J.length; };
+  const rotSlot = (sid, s, k) => { const J = P.ouverts[sid], it = P.plan[s][k]; return J.reduce((a, j) => a + (((P.rot[sid][s] || {})[k] || {})[j] || 0), 0) / J.length / it.q; };
+  const venduSlot = (sid, s, k) => { const J = P.ouverts[sid]; return J.reduce((a, j) => a + (((P.rot[sid][s] || {})[k] || {})[j] || 0), 0) / J.length; };
+  const rotComptoir = sid => { const J = P.ouverts[sid]; let v = 0, c = 0; secsPlan.forEach(s => { c += capSec(s); J.forEach(j => { const L = P.plan[s]; for (const k in L) v += ((P.rot[sid][s] || {})[k] || {})[j] || 0; }); }); return v / J.length / c; };
+  // L'échelle : une section qui dort, qui tourne, qui se vide plusieurs fois.
+  const ECH = [[0.25, '#EFE3D6', '#6b4420', 'moins de 0,25 — dort'], [0.5, '#F2C9A0', '#6b4420', '0,25 – 0,5'], [1, '#E3A27F', '#222', '0,5 – 1'], [1.5, '#C8665C', '#fff', '1 – 1,5 — se vide une fois'], [2, '#A83A3E', '#fff', '1,5 – 2'], [99, '#6E1420', '#fff', '2 et plus — réassort en journée']];
+  const coul = v => { if (v == null) return ['var(--color-background-secondary)', 'var(--color-text-muted)']; const e = ECH.find(x => v < x[0]); return [e[1], e[2]]; };
+  const echelle = () => `<div class="echelle"><span style="font-weight:500;color:var(--color-text)">Rotations par jour</span>${ECH.map(e => `<span><i style="background:${e[1]}"></i>${e[3]}</span>`).join('')}</div>`;
+  const zoneDe = s => SECS[s - 1];
+  const nomsSec = s => ['e3', 'e2', 'e1b', 'e1a'].map(k => (P.plan[s] || {})[k]).filter(Boolean).map(it => it.nom.replace(/\s+/g, ' ')).join(' · ');
+  const SH = { 2: 'Corbais', 3: 'Gosselies', 4: 'Halle', 5: 'Sombreffe' };
+
+  /* ================= ÉCRAN 2 : un magasin, section × jour ================= */
+  function ecran2() {
+    const sid = '2', J = P.jours, jo = P.ouverts[sid];
+    const rs = secsPlan.map(s => ({ s, v: rotSec(sid, s) }));
+    const vite = rs.reduce((a, b) => b.v > a.v ? b : a), lent = rs.reduce((a, b) => b.v < a.v ? b : a);
+    let nLent = 0, nCap = 0; secsPlan.forEach(s => Object.keys(P.plan[s]).forEach(k => { nCap++; if (rotSlot(sid, s, k) < 0.25) nLent++; }));
+    const tu = [
+      ['Rotation du comptoir', f2(rotComptoir(sid)), 'par jour, en moyenne sur ' + jo.length + ' jours ouverts'],
+      ['La plus rapide', 'S' + vite.s + ' · ' + f1(vite.v), zoneDe(vite.s).nom + ' — ' + nomsSec(vite.s).split(' · ').slice(-1)[0]],
+      ['La plus lente', 'S' + lent.s + ' · ' + f2(lent.v), zoneDe(lent.s).nom + ' — ' + nomsSec(lent.s).split(' · ').slice(-2).join(', ')],
+      ['Emplacements qui dorment', nLent + ' / ' + nCap, 'moins de 0,25 rotation par jour : capacité à réduire ou produit à déplacer'],
+      ['Vendu hors comptoir', f1(P.hors[sid]).replace(',0', '') + ' %', 'des unités : boissons, formules, commandes — pas sur le plan'],
+    ];
+    let h = ent('rot');
+    h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;align-items:center"><div class="seg">${Object.entries(SH).map(([k, n]) => `<span class="${k === sid ? 'on' : ''}">${n}</span>`).join('')}<span>Réseau</span></div>
+      <div class="seg"><span>7 jours</span><span class="on">14 jours</span><span>30 jours</span></div></div>
+      <div class="mu" style="font-size:12px">${jl(J[0])} → ${jl(J[J.length - 1])} septembre · ventes du panel, produit par produit</div></div>`;
+    h += `<div class="tuiles">${tu.map(t => `<div class="tuile"><div class="cap">${t[0]}</div><div class="v num">${t[1]}</div><div class="s">${esc(t[2])}</div></div>`).join('')}</div>`;
+    // la carte : le comptoir vu de face, chaque emplacement coloré par sa rotation
+    const bands = []; for (let i = 0; i < 25; i++) { const s = SECS[i], l = bands[bands.length - 1]; if (l && l.zi === s.zi) l.n++; else bands.push(Object.assign({}, s, { n: 1 })); }
+    let c = `<div class="carteR"><div class="row"><div class="hd"></div>${bands.map(z => `<div class="band" style="width:${z.n * 41 + (z.n - 1) * 2}px;background:${fill(z)};color:${ink(z)};border:1px solid ${z.mat === 'mortex' ? 'var(--color-border-secondary)' : 'transparent'}">${esc(z.nom)}</div>`).join('')}</div>`;
+    [['e3', 'Étage 3'], ['e2', 'Étage 2'], ['e1b', 'Étage 1 arrière'], ['e1a', 'Étage 1 avant']].forEach(([k, nom]) => {
+      c += `<div class="row"><div class="hd">${nom}</div>`;
+      for (let i = 0; i < 25; i++) {
+        const s = SECS[i], n = i + 1;
+        if (i < 2) { c += k.startsWith('e1') ? `<div class="c" style="background:var(--color-text);color:#fff;font-size:8.5px">${k === 'e1b' ? 'CAISSE' : ''}</div>` : `<div class="c hach"></div>`; continue; }
+        if (!avail(k.slice(0, 2), s)) { c += `<div class="c hach"></div>`; continue; }
+        const it = (P.plan[n] || {})[k];
+        if (!it) { c += `<div class="c" style="border:1.5px dashed var(--color-border-secondary);font-size:8.5px;color:var(--color-text-muted)">vide</div>`; continue; }
+        const v = rotSlot(sid, n, k), [bg, fg] = coul(v);
+        c += `<div class="c" style="background:${bg};color:${fg}" title="${esc(it.nom)}">${f1(v)}</div>`;
+      }
+      c += `</div>`;
+    });
+    c += `<div class="row"><div class="hd">Section</div>${Array.from({ length: 25 }, (_, i) => `<div style="width:41px;text-align:center;font-size:9.5px;color:var(--color-text-muted)">${i + 1}</div>`).join('')}</div></div>`;
+    h += `<div class="carte"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h2>La carte des rotations <small>chaque emplacement, moyenne par jour ouvert — Corbais</small></h2></div>${c}<div style="margin-top:10px">${echelle()}</div></div>`;
+    // le tableau section × jour
+    let t = `<table class="rt"><tr><th class="l">Section</th><th class="l">Produits de la section</th><th>Qté</th>${J.map(j => `<th>${jl(j)}</th>`).join('')}<th>Moy.</th></tr>`;
+    let zc = -1;
+    secsPlan.forEach(s => {
+      const z = zoneDe(s);
+      if (z.zi !== zc) { zc = z.zi; t += `<tr class="z"><td colspan="${J.length + 4}"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:${fill(z)};border:1px solid var(--color-border-secondary)"></i>${esc(z.nom)}</td></tr>`; }
+      const m = rotSec(sid, s), [mb, mf] = coul(m);
+      t += `<tr><td class="l h">S${s}</td><td class="pr" title="${esc(nomsSec(s))}">${esc(nomsSec(s))}</td><td class="mu">${capSec(s)}</td>${J.map(j => { const v = jo.includes(j) ? rotSecJour(sid, s, j) : null; const [bg, fg] = coul(v); return `<td style="background:${bg};color:${fg}">${v == null ? 'fermé' : f1(v)}</td>`; }).join('')}<td class="h" style="background:${mb};color:${mf}">${f2(m)}</td></tr>`;
+    });
+    t += `</table>`;
+    h += `<div class="carte"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:12px;flex-wrap:wrap"><h2>Section par section, jour par jour <small>Corbais · rotation = unités vendues ÷ quantité que la section contient</small></h2>${echelle()}</div>${t}
+      <div class="formule" style="margin-top:10px"><b>Rotation d’une section, un jour</b> = somme des unités vendues ce jour-là des produits posés sur la section ÷ somme de leurs quantités au plan (Qté). <b>1</b> = la section s’est vidée une fois ; <b>2,5</b> = remplie deux fois et demie. Un produit posé sur deux emplacements partage ses ventes au prorata des quantités. Les jours fermés ne comptent pas. Les ventes sont celles du panel, produit par produit, déjà relevées chaque jour pour les statistiques.</div></div>`;
+    return h;
+  }
+
+  /* ================= ÉCRAN 3 : magasin × section, et le détail ================= */
+  function ecran3() {
+    const sel = { sid: '2', s: 3 };
+    let h = ent('rot');
+    h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;align-items:center"><div class="seg">${Object.values(SH).map(n => `<span>${n}</span>`).join('')}<span class="on">Réseau</span></div>
+      <div class="seg"><span>7 jours</span><span class="on">14 jours</span><span>30 jours</span></div></div>
+      <div class="mu" style="font-size:12px">${jl(P.jours[0])} → ${jl(P.jours[P.jours.length - 1])} septembre · moyenne par jour ouvert</div></div>`;
+    // la matrice magasins × sections, par zone
+    let t = `<table class="rt"><tr><th class="l" rowspan="2">Magasin</th>`;
+    let zc = -1; const zs = [];
+    secsPlan.forEach(s => { const z = zoneDe(s); if (z.zi !== zc) { zc = z.zi; zs.push({ z, n: 0 }); } zs[zs.length - 1].n++; });
+    t += zs.map(x => `<th colspan="${x.n}" style="background:${fill(x.z)};color:${ink(x.z)};border-radius:4px 4px 0 0;border:1px solid ${x.z.mat === 'mortex' ? 'var(--color-border-secondary)' : 'transparent'};text-transform:none;letter-spacing:0;font-size:10px">${esc(x.z.nom)}</th>`).join('') + `<th rowspan="2">Comptoir</th><th rowspan="2">Hors<br>comptoir</th></tr><tr>${secsPlan.map(s => `<th>S${s}</th>`).join('')}</tr>`;
+    Object.entries(SH).forEach(([sid, nom]) => {
+      const c = rotComptoir(sid), [cb, cf] = coul(c);
+      t += `<tr><td class="l h">${nom}</td>${secsPlan.map(s => { const v = rotSec(sid, s), [bg, fg] = coul(v); return `<td class="${sid === sel.sid && s === sel.s ? 'sel' : ''}" style="background:${bg};color:${fg}">${f1(v)}</td>`; }).join('')}<td class="h" style="background:${cb};color:${cf}">${f2(c)}</td><td class="mu">${f1(P.hors[sid]).replace(',0', '')} %</td></tr>`;
+    });
+    // le réseau : la moyenne des quatre magasins
+    const ids = Object.keys(SH);
+    t += `<tr><td class="l h">Réseau</td>${secsPlan.map(s => { const v = ids.reduce((a, k) => a + rotSec(k, s), 0) / ids.length, [bg, fg] = coul(v); return `<td style="background:${bg};color:${fg};font-weight:600">${f1(v)}</td>`; }).join('')}<td class="h">${f2(ids.reduce((a, k) => a + rotComptoir(k), 0) / ids.length)}</td><td></td></tr></table>`;
+    h += `<div class="carte"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:12px;flex-wrap:wrap"><h2>Magasin par magasin, section par section <small>cliquer une case pour son détail</small></h2>${echelle()}</div>${t}</div>`;
+    // le détail de la section choisie
+    const s = sel.s, sid = sel.sid, z = zoneDe(s), J = P.jours, jo = P.ouverts[sid];
+    const lignes = [['e3', 'Étage 3 · top picking'], ['e2', 'Étage 2'], ['e1b', 'Étage 1 · arrière'], ['e1a', 'Étage 1 · avant']].filter(([k]) => (P.plan[s] || {})[k]).map(([k, lib]) => {
+      const it = P.plan[s][k], r = rotSlot(sid, s, k), vd = venduSlot(sid, s, k), [bg, fg] = coul(r);
+      const vals = J.map(j => jo.includes(j) ? ((((P.rot[sid][s] || {})[k] || {})[j] || 0) / it.q) : null); const mx = Math.max(0.5, ...vals.filter(x => x != null));
+      return `<div class="sl">${photo(it)}<div><b>${esc(it.nom)}</b><div class="k">${lib} · ${esc(it.groupe)}</div></div>
+        <div><div class="k">Qté au plan</div><div class="v">${it.q}</div></div><div><div class="k">Vendus / jour</div><div class="v">${f1(vd)}</div></div>
+        <div><div class="k">Rotation</div><div class="v" style="color:${r >= 2 ? '#6E1420' : (r < 0.25 ? '#B26A00' : 'var(--color-text)')}">${f2(r)}</div></div>
+        <div class="bars" title="rotation jour par jour">${vals.map(x => x == null ? `<i style="height:2px;background:var(--color-border-secondary)"></i>` : `<i style="height:${Math.max(2, Math.round(34 * x / mx))}px;background:${coul(x)[0]}"></i>`).join('')}</div></div>`;
+    }).join('');
+    // Ce que la section dit : une phrase par emplacement notable, selon l'échelle.
+    const notes = Object.keys(P.plan[s]).map(k => ({ it: P.plan[s][k], r: rotSlot(sid, s, k), vd: venduSlot(sid, s, k), k }));
+    const phrase = n => n.r >= 2 ? `<div class="r"><b>${esc(n.it.nom)}</b> se vide ${f1(n.r)} fois par jour : ${fI(n.vd)} vendus pour ${n.it.q} au plan. Réassort avant midi, ou un deuxième emplacement.</div>`
+      : n.r < 0.25 ? `<div class="o"><b>${esc(n.it.nom)}</b> : ${n.vd < 0.05 ? 'aucune vente sur 14 jours' : f1(n.vd) + ' vendu par jour'} pour ${n.it.q} en rayon. Réduire la quantité, ou libérer la place pour un produit qui tourne.</div>`
+      : `<div class="g"><b>${esc(n.it.nom)}</b> tourne ${f1(n.r)} fois par jour : ${n.it.q} au plan tiennent la journée.</div>`;
+    const ins = `<div class="ins">
+      ${notes.sort((a, b) => b.r - a.r).map(phrase).join('')}
+      <div style="font-size:11px;color:var(--color-text-muted)">Les mêmes chiffres dans les autres magasins : ${Object.entries(SH).filter(([k]) => k !== sid).map(([k, n]) => n + ' ' + f2(rotSec(k, s))).join(' · ')}.</div></div>`;
+    h += `<div class="carte"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:12px;flex-wrap:wrap"><h2>Section ${s} · ${esc(z.nom)} <small>Corbais · ${f2(rotSec(sid, s))} rotation par jour · capacité ${capSec(s)} unités</small></h2><span class="mu" style="font-size:11px">${jl(J[0])} → ${jl(J[J.length - 1])} — une barre par jour</span></div>
+      <div class="det"><div>${lignes}</div><div><div class="cap" style="margin-bottom:8px">Ce que la section dit</div>${ins}</div></div></div>`;
+    return h;
+  }
+  E.innerHTML = V === '2' ? ecran2() : V === '3' ? ecran3() : ecran1();
+})();
+</script>
+</body>
+</html>

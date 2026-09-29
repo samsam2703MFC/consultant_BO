@@ -833,9 +833,16 @@
         m && m.coutMatierePct > 35 ? 'wa' : ''),
       murC('Main-d’œuvre', m && m.labourPct != null ? fP(m.labourPct) : '—', ca != null ? 'des ventes' : '')
     ]);
+    const X = splitDe(m);
+    if (X) {
+      h += murR([
+        murC('Comptoir', X.complet ? fK(m.caComptoir) : '—', X.complet ? X.sC : esc(X.manque)),
+        S.vue === 'jour' ? murPro() : murC('Clients pro', X.lu ? fK(m.caPro) : '—', X.lu ? X.sP : '', 'pro')
+      ]);
+    }
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
-    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); h += murR([murPro()], true); h += murR([murNote()], true); }
+    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
       murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
@@ -1019,13 +1026,35 @@
       <span class="db-cdr" style="padding:0;margin-left:auto">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>
       ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div>` : ''}</div>`;
   }
+  /** Le split comptoir / pro de la vue (jour, semaine, mois) : lu dans la réponse de Résultat, pas un appel de plus. */
+  function splitDe(m) {
+    if (!m || m.caPro === undefined) { return null; }
+    const per = S.vue !== 'jour', lu = m.caPro != null, complet = lu && m.caComptoir != null;
+    const partC = complet && m.partPro != null ? Math.round((100 - m.partPro) * 10) / 10 : null;
+    const cli = n => n == null ? '' : fN(n) + ' client' + (n > 1 ? 's' : '');
+    return { per, lu, complet, partC,
+      manque: !lu ? (per && m.proJours ? 'aucun des ' + m.proJours + ' jours ouverts n’est encore lu' : 'tickets pas encore lus chez le panel')
+        : (!complet ? 'pro lu sur ' + m.proJoursLus + ' jour' + (m.proJoursLus > 1 ? 's' : '') + ' sur ' + m.proJours + ' — le comptoir s’affiche quand tous les jours sont lus' : ''),
+      sC: [partC != null ? fP(partC) + ' du CA' : '', cli(m.ticketsComptoir), m.panierComptoir != null ? 'panier ' + fU(m.panierComptoir) : ''].filter(Boolean).join(' · '),
+      sP: [m.partPro != null ? fP(m.partPro) + ' du CA' : '', cli(m.ticketsPro), m.panierPro != null ? 'panier ' + fU(m.panierPro) : ''].filter(Boolean).join(' · ') };
+  }
+  function splitCarte(m) {
+    const X = splitDe(m);
+    if (!X) { return ''; }
+    const lib = 'Comptoir et clients pro — ' + (S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois'));
+    if (!X.lu) { return `<div class="db-card db-split"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span></div></div>`; }
+    const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i></div>` : '';
+    return `<div class="db-card db-split"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span></div>${bar}
+      <div class="db-split-g"><div class="c"><div class="k">Comptoir</div><div class="v">${m.caComptoir != null ? fK(m.caComptoir) : '—'}</div><div class="s">${X.sC}</div></div>
+      <div class="p"><div class="k">Clients pro B2B</div><div class="v">${fK(m.caPro)}</div><div class="s">${X.sP}</div></div></div></div>`;
+  }
   /** La tuile du mur mobile : le CA pro du jour et sa part, le tiroir en dessous. */
   function murPro() {
     const P = proData(), cle = clePro();
     if (!P) { return murC('Clients pro', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
     const J = P.jour, M = P.mois || {};
     if (!J) { return murC('Clients pro', '—', 'tickets du jour non lus' + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) + ' du CA' : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, '', 'prodrop'); }
-    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' ticket' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'ok' : '', 'prodrop');
+    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
   }
 
   /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
@@ -1233,6 +1262,7 @@
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
+    h += splitCarte(m);
     if (m.objectifJour) {
       // Objectif atteint : la ligne passe en or, badge trophée et pluie de
       // confettis (V1). Record de jour du magasin : bandeau plein or, feux
@@ -1453,6 +1483,7 @@
       ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
       ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
     </div>`;
+    h += splitCarte(m);
     // Le calendrier : une case par jour, colorée par l'atteinte de SON objectif.
     if (jours.length) {
       const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#2d7a3e', false] : a >= 100 ? ['#6aa84f', false] : a >= 90 ? ['#e8c9a0', true] : a >= 75 ? ['#F5B26B', true] : ['#F08A2C', false]; };
