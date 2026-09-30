@@ -788,3 +788,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-pro.mob .db-notej-t{display:block}.db-pro.mob .db-notej-t small{display:block;margin-top:3px}
 .db-pro.mob .db-pro-corps{grid-template-columns:1fr}.db-pro.mob .db-pro-corps>div{padding:8px 4px 6px}.db-pro.mob .db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}
 @media (max-width:900px){.db-pro-tab td.nom{max-width:0;width:100%}.db-pro-corps{grid-template-columns:1fr}.db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}.db-pro-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Comptoir et clients pro : un seul bloc, qui se déplie sur le détail pro. */
+.db-split.on{border-left:4px solid #1f5f8b}
+.db-split-det{border-top:.5px solid var(--color-border-tertiary);padding-top:4px}
+.db-split-det .db-pro-def{padding:10px 16px 0}
