@@ -1,0 +1,223 @@
+/* Maquettes « voir les contrôles qualité à distance » — styles candidats,
+ * par-dessus dashboard.css. Données réelles : Gosselies, jeudi 24/09/2026. */
+
+/* --- Commun : la photo, ses repères, la pastille d'état ------------------- */
+.cq-ph{position:relative;aspect-ratio:3/4;border-radius:9px;overflow:hidden;background:#2a2622;display:block}
+.cq-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.cq-ph .rp{position:absolute;border:2px solid #D97706;border-radius:3px;box-shadow:0 0 0 1px rgba(255,255,255,.55)}
+.cq-ph .rp u{position:absolute;left:-2px;top:-17px;background:#D97706;color:#fff;font:700 9.5px var(--font-ui);text-decoration:none;padding:1px 5px;border-radius:3px 3px 0 0;white-space:nowrap}
+.cq-ph .h{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.58);color:#fff;font:600 9.5px var(--font-ui);padding:2px 6px;border-radius:5px;font-variant-numeric:tabular-nums}
+.cq-ph.vide{background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);border:1px dashed #c9c2b8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--color-text-muted);font:600 10.5px var(--font-ui);text-align:center;padding:8px}
+.cq-ph.vide .i{font-size:20px;opacity:.55}
+.cq-ph.vide.ko{border-color:#e5b6bc;color:#C0182B;background:repeating-linear-gradient(135deg,#fdf4f5 0 8px,#f9e9eb 8px 16px)}
+.cq-bd{display:inline-flex;align-items:center;gap:4px;font:700 10px var(--font-ui);padding:2px 7px;border-radius:5px;color:#fff;white-space:nowrap;letter-spacing:.01em}
+.cq-ph .cq-bd{position:absolute;right:6px;top:6px}
+.cq-bd.ok{background:#2d7a3e}.cq-bd.nc{background:#D97706}.cq-bd.ctl{background:#2F5D8A}.cq-bd.ko{background:#C0182B}.cq-bd.mu{background:#8a8177}
+.cq-t-ok{color:#2d7a3e}.cq-t-nc{color:#B26A00}.cq-t-ctl{color:#2F5D8A}.cq-t-ko{color:#C0182B}.cq-t-mu{color:var(--color-text-muted)}
+.cq-f{display:inline-flex;gap:6px;flex-wrap:wrap}
+.cq-f span{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:3px 10px;font:600 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-surface);white-space:nowrap}
+.cq-f span b{margin-left:5px;font-weight:700;color:var(--color-text)}
+.cq-f span.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.cq-f span.on b{color:#fff}
+.cq-f span i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
+
+/* --- A · le carrousel ------------------------------------------------------ */
+.cq-car .ct{gap:12px}
+.cq-car .ct .db-mini{margin-left:auto}
+.cq-rail{position:relative;padding:14px 16px 6px}
+.cq-piste{display:flex;gap:12px;overflow:hidden}
+.cq-carte{flex:0 0 calc((100% - 60px) / 6);min-width:0}
+.cq-carte .n{font-weight:700;font-size:12px;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-carte .m{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-carte .c{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-carte.sel .cq-ph{outline:2.5px solid var(--color-primary);outline-offset:2px}
+.cq-fl{position:absolute;top:calc(14px + 118px);width:36px;height:36px;border-radius:50%;background:var(--color-surface);box-shadow:0 2px 10px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font:600 18px var(--font-ui);color:var(--color-text);z-index:2}
+.cq-fl.g{left:4px;opacity:.35}.cq-fl.d{right:4px}
+.cq-pts{display:flex;justify-content:center;align-items:center;gap:6px;padding:8px 0 12px;font-size:10.5px;color:var(--color-text-muted)}
+.cq-pts i{width:7px;height:7px;border-radius:50%;background:#d9d2c8}.cq-pts i.on{background:var(--color-primary);width:18px;border-radius:4px}
+
+/* A · la loupe (photo en grand) */
+.cq-loupe{position:fixed;inset:0;background:rgba(22,18,14,.94);z-index:50;display:flex;flex-direction:column;padding:18px 26px 16px;color:#fff}
+.cq-loupe .hd{display:flex;align-items:center;gap:14px;font:600 13px var(--font-ui)}
+.cq-loupe .hd .x{margin-left:auto;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:16px}
+.cq-loupe .hd small{font-weight:400;opacity:.7;margin-left:6px}
+.cq-loupe .mi{flex:1;display:grid;grid-template-columns:52px auto 380px 52px;gap:22px;align-items:center;justify-content:center;min-height:0;padding:14px 0}
+.cq-loupe .mi .cq-ph{height:min(68vh,640px);border-radius:12px}
+.cq-loupe .fl{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:22px}
+.cq-loupe .fi{background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:18px 20px;align-self:center}
+.cq-loupe .fi h3{font:400 21px var(--font-display);margin:6px 0 2px}
+.cq-loupe .fi .q{font-size:11.5px;color:var(--color-text-muted)}
+.cq-loupe .fi q{display:block;margin:12px 0;padding:10px 12px;border-left:3px solid #D97706;background:#fff7ec;font-size:13px;quotes:none;border-radius:0 8px 8px 0}
+.cq-dl{display:grid;grid-template-columns:92px 1fr;gap:7px 12px;margin:12px 0 0;font-size:12px}
+.cq-dl dt{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding-top:2px}
+.cq-dl dd{margin:0}
+.cq-hist{display:flex;gap:4px;align-items:flex-end;margin-top:4px}
+.cq-hist i{display:block;width:16px;border-radius:3px 3px 0 0;background:#2d7a3e}.cq-hist i.nc{background:#D97706}
+.cq-hist span{font-size:10px;color:var(--color-text-muted);margin-left:6px}
+.cq-loupe .ba{display:flex;gap:8px;justify-content:center;padding-top:4px}
+.cq-loupe .ba .cq-ph{width:44px;border-radius:6px;opacity:.55}
+.cq-loupe .ba .cq-ph.on{opacity:1;outline:2px solid #fff;outline-offset:2px}
+.cq-loupe .ba .cq-ph.vide{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.07)}
+
+/* A · au téléphone : une bande à faire glisser sous le chiffre d'affaires */
+.cq-mcar{border-top:.5px solid rgba(34,34,34,.14);padding:10px 0 12px}
+.cq-mcar .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.cq-mcar .k em{font-style:normal;color:#B26A00}
+.cq-mcar .s{font-size:10px;color:var(--color-text-muted);margin:1px 0 8px}
+.cq-mcar .piste{display:flex;gap:8px;overflow:hidden;margin-right:-14px}
+.cq-mcar .cq-carte{flex:0 0 112px}
+.cq-mcar .cq-carte .n{font-size:10.5px;margin-top:5px}
+.cq-mcar .cq-carte .m{font-size:9.5px}
+
+/* --- B · la deuxième page ------------------------------------------------- */
+.cq-bascule{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.cq-bascule .sw{display:inline-flex;background:var(--color-surface);border:.5px solid var(--color-border-secondary);border-radius:12px;padding:4px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.cq-bascule .sw span{padding:9px 22px;border-radius:9px;font:600 13px var(--font-ui);color:var(--color-text-muted);display:inline-flex;align-items:center;gap:8px}
+.cq-bascule .sw span.on{background:var(--color-primary);color:#fff}
+.cq-bascule .sw span em{font-style:normal;background:#D97706;color:#fff;border-radius:999px;padding:1px 7px;font-size:10.5px}
+.cq-bascule .db-mini{font-size:11.5px}
+.cq-p2{display:grid;grid-template-columns:minmax(0,1fr) 392px;gap:14px;align-items:start}
+.cq-grp .ct .db-mini{margin-left:auto}
+.cq-grille{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:12px 16px 14px}
+.cq-tuile .n{font-weight:700;font-size:11px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-tuile .m{font-size:10px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-tuile.sel .cq-ph{outline:2.5px solid var(--color-primary);outline-offset:2px}
+.cq-det{position:sticky;top:12px}
+.cq-det .in{padding:14px 16px}
+.cq-det h3{font:400 20px var(--font-display);margin:10px 0 2px}
+.cq-det q{display:block;margin:10px 0 2px;padding:9px 12px;border-left:3px solid #D97706;background:#fff7ec;font-size:12.5px;quotes:none;border-radius:0 8px 8px 0}
+.cq-det .nav{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:11px;color:var(--color-text-muted)}
+.cq-det .nav b{color:var(--color-primary);font-weight:600}
+
+/* B · au téléphone : un quatrième onglet */
+.mb-tabs.mb-tabs4{grid-template-columns:repeat(4,1fr)}
+.mb-tabs button{position:relative}
+.mb-tabs button sup{position:absolute;top:-2px;left:calc(50% + 6px);background:#D97706;color:#fff;border-radius:999px;font:700 9px var(--font-ui);padding:1px 5px}
+.cq-mp{padding-top:4px}
+.cq-mp .som{display:grid;grid-template-columns:repeat(3,1fr);border-top:.5px solid rgba(34,34,34,.14);border-bottom:.5px solid rgba(34,34,34,.14);margin-bottom:6px}
+.cq-mp .som>div{padding:8px 2px 7px}
+.cq-mp .som>div+div{border-left:.5px solid rgba(34,34,34,.14);padding-left:10px}
+.cq-mp .som .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.cq-mp .som .v{font-family:var(--font-display);font-size:23px;line-height:1.05}
+.cq-mp .som .s{font-size:9.5px;color:var(--color-text-muted)}
+.cq-mp .gt{display:flex;align-items:baseline;gap:6px;margin:10px 0 6px;font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)}
+.cq-mp .gt small{margin-left:auto;font:500 9.5px var(--font-ui);letter-spacing:0;text-transform:none;color:var(--color-text-muted)}
+.cq-mp .gr{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.cq-mp .gr .n{font-size:10px;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* --- C · le fil de la journée en photos ----------------------------------- */
+.cq-jr .in{padding:6px 16px 10px}
+.cq-e{display:grid;grid-template-columns:96px 22px minmax(0,1fr);gap:0 10px;position:relative}
+.cq-e .t{font:700 12px var(--font-ui);font-variant-numeric:tabular-nums;padding-top:12px;text-align:right}
+.cq-e .t small{display:block;font:500 10px var(--font-ui);color:var(--color-text-muted)}
+.cq-e .ax{position:relative}
+.cq-e .ax:before{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:#e3dcd2}
+.cq-e .ax i{position:absolute;left:4px;top:13px;width:14px;height:14px;border-radius:50%;background:#2d7a3e;box-shadow:0 0 0 3px var(--color-surface)}
+.cq-e .ax i.ctl{background:#2F5D8A}.cq-e .ax i.nc{background:#D97706}.cq-e .ax i.ko{background:#C0182B}.cq-e .ax i.mu{background:#a59d93}
+.cq-e .bd{padding:10px 0 12px;border-bottom:.5px dashed var(--color-border-tertiary)}
+.cq-e .bd .l{font-size:12.5px}
+.cq-e .bd .l b{font-weight:700}
+.cq-e .bd .q{font-size:11px;color:var(--color-text-muted);margin-top:1px}
+.cq-e .ph{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.cq-e .ph>div{width:86px}
+.cq-e .ph .n{font-size:10px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-e.creux .bd{color:var(--color-text-muted);font-style:italic;font-size:11.5px;padding:8px 0}
+.cq-e.creux .ax:before{background:repeating-linear-gradient(180deg,#e3dcd2 0 4px,transparent 4px 8px)}
+.cq-e.creux .ax i{display:none}
+.cq-e:last-child .bd{border-bottom:none}
+.cq-zoom{position:absolute;z-index:5;width:250px;background:var(--color-surface);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:8px}
+.cq-zoom .cq-ph{border-radius:8px}
+.cq-zoom .l{font-size:11.5px;font-weight:700;margin:6px 2px 0}
+.cq-zoom .q{font-size:10.5px;color:var(--color-text-muted);margin:0 2px 2px}
+.db-bt.fil.ouvert{outline:1.5px solid var(--color-primary)}
+
+/* C · au téléphone : le fil dans un tiroir qui monte */
+.cq-voile{position:fixed;inset:0;background:rgba(20,16,12,.45);z-index:40}
+.cq-sheet{position:fixed;left:0;right:0;bottom:0;top:118px;background:var(--color-surface);border-radius:18px 18px 0 0;z-index:41;padding:8px 14px 16px;overflow:hidden}
+.cq-sheet .poi{width:38px;height:4px;border-radius:2px;background:#d9d2c8;margin:0 auto 10px}
+.cq-sheet .hd{display:flex;align-items:baseline;gap:8px}
+.cq-sheet .hd .t{font:400 18px var(--font-display)}
+.cq-sheet .hd .x{margin-left:auto;font-size:16px;color:var(--color-text-muted)}
+.cq-sheet .s0{font-size:10.5px;color:var(--color-text-muted);margin:2px 0 6px}
+.cq-sheet .cq-e{grid-template-columns:40px 18px minmax(0,1fr);gap:0 7px}
+.cq-sheet .cq-e .t{font-size:11px;padding-top:10px}
+.cq-sheet .cq-e .ax:before{left:8px}
+.cq-sheet .cq-e .ax i{left:2px;top:11px}
+.cq-sheet .cq-e .bd{padding:8px 0 10px}
+.cq-sheet .cq-e .bd .l{font-size:11.5px}
+.cq-sheet .cq-e .ph>div{width:58px}
+.cq-sheet .cq-e .ph{gap:6px}
+
+/* --- D · « Pendant votre absence » ----------------------------------------- */
+.cq-abs{background:var(--color-surface);border-radius:14px;padding:11px 12px 10px;margin:4px 0 10px;box-shadow:0 1px 0 rgba(0,0,0,.04);border:.5px solid var(--color-border-tertiary)}
+.cq-abs .k{font:600 9px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary)}
+.cq-abs .s{font-size:10px;color:var(--color-text-muted);margin-top:1px}
+.cq-abs .cpt{display:flex;gap:14px;margin:7px 0 9px;font-size:11px}
+.cq-abs .cpt b{font:400 19px var(--font-display);margin-right:3px;vertical-align:-2px}
+.cq-bul{display:flex;gap:10px;overflow:hidden}
+.cq-bul>div{flex:0 0 62px;text-align:center}
+.cq-bul .o{width:58px;height:58px;border-radius:50%;padding:3px;background:conic-gradient(#2d7a3e 0 100%);margin:0 auto;position:relative}
+.cq-bul .o.nc{background:#D97706}.cq-bul .o.ctl{background:#2F5D8A}.cq-bul .o.ko{background:repeating-conic-gradient(#C0182B 0 12deg,transparent 12deg 24deg)}
+.cq-bul .o.vu{background:#d9d2c8}
+.cq-bul .o>span{display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid var(--color-surface);background:#f3eee7}
+.cq-bul .o img{width:100%;height:100%;object-fit:cover;display:block}
+.cq-bul .o .vid{display:flex;align-items:center;justify-content:center;height:100%;font-size:17px;color:#C0182B}
+.cq-bul .o em{position:absolute;right:-2px;bottom:-1px;font-style:normal;font:700 9px var(--font-ui);color:#fff;border-radius:999px;padding:1px 5px;border:1.5px solid var(--color-surface)}
+.cq-bul .o em.nc{background:#D97706}.cq-bul .o em.ok{background:#2d7a3e}.cq-bul .o em.ctl{background:#2F5D8A}.cq-bul .o em.ko{background:#C0182B}
+.cq-bul .l{font-size:9.5px;font-weight:600;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-bul .l.vu{color:var(--color-text-muted);font-weight:500}
+.cq-abs .pied{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:10.5px}
+.cq-abs .pied b{color:var(--color-primary);font-weight:600}
+
+/* D · la visionneuse plein écran, façon « stories » */
+.cq-story{position:fixed;inset:0;background:#0d0b09;z-index:60;color:#fff;font-family:var(--font-ui)}
+.cq-story .cq-ph{position:absolute;inset:0;border-radius:0;aspect-ratio:auto}
+.cq-story .cq-ph .rp{border-width:3px}
+.cq-story .cq-ph .rp u{font-size:11px;top:-20px;padding:2px 7px}
+.cq-story .bar{position:absolute;left:10px;right:10px;top:10px;display:flex;gap:3px;z-index:2}
+.cq-story .bar i{flex:1;height:2.5px;border-radius:2px;background:rgba(255,255,255,.35)}
+.cq-story .bar i.f{background:#fff}.cq-story .bar i.c{background:linear-gradient(90deg,#fff 55%,rgba(255,255,255,.35) 55%)}
+.cq-story .top{position:absolute;left:12px;right:12px;top:22px;display:flex;align-items:center;gap:9px;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.cq-story .top .av{width:32px;height:32px;border-radius:50%;background:var(--color-primary);display:flex;align-items:center;justify-content:center;font:700 12px var(--font-ui)}
+.cq-story .top b{display:block;font-size:13px}
+.cq-story .top small{font-size:10.5px;opacity:.85}
+.cq-story .top .x{margin-left:auto;font-size:20px}
+.cq-story .bas{position:absolute;left:0;right:0;bottom:0;padding:60px 16px 22px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.85) 38%);z-index:2}
+.cq-story .bas .cq-bd{font-size:11.5px;padding:3px 9px}
+.cq-story .bas .c{font-size:15px;font-weight:600;margin:9px 0 3px}
+.cq-story .bas .q{font-size:11.5px;opacity:.8}
+.cq-story .bas .act{display:flex;gap:8px;margin-top:14px}
+.cq-story .bas .act span{flex:1;text-align:center;border-radius:10px;padding:10px 0;font:600 12.5px var(--font-ui);background:rgba(255,255,255,.14)}
+.cq-story .bas .act span.p{background:#fff;color:var(--color-text)}
+
+/* D · au bureau : le résumé en bandeau, en tête de la journée */
+.cq-absb{display:grid;grid-template-columns:300px minmax(0,1fr) auto;gap:18px;align-items:center;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-left:4px solid var(--color-primary);border-radius:12px;padding:12px 16px;margin-bottom:12px}
+.cq-absb .k{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary)}
+.cq-absb .s{font-size:11px;color:var(--color-text-muted);margin-top:2px}
+.cq-absb .cpt{display:flex;gap:14px;margin-top:7px;font-size:11.5px;flex-wrap:wrap}
+.cq-absb .cpt b{font:400 20px var(--font-display);margin-right:3px;vertical-align:-2px}
+.cq-absb .cq-bul>div{flex:0 0 70px}
+.cq-absb .cq-bul .o{width:62px;height:62px}
+.cq-absb .go{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.cq-absb .go span{border-radius:9px;padding:9px 16px;font:600 12px var(--font-ui);text-align:center;white-space:nowrap}
+.cq-absb .go .p{background:var(--color-primary);color:#fff}
+.cq-absb .go .s2{border:.5px solid var(--color-border-secondary);color:var(--color-text-muted)}
+
+/* --- Planche de présentation ---------------------------------------------- */
+.pl{padding:28px 34px 34px;background:#EAE4DC;font-family:var(--font-ui)}
+.pl .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:rgba(255,255,255,.6);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.pl h1{font:400 30px var(--font-display);margin:0 0 4px}
+.pl .acc{font-size:14px;color:var(--color-text-muted);margin:0 0 18px;max-width:1300px;line-height:1.5}
+.pl .g{display:flex;gap:26px;align-items:flex-start}
+.pl .g img{display:block;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.pl .col{width:330px;flex:0 0 330px;font-size:13px;line-height:1.55}
+.pl .col h4{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary);margin:0 0 6px}
+.pl .col ul{margin:0 0 16px;padding-left:18px}.pl .col li{margin-bottom:5px}
+.pl .col .pl-p li::marker{content:"+  ";color:#2d7a3e;font-weight:700}
+.pl .col .pl-m li::marker{content:"−  ";color:#C0182B;font-weight:700}
+.pl .leg{font-size:11.5px;color:var(--color-text-muted);margin-top:8px;text-align:center}
+
+/* Au téléphone, le chiffre du jour sorti du mur garde sa hauteur. */
+.mb-sc>.mb-r{flex:0 0 auto}
+.mb-sc>.cq-mcar,.mb-sc>.cq-abs,.mb-sc>.cq-mp{flex:0 0 auto}
+.cq-duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cq-grille.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
