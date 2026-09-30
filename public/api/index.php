@@ -42,6 +42,7 @@ require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/assortiment.php';
+require __DIR__ . '/../../src/plano_proposition.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -229,6 +230,7 @@ function route(string $method, string $path): mixed
             $path === '/planogramme/photos'            => ep_plano_std_photos(),
             $path === '/planogramme/standard/photos'   => ep_plano_std_photos(),
             $path === '/planogramme/standard/ventes'   => ep_plano_std_ventes(),
+            $path === '/planogramme/standard/proposition'   => ep_plano_std_proposition(),
             $path === '/planogramme/rotations'         => ep_plano_std_rotations(),
             $path === '/planogramme/montage'           => ep_plano_std_montage(),
             $path === '/planogramme/standard/montage'  => ep_plano_std_montage(),
@@ -471,6 +473,8 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/production/obligatoire/([\w-]+)$#', $path, $m)) { return wr_prod_obligatoire($m[1]); }
     // --- planogramme standard : un plan pour le réseau, un produit par emplacement, l'histoire gardée
     if ($method === 'PUT' && $path === '/planogramme/standard/emplacement') { return wr_plano_std_emplacement(); }
+    // La proposition d'après les ventes moyennes, appliquée aux emplacements choisis.
+    if ($method === 'POST' && $path === '/planogramme/standard/proposition') { return wr_plano_std_proposition(); }
     if ($method === 'POST' && $path === '/planogramme/standard/photo') { return wr_plano_std_photo(); }
     if ($method === 'PUT' && $path === '/planogramme/standard/zone') { return wr_plano_std_zone(); }
     if ($method === 'POST' && $path === '/planogramme/standard/vider') { return wr_plano_std_vider(); }

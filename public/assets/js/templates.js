@@ -10155,6 +10155,8 @@ function tplPlanoStd(c, x){
     h += `<div class="ps-intro mu">Produit et quantité par emplacement — la quantité est ce que l’emplacement contient plein ; c’est elle qui fait les rotations.</div>${tplPsTableau(c, x, false)}`;
   } else if (c.psVue === 'dessus') {
     h += `<div class="ps-intro mu">Longueur 7,50 m · profondeurs à l’échelle · étage 1 en carrés de 30 × 30 cm.</div>${tplPsDessus(c, x)}`;
+  } else if (c.psVue === 'proposition') {
+    h += tplPsProp(c, x);
   } else {
     h += tplPsRot(c, x);
   }
@@ -10244,5 +10246,31 @@ function tplAssortiment(c, x){
   }
   h += `</div>`;
   if (c.refEdit) { h += tplRefEdit(c, x); }
+  return h;
+}
+
+/* La proposition du plan d'après les ventes moyennes, moment par moment. */
+function tplPsProp(c, x){
+  const { esc } = x;
+  const P = c.pp;
+  const seg = l => `<div class="ps-seg">${l.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  let h = `<div class="ps-rbar"><span class="ps-cap">Ventes</span>${seg(P.fenetres)}<span class="ps-cap">Rotation visée par moment</span>${seg(P.rotations)}${seg(P.filtres)}<span class="mu" style="margin-left:auto;font-size:12px">${esc(P.periodeTxt || '')}</span></div>`;
+  if (P.chargement) { return h + '<div class="ps-carte mu">Calcul des ventes moyennes, moment par moment…</div>'; }
+  if (P.erreur) { return h + `<div class="ps-carte mu">${esc(P.erreur)}</div>`; }
+  h += `<div class="ps-intro mu">${esc(P.regle)}</div>`;
+  P.notes.forEach(n => { h += `<div class="ps-note">${esc(n)}</div>`; });
+  h += `<div class="ps-tuiles">${P.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t[0])}</div><div class="v">${esc(t[1])}</div><div class="s">${esc(t[2])}</div></div>`).join('')}</div>`;
+  const occ = (l, vide) => l.length ? l.map(o => `<div class="pp-o"><b>${esc(o.nom)}</b> <span class="pp-q">${esc(o.q)}</span>${o.tags.length ? ` <span class="ps-tags">${o.tags.map(t => `<i class="${t.on ? 'on' : ''}" title="${esc(t.titre)}">${esc(t.t)}</i>`).join('')}</span>` : ''}${o.badges.map(b => ` <span class="pp-b">${esc(b)}</span>`).join('')}${o.ventes ? `<div class="mu" style="font-size:10.5px">vendus / magasin / jour : ${esc(o.ventes)}</div>` : ''}</div>`).join('') : `<span class="mu">${vide}</span>`;
+  h += `<div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:6px 8px 10px">
+    <div class="ao-barre" style="padding:6px 8px"><span class="mu" style="font-size:12px">${P.nCoches} emplacement(s) coché(s)</span><span style="display:flex;gap:6px"><button class="ps-btn" ${x.A(P.toutCocher)}>Tout cocher</button><button class="ps-btn" ${x.A(P.toutDecocher)}>Tout décocher</button>
+      <button class="ps-btn p" ${x.A(P.appliquer)} ${P.applique || !P.nCoches ? 'disabled' : ''}>${P.applique ? 'Application…' : 'Appliquer les ' + P.nCoches + ' emplacement(s)'}</button></span></div>
+    <table class="ao-t"><thead><tr><th style="width:26px"></th><th>Emplacement</th><th>Aujourd’hui</th><th>Proposé</th><th>État</th></tr></thead><tbody>
+    ${P.lignes.length ? P.lignes.map(l => l.zone ? `<tr class="sec"><td colspan="5">${esc(l.zone)}</td></tr>` : `<tr>
+      <td>${l.dis ? '<span class="ao-cb dis"></span>' : `<button class="ao-cb${l.on ? ' on' : ''}" ${x.A(l.basculer)} title="Appliquer cet emplacement">${l.on ? '✓' : ''}</button>`}</td>
+      <td class="nom"><b>${esc(l.titre)}</b><span>${esc(l.famille)}</span></td>
+      <td>${occ(l.actuel, 'libre')}</td><td>${occ(l.propose, 'libéré — aucune vente dans sa famille')}</td>
+      <td><span class="ao-pill ${l.etat[0]}">${esc(l.etat[1])}</span></td></tr>`).join('') : '<tr><td colspan="5" class="mu">Rien à changer : le plan suit déjà les ventes.</td></tr>'}
+    </tbody></table></div>
+    <div class="ps-pick ps-carte ao-pick">${P.listes.map(L => `<div><h3 class="ao-h2" style="font-size:16px">${esc(L.titre)} <small>${L.n}</small></h3>${L.l.length ? L.l.slice(0, 12).map(i => `<div class="pp-li"><b>${esc(i.nom)}</b><span>${esc(i.sous)}</span></div>`).join('') : '<div class="mu" style="font-size:11.5px">aucun</div>'}</div>`).join('')}</div></div>`;
   return h;
 }

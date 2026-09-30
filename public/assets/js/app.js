@@ -10179,7 +10179,7 @@ class App {
     common.psErreur = !!(ps && ps.erreur);
     const vue = S.psVue || 'plan';
     common.psVue = vue;
-    common.psOnglets = [['plan', 'Plan du comptoir'], ['tableau', 'Tableau par section'], ['dessus', 'Vue de dessus'], ['rotations', 'Rotations']]
+    common.psOnglets = [['plan', 'Plan du comptoir'], ['tableau', 'Tableau par section'], ['dessus', 'Vue de dessus'], ['rotations', 'Rotations'], ['proposition', 'Proposition d’après les ventes']]
       .map(o => ({ nom: o[1], on: vue === o[0], go: () => this.setState({ psVue: o[0], psSel: null }) }));
     if (!ps || ps.erreur) { return; }
     const esc0 = v => v == null ? '' : String(v);
@@ -10356,6 +10356,88 @@ class App {
 
     // --- les rotations
     if (vue === 'rotations') { this.valsPsRotations(common, { E, zoneDe, vignette, fill, ink, nf1, nf2, esc0, L }); }
+    if (vue === 'proposition') { this.valsPsProp(common); }
+  }
+  /* --- La proposition d'après les ventes moyennes, moment par moment ------------------------ */
+  ppCle(){ return (this.state.ppJ || 28) + '|' + (this.state.ppR || 1.5); }
+  ppCharge(){
+    const k = this.ppCle(); this.D.pp = this.D.pp || {};
+    if (this.D.pp[k] || (this._ppEnCours || {})[k]) { return; }
+    this._ppEnCours = Object.assign({}, this._ppEnCours, { [k]: true });
+    const [j, r] = k.split('|');
+    readOne('/planogramme/standard/proposition?jours=' + j + '&rotation=' + r).then(d => {
+      this._ppEnCours[k] = false;
+      this.D.pp[k] = d && Array.isArray(d.emplacements) ? d : { erreur: (d && (d.erreur || d.error)) || 'La proposition ne répond pas.' };
+      this.setState({});
+    });
+  }
+  ppAppliquer(cles){
+    if (!cles.length) { this.notify('Aucun emplacement coché'); return; }
+    if (!window.confirm('Poser ' + cles.length + ' emplacement(s) sur le plan standard — le même pour tous les magasins ?\nL’ancien plan reste dans l’historique (il reste lisible à la date d’hier).')) { return; }
+    const [j, r] = this.ppCle().split('|');
+    this.setState({ ppApplique: true });
+    this.api('POST', '/planogramme/standard/proposition', { jours: +j, rotation: +r, cles }).then(res => {
+      this.setState({ ppApplique: false });
+      if (!res || !res.ok || !Array.isArray(res.emplacements)) { return; }
+      this.D.ps = res; this.D.psRot = {}; this.D.pp = {}; this.psMajCatalogue();
+      this.setState({ ppNon: {} });
+      this.notify((res.appliques || 0) + ' emplacement(s) posé(s) d’après les ventes');
+    });
+  }
+  valsPsProp(common){
+    const S = this.state;
+    this.ppCharge();
+    const d = (this.D.pp || {})[this.ppCle()];
+    const nf1 = v => (Math.round(v * 10) / 10).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const J = S.ppJ || 28, R = S.ppR || 1.5, filtre = S.ppFiltre || 'changes';
+    const P = { chargement: !d, erreur: d && d.erreur ? d.erreur : null,
+      fenetres: [14, 28, 56].map(n => ({ nom: n + ' j', on: J === n, go: () => this.setState({ ppJ: n, ppNon: {} }) })),
+      rotations: [1, 1.5, 2, 3].map(n => ({ nom: String(n).replace('.', ','), on: R === n, go: () => this.setState({ ppR: n, ppNon: {} }) })),
+      filtres: [['changes', 'À changer'], ['tous', 'Tout le comptoir']].map(([k, n]) => ({ nom: n, on: filtre === k, go: () => this.setState({ ppFiltre: k }) })),
+      applique: !!S.ppApplique };
+    common.pp = P;
+    if (!d || d.erreur) { return; }
+    const PER = d.periodes || [];
+    const noms = { e3: 'Étage 3', e2: 'Étage 2', e1b: 'Étage 1 · arrière', e1a: 'Étage 1 · avant' };
+    const zones = {}; (((this.D.ps || {}).layout || {}).zones || []).forEach(z => { zones[z.id] = z.nom; });
+    const tags = per => per.length >= PER.length ? [] : PER.map(p => ({ t: p.court, on: per.indexOf(p.k) >= 0, titre: p.nom }));
+    const non = S.ppNon || {};
+    const coche = e => e.statut !== 'identique' && !non[e.cle];
+    const lignes = d.emplacements.filter(e => filtre === 'tous' || e.statut !== 'identique');
+    const cochees = d.emplacements.filter(coche).map(e => e.cle);
+    const R0 = d.resume;
+    P.periodeTxt = 'ventes du ' + this.fD(d.du) + ' au ' + this.fD(d.au) + ' · ' + d.joursLus + ' journées-magasins lues';
+    P.regle = d.regle;
+    P.notes = [];
+    if (d.joursSansB2b || d.joursNonLus) { P.notes.push((d.joursSansB2b + d.joursNonLus) + ' journée(s)-magasin hors calcul (relevé absent ou part pro pas encore lue).'); }
+    if (R0.faibles) { P.notes.push(R0.faibles + ' emplacement(s) ne trouvent dans leur famille que des produits à vente faible (moins de 0,2 par magasin et par moment) : à revoir à la main, ou à donner à une autre famille.'); }
+    P.tuiles = [
+      ['Produits à changer', String(R0.changes), 'emplacements sur ' + R0.emplacements],
+      ['Quantités à ajuster', String(R0.quantites), 'même produit, autre quantité'],
+      ['Inchangés', String(R0.identiques), 'déjà conformes aux ventes'],
+      ['Unités au comptoir', R0.unitesActuel + ' → ' + R0.unitesPropose, 'plein, en moyenne sur la journée'],
+      ['Obligatoires au comptoir', d.obligatoires.placees + ' / ' + d.obligatoires.exigees, d.obligatoires.dehors.length ? d.obligatoires.dehors.length + ' restent hors du plan (voir à droite)' : 'toutes ont une place']];
+    const occ = (o, avecVentes) => ({ nom: o.nom || o.ref, q: o.qte == null ? 'Qté ?' : '×' + String(o.qte).replace('.', ','), tags: tags(o.periodes || []),
+      ventes: avecVentes && o.vendus ? PER.map(p => p.court + ' ' + nf1(o.vendus[p.k] || 0)).join(' · ') : '',
+      badges: [o.plafonne ? 'plafond' : '', o.faible ? 'vente faible' : '', o.obligatoire ? 'obligatoire' : ''].filter(Boolean) });
+    const ETAT = { change: ['ko', 'produit changé'], libre: ['ko', 'libéré'], quantite: ['wa', 'quantité'], identique: ['an', 'identique'] };
+    let zPrec = null;
+    P.lignes = [];
+    lignes.forEach(e => {
+      if (e.zone !== zPrec) { P.lignes.push({ zone: zones[e.zone] || e.zone }); zPrec = e.zone; }
+      const on = coche(e);
+      P.lignes.push({ cle: e.cle, titre: 'S' + e.section + ' · ' + noms[e.niveau], famille: e.famille, on, dis: e.statut === 'identique',
+        basculer: () => this.setState({ ppNon: Object.assign({}, S.ppNon || {}, { [e.cle]: on }) }),
+        actuel: e.actuel.map(o => occ(o, false)), propose: e.propose.map(o => occ(o, true)), etat: ETAT[e.statut] || ['an', e.statut] });
+    });
+    P.nCoches = cochees.length;
+    P.toutCocher = () => this.setState({ ppNon: {} });
+    P.toutDecocher = () => { const n2 = {}; d.emplacements.forEach(e => { n2[e.cle] = true; }); this.setState({ ppNon: n2 }); };
+    P.appliquer = () => this.ppAppliquer(cochees);
+    const liste = l => l.map(x => ({ nom: x.nom, sous: [x.groupe, x.vendus != null ? nf1(x.vendus) + ' / jour' : '', x.raison || ''].filter(Boolean).join(' · ') }));
+    P.listes = [['Entrent au comptoir', liste(d.entrants)], ['Sortent du comptoir', liste(d.sortants)],
+      ['Obligatoires hors du plan', liste(d.obligatoires.dehors)], ['Meilleures ventes sans place', liste(d.absents.slice(0, 10))]]
+      .map(([t, l]) => ({ titre: t, n: l.length, l }));
   }
 
   valsPsRotations(common, u){
