@@ -1006,13 +1006,21 @@
       return mobile ? '<div class="db-mini">lecture des tickets pro…</div>' : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">lecture des tickets…</span></div></div>`;
     }
     const J = P.jour, M = P.mois || {};
+    const detail = mobile === 'detail';
     const rienJour = !J || !J.ticketsPro, rienMois = !(M.ticketsPro > 0);
     const sous = `tickets portés par un client dont la fiche est professionnelle · ${M.jours ? '30 jours : ' + (M.part != null ? fP(M.part) + ' du CA, ' : '') + fE(M.caPro) + ' sur ' + fN(M.ticketsPro) + ' tickets' : 'aucun jour lu sur 30 jours'}${M.manquants ? ' · ' + M.manquants + ' jour' + (M.manquants > 1 ? 's' : '') + ' non lu' + (M.manquants > 1 ? 's' : '') : ''}`;
     if (rienJour && rienMois) {
-      const t = `<div class="db-mini" style="padding:${mobile ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} ni sur les 30 derniers jours lus.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
+      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} ni sur les 30 derniers jours lus.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
+      if (detail) { return t; }
       return mobile ? `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${t}</div>` : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${t}</div>`;
     }
-    const kpi = J ? `<div class="db-obj-t4 db-pro-kpi">
+    // Dans le bloc fusionné, le CA pro et le comptoir sont déjà en tête : le détail ne les répète pas.
+    const kpi = detail ? (J ? `<div class="db-obj-t4 db-pro-kpi">
+        <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
+        <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${M.panierPro != null ? '30 jours : ' + fU(M.panierPro) : ''}</div></div>
+        <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
+        <div><div class="k">30 jours</div><div class="v">${M.part != null ? fP(M.part) : '—'}</div><div class="s">${M.jours ? fE(M.caPro) + ' de CA pro sur ' + fN(M.ticketsPro) + ' tickets' : 'aucun jour lu'}</div></div>
+      </div>` : `<div class="db-mini" style="padding:10px 16px 0">Les tickets de ce jour ne sont pas lus.</div>`) : J ? `<div class="db-obj-t4 db-pro-kpi">
         <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
         <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">sur ${fN(J.tickets)} · ${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
         <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'contre ' + fU(J.panierComptoir) + ' au comptoir' : ''}</div></div>
@@ -1025,6 +1033,8 @@
     const droite = `<div><span class="db-lab">Les comptes — 30 jours</span>
       ${comptes.length ? `<table class="db-pro-tab"><thead><tr><th>Société</th><th class="n">Tickets</th><th class="n">CA</th><th class="n">Dernier</th></tr></thead><tbody>${comptes.slice(0, mobile ? 6 : 9).map(c => { const vieux = (new Date(S.date + 'T12:00:00') - new Date(c.dernier + 'T12:00:00')) / 86400000 > 21; return `<tr><td class="nom">${esc(c.societe)}</td><td class="n">${fN(c.n)}</td><td class="n">${fE(c.ca)}</td><td class="n ${vieux ? 'att' : 'mu'}">${fD(c.dernier)}</td></tr>`; }).join('')}</tbody></table>` : '<div class="db-mini" style="margin-top:6px">Aucun compte pro sur 30 jours.</div>'}
       ${proSerie(P.serie) ? `<div style="margin-top:12px"><span class="db-lab">La part pro, jour par jour</span>${proSerie(P.serie)}<div class="db-mini" style="margin-top:4px">${M.part != null ? fP(M.part) + ' du CA sur ' + M.jours + ' jours lus' : ''}${M.panierPro != null ? ' · panier pro ' + fU(M.panierPro) : ''} · en orange, un compte sans commande depuis trois semaines</div></div>` : ''}</div>`;
+    // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
+    if (detail) { return `${M.manquants ? `<div class="db-mini db-pro-def">${M.manquants} jour${M.manquants > 1 ? 's' : ''} non lu${M.manquants > 1 ? 's' : ''} sur les 30 derniers</div>` : ''}${kpi}<div class="db-pro-corps">${gauche}${droite}</div>`; }
     if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div></div>`; }
     // Sur ordinateur, la carte se replie : l'en-tête garde le jour en une
     // ligne (CA pro, sa part, clients, à facturer) et le mois ; le clic
@@ -1050,15 +1060,30 @@
       sC: [partC != null ? fP(partC) + ' du CA' : '', cli(m.ticketsComptoir), m.panierComptoir != null ? 'panier ' + fU(m.panierComptoir) : ''].filter(Boolean).join(' · '),
       sP: [m.partPro != null ? fP(m.partPro) + ' du CA' : '', cli(m.ticketsPro), m.panierPro != null ? 'panier ' + fU(m.panierPro) : ''].filter(Boolean).join(' · ') };
   }
+  /**
+   * Comptoir et clients pro, en un seul bloc. Les chiffres de tête viennent de Résultat (le même
+   * calcul que le cockpit) ; en vue Jour, le bloc porte aussi « à facturer » et la part pro sur
+   * 30 jours, et se déplie sur le détail des tickets et des comptes pro — l'ancienne carte
+   * « Clients pro — B2B » répétait les mêmes chiffres, lus à un autre moment.
+   */
   function splitCarte(m) {
     const X = splitDe(m);
-    if (!X) { return ''; }
-    const lib = 'Comptoir et clients pro — ' + (S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois'));
-    if (!X.lu) { return `<div class="db-card db-split"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span></div></div>`; }
+    const jour = S.vue === 'jour';
+    if (!X) { return jour ? proCarte(false) : ''; }
+    const lib = 'Comptoir et clients pro — ' + (jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois'));
+    const P = jour ? proData() : null, J = P ? P.jour : null, M = P ? (P.mois || {}) : {};
+    const ouvert = jour && !!S.proOuvert;
+    // Le déclencheur est sur l'en-tête seul : le même attribut sur le lien ferait basculer deux fois.
+    const bascule = jour ? `<span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'détail des clients pro ▾'}</span>` : '';
+    const ct = jour ? ' data-prodrop="1" style="cursor:pointer"' : '';
+    const deplie = ouvert ? `<div class="db-split-det">${proCarte('detail')}</div>` : '';
+    const pro = !!(J && J.ticketsPro) || (m.ticketsPro > 0);
+    if (!X.lu) { return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span>${bascule}</div>${deplie}</div>`; }
     const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i></div>` : '';
-    return `<div class="db-card db-split"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span></div>${bar}
+    const plusP = jour && P ? [J && J.aFacturer ? 'à facturer ' + fE(J.aFacturer) : '', M.jours && M.part != null ? '30 jours : ' + fP(M.part) + ' du CA' : ''].filter(Boolean).join(' · ') : '';
+    return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
       <div class="db-split-g"><div class="c"><div class="k">Comptoir</div><div class="v">${m.caComptoir != null ? fK(m.caComptoir) : '—'}</div><div class="s">${X.sC}</div></div>
-      <div class="p"><div class="k">Clients pro B2B</div><div class="v">${fK(m.caPro)}</div><div class="s">${X.sP}</div></div></div></div>`;
+      <div class="p"><div class="k">Clients pro B2B</div><div class="v">${fK(m.caPro)}</div><div class="s">${X.sP}${plusP ? '<br>' + esc(plusP) : ''}</div></div></div>${deplie}</div>`;
   }
   /** La tuile du mur mobile : le CA pro du jour et sa part, le tiroir en dessous. */
   function murPro() {
@@ -1298,7 +1323,6 @@
     }
     h += objectifsCarte(false);
     h += promosCarte(false);
-    h += proCarte(false);
     h += noteCarte(false);
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
     // Catégories et planning côte à côte.
