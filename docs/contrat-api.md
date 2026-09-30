@@ -761,6 +761,39 @@ Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le l
 **Contrôle des tâches**, l'écran qui porte la responsabilité de l'avis. Une contresignature
 déjà posée s'affiche ici — c'est un fait à connaître, pas une commande à actionner.
 
+### `GET /pwa/tasks/photos` — les photos d'une journée, en une lecture
+
+    ?shop=3&date=2026-09-24
+
+Ce que lit le carrousel **« Les contrôles en photo »** du dashboard magasin (vue Jour, bureau et
+téléphone) : le franchisé qui n'est pas au magasin voit ce que l'équipe a montré et ce que le
+consultant en a dit. `/pwa/tasks/detail` rend UNE tâche ; lu tâche par tâche, un comptoir de
+seize contrôles coûtait seize fois la même chaîne d'appels. Ici chaque niveau part une fois, de
+front : checklists et tâches du jour, avancement de chaque checklist (il porte `attachment_id`),
+puis les URL signées.
+
+```json
+{ "shopId": "3", "date": "2026-09-24", "validite": 1200,
+  "photos": [{ "taskId": "1210", "photo": "https://…r2.cloudflarestorage.com/…?X-Amz-Expires=1200…",
+               "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+               "reperes": [{ "n": 1, "x": 0.3274, "y": 0.2511, "l": 0.4067, "h": 0.5433, "niveau": 3, "txt": "Assortiment" }],
+               "avis": { "note": 3, "accepte": false, "comment": "1. [mineur] Assortiment",
+                         "consultant": "Sam Verheyden", "le": "2026-09-24 13:55" } }],
+  "checklists": { "1212": "CQ-02 — Contrôle qualité d'ouverture." },
+  "api": { "configure": true, "erreur": null } }
+```
+
+- **`photos`** : seulement les tâches qui ont une photo. Le reste de la journée (non rendues,
+  clôturées sans photo, heures, personnes, maîtrise) vient de `/pwa/tasks?date=`, que la vue Jour
+  lit déjà — la page croise les deux par `taskId`.
+- **`validite`** : les URL signées expirent (secondes). La page relit la route au-delà de
+  quinze minutes, et dès qu'une image refuse de se charger.
+- **`avis`** et **`reperes`** sont locaux (`mac_task_review`, `ceo_task_annotation`) : ils ne
+  dépendent pas du panel.
+- **`checklists`** : le nom de la checklist de chaque tâche du jour, photo ou non — `/pwa/tasks`
+  ne le porte pas pour une tâche déjà notée.
+- Lecture seule. Noter, poser un repère ou contresigner restent dans **Contrôle des tâches**.
+
 ### Qui fait autorité sur quoi
 
 Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la

@@ -4332,6 +4332,108 @@ function ep_pwa_tasks_nc(): array
     return $out;
 }
 
+/**
+ * GET /pwa/tasks/photos?shop=&date= — toutes les photos rendues d'un magasin
+ * sur une journée, en UNE lecture. Ce que le carrousel « Les contrôles en
+ * photo » du dashboard magasin montre au franchisé qui n'est pas là.
+ *
+ * `/pwa/tasks/detail` rend une tâche : lu tâche par tâche, un comptoir de
+ * seize contrôles coûtait seize fois la liste des tâches, la liste des
+ * checklists et leur avancement. Ici chaque niveau part UNE fois, de front :
+ * les checklists et les tâches du jour, puis l'avancement de chaque
+ * checklist (c'est lui qui porte `attachment_id`), puis les URL signées.
+ *
+ * L'avis (note, motif, consultant) et les repères posés sur la photo sont
+ * locaux : ils reviennent même quand le panel ne répond pas. L'URL signée,
+ * elle, expire (20 min) : `validite` le dit, la page relit au-delà.
+ */
+function ep_pwa_tasks_photos(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    $date   = (string) ($_GET['date'] ?? '');
+    if ($shopId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shop et date (YYYY-MM-DD) sont requis'];
+    }
+    $out = ['shopId' => (string) $shopId, 'date' => $date, 'photos' => [], 'checklists' => [],
+        'validite' => 1200, 'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
+
+    $avis = [];
+    try {
+        foreach (Db::rows('SELECT id_task, rating, is_accepted, comment, consultant_name, updated_at'
+            . ' FROM mac_task_review WHERE id_shop = ? AND review_date = ?', [$shopId, $date]) as $r) {
+            $avis[(int) $r['id_task']] = [
+                'note' => $r['rating'] !== null ? (int) $r['rating'] : null,
+                'accepte' => $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null,
+                'comment' => $r['comment'] !== null && $r['comment'] !== '' ? (string) $r['comment'] : null,
+                'consultant' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+                'le' => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+            ];
+        }
+    } catch (PDOException $e) { /* table absente : pas d'avis */ }
+    $reperes = [];
+    try {
+        foreach (Db::rows('SELECT id_task, reperes FROM ceo_task_annotation WHERE id_shop = ? AND annot_date = ?',
+            [$shopId, $date]) as $r) {
+            $j = json_decode((string) $r['reperes'], true);
+            $reperes[(int) $r['id_task']] = annotationNormalise(is_array($j) ? $j : []);
+        }
+    } catch (PDOException $e) { /* table absente : pas de repère */ }
+
+    if (!PanelApi::configured()) {
+        $out['api']['erreur'] = 'identifiants API du panel non configurés (Paramètres)';
+        return $out;
+    }
+
+    // 1) Les checklists du jour — lecture simple : elle reprend la connexion
+    //    si le jeton a expiré, ce que la volée ne fait pas. Puis les tâches,
+    //    qui portent le NOM de la checklist.
+    $cls = PanelApi::shopChecklists($shopId, $date);
+    $nomCl = [];
+    foreach (PanelApi::shopTasks($shopId, $date) as $t) {
+        $tid = (int) ($t['task_id'] ?? $t['id'] ?? 0);
+        $n = trim((string) ($t['checklist_name'] ?? ''));
+        if ($tid > 0 && $n !== '') { $nomCl[$tid] = $n; }
+    }
+
+    // 2) L'avancement de chaque checklist, de front : il porte la photo.
+    $req = []; $nomParCl = [];
+    foreach ($cls as $cl) {
+        $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+        if ($cid <= 0) { continue; }
+        $req[$cid] = '/consultant/shops/' . $shopId . '/checklists/' . $cid . '/progress?date=' . urlencode($date);
+        $n = trim((string) ($cl['name'] ?? $cl['checklist_name'] ?? ''));
+        if ($n !== '') { $nomParCl[$cid] = $n; }
+    }
+    $att = [];
+    foreach (PanelApi::getParallele($req) as $cid => $rep) {
+        foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $p) {
+            $tid = (int) ($p['task_id'] ?? $p['id'] ?? 0);
+            if ($tid <= 0) { continue; }
+            if (!isset($nomCl[$tid]) && isset($nomParCl[$cid])) { $nomCl[$tid] = $nomParCl[$cid]; }
+            $a = (int) ($p['attachment_id'] ?? 0);
+            if ($a > 0 && !isset($att[$tid])) { $att[$tid] = $a; }
+        }
+    }
+    foreach ($nomCl as $tid => $n) { $out['checklists'][(string) $tid] = $n; }
+
+    // 3) Les URL signées, de front. La réponse est tantôt la chaîne nue,
+    //    tantôt un objet : même lecture que PanelApi::attachmentUrl.
+    $req = [];
+    foreach ($att as $tid => $a) { $req[$tid] = '/attachments/' . $a . '/presigned-url'; }
+    foreach (PanelApi::getParallele($req) as $tid => $r) {
+        $url = is_string($r) ? $r : null;
+        foreach (['url', 'presigned_url', 'presignedUrl', 'link'] as $k) {
+            if ($url === null && is_array($r) && isset($r[$k]) && is_string($r[$k])) { $url = $r[$k]; }
+        }
+        if ($url === null || !preg_match('#^https://#', $url)) { continue; }
+        $out['photos'][] = ['taskId' => (string) $tid, 'photo' => $url,
+            'checklist' => $nomCl[$tid] ?? null, 'reperes' => $reperes[$tid] ?? [], 'avis' => $avis[$tid] ?? null];
+    }
+    $out['api']['erreur'] = PanelApi::$lastError;
+    return $out;
+}
+
 /** GET /production/params — réglages du moteur de production. */
 function ep_prod_params(): array
 {
