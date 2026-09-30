@@ -482,3 +482,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-29T18:39:52Z resultat : clients manquants au comptoir ; releve : part pro par produit
 2026-09-29T19:20:31Z planogramme standard : un seul plan, moments de la journee, rotations comptoir, tablette
 2026-09-29T20:49:15Z assortiment obligatoire : liste de recherche et obligatoires de saison
+2026-09-30T05:00:28Z planogramme : proposition du plan d'apres les ventes moyennes par moment
