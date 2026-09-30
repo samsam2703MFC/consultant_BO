@@ -18,6 +18,7 @@
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
+    auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
@@ -80,7 +81,7 @@
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
       S.enCours[cle] = true; delete S.err[cle];
       lire(path).then(d => {
-        S.aux[cle] = d;
+        S.aux[cle] = d; S.auxLu[cle] = Date.now();
         // Le stock vient d'être relu : si une référence est passée sous son
         // minimum depuis la lecture précédente, on le dit.
         if (cle === 'stock|' + S.shop) { stockAvertirSiNouveau(stockEtat()); }
@@ -108,7 +109,7 @@
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
@@ -835,6 +836,7 @@
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
     h += '<div class="mb-mur">';
     h += murR([m ? murPeriode(m) : murC('Chiffre d’affaires', '…', 'lecture en cours…')], true);
+    h += rendCQ(true);
     h += murR([
       murC('Clients', m && m.tickets != null ? fN(m.tickets) : '—', m && m.panier ? 'panier ' + fU(m.panier) : ''),
       murC('Résultat', m && m.net != null ? fS(m.net) : '—', m && m.netPct != null ? fPS(m.netPct) + ' des ventes' : 'P&amp;L incomplet',
@@ -1189,16 +1191,17 @@
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
     const m = magasin(d);
-    const garde = noteGarder();
+    const garde = noteGarder(), cqPos = cqGarder();
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       if (S.vue !== 'jour' && S.vue !== 'semaine' && S.vue !== 'actions') { S.vue = 'jour'; urlMaj(); charger(false); }
-      if (S.vue === 'actions') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); return; }
-      $.innerHTML = rendMobile(m, d);
+      if (S.vue === 'actions') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
+      $.innerHTML = rendMobile(m, d) + cqLoupe(true);
       $.classList.add('mob');
       brancher();
       noteRestaurer(garde);
+      cqRestaurer(cqPos);
       // La fête attend que le jour soit lu : lancée sur un mur encore vide,
       // elle serait finie avant que le premier chiffre s'affiche.
       const forcee = !!m && feteDemandee();
@@ -1224,6 +1227,7 @@
     // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
     if (m) { h += rendBench(m, d); }
     h += rendTaches();
+    h += rendCQ(false);
     h += rendStock();
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
@@ -1235,9 +1239,11 @@
     if (st && st.produits && st.produits.aSuivre) { h += `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>`; }
     if (!st && !S.err[ks]) { h += squelette(4); }
     else if (st) { h += rendHeures(st); }
+    h += cqLoupe(false);
     $.innerHTML = h;
     brancher();
     noteRestaurer(garde);
+    cqRestaurer(cqPos);
   }
   function squelette(n) {
     return `<div class="db-tuiles">${Array.from({ length: 5 }, () => `<div class="db-tui"><div class="db-sk" style="width:60%"></div><div class="db-sk" style="height:24px;margin:8px 0 6px"></div><div class="db-sk" style="width:80%"></div></div>`).join('')}</div>
@@ -1987,6 +1993,213 @@
     return `<div class="db-taches">${corps}</div>${drop}`;
   }
 
+  /* --- Les contrôles en photo ---------------------------------------------
+   *
+   * Le franchisé qui n'est pas au magasin voit ce que l'équipe a montré et ce
+   * que le consultant en a dit : une bande de photos sous les tâches du jour,
+   * les écarts d'abord, puis ce qui attend encore le consultant, puis le
+   * conforme ; les contrôles jamais rendus y tiennent leur place en case
+   * vide. Un clic ouvre la photo en grand, avec les repères, le constat et la
+   * tenue de la tâche sur ses derniers contrôles.
+   *
+   * Deux lectures : la journée (`/pwa/tasks`, déjà lue pour les tâches) et
+   * ses photos (`/pwa/tasks/photos`, une seule volée). L'URL signée d'une
+   * photo expire après vingt minutes : passé quinze, ou dès qu'une image
+   * refuse de se charger, on relit — au plus une fois par minute.
+   * On regarde, on n'écrit rien : noter reste dans Contrôle des tâches.
+   */
+  const CQ_PERIME = 15 * 60 * 1000;
+  const CQ_RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
+  const CQ_FILTRES = [['nc', 'Écarts', '#D97706'], ['ctl', 'À contrôler', '#2F5D8A'], ['ok', 'Conformes', '#2d7a3e'], ['ko', 'Non rendues', '#C0182B'], ['mu', 'Sans photo', '#a59d93']];
+  function cleCQ() { return 'cqph|' + S.shop + '|' + S.date; }
+  function cheminCQ() { return '/pwa/tasks/photos?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
+  /** Relit les photos (URL neuves) ; jamais deux fois dans la même minute. */
+  function cqRelire() {
+    const k = cleCQ();
+    if (S.enCours[k] || Date.now() - (S.cqTente[k] || 0) < 60000) { return; }
+    S.cqTente[k] = Date.now();
+    lireAux(k, cheminCQ(), true);
+  }
+  const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+  const cqCl = c => String(c || '').replace(/\.$/, '');
+  /** Ce que le franchisé doit lire d'une tâche : cinq états, pas davantage. */
+  function cqEtat(t, D, seuil) {
+    if (t.note != null) {
+      if (t.note >= seuil && t.accepte !== false) { return { c: 'ok', bd: t.note + '/5', lib: 'Conforme' }; }
+      const n = ncNiveau(D, t.note);
+      return { c: 'nc', bd: t.note + '/5 · ' + n.court, lib: 'Non-conformité ' + n.court, coul: n.couleur };
+    }
+    if (t.statut === 'aControler' || t.statut === 'aValider') { return { c: 'ctl', bd: 'à contrôler', lib: 'Rendue, pas encore notée' }; }
+    if (t.statut === 'sansPhoto') { return { c: 'mu', bd: 'sans photo', lib: 'Rendue sans photo' }; }
+    return { c: 'ko', bd: 'non rendue', lib: S.date === AUJ ? 'Pas encore rendue' : 'Pas rendue ce jour' };
+  }
+  /** La journée du magasin, chaque tâche avec sa photo et son état, triée. */
+  function cqListe() {
+    const d = S.aux['taches|' + S.date];
+    if (!d || d.indispo) { return null; }
+    const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
+    const T = sh ? (sh.taches || []) : [];
+    const P = S.aux[cleCQ()];
+    // L'URL signée vieillit : au-delà de quinze minutes, on la renouvelle.
+    if (P && Date.now() - (S.auxLu[cleCQ()] || 0) > CQ_PERIME) { cqRelire(); }
+    const ph = {};
+    (P && Array.isArray(P.photos) ? P.photos : []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
+    const cls = P && P.checklists ? P.checklists : {};
+    const D = { niveaux: d.repartition }, seuil = d.seuil || 4;
+    return T.map(t => {
+      const p = ph[String(t.taskId)] || null;
+      return Object.assign({}, t, { ph: p, e: cqEtat(t, D, seuil), D: D,
+        cl: t.checklist || (p && p.checklist) || cls[String(t.taskId)] || null,
+        reperes: p && Array.isArray(p.reperes) ? p.reperes : [] });
+    }).sort((a, b) => (CQ_RANG[a.e.c] - CQ_RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || cqNom(a).localeCompare(cqNom(b)));
+  }
+  const cqFiltrees = L => S.cqFiltre === 'tout' ? L : L.filter(x => x.e.c === S.cqFiltre);
+  /** « 04:11 » le jour même, « le 26/09 à 05:03 » pour un geste d'un autre jour. */
+  const cqQuand = v => !v ? '' : (String(v).slice(0, 10) === S.date ? hhmm(v) : 'le ' + fD(String(v).slice(0, 10)) + ' à ' + hhmm(v));
+  function cqMeta(x) {
+    if (x.e.c === 'ko') { return S.date === AUJ ? 'pas encore rendue' : 'pas rendue ce jour'; }
+    if (x.e.c === 'mu') { return 'clôturée ' + cqQuand(x.faitLe); }
+    return x.faitLe ? cqQuand(x.faitLe) + (x.faitePar ? ' · ' + esc(x.faitePar) : '') : 'rendue';
+  }
+  function cqConstat(x) {
+    const quand = x.valideeLe ? ' · noté ' + cqQuand(x.valideeLe) : '';
+    if (x.e.c === 'nc') { const r = x.reperes.map(r => r.txt).filter(Boolean); return `<div class="c nc">${esc(r.length ? r.join(', ') : (x.comment || 'écart relevé'))}${quand}</div>`; }
+    if (x.e.c === 'ok') { return `<div class="c ok">conforme${quand}</div>`; }
+    if (x.e.c === 'ctl') { return '<div class="c ctl">photo déposée, pas encore notée</div>'; }
+    if (x.e.c === 'mu') { return `<div class="c mu">${/^auto/i.test(String(x.comment || '')) ? 'clôturée automatiquement' : 'rendue sans photo'}</div>`; }
+    return `<div class="c ko">${esc(cqCl(x.cl).replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '') || 'non rendue')}</div>`;
+  }
+  /** La photo, ses repères, l'heure et la pastille ; ou la case vide qui dit pourquoi. */
+  function cqPhoto(x, o) {
+    o = o || {};
+    const P = S.aux[cleCQ()];
+    if (!x.ph) {
+      const attend = !P && !S.err[cleCQ()] && x.e.c !== 'ko' && x.e.c !== 'mu';
+      if (attend) { return `<span class="db-cqph att${o.cls ? ' ' + o.cls : ''}"></span>`; }
+      const txt = x.e.c === 'ko' ? (S.date === AUJ ? 'pas encore rendue' : 'pas de photo') : (x.e.c === 'mu' ? 'sans photo' : 'photo indisponible');
+      return `<span class="db-cqph vide ${x.e.c}${o.cls ? ' ' + o.cls : ''}"><b>${x.e.c === 'ko' ? '✗' : '—'}</b>${o.mini ? '' : esc(txt)}</span>`;
+    }
+    const rep = o.mini ? '' : x.reperes.map(r => { const c = ncNiveau(x.D, r.niveau || x.note).couleur;
+      return `<i style="left:${(r.x * 100).toFixed(1)}%;top:${(r.y * 100).toFixed(1)}%;width:${(r.l * 100).toFixed(1)}%;height:${(r.h * 100).toFixed(1)}%;border-color:${esc(c)}">${o.txt ? `<u style="background:${esc(c)}">${r.n}. ${esc(r.txt || '')}</u>` : ''}</i>`; }).join('');
+    return `<span class="db-cqph${o.cls ? ' ' + o.cls : ''}"><img src="${esc(x.ph.photo)}" alt=""${o.cls === 'max' ? '' : ' loading="lazy"'} data-cqimg="1">${rep}`
+      + `${o.heure === false || !x.faitLe ? '' : `<em class="h">${esc(hhmm(x.faitLe))}</em>`}${o.badge === false ? '' : `<em class="cqbd ${x.e.c}">${esc(o.court ? (x.note != null ? x.note + '/5' : x.e.bd) : x.e.bd)}</em>`}</span>`;
+  }
+  /** Le résumé : qui a rendu quand, qui a noté quand, la moyenne. */
+  function cqResume(L) {
+    const P = S.aux[cleCQ()];
+    const avec = L.filter(x => x.ph), notees = L.filter(x => x.note != null);
+    const plage = v => { const s = v.filter(Boolean).map(hhmm).sort(); return !s.length ? '' : (s[0] === s[s.length - 1] ? 'à ' + s[0] : 'de ' + s[0] + ' à ' + s[s.length - 1]); };
+    const qui = v => [...new Set(v.filter(Boolean))].join(', ');
+    const out = [];
+    if (P) {
+      const R = avec.filter(x => String(x.faitLe || '').slice(0, 10) === S.date);
+      out.push(avec.length + ' photo' + (avec.length > 1 ? 's' : '') + (R.length ? ' rendue' + (R.length > 1 ? 's' : '') + ' ' + plage(R.map(x => x.faitLe)) + (qui(R.map(x => x.faitePar)) ? ' par ' + esc(qui(R.map(x => x.faitePar))) : '') : ''));
+    } else { out.push(S.err[cleCQ()] ? 'photos : ' + esc(S.err[cleCQ()]) : 'lecture des photos…'); }
+    if (notees.length) {
+      const moy = notees.reduce((a, x) => a + x.note, 0) / notees.length;
+      out.push(notees.length + ' notée' + (notees.length > 1 ? 's' : '') + ' ' + plage(notees.map(x => x.valideeLe)) + (qui(notees.map(x => x.valideePar || x.consultant)) ? ' par ' + esc(qui(notees.map(x => x.valideePar || x.consultant))) : '') + ' · moyenne ' + nf(moy, 1) + ' / 5');
+    } else if (avec.length) { out.push('pas encore notées'); }
+    if (P && P.api && P.api.erreur && !avec.length) { out.push('panel : ' + esc(P.api.erreur)); }
+    return out.join(' · ');
+  }
+  function cqCarte(x, mobile) {
+    return `<button type="button" class="db-cqc" data-cqvoir="${esc(x.taskId)}">${cqPhoto(x, { court: mobile, heure: !mobile })}`
+      + `<span class="n">${esc(mobile ? cqNom(x).replace(/^(Comptoir|CQ) · /, '') : cqNom(x))}</span><span class="m">${cqMeta(x)}</span>${mobile ? '' : cqConstat(x)}</button>`;
+  }
+  function rendCQ(mobile) {
+    if (S.vue !== 'jour') { return ''; }
+    const L = cqListe();
+    if (L === null) {
+      if (mobile || S.err['taches|' + S.date]) { return ''; }
+      return `<div class="db-card db-cq"><div class="ct"><span class="db-lab">Les contrôles en photo</span><span class="db-mini">lecture du panel…</span></div><div class="db-cqrail"><div class="db-cqpiste">${Array.from({ length: 6 }, () => '<span class="db-cqc"><span class="db-cqph att"></span></span>').join('')}</div></div></div>`;
+    }
+    if (!L.length) { return ''; }
+    const n = c => L.filter(x => x.e.c === c).length;
+    if (S.cqFiltre !== 'tout' && !n(S.cqFiltre)) { S.cqFiltre = 'tout'; }
+    const F = cqFiltrees(L);
+    const jour = fD(S.date);
+    if (mobile) {
+      const alerte = [n('nc') ? n('nc') + ' écart' + (n('nc') > 1 ? 's' : '') : '', n('ctl') ? n('ctl') + ' à contrôler' : ''].filter(Boolean).join(' · ');
+      return `<div class="mb-cq"><div class="k">Les contrôles en photo${alerte ? ` · <em>${alerte}</em>` : ''}</div><div class="s">${cqResume(L)}</div>
+        <div class="db-cqpiste" id="db-cqpiste">${L.map(x => cqCarte(x, true)).join('')}</div></div>`;
+    }
+    const puces = [`<button type="button" data-cqf="tout" class="${S.cqFiltre === 'tout' ? 'on' : ''}">Tout<b>${L.length}</b></button>`]
+      .concat(CQ_FILTRES.filter(f => n(f[0])).map(f => `<button type="button" data-cqf="${f[0]}" class="${S.cqFiltre === f[0] ? 'on' : ''}"><i style="background:${f[2]}"></i>${f[1]}<b>${n(f[0])}</b></button>`)).join('');
+    return `<div class="db-card db-cq"><div class="ct"><span class="db-lab">Les contrôles en photo — ${esc(jour)}</span><span class="db-cqf">${puces}</span><span class="db-mini">${cqResume(L)}</span></div>
+      <div class="db-cqrail"><button type="button" class="db-cqfl g" data-cqpas="-1" aria-label="précédentes">‹</button>
+        <div class="db-cqpiste" id="db-cqpiste">${F.map(x => cqCarte(x, false)).join('')}</div>
+        <button type="button" class="db-cqfl d" data-cqpas="1" aria-label="suivantes">›</button></div>
+      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}${S.cqFiltre === 'tout' ? ' · les écarts d’abord' : ''} · un clic ouvre la photo en grand</div></div>`;
+  }
+  /** La photo en grand : repères, constat, tenue de la tâche ; ‹ › et Échap. */
+  function cqLoupe(mobile) {
+    if (!S.cqVoir || S.vue !== 'jour') { return ''; }
+    const L = cqListe();
+    const F = L ? cqFiltrees(L) : [];
+    const i = F.findIndex(x => String(x.taskId) === String(S.cqVoir));
+    if (i < 0) { S.cqVoir = null; return ''; }
+    const x = F[i];
+    const note = x.note != null ? `${x.note}/5${x.valideeLe ? ' ' + (String(x.valideeLe).slice(0, 10) === S.date ? 'à ' : '') + cqQuand(x.valideeLe) : ''}${(x.valideePar || x.consultant) ? ' par ' + esc(x.valideePar || x.consultant) : ''}`
+      : (x.e.c === 'ctl' ? 'pas encore notée' : '—');
+    const M = x.maitrise || {};
+    const tenue = M.moyenne != null ? `${nf(M.moyenne, 1)} / 5 sur ${M.nb} contrôle${M.nb > 1 ? 's' : ''}${M.masquee && M.recontrole ? ` · maîtrisée, recontrôlée le ${esc(fD(M.recontrole))}` : ''}`
+      : (M.nb === 0 ? 'pas encore d’historique' : '');
+    const reps = x.reperes.filter(r => r.txt);
+    const constat = x.comment && !/^auto/i.test(x.comment) ? x.comment : '';
+    const q = reps.length || constat ? `<q class="${x.e.c}">${reps.map(r => `<b>${r.n}. ${esc(r.txt)}</b>`).join('<br>')}${constat && (!reps.length || !reps.some(r => constat.indexOf(r.txt) >= 0)) ? (reps.length ? '<br>' : '') + esc(constat) : ''}</q>` : '';
+    const rendu = x.e.c === 'ko' ? (S.date === AUJ ? 'pas encore rendue' : 'pas rendue ce jour')
+      : (x.faitLe ? (String(x.faitLe).slice(0, 10) === S.date ? 'à ' : '') + cqQuand(x.faitLe) + (x.faitePar ? ' par ' + esc(x.faitePar) : '') + (x.e.c === 'mu' ? ', sans photo' : '') : 'rendue');
+    const fiche = `<div class="fi"><em class="cqbd ${x.e.c}">${esc(x.e.bd)}</em><h3>${esc(cqNom(x))}</h3>${x.cl ? `<div class="q">${esc(cqCl(x.cl))}</div>` : ''}${q}
+      <dl><dt>Rendue</dt><dd>${rendu}</dd><dt>Notée</dt><dd>${note}</dd>${tenue ? `<dt>Tenue</dt><dd>${tenue}</dd>` : ''}</dl>
+      ${x.ph ? `<a class="db-lien" href="${esc(x.ph.photo)}" target="_blank" rel="noopener">Ouvrir la photo seule ↗</a>` : ''}</div>`;
+    const nav = `${i + 1} / ${F.length}${S.cqFiltre !== 'tout' ? ' · ' + esc((CQ_FILTRES.find(f => f[0] === S.cqFiltre) || [])[1] || '').toLowerCase() : ''}`;
+    if (mobile) {
+      return `<div class="db-cql mob" role="dialog" aria-label="${esc(cqNom(x))}"><div class="hd"><span>${nav}</span><button type="button" class="x" data-cqfermer="1" aria-label="fermer">✕</button></div>
+        <div class="ph" data-cqswipe="1">${cqPhoto(x, { txt: true, heure: false, badge: false, cls: 'max' })}</div>
+        <div class="bas">${fiche}<div class="act"><button type="button" data-cqnav="-1"${i ? '' : ' disabled'}>‹ Précédente</button><button type="button" class="p" data-cqnav="1"${i < F.length - 1 ? '' : ' disabled'}>Suivante ›</button></div></div></div>`;
+    }
+    return `<div class="db-cql" role="dialog" aria-label="${esc(cqNom(x))}"><div class="hd"><span>${nav}</span><b>${esc(cqNom(x))}</b>${x.cl ? `<small>${esc(cqCl(x.cl))}</small>` : ''}<button type="button" class="x" data-cqfermer="1" aria-label="fermer">✕</button></div>
+      <div class="mi"><button type="button" class="fl" data-cqnav="-1"${i ? '' : ' disabled'} aria-label="précédente">‹</button>
+        <div class="ph">${cqPhoto(x, { txt: true, heure: false, badge: false, cls: 'max' })}</div>${fiche}
+        <button type="button" class="fl" data-cqnav="1"${i < F.length - 1 ? '' : ' disabled'} aria-label="suivante">›</button></div>
+      <div class="ba" id="db-cqba">${F.map(y => `<button type="button" data-cqvoir="${esc(y.taskId)}" class="${y === x ? 'on' : ''}" title="${esc(cqNom(y))}">${cqPhoto(y, { mini: true, heure: false, badge: false })}</button>`).join('')}</div></div>`;
+  }
+  function cqAller(pas) {
+    const L = cqListe(); if (!L) { return; }
+    const F = cqFiltrees(L);
+    const i = F.findIndex(x => String(x.taskId) === String(S.cqVoir));
+    const j = i + pas;
+    if (i >= 0 && j >= 0 && j < F.length) { S.cqVoir = String(F[j].taskId); rendre(); }
+  }
+  /** La bande garde sa position quand la page se redessine — et, au
+   * téléphone, le mur aussi : ouvrir une photo ne doit pas ramener en haut. */
+  function cqGarder() {
+    const p = document.getElementById('db-cqpiste'), sc = $.querySelector('.mb-sc');
+    return { x: p ? p.scrollLeft : 0, y: sc ? sc.scrollTop : 0, ou: S.vue + '|' + S.date + '|' + S.shop };
+  }
+  function cqRestaurer(g) {
+    const meme = g && g.ou === S.vue + '|' + S.date + '|' + S.shop;
+    const p = document.getElementById('db-cqpiste'), sc = $.querySelector('.mb-sc');
+    if (sc && meme && g.y) { sc.scrollTop = g.y; }
+    if (p) { if (S.cqRaz || !meme) { S.cqRaz = false; p.scrollLeft = 0; } else { p.scrollLeft = g.x; } cqFleches(); }
+    const ba = document.getElementById('db-cqba'), on = ba && ba.querySelector('.on');
+    if (on) { ba.scrollLeft = on.offsetLeft - ba.clientWidth / 2 + on.clientWidth / 2; }
+    document.documentElement.classList.toggle('db-cq-ouvert', !!S.cqVoir && S.vue === 'jour');
+  }
+  /** Flèches éteintes aux deux bouts, et le compte de ce qu'on voit. */
+  function cqFleches() {
+    const p = document.getElementById('db-cqpiste'); if (!p) { return; }
+    const g = $.querySelector('.db-cqfl.g'), d = $.querySelector('.db-cqfl.d');
+    if (g) { g.disabled = p.scrollLeft <= 2; }
+    if (d) { d.disabled = p.scrollLeft + p.clientWidth >= p.scrollWidth - 2; }
+    const pied = document.getElementById('db-cqpied'), c = p.querySelector('.db-cqc');
+    if (pied && c) {
+      const w = c.getBoundingClientRect().width + 12, n = p.children.length;
+      const a = Math.min(n, Math.round(p.scrollLeft / w) + 1), b = Math.min(n, Math.round((p.scrollLeft + p.clientWidth) / w));
+      if (b < n || a > 1) { pied.textContent = a + ' – ' + b + ' sur ' + n + (S.cqFiltre === 'tout' ? ' · les écarts d’abord' : '') + ' · un clic ouvre la photo en grand'; }
+    }
+  }
+
   /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
   /* --- Trimestre : l'objectif du plan, les 3 mois, les annotations ---------- */
   const VOIX = [['franchise', 'Franchisé', 'fr'], ['consultant', 'Consultant', 'co'], ['marque', 'Marque', 'ma']];
@@ -2340,6 +2553,22 @@
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
+    // Les contrôles en photo : filtres, flèches, loupe.
+    $.querySelectorAll('[data-cqf]').forEach(b => b.addEventListener('click', () => { S.cqFiltre = b.dataset.cqf; S.cqRaz = true; rendre(); }));
+    $.querySelectorAll('[data-cqvoir]').forEach(b => b.addEventListener('click', () => { S.cqVoir = b.dataset.cqvoir; rendre(); }));
+    $.querySelectorAll('[data-cqfermer]').forEach(b => b.addEventListener('click', () => { S.cqVoir = null; rendre(); }));
+    $.querySelectorAll('[data-cqnav]').forEach(b => b.addEventListener('click', () => cqAller(+b.dataset.cqnav)));
+    $.querySelectorAll('.db-cql').forEach(l => l.addEventListener('click', e => { if (e.target === l) { S.cqVoir = null; rendre(); } }));
+    const piste = document.getElementById('db-cqpiste');
+    if (piste) { piste.addEventListener('scroll', cqFleches, { passive: true }); }
+    $.querySelectorAll('[data-cqpas]').forEach(b => b.addEventListener('click', () => { const p = document.getElementById('db-cqpiste'); if (p) { p.scrollBy({ left: +b.dataset.cqpas * Math.max(200, p.clientWidth - 80), behavior: 'smooth' }); } }));
+    // Au téléphone, la photo se feuillette au doigt.
+    $.querySelectorAll('[data-cqswipe]').forEach(z => {
+      let x0 = null, y0 = null;
+      z.addEventListener('touchstart', e => { const t = e.changedTouches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+      z.addEventListener('touchend', e => { if (x0 === null) { return; } const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) { cqAller(dx < 0 ? 1 : -1); } }, { passive: true });
+    });
   }
 
   // Tourner le téléphone, ou ouvrir la page sur un écran étroit, change de
@@ -2352,6 +2581,18 @@
     // sinon les cellules resteraient à « lecture en cours » pour toujours.
     _rt = setTimeout(() => { const n = estMobile(); if (n !== _mob) { _mob = n; if (n) { charger(false); } else { rendre(); } } }, 160);
   });
+
+  // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
+  document.addEventListener('keydown', e => {
+    if (!S.cqVoir) { return; }
+    if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
+    else if (e.key === 'ArrowLeft') { cqAller(-1); } else if (e.key === 'ArrowRight') { cqAller(1); }
+  });
+  // Une photo qui refuse de se charger : son URL signée a expiré. On relit.
+  $.addEventListener('error', e => {
+    const im = e.target;
+    if (im && im.tagName === 'IMG' && im.dataset && im.dataset.cqimg) { im.parentNode.classList.add('perdue'); im.remove(); cqRelire(); }
+  }, true);
 
   /* --- départ ------------------------------------------------------------- */
   pushEtatLire().then(() => rendre()).catch(() => {});

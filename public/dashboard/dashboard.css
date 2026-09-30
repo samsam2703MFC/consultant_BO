@@ -792,3 +792,99 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-split.on{border-left:4px solid #1f5f8b}
 .db-split-det{border-top:.5px solid var(--color-border-tertiary);padding-top:4px}
 .db-split-det .db-pro-def{padding:10px 16px 0}
+
+/* ==========================================================================
+ * LES CONTRÔLES EN PHOTO — la bande sous les tâches du jour, et la loupe.
+ * Les écarts d'abord ; une case vide dit ce qui n'a pas été rendu.
+ * ========================================================================== */
+.db-cq{overflow:hidden;margin-top:12px}
+.db-cq .ct{gap:12px}
+.db-cq .ct .db-mini{margin-left:auto;text-align:right}
+.db-cqf{display:inline-flex;gap:6px;flex-wrap:wrap}
+.db-cqf button{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:3px 10px;font:600 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-surface);white-space:nowrap;cursor:pointer}
+.db-cqf button b{margin-left:5px;font-weight:700;color:var(--color-text)}
+.db-cqf button i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.db-cqf button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.db-cqf button.on b{color:#fff}
+.db-cqrail{position:relative;padding:14px 16px 4px}
+.db-cqpiste{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.db-cqpiste::-webkit-scrollbar{display:none}
+.db-cqc{flex:0 0 calc((100% - 60px) / 6);min-width:150px;scroll-snap-align:start;border:none;background:none;padding:0;text-align:left;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column}
+.db-cqc:focus-visible .db-cqph{outline:2.5px solid var(--color-primary);outline-offset:2px}
+.db-cqc:hover .db-cqph img{transform:scale(1.03)}
+.db-cqc .n{font-weight:700;font-size:12px;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-cqc .m{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-cqc .c{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-cqc .c.ok{color:#2d7a3e}.db-cqc .c.nc{color:#B26A00}.db-cqc .c.ctl{color:#2F5D8A}.db-cqc .c.ko{color:#C0182B}.db-cqc .c.mu{color:var(--color-text-muted)}
+.db-cqph{position:relative;display:block;aspect-ratio:3/4;border-radius:9px;overflow:hidden;background:#2a2622}
+.db-cqph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s}
+.db-cqph>i{position:absolute;border:2px solid #D97706;border-radius:3px;box-shadow:0 0 0 1px rgba(255,255,255,.55);pointer-events:none}
+.db-cqph>i u{position:absolute;left:-2px;top:-18px;color:#fff;font:700 10px var(--font-ui);text-decoration:none;padding:1px 6px;border-radius:3px 3px 0 0;white-space:nowrap}
+.db-cqph .h{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.58);color:#fff;font:600 9.5px var(--font-ui);font-style:normal;padding:2px 6px;border-radius:5px;font-variant-numeric:tabular-nums}
+.db-cqph .cqbd{position:absolute;right:6px;top:6px}
+.cqbd{display:inline-block;font:700 10px var(--font-ui);font-style:normal;padding:2px 7px;border-radius:5px;color:#fff;white-space:nowrap}
+.cqbd.ok{background:#2d7a3e}.cqbd.nc{background:#D97706}.cqbd.ctl{background:#2F5D8A}.cqbd.ko{background:#C0182B}.cqbd.mu{background:#8a8177}
+.db-cqph.vide,.db-cqph.perdue{background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);border:1px dashed #c9c2b8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--color-text-muted);font:600 10.5px var(--font-ui);text-align:center;padding:8px}
+.db-cqph.vide b{font-size:19px;opacity:.6}
+.db-cqph.vide.ko{border-color:#e5b6bc;color:#C0182B;background:repeating-linear-gradient(135deg,#fdf4f5 0 8px,#f9e9eb 8px 16px)}
+.db-cqph.perdue>*:not(.cqbd){display:none}
+.db-cqph.perdue:after{content:"photo en cours de relecture…"}
+.db-cqph.att{background:linear-gradient(90deg,#efe9e1 25%,#f7f3ee 50%,#efe9e1 75%);background-size:200% 100%;animation:db-cqsk 1.3s linear infinite}
+@keyframes db-cqsk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.db-cqfl{position:absolute;top:calc(14px + 110px);width:36px;height:36px;border-radius:50%;border:none;background:var(--color-surface);box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 18px var(--font-ui);color:var(--color-text);z-index:2;cursor:pointer}
+.db-cqfl.g{left:4px}.db-cqfl.d{right:4px}
+.db-cqfl:disabled{opacity:0;pointer-events:none}
+.db-cqpied{text-align:center;padding:8px 0 12px;font-size:10.5px;color:var(--color-text-muted)}
+
+/* La loupe : la photo en grand, sa fiche, la bande des autres. */
+html.db-cq-ouvert,html.db-cq-ouvert body{overflow:hidden}
+.db-cql{position:fixed;inset:0;background:rgba(22,18,14,.94);z-index:80;display:flex;flex-direction:column;padding:16px 26px 14px;color:#fff}
+.db-cql .hd{display:flex;align-items:baseline;gap:14px;font:600 13px var(--font-ui)}
+.db-cql .hd small{font-weight:400;opacity:.7}
+.db-cql .hd .x{margin-left:auto;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;align-self:center}
+.db-cql .mi{flex:1;display:flex;gap:22px;align-items:center;justify-content:center;min-height:0;padding:12px 0}
+.db-cql .mi .ph{min-width:0;display:flex;justify-content:center}
+/* La photo en grand garde le format des photos du panel (3 × 4) : les
+   repères sont posés en proportion de ce cadre, comme sur les vignettes. */
+.db-cqph.max{width:min(calc((100vh - 190px) * .75),calc(100vw - 560px));border-radius:12px}
+.db-cqph.max.vide{font-size:13px}
+.db-cql .fl{flex:0 0 44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:22px;cursor:pointer}
+.db-cql .fl:disabled{opacity:.25;cursor:default}
+.db-cql .fi{flex:0 0 360px;background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:16px 18px}
+.db-cql .fi h3{font:400 21px var(--font-display);margin:8px 0 2px}
+.db-cql .fi .q{font-size:11.5px;color:var(--color-text-muted)}
+.db-cql .fi q{display:block;margin:12px 0 0;padding:9px 12px;border-left:3px solid #D97706;background:#fff7ec;font-size:12.5px;quotes:none;border-radius:0 8px 8px 0;line-height:1.5}
+.db-cql .fi q.ok{border-left-color:#2d7a3e;background:#f0f7f2}
+.db-cql .fi dl{display:grid;grid-template-columns:78px 1fr;gap:7px 12px;margin:12px 0 10px;font-size:12px}
+.db-cql .fi dt{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding-top:2px}
+.db-cql .fi dd{margin:0}
+.db-cql .ba{display:flex;gap:8px;justify-content:safe center;overflow-x:auto;padding:4px 2px;scrollbar-width:none}
+.db-cql .ba::-webkit-scrollbar{display:none}
+.db-cql .ba button{flex:0 0 44px;border:none;background:none;padding:0;cursor:pointer;opacity:.5;border-radius:6px}
+.db-cql .ba button.on{opacity:1;outline:2px solid #fff;outline-offset:2px}
+.db-cql .ba .db-cqph{border-radius:6px}
+.db-cql .ba .db-cqph.vide{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.07);padding:0}
+@media (max-width:1150px){.db-cqc{flex-basis:calc((100% - 36px) / 4)}.db-cql .fi{flex-basis:300px}}
+@media (max-width:900px){.db-cql .mi{flex-wrap:wrap;overflow-y:auto}.db-cql .fi{flex-basis:100%}.db-cqph.max{width:min(calc((100vh - 190px) * .75),calc(100vw - 150px))}}
+
+/* Au téléphone : la bande sous le chiffre du jour, la loupe plein écran. */
+.mb-cq{border-bottom:.5px solid rgba(34,34,34,.14);padding:9px 0 12px;flex:0 0 auto;min-width:0}
+.mb-cq .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.mb-cq .k em{font-style:normal;color:#B26A00}
+.mb-cq .s{font-size:10px;color:var(--color-text-muted);line-height:1.3;margin:1px 0 8px}
+.mb-cq .db-cqpiste{gap:8px;margin-right:-14px;padding-right:14px}
+.mb-cq .db-cqc{flex:0 0 112px;min-width:0}
+.mb-cq .db-cqc .n{font-size:10.5px;margin-top:5px}
+.mb-cq .db-cqc .m{font-size:9.5px}
+.db-cql.mob{padding:0;background:#0d0b09}
+.db-cql.mob .hd{position:absolute;left:12px;right:12px;top:10px;z-index:3;align-items:center;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.db-cql.mob .ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.db-cql.mob .db-cqph.max{width:min(calc(100vw - 24px),calc((100dvh - 290px) * .75));border-radius:10px}
+.db-cql.mob .bas{flex:0 0 auto;max-height:52dvh;overflow-y:auto;padding:0 12px calc(12px + env(safe-area-inset-bottom,0px))}
+.db-cql.mob .fi{padding:12px 14px;border-radius:14px}
+.db-cql.mob .fi h3{font-size:18px}
+.db-cql.mob .fi dl{margin-bottom:6px}
+.db-cql.mob .act{display:flex;gap:8px;margin-top:10px}
+.db-cql.mob .act button{flex:1;border:none;border-radius:10px;padding:11px 0;font:600 12.5px var(--font-ui);background:rgba(255,255,255,.16);color:#fff}
+.db-cql.mob .act button.p{background:#fff;color:var(--color-text)}
+.db-cql.mob .act button:disabled{opacity:.35}
+@media (prefers-reduced-motion:reduce){.db-cqph.att{animation:none}.db-cqc:hover .db-cqph img{transform:none}}
