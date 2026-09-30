@@ -769,3 +769,9 @@ span.ao-pill{cursor:default}
 .ao-cb.on{background:var(--color-primary);border-color:var(--color-primary)}
 .ao-cb.dis{opacity:.4;cursor:default}
 @media (max-width:1180px){.ao-grille{flex-direction:column}.ao-pick{width:100%;position:static;max-height:none}.ao-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* --- Planogramme : proposition d'après les ventes --- */
+.pp-o+.pp-o{margin-top:5px}
+.pp-o b{font-weight:500}
+.pp-q{font:600 11px var(--font-ui);background:var(--color-background-secondary);border-radius:999px;padding:0 7px}
+.pp-b{font:600 9.5px var(--font-ui);border-radius:999px;padding:0 7px;background:#FBEFE0;color:#A0620C}
+.pp-li{padding:5px 0;border-top:.5px solid var(--color-border-tertiary)}.pp-li b{display:block;font-size:11.5px;font-weight:500}.pp-li span{font-size:10.5px;color:var(--color-text-muted)}

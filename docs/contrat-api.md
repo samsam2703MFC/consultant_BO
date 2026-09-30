@@ -496,6 +496,32 @@ produits les classe par ventes).
 - `comptoir` : la rotation moyenne du comptoir du magasin sur ses jours lus (au réseau : la moyenne des magasins) ;
   `horsComptoir` : la part (en %) des unités vendues au comptoir qui sont des produits absents du plan.
 
+**La proposition d'après les ventes.** `GET /planogramme/standard/proposition?jours=28&rotation=1.5` (`jours` 14, 28
+ou 56 ; `rotation` 1, 1,5, 2 ou 3) propose, emplacement par emplacement et moment par moment, les produits et les
+quantités d'après les ventes moyennes au comptoir :
+
+- **Structure gardée.** Chaque emplacement garde sa famille : le groupe du produit qui l'occupe aujourd'hui (un
+  emplacement libre prend celle de son voisin d'étage). La proposition ne déplace ni le frigo ni la boulangerie.
+- **Ventes.** Unités vendues au comptoir (clients pro retirés) pendant les heures du moment, en moyenne par magasin et
+  par jour ouvert lu sur la fenêtre (relevés `svP` gravés, aucun appel au panel).
+- **Choix.** Dans chaque famille et pour chaque moment, les meilleures ventes prennent les emplacements. Un produit en
+  place ne sort que pour un produit qui vend nettement plus (au moins 30 % et une demi-unité par magasin et par moment
+  de plus) ; les nouveaux prennent les emplacements les plus visibles (étage 1 avant, arrière, étage 2, étage 3). Un
+  lissage garde le produit du moment voisin quand l'écart ne compte pas. Hors comptoir : boissons chaudes, bundles, B2B,
+  extras, glaces et yaourts. Les obligatoires ne sont pas forcées : celles que les ventes laissent dehors sont listées.
+- **Quantité.** Ventes moyennes du moment ÷ `rotation`, arrondie au-dessus, entre un minimum de présentation
+  (3 / 4 / 4 : étage 3 / 2 / 1) et un plafond (15 / 30 / 50). Un produit sur plusieurs moments prend la quantité de son
+  moment le plus fort.
+
+Réponse : `emplacements[]` (`cle`, `famille`, `actuel[]`, `propose[]` avec `periodes`, `qte`, `vendus` par moment,
+`plafonne`, `faible`, `obligatoire`, et `statut` : `identique`, `quantite`, `change`, `libre`), `resume` (`changes`,
+`quantites`, `identiques`, `unitesActuel`, `unitesPropose`, `faibles`), `entrants[]`, `sortants[]`, `absents[]` (meilleures
+ventes sans place et pourquoi), `obligatoires` (`exigees`, `placees`, `dehors[]`), `joursLus`, `regle`.
+
+`POST /planogramme/standard/proposition` — `{jours, rotation, cles: ["3|e1a", …]}` recalcule la proposition avec les
+mêmes paramètres et l'applique aux emplacements donnés (les `identique` sont sautés), avec l'histoire du plan : ce qui
+change aujourd'hui ferme la version d'hier. Rend le plan (comme `GET /planogramme/standard`) et `appliques`.
+
 **Le montage en magasin (tablette).** La page `planogramme/?shop=2` montre le plan zone par zone au moment de la journée
 (choisi à l'heure de la tablette). `GET /planogramme/standard/montage?shop=2&date=2026-09-29` →
 `{ "zones": { "z0": { "photo": "uploads/plano/montage/…jpg", "auteur": "Tablette", "quand": "2026-09-29 07:42:10" } } }` ;
