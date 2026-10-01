@@ -1258,13 +1258,14 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/synthese` | admin | la synthèse du jour : `compteurs`, `boutiques[]`, `escalades[]`, `actions[]`, `consultants{}`. Envoyée par mail le matin si `seuils.mails` et `seuils.mailSynthese`. |
 | `GET /visites/reglages` | admin | checklist, seuils, fréquences, état de l'horloge, adresse du cron. |
 | `GET /visites/conformite?shop=` | tous | ce que le cockpit sait du comptoir sans rien ressaisir : `planogramme` (emplacements dessinés et tenus, %, comptoirs photographiés montés aujourd'hui, obligatoires sans place) et `assortiment` (références obligatoires vues en caisse sur la fenêtre calée sur la dernière vente, manquantes nommées). Une source absente rend son `motif`, pas un chiffre. |
+| `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » de `mar_campaign.objective_coef_pct`), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`ceo_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
 | `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`. `{id}` est l'identifiant ou le `client_id`. |
 | `PUT /visites/{id}/points` | consultant | `points[]` : `ref`, `module`, `libelle`, `etat` (ok, ko, na), `note` 1..5, `valeur` (% planogramme), `commentaire`, `causes[]`. Idempotent par (visite, ref). |
 | `POST /visites/photos` | tous | `client_id`, `shop` ou `visite_id`, `ref`, `plan_id`, `genre` (jour_facade, jour_interieur, jour_arriere, point, avant, apres, correction), `data` (data-URL ≤ 2 Mo, JPEG/PNG/WebP), `prise_a`, `lat`, `lng`. Fichier sous `uploads/visites/{shop}/`. |
-| `POST /plans` | consultant, admin | un plan ou `plans[]` : `client_id`, `shop` ou `visite_id`, `ref`, `titre`, `detail`, `priorite` (P0, P1, P2), `assigne` (franchise, equipe, consultant, admin), `echeance`. Push au franchisé. |
-| `PUT /plans/{id}` | tous | `statut` + `role` : transitions permises par rôle (franchisé : ouvert/reprendre → attente ; admin et consultant : attente → valide ou reprendre, valide → ferme, ouvert → escalade, …), `retour` (à reprendre), `escalade_motif`, `photo_client_id`, et le contenu pour consultant et admin. 409 si le passage est refusé. Push à qui de droit. |
+| `POST /plans` | consultant, admin | un plan ou `plans[]` : `client_id`, `shop` ou `visite_id`, `ref`, `titre`, `detail`, `priorite` (P0, P1, P2), `assigne` (franchise, equipe, consultant, admin), `echeance`, `campagne_id` (la campagne que l'action sert ; le plan du franchisé montre alors ses clients par semaine face au N-1 et à l'objectif). Push au franchisé. |
+| `PUT /plans/{id}` | tous | `statut` + `role` : transitions permises par rôle (franchisé : ouvert/reprendre → attente ; admin et consultant : attente → valide ou reprendre, valide → ferme, ouvert → escalade, …), `retour` (à reprendre), `escalade_motif`, `photo_client_id`, et le contenu (`campagne_id` compris) pour consultant et admin. 409 si le passage est refusé. Push à qui de droit. |
 | `POST /msp` | consultant, admin | `shop`, `mois` AAAA-MM, `rubriques{}` (/20), `total`, `commentaires`, `fichier` (data-URL PDF ≤ 8 Mo). Un rapport par boutique et par mois. |
 | `PUT /equipe/{shop}` | consultant, franchisé | `effectif`, `prevu`, `departs`, `releve_le`. |
 | `PUT /visites/reglages` | admin | `checklist[]` (modules produit, hygiene, visuel, planogramme, msp ; points `ref`, `libelle`, `photo`, `pct`), `seuils{}`, `frequence{shop: jours}`. |
@@ -1287,10 +1288,15 @@ réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
 (`#controle/{id}`), un seul écran vertical, étape après étape — photo du jour,
 chiffres et alertes, un module de checklist par étape, vu sur place et
 recommandation, plan d'action et fin de visite ; chaque étape se replie une
-fois faite. Le franchisé n'a pas de page à part : son plan d'action, la photo
-de correction et la recommandation sont dans son dashboard magasin
-(`dashboard/?shop=&vue=actions`), où le module est monté ; les notifications
-push du franchisé y mènent.
+fois faite. Le franchisé n'a pas de page à part : son plan d'action et la recommandation
+sont dans son dashboard magasin (`dashboard/?shop=&vue=actions`), où le module
+est monté ; les notifications push du franchisé y mènent. Cet onglet est de la
+**consultation** : en tête, la carte « Objectif de campagne » (clients, N-1,
+objectif, la trajectoire cumulée, le CA, les autres campagnes en une ligne),
+puis ses actions ; une action liée à une campagne montre les semaines côte à
+côte (cette année, N-1 aux mêmes jours, trait d'objectif) et une phrase qui
+dit ce qu'il faut par jour. Pas de photo de correction à reprendre d'ici : la
+photo et le changement de statut restent au consultant et à l'admin.
 
 Hors ligne (module `assets/js/visites.js`) : la lecture `/visites/app` est
 gardée en IndexedDB ; chaque écriture porte un `client_id`, est appliquée à
