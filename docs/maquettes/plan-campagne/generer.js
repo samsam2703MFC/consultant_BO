@@ -189,6 +189,14 @@ const C = hd('Gosselies · 2 campagnes · 3 actions en cours') + '<div class="pc
   + carteAction(ACTIONS[1], gJours(JO.slice(0, 31), null, ['1er oct.', '31 oct.']), phraseOct, btnPhoto)
   + carteAction(ACTIONS[2], '', '', btnPhoto) + boutique;
 
+/* --- D : le choix — A, avec la trajectoire de B sous les semaines ------------------ */
+const sousTitre = t => `<div class="pc-cap" style="margin:10px 0 0">${t}</div>`;
+const D_ = hd('Gosselies · 2 campagnes · 3 actions en cours') + '<div class="pc-cap">Objectifs de campagne</div>' + A_SEPT + A_OCT
+  + '<div class="pc-cap">Mes actions <em>les clients face au N-1 et à l’objectif</em></div>'
+  + carteAction(ACTIONS[0], sousTitre('Semaine par semaine') + gBarres(SEM, true) + sousTitre('Depuis le début de la campagne') + gCumul(JS, CS.clientsPrevus, CS.jours, ['1er sept.', '30 sept.']), phraseSept + manqueTuile)
+  + carteAction(ACTIONS[1], sousTitre('Semaine par semaine') + gBarres(SEMO, false) + sousTitre('Depuis le début de la campagne') + gCumul(JO, null, CO.jours, ['1er oct.', '29 nov.']), phraseOct, btnPhoto)
+  + carteAction(ACTIONS[2], '', '', btnPhoto) + boutique;
+
 /* --- Les pages ------------------------------------------------------------------ */
 const HD = `<div class="mb-hd"><img src="/public/assets/img/logo.png" alt=""><div><div class="t">${esc(D.magasin)}</div><div class="d">jeudi 1 octobre 2026</div></div><span class="sp"></span><button class="mb-ic">↻</button></div>`;
 const TABS = `<div class="mb-tabs mb-tabs4">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓'], ['reclamation', 'Réclamation', '📷']].map(o => `<button class="${o[0] === 'actions' ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
@@ -201,8 +209,12 @@ const page = (titre, corps) => `<!DOCTYPE html>
 <link rel="stylesheet" href="pc.css"></head>
 <body><div id="dash" class="mob">${HD}<div class="mb-sc pc-sc"><div class="vi desk"><div class="sc">${corps}</div></div></div>${TABS}</div></body></html>`;
 
-const ECRANS = [['a', 'A — jauge en tête, semaines côte à côte', A], ['b', 'B — frise des campagnes, trajectoire cumulée', B], ['c', 'C — tuiles, jour par jour', C]];
+const ECRANS = [['a', 'A — jauge en tête, semaines côte à côte', A], ['b', 'B — frise des campagnes, trajectoire cumulée', B], ['c', 'C — tuiles, jour par jour', C], ['d', 'D — le choix : A, plus la trajectoire de B', D_]];
 const PLANCHES = [
+  { id: 'd', titre: 'D — Le choix : A, avec la trajectoire de B sur chaque action',
+    acc: 'La jauge de A en tête de plan. Sur chaque action liée à une campagne, deux lectures l’une sous l’autre : les semaines côte à côte (cette année, N-1, objectif, l’écart écrit), puis la trajectoire cumulée depuis le premier jour (la courbe, celle de l’an dernier, la droite de l’objectif). La phrase et le « combien par jour » ferment la carte.',
+    plus: ['Les deux questions ont leur réponse : « quelle semaine a décroché » et « où en est-on sur l’ensemble »', 'Même palette, mêmes trois séries sur les deux graphiques : une seule légende', 'Une campagne sans objectif (B2B, octobre) montre quand même ce qu’il y a à battre'],
+    moins: ['Une carte d’action fait un écran entier : deux graphiques, c’est le maximum', 'À coder : le lien action ↔ campagne (campagne_id) et le « + x % » de la campagne d’octobre'] },
   { id: 'a', titre: 'A — La jauge en tête, les semaines côte à côte',
     acc: 'En haut du plan d’action, une carte par campagne : clients faits, N-1, objectif, et une jauge qui va de zéro à l’objectif avec le repère N-1. Sur chaque action liée à une campagne, les clients semaine par semaine : cette année en couleur, l’an dernier en gris, l’objectif en trait, l’écart écrit sous chaque semaine.',
     plus: ['Un coup d’œil suffit : trois chiffres et une jauge, la même lecture pour toutes les campagnes', 'Les semaines sont le rythme du magasin : on voit laquelle a décroché (14–20 et 21–27 sept.)', 'L’écart au N-1 est écrit sous chaque semaine, pas à deviner', 'Une campagne sans objectif chiffré le dit, et propose un chiffre à partir du budget'],
