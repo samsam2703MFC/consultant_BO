@@ -23,7 +23,8 @@ ligne, et le lien action ↔ campagne n'existe pas encore (voir « avant de code
 | A | Jauge en tête (clients · N-1 · objectif), puis les semaines côte à côte sur chaque action | `planche-a.jpg` |
 | B | Frise des campagnes, puis la trajectoire cumulée (réel / N-1 / objectif) sur chaque action | `planche-b.jpg` |
 | C | Tuiles, puis le jour par jour (barres, ligne N-1, objectif du jour) sur chaque action | `planche-c.jpg` |
-| **D** | **Le choix : A, avec la trajectoire de B sous les semaines, sur chaque action** | `planche-d.jpg` |
+| D | A, avec la trajectoire de B sous les semaines, sur chaque action | `planche-d.jpg` |
+| **E** | **Retenue : quatre sections — la trajectoire (B) dans la carte de campagne, les semaines (A) sur l'action** | `planche-e.jpg` |
 
 Avant de coder, deux manques côté données :
 

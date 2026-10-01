@@ -197,6 +197,23 @@ const D_ = hd('Gosselies · 2 campagnes · 3 actions en cours') + '<div class="p
   + carteAction(ACTIONS[1], sousTitre('Semaine par semaine') + gBarres(SEMO, false) + sousTitre('Depuis le début de la campagne') + gCumul(JO, null, CO.jours, ['1er oct.', '29 nov.']), phraseOct, btnPhoto)
   + carteAction(ACTIONS[2], '', '', btnPhoto) + boutique;
 
+/* --- E : simple — quatre sections, chaque graphique une seule fois ----------------- */
+// 1. En tête, l'objectif de campagne : trois chiffres, la trajectoire (B), le CA.
+//    La campagne suivante tient en une ligne.
+const E_CAMP = `<div class="pc-camp"><div class="t"><b>${esc(CS.nom.replace(/ - .*$/, ''))}</b><span class="pill st-fer">septembre · clos</span><span class="pill">+${CS.pct} % de clients</span></div>
+  <div class="pc-3"><div><div class="k">Clients</div><div class="v p">${nf(CS.reel)}</div><div class="s">${pct(CS.reel, CS.clientsPrevus)} % de l’objectif</div></div><div><div class="k">N-1</div><div class="v n">${nf(CS.clientsA1)}</div><div class="s">${sg(vsN1)} · ${nf(100 * vsN1 / CS.clientsA1, 1)} %</div></div><div><div class="k">Objectif</div><div class="v">${nf(CS.clientsPrevus)}</div><div class="s">il en a manqué ${nf(manque)}</div></div></div>
+  ${gCumul(JS, CS.clientsPrevus, CS.jours, ['1er sept.', '30 sept.'])}${LEG}
+  <div class="pc-ca"><span>CA <b>${eur(CS.caReel)}</b> sur ${eur(CS.objectifCA)} visés (${pct(CS.caReel, CS.objectifCA)} %)</span><span>N-1 ${eur(CS.caN1)}</span></div>
+  <div class="pc-ca" style="border-top:none;padding-top:4px"><span>Suivante : <b>${esc(CO.nom.replace(/ - .*$/, ''))}</b> · ${fDL(CO.debut)} → ${fDL(CO.fin)} · N-1 ${nf(CO.clientsA1)} clients</span><span style="color:#B26A00;font-weight:600">objectif à fixer</span></div></div>`;
+// 2. Les actions : la carte d'aujourd'hui, plus les semaines (A) et une ligne.
+const phraseCourte = `<div class="pc-phrase"><b class="ko">${nf(CS.reel)} clients</b> sur ${nf(CS.clientsPrevus)} visés · ${sg(vsN1)} vs N-1 · il aurait fallu <b>${nf(Math.round(manque / CS.jours))} de plus par jour</b>.</div>`;
+const phraseOctCourte = `<div class="pc-phrase">Jour 1 : <b class="ko">${nf(CO.reel)} clients</b>, ${nf(JO[0].n1)} l’an dernier · à battre : ${nf(CO.clientsA1)} sur la période.</div>`;
+const E = hd('Gosselies · 3 actions en cours') + '<div class="pc-cap">Objectif de campagne</div>' + E_CAMP
+  + '<div class="pc-cap">Mes actions</div>'
+  + carteAction(ACTIONS[0], gBarres(SEM, true), phraseCourte)
+  + carteAction(ACTIONS[1], gBarres(SEMO, false), phraseOctCourte, btnPhoto)
+  + carteAction(ACTIONS[2], '', '', btnPhoto) + boutique;
+
 /* --- Les pages ------------------------------------------------------------------ */
 const HD = `<div class="mb-hd"><img src="/public/assets/img/logo.png" alt=""><div><div class="t">${esc(D.magasin)}</div><div class="d">jeudi 1 octobre 2026</div></div><span class="sp"></span><button class="mb-ic">↻</button></div>`;
 const TABS = `<div class="mb-tabs mb-tabs4">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓'], ['reclamation', 'Réclamation', '📷']].map(o => `<button class="${o[0] === 'actions' ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
@@ -209,8 +226,12 @@ const page = (titre, corps) => `<!DOCTYPE html>
 <link rel="stylesheet" href="pc.css"></head>
 <body><div id="dash" class="mob">${HD}<div class="mb-sc pc-sc"><div class="vi desk"><div class="sc">${corps}</div></div></div>${TABS}</div></body></html>`;
 
-const ECRANS = [['a', 'A — jauge en tête, semaines côte à côte', A], ['b', 'B — frise des campagnes, trajectoire cumulée', B], ['c', 'C — tuiles, jour par jour', C], ['d', 'D — le choix : A, plus la trajectoire de B', D_]];
+const ECRANS = [['a', 'A — jauge en tête, semaines côte à côte', A], ['b', 'B — frise des campagnes, trajectoire cumulée', B], ['c', 'C — tuiles, jour par jour', C], ['d', 'D — le choix : A, plus la trajectoire de B', D_], ['e', 'E — simple : quatre sections', E]];
 const PLANCHES = [
+  { id: 'e', titre: 'E — Simple : quatre sections, chaque graphique une fois',
+    acc: 'Le plan d’action en quatre sections : le titre, l’objectif de campagne, mes actions, ma boutique. La trajectoire (B) est dans la carte de campagne — c’est la campagne qu’elle raconte — ; les semaines (A) sont sur l’action, avec une seule ligne de conclusion. La campagne suivante tient en une ligne.',
+    plus: ['Un seul graphique par carte, chacun à sa place : la trajectoire dit la campagne, les semaines disent l’action', 'Trois chiffres en tête (clients, N-1, objectif), lisibles sans défiler', 'Une action = un demi-écran au téléphone'],
+    moins: ['La campagne d’octobre n’a qu’une ligne : son N-1 jour par jour n’est pas montré', 'À coder : le lien action ↔ campagne (campagne_id) et le « + x % » de la campagne d’octobre'] },
   { id: 'd', titre: 'D — Le choix : A, avec la trajectoire de B sur chaque action',
     acc: 'La jauge de A en tête de plan. Sur chaque action liée à une campagne, deux lectures l’une sous l’autre : les semaines côte à côte (cette année, N-1, objectif, l’écart écrit), puis la trajectoire cumulée depuis le premier jour (la courbe, celle de l’an dernier, la droite de l’objectif). La phrase et le « combien par jour » ferment la carte.',
     plus: ['Les deux questions ont leur réponse : « quelle semaine a décroché » et « où en est-on sur l’ensemble »', 'Même palette, mêmes trois séries sur les deux graphiques : une seule légende', 'Une campagne sans objectif (B2B, octobre) montre quand même ce qu’il y a à battre'],
