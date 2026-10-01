@@ -492,6 +492,9 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 #dash.mob{padding:0;height:100dvh;display:flex;flex-direction:column;max-width:none}
 .mb-hd{display:flex;align-items:center;gap:9px;padding:10px 14px 8px;flex:0 0 auto}
 .mb-hd img{height:22px}
+/* Le bloc du titre doit pouvoir rétrécir, sinon un nom long pousse le
+   bouton ↻ hors de l'écran et la page défile de côté. */
+.mb-hd>div{min-width:0}
 .mb-hd .t{font-family:var(--font-display);font-size:16px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mb-hd .d{font-size:10.5px;color:var(--color-text-muted)}
 .mb-hd .sp{flex:1}
@@ -598,6 +601,22 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .mb-sem>div{display:flex;flex-direction:column;justify-content:flex-end;height:100%}
 .mb-sem i{display:block;width:100%;border-radius:2px 2px 0 0}
 .mb-sem span{display:block;font:600 7.5px var(--font-ui);color:var(--color-text-muted);text-align:center;margin-top:2px}
+/* Ta place dans le réseau : trois colonnes, les mêmes jauges qu'au bureau
+   (toi en couleur, les autres en gris, la médiane en trait). */
+.mb-clg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
+.mb-r .mb-cl{padding:0;min-width:0;border:none}
+.mb-cl .rg{display:inline-flex;align-items:baseline;gap:3px;background:var(--color-text);color:#fff;border-radius:6px;padding:2px 7px;font:700 12px var(--font-ui);margin:4px 0 2px;white-space:nowrap}
+.mb-cl .rg small{font-weight:400;opacity:.75;font-size:9px}
+.mb-cl .rg.top{background:#2d7a3e}.mb-cl .rg.bas{background:var(--color-primary)}.mb-cl .rg.mu{background:#c9c2b8}
+.mb-cl .jg{position:relative;height:16px;margin:3px 7px 2px}
+.mb-cl .jg .l{position:absolute;left:0;right:0;top:7px;height:3px;border-radius:2px;background:linear-gradient(90deg,#e5b6bc,#e9e2d8 50%,#bfdcc6)}
+.mb-cl .jg .pt{position:absolute;top:4px;width:8px;height:8px;border-radius:50%;background:#c9c2b8;border:2px solid var(--color-bg,#EAE4DC);transform:translateX(-50%)}
+.mb-cl .jg .md{position:absolute;top:1px;width:2px;height:14px;background:var(--color-text);transform:translateX(-50%)}
+.mb-cl .jg .mo{position:absolute;top:0;width:15px;height:15px;border-radius:50%;background:var(--color-primary);transform:translateX(-50%);box-shadow:0 0 0 2px var(--color-bg,#EAE4DC);z-index:1}
+.mb-cl .jg .mo.top{background:#2d7a3e}
+.mb-r .mb-cl .v{font-size:17px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-r .mb-cl .s{font-size:9.5px}
+
 /* L'objectif atteint. Rien qui gêne le doigt, rien qui reste : des papiers
    qui tombent une fois, puis le nœud disparaît. */
 .mb-confi{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
