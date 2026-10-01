@@ -717,6 +717,24 @@ site est servi en http, où ni la caméra en direct ni `BarcodeDetector` ne sont
 dans la description (« Étiquette : lot L2409A · DDM 31/12/2026 · GTIN 05412345678908 »), et la
 photo de l'étiquette est jointe.
 
+### Le scan en direct et l'adresse https
+
+La caméra en direct (`getUserMedia`) n'est permise qu'aux pages sécurisées. Le déploiement
+(`bin/deploy.sh`, étape 5a) sert donc aussi le cockpit en **https://185-180-206-46.sslip.io/consulant_bo/**
+(nom sslip.io de l'IP, certificat Let's Encrypt par défi HTTP-01, renouvelé par certbot). L'accès par
+l'IP en http reste inchangé ; il garde le scan par photo, et l'écran propose l'adresse https.
+Dans le viseur, le flux est lu réduit (1 280 px, vite) ; au premier code lu, l'image pleine est
+relue plus fort et ses codes s'ajoutent (le long GS1-128 du lot et des dates y est attrapé).
+Un EAN-13 et le GTIN (01) d'une même étiquette ont la même clé : le GTIN sur 14 chiffres.
+
+### `/pwa/tasks/heatmap/mois?obligatoires=1` — les tâches obligatoires seules
+
+Le dashboard magasin ne montre que les tâches **obligatoires** (`obligatoire` du panel) : le jour
+(carrousel des contrôles en photo, bloc des tâches, cellule du téléphone) filtre `/pwa/tasks` côté
+écran ; la semaine et le mois passent `obligatoires=1`, qui écarte les lignes dont le panel dit
+qu'elles sont facultatives (une ligne relevée avant le drapeau, `NULL`, est gardée). Les contrôles
+de formation (CQ-F…) restent dans Contrôle des tâches du cockpit.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json
