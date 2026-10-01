@@ -14,6 +14,12 @@ RewriteEngine On
   </FilesMatch>
 </IfModule>
 
+# Le lecteur de code-barres (vendor/zxing) charge un .wasm : avec le bon type,
+# le navigateur le compile pendant le téléchargement.
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+</IfModule>
+
 # API REST → contrôleur frontal
 RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
 

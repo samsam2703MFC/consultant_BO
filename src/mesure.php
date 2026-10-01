@@ -1516,9 +1516,69 @@ function ep_reclamation_refs(): array
     }
     $out['livraisons'] = array_values($out['livraisons']);
     usort($out['livraisons'], fn ($a, $b) => strcmp((string) $b['le'], (string) $a['le']));
+    // Les codes-barres déjà reconnus : le panel n'en porte aucun (ni EAN ni
+    // GTIN sur les matières), le cockpit apprend la correspondance au premier
+    // scan et la sert à tous les magasins.
+    $out['codes'] = rcCodes();
     $out['note'] = 'Les livraisons listées sont celles en cours chez le fournisseur et celles déjà citées par une '
         . 'réclamation : aucune route ne rend l’historique complet des commandes d’un magasin.';
     return $out;
+}
+
+/**
+ * Code-barres → matière. Le panel ne porte aucun code-barres sur ses matières
+ * (ni EAN, ni GTIN : seulement le SKU du fournisseur). Le premier scan d'un
+ * carton inconnu demande le produit une fois ; le lien est gardé ici, et le
+ * carton suivant — dans n'importe quel magasin — est reconnu tout seul.
+ */
+function ensureMatiereCode(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_matiere_code (
+        code VARCHAR(64) NOT NULL PRIMARY KEY,
+        matiere_id INT NOT NULL,
+        sku VARCHAR(64) NULL,
+        nom VARCHAR(255) NULL,
+        shop_id INT NULL,
+        cree_le DATETIME NOT NULL,
+        maj_le DATETIME NOT NULL,
+        KEY idx_matiere (matiere_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** code → identifiant de matière (chaîne), pour l'écran. */
+function rcCodes(): array
+{
+    $out = [];
+    try {
+        ensureMatiereCode();
+        foreach (Db::rows('SELECT code, matiere_id FROM ceo_matiere_code') as $r) { $out[(string) $r['code']] = (string) $r['matiere_id']; }
+    } catch (PDOException $e) { /* table absente : rien d'appris */ }
+    return $out;
+}
+
+/**
+ * POST /fournisseurs/matiere-code — retenir qu'un code-barres désigne une
+ * matière. { code, idMatiere, shopId?, sku?, nom? }. Le code est le GTIN
+ * quand l'étiquette est GS1 (le lot et la date changent d'un carton à
+ * l'autre, le GTIN non), sinon le texte lu.
+ */
+function wr_matiere_code(): array
+{
+    $b = body();
+    $code = trim((string) ($b['code'] ?? ''));
+    $mid = (int) ($b['idMatiere'] ?? 0);
+    if (!preg_match('/^[\x21-\x7E]{3,64}$/', $code)) { http_response_code(422); return ['error' => 'code illisible (3 à 64 caractères imprimables)']; }
+    if ($mid <= 0) { http_response_code(422); return ['error' => 'il manque la matière']; }
+    $maintenant = date('Y-m-d H:i:s');
+    ensureMatiereCode();
+    Db::exec('INSERT INTO ceo_matiere_code (code, matiere_id, sku, nom, shop_id, cree_le, maj_le) VALUES (?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE matiere_id = VALUES(matiere_id), sku = VALUES(sku), nom = VALUES(nom), shop_id = VALUES(shop_id), maj_le = VALUES(maj_le)',
+        [$code, $mid, mb_substr((string) ($b['sku'] ?? ''), 0, 64) ?: null, mb_substr((string) ($b['nom'] ?? ''), 0, 255) ?: null,
+         (int) ($b['shopId'] ?? 0) ?: null, $maintenant, $maintenant]);
+    return ['ok' => true, 'code' => $code, 'idMatiere' => (string) $mid];
 }
 
 /** La table des photos de réclamation prises depuis le dashboard. */

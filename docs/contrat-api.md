@@ -694,6 +694,29 @@ quantite, idLivraison, motif, action, texte`) accepte deux champs de plus :
 `GET /fournisseurs/reclamations?shop=3&mois=12` ne rend que les réclamations du magasin, et
 chaque ligne porte `photos` : les chemins des photos prises depuis le dashboard.
 
+### `/fournisseurs/matiere-code` — le code-barres d'un carton, appris au premier scan
+
+Le panel ne porte **aucun code-barres** sur ses matières (`/shops/{id}/materials` et
+`/material-suppliers/{id}/materials` n'ont ni EAN ni GTIN ; `connected-materials` porte
+seulement `supplier_sku`). Le scan de l'étiquette (onglet Réclamation du dashboard au téléphone)
+reconnaît donc le produit :
+
+1. par ce que le cockpit a **appris** (`ceo_matiere_code`, servi dans
+   `GET /fournisseurs/reclamation-refs` sous `codes` : `{ "05412345678908": "63", … }`) ;
+2. sinon par le **SKU du fournisseur** quand le code-barres le porte (Code128 `1002343`) ;
+3. sinon le produit est choisi une fois à la main, et le lien est retenu :
+
+`POST /fournisseurs/matiere-code` `{ code, idMatiere, shopId?, sku?, nom? }` → `{ ok, code, idMatiere }`.
+`code` : 3 à 64 caractères imprimables — le GTIN (01) pour une étiquette GS1 (le lot et la date
+changent d'un carton à l'autre, pas le GTIN), sinon l'EAN, sinon le texte lu. Le dernier choix
+l'emporte (corriger un produit mal reconnu réécrit le lien).
+
+La lecture se fait **sur le téléphone**, sur la photo (zxing-wasm, `assets/vendor/zxing/`) : le
+site est servi en http, où ni la caméra en direct ni `BarcodeDetector` ne sont permis. Pour une
+étiquette GS1, le lot (10), la DLC (17), la DDM (15/16) et la date de fabrication (11/13) partent
+dans la description (« Étiquette : lot L2409A · DDM 31/12/2026 · GTIN 05412345678908 »), et la
+photo de l'étiquette est jointe.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json

@@ -2281,7 +2281,7 @@
   }
 
   /* Le brouillon du formulaire : il survit au changement d'onglet. */
-  function rcNeuf() { return { photos: [], traite: 0, matiere: null, q: '', livraison: null, qte: '1', motif: null, note: '', envoi: false, err: null }; }
+  function rcNeuf() { return { photos: [], traite: 0, matiere: null, q: '', livraison: null, qte: '1', motif: null, note: '', envoi: false, err: null, scan: null }; }
   function rcForm() { if (!S.rc) { S.rc = rcNeuf(); } return S.rc; }
   function rcRefs() { const F = S.aux[cleRCR()]; return F && !F.indispo ? F : null; }
   function rcFournNom(F, id) { const f = (F && F.fournisseurs || []).find(x => String(x.id) === String(id)); return f ? String(f.nom).trim() : 'le fournisseur'; }
@@ -2366,6 +2366,15 @@
     h += '</div>';
     // 2. Le produit — et la livraison qui le suit.
     h += '<div class="rc-champ"><label>Le produit</label>';
+    if (F) { rcResoudre(F, R); }
+    const sc = R.scan;
+    if (!rcMatiere(F || {}, R) || (sc && ['lecture', 'illisible', 'erreur'].includes(sc.etat))) {
+      h += `<button class="rc-scan" data-rcscan="1"${sc && sc.etat === 'lecture' ? ' disabled' : ''}>${RC_CODEBARRE}<span>${sc && sc.etat === 'lecture' ? 'Lecture du code-barres…' : 'Scanner l’étiquette'}</span></button>`;
+    }
+    if (sc && sc.etat === 'illisible') { h += '<div class="rc-scanmsg ko">Aucun code-barres lu sur la photo. Reprenez-la de plus près, bien à plat, sans reflet — ou choisissez le produit ci-dessous.</div>'; }
+    if (sc && sc.etat === 'erreur') { h += `<div class="rc-scanmsg ko">${esc(sc.err)}</div>`; }
+    if (sc && sc.etat === 'lu') { h += `<div class="rc-scanmsg">Code <b>${esc(sc.code)}</b> lu — recherche du produit…</div>`; }
+    if (sc && sc.etat === 'inconnu') { h += `<div class="rc-scanmsg">Code <b>${esc(sc.code)}</b> lu, pas encore connu : choisissez le produit une fois, il sera reconnu au prochain scan.</div>`; }
     if (!F0 && S.err[cle]) { h += `<div class="rc-err">${esc(S.err[cle])} <button class="rc-lien" data-recharger="1">relire</button></div>`; }
     else if (!F0) { h += '<div class="rc-pt">lecture des produits du magasin…</div>'; }
     else if (!F) { h += `<div class="rc-err">${esc(F0.motif || 'produits indisponibles')}</div>`; }
@@ -2374,6 +2383,10 @@
       if (m) {
         const L = rcLivraisons(F, m), liv = rcLivraison(F, R);
         h += `<div class="rc-choix"><div><b>${esc(m.nom)}</b><small>${esc(rcFournNom(F, m.fournisseur))} · SKU ${esc(m.sku)}${m.unite ? ' · ' + esc(m.unite) : ''}</small></div><button data-rcmatx="1" aria-label="Changer de produit">✕</button></div>`;
+        const et = rcEtiquette(sc);
+        if (sc && sc.code && (sc.etat === 'ok' || sc.etat === 'appris')) {
+          h += `<div class="rc-scanmsg ok">${RC_CODEBARRE}<span>${sc.etat === 'appris' ? 'Code retenu : reconnu au prochain scan' : 'Reconnu par le code-barres'}${et ? ' · ' + esc(et) : ''}</span></div>`;
+        } else if (et) { h += `<div class="rc-scanmsg ok">${RC_CODEBARRE}<span>${esc(et)}</span></div>`; }
         h += L.length
           ? `<label class="rc-liv">Livraison <select id="rc-liv" data-rcliv="1">${L.map(l => `<option value="${esc(l.id)}"${liv && String(l.id) === String(liv.id) ? ' selected' : ''}>${esc(rcLivLib(l))}</option>`).join('')}</select></label>`
           : `<div class="rc-err">Aucune livraison de ${esc(rcFournNom(F, m.fournisseur))} connue pour ce magasin : la réclamation ne peut pas partir d’ici.</div>`;
@@ -2395,7 +2408,7 @@
     h += `<div class="rc-champ"><label for="rc-note">Un mot pour le fournisseur <em>facultatif</em></label><textarea id="rc-note" class="rc-in" data-rcnote="1" rows="3" maxlength="1500" placeholder="Ce qui ne va pas, comment vous l’avez vu…">${esc(R.note)}</textarea></div>`;
     if (R.err) { h += `<div class="rc-err">${esc(R.err)}</div>`; }
     h += `<div class="rc-envoi">${rcBoutonEnvoi(F, R)}</div>`;
-    return `<div class="rc-form">${h}</div>`;
+    return `<div class="rc-form" data-scan="${R.scan ? R.scan.etat : ''}" data-nscan="${R.nScan || 0}">${h}</div>`;
   }
 
   /** Sous le formulaire : ce qui a déjà été réclamé, et ce qu'il en est. */
@@ -2479,6 +2492,157 @@
       .finally(() => { if (S.rc === R) { R.traite--; rendre(); } }));
   }
 
+  /* --- Le scan de l'étiquette ------------------------------------------------
+   * Le site est servi en http : ni caméra en direct (getUserMedia) ni
+   * BarcodeDetector, réservés aux pages sécurisées. On fait donc comme pour
+   * la photo : l'appareil s'ouvre, la photo revient, et le code-barres est lu
+   * dessus, sur le téléphone, par zxing (wasm, chargé au premier scan).
+   * La photo de l'étiquette est jointe à la réclamation : c'est ce que les
+   * fournisseurs demandent.
+   *
+   * Le panel ne connaît aucun code-barres : on reconnaît le produit par le
+   * SKU du fournisseur quand le code le porte, sinon par ce que le cockpit a
+   * appris au premier scan (POST /fournisseurs/matiere-code). */
+  const RC_CODEBARRE = '<svg viewBox="0 0 24 24" width="20" height="16" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="2" height="16"/><rect x="5.5" y="4" width="1" height="16"/><rect x="8" y="4" width="2" height="16"/><rect x="11.5" y="4" width="1" height="16"/><rect x="14" y="4" width="3" height="16"/><rect x="18.5" y="4" width="1" height="16"/><rect x="21" y="4" width="1.5" height="16"/></svg>';
+  const RC_ZX = '../assets/vendor/zxing/';
+  let rcZx = null, rcFichierScan = null;
+  function rcLecteur() {
+    if (!rcZx) {
+      rcZx = new Promise((ok, ko) => {
+        const s = document.createElement('script');
+        s.src = RC_ZX + 'zxing-reader.js';
+        s.onload = () => {
+          try {
+            const Z = window.ZXingWASM;
+            Z.prepareZXingModule({ overrides: { locateFile: (p, pre) => p.endsWith('.wasm') ? new URL(RC_ZX + p, location.href).href : pre + p } });
+            ok(Z);
+          } catch (e) { ko(e); }
+        };
+        s.onerror = () => ko(new Error('Le lecteur de code-barres ne s’est pas chargé — vérifiez la connexion.'));
+        document.head.appendChild(s);
+      });
+      rcZx.catch(() => { rcZx = null; });
+    }
+    return rcZx;
+  }
+  function rcScanAppareil() {
+    if (!rcFichierScan) {
+      rcFichierScan = document.createElement('input');
+      rcFichierScan.type = 'file'; rcFichierScan.accept = 'image/*'; rcFichierScan.hidden = true;
+      rcFichierScan.setAttribute('capture', 'environment');
+      rcFichierScan.addEventListener('change', () => { const f = rcFichierScan.files && rcFichierScan.files[0]; rcFichierScan.value = ''; if (f) { rcScanner(f); } });
+      document.body.appendChild(rcFichierScan);
+    }
+    // Le lecteur se charge pendant qu'on vise.
+    rcLecteur().catch(() => {});
+    rcFichierScan.click();
+  }
+  /** Les pixels de la photo, à 2 400 px au plus : assez pour les barres fines. */
+  function rcPixels(f) {
+    return new Promise((ok, ko) => {
+      const u = URL.createObjectURL(f), img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
+        const x = cv.getContext('2d'); x.drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(u);
+        ok(x.getImageData(0, 0, cv.width, cv.height));
+      };
+      img.onerror = () => { URL.revokeObjectURL(u); ko(new Error('photo illisible')); };
+      img.src = u;
+    });
+  }
+  /** Une date GS1 (AAMMJJ, JJ = 00 : fin du mois) en jj/mm/aaaa. */
+  function rcDateGS1(v) {
+    if (!/^\d{6}$/.test(v || '')) { return v || ''; }
+    const a = 2000 + +v.slice(0, 2), m = +v.slice(2, 4);
+    let j = +v.slice(4, 6);
+    if (!j) { j = new Date(a, m, 0).getDate(); }
+    return String(j).padStart(2, '0') + '/' + String(m).padStart(2, '0') + '/' + a;
+  }
+  /** Ce que disent les codes lus : la clé du produit, et pour une étiquette
+   * GS1 le lot et les dates. La clé est le GTIN (01) — le lot et la date
+   * changent d'un carton à l'autre, le GTIN non —, sinon l'EAN, sinon le texte. */
+  function rcAnalyse(res) {
+    const a = { code: '', gtin: '', lot: '', dlc: '', ddm: '', fab: '', ai240: '', textes: [] };
+    res.forEach(r => {
+      const t = String(r.text || '').trim(); if (!t) { return; }
+      a.textes.push(t);
+      if (r.contentType === 'GS1' || /^\(\d{2,4}\)/.test(t)) {
+        const re = /\((\d{2,4})\)([^(]*)/g; let x;
+        while ((x = re.exec(t))) {
+          const ai = x[1], v = x[2].trim();
+          if (ai === '01' || ai === '02') { a.gtin = a.gtin || v; }
+          else if (ai === '10') { a.lot = a.lot || v; }
+          else if (ai === '17') { a.dlc = a.dlc || rcDateGS1(v); }
+          else if (ai === '15' || ai === '16') { a.ddm = a.ddm || rcDateGS1(v); }
+          else if (ai === '11' || ai === '13') { a.fab = a.fab || rcDateGS1(v); }
+          else if (ai === '240' || ai === '241') { a.ai240 = a.ai240 || v; }
+        }
+      }
+    });
+    const ean = res.find(r => /^(EAN|UPC)/.test(r.format || ''));
+    a.code = a.gtin || (ean ? String(ean.text).trim() : '') || a.textes[0] || '';
+    return a;
+  }
+  /** Le lot et les dates, tels qu'ils partent dans la description. */
+  function rcEtiquette(sc) {
+    if (!sc) { return ''; }
+    return [sc.lot ? 'lot ' + sc.lot : '', sc.dlc ? 'DLC ' + sc.dlc : '', sc.ddm ? 'DDM ' + sc.ddm : '', sc.fab ? 'fabriqué le ' + sc.fab : '',
+      sc.gtin ? 'GTIN ' + sc.gtin : (sc.code && sc.etat !== 'illisible' ? 'code ' + sc.code : '')].filter(Boolean).join(' · ');
+  }
+  /** Le produit d'un code : appris d'abord, puis le SKU du fournisseur. */
+  function rcTrouve(F, sc) {
+    const C = F.codes || {}, M = F.matieres || [];
+    const parId = id => M.find(m => String(m.id) === String(id)) || null;
+    const cles = [sc.code, sc.gtin, sc.gtin && sc.gtin.replace(/^0+/, ''), sc.ai240].concat(sc.textes || []).filter(Boolean);
+    for (const k of cles) { if (C[k] && parId(C[k])) { return { m: parId(C[k]), par: 'appris' }; } }
+    for (const k of cles) {
+      const n = String(k).replace(/^0+/, '');
+      const m = M.find(x => x.sku && (x.sku === k || x.sku.replace(/^0+/, '') === n));
+      if (m) { return { m: m, par: 'sku' }; }
+    }
+    return null;
+  }
+  /** Un code lu attend les références : on le résout dès qu'elles sont là. */
+  function rcResoudre(F, R) {
+    const sc = R.scan;
+    if (!sc || sc.etat !== 'lu') { return; }
+    const t = rcTrouve(F, sc);
+    if (t) { R.matiere = String(t.m.id); R.livraison = null; R.q = ''; sc.etat = 'ok'; sc.par = t.par; sc.matiere = String(t.m.id); }
+    else { sc.etat = 'inconnu'; }
+  }
+  /** Le produit choisi à la main après un scan : le cockpit retient le lien. */
+  function rcApprendre(R) {
+    const sc = R.scan, F = rcRefs();
+    if (!sc || !sc.code || !F || !R.matiere || sc.matiere === R.matiere) { return; }
+    if (sc.etat !== 'inconnu' && sc.etat !== 'ok' && sc.etat !== 'appris') { return; }
+    const m = rcMatiere(F, R); if (!m) { return; }
+    sc.etat = 'appris'; sc.matiere = String(m.id);
+    F.codes = F.codes || {}; F.codes[sc.code] = String(m.id);
+    ecrire('/fournisseurs/matiere-code', { code: sc.code, idMatiere: m.id, shopId: S.shop, sku: m.sku, nom: m.nom })
+      .catch(e => { if (R.scan === sc) { sc.etat = 'erreur'; sc.err = 'Le code n’a pas pu être retenu : ' + e.message; rendre(); } });
+  }
+  function rcScanner(f) {
+    const R = rcForm(), jeton = { etat: 'lecture' };
+    R.scan = jeton; R.nScan = (R.nScan || 0) + 1; S.rcFait = null; R.err = null;
+    // La photo de l'étiquette rejoint les photos de la réclamation.
+    if (R.photos.length + R.traite < RC_MAX) { rcAjouter([f]); } else { rendre(); }
+    Promise.all([rcLecteur(), rcPixels(f)])
+      .then(([Z, px]) => Z.readBarcodes(px, { tryHarder: true, tryRotate: true, tryDownscale: true, textMode: 'HRI', maxNumberOfSymbols: 4,
+        formats: ['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'Code128', 'Code39', 'ITF', 'DataBar', 'DataBarExpanded', 'DataMatrix', 'QRCode'] }))
+      .then(res => {
+        // Un second scan lancé entre-temps l'emporte.
+        if (S.rc !== R || R.scan !== jeton) { return; }
+        const lus = (res || []).filter(r => r && r.text && r.isValid !== false);
+        if (!lus.length) { R.scan = { etat: 'illisible' }; rendre(); return; }
+        R.scan = Object.assign(rcAnalyse(lus), { etat: 'lu' });
+        rendre();
+      })
+      .catch(e => { if (S.rc === R && R.scan === jeton) { R.scan = { etat: 'erreur', err: e && e.message ? e.message : 'lecture impossible' }; rendre(); } });
+  }
+
   function rcEnvoyer() {
     const R = rcForm(), F = rcRefs();
     if (R.envoi || !F || rcManque(F, R)) { return; }
@@ -2489,7 +2653,9 @@
     Promise.all(R.photos.map(p => rcDataUrl(p.blob)))
       .then(photos => ecrire('/fournisseurs/reclamation', {
         shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite,
-        quantite: q, idLivraison: liv.id, motif: R.motif, action: 'REPLACEMENT', texte: R.note.trim(), auteur: notePar(), photos: photos }))
+        quantite: q, idLivraison: liv.id, motif: R.motif, action: 'REPLACEMENT',
+        texte: [R.note.trim(), rcEtiquette(R.scan) ? 'Étiquette : ' + rcEtiquette(R.scan) : ''].filter(Boolean).join('\n\n'),
+        auteur: notePar(), photos: photos }))
       .then(r => {
         S.rcFait = { id: r && r.id, photos: r && Array.isArray(r.photos) ? r.photos.length : 0, nom: m.nom, qte: q, unite: m.unite,
           fournisseur: rcFournNom(F, liv.fournisseur) };
@@ -2508,8 +2674,9 @@
     const b = e.target.closest('button'); if (!b || b.disabled || !$.contains(b)) { return; }
     const R = rcForm(), d = b.dataset;
     if (d.rcphoto) { rcAppareil(); return; }
+    if (d.rcscan) { rcScanAppareil(); return; }
     if (d.rcsuppr != null) { const p = R.photos.splice(+d.rcsuppr, 1)[0]; if (p) { URL.revokeObjectURL(p.url); } rendre(); return; }
-    if (d.rcmat) { R.matiere = d.rcmat; R.q = ''; R.livraison = null; R.err = null; S.rcFait = null; rendre(); return; }
+    if (d.rcmat) { R.matiere = d.rcmat; R.q = ''; R.livraison = null; R.err = null; S.rcFait = null; rcApprendre(R); rendre(); return; }
     if (d.rcmatx) { R.matiere = null; R.livraison = null; rendre(); const i = document.getElementById('rc-q'); if (i) { i.focus(); } return; }
     if (d.rcmotif) { R.motif = d.rcmotif; rendre(); return; }
     if (d.rcpas) {
