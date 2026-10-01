@@ -19,7 +19,7 @@
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
-    rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false,
+    rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
@@ -2283,6 +2283,11 @@
   /* Le brouillon du formulaire : il survit au changement d'onglet. */
   function rcNeuf() { return { photos: [], traite: 0, matiere: null, q: '', livraison: null, qte: '1', motif: null, note: '', envoi: false, err: null, scan: null }; }
   function rcForm() { if (!S.rc) { S.rc = rcNeuf(); } return S.rc; }
+  /** Scanner ou saisir le produit : le dernier choix du téléphone, le scan d'abord. */
+  function rcMode() {
+    if (!S.rcMode) { try { S.rcMode = localStorage.getItem('db.rcMode') === 'saisie' ? 'saisie' : 'scan'; } catch (e) { S.rcMode = 'scan'; } }
+    return S.rcMode;
+  }
   function rcRefs() { const F = S.aux[cleRCR()]; return F && !F.indispo ? F : null; }
   function rcFournNom(F, id) { const f = (F && F.fournisseurs || []).find(x => String(x.id) === String(id)); return f ? String(f.nom).trim() : 'le fournisseur'; }
   function rcMatiere(F, R) { return R.matiere ? (F.matieres || []).find(m => String(m.id) === String(R.matiere)) || null : null; }
@@ -2367,19 +2372,27 @@
     // 2. Le produit — et la livraison qui le suit.
     h += '<div class="rc-champ"><label>Le produit</label>';
     if (F) { rcResoudre(F, R); }
-    const sc = R.scan;
-    if (!rcMatiere(F || {}, R) || (sc && ['lecture', 'illisible', 'erreur'].includes(sc.etat))) {
-      h += `<button class="rc-scan" data-rcscan="1"${sc && sc.etat === 'lecture' ? ' disabled' : ''}>${RC_CODEBARRE}<span>${sc && sc.etat === 'lecture' ? 'Lecture du code-barres…' : 'Scanner l’étiquette'}</span></button>`;
+    const sc = R.scan, mSel = F ? rcMatiere(F, R) : null, mode = rcMode();
+    // Deux façons de dire le produit : scanner l'étiquette, ou le saisir. Le
+    // téléphone retient la dernière. Un code inconnu ouvre la saisie : le
+    // produit est choisi une fois, puis reconnu.
+    const saisie = mode === 'saisie' || (sc && sc.etat === 'inconnu');
+    if (!mSel) {
+      h += `<div class="rc-mode" role="tablist">${[['scan', RC_CODEBARRE + '<span>Scanner</span>'], ['saisie', '<b aria-hidden="true">⌨</b><span>Saisir</span>']]
+        .map(o => `<button role="tab" aria-selected="${mode === o[0]}" data-rcmode="${o[0]}" class="${mode === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>`;
+      if (mode === 'scan') {
+        h += `<button class="rc-scan" data-rcscan="1"${sc && sc.etat === 'lecture' ? ' disabled' : ''}>${RC_CODEBARRE}<span>${sc && sc.etat === 'lecture' ? 'Lecture du code-barres…' : 'Scanner l’étiquette'}</span></button>`;
+      }
     }
-    if (sc && sc.etat === 'illisible') { h += '<div class="rc-scanmsg ko">Aucun code-barres lu sur la photo. Reprenez-la de plus près, bien à plat, sans reflet — ou choisissez le produit ci-dessous.</div>'; }
+    if (sc && sc.etat === 'illisible') { h += '<div class="rc-scanmsg ko">Aucun code-barres lu sur la photo. Reprenez-la de plus près, bien à plat, sans reflet — ou passez sur « Saisir ».</div>'; }
     if (sc && sc.etat === 'erreur') { h += `<div class="rc-scanmsg ko">${esc(sc.err)}</div>`; }
     if (sc && sc.etat === 'lu') { h += `<div class="rc-scanmsg">Code <b>${esc(sc.code)}</b> lu — recherche du produit…</div>`; }
     if (sc && sc.etat === 'inconnu') { h += `<div class="rc-scanmsg">Code <b>${esc(sc.code)}</b> lu, pas encore connu : choisissez le produit une fois, il sera reconnu au prochain scan.</div>`; }
     if (!F0 && S.err[cle]) { h += `<div class="rc-err">${esc(S.err[cle])} <button class="rc-lien" data-recharger="1">relire</button></div>`; }
-    else if (!F0) { h += '<div class="rc-pt">lecture des produits du magasin…</div>'; }
+    else if (!F0) { if (saisie || mSel) { h += '<div class="rc-pt">lecture des produits du magasin…</div>'; } }
     else if (!F) { h += `<div class="rc-err">${esc(F0.motif || 'produits indisponibles')}</div>`; }
     else {
-      const m = rcMatiere(F, R);
+      const m = mSel;
       if (m) {
         const L = rcLivraisons(F, m), liv = rcLivraison(F, R);
         h += `<div class="rc-choix"><div><b>${esc(m.nom)}</b><small>${esc(rcFournNom(F, m.fournisseur))} · SKU ${esc(m.sku)}${m.unite ? ' · ' + esc(m.unite) : ''}</small></div><button data-rcmatx="1" aria-label="Changer de produit">✕</button></div>`;
@@ -2390,7 +2403,7 @@
         h += L.length
           ? `<label class="rc-liv">Livraison <select id="rc-liv" data-rcliv="1">${L.map(l => `<option value="${esc(l.id)}"${liv && String(l.id) === String(liv.id) ? ' selected' : ''}>${esc(rcLivLib(l))}</option>`).join('')}</select></label>`
           : `<div class="rc-err">Aucune livraison de ${esc(rcFournNom(F, m.fournisseur))} connue pour ce magasin : la réclamation ne peut pas partir d’ici.</div>`;
-      } else {
+      } else if (saisie) {
         const H = rcHabituels(F);
         if (H.length) { h += `<div class="rc-puces">${H.map(x => `<button data-rcmat="${esc(x.id)}">${esc(x.nom)}</button>`).join('')}</div>`; }
         h += `<input id="rc-q" class="rc-in" data-rcq="1" type="search" autocomplete="off" enterkeyhint="search" placeholder="🔍 ${H.length ? 'Un autre produit' : 'Chercher le produit'} — nom ou SKU" value="${esc(R.q)}">`
@@ -2675,6 +2688,13 @@
     const R = rcForm(), d = b.dataset;
     if (d.rcphoto) { rcAppareil(); return; }
     if (d.rcscan) { rcScanAppareil(); return; }
+    if (d.rcmode) {
+      S.rcMode = d.rcmode === 'saisie' ? 'saisie' : 'scan';
+      try { localStorage.setItem('db.rcMode', S.rcMode); } catch (er) { /* navigation privée */ }
+      // Un échec de lecture ne suit pas dans l'autre mode.
+      if (R.scan && ['illisible', 'erreur'].includes(R.scan.etat)) { R.scan = null; }
+      rendre(); return;
+    }
     if (d.rcsuppr != null) { const p = R.photos.splice(+d.rcsuppr, 1)[0]; if (p) { URL.revokeObjectURL(p.url); } rendre(); return; }
     if (d.rcmat) { R.matiere = d.rcmat; R.q = ''; R.livraison = null; R.err = null; S.rcFait = null; rcApprendre(R); rendre(); return; }
     if (d.rcmatx) { R.matiere = null; R.livraison = null; rendre(); const i = document.getElementById('rc-q'); if (i) { i.focus(); } return; }
