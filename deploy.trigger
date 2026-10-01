@@ -493,3 +493,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-01T09:51:16Z dashboard telephone : onglet Reclamation
 2026-10-01T10:57:39Z sonde : champs code des matieres
 2026-10-01T11:08:57Z reclamation telephone : scan du code-barres
+2026-10-01T11:13:18Z reclamation telephone : bascule scanner ou saisir
