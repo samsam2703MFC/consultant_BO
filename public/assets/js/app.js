@@ -7004,6 +7004,23 @@ class App {
     common.anmEtape = etape;
     common.anmPrec = etape > 1 ? () => this.setState({ anmEtape: etape - 1 }) : null;
     common.anmSuiv = etape < 5 ? () => this.setState({ anmEtape: etape + 1 }) : null;
+    // L'étape Prix vit sans la caisse locale : lue chez le panel, elle part
+    // avec le motif quand le reste de l'analyse ne peut pas se calculer.
+    common.anmPrixSeul = !!(d && d.motif && d.prixSeul && d.levier3);
+    if (d && d.levier3) {
+      const l3p = d.levier3;
+      common.anmNom = court(d.nom);
+      common.anmPrix = (l3p.refs || []).map(r => ({
+        nom: r.nom, groupe: r.groupe, prix: px(r.prix), prixReseau: px(r.prixReseau),
+        ecart: '− ' + Math.abs(r.ecartPct).toFixed(1).replace('.', ',') + ' %',
+        fort: r.ecartPct <= -8,
+        volMois: nb(r.volMois) + ' u', gainMois: eur(r.gainMois), gainAn: eur(r.gainAn),
+      }));
+      common.anmPrixReste = l3p.resteN ? '+ ' + l3p.resteN + ' autres références — '
+        + eur(l3p.resteMois) + ' / mois' : '';
+      common.anmPrixSource = l3p.source || '';
+      common.anmPrixTotal = l3p.nb ? l3p.nb + ' référence(s) · + ' + eur(l3p.potMois) + ' / mois — ' + eur(l3p.potAn) + ' / an, à volume constant' : '';
+    }
     if (!d || d.motif) { return; }
 
     const k = d.kpis, l1 = d.levier1, l2 = d.levier2, l3 = d.levier3;
@@ -7043,15 +7060,6 @@ class App {
     const maxPart = Math.max(1, ...common.anmGroupes.map(g => Math.max(g.barre, g.barreReseau)));
     common.anmGroupes.forEach(g => { g.barre = Math.round(100 * g.barre / maxPart);
       g.barreReseau = Math.round(100 * g.barreReseau / maxPart); });
-
-    common.anmPrix = (l3.refs || []).map(r => ({
-      nom: r.nom, groupe: r.groupe, prix: px(r.prix), prixReseau: px(r.prixReseau),
-      ecart: '− ' + Math.abs(r.ecartPct).toFixed(1).replace('.', ',') + ' %',
-      fort: r.ecartPct <= -8,
-      volMois: nb(r.volMois) + ' u', gainMois: eur(r.gainMois), gainAn: eur(r.gainAn),
-    }));
-    common.anmPrixReste = l3.resteN ? '+ ' + l3.resteN + ' autres références — '
-      + eur(l3.resteMois) + ' / mois' : '';
 
     common.anmPlan = (d.plan || []).map(a => ({
       rang: a.rang, action: a.action, levier: a.levier,

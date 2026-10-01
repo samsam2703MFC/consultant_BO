@@ -9474,11 +9474,49 @@ function tplAnm(c, x){
       </div>
     </div>`;
 
+  const e3f = () => `
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">${esc(c.anmNom)} — les prix sous le réseau</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Au prix réellement encaissé, remises comprises. Une référence dont le volume dépasse celui des autres, à taille égale, n’apparaît pas : son prix bas travaille. Le gain est à volume constant — si le volume tient, c’est de la marge pure.${c.anmPrixTotal ? ' <b style="color:var(--color-text)">' + esc(c.anmPrixTotal) + '</b>' : ''}</div>
+      </div>
+      ${!c.anmPrix.length ? `<div style="font-size:12.5px;color:#2d7a3e;padding:14px 18px 16px">Aucun prix sous le réseau : la grille de ce magasin est au niveau.</div>` : `
+      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Référence</th>
+          <th style="${th};text-align:left">Catégorie</th>
+          <th style="${th}">Votre prix</th><th style="${th}">Prix réseau</th><th style="${th}">Écart</th>
+          <th style="${th}">Volume / mois</th><th style="${th}">Gain / mois</th><th style="${th};padding-right:18px">Par an</th>
+        </tr></thead>
+        <tbody>
+          ${c.anmPrix.map(r => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(r.nom)}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.groupe)}</td>
+            <td style="${td}">${esc(r.prix)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(r.prixReseau)}</td>
+            <td style="${td};color:${r.fort ? 'var(--color-primary)' : '#C17A2A'};font-weight:600">${esc(r.ecart)}</td>
+            <td style="${td}">${esc(r.volMois)}</td>
+            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(r.gainMois)}</td>
+            <td style="${td};padding-right:18px;color:var(--color-text-muted)">${esc(r.gainAn)}</td>
+          </tr>`).join('')}
+          ${!c.anmPrixReste ? '' : `<tr><td colspan="8" style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${esc(c.anmPrixReste)}</td></tr>`}
+        </tbody>
+      </table></div>`}
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Prix encaissés lus ${c.anmPrixSource ? 'chez le ' + esc(c.anmPrixSource) : 'sur la période'}, entre magasins ayant vendu au moins 5 unités ; le volume se compare à taille égale (pièces pour 10 000 € de chiffre du magasin). Le détail magasin par magasin est dans Produits › Où ça se vend › Prix × volume. L’alignement est une décision du franchisé : l’écran chiffre, il ne fixe pas les prix.</div>
+    </div>`;
+
   if (c.anmChargement) {
     return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
       <div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Analyse en cours — la caisse est relue sur toute la période…</div></div>`;
   }
   if (c.anmMotif) {
+    // La caisse locale ne répond pas sur la période : les étapes qui en
+    // dépendent se taisent, l'étape Prix — lue chez le panel — reste.
+    if (c.anmPrixSeul) {
+      return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
+        <div style="${carte};padding:14px 18px;font-size:12.5px;line-height:1.55"><b>${esc(c.anmMotif)}</b> — la vue d’ensemble, les catégories et le plan s’appuient sur la caisse locale et ne peuvent pas se calculer sur cette période. L’étape Prix, lue chez le panel, est ci-dessous.</div>
+        ${e3f()}</div>`;
+    }
     return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
       <div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.anmMotif)}</div></div>`;
   }
@@ -9531,36 +9569,6 @@ function tplAnm(c, x){
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Le potentiel = revenir à la part médiane des autres magasins, le CA mensuel actuel posé comme assiette — <b>moins ce que le levier 1 compte déjà</b> : une catégorie en retrait l’est souvent parce que des références y manquent, et additionner les deux promettrait deux fois le même euro. Une catégorie au-dessus du réseau n’est pas « à corriger » : c’est l’identité du magasin — elle est marquée comme force, jamais comptée en négatif.</div>
     </div>`;
 
-  const e3 = `
-    <div style="${carte}">
-      <div style="padding:16px 18px 0">
-        <div style="${lbl}">${esc(c.anmNom)} — les prix sous le réseau</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Au prix réellement encaissé, remises comprises. Une référence dont le volume dépasse celui des autres n’apparaît pas : son prix bas travaille. Le gain est à volume constant — si le volume tient, c’est de la marge pure.</div>
-      </div>
-      ${!c.anmPrix.length ? `<div style="font-size:12.5px;color:#2d7a3e;padding:14px 18px 16px">Aucun prix sous le réseau : la grille de ce magasin est au niveau.</div>` : `
-      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px">
-        <thead><tr>
-          <th style="${th};text-align:left;padding-left:18px">Référence</th>
-          <th style="${th};text-align:left">Catégorie</th>
-          <th style="${th}">Votre prix</th><th style="${th}">Prix réseau</th><th style="${th}">Écart</th>
-          <th style="${th}">Volume / mois</th><th style="${th}">Gain / mois</th><th style="${th};padding-right:18px">Par an</th>
-        </tr></thead>
-        <tbody>
-          ${c.anmPrix.map(r => `<tr>
-            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(r.nom)}</td>
-            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.groupe)}</td>
-            <td style="${td}">${esc(r.prix)}</td>
-            <td style="${td};color:var(--color-text-muted)">${esc(r.prixReseau)}</td>
-            <td style="${td};color:${r.fort ? 'var(--color-primary)' : '#C17A2A'};font-weight:600">${esc(r.ecart)}</td>
-            <td style="${td}">${esc(r.volMois)}</td>
-            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(r.gainMois)}</td>
-            <td style="${td};padding-right:18px;color:var(--color-text-muted)">${esc(r.gainAn)}</td>
-          </tr>`).join('')}
-          ${!c.anmPrixReste ? '' : `<tr><td colspan="8" style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${esc(c.anmPrixReste)}</td></tr>`}
-        </tbody>
-      </table></div>`}
-      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Prix comparés sur la même période, entre magasins ayant vendu au moins 5 unités. L’alignement est une décision du franchisé : l’écran chiffre, il ne fixe pas les prix.</div>
-    </div>`;
 
   const e4 = `
     <div style="${carte}">
@@ -9606,7 +9614,7 @@ function tplAnm(c, x){
   return `
   <div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
     ${tete}
-    ${c.anmEtape === 1 ? e1 : c.anmEtape === 2 ? e2c : c.anmEtape === 3 ? e3 : c.anmEtape === 4 ? e4 : e5}
+    ${c.anmEtape === 1 ? e1 : c.anmEtape === 2 ? e2c : c.anmEtape === 3 ? e3f() : c.anmEtape === 4 ? e4 : e5}
     <div style="display:flex;align-items:center;gap:10px">
       ${c.anmPrec ? `<button ${x.A(c.anmPrec)} style="${pill(false)}">← Précédent</button>` : ''}
       <span style="flex:1"></span>

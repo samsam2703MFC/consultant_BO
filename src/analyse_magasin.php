@@ -20,7 +20,10 @@ declare(strict_types=1);
  *  3. Les PRIX — les références vendues sous le prix encaissé chez les
  *     autres, SANS volume supérieur pour le justifier : un prix bas qui fait
  *     vendre plus n'est pas une erreur, c'est une stratégie, et l'écran ne
- *     pousse pas à la casser. Gain à volume constant.
+ *     pousse pas à la casser. Gain à volume constant. Lus chez le PANEL, sur
+ *     les mois clos (anmPrixPanel) : la copie locale de la caisse s'est
+ *     arrêtée, et des prix comparés sur des mois vides ne disent rien. La
+ *     caisse locale ne sert plus qu'en repli, panel injoignable.
  *
  * Tout est une estimation à comportement constant. La page le dit.
  */
@@ -29,6 +32,101 @@ declare(strict_types=1);
 function anmMediane(array $v): float
 {
     return $v === [] ? 0.0 : mqMediane($v);
+}
+
+/**
+ * Le levier 3 lu chez le panel : les références que le magasin vend sous le
+ * prix encaissé ailleurs, sans volume supérieur pour le justifier.
+ *
+ * Les MÊMES tranches que « Où ça se vend » (pièces et chiffre par magasin et
+ * par référence, gravées une fois closes), sur les $n derniers MOIS CLOS.
+ * Mêmes règles que le calcul sur la caisse locale, une seule change : le
+ * volume des autres se compare à TAILLE ÉGALE (pièces pour 10 000 € de
+ * chiffre du magasin) plutôt que par jour d'ouverture, que les tranches ne
+ * portent pas — la règle de l'onglet Prix × volume.
+ *
+ * Rend null quand le panel n'est pas configuré ou n'a rien rendu : l'appelant
+ * retombe alors sur la caisse locale.
+ *
+ * @param array<int,array{nom:string,groupe:string}> $refs  le catalogue, par pid
+ */
+function anmPrixPanel(string $shop, int $n, array $refs, array $ids): ?array
+{
+    if (!PanelApi::configured() || !function_exists('apTranches2')) { return null; }
+    $tranches = [];
+    for ($i = $n; $i >= 1; $i--) {
+        $t = strtotime(date('Y-m-01') . " -$i month");
+        $tranches[] = [date('Y-m-01', $t), date('Y-m-t', $t)];
+    }
+    $couples = [];
+    foreach ($ids as $sid) { foreach ($tranches as [$du, $au]) { $couples[] = [(int) $sid, $du, $au]; } }
+    $lu = apTranches2($couples);
+    $v = []; $taille = []; $info = []; $muets = 0;
+    foreach ($ids as $sid) {
+        $sid = (string) $sid; $taille[$sid] = 0.0;
+        foreach ($tranches as [$du, $au]) {
+            $p = $lu[$sid . ':' . $du] ?? null;
+            if (!is_array($p)) { $muets++; continue; }
+            foreach ($p as $pid => $x) {
+                $taille[$sid] += (float) $x[3];
+                $info[$pid] = $info[$pid] ?? [(string) $x[0], (string) $x[1]];
+                $v[$sid][$pid]['q'] = ($v[$sid][$pid]['q'] ?? 0.0) + (float) $x[2];
+                $v[$sid][$pid]['ca'] = ($v[$sid][$pid]['ca'] ?? 0.0) + (float) $x[3];
+            }
+        }
+    }
+    if (($v[$shop] ?? []) === [] || ($taille[$shop] ?? 0) <= 0) { return null; }
+    $autres = array_values(array_filter(array_map('strval', $ids), fn ($sid) => $sid !== $shop && ($taille[$sid] ?? 0) > 0));
+    $prix = []; $pot = 0.0;
+    foreach ($v[$shop] as $pid => $x) {
+        if ($x['q'] <= 0 || $x['ca'] <= 0) { continue; }
+        [$nomP, $catP] = $info[$pid];
+        if (function_exists('pvHorsComparaison') && pvHorsComparaison($catP, $nomP)) { continue; }
+        $sien = $x['ca'] / $x['q'];
+        if ($sien <= 0.2) { continue; }   // extra à 1 € symbolique, lignes de correction
+        $desAutres = []; $tauxAutres = [];
+        foreach ($autres as $sid) {
+            $y = $v[$sid][$pid] ?? null;
+            if ($y === null || $y['q'] < 5 || $y['ca'] <= 0) { continue; }   // un prix sur 2 unités n'est pas un prix
+            $desAutres[] = $y['ca'] / $y['q'];
+            $tauxAutres[] = $y['q'] / $taille[$sid];
+        }
+        if (count($desAutres) < 2) { continue; }
+        $refPrix = anmMediane($desAutres);
+        $ecart = $refPrix > 0 ? ($sien - $refPrix) / $refPrix : 0;
+        // Sous le réseau d'au moins 2 % et 5 centimes — en deçà, c'est de
+        // l'arrondi de caisse, pas une politique de prix.
+        if ($ecart > -0.02 || $refPrix - $sien < 0.05) { continue; }
+        // Volume supérieur aux autres, à taille égale : son prix bas
+        // TRAVAILLE, on ne le compte pas.
+        if ($x['q'] / $taille[$shop] > 1.15 * anmMediane($tauxAutres)) { continue; }
+        $gain = ($refPrix - $sien) * $x['q'];
+        $pot += $gain / $n;
+        $r = $refs[(int) $pid] ?? null;
+        $prix[] = ['nom' => $r['nom'] ?? $nomP,
+            'groupe' => ($r !== null && $r['groupe'] !== '— hors groupe') ? $r['groupe'] : ($catP !== '' ? $catP : '—'),
+            'prix' => round($sien, 2), 'prixReseau' => round($refPrix, 2),
+            'ecartPct' => round(100 * $ecart, 1),
+            'volMois' => (int) round($x['q'] / $n),
+            'gainMois' => (int) round($gain / $n), 'gainAn' => (int) round($gain / $n * 12)];
+    }
+    usort($prix, static fn ($a, $b) => $b['gainMois'] <=> $a['gainMois']);
+    $du = $tranches[0][0]; $au = $tranches[count($tranches) - 1][1];
+    $per = function_exists('pvMois')
+        ? ($n === 1 ? pvMois($du) : 'de ' . pvMois($du) . ' à ' . pvMois($au))
+        : mktBriefJour($du) . ' → ' . mktBriefJour($au);
+    return ['prix' => $prix, 'potMois' => $pot, 'du' => $du, 'au' => $au, 'muets' => $muets,
+        'source' => 'panel · ' . $per . ' (mois clos)'];
+}
+
+/** Le levier 3 tel que l'écran et le PDF le lisent, depuis la liste triée. */
+function anmLevier3(array $prix, float $pot, string $source, ?string $du = null, ?string $au = null): array
+{
+    $reste = array_slice($prix, 10);
+    return ['potMois' => (int) round($pot), 'potAn' => (int) round($pot * 12),
+        'refs' => array_slice($prix, 0, 10), 'nb' => count($prix),
+        'resteN' => count($reste), 'resteMois' => (int) round(array_sum(array_column($reste, 'gainMois'))),
+        'source' => $source, 'du' => $du, 'au' => $au];
 }
 
 /** GET /magasin/analyse?shop=4[&mois=6] */
@@ -56,13 +154,6 @@ function ep_mag_analyse(): array
         'shop' => $shop, 'nom' => $nomDe[$shop], 'n' => $n,
         'du' => $du, 'au' => $au, 'motif' => null];
 
-    $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
-    $cl = utilColonnes('transaction_product', UTIL_COLS_LIGNE);
-    if ($ct === null || $cl === null) {
-        $out['motif'] = 'la caisse n’expose pas ses lignes de ticket sur cette base';
-        return $out;
-    }
-
     // --- Le catalogue : pid → groupe, nom. Les gammes ne s'écartent pas ici :
     // le mix et les prix se lisent sur ce qui s'est VENDU.
     $refs = [];
@@ -72,6 +163,23 @@ function ep_mag_analyse(): array
         $g = (string) ($p['groupe'] ?? '');
         $refs[(int) $pid] = ['nom' => (string) $p['nom'],
             'groupe' => $g !== '' ? $g : '— hors groupe'];
+    }
+
+    // --- Le levier 3 chez le panel, d'abord : il ne dépend pas de la caisse
+    // locale. Quand celle-ci ne répond pas sur la période, l'écran garde au
+    // moins l'étape Prix (`levier3` part avec le motif).
+    $p3 = anmPrixPanel($shop, $n, $refs, array_keys($nomDe));
+    $lev3Panel = $p3 !== null ? anmLevier3($p3['prix'], $p3['potMois'], $p3['source'], $p3['du'], $p3['au']) : null;
+    $sans = function (string $motif) use (&$out, $lev3Panel): array {
+        $out['motif'] = $motif;
+        if ($lev3Panel !== null) { $out['levier3'] = $lev3Panel; $out['prixSeul'] = true; }
+        return $out;
+    };
+
+    $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
+    $cl = utilColonnes('transaction_product', UTIL_COLS_LIGNE);
+    if ($ct === null || $cl === null) {
+        return $sans('la caisse n’expose pas ses lignes de ticket sur cette base');
     }
 
     // --- L'activité : jours, tickets, CA par magasin (période entière).
@@ -88,8 +196,8 @@ function ep_mag_analyse(): array
             $act[$sid] = ['jours' => max(1, (int) $r['jours']),
                 'tickets' => (int) $r['tickets'], 'ca' => (float) $r['ca']];
         }
-    } catch (PDOException $e) { $out['motif'] = 'lecture de l’activité impossible'; return $out; }
-    if (!isset($act[$shop])) { $out['motif'] = 'aucune vente pour ce magasin sur la période'; return $out; }
+    } catch (PDOException $e) { return $sans('lecture de l’activité impossible'); }
+    if (!isset($act[$shop])) { return $sans('aucune vente pour ce magasin sur la période dans la caisse locale'); }
 
     // --- Les ventes : magasin × référence (période entière).
     $vente = [];   // sid => pid => ['q','ca']
@@ -108,7 +216,7 @@ function ep_mag_analyse(): array
             if ($q <= 0) { continue; }
             $vente[$sid][(int) $r['produit']] = ['q' => $q, 'ca' => (float) $r['ca']];
         }
-    } catch (PDOException $e) { $out['motif'] = 'lecture des lignes de ticket impossible'; return $out; }
+    } catch (PDOException $e) { return $sans('lecture des lignes de ticket impossible'); }
 
     $autres = array_values(array_diff(array_keys($nomDe), [$shop]));
 
@@ -188,11 +296,12 @@ function ep_mag_analyse(): array
         'groupes' => $groupes,
         'enRetrait' => count(array_filter($groupes, static fn ($g) => $g['potMois'] > 0))];
 
-    // --- Levier 3 : les prix sous le réseau, à volume constant.
-    $prix = [];
+    // --- Levier 3 : les prix sous le réseau, à volume constant — lus chez
+    // le panel (plus haut) ; la caisse locale seulement si le panel n'a rien rendu.
+    $prix = $p3 !== null ? $p3['prix'] : [];
     $potPrixMois = 0.0;
     $joursShop = $act[$shop]['jours'];
-    foreach ($vente[$shop] ?? [] as $pid => $v) {
+    foreach ($p3 !== null ? [] : ($vente[$shop] ?? []) as $pid => $v) {
         $r = $refs[$pid] ?? null;
         if ($r === null || $r['groupe'] === '— hors groupe') { continue; }
         $sien = $v['ca'] / $v['q'];
@@ -222,10 +331,7 @@ function ep_mag_analyse(): array
             'gainMois' => (int) round($gain / $n), 'gainAn' => (int) round($gain / $n * 12)];
     }
     usort($prix, static fn ($a, $b) => $b['gainMois'] <=> $a['gainMois']);
-    $resteP = array_slice($prix, 10);
-    $lev3 = ['potMois' => (int) round($potPrixMois), 'potAn' => (int) round($potPrixMois * 12),
-        'refs' => array_slice($prix, 0, 10), 'nb' => count($prix),
-        'resteN' => count($resteP), 'resteMois' => (int) round(array_sum(array_column($resteP, 'gainMois')))];
+    $lev3 = $lev3Panel ?? anmLevier3($prix, $potPrixMois, 'caisse locale · ' . mktBriefJour($du) . ' → ' . mktBriefJour($au), $du, $au);
 
     // --- Étape 4 : le plan — les trois leviers fusionnés, classés.
     $actions = [];
@@ -272,6 +378,7 @@ function ep_mag_analyse(): array
         'plan' => $actions,
         'source' => 'lignes de ticket de la caisse, ' . mktBriefJour($du) . ' → ' . mktBriefJour($au)
             . ' — comparé aux ' . count($autres) . ' autres magasins, à fréquentation ramenée. '
+            . 'Prix : ' . $lev3['source'] . ', volume comparé à taille égale. '
             . 'Estimations à comportement constant : ni promesse, ni objectif contractuel.',
     ];
     return $out;
@@ -397,7 +504,8 @@ function anmPdfHtml(array $d): string
     // ras du bord (mesuré : trois pages dont une vide, sur les deux versions
     // du document).
     $h .= '<div style="page-break-after:always"></div><div>'
-        . '<div class="sec">Les prix sous le réseau — gain à volume constant</div>';
+        . '<div class="sec">Les prix sous le réseau — gain à volume constant</div>'
+        . (!empty($l3['source']) ? '<p class="mut" style="font-size:8pt;margin:-2mm 0 3mm">Prix encaissés : ' . $e($l3['source']) . '.</p>' : '');
     if ($l3['refs'] === []) {
         $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">Aucun : la grille de ce magasin est au niveau du réseau.</p>';
     } else {
