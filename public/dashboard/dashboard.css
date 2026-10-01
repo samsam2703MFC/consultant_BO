@@ -648,6 +648,8 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-cmdt .n.mu{color:var(--color-text-muted)}
 .mb-tabs.mb-tabs3{grid-template-columns:1fr 1fr 1fr}
 .mb-tabs.mb-tabs4{grid-template-columns:repeat(4,1fr)}
+.mb-tabs.mb-tabs5{grid-template-columns:repeat(5,1fr)}
+.mb-tabs.mb-tabs5 button{font-size:9.5px;letter-spacing:.01em;padding:2px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mb-tabs button i svg{display:inline-block;vertical-align:-2px}
 /* Ventes par catégorie : la liste groupe › catégorie › produit. */
 .db-acc{padding:4px 16px 8px}
