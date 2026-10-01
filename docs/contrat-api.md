@@ -1292,8 +1292,8 @@ recommandation, plan d'action et fin de visite ; chaque étape se replie une
 fois faite. Le franchisé n'a pas de page à part : deux onglets de son dashboard magasin
 montent le module, en **consultation**. « Campagne » (`?vue=campagne`, écran
 `v_campagne`) : la carte « Objectif de campagne » (clients, N-1, objectif, la
-trajectoire cumulée, le CA, les autres campagnes en une ligne) et la boutique
-de la semaine. « Plan d'action » (`?vue=actions`, écran `v_plans`, où mènent
+trajectoire cumulée, le CA, les autres campagnes en une ligne), rien d'autre.
+« Plan d'action » (`?vue=actions`, écran `v_plans`, où mènent
 les notifications push) : la liste des actions à faire puis des fermées, la
 campagne qu'une action sert en pastille, ce que le consultant a vu, l'historique
 des visites. Pas de photo ni de changement de statut depuis ces onglets : ils

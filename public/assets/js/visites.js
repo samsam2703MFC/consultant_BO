@@ -817,8 +817,7 @@
       const b = this.boutique(this.shop) || { court: '' };
       this.chargerCampagnes(this.shop);
       return this.hd('Ma campagne', b.court)
-        + '<div class="cap">Objectif de campagne</div>' + this.campagneCarte(this.shop)
-        + `<div class="cap">Ma boutique cette semaine</div><div class="card sm">${b.ca ? `<div class="row"><span>CA</span><span class="sp"></span><b>${eur(b.ca.ca)}</b><span class="mu">/ ${eur(b.ca.objectif)}</span></div><div class="bar"><i style="width:${Math.min(100, Math.round(b.ca.ca / Math.max(1, b.ca.objectif) * 100))}%"></i></div>` : ''}${b.google ? `<div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>${note1(b.google.note)}</b><span class="mu">${b.google.avis} avis</span></div>` : ''}${b.prochaineVisite ? `<div class="row" style="margin-top:6px"><span>Prochaine visite</span><span class="sp"></span><b>${fmtDJ(b.prochaineVisite.le)} ${b.prochaineVisite.h}</b></div>` : ''}</div>`;
+        + '<div class="cap">Objectif de campagne</div>' + this.campagneCarte(this.shop);
     }
     v_plans() {
       const D = this.D;
