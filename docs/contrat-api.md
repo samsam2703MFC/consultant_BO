@@ -1243,8 +1243,9 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 
 ### `/visites` — l'application terrain (consultant, franchisé, admin)
 
-Une PWA (`visites/`) sur le téléphone du consultant et de l'admin, et l'onglet
-« Plan d'action » du dashboard magasin pour le franchisé ; rien dans le rail. Le
+Une PWA (`visites/`) sur le téléphone du consultant et de l'admin, et les onglets
+« Campagne » et « Plan d'action » du dashboard magasin pour le franchisé ; rien
+dans le rail. Le
 serveur relit l'existant (CA `/exploitation/jour`, Google `/reputation`,
 non-conformités `/pwa/tasks/nc`, push, SMTP) et porte ce qui n'existait pas :
 la visite, ses points, ses photos, le plan d'action à trois acteurs, le
@@ -1288,14 +1289,15 @@ réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
 (`#controle/{id}`), un seul écran vertical, étape après étape — photo du jour,
 chiffres et alertes, un module de checklist par étape, vu sur place et
 recommandation, plan d'action et fin de visite ; chaque étape se replie une
-fois faite. Le franchisé n'a pas de page à part : son plan d'action et la recommandation
-sont dans son dashboard magasin (`dashboard/?shop=&vue=actions`), où le module
-est monté ; les notifications push du franchisé y mènent. Cet onglet est de la
-**consultation** : la carte « Objectif de campagne » (clients, N-1, objectif,
-la trajectoire cumulée, le CA, les autres campagnes en une ligne), ce que le
-consultant a vu, la boutique de la semaine. Les actions, leurs photos et leurs
-statuts restent au consultant et à l'admin ; une action liée à une campagne
-porte la pastille de cette campagne dans leurs listes.
+fois faite. Le franchisé n'a pas de page à part : deux onglets de son dashboard magasin
+montent le module, en **consultation**. « Campagne » (`?vue=campagne`, écran
+`v_campagne`) : la carte « Objectif de campagne » (clients, N-1, objectif, la
+trajectoire cumulée, le CA, les autres campagnes en une ligne) et la boutique
+de la semaine. « Plan d'action » (`?vue=actions`, écran `v_plans`, où mènent
+les notifications push) : la liste des actions à faire puis des fermées, la
+campagne qu'une action sert en pastille, ce que le consultant a vu, l'historique
+des visites. Pas de photo ni de changement de statut depuis ces onglets : ils
+restent au consultant et à l'admin.
 
 Hors ligne (module `assets/js/visites.js`) : la lecture `/visites/app` est
 gardée en IndexedDB ; chaque écriture porte un `client_id`, est appliquée à

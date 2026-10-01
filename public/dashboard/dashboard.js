@@ -14,7 +14,7 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'actions', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'campagne', 'actions', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -91,7 +91,7 @@
   }
   function charger(force) {
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
-    if (S.vue === 'actions') { rendre(); return; }
+    if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
@@ -938,7 +938,7 @@
   /** Le menu du téléphone : le jour, la semaine, le plan d'action, et la
    * réclamation fournisseur — un onglet à part, pas une carte du mur. */
   function mbOnglets() {
-    return `<div class="mb-tabs mb-tabs4">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓'], ['reclamation', 'Réclamation', RC_ICONE]]
+    return `<div class="mb-tabs mb-tabs5">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['campagne', 'Campagne', CP_ICONE], ['actions', 'Plan d’action', '✓'], ['reclamation', 'Réclamation', RC_ICONE]]
       .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
   }
 
@@ -1230,14 +1230,14 @@
     // Au téléphone, le même en-tête que les autres onglets : le logo à sa
     // taille, le nom qui se raccourcit, la date.
     if (mobile) { h += `<div class="mb-hd"><img src="../assets/img/logo.png" alt=""><div><div class="t">${esc(nomShop())}</div><div class="d">${esc(fDL(AUJ))}</div></div><span class="sp"></span></div>`; }
-    h += '<div id="db-actions" style="min-height:60vh;padding:0 ' + (mobile ? '14px 96px' : '0 0') + '"></div>';
-    if (mobile) { h += mbOnglets(); }
+    // Au téléphone, le module défile sous la barre d'onglets, comme les autres vues.
+    h += mobile ? '<div class="mb-sc"><div id="db-actions" style="flex:1 0 auto"></div></div>' + mbOnglets() : '<div id="db-actions" style="min-height:60vh"></div>';
     return h;
   }
   function monterActions() {
     const h = document.getElementById('db-actions');
     if (!h || !window.CockpitVisites) { if (h) { h.innerHTML = '<div class="db-alerte">Le module des visites n’est pas chargé.</div>'; } return; }
-    window.CockpitVisites.mount(h, { role: 'franchise', shop: S.shop, apiBase: API, mobile: false, racine: '../', vue: 'plans', sansOnglets: true });
+    window.CockpitVisites.mount(h, { role: 'franchise', shop: S.shop, apiBase: API, mobile: false, racine: '../', vue: S.vue === 'campagne' ? 'campagne' : 'plans', sansOnglets: true });
   }
   function rendre() {
     const kr = cleRes(), ks = cleSt();
@@ -1247,8 +1247,8 @@
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
-      if (!['jour', 'semaine', 'actions', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
-      if (S.vue === 'actions') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
+      if (!['jour', 'semaine', 'campagne', 'actions', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
         const champ = rcGarder();
         $.innerHTML = rendReclamation(); $.classList.add('mob'); brancher();
@@ -1275,12 +1275,12 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['actions', 'Plan d’action']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['campagne', 'Campagne'], ['actions', 'Plan d’action']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
-    if (S.vue === 'actions') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
+    if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -2284,6 +2284,8 @@
   const rcNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   /** Une citation courte se coupe entre deux mots, pas au milieu d'un. */
   const rcCoupe = (t, n) => { t = String(t || ''); if (t.length <= n) { return t; } const c = t.slice(0, n), i = c.lastIndexOf(' '); return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[\s,;:.(«-]+$/, '') + '…'; };
+  // Le porte-voix de l'onglet Campagne, dans le trait des autres icônes.
+  const CP_ICONE = '<svg viewBox="0 0 24 24" width="19" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v4a1 1 0 0 0 1 1h3l8 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M18.5 8.5a5 5 0 0 1 0 7"/><path d="M8 15v4h3"/></svg>';
   const RC_ICONE = '<svg viewBox="0 0 24 24" width="19" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 
   /** L'état d'une réclamation, vu du magasin : « ouverte » n'est pas un
