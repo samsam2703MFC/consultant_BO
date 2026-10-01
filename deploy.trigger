@@ -488,3 +488,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-01T06:33:48Z ou ca se vend : onglet prix x volume (grille + nuage) et lecture /analyse/prix-volume
 2026-10-01T06:43:37Z analyse magasin : etape prix lue chez le panel
 2026-10-01T06:46:17Z periodes : elision devant voyelle
+2026-10-01T07:01:17Z analyse magasin : motif en majuscule
