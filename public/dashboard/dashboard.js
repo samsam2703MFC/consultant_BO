@@ -2560,11 +2560,10 @@
    * dashboard ne le coupe pas. */
   let rcDirect = null;
   function rcDirectPossible() { return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
-  /** L'adresse https de la même page : le nom sslip.io de l'IP du serveur. */
+  /** La même page en https : le serveur l'est déjà (certificat de son IP). */
   function rcAdresseHttps() {
     if (location.protocol !== 'http:' || /^(localhost|127\.)/.test(location.hostname)) { return ''; }
-    const ip = /^\d{1,3}(\.\d{1,3}){3}$/.test(location.hostname) ? location.hostname.replace(/\./g, '-') + '.sslip.io' : location.hostname;
-    return 'https://' + ip + location.pathname + location.search;
+    return 'https://' + location.host + location.pathname + location.search;
   }
   function rcDirectErreur(e) {
     const n = e && e.name;

@@ -250,86 +250,26 @@ systemctl restart apache2
 # --- 5a. HTTPS — la caméra du téléphone l'exige -----------------------------
 # Le scan du code-barres EN DIRECT (onglet Réclamation du dashboard au
 # téléphone) passe par getUserMedia, que les navigateurs réservent aux pages
-# sécurisées. Le serveur n'a pas de nom : on prend celui que sslip.io donne à
-# son IP (185-180-206-46.sslip.io → 185.180.206.46), avec un certificat
-# Let's Encrypt obtenu par le défi HTTP-01 (webroot), renouvelé par le timer
-# de certbot. Deux vhosts NOMMÉS : les requêtes par l'IP vont toujours au
-# vhost par défaut, rien ne change pour elles (ni pour le panel).
-# Tout le bloc est NON BLOQUANT : un échec laisse le site en http, et le dit.
-HTTPS_HOST="${HTTPS_HOST:-185-180-206-46.sslip.io}"
-ACME_ROOT=/var/lib/consulant_bo/acme
-https_vhost80() {
-  # $1 = 1 : le certificat existe, http://HTTPS_HOST redirige vers https.
-  local redir=""
-  if [[ "${1:-0}" == "1" ]]; then
-    redir="    RewriteEngine On
-    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=302,L]"
+# sécurisées. Le serveur est DÉJÀ servi en https sur son IP : certificat
+# Let's Encrypt d'adresse IP, géré par le certbot du serveur, hors de ce
+# dépôt — le cockpit y répond par l'alias global. On n'y touche pas ; on
+# vérifie seulement. Un essai précédent (nom sslip.io) avait posé deux vhosts
+# et un dossier de défi : on les retire.
+HTTPS_NETTOYE=0
+for site in consulant_bo-https consulant_bo-http; do
+  if [[ -e "/etc/apache2/sites-available/${site}.conf" ]]; then
+    a2dissite "$site" >/dev/null 2>&1 || true
+    rm -f "/etc/apache2/sites-available/${site}.conf"
+    log "HTTPS : vhost ${site} retiré (inutile : le serveur a déjà son https)."
+    HTTPS_NETTOYE=1
   fi
-  cat > /etc/apache2/sites-available/consulant_bo-http.conf <<APACHE
-<VirtualHost *:80>
-    ServerName ${HTTPS_HOST}
-    DocumentRoot /var/lib/consulant_bo/www
-    Alias /.well-known/acme-challenge/ ${ACME_ROOT}/.well-known/acme-challenge/
-    <Directory ${ACME_ROOT}>
-        Require all granted
-    </Directory>
-${redir}
-</VirtualHost>
-APACHE
-}
-https_setup() {
-  [[ -n "$HTTPS_HOST" ]] || return 0
-  local cert="/etc/letsencrypt/live/${HTTPS_HOST}/fullchain.pem"
-  log "HTTPS : https://${HTTPS_HOST}${ALIAS_PATH}/ …"
-  mkdir -p "$ACME_ROOT/.well-known/acme-challenge" /var/lib/consulant_bo/www
-  # 1. Le nom sur le port 80, pour le défi.
-  https_vhost80 0
-  a2ensite consulant_bo-http >/dev/null
-  if ! apache2ctl configtest >/dev/null 2>&1; then
-    warn "HTTPS : vhost port 80 refusé par Apache — retiré."
-    a2dissite consulant_bo-http >/dev/null 2>&1; systemctl reload apache2; return 1
-  fi
-  systemctl reload apache2
-  # 2. Le certificat (gardé tant qu'il n'approche pas de l'expiration).
-  if ! command -v certbot >/dev/null 2>&1; then
-    aptget install -y -qq certbot >/dev/null 2>&1 || { warn "HTTPS : certbot introuvable et non installable."; return 1; }
-  fi
-  if ! certbot certonly --webroot -w "$ACME_ROOT" -d "$HTTPS_HOST" --non-interactive --agree-tos \
-       --register-unsafely-without-email --keep-until-expiring --deploy-hook 'systemctl reload apache2' 2>&1 | sed 's/^/    certbot: /'; then
-    warn "HTTPS : certbot a échoué."
-  fi
-  [[ -f "$cert" ]] || { warn "HTTPS : pas de certificat pour ${HTTPS_HOST} — le site reste en http."; return 1; }
-  # 3. Le site en https, et le nom en http qui y redirige.
-  a2enmod ssl >/dev/null 2>&1 || true
-  cat > /etc/apache2/sites-available/consulant_bo-https.conf <<APACHE
-<VirtualHost *:443>
-    ServerName ${HTTPS_HOST}
-    DocumentRoot /var/lib/consulant_bo/www
-    RedirectMatch 302 ^/\$ ${ALIAS_PATH}/
-    SSLEngine on
-    SSLCertificateFile /etc/letsencrypt/live/${HTTPS_HOST}/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/${HTTPS_HOST}/privkey.pem
-</VirtualHost>
-APACHE
-  a2ensite consulant_bo-https >/dev/null
-  https_vhost80 1
-  if ! apache2ctl configtest >/dev/null 2>&1; then
-    warn "HTTPS : configuration refusée par Apache — vhost https retiré."
-    a2dissite consulant_bo-https >/dev/null 2>&1; https_vhost80 0; systemctl reload apache2; return 1
-  fi
-  # Le pare-feu local, s'il est actif, doit laisser passer le 443.
-  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-    ufw allow 443/tcp >/dev/null 2>&1 || true
-  fi
-  # Un redémarrage, pas un reload : le port 443 s'ouvre à coup sûr.
-  systemctl restart apache2
-  local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve "${HTTPS_HOST}:443:127.0.0.1" "https://${HTTPS_HOST}${ALIAS_PATH}/dashboard/" 2>/dev/null || echo 000)
-  log "HTTPS : https://${HTTPS_HOST}${ALIAS_PATH}/dashboard/ → HTTP ${code} (depuis le serveur)"
-  log "HTTPS : certificat valable jusqu'au $(openssl x509 -enddate -noout -in "$cert" 2>/dev/null | cut -d= -f2)"
-}
-https_setup || warn "HTTPS indisponible — le site reste servi en http (scan par photo)."
+done
+rm -rf /var/lib/consulant_bo/acme /var/lib/consulant_bo/www 2>/dev/null || true
+if [[ "$HTTPS_NETTOYE" == "1" ]] && apache2ctl configtest >/dev/null 2>&1; then
+  systemctl reload apache2 || systemctl restart apache2 || true
+fi
+https_code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1${ALIAS_PATH}/dashboard/" 2>/dev/null || echo 000)
+log "HTTPS : https://185.180.206.46${ALIAS_PATH}/dashboard/ → HTTP ${https_code} (depuis le serveur) — caméra en direct possible."
 
 # --- 5b. Opérations base de données (client MySQL) -----------------------
 # Deux modes, mutuellement exclusifs, pilotés par le workflow :
