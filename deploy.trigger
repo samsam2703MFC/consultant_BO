@@ -486,3 +486,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-30T05:17:52Z dashboard : comptoir et clients pro fusionnes
 2026-09-30T20:37:14Z controles qualite en photo : carrousel dashboard + lecture groupee /pwa/tasks/photos
 2026-10-01T06:33:48Z ou ca se vend : onglet prix x volume (grille + nuage) et lecture /analyse/prix-volume
+2026-10-01T06:43:37Z analyse magasin : etape prix lue chez le panel
