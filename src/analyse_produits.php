@@ -328,6 +328,13 @@ function pvMois(string $jour): string
     return $M[(int) substr($jour, 5, 2) - 1] . ' ' . substr($jour, 0, 4);
 }
 
+/** « de juillet 2026 », « d’avril 2026 » : le début d'une période, élidé devant voyelle. */
+function pvDepuis(string $jour): string
+{
+    $m = pvMois($jour);
+    return (preg_match('/^[aeiouéè]/u', $m) ? 'd’' : 'de ') . $m;
+}
+
 /** La médiane d'une liste non vide. */
 function pvMediane(array $v): float
 {
@@ -454,7 +461,7 @@ function ep_prix_volume(): array
     }
     $du = $tranches[0][0]; $au = $tranches[count($tranches) - 1][1];
     return ['mois' => $mois, 'du' => $du, 'au' => $au,
-        'periode' => $mois === 1 ? pvMois($du) : 'de ' . pvMois($du) . ' à ' . pvMois($au),
+        'periode' => $mois === 1 ? pvMois($du) : pvDepuis($du) . ' à ' . pvMois($au),
         'magasins' => $mag, 'categories' => $cats,
         'comparables' => count($refs), 'prixDiff' => $nDiff, 'ecart10' => $n10,
         'refs' => $refs, 'muets' => $muets];
