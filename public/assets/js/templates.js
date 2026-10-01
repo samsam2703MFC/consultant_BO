@@ -9514,7 +9514,7 @@ function tplAnm(c, x){
     // dépendent se taisent, l'étape Prix — lue chez le panel — reste.
     if (c.anmPrixSeul) {
       return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
-        <div style="${carte};padding:14px 18px;font-size:12.5px;line-height:1.55"><b>${esc(c.anmMotif)}</b> — la vue d’ensemble, les catégories et le plan s’appuient sur la caisse locale et ne peuvent pas se calculer sur cette période. L’étape Prix, lue chez le panel, est ci-dessous.</div>
+        <div style="${carte};padding:14px 18px;font-size:12.5px;line-height:1.55"><b>${esc(c.anmMotif.charAt(0).toUpperCase() + c.anmMotif.slice(1))}</b> — la vue d’ensemble, les catégories et le plan s’appuient sur la caisse locale et ne peuvent pas se calculer sur cette période. L’étape Prix, lue chez le panel, est ci-dessous.</div>
         ${e3f()}</div>`;
     }
     return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}

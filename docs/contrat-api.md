@@ -667,6 +667,17 @@ tranche porte les pièces ET le chiffre de chaque magasin, le prix encaissé en 
   par la lecture des tranches.
 - Mois clos seulement : le prix d'un mois entamé bouge encore. Lecture seule.
 
+### `/magasin/analyse` — l'étape Prix lue chez le panel
+
+`GET /magasin/analyse?shop=&mois=3|6|12` (Magasins › Analyse magasin). Le **levier 3** (prix
+sous le réseau) lit les mêmes tranches que `/analyse/prix-volume` sur les `mois` derniers
+**mois clos** ; les autres leviers lisent encore la caisse locale. Mêmes règles qu'avant (au
+moins 2 % et 5 centimes sous la médiane des autres magasins ayant vendu ≥ 5 pièces, gain à
+volume constant), le volume se compare à taille égale. `levier3.source` dit d'où viennent les
+prix (`panel · d’avril 2026 à septembre 2026 (mois clos)`, ou `caisse locale · …` en repli).
+Quand la caisse locale n'a rien sur la période, la réponse porte `motif` **et** `levier3` avec
+`prixSeul: true` : l'écran garde l'étape Prix.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json
