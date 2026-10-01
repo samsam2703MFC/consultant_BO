@@ -1118,6 +1118,11 @@ function ep_panel_sonde_consultant(): array
         // fournisseurs matière — c'est de là que doit venir leur adresse.
         'material-suppliers' => '/material-suppliers',
         'material-suppliers-BE' => '/material-suppliers?country_code=BE',
+        // Sonde : les matières portent-elles un code-barres (EAN, GTIN) ? Le
+        // scan de la réclamation au téléphone en dépend.
+        'shop-materials' => '/shops/' . $sid . '/materials',
+        'supplier-materials' => '/material-suppliers/1/materials',
+        'supplier-connected' => '/material-suppliers/1/connected-materials',
     ];
 
     $apercu = static function ($v, int $prof = 0) use (&$apercu) {
@@ -1138,10 +1143,28 @@ function ep_panel_sonde_consultant(): array
         return $out;
     };
 
-    $out = ['magasin' => $sid, 'fenetre' => $du . ' → ' . $au, 'routes' => []];
+    $out = ['magasin' => $sid, 'fenetre' => $du . ' → ' . $au, 'routes' => [], 'codes' => []];
     foreach (PanelApi::getParallele($chemins) as $nom => $r) {
         $out['routes'][$nom] = ['chemin' => $chemins[$nom],
             'reponse' => $r === null ? 'aucune réponse' : $apercu($r)];
+        // Les champs qui ressemblent à un code (EAN, GTIN, code-barres, SKU) :
+        // combien de matières en portent un, et trois exemples.
+        if (str_contains($nom, 'materials') && is_array($r)) {
+            $liste = array_is_list($r) ? $r : (array) ($r['materials'] ?? $r['data'] ?? []);
+            $c = [];
+            foreach ($liste as $m) {
+                if (!is_array($m)) { continue; }
+                foreach ($m as $k => $v) {
+                    if (!preg_match('/ean|gtin|bar|code|sku|upc/i', (string) $k) || is_array($v)) { continue; }
+                    $c[$k] ??= ['remplis' => 0, 'exemples' => []];
+                    if ($v !== null && trim((string) $v) !== '') {
+                        $c[$k]['remplis']++;
+                        if (count($c[$k]['exemples']) < 3) { $c[$k]['exemples'][] = mb_substr((string) $v, 0, 40); }
+                    }
+                }
+            }
+            $out['codes'][$nom] = ['matieres' => count($liste), 'champs' => $c];
+        }
     }
     return $out;
 }
