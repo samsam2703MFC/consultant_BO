@@ -322,6 +322,7 @@ function route(string $method, string $path): mixed
             $path === '/visites/cron'                  => ep_visites_cron(),
             $path === '/visites/reglages'              => ep_visites_reglages(),
             $path === '/visites/conformite'            => ep_visites_conformite(),
+            $path === '/visites/campagnes'             => ep_visites_campagnes(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/referentiels/facebook-regles'   => ep_fb_regles(),

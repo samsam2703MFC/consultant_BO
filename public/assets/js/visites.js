@@ -133,6 +133,28 @@
 .vi .et-c{padding:0 14px 14px;border-top:.5px solid var(--color-border-tertiary)}
 .vi .et-c .mod{margin-top:8px}
 .vi .et-c .card{background:var(--color-bg)}
+/* Objectif de campagne : trois chiffres, la trajectoire, le CA ; sur l'action,
+   les semaines côte à côte. Toi en couleur, le N-1 en gris, l'objectif en trait. */
+.vi .pc-lien{display:inline-flex;align-items:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);background:#fdf4f5;border-radius:999px;padding:3px 9px;margin-top:8px}
+.vi .pc-lien.mu{color:var(--color-text-muted);background:var(--color-background-secondary)}
+.vi .pc-g{display:block;width:100%;height:auto;margin-top:8px}
+.vi .pc-g text{font-family:var(--font-ui);font-size:9px;fill:var(--color-text-muted);paint-order:stroke;stroke:var(--color-surface);stroke-width:3px;stroke-linejoin:round}
+.vi .pc-g text.p{font-weight:700;fill:var(--color-primary)}.vi .pc-g text.o{font-weight:700;fill:var(--color-text)}.vi .pc-g text.n{fill:#7d756a}
+.vi .pc-g .reel{fill:var(--color-primary)}.vi .pc-g .n1{fill:#c9c2b8}
+.vi .pc-g .n1l{fill:none;stroke:#9a9184;stroke-width:1.6}.vi .pc-g .reell{fill:none;stroke:var(--color-primary);stroke-width:2.2;stroke-linejoin:round}
+.vi .pc-g .objl{fill:none;stroke:var(--color-text);stroke-width:1.2;stroke-dasharray:3 3}.vi .pc-g .axe{stroke:var(--color-border-tertiary);stroke-width:.5}
+.vi .pc-leg{display:flex;gap:12px;flex-wrap:wrap;font:500 10px var(--font-ui);color:var(--color-text-muted);margin-top:4px}
+.vi .pc-leg span{display:inline-flex;align-items:center;gap:5px}.vi .pc-leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.vi .pc-leg i.r{background:var(--color-primary)}.vi .pc-leg i.n{background:#c9c2b8}.vi .pc-leg i.o{width:14px;height:0;border-top:2px dashed var(--color-text);border-radius:0}
+.vi .pc-phrase{font-size:11.5px;line-height:1.45;margin-top:6px}.vi .pc-phrase b.ok{color:#2d7a3e}.vi .pc-phrase b.ko{color:#C0182B}
+.vi .pc-camp .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.vi .pc-camp .t b{font-size:13.5px}
+.vi .pc-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}.vi .pc-3>div{min-width:0}
+.vi .pc-3 .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.vi .pc-3 .v{font-family:var(--font-display);font-size:24px;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums}
+.vi .pc-3 .v.p{color:var(--color-primary)}.vi .pc-3 .v.n{color:#7d756a}.vi .pc-3 .v.w{color:#B26A00;font-size:18px;padding-top:4px}
+.vi .pc-3 .s{font-size:9.5px;color:var(--color-text-muted);line-height:1.3}
+.vi .pc-ca{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:10px;padding-top:8px;border-top:.5px dashed var(--color-border-tertiary)}
+.vi .pc-ca b{color:var(--color-text)}.vi .pc-ca.s{border-top:none;padding-top:4px}.vi .pc-ca .w{color:#B26A00;font-weight:600;white-space:nowrap}
 `;
 
   /* --- IndexedDB : une réserve de lectures, une file d'écritures --------- */
@@ -174,6 +196,79 @@
   const eur = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
   const pct = n => n == null ? '' : (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + ' %';
   const note1 = n => n == null ? '—' : String(Number(n).toFixed(1)).replace('.', ',');
+  const nf = n => n == null ? '—' : eur(n).replace(/\s*€$/, '');
+  const sg = n => (n >= 0 ? '+' : '−') + nf(Math.abs(Math.round(n)));
+  /* --- Les clients d'une campagne : les semaines côte à côte, la trajectoire ---
+   * Mêmes trois séries partout : cette année (couleur), N-1 aux mêmes jours de
+   * semaine (gris), l'objectif (trait). Étiquettes écrites, pas devinées. */
+  const PC_W = 330;
+  /** La série jour par jour, regroupée par semaine (lundi → dimanche). */
+  const viSemaines = (serie, objJour) => {
+    const S = [];
+    serie.forEach(j => {
+      const d = new Date(j.date + 'T12:00:00'); const lundi = (d.getDay() + 6) % 7;
+      if (!S.length || lundi === 0) { S.push({ du: j.date, au: j.date, jours: 0, reel: null, n1: 0, n1Ecoule: 0, joursEcoules: 0 }); }
+      const s = S[S.length - 1]; s.au = j.date; s.jours++;
+      if (j.tickets != null) { s.reel = (s.reel || 0) + j.tickets; s.joursEcoules++; s.n1Ecoule += j.n1 || 0; }
+      s.n1 += j.n1 || 0;
+    });
+    const serre = S.length > 6; let moisVu = -1;
+    S.forEach(s => {
+      const a = new Date(s.du + 'T12:00:00'), b = new Date(s.au + 'T12:00:00');
+      if (serre) { s.lab = a.getDate() + (a.getMonth() !== moisVu ? ' ' + MOIS[a.getMonth()] : ''); moisVu = a.getMonth(); }
+      else { s.lab = a.getMonth() === b.getMonth() ? (s.jours === 1 ? String(a.getDate()) : a.getDate() + '–' + b.getDate()) : a.getDate() + '/' + (a.getMonth() + 1) + '–' + b.getDate() + '/' + (b.getMonth() + 1); }
+      s.obj = objJour ? Math.round(objJour * s.jours) : null;
+    });
+    return S;
+  };
+  const viGBarres = (S, objJour) => {
+    const H = 150, top = 22, bas = 26, gL = 4, gR = 4, W = PC_W;
+    const max = Math.max(1, ...S.map(s => Math.max(s.reel || 0, s.n1 || 0, s.obj || 0))) * 1.08;
+    const y = v => top + (H - top - bas) * (1 - v / max);
+    const n = S.length, cw = (W - gL - gR) / n, bw = Math.min(26, cw * 0.36), gap = 3, dense = n > 6;
+    let h = `<svg class="pc-g" viewBox="0 0 ${W} ${H}" role="img" aria-label="Clients par semaine, cette année face au N-1 et à l’objectif">`;
+    if (objJour) { h += `<text class="o" x="${gL}" y="9">objectif ${nf(objJour)} clients / jour</text>`; }
+    h += `<line class="axe" x1="${gL}" x2="${W - gR}" y1="${H - bas}" y2="${H - bas}"/>`;
+    S.forEach((s, i) => {
+      const cx = gL + cw * i + cw / 2, xN = cx - gap / 2 - bw, xR = cx + gap / 2;
+      if (s.obj) { const yo = y(s.obj); h += `<line class="objl" x1="${(cx - cw / 2 + 3).toFixed(1)}" x2="${(cx + cw / 2 - 3).toFixed(1)}" y1="${yo.toFixed(1)}" y2="${yo.toFixed(1)}"/>`; }
+      h += `<rect class="n1" x="${xN.toFixed(1)}" y="${y(s.n1).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H - bas - y(s.n1)).toFixed(1)}" rx="2"/>`;
+      if (!dense) { h += `<text class="n" x="${(xN + bw / 2).toFixed(1)}" y="${(y(s.n1) - 3).toFixed(1)}" text-anchor="middle">${nf(s.n1)}</text>`; }
+      if (s.reel != null) {
+        h += `<rect class="reel" x="${xR.toFixed(1)}" y="${y(s.reel).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H - bas - y(s.reel)).toFixed(1)}" rx="2"/>`;
+        h += `<text class="p" x="${(xR + bw / 2).toFixed(1)}" y="${(y(s.reel) - 3).toFixed(1)}" text-anchor="middle">${nf(s.reel)}</text>`;
+      } else { h += `<rect x="${xR.toFixed(1)}" y="${H - bas - 3}" width="${bw.toFixed(1)}" height="3" rx="1" fill="#e9e2d8"/>`; }
+      h += `<text x="${cx.toFixed(1)}" y="${H - bas + 11}" text-anchor="middle">${esc(s.lab)}</text>`;
+      if (s.reel != null) { const d = s.reel - s.n1Ecoule; h += `<text x="${cx.toFixed(1)}" y="${H - bas + 22}" text-anchor="middle" style="fill:${d >= 0 ? '#2d7a3e' : '#C0182B'};font-weight:700">${sg(d)}${s.joursEcoules < s.jours ? ' (' + s.joursEcoules + ' j)' : ''}</text>`; }
+    });
+    return h + '</svg>';
+  };
+  const viGCumul = (serie, prevus, labs) => {
+    const H = 150, top = 14, bas = 18, gL = 4, gR = 58, W = PC_W, jours = Math.max(2, serie.length);
+    const cumR = [], cumN = []; let r = 0, n = 0, dernier = -1;
+    serie.forEach((j, i) => { if (j.tickets != null) { r += j.tickets; dernier = i; } n += j.n1 || 0; cumR.push(r); cumN.push(n); });
+    const nFin = cumN[cumN.length - 1] || 0;
+    const max = Math.max(1, nFin, prevus || 0, dernier >= 0 ? cumR[dernier] : 0) * 1.05;
+    const x = i => gL + (W - gL - gR) * i / (jours - 1), y = v => top + (H - top - bas) * (1 - v / max);
+    let h = `<svg class="pc-g" viewBox="0 0 ${W} ${H}" role="img" aria-label="Clients cumulés depuis le début de la campagne">`;
+    h += `<line class="axe" x1="${gL}" x2="${W - gR}" y1="${H - bas}" y2="${H - bas}"/>`;
+    for (let i = 7; i < jours; i += 7) { h += `<line class="axe" x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${H - bas}" y2="${H - bas + 3}"/>`; }
+    if (prevus) { h += `<line class="objl" x1="${x(0)}" y1="${y(0).toFixed(1)}" x2="${x(jours - 1).toFixed(1)}" y2="${y(prevus).toFixed(1)}"/>`; }
+    if (nFin) { h += `<path class="n1l" d="${cumN.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ')}"/>`; }
+    if (dernier >= 0) { h += `<path class="reell" d="${cumR.slice(0, dernier + 1).map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ')}"/><circle cx="${x(dernier).toFixed(1)}" cy="${y(cumR[dernier]).toFixed(1)}" r="3.5" class="reel"/>`; }
+    // Les étiquettes de fin, écartées d'au moins 10 px, dans l'ordre des valeurs.
+    const L = [];
+    if (prevus) { L.push({ y: y(prevus), c: 'o', t: nf(prevus) + ' visés', x: x(jours - 1) + 7 }); }
+    if (nFin) { L.push({ y: y(nFin), c: 'n', t: nf(nFin) + ' N-1', x: x(jours - 1) + 7 }); }
+    if (dernier >= 0) { L.push({ y: y(cumR[dernier]), c: 'p', t: nf(cumR[dernier]) + (dernier === jours - 1 ? '' : ' au j' + (dernier + 1)), x: x(dernier) + 7 }); }
+    L.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < L.length; i++) { if (L[i].y - L[i - 1].y < 10) { L[i].y = L[i - 1].y + 10; } }
+    for (let i = L.length - 1; i >= 0; i--) { if (L[i].y > H - bas - 2) { L[i].y = H - bas - 2; } if (i < L.length - 1 && L[i + 1].y - L[i].y < 10) { L[i].y = L[i + 1].y - 10; } }
+    L.forEach(l => { h += `<text class="${l.c}" x="${l.x.toFixed(1)}" y="${(l.y + 3).toFixed(1)}">${l.t}</text>`; });
+    h += `<text x="${gL}" y="${H - 4}">${esc(labs[0])}</text><text x="${(W - gR).toFixed(1)}" y="${H - 4}" text-anchor="end">${esc(labs[1])}</text>`;
+    return h + '</svg>';
+  };
+  const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
 
@@ -210,7 +305,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.S = null; this.R = null;
       this.v = o.vue || (this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
       this.toast = null; this.voir = null; this.ouvert = {};
@@ -348,7 +443,7 @@
       if (v === 'tb' || v === 'historique') { this.chargerConformite(p); return; }
       if (v === 'checklist' || v === 'review' || v === 'fiche' || v === 'controle') {
         const vi = this.visite(p);
-        if (vi) { this.chargerConformite(vi.shop); }
+        if (vi) { this.chargerConformite(vi.shop); if (v === 'review') { this.chargerCampagnes(vi.shop); } }
       }
     }
     deHash(init) {
@@ -372,6 +467,79 @@
       if (!shop || this.C[shop]) { return; }
       try { this.C[shop] = await this.lire('/visites/conformite?shop=' + encodeURIComponent(shop), 'conformite:' + shop); } catch (e) { return; }
       this.rendre();
+    }
+    /**
+     * Les campagnes marketing d'une boutique, avec les clients face au N-1 et
+     * à l'objectif. Lues une fois par boutique et par session ; le serveur les
+     * garde vingt minutes.
+     */
+    async chargerCampagnes(shop) {
+      if (!shop || this.K[shop]) { return; }
+      this.K[shop] = { enCours: true };
+      try { this.K[shop] = await this.lire('/visites/campagnes?shop=' + encodeURIComponent(shop), 'campagnes:' + shop); } catch (e) { delete this.K[shop]; return; }
+      this.rendre();
+    }
+    campagnes(shop) { const K = this.K[shop]; return K && Array.isArray(K.campagnes) ? K.campagnes : null; }
+    campagne(shop, id) { return (this.campagnes(shop) || []).find(c => String(c.id) === String(id)) || null; }
+    /** La campagne mise en avant : celle qui a un objectif, en cours d'abord, sinon la dernière close. */
+    campagnePrincipale(shop) {
+      const L = this.campagnes(shop) || [];
+      const rang = c => (c.pct != null ? 0 : 3) + (c.statut === 'encours' ? 0 : (c.statut === 'close' ? 1 : 2));
+      return L.slice().sort((a, b) => rang(a) - rang(b) || String(b.debut).localeCompare(String(a.debut)))[0] || null;
+    }
+    /** Le mot sur l'état d'une campagne : « sept. · clos », « jour 3 / 60 », « dès le 1 déc. ». */
+    campagneEtat(c) {
+      if (c.statut === 'close') { return [MOIS[new Date(c.debut + 'T12:00:00').getMonth()] + ' · clos', 'st-fer']; }
+      if (c.statut === 'encours') { return ['jour ' + c.jourCourant + ' / ' + c.nbJours, 'st-ouv']; }
+      return ['dès le ' + fmtD(c.debut), 'st-att'];
+    }
+    /** La carte « Objectif de campagne » du plan d'action. */
+    campagneCarte(shop) {
+      const K = this.K[shop];
+      if (!K || K.enCours) { return '<div class="card sm mu">lecture des campagnes…</div>'; }
+      if (K.indispo) { return `<div class="card sm mu">${esc((K.motifs || []).join(' · ') || 'campagnes indisponibles')}</div>`; }
+      const c = this.campagnePrincipale(shop);
+      if (!c) { return '<div class="card sm mu">Aucune campagne en cours pour la boutique.</div>'; }
+      const et = this.campagneEtat(c);
+      const vsN1 = c.reel != null && c.n1Ecoule != null ? c.reel - c.n1Ecoule : null;
+      const manque = c.reel != null && c.clientsPrevus != null ? c.clientsPrevus - c.reel : null;
+      const sousR = c.statut === 'close' && c.clientsPrevus ? Math.round(100 * c.reel / c.clientsPrevus) + ' % de l’objectif'
+        : (c.statut === 'encours' ? 'jour ' + c.jourCourant + (c.objectifJour ? ' · ' + nf(c.objectifJour) + ' / jour visés' : '') : 'pas commencée');
+      const sousN = vsN1 != null ? sg(vsN1) + (c.n1Ecoule ? ' · ' + (vsN1 < 0 ? '−' : '+') + Math.abs(100 * vsN1 / c.n1Ecoule).toFixed(1).replace('.', ',') + ' %' : '') + (c.statut === 'encours' ? ' aux mêmes jours' : '') : (c.clientsJour ? c.clientsJour + ' par jour' : '');
+      const obj = c.clientsPrevus != null ? `<div class="v">${nf(c.clientsPrevus)}</div><div class="s">${manque != null ? (manque > 0 ? 'il en ' + (c.statut === 'close' ? 'a manqué ' : 'manque ') + nf(manque) : 'atteint, ' + sg(-manque)) : (c.objectifJour ? nf(c.objectifJour) + ' par jour' : '')}</div>`
+        : `<div class="v w">à fixer</div><div class="s">${c.clientsBudget ? nf(c.clientsBudget) + ' si le budget fait foi' : 'pas de « + x % »'}</div>`;
+      const autres = (this.campagnes(shop) || []).filter(x => x !== c).map(x => {
+        const e = this.campagneEtat(x);
+        return `<div class="pc-ca s"><span>${x.statut === 'avenir' ? 'Suivante' : (x.statut === 'encours' ? 'En cours' : 'Précédente')} : <b>${esc(x.court)}</b> · ${fmtD(x.debut)} → ${fmtD(x.fin)}${x.clientsA1 ? ' · N-1 ' + nf(x.clientsA1) + ' clients' : ''}${x.statut === 'encours' && x.reel != null ? ' · ' + e[0] + ', ' + nf(x.reel) + ' clients' : ''}</span><span class="${x.clientsPrevus != null ? '' : 'w'}">${x.clientsPrevus != null ? 'objectif ' + nf(x.clientsPrevus) : 'objectif à fixer'}</span></div>`;
+      }).join('');
+      return `<div class="card pc-camp"><div class="t"><b>${esc(c.court)}</b><span class="pill ${et[1]}">${esc(et[0])}</span>${c.pct != null ? `<span class="pill">+${nf(c.pct)} % de clients</span>` : ''}</div>
+        <div class="pc-3"><div><div class="k">Clients</div><div class="v p">${c.reel != null ? nf(c.reel) : '—'}</div><div class="s">${sousR}</div></div>
+          <div><div class="k">N-1</div><div class="v n">${c.statut === 'encours' && c.n1Ecoule != null ? nf(c.n1Ecoule) : nf(c.clientsA1)}</div><div class="s">${sousN}${c.statut === 'encours' && c.clientsA1 ? ' · ' + nf(c.clientsA1) + ' sur la période' : ''}</div></div>
+          <div><div class="k">Objectif</div>${obj}</div></div>
+        ${(c.serie || []).length ? viGCumul(c.serie, c.clientsPrevus, [fmtD(c.debut), fmtD(c.fin)]) + pcLeg(!!c.clientsPrevus) : ''}
+        ${c.caReel != null ? `<div class="pc-ca"><span>CA <b>${eur(c.caReel)}</b>${c.objectifCA ? ' sur ' + eur(c.objectifCA) + ' visés (' + Math.round(100 * c.caReel / c.objectifCA) + ' %)' : ''}</span><span>${c.caN1 != null ? 'N-1 ' + eur(c.caN1) : ''}</span></div>` : ''}
+        ${autres}</div>`;
+    }
+    /** Sur une action : la campagne qu'elle sert, les semaines côte à côte, une ligne. */
+    campagneBloc(p) {
+      if (!p.campagne_id) { return ''; }
+      const c = this.campagne(p.shop, p.campagne_id);
+      if (!c) { return '<span class="pc-lien mu">📣 campagne</span>'; }
+      const et = this.campagneEtat(c);
+      let h = `<span class="pc-lien">📣 ${esc(c.court)} · ${esc(et[0])}</span>`;
+      if ((c.serie || []).length && (c.reel != null || c.clientsA1)) {
+        h += viGBarres(viSemaines(c.serie, c.objectifJour), c.objectifJour) + pcLeg(!!c.objectifJour);
+        const vsN1 = c.reel != null && c.n1Ecoule != null ? c.reel - c.n1Ecoule : null;
+        if (c.statut === 'close' && c.reel != null) {
+          const manque = c.clientsPrevus != null ? c.clientsPrevus - c.reel : null;
+          h += `<div class="pc-phrase"><b class="${manque != null && manque > 0 ? 'ko' : 'ok'}">${nf(c.reel)} clients</b>${c.clientsPrevus != null ? ' sur ' + nf(c.clientsPrevus) + ' visés' : ''}${vsN1 != null ? ' · ' + sg(vsN1) + ' vs N-1' : ''}${manque != null && manque > 0 ? ' · il aurait fallu <b>' + nf(Math.ceil(manque / c.nbJours)) + ' de plus par jour</b>' : (manque != null ? ' · <b class="ok">objectif atteint</b>' : '')}.</div>`;
+        } else if (c.statut === 'encours' && c.reel != null) {
+          const reste = c.nbJours - c.jourCourant;
+          const ilFaut = c.clientsPrevus != null && reste > 0 ? Math.ceil((c.clientsPrevus - c.reel) / reste) : null;
+          h += `<div class="pc-phrase">Jour ${c.jourCourant} : <b class="${vsN1 != null && vsN1 < 0 ? 'ko' : 'ok'}">${nf(c.reel)} clients</b>${c.n1Ecoule != null ? ', ' + nf(c.n1Ecoule) + ' l’an dernier aux mêmes jours' : ''}${ilFaut != null ? ' · pour tenir l’objectif : <b>' + nf(Math.max(0, ilFaut)) + ' par jour</b> sur les ' + reste + ' jours qui restent' : (c.clientsA1 ? ' · à battre : ' + nf(c.clientsA1) + ' sur la période' : '')}.</div>`;
+        }
+      }
+      return h;
     }
     dire(msg) { this.toast = msg; this.rendre(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.rendre(); }, 3200); }
 
@@ -455,6 +623,7 @@
         <div class="sm mu">${esc(ASSIGNES[p.assigne] || p.assigne)} · ${esc(p.cree_par || '')} le ${fmtD(p.cree_le)}${p.detail ? ' · « ' + esc(p.detail) + ' »' : ''}</div>
         ${p.retour ? `<div class="sm" style="margin-top:4px">Retour : « ${esc(p.retour)} »</div>` : ''}
         ${p.escalade_motif ? `<div class="sm dn" style="margin-top:4px">Escalade : ${esc(p.escalade_motif)}</div>` : ''}
+        ${this.campagneBloc(p)}
         ${photo ? `<div class="act"><button class="chip" data-a="voir" data-v="${esc(photo.client_id || photo.id)}">📷 Photo du ${fmtD(photo.prise_a)} ${fmtH(photo.prise_a)}</button></div>` : ''}
         ${actions || ''}
       </div>`;
@@ -616,9 +785,13 @@
     }
     /** Le plan d'action en cours de rédaction. */
     planFormHtml(v, f) {
+      // Une action peut servir une campagne : le plan du franchisé montre alors
+      // ses clients face au N-1 et à l'objectif. Campagnes en cours ou à venir.
+      const camps = (this.campagnes(v.shop) || []).filter(c => c.statut !== 'close');
       return `<div class="cap">Plan d’action</div><div class="card">${f.pa.map((a, i) => `<div class="plan ${a.priorite}b" style="padding-bottom:6px"><input type="text" data-f="pa|${i}|titre" value="${esc(a.titre)}" placeholder="Action…" style="font-weight:600"><input type="text" data-f="pa|${i}|detail" value="${esc(a.detail || '')}" placeholder="Détail pour le franchisé…" style="margin-top:4px;font-size:12px">
               <div class="act">${['P0', 'P1', 'P2'].map(p => `<button class="chip ${a.priorite === p ? 'on' : ''}" data-a="pa" data-v="${i}|priorite|${p}">${p}</button>`).join('')}<span style="width:6px"></span>${Object.keys(ASSIGNES).map(k => `<button class="chip ${a.assigne === k ? 'on' : ''}" data-a="pa" data-v="${i}|assigne|${k}">${ASSIGNES[k]}</button>`).join('')}</div>
-              <div class="act">${[[1, '24 h'], [2, '48 h'], [7, '1 sem.'], [14, '2 sem.']].map(([n, l]) => `<button class="chip ${a.echeance === plusJours(auj(), n) ? 'on' : ''}" data-a="pa" data-v="${i}|echeance|${plusJours(auj(), n)}">${l}</button>`).join('')}<input type="date" data-f="pa|${i}|echeance" value="${esc(a.echeance || '')}" style="width:150px;padding:5px 7px"><span class="sp"></span><button class="chip ko" data-a="pa-del" data-v="${i}">retirer</button></div></div>`).join('')}
+              <div class="act">${[[1, '24 h'], [2, '48 h'], [7, '1 sem.'], [14, '2 sem.']].map(([n, l]) => `<button class="chip ${a.echeance === plusJours(auj(), n) ? 'on' : ''}" data-a="pa" data-v="${i}|echeance|${plusJours(auj(), n)}">${l}</button>`).join('')}<input type="date" data-f="pa|${i}|echeance" value="${esc(a.echeance || '')}" style="width:150px;padding:5px 7px"><span class="sp"></span><button class="chip ko" data-a="pa-del" data-v="${i}">retirer</button></div>
+              ${camps.length ? `<div class="act"><span class="xs mu">Campagne</span><button class="chip ${!a.campagne_id || a.campagne_id === '0' ? 'on' : ''}" data-a="pa" data-v="${i}|campagne_id|0">aucune</button>${camps.map(c => `<button class="chip ${String(a.campagne_id || '') === String(c.id) ? 'on' : ''}" data-a="pa" data-v="${i}|campagne_id|${c.id}">📣 ${esc(c.court)} · ${esc(this.campagneEtat(c)[0])}</button>`).join('')}</div>` : ''}</div>`).join('')}
             <div class="act"><button class="chip" data-a="pa-add">+ Ajouter une action</button></div></div>`;
     }
     /** Vu sur place, le vrai problème, la recommandation, l'observé positif. */
@@ -701,8 +874,15 @@
         const b = this.boutique(this.shop) || { court: '' };
         const ps = this.plansDe(this.shop).sort((a, c) => (a.statut === 'ferme') - (c.statut === 'ferme'));
         const enCours = ps.filter(p => p.statut !== 'ferme').length;
+        // Le franchisé CONSULTE : l'objectif de campagne en tête, ses actions
+        // (celles qui servent une campagne montrent les clients face au N-1 et
+        // à l'objectif), ce que le consultant a vu, sa boutique. Pas de photo
+        // à reprendre d'ici.
+        this.chargerCampagnes(this.shop);
         return this.hd('Mon plan d’action', b.court + ' · ' + enCours + ' en cours · ' + (ps.length - enCours) + ' fermé' + (ps.length - enCours > 1 ? 's' : ''))
-          + (ps.length ? ps.map(p => this.planLigne(p, p.statut === 'ouvert' || p.statut === 'reprendre' ? `<div class="btns"><button class="btn ${p.statut === 'ouvert' ? 'p' : ''} w" data-a="photo" data-v="correction|${esc(this.shop)}||${esc(p.ref || '')}|${esc(p.id)}">📷 ${p.statut === 'reprendre' ? 'Reprendre la photo' : 'Photo de la correction'}</button></div>` : p.statut === 'attente' ? '<div class="xs mu" style="margin-top:6px">L’admin contrôle la photo.</div>' : '')).join('') : '<div class="card sm mu">Aucune action en cours. 🎉</div>')
+          + '<div class="cap">Objectif de campagne</div>' + this.campagneCarte(this.shop)
+          + '<div class="cap">Mes actions</div>'
+          + (ps.length ? ps.map(p => this.planLigne(p, '')).join('') : '<div class="card sm mu">Aucune action en cours. 🎉</div>')
           + this.vuSurPlace(this.derniereVisiteDe(this.shop), 'Ce que le consultant a vu')
           + (this.o.sansOnglets ? `<div class="btns"><button class="btn w" data-a="go" data-v="historique/${esc(this.shop)}">Historique des visites</button></div>` : '')
           + `<div class="cap">Ma boutique cette semaine</div><div class="card sm">${b.ca ? `<div class="row"><span>CA</span><span class="sp"></span><b>${eur(b.ca.ca)}</b><span class="mu">/ ${eur(b.ca.objectif)}</span></div><div class="bar"><i style="width:${Math.min(100, Math.round(b.ca.ca / Math.max(1, b.ca.objectif) * 100))}%"></i></div>` : ''}${b.google ? `<div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>${note1(b.google.note)}</b><span class="mu">${b.google.avis} avis</span></div>` : ''}${b.prochaineVisite ? `<div class="row" style="margin-top:6px"><span>Prochaine visite</span><span class="sp"></span><b>${fmtDJ(b.prochaineVisite.le)} ${b.prochaineVisite.h}</b></div>` : ''}</div>`;
@@ -920,7 +1100,7 @@
     terminer(vid) {
       const v = this.visite(vid); if (!v) { return; }
       const f = this.form;
-      const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null }));
+      const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null, campagne_id: Number(a.campagne_id) > 0 ? Number(a.campagne_id) : null }));
       if (plans.length) {
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });

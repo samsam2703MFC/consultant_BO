@@ -151,6 +151,14 @@ function ensureVisites(): void
         KEY k_shop (shop_id, statut),
         KEY k_visite (visite_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Une action peut servir une campagne marketing : le plan d'action du
+    // franchisé montre alors les clients de la campagne face au N-1 et à
+    // l'objectif. Colonne ajoutée après coup, sur une table déjà en place.
+    try {
+        $col = Db::row("SELECT COUNT(*) n FROM information_schema.columns
+                         WHERE table_schema = DATABASE() AND table_name = 'ceo_visite_action' AND column_name = 'campagne_id'");
+        if ((int) ($col['n'] ?? 0) === 0) { Db::exec('ALTER TABLE ceo_visite_action ADD COLUMN campagne_id INT NULL'); }
+    } catch (PDOException $e) { /* base sans information_schema (banc) : la colonne est dans le CREATE */ }
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_action_evt (
         id INT AUTO_INCREMENT PRIMARY KEY,
         plan_id INT NOT NULL,
@@ -434,6 +442,7 @@ function viPlanLigne(array $p): array
         'echeance' => $p['echeance'], 'statut' => $p['statut'], 'retour' => $p['retour'], 'escalade_motif' => $p['escalade_motif'],
         'photo_id' => $p['photo_id'] !== null ? (int) $p['photo_id'] : null, 'cree_par' => $p['cree_par'], 'cree_le' => $p['cree_le'],
         'maj_le' => $p['maj_le'], 'ferme_le' => $p['ferme_le'], 'retard' => $retard,
+        'campagne_id' => isset($p['campagne_id']) && $p['campagne_id'] !== null ? (int) $p['campagne_id'] : null,
         'age' => (int) ((time() - strtotime((string) $p['cree_le'])) / 86400)];
 }
 
@@ -540,6 +549,120 @@ function viRole(): array
     if ($shop !== '' && $role === '') { $role = 'franchise'; }
     if (!in_array($role, VI_ROLES, true)) { $role = 'consultant'; }
     return [$role, $shop !== '' ? $shop : null, trim((string) ($_GET['id'] ?? ''))];
+}
+
+/**
+ * GET /visites/campagnes?shop=3 — les campagnes marketing du magasin, avec leur
+ * objectif de CLIENTS : le N-1 aligné au même jour de semaine (−364 jours),
+ * l'objectif (le « + x % » de la campagne, par le calcul marketing
+ * mktEffetAttendu — la même cible que la note et que Budget × Campagnes), et
+ * les clients faits, jour par jour. C'est la carte « Objectif de campagne »
+ * du plan d'action, et le graphique de chaque action liée à une campagne.
+ *
+ * Fenêtre : finies depuis moins de 60 jours, en cours, ou qui commencent dans
+ * les 30 jours — jamais les brouillons. Le calcul lit le panel : gardé
+ * 20 minutes dans ceo_app_setting, par magasin.
+ */
+function ep_visites_campagnes(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    if ($shop === '' || !isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $auj = date('Y-m-d');
+    $cle = 'viCamp|' . $shop;
+    if (($_GET['force'] ?? '') !== '1') {
+        $c = setting($cle, null);
+        if (is_array($c) && isset($c['val']) && ($c['val']['aujourdhui'] ?? '') === $auj && time() - (int) ($c['quand'] ?? 0) < 1200) {
+            return $c['val'] + ['cache' => true];
+        }
+    }
+    $val = viCampagnesDe($shop, $auj);
+    if (empty($val['indispo'])) {
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                [$cle, json_encode(['quand' => time(), 'val' => $val], JSON_UNESCAPED_UNICODE)]);
+        } catch (PDOException $e) { /* sans cache, on recalcule la prochaine fois */ }
+    }
+    return $val;
+}
+
+function viCampagnesDe(string $shop, string $auj): array
+{
+    $out = ['shop' => $shop, 'aujourdhui' => $auj, 'campagnes' => [], 'motifs' => []];
+    try {
+        $camps = Db::rows("SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, t.label AS type_label
+                             FROM mar_campaign c LEFT JOIN mar_campaign_type t ON t.id = c.type_id
+                            WHERE c.starts_on IS NOT NULL AND c.ends_on IS NOT NULL
+                              AND c.starts_on <= ? AND c.ends_on >= ?
+                              AND c.status_code NOT IN ('draft', 'cancelled', 'canceled', 'archived')
+                            ORDER BY c.starts_on", [mesDecale($auj, 30), mesDecale($auj, -60)]);
+    } catch (PDOException $e) { $out['indispo'] = true; $out['motifs'][] = 'tables marketing absentes'; return $out; }
+    ensureCampagneObjectifs();
+    // Le budget du magasin, pour dire « objectif à fixer » avec un chiffre.
+    $budgets = [];
+    try {
+        foreach (Db::rows('SELECT year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ?', [$shop]) as $r) {
+            $budgets[(int) $r['year']][(int) $r['month'] - 1] = ['budget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
+                'theorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null];
+        }
+    } catch (PDOException $e) { /* sans budget */ }
+    foreach ($camps as $c) {
+        $id = (int) $c['id'];
+        // Le périmètre : les magasins de la campagne, ou tout le réseau.
+        $perim = array_map(fn ($r) => (string) $r['shop_id'], Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$id]));
+        if ($perim !== [] && !in_array($shop, $perim, true)) { continue; }
+        $du = (string) $c['starts_on']; $au = (string) $c['ends_on'];
+        $motifs = [];
+        $reel = $du <= $auj ? (mesSeriesJour([$shop], $du, min($au, $auj), $motifs)[$shop] ?? []) : [];
+        $n1 = mesSeriesJour([$shop], mesDecale($du, -364), mesDecale($au, -364), $motifs)[$shop] ?? [];
+        $effet = mktEffetAttendu($id, $du, $au, [$shop]);
+        $o = Db::row('SELECT objectif FROM ceo_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $shop]);
+        $an = (int) substr($du, 0, 4);
+        $bud = substr($du, 0, 4) === substr($au, 0, 4) && isset($budgets[$an])
+            ? budgetSurFenetre($budgets[$an] + array_fill(0, 12, ['budget' => null, 'theorique' => null]), $du, $au) : ['montant' => null];
+        $out['campagnes'][] = viCampagneCalcul(
+            ['id' => $id, 'nom' => (string) $c['name'], 'type' => (string) ($c['type_label'] ?? ''), 'debut' => $du, 'fin' => $au],
+            $reel, $n1, $effet['magasins'][$shop] ?? [], isset($effet['entete']['pct']) ? (float) $effet['entete']['pct'] : null,
+            $o !== null && $o['objectif'] !== null ? (float) $o['objectif'] : null, $bud['montant'] ?? null, $auj);
+        foreach ($motifs as $m) { if (!in_array($m, $out['motifs'], true)) { $out['motifs'][] = $m; } }
+    }
+    return $out;
+}
+
+/**
+ * Une campagne vue du magasin : clients faits, N-1 aligné, objectif, jour par
+ * jour. Pur — les lectures sont faites par l'appelant, le banc le vérifie.
+ */
+function viCampagneCalcul(array $c, array $reel, array $n1, array $ef, ?float $pct, ?float $objectifCA, ?float $budget, string $auj): array
+{
+    $du = $c['debut']; $au = $c['fin'];
+    $nb = mesJours($du, $au);
+    $statut = $auj < $du ? 'avenir' : ($auj > $au ? 'close' : 'encours');
+    $serie = []; $totR = 0; $totN = 0; $n1Ecoule = 0; $caR = 0.0; $caN = 0.0; $nR = 0;
+    for ($i = 0; $i < $nb; $i++) {
+        $d = mesDecale($du, $i); $dn = mesDecale($d, -364);
+        $r = $reel[$d] ?? null; $n = $n1[$dn] ?? null;
+        $t = $r !== null ? (int) $r['tickets'] : null;
+        $tn = $n !== null ? (int) $n['tickets'] : null;
+        if ($t !== null) { $totR += $t; $caR += (float) $r['ca']; $nR++; $n1Ecoule += (int) $tn; }
+        if ($tn !== null) { $totN += $tn; $caN += (float) $n['ca']; }
+        $serie[] = ['date' => $d, 'tickets' => $t, 'n1' => $tn];
+    }
+    $prevus = isset($ef['clientsPrevus']) ? (int) $ef['clientsPrevus'] : null;
+    $a1 = isset($ef['clientsA1']) ? (int) $ef['clientsA1'] : ($totN > 0 ? $totN : null);
+    $panier = isset($ef['panier']) ? (float) $ef['panier'] : null;
+    return ['id' => (int) $c['id'], 'nom' => $c['nom'], 'court' => preg_replace('/\s+[-–]\s+.*$/u', '', $c['nom']), 'type' => $c['type'],
+        'debut' => $du, 'fin' => $au, 'nbJours' => $nb, 'statut' => $statut,
+        'jourCourant' => $statut === 'encours' ? mesJours($du, $auj) : ($statut === 'close' ? $nb : 0),
+        'pct' => $pct, 'clientsJour' => $ef['clientsJour'] ?? null,
+        'clientsA1' => $a1, 'clientsA1Source' => $ef['clientsA1Source'] ?? ($totN > 0 ? 'serie' : null),
+        'clientsPrevus' => $pct !== null ? $prevus : null,
+        'objectifJour' => $pct !== null && $prevus !== null && $nb > 0 ? round($prevus / $nb, 1) : null,
+        'reel' => $nR > 0 ? $totR : null, 'joursReel' => $nR, 'n1Ecoule' => $nR > 0 ? $n1Ecoule : null,
+        'caReel' => $nR > 0 ? round($caR, 2) : null, 'caN1' => isset($ef['base']) ? (float) $ef['base'] : ($totN > 0 ? round($caN, 2) : null),
+        'objectifCA' => $objectifCA, 'budget' => $budget, 'panier' => $panier,
+        // Sans « + x % » : ce que le budget demanderait, pour que l'écran propose un chiffre.
+        'clientsBudget' => $pct === null && $budget !== null && $panier > 0 ? (int) round($budget / $panier) : null,
+        'serie' => $serie];
 }
 
 /**
@@ -828,9 +951,10 @@ function wr_plans_post(): array
         $prio = in_array($p['priorite'] ?? '', VI_PRIORITES, true) ? $p['priorite'] : 'P1';
         $ass = in_array($p['assigne'] ?? '', VI_ASSIGNES, true) ? $p['assigne'] : 'franchise';
         $now = date('Y-m-d H:i:s');
-        Db::exec('INSERT INTO ceo_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        $camp = (int) ($p['campagne_id'] ?? 0) > 0 ? (int) $p['campagne_id'] : null;
+        Db::exec('INSERT INTO ceo_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le, campagne_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [$cid, $shop, $visite ? (int) $visite['id'] : null, mb_substr(preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? '')), 0, 60) ?: null,
-             $titre, mb_substr((string) ($p['detail'] ?? ''), 0, 2000) ?: null, $prio, $ass, viDate($p['echeance'] ?? null), 'ouvert', $qui, $now, $now]);
+             $titre, mb_substr((string) ($p['detail'] ?? ''), 0, 2000) ?: null, $prio, $ass, viDate($p['echeance'] ?? null), 'ouvert', $qui, $now, $now, $camp]);
         $id = (int) Db::pdo()->lastInsertId();
         Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, 'ouvert', 'créé']);
         $ligne = viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [$id]));
@@ -865,6 +989,7 @@ function wr_plans_put(string $id): array
         if (in_array($b['priorite'] ?? '', VI_PRIORITES, true)) { $set[] = 'priorite = ?'; $args[] = $b['priorite']; }
         if (in_array($b['assigne'] ?? '', VI_ASSIGNES, true)) { $set[] = 'assigne = ?'; $args[] = $b['assigne']; }
         if (array_key_exists('echeance', $b)) { $set[] = 'echeance = ?'; $args[] = viDate($b['echeance'] ?? null); }
+        if (array_key_exists('campagne_id', $b)) { $set[] = 'campagne_id = ?'; $args[] = (int) $b['campagne_id'] > 0 ? (int) $b['campagne_id'] : null; }
     }
     $photoId = null;
     if (!empty($b['photo_client_id'])) {

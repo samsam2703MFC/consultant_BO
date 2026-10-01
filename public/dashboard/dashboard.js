@@ -1227,8 +1227,10 @@
   /* --- le plan d'action du franchisé : le module des visites, monté ici ------ */
   function rendActions(mobile) {
     let h = '';
-    if (mobile) { h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Mon plan d’action · ce que le consultant a vu</div></div></div>`; }
-    h += '<div id="db-actions" style="min-height:60vh;padding:0 4px ' + (mobile ? '96px' : '0') + '"></div>';
+    // Au téléphone, le même en-tête que les autres onglets : le logo à sa
+    // taille, le nom qui se raccourcit, la date.
+    if (mobile) { h += `<div class="mb-hd"><img src="../assets/img/logo.png" alt=""><div><div class="t">${esc(nomShop())}</div><div class="d">${esc(fDL(AUJ))}</div></div><span class="sp"></span></div>`; }
+    h += '<div id="db-actions" style="min-height:60vh;padding:0 ' + (mobile ? '14px 96px' : '0 0') + '"></div>';
     if (mobile) { h += mbOnglets(); }
     return h;
   }

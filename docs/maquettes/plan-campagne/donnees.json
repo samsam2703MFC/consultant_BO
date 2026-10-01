@@ -1,0 +1,660 @@
+{
+ "lu": "2026-10-01",
+ "shop": "3",
+ "magasin": "Atelier by Max & Sandra - Gosselies",
+ "court": "Gosselies",
+ "campagnes": [
+  {
+   "id": 18,
+   "nom": "Réseaux Sociaux - Septembre 2026",
+   "type": "Réseaux sociaux",
+   "debut": "2026-09-01",
+   "fin": "2026-09-30",
+   "jours": 30,
+   "pct": 10,
+   "clientsJour": 131,
+   "clientsA1": 3933,
+   "clientsPrevus": 4323,
+   "reel": 3866,
+   "objectifCA": 68000,
+   "caReel": 52018,
+   "budget": 57000,
+   "panier": 12.85,
+   "caN1": 63096
+  },
+  {
+   "id": 19,
+   "nom": "Développement B2B - Lancement Webshop",
+   "type": "Lancement / nouveauté",
+   "debut": "2026-10-01",
+   "fin": "2026-11-29",
+   "jours": 60,
+   "pct": null,
+   "clientsJour": 140,
+   "clientsA1": 8377,
+   "clientsPrevus": null,
+   "reel": 102,
+   "objectifCA": null,
+   "caReel": 966,
+   "budget": 119933,
+   "panier": 12.85,
+   "caN1": 117169
+  }
+ ],
+ "joursSept": [
+  {
+   "date": "2026-09-01",
+   "court": "Ma 1",
+   "tickets": 131,
+   "n1": 126,
+   "objectif": 1764.5,
+   "jour": 2
+  },
+  {
+   "date": "2026-09-02",
+   "court": "Me 2",
+   "tickets": 136,
+   "n1": 136,
+   "objectif": 1765.84,
+   "jour": 3
+  },
+  {
+   "date": "2026-09-03",
+   "court": "J 3",
+   "tickets": 131,
+   "n1": 113,
+   "objectif": 1783.21,
+   "jour": 4
+  },
+  {
+   "date": "2026-09-04",
+   "court": "V 4",
+   "tickets": 130,
+   "n1": 117,
+   "objectif": 1809.95,
+   "jour": 5
+  },
+  {
+   "date": "2026-09-05",
+   "court": "S 5",
+   "tickets": 125,
+   "n1": 124,
+   "objectif": 2261.77,
+   "jour": 6
+  },
+  {
+   "date": "2026-09-06",
+   "court": "D 6",
+   "tickets": 131,
+   "n1": 119,
+   "objectif": 2316.57,
+   "jour": 7
+  },
+  {
+   "date": "2026-09-07",
+   "court": "L 7",
+   "tickets": 106,
+   "n1": 112,
+   "objectif": 1665.58,
+   "jour": 1
+  },
+  {
+   "date": "2026-09-08",
+   "court": "Ma 8",
+   "tickets": 156,
+   "n1": 153,
+   "objectif": 1764.5,
+   "jour": 2
+  },
+  {
+   "date": "2026-09-09",
+   "court": "Me 9",
+   "tickets": 120,
+   "n1": 141,
+   "objectif": 1765.84,
+   "jour": 3
+  },
+  {
+   "date": "2026-09-10",
+   "court": "J 10",
+   "tickets": 126,
+   "n1": 115,
+   "objectif": 1783.21,
+   "jour": 4
+  },
+  {
+   "date": "2026-09-11",
+   "court": "V 11",
+   "tickets": 129,
+   "n1": 123,
+   "objectif": 1809.95,
+   "jour": 5
+  },
+  {
+   "date": "2026-09-12",
+   "court": "S 12",
+   "tickets": 121,
+   "n1": 147,
+   "objectif": 2261.77,
+   "jour": 6
+  },
+  {
+   "date": "2026-09-13",
+   "court": "D 13",
+   "tickets": 137,
+   "n1": 124,
+   "objectif": 2316.57,
+   "jour": 7
+  },
+  {
+   "date": "2026-09-14",
+   "court": "L 14",
+   "tickets": 105,
+   "n1": 120,
+   "objectif": 1665.58,
+   "jour": 1
+  },
+  {
+   "date": "2026-09-15",
+   "court": "Ma 15",
+   "tickets": 129,
+   "n1": 135,
+   "objectif": 1764.5,
+   "jour": 2
+  },
+  {
+   "date": "2026-09-16",
+   "court": "Me 16",
+   "tickets": 135,
+   "n1": 126,
+   "objectif": 1765.84,
+   "jour": 3
+  },
+  {
+   "date": "2026-09-17",
+   "court": "J 17",
+   "tickets": 140,
+   "n1": 143,
+   "objectif": 1783.21,
+   "jour": 4
+  },
+  {
+   "date": "2026-09-18",
+   "court": "V 18",
+   "tickets": 106,
+   "n1": 127,
+   "objectif": 1809.95,
+   "jour": 5
+  },
+  {
+   "date": "2026-09-19",
+   "court": "S 19",
+   "tickets": 131,
+   "n1": 149,
+   "objectif": 2261.77,
+   "jour": 6
+  },
+  {
+   "date": "2026-09-20",
+   "court": "D 20",
+   "tickets": 131,
+   "n1": 125,
+   "objectif": 2316.57,
+   "jour": 7
+  },
+  {
+   "date": "2026-09-21",
+   "court": "L 21",
+   "tickets": 114,
+   "n1": 121,
+   "objectif": 1665.58,
+   "jour": 1
+  },
+  {
+   "date": "2026-09-22",
+   "court": "Ma 22",
+   "tickets": 124,
+   "n1": 137,
+   "objectif": 1764.5,
+   "jour": 2
+  },
+  {
+   "date": "2026-09-23",
+   "court": "Me 23",
+   "tickets": 139,
+   "n1": 158,
+   "objectif": 1765.84,
+   "jour": 3
+  },
+  {
+   "date": "2026-09-24",
+   "court": "J 24",
+   "tickets": 143,
+   "n1": 118,
+   "objectif": 1783.21,
+   "jour": 4
+  },
+  {
+   "date": "2026-09-25",
+   "court": "V 25",
+   "tickets": 140,
+   "n1": 159,
+   "objectif": 1809.95,
+   "jour": 5
+  },
+  {
+   "date": "2026-09-26",
+   "court": "S 26",
+   "tickets": 125,
+   "n1": 135,
+   "objectif": 2261.77,
+   "jour": 6
+  },
+  {
+   "date": "2026-09-27",
+   "court": "D 27",
+   "tickets": 131,
+   "n1": 144,
+   "objectif": 2316.57,
+   "jour": 7
+  },
+  {
+   "date": "2026-09-28",
+   "court": "L 28",
+   "tickets": 122,
+   "n1": 129,
+   "objectif": 1665.58,
+   "jour": 1
+  },
+  {
+   "date": "2026-09-29",
+   "court": "Ma 29",
+   "tickets": 120,
+   "n1": 125,
+   "objectif": 1764.5,
+   "jour": 2
+  },
+  {
+   "date": "2026-09-30",
+   "court": "Me 30",
+   "tickets": 152,
+   "n1": 132,
+   "objectif": 1765.84,
+   "jour": 3
+  }
+ ],
+ "joursOctNov": [
+  {
+   "date": "2026-10-01",
+   "tickets": 102,
+   "n1": 121,
+   "n1Date": "2025-10-02"
+  },
+  {
+   "date": "2026-10-02",
+   "tickets": null,
+   "n1": 121,
+   "n1Date": "2025-10-03"
+  },
+  {
+   "date": "2026-10-03",
+   "tickets": null,
+   "n1": 162,
+   "n1Date": "2025-10-04"
+  },
+  {
+   "date": "2026-10-04",
+   "tickets": null,
+   "n1": 141,
+   "n1Date": "2025-10-05"
+  },
+  {
+   "date": "2026-10-05",
+   "tickets": null,
+   "n1": 130,
+   "n1Date": "2025-10-06"
+  },
+  {
+   "date": "2026-10-06",
+   "tickets": null,
+   "n1": 129,
+   "n1Date": "2025-10-07"
+  },
+  {
+   "date": "2026-10-07",
+   "tickets": null,
+   "n1": 130,
+   "n1Date": "2025-10-08"
+  },
+  {
+   "date": "2026-10-08",
+   "tickets": null,
+   "n1": 129,
+   "n1Date": "2025-10-09"
+  },
+  {
+   "date": "2026-10-09",
+   "tickets": null,
+   "n1": 146,
+   "n1Date": "2025-10-10"
+  },
+  {
+   "date": "2026-10-10",
+   "tickets": null,
+   "n1": 151,
+   "n1Date": "2025-10-11"
+  },
+  {
+   "date": "2026-10-11",
+   "tickets": null,
+   "n1": 124,
+   "n1Date": "2025-10-12"
+  },
+  {
+   "date": "2026-10-12",
+   "tickets": null,
+   "n1": 108,
+   "n1Date": "2025-10-13"
+  },
+  {
+   "date": "2026-10-13",
+   "tickets": null,
+   "n1": 126,
+   "n1Date": "2025-10-14"
+  },
+  {
+   "date": "2026-10-14",
+   "tickets": null,
+   "n1": 136,
+   "n1Date": "2025-10-15"
+  },
+  {
+   "date": "2026-10-15",
+   "tickets": null,
+   "n1": 126,
+   "n1Date": "2025-10-16"
+  },
+  {
+   "date": "2026-10-16",
+   "tickets": null,
+   "n1": 132,
+   "n1Date": "2025-10-17"
+  },
+  {
+   "date": "2026-10-17",
+   "tickets": null,
+   "n1": 142,
+   "n1Date": "2025-10-18"
+  },
+  {
+   "date": "2026-10-18",
+   "tickets": null,
+   "n1": 132,
+   "n1Date": "2025-10-19"
+  },
+  {
+   "date": "2026-10-19",
+   "tickets": null,
+   "n1": 115,
+   "n1Date": "2025-10-20"
+  },
+  {
+   "date": "2026-10-20",
+   "tickets": null,
+   "n1": 124,
+   "n1Date": "2025-10-21"
+  },
+  {
+   "date": "2026-10-21",
+   "tickets": null,
+   "n1": 128,
+   "n1Date": "2025-10-22"
+  },
+  {
+   "date": "2026-10-22",
+   "tickets": null,
+   "n1": 118,
+   "n1Date": "2025-10-23"
+  },
+  {
+   "date": "2026-10-23",
+   "tickets": null,
+   "n1": 119,
+   "n1Date": "2025-10-24"
+  },
+  {
+   "date": "2026-10-24",
+   "tickets": null,
+   "n1": 141,
+   "n1Date": "2025-10-25"
+  },
+  {
+   "date": "2026-10-25",
+   "tickets": null,
+   "n1": 150,
+   "n1Date": "2025-10-26"
+  },
+  {
+   "date": "2026-10-26",
+   "tickets": null,
+   "n1": 114,
+   "n1Date": "2025-10-27"
+  },
+  {
+   "date": "2026-10-27",
+   "tickets": null,
+   "n1": 147,
+   "n1Date": "2025-10-28"
+  },
+  {
+   "date": "2026-10-28",
+   "tickets": null,
+   "n1": 145,
+   "n1Date": "2025-10-29"
+  },
+  {
+   "date": "2026-10-29",
+   "tickets": null,
+   "n1": 133,
+   "n1Date": "2025-10-30"
+  },
+  {
+   "date": "2026-10-30",
+   "tickets": null,
+   "n1": 122,
+   "n1Date": "2025-10-31"
+  },
+  {
+   "date": "2026-10-31",
+   "tickets": null,
+   "n1": 118,
+   "n1Date": "2025-11-01"
+  },
+  {
+   "date": "2026-11-01",
+   "tickets": null,
+   "n1": 147,
+   "n1Date": "2025-11-02"
+  },
+  {
+   "date": "2026-11-02",
+   "tickets": null,
+   "n1": 139,
+   "n1Date": "2025-11-03"
+  },
+  {
+   "date": "2026-11-03",
+   "tickets": null,
+   "n1": 134,
+   "n1Date": "2025-11-04"
+  },
+  {
+   "date": "2026-11-04",
+   "tickets": null,
+   "n1": 169,
+   "n1Date": "2025-11-05"
+  },
+  {
+   "date": "2026-11-05",
+   "tickets": null,
+   "n1": 146,
+   "n1Date": "2025-11-06"
+  },
+  {
+   "date": "2026-11-06",
+   "tickets": null,
+   "n1": 146,
+   "n1Date": "2025-11-07"
+  },
+  {
+   "date": "2026-11-07",
+   "tickets": null,
+   "n1": 174,
+   "n1Date": "2025-11-08"
+  },
+  {
+   "date": "2026-11-08",
+   "tickets": null,
+   "n1": 133,
+   "n1Date": "2025-11-09"
+  },
+  {
+   "date": "2026-11-09",
+   "tickets": null,
+   "n1": 139,
+   "n1Date": "2025-11-10"
+  },
+  {
+   "date": "2026-11-10",
+   "tickets": null,
+   "n1": 113,
+   "n1Date": "2025-11-11"
+  },
+  {
+   "date": "2026-11-11",
+   "tickets": null,
+   "n1": 132,
+   "n1Date": "2025-11-12"
+  },
+  {
+   "date": "2026-11-12",
+   "tickets": null,
+   "n1": 146,
+   "n1Date": "2025-11-13"
+  },
+  {
+   "date": "2026-11-13",
+   "tickets": null,
+   "n1": 138,
+   "n1Date": "2025-11-14"
+  },
+  {
+   "date": "2026-11-14",
+   "tickets": null,
+   "n1": 160,
+   "n1Date": "2025-11-15"
+  },
+  {
+   "date": "2026-11-15",
+   "tickets": null,
+   "n1": 143,
+   "n1Date": "2025-11-16"
+  },
+  {
+   "date": "2026-11-16",
+   "tickets": null,
+   "n1": 132,
+   "n1Date": "2025-11-17"
+  },
+  {
+   "date": "2026-11-17",
+   "tickets": null,
+   "n1": 138,
+   "n1Date": "2025-11-18"
+  },
+  {
+   "date": "2026-11-18",
+   "tickets": null,
+   "n1": 127,
+   "n1Date": "2025-11-19"
+  },
+  {
+   "date": "2026-11-19",
+   "tickets": null,
+   "n1": 155,
+   "n1Date": "2025-11-20"
+  },
+  {
+   "date": "2026-11-20",
+   "tickets": null,
+   "n1": 144,
+   "n1Date": "2025-11-21"
+  },
+  {
+   "date": "2026-11-21",
+   "tickets": null,
+   "n1": 174,
+   "n1Date": "2025-11-22"
+  },
+  {
+   "date": "2026-11-22",
+   "tickets": null,
+   "n1": 138,
+   "n1Date": "2025-11-23"
+  },
+  {
+   "date": "2026-11-23",
+   "tickets": null,
+   "n1": 163,
+   "n1Date": "2025-11-24"
+  },
+  {
+   "date": "2026-11-24",
+   "tickets": null,
+   "n1": 143,
+   "n1Date": "2025-11-25"
+  },
+  {
+   "date": "2026-11-25",
+   "tickets": null,
+   "n1": 170,
+   "n1Date": "2025-11-26"
+  },
+  {
+   "date": "2026-11-26",
+   "tickets": null,
+   "n1": 171,
+   "n1Date": "2025-11-27"
+  },
+  {
+   "date": "2026-11-27",
+   "tickets": null,
+   "n1": 160,
+   "n1Date": "2025-11-28"
+  },
+  {
+   "date": "2026-11-28",
+   "tickets": null,
+   "n1": 190,
+   "n1Date": "2025-11-29"
+  },
+  {
+   "date": "2026-11-29",
+   "tickets": null,
+   "n1": 153,
+   "n1Date": "2025-11-30"
+  }
+ ],
+ "boutique": {
+  "ca": 5709,
+  "objectifSemaine": 6999,
+  "google": 4.5,
+  "avis": 148
+ },
+ "sources": [
+  "GET /marketing/budget-campagnes?campagne=18|19 (lignes shopId 3 : clientsJour, clientsA1, clientsPrevus, objectif, realise, panier)",
+  "GET /exploitation/periode?vue=mois&date=2026-09-30 (tickets par jour) et date=2025-09-30 / 2025-10-31 / 2025-11-30 (N-1, aligné à −364 jours)",
+  "GET /visites/app?shop=3 (boutique : CA de la semaine, note Google ; 0 action en ligne)"
+ ],
+ "illustration": "Les trois actions du plan sont inventées : Gosselies n’a aucune action en ligne au 01/10/2026. Le lien action ↔ campagne n’existe pas encore dans le cockpit (à ajouter : colonne campagne_id sur ceo_visite_action)."
+}
