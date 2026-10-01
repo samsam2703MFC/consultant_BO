@@ -14,12 +14,12 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'actions'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'actions', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
-    rc: null, rcListe: false, rcFiltre: 'tout',
+    rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
@@ -92,6 +92,9 @@
   function charger(force) {
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions') { rendre(); return; }
+    // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
+    // qu'il faut pour en écrire une — produits, livraisons, motifs.
+    if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
@@ -118,9 +121,6 @@
     // Les commandes clients et les livraisons : une seule lecture, elle porte
     // les deux et ne dépend pas de la période regardée.
     if (estMobile()) { lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force); }
-    // Les réclamations fournisseur du magasin : au téléphone seulement, où se
-    // trouve le bouton « Réclamer ».
-    if (estMobile()) { lireAux(cleRC(), cheminRC(), force); }
     // Les non-conformités se lisent sous les trois vues : la veille en Jour,
     // la période affichée en Semaine et en Mois.
     lireAux(cleNC(), urlNC(ncFenetre()), force);
@@ -861,7 +861,6 @@
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
     if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
-    h += murR([murReclamations()], true);
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
       murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
@@ -891,11 +890,15 @@
     if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
     if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
-    h += '<div class="rc-place"></div></div>';
-    h += rcBouton();
-    h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']]
-      .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
+    h += '</div>';
+    h += mbOnglets();
     return h;
+  }
+  /** Le menu du téléphone : le jour, la semaine, le plan d'action, et la
+   * réclamation fournisseur — un onglet à part, pas une carte du mur. */
+  function mbOnglets() {
+    return `<div class="mb-tabs mb-tabs4">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓'], ['reclamation', 'Réclamation', RC_ICONE]]
+      .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
   }
 
   /* --- l'objectif produits d'une campagne : « 500 tartes aux pommes en octobre », et où l'on en est --- */
@@ -1185,7 +1188,7 @@
     let h = '';
     if (mobile) { h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Mon plan d’action · ce que le consultant a vu</div></div></div>`; }
     h += '<div id="db-actions" style="min-height:60vh;padding:0 4px ' + (mobile ? '96px' : '0') + '"></div>';
-    if (mobile) { h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`; }
+    if (mobile) { h += mbOnglets(); }
     return h;
   }
   function monterActions() {
@@ -1198,14 +1201,19 @@
     const d = S.res[kr], st = S.st[ks];
     const m = magasin(d);
     const garde = noteGarder(), cqPos = cqGarder();
-    // Le parcours de réclamation se dessine à part : il suit les lectures
-    // (références, liste) sans dépendre du mur.
-    rcRendre();
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
-      if (S.vue !== 'jour' && S.vue !== 'semaine' && S.vue !== 'actions') { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['jour', 'semaine', 'actions', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       if (S.vue === 'actions') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
+      if (S.vue === 'reclamation') {
+        const champ = rcGarder();
+        $.innerHTML = rendReclamation(); $.classList.add('mob'); brancher();
+        cqRestaurer(cqPos); rcRestaurer(champ);
+        // Après un envoi, on remonte : le bandeau « Envoyée » est en haut.
+        if (S.rcHaut) { S.rcHaut = false; const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } }
+        return;
+      }
       $.innerHTML = rendMobile(m, d) + cqLoupe(true);
       $.classList.add('mob');
       brancher();
@@ -1217,6 +1225,8 @@
       if (forcee || objectifAtteint(m)) { feteObjectif(forcee); }
       return;
     }
+    // La réclamation fournisseur n'existe qu'au téléphone.
+    if (S.vue === 'reclamation') { S.vue = 'jour'; urlMaj(); charger(false); return; }
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
@@ -2210,22 +2220,18 @@
   }
 
   /* --- Réclamations fournisseur, au téléphone -------------------------------
-   * La photo d'abord : le bouton « Réclamer », au-dessus des onglets, ouvre un
-   * parcours en trois écrans — les photos, le produit et le problème, envoyée.
-   * Le mur porte une carte des réclamations des douze derniers mois ; elle
-   * ouvre la liste complète.
+   * Un onglet à part, « Réclamation » : un formulaire sur un seul écran — la
+   * photo (l'appareil s'ouvre directement), le produit, combien, le problème,
+   * un mot — puis les réclamations du magasin sur douze mois.
+   * La livraison suit le produit : la plus récente reçue de son fournisseur,
+   * modifiable. La demande est un remplacement, comme 38 réclamations sur 40.
    *
    * La route de création du panel ne prend que du texte : les photos sont
-   * gardées par le cockpit et leurs liens partent dans la description.
-   *
-   * Le parcours vit HORS du mur (#rc-racine) : la relecture des dix minutes
-   * redessine le mur sans toucher à une saisie en cours, ni au sélecteur de
-   * photo ouvert. Ses gestes passent par une seule délégation d'événements. */
+   * gardées par le cockpit et leurs liens partent dans la description. */
   const RC_MAX = 4;
   const RC_MOTIFS = { size_or_weight_issue: 'Taille ou poids', broken_packaging: 'Emballage abîmé', incorrect_information: 'Informations incorrectes',
     lack_of_conformity: 'Non conforme à la commande', incorrect_quantity_of_products_in_package: 'Quantité dans l’emballage',
     product_quality: 'Qualité du produit', other: 'Autre raison' };
-  const RC_ACTIONS = [['REPLACEMENT', 'Remplacement'], ['REFUND', 'Remboursement'], ['CREDIT_NOTE', 'Note de crédit']];
   function cleRC() { return 'rcl|' + S.shop; }
   function cheminRC() { return '/fournisseurs/reclamations?shop=' + encodeURIComponent(S.shop) + '&mois=12'; }
   function cleRCR() { return 'rcr|' + S.shop; }
@@ -2234,9 +2240,10 @@
   const rcSansBonjour = t => String(t || '').replace(/^\s*bonjour[\s,.!]*/i, '');
   const rcJours = d => d ? Math.max(0, Math.round((new Date(AUJ + 'T12:00:00') - new Date(d + 'T12:00:00')) / 86400000)) : null;
   const rcPl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
-  const rcNorm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const rcNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   /** Une citation courte se coupe entre deux mots, pas au milieu d'un. */
   const rcCoupe = (t, n) => { t = String(t || ''); if (t.length <= n) { return t; } const c = t.slice(0, n), i = c.lastIndexOf(' '); return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[\s,;:.(«-]+$/, '') + '…'; };
+  const RC_ICONE = '<svg viewBox="0 0 24 24" width="19" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 
   /** L'état d'une réclamation, vu du magasin : « ouverte » n'est pas un
    * statut du panel, c'est une réclamation que personne n'a suivie d'effet. */
@@ -2249,7 +2256,7 @@
   }
   function rcLignes() { const D = S.aux[cleRC()]; return D && Array.isArray(D.lignes) ? D.lignes : []; }
 
-  function rcCarte(l, court) {
+  function rcCarte(l) {
     const e = rcEtat(l), j = rcJours(l.le);
     const P = Array.isArray(l.photos) ? l.photos : [];
     const nPh = P.length + (l.pj || 0);
@@ -2267,262 +2274,184 @@
     if (l.montant) { bouts.push(fE(l.montant)); }
     bouts.push(nPh ? '📷 ' + rcPl(nPh, 'photo') : 'sans photo');
     const tx = rcPremiere(l.texte);
-    return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e.c}">${esc(e.lib)}</span><b>${esc(l.reference || 'Réclamation')}</b><span class="d">${esc(fD(l.le))}${l.id ? ' · n° ' + l.id : ''}</span></div>
-      <div class="l2">${bouts.join(' · ')}</div>
-      ${court || !tx ? '' : `<div class="tx">${esc(tx)}</div>`}
-      ${court || !P.length ? '' : `<div class="rc-vign">${P.map(c => `<a href="../${esc(c)}" target="_blank" rel="noopener"><img src="../${esc(c)}" alt="" loading="lazy"></a>`).join('')}</div>`}${rep}</div>`;
+    return `<div class="rc-carte"><div class="l1"><span class="rc-st ${e.c}">${esc(e.lib)}</span><span class="d">${esc(fD(l.le))}${l.id ? ' · n° ' + l.id : ''}</span></div>
+      <b class="ref">${esc(l.reference || 'Réclamation')}</b><div class="l2">${bouts.join(' · ')}</div>
+      ${tx ? `<div class="tx">${esc(tx)}</div>` : ''}
+      ${P.length ? `<div class="rc-vign">${P.map(c => `<a href="../${esc(c)}" target="_blank" rel="noopener"><img src="../${esc(c)}" alt="" loading="lazy"></a>`).join('')}</div>` : ''}${rep}</div>`;
   }
 
-  /** La cellule du mur : ce qui est ouvert, ce que cela vaut, les deux dernières. */
-  function murReclamations() {
-    const cle = cleRC(), D = S.aux[cle], K = 'Réclamations fournisseur';
-    if (!D && S.err[cle]) { return murC(K, '—', esc(S.err[cle])); }
-    if (!D) { return murC(K, '…', 'lecture du panel…'); }
-    if (D.indispo) { return murC(K, '—', esc(D.motif || 'indisponible')); }
-    const L = rcLignes();
-    if (!L.length) { return murC(K, '0', 'aucune réclamation en 12 mois · « Réclamer » en dépose une, photos comprises', '', 'rclist'); }
-    const nAtt = L.filter(l => rcEtat(l).c === 'att').length, nSans = L.filter(l => rcEtat(l).c === 'sans').length;
-    const bouts = [`ouvertes sur ${L.length} en 12 mois`];
-    if (nAtt) { bouts.push(nAtt + ' en attente'); }
-    if (nSans) { bouts.push(`<span class="ko">${nSans} acceptée${nSans > 1 ? 's' : ''} sans suite</span>`); }
-    if (D.montantOuvert) { bouts.push(fE(D.montantOuvert) + ' au prix d’achat'); }
-    const apres = `<div class="rc-mliste">${L.slice(0, 2).map(l => rcCarte(l, true)).join('')}</div>`
-      + `<div class="rc-voir">Voir les ${L.length} réclamations ›</div>`;
-    return murC(K + (D.ouvertes ? '' : ' <em class="ok">· tout est réglé</em>'), String(D.ouvertes || 0), bouts.join(' · '),
-      D.ouvertes ? 'wa' : 'ok', 'rclist', apres);
-  }
-  /** Le bouton du pouce : au-dessus des onglets, sur le jour et la semaine. */
-  function rcBouton() {
-    return (S.vue === 'jour' || S.vue === 'semaine') ? '<button class="rc-fab" data-rcouvrir="1"><b>📷</b>Réclamer</button>' : '';
-  }
-
-  /* L'état du parcours, et les références qu'il lit. */
-  function rcNeuf() {
-    return { etape: 1, photos: [], traite: 0, livraison: null, matiere: null, q: '', qte: '1', motif: null, action: 'REPLACEMENT',
-      note: '', auteur: notePar(), envoi: false, err: null, fait: null };
-  }
+  /* Le brouillon du formulaire : il survit au changement d'onglet. */
+  function rcNeuf() { return { photos: [], traite: 0, matiere: null, q: '', livraison: null, qte: '1', motif: null, note: '', envoi: false, err: null }; }
+  function rcForm() { if (!S.rc) { S.rc = rcNeuf(); } return S.rc; }
   function rcRefs() { const F = S.aux[cleRCR()]; return F && !F.indispo ? F : null; }
   function rcFournNom(F, id) { const f = (F && F.fournisseurs || []).find(x => String(x.id) === String(id)); return f ? String(f.nom).trim() : 'le fournisseur'; }
-  /** Les livraisons : celles déjà reçues d'abord (réclamées ou attendues à ce
-   * jour), les plus récentes en tête ; celles encore à venir ensuite. */
-  function rcLivraisons(F) {
-    const L = (F.livraisons || []).slice();
+  function rcMatiere(F, R) { return R.matiere ? (F.matieres || []).find(m => String(m.id) === String(R.matiere)) || null : null; }
+  function rcQte(R) { const n = parseFloat(String(R.qte).replace(',', '.')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; }
+  /** Les livraisons du fournisseur du produit : les reçues d'abord (déjà
+   * réclamées, ou attendues à ce jour), la plus récente en tête. */
+  function rcLivraisons(F, m) {
+    const L = m ? (F.livraisons || []).filter(l => String(l.fournisseur) === String(m.fournisseur)) : [];
     const recue = l => l.source !== 'en cours' || (l.attendue && l.attendue <= AUJ);
     const date = l => l.attendue || l.le || '';
     return L.filter(recue).sort((a, b) => date(b).localeCompare(date(a))).concat(L.filter(l => !recue(l)).sort((a, b) => date(a).localeCompare(date(b))));
   }
-  function rcLivLib(F, l) {
-    const quand = l.source !== 'en cours' ? 'déjà réclamée le ' + fD(l.le)
-      : (l.attendue ? (l.attendue <= AUJ ? 'attendue le ' : 'à venir le ') + fD(l.attendue) : 'commandée le ' + fD(l.le));
-    return rcFournNom(F, l.fournisseur) + ' · ' + quand + ' · …' + String(l.cle || l.id).slice(-6);
+  function rcLivraison(F, R) {
+    const L = rcLivraisons(F, rcMatiere(F, R));
+    return L.find(l => String(l.id) === String(R.livraison)) || L[0] || null;
   }
-  function rcLivraison(F, R) { return (F.livraisons || []).find(l => String(l.id) === String(R.livraison)) || null; }
-  function rcMatieres(F, liv) { return liv ? (F.matieres || []).filter(m => String(m.fournisseur) === String(liv.fournisseur)) : []; }
-  function rcMatiere(F, R) { return R.matiere ? (F.matieres || []).find(m => String(m.id) === String(R.matiere)) || null : null; }
-  function rcQte(R) { const n = parseFloat(String(R.qte).replace(',', '.')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; }
-  /** Les références que CE magasin a déjà réclamées à ce fournisseur : ce
-   * sont elles qu'on retrouve, d'une livraison à l'autre. */
-  function rcHabituelles(F, liv) {
-    const M = rcMatieres(F, liv), parSku = {};
-    M.forEach(m => { if (m.sku) { parSku[m.sku] = m; } });
+  function rcLivLib(l) {
+    const quand = l.source !== 'en cours' ? 'réclamée le ' + fD(l.le)
+      : (l.attendue ? (l.attendue <= AUJ ? 'attendue le ' : 'à venir le ') + fD(l.attendue) : 'commandée le ' + fD(l.le));
+    return quand + ' · …' + String(l.cle || l.id).slice(-6);
+  }
+  /** Les produits que CE magasin a déjà réclamés : on les retrouve d'une
+   * livraison à l'autre, ils viennent en premier. */
+  function rcHabituels(F) {
     const n = {};
-    rcLignes().forEach(l => { const m = parSku[l.sku]; if (m) { n[m.id] = (n[m.id] || 0) + 1; } });
-    return Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 5).map(id => M.find(m => String(m.id) === id));
+    rcLignes().forEach(l => {
+      const m = (F.matieres || []).find(x => x.sku && x.sku === l.sku && rcFournNom(F, x.fournisseur) === String(l.fournisseur).trim())
+        || (F.matieres || []).find(x => x.sku && x.sku === l.sku);
+      if (m) { n[m.id] = (n[m.id] || 0) + 1; }
+    });
+    return Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 4).map(id => (F.matieres || []).find(m => String(m.id) === id)).filter(Boolean);
   }
   function rcSuggestions() {
-    const R = S.rc, F = rcRefs(); if (!R || !F) { return ''; }
+    const R = rcForm(), F = rcRefs(); if (!F) { return ''; }
     const q = rcNorm(R.q).trim();
     if (q.length < 2) { return ''; }
-    const M = rcMatieres(F, rcLivraison(F, R)).filter(m => rcNorm(m.nom).includes(q) || String(m.sku).startsWith(q)).slice(0, 6);
-    if (!M.length) { return `<div class="vide">Aucune référence de ${esc(rcFournNom(F, (rcLivraison(F, R) || {}).fournisseur))} ne contient « ${esc(R.q)} ».</div>`; }
-    return M.map(m => `<button data-rcmat="${esc(m.id)}"><span>${esc(m.nom)}</span><small>SKU ${esc(m.sku)}${m.unite ? ' · ' + esc(m.unite) : ''}${m.prix != null ? ' · ' + fU(m.prix) : ''}</small></button>`).join('');
-  }
-  function rcAidePhotos() {
-    const ko = rcLignes().filter(l => l.statut === 'REJECTED' && l.reponse);
-    if (ko.length) {
-      const l = ko[0], n = ko.filter(x => x.fournisseur === l.fournisseur).length;
-      return `<div class="rc-aide"><b>Des photos et des détails, sinon refus.</b> ${esc(l.fournisseur)} a refusé ${rcPl(n, 'réclamation')} du magasin en 12 mois : « ${esc(rcCoupe(rcPremiere(rcSansBonjour(l.reponse)), 140))} »</div>`;
-    }
-    return '<div class="rc-aide"><b>Des photos et des détails, sinon refus.</b> Le produit en entier, l’étiquette du carton, un repère de taille : c’est ce qu’un fournisseur demande avant d’accepter.</div>';
+    const M = (F.matieres || []).filter(m => rcNorm(m.nom).includes(q) || String(m.sku).startsWith(q)).slice(0, 7);
+    if (!M.length) { return `<div class="vide">Aucun produit ne contient « ${esc(R.q)} ».</div>`; }
+    return M.map(m => `<button data-rcmat="${esc(m.id)}"><span>${esc(m.nom)}</span><small>${esc(rcFournNom(F, m.fournisseur))} · SKU ${esc(m.sku)}${m.unite ? ' · ' + esc(m.unite) : ''}</small></button>`).join('');
   }
   /** Ce qui manque pour envoyer, dans l'ordre de l'écran. */
   function rcManque(F, R) {
-    if (!rcLivraison(F, R)) { return 'la livraison'; }
-    if (!rcMatiere(F, R)) { return 'le produit'; }
-    if (!rcQte(R)) { return 'la quantité'; }
-    if (!R.motif) { return 'le problème'; }
+    const m = rcMatiere(F, R);
+    if (!m) { return 'Choisir le produit'; }
+    if (!rcLivraison(F, R)) { return 'Aucune livraison de ' + rcFournNom(F, m.fournisseur); }
+    if (!rcQte(R)) { return 'Indiquer combien'; }
+    if (!R.motif) { return 'Choisir le problème'; }
     return '';
   }
   function rcValeur(F, R) {
-    const m = rcMatiere(F, R), q = rcQte(R);
+    const m = F ? rcMatiere(F, R) : null, q = rcQte(R);
     if (!m || !q || m.prix == null) { return ''; }
-    return `${nf(q, q % 1 ? 2 : 0)} × ${fU(m.prix)} = <b>${fE(q * m.prix)}</b> au prix d’achat`;
+    return `${nf(q, q % 1 ? 2 : 0)} × ${fU(m.prix)} = <b>${fE(q * m.prix)}</b>`;
   }
   function rcBoutonEnvoi(F, R) {
-    const manque = F ? rcManque(F, R) : 'la livraison';
-    const lib = R.envoi ? 'Envoi…' : (manque ? 'Choisir ' + manque : 'Envoyer à ' + esc(rcFournNom(F, rcLivraison(F, R).fournisseur)));
+    const manque = F ? rcManque(F, R) : 'Lecture des produits…';
+    const lib = R.envoi ? 'Envoi…' : (manque || 'Envoyer à ' + esc(rcFournNom(F, rcMatiere(F, R).fournisseur)));
     return `<button id="rc-envoyer" class="rc-btn" data-rcenvoyer="1" ${manque || R.envoi ? 'disabled' : ''}>${lib}</button>`;
   }
 
-  /* Les trois écrans. */
-  function rcEcranPhotos(R) {
-    const P = R.photos, plein = P.length + R.traite >= RC_MAX;
+  /** Le formulaire : cinq lignes, dans l'ordre où on les vit au comptoir. */
+  function rcFormulaire() {
+    const R = rcForm(), cle = cleRCR(), F0 = S.aux[cle], F = rcRefs();
     let h = '';
-    if (P.length) {
-      h += `<div class="rc-viseur"><img src="${P[P.length - 1].url}" alt=""><span class="n">${rcPl(P.length, 'photo')} sur ${RC_MAX}</span></div>`;
+    const f = S.rcFait;
+    if (f) {
+      h += `<div class="rc-fait"><span class="rond">✓</span><div><b>Envoyée à ${esc(f.fournisseur)}</b><small>${esc(f.nom)} · ${nf(f.qte, f.qte % 1 ? 2 : 0)}${f.unite ? ' ' + esc(f.unite) : ''} · ${f.photos ? rcPl(f.photos, 'photo') : 'sans photo'}${f.id ? ' · n° ' + f.id : ''}</small></div><button data-rcfaitx="1" aria-label="Fermer">✕</button></div>`;
+    }
+    // 1. La photo : un seul bouton, l'appareil s'ouvre.
+    const P = R.photos, plein = P.length + R.traite >= RC_MAX;
+    h += '<div class="rc-champ"><label>La photo</label>';
+    if (P.length || R.traite) {
       h += `<div class="rc-photos">${P.map((p, i) => `<div class="ph"><img src="${p.url}" alt=""><button data-rcsuppr="${i}" aria-label="Retirer la photo">✕</button></div>`).join('')}`
-        + (plein ? '' : '<button class="plus" data-rcphoto="cam"><b>＋</b>Une autre</button>') + '</div>';
+        + (R.traite ? '<div class="ph att"><span>…</span></div>' : '')
+        + (plein ? '' : '<button class="plus" data-rcphoto="1" aria-label="Une autre photo"><b>＋</b>Une autre</button>') + '</div>';
     } else {
-      h += `<button class="rc-prise" data-rcphoto="cam"${R.traite ? ' disabled' : ''}><b>📷</b><span>Prendre une photo</span><small>le produit, l’étiquette du carton, un repère de taille</small></button>`;
+      h += '<button class="rc-prise" data-rcphoto="1"><b>📷</b><span>Prendre la photo</span></button>';
+      const ko = rcLignes().filter(l => l.statut === 'REJECTED' && !l.pj && !(l.photos || []).length && !l.texte);
+      if (ko.length) { h += `<div class="rc-aide">${esc(ko[0].fournisseur)} a refusé ${rcPl(ko.length, 'réclamation')} envoyée${ko.length > 1 ? 's' : ''} sans photo ni note : le produit en entier et l’étiquette du carton suffisent.</div>`; }
     }
-    if (R.traite) { h += `<div class="rc-pt">préparation de ${rcPl(R.traite, 'photo')}…</div>`; }
-    if (!plein) { h += '<button class="rc-lien" data-rcphoto="gal">🖼 Choisir dans la galerie</button>'; }
-    if (R.err) { h += `<div class="rc-err">${esc(R.err)}</div>`; }
-    return h + rcAidePhotos();
-  }
-  function rcEcranProduit(R) {
-    const cle = cleRCR(), F0 = S.aux[cle], F = rcRefs();
-    if (!F0 && S.err[cle]) { return `<div class="rc-err">${esc(S.err[cle])}</div><button class="rc-btn sec" data-rcrelire="1">Relire</button>`; }
-    if (!F0) { return '<div class="rc-pt">lecture des livraisons et des références du magasin…</div>'; }
-    if (!F) { return `<div class="rc-err">${esc(F0.motif || 'références indisponibles')}</div>`; }
-    const Lv = rcLivraisons(F);
-    if (!Lv.length) { return '<div class="rc-err">Aucune livraison connue pour ce magasin : le panel n’en rend aucune en cours ni déjà réclamée.</div>'; }
-    if (!rcLivraison(F, R)) { R.livraison = Lv[0].id; }
-    const liv = rcLivraison(F, R), m = rcMatiere(F, R);
-    const H = rcHabituelles(F, liv).filter(Boolean);
-    if (m && !H.some(x => String(x.id) === String(m.id))) { H.unshift(m); }
-    let h = `<div class="rc-champ"><label for="rc-liv">La livraison</label><select id="rc-liv" class="rc-in" data-rcliv="1">${Lv.map(l => `<option value="${esc(l.id)}"${String(l.id) === String(R.livraison) ? ' selected' : ''}>${esc(rcLivLib(F, l))}</option>`).join('')}</select></div>`;
-    h += `<div class="rc-champ"><label>Le produit${H.length ? ' · déjà réclamés au même fournisseur' : ''}</label>`
-      + (H.length ? `<div class="rc-puces">${H.map(x => `<button data-rcmat="${esc(x.id)}" class="${m && String(m.id) === String(x.id) ? 'on' : ''}">${esc(x.nom)}</button>`).join('')}</div>` : '')
-      + `<input id="rc-q" class="rc-in" data-rcq="1" autocomplete="off" placeholder="🔍 ${H.length ? 'un autre produit' : 'chercher le produit'} — nom ou SKU" value="${esc(R.q)}">`
-      + `<div id="rc-sugg" class="rc-sugg">${rcSuggestions()}</div>`
-      + (m ? `<div class="rc-choix"><b>${esc(m.nom)}</b> · SKU ${esc(m.sku)}${m.unite ? ' · ' + esc(m.unite) : ''}${m.prix != null ? ' · ' + fU(m.prix) + ' l’unité' : ''}</div>` : '')
-      + '</div>';
-    h += `<div class="rc-champ"><label for="rc-qte">Combien${m && m.unite ? ' · en ' + esc(m.unite) : ''}</label><div class="rc-ql"><div class="rc-qte"><button data-rcpas="-1" aria-label="Un de moins">−</button><input id="rc-qte" data-rcqte="1" inputmode="decimal" autocomplete="off" value="${esc(R.qte)}"><button data-rcpas="1" aria-label="Un de plus">＋</button></div><span id="rc-valeur" class="rc-val">${F ? rcValeur(F, R) : ''}</span></div></div>`;
-    h += `<div class="rc-champ"><label>Le problème</label><div class="rc-puces">${(F.motifs || []).map(x => `<button data-rcmotif="${esc(x.code)}" class="${R.motif === x.code ? 'on' : ''}">${esc(RC_MOTIFS[x.code] || x.nom)}</button>`).join('')}</div></div>`;
-    h += `<div class="rc-champ"><label>Ce que vous demandez</label><div class="rc-puces">${RC_ACTIONS.map(a => `<button data-rcaction="${a[0]}" class="${R.action === a[0] ? 'on' : ''}">${a[1]}</button>`).join('')}</div></div>`;
-    h += `<div class="rc-champ"><label for="rc-note">Note pour le fournisseur</label><textarea id="rc-note" class="rc-in" data-rcnote="1" rows="4" maxlength="1500" placeholder="Ce qui ne va pas, sur combien de pièces, comment vous l’avez vu…">${esc(R.note)}</textarea>`
-      + `<input id="rc-par" class="rc-in" data-rcpar="1" maxlength="60" autocomplete="given-name" placeholder="signé (prénom)" value="${esc(R.auteur)}"></div>`;
-    h += `<div class="rc-recap">${R.photos.length ? '📷 ' + rcPl(R.photos.length, 'photo') + ' jointe' + (R.photos.length > 1 ? 's' : '') : '<span class="ko">Aucune photo</span> — le fournisseur risque de refuser'} · <button class="rc-lien" data-rcetape="1">${R.photos.length ? 'modifier' : 'en ajouter'}</button></div>`;
-    if (R.err) { h += `<div class="rc-err">${esc(R.err)}</div>`; }
-    return h;
-  }
-  function rcEcranEnvoyee(R) {
-    const f = R.fait || {};
-    const L = rcLignes();
-    return `<div class="rc-ok"><span class="rond">✓</span><h3>Réclamation envoyée à ${esc(f.fournisseur)}</h3>
-      <div class="mu">${esc(f.nom)} · ${nf(f.qte, f.qte % 1 ? 2 : 0)}${f.unite ? ' ' + esc(f.unite) : ''}${f.montant != null ? ' · ' + fE(f.montant) : ''} · ${f.photos ? rcPl(f.photos, 'photo') : 'sans photo'}${f.id ? ' · n° ' + f.id : ''}</div>
-      ${f.photos ? `<div class="mu" style="margin-top:4px">Les photos partent en lien dans la description : ${esc(f.fournisseur)} les ouvre sans compte.</div>` : ''}</div>
-      <div class="rc-lab">Vos dernières réclamations</div>${S.enCours[cleRC()] && f.id && !L.some(l => l.id === f.id) ? '<div class="rc-pt">relecture du panel…</div>' : ''}${L.slice(0, 3).map(l => rcCarte(l, true)).join('')}`;
-  }
-  function rcEcran() {
-    const R = S.rc, F = rcRefs();
-    const T = ['Les photos', 'Le produit et le problème', 'Envoyée'];
-    let corps, pied;
-    if (R.etape === 1) {
-      corps = rcEcranPhotos(R);
-      pied = `<button class="rc-btn${R.photos.length ? '' : ' sec'}" data-rcetape="2"${R.traite ? ' disabled' : ''}>${R.photos.length ? 'Continuer ›' : 'Continuer sans photo ›'}</button>`;
-    } else if (R.etape === 2) {
-      corps = rcEcranProduit(R);
-      pied = `<button class="rc-btn sec rc-ret" data-rcetape="1" aria-label="Retour aux photos">‹</button>${rcBoutonEnvoi(F, R)}`;
-    } else {
-      corps = rcEcranEnvoyee(R);
-      pied = '<button class="rc-btn sec" data-rcnouvelle="1">Une autre</button><button class="rc-btn" data-rcfermer="1">Terminé</button>';
+    h += '</div>';
+    // 2. Le produit — et la livraison qui le suit.
+    h += '<div class="rc-champ"><label>Le produit</label>';
+    if (!F0 && S.err[cle]) { h += `<div class="rc-err">${esc(S.err[cle])} <button class="rc-lien" data-recharger="1">relire</button></div>`; }
+    else if (!F0) { h += '<div class="rc-pt">lecture des produits du magasin…</div>'; }
+    else if (!F) { h += `<div class="rc-err">${esc(F0.motif || 'produits indisponibles')}</div>`; }
+    else {
+      const m = rcMatiere(F, R);
+      if (m) {
+        const L = rcLivraisons(F, m), liv = rcLivraison(F, R);
+        h += `<div class="rc-choix"><div><b>${esc(m.nom)}</b><small>${esc(rcFournNom(F, m.fournisseur))} · SKU ${esc(m.sku)}${m.unite ? ' · ' + esc(m.unite) : ''}</small></div><button data-rcmatx="1" aria-label="Changer de produit">✕</button></div>`;
+        h += L.length
+          ? `<label class="rc-liv">Livraison <select id="rc-liv" data-rcliv="1">${L.map(l => `<option value="${esc(l.id)}"${liv && String(l.id) === String(liv.id) ? ' selected' : ''}>${esc(rcLivLib(l))}</option>`).join('')}</select></label>`
+          : `<div class="rc-err">Aucune livraison de ${esc(rcFournNom(F, m.fournisseur))} connue pour ce magasin : la réclamation ne peut pas partir d’ici.</div>`;
+      } else {
+        const H = rcHabituels(F);
+        if (H.length) { h += `<div class="rc-puces">${H.map(x => `<button data-rcmat="${esc(x.id)}">${esc(x.nom)}</button>`).join('')}</div>`; }
+        h += `<input id="rc-q" class="rc-in" data-rcq="1" type="search" autocomplete="off" enterkeyhint="search" placeholder="🔍 ${H.length ? 'Un autre produit' : 'Chercher le produit'} — nom ou SKU" value="${esc(R.q)}">`
+          + `<div id="rc-sugg" class="rc-sugg">${rcSuggestions()}</div>`;
+      }
     }
-    return `<div class="rc-ecran"><div class="hd"><b>${T[R.etape - 1]}</b><span class="et">${R.etape} / 3</span><button class="x" data-rcfermer="1" aria-label="Fermer">✕</button></div>
-      <div class="prog">${[1, 2, 3].map(i => `<i class="${i <= R.etape ? 'f' : ''}"></i>`).join('')}</div>
-      <div class="corps">${corps}</div><div class="pied">${pied}</div></div>`;
+    h += '</div>';
+    // 3. Combien.
+    const mu = F ? rcMatiere(F, R) : null;
+    h += `<div class="rc-champ"><label for="rc-qte">Combien${mu && mu.unite ? ' · en ' + esc(mu.unite) : ''}</label><div class="rc-ql"><div class="rc-qte"><button data-rcpas="-1" aria-label="Un de moins">−</button><input id="rc-qte" data-rcqte="1" inputmode="decimal" autocomplete="off" value="${esc(R.qte)}"><button data-rcpas="1" aria-label="Un de plus">＋</button></div><span id="rc-valeur" class="rc-val">${rcValeur(F, R)}</span></div></div>`;
+    // 4. Le problème.
+    const motifs = F && F.motifs && F.motifs.length ? F.motifs : Object.keys(RC_MOTIFS).map(k => ({ code: k, nom: RC_MOTIFS[k] }));
+    h += `<div class="rc-champ"><label>Le problème</label><div class="rc-puces">${motifs.map(x => `<button data-rcmotif="${esc(x.code)}" class="${R.motif === x.code ? 'on' : ''}">${esc(RC_MOTIFS[x.code] || x.nom)}</button>`).join('')}</div></div>`;
+    // 5. Un mot.
+    h += `<div class="rc-champ"><label for="rc-note">Un mot pour le fournisseur <em>facultatif</em></label><textarea id="rc-note" class="rc-in" data-rcnote="1" rows="3" maxlength="1500" placeholder="Ce qui ne va pas, comment vous l’avez vu…">${esc(R.note)}</textarea></div>`;
+    if (R.err) { h += `<div class="rc-err">${esc(R.err)}</div>`; }
+    h += `<div class="rc-envoi">${rcBoutonEnvoi(F, R)}</div>`;
+    return `<div class="rc-form">${h}</div>`;
   }
-  function rcListe() {
+
+  /** Sous le formulaire : ce qui a déjà été réclamé, et ce qu'il en est. */
+  function rcHistorique() {
     const cle = cleRC(), D = S.aux[cle], L = rcLignes();
+    let h = '<div class="rc-hist"><div class="rc-lab">Mes réclamations · 12 derniers mois</div>';
+    if (!D) { return h + (S.err[cle] ? `<div class="rc-err">${esc(S.err[cle])}</div>` : '<div class="rc-pt">lecture du panel…</div>') + '</div>'; }
+    if (D.indispo) { return h + `<div class="rc-err">${esc(D.motif || 'indisponible')}</div></div>`; }
+    if (!L.length) { return h + '<div class="rc-pt">Aucune réclamation en 12 mois.</div></div>'; }
     const n = c => L.filter(l => rcEtat(l).c === c).length;
     const F = [['tout', 'Toutes', L.length], ['att', 'En attente', n('att')], ['sans', 'Sans suite', n('sans')], ['ok', 'Réglées', n('ok')], ['ko', 'Refusées', n('ko')]];
     if (S.rcFiltre !== 'tout' && !n(S.rcFiltre)) { S.rcFiltre = 'tout'; }
     const vis = S.rcFiltre === 'tout' ? L : L.filter(l => rcEtat(l).c === S.rcFiltre);
-    let corps;
-    if (!D) { corps = S.err[cle] ? `<div class="rc-err">${esc(S.err[cle])}</div>` : '<div class="rc-pt">lecture du panel…</div>'; }
-    else if (D.indispo) { corps = `<div class="rc-err">${esc(D.motif || 'indisponible')}</div>`; }
-    else {
-      corps = `<div class="rc-filtres">${F.filter(f => f[0] === 'tout' || f[2]).map(f => `<button data-rcfiltre="${f[0]}" class="${S.rcFiltre === f[0] ? 'on' : ''}">${f[1]}<b>${f[2]}</b></button>`).join('')}</div>`
-        + (vis.map(l => rcCarte(l, false)).join('') || '<div class="rc-pt">Aucune réclamation en 12 mois.</div>');
-    }
-    return `<div class="rc-ecran"><div class="hd"><b>Réclamations fournisseur</b><button class="x" data-rcfermer="1" aria-label="Fermer">✕</button></div>
-      <div class="rc-sous">${esc(nomShop())} · les 12 derniers mois${D && D.montantOuvert ? ' · ' + fE(D.montantOuvert) + ' encore ouverts au prix d’achat' : ''}</div>
-      <div class="corps">${corps}</div><div class="pied"><button class="rc-btn" data-rcouvrir="1">📷 Nouvelle réclamation</button></div></div>`;
+    h += `<div class="rc-resume">${D.ouvertes ? `<b>${D.ouvertes}</b> ouverte${D.ouvertes > 1 ? 's' : ''}` : 'Tout est réglé'}${D.montantOuvert ? ' · ' + fE(D.montantOuvert) + ' au prix d’achat' : ''}</div>`;
+    h += `<div class="rc-filtres">${F.filter(f => f[0] === 'tout' || f[2]).map(f => `<button data-rcfiltre="${f[0]}" class="${S.rcFiltre === f[0] ? 'on' : ''}">${f[1]}<b>${f[2]}</b></button>`).join('')}</div>`;
+    return h + vis.map(rcCarte).join('') + '</div>';
   }
-
-  /* Le rendu, à part du mur : il garde le champ actif et le défilement. */
-  let rcRacine = null, rcFichiers = null;
-  function rcMonter() {
-    if (rcRacine) { return; }
-    rcRacine = document.createElement('div'); rcRacine.id = 'rc-racine';
-    document.body.appendChild(rcRacine);
-    // Deux sélecteurs permanents : l'appareil photo, et la galerie. Ils ne
-    // sont jamais redessinés — sinon une photo prise pendant une relecture
-    // arriverait sur un champ qui n'existe plus.
-    const fichier = cam => {
-      const i = document.createElement('input');
-      i.type = 'file'; i.accept = 'image/*'; i.hidden = true;
-      if (cam) { i.setAttribute('capture', 'environment'); } else { i.multiple = true; }
-      i.addEventListener('change', () => { rcAjouter(i.files); i.value = ''; });
-      document.body.appendChild(i);
-      return i;
-    };
-    rcFichiers = { cam: fichier(true), gal: fichier(false) };
-    rcRacine.addEventListener('click', rcClic);
-    rcRacine.addEventListener('input', rcSaisie);
-    rcRacine.addEventListener('change', rcChange);
+  function rendReclamation() {
+    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d">Réclamation fournisseur</div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
+      <div class="mb-sc"><div class="rc-vue">${rcFormulaire()}${rcHistorique()}</div></div>${mbOnglets()}`;
   }
-  function rcRendre() {
-    const ouvert = estMobile() && (S.rc || S.rcListe);
-    document.documentElement.classList.toggle('rc-ouvert', !!ouvert);
-    if (!ouvert) { if (rcRacine) { rcRacine.innerHTML = ''; rcRacine.dataset.vue = ''; } return; }
-    rcMonter();
-    const a = document.activeElement, actif = a && a.id && rcRacine.contains(a) ? a : null;
-    let deb = null, fin = null;
-    try { if (actif) { deb = actif.selectionStart; fin = actif.selectionEnd; } } catch (e) { /* champ sans sélection */ }
-    const c0 = rcRacine.querySelector('.corps'), y = c0 ? c0.scrollTop : 0;
-    const vue = S.rc ? 'p' + S.rc.etape : 'liste';
-    rcRacine.innerHTML = S.rc ? rcEcran() : rcListe();
-    const c1 = rcRacine.querySelector('.corps');
-    if (c1 && rcRacine.dataset.vue === vue) { c1.scrollTop = y; }
-    rcRacine.dataset.vue = vue;
-    if (actif) {
-      const n = document.getElementById(actif.id);
-      if (n) { try { n.focus({ preventScroll: true }); if (deb != null) { n.setSelectionRange(deb, fin); } } catch (e) { /* champ retiré */ } }
-    }
+  /** Le champ actif garde son focus et sa sélection quand la page se redessine. */
+  function rcGarder() {
+    const a = document.activeElement;
+    if (!a || !a.id || !/^rc-/.test(a.id) || !$.contains(a)) { return null; }
+    let deb = null, fin = null; try { deb = a.selectionStart; fin = a.selectionEnd; } catch (e) { /* champ sans sélection */ }
+    return { id: a.id, deb: deb, fin: fin };
+  }
+  function rcRestaurer(g) {
+    if (!g) { return; }
+    const n = document.getElementById(g.id); if (!n) { return; }
+    try { n.focus({ preventScroll: true }); if (g.deb != null) { n.setSelectionRange(g.deb, g.fin); } } catch (e) { /* champ retiré */ }
   }
   /** La quantité change : la valeur et le bouton suivent, sans redessiner. */
   function rcMajEnvoi() {
-    const R = S.rc, F = rcRefs(); if (!R || !rcRacine) { return; }
-    const v = document.getElementById('rc-valeur'); if (v && F) { v.innerHTML = rcValeur(F, R); }
+    const R = rcForm(), F = rcRefs();
+    const v = document.getElementById('rc-valeur'); if (v) { v.innerHTML = rcValeur(F, R); }
     const b = document.getElementById('rc-envoyer'); if (b) { b.outerHTML = rcBoutonEnvoi(F, R); }
   }
 
-  /* Ouvrir, fermer — et le bouton retour du téléphone ferme d'abord le parcours. */
-  function rcHisto() { try { if (!(history.state && history.state.rc)) { history.pushState({ rc: 1 }, ''); } } catch (e) { /* historique indisponible */ } }
-  function rcOuvrir() {
-    rcLiberer();
-    S.rcListe = false; S.rc = rcNeuf();
-    lireAux(cleRCR(), cheminRCR(), false);
-    if (!S.aux[cleRC()]) { lireAux(cleRC(), cheminRC(), false); }
-    rcHisto(); rcRendre();
+  /* La photo : l'appareil, directement — un sélecteur permanent, hors de la
+   * page, qu'aucune relecture ne redessine pendant que l'appareil est ouvert. */
+  let rcFichier = null;
+  function rcAppareil() {
+    if (!rcFichier) {
+      rcFichier = document.createElement('input');
+      rcFichier.type = 'file'; rcFichier.accept = 'image/*'; rcFichier.hidden = true;
+      rcFichier.setAttribute('capture', 'environment');
+      rcFichier.addEventListener('change', () => { rcAjouter(rcFichier.files); rcFichier.value = ''; });
+      document.body.appendChild(rcFichier);
+    }
+    rcFichier.click();
   }
-  function rcListeOuvrir() { S.rcListe = true; rcHisto(); rcRendre(); }
-  function rcLiberer() { if (S.rc) { S.rc.photos.forEach(p => URL.revokeObjectURL(p.url)); } }
-  /** false quand on garde la saisie. */
-  function rcFermer(parHisto) {
-    const R = S.rc;
-    if (R && R.envoi) { return false; }
-    if (R && !R.fait && (R.photos.length || R.note.trim()) && !window.confirm('Abandonner cette réclamation ? Rien n’a été envoyé.')) { return false; }
-    rcLiberer();
-    S.rc = null; S.rcListe = false;
-    rcRendre();
-    if (!parHisto) { try { if (history.state && history.state.rc) { history.back(); } } catch (e) { /* historique indisponible */ } }
-    return true;
-  }
-
-  /* Les photos : réduites au téléphone (1 600 px, JPEG), comme les plans. */
+  /** Réduite au téléphone (1 600 px, JPEG), comme les photos des plans. */
   function rcReduire(f) {
     return new Promise((ok, ko) => {
       const u = URL.createObjectURL(f), img = new Image();
@@ -2540,85 +2469,70 @@
   }
   const rcDataUrl = b => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ko(r.error); r.readAsDataURL(b); });
   function rcAjouter(files) {
-    const R = S.rc; if (!R) { return; }
-    const tous = Array.from(files || []);
-    const place = RC_MAX - R.photos.length - R.traite;
-    const L = tous.slice(0, Math.max(0, place));
-    R.err = tous.length > L.length ? 'Quatre photos au plus : ' + (L.length ? rcPl(tous.length - L.length, 'photo') + ' laissée' + (tous.length - L.length > 1 ? 's' : '') + ' de côté.' : 'retirez-en une pour en ajouter une autre.') : null;
-    R.traite += L.length; rcRendre();
+    const R = rcForm();
+    const L = Array.from(files || []).slice(0, Math.max(0, RC_MAX - R.photos.length - R.traite));
+    if (!L.length) { return; }
+    S.rcFait = null; R.err = null; R.traite += L.length; rendre();
     L.forEach(f => rcReduire(f)
       .then(b => { if (S.rc === R) { R.photos.push({ blob: b, url: URL.createObjectURL(b) }); } })
-      .catch(() => { if (S.rc === R) { R.err = 'Une photo n’a pas pu être lue — reprenez-la.'; } })
-      .finally(() => { if (S.rc === R) { R.traite--; rcRendre(); } }));
+      .catch(() => { if (S.rc === R) { R.err = 'La photo n’a pas pu être lue — reprenez-la.'; } })
+      .finally(() => { if (S.rc === R) { R.traite--; rendre(); } }));
   }
 
   function rcEnvoyer() {
-    const R = S.rc, F = rcRefs();
-    if (!R || R.envoi || !F || rcManque(F, R)) { return; }
+    const R = rcForm(), F = rcRefs();
+    if (R.envoi || !F || rcManque(F, R)) { return; }
     const m = rcMatiere(F, R), liv = rcLivraison(F, R), q = rcQte(R);
-    if (!m.idUnite) { R.err = 'L’unité de « ' + m.nom + ' » est inconnue du panel : la réclamation ne peut pas partir d’ici.'; rcRendre(); return; }
+    if (!m.idUnite) { R.err = 'L’unité de « ' + m.nom + ' » est inconnue du panel : la réclamation ne peut pas partir d’ici.'; rendre(); return; }
     if (document.activeElement && document.activeElement.blur) { document.activeElement.blur(); }
-    const auteur = R.auteur.trim();
-    try { localStorage.setItem('db.notePar', auteur); } catch (e) { /* navigation privée */ }
-    R.envoi = true; R.err = null; rcRendre();
+    R.envoi = true; R.err = null; rendre();
     Promise.all(R.photos.map(p => rcDataUrl(p.blob)))
       .then(photos => ecrire('/fournisseurs/reclamation', {
         shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite,
-        quantite: q, idLivraison: liv.id, motif: R.motif, action: R.action, texte: R.note.trim(), auteur: auteur, photos: photos }))
+        quantite: q, idLivraison: liv.id, motif: R.motif, action: 'REPLACEMENT', texte: R.note.trim(), auteur: notePar(), photos: photos }))
       .then(r => {
-        R.envoi = false;
-        R.fait = { id: r && r.id, photos: r && Array.isArray(r.photos) ? r.photos.length : 0, nom: m.nom, qte: q, unite: m.unite,
-          montant: m.prix != null ? m.prix * q : null, fournisseur: rcFournNom(F, liv.fournisseur) };
-        R.etape = 3;
-        // La liste et les livraisons « déjà réclamées » ont changé.
-        lireAux(cleRC(), cheminRC(), true); delete S.aux[cleRCR()];
-        if (S.rc === R) { rcRendre(); }
+        S.rcFait = { id: r && r.id, photos: r && Array.isArray(r.photos) ? r.photos.length : 0, nom: m.nom, qte: q, unite: m.unite,
+          fournisseur: rcFournNom(F, liv.fournisseur) };
+        R.photos.forEach(p => URL.revokeObjectURL(p.url));
+        S.rc = rcNeuf(); S.rcHaut = true;
+        // La liste, et les livraisons « déjà réclamées », ont changé.
+        lireAux(cleRC(), cheminRC(), true); lireAux(cleRCR(), cheminRCR(), true);
+        rendre();
       })
-      .catch(e => { R.envoi = false; R.err = e.message; if (S.rc === R) { rcRendre(); } });
+      .catch(e => { R.envoi = false; R.err = e.message; rendre(); });
   }
 
-  /* Les gestes du parcours : une délégation, posée une fois. */
-  function rcClic(e) {
-    const b = e.target.closest('button,[data-rcmat]'); if (!b || !rcRacine.contains(b) || b.disabled) { return; }
-    const R = S.rc, d = b.dataset;
-    if (d.rcfermer) { rcFermer(false); return; }
-    if (d.rcouvrir) { rcOuvrir(); return; }
-    if (d.rcfiltre) { S.rcFiltre = d.rcfiltre; rcRendre(); return; }
-    if (!R) { return; }
-    if (d.rcphoto) { if (rcFichiers) { rcFichiers[d.rcphoto === 'gal' ? 'gal' : 'cam'].click(); } return; }
-    if (d.rcsuppr != null) { const p = R.photos.splice(+d.rcsuppr, 1)[0]; if (p) { URL.revokeObjectURL(p.url); } R.err = null; rcRendre(); return; }
-    if (d.rcetape) { R.etape = +d.rcetape; R.err = null; if (R.etape === 2) { lireAux(cleRCR(), cheminRCR(), false); } rcRendre(); const c = rcRacine.querySelector('.corps'); if (c) { c.scrollTop = 0; } return; }
-    if (d.rcrelire) { lireAux(cleRCR(), cheminRCR(), true); return; }
-    if (d.rcmat) { R.matiere = d.rcmat; R.q = ''; R.err = null; rcRendre(); return; }
-    if (d.rcmotif) { R.motif = d.rcmotif; rcRendre(); return; }
-    if (d.rcaction) { R.action = d.rcaction; rcRendre(); return; }
+  /* Les gestes du formulaire : une délégation sur la page, posée une fois. */
+  $.addEventListener('click', e => {
+    if (S.vue !== 'reclamation') { return; }
+    const b = e.target.closest('button'); if (!b || b.disabled || !$.contains(b)) { return; }
+    const R = rcForm(), d = b.dataset;
+    if (d.rcphoto) { rcAppareil(); return; }
+    if (d.rcsuppr != null) { const p = R.photos.splice(+d.rcsuppr, 1)[0]; if (p) { URL.revokeObjectURL(p.url); } rendre(); return; }
+    if (d.rcmat) { R.matiere = d.rcmat; R.q = ''; R.livraison = null; R.err = null; S.rcFait = null; rendre(); return; }
+    if (d.rcmatx) { R.matiere = null; R.livraison = null; rendre(); const i = document.getElementById('rc-q'); if (i) { i.focus(); } return; }
+    if (d.rcmotif) { R.motif = d.rcmotif; rendre(); return; }
     if (d.rcpas) {
-      const q = rcQte(R) || 0, n = Math.max(1, Math.round((q + +d.rcpas) * 100) / 100);
+      const n = Math.max(1, Math.round(((rcQte(R) || 0) + +d.rcpas) * 100) / 100);
       R.qte = String(n).replace('.', ',');
       const i = document.getElementById('rc-qte'); if (i) { i.value = R.qte; }
       rcMajEnvoi(); return;
     }
     if (d.rcenvoyer) { rcEnvoyer(); return; }
-    if (d.rcnouvelle) { rcOuvrir(); }
-  }
-  function rcSaisie(e) {
-    const R = S.rc, t = e.target; if (!R || !t.dataset) { return; }
+    if (d.rcfaitx) { S.rcFait = null; rendre(); return; }
+    if (d.rcfiltre) { S.rcFiltre = d.rcfiltre; rendre(); }
+  });
+  $.addEventListener('input', e => {
+    if (S.vue !== 'reclamation' || !e.target.dataset) { return; }
+    const R = rcForm(), t = e.target;
     if (t.dataset.rcq) { R.q = t.value; const s = document.getElementById('rc-sugg'); if (s) { s.innerHTML = rcSuggestions(); } return; }
     if (t.dataset.rcnote) { R.note = t.value; return; }
-    if (t.dataset.rcpar) { R.auteur = t.value; return; }
     if (t.dataset.rcqte) { R.qte = t.value; rcMajEnvoi(); }
-  }
-  function rcChange(e) {
-    const R = S.rc, t = e.target; if (!R || !t.dataset) { return; }
-    if (t.dataset.rcliv) {
-      R.livraison = t.value;
-      const F = rcRefs(), m = F ? rcMatiere(F, R) : null, liv = F ? rcLivraison(F, R) : null;
-      if (m && liv && String(m.fournisseur) !== String(liv.fournisseur)) { R.matiere = null; }
-      rcRendre(); return;
-    }
-    if (t.dataset.rcpar) { try { localStorage.setItem('db.notePar', t.value.trim()); } catch (er) { /* navigation privée */ } }
-  }
-  window.addEventListener('popstate', () => { if ((S.rc || S.rcListe) && !rcFermer(true)) { rcHisto(); } });
+  });
+  $.addEventListener('change', e => {
+    if (S.vue !== 'reclamation' || !e.target.dataset || !e.target.dataset.rcliv) { return; }
+    rcForm().livraison = e.target.value; rendre();
+  });
 
   /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
   /* --- Trimestre : l'objectif du plan, les 3 mois, les annotations ---------- */
@@ -2973,9 +2887,6 @@
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
-    // Les réclamations fournisseur : la carte ouvre la liste, le bouton le parcours.
-    $.querySelectorAll('[data-rclist]').forEach(b => b.addEventListener('click', rcListeOuvrir));
-    $.querySelectorAll('[data-rcouvrir]').forEach(b => b.addEventListener('click', rcOuvrir));
     // Les contrôles en photo : filtres, flèches, loupe.
     $.querySelectorAll('[data-cqf]').forEach(b => b.addEventListener('click', () => { S.cqFiltre = b.dataset.cqf; S.cqRaz = true; rendre(); }));
     $.querySelectorAll('[data-cqvoir]').forEach(b => b.addEventListener('click', () => { S.cqVoir = b.dataset.cqvoir; rendre(); }));
@@ -3007,7 +2918,6 @@
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
   document.addEventListener('keydown', e => {
-    if ((S.rc || S.rcListe) && e.key === 'Escape') { rcFermer(false); return; }
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
     else if (e.key === 'ArrowLeft') { cqAller(-1); } else if (e.key === 'ArrowRight') { cqAller(1); }

@@ -628,6 +628,8 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-cmdt .n.ko{color:#C0182B;font-weight:600}
 .db-cmdt .n.mu{color:var(--color-text-muted)}
 .mb-tabs.mb-tabs3{grid-template-columns:1fr 1fr 1fr}
+.mb-tabs.mb-tabs4{grid-template-columns:repeat(4,1fr)}
+.mb-tabs button i svg{display:inline-block;vertical-align:-2px}
 /* Ventes par catégorie : la liste groupe › catégorie › produit. */
 .db-acc{padding:4px 16px 8px}
 .db-ent,.db-al{display:grid;grid-template-columns:22px minmax(150px,1.1fr) 3fr 76px 58px 84px 60px;gap:10px;align-items:center}
@@ -889,111 +891,91 @@ html.db-cq-ouvert,html.db-cq-ouvert body{overflow:hidden}
 .db-cql.mob .act button:disabled{opacity:.35}
 @media (prefers-reduced-motion:reduce){.db-cqph.att{animation:none}.db-cqc:hover .db-cqph img{transform:none}}
 
-/* --- Réclamations fournisseur, au téléphone ---------------------------------
-   Une carte sur le mur, un bouton « Réclamer » au-dessus des onglets, et un
-   parcours plein écran en trois temps : les photos, le produit et le
-   problème, envoyée. Le parcours flotte au-dessus de tout sauf la loupe. */
-html.rc-ouvert,html.rc-ouvert body{overflow:hidden}
-.rc-st{display:inline-flex;align-items:center;gap:5px;font:700 10px var(--font-ui);padding:2px 8px;border-radius:999px;white-space:nowrap}
-.rc-st.att{background:#e3eef8;color:#0b4a7a}.rc-st.ok{background:#e6f2e9;color:#2d7a3e}
-.rc-st.sans{background:#fbe6d4;color:#8a3d0b}.rc-st.ko{background:#fbe3e6;color:#C0182B}
-.rc-carte{border-top:.5px solid var(--color-border-tertiary);padding:10px 0}
-.rc-carte:first-child{border-top:none}
-.rc-carte .l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rc-carte .l1 b{font-size:12.5px;font-weight:600;min-width:0}
-.rc-carte .l1 .d{margin-left:auto;font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.rc-carte .l2{font-size:11px;color:var(--color-text-muted);margin-top:2px}
-.rc-carte .tx{font-size:11.5px;margin-top:4px;color:var(--color-text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rc-carte .rep{font-size:11px;line-height:1.4;margin-top:5px;padding:5px 9px;border-radius:7px;background:#f0f7f2;color:#24502f}
-.rc-carte .rep.ko{background:#fdf4f5;color:#8D1D2C}
-.rc-carte .rep.sans{background:#fdf5ec;color:#8a3d0b}
-.rc-carte .rep.att{background:#eef4fa;color:#0b4a7a}
-.rc-vign{display:flex;gap:6px;margin-top:6px}
-.rc-vign a{display:block;width:54px;height:54px;border-radius:7px;overflow:hidden;background:#2a2622}
-.rc-vign img{width:100%;height:100%;object-fit:cover;display:block}
-/* Sur le mur : deux cartes, sans cadre — le mur n'en a pas. */
-.mb-r .rc-mliste{margin-top:6px}
-.mb-r .rc-mliste .rc-carte{padding:7px 0}
-.mb-r .rc-mliste .rc-carte .rep{display:none}
-.mb-r .rc-voir{font:600 10.5px var(--font-ui);color:var(--color-primary);margin-top:2px}
-.rc-place{flex:0 0 58px}
-.rc-fab{position:fixed;right:14px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;align-items:center;gap:8px;
-  border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:12px 17px 12px 14px;font:700 13px var(--font-ui);
-  box-shadow:0 8px 20px rgba(141,29,44,.35);cursor:pointer;-webkit-tap-highlight-color:transparent}
-.rc-fab b{font-size:18px;line-height:1}
-.rc-fab:active{transform:scale(.97)}
-
-.rc-ecran{position:fixed;inset:0;background:var(--color-bg,#EAE4DC);z-index:70;display:flex;flex-direction:column}
-.rc-ecran .hd{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 8px}
-.rc-ecran .hd b{font:400 19px var(--font-display);line-height:1.15}
-.rc-ecran .hd .et{font-size:11px;color:var(--color-text-muted)}
-.rc-ecran .hd .x{margin-left:auto;width:34px;height:34px;border-radius:50%;border:.5px solid var(--color-border-secondary);background:var(--color-surface);font-size:15px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
-.rc-ecran .prog{display:flex;gap:4px;padding:0 14px 10px}
-.rc-ecran .prog i{flex:1;height:3px;border-radius:2px;background:rgba(34,34,34,.12)}.rc-ecran .prog i.f{background:var(--color-primary)}
-.rc-ecran .rc-sous{font-size:11px;color:var(--color-text-muted);padding:0 14px 10px;margin-top:-4px}
-.rc-ecran .corps{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 18px;overscroll-behavior:contain}
-.rc-ecran .pied{padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;background:var(--color-surface);border-top:.5px solid var(--color-border-tertiary)}
-.rc-btn{border:none;border-radius:10px;padding:13px 18px;font:700 13.5px var(--font-ui);background:var(--color-primary);color:#fff;white-space:nowrap;cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis}
-.rc-btn.sec{background:var(--color-background-secondary);color:var(--color-text)}
-.rc-btn:disabled{opacity:.45;cursor:default}
-.rc-btn.rc-ret{flex:0 0 52px;padding:13px 0;font-size:17px}
-.rc-lien{border:none;background:none;padding:0;font:600 12px var(--font-ui);color:var(--color-primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
-.corps>.rc-lien{display:block;margin:12px auto 0}
-.rc-pt{font-size:12px;color:var(--color-text-muted);padding:12px 0;text-align:center}
-.rc-err{font-size:12px;line-height:1.45;padding:9px 11px;border-radius:9px;background:#fdf4f5;color:#8D1D2C;border-left:3px solid #C0182B;margin:10px 0}
-.rc-aide{font-size:11.5px;line-height:1.45;padding:9px 11px;border-radius:9px;background:#fff7ec;border-left:3px solid #D97706;color:#7a4a12;margin-top:14px}
-/* Les photos. */
-.rc-prise{width:100%;min-height:300px;border-radius:14px;border:1.5px dashed var(--color-border-secondary);background:#FCFAF7;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--color-primary);cursor:pointer;padding:20px}
-.rc-prise b{font-size:44px;line-height:1}
-.rc-prise span{font:700 15px var(--font-ui)}
-.rc-prise small{font:500 11.5px var(--font-ui);color:var(--color-text-muted)}
-.rc-viseur{position:relative;height:min(330px,46vh);border-radius:14px;overflow:hidden;background:#111}
-.rc-viseur img{width:100%;height:100%;object-fit:contain;display:block}
-.rc-viseur .n{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.55);color:#fff;font:600 11px var(--font-ui);padding:3px 9px;border-radius:999px}
-.rc-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.rc-photos .ph{width:72px;height:72px;border-radius:9px;overflow:hidden;position:relative;background:#2a2622}
-.rc-photos .ph img{width:100%;height:100%;object-fit:cover;display:block}
-.rc-photos .ph button{position:absolute;right:3px;top:3px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font:700 12px var(--font-ui);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-.rc-photos .plus{width:72px;height:72px;border-radius:9px;border:1.5px dashed var(--color-border-secondary);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--color-primary);font:600 10.5px var(--font-ui);background:#FCFAF7;cursor:pointer;padding:0}
-.rc-photos .plus b{font-size:20px;line-height:1}
-/* Le produit et le problème. */
-.rc-champ{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+/* --- Réclamation fournisseur, au téléphone ----------------------------------
+   Un onglet à part : le formulaire sur un seul écran — la photo, le produit,
+   combien, le problème, un mot — puis les réclamations du magasin. */
+.rc-vue{padding:4px 0 20px}
+.rc-form{background:var(--color-surface);border-radius:14px;padding:14px 14px 12px;margin-bottom:18px}
+.rc-champ{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
 .rc-champ>label{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
-.rc-in{width:100%;box-sizing:border-box;border:.5px solid var(--color-border-secondary);border-radius:9px;padding:10px 11px;font:500 16px var(--font-ui);background:var(--color-surface);color:var(--color-text)}
-.rc-in:focus{outline:none;border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(141,29,44,.08)}
-select.rc-in{font-size:14px;-webkit-appearance:none;appearance:none;padding-right:30px;
-  background-image:linear-gradient(45deg,transparent 50%,var(--color-text-muted) 50%),linear-gradient(135deg,var(--color-text-muted) 50%,transparent 50%);
-  background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px;background-repeat:no-repeat}
-textarea.rc-in{resize:vertical;line-height:1.45;min-height:84px}
-.rc-sugg{display:flex;flex-direction:column;border-radius:9px;overflow:hidden;background:var(--color-surface)}
-.rc-sugg:empty{display:none}
-.rc-sugg button{border:none;border-top:.5px solid var(--color-border-tertiary);background:none;text-align:left;padding:9px 11px;display:flex;flex-direction:column;gap:1px;cursor:pointer;font:500 13px var(--font-ui);color:var(--color-text)}
-.rc-sugg button:first-child{border-top:none}
-.rc-sugg small{color:var(--color-text-muted);font-size:10.5px}
-.rc-sugg .vide{padding:9px 11px;font-size:11.5px;color:var(--color-text-muted)}
-.rc-choix{font-size:12px;padding:8px 11px;border-radius:9px;background:#fdf4f5;color:var(--color-text)}
+.rc-champ>label em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
+.rc-in{width:100%;box-sizing:border-box;border:.5px solid var(--color-border-secondary);border-radius:10px;padding:11px 12px;font:500 16px var(--font-ui);background:#FCFAF7;color:var(--color-text)}
+.rc-in:focus{outline:none;border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(141,29,44,.08);background:var(--color-surface)}
+textarea.rc-in{resize:vertical;line-height:1.45;min-height:70px}
+.rc-pt{font-size:12px;color:var(--color-text-muted);padding:8px 0}
+.rc-err{font-size:12px;line-height:1.45;padding:9px 11px;border-radius:9px;background:#fdf4f5;color:#8D1D2C;border-left:3px solid #C0182B;margin:4px 0 10px}
+.rc-aide{font-size:11.5px;line-height:1.45;color:#7a4a12}
+.rc-lien{border:none;background:none;padding:0;font:600 12px var(--font-ui);color:var(--color-primary);cursor:pointer;text-decoration:underline}
+/* La photo : un grand bouton, l'appareil s'ouvre. */
+.rc-prise{width:100%;height:132px;border-radius:14px;border:none;background:var(--color-primary);color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  box-shadow:0 8px 20px rgba(141,29,44,.25);-webkit-tap-highlight-color:transparent}
+.rc-prise b{font-size:40px;line-height:1}
+.rc-prise span{font:700 16px var(--font-ui)}
+.rc-prise:active{transform:scale(.99)}
+.rc-photos{display:flex;gap:8px;flex-wrap:wrap}
+.rc-photos .ph{width:92px;height:92px;border-radius:10px;overflow:hidden;position:relative;background:#2a2622}
+.rc-photos .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.rc-photos .ph.att{display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;background:#8a8580}
+.rc-photos .ph button{position:absolute;right:4px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font:700 12px var(--font-ui);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.rc-photos .plus{width:92px;height:92px;border-radius:10px;border:1.5px dashed var(--color-primary);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--color-primary);font:600 11px var(--font-ui);background:#fdf4f5;cursor:pointer;padding:0}
+.rc-photos .plus b{font-size:24px;line-height:1}
+/* Le produit. */
 .rc-puces{display:flex;flex-wrap:wrap;gap:6px}
-.rc-puces button{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:7px 12px;font:600 12px var(--font-ui);color:var(--color-text);background:var(--color-surface);cursor:pointer}
+.rc-puces button{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 12px;font:600 12.5px var(--font-ui);color:var(--color-text);background:#FCFAF7;cursor:pointer}
 .rc-puces button.on{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.rc-sugg{display:flex;flex-direction:column;border:.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden}
+.rc-sugg:empty{display:none}
+.rc-sugg button{border:none;border-top:.5px solid var(--color-border-tertiary);background:none;text-align:left;padding:10px 12px;display:flex;flex-direction:column;gap:1px;cursor:pointer;font:600 13px var(--font-ui);color:var(--color-text)}
+.rc-sugg button:first-child{border-top:none}
+.rc-sugg small{color:var(--color-text-muted);font-size:10.5px;font-weight:500}
+.rc-sugg .vide{padding:10px 12px;font-size:11.5px;color:var(--color-text-muted)}
+.rc-choix{display:flex;align-items:center;gap:10px;padding:10px 6px 10px 12px;border-radius:10px;background:#fdf4f5;border:1px solid rgba(141,29,44,.25)}
+.rc-choix>div{flex:1;min-width:0}
+.rc-choix b{display:block;font-size:14px}
+.rc-choix small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.rc-choix button{width:32px;height:32px;border-radius:50%;border:none;background:none;color:var(--color-text-muted);font-size:15px;cursor:pointer;flex:0 0 auto}
+.rc-liv{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-muted)}
+.rc-liv select{flex:1;min-width:0;border:none;background:none;font:600 12px var(--font-ui);color:var(--color-text);padding:4px 0;text-decoration:underline dotted;text-underline-offset:3px}
+/* Combien. */
 .rc-ql{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.rc-qte{display:inline-flex;align-items:stretch;border:.5px solid var(--color-border-secondary);border-radius:9px;overflow:hidden;background:var(--color-surface)}
-.rc-qte button{border:none;background:none;padding:0 15px;font-size:18px;color:var(--color-primary);cursor:pointer}
-.rc-qte input{width:62px;border:none;border-left:.5px solid var(--color-border-tertiary);border-right:.5px solid var(--color-border-tertiary);text-align:center;font:600 16px var(--font-ui);padding:9px 0;background:none;color:var(--color-text)}
+.rc-qte{display:inline-flex;align-items:stretch;border:.5px solid var(--color-border-secondary);border-radius:10px;overflow:hidden;background:#FCFAF7}
+.rc-qte button{border:none;background:none;padding:0 17px;font-size:20px;color:var(--color-primary);cursor:pointer}
+.rc-qte input{width:64px;border:none;border-left:.5px solid var(--color-border-tertiary);border-right:.5px solid var(--color-border-tertiary);text-align:center;font:600 17px var(--font-ui);padding:10px 0;background:none;color:var(--color-text)}
 .rc-qte input:focus{outline:none;background:#fdf4f5}
-.rc-val{font-size:11.5px;color:var(--color-text-muted)}
+.rc-val{font-size:12px;color:var(--color-text-muted)}
 .rc-val b{color:var(--color-text)}
-.rc-recap{font-size:12px;padding:9px 11px;border-radius:9px;background:#FCFAF7;margin-bottom:6px}
-.rc-recap .ko{color:#C0182B;font-weight:600}
-/* Envoyée. */
-.rc-ok{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:20px 10px 8px}
-.rc-ok .rond{width:58px;height:58px;border-radius:50%;background:#e6f2e9;color:#2d7a3e;display:flex;align-items:center;justify-content:center;font-size:28px}
-.rc-ok h3{font:400 21px var(--font-display);margin:4px 0 0}
-.rc-ok .mu{font-size:12px;color:var(--color-text-muted)}
-.rc-lab{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:14px 0 2px}
-/* La liste. */
+/* L'envoi. */
+.rc-envoi{margin-top:4px}
+.rc-btn{width:100%;border:none;border-radius:12px;padding:15px 18px;font:700 15px var(--font-ui);background:var(--color-primary);color:#fff;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-btn:disabled{background:var(--color-background-secondary);color:var(--color-text-muted);cursor:default}
+.rc-fait{display:flex;align-items:center;gap:11px;padding:10px 6px 10px 11px;border-radius:12px;background:#e6f2e9;color:#24502f;margin-bottom:14px}
+.rc-fait .rond{width:30px;height:30px;border-radius:50%;background:#2d7a3e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+.rc-fait>div{flex:1;min-width:0}
+.rc-fait b{display:block;font-size:13.5px}
+.rc-fait small{display:block;font-size:11px}
+.rc-fait button{width:30px;height:30px;border:none;background:none;color:#24502f;font-size:14px;cursor:pointer;flex:0 0 auto}
+/* Les réclamations du magasin. */
+.rc-lab{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:0 2px 4px}
+.rc-resume{font-size:12px;color:var(--color-text-muted);margin:0 2px 8px}
+.rc-resume b{font-family:var(--font-display);font-size:18px;font-weight:400;color:#B26A00}
 .rc-filtres{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .rc-filtres button{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:6px 11px;font:600 11.5px var(--font-ui);color:var(--color-text-muted);background:var(--color-surface);cursor:pointer}
 .rc-filtres button b{color:var(--color-text);margin-left:5px}
 .rc-filtres button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.rc-filtres button.on b{color:#fff}
-.rc-ecran .corps>.rc-carte{background:var(--color-surface);border-radius:12px;padding:10px 12px;margin-top:8px;border-top:none}
+.rc-st{display:inline-flex;align-items:center;font:700 10px var(--font-ui);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.rc-st.att{background:#e3eef8;color:#0b4a7a}.rc-st.ok{background:#e6f2e9;color:#2d7a3e}
+.rc-st.sans{background:#fbe6d4;color:#8a3d0b}.rc-st.ko{background:#fbe3e6;color:#C0182B}
+.rc-carte{background:var(--color-surface);border-radius:12px;padding:10px 12px;margin-top:8px}
+.rc-carte .l1{display:flex;align-items:center;gap:8px}
+.rc-carte .l1 .d{margin-left:auto;font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rc-carte .ref{display:block;font-size:13px;font-weight:600;margin-top:5px}
+.rc-carte .l2{font-size:11px;color:var(--color-text-muted);margin-top:1px}
+.rc-carte .tx{font-size:11.5px;margin-top:4px;color:var(--color-text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rc-carte .rep{font-size:11px;line-height:1.4;margin-top:6px;padding:5px 9px;border-radius:7px;background:#f0f7f2;color:#24502f}
+.rc-carte .rep.ko{background:#fdf4f5;color:#8D1D2C}
+.rc-carte .rep.sans{background:#fdf5ec;color:#8a3d0b}
+.rc-carte .rep.att{background:#eef4fa;color:#0b4a7a}
+.rc-vign{display:flex;gap:6px;margin-top:6px}
+.rc-vign a{display:block;width:56px;height:56px;border-radius:7px;overflow:hidden;background:#2a2622}
+.rc-vign img{width:100%;height:100%;object-fit:cover;display:block}
