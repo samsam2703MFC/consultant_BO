@@ -1,0 +1,98 @@
+/* Maquettes « Objectifs de campagne dans le plan d'action » — styles candidats,
+ * par-dessus dashboard.css et le CSS du module visites (.vi). */
+
+/* La coque du téléphone : l'en-tête des autres onglets, et les onglets du bas. */
+#dash.mob{height:100%;min-height:100vh}
+.pc-sc{flex:1;padding:0 14px 16px}
+.pc-sc .vi .sc{padding:0}
+.pc-cap{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:14px 2px 6px;display:flex;align-items:center;gap:6px}
+.pc-cap em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500;margin-left:auto}
+
+/* --- Commun : la campagne liée à une action, le graphique, sa phrase ------- */
+.pc-lien{display:inline-flex;align-items:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);background:#fdf4f5;border-radius:999px;padding:3px 9px;margin-top:8px}
+.pc-lien.mu{color:var(--color-text-muted);background:var(--color-background-secondary)}
+.pc-lien.mu u{text-decoration:underline dotted;text-underline-offset:2px}
+.pc-g{display:block;width:100%;height:auto;margin-top:8px}
+.pc-g text{font-family:var(--font-ui);font-size:9px;fill:var(--color-text-muted);paint-order:stroke;stroke:var(--color-surface);stroke-width:3px;stroke-linejoin:round}
+.pc-g text.b{font-weight:700;fill:var(--color-text)}
+.pc-g text.p{font-weight:700;fill:var(--color-primary)}
+.pc-g text.o{font-weight:700;fill:var(--color-text)}
+.pc-g text.n{fill:#7d756a}
+.pc-g .reel{fill:var(--color-primary)}
+.pc-g .n1{fill:#c9c2b8}
+.pc-g .n1l{fill:none;stroke:#9a9184;stroke-width:1.6}
+.pc-g .reell{fill:none;stroke:var(--color-primary);stroke-width:2.2;stroke-linejoin:round}
+.pc-g .objl{fill:none;stroke:var(--color-text);stroke-width:1.2;stroke-dasharray:3 3}
+.pc-g .axe{stroke:var(--color-border-tertiary);stroke-width:.5}
+.pc-leg{display:flex;gap:12px;flex-wrap:wrap;font:500 10px var(--font-ui);color:var(--color-text-muted);margin-top:4px}
+.pc-leg span{display:inline-flex;align-items:center;gap:5px}
+.pc-leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.pc-leg i.r{background:var(--color-primary)}.pc-leg i.n{background:#c9c2b8}.pc-leg i.o{width:14px;height:0;border-top:2px dashed var(--color-text);border-radius:0}
+.pc-phrase{font-size:11.5px;line-height:1.45;margin-top:6px}
+.pc-phrase b.ok{color:#2d7a3e}.pc-phrase b.ko{color:#C0182B}
+.pc-manque{font:600 11px var(--font-ui);color:#B26A00;background:#FBEFE0;border-radius:8px;padding:6px 9px;margin-top:8px;display:flex;gap:8px;align-items:center}
+.pc-manque b{font-family:var(--font-display);font-size:18px;font-weight:400;line-height:1}
+
+/* --- La carte « objectif de campagne » ----------------------------------------- */
+.pc-camp{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.pc-camp .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pc-camp .t b{font-size:13.5px}
+.pc-camp .t .d{font-size:10.5px;color:var(--color-text-muted);width:100%}
+.pc-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.pc-3>div{min-width:0}
+.pc-3 .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.pc-3 .v{font-family:var(--font-display);font-size:24px;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums}
+.pc-3 .v.p{color:var(--color-primary)}.pc-3 .v.n{color:#7d756a}
+.pc-3 .s{font-size:9.5px;color:var(--color-text-muted);line-height:1.3}
+/* La jauge « bullet » : la piste va de zéro à l'objectif ; le réel en couleur,
+   le N-1 en repère gris, l'objectif au bout. */
+.pc-bul{position:relative;height:30px;margin:10px 2px 0}
+.pc-bul .piste{position:absolute;left:0;right:0;top:11px;height:8px;border-radius:4px;background:var(--color-background-secondary)}
+.pc-bul .fill{position:absolute;left:0;top:11px;height:8px;border-radius:4px;background:var(--color-primary)}
+.pc-bul .n1{position:absolute;top:7px;width:2px;height:16px;background:#7d756a;transform:translateX(-50%)}
+.pc-bul .n1 i{position:absolute;top:17px;left:50%;transform:translateX(-50%);font:600 8.5px var(--font-ui);color:#7d756a;white-space:nowrap;font-style:normal}
+.pc-bul .obj{position:absolute;right:-1px;top:5px;width:2px;height:20px;background:var(--color-text)}
+.pc-bul .obj i{position:absolute;top:-8px;right:0;font:600 8.5px var(--font-ui);color:var(--color-text);white-space:nowrap;font-style:normal}
+.pc-bul .reel{position:absolute;top:-3px;transform:translateX(-50%);font:700 9px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+.mb-hd .d{white-space:nowrap}
+.pc-ca{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:10px;padding-top:8px;border-top:.5px dashed var(--color-border-tertiary)}
+.pc-ca b{color:var(--color-text)}
+.pc-afixer{margin-top:8px;font-size:11.5px;line-height:1.45;padding:8px 10px;border-radius:9px;background:#FBEFE0;color:#7a4a12}
+.pc-afixer b{display:block;color:#B26A00}
+
+/* B — la liste des campagnes en frise. */
+.pc-frise{display:flex;flex-direction:column;gap:0}
+.pc-frise .c{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:start;padding:9px 0;border-top:.5px solid var(--color-border-tertiary)}
+.pc-frise .c:first-child{border-top:none;padding-top:2px}
+.pc-frise .m{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);line-height:1.3}
+.pc-frise .m b{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;color:var(--color-text);letter-spacing:0;text-transform:none}
+.pc-frise .n b{font-size:12.5px;display:block}
+.pc-frise .n .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.35;margin-top:1px}
+.pc-frise .r{text-align:right;white-space:nowrap}
+.pc-frise .r b{font-family:var(--font-display);font-size:20px;font-weight:400;line-height:1;display:block}
+.pc-frise .r b.ko{color:#C0182B}.pc-frise .r b.ok{color:#2d7a3e}.pc-frise .r b.mu{color:var(--color-text-muted)}
+.pc-frise .r small{font-size:9.5px;color:var(--color-text-muted)}
+
+/* C — les tuiles. */
+.pc-tuiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pc-tuiles>div{background:var(--color-background-secondary);border-radius:10px;padding:8px 9px;min-width:0}
+.pc-tuiles .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.pc-tuiles .v{font-family:var(--font-display);font-size:22px;line-height:1.05;margin-top:2px}
+.pc-tuiles .v.p{color:var(--color-primary)}.pc-tuiles .v.n{color:#7d756a}
+.pc-tuiles .s{font-size:9.5px;color:var(--color-text-muted);line-height:1.3;margin-top:1px}
+
+/* --- Planche --------------------------------------------------------------- */
+.pl{padding:24px 30px 30px;background:#EAE4DC;font-family:var(--font-ui)}
+.pl .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:rgba(255,255,255,.6);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.pl h1{font:400 30px var(--font-display);margin:0 0 4px}
+.pl .acc{font-size:14px;color:var(--color-text-muted);margin:6px 0 18px;max-width:1300px;line-height:1.5}
+.pl .g{display:flex;gap:24px;align-items:flex-start}
+.pl .g img{display:block;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.pl .col{flex:0 0 340px;font-size:13px;line-height:1.55}
+.pl .col h4{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary);margin:0 0 6px}
+.pl .col ul{margin:0 0 16px;padding-left:18px}.pl .col li{margin-bottom:5px}
+.pl .col .pl-p li::marker{content:"+  ";color:#2d7a3e;font-weight:700}
+.pl .col .pl-m li::marker{content:"−  ";color:#C0182B;font-weight:700}
+.pl .leg{font-size:11.5px;color:var(--color-text-muted);margin-top:8px;text-align:center}
+.pl .zoom{flex:0 0 420px}
+.pl .zoom img{width:420px}

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — tuiles, jour par jour</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<style>
+.vi{font-family:var(--font-ui);color:var(--color-text);font-size:14px;line-height:1.45;position:relative;min-height:100%}
+.vi *{box-sizing:border-box}
+.vi.mob{padding-bottom:84px}
+.vi .sc{padding:0 14px 20px}
+.vi.desk .sc{max-width:960px;padding:0}
+.vi .card{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.vi .card.alerte{border-color:#e8b4bb}
+.vi .cap{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:14px 2px 6px;display:flex;align-items:center;gap:6px}
+.vi .row{display:flex;align-items:center;gap:8px}
+.vi .sp{flex:1}
+.vi .feu{width:12px;height:12px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.vi .feu.vert{background:#2d7a3e}.vi .feu.orange{background:#E0A526}.vi .feu.rouge{background:#C0182B}
+.vi .pill{display:inline-flex;align-items:center;gap:4px;font:700 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap;background:var(--color-background-secondary);color:var(--color-text)}
+.vi .api{background:#E6F2E9;color:#2d7a3e}.vi .loc{background:#F7E4E6;color:#C0182B}.vi .mix{background:#FBEFE0;color:#B26A00}
+.vi .P0{background:#C0182B;color:#fff}.vi .P1{background:#E0A526;color:#3a2a00}.vi .P2{background:var(--color-background-secondary);color:var(--color-text)}
+.vi .st-ouv{background:#FBEFE0;color:#B26A00}.vi .st-att{background:#FFF6D6;color:#7a5a00}.vi .st-val{background:#E6F2E9;color:#2d7a3e}.vi .st-rep{background:#EEE6FA;color:#5b3d9e}.vi .st-fer{background:var(--color-background-secondary);color:var(--color-text-muted)}.vi .st-esc{background:#C0182B;color:#fff}
+.vi .k{font-family:var(--font-display);font-size:22px;line-height:1}
+.vi .mu{color:var(--color-text-muted)}.vi .sm{font-size:11.5px}.vi .xs{font-size:10.5px}
+.vi .up{color:#2d7a3e}.vi .dn{color:#C0182B}
+.vi .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;padding:10px 14px;font:600 13px var(--font-ui);border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer;text-decoration:none}
+.vi .btn.p{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+.vi .btn.w{width:100%}.vi .btn.s{padding:6px 10px;font-size:11.5px;border-radius:8px}
+.vi .btn:disabled{opacity:.5;cursor:default}
+.vi .btns{display:flex;gap:8px;margin-top:10px}
+.vi .bas{position:fixed;left:0;right:0;bottom:0;display:grid;background:var(--color-surface);border-top:.5px solid var(--color-border-tertiary);padding:8px 0 max(14px,env(safe-area-inset-bottom));z-index:5}
+.vi .bas button{text-align:center;font:600 10px var(--font-ui);color:var(--color-text-muted);background:none;border:none;cursor:pointer;padding:0}
+.vi .bas button i{display:block;font-style:normal;font-size:17px;opacity:.55;margin-bottom:2px}
+.vi .bas button.on{color:var(--color-primary)}.vi .bas button.on i{opacity:1}
+.vi .onglets{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+.vi .onglets button{font:600 12px var(--font-ui);padding:7px 12px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+.vi .onglets button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+.vi .jour{display:grid;grid-template-columns:54px 1fr;gap:10px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.vi .jour .j{font-size:11px;color:var(--color-text-muted);line-height:1.3}.vi .jour .j b{display:block;font-size:14px;color:var(--color-text)}
+.vi .jour.auj .j b{color:var(--color-primary)}
+.vi .vis{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:9px 11px;margin-bottom:6px}
+.vi .vis b{font-size:14px}
+.vi .libre{color:var(--color-text-muted);font-size:12px;padding:6px 0}
+.vi .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vi.desk .kpi{grid-template-columns:repeat(4,1fr)}
+.vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
+.vi .al{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:12.5px}
+.vi .al:last-child{border:none}
+.vi .ph{height:90px;border-radius:10px;background:#d8cfc3 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#6b5f52;font-size:12px;position:relative;cursor:pointer;overflow:hidden}
+.vi .ph.vide{background:var(--color-background-secondary);border:1.5px dashed var(--color-border-secondary);color:var(--color-primary);font-weight:600}
+.vi .ph small{position:absolute;left:6px;bottom:5px;font-size:10px;background:rgba(0,0,0,.5);color:#fff;padding:2px 6px;border-radius:6px}
+.vi .ph .att{position:absolute;right:6px;top:5px;font-size:10px;background:#E0A526;color:#3a2a00;padding:2px 6px;border-radius:6px}
+.vi .phs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.vi .phs.n2{grid-template-columns:1fr 2fr}
+.vi .mod{margin-top:14px}
+.vi .mod .th{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.vi .mod .th b{font-size:14px}
+.vi .pt{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:9px 11px;margin-bottom:6px}
+.vi .pt.ko{border-color:#e8b4bb}
+.vi .pt .l1{display:flex;align-items:center;gap:8px}
+.vi .cb{width:22px;height:22px;border:1.5px solid var(--color-border-secondary);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto;background:var(--color-surface);cursor:pointer;color:var(--color-text-muted)}
+.vi .cb.ok{background:#2d7a3e;border-color:#2d7a3e;color:#fff}.vi .cb.ko{background:#C0182B;border-color:#C0182B;color:#fff}.vi .cb.na{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .notes{display:flex;gap:3px}
+.vi .notes button{width:24px;height:24px;border-radius:6px;background:var(--color-background-secondary);border:none;display:inline-flex;align-items:center;justify-content:center;font:600 11px var(--font-ui);color:var(--color-text-muted);cursor:pointer;padding:0}
+.vi .notes button.on{background:var(--color-text);color:#fff}.vi .notes button.bad{background:#C0182B;color:#fff}
+.vi .act{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.vi .chip{font:600 11px var(--font-ui);padding:5px 9px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+.vi .chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+.vi .chip.ko{border-color:#C0182B;color:#C0182B}
+.vi .bar{height:6px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden;margin-top:4px}
+.vi .bar i{display:block;height:100%;background:var(--color-primary)}
+.vi .spark{display:flex;align-items:flex-end;gap:4px;height:44px;margin-top:6px}
+.vi .spark i{flex:1;background:#d8cfc3;border-radius:3px 3px 0 0;min-height:2px}
+.vi .spark i.o{background:var(--color-primary)}.vi .spark i.f{background:#e9e2d8}
+.vi .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.vi .tbl th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:8px 8px;border-bottom:.5px solid var(--color-border-tertiary)}
+.vi .tbl td{padding:9px 8px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:top}
+.vi .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vi.mob .grid2{grid-template-columns:1fr}
+.vi .plan{border-left:3px solid var(--color-border-secondary);padding-left:10px;margin:8px 0}
+.vi .plan.P0b{border-color:#C0182B}.vi .plan.P1b{border-color:#E0A526}.vi .plan.P2b{border-color:#9a8c6a}
+.vi .stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.vi .stat>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px;text-align:center}
+.vi input[type=text],.vi input[type=date],.vi input[type=time],.vi input[type=number],.vi input[type=email],.vi select,.vi textarea{font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);width:100%}
+.vi textarea{min-height:64px;resize:vertical}
+.vi .champ{margin-top:8px}.vi .champ label{display:block;font-size:11px;color:var(--color-text-muted);margin-bottom:3px}
+.vi .l2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vi .toast{position:fixed;left:14px;right:14px;bottom:86px;background:var(--color-text);color:#fff;border-radius:12px;padding:10px 12px;font-size:12px;z-index:6}
+.vi.desk .toast{position:absolute;bottom:auto;top:8px}
+.vi .etat{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-muted);margin:4px 2px 8px;flex-wrap:wrap}
+.vi .etat .pt-{width:8px;height:8px;border-radius:50%;background:#2d7a3e;display:inline-block}
+.vi .etat .off .pt-{background:#C0182B}
+.vi .voir{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px}
+.vi .voir img{max-width:100%;max-height:80vh;border-radius:10px}
+.vi .voir .txt{color:#fff;font-size:12px;margin-top:10px;text-align:center}
+.vi .hd{display:flex;align-items:center;gap:8px;margin:6px 0 8px}
+.vi .hd h2{font-family:var(--font-display);font-size:19px;line-height:1.15;margin:0;font-weight:400}
+.vi .hd .d{font-size:11px;color:var(--color-text-muted)}
+.vi .retour{border:none;background:none;font-size:20px;cursor:pointer;padding:0 6px 0 0;color:var(--color-text)}
+.vi .rub{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vi .et{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;margin-bottom:8px;overflow:hidden}
+.vi .et.on{border-color:var(--color-primary)}
+.vi .et-h{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer}
+.vi .et-h .num{width:26px;height:26px;border-radius:50%;background:var(--color-background-secondary);display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--font-ui);color:var(--color-text-muted);flex:0 0 auto}
+.vi .et.on .et-h .num{background:var(--color-primary);color:#fff}
+.vi .et.ok .et-h .num{background:#2d7a3e;color:#fff}
+.vi .et-c{padding:0 14px 14px;border-top:.5px solid var(--color-border-tertiary)}
+.vi .et-c .mod{margin-top:8px}
+.vi .et-c .card{background:var(--color-bg)}</style>
+<link rel="stylesheet" href="pc.css"></head>
+<body><div id="dash" class="mob"><div class="mb-hd"><img src="/public/assets/img/logo.png" alt=""><div><div class="t">Atelier by Max &amp; Sandra - Gosselies</div><div class="d">jeudi 1 octobre 2026</div></div><span class="sp"></span><button class="mb-ic">↻</button></div><div class="mb-sc pc-sc"><div class="vi desk"><div class="sc"><div class="hd"><div><h2>Mon plan d’action</h2><div class="d">Gosselies · 2 campagnes · 3 actions en cours</div></div><span class="sp"></span></div><div class="pc-cap">Objectifs de campagne</div><div class="pc-camp"><div class="t"><b>Réseaux Sociaux</b><span class="pill st-fer">clos</span><span class="d">1 septembre → 30 septembre · +10 % de clients sur le N-1</span></div>
+  <div class="pc-tuiles"><div><div class="k">Clients</div><div class="v p">3 866</div><div class="s">89 % de l’objectif</div></div><div><div class="k">N-1</div><div class="v n">3 933</div><div class="s">−67</div></div><div><div class="k">Objectif</div><div class="v">4 323</div><div class="s">manque 457</div></div></div>
+  <div class="pc-ca"><span>CA <b>52 018 €</b> / 68 000 € (76 %)</span><span>panier 12,85 €</span></div></div><div class="pc-camp"><div class="t"><b>Développement B2B</b><span class="pill st-ouv">jour 1 / 60</span><span class="d">1 octobre → 29 novembre</span></div>
+  <div class="pc-tuiles"><div><div class="k">Clients</div><div class="v p">102</div><div class="s">jour 1</div></div><div><div class="k">N-1</div><div class="v n">8 377</div><div class="s">140 / jour</div></div><div><div class="k">Objectif</div><div class="v" style="color:#B26A00">à fixer</div><div class="s">9 333 si le budget fait foi</div></div></div></div><div class="pc-cap">Mes actions <em>jour par jour</em></div><div class="card">
+    <div class="row"><span class="pill st-val">Validé</span><span class="pill P1">P1</span><span class="sp"></span><span class="xs mu">faite le 29 sept.</span></div>
+    <b style="display:block;margin-top:6px">Publier 3 stories par semaine : vitrine du matin, nouveautés, coulisses</b>
+    <div class="sm mu">Magasin · Sam V. le 2 sept. · « 2 posts + 3 stories, avant 8 h »</div>
+    <span class="pc-lien">📣 Réseaux Sociaux · septembre</span><svg class="pc-g" viewBox="0 0 330 130" role="img" aria-label="Clients par jour"><line class="axe" x1="4" x2="326" y1="114" y2="114"/><rect class="reel" x="5.0" y="42.1" width="8.7" height="71.9" rx="1"/><rect class="reel" x="15.7" y="39.4" width="8.7" height="74.6" rx="1"/><rect class="reel" x="26.5" y="42.1" width="8.7" height="71.9" rx="1"/><rect class="reel" x="37.2" y="42.6" width="8.7" height="71.4" rx="1"/><rect class="reel" x="47.9" y="45.4" width="8.7" height="68.6" rx="1"/><rect class="reel" x="58.7" y="42.1" width="8.7" height="71.9" rx="1"/><rect class="reel" x="69.4" y="55.8" width="8.7" height="58.2" rx="1"/><rect class="reel" x="80.1" y="28.4" width="8.7" height="85.6" rx="1"/><rect class="reel" x="90.9" y="48.1" width="8.7" height="65.9" rx="1"/><rect class="reel" x="101.6" y="44.8" width="8.7" height="69.2" rx="1"/><rect class="reel" x="112.3" y="43.2" width="8.7" height="70.8" rx="1"/><rect class="reel" x="123.1" y="47.6" width="8.7" height="66.4" rx="1"/><rect class="reel" x="133.8" y="38.8" width="8.7" height="75.2" rx="1"/><rect class="reel" x="144.5" y="56.4" width="8.7" height="57.6" rx="1"/><rect class="reel" x="155.3" y="43.2" width="8.7" height="70.8" rx="1"/><rect class="reel" x="166.0" y="39.9" width="8.7" height="74.1" rx="1"/><rect class="reel" x="176.7" y="37.2" width="8.7" height="76.8" rx="1"/><rect class="reel" x="187.5" y="55.8" width="8.7" height="58.2" rx="1"/><rect class="reel" x="198.2" y="42.1" width="8.7" height="71.9" rx="1"/><rect class="reel" x="208.9" y="42.1" width="8.7" height="71.9" rx="1"/><rect class="reel" x="219.7" y="51.4" width="8.7" height="62.6" rx="1"/><rect class="reel" x="230.4" y="45.9" width="8.7" height="68.1" rx="1"/><rect class="reel" x="241.1" y="37.7" width="8.7" height="76.3" rx="1"/><rect class="reel" x="251.9" y="35.5" width="8.7" height="78.5" rx="1"/><rect class="reel" x="262.6" y="37.2" width="8.7" height="76.8" rx="1"/><rect class="reel" x="273.3" y="45.4" width="8.7" height="68.6" rx="1"/><rect class="reel" x="284.1" y="42.1" width="8.7" height="71.9" rx="1"/><rect class="reel" x="294.8" y="47.0" width="8.7" height="67.0" rx="1"/><rect class="reel" x="305.5" y="48.1" width="8.7" height="65.9" rx="1"/><rect class="reel" x="316.3" y="30.6" width="8.7" height="83.4" rx="1"/><path class="n1l" d="M9.4 44.8 L20.1 39.4 L30.8 52.0 L41.6 49.8 L52.3 45.9 L63.0 48.7 L73.8 52.5 L84.5 30.0 L95.2 36.6 L106.0 50.9 L116.7 46.5 L127.4 33.3 L138.2 45.9 L148.9 48.1 L159.6 39.9 L170.4 44.8 L181.1 35.5 L191.8 44.3 L202.6 32.2 L213.3 45.4 L224.0 47.6 L234.8 38.8 L245.5 27.3 L256.2 49.2 L267.0 26.7 L277.7 39.9 L288.4 35.0 L299.2 43.2 L309.9 45.4 L320.6 41.5" style="stroke-width:1.3"/><line class="objl" x1="4" x2="326" y1="34.9" y2="34.9"/><text class="o" x="4" y="31.9">objectif 144 / jour</text><text class="p" x="320.6" y="27.6" text-anchor="end">152</text><text class="n" x="170.4" y="40.8" text-anchor="middle">N-1</text><text x="4" y="126">1er sept.</text><text x="326.0" y="126" text-anchor="end">30 sept.</text></svg><div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span><span><i class="o"></i>objectif</span></div><div class="pc-phrase">Sur la campagne : <b class="ko">3 866 clients</b>, 3 933 l’an dernier (−67) · objectif 4 323 : <b class="ko">il en a manqué 457</b>, soit 15 par jour.</div>
+    </div><div class="card alerte">
+    <div class="row"><span class="pill st-ouv">Ouvert</span><span class="pill P0">P0</span><span class="sp"></span><span class="xs mu">délai 15 oct.</span></div>
+    <b style="display:block;margin-top:6px">Proposer le webshop aux clients pro : carte + QR glissés dans chaque commande</b>
+    <div class="sm mu">Magasin · Sam V. le 30 sept. · « les 7 clients pro de la semaine d’abord »</div>
+    <span class="pc-lien">📣 Développement B2B · oct. → nov.</span><svg class="pc-g" viewBox="0 0 330 130" role="img" aria-label="Clients par jour"><line class="axe" x1="4" x2="326" y1="114" y2="114"/><rect class="reel" x="5.0" y="59.1" width="8.4" height="54.9" rx="1"/><path class="n1l" d="M9.2 48.8 L19.6 48.8 L30.0 26.7 L40.4 38.0 L50.7 44.0 L61.1 44.5 L71.5 44.0 L81.9 44.5 L92.3 35.3 L102.7 32.7 L113.1 47.2 L123.5 55.8 L133.8 46.1 L144.2 40.7 L154.6 46.1 L165.0 42.9 L175.4 37.5 L185.8 42.9 L196.2 52.0 L206.5 47.2 L216.9 45.0 L227.3 50.4 L237.7 49.9 L248.1 38.0 L258.5 33.2 L268.9 52.6 L279.3 34.8 L289.6 35.9 L300.0 42.4 L310.4 48.3 L320.8 50.4" style="stroke-width:1.3"/><text class="p" x="9.2" y="56.1" text-anchor="middle">102</text><text class="n" x="165.0" y="38.9" text-anchor="middle">N-1</text><text x="4" y="126">1er oct.</text><text x="326.0" y="126" text-anchor="end">31 oct.</text></svg><div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span><span><i class="o"></i>objectif</span></div><div class="pc-phrase">Jour 1 sur 60 : <b class="ko">102 clients</b> contre 121 le même jour l’an dernier. Sur la période, le N-1 fait 8 377 clients (140 par jour).</div>
+    <div class="btns"><button class="btn p w">📷 Photo de la correction</button></div></div><div class="card">
+    <div class="row"><span class="pill st-ouv">Ouvert</span><span class="pill P2">P2</span><span class="sp"></span><span class="xs mu">délai 8 oct.</span></div>
+    <b style="display:block;margin-top:6px">Remettre les tartes en vitrine avant 7 h</b>
+    <div class="sm mu">Magasin · Sam V. le 30 sept.</div>
+    <span class="pc-lien mu">pas liée à une campagne · <u>lier</u></span>
+    <div class="btns"><button class="btn p w">📷 Photo de la correction</button></div></div><div class="cap">Ma boutique cette semaine</div><div class="card sm"><div class="row"><span>CA</span><span class="sp"></span><b>5 709 €</b><span class="mu">/ 6 999 €</span></div><div class="bar"><i style="width:82%"></i></div><div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>4,5</b><span class="mu">148 avis</span></div></div></div></div></div><div class="mb-tabs mb-tabs4"><button class=""><i>◉</i>Le jour</button><button class=""><i>▤</i>La semaine</button><button class="on"><i>✓</i>Plan d’action</button><button class=""><i>📷</i>Réclamation</button></div></div></body></html>
