@@ -719,10 +719,11 @@ photo de l'étiquette est jointe.
 
 ### Le scan en direct et l'adresse https
 
-La caméra en direct (`getUserMedia`) n'est permise qu'aux pages sécurisées. Le déploiement
-(`bin/deploy.sh`, étape 5a) sert donc aussi le cockpit en **https://185-180-206-46.sslip.io/consulant_bo/**
-(nom sslip.io de l'IP, certificat Let's Encrypt par défi HTTP-01, renouvelé par certbot). L'accès par
-l'IP en http reste inchangé ; il garde le scan par photo, et l'écran propose l'adresse https.
+La caméra en direct (`getUserMedia`) n'est permise qu'aux pages sécurisées. Le serveur est déjà
+servi en https sur son IP — **https://185.180.206.46/consulant_bo/** — avec un certificat
+Let's Encrypt d'adresse IP que le certbot du serveur gère et renouvelle (hors de ce dépôt ;
+`bin/deploy.sh`, étape 5a, n'y touche pas et vérifie seulement que le dashboard y répond). En
+http, l'écran garde le scan par photo et propose la même page en https.
 Dans le viseur, le flux est lu réduit (1 280 px, vite) ; au premier code lu, l'image pleine est
 relue plus fort et ses codes s'ajoutent (le long GS1-128 du lot et des dates y est attrapé).
 Un EAN-13 et le GTIN (01) d'une même étiquette ont la même clé : le GTIN sur 14 chiffres.
