@@ -1,0 +1,1310 @@
+{
+ "date": "2026-10-01",
+ "seuil": 4,
+ "shops": [
+  {
+   "shopId": "2",
+   "shop": "Atelier by Berlo - Corbais",
+   "taches": [
+    {
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CO-01 — Ouverture",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1212",
+     "tache": "Photo du comptoir - Biscuiterie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1208",
+     "tache": "Photo du comptoir - Pâtisseries",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1259",
+     "tache": "Contrôle Qualité – Pâtes à l'Amatriciana",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1258",
+     "tache": "Contrôle Qualité – Pâtes à l'arrabiata",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1261",
+     "tache": "Contrôle Qualité – Poulet Cacahuète & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1262",
+     "tache": "Contrôle Qualité – Poulet Jaune & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1260",
+     "tache": "Contrôle Qualité – Spaghetti Bolognaise",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    }
+   ]
+  },
+  {
+   "shopId": "3",
+   "shop": "Atelier by Max & Sandra - Gosselies",
+   "taches": [
+    {
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:56",
+     "faitePar": "Obchette S.",
+     "checklist": "CO-01 — Ouverture",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1212",
+     "tache": "Photo du comptoir - Biscuiterie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": true,
+      "moyenne": 4.2,
+      "nb": 5,
+      "motif": "Maîtrisée — 4,20 sur 5 contrôles",
+      "recontrole": "2026-10-06",
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:57",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:57",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": true,
+      "moyenne": 4.4,
+      "nb": 5,
+      "motif": "Maîtrisée — 4,40 sur 5 contrôles",
+      "recontrole": "2026-10-15",
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1208",
+     "tache": "Photo du comptoir - Pâtisseries",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:57",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:57",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:58",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 3.8,
+      "nb": 5,
+      "motif": "Moyenne 3,80 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:57",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:56",
+     "faitePar": "Obchette S.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 03:58",
+     "faitePar": "Obchette S.",
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 3.6,
+      "nb": 5,
+      "motif": "Note grave dans les 5 derniers contrôles",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1259",
+     "tache": "Contrôle Qualité – Pâtes à l'Amatriciana",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 12:57",
+     "faitePar": "Poulin L.",
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": true,
+      "moyenne": 4.2,
+      "nb": 5,
+      "motif": "Maîtrisée — 4,20 sur 5 contrôles",
+      "recontrole": "2026-10-09",
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1258",
+     "tache": "Contrôle Qualité – Pâtes à l'arrabiata",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 3.6,
+      "nb": 5,
+      "motif": "Note grave dans les 5 derniers contrôles",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1261",
+     "tache": "Contrôle Qualité – Poulet Cacahuète & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1262",
+     "tache": "Contrôle Qualité – Poulet Jaune & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1260",
+     "tache": "Contrôle Qualité – Spaghetti Bolognaise",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 12:57",
+     "faitePar": "Poulin L.",
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": true,
+      "moyenne": 4.2,
+      "nb": 5,
+      "motif": "Maîtrisée — 4,20 sur 5 contrôles",
+      "recontrole": "2026-10-15",
+      "permanent": false
+     },
+     "photo": true
+    }
+   ]
+  },
+  {
+   "shopId": "4",
+   "shop": "Atelier by - Halle",
+   "taches": [
+    {
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:33",
+     "faitePar": "Sara D.",
+     "checklist": "CO-01 — Ouverture",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1212",
+     "tache": "Photo du comptoir - Biscuiterie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:35",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4.2,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:35",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1208",
+     "tache": "Photo du comptoir - Pâtisseries",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Moyenne 4,00 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:35",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:34",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": "En cuisson",
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 3.8,
+      "nb": 5,
+      "motif": "Moyenne 3,80 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:34",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": "En preparation",
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 3.8,
+      "nb": 5,
+      "motif": "Moyenne 3,80 (masquage à 4.2)",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:33",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4,
+      "nb": 5,
+      "motif": "Rouvert manuellement par Sam Verheyden",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "faitLe": "2026-10-01 05:34",
+     "faitePar": "Sara D.",
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": true,
+      "moyenne": 4.2,
+      "nb": 5,
+      "motif": "Maîtrisée — 4,20 sur 5 contrôles",
+      "recontrole": "2026-10-30",
+      "permanent": false
+     },
+     "photo": true
+    },
+    {
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": 4.5,
+      "nb": 2,
+      "motif": "2 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1259",
+     "tache": "Contrôle Qualité – Pâtes à l'Amatriciana",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1258",
+     "tache": "Contrôle Qualité – Pâtes à l'arrabiata",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1261",
+     "tache": "Contrôle Qualité – Poulet Cacahuète & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1262",
+     "tache": "Contrôle Qualité – Poulet Jaune & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1260",
+     "tache": "Contrôle Qualité – Spaghetti Bolognaise",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    }
+   ]
+  },
+  {
+   "shopId": "5",
+   "shop": "Atelier by Harmonie - Sombreffe",
+   "taches": [
+    {
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CO-01 — Ouverture",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1212",
+     "tache": "Photo du comptoir - Biscuiterie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1208",
+     "tache": "Photo du comptoir - Pâtisseries",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture.",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie",
+     "obligatoire": true,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1259",
+     "tache": "Contrôle Qualité – Pâtes à l'Amatriciana",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1258",
+     "tache": "Contrôle Qualité – Pâtes à l'arrabiata",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1261",
+     "tache": "Contrôle Qualité – Poulet Cacahuète & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1262",
+     "tache": "Contrôle Qualité – Poulet Jaune & Riz",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    },
+    {
+     "taskId": "1260",
+     "tache": "Contrôle Qualité – Spaghetti Bolognaise",
+     "statut": "nonRendue",
+     "faitLe": null,
+     "faitePar": null,
+     "checklist": "CQ-F1 — Contrôle qualité : Formation Cuisine 1",
+     "obligatoire": false,
+     "note": null,
+     "comment": null,
+     "maitrise": {
+      "masquee": false,
+      "moyenne": null,
+      "nb": 0,
+      "motif": "0 contrôle(s) sur 5 — pas encore de quoi juger",
+      "recontrole": null,
+      "permanent": false
+     },
+     "photo": false
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,607 @@
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit CEO — L'Atelier by</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="/public/assets/img/logo.png">
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/css/app.css">
+<style>.db-cq{overflow:hidden;margin-top:12px}
+.db-cq .ct{gap:12px}
+.db-cq .ct .db-mini{margin-left:auto;text-align:right}
+.db-cqf{display:inline-flex;gap:6px;flex-wrap:wrap}
+.db-cqf button{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:3px 10px;font:600 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-surface);white-space:nowrap;cursor:pointer}
+.db-cqf button b{margin-left:5px;font-weight:700;color:var(--color-text)}
+.db-cqf button i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.db-cqf button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.db-cqf button.on b{color:#fff}
+.db-cqrail{position:relative;padding:14px 16px 4px}
+.db-cqpiste{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.db-cqpiste::-webkit-scrollbar{display:none}
+.db-cqc{flex:0 0 calc((100% - 60px) / 6);min-width:150px;scroll-snap-align:start;border:none;background:none;padding:0;text-align:left;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column}
+.db-cqc:focus-visible .db-cqph{outline:2.5px solid var(--color-primary);outline-offset:2px}
+.db-cqc:hover .db-cqph img{transform:scale(1.03)}
+.db-cqc .n{font-weight:700;font-size:12px;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-cqc .m{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-cqc .c{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-cqc .c.ok{color:#2d7a3e}.db-cqc .c.nc{color:#B26A00}.db-cqc .c.ctl{color:#2F5D8A}.db-cqc .c.ko{color:#C0182B}.db-cqc .c.mu{color:var(--color-text-muted)}
+.db-cqph{position:relative;display:block;aspect-ratio:3/4;border-radius:9px;overflow:hidden;background:#2a2622}
+.db-cqph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s}
+.db-cqph>i{position:absolute;border:2px solid #D97706;border-radius:3px;box-shadow:0 0 0 1px rgba(255,255,255,.55);pointer-events:none}
+.db-cqph>i u{position:absolute;left:-2px;top:-18px;color:#fff;font:700 10px var(--font-ui);text-decoration:none;padding:1px 6px;border-radius:3px 3px 0 0;white-space:nowrap}
+.db-cqph .h{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.58);color:#fff;font:600 9.5px var(--font-ui);font-style:normal;padding:2px 6px;border-radius:5px;font-variant-numeric:tabular-nums}
+.db-cqph .cqbd{position:absolute;right:6px;top:6px}
+.cqbd{display:inline-block;font:700 10px var(--font-ui);font-style:normal;padding:2px 7px;border-radius:5px;color:#fff;white-space:nowrap}
+.cqbd.ok{background:#2d7a3e}.cqbd.nc{background:#D97706}.cqbd.ctl{background:#2F5D8A}.cqbd.ko{background:#C0182B}.cqbd.mu{background:#8a8177}
+.db-cqph.vide,.db-cqph.perdue{background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);border:1px dashed #c9c2b8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--color-text-muted);font:600 10.5px var(--font-ui);text-align:center;padding:8px}
+.db-cqph.vide b{font-size:19px;opacity:.6}
+.db-cqph.vide.ko{border-color:#e5b6bc;color:#C0182B;background:repeating-linear-gradient(135deg,#fdf4f5 0 8px,#f9e9eb 8px 16px)}
+.db-cqph.perdue>*:not(.cqbd){display:none}
+.db-cqph.perdue:after{content:"photo en cours de relecture…"}
+.db-cqph.att{background:linear-gradient(90deg,#efe9e1 25%,#f7f3ee 50%,#efe9e1 75%);background-size:200% 100%;animation:db-cqsk 1.3s linear infinite}
+@keyframes db-cqsk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.db-cqfl{position:absolute;top:calc(14px + 110px);width:36px;height:36px;border-radius:50%;border:none;background:var(--color-surface);box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 18px var(--font-ui);color:var(--color-text);z-index:2;cursor:pointer}
+.db-cqfl.g{left:4px}.db-cqfl.d{right:4px}
+.db-cqfl:disabled{opacity:0;pointer-events:none}
+.db-cqpied{text-align:center;padding:8px 0 12px;font-size:10.5px;color:var(--color-text-muted)}
+html.db-cq-ouvert,html.db-cq-ouvert body{overflow:hidden}
+.db-cql{position:fixed;inset:0;background:rgba(22,18,14,.94);z-index:80;display:flex;flex-direction:column;padding:16px 26px 14px;color:#fff}
+.db-cql .hd{display:flex;align-items:baseline;gap:14px;font:600 13px var(--font-ui)}
+.db-cql .hd small{font-weight:400;opacity:.7}
+.db-cql .hd .x{margin-left:auto;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;align-self:center}
+.db-cql .mi{flex:1;display:flex;gap:22px;align-items:center;justify-content:center;min-height:0;padding:12px 0}
+.db-cql .mi .ph{min-width:0;display:flex;justify-content:center}
+.db-cqph.max{width:min(calc((100vh - 190px) * .75),calc(100vw - 560px));border-radius:12px}
+.db-cqph.max.vide{font-size:13px}
+.db-cql .fl{flex:0 0 44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:22px;cursor:pointer}
+.db-cql .fl:disabled{opacity:.25;cursor:default}
+.db-cql .fi{flex:0 0 360px;background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:16px 18px}
+.db-cql .fi h3{font:400 21px var(--font-display);margin:8px 0 2px}
+.db-cql .fi .q{font-size:11.5px;color:var(--color-text-muted)}
+.db-cql .fi q{display:block;margin:12px 0 0;padding:9px 12px;border-left:3px solid #D97706;background:#fff7ec;font-size:12.5px;quotes:none;border-radius:0 8px 8px 0;line-height:1.5}
+.db-cql .fi q.ok{border-left-color:#2d7a3e;background:#f0f7f2}
+.db-cql .fi dl{display:grid;grid-template-columns:78px 1fr;gap:7px 12px;margin:12px 0 10px;font-size:12px}
+.db-cql .fi dt{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding-top:2px}
+.db-cql .fi dd{margin:0}
+.db-cql .ba{display:flex;gap:8px;justify-content:safe center;overflow-x:auto;padding:4px 2px;scrollbar-width:none}
+.db-cql .ba::-webkit-scrollbar{display:none}
+.db-cql .ba button{flex:0 0 44px;border:none;background:none;padding:0;cursor:pointer;opacity:.5;border-radius:6px}
+.db-cql .ba button.on{opacity:1;outline:2px solid #fff;outline-offset:2px}
+.db-cql .ba .db-cqph{border-radius:6px}
+.db-cql .ba .db-cqph.vide{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.07);padding:0}
+@media (max-width:1150px){.db-cqc{flex-basis:calc((100% - 36px) / 4)}.db-cql .fi{flex-basis:300px}}
+@media (max-width:900px){.db-cql .mi{flex-wrap:wrap;overflow-y:auto}.db-cql .fi{flex-basis:100%}.db-cqph.max{width:min(calc((100vh - 190px) * .75),calc(100vw - 150px))}}
+.db-cql.mob{padding:0;background:#0d0b09}
+.db-cql.mob .hd{position:absolute;left:12px;right:12px;top:10px;z-index:3;align-items:center;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.db-cql.mob .ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.db-cql.mob .db-cqph.max{width:min(calc(100vw - 24px),calc((100dvh - 290px) * .75));border-radius:10px}
+.db-cql.mob .bas{flex:0 0 auto;max-height:52dvh;overflow-y:auto;padding:0 12px calc(12px + env(safe-area-inset-bottom,0px))}
+.db-cql.mob .fi{padding:12px 14px;border-radius:14px}
+.db-cql.mob .fi h3{font-size:18px}
+.db-cql.mob .fi dl{margin-bottom:6px}
+.db-cql.mob .act{display:flex;gap:8px;margin-top:10px}
+.db-cql.mob .act button{flex:1;border:none;border-radius:10px;padding:11px 0;font:600 12.5px var(--font-ui);background:rgba(255,255,255,.16);color:#fff}
+.db-cql.mob .act button.p{background:#fff;color:var(--color-text)}
+.db-cql.mob .act button:disabled{opacity:.35}
+@media (prefers-reduced-motion:reduce){.db-cqph.att{animation:none}.db-cqc:hover .db-cqph img{transform:none}}</style><link rel="stylesheet" href="ct.css"></head>
+<body>
+<div id="app">
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
+
+  <aside style="width:236px;flex:0 0 236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto">
+    <div style="padding:22px 20px 14px">
+      <img src="/public/assets/img/logo.png" alt="L'Atelier by" style="width:176px;max-width:100%;height:auto;display:block">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">Pilotage Réseau</div>
+    </div>
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div style="padding:0 12px 12px;position:relative">
+      <div style="position:relative">
+        <input id="rail-q" value="" data-i="0" placeholder="Rechercher partout…" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text);border-radius:9px;height:32px;padding:0 10px 0 10px;font-family:var(--font-ui);font-size:12px">
+        
+      </div>
+      
+    </div>
+
+    <nav style="flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px">
+      
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Pilotage</div>
+          
+    <button data-h="1" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Résultat</span>
+      
+    </button>
+    <button data-h="2" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Performance</span>
+      
+    </button>
+    <button data-h="3" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Magasins</div>
+          
+    <button data-h="4" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Analyse magasin</span>
+      
+    </button>
+    <button data-h="5" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Scoring du trimestre</span>
+      
+    </button>
+    <button data-h="6" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Budget</span>
+      
+    </button>
+    <button data-h="7" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Jours creux</span>
+      
+    </button>
+    <button data-h="8" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Plan de développement</span>
+      
+    </button>
+    <button data-h="9" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Produits</div>
+          
+    <button data-h="10" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Catalogue</span>
+      <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">6</span>
+    </button>
+    <button data-h="11" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Gamme · scoring</span>
+      
+    </button>
+    <button data-h="12" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Où ça se vend</span>
+      
+    </button>
+    <button data-h="13" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Dans le temps</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Centrale d’achat</div>
+          
+    <button data-h="14" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Achats</span>
+      
+    </button>
+    <button data-h="15" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Marque &amp; marketing</div>
+          
+    <button data-h="16" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Campagnes</span>
+      
+    </button>
+    <button data-h="17" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Projets de développement</span>
+      
+    </button>
+    <button data-h="18" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">ERP franchisé</div>
+          
+    <button data-h="19" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Développement commercial</span>
+      
+    </button>
+    <button data-h="20" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Prospection</span>
+      
+    </button>
+    <button data-h="21" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Prospection mobile</span>
+      
+    </button>
+    <button data-h="22" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Newsletter</span>
+      
+    </button>
+    <button data-h="23" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Newsletter magasin</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Contrôle</div>
+          
+    <button data-h="24" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">
+      <span>Tâches</span>
+      <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">15</span>
+    </button>
+    <button data-h="25" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Contrôle posts Facebook</span>
+      
+    </button>
+    <button data-h="26" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Reporting automatisé</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Administration</div>
+          
+    <button data-h="27" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Paramètres</span>
+      
+    </button>
+    <button data-h="28" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </nav>
+    <div style="padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+      <button data-h="29" title="Mon compte et le compte consultant" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:none;background:transparent;padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui)">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:0 0 auto">SV</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--color-text)">Sam Verheyden</div>
+          <div style="font-size:10px;color:var(--color-text-muted)">Stratégie et Développement</div>
+        </div>
+      </button>
+      <span title="Version en ligne — si elle est plus ancienne que la livraison, le navigateur sert une version en cache (Ctrl+Maj+R)" style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">v01/10 15:52</span>
+      <button data-h="30" title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>
+    </div>
+  </aside>
+
+  <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
+    <div style="padding:26px 32px 60px;max-width:1460px">
+      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
+        <div>
+          <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">Tâches</h1>
+          <p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+          <span style="font-size:12px;color:var(--color-text-muted)"></span>
+          <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-secondary);color:var(--color-on-abricot)"></span>
+          <button data-h="31" title="Ce que cet écran ne peut pas afficher, et pourquoi" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;cursor:pointer">⚠ 2 limites API ▾</button>
+        </div>
+      </header>
+
+      
+      <div class="no-print" style="display:inline-flex;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px">
+    <button data-h="32" style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:transparent;color:var(--color-text)">Suivi</button><button data-h="33" style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:var(--color-primary);color:#fff">Contrôle</button><button data-h="34" style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:transparent;color:var(--color-text)">Mensuel</button>
+  </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div data-screen="controle" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+      
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Tâches évaluées</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">64</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">4 boutique(s) — journée du 01/10/2026</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">À noter</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">15</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Tâches rendues sans évaluation — la note vaut validation</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Validées</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">0</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Tâches évaluées : une note posée vaut validation</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Non conformes</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">0</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Évaluées sous le seuil de conformité</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Note moyenne</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1"></div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Moyenne des notes consultants du jour</div>
+        </div>
+    </div>
+    
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500">Répartition des avis par niveau de conformité</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">0 notée(s) · 64 sans note</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:14px">
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#2d7a3e;margin-bottom:8px">Conforme</div>
+          
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#C9A227"></span>
+                <span style="font-size:12.5px;flex:1">Exemplaire</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#C9A227;width:0%"></span></span>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#2D7A3E"></span>
+                <span style="font-size:12.5px;flex:1">Conforme</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#2D7A3E;width:0%"></span></span>
+            </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#8D1D2C;margin-bottom:8px">Non conforme</div>
+          
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#D97706"></span>
+                <span style="font-size:12.5px;flex:1">Non conforme — mineur</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#D97706;width:0%"></span></span>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#C0182B"></span>
+                <span style="font-size:12.5px;flex:1">Non conforme — majeur</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#C0182B;width:0%"></span></span>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#8D1D2C"></span>
+                <span style="font-size:12.5px;flex:1">Non conforme — critique</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#8D1D2C;width:0%"></span></span>
+            </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Journée</span>
+      <select data-c="35" style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"><option value="2026-10-01" selected="">01/10/2026</option><option value="2026-09-30">30/09/2026</option><option value="2026-09-29">29/09/2026</option><option value="2026-09-24">24/09/2026</option><option value="2026-09-20">20/09/2026</option><option value="2026-09-19">19/09/2026</option><option value="2026-09-18">18/09/2026</option><option value="2026-09-17">17/09/2026</option><option value="2026-09-16">16/09/2026</option><option value="2026-09-15">15/09/2026</option><option value="2026-09-14">14/09/2026</option><option value="2026-09-11">11/09/2026</option><option value="2026-09-09">09/09/2026</option><option value="2026-09-07">07/09/2026</option><option value="2026-09-06">06/09/2026</option><option value="2026-09-04">04/09/2026</option><option value="2026-09-03">03/09/2026</option><option value="2026-09-02">02/09/2026</option><option value="2026-09-01">01/09/2026</option><option value="2026-08-31">31/08/2026</option><option value="2026-08-28">28/08/2026</option><option value="2026-08-27">27/08/2026</option><option value="2026-08-26">26/08/2026</option><option value="2026-08-25">25/08/2026</option><option value="2026-08-24">24/08/2026</option><option value="2026-08-23">23/08/2026</option><option value="2026-08-22">22/08/2026</option><option value="2026-08-21">21/08/2026</option><option value="2026-08-20">20/08/2026</option><option value="2026-08-19">19/08/2026</option><option value="2026-08-18">18/08/2026</option><option value="2026-08-17">17/08/2026</option><option value="2026-08-15">15/08/2026</option><option value="2026-08-14">14/08/2026</option><option value="2026-08-13">13/08/2026</option><option value="2026-08-12">12/08/2026</option><option value="2026-08-07">07/08/2026</option><option value="2026-08-06">06/08/2026</option><option value="2026-08-05">05/08/2026</option><option value="2026-08-04">04/08/2026</option><option value="2026-08-01">01/08/2026</option><option value="2026-07-31">31/07/2026</option></select>
+      <select data-c="36" style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"><option value="Toutes les boutiques" selected="">Toutes les boutiques</option><option value="Atelier by Berlo - Corbais">Atelier by Berlo - Corbais</option><option value="Atelier by Max &amp; Sandra - Gosselies">Atelier by Max &amp; Sandra - Gosselies</option><option value="Atelier by - Halle">Atelier by - Halle</option><option value="Atelier by Harmonie - Sombreffe">Atelier by Harmonie - Sombreffe</option></select>
+      <select data-c="37" style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"><option value="tous" selected="">Toutes les tâches</option><option value="acontroler">À contrôler — photographiées, non notées</option><option value="sansphoto">Rendues sans photo</option><option value="avalider">Toutes les non notées</option><option value="refuses">Non conformes seulement</option></select>
+    <span class="cq-vue"><button type="button" class="on">▦ Photos</button><button type="button">☰ Liste</button></span></div>
+    
+    
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden"><div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:13.5px;font-weight:600">Atelier by Berlo - Corbais</div><span class="db-cqf"><button type="button" class="on">Tout<b>16</b></button><button type="button" class=""><i style="background:#C0182B"></i>Non rendues<b>16</b></button></span>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">aucune photo rendue aujourd’hui · 0 / 16 notée</div></div><div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">16 tâches pas encore rendues — rien à noter pour l’instant.</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden"><div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:13.5px;font-weight:600">Atelier by Max &amp; Sandra - Gosselies</div><span class="db-cqf"><button type="button" class="on">Tout<b>16</b></button><button type="button" class=""><i style="background:#2F5D8A"></i>À contrôler<b>11</b></button><button type="button" class=""><i style="background:#C0182B"></i>Non rendues<b>5</b></button></span>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">11 photos rendues de 03:56 à 12:57 par Obchette S., Poulin L. · 0 / 16 notée</div></div>
+    <div class="db-cqrail"><button type="button" class="db-cqfl g" disabled aria-label="précédentes">‹</button>
+      <div class="db-cqpiste"><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1206.jpg" alt=""><em class="h">03:56</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Pains &amp; Boulangerie</span><span class="m">03:56 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1216.jpg" alt=""><em class="h">03:56</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Vérifier si le magasin est propre.</span><span class="m">03:56 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1213.jpg" alt=""><em class="h">03:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Boissons</span><span class="m">03:57 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1214.jpg" alt=""><em class="h">03:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Épicerie</span><span class="m">03:57 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1211.jpg" alt=""><em class="h">03:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Quiches</span><span class="m">03:57 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1209.jpg" alt=""><em class="h">03:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Tartes</span><span class="m">03:57 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1207.jpg" alt=""><em class="h">03:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Viennoiseries</span><span class="m">03:57 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1210.jpg" alt=""><em class="h">03:58</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Traiteur</span><span class="m">03:58 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1267.jpg" alt=""><em class="h">03:58</em><em class="cqbd ctl">à contrôler</em></span><span class="n">étiquetage des prix et allergènes</span><span class="m">03:58 · Obchette S.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1259.jpg" alt=""><em class="h">12:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">CQ · Pâtes à l'Amatriciana</span><span class="m">12:57 · Poulin L.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/3-1260.jpg" alt=""><em class="h">12:57</em><em class="cqbd ctl">à contrôler</em></span><span class="n">CQ · Spaghetti Bolognaise</span><span class="m">12:57 · Poulin L.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">Comptoir · Biscuiterie</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité d'ouverture</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">Comptoir · Pâtisseries</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité d'ouverture</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Pâtes à l'arrabiata</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Poulet Cacahuète &amp; Riz</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Poulet Jaune &amp; Riz</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button></div>
+      <button type="button" class="db-cqfl d" aria-label="suivantes">›</button></div>
+    <div class="db-cqpied">16 contrôles · à contrôler d’abord, non rendues en fin de piste · un clic ouvre la photo et la notation</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden"><div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:13.5px;font-weight:600">Atelier by - Halle</div><span class="db-cqf"><button type="button" class="on">Tout<b>16</b></button><button type="button" class=""><i style="background:#2F5D8A"></i>À contrôler<b>8</b></button><button type="button" class=""><i style="background:#C0182B"></i>Non rendues<b>8</b></button></span>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">8 photos rendues de 05:33 à 05:35 par Sara D. · 0 / 16 notée</div></div>
+    <div class="db-cqrail"><button type="button" class="db-cqfl g" disabled aria-label="précédentes">‹</button>
+      <div class="db-cqpiste"><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1207.jpg" alt=""><em class="h">05:33</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Viennoiseries</span><span class="m">05:33 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1216.jpg" alt=""><em class="h">05:33</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Vérifier si le magasin est propre.</span><span class="m">05:33 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1206.jpg" alt=""><em class="h">05:34</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Pains &amp; Boulangerie</span><span class="m">05:34 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1209.jpg" alt=""><em class="h">05:34</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Tartes</span><span class="m">05:34 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1210.jpg" alt=""><em class="h">05:34</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Traiteur</span><span class="m">05:34 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1213.jpg" alt=""><em class="h">05:35</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Boissons</span><span class="m">05:35 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1214.jpg" alt=""><em class="h">05:35</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Épicerie</span><span class="m">05:35 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph"><img src="photos/4-1211.jpg" alt=""><em class="h">05:35</em><em class="cqbd ctl">à contrôler</em></span><span class="n">Comptoir · Quiches</span><span class="m">05:35 · Sara D.</span><span class="c ctl">photo déposée, pas encore notée</span><span class="cq-noter">Noter</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">Comptoir · Biscuiterie</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité d'ouverture</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">Comptoir · Pâtisseries</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité d'ouverture</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Pâtes à l'Amatriciana</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Pâtes à l'arrabiata</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Poulet Cacahuète &amp; Riz</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Poulet Jaune &amp; Riz</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">CQ · Spaghetti Bolognaise</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle qualité : Formation Cuisine 1</span></button><button type="button" class="db-cqc" title="Voir la photo et noter"><span class="db-cqph vide ko"><b>✗</b>pas encore rendue</span><span class="n">étiquetage des prix et allergènes</span><span class="m">pas encore rendue</span><span class="c ko">Contrôle opérationnel Boulangerie</span></button></div>
+      <button type="button" class="db-cqfl d" aria-label="suivantes">›</button></div>
+    <div class="db-cqpied">16 contrôles · à contrôler d’abord, non rendues en fin de piste · un clic ouvre la photo et la notation</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden"><div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:13.5px;font-weight:600">Atelier by Harmonie - Sombreffe</div><span class="db-cqf"><button type="button" class="on">Tout<b>16</b></button><button type="button" class=""><i style="background:#C0182B"></i>Non rendues<b>16</b></button></span>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">aucune photo rendue aujourd’hui · 0 / 16 notée</div></div><div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">16 tâches pas encore rendues — rien à noter pour l’instant.</div></div></div>
+    
+  </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  <div data-h="158" style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:60;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:560px;background:var(--color-surface);z-index:61;box-shadow:-12px 0 40px rgba(34,34,34,0.18);overflow-y:auto;animation:panelIn 200ms ease">
+    <div style="padding:24px 28px 60px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Tâche checklist — CQ-02 — Contrôle qualité d'ouverture.</div>
+          <h2 style="font-family:var(--font-display);font-size:22px;font-weight:400;margin:4px 0 0;line-height:1.2">Photo du comptoir - Viennoiseries</h2>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">01/10/2026 · DONE · Obligatoire</div>
+        </div>
+        <button data-h="159" style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-bottom:6px">Photo en boutique</div>
+          <button data-h="160" title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="photos/3-1207.jpg" alt="Photo de réalisation" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block">
+                <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:3px 9px;border-radius:999px;background:rgba(20,16,14,0.72);color:#fff">annoter</span></button>
+               <div style="margin-top:5px;font-size:11px;color:var(--color-text)">Prise le 01/10/2026 à 03:57 par Obchette S.</div>
+               <a href="https://8d1e5f9584044b577c21d4f846942427.r2.cloudflarestorage.com/tfbuddy-production/shops/3/task_completions/5715/images/835cc48d0402dbcc236769ea38792088.jpg?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ef1b313992ae892b95c6a00142b784b1%2F20261001%2Fauto%2Fs3%2Faws4_request&amp;X-Amz-Date=20261001T200051Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=1200&amp;X-Amz-Signature=8529830c8b77bf74b99f64cee45061785013e61f8ca212deacb06620bf7361a2" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-bottom:6px">Référence attendue</div>
+          <div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Un contrôle qualité se juge par comparaison : la photo produit (products/available → recipes/{id_recipe}, le même API que le webshop) s’affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »</div>
+
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin:22px 0 6px">Avis du consultant</div>
+      <div style="font-size:13px;font-weight:500">Pas encore d’avis consultant</div>
+      
+
+      <!-- Assistance IA : une PROPOSITION, jamais une note. Elle pré-remplit,
+           le consultant valide — c'est son geste qui engage le réseau. -->
+      <div style="margin:20px 0 0;padding:12px 14px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);flex:1;min-width:150px">Assistance à la notation</div>
+          <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.5">Aucune clé Anthropic enregistrée. Paramètres → Assistance IA. La clé reste sur le serveur ; le navigateur ne reçoit que la proposition.</div>
+        
+        
+      </div>
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px">
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Votre évaluation</div>
+        
+      </div>
+      
+      
+        <button data-h="161" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)">
+          <span style="width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:#C9A227"></span>
+          <span style="flex:1">Exemplaire</span>
+          <span style="font-size:11px;color:var(--color-text-muted);font-weight:400">au-dessus de l'attendu</span>
+        </button>
+        <button data-h="162" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)">
+          <span style="width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:#2D7A3E"></span>
+          <span style="flex:1">Conforme</span>
+          <span style="font-size:11px;color:var(--color-text-muted);font-weight:400">livrable accepté</span>
+        </button>
+        <button data-h="163" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)">
+          <span style="width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:#D97706"></span>
+          <span style="flex:1">Non conforme — mineur</span>
+          <span style="font-size:11px;color:var(--color-text-muted);font-weight:400">détail à reprendre</span>
+        </button>
+        <button data-h="164" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)">
+          <span style="width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:#C0182B"></span>
+          <span style="flex:1">Non conforme — majeur</span>
+          <span style="font-size:11px;color:var(--color-text-muted);font-weight:400">écart net, à reprendre</span>
+        </button>
+        <button data-h="165" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)">
+          <span style="width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:#8D1D2C"></span>
+          <span style="flex:1">Non conforme — critique</span>
+          <span style="font-size:11px;color:var(--color-text-muted);font-weight:400">à reprendre immédiatement</span>
+        </button>
+      <textarea data-c="166" rows="4" placeholder="Commentaire (facultatif)" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55"></textarea>
+      
+      <!-- Note au consultant : un geste occasionnel, replié par défaut. -->
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:11px">
+        <button data-h="167" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--color-primary)">
+          + Ajouter une note au consultant</button>
+        
+      </div>
+
+      <!-- Réclamation fournisseur : le défaut vient du produit, pas du geste. -->
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:11px">
+        <button data-h="168" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--color-primary)">
+          + Ouvrir une réclamation fournisseur</button>
+        
+        
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+        <button data-h="169" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
+        <button data-h="170" style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer;opacity:1">Envoyer la note</button>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l’API du panel (source de vérité) et est recopiée dans le journal des avis.</div>
+    </div>
+  </div>
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>
