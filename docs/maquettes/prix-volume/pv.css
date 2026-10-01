@@ -1,0 +1,97 @@
+/* Maquettes « Prix × volume » — le style des écrans du cockpit. */
+body{background:var(--color-bg);margin:0;padding:18px 24px 28px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+#ecran{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px}
+.carte.sans{padding:0;overflow:hidden}
+.cap{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+.mu{color:var(--color-text-muted)}.mu.s,.s.mu{font-size:11.5px;margin-top:2px}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.ok{color:#2d7a3e}.ko{color:#C0182B}
+h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:34px;line-height:1.1}
+h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:22px}
+.sous{font-size:13.5px;font-weight:500;color:var(--color-text-muted);max-width:700px;margin-top:6px}
+.simu{font-size:11.5px;background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot,#7a4a12);padding:7px 12px;border-radius:9px}
+.barre{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.barre>.seg:first-child,.barre>.ctl:first-child{margin-right:auto}
+.ongl{display:inline-flex;gap:2px;background:var(--color-surface);padding:4px;border-radius:12px;border:.5px solid var(--color-border-tertiary);align-self:flex-start}
+.ongl span{font-size:13px;font-weight:600;padding:8px 16px;border-radius:9px;color:var(--color-text);display:inline-flex;gap:7px;align-items:center}
+.ongl span.on{background:var(--color-primary);color:#fff}
+.ongl span i{font-style:normal;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;background:rgba(255,255,255,.25)}
+.seg{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:9px}
+.seg span{font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:7px;color:var(--color-text-muted);white-space:nowrap}
+.seg span b{font-weight:700;margin-left:4px;color:var(--color-text)}
+.seg span.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 3px rgba(34,34,34,.12)}
+.ctl{font-size:12.5px;padding:7px 12px;border-radius:9px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);white-space:nowrap}
+.ctl.rech{min-width:230px;color:var(--color-text-muted)}.ctl.fort{font-weight:600;font-size:13.5px}
+.tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tuile{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:11px 13px}
+.tuile .v{font-family:var(--font-display);font-size:25px;line-height:1.15;margin-top:3px}
+.tuile .s{font-size:11px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
+.tuile.bleu{border-color:#b9d3ea;background:#f3f8fc}.tuile.bleu .v{color:#0b4a7a}
+.tuile.abricot{border-color:#ecc9a6;background:#fdf5ec}.tuile.abricot .v{color:#8a3d0b}
+.tuile.or{border-color:#e2c46a;background:#fffbe9}.tuile.or .v{color:#2d7a3e}
+/* Le tableau */
+table.t{border-collapse:collapse;width:100%;font-size:12px}
+.t th{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:10px 12px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap;vertical-align:bottom}
+.t th small{display:block;font-weight:500;letter-spacing:0;text-transform:none;font-size:10px}
+.t th.g,.t td.g{text-align:left;padding-left:16px}
+.t th.mag{text-align:center}.t th.mag i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
+.t td{padding:7px 12px;border-bottom:.5px dashed var(--color-border-tertiary);vertical-align:middle}
+.t td.g b{font-weight:600}.t td.g .mu{font-size:10.5px}
+.t td.mag{text-align:center;white-space:nowrap}
+.t td.mag .q{font-size:10.5px;color:var(--color-text-muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.t td.vide{color:var(--color-text-muted)}
+.t td.fort{font-weight:700;color:var(--color-primary)}
+.t.petit td{padding:6px 10px}.t.petit th{padding:8px 10px}
+.t tr:last-child td{border-bottom:none}
+.px{display:inline-block;font-weight:600;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:6px;background:var(--color-background-secondary)}
+.px.bas{background:#e3eef8;color:#0b4a7a}.px.haut{background:#fbe6d4;color:#8a3d0b}.px.neutre{background:#f1ede7}
+.rel{font-size:10px;font-weight:600;color:var(--color-text-muted);white-space:nowrap}
+.rel.plus{color:#2d7a3e}.rel.moins{color:#C0182B}
+.pied{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:10px 16px 12px;font-size:10.5px;color:var(--color-text-muted);border-top:.5px solid var(--color-border-tertiary);background:#FCFAF7}
+.pied .px{font-size:10px;padding:1px 5px}
+/* B — la fiche */
+.grille{display:flex;gap:14px;align-items:flex-start}
+.liste{flex:0 0 300px;padding:12px 0 6px}
+.liste>.cap,.liste>.mu{padding:0 14px}
+.li{display:grid;grid-template-columns:1fr;gap:1px;padding:8px 14px;border-top:.5px solid var(--color-border-tertiary);position:relative}
+.li b{font-weight:600;font-size:12px}.li .mu{font-size:10.5px}
+.li.on{background:#fdf4f5;box-shadow:inset 3px 0 0 var(--color-primary)}
+.li .pts{position:relative;height:10px;margin:5px 6px 2px;border-top:1px solid var(--color-border-tertiary)}
+.li .pts i{position:absolute;top:-5px;width:9px;height:9px;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 0 1.5px #fff}
+.droite{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.legende{display:flex;gap:12px;font-size:11.5px;color:var(--color-text-muted)}
+.legende i,i.pt{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+svg.nuage{display:block;max-width:100%;height:auto;margin-top:8px}
+svg .gr{stroke:#ece7e0;stroke-width:1}
+svg .ax{font:500 10.5px var(--font-ui);fill:var(--color-text-muted)}
+svg .ax.t{font-weight:600;letter-spacing:.02em}
+svg .med{stroke:#26221E;stroke-width:1.5;stroke-dasharray:4 4;opacity:.55}
+svg .lab{font:600 12px var(--font-ui);fill:var(--color-text)}
+svg .mu2{font-weight:500;fill:var(--color-text-muted)}
+.lecture{font-size:13px;margin:6px 0 10px;padding:9px 12px;background:#FCFAF7;border-radius:9px;line-height:1.5}
+.lecture .mu{font-size:11.5px}
+.minis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:8px}
+.mini{border:.5px solid var(--color-border-tertiary);border-radius:9px;padding:7px 8px 4px}
+.mini b{display:block;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .mu{font-size:10px}
+.mini svg{display:block;width:100%;height:auto}
+/* C — par magasin */
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tt{padding:12px 16px 4px}
+.sig{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:5px}
+.sig.ok{background:#e6f2e9;color:#2d7a3e}.sig.wa{background:#fbe6d4;color:#8a3d0b}
+.simres{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;margin-top:12px}
+.simres .v{font-family:var(--font-display);font-size:30px;line-height:1.1}
+/* Planche */
+.pl{padding:24px 30px 30px}
+.pl .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:rgba(255,255,255,.6);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.pl h1{font-size:30px}
+.pl .acc{font-size:14px;color:var(--color-text-muted);margin:6px 0 18px;max-width:1300px;line-height:1.5}
+.pl .pg{display:flex;gap:26px;align-items:flex-start}
+.pl .pg img{display:block;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.pl .col{flex:0 0 330px;font-size:13px;line-height:1.55}
+.pl .col h4{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary);margin:0 0 6px}
+.pl .col ul{margin:0 0 16px;padding-left:18px}.pl .col li{margin-bottom:5px}
+.pl .col .pl-p li::marker{content:"+  ";color:#2d7a3e;font-weight:700}
+.pl .col .pl-m li::marker{content:"−  ";color:#C0182B;font-weight:700}

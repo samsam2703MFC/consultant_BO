@@ -128,7 +128,7 @@ export function render(c, x){
       ${c.isSeuil ? tplSeuil(c, x) : ''}
       ${c.isUsage ? tplUsage(c, x) : ''}
       ${c.isManque ? tplManque(c, x) : ''}
-      ${c.isAnm ? tplAnm(c, x) : ''}
+      ${c.isAnm ? tplAnm(c, x) : ''}${c.isPxv ? tplPxv(c, x) : ''}
       ${c.isVentes ? tplVentes(c, x) : ''}
       ${c.isCrois ? tplCrois(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
@@ -776,6 +776,97 @@ function tplAnaprod(c, x){
         </tr>`).join('')}
       </table></div>
       ${c.apNbFiltre > c.apNbMontre ? `<div style="padding:10px 18px;font-size:11px;color:var(--color-text-muted)">${c.apNbMontre} références montrées sur ${c.apNbFiltre} — affinez par catégorie ou par le filtre.</div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* Prix × volume — Produits › Où ça se vend. La grille référence × magasin
+   (le prix encaissé teinté face au réseau, les pièces, le volume à taille
+   égale), et la fiche d'une référence : le nuage prix contre volume. */
+function tplPxv(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;white-space:nowrap`;
+  const champ = 'font-family:var(--font-ui);font-size:12px;padding:8px 12px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface)';
+  const entete = `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="${cap}">Prix × volume${c.pxvPeriode ? ' · ' + esc(c.pxvPeriode) : ''}</div>
+        <div style="font-family:var(--font-display);font-size:17px;margin-top:2px">Le prix encaissé par chaque magasin, face à ce qu’il vend</div>
+      </div>
+      <input id="pxv-q" value="${esc(c.pxvQVal || '')}" placeholder="Filtrer les références…" ${x.I(c.pxvPoserQ)} style="width:210px;${champ}">
+      <select ${x.C(c.pxvPoserCat)} style="${champ};padding:8px 10px">
+        ${(c.pxvCats || []).map(o2 => `<option value="${esc(o2.v)}" ${o2.on ? 'selected' : ''}>${esc(o2.lib)}</option>`).join('')}
+      </select>
+      ${(c.pxvMoisChoix || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.lib)}</button>`).join('')}
+    </div>`;
+  if (c.pxvChargement) {
+    return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">${entete}
+        <div style="padding:30px 0 16px;font-size:13px;color:var(--color-text-muted)">Lecture des ventes de chaque magasin chez le panel — un mois clos se lit une fois puis reste gravé, les suivants sont instantanés…</div></div></div>`;
+  }
+  if (c.pxvIndispo) {
+    return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px">${entete}
+      <div style="padding:18px 0 6px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.pxvIndispo)}</div></div></div>`;
+  }
+  const prix = (txt, t, peu) => `<span class="pxv-px${t ? ' ' + t : ''}${peu ? ' peu' : ''}">${esc(txt)}</span>`;
+  const rel = (txt, t) => txt ? `<span class="pxv-rel${t ? ' ' + t : ''}">${esc(txt)}</span>` : '';
+
+  if (c.pxvFiche) {
+    const F = c.pxvFiche;
+    const svg = `<svg viewBox="0 0 ${F.w} ${F.h}" width="${F.w}" height="${F.h}" class="pxv-nuage" role="img" aria-label="${esc(F.nom)} : prix encaissé contre volume, par magasin">
+      ${F.gy.map(g => `<line x1="${F.gl}" x2="${F.gr}" y1="${g.y}" y2="${g.y}" class="gr"/><text x="${F.gl - 8}" y="${+g.y + 4}" class="ax" text-anchor="end">${esc(g.t)}</text>`).join('')}
+      ${F.gx.map(g => `<text x="${g.x}" y="${F.gb + 18}" class="ax" text-anchor="middle">${esc(g.t)}</text>`).join('')}
+      <text x="${F.gl}" y="${F.gt - 10}" class="ax t">pièces pour 10 000 € de chiffre du magasin</text>
+      <text x="${F.gr}" y="${F.h - 6}" class="ax t" text-anchor="end">prix encaissé →</text>
+      <line x1="${F.medX}" x2="${F.medX}" y1="${F.gt}" y2="${F.gb}" class="med"/><text x="${+F.medX + 6}" y="${F.gt + 12}" class="ax">prix réseau ${esc(F.med)}</text>
+      ${F.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="12" fill="transparent"><title>${esc(p.titre)}</title></circle><circle cx="${p.x}" cy="${p.y}" r="8" fill="${p.coul}" stroke="#fff" stroke-width="2" pointer-events="none"/>
+        <text x="${p.lx}" y="${p.ly}" class="lab">${esc(p.nom)} <tspan class="mu">${esc(p.det)}</tspan></text>`).join('')}
+    </svg>`;
+    return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">${entete}</div>
+      <div class="pxv-fiche">
+        <div style="${carte};padding:12px 0 6px" class="pxv-liste">
+          <div style="${cap};padding:0 14px">Là où les prix diffèrent le plus</div>
+          <div style="font-size:11px;color:var(--color-text-muted);padding:2px 14px 6px">écart de prix × chiffre du réseau</div>
+          ${F.liste.map(l => `<button ${x.A(l.ouvrir)} class="pxv-li${l.on ? ' on' : ''}"><b>${esc(l.nom)}</b><span>${esc(l.plage)}</span>
+            <span class="pts">${l.pts.map(p => `<i style="left:${p.g}%;background:${p.coul}" title="${esc(p.nom)} ${esc(p.prix)}"></i>`).join('')}</span></button>`).join('')}
+        </div>
+        <div style="${carte};padding:16px 18px;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+            <div><button ${x.A(F.fermer)} style="${pill(false)};margin-bottom:8px">← Retour à la grille</button>
+              <div style="font-family:var(--font-display);font-size:21px">${esc(F.nom)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(F.cat)} · ${esc(F.periode)} · ${esc(F.ca)} dans le réseau · prix réseau ${esc(F.med)}</div></div>
+            <div class="pxv-leg">${F.legende.map(l => `<span><i style="background:${l.coul}"></i>${esc(l.nom)}</span>`).join('')}</div>
+          </div>
+          <div style="overflow-x:auto;margin-top:8px">${svg}</div>
+          <div class="pxv-lecture">${esc(F.phrase)} <span>Le nuage montre ce qui va ensemble, pas ce qui le cause : l’emplacement, la clientèle ou la fraîcheur pèsent aussi.</span></div>
+          <div style="overflow-x:auto"><table class="pxv-t petit"><thead><tr><th class="g">Magasin</th><th>Prix encaissé</th><th>Face au réseau</th><th>Pièces</th><th>Pour 10 000 €</th><th>Face aux autres</th><th>Chiffre</th><th>Au prix réseau<small>à volume constant</small></th></tr></thead>
+          <tbody>${F.lignes.map(l => `<tr><td class="g"><i class="pt" style="background:${l.coul}"></i>${esc(l.nom)}</td><td>${prix(l.prix, l.teinte, l.peu)}</td><td>${esc(l.ec)}</td><td>${esc(l.q)}</td>
+            <td>${esc(l.v10k)}</td><td>${rel(l.rel, l.relTon)}</td><td>${esc(l.ca)}</td><td class="${l.align ? l.alignTon : ''}">${l.align ? esc(l.align) : '<span class="mu">au prix réseau</span>'}</td></tr>`).join('')}</tbody></table></div>
+        </div>
+      </div></div>`;
+  }
+
+  return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px">
+    <div style="${carte};padding:16px 18px">${entete}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">${(c.pxvFiltres || []).map(f => `<button ${x.A(f.choisir)} style="${pill(f.on)}">${esc(f.lib)} <b style="margin-left:3px">${f.n}</b></button>`).join('')}</div>
+    </div>
+    <div class="pxv-tuiles">${(c.pxvTuiles || []).map(t => `<div class="pxv-tuile${t.ton ? ' ' + t.ton : ''}"><div style="${cap}">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+    <div style="${carte};padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><table class="pxv-t">
+        <thead><tr><th class="g">Référence</th><th>Prix réseau<small>médiane</small></th>
+          ${(c.pxvMags || []).map(m => `<th class="mag"><i style="background:${m.coul}"></i>${esc(m.court)}</th>`).join('')}<th>Écart<small>max − min</small></th></tr></thead>
+        <tbody>${(c.pxvLignes || []).map(l => `<tr ${x.A(l.ouvrir)} class="hv-bg">
+          <td class="g"><b>${esc(l.nom)}</b><div class="mu">${esc(l.cat)} · ${esc(l.ca)}</div></td><td>${esc(l.med)}</td>
+          ${l.cells.map(k => k.vide ? '<td class="mag vide">—<div class="q">pas vendue</div></td>'
+            : `<td class="mag" title="${esc(k.titre)}">${prix(k.prix, k.teinte, k.peu)}<div class="q">${esc(k.vol)} ${rel(k.rel, k.relTon)}</div></td>`).join('')}
+          <td class="${l.fort ? 'fort' : (l.egal ? 'mu' : '')}">${esc(l.ecart)}</td></tr>`).join('')}
+        ${!(c.pxvLignes || []).length ? `<tr><td colspan="${(c.pxvMags || []).length + 3}" class="g mu" style="padding:18px">Aucune référence pour ce filtre.</td></tr>` : ''}</tbody>
+      </table></div>
+      <div class="pxv-pied"><span><span class="pxv-px bas">bleu</span> 5 % ou plus sous le prix réseau · <span class="pxv-px haut">abricot</span> 5 % ou plus au-dessus · <span class="pxv-px peu">grisé</span> moins de 5 pièces, hors du prix réseau · <span class="pxv-rel plus">▲</span> <span class="pxv-rel moins">▼</span> volume à taille égale (pièces pour 10 000 € de chiffre du magasin) face aux autres magasins</span>
+        <span>Prix encaissé = chiffre ÷ pièces, remises comprises · ${c.pxvNbMontre} référence(s) sur ${c.pxvNb}, classées par chiffre réseau${c.pxvNb > c.pxvNbMontre ? ' — affinez par catégorie ou par le filtre' : ''} · un clic ouvre le nuage prix contre volume${c.pxvMuets ? ` · ${c.pxvMuets} tranche(s) sans réponse du panel` : ''}</span></div>
     </div>
   </div>`;
 }

@@ -627,6 +627,46 @@ client mystère s'il est joint ; les `destinataires` de la ligne reçoivent le d
 magasin à cette seule adresse, sans journal. Réponse : `{ ok, resume, magasins: [ { magasin, statut: envoye|sans-adresse|echec|erreur, envoyes, note } ], copies, runId }`.
 Le cron du reporting fait la même chose le **1er jour de chaque trimestre à 8 h** pour le trimestre révolu (`scoringCron`).
 
+### `/analyse/prix-volume` — le prix encaissé de chaque magasin, face à ce qu'il vend
+
+    GET /analyse/prix-volume?mois=1      le dernier mois clos (défaut)
+    GET /analyse/prix-volume?mois=3      les trois derniers mois clos
+    GET /analyse/prix-volume?mois=12     les douze derniers mois clos
+
+L'écran **Produits › Où ça se vend › Prix × volume** : une ligne par référence vendue dans au
+moins deux magasins, une colonne par magasin. Même source que la grille « Par référence »
+(`/shops/{id}/statistics/sales/product-category-groups`, par mois, gravé une fois clos) : la
+tranche porte les pièces ET le chiffre de chaque magasin, le prix encaissé en sort.
+
+```json
+{ "mois": 1, "du": "2026-09-01", "au": "2026-09-30", "periode": "septembre 2026",
+  "magasins": [{ "id": "2", "nom": "Atelier by Berlo - Corbais", "court": "Corbais",
+                 "taille": 121505, "plusBas": 93, "plusHaut": 31 }],
+  "categories": ["Pain", "Quiches"],
+  "comparables": 213, "prixDiff": 190, "ecart10": 150,
+  "refs": [{ "pid": 812, "nom": "Pain 10 Céréales", "cat": "Pain", "med": 3.15, "min": 2.9, "max": 3.9,
+             "ecart": 34.5, "diff": true, "ca": 6222,
+             "mag": { "2": { "q": 469, "qm": 469, "ca": 1829.1, "p": 3.9, "ec": 23.8,
+                             "v10k": 38.6, "rel": -65.1, "auMed": -351.75, "peu": false } } }],
+  "muets": 0 }
+```
+
+- **`p`** — prix encaissé : chiffre ÷ pièces, remises comprises. Ce que le client paie, pas le
+  tarif affiché.
+- **`med`** — prix réseau : la médiane des magasins qui en ont vendu au moins 5 sur la période
+  (tous, s'il n'y en a pas deux). `peu` marque un magasin sous ce seuil.
+- **`v10k`** / **`rel`** — volume à taille égale : pièces pour 10 000 € de chiffre du magasin
+  (`taille`), et l'écart en % à la moyenne des autres magasins qui vendent la référence.
+- **`auMed`** — ce qu'un alignement sur le prix réseau changerait, en € par mois, à volume
+  constant (positif : le magasin vend sous le réseau).
+- **`diff`** — prix différents : au moins 2 % ET 5 centimes entre le plus bas et le plus haut
+  (la règle de l'Analyse magasin ; en dessous, c'est le bruit des remises). `plusBas` /
+  `plusHaut` comptent, parmi elles, les références où le magasin a le prix le plus bas / haut.
+- Hors comparaison : catégories `Bundle…` et `Extra…`, frais de livraison, dépannage, sacs, et
+  tout prix encaissé sous 0,30 €. Les catégories désactivées au catalogue sont déjà retirées
+  par la lecture des tranches.
+- Mois clos seulement : le prix d'un mois entamé bouge encore. Lecture seule.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json

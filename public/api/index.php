@@ -177,6 +177,7 @@ function route(string $method, string $path): mixed
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/analyse/produits'              => ep_analyse_produits(),
             $path === '/analyse/prix-transfert'        => ep_prix_transfert(),
+            $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
