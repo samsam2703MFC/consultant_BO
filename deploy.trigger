@@ -497,3 +497,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-01T11:40:53Z scan en direct, site en https, taches obligatoires seules
 2026-10-01T11:50:26Z https deja present sur l'IP : retrait de l'essai sslip
 2026-10-01T12:07:11Z dashboard telephone : classement reseau
+2026-10-01T13:23:18Z plan d action : objectif de campagne, clients face au N-1, campagne_id sur les actions
