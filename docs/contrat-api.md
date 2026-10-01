@@ -1264,7 +1264,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`. `{id}` est l'identifiant ou le `client_id`. |
 | `PUT /visites/{id}/points` | consultant | `points[]` : `ref`, `module`, `libelle`, `etat` (ok, ko, na), `note` 1..5, `valeur` (% planogramme), `commentaire`, `causes[]`. Idempotent par (visite, ref). |
 | `POST /visites/photos` | tous | `client_id`, `shop` ou `visite_id`, `ref`, `plan_id`, `genre` (jour_facade, jour_interieur, jour_arriere, point, avant, apres, correction), `data` (data-URL ≤ 2 Mo, JPEG/PNG/WebP), `prise_a`, `lat`, `lng`. Fichier sous `uploads/visites/{shop}/`. |
-| `POST /plans` | consultant, admin | un plan ou `plans[]` : `client_id`, `shop` ou `visite_id`, `ref`, `titre`, `detail`, `priorite` (P0, P1, P2), `assigne` (franchise, equipe, consultant, admin), `echeance`, `campagne_id` (la campagne que l'action sert ; le plan du franchisé montre alors ses clients par semaine face au N-1 et à l'objectif). Push au franchisé. |
+| `POST /plans` | consultant, admin | un plan ou `plans[]` : `client_id`, `shop` ou `visite_id`, `ref`, `titre`, `detail`, `priorite` (P0, P1, P2), `assigne` (franchise, equipe, consultant, admin), `echeance`, `campagne_id` (la campagne que l'action sert, en pastille sur l'action). Push au franchisé. |
 | `PUT /plans/{id}` | tous | `statut` + `role` : transitions permises par rôle (franchisé : ouvert/reprendre → attente ; admin et consultant : attente → valide ou reprendre, valide → ferme, ouvert → escalade, …), `retour` (à reprendre), `escalade_motif`, `photo_client_id`, et le contenu (`campagne_id` compris) pour consultant et admin. 409 si le passage est refusé. Push à qui de droit. |
 | `POST /msp` | consultant, admin | `shop`, `mois` AAAA-MM, `rubriques{}` (/20), `total`, `commentaires`, `fichier` (data-URL PDF ≤ 8 Mo). Un rapport par boutique et par mois. |
 | `PUT /equipe/{shop}` | consultant, franchisé | `effectif`, `prevu`, `departs`, `releve_le`. |
@@ -1291,12 +1291,11 @@ recommandation, plan d'action et fin de visite ; chaque étape se replie une
 fois faite. Le franchisé n'a pas de page à part : son plan d'action et la recommandation
 sont dans son dashboard magasin (`dashboard/?shop=&vue=actions`), où le module
 est monté ; les notifications push du franchisé y mènent. Cet onglet est de la
-**consultation** : en tête, la carte « Objectif de campagne » (clients, N-1,
-objectif, la trajectoire cumulée, le CA, les autres campagnes en une ligne),
-puis ses actions ; une action liée à une campagne montre les semaines côte à
-côte (cette année, N-1 aux mêmes jours, trait d'objectif) et une phrase qui
-dit ce qu'il faut par jour. Pas de photo de correction à reprendre d'ici : la
-photo et le changement de statut restent au consultant et à l'admin.
+**consultation** : la carte « Objectif de campagne » (clients, N-1, objectif,
+la trajectoire cumulée, le CA, les autres campagnes en une ligne), ce que le
+consultant a vu, la boutique de la semaine. Les actions, leurs photos et leurs
+statuts restent au consultant et à l'admin ; une action liée à une campagne
+porte la pastille de cette campagne dans leurs listes.
 
 Hors ligne (module `assets/js/visites.js`) : la lecture `/visites/app` est
 gardée en IndexedDB ; chaque écriture porte un `client_id`, est appliquée à
