@@ -500,3 +500,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-01T13:23:18Z plan d action : objectif de campagne, clients face au N-1, campagne_id sur les actions
 2026-10-01T13:26:08Z plan d action : etiquette du cumul
 2026-10-01T13:32:15Z plan d action du franchise : la campagne seulement
+2026-10-01T13:42:52Z dashboard telephone : onglets Campagne et Plan d action
