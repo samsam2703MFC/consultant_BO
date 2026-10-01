@@ -490,3 +490,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-01T06:46:17Z periodes : elision devant voyelle
 2026-10-01T07:01:17Z analyse magasin : motif en majuscule
 2026-10-01T09:40:42Z dashboard telephone : reclamations fournisseur avec photos
+2026-10-01T09:51:16Z dashboard telephone : onglet Reclamation
