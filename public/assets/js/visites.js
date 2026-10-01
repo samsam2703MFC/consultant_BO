@@ -244,7 +244,7 @@
     return h + '</svg>';
   };
   const viGCumul = (serie, prevus, labs) => {
-    const H = 150, top = 14, bas = 18, gL = 4, gR = 58, W = PC_W, jours = Math.max(2, serie.length);
+    const H = 150, top = 14, bas = 18, gL = 4, gR = 68, W = PC_W, jours = Math.max(2, serie.length);
     const cumR = [], cumN = []; let r = 0, n = 0, dernier = -1;
     serie.forEach((j, i) => { if (j.tickets != null) { r += j.tickets; dernier = i; } n += j.n1 || 0; cumR.push(r); cumN.push(n); });
     const nFin = cumN[cumN.length - 1] || 0;
