@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — page Réclamations</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="rc.css"></head>
+<body><div id="dash"><div class="db-hd"><img src="/public/assets/img/logo.png" alt=""><div><div class="db-titre">Atelier by Max &amp; Sandra - Gosselies</div><div class="db-sous">Dashboard magasin · mercredi 30 septembre 2026</div></div>
+      <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div><div class="db-nav">
+      <div class="db-ong"><button data-vue="jour" class="on">Jour</button><button data-vue="semaine" class="">Semaine</button><button data-vue="mois" class="">Mois</button><button data-vue="trimestre" class="">Trimestre</button><button data-vue="annee" class="">Année</button><button data-vue="actions" class="">Plan d’action</button></div>
+      <span class="db-lab">Date</span>
+      <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="2026-09-30" max="2026-10-01"><button class="db-btn" data-pas="1">›</button>
+      <button class="db-btn" data-auj="1">Aujourd’hui</button>
+      <span style="flex:1"></span><button class="db-valoc" data-vdrop="1" title="CA des 730 derniers jours ÷ 730 × 365 ÷ 6">
+      <span class="k">Valeur</span><span class="v">109 467 €</span><span class="dr">▾</span></button><button class="db-btn" data-recharger="1">↻ Relire</button></div><div class="rc-bascule"><span class="sw"><span>📊 Les chiffres</span><span class="on">📦 Les réclamations <em>18 sans suite</em></span></span><span class="db-mini">créer, documenter et suivre ce qui a été réclamé aux fournisseurs — la bascule reste sur la page choisie</span></div><div class="db-tuiles"><div class="db-tui "><div class="k">Sur 12 mois</div><div class="v">27</div><div class="s">réclamations · 1 fournisseur</div></div>
+  <div class="db-tui "><div class="k">En attente</div><div class="v">4</div><div class="s">envoyées, pas encore traitées</div></div>
+  <div class="db-tui vif"><div class="k">Acceptées sans suite</div><div class="v">14</div><div class="s">la plus ancienne : 10/10/2025</div></div>
+  <div class="db-tui bon"><div class="k">Réglées</div><div class="v">7</div><div class="s">expédition ou remboursement annoncés</div></div>
+  <div class="db-tui "><div class="k">Refusées</div><div class="v">2</div><div class="s">faute de photos et de détails</div></div>
+  <div class="db-tui "><div class="k">En jeu</div><div class="v">559 €</div><div class="s">au prix d’achat, sur les 18 sans suite</div></div></div><div class="rc-p2"><div class="db-card" style="padding:14px 16px"><div class="db-lab" style="margin-bottom:10px">Nouvelle réclamation</div><div class="rc-etapes"><span class="fait"><i>✓</i>Livraison</span><span class="fait"><i>✓</i>Produit</span><span class="on"><i>3</i>Le problème</span><span class=""><i>4</i>Envoyer</span></div>
+  <div class="rc-recap"><div><b>Livraison</b>ORD-3-D2410527… · SLFood · 30/09</div><div><b>Produit</b>Pain au Chocolat · SKU 1002343</div></div>
+  <div class="rc-aide"><b>Photos et détails, sinon refus.</b> En mai, SLFood a refusé 2 réclamations : « Merci d’ajouter des photos et de préciser en détail la nature du problème. »</div>
+  <div style="display:flex;gap:14px"><div class="rc-champ"><label>Quantité</label><div class="rc-qte"><b>−</b><span>60</span><b>＋</b></div></div>
+    <div class="rc-champ" style="flex:1"><label>Ce que vous demandez</label><div class="rc-puces"><span class="on">Remplacement</span><span>Remboursement</span><span>Note de crédit</span></div></div></div>
+  <div class="rc-champ"><label>Le problème</label><div class="rc-puces"><span class="on">Problème de taille ou de poids</span><span class="">Emballage endommagé</span><span class="">Informations incorrectes</span><span class="">Non conforme à la commande</span><span class="">Quantité dans l’emballage</span><span class="">Problème de qualité du produit</span><span class="">Autre raison</span></div></div>
+  <div class="rc-champ"><label>Photos · 2</label><div class="rc-photos"><div class="ph"><img src="photos/viennoiseries.jpg"><i>✕</i></div><div class="ph"><img src="photos/vitrine.jpg"><i>✕</i></div><div class="plus"><b>＋</b>Prendre une photo</div></div></div>
+  <div class="rc-champ"><label>Note pour le fournisseur</label><div class="rc-note">Pains au chocolat trop petits et peu feuilletés à la sortie du four, sur tout le carton (60 pièces). Photos prises à 06:10, à côté d’un pain au chocolat de la livraison précédente.</div></div>
+  <div class="rc-envoi"><span class="rc-btn sec">‹ Produit</span><span class="rc-btn">Vérifier et envoyer ›</span></div></div><div class="db-card"><div class="ct"><span class="db-lab">Mes réclamations — 12 mois</span><div class="rc-filtres"><span class="on">Toutes<b>27</b></span><span class="">En attente<b>4</b></span><span class="">Sans suite<b>14</b></span><span>Réglées<b>7</b></span><span>Refusées<b>2</b></span></div></div>
+  <table class="rc-t"><tr><th>État</th><th>Le</th><th>Produit · motif</th><th style="text-align:right">Qté</th><th style="text-align:right">Valeur</th><th>Réponse du fournisseur</th></tr>
+  <tr class="ouv"><td><span class="rc-st att">Envoyée · en attente</span></td><td class="n" style="text-align:left">30/09<div class="mu">n° 48</div></td>
+    <td><b>Riz Croustillant – 28 Ø</b><div class="mu">Problème de qualité du produit · sans photo</div></td><td class="n">10</td><td class="n">92 €</td>
+    <td class="tx">en attente · 1 j</td></tr><tr class="ouv"><td><span class="rc-st att">Envoyée · en attente</span></td><td class="n" style="text-align:left">30/09<div class="mu">n° 47</div></td>
+    <td><b>Tendresse au Chocolat</b><div class="mu">Autre raison · sans photo</div></td><td class="n">40</td><td class="n">44 €</td>
+    <td class="tx">en attente · 1 j</td></tr><tr class=""><td><span class="rc-st ok">Réglée</span></td><td class="n" style="text-align:left">20/09<div class="mu">n° 46</div></td>
+    <td><b>Moelleux Chocolat - 28</b><div class="mu">Quantité incorrecte de produits dans l’emballage · sans photo</div></td><td class="n">4</td><td class="n">35 €</td>
+    <td class="tx">expédition 22/09/2026</td></tr><tr class=""><td><span class="rc-st ok">Réglée</span></td><td class="n" style="text-align:left">20/09<div class="mu">n° 45</div></td>
+    <td><b>Baguette Tradition 500 g.</b><div class="mu">Quantité incorrecte de produits dans l’emballage · sans photo</div></td><td class="n">8</td><td class="n">12 €</td>
+    <td class="tx">expédition 22/09/2026</td></tr><tr class=""><td><span class="rc-st ok">Réglée</span></td><td class="n" style="text-align:left">20/09<div class="mu">n° 41</div></td>
+    <td><b>Pain au Chocolat</b><div class="mu">Problème de taille ou de poids · 📎 2</div></td><td class="n">60</td><td class="n">47 €</td>
+    <td class="tx">expédition 22/09/2026</td></tr><tr class=""><td><span class="rc-st ok">Réglée</span></td><td class="n" style="text-align:left">20/09<div class="mu">n° 40</div></td>
+    <td><b>Fermier Seigle &amp; Levain 600 g.</b><div class="mu">Problème de qualité du produit · 📎 1</div></td><td class="n">22</td><td class="n">35 €</td>
+    <td class="tx">expédition 22/09/2026</td></tr><tr class="ouv"><td><span class="rc-st att">Envoyée · en attente</span></td><td class="n" style="text-align:left">17/09<div class="mu">n° 39</div></td>
+    <td><b>La livraison</b><div class="mu">Problème de livraison · 📎 2</div></td><td class="n">—</td><td class="n">—</td>
+    <td class="tx">en attente · 14 j</td></tr><tr class=""><td><span class="rc-st ok">Réglée</span></td><td class="n" style="text-align:left">10/09<div class="mu">n° 38</div></td>
+    <td><b>Quiche Veggie Tian - 26ø</b><div class="mu">Non-conformité avec la commande · sans photo</div></td><td class="n">6</td><td class="n">22 €</td>
+    <td class="tx">expédition 15/09/2026</td></tr><tr class="ouv"><td><span class="rc-st att">Envoyée · en attente</span></td><td class="n" style="text-align:left">24/08<div class="mu">n° 36</div></td>
+    <td><b>La livraison</b><div class="mu">Problème de livraison · 📎 2</div></td><td class="n">—</td><td class="n">—</td>
+    <td class="tx">en attente · 38 j</td></tr><tr class=""><td><span class="rc-st ok">Réglée</span></td><td class="n" style="text-align:left">16/08<div class="mu">n° 34</div></td>
+    <td><b>Baguette Tradition 500 g.</b><div class="mu">Non-conformité avec la commande · sans photo</div></td><td class="n">72</td><td class="n">106 €</td>
+    <td class="tx">Montant total à rembourser : 81,27 euro</td></tr><tr class="ouv"><td><span class="rc-st sans">Acceptée · sans suite</span></td><td class="n" style="text-align:left">16/08<div class="mu">n° 33</div></td>
+    <td><b>Baguette Tradition 500 g.</b><div class="mu">Quantité incorrecte de produits dans l’emballage · sans photo</div></td><td class="n">12</td><td class="n">18 €</td>
+    <td class="tx"><span style="color:#8a3d0b">aucune, depuis 46 j</span></td></tr><tr class="ouv"><td><span class="rc-st sans">Acceptée · sans suite</span></td><td class="n" style="text-align:left">15/08<div class="mu">n° 32</div></td>
+    <td><b>Baguette Tradition 500 g.</b><div class="mu">Non-conformité avec la commande · 📎 1</div></td><td class="n">32</td><td class="n">47 €</td>
+    <td class="tx"><span style="color:#8a3d0b">aucune, depuis 47 j</span></td></tr><tr class="ouv"><td><span class="rc-st sans">Acceptée · sans suite</span></td><td class="n" style="text-align:left">14/08<div class="mu">n° 31</div></td>
+    <td><b>Pain Doré 600 g.</b><div class="mu">Non-conformité avec la commande · 📎 1</div></td><td class="n">1</td><td class="n">1 €</td>
+    <td class="tx"><span style="color:#8a3d0b">aucune, depuis 48 j</span></td></tr></table>
+  <div style="padding:8px 16px 12px;font-size:11px;color:var(--color-text-muted)">+ 14 autres · un clic ouvre la réclamation, ses photos et la réponse complète</div></div></div></div></body></html>
