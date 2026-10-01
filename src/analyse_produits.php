@@ -314,6 +314,152 @@ function ep_prix_transfert(): array
     ];
 }
 
+/** Catégories qui ne se comparent pas en prix : lots, suppléments, frais. */
+function pvHorsComparaison(string $cat, string $nom): bool
+{
+    return preg_match('/^(bundle|extra)\b/iu', $cat) === 1
+        || preg_match('/frais de livraison|d[ée]pannage|sac papier/iu', $cat . ' ' . $nom) === 1;
+}
+
+/** « septembre 2026 » : le mois en toutes lettres, pour l'en-tête de l'écran. */
+function pvMois(string $jour): string
+{
+    $M = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    return $M[(int) substr($jour, 5, 2) - 1] . ' ' . substr($jour, 0, 4);
+}
+
+/** La médiane d'une liste non vide. */
+function pvMediane(array $v): float
+{
+    sort($v);
+    $n = count($v);
+    return $n % 2 ? (float) $v[intdiv($n, 2)] : ((float) $v[$n / 2 - 1] + (float) $v[$n / 2]) / 2;
+}
+
+/**
+ * GET /analyse/prix-volume?mois=1|3|12 — le prix encaissé de chaque magasin,
+ * face à ce qu'il vend : Produits › Où ça se vend › Prix × volume.
+ *
+ * Les MÊMES tranches que la grille « Par référence » (product-category-groups,
+ * gravées une fois closes) portent, par magasin et par référence, les pièces
+ * ET le chiffre : le prix encaissé en sort (chiffre ÷ pièces, remises
+ * comprises — ce que le client paie, pas le tarif affiché). Des mois CLOS
+ * seulement : le prix d'un mois entamé bouge encore.
+ *
+ *  - prix réseau = la MÉDIANE des prix des magasins qui en ont vendu au moins
+ *    5 sur la période (tous, s'il n'y en a pas deux) — un magasin qui a vendu
+ *    deux pièces au prix d'un geste commercial ne fait pas le prix du réseau ;
+ *  - volume à taille égale = pièces pour 10 000 € de chiffre du magasin, face
+ *    à la moyenne des autres magasins qui vendent la référence — sans quoi le
+ *    plus grand magasin gagnerait toutes les comparaisons ;
+ *  - « prix différents » = au moins 2 % ET 5 centimes entre le plus bas et le
+ *    plus haut — la règle de l'Analyse magasin : sous ce seuil, c'est le
+ *    bruit des remises.
+ */
+function ep_prix_volume(): array
+{
+    if (!PanelApi::configured()) {
+        return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)'];
+    }
+    $mois = (int) ($_GET['mois'] ?? 1);
+    if (!in_array($mois, [1, 3, 12], true)) { $mois = 1; }
+    $tranches = [];
+    for ($i = $mois; $i >= 1; $i--) {
+        $t = strtotime(date('Y-m-01') . " -$i month");
+        $tranches[] = [date('Y-m-01', $t), date('Y-m-t', $t)];
+    }
+    $shops = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+        $shops[(int) $s['id']] = (string) $s['name'];
+    }
+    $couples = [];
+    foreach (array_keys($shops) as $sid) {
+        foreach ($tranches as [$du, $au]) { $couples[] = [$sid, $du, $au]; }
+    }
+    $lu = apTranches2($couples);
+
+    $q = []; $ca = []; $info = []; $taille = []; $muets = 0;
+    foreach (array_keys($shops) as $sid) {
+        $taille[$sid] = 0.0;
+        foreach ($tranches as [$du, $au]) {
+            $p = $lu[$sid . ':' . $du] ?? null;
+            if (!is_array($p)) { $muets++; continue; }
+            foreach ($p as $pid => $x) {
+                $taille[$sid] += (float) $x[3];
+                if (!isset($info[$pid])) { $info[$pid] = [(string) $x[0], (string) $x[1]]; }
+                $q[$pid][$sid] = ($q[$pid][$sid] ?? 0.0) + (float) $x[2];
+                $ca[$pid][$sid] = ($ca[$pid][$sid] ?? 0.0) + (float) $x[3];
+            }
+        }
+    }
+    if ($info === []) {
+        return ['indispo' => true,
+            'motif' => $muets > 0 ? 'les endpoints du panel n’ont pas répondu' : 'aucune vente sur la période'];
+    }
+
+    $refs = []; $bas = []; $haut = []; $nDiff = 0; $n10 = 0;
+    foreach ($info as $pid => [$nom, $cat]) {
+        if (pvHorsComparaison($cat, $nom)) { continue; }
+        $m = [];
+        foreach ($q[$pid] as $sid => $pieces) {
+            $chiffre = $ca[$pid][$sid] ?? 0.0;
+            if ($pieces <= 0 || $chiffre <= 0 || $taille[$sid] <= 0) { continue; }
+            $prix = $chiffre / $pieces;
+            if ($prix < 0.30) { continue; }
+            $m[$sid] = ['q' => $pieces, 'ca' => $chiffre, 'p' => $prix];
+        }
+        if (count($m) < 2) { continue; }
+        $fiables = array_filter($m, fn ($x) => $x['q'] >= 5);
+        $med = pvMediane(array_column(count($fiables) >= 2 ? $fiables : $m, 'p'));
+        $prix = array_column($m, 'p');
+        $min = min($prix); $max = max($prix);
+        $diff = $max - $min >= 0.05 && $min > 0 && ($max - $min) / $min >= 0.02;
+        $ecart = $min > 0 ? 100 * ($max - $min) / $min : 0.0;
+        if ($diff) {
+            $nDiff++;
+            if ($ecart >= 10) { $n10++; }
+            foreach ($m as $sid => $x) {
+                if (abs($x['p'] - $min) < 0.005) { $bas[$sid] = ($bas[$sid] ?? 0) + 1; }
+                if (abs($x['p'] - $max) < 0.005) { $haut[$sid] = ($haut[$sid] ?? 0) + 1; }
+            }
+        }
+        $par = []; $caR = 0.0;
+        foreach ($m as $sid => $x) {
+            $v10k = 10000 * $x['q'] / $taille[$sid];
+            $autres = [];
+            foreach ($m as $sid2 => $y) { if ($sid2 !== $sid) { $autres[] = 10000 * $y['q'] / $taille[$sid2]; } }
+            $moyA = array_sum($autres) / count($autres);
+            $caR += $x['ca'];
+            $par[(string) $sid] = [
+                'q' => round($x['q'], 1), 'qm' => round($x['q'] / $mois, 1), 'ca' => round($x['ca'], 2),
+                'p' => round($x['p'], 2), 'ec' => round(100 * ($x['p'] - $med) / $med, 1),
+                'v10k' => round($v10k, 2), 'rel' => $moyA > 0 ? round(100 * ($v10k / $moyA - 1), 1) : null,
+                // Ce qu'un alignement sur le prix réseau changerait, par mois, à volume constant.
+                'auMed' => round(($med - $x['p']) * $x['q'] / $mois, 2),
+                'peu' => $x['q'] < 5,
+            ];
+        }
+        $refs[] = ['pid' => (int) $pid, 'nom' => $nom, 'cat' => $cat, 'med' => round($med, 2),
+            'min' => round($min, 2), 'max' => round($max, 2), 'ecart' => round($ecart, 1), 'diff' => $diff,
+            'ca' => round($caR, 0), 'mag' => $par];
+    }
+    usort($refs, fn ($a, $b) => $b['ca'] <=> $a['ca']);
+    $cats = array_values(array_unique(array_filter(array_column($refs, 'cat'))));
+    sort($cats);
+    $court = fn (string $n) => trim((string) array_reverse(explode(' - ', $n))[0]);
+    $mag = [];
+    foreach ($shops as $sid => $n) {
+        $mag[] = ['id' => (string) $sid, 'nom' => $n, 'court' => $court($n), 'taille' => round($taille[$sid], 0),
+            'plusBas' => $bas[$sid] ?? 0, 'plusHaut' => $haut[$sid] ?? 0];
+    }
+    $du = $tranches[0][0]; $au = $tranches[count($tranches) - 1][1];
+    return ['mois' => $mois, 'du' => $du, 'au' => $au,
+        'periode' => $mois === 1 ? pvMois($du) : 'de ' . pvMois($du) . ' à ' . pvMois($au),
+        'magasins' => $mag, 'categories' => $cats,
+        'comparables' => count($refs), 'prixDiff' => $nDiff, 'ecart10' => $n10,
+        'refs' => $refs, 'muets' => $muets];
+}
+
 /* ---------------------------------------------------------------------------
  * La revue franchiseur et l'arbitrage de gamme.
  * ------------------------------------------------------------------------- */
