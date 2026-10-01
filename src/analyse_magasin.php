@@ -112,8 +112,8 @@ function anmPrixPanel(string $shop, int $n, array $refs, array $ids): ?array
     }
     usort($prix, static fn ($a, $b) => $b['gainMois'] <=> $a['gainMois']);
     $du = $tranches[0][0]; $au = $tranches[count($tranches) - 1][1];
-    $per = function_exists('pvMois')
-        ? ($n === 1 ? pvMois($du) : 'de ' . pvMois($du) . ' à ' . pvMois($au))
+    $per = function_exists('pvDepuis')
+        ? ($n === 1 ? pvMois($du) : pvDepuis($du) . ' à ' . pvMois($au))
         : mktBriefJour($du) . ' → ' . mktBriefJour($au);
     return ['prix' => $prix, 'potMois' => $pot, 'du' => $du, 'au' => $au, 'muets' => $muets,
         'source' => 'panel · ' . $per . ' (mois clos)'];
