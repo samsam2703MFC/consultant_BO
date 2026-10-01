@@ -334,9 +334,13 @@ function ep_taches_heatmap_mois(): array
         Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour BETWEEN ? AND ? ORDER BY jour', [$deb, $fin]));
     $releves = array_flip($releves);
 
+    // ?obligatoires=1 : les tâches obligatoires seules (le dashboard magasin).
+    // Une ligne relevée avant que le drapeau existe (NULL) est gardée ; seules
+    // les tâches que le panel dit facultatives sont écartées.
+    $oblig = ($_GET['obligatoires'] ?? '') === '1' ? ' AND (obligatoire IS NULL OR obligatoire = 1)' : '';
     $parJour = [];
     foreach (Db::rows("SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
-                       WHERE jour BETWEEN ? AND ? GROUP BY jour, id_shop", [$deb, $fin]) as $r2) {
+                       WHERE jour BETWEEN ? AND ?" . $oblig . " GROUP BY jour, id_shop", [$deb, $fin]) as $r2) {
         $parJour[(string) $r2['jour']][(string) $r2['id_shop']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
     }
 

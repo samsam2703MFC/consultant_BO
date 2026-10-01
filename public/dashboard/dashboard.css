@@ -995,3 +995,25 @@ textarea.rc-in{resize:vertical;line-height:1.45;min-height:70px}
   font:700 13.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .rc-mode button b{font-size:16px;line-height:1;font-weight:400}
 .rc-mode button.on{background:var(--color-surface);color:var(--color-primary);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.rc-scanalt{display:block;text-align:center;font:600 12px var(--font-ui);color:var(--color-primary);margin:2px auto 0;text-decoration:underline;text-underline-offset:2px}
+/* Le viseur en direct : plein écran, au-dessus de tout. Le cadre dit où
+   tenir l'étiquette ; il passe au vert quand le code est lu. */
+html.rc-direct-ouvert,html.rc-direct-ouvert body{overflow:hidden}
+.rc-direct{position:fixed;inset:0;z-index:95;background:#000;color:#fff;overflow:hidden}
+.rc-direct video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rc-direct .vise{position:absolute;left:7%;right:7%;top:30%;height:26%;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45);
+  border:2px solid rgba(255,255,255,.85);transition:border-color .15s}
+.rc-direct .vise i{position:absolute;left:6%;right:6%;top:50%;height:2px;background:#ff3b4a;box-shadow:0 0 8px #ff3b4a;animation:rc-balaye 1.6s ease-in-out infinite alternate}
+@keyframes rc-balaye{from{transform:translateY(-38%)}to{transform:translateY(38%)}}
+.rc-direct.ok .vise{border-color:#3ecf6a;box-shadow:0 0 0 100vmax rgba(0,0,0,.45),0 0 0 4px rgba(62,207,106,.5)}
+.rc-direct.ok .vise i{display:none}
+.rc-direct .hd{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:calc(14px + env(safe-area-inset-top,0px)) 14px 10px;
+  font:700 15px var(--font-ui);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.rc-direct .hd span{flex:1}
+.rc-direct .hd button{width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:17px;cursor:pointer}
+.rc-direct .msg{position:absolute;left:0;right:0;top:calc(56% + 16px);text-align:center;font:600 13px var(--font-ui);text-shadow:0 1px 3px rgba(0,0,0,.7);padding:0 20px}
+.rc-direct .pied{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;padding:14px 16px calc(22px + env(safe-area-inset-bottom,0px))}
+.rc-direct .pied button{border:none;border-radius:999px;padding:13px 20px;font:700 14px var(--font-ui);background:rgba(255,255,255,.18);color:#fff;cursor:pointer;backdrop-filter:blur(6px)}
+.rc-direct .pied button[data-photo]{background:#fff;color:#111}
+.rc-direct .pied button.on{background:#ffd54a;color:#111}
+@media (prefers-reduced-motion:reduce){.rc-direct .vise i{animation:none}}

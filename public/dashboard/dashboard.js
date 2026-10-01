@@ -114,7 +114,7 @@
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
     if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); }
-    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
+    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
     if (estMobile() && S.vue === 'jour') { lireAux('sem|' + bornesSemaine()[0], '/exploitation/periode?vue=semaine&date=' + S.date, force); }
@@ -542,6 +542,16 @@
     return window.innerWidth <= MOB_MAX;
   }
 
+  /** Le dashboard magasin ne montre que les tâches OBLIGATOIRES : les
+   * contrôles facultatifs (formation cuisine CQ-F…) restent dans Contrôle des
+   * tâches du cockpit. Une tâche dont le panel ne dit rien est gardée. */
+  const tacheObligatoire = t => t.obligatoire !== false;
+  /** Les tâches obligatoires du magasin pour la journée regardée. */
+  function tachesJour(d) {
+    const sh = d ? (d.shops || []).find(x => String(x.shopId) === String(S.shop)) : null;
+    return sh ? (sh.taches || []).filter(tacheObligatoire) : [];
+  }
+
   /** Les tâches de la vue, comptées comme dans le bloc du bureau. */
   function mobTaches() {
     if (S.vue !== 'jour') {
@@ -558,8 +568,7 @@
     }
     const d = S.aux['taches|' + S.date];
     if (!d) { return null; }
-    const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
-    const T = sh ? (sh.taches || []) : [];
+    const T = tachesJour(d);
     if (!T.length) { return { total: 0 }; }
     const faite = t => t.statut !== 'nonRendue';
     const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
@@ -1959,8 +1968,7 @@
     if (S.err[cle]) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches ${jour ? 'du jour' : 'de la période'}</div><div class="s">${esc(S.err[cle])}</div></div></div>`; }
     if (!d) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches ${jour ? 'du jour' : 'de la période'}</div><div class="s">lecture du panel…</div></div>${tuileT('Faites', '<span class="db-sk" style="display:block;width:40px;height:22px"></span>')}${tuileT('Non faites', '<span class="db-sk" style="display:block;width:40px;height:22px"></span>')}${tuileT('Bloquantes', '<span class="db-sk" style="display:block;width:40px;height:22px"></span>')}<div class="db-bt fil"><div class="k">Le fil</div><div class="db-sk"></div></div></div>`; }
     if (jour) {
-      const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
-      const T = sh ? (sh.taches || []) : [];
+      const T = tachesJour(d);
       if (!T.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">${d.indispo ? 'panel injoignable' : 'aucune tâche pour ce magasin ce jour'}</div></div></div>`; }
       const faite = t => t.statut !== 'nonRendue';
       const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
@@ -2056,8 +2064,7 @@
   function cqListe() {
     const d = S.aux['taches|' + S.date];
     if (!d || d.indispo) { return null; }
-    const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
-    const T = sh ? (sh.taches || []) : [];
+    const T = tachesJour(d);
     const P = S.aux[cleCQ()];
     // L'URL signée vieillit : au-delà de quinze minutes, on la renouvelle.
     if (P && Date.now() - (S.auxLu[cleCQ()] || 0) > CQ_PERIME) { cqRelire(); }
@@ -2382,6 +2389,10 @@
         .map(o => `<button role="tab" aria-selected="${mode === o[0]}" data-rcmode="${o[0]}" class="${mode === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>`;
       if (mode === 'scan') {
         h += `<button class="rc-scan" data-rcscan="1"${sc && sc.etat === 'lecture' ? ' disabled' : ''}>${RC_CODEBARRE}<span>${sc && sc.etat === 'lecture' ? 'Lecture du code-barres…' : 'Scanner l’étiquette'}</span></button>`;
+        // En direct, la photo reste possible ; en http, on montre où le direct marche.
+        const https = rcAdresseHttps();
+        if (rcDirectPossible()) { h += '<button class="rc-lien rc-scanalt" data-rcscanphoto="1">ou prendre l’étiquette en photo</button>'; }
+        else if (https) { h += `<a class="rc-scanalt" href="${esc(https)}">Scan en direct avec la caméra : ouvrir le cockpit en https ›</a>`; }
       }
     }
     if (sc && sc.etat === 'illisible') { h += '<div class="rc-scanmsg ko">Aucun code-barres lu sur la photo. Reprenez-la de plus près, bien à plat, sans reflet — ou passez sur « Saisir ».</div>'; }
@@ -2518,6 +2529,7 @@
    * appris au premier scan (POST /fournisseurs/matiere-code). */
   const RC_CODEBARRE = '<svg viewBox="0 0 24 24" width="20" height="16" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="2" height="16"/><rect x="5.5" y="4" width="1" height="16"/><rect x="8" y="4" width="2" height="16"/><rect x="11.5" y="4" width="1" height="16"/><rect x="14" y="4" width="3" height="16"/><rect x="18.5" y="4" width="1" height="16"/><rect x="21" y="4" width="1.5" height="16"/></svg>';
   const RC_ZX = '../assets/vendor/zxing/';
+  const RC_FORMATS = ['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'Code128', 'Code39', 'ITF', 'DataBar', 'DataBarExpanded', 'DataMatrix', 'QRCode'];
   let rcZx = null, rcFichierScan = null;
   function rcLecteur() {
     if (!rcZx) {
@@ -2538,6 +2550,151 @@
     }
     return rcZx;
   }
+  /* --- Le scan en direct --------------------------------------------------------
+   * Sur une page sécurisée (https), la caméra s'ouvre en viseur plein écran et
+   * le code-barres est lu en continu : dès qu'il est lu, le téléphone vibre,
+   * l'image de l'étiquette devient une photo de la réclamation, le viseur se
+   * ferme. En http, les navigateurs refusent la caméra en direct : on retombe
+   * sur la photo, et l'écran propose l'adresse https.
+   * Le viseur vit hors de la page (document.body) : une relecture du
+   * dashboard ne le coupe pas. */
+  let rcDirect = null;
+  function rcDirectPossible() { return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
+  /** L'adresse https de la même page : le nom sslip.io de l'IP du serveur. */
+  function rcAdresseHttps() {
+    if (location.protocol !== 'http:' || /^(localhost|127\.)/.test(location.hostname)) { return ''; }
+    const ip = /^\d{1,3}(\.\d{1,3}){3}$/.test(location.hostname) ? location.hostname.replace(/\./g, '-') + '.sslip.io' : location.hostname;
+    return 'https://' + ip + location.pathname + location.search;
+  }
+  function rcDirectErreur(e) {
+    const n = e && e.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') { return 'L’accès à la caméra a été refusé. Autorisez-le pour ce site dans les réglages du navigateur — ou prenez l’étiquette en photo.'; }
+    if (n === 'NotFoundError' || n === 'OverconstrainedError') { return 'Aucune caméra disponible sur cet appareil — prenez l’étiquette en photo.'; }
+    if (n === 'NotReadableError' || n === 'AbortError') { return 'La caméra est occupée par une autre application. Fermez-la et réessayez — ou prenez l’étiquette en photo.'; }
+    return (e && e.message) || 'La caméra n’a pas démarré — prenez l’étiquette en photo.';
+  }
+  function rcDirectOuvrir() {
+    if (rcDirect) { return; }
+    const R = rcForm();
+    const el = document.createElement('div');
+    el.className = 'rc-direct';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Scanner le code-barres');
+    el.innerHTML = '<video playsinline muted autoplay></video><div class="vise"><i></i></div>'
+      + '<div class="hd"><span>Visez le code-barres de l’étiquette</span><button data-x aria-label="Fermer">✕</button></div>'
+      + '<div class="msg">Démarrage de la caméra…</div>'
+      + '<div class="pied"><button data-torche hidden>Lampe</button><button data-photo disabled>Prendre en photo</button></div>';
+    document.body.appendChild(el);
+    document.documentElement.classList.add('rc-direct-ouvert');
+    const D = rcDirect = { el: el, video: el.querySelector('video'), flux: null, Z: null, fini: false, occupe: false, minuteur: null, essais: 0, torche: false, R: R };
+    el.querySelector('[data-x]').addEventListener('click', () => rcDirectFermer(false));
+    el.querySelector('[data-photo]').addEventListener('click', () => rcDirectPhoto(D));
+    try { history.pushState({ rcDirect: 1 }, ''); } catch (e) { /* historique indisponible */ }
+    Promise.all([rcLecteur(), navigator.mediaDevices.getUserMedia({ audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } })])
+      .then(([Z, flux]) => {
+        if (D.fini) { flux.getTracks().forEach(t => t.stop()); return; }
+        D.Z = Z; D.flux = flux; D.video.srcObject = flux;
+        return D.video.play().then(() => {
+          if (D.fini) { return; }
+          el.querySelector('.msg').textContent = 'Tenez l’étiquette dans le cadre, à 15–20 cm';
+          el.querySelector('[data-photo]').disabled = false;
+          const piste = flux.getVideoTracks()[0];
+          const cap = piste && piste.getCapabilities ? piste.getCapabilities() : {};
+          if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) { piste.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {}); }
+          if (cap.torch) {
+            const b = el.querySelector('[data-torche]'); b.hidden = false;
+            b.addEventListener('click', () => {
+              D.torche = !D.torche;
+              piste.applyConstraints({ advanced: [{ torch: D.torche }] }).then(() => b.classList.toggle('on', D.torche)).catch(() => {});
+            });
+          }
+          rcDirectBoucle(D);
+        });
+      })
+      .catch(e => {
+        if (D.fini) { return; }
+        rcDirectFermer(false);
+        R.scan = { etat: 'erreur', err: rcDirectErreur(e) }; rendre();
+      });
+  }
+  /** Une image du flux, réduite à 1 280 px, lue ; la suivante 120 ms plus tard.
+   * Une lecture sur trois cherche plus fort (codes petits ou flous). */
+  function rcDirectBoucle(D) {
+    if (D.fini) { return; }
+    const v = D.video;
+    if (!D.occupe && v.readyState >= 2 && v.videoWidth) {
+      D.occupe = true; D.essais++;
+      const k = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+      const w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
+      const cv = D.cv || (D.cv = document.createElement('canvas'));
+      if (cv.width !== w) { cv.width = w; } if (cv.height !== h) { cv.height = h; }
+      const x = cv.getContext('2d', { willReadFrequently: true });
+      x.drawImage(v, 0, 0, w, h);
+      D.Z.readBarcodes(x.getImageData(0, 0, w, h), { tryHarder: D.essais % 3 === 0, tryRotate: true, tryDownscale: true,
+        textMode: 'HRI', maxNumberOfSymbols: 4, formats: RC_FORMATS })
+        .then(res => { const lus = (res || []).filter(r => r && r.text && r.isValid !== false); if (lus.length && !D.fini) { rcDirectTrouve(D, lus); } })
+        .catch(() => {})
+        .then(() => { D.occupe = false; });
+    }
+    D.minuteur = setTimeout(() => rcDirectBoucle(D), 120);
+  }
+  /** L'image pleine du flux : la photo de l'étiquette (JPEG), et ses pixels. */
+  function rcDirectImage(D) {
+    return new Promise(ok => {
+      const v = D.video;
+      if (!v.videoWidth) { ok(null); return; }
+      const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight;
+      const x = cv.getContext('2d'); x.drawImage(v, 0, 0);
+      const px = x.getImageData(0, 0, cv.width, cv.height);
+      cv.toBlob(b => ok({ blob: b, px: px }), 'image/jpeg', 0.9);
+    });
+  }
+  /** Lu dans le flux. Le flux est lu réduit, pour aller vite : il attrape
+   * souvent l'EAN et manque le long code GS1 (lot, dates). L'image pleine est
+   * donc relue plus fort, et ce qu'elle trouve s'ajoute. */
+  function rcDirectTrouve(D, lus) {
+    const R = D.R;
+    D.fini = true; clearTimeout(D.minuteur);
+    if (navigator.vibrate) { try { navigator.vibrate(70); } catch (e) { /* sans vibreur */ } }
+    D.el.classList.add('ok');
+    D.el.querySelector('.msg').textContent = 'Code-barres lu';
+    rcDirectImage(D).then(im => {
+      setTimeout(() => rcDirectFermer(false), 280);
+      if (S.rc !== R) { return; }
+      const jeton = { etat: 'lecture' };
+      R.scan = jeton; R.nScan = (R.nScan || 0) + 1; S.rcFait = null; R.err = null;
+      if (im && im.blob && R.photos.length + R.traite < RC_MAX) { rcAjouter([im.blob]); } else { rendre(); }
+      const plein = im && im.px && D.Z
+        ? D.Z.readBarcodes(im.px, { tryHarder: true, tryRotate: true, tryDownscale: true, textMode: 'HRI', maxNumberOfSymbols: 6, formats: RC_FORMATS }).catch(() => [])
+        : Promise.resolve([]);
+      plein.then(res => {
+        if (S.rc !== R || R.scan !== jeton) { return; }
+        const tous = lus.slice();
+        (res || []).forEach(r => { if (r && r.text && r.isValid !== false && !tous.some(x => x.text === r.text)) { tous.push(r); } });
+        R.scan = Object.assign(rcAnalyse(tous), { etat: 'lu' });
+        rendre();
+      });
+    });
+  }
+  /** « Prendre en photo » : l'image du moment, lue plus fort, comme une photo. */
+  function rcDirectPhoto(D) {
+    if (D.fini) { return; }
+    D.fini = true; clearTimeout(D.minuteur);
+    rcDirectImage(D).then(im => { rcDirectFermer(false); if (im && im.blob) { rcScanner(im.blob); } });
+  }
+  function rcDirectFermer(parHisto) {
+    const D = rcDirect; if (!D) { return; }
+    rcDirect = null;
+    D.fini = true; clearTimeout(D.minuteur);
+    if (D.flux) { D.flux.getTracks().forEach(t => t.stop()); }
+    D.el.remove();
+    document.documentElement.classList.remove('rc-direct-ouvert');
+    if (!parHisto) { try { if (history.state && history.state.rcDirect) { history.back(); } } catch (e) { /* historique indisponible */ } }
+  }
+  // Le bouton retour du téléphone ferme le viseur ; quitter l'appli coupe la caméra.
+  window.addEventListener('popstate', () => { if (rcDirect) { rcDirectFermer(true); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && rcDirect) { rcDirectFermer(false); } });
+
   function rcScanAppareil() {
     if (!rcFichierScan) {
       rcFichierScan = document.createElement('input');
@@ -2596,9 +2753,12 @@
       }
     });
     const ean = res.find(r => /^(EAN|UPC)/.test(r.format || ''));
-    a.code = a.gtin || (ean ? String(ean.text).trim() : '') || a.textes[0] || '';
+    a.code = rcCle(a.gtin || (ean ? String(ean.text).trim() : '') || a.textes[0] || '');
     return a;
   }
+  /** Un EAN-8/13, un UPC et un GTIN-14 désignent le même produit : la clé
+   * est le GTIN sur 14 chiffres. Les autres codes restent tels quels. */
+  const rcCle = k => /^\d{8,14}$/.test(String(k || '')) ? String(k).padStart(14, '0') : String(k || '');
   /** Le lot et les dates, tels qu'ils partent dans la description. */
   function rcEtiquette(sc) {
     if (!sc) { return ''; }
@@ -2609,7 +2769,7 @@
   function rcTrouve(F, sc) {
     const C = F.codes || {}, M = F.matieres || [];
     const parId = id => M.find(m => String(m.id) === String(id)) || null;
-    const cles = [sc.code, sc.gtin, sc.gtin && sc.gtin.replace(/^0+/, ''), sc.ai240].concat(sc.textes || []).filter(Boolean);
+    const cles = [sc.code, sc.gtin, sc.gtin && sc.gtin.replace(/^0+/, ''), sc.ai240].concat(sc.textes || [], (sc.textes || []).map(rcCle)).filter(Boolean);
     for (const k of cles) { if (C[k] && parId(C[k])) { return { m: parId(C[k]), par: 'appris' }; } }
     for (const k of cles) {
       const n = String(k).replace(/^0+/, '');
@@ -2644,7 +2804,7 @@
     if (R.photos.length + R.traite < RC_MAX) { rcAjouter([f]); } else { rendre(); }
     Promise.all([rcLecteur(), rcPixels(f)])
       .then(([Z, px]) => Z.readBarcodes(px, { tryHarder: true, tryRotate: true, tryDownscale: true, textMode: 'HRI', maxNumberOfSymbols: 4,
-        formats: ['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'Code128', 'Code39', 'ITF', 'DataBar', 'DataBarExpanded', 'DataMatrix', 'QRCode'] }))
+        formats: RC_FORMATS }))
       .then(res => {
         // Un second scan lancé entre-temps l'emporte.
         if (S.rc !== R || R.scan !== jeton) { return; }
@@ -2687,7 +2847,8 @@
     const b = e.target.closest('button'); if (!b || b.disabled || !$.contains(b)) { return; }
     const R = rcForm(), d = b.dataset;
     if (d.rcphoto) { rcAppareil(); return; }
-    if (d.rcscan) { rcScanAppareil(); return; }
+    if (d.rcscan) { if (rcDirectPossible()) { rcDirectOuvrir(); } else { rcScanAppareil(); } return; }
+    if (d.rcscanphoto) { rcScanAppareil(); return; }
     if (d.rcmode) {
       S.rcMode = d.rcmode === 'saisie' ? 'saisie' : 'scan';
       try { localStorage.setItem('db.rcMode', S.rcMode); } catch (er) { /* navigation privée */ }
