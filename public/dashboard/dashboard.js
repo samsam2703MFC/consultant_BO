@@ -639,6 +639,37 @@
       '', '', (m && m.attendu ? murJauge(att, av ? '#2d7a3e' : '') : '') + (J ? murSemaine(J) : ''));
   }
 
+  /* Ta place dans le réseau, au téléphone : trois colonnes — chiffre
+   * d'affaires, clients, panier moyen — le rang, la jauge du réseau (les
+   * autres magasins en gris, la médiane en trait), la valeur et l'écart à la
+   * médiane. Les mêmes calculs que le bandeau du bureau (rendBench), anonymes :
+   * on ne nomme jamais les autres. Au jour et à la semaine. */
+  function murClassement(m, d) {
+    if (!d) { return murR([murC('Ta place dans le réseau', '…', 'lecture du réseau…')], true); }
+    const L = (d.magasins || []).filter(x => x.ouvert !== false);
+    if (!m || L.length < 2) { return ''; }
+    const jour = S.vue === 'jour';
+    const defs = [['Chiffre d’affaires', jour ? 'ca' : 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))]];
+    const ord = n => n === 1 ? '1er' : n + 'e';
+    let premiers = 0;
+    const cols = defs.map(([lib, k, f, fd]) => {
+      const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
+      const v = m[k];
+      if (v == null || !vals.length) { return `<div class="mb-cl"><div class="k">${lib}</div><div class="rg mu">—</div><div class="v">—</div><div class="s">pas de valeur</div></div>`; }
+      const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
+      const med = vals[Math.floor((n - 1) / 2)];
+      const top = rang === 1, bas = rang === n && n > 1;
+      if (top) { premiers++; }
+      const mn = vals[n - 1], mx = vals[0], ecart = mx - mn;
+      const pos = x => ecart > 0 ? Math.max(0, Math.min(100, 100 * (x - mn) / ecart)) : 50;
+      const autres = vals.filter((x, i) => i !== rang - 1).map(x => `<span class="pt" style="left:${pos(x).toFixed(1)}%"></span>`).join('');
+      return `<div class="mb-cl"><div class="k">${lib}</div><div class="rg${top ? ' top' : (bas ? ' bas' : '')}">${top ? '🏆 ' : ''}${ord(rang)}<small>/ ${n}</small></div>
+        <div class="jg"><i class="l"></i>${autres}<span class="md" style="left:${pos(med).toFixed(1)}%"></span><span class="mo${top ? ' top' : ''}" style="left:${pos(v).toFixed(1)}%"></span></div>
+        <div class="v">${f(v)}</div><div class="s"><span class="${v - med >= 0 ? 'ok' : 'ko'}">${fd(v - med)}</span> vs médiane ${f(med)}</div></div>`;
+    }).join('');
+    return `<div class="mb-r un mb-cls"><div><div class="k">Ta place dans le réseau <em>· ${L.length} magasins · ${jour ? 'la journée' : 'la semaine'} · anonyme${premiers ? ' · ' + premiers + ' × 🏆' : ''}</em></div><div class="mb-clg">${cols}</div></div></div>`;
+  }
+
   /** La semaine vue depuis le jour : le retard, et les sept barres. */
   function murSemaineResume() {
     const d = S.aux['sem|' + bornesSemaine()[0]];
@@ -849,6 +880,7 @@
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
     h += '<div class="mb-mur">';
     h += murR([m ? murPeriode(m) : murC('Chiffre d’affaires', '…', 'lecture en cours…')], true);
+    h += murClassement(m, d);
     h += rendCQ(true);
     h += murR([
       murC('Clients', m && m.tickets != null ? fN(m.tickets) : '—', m && m.panier ? 'panier ' + fU(m.panier) : ''),
