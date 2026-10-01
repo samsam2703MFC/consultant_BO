@@ -989,3 +989,9 @@ textarea.rc-in{resize:vertical;line-height:1.45;min-height:70px}
 .rc-scanmsg.ok svg{flex:0 0 auto;margin-top:1px}.rc-scanmsg.ok span{flex:1;min-width:0}
 .rc-scanmsg.ko{background:#fdf4f5;color:#8D1D2C}
 .rc-scanmsg b{word-break:break-all}
+/* Scanner ou saisir : deux positions, une seule visible à la fois. */
+.rc-mode{display:grid;grid-template-columns:1fr 1fr;background:var(--color-background-secondary);border-radius:12px;padding:3px}
+.rc-mode button{display:flex;align-items:center;justify-content:center;gap:7px;border:none;background:none;border-radius:9px;padding:10px 0;
+  font:700 13.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rc-mode button b{font-size:16px;line-height:1;font-weight:400}
+.rc-mode button.on{background:var(--color-surface);color:var(--color-primary);box-shadow:0 1px 4px rgba(0,0,0,.12)}
