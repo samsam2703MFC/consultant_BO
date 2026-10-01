@@ -1296,8 +1296,12 @@ function ep_fournisseurs_reclamations(): array
     $depuis = $mois > 0 ? $auj->modify('-' . $mois . ' months')->format('Y-m-d') : null;
     $ecartees = 0;
     $lignes = [];
+    // ?shop= : le dashboard d'un magasin ne lit que les siennes.
+    $seul = (int) ($_GET['shop'] ?? 0);
+    $photos = $seul > 0 ? rcPhotosDe($seul) : [];
     foreach ((array) ($r['shops'] ?? []) as $s) {
         $sid = (int) ($s['shop_id'] ?? 0);
+        if ($seul > 0 && $sid !== $seul) { continue; }
         foreach ((array) ($s['complaints'] ?? []) as $c) {
             if (!is_array($c)) { continue; }
             $rep = trim((string) ($c['production_response'] ?? ''));
@@ -1336,6 +1340,8 @@ function ep_fournisseurs_reclamations(): array
                 'qteAcceptee' => isset($c['accepted_qty']) && $c['accepted_qty'] !== null ? (float) $c['accepted_qty'] : null,
                 'compensation' => (string) ($c['compensation_method'] ?? ''),
                 'pj' => count((array) ($c['attachments'] ?? [])),
+                // Les photos prises depuis le dashboard, gardées par le cockpit.
+                'photos' => $photos[(int) ($c['id'] ?? 0)] ?? [],
                 'ouverte' => $ouverte,
             ];
         }
@@ -1492,6 +1498,58 @@ function ep_reclamation_refs(): array
     return $out;
 }
 
+/** La table des photos de réclamation prises depuis le dashboard. */
+function ensureReclamationPhotos(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_reclamation_photo (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        reclamation_id INT NOT NULL,
+        shop_id INT NOT NULL,
+        chemin VARCHAR(255) NOT NULL,
+        cree_le DATETIME NOT NULL,
+        KEY idx_recl (reclamation_id), KEY idx_shop (shop_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** reclamation_id → [url relative, …] pour un magasin. */
+function rcPhotosDe(int $shop): array
+{
+    $out = [];
+    try {
+        ensureReclamationPhotos();
+        foreach (Db::rows('SELECT reclamation_id, chemin FROM ceo_reclamation_photo WHERE shop_id = ? ORDER BY id', [$shop]) as $r) {
+            $out[(int) $r['reclamation_id']][] = (string) $r['chemin'];
+        }
+    } catch (PDOException $e) { /* table absente : pas de photo locale */ }
+    return $out;
+}
+
+/**
+ * Une photo de réclamation (data-URL JPEG, PNG ou WebP, 6 Mo au plus) posée
+ * sous public/uploads/reclamations, sous un nom ALÉATOIRE : le lien part dans
+ * la description envoyée au fournisseur, il doit s'ouvrir sans compte et ne
+ * pas se deviner.
+ */
+function rcPhotoEnregistrer(string $data, int $shop): array
+{
+    if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $data, $m)) { return ['code' => 422, 'error' => 'photo illisible (data-URL attendue)']; }
+    $bin = base64_decode($m[2], true);
+    if ($bin === false || strlen($bin) < 64) { return ['code' => 422, 'error' => 'photo illisible']; }
+    if (strlen($bin) > 6 * 1024 * 1024) { return ['code' => 413, 'error' => 'photo trop lourde — 6 Mo au maximum']; }
+    $info = @getimagesizefromstring($bin);
+    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime'] ?? ''] ?? null;
+    if ($ext === null) { return ['code' => 415, 'error' => 'format non accepté — JPEG, PNG ou WebP']; }
+    $chemin = 'uploads/reclamations/' . $shop . '-' . date('Ymd-His') . '-' . bin2hex(random_bytes(8)) . '.' . $ext;
+    $abs = __DIR__ . '/../public/' . $chemin;
+    $dos = dirname($abs);
+    if (!is_dir($dos) && !@mkdir($dos, 0775, true) && !is_dir($dos)) { return ['code' => 500, 'error' => 'dossier des photos impossible à créer']; }
+    if (@file_put_contents($abs, $bin) === false) { return ['code' => 500, 'error' => 'écriture de la photo impossible']; }
+    return ['chemin' => $chemin];
+}
+
 /**
  * POST /fournisseurs/reclamation — déposer une réclamation dans le panel.
  *
@@ -1510,6 +1568,30 @@ function wr_reclamation_creer(): array
     }
     if ($manque !== []) { http_response_code(422); return ['error' => 'il manque : ' . implode(', ', $manque)]; }
 
+    // LES PHOTOS (dashboard, au téléphone). La route de création du panel ne
+    // prend que du texte : les photos restent ici, et leurs liens partent dans
+    // la description — le fournisseur les ouvre sans compte. Enregistrées
+    // AVANT l'envoi pour que les liens y soient ; effacées si le panel refuse.
+    $shopId = (int) ($b['shopId'] ?? 0);
+    $poses = [];
+    $dataPhotos = array_slice(array_values(array_filter((array) ($b['photos'] ?? []), 'is_string')), 0, 4);
+    foreach ($dataPhotos as $data) {
+        $f = rcPhotoEnregistrer($data, $shopId);
+        if (isset($f['error'])) {
+            foreach ($poses as $c) { @unlink(__DIR__ . '/../public/' . $c); }
+            http_response_code($f['code']); return ['error' => $f['error']];
+        }
+        $poses[] = $f['chemin'];
+    }
+    $texte = trim((string) ($b['texte'] ?? ''));
+    $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 60);
+    if ($auteur !== '') { $texte .= ($texte !== '' ? "\n\n" : '') . '— signalé par ' . $auteur; }
+    if ($poses !== []) {
+        $base = function_exists('rapBaseUrl') ? rapBaseUrl() : '';
+        $texte .= ($texte !== '' ? "\n\n" : '') . 'Photos (' . count($poses) . ') :';
+        foreach ($poses as $c) { $texte .= "\n" . ($base !== '' ? $base . '/' : '') . $c; }
+    }
+
     $corps = [
         'id_shop' => (int) ($b['shopId'] ?? 0),
         'id_material' => (int) $b['idMatiere'],
@@ -1518,7 +1600,7 @@ function wr_reclamation_creer(): array
         'id_order' => (int) $b['idLivraison'],
         'id_unit' => (int) $b['idUnite'],
         'complaint_reason_code' => (string) $b['motif'],
-        'description' => trim((string) ($b['texte'] ?? '')),
+        'description' => $texte,
         'requested_action' => in_array($b['action'] ?? '', ['REPLACEMENT', 'REFUND', 'CREDIT_NOTE'], true) ? $b['action'] : 'REPLACEMENT',
         'complaint_type' => 'PRODUCT',
     ];
@@ -1526,16 +1608,26 @@ function wr_reclamation_creer(): array
 
     [$ok, $res] = PanelApi::post('/material-complaints', $corps);
     if (!$ok) {
+        foreach ($poses as $c) { @unlink(__DIR__ . '/../public/' . $c); }
         http_response_code(502);
         return ['error' => 'le panel a refusé la réclamation : ' . (PanelApi::$lastError ?? 'motif inconnu'),
             'detail' => is_array($res) ? ($res['errors'] ?? null) : null];
     }
     $id = null;
     foreach ([$res['inserted_id'] ?? null, $res['id'] ?? null] as $v) { if (is_numeric($v)) { $id = (int) $v; break; } }
+    if ($poses !== []) {
+        try {
+            ensureReclamationPhotos();
+            foreach ($poses as $c) {
+                Db::exec('INSERT INTO ceo_reclamation_photo (reclamation_id, shop_id, chemin, cree_le) VALUES (?,?,?,?)',
+                    [(int) ($id ?? 0), $shopId, $c, date('Y-m-d H:i:s')]);
+            }
+        } catch (PDOException $e) { /* les liens sont déjà dans la description */ }
+    }
     journalAdd('CEO', 'Réclamation', magasinNom((string) ($b['shopId'] ?? '')) ?? null,
         'Réclamation déposée' . ($id ? ' (#' . $id . ')' : '') . ' — ' . (string) ($b['nomMatiere'] ?? $b['sku'])
         . ' · ' . $corps['product_quantity'] . ' · ' . $corps['complaint_reason_code']);
-    return ['ok' => true, 'id' => $id];
+    return ['ok' => true, 'id' => $id, 'photos' => $poses];
 }
 
 /** Le nom d'un magasin, pour le journal. */

@@ -161,6 +161,7 @@ rsync -a --delete \
 # à chaque livraison — une photo de comptoir perdue sans que rien ne le dise.
 mkdir -p "$TARGET_DIR/public/uploads/plano"
 mkdir -p "$TARGET_DIR/public/uploads/visites"
+mkdir -p "$TARGET_DIR/public/uploads/reclamations"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 

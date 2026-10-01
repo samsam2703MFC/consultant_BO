@@ -678,6 +678,22 @@ prix (`panel · d’avril 2026 à septembre 2026 (mois clos)`, ou `caisse locale
 Quand la caisse locale n'a rien sur la période, la réponse porte `motif` **et** `levier3` avec
 `prixSeul: true` : l'écran garde l'étape Prix.
 
+### `/fournisseurs/reclamation` — les réclamations du dashboard au téléphone, avec photos
+
+`POST /fournisseurs/reclamation` (inchangé : `shopId, idMatiere, sku, idFournisseur, idUnite,
+quantite, idLivraison, motif, action, texte`) accepte deux champs de plus :
+
+- **`photos`** — jusqu'à 4 data-URL (JPEG, PNG, WebP ; 6 Mo chacune). La route de création du
+  panel (`POST /material-complaints`) ne prend que du texte : les photos sont posées par le
+  cockpit sous `public/uploads/reclamations/`, sous un nom aléatoire, et leurs **liens** sont
+  ajoutés à la description envoyée au fournisseur (« Photos (2) : http://…/uploads/reclamations/3-… »)
+  — il les ouvre sans compte. Enregistrées avant l'envoi, effacées si le panel refuse ;
+  rattachées ensuite à la réclamation (`ceo_reclamation_photo`). La réponse rend `photos`.
+- **`auteur`** — le prénom de qui signale ; ajouté en fin de description (« — signalé par … »).
+
+`GET /fournisseurs/reclamations?shop=3&mois=12` ne rend que les réclamations du magasin, et
+chaque ligne porte `photos` : les chemins des photos prises depuis le dashboard.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json
