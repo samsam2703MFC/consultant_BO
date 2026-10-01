@@ -133,8 +133,8 @@
 .vi .et-c{padding:0 14px 14px;border-top:.5px solid var(--color-border-tertiary)}
 .vi .et-c .mod{margin-top:8px}
 .vi .et-c .card{background:var(--color-bg)}
-/* Objectif de campagne : trois chiffres, la trajectoire, le CA ; sur l'action,
-   les semaines côte à côte. Toi en couleur, le N-1 en gris, l'objectif en trait. */
+/* Objectif de campagne : trois chiffres, la trajectoire, le CA. Toi en couleur,
+   le N-1 en gris, l'objectif en trait. */
 .vi .pc-lien{display:inline-flex;align-items:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);background:#fdf4f5;border-radius:999px;padding:3px 9px;margin-top:8px}
 .vi .pc-lien.mu{color:var(--color-text-muted);background:var(--color-background-secondary)}
 .vi .pc-g{display:block;width:100%;height:auto;margin-top:8px}
@@ -146,7 +146,6 @@
 .vi .pc-leg{display:flex;gap:12px;flex-wrap:wrap;font:500 10px var(--font-ui);color:var(--color-text-muted);margin-top:4px}
 .vi .pc-leg span{display:inline-flex;align-items:center;gap:5px}.vi .pc-leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .vi .pc-leg i.r{background:var(--color-primary)}.vi .pc-leg i.n{background:#c9c2b8}.vi .pc-leg i.o{width:14px;height:0;border-top:2px dashed var(--color-text);border-radius:0}
-.vi .pc-phrase{font-size:11.5px;line-height:1.45;margin-top:6px}.vi .pc-phrase b.ok{color:#2d7a3e}.vi .pc-phrase b.ko{color:#C0182B}
 .vi .pc-camp .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.vi .pc-camp .t b{font-size:13.5px}
 .vi .pc-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}.vi .pc-3>div{min-width:0}
 .vi .pc-3 .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
@@ -198,51 +197,10 @@
   const note1 = n => n == null ? '—' : String(Number(n).toFixed(1)).replace('.', ',');
   const nf = n => n == null ? '—' : eur(n).replace(/\s*€$/, '');
   const sg = n => (n >= 0 ? '+' : '−') + nf(Math.abs(Math.round(n)));
-  /* --- Les clients d'une campagne : les semaines côte à côte, la trajectoire ---
-   * Mêmes trois séries partout : cette année (couleur), N-1 aux mêmes jours de
-   * semaine (gris), l'objectif (trait). Étiquettes écrites, pas devinées. */
+  /* --- Les clients d'une campagne : la trajectoire cumulée ---
+   * Trois séries : cette année (couleur), N-1 aux mêmes jours de semaine
+   * (gris), l'objectif (trait). Étiquettes écrites, pas devinées. */
   const PC_W = 330;
-  /** La série jour par jour, regroupée par semaine (lundi → dimanche). */
-  const viSemaines = (serie, objJour) => {
-    const S = [];
-    serie.forEach(j => {
-      const d = new Date(j.date + 'T12:00:00'); const lundi = (d.getDay() + 6) % 7;
-      if (!S.length || lundi === 0) { S.push({ du: j.date, au: j.date, jours: 0, reel: null, n1: 0, n1Ecoule: 0, joursEcoules: 0 }); }
-      const s = S[S.length - 1]; s.au = j.date; s.jours++;
-      if (j.tickets != null) { s.reel = (s.reel || 0) + j.tickets; s.joursEcoules++; s.n1Ecoule += j.n1 || 0; }
-      s.n1 += j.n1 || 0;
-    });
-    const serre = S.length > 6; let moisVu = -1;
-    S.forEach(s => {
-      const a = new Date(s.du + 'T12:00:00'), b = new Date(s.au + 'T12:00:00');
-      if (serre) { s.lab = a.getDate() + (a.getMonth() !== moisVu ? ' ' + MOIS[a.getMonth()] : ''); moisVu = a.getMonth(); }
-      else { s.lab = a.getMonth() === b.getMonth() ? (s.jours === 1 ? String(a.getDate()) : a.getDate() + '–' + b.getDate()) : a.getDate() + '/' + (a.getMonth() + 1) + '–' + b.getDate() + '/' + (b.getMonth() + 1); }
-      s.obj = objJour ? Math.round(objJour * s.jours) : null;
-    });
-    return S;
-  };
-  const viGBarres = (S, objJour) => {
-    const H = 150, top = 22, bas = 26, gL = 4, gR = 4, W = PC_W;
-    const max = Math.max(1, ...S.map(s => Math.max(s.reel || 0, s.n1 || 0, s.obj || 0))) * 1.08;
-    const y = v => top + (H - top - bas) * (1 - v / max);
-    const n = S.length, cw = (W - gL - gR) / n, bw = Math.min(26, cw * 0.36), gap = 3, dense = n > 6;
-    let h = `<svg class="pc-g" viewBox="0 0 ${W} ${H}" role="img" aria-label="Clients par semaine, cette année face au N-1 et à l’objectif">`;
-    if (objJour) { h += `<text class="o" x="${gL}" y="9">objectif ${nf(objJour)} clients / jour</text>`; }
-    h += `<line class="axe" x1="${gL}" x2="${W - gR}" y1="${H - bas}" y2="${H - bas}"/>`;
-    S.forEach((s, i) => {
-      const cx = gL + cw * i + cw / 2, xN = cx - gap / 2 - bw, xR = cx + gap / 2;
-      if (s.obj) { const yo = y(s.obj); h += `<line class="objl" x1="${(cx - cw / 2 + 3).toFixed(1)}" x2="${(cx + cw / 2 - 3).toFixed(1)}" y1="${yo.toFixed(1)}" y2="${yo.toFixed(1)}"/>`; }
-      h += `<rect class="n1" x="${xN.toFixed(1)}" y="${y(s.n1).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H - bas - y(s.n1)).toFixed(1)}" rx="2"/>`;
-      if (!dense) { h += `<text class="n" x="${(xN + bw / 2).toFixed(1)}" y="${(y(s.n1) - 3).toFixed(1)}" text-anchor="middle">${nf(s.n1)}</text>`; }
-      if (s.reel != null) {
-        h += `<rect class="reel" x="${xR.toFixed(1)}" y="${y(s.reel).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H - bas - y(s.reel)).toFixed(1)}" rx="2"/>`;
-        h += `<text class="p" x="${(xR + bw / 2).toFixed(1)}" y="${(y(s.reel) - 3).toFixed(1)}" text-anchor="middle">${nf(s.reel)}</text>`;
-      } else { h += `<rect x="${xR.toFixed(1)}" y="${H - bas - 3}" width="${bw.toFixed(1)}" height="3" rx="1" fill="#e9e2d8"/>`; }
-      h += `<text x="${cx.toFixed(1)}" y="${H - bas + 11}" text-anchor="middle">${esc(s.lab)}</text>`;
-      if (s.reel != null) { const d = s.reel - s.n1Ecoule; h += `<text x="${cx.toFixed(1)}" y="${H - bas + 22}" text-anchor="middle" style="fill:${d >= 0 ? '#2d7a3e' : '#C0182B'};font-weight:700">${sg(d)}${s.joursEcoules < s.jours ? ' (' + s.joursEcoules + ' j)' : ''}</text>`; }
-    });
-    return h + '</svg>';
-  };
   const viGCumul = (serie, prevus, labs) => {
     const H = 150, top = 14, bas = 18, gL = 4, gR = 68, W = PC_W, jours = Math.max(2, serie.length);
     const cumR = [], cumN = []; let r = 0, n = 0, dernier = -1;
@@ -520,26 +478,11 @@
         ${c.caReel != null ? `<div class="pc-ca"><span>CA <b>${eur(c.caReel)}</b>${c.objectifCA ? ' sur ' + eur(c.objectifCA) + ' visés (' + Math.round(100 * c.caReel / c.objectifCA) + ' %)' : ''}</span><span>${c.caN1 != null ? 'N-1 ' + eur(c.caN1) : ''}</span></div>` : ''}
         ${autres}</div>`;
     }
-    /** Sur une action : la campagne qu'elle sert, les semaines côte à côte, une ligne. */
+    /** Sur une action (consultant, admin) : la campagne qu'elle sert. */
     campagneBloc(p) {
       if (!p.campagne_id) { return ''; }
       const c = this.campagne(p.shop, p.campagne_id);
-      if (!c) { return '<span class="pc-lien mu">📣 campagne</span>'; }
-      const et = this.campagneEtat(c);
-      let h = `<span class="pc-lien">📣 ${esc(c.court)} · ${esc(et[0])}</span>`;
-      if ((c.serie || []).length && (c.reel != null || c.clientsA1)) {
-        h += viGBarres(viSemaines(c.serie, c.objectifJour), c.objectifJour) + pcLeg(!!c.objectifJour);
-        const vsN1 = c.reel != null && c.n1Ecoule != null ? c.reel - c.n1Ecoule : null;
-        if (c.statut === 'close' && c.reel != null) {
-          const manque = c.clientsPrevus != null ? c.clientsPrevus - c.reel : null;
-          h += `<div class="pc-phrase"><b class="${manque != null && manque > 0 ? 'ko' : 'ok'}">${nf(c.reel)} clients</b>${c.clientsPrevus != null ? ' sur ' + nf(c.clientsPrevus) + ' visés' : ''}${vsN1 != null ? ' · ' + sg(vsN1) + ' vs N-1' : ''}${manque != null && manque > 0 ? ' · il aurait fallu <b>' + nf(Math.ceil(manque / c.nbJours)) + ' de plus par jour</b>' : (manque != null ? ' · <b class="ok">objectif atteint</b>' : '')}.</div>`;
-        } else if (c.statut === 'encours' && c.reel != null) {
-          const reste = c.nbJours - c.jourCourant;
-          const ilFaut = c.clientsPrevus != null && reste > 0 ? Math.ceil((c.clientsPrevus - c.reel) / reste) : null;
-          h += `<div class="pc-phrase">Jour ${c.jourCourant} : <b class="${vsN1 != null && vsN1 < 0 ? 'ko' : 'ok'}">${nf(c.reel)} clients</b>${c.n1Ecoule != null ? ', ' + nf(c.n1Ecoule) + ' l’an dernier aux mêmes jours' : ''}${ilFaut != null ? ' · pour tenir l’objectif : <b>' + nf(Math.max(0, ilFaut)) + ' par jour</b> sur les ' + reste + ' jours qui restent' : (c.clientsA1 ? ' · à battre : ' + nf(c.clientsA1) + ' sur la période' : '')}.</div>`;
-        }
-      }
-      return h;
+      return c ? `<span class="pc-lien">📣 ${esc(c.court)} · ${esc(this.campagneEtat(c)[0])}</span>` : '<span class="pc-lien mu">📣 campagne</span>';
     }
     dire(msg) { this.toast = msg; this.rendre(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.rendre(); }, 3200); }
 
@@ -872,17 +815,12 @@
       const D = this.D;
       if (this.role === 'franchise') {
         const b = this.boutique(this.shop) || { court: '' };
-        const ps = this.plansDe(this.shop).sort((a, c) => (a.statut === 'ferme') - (c.statut === 'ferme'));
-        const enCours = ps.filter(p => p.statut !== 'ferme').length;
-        // Le franchisé CONSULTE : l'objectif de campagne en tête, ses actions
-        // (celles qui servent une campagne montrent les clients face au N-1 et
-        // à l'objectif), ce que le consultant a vu, sa boutique. Pas de photo
-        // à reprendre d'ici.
+        // Le franchisé CONSULTE : l'objectif de campagne en tête, ce que le
+        // consultant a vu, sa boutique. Les actions (et leurs photos) restent
+        // au consultant et à l'admin.
         this.chargerCampagnes(this.shop);
-        return this.hd('Mon plan d’action', b.court + ' · ' + enCours + ' en cours · ' + (ps.length - enCours) + ' fermé' + (ps.length - enCours > 1 ? 's' : ''))
+        return this.hd('Mon plan d’action', b.court)
           + '<div class="cap">Objectif de campagne</div>' + this.campagneCarte(this.shop)
-          + '<div class="cap">Mes actions</div>'
-          + (ps.length ? ps.map(p => this.planLigne(p, '')).join('') : '<div class="card sm mu">Aucune action en cours. 🎉</div>')
           + this.vuSurPlace(this.derniereVisiteDe(this.shop), 'Ce que le consultant a vu')
           + (this.o.sansOnglets ? `<div class="btns"><button class="btn w" data-a="go" data-v="historique/${esc(this.shop)}">Historique des visites</button></div>` : '')
           + `<div class="cap">Ma boutique cette semaine</div><div class="card sm">${b.ca ? `<div class="row"><span>CA</span><span class="sp"></span><b>${eur(b.ca.ca)}</b><span class="mu">/ ${eur(b.ca.objectif)}</span></div><div class="bar"><i style="width:${Math.min(100, Math.round(b.ca.ca / Math.max(1, b.ca.objectif) * 100))}%"></i></div>` : ''}${b.google ? `<div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>${note1(b.google.note)}</b><span class="mu">${b.google.avis} avis</span></div>` : ''}${b.prochaineVisite ? `<div class="row" style="margin-top:6px"><span>Prochaine visite</span><span class="sp"></span><b>${fmtDJ(b.prochaineVisite.le)} ${b.prochaineVisite.h}</b></div>` : ''}</div>`;
