@@ -53,10 +53,10 @@ jobs:
           for f in $(find src public -name '*.php'); do
             php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP invalide"; fail=1; }
           done
-          # public/assistant : bundle Vite minifié (modules ES), déjà validé
-          # par sa compilation — `node --check` le lirait comme un script
-          # CommonJS et le refuserait à tort.
-          for f in $(find public -name '*.js' -not -path 'public/assistant/*'); do
+          # public/assistant et public/tablette : bundles Vite minifiés (modules
+          # ES), déjà validés par leur compilation — `node --check` les lirait
+          # comme des scripts CommonJS et les refuserait à tort.
+          for f in $(find public -name '*.js' -not -path 'public/assistant/*' -not -path 'public/tablette/*'); do
             node --check "$f" >/dev/null 2>&1 || { echo "::error file=$f::syntaxe JS invalide"; fail=1; }
           done
           [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
@@ -185,6 +185,28 @@ jobs:
           if ! curl -fsS "${APP_BASE}/assets/data/population_grid_2021.json" | head -c 300 | grep -q '"cellules"'; then echo "::error::assets/data/population_grid_2021.json absent ou illisible"; fail=1
           else echo "OK  la grille de population du recensement 2021 est servie"; fi
           else echo "OK  /scouting/reseau rend les magasins du réseau ($(echo "$rs" | grep -o '"caAnnuel":[0-9]' | wc -l) avec un CA réel, $(echo "$rs" | grep -o '"position":"' | wc -l) positionnés)"; fi
+
+          # La tablette des vendeuses (public/tablette/, application compilée) :
+          # la page, son service worker et son manifeste répondent ; un fichier
+          # absent rend un 404 — jamais le shell du cockpit en 200, qui casserait
+          # l'application et empoisonnerait son cache hors ligne ; et son book de
+          # données sort du catalogue du BO.
+          echo "== tablette vendeuses =="
+          if ! curl -fsS "${APP_BASE}/tablette/" | grep -q 'Book vendeuses'; then
+            echo "::error::tablette/ ne sert pas la page « Book vendeuses »"; fail=1
+          else echo "OK  tablette/ sert la page Book vendeuses"; fi
+          for f in sw.js manifest.webmanifest; do
+            rc=$(curl -s -o /dev/null -w '%{http_code}' "${APP_BASE}/tablette/${f}")
+            if [ "$rc" != "200" ]; then echo "::error::tablette/${f} répond HTTP $rc (200 attendu)"; fail=1
+            else echo "OK  tablette/${f} → 200"; fi
+          done
+          rc=$(curl -s -o /dev/null -w '%{http_code}' "${APP_BASE}/tablette/img/__absent__.png")
+          if [ "$rc" != "404" ]; then echo "::error::un fichier absent de tablette/ répond HTTP $rc (404 attendu, sinon le shell du cockpit part en 200)"; fail=1
+          else echo "OK  un fichier absent de tablette/ rend 404"; fi
+          bk=$(curl -fsS --max-time 120 "${APP_BASE}/api/cockpit/tablette/book" || echo '{}')
+          if ! echo "$bk" | grep -q '"products":\['; then
+            echo "::error::/tablette/book ne rend pas de produits : $(echo "$bk" | head -c 300)"; fail=1
+          else echo "OK  /tablette/book rend $(echo "$bk" | grep -o '"alKnown":' | wc -l) produit(s)"; fi
 
           # Les identifiants d'intervenant sont le point de jointure avec le
           # panel : `owner_id` doit s'écrire « u<membership> » pour que le

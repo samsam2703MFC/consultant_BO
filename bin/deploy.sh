@@ -162,6 +162,9 @@ rsync -a --delete \
 mkdir -p "$TARGET_DIR/public/uploads/plano"
 mkdir -p "$TARGET_DIR/public/uploads/visites"
 mkdir -p "$TARGET_DIR/public/uploads/reclamations"
+# Vignettes 640 px de la tablette des vendeuses (src/tablette.php) : sous
+# uploads/, donc protégées du rsync --delete par la même exclusion.
+mkdir -p "$TARGET_DIR/public/uploads/tablette"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 

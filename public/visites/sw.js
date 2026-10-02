@@ -18,8 +18,11 @@ const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js'
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(COQUILLE).catch(() => null)).then(() => self.skipWaiting()));
 });
+// Les caches d'un site sont partagés par toutes ses applications : on ne
+// retire que les anciennes versions des NÔTRES (« visites-… »). Effacer tout
+// sauf VERSION vidait aussi le cache hors ligne de la tablette des vendeuses.
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('visites-') && k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', e => {

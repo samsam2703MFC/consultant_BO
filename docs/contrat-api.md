@@ -577,6 +577,85 @@ les donne pas.
 l'assortiment, aujourd'hui pour les obligatoires sans place au comptoir. `assortiment` ajoute `saisonnieres` (exigées
 de saison) et `horsSaison` (obligatoires de saison non exigées à cette date).
 
+### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
+
+La tablette « Book vendeuses » (`public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,
+catégories et saisons au BO ; le reste (allergènes UE, FAQ, services, réflexes de vente, statistiques) reste embarqué.
+Code : `src/tablette.php`. Le lien d'un magasin est `tablette/?shop=<id>` (+ `&lang=nl`, `&prices=0`) ; la tablette
+garde `shop` sur l'appareil.
+
+`GET /tablette/book?shop=4[&ensemble=comptoir|tout][&rafraichir=1]` (sans `shop`, ou magasin inconnu : le réseau) :
+
+```json
+{ "schema": 1, "version": "27f01940c216303f7932a9a5042b07d5d5d4f188", "genereLe": "2026-10-02T09:12:00+02:00",
+  "shop": { "id": "4", "nom": "Halle" }, "ensemble": "comptoir",
+  "book": {
+    "categories": [ { "id": "g-viennoiserie", "n": ["Viennoiserie", "Viennoiserie"] } ],
+    "seasons": [ { "id": "s8", "img": "img/s/christmas-new-year-range.png", "m": [11, 12, 1], "n": ["Noël & Nouvel An", ""],
+                   "dates": ["1er novembre au 15 janvier", "1 november t/m 15 januari"], "tip": ["", ""] } ],
+    "products": [ { "id": "1610006", "cat": "g-viennoiserie", "season": "s8", "img": "uploads/tablette/1610006-640.jpg",
+                    "price": 1.3, "unit": ["pièce", "stuk"], "best": true, "name": ["Croissant", ""], "desc": ["", ""],
+                    "pitch": ["", ""], "ingr": ["", ""], "al": [], "tr": [], "alKnown": false, "trKnown": false, "alRaw": "",
+                    "diet": null, "keep": ["", ""], "dlc": 1, "cross": [], "crossLine": ["", ""] } ] },
+  "manque": { "total": 98, "photos": 39, "nl": 98, "allergenes": 98, "descriptions": 98 },
+  "photosRestantes": 12,
+  "sources": { "produits": "…", "photos": "…", "best": "…", "saisons": "…" } }
+```
+
+- **Textes** : paires `[FR, NL]`, `""` quand le néerlandais n'existe pas (la tablette affiche alors le français). Seuls
+  les noms de groupes ont un néerlandais (brouillon `TB_GROUPES_NL`, à faire valider) et les saisons dont le panel porte
+  un alias `nl`. `pitch`, `ingr`, `tip`, `cross`, `crossLine` sont vides : aucune source n'existe.
+- **Produits** : `ensemble=comptoir` (défaut) = les produits du planogramme standard + ceux des gammes saisonnières
+  ouvertes ou qui ouvrent sous 45 jours + les obligatoires exigées ; planogramme vide → tout le catalogue actif.
+  `tout` = tout le catalogue actif. `id` = l'id produit du panel (`pwaId`). Triés par catégorie puis par nom.
+- **Catégories** : le groupe du BO (`product_category_group`, le premier quand la catégorie en a deux), sinon la
+  catégorie ; `id` = `g-` + le nom sans accents. Dans l'ordre Viennoiserie, Boulangerie, Pâtisserie, Tartes, Quiches,
+  Traiteur, Biscuiterie, Épicerie, Boissons, Fêtes & Occasions, Bundle & Promotion, B. 2 B., puis les autres.
+- **Saisons** : celles de `/production/saisons` (actives, ni permanentes ni terminées), dans l'ordre du calendrier (date
+  de début). `id` = `s` + l'id de la gamme ; `m` = ses mois, du premier au dernier, Nouvel An passé ; `dates` écrites en
+  toutes lettres ; `img` = une illustration embarquée dans la tablette choisie par mot-clé du nom (Noël, Saint-Nicolas,
+  Épiphanie, Saint-Valentin, Pâques, Fête des mères, Glace/Estivale, Automne, Hiver), sinon `""`. `season` d'un produit
+  = sa gamme ouverte, sinon celle qui ouvre le plus tôt ; la clé est absente s'il n'en a aucune au book.
+- **`price`** : le prix réseau du catalogue (`prix` : saisi au BO, sinon moyenne des boutiques, sinon prix conseillé),
+  `null` s'il n'y en a pas. **`unit`** : le poids de la fiche (`600 g`, `1,2 kg`), sinon `pièce`/`stuk` pour un produit
+  vendu à la pièce, sinon vide. **`best`** : les 8 meilleures ventes au comptoir du magasin sur 28 jours (relevés
+  quotidiens `svP`, aucun appel au panel), parmi les produits du book ; sans magasin ou sans vente relevée, celles du
+  réseau. **`diet`** : `"vege"` si `product.is_vegetarian`, sinon `null` (aucun indicateur vegan n'existe).
+  **`keep`** : la consigne de stockage de la fiche et la réchauffe, en français ; vide si la fiche n'a que la
+  température (4 °C par défaut, pain compris). **`dlc`** : jours entiers, arrondis vers le bas à une heure près
+  (1 444 min = 1) ; moins de six heures, ou inconnue → `0` (« immédiat »).
+- **Allergènes** : `alRaw` = `product.allergene` tel quel. Mesuré le 02/10/2026 : vide sur les 115 fiches sondées (les
+  68 produits du planogramme et un par catégorie). `al` ne porte que les 14 identifiants UE (`gluten`, `crust`,
+  `oeufs`, `poisson`, `arach`, `soja`, `lait`, `noix`, `celeri`, `moutarde`, `sesame`, `sulfites`, `lupin`,
+  `mollusques`), et seulement quand TOUT le texte se lit comme une liste d'allergènes nommés (français, néerlandais ou
+  anglais) : alors `alKnown: true`. Un mot inconnu, un chiffre, une trace, une négation (« sans », « glutenvrij »), un
+  doute ou un texte vide → `al: []`, `alKnown: false`. Les traces n'existent nulle part : `tr: []`, `trKnown: false`.
+  **`alKnown: false` interdit à la tablette d'afficher le produit « sans » un allergène.**
+- **`img`** : la vignette `uploads/tablette/<ref>-640.jpg`, sinon la photo du panel `uploads/plano/panel/<ref>.<ext>`,
+  sinon `""` ; chemins relatifs à la racine publique du BO. Les vignettes (640 px sur le grand côté, JPEG 80) se font à
+  la lecture, 40 au plus et en 3 s au plus par appel ; la tablette ne déclenche jamais de téléchargement au panel.
+- **`manque`** : par produit du book — sans photo, sans nom néerlandais, allergènes non lus (`alKnown: false`), sans
+  description ; `total` = produits à qui il manque au moins une des quatre. **`photosRestantes`** : photos à lire au
+  panel (jamais lues, fichier perdu, absence notée il y a plus de sept jours) + vignettes pas encore faites — ce que
+  `POST /tablette/photos` ferait.
+- **`sources`** : une phrase par source (`produits`, `photos`, `best`, `saisons`) — ce qui a été lu, ou pourquoi c'est
+  vide. Une source muette laisse ses champs vides et le dit ici ; le book répond quand même `200`.
+- **Cache** : le book est calculé une fois pour six heures (`ceo_app_setting` `tabletteBook:<shop|reseau>:<ensemble>`) ;
+  `rafraichir=1` le recalcule. Les photos sont relues à chaque appel : une photo arrivée change `version`, que la tablette
+  compare pour se recharger. `version` = sha1 du contenu de `book`.
+- **Erreur** : catalogue illisible ou vide → `500` `{ "erreur": "book indisponible : …" }` (la tablette garde ses données
+  d'exemple) ; base injoignable → `503` du contrôleur frontal (`{ "error": … }`).
+
+`POST /tablette/photos` — `{ "shop": "4" | null, "ensemble"?: "comptoir" | "tout" }` → `{ "faites": 40, "restants": 69,
+"manquantes": 78 }`. Pour les produits du book de ce magasin : au plus 24 photos de recette lues au panel (même chaîne
+et même table `ceo_plano_std_photo` que le planogramme, mais la recette est lue par l'`id_recipe` du catalogue,
+`PanelApi::recipePhotos`, sans passer par l'assortiment d'un magasin), téléchargées sous `uploads/plano/panel/`, puis
+leurs vignettes (80 au plus, 25 s au plus). `faites` = références traitées par l'appel (photo lue, absence notée pour
+sept jours, ou vignette faite) ; `restants` = ce qu'un appel suivant ferait encore ; `manquantes` = produits toujours
+sans photo. L'écran BO rappelle tant que `restants > 0`. Sans compte panel configuré alors qu'il reste des photos à
+lire → `503` `{ "error": "compte API du panel non configuré…", "faites", "restants", "manquantes" }`. La tablette ne
+l'appelle jamais.
+
 ### `/scoring` — le scoring du trimestre : quatre postes de cinq points par magasin
 
 `GET /scoring?trimestre=2026-T3` (sans `trimestre` : le trimestre en cours) :
