@@ -593,7 +593,7 @@ garde `shop` sur l'appareil.
     "categories": [ { "id": "g-viennoiserie", "n": ["Viennoiserie", "Viennoiserie"] } ],
     "seasons": [ { "id": "s8", "img": "img/s/christmas-new-year-range.png", "m": [11, 12, 1], "n": ["Noël & Nouvel An", ""],
                    "dates": ["1er novembre au 15 janvier", "1 november t/m 15 januari"], "tip": ["", ""] } ],
-    "products": [ { "id": "1610006", "cat": "g-viennoiserie", "season": "s8", "img": "uploads/tablette/1610006-640.jpg",
+    "products": [ { "id": "1610006", "cat": "g-viennoiserie", "season": "s8", "img": "uploads/tablette/1610006-640c.jpg",
                     "price": 1.3, "unit": ["pièce", "stuk"], "best": true, "name": ["Croissant", ""], "desc": ["", ""],
                     "pitch": ["", ""], "ingr": ["", ""], "al": ["gluten", "oeufs", "lait"], "tr": [], "alKnown": true,
                     "trKnown": false, "alRaw": "", "diet": null, "keep": ["Conservation : Comptoir Frigo - 1 (2°C – 4°C).", ""],
@@ -667,8 +667,10 @@ garde `shop` sur l'appareil.
   reste relit d'avance les entrées de 18 à 24 h (heure étalée par entrée), pour que le cache n'expire jamais d'un bloc.
   Un premier calcul à froid (~220 lectures pour les 98 produits du comptoir) en demande deux. Une panne du panel ne
   casse jamais le book : les allergènes déjà connus restent « contient », tout le reste passe « à vérifier ».
-- **`img`** : la vignette `uploads/tablette/<ref>-640.jpg`, sinon la photo du panel `uploads/plano/panel/<ref>.<ext>`,
-  sinon `""` ; chemins relatifs à la racine publique du BO. Les vignettes (640 px sur le grand côté, JPEG 80) se font à
+- **`img`** : la vignette `uploads/tablette/<ref>-640c.jpg`, sinon la photo du panel `uploads/plano/panel/<ref>.<ext>`,
+  sinon `""` ; chemins relatifs à la racine publique du BO. Les vignettes sont carrées (640 × 640, moins si l'original
+  est plus petit ; JPEG 80) : une photo qui ne l'est pas est posée entière au milieu, ses bords prolongés jusqu'au
+  carré — la tablette montre les photos en carré, sans rien couper. Elles se font à
   la lecture, 40 au plus et en 3 s au plus par appel ; la tablette ne déclenche jamais de téléchargement au panel.
 - **`manque`** : par produit du book — sans photo, sans nom néerlandais, allergènes à vérifier (`alKnown: false`,
   partiels compris), sans description ; `total` = produits à qui il manque au moins une des quatre. **`photosRestantes`** : photos à lire au
