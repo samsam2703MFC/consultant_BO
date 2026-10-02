@@ -505,6 +505,10 @@ function ep_pwa_tasks(): array
         } catch (PDOException $e) { /* shops absente : nom = #id */ }
 
         $rows = Db::rows("SELECT * FROM mac_task_review WHERE review_date = ? ORDER BY id_shop, id_task", [$date]);
+        // Une seule boutique (l'application visites, au téléphone) : les appels
+        // au panel et les lignes se limitent à elle.
+        $shopF = (int) ($_GET['shop'] ?? 0);
+        if ($shopF > 0) { $rows = array_values(array_filter($rows, fn ($r) => (int) $r['id_shop'] === $shopF)); }
 
         // Noms RÉELS des tâches : l'API amont du panel est la seule à les porter
         // (la base ne garde que l'identifiant). On interroge une fois par
@@ -523,6 +527,7 @@ function ep_pwa_tasks(): array
             try {
                 $actifs = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
             } catch (PDOException $eA) { $actifs = []; }
+            if ($shopF > 0) { $actifs = [$shopF]; }
             $sids = array_values(array_unique(array_merge($actifs,
                 array_map(fn ($r) => (int) $r['id_shop'], $rows))));
             $req = [];
@@ -4405,14 +4410,15 @@ function ep_pwa_tasks_photos(): array
         $n = trim((string) ($cl['name'] ?? $cl['checklist_name'] ?? ''));
         if ($n !== '') { $nomParCl[$cid] = $n; }
     }
-    $att = [];
+    $att = []; $clDe = []; $compDe = [];
     foreach (PanelApi::getParallele($req) as $cid => $rep) {
         foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $p) {
             $tid = (int) ($p['task_id'] ?? $p['id'] ?? 0);
             if ($tid <= 0) { continue; }
             if (!isset($nomCl[$tid]) && isset($nomParCl[$cid])) { $nomCl[$tid] = $nomParCl[$cid]; }
             $a = (int) ($p['attachment_id'] ?? 0);
-            if ($a > 0 && !isset($att[$tid])) { $att[$tid] = $a; }
+            // La checklist et la completion : ce qu'une note doit citer au panel.
+            if ($a > 0 && !isset($att[$tid])) { $att[$tid] = $a; $clDe[$tid] = (int) $cid; $compDe[$tid] = (int) ($p['completion_id'] ?? 0); }
         }
     }
     foreach ($nomCl as $tid => $n) { $out['checklists'][(string) $tid] = $n; }
@@ -4428,7 +4434,8 @@ function ep_pwa_tasks_photos(): array
         }
         if ($url === null || !preg_match('#^https://#', $url)) { continue; }
         $out['photos'][] = ['taskId' => (string) $tid, 'photo' => $url,
-            'checklist' => $nomCl[$tid] ?? null, 'reperes' => $reperes[$tid] ?? [], 'avis' => $avis[$tid] ?? null];
+            'checklist' => $nomCl[$tid] ?? null, 'reperes' => $reperes[$tid] ?? [], 'avis' => $avis[$tid] ?? null,
+            'checklistId' => !empty($clDe[$tid]) ? $clDe[$tid] : null, 'completionId' => !empty($compDe[$tid]) ? $compDe[$tid] : null];
     }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;

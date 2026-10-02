@@ -383,39 +383,54 @@ function wr_pwa_task_review(): array
         return ['error' => 'l’API du panel a refusé la note : ' . (PanelApi::$lastError ?? 'erreur inconnue')];
     }
 
-    // Journal local (miroir). L'auteur du cockpit est la DIRECTION : on le
-    // consigne dans les colonnes owner_*, et on NE TOUCHE PAS à
-    // `consultant_name` quand un avis existe déjà — sinon renoter depuis le
-    // cockpit efface qui a évalué sur le terrain, et la trace du contrôle
-    // remplace celle du contrôlé.
+    // Journal local (miroir). Deux auteurs possibles : la DIRECTION (le
+    // cockpit), consignée dans les colonnes owner_* sans toucher à
+    // `consultant_name` quand un avis terrain existe déjà — sinon renoter
+    // depuis le cockpit efface qui a évalué sur le terrain ; et le CONSULTANT
+    // (l'application visites, `role: consultant`, `auteur`), qui EST l'avis
+    // terrain : son nom va dans consultant_name, les colonnes owner_* restent.
+    $consultant = (string) ($b['role'] ?? '') === 'consultant';
     $u = setting('utilisateur', []);
-    $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+    $auteur = $consultant && trim((string) ($b['auteur'] ?? '')) !== ''
+        ? mb_substr(trim((string) $b['auteur']), 0, 190)
+        : (is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO');
     $now = date('Y-m-d H:i:s');
     try {
         $exist = Db::row('SELECT consultant_name FROM mac_task_review WHERE id_shop = ? AND id_task = ? AND review_date = ?',
             [$shopId, $taskId, $date]);
         if ($exist !== null) {
-            Db::exec(
-                'UPDATE mac_task_review SET rating = ?, is_accepted = ?, comment = ?,'
-                . ' owner_validated_at = ?, owner_name = ?, updated_at = ?'
-                . ' WHERE id_shop = ? AND id_task = ? AND review_date = ?',
-                [$note, $accepte ? 1 : 0, $payload['comment'], $now, $auteur, $now, $shopId, $taskId, $date]
-            );
+            if ($consultant) {
+                Db::exec(
+                    'UPDATE mac_task_review SET rating = ?, is_accepted = ?, comment = ?, consultant_name = ?, updated_at = ?'
+                    . ' WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+                    [$note, $accepte ? 1 : 0, $payload['comment'], $auteur, $now, $shopId, $taskId, $date]
+                );
+            } else {
+                Db::exec(
+                    'UPDATE mac_task_review SET rating = ?, is_accepted = ?, comment = ?,'
+                    . ' owner_validated_at = ?, owner_name = ?, updated_at = ?'
+                    . ' WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+                    [$note, $accepte ? 1 : 0, $payload['comment'], $now, $auteur, $now, $shopId, $taskId, $date]
+                );
+            }
         } else {
-            // Aucun avis terrain : la direction est le premier évaluateur.
+            // Aucun avis : le premier évaluateur — la direction contresigne
+            // d'office, le consultant pose un avis terrain.
             Db::exec(
                 'INSERT INTO mac_task_review (id_shop, id_checklist, id_task, review_date, completion_id,'
                 . ' id_consultant, consultant_name, rating, is_accepted, comment,'
                 . ' owner_validated_at, owner_name, created_at, updated_at)'
                 . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 [$shopId, $payload['checklist_id'] ?? null, $taskId, $date, $payload['completion_id'] ?? null,
-                 0, $auteur, $note, $accepte ? 1 : 0, $payload['comment'], $now, $auteur, $now, $now]
+                 0, $auteur, $note, $accepte ? 1 : 0, $payload['comment'],
+                 $consultant ? null : $now, $consultant ? null : $auteur, $now, $now]
             );
         }
     } catch (PDOException $e) { /* miroir best-effort : l'API a déjà la note */ }
 
-    journalAdd('CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
-        . $note . '/5 — ' . ($accepte ? 'conforme' : 'non conforme') . ($comment !== '' ? ' : ' . $comment : ''));
+    journalAdd($consultant ? $auteur : 'CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
+        . $note . '/5 — ' . ($accepte ? 'conforme' : 'non conforme') . ($comment !== '' ? ' : ' . $comment : '')
+        . ($consultant ? ' (visite)' : ''));
     return ['ok' => true, 'note' => $note, 'accepte' => $accepte];
 }
 

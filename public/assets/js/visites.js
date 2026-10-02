@@ -154,6 +154,32 @@
 .vi .pc-3 .s{font-size:9.5px;color:var(--color-text-muted);line-height:1.3}
 .vi .pc-ca{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:10px;padding-top:8px;border-top:.5px dashed var(--color-border-tertiary)}
 .vi .pc-ca b{color:var(--color-text)}.vi .pc-ca.s{border-top:none;padding-top:4px}.vi .pc-ca .w{color:#B26A00;font-weight:600;white-space:nowrap}
+/* Les contrôles en photo, dans le contrôle guidé : les cartes viennent de
+   controles-photo.css (partagé avec le dashboard et le cockpit). Ici la bande
+   déborde jusqu'aux bords de la carte, la note rapide vit sous la photo, la
+   loupe prend tout l'écran. */
+.vi .cq-res{font-size:11px;color:var(--color-text-muted);line-height:1.35;margin:10px 0 8px}
+.vi .cq-res em{font-style:normal;color:#2F5D8A;font-weight:600}
+.vi .cq-fs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px 2px}
+.vi .cq-fs::-webkit-scrollbar{display:none}.vi .cq-fs button{flex:0 0 auto}
+.vi .cq-piste{gap:10px;margin:10px -14px 0;padding:0 14px;scroll-padding:0 14px}
+.vi .cq-piste .db-cqc{flex:0 0 158px;min-width:0}
+.vi .db-cqc .n{white-space:normal;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;margin-top:6px}
+.vi .db-cqc .m{font-size:10px}.vi .db-cqc .c{font-size:10px;white-space:normal;line-height:1.25}
+.vi .cq-ouvrir{display:flex;flex-direction:column;width:100%;border:none;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.vi .cq-acts{display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:7px}
+.vi .cq-rapide{min-width:34px;height:30px;border-radius:999px;border:1.5px solid var(--c,#2d7a3e);background:transparent;color:var(--c,#2d7a3e);font:700 13px var(--font-ui);padding:0 10px;cursor:pointer}
+.vi .cq-rapide.lg{flex:1;height:40px;font-size:13px}
+.vi .cq-pied{font-size:10.5px;color:var(--color-text-muted);margin:8px 0 2px}
+.vi .cq-l{position:fixed;inset:0;background:#0d0b09;z-index:21;display:flex;flex-direction:column;color:#fff}
+.vi .cq-l .hd{display:flex;align-items:center;gap:10px;padding:12px 14px;font:600 13px var(--font-ui)}
+.vi .cq-l .hd .x{width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:16px}
+.vi .cq-l .ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 12px}
+.vi .cq-l .ph img{max-width:100%;max-height:100%;border-radius:10px;object-fit:contain}
+.vi .cq-l .fi{flex:0 0 auto;max-height:52dvh;overflow-y:auto;margin:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:12px 14px}
+.vi .cq-l .fi .t{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;margin:6px 0 2px}
+.vi .cq-l .fi .q{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
+.vi .cq-l .fi .cq-acts{margin-top:10px;padding-top:0}.vi .cq-l .fi .act{margin-top:10px}.vi .cq-l .fi .act .btn{flex:1}
 `;
 
   /* --- IndexedDB : une réserve de lectures, une file d'écritures --------- */
@@ -226,6 +252,10 @@
     h += `<text x="${gL}" y="${H - 4}">${esc(labs[0])}</text><text x="${(W - gR).toFixed(1)}" y="${H - 4}" text-anchor="end">${esc(labs[1])}</text>`;
     return h + '</svg>';
   };
+  // Les contrôles en photo : le nom court d'une tâche, sa checklist sans son code.
+  const cqNom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+  const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
+  const hm = v => v ? String(v).slice(11, 16) : '';
   const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
@@ -263,7 +293,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
       this.v = o.vue || (this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
       this.toast = null; this.voir = null; this.ouvert = {};
@@ -333,7 +363,7 @@
           let j = null; try { j = await r.json(); } catch (e) { j = {}; }
           if (!r.ok && r.status >= 500) { break; }
           this.file.shift(); await Idb.del('file', op.id);
-          if (!r.ok) { this.dire('Refusé par le serveur : ' + ((j && j.error) || r.status)); }
+          if (!r.ok) { this.dire('Refusé par le serveur : ' + ((j && j.error) || r.status)); if (op.apres === 'controle') { this.cqAnnule(op.body); } }
           else if (op.apres) { this.apres(op, j); }
         }
       } finally { this.busy = false; }
@@ -346,6 +376,7 @@
       if (op.apres === 'plans' && j.plans) { j.plans.forEach(p => { const i = D.plans.findIndex(x => x.client_id === p.client_id || x.id === p.id); if (i >= 0) { D.plans[i] = p; } else { D.plans.push(p); } }); }
       if (op.apres === 'plan' && j.plan) { const i = D.plans.findIndex(x => x.id === j.plan.id || (x.client_id && x.client_id === j.plan.client_id)); if (i >= 0) { D.plans[i] = j.plan; } }
       if (op.apres === 'photo' && j.photo) { const i = D.photos.findIndex(x => x.client_id === j.photo.client_id); if (i >= 0) { D.photos[i] = j.photo; } else { D.photos.unshift(j.photo); } }
+      if (op.apres === 'controle') { const t = this.cqTache(op.body); if (t) { t.attente = false; delete t._avant; } this.dire('Note ' + (op.body || {}).note + '/5 enregistrée.'); }
     }
     /** Les écritures en file, rejouées sur la lecture fraîche : l'écran ne recule pas. */
     appliquerFile() {
@@ -401,7 +432,7 @@
       if (v === 'tb' || v === 'historique') { this.chargerConformite(p); return; }
       if (v === 'checklist' || v === 'review' || v === 'fiche' || v === 'controle') {
         const vi = this.visite(p);
-        if (vi) { this.chargerConformite(vi.shop); if (v === 'review') { this.chargerCampagnes(vi.shop); } }
+        if (vi) { this.chargerConformite(vi.shop); if (v === 'review') { this.chargerCampagnes(vi.shop); } if (v === 'controle') { this.chargerControles(vi.shop); } }
       }
     }
     deHash(init) {
@@ -484,6 +515,138 @@
       const c = this.campagne(p.shop, p.campagne_id);
       return c ? `<span class="pc-lien">📣 ${esc(c.court)} · ${esc(this.campagneEtat(c)[0])}</span>` : '<span class="pc-lien mu">📣 campagne</span>';
     }
+    /* --- Les contrôles en photo : ce que l'équipe a rendu aujourd'hui -------------
+     * Deux lectures par boutique (les tâches du jour, les photos signées) fondues
+     * en une liste ; relues passé quinze minutes, les URL expirant à vingt. La
+     * note rapide part dans la file, comme toute écriture : elle survit au
+     * hors-ligne et se rejoue au retour du réseau. */
+    async chargerControles(shop, force) {
+      if (!shop) { return; }
+      const T = this.T[shop];
+      if (T && (T.enCours || (!force && Date.now() - (T.lu || 0) < 15 * 60 * 1000))) { return; }
+      this.T[shop] = Object.assign({}, T, { enCours: true });
+      const d = auj();
+      let pt = null, ph = null;
+      try {
+        [pt, ph] = await Promise.all([
+          this.lire('/pwa/tasks?date=' + d + '&shop=' + encodeURIComponent(shop), 'ctl:' + shop + ':' + d),
+          this.lire('/pwa/tasks/photos?shop=' + encodeURIComponent(shop) + '&date=' + d, 'ctlph:' + shop + ':' + d)]);
+      } catch (e) { this.T[shop] = Object.assign({}, T, { enCours: false, erreur: true, lu: Date.now() - 14 * 60 * 1000 }); this.rendre(); return; }
+      const sh = ((pt && pt.shops) || []).find(x => String(x.shopId) === String(shop));
+      const photos = {}; ((ph && ph.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { photos[String(p.taskId)] = p; } });
+      const taches = ((sh && sh.taches) || []).filter(t => !(t.maitrise && t.maitrise.masquee)).map(t => {
+        const p = photos[String(t.taskId)] || null;
+        return Object.assign({}, t, { photoUrl: p ? p.photo : null, reperes: p && Array.isArray(p.reperes) ? p.reperes : [], checklistId: p ? p.checklistId : null, completionId: p ? p.completionId : null });
+      });
+      this.T[shop] = { lu: Date.now(), date: d, taches, seuil: (pt && pt.seuil) || 4, niveaux: (pt && pt.repartition) || [] };
+      // Les notes encore en file (hors ligne) comptent déjà.
+      this.file.filter(op => op.apres === 'controle' && String((op.body || {}).shopId) === String(shop)).forEach(op => this.cqApplique(op.body, true));
+      this.rendre();
+    }
+    /** L'état d'une tâche, cinq mots : écart, à contrôler, conforme, non rendue, sans photo. */
+    cqEtat(t, seuil) {
+      if (t.note != null) {
+        if (t.note >= seuil && t.accepte !== false) { return { c: 'ok', bd: t.note + '/5' }; }
+        const lv = this.cqNiveau(t.note); return { c: 'nc', bd: t.note + '/5 · ' + (lv && lv.nom ? String(lv.nom).split(/[—–-]/).pop().trim().toLowerCase() : 'écart') };
+      }
+      if (t.statut === 'aControler' || t.statut === 'aValider') { return { c: 'ctl', bd: 'à contrôler' }; }
+      if (t.statut === 'sansPhoto') { return { c: 'mu', bd: 'sans photo' }; }
+      return { c: 'ko', bd: 'non rendue' };
+    }
+    cqNiveau(n) { const T = this.T[this._cqShop] || {}; return (T.niveaux || []).find(x => +x.n === +n) || null; }
+    /** La liste triée d'une boutique : les écarts d'abord, les non rendues en fin de piste. */
+    cqListe(shop) {
+      const T = this.T[shop]; if (!T || !T.taches) { return null; }
+      this._cqShop = shop;
+      const RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
+      const L = T.taches.map(t => Object.assign({ e: this.cqEtat(t, T.seuil) }, t))
+        .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || cqNom(a).localeCompare(cqNom(b)));
+      const nb = c => L.filter(t => t.e.c === c).length;
+      return { L, nb, total: L.length, avec: L.filter(t => t.photoUrl).length, aNoter: nb('ctl'), seuil: T.seuil,
+        rapides: (T.niveaux || []).filter(x => +x.n >= T.seuil).sort((a, b) => a.n - b.n) };
+    }
+    /** Les cartes visibles, selon le filtre de la boutique. */
+    cqVisibles(shop, cq) {
+      const sel0 = this.cqF[shop] || 'tout'; const sel = sel0 !== 'tout' && !cq.nb(sel0) ? 'tout' : sel0;
+      return { sel, F: sel === 'tout' ? cq.L : cq.L.filter(t => t.e.c === sel) };
+    }
+    controlesHtml(shop) {
+      this.chargerControles(shop);
+      const T = this.T[shop]; const cq = this.cqListe(shop);
+      if (!cq) { return `<div class="card sm mu">${T && T.erreur ? 'Contrôles du jour indisponibles — hors ligne ?' : 'Lecture des contrôles du jour…'}</div>`; }
+      const { sel, F } = this.cqVisibles(shop, cq);
+      const avec = cq.L.filter(t => t.photoUrl);
+      const heures = avec.map(t => hm(t.faitLe)).filter(Boolean).sort();
+      const qui = [...new Set(avec.map(t => t.faitePar).filter(Boolean))].join(', ');
+      const notees = cq.L.filter(t => t.note != null).length;
+      const res = avec.length ? `<em>${avec.length} photo${avec.length > 1 ? 's' : ''}</em> rendue${avec.length > 1 ? 's' : ''}${heures.length ? ' ' + (heures[0] === heures[heures.length - 1] ? 'à ' + heures[0] : 'de ' + heures[0] + ' à ' + heures[heures.length - 1]) : ''}${qui ? ' par ' + esc(qui) : ''} · ${notees ? notees + ' notée' + (notees > 1 ? 's' : '') : 'pas encore notées'}` : 'aucune photo rendue pour l’instant';
+      const puces = [['tout', 'Tout', null, cq.total], ['nc', 'Écarts', '#D97706', cq.nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', cq.nb('ctl')], ['ok', 'Conformes', '#2d7a3e', cq.nb('ok')], ['ko', 'Non rendues', '#C0182B', cq.nb('ko')], ['mu', 'Sans photo', '#a59d93', cq.nb('mu')]]
+        .filter(f => f[3]).map(f => `<button type="button" class="${sel === f[0] ? 'on' : ''}" data-a="cq-f" data-v="${esc(shop)}|${f[0]}">${f[2] ? `<i style="background:${f[2]}"></i>` : ''}${f[1]}<b>${f[3]}</b></button>`).join('');
+      return `<div class="cq-res">${res}${cq.nb('ko') ? ' · ' + cq.nb('ko') + ' non rendue' + (cq.nb('ko') > 1 ? 's' : '') : ''}</div><div class="db-cqf cq-fs">${puces}</div>`
+        + (F.length ? `<div class="db-cqpiste cq-piste">${F.map(t => this.cqCarte(shop, t, cq)).join('')}</div><div class="cq-pied">${F.length} contrôle${F.length > 1 ? 's' : ''}${sel === 'tout' ? ' · les écarts d’abord' : ''} · 4 et 5 notent sans commentaire · toucher une photo l’ouvre en grand</div>`
+          : '<div class="sm mu" style="margin-top:8px">Aucune tâche dans ce filtre.</div>');
+    }
+    cqRepere(r, t) { const lv = this.cqNiveau(r.niveau || t.note || 3); return `<i style="left:${(r.x * 100).toFixed(1)}%;top:${(r.y * 100).toFixed(1)}%;width:${(r.l * 100).toFixed(1)}%;height:${(r.h * 100).toFixed(1)}%;border-color:${esc((lv && lv.couleur) || '#D97706')}"></i>`; }
+    cqConstat(t) {
+      const quand = t.valideeLe ? ' · noté ' + (/\d{2}:\d{2}/.test(String(t.valideeLe)) ? hm(t.valideeLe) : t.valideeLe) : '';
+      if (t.e.c === 'nc') { return ((t.reperes || []).map(r => r.txt).filter(Boolean).join(', ') || t.comment || 'écart relevé') + quand; }
+      if (t.e.c === 'ok') { return 'conforme' + quand; }
+      if (t.e.c === 'ctl') { return 'photo déposée, pas encore notée'; }
+      if (t.e.c === 'mu') { return 'rendue sans photo'; }
+      return cqCl(t) || 'non rendue';
+    }
+    cqRapides(shop, t, cq, lg) {
+      if (t.attente) { return '<div class="cq-acts"><span class="xs mu">envoi de la note…</span></div>'; }
+      if (t.e.c !== 'ctl' || !cq.rapides.length) { return ''; }
+      return `<div class="cq-acts">${cq.rapides.map(n => `<button type="button" class="cq-rapide${lg ? ' lg' : ''}" style="--c:${esc(n.couleur || '#2d7a3e')}" data-a="cq-note" data-v="${esc(shop)}|${esc(t.taskId)}|${n.n}" title="${esc(n.nom || '')} — note rapide, sans commentaire">${n.n}${lg ? ' · ' + esc(n.nom || '') : ''}</button>`).join('')}</div>`;
+    }
+    cqCarte(shop, t, cq) {
+      const ph = !t.photoUrl ? `<span class="db-cqph vide ${t.e.c}"><b>${t.e.c === 'ko' ? '✗' : '—'}</b>${t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible')}</span>`
+        : `<span class="db-cqph"><img src="${esc(t.photoUrl)}" alt="" loading="lazy">${(t.reperes || []).map(r => this.cqRepere(r, t)).join('')}${hm(t.faitLe) ? `<em class="h">${hm(t.faitLe)}</em>` : ''}<em class="cqbd ${t.e.c}">${esc(t.e.bd)}</em></span>`;
+      const meta = t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hm(t.faitLe) : hm(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : ''));
+      return `<div class="db-cqc"><button type="button" class="cq-ouvrir" data-a="cq-voir" data-v="${esc(shop)}|${esc(t.taskId)}">${ph}<span class="n">${esc(cqNom(t))}</span><span class="m">${esc(meta)}</span><span class="c ${t.e.c}">${esc(this.cqConstat(t))}</span></button>${this.cqRapides(shop, t, cq, false)}</div>`;
+    }
+    /** La photo en grand : sa fiche, la note rapide, ‹ › dans l'ordre de la bande. */
+    cqLoupe() {
+      const V = this.cqV; const cq = V ? this.cqListe(V.shop) : null;
+      if (!cq) { this.cqV = null; return ''; }
+      const { F } = this.cqVisibles(V.shop, cq);
+      const i = F.findIndex(t => String(t.taskId) === String(V.taskId));
+      if (i < 0) { this.cqV = null; return ''; }
+      const t = F[i];
+      const rendue = t.e.c === 'ko' ? 'pas encore rendue' : (hm(t.faitLe) ? 'à ' + hm(t.faitLe) + (t.faitePar ? ' par ' + t.faitePar : '') : 'rendue');
+      const notee = t.note != null ? t.note + '/5' + (t.valideeLe ? ' · ' + (/\d{2}:\d{2}/.test(String(t.valideeLe)) ? hm(t.valideeLe) : t.valideeLe) : '') + (t.valideePar ? ' par ' + t.valideePar : '') : 'pas encore notée';
+      return `<div class="cq-l" role="dialog" aria-label="${esc(cqNom(t))}"><div class="hd"><span>${i + 1} / ${F.length}</span><span class="sp"></span><button type="button" class="x" data-a="cq-fermer" aria-label="fermer">✕</button></div>
+        <div class="ph">${t.photoUrl ? `<img src="${esc(t.photoUrl)}" alt="">` : `<span class="xs" style="color:#bbb">${t.e.c === 'ko' ? 'pas encore rendue' : 'pas de photo'}</span>`}</div>
+        <div class="fi"><em class="cqbd ${t.e.c}">${esc(t.e.bd)}</em><b class="t">${esc(cqNom(t))}</b>${cqCl(t) ? `<div class="q">${esc(cqCl(t))}</div>` : ''}
+          <div class="q" style="margin-top:6px">Rendue ${esc(rendue)}<br>Notée ${esc(notee)}${t.e.c === 'nc' ? '<br>' + esc(this.cqConstat(t)) : ''}</div>
+          ${this.cqRapides(V.shop, t, cq, true)}
+          <div class="act"><button type="button" class="btn" data-a="cq-nav" data-v="-1"${i ? '' : ' disabled'}>‹ Précédente</button><button type="button" class="btn p" data-a="cq-nav" data-v="1"${i < F.length - 1 ? '' : ' disabled'}>Suivante ›</button></div></div></div>`;
+    }
+    cqAvance(dir) {
+      const V = this.cqV; const cq = V ? this.cqListe(V.shop) : null; if (!cq) { return; }
+      const { F } = this.cqVisibles(V.shop, cq);
+      const i = F.findIndex(t => String(t.taskId) === String(V.taskId)); const j = i + dir;
+      if (j < 0 || j >= F.length) { return; }
+      this.cqV = { shop: V.shop, taskId: F[j].taskId }; this.rendre();
+    }
+    cqTache(b) { const T = b && this.T[String(b.shopId)]; return T && T.taches ? T.taches.find(x => String(x.taskId) === String(b.taskId)) || null : null; }
+    /** La note posée d'avance sur la carte ; `_avant` permet de la reprendre si le serveur refuse. */
+    cqApplique(b, attente) {
+      const t = this.cqTache(b); if (!t) { return; }
+      const T = this.T[String(b.shopId)];
+      if (!t._avant) { t._avant = { note: t.note, accepte: t.accepte, statut: t.statut, valideeLe: t.valideeLe, valideePar: t.valideePar }; }
+      Object.assign(t, { note: b.note, accepte: b.note >= (T.seuil || 4), statut: 'notee', valideeLe: 'à l’instant', valideePar: b.auteur || this.qui(), attente: !!attente });
+    }
+    cqAnnule(b) { const t = this.cqTache(b); if (!t) { return; } if (t._avant) { Object.assign(t, t._avant); delete t._avant; } t.attente = false; this.rendre(); }
+    /** La note rapide : 4 ou 5 en un clic, sans commentaire ni repère, dans la file. */
+    cqNoter(shop, taskId, n) {
+      const T = this.T[shop]; const t = T && T.taches ? T.taches.find(x => String(x.taskId) === String(taskId)) : null;
+      if (!t || t.attente || !(n >= (T.seuil || 4))) { return; }
+      const body = { shopId: shop, taskId, date: T.date, note: n, comment: '', checklistId: t.checklistId || null, completionId: t.completionId || null, role: 'consultant', auteur: this.qui() };
+      this.cqApplique(body, true);
+      this.ecrire({ method: 'POST', path: '/pwa/tasks/review', body, apres: 'controle' });
+    }
     dire(msg) { this.toast = msg; this.rendre(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.rendre(); }, 3200); }
 
     /* --- rendu -------------------------------------------------------------- */
@@ -495,11 +658,15 @@
       const actif = document.activeElement; const focus = actif && this.host.contains(actif) && actif.dataset && actif.dataset.f ? { f: actif.dataset.f, pos: actif.selectionStart } : null;
       const V = this['v_' + this.v] ? this['v_' + this.v]() : this.v_agenda();
       const onglets = this.onglets();
+      // Les bandes de photos gardent leur défilement d'un rendu à l'autre.
+      const pistes = [...vi.querySelectorAll('.db-cqpiste')].map(e => e.scrollLeft);
       vi.innerHTML = (this.o.mobile || this.o.sansOnglets ? '' : `<div class="onglets">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}">${t[2]}</button>`).join('')}</div>`)
         + `<div class="sc">${this.etat()}${V}</div>`
         + (this.o.mobile && !this.o.sansOnglets ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
-        + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '');
+        + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
+        + (this.cqV ? this.cqLoupe() : '');
+      vi.querySelectorAll('.db-cqpiste').forEach((e, i) => { if (pistes[i]) { e.scrollLeft = pistes[i]; } });
       if (focus) { const el = this.host.querySelector(`[data-f="${focus.f.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); try { if (focus.pos != null && el.setSelectionRange) { el.setSelectionRange(focus.pos, focus.pos); } } catch (e) { /* select */ } } }
     }
     onglets() {
@@ -777,6 +944,11 @@
       const B = this.B[v.shop];
       const etapes = [];
       etapes.push({ titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
+      // Ce que l'équipe a rendu aujourd'hui : la bande du dashboard, la note
+      // rapide sous chaque photo. Faite quand plus rien n'attend une note.
+      const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
+      etapes.push({ titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
+        fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
       etapes.push({ titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
       (this.D.checklist || []).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
@@ -940,6 +1112,11 @@
       if (a === 'go') { const [vue, p] = v.split('/'); this.go(vue, p); return; }
       if (a === 'fermer-voir') { this.voir = null; this.rendre(); return; }
       if (a === 'voir') { const p = (this.D.photos || []).find(x => String(x.id) === v || x.client_id === v); if (p) { this.voir = { src: this.photoSrc(p), txt: (this.boutique(p.shop) || {}).court + ' · ' + fmtDJ(p.prise_a) + ' ' + fmtH(p.prise_a) + ' · ' + p.genre.replace('jour_', '') + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
+      if (a === 'cq-f') { this.cqF[parts[0]] = parts[1]; this.rendre(); return; }
+      if (a === 'cq-voir') { this.cqV = { shop: parts[0], taskId: parts[1] }; this.rendre(); return; }
+      if (a === 'cq-fermer') { this.cqV = null; this.rendre(); return; }
+      if (a === 'cq-nav') { this.cqAvance(Number(v)); return; }
+      if (a === 'cq-note') { this.cqNoter(parts[0], parts[1], Number(parts[2])); return; }
       if (a === 'voir-serie') { const ps = this.photosJour(parts[0]).filter(x => x.genre === parts[1]); if (ps.length) { this.voir = { src: this.photoSrc(ps[0]), txt: ps.length + ' photo(s) · la plus récente ' + fmtDJ(ps[0].prise_a) }; this.rendre(); } return; }
       if (a === 'sem') { this.sem = v === '0' ? 0 : this.sem + Number(v); this.rendre(); return; }
       if (a === 'drop') { this.ouvert[v] = !this.ouvert[v]; this.rendre(); return; }

@@ -12,8 +12,8 @@
  */
 'use strict';
 
-const VERSION = 'visites-v1';
-const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js', '../assets/ds/global.css', '../assets/img/logo.png'];
+const VERSION = 'visites-v2';
+const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js', '../assets/ds/global.css', '../assets/css/controles-photo.css', '../assets/img/logo.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(COQUILLE).catch(() => null)).then(() => self.skipWaiting()));
