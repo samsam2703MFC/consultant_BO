@@ -509,3 +509,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-02T10:01:51Z controle guide : contrôles en photo et note rapide au telephone
 2026-10-02T19:05:38Z tablette vendeuses : menu en bas, objectifs, remarques, allergenes du panel, les bases
 2026-10-02T19:43:51Z tablette vendeuses : faq, familles de produits sous produits
+2026-10-02T19:58:36Z tablette vendeuses : photos carrees et pictogrammes des allergenes
