@@ -502,3 +502,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-01T13:32:15Z plan d action du franchise : la campagne seulement
 2026-10-01T13:42:52Z dashboard telephone : onglets Campagne et Plan d action
 2026-10-01T13:51:54Z onglet campagne : sans la boutique de la semaine
+2026-10-02T05:35:42Z controle des taches : photos en carrousel, CSS partage
