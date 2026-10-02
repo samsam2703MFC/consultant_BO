@@ -3216,7 +3216,15 @@ function tplCtrlPhotos(s, c, x, card){
     }
     return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.e}">${esc(t.badge)}</em></span>`;
   };
-  const carte = t => `<button type="button" ${x.A(t.open)} class="db-cqc" title="Voir la photo et noter">${photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}${t.bouton ? `<span class="cq-noter${t.e === 'ctl' ? '' : ' re'}">${esc(t.bouton)}</span>` : ''}</button>`;
+  // La carte : la photo et son texte ouvrent le volet ; dessous, la note
+  // rapide (4, 5 — sans commentaire) et « Noter… » pour le volet.
+  const actes = t => {
+    if (t.envoi) { return '<div class="cq-acts"><span class="cq-envoi">envoi de la note…</span></div>'; }
+    const rapides = (t.rapides || []).map(r => `<button type="button" ${x.A(r.pick)} class="cq-rapide" style="--c:${esc(r.coul)}" title="${esc(r.nom)} — note rapide, sans commentaire">${r.n}</button>`).join('');
+    if (!rapides && !t.bouton) { return ''; }
+    return `<div class="cq-acts">${rapides}${t.bouton ? `<button type="button" ${x.A(t.open)} class="cq-noter${t.e === 'ctl' ? '' : ' re'}" title="Voir la photo en grand, poser des repères, commenter">${esc(t.bouton)}</button>` : ''}</div>`;
+  };
+  const carte = t => `<div class="db-cqc"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
   return `
           <div style="${card};overflow:hidden">
             <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">

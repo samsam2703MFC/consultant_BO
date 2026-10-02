@@ -12443,6 +12443,32 @@ class App {
     return c ? c.val : null;
   }
   /**
+   * La note rapide, sous la photo : 4 ou 5 en un clic, sans commentaire ni
+   * repère — au-dessus du seuil, le barème n'en exige pas. Le même chemin
+   * que le volet : le détail de la tâche pour les identifiants du panel
+   * (checklist, completion), puis la note ; la carte prend la note tout de
+   * suite, la journée se recharge derrière.
+   */
+  ctrlNoteRapide(shopId, taskId, date, nom, note){
+    const k = shopId + '|' + taskId;
+    const marque = on => this.setState(s => ({ ctrlRapide: Object.assign({}, s.ctrlRapide, { [k]: on }) }));
+    if ((this.state.ctrlRapide || {})[k]) { return; }
+    marque(true);
+    readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
+      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: '',
+        checklistId: (d && d.checklistId) || null, completionId: (d && d.completionId) || null }))
+      .then(r => {
+        if (r && r.error) { throw new Error(r.error); }
+        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: '' });
+        marque(false);
+        this.notify('Note ' + note + '/5 enregistrée — ' + nom);
+        readOne('/pwa/tasks?date=' + encodeURIComponent(date))
+          .then(pt => { if (pt) { this.D.pwaTasks = pt; this.setState({}); } })
+          .catch(() => {});
+      })
+      .catch(e => { marque(false); this.notify('Échec de l’envoi de la note' + (e && e.message ? ' — ' + e.message : '.')); });
+  }
+  /**
    * Les cartes d'une boutique : l'état de chaque tâche, sa photo et ses
    * repères, dans l'ordre du dashboard — les écarts d'abord, les non rendues
    * en fin de piste. Les tâches maîtrisées restent sous leur bandeau.
@@ -12482,10 +12508,14 @@ class App {
       : avec.length ? avec.length + ' photo' + (avec.length > 1 ? 's' : '') + ' rendue' + (avec.length > 1 ? 's' : '') + plage + (qui ? ' par ' + qui : '')
       : (P.erreur ? 'photos indisponibles' : 'aucune photo rendue'))
       + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '');
+    // La note rapide : les niveaux au-dessus du seuil, ceux qui n'exigent ni
+    // commentaire ni repère — 4 et 5 dans le barème partagé.
+    const rapides = this.zNiveaux().filter(lv => lv.n >= seuil).sort((a, b) => a.n - b.n);
     const cartes = F.map(t => {
       const reps = t.p && Array.isArray(t.p.reperes) ? t.p.reperes : [];
       const rp = reps.map(r => ({ st: 'left:' + (r.x * 100).toFixed(1) + '%;top:' + (r.y * 100).toFixed(1) + '%;width:' + (r.l * 100).toFixed(1) + '%;height:' + (r.h * 100).toFixed(1) + '%;border-color:' + ((this.zNiveau(r.niveau || t.note || 3) || {}).couleur || '#D97706') }));
-      const note = t.valideeLe ? ' · noté ' + hh(t.valideeLe) : '';
+      // « à l’instant » quand la ligne vient d'être notée ici, l'heure sinon.
+      const note = t.valideeLe ? ' · noté ' + (/\d{2}:\d{2}/.test(String(t.valideeLe)) ? hh(t.valideeLe) : t.valideeLe) : '';
       const constat = t.e.c === 'nc' ? (reps.map(r => r.txt).filter(Boolean).join(', ') || t.comment || 'écart relevé') + note
         : t.e.c === 'ok' ? 'conforme' + note
         : t.e.c === 'ctl' ? 'photo déposée, pas encore notée'
@@ -12495,7 +12525,10 @@ class App {
         constat, photo: t.p ? t.p.photo : null, reperes: rp,
         attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
         videTxt: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible'),
-        bouton: t.e.c === 'ctl' ? 'Noter' : (t.note != null ? 'Renoter' : ''),
+        bouton: t.e.c === 'ctl' ? 'Noter…' : (t.note != null ? 'Renoter' : ''),
+        envoi: !!((S.ctrlRapide || {})[s.shopId + '|' + t.taskId]),
+        rapides: t.e.c === 'ctl' ? rapides.map(lv => ({ n: lv.n, nom: lv.nom || (lv.n + '/5'), coul: lv.couleur || '#2d7a3e',
+          pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, lv.n) })) : [],
         open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache) };
     });
     // Les flèches font défiler le rail d'une largeur, sans rendu : le DOM reste.
