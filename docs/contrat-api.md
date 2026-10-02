@@ -995,6 +995,18 @@ seuil). Une lecture par boutique et par journée,
 relue passé quinze minutes (les URL expirent à vingt) ; la bascule
 « Liste » redonne le tableau et ses colonnes.
 
+**L'application visites aussi** : dans le contrôle guidé du consultant, l'étape
+« Les contrôles en photo » (après la photo du jour) montre la même bande pour
+la boutique visitée — `GET /pwa/tasks?date=&shop=` (le paramètre `shop`
+limite les appels au panel et les lignes à cette boutique) et
+`GET /pwa/tasks/photos?shop=&date=`, dont chaque photo porte désormais
+`checklistId` et `completionId`. La note rapide 4 / 5 y part dans la file
+hors ligne comme toute écriture, avec `role: consultant` et `auteur` : le
+serveur consigne alors le consultant dans `consultant_name` (avis terrain) et
+laisse les colonnes `owner_*` à la direction. La photo en grand (loupe) porte
+la fiche, la note rapide et ‹ ›. L'étape est faite quand plus rien n'attend
+une note.
+
 ### Qui fait autorité sur quoi
 
 Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la
