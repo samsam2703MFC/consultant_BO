@@ -986,8 +986,12 @@ puis les URL signées.
 montre, par défaut, chaque boutique en photos — la même bande que le dashboard
 (`assets/css/controles-photo.css`, partagé) : la photo, l'heure, la pastille
 d'état, qui l'a rendue, les écarts d'abord, les non rendues en fin de piste ;
-filtres par état dans l'en-tête de la boutique, et bouton « Noter ». Un clic
-ouvre le volet de notation existant. Une lecture par boutique et par journée,
+filtres par état dans l'en-tête de la boutique. Sous chaque photo à contrôler,
+la **note rapide** : les niveaux au-dessus du seuil (4 Conforme, 5 Exemplaire),
+en un clic, sans commentaire ni repère — même `POST /pwa/tasks/review` que le
+volet, avec les identifiants lus dans `/pwa/tasks/detail` ; « Noter… » ouvre le
+volet pour le reste (photo en grand, repères, commentaire, niveaux sous le
+seuil). Une lecture par boutique et par journée,
 relue passé quinze minutes (les URL expirent à vingt) ; la bascule
 « Liste » redonne le tableau et ses colonnes.
 
