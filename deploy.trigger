@@ -507,3 +507,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-02T09:29:32Z tablette vendeuses : demarrage immediat sur le dernier book
 2026-10-02T09:48:02Z controle des taches : note rapide 4 et 5
 2026-10-02T10:01:51Z controle guide : contrôles en photo et note rapide au telephone
+2026-10-02T19:05:38Z tablette vendeuses : menu en bas, objectifs, remarques, allergenes du panel, les bases
