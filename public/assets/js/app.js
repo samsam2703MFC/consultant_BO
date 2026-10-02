@@ -8587,6 +8587,143 @@ class App {
       : (min < 48 * 60 ? 'il y a ' + Math.round(min / 60) + ' h' : 'il y a ' + Math.round(min / 1440) + ' j')));
     return { date, age };
   }
+  /**
+   * Les remarques des clients saisies au comptoir sur la tablette
+   * (GET /tablette/remarques), pour le magasin choisi ou tout le réseau, sur
+   * 30 jours. Lues une fois par magasin, relues à la demande ou passé cinq
+   * minutes. Un échec garde la liste déjà lue et le dit ; en mode
+   * démonstration, rien ne part.
+   */
+  tbRqCharge(force, cle){
+    if (this.source !== 'api') { return; }
+    cle = cle || this.tbCle();
+    const E = this.D.tbRq || (this.D.tbRq = {});
+    const enCours = this._tbRqEnCours || (this._tbRqEnCours = {});
+    const cur = E[cle];
+    if (enCours[cle] || (cur && !force && Date.now() - (cur.le || 0) < 5 * 60000)) { return; }
+    enCours[cle] = true;
+    if (cur && force) { cur.relecture = true; this.setState({}); }
+    readOne('/tablette/remarques?jours=30' + (cle !== 'reseau' ? '&shop=' + encodeURIComponent(cle) : '')).then(d => {
+      enCours[cle] = false;
+      E[cle] = (d && Array.isArray(d.remarques)) ? { d, le: Date.now() }
+        : { d: cur ? cur.d : null, le: Date.now(), erreur: d ? (d.erreur || d.error || 'réponse inattendue') : 'sans réponse' };
+      this.setState({});
+    });
+  }
+  /**
+   * « Traitée » : posée tout de suite à l'écran — dans chaque liste lue, celle
+   * du magasin comme celle du réseau — et défaite si le serveur refuse.
+   */
+  tbRqTraiter(r){
+    if (this.source !== 'api') { this.notify('Mode démonstration : les remarques se traitent au serveur, indisponible ici.'); return; }
+    const enCours = this._tbRqPatch || (this._tbRqPatch = {});
+    if (enCours[r.id]) { return; }
+    enCours[r.id] = true;
+    const avant = { traitee: !!r.traitee, le: r.traiteeLe || null };
+    const poser = (val, le) => Object.values(this.D.tbRq || {}).forEach(e => {
+      ((e && e.d && e.d.remarques) || []).forEach(x => {
+        if (x.id !== r.id || !!x.traitee === val) { return; }
+        x.traitee = val; x.traiteeLe = le;
+        e.d.nonTraitees = Math.max(0, (+e.d.nonTraitees || 0) + (val ? -1 : 1));
+      });
+    });
+    const t = !avant.traitee;
+    poser(t, t ? new Date().toISOString() : null);
+    this.setState({});
+    write(this.source, 'PATCH', '/tablette/remarques/' + encodeURIComponent(r.id), { traitee: t }).then(res => {
+      enCours[r.id] = false;
+      if (!res || res.ok === false) {
+        poser(avant.traitee, avant.le);
+        this.notify('Remarque non enregistrée : ' + ((res && (res.erreur || res.error)) || 'refusé par le serveur') + '.');
+      }
+      this.setState({});
+    });
+  }
+  /**
+   * Les objectifs que l'accueil de la tablette montre (GET /tablette/objectifs) :
+   * CA et articles par ticket de la semaine et du mois. Lus une fois par
+   * magasin, relus à la demande ; `rafraichir` les fait recalculer au serveur
+   * (~12 s à froid — la carte dit « Calcul en cours… », le reste de l'écran
+   * n'attend pas). Après un magasin, le réseau est lu aussi : c'est le repère
+   * sous la saisie, et il sort du cache du serveur, qui calcule tout le réseau
+   * d'un coup. Rend une promesse : vrai si la lecture a réussi.
+   */
+  tbObjCharge(force, rafraichir, cle){
+    if (this.source !== 'api') { return Promise.resolve(false); }
+    cle = cle || this.tbCle();
+    const E = this.D.tbObj || (this.D.tbObj = {});
+    const P = this._tbObjP || (this._tbObjP = {});
+    // Une lecture en cours : on l'attend, puis on relit si on l'a demandé.
+    if (P[cle]) { return force ? P[cle].then(() => this.tbObjCharge(true, rafraichir, cle)) : P[cle]; }
+    const cur = E[cle];
+    if (cur && !force) { return Promise.resolve(!cur.erreur); }
+    if (cur) { cur.relecture = rafraichir ? 'recalcul' : 'relit'; this.setState({}); }
+    const q = [];
+    if (cle !== 'reseau') { q.push('shop=' + encodeURIComponent(cle)); }
+    if (rafraichir) { q.push('rafraichir=1'); }
+    P[cle] = readOne('/tablette/objectifs' + (q.length ? '?' + q.join('&') : '')).then(d => {
+      P[cle] = null;
+      const ok = !!(d && d.ca && d.venteAdd);
+      E[cle] = ok ? { d, le: Date.now() }
+        : { d: cur ? cur.d : null, le: Date.now(), erreur: d ? (d.erreur || d.error || 'réponse inattendue') : 'sans réponse' };
+      this.setState({});
+      if (ok && cle !== 'reseau') { this.tbObjCharge(false, false, 'reseau'); }
+      return ok;
+    });
+    return P[cle];
+  }
+  /**
+   * L'objectif d'articles par ticket d'un magasin. C'est la target
+   * cross-selling de Ventes › primes (réglage `venteCrossTargets`), qu'aucun
+   * autre écran ne modifie : POST /ventes/cross-target la pose dès le mois en
+   * cours ; une valeur vide la retire — pour ce mois seulement. Une target posée
+   * un mois précédent reste alors la dernière posée : la relecture le montre,
+   * et la carte le dit plutôt que d'annoncer un retrait qui n'a pas eu lieu.
+   */
+  tbObjCible(cle, retirer){
+    if (this.source !== 'api') { this.notify('Mode démonstration : les objectifs se règlent au serveur, indisponible ici.'); return; }
+    const S = this.D.tbObjSaisie || (this.D.tbObjSaisie = {});
+    const st = S[cle] || (S[cle] = {});
+    if (st.envoi) { return; }
+    const fr = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+    let v = null;
+    if (!retirer) {
+      const brut = String(st.valeur != null ? st.valeur : '').trim().replace(',', '.');
+      v = brut === '' ? NaN : +brut;
+      if (!isFinite(v) || v < 1 || v > 10) { st.ko = true; st.msg = 'Un nombre entre 1 et 10 articles par ticket.'; this.setState({}); return; }
+      v = Math.round(v * 10) / 10;
+    }
+    const auj = new Date();
+    const m = auj.getFullYear() + '-' + String(auj.getMonth() + 1).padStart(2, '0');
+    const moisTxt = auj.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' });
+    st.envoi = true; st.ko = false; st.msg = retirer ? 'Retrait…' : 'Enregistrement…';
+    this.setState({});
+    write(this.source, 'POST', '/ventes/cross-target', { shop: cle, target: retirer ? '' : v, m }).then(r => {
+      if (!r || r.ok === false) {
+        st.envoi = false; st.ko = true;
+        st.msg = 'Non enregistré : ' + ((r && (r.erreur || r.error)) || 'refusé par le serveur') + '.';
+        this.setState({});
+        return;
+      }
+      const fait = retirer ? 'Retiré pour ' + moisTxt : 'Enregistré : ' + fr(v) + ' article' + (v > 1 ? 's' : '') + ' par ticket dès ' + moisTxt;
+      st.valeur = null;
+      st.msg = fait + ' — recalcul des objectifs…';
+      this.setState({});
+      this.tbObjCharge(true, true, cle).then(ok => {
+        st.envoi = false;
+        const E = (this.D.tbObj || {})[cle];
+        const c = E && E.d && E.d.venteAdd && E.d.venteAdd.mois ? E.d.venteAdd.mois.cible : null;
+        if (retirer && ok && c != null) {
+          st.ko = true;
+          st.msg = 'Retiré pour ' + moisTxt + ', mais la cible posée un mois précédent (' + fr(c) + ') reste la dernière posée : elle s’applique encore. Le serveur ne retire que la cible du mois.';
+        } else {
+          st.ko = !ok;
+          st.msg = fait + (ok ? '.' : ' — la relecture des objectifs a échoué : « Relire ».');
+        }
+        this.setState({});
+      });
+    });
+  }
   /** L'écran Tablette vendeuses : le lien, l'état des données, l'aperçu. */
   valsTablette(common){
     const S = this.state;
@@ -8663,7 +8800,7 @@ class App {
       const tot = man.total != null ? +man.total : n;
       const sur = 'sur ' + pl(tot, 'produit');
       const quand = this.tbQuand(d.genereLe);
-      const libSrc = { produits: 'Produits', photos: 'Photos', best: 'Best-sellers', saisons: 'Saisons' };
+      const libSrc = { produits: 'Produits', photos: 'Photos', best: 'Best-sellers', saisons: 'Saisons', allergenes: 'Allergènes' };
       T.etat = {
         genere: quand.date, age: quand.age,
         details: [d.shop && d.shop.nom ? d.shop.nom : 'Tout le réseau',
@@ -8702,6 +8839,69 @@ class App {
       } else {
         T.photosTxt = 'Terminé : ' + pl(P.faites, 'photo') + ' récupérée' + (P.faites > 1 ? 's' : '') + reste + '.';
       }
+    }
+
+    // Les remarques des clients, saisies au comptoir sur la tablette.
+    this.tbRqCharge(false, cle);
+    const R = (this.D.tbRq || {})[cle] || null;
+    const TYPES = { compliment: ['Compliment', 'ok'], suggestion: ['Suggestion', 'an'], reclamation: ['Réclamation', 'ko'] };
+    const attente = this._tbRqPatch || {};
+    const rq = T.rq = { demo: T.demo, chargement: !T.demo && !R, erreur: (R && R.erreur) || '', relecture: !!(R && R.relecture),
+      relire: () => this.tbRqCharge(true, cle), reseau: !m, lignes: null, total: 0, nonTraitees: 0, tronque: false };
+    if (R && R.d) {
+      rq.total = +R.d.total || 0;
+      rq.nonTraitees = +R.d.nonTraitees || 0;
+      rq.lignes = R.d.remarques.map(r => {
+        const t = new Date(r.saisieLe);
+        const ty = TYPES[r.type] || [String(r.type || '—'), 'an'];
+        return { date: isNaN(t) ? String(r.saisieLe || '—') : t.toLocaleString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          magasin: r.shop ? String(r.shop.nom || r.shop.id) : (r.shopBrut ? 'magasin inconnu (' + r.shopBrut + ')' : 'Sans magasin'), type: ty[0], cls: ty[1], nl: r.langue === 'nl',
+          texte: String(r.texte || ''), traitee: !!r.traitee, attente: !!attente[r.id], basculer: () => this.tbRqTraiter(r) };
+      });
+      rq.tronque = rq.total > rq.lignes.length;
+    }
+
+    // Les objectifs de l'accueil de la tablette, et l'objectif d'articles par ticket du magasin.
+    this.tbObjCharge(false, false, cle);
+    const O = (this.D.tbObj || {})[cle] || null;
+    const OR = (this.D.tbObj || {}).reseau || null;
+    const st = (this.D.tbObjSaisie || {})[cle] || {};
+    const eur = v => (v == null || !isFinite(+v)) ? '—' : (+v).toLocaleString('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const art = (v, dec) => (v == null || !isFinite(+v)) ? '—' : (+v).toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: 2 });
+    const jm = s => { const t = s ? new Date(s + 'T12:00:00') : null; return t && !isNaN(t) ? t.toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' }) : '—'; };
+    const ob = T.obj = { demo: T.demo, chargement: !T.demo && !O, erreur: (O && O.erreur) || '', relecture: (O && O.relecture) || '',
+      relire: () => this.tbObjCharge(true, false, cle), magasin: !!m, tuiles: null, periodes: '', sources: [],
+      lu: !!(O && O.d), cible: null, saisie: st.valeur != null ? String(st.valeur) : '', envoi: !!st.envoi, msg: st.msg || '', ko: !!st.ko, repere: '',
+      setSaisie: e => { const s2 = this.D.tbObjSaisie || (this.D.tbObjSaisie = {}); (s2[cle] || (s2[cle] = {})).valeur = e.target.value; },
+      enregistrer: () => this.tbObjCible(cle, false), retirer: () => this.tbObjCible(cle, true) };
+    if (O && O.d) {
+      const d = O.d, ca = d.ca || {}, va = d.venteAdd || {};
+      const tCa = (cap, p) => {
+        p = p || {};
+        return { cap, v: eur(p.realise), alerte: p.attendu != null && p.realise != null && +p.realise < +p.attendu,
+          s: p.objectif != null ? 'objectif ' + eur(p.objectif) + (p.attendu != null ? ' · attendu à ce jour ' + eur(p.attendu) : '') : 'pas d’objectif connu' };
+      };
+      const tVa = (cap, p) => {
+        p = p || {};
+        return { cap, v: art(p.parTicket, 2), alerte: p.cible != null && p.parTicket != null && +p.parTicket < +p.cible,
+          s: (p.tickets != null ? pl(p.tickets, 'ticket') : 'tickets inconnus') + (p.cible != null ? ' · cible ' + art(p.cible, 1) : (m ? ' · sans cible' : '')) };
+      };
+      ob.tuiles = [tCa('CA semaine', ca.semaine), tCa('CA mois', ca.mois), tVa('Articles par ticket · semaine', va.semaine), tVa('Articles par ticket · mois', va.mois)];
+      const mois = ca.mois && ca.mois.du ? new Date(ca.mois.du + 'T12:00:00') : null;
+      const quand = this.tbQuand(d.genereLe);
+      ob.periodes = [ca.semaine ? 'semaine du ' + jm(ca.semaine.du) + ' au ' + jm(ca.semaine.au) : '',
+        mois && !isNaN(mois) ? mois.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : '',
+        d.date ? 'jusqu’au ' + jm(d.date) : '', d.genereLe ? 'calculé ' + (quand.age || 'le ' + quand.date) : ''].filter(Boolean).join(' · ');
+      const libSrc = { ca: 'CA', venteAdd: 'Articles par ticket' };
+      ob.sources = Object.keys(d.sources || {}).filter(k => d.sources[k]).map(k => ({ nom: libSrc[k] || k, txt: String(d.sources[k]) }));
+      ob.cible = va.mois && va.mois.cible != null ? +va.mois.cible : null;
+      if (st.valeur == null) { ob.saisie = ob.cible != null ? String(ob.cible) : ''; }
+    }
+    ob.cibleTxt = ob.lu ? (ob.cible != null ? art(ob.cible, 1) + ' article' + (ob.cible > 1 ? 's' : '') + ' par ticket' : 'aucun') : '—';
+    const rv = OR && OR.d && OR.d.venteAdd ? OR.d.venteAdd : null;
+    if (m && rv && rv.mois && rv.mois.parTicket != null) {
+      ob.repere = 'Repère : le réseau fait ' + art(rv.mois.parTicket, 2) + ' articles par ticket ce mois'
+        + (rv.semaine && rv.semaine.parTicket != null ? ' (' + art(rv.semaine.parTicket, 2) + ' cette semaine)' : '') + '.';
     }
   }
   valsDemarchage(common){

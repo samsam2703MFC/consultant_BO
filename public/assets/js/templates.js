@@ -10221,6 +10221,8 @@ function tplTablette(c, x){
         ${donnees}
       </div>
     </div>
+    ${tplTbObjectifs(T, x)}
+    ${tplTbRemarques(T, x)}
     <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div class="ps-cap">Aperçu · ${esc(T.nom)}${T.nl ? ' · NL' : ''}${T.prix ? '' : ' · sans prix'}</div>
@@ -10242,6 +10244,102 @@ function tplTablette(c, x){
       <div style="${mu};font-size:11.5px">L’aperçu est la tablette en ligne, à la même adresse que le cockpit : les mêmes données qu’en magasin, à l’échelle de l’écran.</div>
     </div>
   </div>`;
+}
+
+/* Les objectifs de l'accueil de la tablette (CA, articles par ticket) et la
+ * saisie de l'objectif d'articles par ticket du magasin : une seule carte,
+ * toujours rendue, pour la même raison que celle des remarques. */
+function tplTbObjectifs(T, x){
+  const { esc } = x;
+  const O = T.obj;
+  const mu = 'font-size:12px;color:var(--color-text-muted);line-height:1.55';
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const off = b => b ? ' disabled style="opacity:.55;cursor:default"' : '';
+  const filet = 'padding-top:12px;border-top:.5px solid var(--color-border-tertiary)';
+  let corps;
+  if (O.demo) {
+    corps = `<div class="ps-note">Mode démonstration : l’API du cockpit ne répond pas, les objectifs de la tablette ne sont pas lisibles.</div>`;
+  } else if (O.chargement) {
+    corps = `<div style="${mu}">Calcul en cours… Le serveur lit le réseau au panel : une quinzaine de secondes au plus quand rien n’est gardé.</div>`;
+  } else if (!O.tuiles) {
+    corps = `<div class="ps-note">${O.erreur === 'sans réponse'
+        ? 'Le service /tablette/objectifs ne répond pas : pas encore en ligne, ou en erreur au serveur.'
+        : 'Le service /tablette/objectifs rend une réponse inattendue (' + esc(O.erreur) + ').'} Réessayez avec « Relire ».</div>`;
+  } else {
+    corps = `
+      <div style="${mu};font-size:11.5px">${esc(O.periodes)}${O.relecture ? ` · <b style="font-weight:600;color:var(--color-text)">${O.relecture === 'recalcul' ? 'Recalcul en cours…' : 'Lecture…'}</b>` : ''}</div>
+      ${O.erreur ? `<div class="ps-note">La dernière lecture a échoué (${esc(O.erreur)}) : les chiffres affichés sont les précédents.</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">
+        ${O.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v"${t.alerte ? ' style="color:#8a5a13"' : ''}>${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}
+      </div>
+      ${O.sources.length ? `<div style="${mu};font-size:11.5px">${O.sources.map(s => `<div><span style="color:var(--color-text);font-weight:500">${esc(s.nom)}</span> — ${esc(s.txt)}</div>`).join('')}</div>` : ''}`;
+  }
+  let saisie = '';
+  if (!O.demo) {
+    saisie = O.magasin
+      ? `<div style="display:flex;flex-direction:column;gap:8px;${filet}">
+        <div style="display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap"><span class="ps-cap">Objectif articles par ticket</span><span style="font-size:13px">Actuel : <b style="font-weight:600">${esc(O.cibleTxt)}</b></span></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input type="number" step="0.1" min="1" max="10" inputmode="decimal" value="${esc(O.saisie)}" ${x.I(O.setSaisie)} aria-label="Objectif articles par ticket" placeholder="ex. 2,3" style="${SEL};width:100px"${O.envoi ? ' disabled' : ''}>
+          <button class="ps-btn p" ${x.A(O.enregistrer)}${off(O.envoi)}>Enregistrer</button>
+          ${O.cible != null ? `<button class="ps-btn" ${x.A(O.retirer)}${off(O.envoi)}>Retirer</button>` : ''}
+          ${O.msg ? `<span style="${mu}${O.ko ? ';color:#8a5a13' : ''}">${esc(O.msg)}</span>` : ''}
+        </div>
+        <div style="${mu};font-size:11.5px">Entre 1 et 10, dès ce mois, pour ce magasin — c’est la target cross-selling de Ventes › primes, le même réglage.${O.repere ? ' ' + esc(O.repere) : ''}</div>
+      </div>`
+      : `<div style="${mu};${filet}">Les objectifs d’articles par ticket se posent magasin par magasin : choisissez un magasin pour le modifier.</div>`;
+  }
+  return `<div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="ps-cap">Objectifs de la tablette · ${esc(T.nom)}</div>
+        ${O.demo ? '' : `<button class="ps-btn" ${x.A(O.relire)}${off(O.chargement || !!O.relecture)}>${O.relecture === 'relit' ? 'Lecture…' : 'Relire'}</button>`}
+      </div>
+      <div style="${mu}">Ce que l’accueil de la tablette montre aux vendeuses : le chiffre d’affaires et les articles par ticket de la semaine et du mois, face à leur objectif.</div>
+      ${corps}
+      ${saisie}
+    </div>`;
+}
+
+/* Les remarques des clients saisies sur la tablette : une seule carte, toujours
+ * rendue (l'aperçu qui la suit garde ainsi sa position pour la fusion). */
+function tplTbRemarques(T, x){
+  const { esc } = x;
+  const Q = T.rq;
+  const mu = 'font-size:12px;color:var(--color-text-muted);line-height:1.55';
+  const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+  let corps;
+  if (Q.demo) {
+    corps = `<div class="ps-note">Mode démonstration : l’API du cockpit ne répond pas, les remarques des clients ne sont pas lisibles.</div>`;
+  } else if (Q.chargement) {
+    corps = `<div style="${mu}">Lecture des remarques…</div>`;
+  } else if (!Q.lignes) {
+    corps = `<div class="ps-note">${Q.erreur === 'sans réponse'
+        ? 'Le service /tablette/remarques ne répond pas : pas encore en ligne, ou en erreur au serveur.'
+        : 'Le service /tablette/remarques rend une réponse inattendue (' + esc(Q.erreur) + ').'} Réessayez avec « Relire ».</div>`;
+  } else if (!Q.lignes.length) {
+    corps = `<div style="${mu}">Aucune remarque sur les 30 derniers jours.</div>`;
+  } else {
+    corps = `${Q.erreur ? `<div class="ps-note">La dernière lecture a échoué (${esc(Q.erreur)}) : la liste affichée est la précédente.</div>` : ''}
+      <div style="max-height:560px;overflow:auto">${Q.lignes.map((l, i) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${i ? 'border-top:.5px solid var(--color-border-tertiary)' : ''}">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="ao-pill ${l.cls}">${esc(l.type)}</span><span style="${mu};font-size:11.5px">${esc(l.date)}${Q.reseau ? ' · ' + esc(l.magasin) : ''}${l.nl ? ' · NL' : ''}</span></div>
+            <div style="font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;color:var(${l.traitee ? '--color-text-muted' : '--color-text'})">${esc(l.texte)}</div>
+          </div>
+          <button class="ps-tog${l.traitee ? ' on' : ''}" ${x.A(l.basculer)}${l.attente ? ' disabled' : ''} style="flex:none;margin-top:3px" title="${l.traitee ? 'Remettre à traiter' : 'Marquer comme traitée'}"><i></i>Traitée</button>
+        </div>`).join('')}
+      </div>
+      ${Q.tronque ? `<div style="${mu};font-size:11.5px">Les ${Q.lignes.length} plus récentes sur ${Q.total}.</div>` : ''}`;
+  }
+  const titre = 'Remarques des clients · ' + T.nom + (Q.lignes ? ' · ' + (Q.nonTraitees ? pl(Q.nonTraitees, 'non traitée') : 'tout est traité') : '');
+  return `<div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="ps-cap">${esc(titre)}</div>
+        ${Q.demo ? '' : `<button class="ps-btn" ${x.A(Q.relire)}${Q.relecture || Q.chargement ? ' disabled style="opacity:.55;cursor:default"' : ''}>${Q.relecture ? 'Lecture…' : 'Relire'}</button>`}
+      </div>
+      <div style="${mu}">Ce que les vendeuses notent au comptoir sur la tablette, les 30 derniers jours, les plus récentes d’abord.</div>
+      ${corps}
+    </div>`;
 }
 
 /* ============================================================================

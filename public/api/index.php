@@ -65,6 +65,8 @@ require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
 require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
+require __DIR__ . '/../../src/tablette_objectifs.php';
+require __DIR__ . '/../../src/tablette_remarques.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -227,6 +229,10 @@ function route(string $method, string $path): mixed
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
             $path === '/tablette/book'                 => ep_tablette_book(),
+            // L'accueil de la tablette : CA et vente additionnelle de la semaine et du mois face à l'objectif.
+            $path === '/tablette/objectifs'            => ep_tablette_objectifs(),
+            // Les remarques des clients saisies sur la tablette, pour l'écran Tablette vendeuses.
+            $path === '/tablette/remarques'            => ep_tablette_remarques(),
             // Le planogramme STANDARD (un plan pour le réseau) ; les anciennes
             // adresses rendent désormais le même plan.
             $path === '/planogramme'                   => ep_plano_std(),
@@ -485,6 +491,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/planogramme/standard/photo') { return wr_plano_std_photo(); }
     // Les photos du panel qui manquent à la tablette des vendeuses, 24 par appel, et leurs vignettes.
     if ($method === 'POST' && $path === '/tablette/photos') { return wr_tablette_photos(); }
+    // Une remarque de client saisie au comptoir (envoyée par la tablette), puis « traitée » à l'écran du BO.
+    if ($method === 'POST' && $path === '/tablette/remarques') { return wr_tablette_remarque_creer(); }
+    if ($method === 'PATCH' && preg_match('#^/tablette/remarques/([\w-]{1,64})$#', $path, $m)) { return wr_tablette_remarque_traiter($m[1]); }
     if ($method === 'PUT' && $path === '/planogramme/standard/zone') { return wr_plano_std_zone(); }
     if ($method === 'POST' && $path === '/planogramme/standard/vider') { return wr_plano_std_vider(); }
     if ($method === 'POST' && ($path === '/planogramme/standard/montage' || $path === '/planogramme/montage')) { return wr_plano_std_montage(); }

@@ -53,6 +53,7 @@ function ensureInstalled(): void
     ensureProspection();
     ensureVisites();
     ensureFacebook();
+    ensureTabletteRemarques();
 }
 
 /**
@@ -1042,5 +1043,39 @@ function ensureCentrale(): void
                 'objectifBaissePrixPct' => 3.0,   // défaut d'une demande de prix
                 'objectifHausseVolPct'  => 10.0,
             ], JSON_UNESCAPED_UNICODE)]);
+    }
+}
+
+/**
+ * Les remarques des clients saisies sur la tablette des vendeuses
+ * (src/tablette_remarques.php), à chaque démarrage — même raison que
+ * `ensureValidation()` : une installation déjà en service ne rejoue pas
+ * schema.sql. Idempotent (CREATE TABLE IF NOT EXISTS). `id` est l'uuid tiré
+ * par la tablette : la clé primaire rend un renvoi inoffensif.
+ */
+function ensureTabletteRemarques(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_remarque ('
+        . 'id CHAR(36) NOT NULL PRIMARY KEY,'
+        . 'shop_id VARCHAR(32) NULL,'
+        . 'shop_brut VARCHAR(32) NULL,'
+        . 'type VARCHAR(16) NOT NULL,'
+        . 'texte TEXT NOT NULL,'
+        . "langue CHAR(2) NOT NULL DEFAULT 'fr',"
+        . 'saisie_le DATETIME NOT NULL,'
+        . 'recu_le DATETIME NOT NULL,'
+        . 'traitee TINYINT(1) NOT NULL DEFAULT 0,'
+        . 'traitee_le DATETIME NULL,'
+        . 'ip VARCHAR(64) NULL,'
+        . 'KEY idx_shop_saisie (shop_id, saisie_le),'
+        . 'KEY idx_saisie (saisie_le),'
+        . 'KEY idx_shop_recu (shop_id, recu_le)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Le magasin envoyé par la tablette quand il n'est pas connu (la remarque est
+    // gardée sans magasin) : arrivé après la table, ajouté aux bases qui l'ont déjà.
+    $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tablette_remarque' AND column_name = 'shop_brut'");
+    if ((int) ($r['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_tablette_remarque ADD COLUMN shop_brut VARCHAR(32) NULL AFTER shop_id');
     }
 }

@@ -595,11 +595,12 @@ garde `shop` sur l'appareil.
                    "dates": ["1er novembre au 15 janvier", "1 november t/m 15 januari"], "tip": ["", ""] } ],
     "products": [ { "id": "1610006", "cat": "g-viennoiserie", "season": "s8", "img": "uploads/tablette/1610006-640.jpg",
                     "price": 1.3, "unit": ["pièce", "stuk"], "best": true, "name": ["Croissant", ""], "desc": ["", ""],
-                    "pitch": ["", ""], "ingr": ["", ""], "al": [], "tr": [], "alKnown": false, "trKnown": false, "alRaw": "",
-                    "diet": null, "keep": ["", ""], "dlc": 1, "cross": [], "crossLine": ["", ""] } ] },
-  "manque": { "total": 98, "photos": 39, "nl": 98, "allergenes": 98, "descriptions": 98 },
+                    "pitch": ["", ""], "ingr": ["", ""], "al": ["gluten", "oeufs", "lait"], "tr": [], "alKnown": true,
+                    "trKnown": false, "alRaw": "", "diet": null, "keep": ["Conservation : Comptoir Frigo - 1 (2°C – 4°C).", ""],
+                    "dlc": 1, "cross": [], "crossLine": ["", ""] } ] },
+  "manque": { "total": 98, "photos": 39, "nl": 98, "allergenes": 43, "descriptions": 98 },
   "photosRestantes": 12,
-  "sources": { "produits": "…", "photos": "…", "best": "…", "saisons": "…" } }
+  "sources": { "produits": "…", "photos": "…", "best": "…", "saisons": "…", "allergenes": "…" } }
 ```
 
 - **Textes** : paires `[FR, NL]`, `""` quand le néerlandais n'existe pas (la tablette affiche alors le français). Seuls
@@ -621,27 +622,67 @@ garde `shop` sur l'appareil.
   vendu à la pièce, sinon vide. **`best`** : les 8 meilleures ventes au comptoir du magasin sur 28 jours (relevés
   quotidiens `svP`, aucun appel au panel), parmi les produits du book ; sans magasin ou sans vente relevée, celles du
   réseau. **`diet`** : `"vege"` si `product.is_vegetarian`, sinon `null` (aucun indicateur vegan n'existe).
-  **`keep`** : la consigne de stockage de la fiche et la réchauffe, en français ; vide si la fiche n'a que la
-  température (4 °C par défaut, pain compris). **`dlc`** : jours entiers, arrondis vers le bas à une heure près
-  (1 444 min = 1) ; moins de six heures, ou inconnue → `0` (« immédiat »).
-- **Allergènes** : `alRaw` = `product.allergene` tel quel. Mesuré le 02/10/2026 : vide sur les 115 fiches sondées (les
-  68 produits du planogramme et un par catégorie). `al` ne porte que les 14 identifiants UE (`gluten`, `crust`,
-  `oeufs`, `poisson`, `arach`, `soja`, `lait`, `noix`, `celeri`, `moutarde`, `sesame`, `sulfites`, `lupin`,
-  `mollusques`), et seulement quand TOUT le texte se lit comme une liste d'allergènes nommés (français, néerlandais ou
-  anglais) : alors `alKnown: true`. Un mot inconnu, un chiffre, une trace, une négation (« sans », « glutenvrij »), un
-  doute ou un texte vide → `al: []`, `alKnown: false`. Les traces n'existent nulle part : `tr: []`, `trKnown: false`.
-  **`alKnown: false` interdit à la tablette d'afficher le produit « sans » un allergène.**
+  **`keep`** : le lieu de stockage et sa consigne, puis la réchauffe, en français (« Conservation : Comptoir Frigo - 1
+  (2°C – 4°C). Réchauffer 10 min à 180 °C. ») ; jamais la seule température (4 °C par défaut, pain compris). La base
+  partagée ne porte que l'id du lieu de stockage : son nom et sa consigne (`storage_name`, `storage_description`)
+  viennent de `GET /products` du panel — une lecture pour tout le catalogue, gardée 24 h (`ceo_app_setting`
+  `tablettePanelProduits`) ; la réchauffe du panel quand elle est > 0, sinon celle de la base. Panel muet : la dernière
+  liste lue, sinon la base seule. Mesuré le 02/10/2026 : 49 des 98 produits du comptoir ont un lieu de stockage nommé au
+  panel (les autres pointent des `id_storage` 1, 2, 5, 24 que le panel ne nomme pas). **`dlc`** : jours entiers,
+  arrondis vers le bas à une heure près (1 444 min = 1) ; moins de six heures, ou inconnue → `0` (« immédiat »). Durée
+  du catalogue du BO, sinon `product.shelf_life_minutes`, sinon celle du panel (`GET /products`).
+- **Allergènes** : `al` ne porte que les 14 identifiants UE (`gluten`, `crust`, `oeufs`, `poisson`, `arach`, `soja`,
+  `lait`, `noix`, `celeri`, `moutarde`, `sesame`, `sulfites`, `lupin`, `mollusques`). Deux sources, dans l'ordre :
+  1. **`product.allergene`**, s'il se lit EN ENTIER comme une liste d'allergènes nommés (français, néerlandais ou
+     anglais) : il fait foi, `alKnown: true`, `alRaw` = le texte. Mesuré le 02/10/2026 : vide partout.
+  2. Sinon **la recette du produit au panel** (`product.id_recipe`, à défaut celui de `GET /products`) :
+     `GET /recipes/{id}`, ses sous-recettes `GET /subrecipes/{id}` (récursivement, 6 niveaux au plus, chacune une
+     fois — `GET /recipes/{id}` d'une sous-recette rend `200 []`), et chaque matière première `GET /materials/{id}`
+     (seule la fiche détaillée porte `allergens: [{id, code, name}]`, pas la liste `/materials`). Le référentiel est
+     `GET /allergens` du panel (les 14 codes UE, id → code) : un allergène se reconnaît par son id, puis par son code ;
+     `cereals_gluten` → `gluten`, `crustaceans` → `crust`, `eggs` → `oeufs`, `fish` → `poisson`, `peanuts` → `arach`,
+     `soybeans` → `soja`, `milk` → `lait`, `nuts` → `noix`, `celery` → `celeri`, `mustard` → `moutarde`,
+     `sesame_seeds` → `sesame`, `sulphur_dioxide_sulphites` → `sulfites`, `lupin` → `lupin`, `molluscs` → `mollusques`
+     (table en dur seulement si le référentiel n'a jamais pu être lu). Les emballages (catégorie de matière
+     « … (Emballage) » ; `is_part_of_package` vaut 0 même pour eux et n'est pas lu) ne comptent pas, sauf s'ils portent
+     des allergènes. `al` = l'union des allergènes des matières. **`alKnown: true` seulement si** tout l'arbre a été lu
+     et date de moins de 24 h, qu'il compte au moins une matière hors emballage, que CHAQUE matière porte une liste
+     non vide dont chaque allergène est reconnu (id dans le référentiel, code cohérent, l'un des 14), et que
+     `product.allergene` est vide. **Une liste vide veut dire « jamais saisie », pas « sans allergène »** (mesuré : les
+     œufs, le beurre, les fromages et le sel du traiteur ont une liste vide). Sinon `alKnown: false`, `al` garde les
+     allergènes connus (la tablette les montre « contient », le reste « à vérifier ») et `alRaw` dit pourquoi, en
+     français : « Allergènes non renseignés au panel pour : Fondant chocolat. », « Recette du panel pas encore lue en
+     entier. », « Recette introuvable au panel. », « Recette du panel sans matière première. », « Allergène du panel
+     non reconnu : … » — précédé du texte de `product.allergene` s'il en a un qu'on ne sait pas lire.
+  3. Sans recette : `al: []`, `alKnown: false`, `alRaw` = « Pas de recette au panel. ».
+
+  `alRaw` est vide quand `alKnown` vient de la recette. Les traces n'existent nulle part : `tr: []`,
+  `trKnown: false`. **`alKnown: false` interdit à la tablette d'afficher le produit « sans » un allergène.**
+  Recettes, sous-recettes, matières et référentiel sont gardés 24 h par entrée (`ceo_app_setting`
+  `tabletteAllergenes` = `{reference: {codes, le}, recettes: {id: {nom, materiaux: [{id, nom, cat}], sous, le}},
+  sousRecettes: {…}, materiaux: {id: {nom, cat, allergenes: [{id, code}], le}}}`, entrées inutilisées oubliées après
+  30 jours). Chaque calcul du book relit au panel ce qui manque ou a plus de 24 h, six requêtes de front, 8 s au plus
+  (`GET /products` à part, 6 s au plus) : ce qui n'est pas lu à temps reste « à vérifier » et sera lu au calcul suivant
+  — un book ainsi incomplet (ou calculé panel muet) ne se garde que 30 minutes au lieu de six heures. Le temps qui
+  reste relit d'avance les entrées de 18 à 24 h (heure étalée par entrée), pour que le cache n'expire jamais d'un bloc.
+  Un premier calcul à froid (~220 lectures pour les 98 produits du comptoir) en demande deux. Une panne du panel ne
+  casse jamais le book : les allergènes déjà connus restent « contient », tout le reste passe « à vérifier ».
 - **`img`** : la vignette `uploads/tablette/<ref>-640.jpg`, sinon la photo du panel `uploads/plano/panel/<ref>.<ext>`,
   sinon `""` ; chemins relatifs à la racine publique du BO. Les vignettes (640 px sur le grand côté, JPEG 80) se font à
   la lecture, 40 au plus et en 3 s au plus par appel ; la tablette ne déclenche jamais de téléchargement au panel.
-- **`manque`** : par produit du book — sans photo, sans nom néerlandais, allergènes non lus (`alKnown: false`), sans
-  description ; `total` = produits à qui il manque au moins une des quatre. **`photosRestantes`** : photos à lire au
+- **`manque`** : par produit du book — sans photo, sans nom néerlandais, allergènes à vérifier (`alKnown: false`,
+  partiels compris), sans description ; `total` = produits à qui il manque au moins une des quatre. **`photosRestantes`** : photos à lire au
   panel (jamais lues, fichier perdu, absence notée il y a plus de sept jours) + vignettes pas encore faites — ce que
   `POST /tablette/photos` ferait.
-- **`sources`** : une phrase par source (`produits`, `photos`, `best`, `saisons`) — ce qui a été lu, ou pourquoi c'est
-  vide. Une source muette laisse ses champs vides et le dit ici ; le book répond quand même `200`.
-- **Cache** : le book est calculé une fois pour six heures (`ceo_app_setting` `tabletteBook:<shop|reseau>:<ensemble>`) ;
-  `rafraichir=1` le recalcule. Les photos sont relues à chaque appel : une photo arrivée change `version`, que la tablette
+- **`sources`** : une phrase par source (`produits`, `photos`, `best`, `saisons`, `allergenes`) — ce qui a été lu, ou
+  pourquoi c'est vide. `produits` dit la couverture de `keep` et `dlc` (« conservation : 49/98 (dont 48 depuis le
+  panel) ») ; `allergenes` compte les produits complets, partiels, sans allergène connu et sans recette, nomme les
+  matières sans allergènes saisis qui bloquent le plus de produits, et dit ce qui a été lu au panel (référentiel
+  `/allergens`, cache, lectures, temps, lectures remises). Une source muette laisse ses champs vides et le dit ici ; le
+  book répond quand même `200`.
+- **Cache** : le book est calculé une fois pour six heures (`ceo_app_setting` `tabletteBook:<shop|reseau>:<ensemble>`),
+  trente minutes si ses lectures au panel n'ont pas abouti ; `rafraichir=1` le recalcule (et relit au panel les
+  recettes, matières et fiches de plus de 24 h, pas les autres). Les photos sont relues à chaque appel : une photo arrivée change `version`, que la tablette
   compare pour se recharger. `version` = sha1 du contenu de `book`.
 - **Erreur** : catalogue illisible ou vide → `500` `{ "erreur": "book indisponible : …" }` (la tablette garde ses données
   d'exemple) ; base injoignable → `503` du contrôleur frontal (`{ "error": … }`).
@@ -655,6 +696,96 @@ sept jours, ou vignette faite) ; `restants` = ce qu'un appel suivant ferait enco
 sans photo. L'écran BO rappelle tant que `restants > 0`. Sans compte panel configuré alors qu'il reste des photos à
 lire → `503` `{ "error": "compte API du panel non configuré…", "faites", "restants", "manquantes" }`. La tablette ne
 l'appelle jamais.
+
+### `/tablette/objectifs` — les objectifs de l'accueil de la tablette
+
+`GET /tablette/objectifs?shop=4[&date=2026-10-02][&rafraichir=1]` (sans `shop`, ou magasin inconnu : le réseau,
+`shop: null` ; `date` absente, future ou illisible → aujourd'hui). Code : `src/tablette_objectifs.php`.
+
+```json
+{ "schema": 1, "genereLe": "2026-10-02T20:15:00+02:00", "date": "2026-10-02", "shop": { "id": "4", "nom": "Halle" },
+  "ca": { "semaine": { "du": "2026-09-28", "au": "2026-10-04", "realise": 7472.3, "objectif": 13962.82, "attendu": 9255.18 },
+          "mois":    { "du": "2026-10-01", "au": "2026-10-31", "realise": 3572.45, "objectif": 61000, "attendu": 3694.64 } },
+  "venteAdd": { "semaine": { "parTicket": 2.41, "cible": null, "tickets": 482 },
+                "mois":    { "parTicket": 2.38, "cible": null, "tickets": 121 } },
+  "sources": { "ca": "Résultat › Semaine et › Mois du BO (…) ; semaine : objectif au budget validé ; …",
+               "venteAdd": "Articles par ticket = lignes de caisse ÷ tickets (…) ; semaine : 4/4 jours moissonnés ; …" } }
+```
+
+- **`ca`** : les chiffres de Résultat › Semaine et › Mois (`GET /exploitation/periode`, ceux du dashboard magasin), pas
+  recalculés. Semaine = lundi → dimanche qui contient `date` ; mois = son mois calendaire. `realise` = CA **TTC**
+  encaissé (ventes caisse après remise : `ca` du margin-heatmap du panel, = `income` du daily-summary, taxe comprise) du
+  début de l'étendue jusqu'à `date` incluse. `objectif` = celui de l'étendue entière : le budget validé du mois
+  (`ceo_shop_month_perf.revenue_budget`), à défaut le CA théorique de l'étude (`ca_theorique`), réparti jour par jour par
+  la pondération réseau sur les jours où le magasin ouvre — une semaine à cheval sur deux mois prend chaque jour dans le
+  budget de son mois. `attendu` = la part de cet objectif des jours jusqu'à `date` comprise. Pour une `date` passée,
+  réalisé et attendu se relisent dans les `jours` de Résultat (quelques centimes d'arrondi). Réseau : la ligne `reseau`
+  de Résultat (objectif et attendu sur les seuls magasins qui en ont un). `objectif`/`attendu` `null` : pas de
+  pondération adoptée, ou ni budget ni CA théorique ; les trois `null` : ventes non lues, vue en panne, magasin inactif.
+- **`venteAdd`** — « articles par ticket » (décision du 02/10/2026), la mesure de Ventes › primes, lue dans la moisson
+  horaire des tickets du panel (`/transactions/{id}?include=products`, gravée par jour et par magasin :
+  `ceo_app_setting` `pvL<magasin>:<jour>`, voir `panel_ventes.php`) ; aucun appel au panel. Une **ligne** = un produit
+  encaissé sur le ticket, quelle que soit sa quantité (trois croissants sur une ligne comptent 1) ; tous les tickets du
+  magasin, clients pro compris. `parTicket` = total des lignes ÷ total des tickets (pas une moyenne de moyennes), arrondi
+  à 0,01, du lundi ou du 1er jusqu'à `date` incluse — **la moisson s'arrête à la veille** : la journée en cours n'y est
+  jamais, et un jour pas encore moissonné manque (rien avant le 01/08/2026). `tickets` = les tickets de cette base (`0`
+  si les jours lus n'en ont aucun, `null` si aucun jour n'est lu ; `parTicket` est alors `null`). Réseau = tous les
+  magasins actifs. `cible` = la target cross-selling du magasin (`ceo_app_setting.venteCrossTargets`, en lignes par
+  ticket, la dernière posée au plus tard le mois de `date` — posée par `POST /ventes/cross-target {shop, target, m}`,
+  aucun écran du BO ne la règle aujourd'hui) ; `null` sans target, et toujours `null` pour le réseau (les targets se
+  posent par magasin).
+- **`sources`** : `ca` = la définition, puis, par vue, la source de l'objectif de CE magasin (budget validé, CA théorique,
+  partiel s'il manque un mois) ou pourquoi c'est `null`, et l'heure du calcul ; `venteAdd` = la définition de la ligne,
+  les jours moissonnés sur les jours attendus par vue (jours-magasin pour le réseau), la cible ou son absence.
+- **Cache** : Résultat lit tout le réseau au panel (~12 s pour les deux vues, mesuré) : elles se calculent une fois pour
+  tous les magasins, avec la moisson (une requête groupée), et se gardent 10 min (`ceo_app_setting` `tabletteObjectifs:<date>`), 1 min si une source a manqué ;
+  un verrou MySQL sérialise les calculs. Sous PHP-FPM, un calcul complet de moins de 2 h est servi aussitôt et recalculé
+  après la réponse ; ailleurs, l'appel qui trouve le cache expiré attend le calcul. `rafraichir=1` recalcule.
+- **Erreur** : `500` `{ "erreur": "objectifs indisponibles : …" }` ; une vue en panne laisse ses champs à `null` et le dit
+  dans `sources.ca`, l'autre répond ; une moisson illisible laisse `venteAdd` à `null` et le dit dans `sources.venteAdd`.
+
+### `/tablette/remarques` — les remarques des clients saisies sur la tablette
+
+Une vendeuse note au comptoir ce qu'un client a dit ; la tablette l'envoie, l'écran BO « Tablette vendeuses » les
+montre (carte « Remarques des clients ») avec une bascule « Traitée ». Code : `src/tablette_remarques.php` ; table
+`ceo_tablette_remarque`, créée au démarrage par `installer.php` (`ensureTabletteRemarques`) et dans `sql/schema.sql`.
+Contrat figé avec la tablette (`pwa_sales_tablet`, `src/data/remarks.ts`). **Accès** : l'API est ouverte (auth
+désactivée en production, comme tout le cockpit) et ces routes n'ajoutent aucun contrôle — le plafond par magasin et
+par jour borne ce qu'un appel abusif peut remplir. Même origine que le BO : la tablette est servie depuis
+`public/tablette/`, aucun en-tête CORS n'est posé.
+
+`POST /tablette/remarques` (la tablette) — `{ "id": "<uuid>", "shop": "4" | null, "type": "compliment" | "suggestion" |
+"reclamation", "texte": "…", "langue": "fr" | "nl", "saisieLe": "2026-10-02T18:40:12+02:00" }` →
+`201` `{ "ok": true, "id": "<uuid>" }` ; déjà reçue → `200` `{ "ok": true, "id", "doublon": true }`.
+
+- **Idempotence** : `id` (8-4-4-4-12 hexadécimal, rangé en minuscules) est la clé primaire. Le doublon est reconnu avant
+  toute autre règle : un renvoi n'est jamais refusé, même plafond atteint.
+- **`400` `{ "erreur": "…" }`** (définitif, la tablette jette la remarque) : `id` absent ou mal formé, `type` hors des
+  trois, `texte` vide ou de plus de 1 000 caractères (compté après retrait des espaces de bord ; les caractères de
+  contrôle, hors retours à la ligne et tabulations, sont retirés). Seules ces trois erreurs du corps rendent `400`.
+- **Le magasin ne fait jamais perdre une remarque** : `null` ou `""` = sans magasin ; un `shop` qui n'est pas un magasin
+  connu (`shops`, sinon `ceo_shop`) est accepté (`201`) et gardé sans magasin (`shop_id` NULL), la valeur reçue rangée
+  telle quelle dans `shop_brut` (32 caractères au plus) — l'écran BO l'affiche « magasin inconnu (<valeur>) ».
+- **Corrigé plutôt que refusé** : `langue` autre que `nl` → `fr` ; `saisieLe` absente, illisible, d'avant 2024 ou dans le
+  futur → l'heure de réception. Les dates sont rangées dans le fuseau du serveur.
+- **`429` `{ "erreur": "trop de remarques pour ce magasin aujourd’hui (200 au plus par jour)" }`** : 200 remarques déjà
+  reçues ce jour (heure de réception) pour ce magasin ; les remarques sans magasin et celles d'un magasin inconnu
+  comptent ensemble pour un magasin. La tablette réessaie.
+- **`5xx`** : base injoignable (`503` du contrôleur frontal) — la tablette garde la remarque et réessaie.
+- **Journal** : une ligne par remarque reçue (`Tablette`, `Remarque client`, le magasin, le type, la longueur et la
+  langue — pas le texte du client). L'adresse IP de l'appel est gardée dans la table, jamais rendue.
+
+`GET /tablette/remarques?shop=4&jours=30` (l'écran BO) → `{ "remarques": [ { "id", "shop": { "id": "4", "nom": "Halle" }
+| null, "shopBrut": null | "99", "type", "texte", "langue", "saisieLe": "2026-10-02T18:40:12+02:00", "recuLe": "…",
+"traitee": false, "traiteeLe": null | "…" } ], "total": 7, "nonTraitees": 5 }`. `shopBrut` (ajout au contrat, lu par le
+BO seul) = le magasin envoyé quand il n'était pas connu, alors `shop: null`. Sans `shop` : tous les magasins, et les
+remarques sans magasin ou d'un magasin inconnu (seule cette vue les montre). Période : saisies depuis minuit il y a `jours` jours (défaut 30, 366 au plus). Tri : `saisieLe`
+décroissante. `remarques` en porte au plus 1 000 ; `total` et `nonTraitees` comptent toute la période. `nom` = le nom
+court du magasin. `shop` mal formé → `400` ; magasin inconnu → liste vide.
+
+`PATCH /tablette/remarques/{id}` (l'écran BO) — `{ "traitee": true | false }` → `200` `{ "ok": true }` ; pose ou efface
+`traitee_le`, et journalise (`CEO`, `Remarque client`) quand l'état change. `traitee` absent ou non booléen → `400` ;
+id inconnu ou mal formé → `404` `{ "erreur": "remarque inconnue" }`.
 
 ### `/scoring` — le scoring du trimestre : quatre postes de cinq points par magasin
 
@@ -994,6 +1125,18 @@ volet pour le reste (photo en grand, repères, commentaire, niveaux sous le
 seuil). Une lecture par boutique et par journée,
 relue passé quinze minutes (les URL expirent à vingt) ; la bascule
 « Liste » redonne le tableau et ses colonnes.
+
+**L'application visites aussi** : dans le contrôle guidé du consultant, l'étape
+« Les contrôles en photo » (après la photo du jour) montre la même bande pour
+la boutique visitée — `GET /pwa/tasks?date=&shop=` (le paramètre `shop`
+limite les appels au panel et les lignes à cette boutique) et
+`GET /pwa/tasks/photos?shop=&date=`, dont chaque photo porte désormais
+`checklistId` et `completionId`. La note rapide 4 / 5 y part dans la file
+hors ligne comme toute écriture, avec `role: consultant` et `auteur` : le
+serveur consigne alors le consultant dans `consultant_name` (avis terrain) et
+laisse les colonnes `owner_*` à la direction. La photo en grand (loupe) porte
+la fiche, la note rapide et ‹ ›. L'étape est faite quand plus rien n'attend
+une note.
 
 ### Qui fait autorité sur quoi
 

@@ -944,3 +944,30 @@ CREATE TABLE IF NOT EXISTS brand_guard_checks (
   KEY idx_shop (shop_id, created_at),
   KEY idx_sauvage (sauvage, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Tablette vendeuses — les remarques des clients (src/tablette_remarques.php)
+--
+-- Une vendeuse note au comptoir ce qu'un client a dit : compliment, suggestion
+-- ou réclamation. La tablette l'envoie avec un uuid qu'elle tire elle-même, qui
+-- sert de clé primaire : un renvoi ne crée jamais de doublon. `saisie_le` est
+-- l'heure de saisie sur la tablette (une remarque peut arriver plus tard),
+-- `recu_le` l'heure de réception au serveur (le plafond par jour la compte).
+-- Créée aussi au démarrage par installer.php (ensureTabletteRemarques).
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_tablette_remarque (
+  id          CHAR(36)    NOT NULL PRIMARY KEY,   -- uuid tiré par la tablette
+  shop_id     VARCHAR(32) NULL,                   -- shops.id, NULL = sans magasin ou magasin inconnu
+  shop_brut   VARCHAR(32) NULL,                   -- le magasin envoyé quand il n'est pas connu (gardé tel quel)
+  type        VARCHAR(16) NOT NULL,               -- compliment | suggestion | reclamation
+  texte       TEXT        NOT NULL,               -- 1 à 1 000 caractères
+  langue      CHAR(2)     NOT NULL DEFAULT 'fr',  -- fr | nl
+  saisie_le   DATETIME    NOT NULL,
+  recu_le     DATETIME    NOT NULL,
+  traitee     TINYINT(1)  NOT NULL DEFAULT 0,
+  traitee_le  DATETIME    NULL,
+  ip          VARCHAR(64) NULL,
+  KEY idx_shop_saisie (shop_id, saisie_le),
+  KEY idx_saisie (saisie_le),
+  KEY idx_shop_recu (shop_id, recu_le)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
