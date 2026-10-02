@@ -9,7 +9,7 @@ RewriteEngine On
 # « no-cache » n'interdit pas de stocker, il impose de revalider : avec l'ETag
 # la requête coûte un 304 vide, pas un téléchargement.
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|js|css)$">
+  <FilesMatch "\.(html|js|css|webmanifest)$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>
@@ -18,6 +18,9 @@ RewriteEngine On
 # le navigateur le compile pendant le téléchargement.
 <IfModule mod_mime.c>
   AddType application/wasm .wasm
+  # Le manifeste de la tablette des vendeuses (PWA) : sans son type, certains
+  # navigateurs refusent de proposer l'installation.
+  AddType application/manifest+json .webmanifest
 </IfModule>
 
 # API REST → contrôleur frontal
@@ -41,6 +44,16 @@ RewriteRule ^(uploads|assistant/uploads)/.*\.(php|phtml|phar|phps|cgi|pl|py|sh|h
 # n'indiquait que le fichier manquait.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^(uploads|assistant/uploads)/ - [R=404,L]
+
+# La tablette des vendeuses (tablette/, application compilée) : un fichier
+# ABSENT rend un 404, jamais le shell du cockpit. Sans cette règle, un morceau
+# de script périmé ou une image mal nommée recevait la page HTML du cockpit avec
+# un statut 200 — « Unexpected token < » à l'écran, et un cache hors ligne qui
+# garde du HTML à la place d'une image. La règle est ici et pas dans
+# tablette/.htaccess : la mise à jour remplace le dossier entier.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^tablette(/|$) - [R=404,L]
 
 # SPA : tout chemin qui n'est pas un fichier réel → index.html
 RewriteCond %{REQUEST_FILENAME} !-f

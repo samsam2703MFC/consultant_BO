@@ -967,17 +967,70 @@ final class PanelApi
             $d = $res[(string) $pid] ?? null;
             if (is_array($d)) {
                 foreach (['data', 'recipe'] as $k) { if (isset($d[$k]) && is_array($d[$k])) { $d = $d[$k]; } }
-                $rp = null;
-                foreach (['id_product', 'product_id', 'productId'] as $k) { if (isset($d[$k]) && is_numeric($d[$k])) { $rp = (int) $d[$k]; break; } }
-                if ($rp === null || $rp === $pid) {
-                    $path = null;
-                    foreach (['shop_photo_path', 'main_photo_path', 'photo_1', 'photo_2', 'photo_3'] as $k) { $path = self::texteProfond($d, $k); if ($path !== null) { break; } }
-                    if ($path !== null) { $url = preg_match('#^https?://#i', $path) ? $path : self::photosBase() . '/' . ltrim($path, '/'); }
-                }
+                $url = self::recettePhotoUrl($d, $pid);
             }
             $out[$pid] = ['nom' => $noms[$pid] ?? ('Produit #' . $pid), 'url' => $url];
         }
         return $out;
+    }
+
+    /**
+     * Les visuels de plusieurs produits par leur RECETTE, connue d'avance —
+     * [id produit => {nom, url}] pour [id produit => id recette].
+     *
+     * L'id_recipe est sur la fiche produit (`product.id_recipe`, le `recetteId`
+     * du catalogue) : inutile de le chercher dans products/available d'une
+     * boutique, qui ne rend que ce que CETTE boutique vend — un produit absent
+     * du premier magasin y restait sans photo. Même lecture de la recette que
+     * productPhotos (shop_photo_path, sinon main_photo_path, sinon photo_1..3)
+     * et même corroboration : un id_product de recette qui contredit le produit
+     * ne donne aucune photo plutôt qu'une photo trompeuse.
+     *
+     * @param array<int,int> $recettes id produit → id recette
+     * @return array<int,array{nom:string,url:?string}>
+     */
+    public static function recipePhotos(array $recettes): array
+    {
+        $chemins = [];
+        foreach ($recettes as $pid => $rid) {
+            if ((int) $pid > 0 && (int) $rid > 0) { $chemins[(int) $pid] = '/recipes/' . (int) $rid; }
+        }
+        if (!$chemins) { return []; }
+        $res = self::getParallele($chemins, 6);
+        // Tout muet : le plus souvent un jeton périmé, que la lecture en parallèle ne
+        // renouvelle pas. Une lecture simple (qui se reconnecte sur un 401), puis on
+        // relit — sans quoi chaque produit serait noté « sans photo » pour sept jours.
+        if (!array_filter($res, 'is_array') && self::get((string) reset($chemins)) !== null) {
+            $res = self::getParallele($chemins, 6);
+        }
+        $out = [];
+        foreach ($chemins as $pid => $_) {
+            $nom = ''; $url = null;
+            $d = $res[$pid] ?? null;
+            if (is_array($d)) {
+                foreach (['data', 'recipe'] as $k) { if (isset($d[$k]) && is_array($d[$k])) { $d = $d[$k]; } }
+                foreach (['name', 'recipe_name', 'label', 'title', 'nom'] as $k) { if (!empty($d[$k]) && is_string($d[$k])) { $nom = trim($d[$k]); break; } }
+                $url = self::recettePhotoUrl($d, $pid);
+            }
+            $out[$pid] = ['nom' => $nom, 'url' => $url];
+        }
+        return $out;
+    }
+
+    /**
+     * Le visuel d'une recette déjà déballée : shop_photo_path, sinon
+     * main_photo_path, sinon photo_1..3, résolu contre photoBase. null si la
+     * recette n'a pas de visuel, ou si son id_product contredit le produit.
+     */
+    private static function recettePhotoUrl(array $d, int $pid): ?string
+    {
+        $rp = null;
+        foreach (['id_product', 'product_id', 'productId'] as $k) { if (isset($d[$k]) && is_numeric($d[$k])) { $rp = (int) $d[$k]; break; } }
+        if ($rp !== null && $rp !== $pid) { return null; }
+        $path = null;
+        foreach (['shop_photo_path', 'main_photo_path', 'photo_1', 'photo_2', 'photo_3'] as $k) { $path = self::texteProfond($d, $k); if ($path !== null) { break; } }
+        if ($path === null) { return null; }
+        return preg_match('#^https?://#i', $path) ? $path : self::photosBase() . '/' . ltrim($path, '/');
     }
 
     /**

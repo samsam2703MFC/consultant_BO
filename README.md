@@ -85,6 +85,8 @@ public/
     index.html          coquille
     dashboard.js        état S, rendre()/brancher(), lectures lireAux()
     dashboard.css       styles de la page
+  tablette/             tablette des vendeuses « Book vendeuses » — application
+                        compilée (dépôt pwa_sales_tablet), copiée telle quelle
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran
@@ -261,6 +263,41 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.
+
+## Tablette des vendeuses (Book vendeuses)
+
+L'application de comptoir des vendeuses — gamme, photos, prix, saisons,
+allergènes, conseils de vente — est servie par le BO depuis `public/tablette/` :
+**https://185.180.206.46/consulant_bo/tablette/?shop=4** (`&lang=nl`, `&prices=0`).
+C'est la compilation du dépôt `pwa_sales_tablet` (Vite, `base: './'`), copiée
+ici comme l'assistant de campagne : on ne la modifie pas dans ce dépôt, on la
+recompile là-bas et on recopie le dossier `dist/` (avec le sha source dans
+`public/tablette/VERSION`). Le dossier est l'identité de l'application
+installée sur les tablettes : il ne change plus de nom.
+
+- **Données** : `GET /api/cockpit/tablette/book?shop=…` (`src/tablette.php`)
+  rend le catalogue du réseau dans les champs de la tablette — produits du
+  comptoir (planogramme standard, gammes ouvertes ou proches, obligatoires),
+  groupes, gammes saisonnières, prix réseau, top 8 des ventes du magasin sur
+  28 jours, photos de recette du panel en vignettes 640 px. Calculé pour six
+  heures ; contrat complet dans `docs/contrat-api.md`. Sans réponse valable, la
+  tablette garde ses données d'exemple.
+- **Photos** : `POST /api/cockpit/tablette/photos {shop}` les télécharge au
+  panel, 24 par appel, et fait les vignettes sous `public/uploads/tablette/`.
+  C'est l'écran BO qui l'appelle ; la tablette, jamais.
+- **Allergènes** : `product.allergene` est vide dans la base (mesuré le
+  02/10/2026). La tablette n'affiche donc jamais un produit « sans » un
+  allergène : `alKnown: false` → « à vérifier sur l'étiquette ».
+- **http / https** : le service worker, le mode hors ligne et l'installation
+  sur l'écran d'accueil n'existent que sur une page sécurisée. En http la
+  tablette s'ouvre et affiche ses données, sans plus. Le lien à installer sur
+  les tablettes est donc le lien **https** — or, au 02/10/2026, le serveur
+  répond à https://185.180.206.46/ par une connexion réinitialisée
+  (*connection reset*) : à rétablir avant d'équiper les magasins.
+- **Serveur de dev** : `public/router.php` sert l'`index.html` d'un dossier et
+  rend 404 pour un fichier absent sous `tablette/` ou `uploads/`, comme le
+  `.htaccess` (qui fait de même en production : sans cela le shell du cockpit
+  partait en 200 à la place d'un morceau de script ou d'une image).
 
 ## Scouting commercial
 

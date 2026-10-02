@@ -274,3 +274,51 @@ matin (7 h), une fois par jour chacun. Les photos de visite vivent sous
 déploiement, hors git). Les mails ne partent que si le réglage `mails` est
 activé dans Réglages visites ; les notifications push partent toujours vers
 les abonnements existants.
+
+## Tablette des vendeuses (Book vendeuses)
+
+Adresse : **`https://185.180.206.46/consulant_bo/tablette/?shop=<id>`** (barre
+finale comprise ; `&lang=nl`, `&prices=0`). Le dossier `tablette/` est
+l'identité de l'application installée sur les tablettes : le renommer ferait
+apparaître une seconde application sur chacune.
+
+**Ce qui est livré.** `public/tablette/` est la compilation du dépôt
+`pwa_sales_tablet`, commitée ici comme `public/assistant/` (rien n'est compilé
+au déploiement). La mettre à jour :
+
+```bash
+cd ../pwa_sales_tablet
+npm ci && npm run typecheck && npm run lint && npm test && npm run build
+rm -rf ../consultant_bo/public/tablette && cp -r dist ../consultant_bo/public/tablette
+git rev-parse HEAD > ../consultant_bo/public/tablette/VERSION
+```
+
+Ne rien poser à la main dans `public/tablette/` : la mise à jour remplace le
+dossier entier (le `rsync --delete` du déploiement retire aussi les anciens
+morceaux de script). Les règles propres à la tablette vivent donc dans
+`public/.htaccess` : un fichier absent sous `tablette/` rend **404** (jamais le
+shell du cockpit en 200, qui casserait l'application et empoisonnerait son
+cache hors ligne), et `.webmanifest` est servi en `application/manifest+json`.
+
+**Données et photos.** `GET /api/cockpit/tablette/book` (gardé six heures en
+base, clé `tabletteBook:…`) et `POST /api/cockpit/tablette/photos` — voir
+`docs/contrat-api.md`. Les vignettes 640 px vivent sous
+`public/uploads/tablette/` : créé et donné à www-data par `bin/deploy.sh`, hors
+git, et protégé du `rsync --delete` par l'exclusion de `public/uploads`. Les
+photos d'origine restent sous `public/uploads/plano/panel/`, partagées avec le
+planogramme.
+
+**http / https.** Le service worker, le mode hors ligne et l'installation sur
+l'écran d'accueil n'existent que sur une page sécurisée : en http, la tablette
+s'ouvre et lit ses données, mais ne fonctionne pas sans réseau et ne
+s'installe pas. Le lien donné aux magasins est donc le lien **https**. Au
+02/10/2026, `https://185.180.206.46/` répond par une **connexion
+réinitialisée** (*connection reset*), alors que l'étape 5a de `bin/deploy.sh`
+suppose un https déjà servi par le certbot du serveur : à rétablir (et son
+renouvellement automatique à vérifier) avant d'équiper les tablettes.
+
+**Recette** (ajoutée à `deploy.yml`) : `tablette/` contient « Book vendeuses »,
+`tablette/sw.js` et `tablette/manifest.webmanifest` répondent 200,
+`tablette/img/__absent__.png` répond 404, `api/cockpit/tablette/book` porte
+`"products":[`. Le contrôle de syntaxe `node --check` ignore `public/tablette/`
+(bundle Vite, comme `public/assistant/`).

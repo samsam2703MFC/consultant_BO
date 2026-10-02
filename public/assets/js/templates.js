@@ -151,6 +151,7 @@ export function render(c, x){
       ${c.isNewsletter || c.isNewsletterShop ? tplNewsletter(c, x) : ''}
       ${c.isProspection ? tplProspection(c, x) : ''}
       ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
+      ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isCreux ? tplCreux(c, x) : ''}
@@ -10137,6 +10138,100 @@ function tplProspectionMobile(c, x){
     <div style="${carte};padding:14px 16px 16px">
       <div style="${cap};margin-bottom:10px;display:flex;justify-content:space-between"><span>Aperçu · ${esc(c.prMagasin ? c.prMagasin.nom : '')}</span><span>390 × 760</span></div>
       ${c.prMagasin ? `<div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.prLienMobile)}" title="Prospection mobile" style="width:390px;height:760px;border:none;display:block"></iframe></div>` : '<div style="font-size:12px;color:var(--color-text-muted)">Choisissez un magasin.</div>'}
+    </div>
+  </div>`;
+}
+
+/* --- Tablette vendeuses : le lien de chaque magasin, l'état des données, un aperçu ---
+ * L'aperçu vient en dernier, hors de la grille du haut : la fusion du rendu
+ * compare les nœuds par position, et ce qui bouge au-dessus (la progression des
+ * photos, une relecture) ne doit pas recréer l'iframe — elle se rechargerait. */
+function tplTablette(c, x){
+  const { esc } = x;
+  const T = c.tb;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const mu = 'font-size:12px;color:var(--color-text-muted);line-height:1.55';
+  const seg = l => `<div class="ps-seg">${l.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const E = T.etat;
+  const off = (b) => b ? ' disabled style="opacity:.55;cursor:default"' : '';
+
+  let donnees;
+  if (T.demo) {
+    donnees = `<div class="ps-note">Mode démonstration : l’API du cockpit ne répond pas, l’état des données n’est pas lisible. La tablette affiche alors ses données d’exemple.</div>`;
+  } else if (T.chargement) {
+    donnees = `<div style="${mu}">Lecture du book de la tablette…</div>`;
+  } else if (!E) {
+    donnees = `<div class="ps-note">${T.erreur === 'sans réponse'
+        ? 'Le service /tablette/book ne répond pas : pas encore en ligne, ou en erreur au serveur.'
+        : 'Le service /tablette/book rend une réponse inattendue (' + esc(T.erreur) + ').'} La tablette affiche alors ses données d’exemple.</div>
+      <div><button class="ps-btn" ${x.A(T.reessayer)}${off(!!T.relecture)}>${T.relecture ? 'Lecture…' : 'Réessayer'}</button></div>`;
+  } else {
+    donnees = `
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px 12px;flex-wrap:wrap">
+        <div style="font-size:13px"><span style="font-weight:500">Généré le ${esc(E.genere)}</span>${E.age ? ` <span style="color:var(--color-text-muted)">· ${esc(E.age)}</span>` : ''}</div>
+        <span style="${mu};font-size:11.5px">${esc(E.details)}</span>
+      </div>
+      ${T.erreur ? `<div class="ps-note">La dernière lecture a échoué (${esc(T.erreur)}) : l’état affiché est le précédent.</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+        ${E.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v"${t.alerte ? ' style="color:#8a5a13"' : ''}>${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}
+      </div>
+      ${E.sources.length ? `<div style="${mu};font-size:11.5px">${E.sources.map(s => `<div><span style="color:var(--color-text);font-weight:500">${esc(s.nom)}</span> — ${esc(s.txt)}</div>`).join('')}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="ps-btn" ${x.A(T.regenerer)}${off(!!T.relecture)} title="Recalculer le book au serveur (il est sinon gardé six heures)">${T.relecture === 'regenere' ? 'Régénération…' : (T.relecture ? 'Lecture…' : 'Régénérer')}</button>
+        <button class="ps-btn${T.photosEnCours ? '' : ' p'}" ${x.A(T.photos)}>${T.photosEnCours ? 'Arrêter la récupération' : 'Récupérer les photos manquantes'}</button>
+      </div>
+      ${T.photosTxt ? `<div style="display:flex;flex-direction:column;gap:6px">
+        ${T.photosPct != null ? `<div style="height:6px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><div style="height:100%;width:${T.photosPct}%;background:${T.photosKo ? '#C17A2A' : 'var(--color-primary)'};transition:width .3s"></div></div>` : ''}
+        <div style="${mu};${T.photosKo ? 'color:#8a5a13' : ''}">${esc(T.photosTxt)}</div>
+      </div>` : ''}`;
+  }
+
+  return `
+  <div data-screen="tablette" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px;align-items:start">
+      <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+        <div class="ps-cap">Le lien de la tablette</div>
+        <div style="${mu}">Une application à part, faite pour la tablette du comptoir : la gamme et ses photos, les prix, les saisons, les allergènes, la vente additionnelle — en français et en néerlandais. Chaque magasin a son lien ; la tablette retient son magasin, et l’application installée se rouvre sans le lien.</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="ps-cap">Magasin</span>
+          <select ${x.C(T.setMagasin)} style="${SEL}" aria-label="Magasin">${T.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}<option value=""${T.reseauOn ? ' selected' : ''}>Tout le réseau (sans magasin)</option></select>
+          ${seg(T.langues)}
+          <button class="ps-tog${T.prix ? ' on' : ''}" ${x.A(T.basculerPrix)}><i></i>Prix affichés</button>
+        </div>
+        ${T.sansMagasin ? `<div style="${mu}">Aucun magasin ouvert n’est lu : le lien mène à la tablette sans magasin, avec les données de tout le réseau.</div>` : ''}
+        <input readonly value="${esc(T.lien)}" ${x.A(T.selectionner)} aria-label="Lien de la tablette" style="width:100%;font:12px var(--font-ui);padding:8px 10px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text)">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ps-btn p" ${x.A(T.copier)}>Copier le lien</button>
+          <a class="ps-btn" href="${esc(T.lien)}" target="_blank" rel="noopener">Ouvrir dans un onglet ↗</a>
+        </div>
+        ${T.https
+          ? `<div style="${mu}">Lien https : la tablette peut s’installer sur l’écran d’accueil et fonctionner sans réseau.</div>`
+          : `<div class="ps-note"><b style="font-weight:600">Hors ligne et installation : https seulement.</b> Le serveur ne sert aujourd’hui que http : ce lien fonctionne en ligne, mais la tablette ne peut ni s’installer sur l’écran d’accueil ni fonctionner sans réseau.</div>`}
+      </div>
+      <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+        <div class="ps-cap">Les données reçues du BO · ${esc(T.nom)}</div>
+        ${donnees}
+      </div>
+    </div>
+    <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="ps-cap">Aperçu · ${esc(T.nom)}${T.nl ? ' · NL' : ''}${T.prix ? '' : ' · sans prix'}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${seg(T.orients)}
+          <button class="ps-btn" ${x.A(T.recharger)} title="Recharger la tablette">↻ Recharger</button>
+          <span style="${mu};font-size:11px;font-variant-numeric:tabular-nums">${T.w} × ${T.h} · ${esc(T.echTxt)}</span>
+        </div>
+      </div>
+      <div style="${T.installee
+        ? `box-sizing:content-box;width:${T.sw}px;height:${T.sh}px;border:${T.bord}px solid #222;border-radius:22px;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)`
+        : 'border:1.5px dashed var(--color-border-secondary);border-radius:12px;padding:28px 24px;text-align:center'}">
+        ${T.installee
+          ? `<iframe id="tb-apercu" src="${esc(T.apercu)}" title="Tablette vendeuses — aperçu" style="width:${T.w}px;height:${T.h}px;border:none;display:block;transform:scale(${T.ech});transform-origin:0 0"></iframe>`
+          : `<div style="${mu}">${T.installee === false
+            ? 'La tablette n’est pas installée sur ce serveur : le dossier tablette/ ne répond pas. Elle s’y copie compilée depuis le dépôt pwa_sales_tablet — puis « Recharger ».'
+            : 'Vérification de la tablette…'}</div>`}
+      </div>
+      <div style="${mu};font-size:11.5px">L’aperçu est la tablette en ligne, à la même adresse que le cockpit : les mêmes données qu’en magasin, à l’échelle de l’écran.</div>
     </div>
   </div>`;
 }
