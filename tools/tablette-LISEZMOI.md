@@ -10,7 +10,7 @@ dans l'écran « Tablette vendeuses » du cockpit). Ce dossier est l'identité d
 l'application installée sur les tablettes : ne pas le renommer.
 
 Les données viennent de `GET api/cockpit/tablette/book` (src/tablette.php) ;
-les photos de `uploads/tablette/` (vignettes 640 px) et
+les photos de `uploads/tablette/` (vignettes carrées 640 px) et
 `uploads/plano/panel/`. Le mode hors ligne et l'installation sur l'écran
 d'accueil n'existent qu'en https.
 

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * DONNÉES : GET /tablette/book rend le catalogue du réseau dans les noms de
  * champs de la tablette (BookData : categories, seasons, products), et
  * POST /tablette/photos télécharge les photos de recette du panel qui manquent,
- * avec leur vignette 640 px. Contrat : docs/contrat-api.md.
+ * avec leur vignette carrée de 640 px. Contrat : docs/contrat-api.md.
  *
  * Tout vient de ce que le BO lit déjà : le catalogue (ep_prod_catalogue, gammes
  * comprises), la fiche produit de la base partagée (UNE lecture groupée de
@@ -48,7 +48,8 @@ const TB_CACHE_HEURES = 6;
 const TB_BEST = 8;                         // meilleures ventes marquées
 const TB_BEST_JOURS = 28;
 const TB_SAISON_AVANT_JOURS = 45;          // une gamme qui ouvre dans 45 jours entre au comptoir
-const TB_VIGNETTE_PX = 640;                // grand côté des vignettes
+const TB_VIGNETTE_PX = 640;                // côté des vignettes (carrées)
+const TB_VIGNETTE_FIN = '-640c.jpg';       // fin du nom d'une vignette : « c » = carrée (le nom a changé avec le format, les tablettes rechargent)
 const TB_VIGNETTES_LECTURE = 40;           // vignettes faites au plus par GET /tablette/book…
 const TB_VIGNETTES_LECTURE_S = 3.0;        // … et en 3 s au plus : la tablette n'attend que 6 s
 const TB_VIGNETTES_ECRITURE = 80;          // par POST /tablette/photos
@@ -174,7 +175,7 @@ function ep_tablette_book(): array
 /**
  * POST /tablette/photos — {shop, ensemble?} : au plus PS_PHOTOS_PAR_APPEL photos
  * du panel téléchargées (recette lue par l'id_recipe du catalogue, sans passer
- * par un magasin), puis les vignettes 640 px. L'écran BO rappelle tant que
+ * par un magasin), puis les vignettes carrées de 640 px. L'écran BO rappelle tant que
  * `restants` > 0 ; la tablette ne l'appelle jamais.
  * `faites` : références traitées par cet appel (photo lue au panel, absence
  * notée pour sept jours, ou vignette faite) ; `restants` : ce qu'un prochain
@@ -424,7 +425,7 @@ function tbReponse(array $base): array
     try {
         $e = tbPhotosEtat($refs, TB_VIGNETTES_LECTURE, TB_VIGNETTES_LECTURE_S);
         $avec = count($produits) - $e['manquantes'];
-        $source = 'photo de recette du panel gardée sous uploads/plano/panel/, vignette ' . TB_VIGNETTE_PX . ' px sous uploads/tablette/ : '
+        $source = 'photo de recette du panel gardée sous uploads/plano/panel/, vignette carrée ' . TB_VIGNETTE_PX . ' px sous uploads/tablette/ : '
             . $avec . '/' . count($produits) . ' produit(s) avec photo, ' . $e['vignettes'] . ' en vignette'
             . ($e['restants'] > 0 ? ' ; ' . $e['restants'] . ' à récupérer (POST /tablette/photos)' : '');
     } catch (Throwable $ex) {
@@ -805,7 +806,7 @@ function tbPhotosEtat(array $refs, int $max, float $secondes): array
             if ($l === null || !empty($l['fichier']) || time() - (strtotime((string) $l['maj']) ?: 0) >= 7 * 86400) { $out['aLire']++; }
             continue;
         }
-        $vig = 'uploads/tablette/' . tbFichierRef($ref) . '-' . TB_VIGNETTE_PX . '.jpg';
+        $vig = 'uploads/tablette/' . tbFichierRef($ref) . TB_VIGNETTE_FIN;
         $ok = is_file($pub . $vig) && (int) filemtime($pub . $vig) >= (int) filemtime($pub . $orig);
         if (!$ok) {
             if ($out['faites'] < $max && microtime(true) - $t0 < $secondes) {
@@ -823,11 +824,14 @@ function tbPhotosEtat(array $refs, int $max, float $secondes): array
 }
 
 /**
- * La vignette d'une photo : 640 px sur le grand côté, JPEG qualité 80, sous
- * public/uploads/tablette/<ref>-640.jpg — les originaux du panel montent à 8 Mo,
- * de quoi remplir une tablette hors ligne. Refaite quand l'original est plus
- * récent. Le chemin relatif à public/, ou null (pas d'original, image
- * illisible, trop grande pour la mémoire disponible).
+ * La vignette d'une photo : un carré de 640 px (moins si l'original est plus
+ * petit), JPEG qualité 80, sous public/uploads/tablette/<ref>-640c.jpg — les
+ * originaux du panel montent à 8 Mo, de quoi remplir une tablette hors ligne.
+ * La tablette montre les photos en carré : une photo qui ne l'est pas est
+ * posée entière au milieu et ses bords sont prolongés jusqu'au carré (le fond
+ * continue, rien n'est coupé — l'étiquette d'un sachet reste lisible). Refaite
+ * quand l'original est plus récent. Le chemin relatif à public/, ou null (pas
+ * d'original, image illisible, trop grande pour la mémoire disponible).
  */
 function tbVignette(string $ref, ?string $source = null): ?string
 {
@@ -842,7 +846,7 @@ function tbVignette(string $ref, ?string $source = null): ?string
     }
     $src = $pub . $source;
     if (!is_file($src)) { return null; }
-    $rel = 'uploads/tablette/' . $nom . '-' . TB_VIGNETTE_PX . '.jpg';
+    $rel = 'uploads/tablette/' . $nom . TB_VIGNETTE_FIN;
     $dst = $pub . $rel;
     if (is_file($dst) && (int) filemtime($dst) >= (int) filemtime($src)) { return $rel; }
 
@@ -866,12 +870,32 @@ function tbVignette(string $ref, ?string $source = null): ?string
         }
     }
     $w = imagesx($im); $h = imagesy($im);
-    $k = min(1.0, TB_VIGNETTE_PX / max($w, $h));
-    $nw = max(1, (int) round($w * $k)); $nh = max(1, (int) round($h * $k));
-    $v = imagecreatetruecolor($nw, $nh);
+    $c = min(TB_VIGNETTE_PX, max($w, $h));
+    $k = $c / max($w, $h);
+    $nw = max(1, min($c, (int) round($w * $k))); $nh = max(1, min($c, (int) round($h * $k)));
+    $p = imagecreatetruecolor($nw, $nh);
     // Fond blanc : la transparence d'un PNG ne passe pas en JPEG (elle virerait au noir).
-    imagefill($v, 0, 0, (int) imagecolorallocate($v, 255, 255, 255));
-    imagecopyresampled($v, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    imagefill($p, 0, 0, (int) imagecolorallocate($p, 255, 255, 255));
+    imagecopyresampled($p, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    unset($im);
+    // Le carré : la photo au milieu, puis une colonne (ou ligne) prise près de
+    // chaque bord étirée sur la marge, sans lissage (pixel pour pixel). Prise à
+    // 3 px du bord, qu'elle recouvre aussi : certaines photos du panel ont un
+    // liseré sombre d'un pixel, qui deviendrait sinon une bande noire.
+    $x = intdiv($c - $nw, 2); $y = intdiv($c - $nh, 2);
+    $v = imagecreatetruecolor($c, $c);
+    imagecopy($v, $p, $x, $y, 0, 0, $nw, $nh);
+    if ($x > 0) {
+        $i = min(3, intdiv($nw, 50));
+        imagecopyresized($v, $p, 0, $y, $i, 0, $x + $i, $nh, 1, $nh);
+        imagecopyresized($v, $p, $x + $nw - $i, $y, $nw - 1 - $i, 0, $c - $x - $nw + $i, $nh, 1, $nh);
+    }
+    if ($y > 0) {
+        $i = min(3, intdiv($nh, 50));
+        imagecopyresized($v, $p, $x, 0, 0, $i, $nw, $y + $i, $nw, 1);
+        imagecopyresized($v, $p, $x, $y + $nh - $i, 0, $nh - 1 - $i, $nw, $c - $y - $nh + $i, $nw, 1);
+    }
+    unset($p);
     $dos = dirname($dst);
     if (!is_dir($dos) && !@mkdir($dos, 0775, true) && !is_dir($dos)) { return null; }
     // Écrite à côté puis renommée : jamais une vignette à moitié écrite servie.
