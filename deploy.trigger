@@ -505,3 +505,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-02T05:35:42Z controle des taches : photos en carrousel, CSS partage
 2026-10-02T09:18:54Z tablette vendeuses : vue test en ligne, book et photos du bo
 2026-10-02T09:29:32Z tablette vendeuses : demarrage immediat sur le dernier book
+2026-10-02T09:48:02Z controle des taches : note rapide 4 et 5
