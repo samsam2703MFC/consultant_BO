@@ -3097,6 +3097,7 @@ function tplControle(c, x){
       ${dateSel}
       <select ${x.C(c.setCtrlShop)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlShopOptions, c.ctrlShop)}</select>
       <select ${x.C(c.setCtrlOnly)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlOnlyOptions, c.ctrlOnly, o => o.val, o => o.nom)}</select>
+      <span class="cq-vue"><button type="button" ${x.A(c.ctrlVuePhotos)} class="${c.ctrlVue === 'photos' ? 'on' : ''}">▦ Photos</button><button type="button" ${x.A(c.ctrlVueListe)} class="${c.ctrlVue === 'liste' ? 'on' : ''}">☰ Liste</button></span>
     </div>
     ${c.ctrlApiOff ? `
       <div style="background:rgba(193,122,42,0.10);border:0.5px solid rgba(193,122,42,0.35);border-radius:10px;padding:12px 16px;font-size:12.5px;line-height:1.55">
@@ -3109,7 +3110,7 @@ function tplControle(c, x){
       </div>` : (c.ctrlEmpty ? `
       <div style="${card};padding:24px;text-align:center;font-size:13px;color:var(--color-text-muted)">Aucune tâche ne correspond à ce filtre pour cette journée.</div>` : `
       <div style="display:flex;flex-direction:column;gap:14px">
-        ${c.ctrlShops.map(s => `
+        ${c.ctrlShops.map(s => c.ctrlVue === 'photos' ? tplCtrlPhotos(s, c, x, card) : `
           <div style="${card};overflow:hidden">
             <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="font-size:13.5px;font-weight:600">${esc(s.shop)}</div>
@@ -3150,21 +3151,7 @@ function tplControle(c, x){
                  jour sans disparaître. Le motif reste lisible et un bouton
                  ramène la tâche tout de suite — un contrôle qui s'efface sans
                  dire pourquoi ressemble à un oubli. -->
-            ${s.nMasquees ? `<div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
-              <button ${x.A(c.ctrlMasqPlier)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
-                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">${s.nMasquees} contrôle(s) maîtrisé(s)</span>
-                <span style="font-size:11px;color:var(--color-text-muted)">${c.ctrlMasqTout ? '— masquer le détail' : '— afficher'}</span>
-              </button>
-              ${c.ctrlMasqTout ? `<div style="padding:0 18px 12px">
-                ${s.masquees.map(t => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
-                  <span style="flex:1;min-width:0">
-                    <span style="font-size:12.5px;font-weight:500">${esc(t.tache)}</span>
-                    <span style="display:block;font-size:11px;color:var(--color-text-muted)">${esc(t.maitriseMoy || t.maitriseMotif)}${t.recontrole ? ' · ' + esc(t.recontrole) : ''}</span>
-                  </span>
-                  <button ${x.A(t.rouvrir)} title="Remettre ce contrôle dans la liste du jour" style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>
-                </div>`).join('')}
-              </div>` : ''}
-            </div>` : ''}
+            ${tplCtrlMasquees(s, c, x)}
           </div>`).join('')}
       </div>`)}
     ${c.ctrlConsultants && c.ctrlConsultants.length ? `
@@ -3193,6 +3180,55 @@ function tplControle(c, x){
         </div>
       </div>` : ''}
   </div>`;
+}
+
+/* Les contrôles maîtrisés d'une boutique : sous la liste comme sous les photos.
+   CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du jour sans
+   disparaître — le motif reste lisible et un bouton ramène la tâche. */
+function tplCtrlMasquees(s, c, x){
+  const { esc } = x;
+  return `${s.nMasquees ? `<div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+              <button ${x.A(c.ctrlMasqPlier)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
+                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">${s.nMasquees} contrôle(s) maîtrisé(s)</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${c.ctrlMasqTout ? '— masquer le détail' : '— afficher'}</span>
+              </button>
+              ${c.ctrlMasqTout ? `<div style="padding:0 18px 12px">
+                ${s.masquees.map(t => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+                  <span style="flex:1;min-width:0">
+                    <span style="font-size:12.5px;font-weight:500">${esc(t.tache)}</span>
+                    <span style="display:block;font-size:11px;color:var(--color-text-muted)">${esc(t.maitriseMoy || t.maitriseMotif)}${t.recontrole ? ' · ' + esc(t.recontrole) : ''}</span>
+                  </span>
+                  <button ${x.A(t.rouvrir)} title="Remettre ce contrôle dans la liste du jour" style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>
+                </div>`).join('')}
+              </div>` : ''}
+            </div>` : ''}`;
+}
+
+/* Une boutique en photos : l'en-tête avec ses filtres, le rail, le pied. Les
+   cartes sont celles du dashboard magasin (controles-photo.css) ; un clic ouvre
+   le volet de notation. */
+function tplCtrlPhotos(s, c, x, card){
+  const { esc } = x; const q = s.cq || { puces: [], cartes: [], resume: '', pied: '', vide: '' };
+  const photo = t => {
+    if (!t.photo) {
+      if (t.attente) { return '<span class="db-cqph att"></span>'; }
+      return `<span class="db-cqph vide ${t.e}"><b>${t.e === 'ko' ? '✗' : '—'}</b>${esc(t.videTxt)}</span>`;
+    }
+    return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.e}">${esc(t.badge)}</em></span>`;
+  };
+  const carte = t => `<button type="button" ${x.A(t.open)} class="db-cqc" title="Voir la photo et noter">${photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}${t.bouton ? `<span class="cq-noter${t.e === 'ctl' ? '' : ' re'}">${esc(t.bouton)}</span>` : ''}</button>`;
+  return `
+          <div style="${card};overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="font-size:13.5px;font-weight:600">${esc(s.shop)}</div>
+              <span class="db-cqf">${q.puces.map(f => `<button type="button" ${x.A(f.pick)} class="${f.on ? 'on' : ''}">${f.coul ? `<i style="background:${f.coul}"></i>` : ''}${esc(f.nom)}<b>${f.nb}</b></button>`).join('')}</span>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">${esc(q.resume)}</div>
+            </div>
+            ${q.sansPhoto ? `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.sansPhotoTxt)}</div>`
+            : q.cartes.length ? `<div class="db-cqrail"><button type="button" class="db-cqfl g" ${x.A(q.gauche)} aria-label="précédentes">‹</button><div class="db-cqpiste">${q.cartes.map(carte).join('')}</div><button type="button" class="db-cqfl d" ${x.A(q.droite)} aria-label="suivantes">›</button></div><div class="db-cqpied">${esc(q.pied)}</div>`
+            : `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.vide)}</div>`}
+            ${tplCtrlMasquees(s, c, x)}
+          </div>`;
 }
 
 /* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le

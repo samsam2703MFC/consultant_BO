@@ -903,6 +903,15 @@ puis les URL signées.
   ne le porte pas pour une tâche déjà notée.
 - Lecture seule. Noter, poser un repère ou contresigner restent dans **Contrôle des tâches**.
 
+**Le cockpit la lit aussi** : la page Tâches › Contrôle (`#/controle-taches`)
+montre, par défaut, chaque boutique en photos — la même bande que le dashboard
+(`assets/css/controles-photo.css`, partagé) : la photo, l'heure, la pastille
+d'état, qui l'a rendue, les écarts d'abord, les non rendues en fin de piste ;
+filtres par état dans l'en-tête de la boutique, et bouton « Noter ». Un clic
+ouvre le volet de notation existant. Une lecture par boutique et par journée,
+relue passé quinze minutes (les URL expirent à vingt) ; la bascule
+« Liste » redonne le tableau et ses colonnes.
+
 ### Qui fait autorité sur quoi
 
 Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la

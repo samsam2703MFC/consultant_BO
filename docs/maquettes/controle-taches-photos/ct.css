@@ -1,0 +1,27 @@
+/* Maquette « photos en carrousel » sur la page Contrôle des tâches — par-dessus
+ * le CSS du cockpit et les règles du carrousel du dashboard (.db-cq*). */
+.db-cqrail{padding:14px 16px 4px}
+.db-cqc{min-width:0;flex-basis:calc((100% - 60px) / 6)}
+.db-cqc .n{white-space:normal;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;margin-top:7px}
+.db-cqc .c{white-space:normal;line-height:1.25;margin-top:1px;margin-bottom:7px}
+.cq-noter{display:inline-block;align-self:flex-start;margin-top:auto;padding-top:5px;font:500 11.5px var(--font-ui);padding:5px 13px;border-radius:999px;background:var(--color-primary);color:#fff}
+.cq-noter.re{background:transparent;color:var(--color-text-muted);border:0.5px solid var(--color-border-secondary)}
+.db-cqf button{line-height:1.2}
+.cq-vue{margin-left:auto;display:inline-flex;gap:2px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:9px;padding:3px}
+.cq-vue button{border:none;border-radius:7px;padding:6px 12px;font:600 12px var(--font-ui);background:transparent;color:var(--color-text);cursor:pointer}
+.cq-vue button.on{background:var(--color-text);color:#fff}
+@media (max-width:1150px){.db-cqc{flex-basis:calc((100% - 36px) / 4)}}
+
+/* Planche. */
+.pl{padding:24px 30px 30px;background:#EAE4DC;font-family:var(--font-ui)}
+.pl .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:rgba(255,255,255,.6);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.pl h1{font:400 30px var(--font-display);margin:0 0 4px}
+.pl .acc{font-size:14px;color:var(--color-text-muted);margin:6px 0 18px;max-width:1300px;line-height:1.5}
+.pl .g{display:flex;gap:24px;align-items:flex-start}
+.pl .g img{display:block;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.pl .col{flex:0 0 320px;font-size:13px;line-height:1.55}
+.pl .col h4{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary);margin:0 0 6px}
+.pl .col ul{margin:0 0 16px;padding-left:18px}.pl .col li{margin-bottom:5px}
+.pl .col .pl-p li::marker{content:"+  ";color:#2d7a3e;font-weight:700}
+.pl .col .pl-m li::marker{content:"−  ";color:#C0182B;font-weight:700}
+.pl .leg{font-size:11.5px;color:var(--color-text-muted);margin-top:8px;text-align:center}
