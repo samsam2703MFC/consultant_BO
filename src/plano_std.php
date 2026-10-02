@@ -539,6 +539,31 @@ function ep_plano_std_photos(): array
         foreach (psLignes(date('Y-m-d')) as $rs) { foreach ($rs as $l) { $refs[] = (string) $l['ref']; } }
     }
     $refs = array_slice(array_values(array_unique($refs)), 0, 120);
+    $r = psPhotosResoudre($refs);
+    return ['photos' => (object) $r['photos'], 'restants' => $r['restants'],
+        'source' => 'photo de recette du panel, gardée sur le serveur ; une photo déposée au cockpit la remplace'];
+}
+
+/**
+ * Le cœur de la lecture des photos, partagé par le planogramme et la tablette
+ * des vendeuses : chaque référence fraîche est rendue telle quelle, les autres
+ * sont relues au panel (au plus PS_PHOTOS_PAR_APPEL), téléchargées sous
+ * uploads/plano/panel/ et notées dans ceo_plano_std_photo — une absence aussi,
+ * pour sept jours.
+ *
+ * La recette se trouve de deux façons. Quand l'appelant connaît l'id_recipe du
+ * produit (`$recettes`, ref → id, tiré du catalogue), elle se lit directement :
+ * aucune boutique n'intervient. Sinon on passe par products/available d'un
+ * magasin (`$shop`, à défaut le premier actif) — qui ne connaît que ce que CE
+ * magasin vend : un produit absent de son assortiment restait sans photo.
+ *
+ * @param list<string>       $refs
+ * @param array<string,int>  $recettes ref → id_recipe connu
+ * @return array{photos: array<string,array{url:?string,nom:string}>, restants:int, lus:int}
+ */
+function psPhotosResoudre(array $refs, int $shop = 0, array $recettes = []): array
+{
+    ensurePlanoStd();
     $connu = [];
     if ($refs) {
         $in = implode(',', array_fill(0, count($refs), '?'));
@@ -553,11 +578,22 @@ function ep_plano_std_photos(): array
     }
     $restants = max(0, count($aLire) - PS_PHOTOS_PAR_APPEL);
     $aLire = array_slice($aLire, 0, PS_PHOTOS_PAR_APPEL);
+    $lus = 0;
     if ($aLire && PanelApi::configured()) {
-        $ids = array_values(array_filter(array_map(static fn ($r) => is_numeric($r) ? (int) $r : 0, $aLire)));
-        $shop = 0;
-        try { $s = Db::row('SELECT id FROM shops WHERE active = 1 ORDER BY id LIMIT 1'); $shop = $s !== null ? (int) $s['id'] : 0; } catch (PDOException $e) { /* sans magasin : pas de recette */ }
-        $trouves = $ids && $shop > 0 ? PanelApi::productPhotos($ids, $shop) : [];
+        // Recette connue : lue directement. Les autres passent par un magasin.
+        $parRecette = []; $parMagasin = [];
+        foreach ($aLire as $r) {
+            $rid = (int) ($recettes[$r] ?? 0);
+            if ($rid > 0 && ctype_digit((string) $r)) { $parRecette[(int) $r] = $rid; } else { $parMagasin[] = $r; }
+        }
+        $trouves = $parRecette ? PanelApi::recipePhotos($parRecette) : [];
+        $ids = array_values(array_filter(array_map(static fn ($r) => is_numeric($r) ? (int) $r : 0, $parMagasin)));
+        if ($ids) {
+            if ($shop <= 0) {
+                try { $s = Db::row('SELECT id FROM shops WHERE active = 1 ORDER BY id LIMIT 1'); $shop = $s !== null ? (int) $s['id'] : 0; } catch (PDOException $e) { /* sans magasin : pas de recette */ }
+            }
+            if ($shop > 0) { $trouves += PanelApi::productPhotos($ids, $shop); }
+        }
         foreach ($aLire as $r) {
             $t = $trouves[(int) $r] ?? null;
             $fichier = null;
@@ -565,10 +601,10 @@ function ep_plano_std_photos(): array
             $photos[$r] = ['url' => $fichier, 'nom' => (string) ($t['nom'] ?? '')];
             Db::exec('DELETE FROM ceo_plano_std_photo WHERE ref = ?', [$r]);
             Db::exec('INSERT INTO ceo_plano_std_photo (ref, nom, fichier, maj) VALUES (?,?,?,?)', [$r, mb_substr((string) ($t['nom'] ?? ''), 0, 190), $fichier, date('Y-m-d H:i:s')]);
+            $lus++;
         }
     }
-    return ['photos' => (object) $photos, 'restants' => $restants,
-        'source' => 'photo de recette du panel, gardée sur le serveur ; une photo déposée au cockpit la remplace'];
+    return ['photos' => $photos, 'restants' => $restants, 'lus' => $lus];
 }
 
 /** Télécharge une image (lien signé du panel) sous public/ ; le chemin relatif, ou null. */

@@ -64,6 +64,7 @@ require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
 require __DIR__ . '/../../src/kpi_table.php';
+require __DIR__ . '/../../src/tablette.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -224,6 +225,8 @@ function route(string $method, string $path): mixed
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
             $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
+            // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
+            $path === '/tablette/book'                 => ep_tablette_book(),
             // Le planogramme STANDARD (un plan pour le réseau) ; les anciennes
             // adresses rendent désormais le même plan.
             $path === '/planogramme'                   => ep_plano_std(),
@@ -480,6 +483,8 @@ function route(string $method, string $path): mixed
     // La proposition d'après les ventes moyennes, appliquée aux emplacements choisis.
     if ($method === 'POST' && $path === '/planogramme/standard/proposition') { return wr_plano_std_proposition(); }
     if ($method === 'POST' && $path === '/planogramme/standard/photo') { return wr_plano_std_photo(); }
+    // Les photos du panel qui manquent à la tablette des vendeuses, 24 par appel, et leurs vignettes.
+    if ($method === 'POST' && $path === '/tablette/photos') { return wr_tablette_photos(); }
     if ($method === 'PUT' && $path === '/planogramme/standard/zone') { return wr_plano_std_zone(); }
     if ($method === 'POST' && $path === '/planogramme/standard/vider') { return wr_plano_std_vider(); }
     if ($method === 'POST' && ($path === '/planogramme/standard/montage' || $path === '/planogramme/montage')) { return wr_plano_std_montage(); }

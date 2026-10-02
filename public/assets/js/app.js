@@ -273,6 +273,7 @@ class App {
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
+      tablette: 'tablette-vendeuses',
       posts: 'controle-posts-facebook', brandGuard: 'brand-guard',
     };
   }
@@ -931,6 +932,7 @@ class App {
       newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
       prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
       prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
+      tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
@@ -1341,6 +1343,10 @@ class App {
         ['demarchage', 'Développement commercial', 0],
         ['prospection', 'Prospection', 0],
         ['prospectionMobile', 'Prospection mobile', 0],
+        // Le book des vendeuses : une application à part (tablette/), comme
+        // Prospection mobile — l'écran donne ses liens, un aperçu et l'état
+        // des données que le BO lui sert.
+        ['tablette', 'Tablette vendeuses', 0],
         ['newsletter', 'Newsletter', 0],
         ['newsletterShop', 'Newsletter magasin', 0]]],
       ['Contrôle', [
@@ -1376,11 +1382,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1769,6 +1775,7 @@ class App {
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
     if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
     if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
+    if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isCreux) this.valsCreux(common);
@@ -7575,7 +7582,11 @@ class App {
       const push = (id, label, section) => {
         const aide = ((titles || {})[id] || [])[1] || '';
         if (trouve(colle(label, section, aide))) {
-          ecrans.push({ titre: label, detail: section, aller: goTo(id) });
+          // Une entrée « ext: » vit hors du cockpit : elle s'ouvre dans un
+          // onglet, comme depuis le rail. goTo() en faisait un écran inconnu —
+          // chercher « Dashboard » ouvrait une page blanche.
+          ecrans.push({ titre: label, detail: section,
+            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener') : goTo(id) });
         }
       };
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
@@ -8440,6 +8451,258 @@ class App {
     common.prLienMobile = m ? base + 'prospection/?shop=' + encodeURIComponent(String(m.id)) : '';
     common.prLiens = ms.map(x => ({ id: String(x.id), nom: x.nom, url: base + 'prospection/?shop=' + encodeURIComponent(String(x.id)), on: m && String(x.id) === String(m.id) }));
     common.prCopier = () => { try { navigator.clipboard.writeText(common.prLienMobile); this.notify('Lien copié — à ouvrir sur le téléphone du franchisé.'); } catch (e) { this.notify('Copie impossible : sélectionnez le lien.'); } };
+  }
+
+  /* --- Tablette vendeuses ------------------------------------------------------
+   * Le book des vendeuses est une application à part, servie depuis tablette/
+   * (compilée dans le dépôt pwa_sales_tablet, puis copiée ici). Comme pour
+   * Prospection mobile, l'écran donne le lien de chaque magasin et un aperçu en
+   * ligne. Il y ajoute l'état des données que le BO sert à la tablette
+   * (GET /tablette/book), un bouton pour les recalculer, et la récupération des
+   * photos du panel (POST /tablette/photos, par lots, tant qu'il en reste).
+   */
+  /** Les deux formats de la tablette du comptoir — ceux de ses propres tests. */
+  static get TB_FORMATS(){ return { paysage: [1280, 800], portrait: [820, 1180] }; }
+  /** Le magasin choisi ; null pour « Tout le réseau » (choisi, ou faute de magasin ouvert). */
+  tbMagasin(){
+    if (this.state.tbShop === '') { return null; }
+    const ms = this.open();
+    return ms.find(m => String(m.id) === String(this.state.tbShop)) || ms[0] || null;
+  }
+  /** La clé des données lues : l'identifiant du magasin, ou « reseau ». */
+  tbCle(){ const m = this.tbMagasin(); return m ? String(m.id) : 'reseau'; }
+  /**
+   * L'état du book servi à la tablette, magasin par magasin. Lu une fois, relu
+   * à la demande (`force`) ; `rafraichir` le fait recalculer au serveur, qui le
+   * garde sinon six heures. En mode démonstration, rien ne part : l'API ne
+   * répond pas, et l'écran le dit.
+   */
+  tbCharge(force, rafraichir, cle){
+    if (this.source !== 'api') { return; }
+    cle = cle || this.tbCle();
+    const E = this.D.tb || (this.D.tb = {});
+    const enCours = this._tbEnCours || (this._tbEnCours = {});
+    if (enCours[cle] || (E[cle] && !force)) { return; }
+    enCours[cle] = true;
+    // Une relecture (forcée, donc d'un geste) se voit tout de suite sur le bouton.
+    if (E[cle]) { E[cle].relecture = rafraichir ? 'regenere' : 'relit'; this.setState({}); }
+    const q = [];
+    if (cle !== 'reseau') { q.push('shop=' + encodeURIComponent(cle)); }
+    if (rafraichir) { q.push('rafraichir=1'); }
+    readOne('/tablette/book' + (q.length ? '?' + q.join('&') : '')).then(d => {
+      enCours[cle] = false;
+      const ok = !!(d && d.book && Array.isArray(d.book.products));
+      // Un échec ne fait pas disparaître l'état déjà lu : il le signale.
+      const avant = E[cle];
+      E[cle] = ok ? { d, le: Date.now() }
+        : { d: avant ? avant.d : null, erreur: d ? (d.erreur || d.error || 'réponse inattendue') : 'sans réponse' };
+      this.setState({});
+    });
+  }
+  /**
+   * La tablette est-elle installée sur ce serveur ? Sans le dossier tablette/,
+   * le repli de l'application rend… le cockpit lui-même, avec un statut 200 :
+   * l'aperçu montrerait le cockpit dans le cockpit. On le reconnaît à son script.
+   */
+  tbSonde(force){
+    if (this._tbSondeEnCours || (this.D.tbInstallee != null && !force)) { return; }
+    this._tbSondeEnCours = true;
+    if (force) { this.D.tbInstallee = null; this.setState({}); }
+    fetch('tablette/', { cache: 'no-store', credentials: 'same-origin' })
+      .then(r => (r.ok ? r.text() : ''))
+      .catch(() => '')
+      .then(t => {
+        this._tbSondeEnCours = false;
+        this.D.tbInstallee = !!t && t.indexOf('assets/js/app.js') < 0;
+        this.setState({});
+      });
+  }
+  /**
+   * Les photos du panel, rapatriées au serveur par lots de 24 : on rappelle tant
+   * qu'il en reste — le principe des photos du planogramme (psPhotos). Le même
+   * bouton arrête la boucle. Une boucle qui n'avance plus (des photos que le
+   * panel ne rend pas) s'arrête d'elle-même. À la fin, si des photos sont
+   * arrivées, l'état est recalculé : le book gardé six heures ne les connaît pas.
+   */
+  tbPhotos(){
+    const cle = this.tbCle();
+    const tous = this.D.tbPh || (this.D.tbPh = {});
+    const cur = tous[cle];
+    if (cur && cur.enCours) { cur.stop = true; this.setState({}); return; }
+    if (this.source !== 'api') { this.notify('Mode démonstration : les photos se récupèrent au serveur, indisponible ici.'); return; }
+    const p = tous[cle] = { enCours: true, faites: 0, restants: null, manquantes: 0, appels: 0, erreur: '', stop: false, bloque: false };
+    this.setState({});
+    const tour = () => {
+      write(this.source, 'POST', '/tablette/photos', { shop: cle === 'reseau' ? null : cle }).then(r => {
+        p.appels++;
+        if (!r || r.ok === false) {
+          p.enCours = false;
+          p.erreur = (r && (r.erreur || r.error)) || 'refusé par le serveur';
+          this.setState({});
+          return;
+        }
+        const avant = p.restants;
+        const faites = Math.max(0, +r.faites || 0);
+        p.faites += faites;
+        p.restants = Math.max(0, +r.restants || 0);
+        p.manquantes = Math.max(0, +r.manquantes || 0);
+        p.bloque = p.restants > 0 && !faites && avant != null && p.restants >= avant;
+        if (p.restants > 0 && !p.stop && !p.bloque && p.appels < 100) { this.setState({}); setTimeout(tour, 300); return; }
+        p.enCours = false;
+        this.setState({});
+        if (p.faites) { this.tbCharge(true, true, cle); }
+      });
+    };
+    tour();
+  }
+  /**
+   * Copier un lien. navigator.clipboard n'existe qu'en contexte sécurisé (https,
+   * localhost) : le BO servi en http retombe sur la copie d'une sélection.
+   */
+  tbCopier(texte, msg){
+    const fini = ok => this.notify(ok ? msg : 'Copie impossible : sélectionnez le lien et copiez-le à la main.');
+    const parSelection = () => {
+      const ta = document.createElement('textarea');
+      ta.value = texte;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      return ok;
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(texte).then(() => fini(true), () => fini(parSelection()));
+    } else { fini(parSelection()); }
+  }
+  /** Une date ISO du serveur, lisible : « 2 octobre 2026 à 09:12 », et son âge. */
+  tbQuand(iso){
+    const t = iso ? new Date(iso) : null;
+    if (!t || isNaN(t)) { return { date: iso ? String(iso) : '—', age: '' }; }
+    const date = t.toLocaleString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const min = Math.round((Date.now() - t.getTime()) / 60000);
+    const age = min < 0 ? '' : (min < 1 ? 'à l’instant' : (min < 60 ? 'il y a ' + min + ' min'
+      : (min < 48 * 60 ? 'il y a ' + Math.round(min / 60) + ' h' : 'il y a ' + Math.round(min / 1440) + ' j')));
+    return { date, age };
+  }
+  /** L'écran Tablette vendeuses : le lien, l'état des données, l'aperçu. */
+  valsTablette(common){
+    const S = this.state;
+    const ms = this.open();
+    const m = this.tbMagasin();
+    const cle = this.tbCle();
+    const nl = S.tbLang === 'nl';
+    const prix = S.tbPrix !== false;
+    const orient = S.tbOrient === 'portrait' ? 'portrait' : 'paysage';
+    const nb = v => (v == null || v === '' || !isFinite(+v)) ? '—' : (+v).toLocaleString('fr-BE');
+    const pl = (n, mot) => nb(n) + ' ' + mot + (+n > 1 ? 's' : '');
+    const T = common.tb = {};
+
+    // Le magasin, et le lien qu'il recevra. « shop= » vide fait oublier à la
+    // tablette un magasin retenu : la vue réseau est donc explicite.
+    T.magasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: !!m && String(x.id) === String(m.id) }));
+    T.reseauOn = !m;
+    T.sansMagasin = !ms.length;
+    T.setMagasin = e => this.setState({ tbShop: e.target.value });
+    T.nom = m ? m.nom : 'Tout le réseau';
+    const q = ['shop=' + (m ? encodeURIComponent(String(m.id)) : '')];
+    if (nl) { q.push('lang=nl'); }
+    if (!prix) { q.push('prices=0'); }
+    T.apercu = 'tablette/?' + q.join('&');
+    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+    T.lien = base + T.apercu;
+    T.https = location.protocol === 'https:';
+    T.nl = nl;
+    T.langues = [['fr', 'Français'], ['nl', 'Nederlands']].map(([v, l]) => ({ nom: l, on: (v === 'nl') === nl, go: () => this.setState({ tbLang: v }) }));
+    T.prix = prix;
+    T.basculerPrix = () => this.setState({ tbPrix: !prix });
+    T.copier = () => this.tbCopier(T.lien, m ? 'Lien copié — à ouvrir sur la tablette du magasin ' + m.nom + '.' : 'Lien copié.');
+    T.selectionner = e => { try { e.target.select(); } catch (er) { /* rien à sélectionner */ } };
+
+    // L'aperçu : la tablette à sa taille réelle, réduite pour tenir dans la
+    // page (rail de 236 px, marges de la page et de la carte, cadre de 10 px).
+    const [w, h] = App.TB_FORMATS[orient];
+    const BORD = 10;
+    const larg = Math.min(window.innerWidth - 236, 1460) - 64 - 34 - 2 * BORD;
+    const haut = window.innerHeight - 170 - 2 * BORD;
+    const ech = Math.floor(Math.max(0.3, Math.min(1, larg / w, haut / h)) * 100) / 100;
+    T.orients = [['paysage', 'Paysage'], ['portrait', 'Portrait']].map(([v, l]) => ({ nom: l + ' ' + App.TB_FORMATS[v].join(' × '), on: v === orient, go: () => this.setState({ tbOrient: v }) }));
+    T.w = w; T.h = h; T.ech = ech; T.bord = BORD;
+    T.sw = Math.round(w * ech); T.sh = Math.round(h * ech);
+    T.echTxt = Math.round(ech * 100) + ' %';
+    T.installee = this.D.tbInstallee;
+    T.recharger = () => {
+      if (this.D.tbInstallee !== true) { this.tbSonde(true); return; }
+      const f = document.getElementById('tb-apercu');
+      if (!f) { return; }
+      try { f.contentWindow.location.reload(); } catch (e) { f.src = f.getAttribute('src'); }
+    };
+    // L'échelle suit la fenêtre : un redessin quand elle change de taille.
+    if (!this._tbRedim) {
+      this._tbRedim = true;
+      window.addEventListener('resize', () => {
+        clearTimeout(this._tbRedimT);
+        this._tbRedimT = setTimeout(() => { if (this.state.screen === 'tablette') { this.setState({}); } }, 150);
+      });
+    }
+
+    // L'état des données servies à la tablette.
+    T.demo = this.source !== 'api';
+    const E = (this.D.tb || {})[cle] || null;
+    T.chargement = !T.demo && !E;
+    T.relecture = (E && E.relecture) || '';
+    T.erreur = (E && E.erreur) || '';
+    T.regenerer = () => this.tbCharge(true, true);
+    T.reessayer = () => this.tbCharge(true, false);
+    T.etat = null;
+    if (E && E.d) {
+      const d = E.d, man = d.manque || {}, book = d.book;
+      const n = book.products.length;
+      const tot = man.total != null ? +man.total : n;
+      const sur = 'sur ' + pl(tot, 'produit');
+      const quand = this.tbQuand(d.genereLe);
+      const libSrc = { produits: 'Produits', photos: 'Photos', best: 'Best-sellers', saisons: 'Saisons' };
+      T.etat = {
+        genere: quand.date, age: quand.age,
+        details: [d.shop && d.shop.nom ? d.shop.nom : 'Tout le réseau',
+          d.ensemble === 'tout' ? 'tout le catalogue actif' : 'comptoir, saisons et obligatoires',
+          d.version ? 'version ' + String(d.version).slice(0, 7) : ''].filter(Boolean).join(' · '),
+        tuiles: [
+          { cap: 'Produits', v: nb(n), s: pl((book.categories || []).length, 'catégorie') + ' · ' + pl((book.seasons || []).length, 'saison'), alerte: false },
+          { cap: 'Sans photo', v: nb(man.photos), s: sur, alerte: +man.photos > 0 },
+          { cap: 'Sans néerlandais', v: nb(man.nl), s: 'la tablette montre le français', alerte: +man.nl > 0 },
+          { cap: 'Allergènes', v: nb(man.allergenes), s: 'à vérifier sur l’étiquette', alerte: +man.allergenes > 0 },
+          { cap: 'Sans description', v: nb(man.descriptions), s: sur, alerte: +man.descriptions > 0 },
+          { cap: 'Photos du panel', v: nb(d.photosRestantes), s: 'à récupérer, par lots de 24', alerte: +d.photosRestantes > 0 }],
+        sources: Object.keys(d.sources || {}).filter(k => d.sources[k]).map(k => ({ nom: libSrc[k] || k, txt: String(d.sources[k]) })) };
+    }
+
+    // La récupération des photos, et où elle en est.
+    const P = (this.D.tbPh || {})[cle] || null;
+    T.photos = () => this.tbPhotos();
+    T.photosEnCours = !!(P && P.enCours);
+    T.photosTxt = ''; T.photosPct = null; T.photosKo = false;
+    if (P) {
+      const tot = P.faites + (P.restants || 0);
+      T.photosPct = tot ? Math.round(P.faites / tot * 100) : (P.enCours ? 0 : (P.erreur ? null : 100));
+      const reste = P.manquantes ? ' · ' + pl(P.manquantes, 'produit') + ' encore sans photo' : '';
+      if (P.enCours) {
+        T.photosTxt = P.restants == null ? 'Récupération des photos au panel…'
+          : 'Récupération… ' + pl(P.faites, 'photo') + ' récupérée' + (P.faites > 1 ? 's' : '') + ', ' + nb(P.restants) + ' restante' + (P.restants > 1 ? 's' : '') + (P.stop ? ' — arrêt après ce lot' : '');
+      } else if (P.erreur) {
+        T.photosKo = true;
+        T.photosTxt = 'La récupération a échoué (' + P.erreur + ')' + (P.faites ? ' après ' + pl(P.faites, 'photo') : '') + '.';
+      } else if (P.stop && P.restants) {
+        T.photosTxt = 'Arrêté : ' + pl(P.faites, 'photo') + ' récupérée' + (P.faites > 1 ? 's' : '') + ', ' + nb(P.restants) + ' restante' + (P.restants > 1 ? 's' : '') + '.';
+      } else if (P.bloque) {
+        T.photosKo = true;
+        T.photosTxt = pl(P.faites, 'photo') + ' récupérée' + (P.faites > 1 ? 's' : '') + ' ; ' + nb(P.restants) + ' ne se téléchargent pas — le panel ne les rend pas.';
+      } else {
+        T.photosTxt = 'Terminé : ' + pl(P.faites, 'photo') + ' récupérée' + (P.faites > 1 ? 's' : '') + reste + '.';
+      }
+    }
   }
   valsDemarchage(common){
     const S = this.state;
