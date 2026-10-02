@@ -12417,6 +12417,100 @@ class App {
       });
     });
   }
+  /* --- Le contrôle en photos : la bande du dashboard, une boutique par rail ----
+   *
+   * Les photos viennent de /pwa/tasks/photos — une lecture par boutique et par
+   * journée, la même que le dashboard magasin. Les URL sont signées et
+   * expirent après vingt minutes : on relit passé quinze. Le DOM est fusionné,
+   * l'image déjà décodée reste à l'écran pendant la relecture. */
+  ctrlPhotosLire(shopId, date){
+    if (!shopId || !date) { return null; }
+    if (this.source !== 'api') { return { photos: [], demo: true }; }
+    const k = shopId + '|' + date;
+    this._cqPhotos = this._cqPhotos || {}; this._cqEnCours = this._cqEnCours || {};
+    const c = this._cqPhotos[k];
+    if (c && Date.now() - c.lu < 15 * 60 * 1000) { return c.val; }
+    if (!this._cqEnCours[k]) {
+      this._cqEnCours[k] = true;
+      readOne('/pwa/tasks/photos?shop=' + encodeURIComponent(shopId) + '&date=' + encodeURIComponent(date))
+        .then(v => {
+          // Sans réponse, on réessaie dans une minute, pas dans quinze.
+          this._cqPhotos[k] = v ? { lu: Date.now(), val: v } : { lu: Date.now() - 14 * 60 * 1000, val: { photos: [], erreur: true } };
+          delete this._cqEnCours[k];
+          this.setState({});
+        });
+    }
+    return c ? c.val : null;
+  }
+  /**
+   * Les cartes d'une boutique : l'état de chaque tâche, sa photo et ses
+   * repères, dans l'ordre du dashboard — les écarts d'abord, les non rendues
+   * en fin de piste. Les tâches maîtrisées restent sous leur bandeau.
+   */
+  ctrlCartes(s, pt, garde, seuil, nomNiveau){
+    const S = this.state;
+    const P = this.ctrlPhotosLire(s.shopId, pt.date);
+    const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
+    const RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
+    const hh = v => v ? String(v).slice(11, 16) : '';
+    const etat = t => {
+      if (t.note != null) {
+        if (t.note >= seuil && t.accepte !== false) { return { c: 'ok', bd: t.note + '/5' }; }
+        return { c: 'nc', bd: t.note + '/5 · ' + String(nomNiveau(t.note)).split(/[—–-]/).pop().trim().toLowerCase() };
+      }
+      if (t.statut === 'aControler' || t.statut === 'aValider') { return { c: 'ctl', bd: 'à contrôler' }; }
+      if (t.statut === 'sansPhoto') { return { c: 'mu', bd: 'sans photo' }; }
+      return { c: 'ko', bd: 'non rendue' };
+    };
+    const nom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+    const cl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
+    const L = (s.taches || []).filter(garde).filter(t => !(t.maitrise && t.maitrise.masquee))
+      .map(t => Object.assign({ e: etat(t), p: ph[String(t.taskId)] || null }, t))
+      .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || nom(a).localeCompare(nom(b)));
+    const nb = c => L.filter(t => t.e.c === c).length;
+    const choix = (S.ctrlPuce || {})[String(s.shopId)] || 'tout';
+    const puceSel = choix !== 'tout' && !nb(choix) ? 'tout' : choix;
+    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
+      .filter(f => f[3]).map(f => ({ nom: f[1], coul: f[2], nb: f[3], on: puceSel === f[0],
+        pick: () => this.setState(s2 => ({ ctrlPuce: Object.assign({}, s2.ctrlPuce, { [String(s.shopId)]: f[0] }) })) }));
+    const F = puceSel === 'tout' ? L : L.filter(t => t.e.c === puceSel);
+    const avec = L.filter(t => t.p); const notees = L.filter(t => t.note != null).length;
+    const heures = avec.map(t => hh(t.faitLe)).filter(Boolean).sort();
+    const qui = [...new Set(avec.map(t => t.faitePar).filter(Boolean))].join(', ');
+    const plage = heures.length ? ' ' + (heures[0] === heures[heures.length - 1] ? 'à ' + heures[0] : 'de ' + heures[0] + ' à ' + heures[heures.length - 1]) : '';
+    const resume = (!P ? 'lecture des photos…'
+      : avec.length ? avec.length + ' photo' + (avec.length > 1 ? 's' : '') + ' rendue' + (avec.length > 1 ? 's' : '') + plage + (qui ? ' par ' + qui : '')
+      : (P.erreur ? 'photos indisponibles' : 'aucune photo rendue'))
+      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '');
+    const cartes = F.map(t => {
+      const reps = t.p && Array.isArray(t.p.reperes) ? t.p.reperes : [];
+      const rp = reps.map(r => ({ st: 'left:' + (r.x * 100).toFixed(1) + '%;top:' + (r.y * 100).toFixed(1) + '%;width:' + (r.l * 100).toFixed(1) + '%;height:' + (r.h * 100).toFixed(1) + '%;border-color:' + ((this.zNiveau(r.niveau || t.note || 3) || {}).couleur || '#D97706') }));
+      const note = t.valideeLe ? ' · noté ' + hh(t.valideeLe) : '';
+      const constat = t.e.c === 'nc' ? (reps.map(r => r.txt).filter(Boolean).join(', ') || t.comment || 'écart relevé') + note
+        : t.e.c === 'ok' ? 'conforme' + note
+        : t.e.c === 'ctl' ? 'photo déposée, pas encore notée'
+        : t.e.c === 'mu' ? 'rendue sans photo' : (cl(t) || 'non rendue');
+      return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe),
+        meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
+        constat, photo: t.p ? t.p.photo : null, reperes: rp,
+        attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
+        videTxt: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible'),
+        bouton: t.e.c === 'ctl' ? 'Noter' : (t.note != null ? 'Renoter' : ''),
+        open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache) };
+    });
+    // Les flèches font défiler le rail d'une largeur, sans rendu : le DOM reste.
+    const fleche = dir => e => {
+      const r = e && e.target && e.target.closest ? e.target.closest('.db-cqrail') : null;
+      const piste = r ? r.querySelector('.db-cqpiste') : null;
+      if (piste) { piste.scrollBy({ left: dir * Math.max(240, piste.clientWidth - 40), behavior: 'smooth' }); }
+    };
+    const nKo = nb('ko'), nMu = nb('mu');
+    return { puces, resume, cartes, gauche: fleche(-1), droite: fleche(1),
+      pied: F.length + ' contrôle' + (F.length > 1 ? 's' : '') + (puceSel === 'tout' ? ' · les écarts d’abord, les non rendues en fin de piste' : '') + ' · un clic ouvre la photo et la notation',
+      vide: L.length ? 'Aucune tâche dans ce filtre.' : 'Aucune tâche pour cette journée.',
+      sansPhoto: !!P && !avec.length && L.length > 0 && !nb('nc') && !nb('ok'),
+      sansPhotoTxt: nKo + ' tâche' + (nKo > 1 ? 's' : '') + ' pas encore rendue' + (nKo > 1 ? 's' : '') + (nMu ? ' · ' + nMu + ' rendue' + (nMu > 1 ? 's' : '') + ' sans photo' : '') + (nb('ctl') ? ' · ' + nb('ctl') + ' rendue' + (nb('ctl') > 1 ? 's' : '') + ', photo indisponible' : '') + ' — rien à noter pour l’instant.' };
+  }
   valsControle(common){
     const S = this.state, D = this.D, M = this.M;
     const pt = D.pwaTasks || { shops: [], dates: [], consultants: [], totals: {}, indispo: true };
@@ -12459,14 +12553,16 @@ class App {
       pct: r.pct + ' %', txt: r.nb + ' · ' + r.pct + ' %',
       dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + r.couleur,
       barSt: 'display:block;height:5px;border-radius:999px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
+    // Le filtre d'état, le même pour la liste et pour les photos.
+    const garde = t =>
+        common.ctrlOnly === 'tous' ? true
+      : common.ctrlOnly === 'acontroler' ? (t.statut === 'aControler' && !t.valide)
+      : common.ctrlOnly === 'sansphoto' ? (t.statut === 'sansPhoto')
+      : common.ctrlOnly === 'avalider' ? !t.valide
+      : (t.note != null && t.note < seuilC);
     const shops = (pt.shops || []).filter(s => common.ctrlShop === 'Toutes les boutiques' || s.shop === common.ctrlShop)
       .map(s => {
-        const taches = (s.taches || []).filter(t =>
-            common.ctrlOnly === 'tous' ? true
-          : common.ctrlOnly === 'acontroler' ? (t.statut === 'aControler' && !t.valide)
-          : common.ctrlOnly === 'sansphoto' ? (t.statut === 'sansPhoto')
-          : common.ctrlOnly === 'avalider' ? !t.valide
-          : (t.note != null && t.note < seuilC))
+        const taches = (s.taches || []).filter(garde)
           .map(t => ({
             taskId: t.taskId, tache: t.tache,
             note: t.note == null ? '' : t.note + ' / 5', noteSt: noteSt(t.note),
@@ -12518,6 +12614,15 @@ class App {
       }).filter(s => !(common.ctrlOnly !== 'tous' && s.vide));
     common.ctrlShops = shops;
     common.ctrlEmpty = shops.length === 0;
+    // En photos, par défaut : la bande du dashboard magasin, une boutique par
+    // rail, la note au clic. La liste reste à un clic pour ses colonnes.
+    common.ctrlVue = S.ctrlVue === 'liste' ? 'liste' : 'photos';
+    common.ctrlVuePhotos = () => this.setState({ ctrlVue: 'photos' });
+    common.ctrlVueListe = () => this.setState({ ctrlVue: 'liste' });
+    if (common.ctrlVue === 'photos' && S.screen === 'controle') {
+      const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
+      shops.forEach(s2 => { s2.cq = this.ctrlCartes(brut[String(s2.shopId)] || { shopId: s2.shopId, taches: [] }, pt, garde, seuilC, nomNiveau); });
+    }
     common.ctrlMasqTout = !!S.ctrlMasqTout;
     common.ctrlMasqPlier = () => this.setState({ ctrlMasqTout: !S.ctrlMasqTout });
     common.ctrlMasqTotal = shops.reduce((a, s2) => a + s2.nMasquees, 0);
