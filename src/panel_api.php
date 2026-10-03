@@ -507,6 +507,26 @@ final class PanelApi
         return ['code' => $code, 'corps' => $res, 'erreur' => $code >= 200 && $code < 300 ? null : self::$lastError];
     }
 
+    /**
+     * Lecture BRUTE d'une page du panel pour les sondes : le code et le texte
+     * tel quel (tronqué), sans décodage JSON — une page de documentation, par
+     * exemple. Lecture seule, GET uniquement.
+     *
+     * @return array{code:int, texte:?string}
+     */
+    public static function sondeTexte(string $path, int $max = 40000, int $timeout = 12): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'texte' => null]; }
+        $ch = curl_init(self::config()['base'] . $path);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 2, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 6,
+            CURLOPT_HTTPHEADER => ['Accept: text/html,application/json,*/*', 'Authorization: Bearer ' . $tok]]);
+        $raw = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ['code' => $code, 'texte' => $raw === false ? null : mb_substr((string) $raw, 0, $max)];
+    }
+
     /** Catégories produit du réseau (/product-categories). */
     /** Chemin qui a effectivement répondu au dernier appel multi-variantes. */
     public static ?string $lastPath = null;
