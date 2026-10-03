@@ -863,6 +863,7 @@ function ep_production_flux_sonde(): array
 const PF_FOURS_MAX = 6;
 const PF_OPS_MAX = 12;
 const PF_ETAPES_MAX = 8;
+const PF_CHAUFFE = 10;   // minutes pour changer la température d'un four
 
 /**
  * Les étapes proposées d'une catégorie (demande du 03/10/2026 : production et finition, avant ou
@@ -1050,7 +1051,7 @@ function pfEquipe(array $plan, array $G, array $F): array
 {
     $ops = []; foreach ($F['operateurs'] as $o) { $ops[$o['id']] = $o; }
     $four = [];
-    foreach ($G['fours'] as $f) { foreach ($f['fournees'] as $x) { foreach ($x['categories'] as $c) { $k = $x['cuisson'] . '|' . $c['cle']; $four[$k]['in'] = min($four[$k]['in'] ?? 99.0, (float) $x['d']); $four[$k]['out'] = max($four[$k]['out'] ?? 0.0, (float) $x['f']); $four[$k]['lots'] = ($four[$k]['lots'] ?? 0) + 1; } } }
+    foreach ($G['fours'] as $f) { foreach ($f['fournees'] as $x) { foreach ($x['categories'] as $c) { $k = $x['cuisson'] . '|' . $c['cle']; $four[$k]['in'] = min($four[$k]['in'] ?? 99.0, (float) $x['d']); $four[$k]['out'] = max($four[$k]['out'] ?? 0.0, (float) ($c['f'] ?? $x['f'])); $four[$k]['lots'] = ($four[$k]['lots'] ?? 0) + 1; } } }
     $EP = $F['etapesProduits'] ?? [];
     $taches = []; $libres = [];
     foreach ($plan as $c) {
@@ -1059,9 +1060,10 @@ function pfEquipe(array $plan, array $G, array $F): array
         foreach ($c['lignes'] as $l) {
             $q = (int) $l['sortie']; if ($q <= 0) { continue; }
             $k = (string) $l['catCle'];
-            if (isset($EP[(string) $l['pid']])) { $sujets['p' . $l['pid']] = ['cle' => $k, 'pid' => (int) $l['pid'], 'nom' => $l['nom'], 'groupe' => $l['groupe'], 'pieces' => $q, 'etapes' => $EP[(string) $l['pid']]]; continue; }
-            $sujets['c' . $k] ??= ['cle' => $k, 'pid' => null, 'nom' => $l['cat'], 'groupe' => $l['groupe'], 'pieces' => 0, 'etapes' => $F['etapes'][$k] ?? []];
+            if (isset($EP[(string) $l['pid']])) { $sujets['p' . $l['pid']] = ['cle' => $k, 'pid' => (int) $l['pid'], 'nom' => $l['nom'], 'groupe' => $l['groupe'], 'pieces' => $q, 'etapes' => $EP[(string) $l['pid']], 'produits' => [[$l['nom'], $q]]]; continue; }
+            $sujets['c' . $k] ??= ['cle' => $k, 'pid' => null, 'nom' => $l['cat'], 'groupe' => $l['groupe'], 'pieces' => 0, 'etapes' => $F['etapes'][$k] ?? [], 'produits' => []];
             $sujets['c' . $k]['pieces'] += $q;
+            $sujets['c' . $k]['produits'][] = [$l['nom'] ?? $l['cat'], $q];   // le détail, pour la feuille du poste
         }
         foreach ($sujets as $su) {
             $r = $F['categories'][$su['cle']] ?? null;
@@ -1072,7 +1074,8 @@ function pfEquipe(array $plan, array $G, array $F): array
                 $min = pfEtapeMinutes($e, (float) $su['pieces'], $pl, $lots);
                 if ($min <= 0) { continue; }
                 $t = ['sujet' => $c['id'] . '|' . $su['cle'] . '|' . ($su['pid'] ?? ''), 'ordre' => $ordre, 'op' => $e['op'], 'cuisson' => $c['id'], 'cuissonNom' => $c['nom'], 'vente' => $c['de'], 'etape' => $e['nom'], 'quand' => $e['quand'], 'cle' => $su['cle'], 'pid' => $su['pid'], 'nom' => $su['nom'], 'groupe' => $su['groupe'],
-                    'qte' => $e['par'] === 'piece' ? $su['pieces'] : ($e['par'] === 'lot' ? $lots : $pl), 'par' => $e['par'], 'minutes' => $min,
+                    'qte' => $e['par'] === 'piece' ? $su['pieces'] : ($e['par'] === 'lot' ? $lots : $pl), 'par' => $e['par'], 'minutes' => $min, 'pieces' => $su['pieces'],
+                    'produits' => (static function (array $l) { usort($l, static fn ($a, $b) => $b[1] <=> $a[1]); return $l; })($su['produits']),
                     'limite' => (float) ($fx['in'] ?? $de), 'pret' => (float) ($fx['out'] ?? $de), 'v' => $de];
                 if ($e['op'] === null || !isset($ops[$e['op']])) { $libres[] = $t; } else { $taches[$e['op']][] = $t; }
             }
@@ -1128,141 +1131,172 @@ function pfEquipe(array $plan, array $G, array $F): array
 }
 
 /**
- * Le Gantt d'un plan : par four, les fournées de chaque cuisson. Les plaques d'une catégorie =
- * ses pièces de la cuisson ÷ pièces par plaque, arrondi au-dessus ; les catégories d'un même four
- * au même réglage partagent les fournées ; la plus chaude d'abord. Les fournées d'une cuisson
- * s'enchaînent pour finir à l'ouverture de sa vente (« de »), jamais avant la fin de la précédente.
+ * Le Gantt d'un plan : par four, les fournées de chaque cuisson (demande du 03/10/2026 : grouper
+ * les cuissons par température). Les plaques d'une catégorie = ses pièces de la cuisson ÷ pièces
+ * par plaque, arrondi au-dessus. Une fournée réunit les catégories d'un four à la même température
+ * (chacune sort à sa durée, la fournée dure la plus longue) ; la plus chaude d'abord ; changer la
+ * température d'un four coûte PF_CHAUFFE minutes. Les catégories « répartir » partagent leurs
+ * plaques par température, fournée pleine par fournée pleine, au four qui la sortirait le plus tôt
+ * — celui qui est déjà à cette température passe devant. Les fournées d'une cuisson s'enchaînent
+ * pour finir à l'ouverture de sa vente (plus tôt quand une finition suit la cuisson), jamais avant
+ * l'heure « au four » de la cuisson ni avant que le four soit libre. Chaque catégorie d'une fournée
+ * porte ses produits (les pièces de la cuisson, produit après produit, dans l'ordre des fournées).
  */
 function pfGantt(array $plan, array $F): array
 {
-    $fours = []; foreach ($F['fours'] as $f) { $fours[$f['id']] = $f + ['fournees' => [], 'occupation' => 0, 'plaquesTot' => 0, 'libre' => null]; }
+    $fours = []; foreach ($F['fours'] as $f) { $fours[$f['id']] = $f + ['fournees' => [], 'occupation' => 0, 'plaquesTot' => 0, 'libre' => null, 'temp' => null]; }
     $hors = []; $retards = 0; $entree = [];
+    $chauffe = PF_CHAUFFE / 60;
     foreach ($plan as $c) {
         $de = gpHeure($c['de']); if ($de === null) { continue; }
-        // Les plaques par four et par réglage.
-        $grp = [];
-        $parCat = [];
-        foreach ($c['lignes'] as $l) { if ((int) $l['sortie'] > 0) { $parCat[(string) $l['catCle']]['pieces'] = ($parCat[(string) $l['catCle']]['pieces'] ?? 0) + (int) $l['sortie']; $parCat[(string) $l['catCle']]['nom'] = $l['cat']; $parCat[(string) $l['catCle']]['groupe'] = $l['groupe']; } }
+        $au = gpHeure($c['four'] ?? null);
+        // Les pièces de chaque catégorie, et ses produits.
+        $parCat = []; $prods = [];
+        foreach ($c['lignes'] as $l) {
+            if ((int) $l['sortie'] <= 0) { continue; }
+            $k = (string) $l['catCle'];
+            $parCat[$k]['pieces'] = ($parCat[$k]['pieces'] ?? 0) + (int) $l['sortie']; $parCat[$k]['nom'] = $l['cat']; $parCat[$k]['groupe'] = $l['groupe'];
+            $prods[$k][] = [(string) ($l['nom'] ?? $l['cat']), (int) $l['sortie']];
+        }
         // Ce que l'écran recalcule lui-même quand on change un four sans l'enregistrer.
         $entree[] = ['id' => $c['id'], 'nom' => $c['nom'], 'de' => $c['de'], 'four' => $c['four'] ?? null,
             'categories' => array_map(static fn ($k, $x) => ['cle' => (string) $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'pieces' => $x['pieces']], array_keys($parCat), array_values($parCat))];
+        // Par four, par température : les catégories et leurs plaques.
+        $grp = []; $rep = [];
         foreach ($parCat as $k => $x) {
+            $k = (string) $k;
             $r = $F['categories'][$k] ?? null;
-            if ($r !== null && $r['four'] === '*' && $fours !== []) { continue; }   // réparti plus bas
-            if ($r === null || $r['four'] === null || !isset($fours[$r['four']])) { $hors[$k] = ['cle' => (string) $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'pieces' => ($hors[$k]['pieces'] ?? 0) + $x['pieces']]; continue; }
-            $pl = (int) ceil($x['pieces'] / max(1, $r['parPlaque']));
-            $g = $r['four'] . '|' . $r['temp'] . '|' . $r['duree'];
-            $grp[$r['four']][$g] ??= ['temp' => $r['temp'], 'duree' => $r['duree'], 'cats' => []];
-            $grp[$r['four']][$g]['cats'][] = ['cle' => (string) $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $pl, 'pieces' => $x['pieces']];
-        }
-        // Les catégories « répartir sur les fours » (demande du 03/10/2026 : ajouter un four et
-        // rafraîchir doit répartir la charge) : fournée après fournée, au four qui la sortirait le
-        // plus tôt — sa charge de la cuisson face à sa fenêtre libre avant l'ouverture de la vente.
-        $rep = [];
-        foreach ($parCat as $k => $x) {
-            $r = $F['categories'][$k] ?? null;
-            if ($r === null || $r['four'] !== '*' || $fours === []) { continue; }
-            $g = $r['temp'] . '|' . $r['duree'];
-            $rep[$g] ??= ['temp' => $r['temp'], 'duree' => $r['duree'], 'cats' => []];
-            $rep[$g]['cats'][] = ['cle' => (string) $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => (int) ceil($x['pieces'] / max(1, $r['parPlaque'])), 'pieces' => $x['pieces']];
+            $ent = ['cle' => $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $r !== null ? (int) ceil($x['pieces'] / max(1, (int) $r['parPlaque'])) : 0, 'pieces' => $x['pieces'], 'duree' => (int) ($r['duree'] ?? 0)];
+            if ($r !== null && $r['four'] === '*' && $fours !== []) { $rep[(int) $r['temp']][] = $ent; continue; }
+            if ($r === null || $r['four'] === null || !isset($fours[$r['four']])) { $hors[$k] = ['cle' => $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'pieces' => ($hors[$k]['pieces'] ?? 0) + $x['pieces']]; continue; }
+            $grp[$r['four']][(int) $r['temp']][] = $ent;
         }
         if ($rep !== []) {
-            $au = gpHeure($c['four'] ?? null);
-            $charge = [];
-            foreach ($fours as $fid => $f) { $m = 0; foreach ($grp[$fid] ?? [] as $g) { $m += (int) ceil(array_sum(array_column($g['cats'], 'plaques')) / max(1, $f['plaques'])) * $g['duree']; } $charge[$fid] = $m; }
+            // La charge de chaque four pour cette cuisson (fournées, et chauffe entre deux températures).
+            $charge = []; $temps = [];
+            foreach ($fours as $fid => $f) {
+                $m = 0.0; $ts = array_keys($grp[$fid] ?? []);
+                foreach ($grp[$fid] ?? [] as $cats) { $m += (int) ceil(array_sum(array_column($cats, 'plaques')) / max(1, $f['plaques'])) * max(array_column($cats, 'duree')); }
+                $charge[$fid] = $m + max(0, count($ts) - 1) * PF_CHAUFFE;
+                // Un four sans fournée encore pour cette cuisson reste à la température de la précédente.
+                $temps[$fid] = $ts !== [] ? $ts : ($f['temp'] !== null ? [$f['temp']] : []);
+            }
             $fenetre = static function (string $fid) use ($fours, $au, $de): float { $deb = max($fours[$fid]['libre'] ?? -1.0e9, $au ?? -1.0e9); return $deb < -1.0e8 ? 1.0e6 : ($de - $deb) * 60; };
-            uasort($rep, static fn ($a, $b) => [$b['temp'], $b['duree']] <=> [$a['temp'], $a['duree']]);
-            // Les catégories d'un même réglage partagent leurs fournées : le lot de plaques du réglage
-            // part fournée pleine par fournée pleine, chacune au four qui la sortirait le plus tôt.
-            foreach ($rep as $g) {
-                $file = $g['cats'];
-                foreach ($file as &$x) { $x['reste'] = $x['plaques']; } unset($x);
-                $total = array_sum(array_column($file, 'plaques'));
+            krsort($rep);
+            foreach ($rep as $temp => $cats) {
+                usort($cats, static fn ($a, $b) => $b['duree'] <=> $a['duree']);
+                foreach ($cats as &$x) { $x['reste'] = $x['plaques']; $x['resteP'] = $x['pieces']; } unset($x);
+                $total = array_sum(array_column($cats, 'plaques'));
                 $i = 0;
                 while ($total > 0) {
                     $choix = null; $score = null;
-                    foreach ($fours as $fid => $f) { $sc = $charge[$fid] + $g['duree'] - $fenetre((string) $fid); if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; } }
+                    foreach ($fours as $fid => $f) {
+                        // Un four qui n'est pas encore à cette température paie la chauffe.
+                        $chg = $temps[$fid] !== [] && !in_array($temp, $temps[$fid], true) ? PF_CHAUFFE : 0;
+                        $sc = $charge[$fid] + $cats[min($i, count($cats) - 1)]['duree'] + $chg - $fenetre((string) $fid);
+                        if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; }
+                    }
                     $place = min($total, $fours[$choix]['plaques']); $total -= $place;
-                    $key = $choix . '|' . $g['temp'] . '|' . $g['duree'];
-                    $grp[$choix][$key] ??= ['temp' => $g['temp'], 'duree' => $g['duree'], 'cats' => []];
-                    while ($place > 0 && isset($file[$i])) {
-                        $x = &$file[$i];
+                    $dmax = 0;
+                    while ($place > 0 && isset($cats[$i])) {
+                        $x = &$cats[$i];
                         $mis = min($place, $x['reste']);
-                        $pc = (int) round($x['pieces'] * $mis / max(1, $x['reste'])); $x['pieces'] -= $pc; $x['reste'] -= $mis; $place -= $mis;
+                        $pc = (int) round($x['resteP'] * $mis / max(1, $x['reste'])); $x['resteP'] -= $pc; $x['reste'] -= $mis; $place -= $mis;
+                        $dmax = max($dmax, $x['duree']);
                         $vu = false;
-                        foreach ($grp[$choix][$key]['cats'] as &$y) { if ($y['cle'] === $x['cle']) { $y['plaques'] += $mis; $y['pieces'] += $pc; $vu = true; break; } }
-                        unset($y);
-                        if (!$vu) { $grp[$choix][$key]['cats'][] = ['cle' => $x['cle'], 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $mis, 'pieces' => $pc]; }
+                        foreach ($grp[$choix][$temp] ?? [] as $j => $y) { if ($y['cle'] === $x['cle']) { $grp[$choix][$temp][$j]['plaques'] += $mis; $grp[$choix][$temp][$j]['pieces'] += $pc; $vu = true; break; } }
+                        if (!$vu) { $grp[$choix][$temp][] = ['cle' => $x['cle'], 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $mis, 'pieces' => $pc, 'duree' => $x['duree']]; }
                         if ($x['reste'] <= 0) { $i++; }
                         unset($x);
                     }
-                    $charge[$choix] += $g['duree'];
+                    $charge[$choix] += $dmax + ($temps[$choix] !== [] && !in_array($temp, $temps[$choix], true) ? PF_CHAUFFE : 0);
+                    if (!in_array($temp, $temps[$choix], true)) { $temps[$choix][] = $temp; }
                 }
             }
         }
-        foreach ($grp as $fid => $gs) {
+        foreach ($grp as $fid => $parTemp) {
             $cap = $fours[$fid]['plaques'];
             // Une catégorie finie après cuisson (nappage…) doit sortir du four d'autant plus tôt.
             $apres = 0.0;
-            foreach ($gs as $g) { foreach ($g['cats'] as $x) {
+            foreach ($parTemp as $cats) { foreach ($cats as $x) {
                 $m = 0.0; foreach ((array) ($F['etapes'][$x['cle']] ?? []) as $e) { if (($e['quand'] ?? '') === 'apres') { $m += pfEtapeMinutes($e, (float) $x['pieces'], $x['plaques'], (int) ceil($x['plaques'] / max(1, $cap))); } }
                 $apres = max($apres, $m);
             } }
             $cible = $de - $apres / 60;
-            usort($gs, static fn ($a, $b) => [$b['temp'], $b['duree']] <=> [$a['temp'], $a['duree']]);
-            // Les fournées du four pour cette cuisson, remplies catégorie après catégorie.
+            krsort($parTemp);
+            // Le four commence par la température où il est déjà, puis la plus chaude d'abord.
+            $tc = $fours[$fid]['temp'];
+            if ($tc !== null && isset($parTemp[$tc])) { $parTemp = [$tc => $parTemp[$tc]] + $parTemp; }
+            // Les fournées du four : par température, la plus chaude d'abord ; dans une température, la plus longue d'abord.
             $fn = [];
-            foreach ($gs as $g) {
+            foreach ($parTemp as $temp => $cats) {
+                usort($cats, static fn ($a, $b) => $b['duree'] <=> $a['duree']);
                 $cur = null;
-                foreach ($g['cats'] as $x) {
+                foreach ($cats as $x) {
                     $reste = $x['plaques']; $pieces = $x['pieces'];
                     while ($reste > 0) {
-                        if ($cur === null || $cur['plaques'] >= $cap) { if ($cur !== null) { $fn[] = $cur; } $cur = ['temp' => $g['temp'], 'duree' => $g['duree'], 'plaques' => 0, 'categories' => []]; }
+                        if ($cur === null || $cur['plaques'] >= $cap) { if ($cur !== null) { $fn[] = $cur; } $cur = ['temp' => (int) $temp, 'duree' => 0, 'plaques' => 0, 'categories' => []]; }
                         $mis = min($reste, $cap - $cur['plaques']);
                         $pc = (int) round($pieces * $mis / max(1, $reste)); $pieces -= $pc;
-                        $cur['plaques'] += $mis; $reste -= $mis;
-                        $cur['categories'][] = ['cle' => $x['cle'], 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $mis, 'pieces' => $pc];
+                        $cur['plaques'] += $mis; $reste -= $mis; $cur['duree'] = max($cur['duree'], $x['duree']);
+                        $cur['categories'][] = ['cle' => $x['cle'], 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $mis, 'pieces' => $pc, 'duree' => $x['duree']];
                     }
                 }
                 if ($cur !== null) { $fn[] = $cur; }
             }
-            // Au plus tard : la dernière fournée sort à l'ouverture de la vente ; jamais avant l'heure « au
-            // four » de la cuisson ni avant que le four soit libre — ce qui ne tient pas sort en retard.
-            $tot = array_sum(array_map(static fn ($x) => $x['duree'], $fn)) / 60;
+            // Au plus tard pour sortir à la cible ; la chauffe entre deux températures (et depuis la
+            // cuisson précédente) compte ; jamais avant l'heure « au four » ni avant que le four soit libre.
+            $tot = 0.0; $prev = $fours[$fid]['temp'];
+            foreach ($fn as $x) { $tot += $x['duree'] / 60 + ($prev !== null && $prev !== $x['temp'] ? $chauffe : 0.0); $prev = $x['temp']; }
             $t = $cible - $tot;
-            $au = gpHeure($c['four'] ?? null);
             if ($au !== null && $t < $au) { $t = $au; }
             if ($fours[$fid]['libre'] !== null && $t < $fours[$fid]['libre']) { $t = $fours[$fid]['libre']; }
+            $prev = $fours[$fid]['temp'];
             foreach ($fn as $x) {
+                $ch = $prev !== null && $prev !== $x['temp'] ? PF_CHAUFFE : 0;
+                $t += $ch / 60;
                 $fin = $t + $x['duree'] / 60;
                 $ret = (int) round(max(0.0, $fin - $cible) * 60);
                 if ($ret > 0) { $retards++; }
+                $cats = array_map(static fn ($y) => $y + ['f' => round($t + $y['duree'] / 60, 3), 'sortie' => gpHhmm($t + $y['duree'] / 60)], $x['categories']);
                 $fours[$fid]['fournees'][] = ['cuisson' => $c['id'], 'cuissonNom' => $c['nom'], 'debut' => gpHhmm($t), 'fin' => gpHhmm($fin), 'd' => round($t, 3), 'f' => round($fin, 3), 'temp' => $x['temp'], 'duree' => $x['duree'],
-                    'plaques' => $x['plaques'], 'capacite' => $cap, 'categories' => $x['categories'], 'retard' => $ret, 'cible' => gpHhmm($cible)];
-                $fours[$fid]['occupation'] += $x['duree']; $fours[$fid]['plaquesTot'] += $x['plaques'];
-                $t = $fin;
+                    'plaques' => $x['plaques'], 'capacite' => $cap, 'categories' => $cats, 'retard' => $ret, 'cible' => gpHhmm($cible), 'chauffe' => $ch];
+                $fours[$fid]['occupation'] += $x['duree'] + $ch; $fours[$fid]['plaquesTot'] += $x['plaques'];
+                $t = $fin; $prev = $x['temp'];
             }
-            $fours[$fid]['libre'] = $t;
+            $fours[$fid]['libre'] = $t; $fours[$fid]['temp'] = $prev;
+        }
+        // Les produits de chaque catégorie, dans l'ordre des fournées de la cuisson.
+        $ix = [];
+        foreach ($fours as $fid => $f) { foreach ($f['fournees'] as $bi => $x) { if ($x['cuisson'] !== $c['id']) { continue; } foreach ($x['categories'] as $ci => $y) { $ix[$y['cle']][] = [$x['d'], $fid, $bi, $ci]; } } }
+        foreach ($ix as $k => $refs) {
+            usort($refs, static fn ($a, $b) => $a[0] <=> $b[0]);
+            $file = $prods[$k] ?? []; $p = 0;
+            foreach ($refs as [, $fid, $bi, $ci]) {
+                $besoin = (int) $fours[$fid]['fournees'][$bi]['categories'][$ci]['pieces']; $l = [];
+                while ($besoin > 0 && isset($file[$p])) { $q = min($besoin, $file[$p][1]); $l[] = [$file[$p][0], $q]; $file[$p][1] -= $q; $besoin -= $q; if ($file[$p][1] <= 0) { $p++; } }
+                $fours[$fid]['fournees'][$bi]['categories'][$ci]['produits'] = $l;
+            }
         }
     }
     $d = null; $a = null;
     foreach ($fours as $f) { foreach ($f['fournees'] as $x) { $d = min($d ?? 99, $x['d']); $a = max($a ?? 0, $x['f']); } }
     foreach ($plan as $c) { $h = gpHeure($c['de']); if ($h !== null) { $d = min($d ?? $h, $h); $a = max($a ?? $h, $h); } }
-    // L'utilisation d'un four : ses minutes de cuisson sur la plage de production (de la 1re mise
-    // au four prévue à la dernière ouverture de vente) ; le remplissage : ses plaques sur la
-    // capacité de ses fournées.
+    // L'utilisation d'un four : ses minutes (cuisson et chauffe) sur la plage de production (de la
+    // 1re mise au four prévue à la dernière ouverture de vente) ; le remplissage : ses plaques sur
+    // la capacité de ses fournées.
     $pd = null; $pa = null;
     foreach ($plan as $c) { $h = gpHeure($c['de']); $q = gpHeure($c['four'] ?? null) ?? $h; if ($h !== null) { $pd = min($pd ?? $q, $q); $pa = max($pa ?? $h, $h); } }
     $fen = $pd !== null && $pa !== null ? max(1, (int) round(($pa - $pd) * 60)) : null;
-    $out = [];
+    $out = []; $rmax = 0;
     foreach ($fours as $f) {
-        unset($f['libre']); $f['nFournees'] = count($f['fournees']);
+        unset($f['libre'], $f['temp']); $f['nFournees'] = count($f['fournees']);
         $f['utilisation'] = $fen !== null ? (int) round(100 * $f['occupation'] / $fen) : null;
         $f['remplissage'] = $f['nFournees'] > 0 ? (int) round(100 * $f['plaquesTot'] / ($f['nFournees'] * $f['plaques'])) : null;
+        foreach ($f['fournees'] as $x) { $rmax = max($rmax, (int) $x['retard']); }
         $out[] = $f;
     }
-    $rmax = 0; foreach ($out as $f) { foreach ($f['fournees'] as $x) { $rmax = max($rmax, (int) $x['retard']); } }
-    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'retardMax' => $rmax, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
+    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'retardMax' => $rmax, 'chauffe' => PF_CHAUFFE, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
         'fenetre' => $pd !== null ? ['de' => gpHhmm($pd), 'a' => gpHhmm($pa), 'minutes' => $fen] : null, 'entree' => $entree];
 }
 

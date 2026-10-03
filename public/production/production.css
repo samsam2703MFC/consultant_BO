@@ -181,3 +181,35 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab td.nom small{display:block;font-size:10px;color:#888;font-weight:500}
 .pf-ct select{font:600 11.5px var(--font-ui);padding:5px 8px;border-radius:8px;border:.5px solid var(--pf-trait2);background:#fff;margin-left:auto}
 .pf-in[type=time]{width:104px}
+/* L'impression par poste : une page A4 par four et par opérateur (demande du 03/10/2026). */
+#pf-print{display:none}
+.pp-page{page:poste;font-family:var(--font-ui);color:#222}
+.pp-hd{display:flex;align-items:center;gap:14px;border-bottom:2px solid #8D1D2C;padding-bottom:8px;margin-bottom:10px}
+.pp-hd img{height:30px}
+.pp-t{font:400 22px var(--font-display);line-height:1.1}
+.pp-s{font-size:11px;color:#555}
+.pp-r{margin-left:auto;text-align:right;font-size:11px;color:#333;line-height:1.4}
+.pp-av{font-size:10.5px;color:#9a5a06;margin:0 0 6px}
+.pp-tab{width:100%;border-collapse:collapse;font-size:10.5px}
+.pp-tab th{text-align:left;font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#666;border-bottom:1px solid #999;padding:4px 5px}
+.pp-tab td{border-bottom:.5px solid #ccc;padding:5px;vertical-align:top}
+.pp-tab td.ck,.pp-tab th.ck{width:16px;font-size:14px;line-height:1;text-align:center}
+.pp-tab td.h{white-space:nowrap}
+.pp-tab td small{display:block;font-size:8.5px;color:#C0182B}
+.pp-tab tr.hs td.h small{color:#B45309}
+.pp-tab td.det{font-size:9.5px;color:#333;max-width:260px}
+.pp-tab tr{break-inside:avoid}
+.pp-pied{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:16px;font-size:10.5px;color:#444}
+@page poste{size:A4 portrait;margin:12mm}
+@media print{
+  body.pf-imp #pf{display:none!important}
+  body.pf-imp #pf-print{display:block}
+  .pp-page{break-after:page}
+  .pp-page:last-child{break-after:auto}
+}
+/* Grouper par température : la chauffe entre deux températures, les feuilles de cuisson. */
+.pf-gantt .gc{position:absolute;top:13px;height:20px;border-radius:4px;background:repeating-linear-gradient(135deg,rgba(217,119,6,.35) 0 4px,rgba(217,119,6,.08) 4px 8px);z-index:1}
+.pp-four{font:600 11px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8D1D2C;margin:12px 0 4px}
+.pp-tab .det{font-size:9.5px;color:#444}
+.pp-tab small.ch,.pp-ch{color:#B45309;font-size:8.5px}
+.pp-sans{font-size:10.5px;line-height:1.6}

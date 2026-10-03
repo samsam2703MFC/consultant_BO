@@ -428,6 +428,7 @@
     // Le Gantt affiché : la dernière simulation (bouton « Rafraîchir »), sinon celui des réglages enregistrés.
     const sim = S.simF && S.simF.cle === S.editFCle ? S.simF : null;
     const G = sim ? sim.gantt : d.gantt, Q = sim ? sim.equipe : d.equipe;
+    S.vueF = { d, G, Q, simulee: !!(sim && sim.sig !== sigEnr) };
     const aJour = (sim ? sim.sig : sigEnr) === sigE;
     const A = { de: Math.min(G.axe.de, Q.axe.de), a: Math.max(G.axe.a, Q.axe.a) }, span = Math.max(1, A.a - A.de);
     const pos = h => (100 * (h - A.de) / span).toFixed(2) + '%', larg = (a, b) => `calc(${(100 * (b - a) / span).toFixed(2)}% - 2px)`;
@@ -448,7 +449,8 @@
       <div class="pf-gantt">${axe}
       ${G.fours.map(f => `<div class="gr"><div class="gl"><b>${esc(f.nom)}</b><small>${f.plaques} plaques · ${f.nFournees} fournée${f.nFournees > 1 ? 's' : ''} · ${hm(f.occupation)}</small><small class="ut">${pc(f.utilisation, 'utilisé')}${f.remplissage != null ? ' · ' + pc(f.remplissage, 'rempli') : ''}</small></div><div class="gt">${fond()}
         ${f.fournees.map(x => { const sec = x.categories[0] ? x.categories[0].groupe || x.categories[0].nom : ''; x.categories.forEach(c => { sections[c.groupe || c.nom] = true; });
-          return `<div class="gb${x.retard ? ' late' : ''}" style="left:${pos(x.d)};width:${larg(x.d, x.f)};background:${teinte(sec)}" title="${esc(x.cuissonNom)} · ${esc(x.debut)}–${esc(x.fin)} · ${x.temp} °C · ${x.duree} min · ${x.plaques}/${x.capacite} plaques : ${esc(x.categories.map(c => c.nom + ' ' + c.plaques + ' pl. (' + c.pieces + ' pièces)').join(', '))}${x.retard ? ' · en retard de ' + x.retard + ' min' : ''}"><span>${esc(x.categories.map(c => `${c.nom} ${c.plaques} pl.`).join(' + '))}</span></div>`; }).join('')}
+          const ch = x.chauffe ? `<div class="gc" style="left:${pos(x.d - x.chauffe / 60)};width:${larg(x.d - x.chauffe / 60, x.d)}" title="changement de température : ${x.chauffe} min avant ${x.temp} °C"></div>` : '';
+          return ch + `<div class="gb${x.retard ? ' late' : ''}" style="left:${pos(x.d)};width:${larg(x.d, x.f)};background:${teinte(sec)}" title="${esc(x.cuissonNom)} · ${esc(x.debut)}–${esc(x.fin)} · ${x.temp} °C · ${x.plaques}/${x.capacite} plaques : ${esc(x.categories.map(c => c.nom + ' ' + c.plaques + ' pl. (' + c.pieces + ' pièces), sortie ' + (c.sortie || x.fin)).join(' ; '))}${x.retard ? ' · en retard de ' + x.retard + ' min' : ''}"><span>${x.temp}° ${esc(x.categories.map(c => `${c.nom} ${c.plaques} pl.`).join(' + '))}</span></div>`; }).join('')}
       </div></div>`).join('')}${ventes}</div>
       ${G.horsFour.length ? `<div class="pf-pied mu">Hors four : ${G.horsFour.map(x => esc(x.nom) + ' (' + fN(x.pieces) + ')').join(' · ')}</div>` : ''}</div>`;
     // Le Gantt des opérateurs.
@@ -461,9 +463,11 @@
       <div class="pf-leg">${Object.keys(sections).map(n => `<span><i style="background:${teinte(n)}"></i>${esc(n)}</span>`).join('')}<span><i class="late"></i>en retard</span><span><i class="hs"></i>hors service</span><span><i class="gsl"></i>service de l’opérateur</span><span><i class="gvl"></i>ouverture de la vente</span></div>
       ${Q.aAttribuer.taches.length ? `<div class="pf-pied"><b class="wa">À attribuer : ${hm(Q.aAttribuer.minutes)}</b> <span class="mu">${Q.aAttribuer.taches.map(t => esc(t.etape) + ' · ' + esc(t.nom) + ' (' + hm(t.minutes) + ')').join(' · ')} : choisissez un opérateur dans les étapes</span></div>` : ''}</div>`;
     // Les listes de travail.
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">La feuille de travail</span><span class="pf-mini">les fournées et les tâches dans l’ordre, four par four, opérateur par opérateur</span><button class="pf-btn" data-imprimer="1">Imprimer</button></div>
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">La feuille de travail</span><span class="pf-mini">les fournées et les tâches dans l’ordre, four par four, opérateur par opérateur</span>
+      <select data-imprposte="1"><option value="">Imprimer…</option><option value="cuissons">les feuilles de cuisson de la journée</option><option value="tous">tous les postes, une page chacun</option>${G.fours.filter(f => f.nFournees).map(f => `<option value="f:${esc(f.id)}">${esc(f.nom)}</option>`).join('')}${Q.operateurs.filter(o => o.taches.length).map(o => `<option value="o:${esc(o.id)}">${esc(o.nom)}</option>`).join('')}${Q.aAttribuer.taches.length ? '<option value="aa">à attribuer</option>' : ''}</select>
+      <button class="pf-btn" data-imprimer="1">Imprimer la page</button></div>
       <table class="pf-tab"><thead><tr><th>Four ou opérateur</th><th class="n">Début</th><th class="n">Fin</th><th>Quoi</th><th class="n">Quantité</th><th class="n">Temps</th><th>Cuisson</th></tr></thead><tbody>
-      ${G.fours.map(f => f.fournees.length ? `<tr class="grp"><td colspan="7">${esc(f.nom)} · ${f.plaques} plaques</td></tr>` + f.fournees.map(x => `<tr><td class="mu">four</td><td class="n"><b>${esc(x.debut)}</b></td><td class="n ${x.retard ? 'ko' : ''}">${esc(x.fin)}${x.retard ? ' <small>+' + x.retard + ' min</small>' : ''}</td><td>${x.temp} °C · ${x.categories.map(c => esc(c.nom)).join(' + ')}</td><td class="n">${x.plaques} / ${x.capacite} pl.</td><td class="n">${x.duree} min</td><td>${esc(x.cuissonNom)}</td></tr>`).join('') : '').join('')}
+      ${G.fours.map(f => f.fournees.length ? `<tr class="grp"><td colspan="7">${esc(f.nom)} · ${f.plaques} plaques</td></tr>` + f.fournees.map(x => `<tr><td class="mu">four</td><td class="n"><b>${esc(x.debut)}</b></td><td class="n ${x.retard ? 'ko' : ''}">${esc(x.fin)}${x.retard ? ' <small>+' + x.retard + ' min</small>' : ''}</td><td>${x.temp} °C${x.chauffe ? ` <span class="wa">après ${x.chauffe} min de chauffe</span>` : ''} · ${x.categories.map(c => esc(c.nom) + (c.sortie && c.sortie !== x.fin ? ` <span class="mu">sortie ${esc(c.sortie)}</span>` : '')).join(' + ')}</td><td class="n">${x.plaques} / ${x.capacite} pl.</td><td class="n">${x.duree} min</td><td>${esc(x.cuissonNom)}</td></tr>`).join('') : '').join('')}
       ${Q.operateurs.map(o => o.taches.length ? `<tr class="grp"><td colspan="7">${esc(o.nom)} · ${esc(o.de)}–${esc(o.a)} · ${hm(o.charge)}</td></tr>` + o.taches.map(t => `<tr><td class="mu">${t.quand === 'apres' ? 'après cuisson' : 'avant cuisson'}</td><td class="n ${t.horsService ? 'wa' : ''}"><b>${esc(t.debut)}</b></td><td class="n ${t.retard ? 'ko' : ''}">${esc(t.fin)}${t.retard ? ' <small>+' + t.retard + ' min</small>' : ''}</td><td>${esc(t.etape)} · ${esc(t.nom)}</td><td class="n">${fN(t.qte)} ${t.par === 'piece' ? 'p.' : (t.par === 'lot' ? 'fourn.' : 'pl.')}</td><td class="n">${hm(t.minutes)}</td><td>${esc(t.cuissonNom)}</td></tr>`).join('') : '').join('')}</tbody></table></div>`;
     // Les fours du magasin.
     h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Les fours du magasin</span><span class="pf-mini">utilisation : le temps de cuisson sur la plage de production (au-delà de 100 %, le four ne suffit pas) · remplissage : les plaques sur la capacité des fournées</span></div>
@@ -510,6 +514,60 @@
     h += `<div class="pf-barre"><label>Signé <input class="pf-in" data-par="1" data-f="par" value="${esc(S.par)}" placeholder="prénom"></label><span class="sp"></span>${btn}<button class="pf-btn" data-fannuler="1">Revenir aux réglages enregistrés</button><button class="pf-btn prim" data-fenreg="1"${S.envoi ? ' disabled' : ''}>${S.envoi ? 'Enregistrement…' : 'Enregistrer les fours et l’équipe'}</button></div>`;
     h += `<div class="pf-pied mu" style="border:none">${esc(d.source)}</div>`;
     return h;
+  }
+  /**
+   * L'impression par poste (demande du 03/10/2026) : une page A4 par four et par opérateur, ses
+   * fournées ou ses tâches dans l'ordre, le détail des produits, une case à cocher, la signature.
+   */
+  function pagesPostes(v) {
+    const X = S.vueF; if (!X) { return ''; }
+    const { d, G, Q } = X;
+    const tete = (poste, sous, droite) => `<div class="pp-hd"><img src="../assets/img/logo.png" alt=""><div><div class="pp-t">${esc(poste)}</div><div class="pp-s">${esc(nomShop())} · ${esc(fDL(d.date))}${sous ? ' · ' + sous : ''}</div></div><div class="pp-r">${droite}</div></div>`;
+    const pied = `<div class="pp-pied"><span>Fait par : ______________________</span><span>Contrôlé à : ________</span><span>Remarques : __________________________________________</span></div>`;
+    const avert = X.simulee ? '<div class="pp-av">Réglages pas encore enregistrés : feuille issue d’une simulation.</div>' : '';
+    const detail = l => { const n = 7; const t = (l || []).slice(0, n).map(([nom, q]) => `${esc(nom)} <b>${fN(q)}</b>`).join(' · '); return t + ((l || []).length > n ? ` · + ${(l || []).length - n} autres` : ''); };
+    const pages = [];
+    G.fours.forEach(f => { if (!f.nFournees || (v !== 'tous' && v !== 'f:' + f.id)) { return; }
+      pages.push(`<div class="pp-page">${tete(f.nom, f.plaques + ' plaques par fournée', `${pl(f.nFournees, 'fournée')} · ${pl(f.plaquesTot, 'plaque')}<br>${hm(f.occupation)} de cuisson`)}${avert}
+        <table class="pp-tab"><thead><tr><th class="ck"></th><th>Enfourner</th><th>Sortir</th><th>°C</th><th>Durée</th><th>Plaques</th><th>Contenu</th><th>Pour la vente</th></tr></thead><tbody>
+        ${f.fournees.map(x => `<tr class="${x.retard ? 'late' : ''}"><td class="ck">☐</td><td class="h"><b>${esc(x.debut)}</b></td><td class="h">${esc(x.fin)}${x.retard ? `<small>retard ${x.retard} min</small>` : ''}</td><td>${x.temp}</td><td>${x.duree} min</td><td>${x.plaques} / ${x.capacite}</td>
+          <td>${x.chauffe ? `<span class="pp-ch">chauffe ${x.chauffe} min avant</span><br>` : ''}${x.categories.map(c => `<b>${esc(c.nom)}</b> ${fN(c.plaques)} pl.${c.sortie && c.sortie !== x.fin ? ` · sortie <b>${esc(c.sortie)}</b>` : ''}<br><span class="det">${detail(c.produits)}</span>`).join('<br>')}</td><td>${esc(x.cuissonNom)} ${esc((d.cuissons.find(c => c.id === x.cuisson) || {}).de || '')}</td></tr>`).join('')}</tbody></table>${pied}</div>`); });
+    const pageOp = (titre, sous, droite, taches) => `<div class="pp-page">${tete(titre, sous, droite)}${avert}
+        <table class="pp-tab"><thead><tr><th class="ck"></th><th>Début</th><th>Fin</th><th>Étape</th><th>Produits</th><th>Quantité</th><th>Temps</th><th>Pour la vente</th></tr></thead><tbody>
+        ${taches.map(t => `<tr class="${t.retard ? 'late' : ''}${t.horsService ? ' hs' : ''}"><td class="ck">☐</td><td class="h"><b>${esc(t.debut || '—')}</b>${t.horsService ? '<small>hors service</small>' : ''}</td><td class="h">${esc(t.fin || '—')}${t.retard ? `<small>retard ${t.retard} min</small>` : ''}</td>
+          <td><b>${esc(t.etape)}</b><br>${esc(t.nom)} <span class="mu">${t.quand === 'apres' ? 'après cuisson' : 'avant cuisson'}</span></td><td class="det">${detail(t.produits)}</td>
+          <td>${pl(t.qte, t.par === 'piece' ? 'pièce' : (t.par === 'lot' ? 'fournée' : 'plaque'))}</td><td>${hm(t.minutes)}</td><td>${esc(t.cuissonNom)} ${esc(t.vente || '')}</td></tr>`).join('')}</tbody></table>${pied}</div>`;
+    Q.operateurs.forEach(o => { if (!o.taches.length || (v !== 'tous' && v !== 'o:' + o.id)) { return; }
+      pages.push(pageOp(o.nom, 'service ' + esc(o.de) + '–' + esc(o.a), `${pl(o.taches.length, 'tâche')} · ${hm(o.charge)}<br>${o.utilisation != null ? 'utilisé ' + fN(o.utilisation) + ' %' : ''}`, o.taches)); });
+    if (v === 'cuissons') {
+      const horsCat = new Set((d.categories || []).filter(c => !c.four).map(c => c.cle));
+      d.cuissons.forEach(cu => {
+        const parFour = G.fours.map(f => ({ f, l: f.fournees.filter(x => x.cuisson === cu.id) })).filter(x => x.l.length);
+        const ent = ((G.entree || []).find(e => e.id === cu.id) || { categories: [] }).categories.filter(c => horsCat.has(c.cle));
+        if (!parFour.length && !ent.length) { return; }
+        const nb = parFour.reduce((a, x) => a + x.l.length, 0), pls = parFour.reduce((a, x) => a + x.l.reduce((b, y) => b + y.plaques, 0), 0);
+        pages.push(`<div class="pp-page">${tete('Feuille de cuisson · ' + cu.nom, 'vente à ' + esc(cu.de) + (cu.four ? ' · au four dès ' + esc(cu.four) : ''), `${pl(nb, 'fournée')} · ${pl(pls, 'plaque')}<br>${fN(cu.pieces)} pièces au plan`)}${avert}
+          ${parFour.map(({ f, l }) => `<div class="pp-four">${esc(f.nom)} · ${f.plaques} plaques par fournée</div>
+          <table class="pp-tab"><thead><tr><th class="ck"></th><th>Enfourner</th><th>°C</th><th>Contenu et produits</th><th>Plaques</th><th>Sortir</th></tr></thead><tbody>
+          ${l.map(x => `<tr class="${x.retard ? 'late' : ''}"><td class="ck">☐</td><td class="h"><b>${esc(x.debut)}</b>${x.chauffe ? `<small class="ch">chauffe ${x.chauffe} min avant</small>` : ''}</td><td><b>${x.temp}</b></td>
+            <td>${x.categories.map(c => `<b>${esc(c.nom)}</b> ${fN(c.plaques)} pl.<br><span class="det">${detail(c.produits)}</span>`).join('<br>')}</td><td>${x.plaques} / ${x.capacite}</td>
+            <td class="h">${x.categories.map(c => `<b>${esc(c.sortie || x.fin)}</b>${x.categories.length > 1 ? ' <span class="mu">' + esc(c.nom) + '</span>' : ''}`).join('<br>')}${x.retard ? `<small>retard ${x.retard} min</small>` : ''}</td></tr>`).join('')}</tbody></table>`).join('')}
+          ${ent.length ? `<div class="pp-four">Sans cuisson</div><div class="pp-sans">${ent.map(c => `${esc(c.nom)} <b>${fN(c.pieces)}</b>`).join(' · ')}</div>` : ''}${pied}</div>`);
+      });
+      return pages.join('');
+    }
+    if (Q.aAttribuer.taches.length && (v === 'tous' || v === 'aa')) { pages.push(pageOp('À attribuer', 'étapes sans opérateur', `${Q.aAttribuer.taches.length} tâches · ${hm(Q.aAttribuer.minutes)}`, Q.aAttribuer.taches)); }
+    return pages.join('');
+  }
+  function imprimerPostes(v) {
+    const html = pagesPostes(v); if (!html) { return; }
+    let z = document.getElementById('pf-print');
+    if (!z) { z = document.createElement('div'); z.id = 'pf-print'; document.body.appendChild(z); }
+    z.innerHTML = html;
+    document.body.classList.add('pf-imp');
+    const fin = () => { document.body.classList.remove('pf-imp'); z.innerHTML = ''; window.removeEventListener('afterprint', fin); };
+    window.addEventListener('afterprint', fin);
+    setTimeout(() => window.print(), 50);
   }
   function simulerFours() {
     const E = S.editF, d = S.data[cle()]; if (!E || !d) { return; }
@@ -615,6 +673,7 @@
       on('[data-fannuler]', 'click', () => { S.editF = null; S.simF = null; S.msg = null; rendre(); });
       on('[data-fenreg]', 'click', () => enregistrerFours());
       on('[data-frefresh]', 'click', () => simulerFours());
+      on('[data-imprposte]', 'change', s => { const v = s.value; s.value = ''; if (v) { imprimerPostes(v); } });
     }
   }
 
