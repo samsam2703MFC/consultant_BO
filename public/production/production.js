@@ -232,9 +232,12 @@
     const cols = C.length;
     const somme = (rows, f) => rows.reduce((a, l) => a + Math.round(f(l) || 0), 0);
     const sg = n => (n > 0 ? '+' : '−') + fN(Math.abs(n));
-    // L'ajustement J−7 de la cuisson reste au survol : la colonne « Proposition J−7 » le porte déjà.
-    const cellQ = x => { const t = x && x.ajustJ7 ? ` title="dont ${sg(x.ajustJ7)} ajusté sur J−7"` : '';
-      return !x || !x.sortie ? `<span class="mu"${t}>—</span>` : `<b${t}>${fN(x.sortie)}</b>${x.plaque ? `<small>${fN(x.plaques)} × ${fN(x.plaque)}</small>` : ''}`; };
+    // Une case = un nombre entier ; les plaques et l'ajustement J−7 de la cuisson restent au survol.
+    const cellQ = x => { const tt = [];
+      if (x && x.sortie && x.plaque) { tt.push(`${pl(x.plaques, 'plaque')} de ${fN(x.plaque)}`); }
+      if (x && x.ajustJ7) { tt.push(`dont ${sg(x.ajustJ7)} ajusté sur J−7`); }
+      const t = tt.length ? ` title="${esc(tt.join(' · '))}"` : '';
+      return !x || !x.sortie ? `<span class="mu"${t}>—</span>` : `<b${t}>${fN(x.sortie)}</b>`; };
     const VJ = { peu: ['att', 'Trop peu'], trop: ['bleu', 'Trop'], mixte: ['att', 'Les deux'], juste: ['ok', 'Juste'], aucune: ['', 'Pas vendu'] };
     const fin7 = d.j7.derniereVente;
     const cDer = l => { const j = l.j7; if (j.derniere == null) { return `<span class="mu">${j.verdict === 'aucune' ? 'aucune' : '—'}</span>`; }
