@@ -1105,8 +1105,10 @@ posé ou si `fulfilment_mode` parle de livraison ; livraison si
 collect. Une commande non webshop est une précommande au comptoir : elle
 n'entre pas dans le split. Une commande annulée (`non_collection_id_reason`)
 est ignorée. Le statut se lit dans `order_status` et `issuing_timestamp` :
-à préparer, en préparation, prête, en route, remise (click & collect) ou
-livrée.
+à préparer, en préparation (`accepting_timestamp`), prête
+(`completion_timestamp`), en route, remise (click & collect) ou livrée —
+une commande encaissée en caisse (`id_transaction`) compte remise, mesuré à
+Halle : le panel la laisse « new ».
 
 **Le comptoir = tickets caisse − les commandes webshop encaissées en caisse**
 (`id_transaction` posé) ; une commande payée en ligne s'ajoute au CA du jour.
@@ -1118,8 +1120,8 @@ Un magasin :
       jour:     { joursLus, caisse, tickets, comptoir, cc: {n, ca}, liv: {n, ca}, webshop, encaisse, total, part },
       serie:    [ { j, lu, caisse, tickets, comptoir, cc, liv, ccN, livN } × 14 ],
       quatorze: { webshop, total, cc: {n, ca}, liv: {n, ca} },
-      liste:    [ { heure, canal: cc|liv, articles, montant, statut } ],   les commandes webshop du jour
-      aPreparer, demain: { n, ca }, indispo, source }
+      liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut } ],   toutes les commandes du jour, précommandes au comptoir comprises
+      nWebshop, aPreparer, demain: { n, ca }, indispo, source }
 
 `indispo` est vrai quand le panel n'a pas répondu : le split retombe sur la
 caisse seule, le dashboard garde alors la carte « Comptoir et clients pro ».

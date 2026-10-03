@@ -46,12 +46,14 @@ function coStatut(array $c, string $canal): string
 {
     if (($c['non_collection_id_reason'] ?? null) !== null) { return 'annulée'; }
     $st = strtolower((string) ($c['order_status'] ?? ''));
-    if (($c['issuing_timestamp'] ?? null) !== null || in_array($st, ['picked_up', 'delivered', 'completed', 'done', 'issued'], true)) {
+    // Remise : le panel pose `issuing_timestamp` ; mesuré à Halle, une commande encaissée en
+    // caisse (`id_transaction`) reste pourtant « new » — l'encaissement vaut remise.
+    if (($c['issuing_timestamp'] ?? null) !== null || (int) ($c['id_transaction'] ?? 0) > 0 || in_array($st, ['picked_up', 'delivered', 'completed', 'done', 'issued'], true)) {
         return $canal === 'liv' ? 'livrée' : 'remise';
     }
     if (preg_match('/ship|transit|route|out_for/', $st) === 1) { return 'en route'; }
-    if (preg_match('/ready|prepared|prete|prête/', $st) === 1) { return 'prête'; }
-    if (preg_match('/prepar|progress|processing/', $st) === 1) { return 'en préparation'; }
+    if (($c['completion_timestamp'] ?? null) !== null || preg_match('/ready|prepared|prete|prête/', $st) === 1) { return 'prête'; }
+    if (($c['accepting_timestamp'] ?? null) !== null || preg_match('/prepar|progress|processing/', $st) === 1) { return 'en préparation'; }
     return 'à préparer';
 }
 
@@ -166,16 +168,18 @@ function ep_exploitation_canaux(): array
         $mJ = coMagasin($shop, [$date], $cmds);
         $demain = date('Y-m-d', strtotime($date . ' +1 day'));
         $liste = []; $aPreparer = 0; $dem = ['n' => 0, 'ca' => 0.0];
+        // La liste du jour porte TOUTES les commandes, précommandes au comptoir comprises : c'est
+        // ce que le magasin doit préparer. Le split, lui, ne compte que le webshop.
         foreach ((array) $cmds as $c) {
-            if ($c['canal'] === 'compt') { continue; }
             $j = substr($c['quand'], 0, 10);
             if ($j === $date) {
                 $liste[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut']];
                 if (in_array($c['statut'], ['à préparer', 'en préparation'], true)) { $aPreparer++; }
             } elseif ($j === $demain) { $dem['n']++; $dem['ca'] += $c['montant']; }
         }
+        $nWeb = count(array_filter($liste, static fn ($c) => $c['canal'] !== 'compt'));
         return ['shop' => (string) $shop, 'date' => $date, 'jour' => $mJ, 'serie' => $m14['serie'], 'quatorze' => ['webshop' => $m14['webshop'], 'total' => $m14['total'], 'cc' => $m14['cc'], 'liv' => $m14['liv']],
-            'liste' => $liste, 'aPreparer' => $aPreparer, 'demain' => ['n' => $dem['n'], 'ca' => round($dem['ca'], 2)],
+            'liste' => $liste, 'nWebshop' => $nWeb, 'aPreparer' => $aPreparer, 'demain' => ['n' => $dem['n'], 'ca' => round($dem['ca'], 2)],
             'indispo' => $cmds === null, 'source' => $cmds === null ? 'panel muet' : 'commandes du panel + tickets caisse'];
     }
     // Le réseau : chaque magasin sur la période.
