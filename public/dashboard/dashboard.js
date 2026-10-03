@@ -14,7 +14,7 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'campagne', 'actions', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'campagne', 'actions', 'reclamation', 'production'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -22,6 +22,7 @@
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
+    ppOnglet: 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
@@ -96,6 +97,7 @@
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
+    if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
@@ -162,6 +164,7 @@
   }
   function libPeriode() {
     if (S.vue === 'jour') { return fDL(S.date); }
+    if (S.vue === 'production') { return 'production · ' + fDL(S.date); }
     if (S.vue === 'annee') { return 'année ' + annee(); }
     if (S.vue === 'trimestre') { return 'T' + trimestre() + ' ' + annee(); }
     const d = S.res[cleRes()];
@@ -1160,6 +1163,186 @@
       <div class="db-leg" style="padding-top:10px"><span><span class="co-verdict ok">Garder</span> l’offre rapporte : ≥ +8 % face à la référence, ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous ${CO_SEUIL_MARGE} %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div></div>`;
   }
   /** Les tuiles du mur mobile : le webshop du jour, et les offres sur 7 jours. */
+  /* --- gestion de production (module franchisé) : paramètres, plan du jour, recuissons --- */
+  function clePP() { return 'pp|' + S.shop + '|' + S.date; }
+  function cheminPP() { return '/production/plan?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
+  function ppData() { const P = S.aux[clePP()]; return P && !P.error ? P : null; }
+  const PP_JOURS = ['', 'lundis', 'mardis', 'mercredis', 'jeudis', 'vendredis', 'samedis', 'dimanches'];
+  const PP_VERDICT = { recuire: ['Recuire', 'ko'], tient: ['Tient', 'ok'], trop: ['Trop produit', 'att'], tard: ['Trop tard', 'mu'] };
+  const ppDemain = () => { const t = new Date(AUJ + 'T12:00:00'); t.setDate(t.getDate() + 1); return t.toISOString().slice(0, 10); };
+  /** Le brouillon des paramètres : une copie de ce que le serveur rend, modifiée à l'écran jusqu'à « Enregistrer ». */
+  function ppBrouillon(P) {
+    if (S.ppEdit && S.ppEdit.shop === S.shop) { return S.ppEdit; }
+    const cats = {};
+    (P.categories || []).forEach(c => { cats[c.cle] = { cuissons: (c.cuissons || []).slice(), plaque: c.plaque, limite: c.limite, nom: c.nom, catId: c.catId }; });
+    S.ppEdit = { shop: S.shop, cuissons: P.params.cuissons.map(c => Object.assign({}, c)), regles: Object.assign({}, P.params.regles), categories: cats, modifie: false };
+    return S.ppEdit;
+  }
+  /** La prévision heure par heure en mini-barres : la période en couleur, l'heure en cours en rouge. */
+  function ppSpark(h, a, b, now) {
+    const hs = []; for (let x = 5; x <= 19; x++) { hs.push(x); }
+    const v = hs.map(x => +(h && h[x] || 0)), m = Math.max(0.0001, ...v);
+    return `<span class="pp-spark" title="prévision heure par heure, 05 h → 19 h">${hs.map((x, i) => `<i class="${x + 1 > a && x < b ? 'fe' : ''}${now != null && x === Math.floor(now) ? ' now' : ''}" style="height:${Math.max(2, 100 * v[i] / m).toFixed(0)}%"></i>`).join('')}</span>`;
+  }
+  const ppH = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] + m[2] / 60 : null; };
+  const ppPl = (pl, plaque) => pl == null ? (plaque ? '<span class="mu">—</span>' : '<span class="mu">à l’unité</span>') : (pl ? pl + ' × ' + plaque : '<span class="mu">—</span>');
+  function ppOnglets(P) {
+    const auj = S.date === AUJ;
+    const o = [['plan', 'Plan du jour'], ['suivi', 'Suivi et recuissons'], ['params', 'Paramètres']];
+    return `<div class="pp-nav">${o.map(([k, n]) => `<button data-pponglet="${k}" class="${S.ppOnglet === k ? 'on' : ''}">${n}</button>`).join('')}
+      <span class="pp-quand">${S.date === AUJ ? 'aujourd’hui' : (S.date === ppDemain() ? 'demain' : fD(S.date))}${P && P.base ? ` · base : ${P.base.lus.length} ${PP_JOURS[P.jourSemaine] || 'jours'} lus sur ${P.base.jours.length}` : ''}</span>
+      ${auj ? `<button class="pp-lien" data-ppdemain="1">Préparer demain ›</button>` : `<button class="pp-lien" data-auj="1">‹ Aujourd’hui</button>`}</div>`;
+  }
+  function ppCorps(mobile) {
+    const cle = clePP(), P = ppData(), err = S.err[cle];
+    if (!P) { return ppOnglets(null) + `<div class="db-card"><div class="db-mini" style="padding:16px">${err ? '<span class="ko">' + esc(err) + '</span>' : 'Lecture des ventes des dernières semaines, heure par heure, et des commandes du jour…'}</div></div>`; }
+    const msg = S.ppMsg ? `<div class="pp-msg ${S.ppMsg.ok ? 'ok' : 'ko'}">${esc(S.ppMsg.texte)}</div>` : '';
+    let h = ppOnglets(P) + msg;
+    if (!P.base.lus.length) { h += `<div class="db-card"><div class="db-mini" style="padding:16px">Aucun des ${P.base.jours.length} derniers ${PP_JOURS[P.jourSemaine] || 'jours'} n’est encore lu : la prévision attend les tickets du panel${P.base.manquants.length ? ' (' + P.base.manquants.length + ' jour' + (P.base.manquants.length > 1 ? 's' : '') + ' à lire)' : ''}.</div></div>`; }
+    if (S.ppOnglet === 'params') { return h + ppParams(P, mobile); }
+    if (S.ppOnglet === 'suivi') { return h + ppSuivi(P, mobile); }
+    return h + ppPlan(P, mobile);
+  }
+  function ppTuiles(P) {
+    return `<div class="pp-cuis">${P.plan.map(c => { const f = P.faits && P.faits[c.id]; return `<div class="k${Math.min(c.k, 6)}${c.panel ? '' : ' loc'}"><div class="k">Cuisson ${c.k} · ${esc(c.nom)} · four ${c.four}</div><div class="v">${fN(c.total.pieces)} <small>pièces${c.total.plaques ? ' · ' + fN(c.total.plaques) + ' plaques' : ''}</small></div><div class="s">vente ${c.de}–${c.a} · ${nf(c.pct, 0)} % de la journée · ${c.total.categories} catégorie${c.total.categories > 1 ? 's' : ''}${c.total.cmd + c.total.ws ? ` · dont <b>${fN(c.total.cmd + c.total.ws)} commandées</b>` : ''}${f ? '<br><span class="pp-tag ok">validée</span>' : ''}${c.panel ? '' : '<br><span class="pp-tag loc">cuisson locale — absente du panel</span>'}</div></div>`; }).join('')}</div>`;
+  }
+  function ppPlan(P, mobile) {
+    const tot = P.plan.reduce((a, c) => ({ p: a.p + c.total.pieces, pl: a.pl + c.total.plaques }), { p: 0, pl: 0 });
+    const nCmd = (P.commandes || []).length;
+    let h = `<div class="db-card"><div class="ct"><span class="db-lab">Les cuissons ${S.date === AUJ ? 'du jour' : (S.date === ppDemain() ? 'de demain' : 'du ' + fD(S.date))}</span><span class="db-mini">prévision = moyenne des ${P.base.semaines} derniers ${PP_JOURS[P.jourSemaine] || 'jours'}, heure par heure · + ${nf(P.params.regles.securite, 0)} % de sécurité · commandes et webshop inclus</span></div>${ppTuiles(P)}
+      <div class="pp-pied"><b>${fN(tot.p)} pièces${tot.pl ? ' en ' + fN(tot.pl) + ' plaques' : ''}</b> à sortir · ${nCmd ? nCmd + ' commande' + (nCmd > 1 ? 's' : '') + ' à retirer' : (P.commandesLues ? 'aucune commande à retirer' : 'commandes du panel non lues')} · base : ${fN(P.base.piecesParJour)} pièces par ${(PP_JOURS[P.jourSemaine] || 'jour').replace(/s$/, '')} en moyenne${P.base.fermes.length ? ' · ' + P.base.fermes.length + ' jour' + (P.base.fermes.length > 1 ? 's' : '') + ' fermé' + (P.base.fermes.length > 1 ? 's' : '') + ' écarté' + (P.base.fermes.length > 1 ? 's' : '') : ''}${P.params.enregistre ? '' : ' · <b>paramètres proposés</b> : réglez-les dans l’onglet Paramètres'}</div></div>`;
+    const suiv = P.suivi && P.suivi.cuisson ? P.suivi.cuisson.id : null;
+    P.plan.forEach((c, i) => {
+      const ouvert = S.ppOuvert[c.id] != null ? S.ppOuvert[c.id] : (suiv ? c.id === suiv : i === 0);
+      const tete = `<div class="ct" data-ppcu="${c.id}" style="cursor:pointer"><span class="db-lab">Cuisson ${c.k} · ${esc(c.nom)} — four à ${c.four}, vente ${c.de}–${c.a}</span><span class="db-mini">${nf(c.pct, 0)} % de la journée · ${fN(c.total.pieces)} pièces${c.total.plaques ? ' · ' + fN(c.total.plaques) + ' plaques' : ''}</span><span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>`;
+      if (!ouvert) { h += `<div class="db-card">${tete}</div>`; return; }
+      if (!c.lignes.length) { h += `<div class="db-card">${tete}<div class="db-mini" style="padding:12px 16px">Aucune catégorie cochée pour cette cuisson.</div></div>`; return; }
+      let g = '';
+      const corps = mobile
+        ? c.lignes.map(l => { const t = l.cat !== g ? `<tr class="grp"><td colspan="3">${esc(l.cat)}</td></tr>` : ''; g = l.cat; return t + `<tr><td class="nom">${esc(l.nom)}<small>prévu ${fN(l.prevu)}${l.cmd + l.ws ? ' · + ' + fN(l.cmd + l.ws) + ' commandés' : ''}${l.stock ? ' · − ' + fN(l.stock) + ' en stock' : ''}</small></td><td class="n"><b>${fN(l.sortie)}</b></td><td class="n">${ppPl(l.plaques, l.plaque)}</td></tr>`; }).join('')
+        : c.lignes.map(l => { const t = l.cat !== g ? `<tr class="grp"><td colspan="10">${esc(l.cat)}</td></tr>` : ''; g = l.cat; return t + `<tr><td class="nom">${esc(l.nom)}</td><td>${ppSpark(l.h, ppH(l.zone[0]), ppH(l.zone[1]))} <small class="mu">${nf(l.fenetre, 0)} sur la période</small></td><td class="n">${nf(l.prevJ, l.prevJ < 10 ? 1 : 0)}</td><td class="n mu">${nf(l.part, 0)} %</td><td class="n">${fN(l.prevu)}</td><td class="n">${l.cmd >= 0.5 ? '<b>+ ' + fN(l.cmd) + '</b>' : '<span class="mu">—</span>'}</td><td class="n">${l.ws >= 0.5 ? '<b>+ ' + fN(l.ws) + '</b>' : '<span class="mu">—</span>'}</td><td class="n">${l.stock >= 0.5 ? '− ' + fN(l.stock) : '<span class="mu">—</span>'}</td><td class="n"><b>${fN(l.sortie)}</b>${l.fait != null ? `<small class="ok"> · fait ${fN(l.fait)}</small>` : ''}</td><td class="n">${ppPl(l.plaques, l.plaque)}</td></tr>`; }).join('');
+      const tete2 = mobile ? '<tr><th>Produit</th><th class="n">À cuire</th><th class="n">Plaques</th></tr>'
+        : `<tr><th>Produit</th><th>Prévision heure par heure</th><th class="n">Par jour<br><small>${P.base.semaines} dern. ${esc((PP_JOURS[P.jourSemaine] || 'jours'))}</small></th><th class="n">Part C${c.k}</th><th class="n">Prévu + ${nf(P.params.regles.securite, 0)} %</th><th class="n">Commandes</th><th class="n">Webshop</th><th class="n">Stock estimé</th><th class="n">À cuire</th><th class="n">Plaques</th></tr>`;
+      h += `<div class="db-card">${tete}<div class="pp-defil"><table class="pp-tab"><thead>${tete2}</thead><tbody>${corps}
+        ${mobile ? '' : `<tr class="tot"><td>Cuisson ${c.k}</td><td></td><td></td><td></td><td class="n">${fN(c.total.prevu)}</td><td class="n">${c.total.cmd ? '+ ' + fN(c.total.cmd) : '—'}</td><td class="n">${c.total.ws ? '+ ' + fN(c.total.ws) : '—'}</td><td class="n">${c.total.stock ? '− ' + fN(c.total.stock) : '—'}</td><td class="n">${fN(c.total.pieces)}</td><td class="n">${c.total.plaques ? fN(c.total.plaques) : ''}</td></tr>`}</tbody></table></div>
+        <div class="pp-pied"><b>À cuire = prévision du jour × part de la cuisson × ${nf(1 + P.params.regles.securite / 100, 2).replace(/0$/, '')} + commandes et webshop à retirer d’ici la cuisson suivante − stock estimé</b>, arrondi à la plaque. ${i === 0 ? 'Le stock de départ vaut zéro : le panel ne rend pas les reports de la veille.' : 'Le stock estimé = sorti à la cuisson précédente − ventes prévues jusqu’à l’ouverture de celle-ci ; avant le four, l’onglet « Suivi et recuissons » le remplace par le réel.'}</div></div>`;
+    });
+    const C = P.commandes || [];
+    if (C.length) {
+      const nomCu = id => { const c = P.plan.find(x => x.id === id); return c ? 'C' + c.k : ''; };
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Les commandes ${S.date === AUJ ? 'du jour' : 'à retirer'}</span><span class="db-mini">comptoir, clients pro et webshop — chacune entre dans la cuisson qui précède son retrait</span></div><div class="pp-defil"><table class="pp-tab"><thead><tr><th>Retrait</th><th>Canal</th><th>Articles</th><th class="n">Montant</th><th>Cuisson</th></tr></thead><tbody>${C.map(o => `<tr><td class="nom">${esc(o.heure)}</td><td><span class="pp-tag">${o.canal === 'cc' ? 'Click & collect' : (o.canal === 'liv' ? 'Livraison' : 'Comptoir')}</span></td><td>${o.sansDetail ? '<span class="mu">articles non joints par le panel</span>' : o.lignes.map(l => fN(l.q) + ' × ' + esc(l.nom)).join(' · ')}</td><td class="n">${fU(o.montant)}</td><td>${o.cuissons.map(id => `<span class="pp-tag k${(P.plan.find(x => x.id === id) || {}).k || 1}">${nomCu(id)}</span>`).join(' ') || '<span class="mu">hors production</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
+    }
+    return h;
+  }
+  function ppSuivi(P, mobile) {
+    if (S.date !== AUJ) { return `<div class="db-card"><div class="db-mini" style="padding:16px">Le suivi et les recuissons se calculent le jour même, sur les ventes réelles. <button class="pp-lien" data-auj="1">Revenir à aujourd’hui ›</button></div></div>`; }
+    const V = P.suivi;
+    if (!V) { return `<div class="db-card"><div class="db-mini" style="padding:16px">Plus de cuisson aujourd’hui : la dernière période de vente est ouverte. Le plan de demain est dans « Préparer demain ».</div></div>`; }
+    const T = V.total, c = P.plan.find(x => x.id === V.cuisson.id) || { k: '?' }, fait = P.faits && P.faits[V.cuisson.id];
+    const ec = T.ecart, ecTxt = ec == null ? '—' : (ec >= 0 ? '+ ' : '− ') + nf(Math.abs(ec), 0) + ' %';
+    const rec = V.lignes.filter(l => l.verdict === 'recuire'), trop = V.lignes.filter(l => l.verdict === 'trop');
+    const tete = `<div class="db-card"><div class="ct"><span class="db-lab">La journée en cours</span><span class="pp-now">${esc(V.maintenant)}</span><span class="db-mini">${V.ventesLues ? 'tickets relus toutes les 10 minutes' : 'tickets du jour pas encore lus'} · ${ecTxt} face à la prévision à la même heure, sur les produits de la cuisson ${c.k}</span></div>
+      <div class="pp-cuis">${P.plan.map(x => { const avant = ppH(x.de) <= ppH(V.maintenant), ici = x.id === V.cuisson.id; return `<div class="k${Math.min(x.k, 6)}${x.panel ? '' : ' loc'}"><div class="k">Cuisson ${x.k} · ${esc(x.nom)} · four ${x.four}</div><div class="v">${ici ? fN(T.plaques || T.aEnfourner) + ` <small>${T.plaques ? 'plaques · ' + fN(T.aEnfourner) + ' pièces' : 'pièces'}</small>` : (avant ? (P.faits && P.faits[x.id] ? '✓' : fN(x.total.pieces)) : '—')}</div><div class="s">${ici ? `plan de la nuit : ${fN(T.planPlaques || T.plan)} ${T.planPlaques ? 'plaques' : 'pièces'} · <b>recalculée à ${esc(V.maintenant)}</b>` : (avant ? (P.faits && P.faits[x.id] ? 'validée' : 'sortie prévue (non validée)') : 'se recalculera avant le four')}</div></div>`; }).join('')}</div></div>`;
+    const alerte = `<div class="pp-alerte${rec.length ? '' : ' ok'}"><b>Cuisson ${c.k} — ${esc(V.cuisson.nom)}, four à ${esc(V.cuisson.four)} : ${rec.length ? fN(T.aEnfourner) + ' pièces' + (T.plaques ? ' en ' + fN(T.plaques) + ' plaques' : '') + ' à enfourner' : 'rien à recuire'}${T.plan ? ' (plan de la nuit : ' + fN(T.plan) + ')' : ''}</b><span class="mu">${rec.length} produit${rec.length > 1 ? 's' : ''} à recuire${trop.length ? ' · ' + trop.length + ' en trop, à ne pas recuire (' + trop.slice(0, 4).map(l => esc(l.nom)).join(', ') + (trop.length > 4 ? '…' : '') + ')' : ''}</span>
+      ${fait ? '<span class="pp-tag ok" style="margin-left:auto">cuisson validée</span>' : `<button class="pp-btn" data-ppvalider="${V.cuisson.id}"${S.ppEnvoi ? ' disabled' : ''}>${S.ppEnvoi ? 'Envoi…' : 'Valider la cuisson ' + c.k}</button>`}</div>`;
+    let g = '';
+    const lignes = V.lignes.map(l => { const t = l.cat !== g ? `<tr class="grp"><td colspan="${mobile ? 3 : 10}">${esc(l.cat)}</td></tr>` : ''; g = l.cat; const vd = PP_VERDICT[l.verdict] || PP_VERDICT.tient;
+      const detail = l.verdict === 'recuire' ? (l.plaques ? `<b>${l.plaques} plaque${l.plaques > 1 ? 's' : ''}</b> (${fN(l.aEnfourner)})` : `<b>${fN(l.aEnfourner)}</b> à préparer`) : (l.verdict === 'trop' ? 'couvre ' + nf(l.couverture, 0) + ' % du besoin : ne pas recuire' : (l.verdict === 'tard' ? 'après ' + esc(l.limite) + ' : plus de recuisson' : 'rien à recuire'));
+      if (mobile) { return t + `<tr><td class="nom">${esc(l.nom)}<small>vendu ${fN(l.vendu)} / prévu ${fN(l.prevuMaintenant)} · stock ${fN(l.stock)} · besoin ${fN(l.besoin)} → ${esc(l.jusqua)}</small></td><td><span class="pp-tag ${vd[1]}">${vd[0]}</span></td><td class="n">${l.verdict === 'recuire' ? (l.plaques ? l.plaques + ' × ' + l.plaque : fN(l.aEnfourner)) : '<span class="mu">—</span>'}</td></tr>`; }
+      const e = l.ecart, couv = Math.min(100, l.couverture);
+      return t + `<tr><td class="nom">${esc(l.nom)}<small>${l.plaque ? 'plaque de ' + l.plaque : 'à l’unité'}${l.limite ? ' · recuisson jusqu’à ' + esc(l.limite) : ''}</small></td><td>${ppSpark(l.h, 5, ppH(V.maintenant), ppH(V.maintenant))}</td><td class="n">${fN(l.produit)}</td><td class="n"><b>${fN(l.vendu)}</b>${l.jete ? `<small class="mu"> · ${fN(l.jete)} jeté${l.jete > 1 ? 's' : ''}</small>` : ''}</td><td class="n mu">${fN(l.prevuMaintenant)}</td><td class="n" style="color:${e == null ? 'inherit' : (e > 8 ? '#2d7a3e' : (e < -8 ? '#C0182B' : 'inherit'))}">${e == null ? '—' : (e >= 0 ? '+ ' : '− ') + nf(Math.abs(e), 0) + ' %'}</td><td class="n">${fN(l.stock)}</td><td class="n"><span class="pp-bar"><i class="${vd[1]}" style="width:${couv.toFixed(0)}%"></i></span>${fN(l.besoin)} <small class="mu">→ ${esc(l.jusqua)}</small></td><td class="n mu">${l.plan ? fN(l.plan) : '—'}</td><td><span class="pp-tag ${vd[1]}">${vd[0]}</span> <small class="mu">${detail}</small></td></tr>`; }).join('');
+    const th = mobile ? '<tr><th>Produit</th><th>Verdict</th><th class="n">À enfourner</th></tr>'
+      : `<tr><th>Produit</th><th>Prévision · déjà passée</th><th class="n">Sorti avant</th><th class="n">Vendu</th><th class="n">Prévu à ${esc(V.maintenant)}</th><th class="n">Écart</th><th class="n">Stock</th><th class="n">Besoin + ${nf(P.params.regles.securite, 0)} %</th><th class="n">Plan de la nuit</th><th>À enfourner à ${esc(V.cuisson.four)}</th></tr>`;
+    return tete + `<div class="db-card"><div class="ct"><span class="db-lab">Recalcul de la cuisson ${c.k} — ${esc(V.cuisson.nom)}, four à ${esc(V.cuisson.four)}</span><span class="db-mini">stock réel face au besoin jusqu’à la cuisson suivante de chaque catégorie</span></div>${alerte}
+      ${V.lignes.length ? `<div class="pp-defil"><table class="pp-tab"><thead>${th}</thead><tbody>${lignes}</tbody></table></div>` : '<div class="db-mini" style="padding:12px 16px">Aucune catégorie cochée pour cette cuisson.</div>'}
+      <div class="pp-pied"><b>À enfourner = besoin − stock, arrondi à la plaque</b> — stock = sorti aux cuissons d’avant (validé, sinon prévu) − vendu (tickets du panel) − jeté (poubelle du panel) ; besoin = prévision des heures qui restent jusqu’à la cuisson suivante de la catégorie × ${nf(1 + P.params.regles.securite / 100, 2).replace(/0$/, '')} + commandes et webshop à retirer d’ici là. Recuisson sous ${nf(P.params.regles.seuilRecuisson, 0)} % de couverture ; « trop produit » au-delà de ${nf(P.params.regles.seuilTrop, 0)} %. « Valider » enregistre ces quantités comme enfournées : la cuisson suivante part de là.</div></div>`;
+  }
+  function ppParams(P, mobile) {
+    const E = ppBrouillon(P), C = E.cuissons, R = E.regles;
+    const tot = C.reduce((a, c) => a + (+c.pct || 0), 0), totOk = Math.abs(tot - 100) <= 0.5;
+    const dp = P.dayparts || [];
+    const cuis = `<div class="pp-cuis pp-cuis-ed">${C.map((c, i) => `<div class="k${Math.min(i + 1, 6)}${c.daypart ? '' : ' loc'}"><div class="k">Cuisson ${i + 1}${C.length > 1 ? ` <button class="pp-x" data-ppdel="${i}" title="retirer cette cuisson">×</button>` : ''}</div>
+      <input class="pp-in l" data-ppin="c:${i}:nom" value="${esc(c.nom)}" maxlength="40">
+      <div class="pp-ligne"><input class="pp-in" type="number" min="0" max="100" step="1" data-ppin="c:${i}:pct" value="${esc(c.pct)}"> <span>% de la journée</span></div>
+      <div class="pp-ligne">vente <input class="pp-in t" inputmode="numeric" maxlength="5" placeholder="hh:mm" data-ppin="c:${i}:de" value="${esc(c.de)}"> → <input class="pp-in t" inputmode="numeric" maxlength="5" placeholder="hh:mm" data-ppin="c:${i}:a" value="${esc(c.a)}"></div>
+      <div class="s">${c.daypart ? '<span class="pp-tag">panel</span> ' + esc((dp.find(d => d.id === c.daypart) || {}).nom || '') : '<span class="pp-tag loc">locale — à créer dans le panel</span>'} · four ${(() => { const h = ppH(c.de); return h == null ? '—' : String(Math.floor(Math.max(0, h - R.avance / 60))).padStart(2, '0') + ':' + String(Math.round((Math.max(0, h - R.avance / 60) % 1) * 60)).padStart(2, '0'); })()}</div></div>`).join('')}
+      ${C.length < 6 ? '<button class="pp-ajout" data-ppadd="1">+ Ajouter une cuisson</button>' : ''}</div>
+      <div class="pp-pied ${totOk ? '' : 'ko'}"><b>Total : ${nf(tot, 0)} %${totOk ? '' : ' — il faut 100 %'}.</b> Les périodes de vente du panel (${dp.length ? dp.map(d => esc(d.nom) + ' ' + d.de + '–' + d.a).join(', ') : 'aucune lue'}) donnent les cuissons ; une cuisson locale vit ici tant qu’elle n’est pas créée dans le panel. Four = ouverture de la période − <input class="pp-in s" type="number" min="0" max="180" data-ppin="r:avance" value="${esc(R.avance)}"> min.</div>`;
+    // La matrice : les catégories vendues ces semaines-là, par groupe.
+    const cats = (P.categories || []).slice();
+    let g = null;
+    const lignes = cats.map(cv => { const e = E.categories[cv.cle] || { cuissons: [], plaque: null, limite: null }; const t = cv.groupe !== g ? `<tr class="grp"><td colspan="${C.length + 4}">${esc(cv.groupe || 'Sans groupe')}</td></tr>` : ''; g = cv.groupe;
+      return t + `<tr><td class="nom">${esc(cv.nom)}<small>${nf(cv.parJour, cv.parJour < 10 ? 1 : 0)} pièces par jour${cv.auto && !E.modifie ? ' · proposé' : ''}</small></td>${C.map(c => { const on = e.cuissons.includes(c.id), v = cv.ventesParCuisson ? cv.ventesParCuisson[c.id] : null; return `<td class="c"><button class="pp-chk${on ? ' on' : ''}" data-ppchk="${esc(cv.cle)}|${c.id}" title="${on ? 'retirer' : 'cocher'}"></button>${v != null && !mobile ? `<small>${nf(v, 0)} %</small>` : ''}</td>`; }).join('')}
+        <td class="n"><input class="pp-in" type="number" min="1" max="500" placeholder="—" data-ppin="k:${esc(cv.cle)}:plaque" value="${e.plaque == null ? '' : esc(e.plaque)}"></td><td class="n"><input class="pp-in t" inputmode="numeric" maxlength="5" placeholder="hh:mm" data-ppin="k:${esc(cv.cle)}:limite" value="${e.limite == null ? '' : esc(e.limite)}"></td></tr>`; }).join('');
+    const matrice = `<div class="pp-defil"><table class="pp-tab pp-mat"><thead><tr><th>Catégorie</th>${C.map((c, i) => `<th class="c">C${i + 1} · ${esc(c.nom)}<br><small>${esc(c.de)}–${esc(c.a)}</small></th>`).join('')}<th class="n">Pièces / plaque</th><th class="n">Dernière recuisson</th></tr></thead><tbody>${lignes}</tbody></table></div>
+      <div class="pp-pied">Cocher = la catégorie se cuit pour cette période ; la part de chaque cuisson reprend les % de la journée, renormalisés sur les cases cochées. Sous chaque case : la part de ses ventes dans la période (les ${P.base.semaines} derniers ${PP_JOURS[P.jourSemaine] || 'jours'}). Sans pièces par plaque, le plan compte à l’unité ; sans dernière recuisson, elle reste possible jusqu’à la dernière cuisson cochée.</div>`;
+    const inp = (k, min, max, step) => `<input class="pp-in" type="number" min="${min}" max="${max}" step="${step || 1}" data-ppin="r:${k}" value="${esc(R[k])}">`;
+    const chk = k => `<button class="pp-chk${R[k] ? ' on' : ''}" data-ppchk="r|${k}"></button>`;
+    const regles = `<div class="pp-regles">
+      <div class="r"><b>Base de prévision</b>${inp('semaines', 1, 12)} dernières semaines, le même jour, heure par heure<small>un jour fermé (aucun ticket) est écarté de la moyenne</small></div>
+      <div class="r"><b>Sécurité</b>+ ${inp('securite', 0, 50, 0.5)} % sur la prévision de chaque cuisson<small>manquer coûte une vente, trop produire coûte la matière</small></div>
+      <div class="r"><b>Arrondi</b>à la plaque pleine, au moins ${inp('minPlaques', 0, 10)} plaque<small>13 croissants et 12 par plaque = 2 plaques</small></div>
+      <div class="r"><b>Commandes</b>${chk('commandes')} comptoir et clients pro ${chk('webshop')} webshop<small>une commande s’ajoute à la cuisson qui précède son retrait</small></div>
+      <div class="r"><b>Recuisson</b>conseillée sous ${inp('seuilRecuisson', 0, 100)} % de couverture<small>couverture = stock ÷ besoin jusqu’à la cuisson suivante</small></div>
+      <div class="r"><b>Trop produit</b>au-delà de ${inp('seuilTrop', 100, 400)} % de couverture<small>le suivi dit alors de ne pas recuire</small></div></div>`;
+    const actions = `<span style="margin-left:auto;display:flex;gap:8px;align-items:center">${E.modifie ? '<button class="pp-lien" data-ppreset="1">Annuler les modifications</button>' : ''}<button class="pp-btn" data-ppsave="1"${!totOk || S.ppEnvoi ? ' disabled' : ''}>${S.ppEnvoi ? 'Enregistrement…' : 'Enregistrer'}</button></span>`;
+    return `<div class="db-card"><div class="ct" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="db-lab">1 · Les cuissons de la journée</span><span class="db-mini">${P.params.enregistre ? 'enregistré' + (P.params.maj ? ' le ' + fD(String(P.params.maj).slice(0, 10)) : '') : 'proposé à partir des périodes de vente du panel — à enregistrer'}</span>${actions}</div>${cuis}</div>
+      <div class="db-card"><div class="ct"><span class="db-lab">2 · Quelles catégories à quelles cuissons</span><span class="db-mini">${cats.length} catégorie${cats.length > 1 ? 's' : ''} vendue${cats.length > 1 ? 's' : ''} ces ${P.base.semaines} dernières semaines</span></div>${matrice}</div>
+      <div class="db-card"><div class="ct" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="db-lab">3 · Les règles de prévision et de recuisson</span>${actions}</div>${regles}</div>`;
+  }
+  /** L'écran Production — sur ordinateur seulement (pas d'écran au téléphone, demande du 03/10/2026). */
+  function rendProduction() { return `<div class="pp-vue">${ppCorps(false)}</div>`; }
+  /** Le champ actif garde son focus quand l'écran se redessine. */
+  function ppGarder() { const a = document.activeElement; return a && a.dataset && a.dataset.ppin && $.contains(a) ? a.dataset.ppin : null; }
+  function ppRestaurer(k) { if (!k) { return; } const el = $.querySelector(`[data-ppin="${k.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); } }
+  /** « 6h30 », « 6:30 », « 630 » → « 06:30 » ; tel quel sinon (le serveur refusera et le dira). */
+  function ppNormH(v) { const m = /^\s*(\d{1,2})\s*[:h.]?\s*(\d{2})?\s*$/i.exec(v || ''); if (!m) { return v; } const h = +m[1], mi = +(m[2] || 0); return h <= 24 && mi < 60 ? String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0') : v; }
+  function ppPoser(chemin, val) {
+    const E = S.ppEdit; if (!E) { return; }
+    if (/:(de|a|limite)$/.test(chemin) && val !== '') { val = ppNormH(val); }
+    const [t, a, b] = chemin.split(':');
+    if (t === 'c') { const c = E.cuissons[+a]; if (!c) { return; } c[b] = b === 'pct' ? (val === '' ? 0 : +val) : val; }
+    else if (t === 'r') { E.regles[a] = val === '' ? 0 : +val; }
+    else if (t === 'k') { const e = E.categories[a] = E.categories[a] || { cuissons: [], plaque: null, limite: null }; e[b] = b === 'plaque' ? (val === '' ? null : Math.max(1, Math.round(+val))) : (val === '' ? null : val); }
+    E.modifie = true; S.ppMsg = null;
+  }
+  function ppBrancher() {
+    $.querySelectorAll('[data-pponglet]').forEach(b => b.addEventListener('click', () => { S.ppOnglet = b.dataset.pponglet; S.ppMsg = null; rendre(); }));
+    $.querySelectorAll('[data-ppdemain]').forEach(b => b.addEventListener('click', () => { S.date = ppDemain(); urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-ppcu]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.ppcu; const P = ppData(); const suiv = P && P.suivi && P.suivi.cuisson ? P.suivi.cuisson.id : null; const ouvert = S.ppOuvert[id] != null ? S.ppOuvert[id] : (suiv ? id === suiv : P && P.plan[0] && P.plan[0].id === id); S.ppOuvert[id] = !ouvert; rendre(); }));
+    $.querySelectorAll('[data-ppin]').forEach(i => i.addEventListener('change', () => { ppPoser(i.dataset.ppin, i.value); rendre(); }));
+    $.querySelectorAll('[data-ppchk]').forEach(b => b.addEventListener('click', () => {
+      const E = S.ppEdit; if (!E) { return; }
+      const [cle, id] = b.dataset.ppchk.split('|');
+      if (cle === 'r') { E.regles[id] = !E.regles[id]; }
+      else { const e = E.categories[cle] = E.categories[cle] || { cuissons: [], plaque: null, limite: null }; e.cuissons = e.cuissons.includes(id) ? e.cuissons.filter(x => x !== id) : E.cuissons.map(c => c.id).filter(x => x === id || e.cuissons.includes(x)); }
+      E.modifie = true; S.ppMsg = null; rendre(); }));
+    $.querySelectorAll('[data-ppadd]').forEach(b => b.addEventListener('click', () => {
+      const E = S.ppEdit; if (!E || E.cuissons.length >= 6) { return; }
+      const der = E.cuissons[E.cuissons.length - 1]; let n = 1; while (E.cuissons.some(c => c.id === 'c' + n)) { n++; }
+      E.cuissons.push({ id: 'c' + n, nom: 'Cuisson ' + (E.cuissons.length + 1), de: der ? der.a : '17:00', a: '19:00', pct: 0, daypart: null }); E.modifie = true; rendre(); }));
+    $.querySelectorAll('[data-ppdel]').forEach(b => b.addEventListener('click', () => {
+      const E = S.ppEdit; if (!E || E.cuissons.length <= 1) { return; }
+      const c = E.cuissons.splice(+b.dataset.ppdel, 1)[0];
+      Object.values(E.categories).forEach(e => { e.cuissons = e.cuissons.filter(x => x !== c.id); }); E.modifie = true; rendre(); }));
+    $.querySelectorAll('[data-ppreset]').forEach(b => b.addEventListener('click', () => { S.ppEdit = null; S.ppMsg = null; rendre(); }));
+    $.querySelectorAll('[data-ppsave]').forEach(b => b.addEventListener('click', () => {
+      const E = S.ppEdit; if (!E || S.ppEnvoi) { return; }
+      S.ppEnvoi = true; rendre();
+      ecrire('/production/plan/params', { shop: S.shop, params: { cuissons: E.cuissons, categories: E.categories, regles: E.regles } })
+        .then(() => { S.ppEnvoi = false; S.ppEdit = null; S.ppMsg = { ok: true, texte: 'Paramètres enregistrés : le plan du jour se recalcule.' }; lireAux(clePP(), cheminPP(), true); rendre(); })
+        .catch(e => { S.ppEnvoi = false; S.ppMsg = { ok: false, texte: 'Non enregistré : ' + e.message }; rendre(); });
+    }));
+    $.querySelectorAll('[data-ppvalider]').forEach(b => b.addEventListener('click', () => {
+      const P = ppData(); if (!P || !P.suivi || S.ppEnvoi) { return; }
+      const lignes = {}; P.suivi.lignes.forEach(l => { lignes[l.pid] = l.aEnfourner; });
+      S.ppEnvoi = true; rendre();
+      ecrire('/production/plan/fait', { shop: S.shop, date: S.date, cuisson: b.dataset.ppvalider, lignes })
+        .then(() => { S.ppEnvoi = false; S.ppMsg = { ok: true, texte: 'Cuisson validée : ces quantités comptent comme enfournées.' }; lireAux(clePP(), cheminPP(), true); rendre(); })
+        .catch(e => { S.ppEnvoi = false; S.ppMsg = { ok: false, texte: 'Non validée : ' + e.message }; rendre(); });
+    }));
+  }
+
   /* --- les invendus et la poubelle : ce que le panel sait des pièces jetées (route /shops/{id}/products/waste) --- */
   function cleInv() { return 'inv|' + S.shop + '|' + (coPer() ? bornes().join('|') : S.date); }
   function cheminInv() { const b = '/exploitation/invendus?shop=' + encodeURIComponent(S.shop); if (!coPer()) { return b + '&date=' + S.date; } const [du, au] = bornes(); return b + '&du=' + du + '&au=' + au; }
@@ -1429,6 +1612,7 @@
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
+      // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
       if (!['jour', 'semaine', 'campagne', 'actions', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
@@ -1457,12 +1641,13 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['campagne', 'Campagne'], ['actions', 'Plan d’action']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['production', 'Production'], ['campagne', 'Campagne'], ['actions', 'Plan d’action']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
+    if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -3421,7 +3606,7 @@
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
-      if (S.vue === 'jour') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
+      if (S.vue === 'jour' || S.vue === 'production') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
       const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
@@ -3464,6 +3649,7 @@
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
+    ppBrancher();
     $.querySelectorAll('[data-cmdliste]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.cmdListeOuvert = !S.cmdListeOuvert; rendre(); }));
     // Les contrôles en photo : filtres, flèches, loupe.
     $.querySelectorAll('[data-cqf]').forEach(b => b.addEventListener('click', () => { S.cqFiltre = b.dataset.cqf; S.cqRaz = true; rendre(); }));
