@@ -33,7 +33,7 @@
     page: PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan',
     date: dateOk(q.get('date')) ? q.get('date') : AUJ,   // ramené à aujourd'hui hors du plan, au départ
     stores: [], data: {}, err: {}, enCours: {},
-    edit: null, editShop: null, editF: null, editFCle: null, filtre: '', seulsOblig: false, alertes: false, ecartsJ7: false,
+    edit: null, editShop: null, editF: null, editFCle: null, ganttF: null, filtre: '', seulsOblig: false, alertes: false, ecartsJ7: false,
     valid: null, clot: null, msg: null, envoi: false,
     par: (() => { try { return localStorage.getItem('pf.par') || ''; } catch (e) { return ''; } })(),
   };
@@ -404,18 +404,85 @@
   const TEINTES = ['#8D1D2C', '#C9A227', '#1f5f8b', '#2d7a3e', '#D97706', '#6b4c9a', '#0f766e', '#b45309', '#475569', '#be185d'];
   const teinte = n => { let x = 0; for (const ch of String(n || '')) { x = (x * 31 + ch.charCodeAt(0)) % 997; } return TEINTES[x % TEINTES.length]; };
   const hm = m => (m >= 60 ? Math.floor(m / 60) + ' h ' : '') + String(m % 60).padStart(m >= 60 ? 2 : 1, '0') + ' min';
+  /**
+   * Le Gantt recalculé à l'écran avec les fours et réglages du brouillon — le même calcul que le
+   * serveur (pfGantt) : plaques = pièces ÷ pièces par plaque, regroupées par four et par réglage, la
+   * plus chaude d'abord, au plus tard pour sortir à l'ouverture de la vente, jamais avant l'heure
+   * « au four » de la cuisson ni avant que le four soit libre.
+   */
+  function ganttCalc(entree, E) {
+    const hh = x => { const m = Math.round(x * 60); return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+    const fours = {}; E.fours.forEach(f => { fours[f.id] = { id: f.id, nom: f.nom, plaques: Math.max(1, +f.plaques || 1), fournees: [], occupation: 0, plaquesTot: 0, libre: null }; });
+    const hors = {}; let retards = 0, d = null, a = null, pd = null, pa = null;
+    entree.forEach(c => {
+      const de = hDe(c.de); if (de == null) { return; }
+      const au = hDe(c.four);
+      pd = Math.min(pd == null ? (au != null ? au : de) : pd, au != null ? au : de); pa = Math.max(pa == null ? de : pa, de);
+      const grp = {};
+      c.categories.forEach(x => {
+        const r = E.categories[x.cle];
+        if (!r || !r.four || !fours[r.four]) { hors[x.cle] = { cle: x.cle, nom: x.nom, groupe: x.groupe, pieces: (hors[x.cle] ? hors[x.cle].pieces : 0) + x.pieces }; return; }
+        const pl = Math.ceil(x.pieces / Math.max(1, +r.parPlaque || 1));
+        const g = r.four + '|' + (+r.temp) + '|' + (+r.duree);
+        (grp[r.four] = grp[r.four] || {});
+        (grp[r.four][g] = grp[r.four][g] || { temp: +r.temp, duree: +r.duree, cats: [] }).cats.push({ cle: x.cle, nom: x.nom, groupe: x.groupe, plaques: pl, pieces: x.pieces });
+      });
+      Object.keys(grp).forEach(fid => {
+        const cap = fours[fid].plaques;
+        const gs = Object.values(grp[fid]).sort((p, q) => (q.temp - p.temp) || (q.duree - p.duree));
+        const fn = [];
+        gs.forEach(g => {
+          let cur = null;
+          g.cats.forEach(x => {
+            let reste = x.plaques, pieces = x.pieces;
+            while (reste > 0) {
+              if (!cur || cur.plaques >= cap) { if (cur) { fn.push(cur); } cur = { temp: g.temp, duree: g.duree, plaques: 0, categories: [] }; }
+              const mis = Math.min(reste, cap - cur.plaques);
+              const pc = Math.round(pieces * mis / Math.max(1, reste)); pieces -= pc;
+              cur.plaques += mis; reste -= mis;
+              cur.categories.push({ cle: x.cle, nom: x.nom, groupe: x.groupe, plaques: mis, pieces: pc });
+            }
+          });
+          if (cur) { fn.push(cur); }
+        });
+        let t = de - fn.reduce((s2, x) => s2 + x.duree, 0) / 60;
+        if (au != null && t < au) { t = au; }
+        if (fours[fid].libre != null && t < fours[fid].libre) { t = fours[fid].libre; }
+        fn.forEach(x => {
+          const fin = t + x.duree / 60, ret = Math.round(Math.max(0, fin - de) * 60);
+          if (ret > 0) { retards++; }
+          fours[fid].fournees.push({ cuisson: c.id, cuissonNom: c.nom, debut: hh(t), fin: hh(fin), d: t, f: fin, temp: x.temp, duree: x.duree, plaques: x.plaques, capacite: cap, categories: x.categories, retard: ret });
+          fours[fid].occupation += x.duree; fours[fid].plaquesTot += x.plaques;
+          t = fin;
+        });
+        fours[fid].libre = t;
+      });
+    });
+    Object.values(fours).forEach(f => f.fournees.forEach(x => { d = Math.min(d == null ? 99 : d, x.d); a = Math.max(a == null ? 0 : a, x.f); }));
+    entree.forEach(c => { const x = hDe(c.de); if (x != null) { d = Math.min(d == null ? x : d, x); a = Math.max(a == null ? x : a, x); } });
+    const fen = pd != null && pa != null ? Math.max(1, Math.round((pa - pd) * 60)) : null;
+    return { fours: Object.values(fours).map(f => Object.assign(f, { nFournees: f.fournees.length, utilisation: fen != null ? Math.round(100 * f.occupation / fen) : null, remplissage: f.fournees.length ? Math.round(100 * f.plaquesTot / (f.fournees.length * f.plaques)) : null })),
+      horsFour: Object.values(hors), retards, axe: { de: Math.floor(d == null ? 5 : d), a: Math.ceil(a == null ? 19 : a) }, fenetre: fen != null ? { de: hh(pd), a: hh(pa), minutes: fen } : null };
+  }
+  const sigF = E => JSON.stringify([E.fours.map(f => [f.id, f.nom, +f.plaques]), Object.entries(E.categories).map(([k, c]) => [k, c.four, +c.temp, +c.duree, +c.parPlaque])]);
   function brouillonF(d) { return { fours: d.fours.map(f => Object.assign({}, f)), categories: Object.fromEntries(d.categories.map(c => [c.cle, { four: c.four, temp: c.temp, duree: c.duree, parPlaque: c.parPlaque, nom: c.nom, groupe: c.groupe, auto: c.auto }])) }; }
   function pageFours(d) {
-    if (!S.editF || S.editFCle !== S.shop) { S.editF = brouillonF(d); S.editFCle = S.shop; }
-    const E = S.editF, G = d.gantt, A = G.axe, span = Math.max(1, A.a - A.de);
+    if (!S.editF || S.editFCle !== S.shop) { S.editF = brouillonF(d); S.editFCle = S.shop; S.ganttF = null; }
+    const E = S.editF;
+    // Le Gantt affiché : celui des réglages au dernier rafraîchissement (au départ, les enregistrés).
+    if (!S.ganttF || S.ganttF.date !== d.date || S.ganttF.shop !== S.shop) { S.ganttF = { date: d.date, shop: S.shop, sig: sigF(E), g: ganttCalc(d.gantt.entree || [], E) }; }
+    const G = S.ganttF.g, A = G.axe, span = Math.max(1, A.a - A.de);
+    const aJour = S.ganttF.sig === sigF(E), brouillon = sigF(E) !== sigF(brouillonF(d));
+    const pc = (v, lib) => v == null ? '' : `<span class="${v > 100 ? 'ko' : (v >= 85 ? 'wa' : '')}">${lib} ${fN(v)} %</span>`;
     const pos = h => (100 * (h - A.de) / span).toFixed(2) + '%';
     let h = `<div class="pf-intro"><b>Les fours du ${esc(fDL(d.date))}.</b> Chaque cuisson du plan devient des fournées : les plaques de chaque catégorie (pièces ÷ pièces par plaque), regroupées par four et par réglage, la plus chaude d’abord, enchaînées pour sortir à l’ouverture de la vente. Une fournée qui sort après l’ouverture est en retard : à enfourner plus tôt, ou à répartir sur un autre four.${d.enregistre ? '' : ' Rien n’est encore enregistré : un four et des réglages proposés.'}</div>`;
     // Le Gantt.
     const heures = []; for (let x = A.de; x <= A.a; x++) { heures.push(x); }
     const sections = {};
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Le Gantt des fours</span><span class="pf-mini">${G.fours.reduce((a, f) => a + f.nFournees, 0)} fournées · ${G.fours.reduce((a, f) => a + f.plaquesTot, 0)} plaques${G.retards ? ` · <b class="ko">${G.retards} fournée${G.retards > 1 ? 's' : ''} en retard</b>` : ' · tout sort à l’heure'}</span></div>
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Le Gantt des fours</span><span class="pf-mini">${G.fours.reduce((a, f) => a + f.nFournees, 0)} fournées · ${G.fours.reduce((a, f) => a + f.plaquesTot, 0)} plaques${G.fenetre ? ` · plage de production ${esc(G.fenetre.de)}–${esc(G.fenetre.a)}` : ''}${G.retards ? ` · <b class="ko">${G.retards} fournée${G.retards > 1 ? 's' : ''} en retard</b>` : ' · tout sort à l’heure'}${brouillon && aJour ? ' · <b class="wa">avec les réglages non enregistrés</b>' : ''}</span>
+      <button class="pf-btn${aJour ? '' : ' prim'}" data-frefresh="1" title="recalculer le Gantt avec les fours et les réglages de cuisson ci-dessous">↻ Rafraîchir le Gantt${aJour ? '' : ' (réglages modifiés)'}</button></div>
       <div class="pf-gantt"><div class="gx"><div class="gl"></div><div class="gt">${heures.map(x => `<span style="left:${pos(x)}">${x} h</span>`).join('')}</div></div>
-      ${G.fours.map(f => `<div class="gr"><div class="gl"><b>${esc(f.nom)}</b><small>${f.plaques} plaques · ${f.nFournees} fournée${f.nFournees > 1 ? 's' : ''} · ${hm(f.occupation)}</small></div><div class="gt">
+      ${G.fours.map(f => `<div class="gr"><div class="gl"><b>${esc(f.nom)}</b><small>${f.plaques} plaques · ${f.nFournees} fournée${f.nFournees > 1 ? 's' : ''} · ${hm(f.occupation)}</small><small class="ut">${pc(f.utilisation, 'utilisé')}${f.remplissage != null ? ' · ' + pc(f.remplissage, 'rempli') : ''}</small></div><div class="gt">
         ${heures.map(x => `<i class="gh" style="left:${pos(x)}"></i>`).join('')}
         ${d.cuissons.map(c => `<i class="gv" style="left:${pos(hDe(c.de))}" title="${esc(c.nom)} : ouverture de la vente à ${esc(c.de)}"></i>`).join('')}
         ${f.fournees.map(x => { const sec = x.categories[0] ? x.categories[0].groupe || x.categories[0].nom : ''; x.categories.forEach(c => { sections[c.groupe || c.nom] = true; });
@@ -431,8 +498,11 @@
       ${G.fours.map(f => f.fournees.map((x, i) => `<tr><td class="nom">${i === 0 ? esc(f.nom) : ''}</td><td>${esc(x.cuissonNom)}</td><td class="n"><b>${esc(x.debut)}</b></td><td class="n ${x.retard ? 'ko' : ''}">${esc(x.fin)}${x.retard ? ' <small>+' + x.retard + ' min</small>' : ''}</td><td class="n">${x.temp}</td><td class="n">${x.plaques} / ${x.capacite}</td><td>${x.categories.map(c => `${esc(c.nom)} <span class="mu">${c.plaques} pl. · ${fN(c.pieces)} p.</span>`).join(' · ')}</td></tr>`).join('')).join('') || '<tr><td colspan="7" class="mu">Aucune fournée : rien à cuire ce jour, ou aucune catégorie n’a de four.</td></tr>'}</tbody></table></div>`;
     // Les fours.
     h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Les fours du magasin</span><span class="pf-mini">le nombre de plaques qu’une fournée peut contenir</span></div>
-      <table class="pf-tab"><thead><tr><th>Four</th><th class="n">Plaques par fournée</th><th></th></tr></thead><tbody>
-      ${E.fours.map((f, i) => `<tr><td><input class="pf-in" data-fn="${i}" data-f="fn${i}" value="${esc(f.nom)}"></td><td class="n"><input class="pf-in court" type="number" min="1" max="100" data-fp="${i}" data-f="fp${i}" value="${esc(f.plaques)}"></td><td>${E.fours.length > 1 ? `<button class="pf-x" data-fsup="${i}" title="retirer">×</button>` : ''}</td></tr>`).join('')}</tbody></table>
+      <table class="pf-tab"><thead><tr><th>Four</th><th class="n">Plaques par fournée</th><th class="n">Fournées du jour</th><th class="n">Temps de cuisson</th><th class="n">Utilisation</th><th class="n">Remplissage</th><th></th></tr></thead><tbody>
+      ${E.fours.map((f, i) => { const g = G.fours.find(x => x.id === f.id); return `<tr><td><input class="pf-in" data-fn="${i}" data-f="fn${i}" value="${esc(f.nom)}"></td><td class="n"><input class="pf-in court" type="number" min="1" max="100" data-fp="${i}" data-f="fp${i}" value="${esc(f.plaques)}"></td>
+        <td class="n">${g ? fN(g.nFournees) : '<span class="mu">—</span>'}</td><td class="n">${g ? hm(g.occupation) : '<span class="mu">—</span>'}</td><td class="n">${g && g.utilisation != null ? pc(g.utilisation, '') : '<span class="mu">—</span>'}</td><td class="n">${g && g.remplissage != null ? pc(g.remplissage, '') : '<span class="mu">—</span>'}</td>
+        <td>${E.fours.length > 1 ? `<button class="pf-x" data-fsup="${i}" title="retirer">×</button>` : ''}</td></tr>`; }).join('')}</tbody></table>
+      <div class="pf-pied mu" style="border-top:none;padding-top:0">Utilisation : le temps de cuisson du four sur la plage de production${G.fenetre ? ` (${esc(G.fenetre.de)}–${esc(G.fenetre.a)}, de la 1re mise au four à la dernière ouverture de vente)` : ''} ; au-delà de 100 %, le four ne suffit pas. Remplissage : les plaques enfournées sur la capacité des fournées. Après un changement, « Rafraîchir le Gantt » recalcule sans enregistrer.</div>
       <div class="pf-pied">${E.fours.length < 6 ? '<button class="pf-btn" data-fajout="1">+ ajouter un four</button>' : ''}</div></div>`;
     // Les réglages de cuisson par catégorie.
     let g = null;
@@ -454,7 +524,7 @@
     const corps = { shop: +S.shop, par: S.par, fours: E.fours.map(f => ({ id: f.id, nom: f.nom, plaques: +f.plaques })),
       categories: Object.fromEntries(Object.entries(E.categories).map(([k, c]) => [k, { four: c.four || null, temp: +c.temp, duree: +c.duree, parPlaque: +c.parPlaque, nom: c.nom }])) };
     S.envoi = true; S.msg = null; rendre();
-    ecrire('/production/flux/fours', corps).then(r => { S.msg = { ok: true, t: `Fours enregistrés : ${r.fours} four${r.fours > 1 ? 's' : ''}, ${r.categories} catégories réglées. Le Gantt les reprend.` }; S.editF = null; Object.keys(S.data).forEach(k => { if (k.startsWith('fours|')) { delete S.data[k]; } }); charger(true); })
+    ecrire('/production/flux/fours', corps).then(r => { S.msg = { ok: true, t: `Fours enregistrés : ${r.fours} four${r.fours > 1 ? 's' : ''}, ${r.categories} catégories réglées. Le Gantt les reprend.` }; S.editF = null; S.ganttF = null; Object.keys(S.data).forEach(k => { if (k.startsWith('fours|')) { delete S.data[k]; } }); charger(true); })
       .catch(e => { S.msg = { ok: false, t: 'Pas enregistrés : ' + e.message }; })
       .finally(() => { S.envoi = false; rendre(); });
   }
@@ -516,17 +586,20 @@
     // Fours
     const F = S.editF;
     if (F) {
-      on('[data-fn]', 'input', i => { F.fours[+i.dataset.fn].nom = i.value; });
-      on('[data-fn]', 'change', () => rendre());
-      on('[data-fp]', 'input', i => { F.fours[+i.dataset.fp].plaques = i.value; });
+      // Une saisie ne redessine pas la page (le champ suivant garde la main) : seul le bouton
+      // « Rafraîchir le Gantt » signale que les réglages ont changé.
+      const majF = () => { const b = $.querySelector('[data-frefresh]'); if (!b || !S.ganttF) { return; } const ok = S.ganttF.sig === sigF(F); b.classList.toggle('prim', !ok); b.textContent = '↻ Rafraîchir le Gantt' + (ok ? '' : ' (réglages modifiés)'); };
+      on('[data-fn]', 'input', i => { F.fours[+i.dataset.fn].nom = i.value; majF(); });
+      on('[data-fp]', 'input', i => { F.fours[+i.dataset.fp].plaques = i.value; majF(); });
       on('[data-fsup]', 'click', b => { const i = +b.dataset.fsup; const id = F.fours[i].id; F.fours.splice(i, 1); Object.values(F.categories).forEach(c => { if (c.four === id) { c.four = F.fours[0] ? F.fours[0].id : null; } }); rendre(); });
       on('[data-fajout]', 'click', () => { let n = 1; while (F.fours.some(f => f.id === 'f' + n)) { n++; } F.fours.push({ id: 'f' + n, nom: 'Four ' + (F.fours.length + 1), plaques: 10 }); rendre(); });
       on('[data-cf]', 'change', s => { const c = F.categories[s.dataset.cf]; c.four = s.value || null; c.auto = false; rendre(); });
-      on('[data-ct]', 'input', i => { F.categories[i.dataset.ct].temp = i.value; F.categories[i.dataset.ct].auto = false; });
-      on('[data-cd]', 'input', i => { F.categories[i.dataset.cd].duree = i.value; F.categories[i.dataset.cd].auto = false; });
-      on('[data-cpp]', 'input', i => { F.categories[i.dataset.cpp].parPlaque = i.value; F.categories[i.dataset.cpp].auto = false; });
-      on('[data-fannuler]', 'click', () => { S.editF = null; S.msg = null; rendre(); });
+      on('[data-ct]', 'input', i => { F.categories[i.dataset.ct].temp = i.value; F.categories[i.dataset.ct].auto = false; majF(); });
+      on('[data-cd]', 'input', i => { F.categories[i.dataset.cd].duree = i.value; F.categories[i.dataset.cd].auto = false; majF(); });
+      on('[data-cpp]', 'input', i => { F.categories[i.dataset.cpp].parPlaque = i.value; F.categories[i.dataset.cpp].auto = false; majF(); });
+      on('[data-fannuler]', 'click', () => { S.editF = null; S.ganttF = null; S.msg = null; rendre(); });
       on('[data-fenreg]', 'click', () => enregistrerFours());
+      on('[data-frefresh]', 'click', () => { const d = S.data[cle()]; if (d) { S.ganttF = { date: d.date, shop: S.shop, sig: sigF(F), g: ganttCalc(d.gantt.entree || [], F) }; rendre(); } });
     }
   }
 

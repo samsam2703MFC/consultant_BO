@@ -578,7 +578,11 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   regroupées par four et par réglage, la plus chaude d'abord, en fournées de la capacité du four,
   enchaînées pour sortir à l'ouverture de la vente sans recouvrir la cuisson précédente
   (`debut`, `fin`, `temp`, `duree`, `plaques`, `capacite`, `categories`, `retard` en minutes) ;
-  `occupation` (min), `horsFour`, `retards`, `axe` (heures du Gantt).
+  `occupation` (min), `utilisation` (% : minutes de cuisson sur la plage de production, de la 1re
+  heure « au four » à la dernière ouverture de vente, `fenetre` ; plus de 100 % = le four ne suffit
+  pas), `remplissage` (% : plaques enfournées sur la capacité des fournées), `horsFour`, `retards`,
+  `axe` (heures du Gantt), `entree` (par cuisson, les pièces de chaque catégorie : l'écran recalcule
+  le Gantt avec des fours ou des réglages pas encore enregistrés, bouton « Rafraîchir le Gantt »).
 - **Sonde** : `GET /production/flux/sonde?shop=&date=` (lecture seule, des comptes et des noms de
   champs, jamais un client) : les commandes du jour, encaissées ou non, les routes du panel essayées
   pour leurs articles, la part des tickets pro qui sont des commandes ; `&liste=1` : la taille et
