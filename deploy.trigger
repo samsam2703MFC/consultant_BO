@@ -547,3 +547,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T14:31:26Z production : articles des commandes
 2026-10-03T14:33:25Z production : diagnostic articles
 2026-10-03T14:35:46Z sonde : une commande
+2026-10-03T14:37:38Z sonde : cles completes
