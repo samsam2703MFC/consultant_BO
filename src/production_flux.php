@@ -181,25 +181,50 @@ function pfFaits(int $sid, string $date): array
 }
 
 /** Les ventes d'un jour par produit : [pid => pièces] (portions ramenées à la pièce), et la part des clients pro. */
-function pfVentesJour(int $sid, string $date, int &$cout, int $budget): ?array
+function pfVentesJour(int $sid, string $date, int &$cout, int $budget, ?array $A = null): ?array
 {
     $p = function_exists('svProduitsJour') ? svProduitsJour($sid, $date, $cout, $budget) : null;
     if ($p === null) { return null; }
     $f = gpPlier($p);
-    $tot = []; foreach ($f['q'] as $pid => $hs) { $tot[(int) $pid] = array_sum($hs); }
-    $g = setting('svP' . $sid . ':' . $date);
-    $pro = [];
-    if (is_array($g) && isset($g['pb'])) { foreach ((array) $g['pb'] as $pid => $q) { $pro[(int) $pid] = min((float) $q, (float) ($tot[(int) $pid] ?? 0)); } }
-    return ['tot' => $tot, 'pro' => $pro, 'h' => $f['q'], 'noms' => $f['noms']];
+    $h = $f['q'];
+    // Le comptoir : les tickets du jour moins ceux des commandes encaissées ce jour-là.
+    if ($A !== null) { foreach (gpCmdTicketsDuJour($A, $date) as $pid => $hs) { foreach ($hs as $hh => $q) { if (isset($h[$pid][$hh])) { $h[$pid][$hh] = max(0.0, $h[$pid][$hh] - $q); } } } }
+    $tot = []; foreach ($h as $pid => $hs) { $tot[(int) $pid] = array_sum($hs); }
+    // Les commandes retirées ce jour-là : POS et webshop, et heure par heure à l'heure du retrait.
+    $cmd = []; $ws = []; $hr = []; $n = ['pos' => 0, 'web' => 0, 'caPos' => 0.0, 'caWeb' => 0.0, 'sansDetail' => 0];
+    foreach ($A !== null ? gpCmdRetraits($A, $date) : [] as $o) {
+        $web = !empty($o['webshop']);
+        $n[$web ? 'web' : 'pos']++; $n[$web ? 'caWeb' : 'caPos'] += (float) $o['montant'];
+        if ($o['sansDetail']) { $n['sansDetail']++; }
+        $hh = (int) substr((string) $o['heure'], 0, 2);
+        foreach ($o['lignes'] as [$pid, $q]) {
+            $pid = (int) $pid;
+            if ($web) { $ws[$pid] = ($ws[$pid] ?? 0.0) + (float) $q; } else { $cmd[$pid] = ($cmd[$pid] ?? 0.0) + (float) $q; }
+            $hr[$pid][$hh] = ($hr[$pid][$hh] ?? 0.0) + (float) $q;
+        }
+    }
+    return ['tot' => $tot, 'h' => $h, 'cmd' => $cmd, 'ws' => $ws, 'hRetraits' => $hr, 'commandes' => $n, 'cmdLues' => $A !== null, 'noms' => $f['noms']];
+}
+
+/** Ce qui est sorti de la vitrine heure par heure : le comptoir et les commandes retirées. */
+function pfSortiVitrine(?array $V): array
+{
+    if ($V === null) { return []; }
+    $h = $V['h'];
+    foreach ($V['hRetraits'] as $pid => $hs) { foreach ($hs as $hh => $q) { $h[$pid][$hh] = ($h[$pid][$hh] ?? 0.0) + $q; } }
+    return $h;
 }
 
 /** Ce qu'il faut pour planifier un jour : base, paramètres du jour, obligatoires, report, plan. */
-function pfCalcul(int $sid, string $date, int &$cout, int $budget, bool $avecCommandes = true): array
+function pfCalcul(int $sid, string $date, int &$cout, int $budget, bool $avecCommandes = true, ?array $A = null): array
 {
     $dp = gpDayparts();
     $s = setting('gpParams:' . $sid);
     $sem = is_array($s) && isset($s['regles']['semaines']) ? max(1, min(12, (int) $s['regles']['semaines'])) : gpReglesDefaut()['semaines'];
-    $base = gpBase($sid, $date, $sem, $cout, $budget);
+    // Les commandes depuis le plus vieux jour de la base : leurs tickets sortent du comptoir, et
+    // celles retirées ce jour-là s'ajoutent au plan (demande du 03/10/2026).
+    if ($A === null || ($A['du'] ?? '9') > pfDecale($date, -7 * $sem)) { $A = gpCommandesArticles($sid, pfDecale($date, -7 * $sem), $cout, $budget); }
+    $base = gpBase($sid, $date, $sem, $cout, $budget, $A);
     $gp = gpParams($sid, $dp, $base);
     $pf = pfParams($sid, $gp, $date);
     $jour = pfJour($date);
@@ -207,12 +232,14 @@ function pfCalcul(int $sid, string $date, int &$cout, int $budget, bool $avecCom
     $oblig = pfObligDuJour($pf, $jour);
     $stock0 = pfReport($sid, pfDecale($date, -1));
     $F = pfFaits($sid, $date);
-    $cmds = $avecCommandes ? (gpCommandes($sid, $date) ?? []) : [];
+    $cmds = $avecCommandes ? ($A !== null ? gpCmdRetraits($A, $date) : (gpCommandes($sid, $date) ?? [])) : [];
     $prix = gpPrix($sid);
     $plan = gpPlan($jp['params'], $base, $cmds, $F['faits'], $prix, ['stock0' => $stock0, 'minPct' => $jp['minPct'], 'oblig' => $oblig]);
     // J−7 : trop ou trop peu, et la proposition ajustée en steps entiers.
-    $T = []; foreach ($plan as $c) { foreach ($c['lignes'] as $l) { $T[(int) $l['pid']] = ($T[(int) $l['pid']] ?? 0) + (int) $l['sortie']; } }
-    $J7 = pfJ7($sid, $date, $base, $jp['params'], $cout, $budget, $T);
+    // Le plan face au comptoir de J−7 : sans les commandes du jour.
+    $T = []; foreach ($plan as $c) { foreach ($c['lignes'] as $l) { $T[(int) $l['pid']] = ($T[(int) $l['pid']] ?? 0) + (int) $l['sortie'] - $l['cmd'] - $l['ws']; } }
+    foreach ($T as $k => $v) { $T[$k] = max(0, (int) round($v)); }
+    $J7 = pfJ7($sid, $date, $base, $jp['params'], $cout, $budget, $T, $A);
     if ($pf['ajusterJ7'] && $J7['lu']) { $plan = pfAjuster($plan, $J7['par'], $pf['modePeu']); }
     // Le stock minimum de recuisson de chaque produit : celui de sa catégorie, relevé du « trop
     // peu » de J−7 quand c'est la réponse choisie ; il ne vaut que jusqu'à la dernière recuisson.
@@ -227,7 +254,7 @@ function pfCalcul(int $sid, string $date, int &$cout, int $budget, bool $avecCom
             if ($q > 0) { $smin[$pid] = ['q' => $q, 'limite' => $lim]; }
         }
     }
-    return ['sem' => $sem, 'base' => $base, 'gp' => $gp, 'pf' => $pf, 'jour' => $jour, 'jp' => $jp, 'oblig' => $oblig, 'stock0' => $stock0, 'faits' => $F['faits'], 'valid' => $F['valid'], 'cmds' => $cmds, 'prix' => $prix, 'plan' => $plan, 'j7' => $J7, 'smin' => $smin];
+    return ['sem' => $sem, 'base' => $base, 'gp' => $gp, 'pf' => $pf, 'jour' => $jour, 'jp' => $jp, 'oblig' => $oblig, 'stock0' => $stock0, 'faits' => $F['faits'], 'valid' => $F['valid'], 'cmds' => $cmds, 'prix' => $prix, 'plan' => $plan, 'j7' => $J7, 'smin' => $smin, 'A' => $A];
 }
 
 /** Le step de production d'une catégorie (pièces par fournée) : le réglage, 1 — à l'unité — sinon. */
@@ -242,10 +269,10 @@ function pfStep(?array $cfg): int { $p = (int) ($cfg['plaque'] ?? 0); return $p 
  * l'atteindre, arrondi au step supérieur (plus) ; ce qui le dépasse, au plus la poubelle, arrondi
  * au step inférieur (moins) — moins d'un step ne retire rien.
  */
-function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, int $budget, array $T = []): array
+function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, int $budget, array $T = [], ?array $A = null): array
 {
     $j7 = pfDecale($date, -7);
-    $v7 = pfVentesJour($sid, $j7, $cout, $budget);
+    $v7 = pfVentesJour($sid, $j7, $cout, $budget, $A);
     $jete = null;
     if (function_exists('invLignes')) { $il = invLignes($sid, $j7, $j7); if (is_array($il)) { $jete = []; foreach ($il as $x) { $jete[(int) $x['pid']] = ($jete[(int) $x['pid']] ?? 0.0) + (float) $x['pieces']; } } }
     $cl = setting('pfCloture:' . $sid . ':' . $j7);
@@ -332,7 +359,7 @@ function pfParProduit(array $plan): array
         foreach ($c['lignes'] as $l) {
             $pid = (int) $l['pid'];
             $out[$pid] ??= ['pid' => $pid, 'nom' => $l['nom'], 'groupe' => $l['groupe'], 'cat' => $l['cat'], 'catCle' => $l['catCle'], 'prix' => $l['prix'], 'prevJ' => $l['prevJ'], 'oblig' => !empty($l['oblig']), 'h' => $l['h'], 'c' => []];
-            $out[$pid]['c'][$c['id']] = ['sortie' => $l['sortie'], 'plaques' => $l['plaques'], 'plaque' => $l['plaque'], 'stock' => $l['stock'], 'prevu' => $l['prevu'], 'fait' => $l['fait'], 'zone' => $l['zone'], 'ajustJ7' => (int) ($l['ajustJ7'] ?? 0)];
+            $out[$pid]['c'][$c['id']] = ['sortie' => $l['sortie'], 'plaques' => $l['plaques'], 'plaque' => $l['plaque'], 'stock' => $l['stock'], 'prevu' => $l['prevu'], 'fait' => $l['fait'], 'zone' => $l['zone'], 'ajustJ7' => (int) ($l['ajustJ7'] ?? 0), 'cmd' => (float) ($l['cmd'] ?? 0), 'ws' => (float) ($l['ws'] ?? 0)];
         }
     }
     return $out;
@@ -435,14 +462,16 @@ function ep_production_flux_plan(): array
     // J−7 : le même jour la semaine d'avant, par canal. Les tickets donnent le comptoir et les
     // clients pro (les commandes passées en magasin) ; le webshop n'a pas d'articles au panel.
     $J7 = $K['j7']; $j7 = $J7['date']; $v7 = $J7['v7'];
-    $c7 = gpCommandes($sid, $j7);
-    $ws7 = ['n' => 0, 'ca' => 0.0]; $cm7 = ['n' => 0, 'ca' => 0.0];
-    foreach ((array) $c7 as $o) { if (!empty($o['webshop'])) { $ws7['n']++; $ws7['ca'] += (float) $o['montant']; } else { $cm7['n']++; $cm7['ca'] += (float) $o['montant']; } }
+    $n7 = $v7['commandes'] ?? ['pos' => 0, 'web' => 0, 'caPos' => 0.0, 'caWeb' => 0.0, 'sansDetail' => 0];
+    $cmdLues = $v7 !== null && !empty($v7['cmdLues']);
+    // Les commandes retirées le jour planifié : POS et webshop, ce qui en est connu.
+    $nJ = ['pos' => 0, 'web' => 0, 'ca' => 0.0, 'sansDetail' => 0, 'pieces' => 0.0];
+    foreach ($K['cmds'] as $o) { $nJ[!empty($o['webshop']) ? 'web' : 'pos']++; $nJ['ca'] += (float) $o['montant']; if ($o['sansDetail']) { $nJ['sansDetail']++; } foreach ($o['lignes'] as [, $q]) { $nJ['pieces'] += (float) $q; } }
     // Le lendemain : sa 1re cuisson, pour les catégories préparées la veille.
     $d1 = pfDecale($date, 1);
     $K1 = null; $veille = [];
     if ($K['pf']['veille'] !== []) {
-        $K1 = pfCalcul($sid, $d1, $cout, $budget, false);
+        $K1 = pfCalcul($sid, $d1, $cout, $budget, false, $K['A']);
         $c1 = $K1['plan'][0] ?? null;
         if ($c1 !== null) { foreach ($c1['lignes'] as $l) { if (in_array((string) $l['catCle'], $K['pf']['veille'], true)) { $veille[(int) $l['pid']] = ['sortie' => $l['sortie'], 'plaques' => $l['plaques'], 'plaque' => $l['plaque'], 'nom' => $l['nom'], 'groupe' => $l['groupe'], 'cat' => $l['cat'], 'catCle' => $l['catCle'], 'prix' => $l['prix']]; } }
         }
@@ -457,9 +486,11 @@ function ep_production_flux_plan(): array
         $tot = 0; $ca = 0.0;
         foreach ($l['c'] as $x) { $tot += (int) $x['sortie']; }
         if ($l['prix'] !== null) { $ca = round($tot * (float) $l['prix'], 2); }
-        $mag = $v7 !== null ? (float) ($v7['tot'][$pid] ?? 0) - (float) ($v7['pro'][$pid] ?? 0) : null;
+        $mag = $v7 !== null ? (float) ($v7['tot'][$pid] ?? 0) : null;
+        $cmdJ = 0.0; $wsJ = 0.0; foreach ($l['c'] as $x) { $cmdJ += (float) ($x['cmd'] ?? 0); $wsJ += (float) ($x['ws'] ?? 0); }
         $lignes[] = ['pid' => $pid, 'nom' => $l['nom'], 'groupe' => $l['groupe'] !== '' ? $l['groupe'] : $l['cat'], 'cat' => $l['cat'], 'catCle' => $l['catCle'], 'oblig' => $l['oblig'], 'prix' => $l['prix'],
-            'j7' => ['magasin' => $mag !== null ? round(max(0.0, $mag), 1) : null, 'webshop' => null, 'commandes' => $v7 !== null ? round((float) ($v7['pro'][$pid] ?? 0), 1) : null,
+            'commandesJour' => ['pos' => round($cmdJ, 1), 'webshop' => round($wsJ, 1)],
+            'j7' => ['magasin' => $mag !== null ? round(max(0.0, $mag), 1) : null, 'webshop' => $cmdLues ? round((float) ($v7['ws'][$pid] ?? 0), 1) : null, 'commandes' => $cmdLues ? round((float) ($v7['cmd'][$pid] ?? 0), 1) : null,
                 'derniere' => $J7['par'][$pid]['derniere'] ?? null, 'poubelle' => $J7['par'][$pid]['poubelle'] ?? ($J7['poubelleLue'] ? 0.0 : null),
                 'verdict' => $J7['par'][$pid]['verdict'] ?? null, 'manque' => $J7['par'][$pid]['manque'] ?? 0, 'plus' => $J7['par'][$pid]['plus'] ?? 0, 'moins' => $J7['par'][$pid]['moins'] ?? 0,
                 'vendu' => $J7['par'][$pid]['vendu'] ?? null, 'besoin' => $J7['par'][$pid]['besoin'] ?? null, 'plan' => $J7['par'][$pid]['plan'] ?? null],
@@ -478,12 +509,13 @@ function ep_production_flux_plan(): array
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'jourSemaine' => $K['jour'], 'jourNom' => PF_JOURS[$K['jour']],
         'cuissons' => $C, 'minPct' => round(100 * $K['jp']['minPct'], 1), 'nCuissons' => $K['jp']['cuissons'],
         'lignes' => $lignes, 'obligatoires' => count($K['oblig']), 'reportVeille' => ['pieces' => round(array_sum($K['stock0']), 1), 'produits' => count($K['stock0']), 'cloture' => setting('pfCloture:' . $sid . ':' . pfDecale($date, -1)) !== null],
-        'j7' => ['date' => $j7, 'lu' => $v7 !== null, 'webshop' => ['n' => $ws7['n'], 'ca' => round($ws7['ca'], 2)], 'commandes' => ['n' => $cm7['n'], 'ca' => round($cm7['ca'], 2)], 'commandesLues' => $c7 !== null,
+        'j7' => ['date' => $j7, 'lu' => $v7 !== null, 'webshop' => ['n' => $n7['web'], 'ca' => round($n7['caWeb'], 2)], 'commandes' => ['n' => $n7['pos'], 'ca' => round($n7['caPos'], 2)], 'commandesLues' => $cmdLues, 'commandesSansDetail' => $n7['sansDetail'],
             'derniereVente' => $J7['fin'], 'poubelleLue' => $J7['poubelleLue'], 'poubelle' => $J7['poubelle'],
             'ajuster' => $K['pf']['ajusterJ7'], 'modePeu' => $K['pf']['modePeu']],
         'lendemain' => ['date' => $d1, 'jourNom' => PF_JOURS[pfJour($d1)], 'categories' => count($K['pf']['veille']), 'complet' => $K1 === null || $K1['base']['manquants'] === [], 'lus' => $K1 !== null ? count($K1['base']['lus']) : 0, 'jours' => $K1 !== null ? count($K1['base']['jours']) : 0],
-        'base' => ['semaines' => $K['sem'], 'jours' => count($K['base']['jours']), 'lus' => count($K['base']['lus']), 'manquants' => $K['base']['manquants']],
-        'source' => 'prévision : tickets du panel, moyenne des ' . $K['sem'] . ' derniers ' . PF_JOURS[$K['jour']] . 's heure par heure · J−7 : tickets du ' . $j7 . ' (clients pro = commandes passées en magasin) · webshop : commandes du panel, sans articles'];
+        'base' => ['semaines' => $K['sem'], 'jours' => count($K['base']['jours']), 'lus' => count($K['base']['lus']), 'manquants' => $K['base']['manquants'], 'commandes' => $K['base']['commandes'] ?? null],
+        'commandes' => ['lues' => $K['A'] !== null, 'complet' => $K['A'] !== null && !$K['A']['incomplet'], 'pos' => $nJ['pos'], 'webshop' => $nJ['web'], 'ca' => round($nJ['ca'], 2), 'sansDetail' => $nJ['sansDetail'], 'pieces' => round($nJ['pieces'], 1)],
+        'source' => 'prévision : ventes comptoir du panel (tickets moins ceux des commandes), moyenne des ' . $K['sem'] . ' derniers ' . PF_JOURS[$K['jour']] . 's heure par heure, + les commandes POS et webshop du jour (articles de leur ticket) · J−7 : tickets du ' . $j7];
 }
 
 /**
@@ -501,11 +533,11 @@ function ep_production_flux_suivi(): array
     $cout = 0;
     $K = pfCalcul($sid, $date, $cout, $budget);
     $now = $date === $auj ? (int) date('G') + (int) date('i') / 60 : 24.0;
-    $V = pfVentesJour($sid, $date, $cout, $budget);
+    $V = pfVentesJour($sid, $date, $cout, $budget, $K['A']);
     $jete = [];
     if (function_exists('invLignes')) { foreach ((array) invLignes($sid, $date, $date) as $l) { $jete[(int) $l['pid']] = ($jete[(int) $l['pid']] ?? 0.0) + (float) $l['pieces']; } }
     $R = (float) $K['gp']['regles']['securite'];
-    $suivi = pfSuivi($K['plan'], $K['stock0'], $V !== null ? $V['h'] : [], $now, $K['smin']);
+    $suivi = pfSuivi($K['plan'], $K['stock0'], pfSortiVitrine($V), $now, $K['smin']);
     $C = [];
     foreach ($K['plan'] as $c) {
         $v = $K['valid'][$c['id']] ?? null;
@@ -660,8 +692,8 @@ function ep_production_flux_cloture(): array
     @set_time_limit(120);
     $budget = defined('SV_BUDGET_DEMANDE') ? SV_BUDGET_DEMANDE : 500;
     $cout = 0;
-    $K = pfCalcul($sid, $date, $cout, $budget, false);
-    $V = pfVentesJour($sid, $date, $cout, $budget);
+    $K = pfCalcul($sid, $date, $cout, $budget);
+    $V = pfVentesJour($sid, $date, $cout, $budget, $K['A']);
     $jete = [];
     $invLu = function_exists('invLignes');
     if ($invLu) { foreach ((array) invLignes($sid, $date, $date) as $l) { $jete[(int) $l['pid']] = ($jete[(int) $l['pid']] ?? 0.0) + (float) $l['pieces']; } }
@@ -678,7 +710,7 @@ function ep_production_flux_cloture(): array
         $sorti = 0.0; $toutValide = true;
         if ($p !== null) { foreach ($p['c'] as $id => $x) { $f = $x['fait']; if ($f === null) { $toutValide = false; } $sorti += $f !== null ? (float) $f : (float) $x['sortie']; } }
         $s0 = (float) ($K['stock0'][$pid] ?? 0);
-        $vd = $V !== null ? (float) ($V['tot'][$pid] ?? 0) : 0.0;
+        $vd = $V !== null ? (float) ($V['tot'][$pid] ?? 0) + (float) ($V['cmd'][$pid] ?? 0) + (float) ($V['ws'][$pid] ?? 0) : 0.0;
         $jd = (float) ($jete[$pid] ?? 0);
         $reste = max(0.0, $s0 + $sorti - $vd - $jd);
         $nom = $p['nom'] ?? (gpCatalogue()['produits'][$pid]['nom'] ?? ('Produit ' . $pid));

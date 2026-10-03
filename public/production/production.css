@@ -144,3 +144,4 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab td.q .wa b{color:#B45309}
 .pf-pied select{font:600 12px var(--font-ui);padding:4px 6px;border-radius:6px;border:.5px solid var(--pf-trait2);background:#fff}
 .pf-tab b.or{color:#7d6310}
+.pf-tab .pf-tag{white-space:nowrap}
