@@ -521,3 +521,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T11:02:57Z sonde des ventes : un produit precis
 2026-10-03T11:05:42Z sonde des ventes : ligne de ticket brute
 2026-10-03T11:08:02Z sonde des ventes : tous les tickets
+2026-10-03T11:14:07Z detail des ventes : noms, categories et portions depuis le panel
