@@ -61,6 +61,14 @@ function ep_exploitation_invendus_sonde(): array
             if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
         }
     }
+    // `texte` : une page lue telle quelle (documentation) ; `spec` : un document OpenAPI dont on liste les chemins.
+    $texte = (string) ($_GET['texte'] ?? '');
+    if ($texte !== '' && preg_match('#^/(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*(\?[A-Za-z0-9_=&\-%.]*)?$#', $texte)) {
+        $t = PanelApi::sondeTexte($texte);
+        $out['texte'] = ['chemin' => $texte, 'code' => $t['code'], 'longueur' => $t['texte'] === null ? null : mb_strlen($t['texte']),
+            'urls' => $t['texte'] === null ? [] : array_values(array_unique(array_slice(preg_match_all('#["\']([^"\' ]*(?:swagger|openapi|spec|api-docs|\.json|\.yaml)[^"\' ]*)["\']#i', $t['texte'], $m) ? $m[1] : [], 0, 40))),
+            'extrait' => $t['texte'] === null ? null : mb_substr($t['texte'], 0, 3000)];
+    }
     $out['candidats'] = [];
     foreach ($cands as $c) {
         $p = str_replace(['{s}', '{d}'], [(string) $sid, $date], $c);
@@ -68,7 +76,18 @@ function ep_exploitation_invendus_sonde(): array
         $b = $r['corps'];
         if (is_string($b) && preg_match('/(href|location)=["\']?([^"\' >]+)/i', $b, $mm)) { $b = ['redirection' => $mm[2]]; }
         $ap = null;
-        if (is_array($b)) {
+        if (is_array($b) && isset($b['paths']) && is_array($b['paths'])) {
+            // Un document OpenAPI : la liste des chemins, et le détail de ceux qui parlent de produits, de pertes, de stock.
+            $det = [];
+            foreach ($b['paths'] as $ch => $ops) {
+                if (!preg_match('/waste|product|stock|movement|carry|unsold|production|inventor|loss|leftover|closing|report/i', (string) $ch) || !is_array($ops)) { continue; }
+                foreach ($ops as $meth => $op) {
+                    if (!is_array($op)) { continue; }
+                    $det[$ch . ' ' . strtoupper((string) $meth)] = ['resume' => $op['summary'] ?? ($op['description'] ?? null), 'params' => array_map(static fn ($x) => is_array($x) ? ($x['name'] ?? '') . (isset($x['in']) ? ' (' . $x['in'] . ')' : '') : $x, (array) ($op['parameters'] ?? []))];
+                }
+            }
+            $ap = ['openapi' => $b['openapi'] ?? ($b['swagger'] ?? null), 'chemins' => array_keys($b['paths']), 'detail' => $det];
+        } elseif (is_array($b)) {
             if (array_is_list($b)) { $ap = ['liste' => count($b), 'premier' => is_array($b[0] ?? null) ? array_slice($b[0], 0, 20, true) : ($b[0] ?? null)]; }
             else { $ap = ['cles' => array_slice(array_keys($b), 0, 20), 'extrait' => array_map(static fn ($v) => is_array($v) ? (array_is_list($v) ? ['liste' => count($v), 'premier' => $v[0] ?? null] : array_slice($v, 0, 12, true)) : $v, array_slice($b, 0, 8, true))]; }
         } elseif ($b !== null) { $ap = ['brut' => mb_substr((string) $b, 0, 300)]; }
