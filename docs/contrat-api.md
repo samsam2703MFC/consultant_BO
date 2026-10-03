@@ -1090,6 +1090,84 @@ Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le l
 **Contrôle des tâches**, l'écran qui porte la responsabilité de l'avis. Une contresignature
 déjà posée s'affiche ici — c'est un fait à connaître, pas une commande à actionner.
 
+### `GET /exploitation/canaux` — par où passent les commandes : comptoir, click & collect, livraison
+
+    ?shop=4&date=2026-10-02            un magasin, la journée
+    ?periode=jour|7|30&date=…          le réseau, magasin par magasin (sans shop)
+
+La source est double et mesurée : les **commandes du panel**
+(`/shops/{id}/client-orders?date_from=`, gardées dix minutes dans
+`ceo_app_setting` sous `coCmd:{shop}:{du}`, sans rien de nominatif — quand,
+canal, montant, articles, statut, encaissée) et la **caisse** (les heures
+gravées, `svHeuresJours`). Une commande est **webshop** si `is_webshop` est
+posé ou si `fulfilment_mode` parle de livraison ; livraison si
+`fulfilment_mode` contient `deliv`, `livr`, `ship` ou `office`, sinon click &
+collect. Une commande non webshop est une précommande au comptoir : elle
+n'entre pas dans le split. Une commande annulée (`non_collection_id_reason`)
+est ignorée. Le statut se lit dans `order_status` et `issuing_timestamp` :
+à préparer, en préparation, prête, en route, remise (click & collect) ou
+livrée.
+
+**Le comptoir = tickets caisse − les commandes webshop encaissées en caisse**
+(`id_transaction` posé) ; une commande payée en ligne s'ajoute au CA du jour.
+Les clients pro restent dans le comptoir (le dashboard les dit « dont »).
+
+Un magasin :
+
+    { shop, date,
+      jour:     { joursLus, caisse, tickets, comptoir, cc: {n, ca}, liv: {n, ca}, webshop, encaisse, total, part },
+      serie:    [ { j, lu, caisse, tickets, comptoir, cc, liv, ccN, livN } × 14 ],
+      quatorze: { webshop, total, cc: {n, ca}, liv: {n, ca} },
+      liste:    [ { heure, canal: cc|liv, articles, montant, statut } ],   les commandes webshop du jour
+      aPreparer, demain: { n, ca }, indispo, source }
+
+`indispo` est vrai quand le panel n'a pas répondu : le split retombe sur la
+caisse seule, le dashboard garde alors la carte « Comptoir et clients pro ».
+Le réseau rend `magasins[]` (le même bloc sans `serie`, plus `shop`, `nom`)
+et `reseau` (comptoir, cc, liv, webshop, total, part, `livrent` et `vendent`
+= combien de magasins livrent, vendent en ligne).
+
+### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
+
+    ?shop=4&date=2026-10-02&periode=7      un magasin
+    ?periode=jour|7|30&date=…              le réseau : les offres en lignes, les magasins en colonnes
+
+Deux familles d'offres, une ligne chacune :
+
+- **bundle** : un produit dont la catégorie du panel s'appelle « Bundle &
+  Promotion » (`svCategories`, nom contenant `bundle` ou `promotion`), lu dans
+  les tickets jour par jour (`svProduitsJour`, le cache `svP{shop}:{j}`) sur
+  les 35 derniers jours : les 7 derniers, et les 4 semaines d'avant comme
+  référence. `delta` = pièces par jour lu sur 7 jours face à la référence ;
+  `marge` et `coef` (CA ÷ coût matière) sur 7 jours. Le temps de lecture est
+  borné (35 s pour un magasin, partagé entre les magasins en vue réseau) : un
+  jour non lu l'est à la lecture suivante, `kpi.joursLus` le dit.
+- **promo** : une promotion des jours creux (`ceo_promo`, en cours ou finie
+  depuis moins de 30 jours), avec l'effet de `jcEffet` : `delta` = CA/h du
+  créneau face à la référence gelée au lancement, `deltaTk` pour les clients.
+  Le CA de la ligne est celui du créneau sur la période.
+
+    { shop, date, periode,
+      offres: [ { type: bundle|promo, id, nom, regle, canaux, depuis, au?, statut?, levier?,
+                  periode: {pieces, ca}, auj: {pieces, ca}, sept: {pieces, ca},
+                  marge, coef, spark[7], delta, deltaTk?, verdict: tot|garder|ajuster|arreter, verdictLib, mot } ],
+      kpi: { ca, caJour, pieces, caPeriode, part, marge, bundles, promos, aAjuster, joursLus, ticketsLus } }
+
+Le verdict d'un bundle : **trop tôt** sous 5 jours vendus sur les 7 ;
+**garder** à partir de +8 % face à la référence ; **ajuster** entre −3 % et
++8 % ; **arrêter** sous −3 %. Sans référence (bundle nouveau), c'est la marge
+qui tranche : garder à 50 % et plus, ajuster dessous. Le réseau rend
+`offres[]` fusionnées par type et nom (`magasins: {shop: {pieces, ca, verdict,
+verdictLib, mot, delta}}`, `pieces`, `ca` totaux), `magasins[]` avec leur
+`kpi`, et un `kpi` réseau.
+
+Qui les lit : le dashboard magasin en vue Jour (les cartes « Commandes et
+canaux — la journée », qui remplace « Comptoir et clients pro » dès que les
+commandes sont lues, et « Promotions et bundles — ce qu'elles rapportent » ;
+au téléphone, les tuiles Webshop et Offres du mur) et le cockpit, Marque &
+marketing › **Offres et canaux** (`#/offres-canaux`), sur la journée, 7 ou
+30 jours.
+
 ### `GET /pwa/tasks/photos` — les photos d'une journée, en une lecture
 
     ?shop=3&date=2026-09-24

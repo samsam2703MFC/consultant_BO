@@ -1,0 +1,277 @@
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit CEO — L'Atelier by</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="/public/assets/img/logo.png">
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/css/app.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css"><link rel="stylesheet" href="co.css"><style>body .db-leg{padding-left:0}</style></head>
+<body>
+<div id="app">
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
+
+  <aside style="width:236px;flex:0 0 236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto">
+    <div style="padding:22px 20px 14px">
+      <img src="/public/assets/img/logo.png" alt="L'Atelier by" style="width:176px;max-width:100%;height:auto;display:block">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">Pilotage Réseau</div>
+    </div>
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div style="padding:0 12px 12px;position:relative">
+      <div style="position:relative">
+        <input id="rail-q" value="" data-i="0" placeholder="Rechercher partout…" style="width: 100%; box-sizing: border-box; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text); border-radius: 9px; height: 32px; padding: 0px 10px; font-family: var(--font-ui); font-size: 12px;">
+        
+      </div>
+      
+    </div>
+
+    <nav style="flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px">
+      
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Pilotage</div>
+          
+    <button data-h="1" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Résultat</span>
+      
+    </button>
+    <button data-h="2" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Performance</span>
+      
+    </button>
+    <button data-h="3" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Magasins</div>
+          
+    <button data-h="4" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Analyse magasin</span>
+      
+    </button>
+    <button data-h="5" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Scoring du trimestre</span>
+      
+    </button>
+    <button data-h="6" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Budget</span>
+      
+    </button>
+    <button data-h="7" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Jours creux</span>
+      
+    </button>
+    <button data-h="8" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Plan de développement</span>
+      
+    </button>
+    <button data-h="9" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Produits</div>
+          
+    <button data-h="10" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Catalogue</span>
+      <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">6</span>
+    </button>
+    <button data-h="11" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Gamme · scoring</span>
+      
+    </button>
+    <button data-h="12" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Où ça se vend</span>
+      
+    </button>
+    <button data-h="13" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Dans le temps</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Centrale d’achat</div>
+          
+    <button data-h="14" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Achats</span>
+      
+    </button>
+    <button data-h="15" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Marque &amp; marketing</div>
+          
+    <button data-h="16" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Campagnes</span>
+      
+    </button>
+    <button data-h="17" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Projets de développement</span>
+      
+    </button>
+    <button data-h="18" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">ERP franchisé</div>
+          
+    <button data-h="19" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Développement commercial</span>
+      
+    </button>
+    <button data-h="20" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Prospection</span>
+      
+    </button>
+    <button data-h="21" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Prospection mobile</span>
+      
+    </button>
+    <button data-h="22" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Newsletter</span>
+      
+    </button>
+    <button data-h="23" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Newsletter magasin</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Contrôle</div>
+          
+    <button data-h="24" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">
+      <span>Tâches</span>
+      <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">15</span>
+    </button>
+    <button data-h="25" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Contrôle posts Facebook</span>
+      
+    </button>
+    <button data-h="26" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Reporting automatisé</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Administration</div>
+          
+    <button data-h="27" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Paramètres</span>
+      
+    </button>
+    <button data-h="28" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </nav>
+    <div style="padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+      <button data-h="29" title="Mon compte et le compte consultant" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:none;background:transparent;padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui)">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:0 0 auto">SV</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--color-text)">Sam Verheyden</div>
+          <div style="font-size:10px;color:var(--color-text-muted)">Stratégie et Développement</div>
+        </div>
+      </button>
+      <span title="Version en ligne — si elle est plus ancienne que la livraison, le navigateur sert une version en cache (Ctrl+Maj+R)" style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">v01/10 15:52</span>
+      <button data-h="30" title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>
+    </div>
+  </aside>
+
+  <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
+    <div style="padding:26px 32px 60px;max-width:1460px">
+      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px"><div><h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">Offres et canaux</h1><p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click &amp; collect, livraison.</p></div><div style="font-size:12px;color:var(--color-text-muted)">vendredi 2 octobre 2026 · chiffres illustrés sur la journée réelle de Halle</div></header>
+  <div style="display:inline-flex;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px"><button style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;background:var(--color-primary);color:#fff">Aujourd’hui</button><button style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;background:transparent;color:var(--color-text)">7 jours</button><button style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;background:transparent;color:var(--color-text)">30 jours</button></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px">
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Webshop · réseau</div><div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">466 €</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">7,7 % du CA du jour · 13 commandes · 1 magasin livre</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Click & collect</div><div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">280 €</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">10 commandes · panier 20,40 € · 3 magasins</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Livraison</div><div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">187 €</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">3 commandes · panier 62,17 € · Halle seul, 3 bureaux</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Offres actives</div><div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">4</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">2 bundles · 2 promotions · 1 à ajuster</div></div><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px"><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">CA des offres</div><div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">323 €</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">6,4 % du jour · marge 63 %</div></div>
+  </div>
+  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;margin-bottom:16px"><div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px"><div style="font-size:13.5px;font-weight:600">Les commandes par canal, magasin par magasin</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto">comptoir · click &amp; collect · livraison — la part webshop, et ce qu’elle vaut</div></div>
+    <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Magasin</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);width:38%">Part de chaque canal</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Comptoir</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Click &amp; collect</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Livraison</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Webshop</th></tr></thead><tbody>
+    <tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;font-weight:600">Corbais</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><div class="db-split-bar" style="margin:0"><i class="c" style="width:100.0%"></i><i class="w" style="width:0.0%"></i><i class="l" style="width:0.0%"></i></div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right">1 480 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#1f5f8b;font-weight:600"><span style="color:var(--color-text-muted);font-weight:400">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#0f3b5c;font-weight:600"><span style="color:var(--color-text-muted);font-weight:400">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600"><span style="color:var(--color-text-muted);font-weight:400">pas encore</span></td></tr><tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;font-weight:600">Gosselies</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><div class="db-split-bar" style="margin:0"><i class="c" style="width:93.4%"></i><i class="w" style="width:6.6%"></i><i class="l" style="width:0.0%"></i></div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right">1 357 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#1f5f8b;font-weight:600">96 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#0f3b5c;font-weight:600"><span style="color:var(--color-text-muted);font-weight:400">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600">6,6 %</td></tr><tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;font-weight:600">Halle</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><div class="db-split-bar" style="margin:0"><i class="c" style="width:82.5%"></i><i class="w" style="width:7.6%"></i><i class="l" style="width:9.9%"></i></div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right">1 552 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#1f5f8b;font-weight:600">143 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#0f3b5c;font-weight:600">187 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600">17,5 %</td></tr><tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;font-weight:600">Sombreffe</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><div class="db-split-bar" style="margin:0"><i class="c" style="width:96.7%"></i><i class="w" style="width:3.3%"></i><i class="l" style="width:0.0%"></i></div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right">1 212 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#1f5f8b;font-weight:600">41 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;color:#0f3b5c;font-weight:600"><span style="color:var(--color-text-muted);font-weight:400">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600">3,3 %</td></tr>
+    <tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;font-weight:600;border-top:1px solid var(--color-border-secondary)">Réseau</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;border-top:1px solid var(--color-border-secondary)"><div class="db-split-bar" style="margin:0"><i class="c" style="width:92.3%"></i><i class="w" style="width:4.6%"></i><i class="l" style="width:3.1%"></i></div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600;border-top:1px solid var(--color-border-secondary)">5 601 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600;border-top:1px solid var(--color-border-secondary)">280 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600;border-top:1px solid var(--color-border-secondary)">187 €</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:600;border-top:1px solid var(--color-border-secondary)">7,7 %</td></tr>
+    </tbody></table><div class="db-leg" style="padding:8px 18px 12px"><span><i style="background:#b8ad9f"></i>comptoir</span><span><i style="background:#1f5f8b"></i>click &amp; collect</span><span><i style="background:#0f3b5c"></i>livraison</span><span style="margin-left:auto">source : commandes du panel (<code>is_webshop</code>, <code>fulfilment_mode</code>) et tickets caisse</span></div></div>
+  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden"><div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px"><div style="font-size:13.5px;font-weight:600">Les offres, magasin par magasin</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto">pièces vendues aujourd’hui · le verdict est celui de chaque magasin, face à sa propre référence</div></div>
+    <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Offre</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Corbais</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Gosselies</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Halle</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Sombreffe</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right">Réseau</th><th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Verdict</th></tr></thead><tbody>
+    <tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-type b">Bundle</span><b>Formule petit-déj</b><div style="font-size:11px;color:var(--color-text-muted)">croissant + boisson chaude · 3,90 €</div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>31</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>26</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>23</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>19</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:700">99</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-verdict ok">Garder</span> <span style="font-size:11px;color:var(--color-text-muted)">12 % des tickets du matin, panier +1,10 €</span></td></tr><tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-type b">Bundle</span><b>Box apéro 6 personnes</b><div style="font-size:11px;color:var(--color-text-muted)">webshop · livraison au bureau · 39 €</div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><span style="color:var(--color-text-muted)">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>2</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>3</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><span style="color:var(--color-text-muted)">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:700">5</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-verdict tot">Trop tôt</span> <span style="font-size:11px;color:var(--color-text-muted)">2 jours lus · 4 bureaux servis</span></td></tr><tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-type p">Promo</span><b>Tartes −20 % de 16 à 18 h</b><div style="font-size:11px;color:var(--color-text-muted)">jours creux · trafic · mar → jeu</div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>18</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>22</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><span style="color:var(--color-text-muted)">—</span></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>14</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:700">54</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-verdict ok">Garder</span> <span style="font-size:11px;color:var(--color-text-muted)">CA/h 107 € contre 96 € en référence</span></td></tr><tr><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-type p">Promo</span><b>Pain du jour −30 % après 17 h</b><div style="font-size:11px;color:var(--color-text-muted)">jours creux · écouler · tous les jours</div></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>12</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>9</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>9</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums"><b>7</b></td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-weight:700">37</td><td style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span class="co-verdict att">Ajuster</span> <span style="font-size:11px;color:var(--color-text-muted)">pertes −38 % · marge du créneau 44 %, sous le seuil</span></td></tr>
+    </tbody></table></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>
