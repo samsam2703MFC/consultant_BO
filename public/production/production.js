@@ -230,7 +230,7 @@
     h += `<div class="pf-note">J−7 (${esc(fDL(d.j7.date))}) : ${d.j7.lu ? 'tickets lus' : '<b class="wa">tickets pas encore lus</b>'} · webshop ${d.j7.webshop.n} commande${d.j7.webshop.n > 1 ? 's' : ''} (${fE(d.j7.webshop.ca)}) · commandes magasin ${d.j7.commandes.n} (${fE(d.j7.commandes.ca)})${d.j7.derniereVente != null ? ` · dernière vente du magasin à ${d.j7.derniereVente} h` : ''}. « Dernière vente » : l’heure du dernier ticket du produit ; avant la fermeture, il en a manqué (trop peu). « Poubelle » : ce qui a été jeté ce jour-là (trop). La proposition vise le besoin de J−7, vendu + manqué : elle relève le plan qui reste en dessous, et retire la poubelle de ce qui le dépasse, en steps de la catégorie. Le panel ne joint pas les articles des commandes webshop : la colonne reste vide ; une commande retirée en magasin passe en caisse et compte dans « en magasin ». « Commandes magasin » = les tickets des clients pro.</div>`;
     // Le tableau : section › catégorie › produit, sous-totaux en pièces et en CA.
     const cols = C.length;
-    const somme = (rows, f) => rows.reduce((a, l) => a + (f(l) || 0), 0);
+    const somme = (rows, f) => rows.reduce((a, l) => a + Math.round(f(l) || 0), 0);
     const sg = n => (n > 0 ? '+' : '−') + fN(Math.abs(n));
     // L'ajustement J−7 de la cuisson reste au survol : la colonne « Proposition J−7 » le porte déjà.
     const cellQ = x => { const t = x && x.ajustJ7 ? ` title="dont ${sg(x.ajustJ7)} ajusté sur J−7"` : '';
@@ -239,23 +239,28 @@
     const fin7 = d.j7.derniereVente;
     const cDer = l => { const j = l.j7; if (j.derniere == null) { return `<span class="mu">${j.verdict === 'aucune' ? 'aucune' : '—'}</span>`; }
       const tot = j.verdict === 'peu' || j.verdict === 'mixte';
-      return `<span class="${tot ? 'wa' : ''}" title="dernier ticket entre ${j.derniere} h et ${j.derniere + 1} h${fin7 != null ? ' · le magasin a vendu jusqu’à ' + (fin7 + 1) + ' h' : ''}${j.manque ? ' · vente perdue estimée ' + fQ(j.manque) + ' pièces' : ''}">${tot ? '<b>' + j.derniere + ' h</b>' : j.derniere + ' h'}</span>`; };
-    const cPoub = l => l.j7.poubelle == null ? '<span class="mu" title="poubelle pas lue">—</span>' : (l.j7.poubelle > 0 ? `<b class="ko">${fQ(l.j7.poubelle)}</b>` : '<span class="mu">0</span>');
+      return `<span class="${tot ? 'wa' : ''}" title="dernier ticket entre ${j.derniere} h et ${j.derniere + 1} h${fin7 != null ? ' · le magasin a vendu jusqu’à ' + (fin7 + 1) + ' h' : ''}${j.manque ? ' · vente perdue estimée ' + fN(j.manque) + ' pièces' : ''}">${tot ? '<b>' + j.derniere + ' h</b>' : j.derniere + ' h'}</span>`; };
+    const cPoub = l => l.j7.poubelle == null ? '<span class="mu" title="poubelle pas lue">—</span>' : (Math.round(l.j7.poubelle) > 0 ? `<b class="ko">${fN(l.j7.poubelle)}</b>` : '<span class="mu">0</span>');
     const cVerd = l => { const v = VJ[l.j7.verdict]; return v ? `<span class="pf-tag ${v[0]}">${v[1]}</span>` : '<span class="mu">—</span>'; };
-    const steps = (n, st) => st > 1 && n % st === 0 ? `<small>${fN(Math.abs(n) / st)} step${Math.abs(n) / st > 1 ? 's' : ''} de ${fN(st)}</small>` : (st > 1 ? `<small>step de ${fN(st)}</small>` : '<small>à l’unité</small>');
+    const stepsTxt = (n, st) => st > 1 ? (n % st === 0 ? `${fN(Math.abs(n) / st)} step${Math.abs(n) / st > 1 ? 's' : ''} de ${fN(st)}` : `step de ${fN(st)}`) : 'à l’unité';
+    // La proposition : un nombre entier dans la case, le détail au survol.
     const cProp = l => { const j = l.j7, st = l.step || 1, stock = d.j7.modePeu === 'stock';
       if (!j.verdict || j.verdict === 'juste' || j.verdict === 'aucune') { return '<span class="mu">—</span>'; }
-      let h = '';
-      if (stock && j.plus > 0) { h += `<span class="${d.j7.ajuster ? '' : 'mu'}" title="trop peu à J−7 : le stock minimum de recuisson est relevé de ${fN(j.plus)} pièces">stock min. <b>${fN(d.j7.ajuster ? l.stockMin : j.plus)}</b></span><small>+${fN(j.plus)} en vitrine</small>`; }
       const net = d.j7.ajuster ? l.ajustJ7 : (stock ? 0 : j.plus) - j.moins;
-      if (net) { h += (h ? '<br>' : '') + `<b class="${d.j7.ajuster ? (net > 0 ? 'ok' : 'bl') : 'mu'}">${sg(net)}</b>` + steps(net, st); }
-      else if (!h) { const couvre = j.plan != null && j.besoin != null && (j.verdict === 'trop' ? j.plan <= j.besoin + st - 1 : j.plan >= j.besoin);
-        h = `<span class="mu">0</span><small>${j.verdict === 'trop' ? (couvre ? 'déjà au vendu de J−7' : 'poubelle sous le step de ' + fN(st)) : (couvre ? 'le plan couvre déjà J−7' : 'écart sous le step de ' + fN(st))}</small>`; }
-      const titre = j.besoin != null ? `besoin à J−7 : vendu ${fQ(j.vendu)}${j.manque ? ' + manqué ' + fN(j.manque) : ''} = ${fQ(j.besoin)}${j.plan != null ? ' · plan avant ajustement ' + fN(j.plan) : ''}${j.poubelle ? ' · poubelle ' + fQ(j.poubelle) : ''}` : '';
-      return `<span title="${esc(titre)}">${h}</span>` + (d.j7.ajuster ? '' : '<small>pas appliquée</small>'); };
+      const smin = stock && j.plus > 0 ? (d.j7.ajuster ? l.stockMin : j.plus) : 0;
+      const tt = [];
+      if (j.besoin != null) { tt.push(Math.round(j.manque) ? `besoin à J−7 : vendu ${fN(j.vendu)} + manqué ${fN(j.manque)} = ${fN(j.besoin)}` : `besoin à J−7 : vendu ${fN(j.vendu)}`); }
+      if (j.plan != null) { tt.push('plan avant ajustement ' + fN(j.plan)); }
+      if (j.poubelle) { tt.push('poubelle ' + fN(j.poubelle)); }
+      if (net) { tt.push(sg(net) + ' : ' + stepsTxt(net, st)); }
+      if (smin) { tt.push('stock minimum de recuisson relevé à ' + fN(smin)); }
+      if (!d.j7.ajuster) { tt.push('pas appliquée au plan'); }
+      let v = net ? `<b class="${d.j7.ajuster ? (net > 0 ? 'ok' : 'bl') : 'mu'}">${sg(net)}</b>` : '';
+      if (smin) { v += (v ? ' ' : '') + `<b class="or">${fN(smin)}</b>`; }
+      return `<span title="${esc(tt.join(' · '))}">${v || '<span class="mu">0</span>'}</span>`; };
     const nV = (rows, v) => rows.filter(l => l.j7.verdict === v).length;
     const sousTot = (cls, lib, rows) => { const np = nV(rows, 'peu') + nV(rows, 'mixte'), nt = nV(rows, 'trop'), aj = somme(rows, l => d.j7.ajuster ? l.ajustJ7 : (d.j7.modePeu === 'stock' ? 0 : l.j7.plus) - l.j7.moins);
-      return `<tr class="${cls}"><td>${lib}</td><td class="n">${fQ(somme(rows, l => l.j7.magasin))}</td><td class="n mu">—</td><td class="n">${fQ(somme(rows, l => l.j7.commandes))}</td><td class="n mu"></td><td class="n">${fQ(somme(rows, l => l.j7.poubelle))}</td><td class="n j7v">${np || nt ? `${np ? `<span class="wa">${np} peu</span>` : ''}${np && nt ? ' · ' : ''}${nt ? `<span class="bl">${nt} trop</span>` : ''}` : '<span class="mu">—</span>'}</td><td class="n">${fQ(somme(rows, l => l.prevJ))}</td><td class="n">${fQ(somme(rows, l => l.report))}</td><td class="n">${aj ? sg(aj) : '<span class="mu">0</span>'}</td>
+      return `<tr class="${cls}"><td>${lib}</td><td class="n">${fN(somme(rows, l => l.j7.magasin))}</td><td class="n mu">—</td><td class="n">${fN(somme(rows, l => l.j7.commandes))}</td><td class="n mu"></td><td class="n">${fN(somme(rows, l => l.j7.poubelle))}</td><td class="n j7v">${np || nt ? `${np ? `<span class="wa">${np} peu</span>` : ''}${np && nt ? ' · ' : ''}${nt ? `<span class="bl">${nt} trop</span>` : ''}` : '<span class="mu">—</span>'}</td><td class="n">${fN(somme(rows, l => l.prevJ))}</td><td class="n">${fN(somme(rows, l => l.report))}</td><td class="n">${aj ? sg(aj) : '<span class="mu">0</span>'}</td>
       ${C.map(c => `<td class="n">${fN(somme(rows, l => l.c[c.id] ? l.c[c.id].sortie : 0))}</td>`).join('')}<td class="n">${fN(somme(rows, l => l.total))}</td><td class="n">${fN(somme(rows, l => l.veille ? l.veille.sortie : 0))}</td><td class="n">${fE(somme(rows, l => l.ca))}</td></tr>`; };
     let corps = '';
     const LF = S.ecartsJ7 ? L.filter(l => ['peu', 'trop', 'mixte'].includes(l.j7.verdict)) : L;
@@ -266,9 +271,9 @@
       g.cats.forEach(c => {
         if (g.cats.length > 1 || c.nom !== g.nom) { corps += sousTot('scat', esc(c.nom), c.lignes); }
         corps += c.lignes.map(l => `<tr><td class="nom">${l.oblig ? '<span class="pf-ob" title="obligatoire ce jour">★</span> ' : ''}${esc(l.nom)}</td>
-          <td class="n">${fQ(l.j7.magasin)}</td><td class="n mu">${l.j7.webshop == null ? '—' : fQ(l.j7.webshop)}</td><td class="n">${l.j7.commandes ? fQ(l.j7.commandes) : '<span class="mu">0</span>'}</td>
+          <td class="n">${fN(l.j7.magasin)}</td><td class="n mu">${l.j7.webshop == null ? '—' : fN(l.j7.webshop)}</td><td class="n">${Math.round(l.j7.commandes || 0) ? fN(l.j7.commandes) : '<span class="mu">0</span>'}</td>
           <td class="n q">${cDer(l)}</td><td class="n">${cPoub(l)}</td><td class="c">${cVerd(l)}</td>
-          <td class="n mu">${fQ(l.prevJ)}</td><td class="n">${l.report ? fQ(l.report) : '<span class="mu">—</span>'}</td><td class="n q prop">${cProp(l)}</td>
+          <td class="n mu">${fN(l.prevJ)}</td><td class="n">${Math.round(l.report || 0) ? fN(l.report) : '<span class="mu">—</span>'}</td><td class="n q prop">${cProp(l)}</td>
           ${C.map(c => `<td class="n q">${cellQ(l.c[c.id])}</td>`).join('')}<td class="n"><b>${fN(l.total)}</b></td>
           <td class="n q veille">${l.veille ? cellQ(l.veille) : '<span class="mu">—</span>'}</td><td class="n mu">${l.ca == null ? '—' : fE(l.ca)}</td></tr>`).join('');
       });
