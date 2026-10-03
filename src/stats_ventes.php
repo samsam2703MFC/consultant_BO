@@ -81,6 +81,16 @@ function ep_stats_ventes_sonde(): array
         $gr = setting('svP' . $sid . ':' . $date);
         $d['ticketGrave'] = null;
         foreach ((array) ($gr['p'] ?? []) as $h => $lst) { if (isset($lst[$pid])) { $d['ticketGrave'] = ['h' => $h, 'ligne' => $lst[$pid]]; break; } }
+        // La ligne de ticket BRUTE qui porte ce produit, telle que le panel la rend : les tickets du
+        // jour, puis chaque ticket jusqu'à trouver la ligne (soixante tickets au plus).
+        $d['ligneTicket'] = null;
+        $lt = analyseListe($res['trans'] ?? null);
+        foreach (array_slice($lt, 0, 60) as $tk) {
+            $t = PanelApi::get('/transactions/' . (int) ($tk['id'] ?? 0) . '?include=products');
+            foreach ((array) ($t['products'] ?? []) as $l) {
+                if ((int) ($l['id_product'] ?? 0) === $pid) { $d['ligneTicket'] = ['ticket' => (int) $tk['id'], 'ligne' => $propre($l), 'clesTicket' => array_keys($t)]; break 2; }
+            }
+        }
         $out['produit'] = $d;
         return $out;
     }
