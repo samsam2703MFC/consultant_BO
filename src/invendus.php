@@ -346,7 +346,8 @@ function ep_exploitation_invendus_sonde(): array
     if ($extra !== '') {
         $cands = [];
         foreach (array_slice(array_filter(array_map('trim', explode(',', $extra))), 0, 30) as $e) {
-            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|(\.\./){0,3}(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
+            // Produits, stock, production, périodes de vente : jamais un client ni un employé.
+            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day|statistics/production-planning|product-availability-periods)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|admin/sales-dayparts[A-Za-z0-9_\-/]*|shops/production-areas[A-Za-z0-9_\-/]*|production-areas[A-Za-z0-9_\-/]*|(recipe-)?preparation-types[A-Za-z0-9_\-/]*|product-availability-periods[A-Za-z0-9_\-/]*|products/\d+/availability-periods|(\.\./){0,3}(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
         }
     }
     // `texte` : une page lue telle quelle (documentation) ; `spec` : un document OpenAPI dont on liste les chemins.
