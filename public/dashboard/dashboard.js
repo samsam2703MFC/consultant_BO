@@ -1180,8 +1180,8 @@
     const M = I.parMotif || [], P = I.produits || [], jour = !per && P.some(p => p.vendus != null);
     const kpi = `<div class="db-obj-t4 db-pro-kpi db-inv-kpi">
       <div><div class="k">Jetées</div><div class="v">${fN(I.pieces)}</div><div class="s">pièce${I.pieces > 1 ? 's' : ''} · ${I.references} référence${I.references > 1 ? 's' : ''} ${per ? 'sur ' + perLib() : ceJour()}</div></div>
-      <div><div class="k">Coût de production</div><div class="v ko">${fE(I.cout)}</div><div class="s">retranché du résultat · ${fE(I.coutBrut)} TTC au panel</div></div>
-      <div><div class="k">${mobile ? 'Vente perdue' : 'Valeur de vente perdue'}</div><div class="v">${fE(I.caPerdu)}</div><div class="s">au prix de vente du panel</div></div>
+      <div><div class="k">Coût de production</div><div class="v ko">${fE(I.cout)}</div><div class="s">${['retranché du résultat', I.coutBrut > 0 ? fE(I.coutBrut) + ' TTC au panel' : '', I.auCatalogue ? I.auCatalogue + ' réf. au coût de recette actuel' : '', I.sansCout ? '<b>' + I.sansCout + ' réf. sans coût connu</b>' : ''].filter(Boolean).join(' · ')}</div></div>
+      <div><div class="k">${mobile ? 'Vente perdue' : 'Valeur de vente perdue'}</div><div class="v">${fE(I.caPerdu)}</div><div class="s">${I.perduCatalogue ? (I.perduCatalogue === I.references ? 'au prix de vente du catalogue' : 'au prix de vente du panel, ' + I.perduCatalogue + ' réf. au catalogue') : 'au prix de vente du panel'}</div></div>
       <div><div class="k">Motifs</div><div class="v">${M.length ? esc(M[0].lib) : '—'}</div><div class="s">${M.map(x => esc(x.lib) + ' ' + fN(x.pieces)).join(' · ')}</div></div>
     </div>`;
     const nMax = mobile ? 8 : 12;

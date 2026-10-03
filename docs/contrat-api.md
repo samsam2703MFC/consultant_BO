@@ -444,8 +444,12 @@ ignoré), seul le motif dominant d'un produit est connu.
 `lu` est faux quand le panel ne répond pas (rien n'est alors retranché du résultat) ; `declare` est faux quand la
 réponse est vide — mesuré : Corbais et Sombreffe ne déclarent rien, Halle et Gosselies déclarent. `cout` est le coût
 de production **net** : le coût de recette du panel pour ce magasin × pièces quand il existe et tient face au brut
-(entre 70 % et 100 %), sinon le brut ÷ 1,06. En vue Jour, `vendus` et `taux` (jetées ÷ (jetées + vendues)) viennent du
-relevé gravé des ventes du jour, sans lecture de plus. Cache `inv:{shop}:{du}:{au}` : dix minutes quand la fenêtre
+(entre 70 % et 100 %), sinon le brut ÷ 1,06. Mesuré : le panel rend un brut de 0 sur un tiers des références de
+Gosselies (Couque au Beurre, Pain Doré…) : elles sont prises au coût de recette actuel (`auCatalogue`), et celles qui
+n'ont de coût nulle part comptent zéro et sont comptées (`sansCout`). `caPerdu` : la valeur du panel quand il la
+chiffre, sinon pièces × prix de vente du magasin (`perduCatalogue`) — mesuré : sur une fenêtre d'un jour le panel
+rend 0,00 là où la semaine rend 274,16 € pour les mêmes pièces. En vue Jour, `vendus` et `taux` (jetées ÷ (jetées +
+vendues)) viennent du relevé gravé des ventes du jour, sans lecture de plus. Cache `inv:{shop}:{du}:{au}` : dix minutes quand la fenêtre
 touche aujourd'hui ou hier, six heures sinon ; un panel muet ressert la dernière lecture.
 
 **Les reports au lendemain** (« carryover ») n'ont pas de route de lecture : la caisse les écrit comme une production du
