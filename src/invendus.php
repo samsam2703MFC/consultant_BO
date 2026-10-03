@@ -378,7 +378,8 @@ function ep_exploitation_invendus_sonde(): array
             $ap = ['openapi' => $b['openapi'] ?? ($b['swagger'] ?? null), 'chemins' => array_keys($b['paths']), 'detail' => $det];
         } elseif (is_array($b)) {
             if (array_is_list($b)) { $ap = ['liste' => count($b), 'premier' => is_array($b[0] ?? null) ? array_slice($b[0], 0, 20, true) : ($b[0] ?? null)]; }
-            else { $ap = ['cles' => array_slice(array_keys($b), 0, 20), 'extrait' => array_map(static fn ($v) => is_array($v) ? (array_is_list($v) ? ['liste' => count($v), 'premier' => $v[0] ?? null] : array_slice($v, 0, 12, true)) : $v, array_slice($b, 0, 8, true))]; }
+            else { $ap = ['cles' => array_slice(array_keys($b), 0, 80), 'extrait' => array_map(static fn ($v) => is_array($v) ? (array_is_list($v) ? ['liste' => count($v), 'premier' => $v[0] ?? null] : array_slice($v, 0, 12, true)) : $v, array_slice($b, 0, 8, true)),
+                'listes' => array_map(static fn ($v) => ['liste' => count($v), 'premier' => $v[0] ?? null], array_filter($b, static fn ($v) => is_array($v) && array_is_list($v)))]; }
         } elseif ($b !== null) { $ap = ['brut' => mb_substr((string) $b, 0, 300)]; }
         $out['candidats'][] = ['chemin' => $p, 'code' => $r['code'], 'erreur' => $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 200) : null, 'apercu' => invScrub($ap)];
     }
