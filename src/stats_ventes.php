@@ -84,11 +84,17 @@ function ep_stats_ventes_sonde(): array
         // La ligne de ticket BRUTE qui porte ce produit, telle que le panel la rend : les tickets du
         // jour, puis chaque ticket jusqu'à trouver la ligne (soixante tickets au plus).
         $d['ligneTicket'] = null;
-        $lt = analyseListe($res['trans'] ?? null);
-        foreach (array_slice($lt, 0, 60) as $tk) {
-            $t = PanelApi::get('/transactions/' . (int) ($tk['id'] ?? 0) . '?include=products');
-            foreach ((array) ($t['products'] ?? []) as $l) {
-                if ((int) ($l['id_product'] ?? 0) === $pid) { $d['ligneTicket'] = ['ticket' => (int) $tk['id'], 'ligne' => $propre($l), 'clesTicket' => array_keys($t)]; break 2; }
+        $ids = array_values(array_filter(array_map(static fn ($tk) => (int) ($tk['id'] ?? 0), analyseListe($res['trans'] ?? null))));
+        $d['ticketsDuJour'] = count($ids);
+        foreach (array_chunk($ids, 40) as $lot) {
+            $chemins = [];
+            foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+            $rs = PanelApi::getParallele($chemins, 8);
+            foreach ($lot as $id) {
+                $t = $rs[$id] ?? null;
+                foreach ((array) (is_array($t) ? ($t['products'] ?? []) : []) as $l) {
+                    if ((int) ($l['id_product'] ?? 0) === $pid) { $d['ligneTicket'] = ['ticket' => $id, 'ligne' => $propre($l), 'clesTicket' => array_keys($t), 'autresLignes' => array_map(static fn ($x) => ['id_product' => $x['id_product'] ?? null, 'nom' => $x['product_name'] ?? null, 'q' => $x['quantity'] ?? null], (array) $t['products'])]; break 3; }
+                }
             }
         }
         $out['produit'] = $d;
