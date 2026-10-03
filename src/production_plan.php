@@ -434,8 +434,14 @@ function gpCmdZone(array $cmds, int $pid, float $a, float $b): array
  * part, prévu + sécurité, commandes, webshop, stock estimé, à cuire, plaques. `faits` (ce qui
  * a été réellement enfourné, validé à l'écran) remplace la sortie prévue pour le stock suivant.
  */
-function gpPlan(array $params, array $base, array $cmds, array $faits = [], array $prix = []): array
+function gpPlan(array $params, array $base, array $cmds, array $faits = [], array $prix = [], array $opts = []): array
 {
+    // Options du flux de production (/production) : le stock de départ (le report de la veille),
+    // la production minimum de la 1re cuisson (part de la journée) et les obligatoires du jour
+    // (pid => pièces minimum), planifiés même sans vente dans la base.
+    $stock0 = (array) ($opts['stock0'] ?? []);
+    $minPct = isset($opts['minPct']) && is_numeric($opts['minPct']) ? max(0.0, min(1.0, (float) $opts['minPct'])) : null;
+    $oblig = []; foreach ((array) ($opts['oblig'] ?? []) as $k => $v) { $oblig[(int) $k] = max(0, (int) $v); }
     $C = $params['cuissons']; $R = $params['regles'];
     $sec = 1 + (float) $R['securite'] / 100; $minPl = (int) $R['minPlaques'];
     if (!$R['commandes']) { $cmds = array_values(array_filter($cmds, static fn ($o) => !empty($o['webshop']))); }
@@ -443,25 +449,48 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
     $pct = []; foreach ($C as $c) { $pct[$c['id']] = (float) $c['pct']; }
     $lignes = []; foreach ($C as $c) { $lignes[$c['id']] = []; }
     $poidsCat = []; $poidsGrp = [];
-    foreach ($base['produits'] as $pid => $p) {
+    $prods = $base['produits'];
+    if ($oblig !== []) {
+        $cat = gpCatalogue();
+        foreach ($oblig as $pid => $_) {
+            if (isset($prods[$pid])) { continue; }
+            $x = $cat['produits'][$pid] ?? null;
+            if ($x === null) { continue; }
+            $catId = (int) $x['catId']; $catNom = (string) $x['cat'] !== '' ? (string) $x['cat'] : 'Sans catégorie';
+            $prods[$pid] = ['nom' => (string) $x['nom'] !== '' ? (string) $x['nom'] : 'Produit ' . $pid, 'catId' => $catId, 'cat' => $catNom, 'catCle' => gpCleCat($catId, $catNom),
+                'groupe' => $catId > 0 ? (string) ($cat['categories'][$catId]['groupe'] ?? '') : '', 'h' => []];
+        }
+    }
+    foreach ($prods as $pid => $p) {
         $cfg = $params['categories'][$p['catCle']] ?? null;
         $prevJ = array_sum($p['h']);
-        if ($cfg === null || $cfg['cuissons'] === [] || $prevJ < PP_MIN_JOUR) { continue; }
+        $ob = $oblig[(int) $pid] ?? null;
+        // Un obligatoire d'une catégorie qui ne passe pas au four ce jour-là : la 1re cuisson.
+        if ($ob !== null && ($cfg === null || $cfg['cuissons'] === [])) { $cfg = ['cuissons' => [$C[0]['id']], 'plaque' => $cfg['plaque'] ?? null]; }
+        if ($cfg === null || $cfg['cuissons'] === [] || ($prevJ < PP_MIN_JOUR && $ob === null)) { continue; }
         $poidsCat[$p['catCle']] = ($poidsCat[$p['catCle']] ?? 0.0) + $prevJ;
         $grp = (string) ($p['groupe'] ?? '') !== '' ? (string) $p['groupe'] : $p['cat'];
         $poidsGrp[$grp] = ($poidsGrp[$grp] ?? 0.0) + $prevJ;
         $pu = isset($prix[(int) $pid]) ? (float) $prix[(int) $pid] : null;
         $z = gpZones($C, $cfg['cuissons']);
         $tp = 0.0; foreach ($z as $id => $_) { $tp += $pct[$id]; }
-        $stock = 0.0; $prec = null;
+        // La part de chaque cuisson ; la 1re relevée à la production minimum, les suivantes réduites d'autant.
+        $parts = []; foreach ($z as $id => $_) { $parts[$id] = $tp > 0 ? $pct[$id] / $tp : 0.0; }
+        $id0 = array_key_first($z);
+        if ($minPct !== null && $id0 !== null && count($z) > 1 && $parts[$id0] < $minPct) {
+            $r0 = 1 - $parts[$id0];
+            foreach ($parts as $id => $v) { $parts[$id] = $id === $id0 ? $minPct : ($r0 > 0 ? $v * (1 - $minPct) / $r0 : 0.0); }
+        }
+        $stock = (float) ($stock0[(int) $pid] ?? 0); $prec = null;
         foreach ($z as $id => [$za, $zb]) {
             if ($prec !== null) {
                 // Ce qui reste de la cuisson précédente à l'ouverture de celle-ci.
                 [$pa] = $z[$prec['id']];
                 $stock = max(0.0, $prec['stock'] + $prec['sortie'] - gpSomme($p['h'], $pa, $za) - $prec['cmd'] - $prec['ws']);
             }
-            $part = $tp > 0 ? $pct[$id] / $tp : 0.0;
+            $part = $parts[$id];
             $ap = $prevJ * $part * $sec;
+            if ($ob !== null && $id === $id0) { $ap = max($ap, (float) $ob); }
             [$cm, $ws] = gpCmdZone($cmds, (int) $pid, $za, $zb);
             $aCuire = max(0.0, $ap + $cm + $ws - $stock);
             [$pl, $sortie] = gpArrondi($aCuire, $cfg['plaque'], $minPl);
@@ -469,7 +498,7 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
             $lignes[$id][] = ['pid' => (int) $pid, 'nom' => $p['nom'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'groupe' => $grp, 'prix' => $pu, 'ca' => $pu !== null ? round($pu * $sortie, 2) : null, 'prevJ' => round($prevJ, 2), 'h' => $p['h'],
                 'zone' => [gpHhmm($za), gpHhmm($zb)], 'fenetre' => round(gpSomme($p['h'], $za, $zb), 2), 'part' => round(100 * $part, 1), 'prevu' => round($ap, 2),
                 'cmd' => round($cm, 2), 'ws' => round($ws, 2), 'stock' => round($stock, 2), 'aCuire' => round($aCuire, 2), 'plaque' => $cfg['plaque'], 'plaques' => $pl, 'sortie' => $sortie,
-                'fait' => $fait !== null ? (float) $fait : null];
+                'fait' => $fait !== null ? (float) $fait : null, 'oblig' => $ob !== null];
             $prec = ['id' => $id, 'stock' => $stock, 'sortie' => $fait !== null ? (float) $fait : (float) $sortie, 'cmd' => $cm, 'ws' => $ws];
         }
     }

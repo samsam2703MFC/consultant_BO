@@ -6077,16 +6077,17 @@ function tplGP(c, x){
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Magasin</label>
       <select ${x.C(g.setShop)} style="${SEL}">${g.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>
-      <span style="width:14px"></span>
+      ${g.parJour ? `<span style="width:14px"></span>
       <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Jour</label>
       <button ${x.A(g.prec)} style="${btn(false)}" title="jour précédent">‹</button>
       <input type="date" value="${esc(g.date)}" ${x.C(g.setDate)} style="${SEL}">
       <button ${x.A(g.suiv)} style="${btn(false)}" title="jour suivant">›</button>
       <button ${x.A(g.versAuj)} style="${btn(g.auj)}">Aujourd’hui</button>
-      <button ${x.A(g.versDemain)} style="${btn(g.demain)}">Demain</button>
-      <span style="font-size:12.5px;color:var(--color-text-muted);margin-left:6px">${esc(g.jour)}</span>
+      ${g.demainOk ? `<button ${x.A(g.versDemain)} style="${btn(g.demain)}">Demain</button>` : ''}
+      <span style="font-size:12.5px;color:var(--color-text-muted);margin-left:6px">${esc(g.jour)}</span>` : ''}
+      <a href="${esc(g.pleinEcran)}" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--color-primary);text-decoration:none">Ouvrir l’application Production ↗</a>
     </div>
-    <iframe src="${esc(g.src)}" title="Gestion de production" style="width:100%;height:calc(100vh - 210px);min-height:640px;border:0.5px solid var(--color-border-tertiary);border-radius:12px;background:var(--color-bg)"></iframe>
+    <iframe src="${esc(g.src)}" title="Production" style="width:100%;height:calc(100vh - 210px);min-height:640px;border:0.5px solid var(--color-border-tertiary);border-radius:12px;background:var(--color-bg)"></iframe>
   </div>`;
 }
 /* Invendus et poubelle (Magasins) : le réseau, magasin par magasin, et les produits les plus jetés. */

@@ -496,6 +496,47 @@ retirée est dans les tickets (`id_transaction`), donc dans les ventes et la pr�
 (`sansDetail: true`, heure, canal, montant) sans changer le plan tant que le panel n'en joint pas les articles —
 le calcul les prendra d'office le jour où `products` sera rempli.
 
+### `/production/flux/*` — l'application Production du magasin (`/production`)
+
+Une application à part, `/production/?shop=4&date=YYYY-MM-DD&page=params|plan|suivi|cloture`
+(`&embed=1` sans en-tête : c'est elle que le rail du cockpit intègre, ERP franchisé › Gestion de
+production, quatre pages). Le flux de la journée, en quatre pages :
+
+| Page | Lecture | Écriture |
+|---|---|---|
+| 1. Paramètres | `GET /production/flux/params?shop=` | `POST /production/flux/params` `{shop, gp: {cuissons, categories, regles}, flux: {jours, obligatoires, veille, garde}, par}` |
+| 2. Plan de production | `GET /production/flux/plan?shop=&date=` (jusqu'à J+7) | — |
+| 3. Validation et suivi | `GET /production/flux/suivi?shop=&date=` (jusqu'à aujourd'hui) | `POST /production/flux/valider` `{shop, date, cuisson, lignes: {pid: pièces}, par}` |
+| 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste}}, par}` |
+
+- **Par jour de la semaine** (`flux.jours[1..7]`) : le nombre de cuissons du jour (les n premières
+  cuissons du magasin, leurs parts ramenées à 100 %) et la **production minimum de la 1re cuisson**
+  en % de la journée : la 1re cuisson est relevée à ce minimum, les suivantes réduites d'autant.
+  Une catégorie qui ne cuisait qu'à une cuisson absente ce jour-là passe à la dernière du jour.
+- **Obligatoires** (`flux.obligatoires[pid] = {jours, min}`) : planifiés les jours cochés, au moins
+  `min` pièces en 1re cuisson, même sans vente dans la base. Par défaut : l'assortiment obligatoire
+  du cockpit (`ceo_prod_product.must`), tous les jours, son minimum (`qmin`, sinon 2).
+- **Préparées la veille** (`flux.veille`, catégories ; la viennoiserie par défaut) : le plan d'un jour
+  porte la colonne « à préparer pour demain matin » = la 1re cuisson du lendemain (base des mêmes
+  jours que le lendemain). **Se garde** (`flux.garde` ; biscuits, cakes, épicerie, boissons par
+  défaut) : la clôture propose de les garder, le reste se jette.
+- **Plan** : par produit (section › catégorie › produit, triés par volume), vendu à J−7 en magasin
+  (tickets − clients pro), webshop (`null` : le panel ne joint pas les articles des commandes ; le
+  nombre et le montant des commandes webshop et magasin de J−7 sont donnés à part) et commandes
+  magasin (les tickets des clients pro, `pb` du gravé des tickets) ; la prévision du jour ; le
+  report de la veille (la clôture d'hier, déduite de la 1re cuisson) ; à produire par cuisson
+  (`c[id] = {sortie, plaques, plaque, stock, prevu, fait, zone}`), le total, le CA au prix du magasin.
+- **Suivi** : une cuisson met ses pièces en vitrine à l'ouverture de sa période (validé, sinon le
+  plan). Pour chaque produit, `cases[]` heure par heure : passé = report + sorti − vendu (tickets),
+  à venir = stock actuel + cuissons à venir − prévision (l'heure entamée au prorata). `manque`
+  (première heure projetée sous zéro et le déficit), `verdict` rupture | manque | trop | ok,
+  `conseil` (pièces et plaques à recuire).
+- **Validation** : le même enregistrement que l'écran historique (`ppFait:{shop}:{date}`, `c[cuisson]`),
+  plus qui et quand (`v[cuisson] = {le, par}`).
+- **Clôture** : reste = report d'hier + sorti − vendu − jeté déjà déclaré au panel ; `report`
+  (gardé pour demain) devient le stock de départ du plan du lendemain (`pfCloture:{shop}:{date}`).
+  Rien n'est écrit au panel : ce qui se jette est à encoder en caisse.
+
 ### `/exploitation/invendus` — les invendus et la poubelle
 
 `GET /exploitation/invendus?shop=4&date=2026-10-02` (le jour), `?shop=4&du=&au=` (la semaine, le mois), sans `shop` le
