@@ -511,7 +511,7 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 | 2. Plan de production | `GET /production/flux/plan?shop=&date=` (jusqu'à J+7) | — |
 | 3. Validation et suivi | `GET /production/flux/suivi?shop=&date=` (jusqu'à aujourd'hui) | `POST /production/flux/valider` `{shop, date, cuisson, lignes: {pid: pièces}, par}` |
 | 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste}}, par}` |
-| 5. Fours | `GET /production/flux/fours?shop=&date=` (jusqu'à J+7) | `POST /production/flux/fours` `{shop, fours: [{id, nom, plaques}], categories: {cat: {four, temp, duree, parPlaque}}, par}` |
+| 5. Fours et équipe | `GET /production/flux/fours?shop=&date=` (jusqu'à J+7) | `POST /production/flux/fours` `{shop, fours: [{id, nom, plaques}], categories: {cat: {four, temp, duree, parPlaque}}, operateurs: [{id, nom, de, a}], etapes: {cat: [étape]}, etapesProduits: {pid: [étape]}, par}` ; `POST /production/flux/fours/simuler` (même corps + `date`) : les deux Gantt sans rien écrire |
 
 - **Par jour de la semaine** (`flux.jours[1..7]`) : le nombre de cuissons du jour (les n premières
   cuissons du magasin, leurs parts ramenées à 100 %) et la **production minimum de la 1re cuisson**
@@ -583,6 +583,20 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   pas), `remplissage` (% : plaques enfournées sur la capacité des fournées), `horsFour`, `retards`,
   `axe` (heures du Gantt), `entree` (par cuisson, les pièces de chaque catégorie : l'écran recalcule
   le Gantt avec des fours ou des réglages pas encore enregistrés, bouton « Rafraîchir le Gantt »).
+- **Répartir sur les fours** : `four = '*'` (proposé pour toute catégorie qui passe au four) : fournée
+  après fournée, au four qui la sortirait le plus tôt (sa charge de la cuisson face à sa fenêtre
+  libre avant l'ouverture) ; ajouter un four et « Rafraîchir » répartit la charge.
+- **Étapes et opérateurs** (demande du 03/10/2026) : une étape = `{nom, quand: avant|apres, minutes,
+  par: plaque|piece|lot, op}` ; par catégorie (`etapes`, proposées tant que rien n'est enregistré,
+  `etapesAuto`) et propres à un produit (`etapesProduits`, elles remplacent celles de sa catégorie).
+  Les opérateurs : `{id, nom, de, a}` (service). `equipe` : par opérateur, ses tâches (`debut`,
+  `fin`, `etape`, `nom`, `qte`, `par`, `minutes`, `quand`, `cuisson`, `retard` = minutes après
+  l'ouverture de la vente pour une finition, `horsService`), `charge` (min), `service` (min),
+  `utilisation` (%) ; `aAttribuer` (étapes sans opérateur), `heures` (minutes de travail du jour),
+  `retards`, `horsService`, `axe`. Avant cuisson : au plus tard pour finir à l'entrée au four (à
+  l'ouverture de la vente hors four) ; après cuisson : au plus tôt dès la sortie ; les étapes d'un
+  même produit se suivent dans leur ordre, même à deux opérateurs. Une catégorie finie après
+  cuisson sort du four d'autant plus tôt (`fournees[].cible`).
 - **Sonde** : `GET /production/flux/sonde?shop=&date=` (lecture seule, des comptes et des noms de
   champs, jamais un client) : les commandes du jour, encaissées ou non, les routes du panel essayées
   pour leurs articles, la part des tickets pro qui sont des commandes ; `&liste=1` : la taille et
