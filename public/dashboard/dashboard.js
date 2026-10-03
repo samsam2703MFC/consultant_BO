@@ -34,6 +34,7 @@
   const fK = n => n == null ? '—' : (Math.abs(n) >= 10000 ? Number(n / 1000).toLocaleString('fr-BE', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' k€' : fE(n));
   const fU = n => n == null ? '—' : nf(n, 2) + ' €';
   const fP = n => n == null ? '—' : nf(n, 1) + ' %';
+  const fP0 = n => n == null ? '—' : nf(Math.round(n), 0) + ' %';
   const fS = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + fE(Math.abs(n));
   const fSK = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + fK(Math.abs(n));
   const fN = n => n == null ? '—' : nf(Math.round(n), 0);
@@ -1407,7 +1408,7 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' : 'écart à la référence'}</span></div>
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence'}</span></div>
       ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -1492,9 +1493,10 @@
   }
   /**
    * Ventes par catégorie en liste à trois niveaux : groupe › catégorie › produit.
-   * Chaque ligne porte le CA, sa part, la marge brute (CA − coût matière) et
-   * son taux ; la barre est le poids dans le niveau du dessus, sa couleur la
-   * marge. Un groupe ou une catégorie s'ouvre d'un clic ; ce qui est ouvert
+   * Chaque ligne porte le CA, sa part, la marge brute (CA − coût matière),
+   * son taux et le coefficient (CA ÷ coût matière, « × 2,43 ») ; la barre est
+   * le poids dans le niveau du dessus, sa couleur la marge. Les pourcentages
+   * sont des entiers : la décimale ne se lit pas à cette taille. Un groupe ou une catégorie s'ouvre d'un clic ; ce qui est ouvert
    * reste ouvert d'une relecture à l'autre. Sans tickets lus, la liste retombe
    * sur les catégories du panel et leur écart à la référence.
    */
@@ -1512,15 +1514,20 @@
     });
     const fams = Object.values(G).sort((a, b) => b.ca - a.ca); fams.forEach(f => f.cats.sort((a, b) => b.ca - a.ca));
     const max = Math.max(1, ...fams.map(f => f.ca));
+    // Le coefficient : ce que le CA fait du coût matière. Sous 1, on vend sous
+    // le coût ; sans coût matière, rien à calculer.
+    const coef = (ca, m) => (m == null || ca == null || ca - m <= 0) ? null : ca / (ca - m);
+    const coefTxt = v => v == null ? '<span class="mu">—</span>' : '<small>×</small>' + nf(v, 2);
     const ligne = (niv, cle, x, ref, sub) => `<div class="db-al ${niv}" ${cle ? `data-cacc="${esc(cle)}"` : ''}>
         <span>${cle ? `<span class="db-tog ${S.cOuv[cle] ? 'on' : ''}">${S.cOuv[cle] ? '▾' : '▸'}</span>` : ''}</span>
         <span class="nom">${esc(x.nom)}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
         <span class="barre"><i style="width:${Math.max(1, Math.min(100, 100 * x.ca / Math.max(ref, 1)))}%;background:${coul(x)}"></i></span>
         <span class="n">${fE(x.ca)}</span>
-        <span class="n mu">${x.part != null ? fP(x.part) : ''}</span>
+        <span class="n mu">${x.part != null ? fP0(x.part) : ''}</span>
         <span class="n mg ${clM(x.taux)}">${parMarge ? (x.m == null ? '<span class="mu" title="coût matière inconnu">?</span>' : fE(x.m)) : (x.delta != null ? (x.delta >= 0 ? '+' : '') + fP(x.delta) : '<span class="mu">—</span>')}</span>
-        <span class="n ${clM(x.taux)}">${parMarge ? (x.taux != null ? fP(x.taux) : '') : ''}</span></div>`;
-    const entete = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Poids dans le CA</span><span class="n">CA</span><span class="n">Part</span><span class="n">${parMarge ? 'Marge brute' : 'vs réf.'}</span><span class="n">${parMarge ? 'Taux' : ''}</span></div>`;
+        <span class="n ${clM(x.taux)}">${parMarge ? (x.taux != null ? fP0(x.taux) : '') : ''}</span>
+        <span class="n coef ${clM(x.taux)}">${parMarge ? (x.m == null ? '<span class="mu" title="coût matière inconnu">?</span>' : coefTxt(coef(x.ca, x.m))) : ''}</span></div>`;
+    const entete = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Poids dans le CA</span><span class="n">CA</span><span class="n">Part</span><span class="n">${parMarge ? 'Marge brute' : 'vs réf.'}</span><span class="n">${parMarge ? 'Taux' : ''}</span><span class="n">${parMarge ? 'Coef' : ''}</span></div>`;
     const produits = c => {
       const L = c.produits || [];
       if (!L.length) { return `<div class="db-autres">Le détail par produit se lit sur les tickets : pas encore disponible pour cette catégorie.</div>`; }
@@ -1541,7 +1548,7 @@
       return h;
     }).join('');
     const totM = parMarge ? cats.reduce((t, c) => t + (c.m == null ? 0 : c.m), 0) : null;
-    const pied = `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? fP(100 * totM / tot) : ''}</span></div>`;
+    const pied = `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? fP0(100 * totM / tot) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
     return `<div class="db-acc">${entete}${rows}${pied}</div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */

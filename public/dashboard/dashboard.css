@@ -653,7 +653,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .mb-tabs button i svg{display:inline-block;vertical-align:-2px}
 /* Ventes par catégorie : la liste groupe › catégorie › produit. */
 .db-acc{padding:4px 16px 8px}
-.db-ent,.db-al{display:grid;grid-template-columns:22px minmax(150px,1.1fr) 3fr 76px 58px 84px 60px;gap:10px;align-items:center}
+.db-ent,.db-al{display:grid;grid-template-columns:22px minmax(150px,1.1fr) 3fr 76px 58px 84px 60px 66px;gap:10px;align-items:center}
 .db-ent{padding:6px 6px 4px;font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
 .db-ent .n{text-align:right}
 .db-al{padding:7px 6px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px}
@@ -663,6 +663,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-al .nom{font-weight:600}.db-al.p .nom{font-weight:400}
 .db-al .sub{display:block;font:400 10px var(--font-ui);color:var(--color-text-muted)}
 .db-al .n{text-align:right;font-variant-numeric:tabular-nums}.db-al .mg{font-weight:600}
+.db-al .coef{font-weight:700}.db-al .coef small{font-size:.85em;font-weight:500;opacity:.6;margin-right:2px}
 .db-al .barre{height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden;position:relative}
 .db-al .barre i{position:absolute;left:0;top:0;bottom:0;border-radius:999px}
 .db-al .ok{color:#2d7a3e}.db-al .ko{color:#C0182B}.db-al .att{color:#B26A00}.db-al .mu{color:var(--color-text-muted)}
@@ -670,7 +671,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-tog{width:18px;height:18px;border-radius:5px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--color-text-muted)}
 .db-tog.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
 .db-autres{padding:3px 6px 6px 52px;font-size:10.5px;color:var(--color-text-muted);background:var(--color-background-secondary)}
-@media (max-width:900px){.db-ent,.db-al{grid-template-columns:20px minmax(110px,1fr) 2fr 70px 54px 76px 54px;gap:6px}}
+@media (max-width:900px){.db-ent,.db-al{grid-template-columns:20px minmax(110px,1fr) 2fr 70px 54px 76px 54px 58px;gap:6px}}
 .db-cvue{margin-left:4px}.db-cvue button{padding:4px 10px;font-size:11px}
 .db-card>.ct .db-mini{margin-left:auto}
 /* Les périodes — matin, midi, après-midi : une grille jour × période, la couleur suit le chiffre choisi. */
