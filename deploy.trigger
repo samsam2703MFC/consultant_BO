@@ -557,3 +557,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T16:00:30Z production : heures du suivi
 2026-10-03T16:11:17Z production : plage du suivi
 2026-10-03T16:13:51Z production : conseil du suivi
+2026-10-03T16:27:37Z production : barre des jours
