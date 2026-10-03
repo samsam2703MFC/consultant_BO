@@ -201,6 +201,24 @@ function invCoutsMagasins(array $sids, string $du, string $au): array
     return $out;
 }
 
+/** Le CA de chaque magasin sur une fenêtre, en une lecture (/consultant/shops/sales-kpis) — [sid => ca], vide si le panel est muet. */
+function invCaMagasins(string $du, string $au): array
+{
+    if (!class_exists('PanelApi') || !PanelApi::configured() || !method_exists('PanelApi', 'shopsSalesKpisEntre')) { return []; }
+    $r = PanelApi::shopsSalesKpisEntre($du, $au);
+    if (!is_array($r)) { return []; }
+    $liste = function_exists('analyseListe') ? analyseListe($r) : (array_is_list($r) ? $r : []);
+    $out = [];
+    foreach ($liste as $x) {
+        if (!is_array($x)) { continue; }
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) { if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; } }
+        if ($id <= 0) { continue; }
+        foreach (['ca', 'turnover', 'revenue', 'income', 'net_turnover'] as $c) { if (isset($x[$c]) && is_numeric($x[$c])) { $out[$id] = (float) $x[$c]; break; } }
+    }
+    return $out;
+}
+
 /** Le texte, toujours le même, sur ce que le panel ne rend pas. */
 function invReport(): array
 {
@@ -218,6 +236,9 @@ function ep_exploitation_invendus(): array
     $sid = (int) ($_GET['shop'] ?? 0);
     $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? '');
     $periode = preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) && $du <= $au;
+    // Le cockpit parle en périodes glissantes, comme Offres et canaux : jour, 7 ou 30 jours.
+    $per = (string) ($_GET['periode'] ?? '');
+    if (!$periode && in_array($per, ['7', '30'], true)) { $au = $auj; $du = date('Y-m-d', strtotime($auj . ' -' . ((int) $per - 1) . ' days')); $periode = true; }
     if ($periode) { if ($au > $auj) { $au = $auj; } if ($du > $au) { $du = $au; } }
     else { $du = (string) ($_GET['date'] ?? $auj); if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || $du > $auj) { $du = $auj; } $au = $du; }
     @set_time_limit(60);
@@ -228,17 +249,52 @@ function ep_exploitation_invendus(): array
         $b = invBilan($sid, $du, $au, invLignes($sid, $du, $au));
         return ['shop' => $sid, 'magasin' => $mags[(string) $sid] ?? null, 'lu' => $b !== null] + ($b ?? ['declare' => null, 'pieces' => null, 'cout' => null, 'coutBrut' => null, 'caPerdu' => null, 'produits' => [], 'parMotif' => [], 'references' => 0, 'coutSource' => null]) + $base;
     }
+    // Le réseau : chaque magasin, son CA sur la fenêtre (pour la part), les produits
+    // additionnés d'un magasin à l'autre, les motifs du réseau.
     $sids = array_map('intval', array_keys($mags));
     $lignes = invLignesMagasins($sids, $du, $au);
-    $out = []; $t = ['pieces' => 0.0, 'cout' => 0.0, 'caPerdu' => 0.0, 'declarent' => 0, 'lus' => 0];
+    $caM = invCaMagasins($du, $au);
+    $out = []; $t = ['pieces' => 0.0, 'cout' => 0.0, 'caPerdu' => 0.0, 'declarent' => 0, 'lus' => 0, 'ca' => 0.0, 'caLus' => 0, 'sansCout' => 0, 'auCatalogue' => 0];
+    $agg = []; $motifs = [];
     foreach ($sids as $s) {
         $b = invBilan($s, $du, $au, $lignes[$s] ?? null);
+        $ca = $caM[$s] ?? null;
         $out[] = ['shopId' => (string) $s, 'magasin' => $mags[(string) $s] ?? (string) $s, 'lu' => $b !== null, 'declare' => $b['declare'] ?? null,
-            'pieces' => $b['pieces'] ?? null, 'cout' => $b['cout'] ?? null, 'caPerdu' => $b['caPerdu'] ?? null, 'references' => $b['references'] ?? 0, 'parMotif' => $b['parMotif'] ?? []];
-        if ($b !== null) { $t['lus']++; $t['pieces'] += $b['pieces']; $t['cout'] += $b['cout']; $t['caPerdu'] += $b['caPerdu']; if ($b['declare']) { $t['declarent']++; } }
+            'pieces' => $b['pieces'] ?? null, 'cout' => $b['cout'] ?? null, 'caPerdu' => $b['caPerdu'] ?? null, 'references' => $b['references'] ?? 0, 'parMotif' => $b['parMotif'] ?? [],
+            'sansCout' => $b['sansCout'] ?? 0, 'auCatalogue' => $b['auCatalogue'] ?? 0,
+            'ca' => $ca !== null ? round($ca, 2) : null, 'part' => ($b !== null && $ca !== null && $ca > 0) ? round(100 * $b['cout'] / $ca, 2) : null];
+        if ($ca !== null) { $t['ca'] += $ca; $t['caLus']++; }
+        if ($b === null) { continue; }
+        $t['lus']++; $t['pieces'] += $b['pieces']; $t['cout'] += $b['cout']; $t['caPerdu'] += $b['caPerdu']; $t['sansCout'] += $b['sansCout']; $t['auCatalogue'] += $b['auCatalogue'];
+        if ($b['declare']) { $t['declarent']++; }
+        foreach ($b['parMotif'] as $m) {
+            $motifs[$m['motif']] = $motifs[$m['motif']] ?? ['motif' => $m['motif'], 'lib' => $m['lib'], 'pieces' => 0.0, 'cout' => 0.0];
+            $motifs[$m['motif']]['pieces'] += $m['pieces']; $motifs[$m['motif']]['cout'] += $m['cout'];
+        }
+        foreach ($b['produits'] as $p) {
+            $e = $agg[$p['pid']] ?? ['pid' => $p['pid'], 'nom' => $p['nom'], 'categorie' => $p['categorie'], 'pieces' => 0.0, 'cout' => 0.0, 'caPerdu' => 0.0, 'motifs' => [], 'parMagasin' => []];
+            $e['pieces'] += $p['pieces']; $e['cout'] += $p['cout']; $e['caPerdu'] += $p['caPerdu'];
+            $e['motifs'][$p['motif']] = ($e['motifs'][$p['motif']] ?? 0) + $p['pieces'];
+            $e['parMagasin'][(string) $s] = round($p['pieces'], 1);
+            $agg[$p['pid']] = $e;
+        }
     }
     usort($out, static fn ($a, $b) => ($b['cout'] ?? -1) <=> ($a['cout'] ?? -1));
-    return ['magasins' => $out, 'reseau' => ['magasins' => count($sids), 'lus' => $t['lus'], 'declarent' => $t['declarent'], 'pieces' => round($t['pieces'], 1), 'cout' => round($t['cout'], 2), 'caPerdu' => round($t['caPerdu'], 2)]] + $base;
+    $prods = [];
+    foreach ($agg as $e) {
+        arsort($e['motifs']);
+        $m = (string) array_key_first($e['motifs']);
+        $prods[] = ['pid' => $e['pid'], 'nom' => $e['nom'], 'categorie' => $e['categorie'], 'pieces' => round($e['pieces'], 1), 'cout' => round($e['cout'], 2), 'caPerdu' => round($e['caPerdu'], 2),
+            'motif' => $m, 'motifLib' => invMotif($m), 'magasins' => count($e['parMagasin']), 'parMagasin' => $e['parMagasin']];
+    }
+    usort($prods, static fn ($a, $b) => $b['cout'] <=> $a['cout'] ?: $b['pieces'] <=> $a['pieces']);
+    $pm = array_values($motifs);
+    usort($pm, static fn ($a, $b) => $b['cout'] <=> $a['cout']);
+    foreach ($pm as &$x) { $x['pieces'] = round($x['pieces'], 1); $x['cout'] = round($x['cout'], 2); } unset($x);
+    return ['periode' => $periode ? (in_array($per, ['7', '30'], true) ? $per : 'bornes') : 'jour', 'magasins' => $out, 'produits' => array_slice($prods, 0, 30), 'parMotif' => $pm,
+        'reseau' => ['magasins' => count($sids), 'lus' => $t['lus'], 'declarent' => $t['declarent'], 'pieces' => round($t['pieces'], 1), 'cout' => round($t['cout'], 2), 'caPerdu' => round($t['caPerdu'], 2),
+            'references' => count($prods), 'sansCout' => $t['sansCout'], 'auCatalogue' => $t['auCatalogue'],
+            'ca' => $t['caLus'] ? round($t['ca'], 2) : null, 'part' => ($t['caLus'] && $t['ca'] > 0) ? round(100 * $t['cout'] / $t['ca'], 2) : null, 'caMagasins' => $t['caLus']]] + $base;
 }
 
 /**

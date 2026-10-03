@@ -274,7 +274,7 @@ class App {
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
       tablette: 'tablette-vendeuses',
-      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux',
+      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle',
     };
   }
   /**
@@ -938,6 +938,7 @@ class App {
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
       offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
+      invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
       creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
@@ -1315,6 +1316,7 @@ class App {
         ['scoringTri', 'Scoring du trimestre', 0],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
         ['creux', 'Jours creux', 0],
+        ['invendus', 'Invendus et poubelle', 0],
         ['plan', 'Plan de développement', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
@@ -1384,8 +1386,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
@@ -1809,6 +1811,7 @@ class App {
     if (common.isPosts) this.valsPosts(common);
     if (common.isBrandGuard) this.valsBrandGuard(common);
     if (common.isOffres) this.valsOffres(common);
+    if (common.isInvendus) this.valsInvendus(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches
@@ -2758,6 +2761,52 @@ class App {
       oc.okpi = K;
     }
     common.oc = oc;
+  }
+  /* --- invendus et poubelle : une lecture réseau sur la période choisie --- */
+  ivCharge(force){
+    const per = this.state.ivPeriode || 'jour', M = this.state.iv || {}, b = M[per];
+    if (!force && b && (b.d || b.chargement)) { return; }
+    if (this._ivEnCours === per && !force) { return; }
+    this._ivEnCours = per;
+    this.setState({ iv: Object.assign({}, M, { [per]: { chargement: true, d: b ? b.d : null } }) });
+    readOne('/exploitation/invendus?periode=' + per).catch(() => null)
+      .then(d => { this._ivEnCours = null; this.setState({ iv: Object.assign({}, this.state.iv || {}, { [per]: { chargement: false, d: d || { error: 'injoignable' } } }) }); });
+  }
+  valsInvendus(common){
+    const S = this.state, per = S.ivPeriode || 'jour';
+    this.ivCharge(false);
+    const b = (S.iv || {})[per] || {}, D = b.d && !b.d.error ? b.d : null;
+    const nf = (n, dd) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: dd || 0, maximumFractionDigits: dd || 0 });
+    const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
+    const fP = n => n == null ? '—' : nf(n, 1) + ' %';
+    const libPer = { jour: 'du jour', '7': 'des 7 jours', '30': 'des 30 jours' }[per];
+    const pluriel = (n, u) => nf(n) + ' ' + u + (n > 1 ? 's' : '');
+    const CLS = { expiration: 'fdj', damage: 'casse', tasting: 'degu', quality: 'qual', carryover: 'rep' };
+    const iv = { periode: per, libPer,
+      periodes: [['jour', 'Aujourd’hui'], ['7', '7 jours'], ['30', '30 jours']].map(([v, nom]) => ({ v, nom, on: per === v, choisir: () => this.setState({ ivPeriode: v }) })),
+      chargement: !!b.chargement && !b.d, rafraichir: () => this.ivCharge(true),
+      date: D ? D.date : '', du: D ? D.du : '', au: D ? D.au : '',
+      indispo: !b.chargement && b.d && !D ? 'Lecture impossible — API injoignable.' : '', kpi: [], mags: [], prods: [], motifs: [], reseau: null, report: D && D.report ? D.report.motif : '', vide: '', prodsVide: '' };
+    if (D) {
+      const R = D.reseau || {}, tot = R.cout || 0;
+      iv.reseau = { cout: fE(R.cout), part: fP(R.part), pieces: nf(R.pieces), caPerdu: fE(R.caPerdu), declarent: R.declarent, magasins: R.magasins };
+      iv.kpi.push(['Coût de production jeté', fE(R.cout), (R.part != null ? fP(R.part) + ' du CA ' + libPer : 'part du CA inconnue : CA non lu') + ' · retranché du résultat de chaque magasin']);
+      iv.kpi.push(['Pièces jetées', nf(R.pieces), pluriel(R.references || 0, 'référence') + ' · ' + R.declarent + ' magasin' + (R.declarent > 1 ? 's' : '') + ' sur ' + R.magasins + ' déclare' + (R.declarent > 1 ? 'nt' : '') + ' la poubelle']);
+      iv.kpi.push(['Valeur de vente perdue', fE(R.caPerdu), 'au prix de vente · ce que ces pièces auraient rapporté']);
+      const M0 = (D.parMotif || [])[0];
+      iv.kpi.push(['Motif principal', M0 ? M0.lib : '—', (D.parMotif || []).map(m => m.lib + ' ' + nf(m.pieces)).join(' · ') || 'aucun motif ' + libPer]);
+      iv.motifs = (D.parMotif || []).map(m => ({ lib: m.lib, cls: CLS[m.motif] || '', pieces: nf(m.pieces), cout: fE(m.cout) }));
+      iv.mags = (D.magasins || []).map(m => ({ nom: m.magasin, etat: !m.lu ? 'muet' : (m.declare ? 'declare' : 'rien'), etatLib: !m.lu ? 'panel muet' : (m.declare ? 'déclare' : 'rien déclaré'),
+        pieces: m.lu && m.declare ? nf(m.pieces) : '', cout: m.lu && m.declare ? fE(m.cout) : '', part: m.part != null && m.declare ? fP(m.part) : '', ca: m.ca != null ? fE(m.ca) : '', caPerdu: m.lu && m.declare ? fE(m.caPerdu) : '',
+        references: m.references, w: tot > 0 && m.cout ? (100 * m.cout / tot).toFixed(1) : '0',
+        motifs: (m.parMotif || []).map(x => ({ lib: x.lib, cls: CLS[x.motif] || '', pieces: nf(x.pieces) })),
+        note: m.lu && m.declare ? [m.auCatalogue ? m.auCatalogue + ' réf. au coût de recette actuel' : '', m.sansCout ? m.sansCout + ' réf. sans coût connu' : ''].filter(Boolean).join(' · ') : '' }));
+      iv.prods = (D.produits || []).map(p => ({ nom: p.nom, categorie: p.categorie || '', motifLib: p.motifLib, cls: CLS[p.motif] || '', magasins: p.magasins, pieces: nf(p.pieces), cout: fE(p.cout), caPerdu: fE(p.caPerdu),
+        titre: Object.entries(p.parMagasin || {}).map(([sid, n]) => ((D.magasins || []).find(m => m.shopId === sid) || {}).magasin + ' : ' + nf(n)).join(' · ') }));
+      if (!R.declarent) { iv.vide = 'Rien déclaré ' + libPer + ' : aucune pièce jetée encodée en caisse dans le réseau.'; }
+      if (!iv.prods.length) { iv.prodsVide = iv.vide || 'Aucun produit jeté ' + libPer + '.'; }
+    }
+    common.iv = iv;
   }
   valsCreux(common){
     const S = this.state;
