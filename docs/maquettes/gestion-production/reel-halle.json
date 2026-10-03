@@ -1,0 +1,1527 @@
+{
+ "magasin": "Atelier by - Halle",
+ "du": "2026-09-01",
+ "au": "2026-09-30",
+ "nJoursOuverts": 30,
+ "heures": [
+  {
+   "h": 5,
+   "tickets": 2,
+   "ca": 140.5,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 75
+    }
+   ]
+  },
+  {
+   "h": 6,
+   "tickets": 278,
+   "ca": 2888.1,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 1004
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 299
+    },
+    {
+     "nom": "Pain",
+     "q": 81
+    }
+   ]
+  },
+  {
+   "h": 7,
+   "tickets": 438,
+   "ca": 5173.1,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 1589
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 461
+    },
+    {
+     "nom": "Pain",
+     "q": 143
+    }
+   ]
+  },
+  {
+   "h": 8,
+   "tickets": 537,
+   "ca": 6977.5,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 1842
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 747
+    },
+    {
+     "nom": "Pain",
+     "q": 204
+    }
+   ]
+  },
+  {
+   "h": 9,
+   "tickets": 450,
+   "ca": 5066.6,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 1076
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 429
+    },
+    {
+     "nom": "Pâtisserie individuelle",
+     "q": 31
+    }
+   ]
+  },
+  {
+   "h": 10,
+   "tickets": 454,
+   "ca": 5873.95,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 784
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 632
+    },
+    {
+     "nom": "Pain",
+     "q": 247
+    }
+   ]
+  },
+  {
+   "h": 11,
+   "tickets": 479,
+   "ca": 6310.75,
+   "cats": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 448
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 619
+    },
+    {
+     "nom": "Cookies",
+     "q": 89
+    }
+   ]
+  },
+  {
+   "h": 12,
+   "tickets": 496,
+   "ca": 5180,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 266
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 281
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 396
+    }
+   ]
+  },
+  {
+   "h": 13,
+   "tickets": 271,
+   "ca": 3840.55,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 136
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 134
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 204
+    }
+   ]
+  },
+  {
+   "h": 14,
+   "tickets": 239,
+   "ca": 3061.1,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 138
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 115
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "q": 156
+    }
+   ]
+  },
+  {
+   "h": 15,
+   "tickets": 209,
+   "ca": 2472.3,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 141
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 62
+    },
+    {
+     "nom": "Cookies",
+     "q": 49
+    }
+   ]
+  },
+  {
+   "h": 16,
+   "tickets": 161,
+   "ca": 2085.3,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 100
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 93
+    },
+    {
+     "nom": "Cookies",
+     "q": 39
+    }
+   ]
+  },
+  {
+   "h": 17,
+   "tickets": 133,
+   "ca": 1619.4,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 74
+    },
+    {
+     "nom": "Cookies",
+     "q": 43
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 53
+    }
+   ]
+  },
+  {
+   "h": 18,
+   "tickets": 7,
+   "ca": 118.4,
+   "cats": [
+    {
+     "nom": "Épicerie",
+     "q": 2
+    },
+    {
+     "nom": "Viennoiserie Ind.",
+     "q": 8
+    },
+    {
+     "nom": "Cookies",
+     "q": 2
+    }
+   ]
+  },
+  {
+   "h": 20,
+   "tickets": 1,
+   "ca": 9.4,
+   "cats": [
+    {
+     "nom": "Pain",
+     "q": 2
+    },
+    {
+     "nom": "Pain Tradition",
+     "q": 1
+    }
+   ]
+  },
+  {
+   "h": 21,
+   "tickets": 1,
+   "ca": 32.8,
+   "cats": [
+    {
+     "nom": "Viennoiserie réduction",
+     "q": 32
+    }
+   ]
+  }
+ ],
+ "categories": [
+  {
+   "nom": "Viennoiserie Ind.",
+   "groupe": "Viennoiserie",
+   "q": 7564,
+   "refs": 10,
+   "produits": [
+    {
+     "id": 1610006,
+     "nom": "Croissant",
+     "q": 1639,
+     "part": 20.1
+    },
+    {
+     "id": 1610004,
+     "nom": "Pain au Chocolat",
+     "q": 1495,
+     "part": 19.4
+    },
+    {
+     "id": 1610009,
+     "nom": "Pain au Chocolat Nappé",
+     "q": 1137,
+     "part": 16.3
+    },
+    {
+     "id": 6700170,
+     "nom": "Couque au Beurre",
+     "q": 761,
+     "part": 9.4
+    },
+    {
+     "id": 1610002,
+     "nom": "Suisse",
+     "q": 688,
+     "part": 9
+    },
+    {
+     "id": 1610005,
+     "nom": "Huit",
+     "q": 624,
+     "part": 8.5
+    },
+    {
+     "id": 1610008,
+     "nom": "Baulus",
+     "q": 404,
+     "part": 5
+    },
+    {
+     "id": 1610010,
+     "nom": "Couque à la Crème",
+     "q": 182,
+     "part": 4.4
+    },
+    {
+     "id": 1610003,
+     "nom": "Tortillon",
+     "q": 366,
+     "part": 4.3
+    },
+    {
+     "id": 1610007,
+     "nom": "Gosette Pomme",
+     "q": 268,
+     "part": 3.6
+    }
+   ]
+  },
+  {
+   "nom": "Tartes",
+   "groupe": "Tartes",
+   "q": 741,
+   "refs": 23,
+   "produits": [
+    {
+     "id": 1150036,
+     "nom": "1/4",
+     "q": 328,
+     "part": 24.1
+    },
+    {
+     "id": 1150034,
+     "nom": "1/2",
+     "q": 133,
+     "part": 18
+    },
+    {
+     "id": 1150004,
+     "nom": "Brownies",
+     "q": 52,
+     "part": 16.1
+    },
+    {
+     "id": 1150037,
+     "nom": "1/2 - Chocolat",
+     "q": 50,
+     "part": 8
+    },
+    {
+     "id": 1150002,
+     "nom": "Brookie",
+     "q": 22,
+     "part": 6.8
+    },
+    {
+     "id": 1150038,
+     "nom": "1/4 - Chocolat",
+     "q": 73,
+     "part": 6.3
+    },
+    {
+     "id": 1150008,
+     "nom": "Fromage",
+     "q": 14,
+     "part": 3.5
+    },
+    {
+     "id": 1150015,
+     "nom": "Frangipane & Pommes",
+     "q": 13,
+     "part": 3.2
+    },
+    {
+     "id": 1150011,
+     "nom": "Frangipane & Poires",
+     "q": 10,
+     "part": 2.5
+    },
+    {
+     "id": 1150013,
+     "nom": "Riz",
+     "q": 8,
+     "part": 2
+    },
+    {
+     "id": 1150007,
+     "nom": "Cerise",
+     "q": 5,
+     "part": 1.2
+    },
+    {
+     "id": 1150003,
+     "nom": "Plusieurs Fruits",
+     "q": 4,
+     "part": 1
+    },
+    {
+     "id": 1150028,
+     "nom": "Pommes Amandes",
+     "q": 4,
+     "part": 1
+    },
+    {
+     "id": 1150042,
+     "nom": "Fraises & Rhubarbes",
+     "q": 4,
+     "part": 1
+    },
+    {
+     "id": 6700123,
+     "nom": "Pomme Parisienne",
+     "q": 4,
+     "part": 1
+    },
+    {
+     "id": 1150005,
+     "nom": "Abricot & Cerise",
+     "q": 3,
+     "part": 0.7
+    },
+    {
+     "id": 1150019,
+     "nom": "Flan Breton",
+     "q": 3,
+     "part": 0.7
+    },
+    {
+     "id": 1150010,
+     "nom": "Pommes Tranches",
+     "q": 3,
+     "part": 0.7
+    },
+    {
+     "id": 1150016,
+     "nom": "Abricot",
+     "q": 3,
+     "part": 0.7
+    },
+    {
+     "id": 1150014,
+     "nom": "Rhubarbe",
+     "q": 2,
+     "part": 0.5
+    },
+    {
+     "id": 1150024,
+     "nom": "Flan Brézillien",
+     "q": 1,
+     "part": 0.3
+    },
+    {
+     "id": 1150041,
+     "nom": "Brézilienne",
+     "q": 1,
+     "part": 0.2
+    },
+    {
+     "id": 1150040,
+     "nom": "Frangipane",
+     "q": 1,
+     "part": 0.2
+    }
+   ]
+  },
+  {
+   "nom": "Pain",
+   "groupe": "Boulangerie",
+   "q": 2047,
+   "refs": 7,
+   "produits": [
+    {
+     "id": 1200003,
+     "nom": "Pain Doré",
+     "q": 707,
+     "part": 32.8
+    },
+    {
+     "id": 1200001,
+     "nom": "Pain Demi-Gris",
+     "q": 626,
+     "part": 29.1
+    },
+    {
+     "id": 1200002,
+     "nom": "Pain 10 Céréales",
+     "q": 531,
+     "part": 27.2
+    },
+    {
+     "id": 1200005,
+     "nom": "Fermier Seigle & Levain",
+     "q": 80,
+     "part": 5.3
+    },
+    {
+     "id": 1200006,
+     "nom": "Pavé Seigle & Froment",
+     "q": 77,
+     "part": 5.1
+    },
+    {
+     "id": 6700169,
+     "nom": "Promotie - 1.5 euros",
+     "q": 24,
+     "part": 0.6
+    },
+    {
+     "id": 6700277,
+     "nom": "Gratis Brood - Promotie",
+     "q": 2,
+     "part": 0
+    }
+   ]
+  },
+  {
+   "nom": "Petite Boulangerie",
+   "groupe": "Boulangerie",
+   "q": 4096,
+   "refs": 5,
+   "produits": [
+    {
+     "id": 1300001,
+     "nom": "Pistolet à l'Ancienne",
+     "q": 1741,
+     "part": 34.1
+    },
+    {
+     "id": 1300012,
+     "nom": "Sandwich",
+     "q": 1678,
+     "part": 32.9
+    },
+    {
+     "id": 1300003,
+     "nom": "Baguette Tradition 500 g.",
+     "q": 668,
+     "part": 32
+    },
+    {
+     "id": 1300007,
+     "nom": "Cramique",
+     "q": 8,
+     "part": 0.9
+    },
+    {
+     "id": 1300008,
+     "nom": "Craquelin",
+     "q": 1,
+     "part": 0.1
+    }
+   ]
+  },
+  {
+   "nom": "Quiches",
+   "groupe": "Quiches",
+   "q": 391,
+   "refs": 10,
+   "produits": [
+    {
+     "id": 6700227,
+     "nom": "1/4 - Quiches",
+     "q": 258,
+     "part": 47.7
+    },
+    {
+     "id": 6700226,
+     "nom": "1/2 - Quiches",
+     "q": 110,
+     "part": 37.8
+    },
+    {
+     "id": 1410006,
+     "nom": "Quiche saumon & épinards",
+     "q": 5,
+     "part": 3.2
+    },
+    {
+     "id": 1410005,
+     "nom": "Quiche Grecque",
+     "q": 4,
+     "part": 2.5
+    },
+    {
+     "id": 1410016,
+     "nom": "Quiche - Kip & Gorgonzola",
+     "q": 3,
+     "part": 1.9
+    },
+    {
+     "id": 1410003,
+     "nom": "Quiche Lorraine",
+     "q": 3,
+     "part": 1.9
+    },
+    {
+     "id": 1410011,
+     "nom": "Quiche lardons, chèvre & tomates",
+     "q": 3,
+     "part": 1.9
+    },
+    {
+     "id": 1410004,
+     "nom": "Quiche Jambon & Chicons",
+     "q": 2,
+     "part": 1.3
+    },
+    {
+     "id": 1410015,
+     "nom": "Quiche - Champignons",
+     "q": 2,
+     "part": 1.3
+    },
+    {
+     "id": 1410010,
+     "nom": "Quiche feta, aubergines & citron",
+     "q": 1,
+     "part": 0.6
+    }
+   ]
+  },
+  {
+   "nom": "Sandwiches garnis",
+   "groupe": "Traiteur",
+   "q": 344,
+   "refs": 16,
+   "produits": [
+    {
+     "id": 2300001,
+     "nom": "FlipFlap - Poulet César",
+     "q": 70,
+     "part": 20.4
+    },
+    {
+     "id": 2300012,
+     "nom": "FlipFlap - Saumons & CreamCheese",
+     "q": 41,
+     "part": 14.4
+    },
+    {
+     "id": 2300016,
+     "nom": "FlipFlap - Club",
+     "q": 45,
+     "part": 12.2
+    },
+    {
+     "id": 2300010,
+     "nom": "FlipFlap - Thon",
+     "q": 39,
+     "part": 10.6
+    },
+    {
+     "id": 2300003,
+     "nom": "FlipFlap - Italien",
+     "q": 35,
+     "part": 10.2
+    },
+    {
+     "id": 2300005,
+     "nom": "FlipFlap - Poulet Curry",
+     "q": 28,
+     "part": 8.2
+    },
+    {
+     "id": 6700023,
+     "nom": "FlipFlap - Di Jour",
+     "q": 22,
+     "part": 6.5
+    },
+    {
+     "id": 6700082,
+     "nom": "FlipFlap - Halloumi & Légumes grillés",
+     "q": 16,
+     "part": 4.7
+    },
+    {
+     "id": 2300002,
+     "nom": "FlipFlap - Omelette & Lardons",
+     "q": 12,
+     "part": 3.3
+    },
+    {
+     "id": 2300011,
+     "nom": "FlipFlap - Tomates & Mozzarella",
+     "q": 10,
+     "part": 2.9
+    },
+    {
+     "id": 2300004,
+     "nom": "FlipFlap - Américain Maison",
+     "q": 10,
+     "part": 2.9
+    },
+    {
+     "id": 2300014,
+     "nom": "FlipFlap - Fromage Gouda Jeune",
+     "q": 5,
+     "part": 1.4
+    },
+    {
+     "id": 2300017,
+     "nom": "FlipFlap - Omelette & Saumons",
+     "q": 3,
+     "part": 0.9
+    },
+    {
+     "id": 6700020,
+     "nom": "Sandwich Garnis Individuel",
+     "q": 6,
+     "part": 0.8
+    },
+    {
+     "id": 6700102,
+     "nom": "FlipFlap - Falafell",
+     "q": 1,
+     "part": 0.3
+    },
+    {
+     "id": 2300006,
+     "nom": "FlipFlap - Salade de Viande Maison",
+     "q": 1,
+     "part": 0.3
+    }
+   ]
+  },
+  {
+   "nom": "Cookies",
+   "groupe": "Biscuiterie",
+   "q": 573,
+   "refs": 6,
+   "produits": [
+    {
+     "id": 3210002,
+     "nom": "Cookie Chocolat Noir",
+     "q": 116,
+     "part": 19.9
+    },
+    {
+     "id": 3210004,
+     "nom": "Cookie Chocolat Lait",
+     "q": 116,
+     "part": 19.9
+    },
+    {
+     "id": 3210001,
+     "nom": "Cookie Chocolat Blanc",
+     "q": 105,
+     "part": 18
+    },
+    {
+     "id": 6700127,
+     "nom": "Cookie Noix & Caramel",
+     "q": 87,
+     "part": 14.9
+    },
+    {
+     "id": 3210006,
+     "nom": "Cookie Avoine Raisins et Noisette",
+     "q": 69,
+     "part": 13.7
+    },
+    {
+     "id": 3210003,
+     "nom": "Cookie Double Chocolat",
+     "q": 80,
+     "part": 13.7
+    }
+   ]
+  },
+  {
+   "nom": "Tartissières - 19Ø",
+   "groupe": "Tartes",
+   "q": 69,
+   "refs": 4,
+   "produits": [
+    {
+     "id": 1110203,
+     "nom": "Fromage & Spéculoos",
+     "q": 51,
+     "part": 71
+    },
+    {
+     "id": 1110208,
+     "nom": "Citron Meringué",
+     "q": 14,
+     "part": 22.7
+    },
+    {
+     "id": 1110202,
+     "nom": "Passion Sauvage",
+     "q": 2,
+     "part": 3.2
+    },
+    {
+     "id": 1110205,
+     "nom": "Fromage citronné & coulis de framboises",
+     "q": 2,
+     "part": 3
+    }
+   ]
+  },
+  {
+   "nom": "Entremets - 190Ø",
+   "groupe": "Pâtisserie",
+   "q": 41,
+   "refs": 2,
+   "produits": [
+    {
+     "id": 1520002,
+     "nom": "Duo Chocolat - 180⌀",
+     "q": 25,
+     "part": 61
+    },
+    {
+     "id": 1520001,
+     "nom": "Duo Framboise & Passion - 180⌀",
+     "q": 16,
+     "part": 39
+    }
+   ]
+  },
+  {
+   "nom": "Boissons froides",
+   "groupe": "Boissons",
+   "q": 345,
+   "refs": 14,
+   "produits": [
+    {
+     "id": 3400028,
+     "nom": "Cécémel",
+     "q": 69,
+     "part": 21.7
+    },
+    {
+     "id": 3400025,
+     "nom": "Jus d'orange",
+     "q": 32,
+     "part": 19.1
+    },
+    {
+     "id": 3400029,
+     "nom": "Red Bull",
+     "q": 37,
+     "part": 11.6
+    },
+    {
+     "id": 3400001,
+     "nom": "Coca-Cola",
+     "q": 46,
+     "part": 10
+    },
+    {
+     "id": 3400026,
+     "nom": "Jus de pomme",
+     "q": 33,
+     "part": 9.7
+    },
+    {
+     "id": 3400004,
+     "nom": "Eau Plate",
+     "q": 33,
+     "part": 7.2
+    },
+    {
+     "id": 3400002,
+     "nom": "Coca-Cola Zero",
+     "q": 25,
+     "part": 5.4
+    },
+    {
+     "id": 3400003,
+     "nom": "Eau Pétillante",
+     "q": 22,
+     "part": 4.8
+    },
+    {
+     "id": 3400015,
+     "nom": "IceTea Pétillant",
+     "q": 18,
+     "part": 3.9
+    },
+    {
+     "id": 3400012,
+     "nom": "Fanta",
+     "q": 11,
+     "part": 2.4
+    },
+    {
+     "id": 3400013,
+     "nom": "IceTea Pêche",
+     "q": 9,
+     "part": 2
+    },
+    {
+     "id": 3400021,
+     "nom": "Sprite",
+     "q": 8,
+     "part": 1.7
+    },
+    {
+     "id": 6700094,
+     "nom": "Bouteille Sprite 50cl",
+     "q": 1,
+     "part": 0.3
+    },
+    {
+     "id": 6700092,
+     "nom": "Bouteille Coca-Cola 50cl",
+     "q": 1,
+     "part": 0.3
+    }
+   ]
+  },
+  {
+   "nom": "Viennoiserie réduction",
+   "groupe": "Viennoiserie",
+   "q": 869,
+   "refs": 8,
+   "produits": [
+    {
+     "id": 1620005,
+     "nom": "Mini - Croissant",
+     "q": 192,
+     "part": 21.9
+    },
+    {
+     "id": 1620003,
+     "nom": "Mini - Chocolat",
+     "q": 191,
+     "part": 21.8
+    },
+    {
+     "id": 1620001,
+     "nom": "Mini - Huit",
+     "q": 170,
+     "part": 19.5
+    },
+    {
+     "id": 1620007,
+     "nom": "Mini - Frangipane",
+     "q": 118,
+     "part": 13.4
+    },
+    {
+     "id": 1620004,
+     "nom": "Mini - Rhubarbe",
+     "q": 88,
+     "part": 10
+    },
+    {
+     "id": 1620006,
+     "nom": "Mini - Pomme",
+     "q": 76,
+     "part": 8.9
+    },
+    {
+     "id": 1620010,
+     "nom": "Mini - Chocolat Nappé",
+     "q": 29,
+     "part": 4.1
+    },
+    {
+     "id": 1620002,
+     "nom": "Mini - Baulus",
+     "q": 5,
+     "part": 0.6
+    }
+   ]
+  },
+  {
+   "nom": "Tartissières - 12Ø",
+   "groupe": "Tartes",
+   "q": 85,
+   "refs": 4,
+   "produits": [
+    {
+     "id": 1110103,
+     "nom": "Fromage & Spéculoos - 120⌀",
+     "q": 59,
+     "part": 69.4
+    },
+    {
+     "id": 1110105,
+     "nom": "Citron Meringué - 120⌀",
+     "q": 19,
+     "part": 22.4
+    },
+    {
+     "id": 1110107,
+     "nom": "Fromage Citron & Coulis Framboise - 120⌀",
+     "q": 4,
+     "part": 4.7
+    },
+    {
+     "id": 1110106,
+     "nom": "Passion Sauvage - 120⌀",
+     "q": 3,
+     "part": 3.5
+    }
+   ]
+  },
+  {
+   "nom": "Pâtisserie individuelle",
+   "groupe": "Pâtisserie",
+   "q": 249,
+   "refs": 1,
+   "produits": [
+    {
+     "id": 1540001,
+     "nom": "éclair chocolat",
+     "q": 249,
+     "part": 100
+    }
+   ]
+  },
+  {
+   "nom": "Pain Tradition",
+   "groupe": "Boulangerie",
+   "q": 174,
+   "refs": 9,
+   "produits": [
+    {
+     "id": 1210006,
+     "nom": "Pain Tradition - Olives",
+     "q": 48,
+     "part": 26.9
+    },
+    {
+     "id": 1210001,
+     "nom": "Pain au Noix & Sésame",
+     "q": 34,
+     "part": 22.2
+    },
+    {
+     "id": 1210011,
+     "nom": "Pain Tradition - Noix et Raisins",
+     "q": 32,
+     "part": 17.9
+    },
+    {
+     "id": 1210003,
+     "nom": "Pain Tradition - Noisettes",
+     "q": 27,
+     "part": 15.1
+    },
+    {
+     "id": 1210005,
+     "nom": "Pain Tradition - 4 Céréales",
+     "q": 18,
+     "part": 10.1
+    },
+    {
+     "id": 1210004,
+     "nom": "Pain Tradition - Oignons et Lardons",
+     "q": 8,
+     "part": 4.5
+    },
+    {
+     "id": 1210002,
+     "nom": "Focaccia - Aromates",
+     "q": 4,
+     "part": 2.7
+    },
+    {
+     "id": 1210009,
+     "nom": "Blanc (Pauvre en Gluten) - 600 g.",
+     "q": 1,
+     "part": 0.7
+    },
+    {
+     "id": 6700129,
+     "nom": "Focaccia - Olives",
+     "q": 2,
+     "part": 0
+    }
+   ]
+  },
+  {
+   "nom": "Épicerie",
+   "groupe": "Épicerie",
+   "q": 64,
+   "refs": 5,
+   "produits": [
+    {
+     "id": 6700138,
+     "nom": "Granola - Citron & Bleuet",
+     "q": 15,
+     "part": 23.4
+    },
+    {
+     "id": 6700134,
+     "nom": "Granola - Noisette & Miel",
+     "q": 14,
+     "part": 21.9
+    },
+    {
+     "id": 6700137,
+     "nom": "Granola - Banane & Chocolat",
+     "q": 14,
+     "part": 21.9
+    },
+    {
+     "id": 6700136,
+     "nom": "Granola - Pommes & Canelle",
+     "q": 11,
+     "part": 17.2
+    },
+    {
+     "id": 6700135,
+     "nom": "Granola - Noisette & Chocolat",
+     "q": 10,
+     "part": 15.6
+    }
+   ]
+  },
+  {
+   "nom": "Cake 100g.",
+   "groupe": "Pâtisserie",
+   "q": 70,
+   "refs": 5,
+   "produits": [
+    {
+     "id": 1561104,
+     "nom": "Cake Nature - 300 g.",
+     "q": 16,
+     "part": 22.9
+    },
+    {
+     "id": 1561106,
+     "nom": "Cake Marbré - 300 g.",
+     "q": 15,
+     "part": 21.4
+    },
+    {
+     "id": 1561102,
+     "nom": "Cake Pomme & Pralin - 300 g.",
+     "q": 14,
+     "part": 20
+    },
+    {
+     "id": 1561110,
+     "nom": "Cake Chocolat - 300 g.",
+     "q": 13,
+     "part": 18.6
+    },
+    {
+     "id": 1561001,
+     "nom": "Cake Citron - 350 g.",
+     "q": 12,
+     "part": 17.1
+    }
+   ]
+  },
+  {
+   "nom": "Entremets - Individuel",
+   "groupe": "Pâtisserie",
+   "q": 185,
+   "refs": 4,
+   "produits": [
+    {
+     "id": 1530006,
+     "nom": "Merveilleux",
+     "q": 57,
+     "part": 44.7
+    },
+    {
+     "id": 1530001,
+     "nom": "Javanais Ind.",
+     "q": 29,
+     "part": 22.7
+    },
+    {
+     "id": 1530002,
+     "nom": "Misérable Ind.",
+     "q": 23,
+     "part": 18
+    },
+    {
+     "id": 1530010,
+     "nom": "Choux Nappe",
+     "q": 76,
+     "part": 14.6
+    }
+   ]
+  },
+  {
+   "nom": "Entremets - 4/6 personnes",
+   "groupe": "Pâtisserie · Tartes",
+   "q": 38,
+   "refs": 2,
+   "produits": [
+    {
+     "id": 1510004,
+     "nom": "Entremet 120Ø -  Duo Chocolat",
+     "q": 25,
+     "part": 65.8
+    },
+    {
+     "id": 1510003,
+     "nom": "Entremet 120Ø -  Duo Framboise & Passion",
+     "q": 13,
+     "part": 34.2
+    }
+   ]
+  },
+  {
+   "nom": "Croutes Fruits Frais",
+   "groupe": "Tartes",
+   "q": 38,
+   "refs": 3,
+   "produits": [
+    {
+     "id": 1122002,
+     "nom": "Croûte aux fraises",
+     "q": 12,
+     "part": 63.7
+    },
+    {
+     "id": 1122004,
+     "nom": "Croûtes aux fraises individuelle",
+     "q": 25,
+     "part": 30.2
+    },
+    {
+     "id": 1122007,
+     "nom": "Croûte Framboise",
+     "q": 1,
+     "part": 6
+    }
+   ]
+  },
+  {
+   "nom": "Boissons chaudes",
+   "groupe": "Boissons",
+   "q": 114,
+   "refs": 6,
+   "produits": [
+    {
+     "id": 3400007,
+     "nom": "Café",
+     "q": 63,
+     "part": 50.9
+    },
+    {
+     "id": 3400009,
+     "nom": "Cappuccino (à emporter)",
+     "q": 20,
+     "part": 19.7
+    },
+    {
+     "id": 6700089,
+     "nom": "Macchiato",
+     "q": 16,
+     "part": 15.7
+    },
+    {
+     "id": 6700088,
+     "nom": "Americano",
+     "q": 6,
+     "part": 5.9
+    },
+    {
+     "id": 3400010,
+     "nom": "Espresso (à emporter)",
+     "q": 6,
+     "part": 4.8
+    },
+    {
+     "id": 6700090,
+     "nom": "Flat White",
+     "q": 3,
+     "part": 3
+    }
+   ]
+  },
+  {
+   "nom": "Tarte Fruits Frais",
+   "groupe": "Tartes",
+   "q": 12,
+   "refs": 4,
+   "produits": [
+    {
+     "id": 1121001,
+     "nom": "Tarte Fraises",
+     "q": 4,
+     "part": 42.9
+    },
+    {
+     "id": 1150033,
+     "nom": "1/2 - Fruits Frais",
+     "q": 6,
+     "part": 42.8
+    },
+    {
+     "id": 1121003,
+     "nom": "Tarte TuttiFrutti",
+     "q": 1,
+     "part": 10.7
+    },
+    {
+     "id": 1150035,
+     "nom": "1/4 - Fruis Frais",
+     "q": 1,
+     "part": 3.6
+    }
+   ]
+  },
+  {
+   "nom": "Tartes – Ø 28 cm",
+   "groupe": "Tartes",
+   "q": 14,
+   "refs": 1,
+   "produits": [
+    {
+     "id": 1150023,
+     "nom": "Bleuet",
+     "q": 14,
+     "part": 100
+    }
+   ]
+  },
+  {
+   "nom": "Tartes au sucre",
+   "groupe": "Tartes",
+   "q": 14,
+   "refs": 2,
+   "produits": [
+    {
+     "id": 1131001,
+     "nom": "Tarte Sucre Blanc",
+     "q": 8,
+     "part": 57.1
+    },
+    {
+     "id": 1131002,
+     "nom": "Tarte Cassonade",
+     "q": 6,
+     "part": 42.9
+    }
+   ]
+  },
+  {
+   "nom": "Wrapps",
+   "groupe": "Traiteur",
+   "q": 32,
+   "refs": 1,
+   "produits": [
+    {
+     "id": 6700018,
+     "nom": "Wrapps - Poulet & Parmesan",
+     "q": 32,
+     "part": 100
+    }
+   ]
+  },
+  {
+   "nom": "Glace by Rawette",
+   "groupe": "Épicerie",
+   "q": 13,
+   "refs": 8,
+   "produits": [
+    {
+     "id": 6700218,
+     "nom": "Crème Glacée Stratiatella - 600 ml",
+     "q": 3,
+     "part": 25
+    },
+    {
+     "id": 6700215,
+     "nom": "Crème Glacée Vanille 600 ml",
+     "q": 2,
+     "part": 16.7
+    },
+    {
+     "id": 6700217,
+     "nom": "Crème Glacée Spéculoos - 600 ml",
+     "q": 2,
+     "part": 16.7
+    },
+    {
+     "id": 6700216,
+     "nom": "Crème Glacée Chocolat 600 ml",
+     "q": 2,
+     "part": 16.7
+    },
+    {
+     "id": 6700220,
+     "nom": "Sorbet Fraise 600 ml",
+     "q": 1,
+     "part": 8.3
+    },
+    {
+     "id": 6700219,
+     "nom": "Sorbet Passion & Mangue 600 ml",
+     "q": 1,
+     "part": 8.3
+    },
+    {
+     "id": 6700252,
+     "nom": "Crème Glacée Spéculoos - 200 ml",
+     "q": 1,
+     "part": 4.2
+    },
+    {
+     "id": 6700253,
+     "nom": "Crème Glacée Stratiatella - 200 ml",
+     "q": 1,
+     "part": 4.2
+    }
+   ]
+  },
+  {
+   "nom": "Biscuiterie",
+   "groupe": "Biscuiterie",
+   "q": 21,
+   "refs": 4,
+   "produits": [
+    {
+     "id": 3200001,
+     "nom": "Damier - 100 g.",
+     "q": 11,
+     "part": 52.4
+    },
+    {
+     "id": 3200004,
+     "nom": "Leopard - 100 g.",
+     "q": 5,
+     "part": 23.8
+    },
+    {
+     "id": 3200002,
+     "nom": "Swirl - 100g.",
+     "q": 4,
+     "part": 19
+    },
+    {
+     "id": 3200006,
+     "nom": "Amandes & Cannelles - 100 g",
+     "q": 1,
+     "part": 4.8
+    }
+   ]
+  }
+ ],
+ "dayparts": [
+  {
+   "id": 1,
+   "nom": "Matin",
+   "de": "06:00",
+   "a": "11:00"
+  },
+  {
+   "id": 2,
+   "nom": "Midi",
+   "de": "11:00",
+   "a": "13:00"
+  },
+  {
+   "id": 3,
+   "nom": "Après-midi",
+   "de": "14:00",
+   "a": "19:00"
+  }
+ ],
+ "commandes": [
+  {
+   "heure": "06:00",
+   "canal": "compt",
+   "montant": 91.0
+  },
+  {
+   "heure": "07:00",
+   "canal": "compt",
+   "montant": 77.2
+  },
+  {
+   "heure": "13:30",
+   "canal": "cc",
+   "montant": 5.8
+  }
+ ],
+ "demain": {
+  "n": 7,
+  "ca": 523.7
+ }
+}
