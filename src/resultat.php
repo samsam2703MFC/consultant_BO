@@ -135,7 +135,10 @@ function ep_exploitation_periode(): array
                 $j = (string) ($d['date'] ?? '');
                 if ($j === '') { continue; }
                 $ca = (float) ($d['ca'] ?? 0);
-                $parJour[$j] = ['ca' => $ca, 'mb' => (float) ($d['margin_value'] ?? 0),
+                // La marge du panel ne vaut que si son coût est complet ; sinon la journée se
+                // recompose depuis les tickets gravés (svMatiereJour), jamais zéro.
+                $mbConnu = isset($d['margin_value']) && is_numeric($d['margin_value']) && empty($d['cost_unknown']);
+                $parJour[$j] = ['ca' => $ca, 'mb' => $mbConnu ? (float) $d['margin_value'] : null, 'mbConnu' => $mbConnu,
                     'tickets' => (int) ($d['tickets'] ?? 0), 'ouvert' => !empty($d['has_data']) && $ca > 0];
             }
         }
@@ -188,6 +191,7 @@ function ep_exploitation_periode(): array
         if ($ohManque) { $ohJ = 0.0; }
 
         $jours = []; $objectif = 0.0; $attendu = 0.0; $prevu = 0.0; $realise = 0.0; $tickets = 0; $mb = 0.0;
+        $caMb = 0.0; $matEstimes = 0; $matInconnus = 0;   // la matière : le CA des jours qui la portent, les jours recomposés, les jours sans tickets
         $labour = 0.0; $oh = 0.0; $joursOuvertsPasses = 0; $joursHorsMoisC = 0; $sansBudget = [];
         $objAucun = true; $src = null; $ouvertUnJour = false;
         $pro = ['ca' => 0.0, 'tk' => 0, 'lus' => 0, 'jours' => 0];
@@ -211,7 +215,13 @@ function ep_exploitation_periode(): array
                 'aujourdhui' => $d === $auj];
             if ($obj !== null) { $objectif += $obj; if ($passe) { $attendu += $obj; } else { $prevu += $obj; } }
             if ($ouvert) {
-                $realise += $x['ca']; $tickets += $x['tickets']; $mb += $x['mb'];
+                $realise += $x['ca']; $tickets += $x['tickets'];
+                $mbJ = $x['mb'];
+                if (!$x['mbConnu'] && function_exists('svMatiereJour')) {
+                    $zeroM = 0; $eM = svMatiereJour($id, $d, $zeroM, 0);
+                    if ($eM !== null) { $mbJ = $x['ca'] - (float) $eM['estime']; $matEstimes++; }
+                }
+                if ($mbJ !== null) { $mb += $mbJ; $caMb += $x['ca']; } else { $matInconnus++; }
                 $pro['jours']++;
                 $bP = $proJ[$id][$d] ?? null;
                 if ($bP !== null) { $pro['lus']++; $pro['tk'] += count($bP['t']); foreach ($bP['t'] as $tP) { $pro['ca'] += (float) $tP[2]; } }
@@ -229,10 +239,15 @@ function ep_exploitation_periode(): array
                 'objectif' => $objAucun ? null : round($objectif, 2)];
             continue;
         }
-        $fc = $realise - $mb;
+        // Le coût matière de la période : le taux des jours dont la marge est connue ou recomposée,
+        // appliqué à tout le CA ; inconnu si aucun jour ne le porte.
+        $matSrc = $matInconnus === 0 ? ($matEstimes > 0 ? 'recettes vendues sur ' . $matEstimes . ' jour' . ($matEstimes > 1 ? 's' : '') : 'panel')
+            : ($caMb > 0 ? 'taux de ' . ($pro['jours'] - $matInconnus) . ' jour' . ($pro['jours'] - $matInconnus > 1 ? 's' : '') . ' sur ' . $pro['jours'] . ', les autres sans tickets lus' : 'coût matière inconnu : tickets non lus');
+        if ($caMb > 0) { $fc = $realise * ($caMb - $mb) / $caMb; $mb = $realise - $fc; }
+        else { $fc = null; $mb = null; }
         // Le résultat n'est complet que si chaque jour vendu a sa main-d'œuvre
         // et ses frais : hors du mois courant, le panel ne les rend pas.
-        $netOk = $labJ !== null && $ohJ !== null && $joursHorsMoisC === 0 && $joursOuvertsPasses > 0;
+        $netOk = $mb !== null && $labJ !== null && $ohJ !== null && $joursHorsMoisC === 0 && $joursOuvertsPasses > 0;
         $net = $netOk ? $mb - $labour - $oh : null;
         $panier = $tickets > 0 ? $realise / $tickets : null;
         $ecart = $objAucun ? null : $realise - $attendu;
@@ -251,14 +266,14 @@ function ep_exploitation_periode(): array
             'panier' => $panier !== null ? round($panier, 2) : null,
             // Positif : il manque des clients. Négatif : ils sont d'avance.
             'clientsManquants' => ($ecart !== null && $panier !== null && $panier > 0) ? (int) round(-$ecart / $panier) : null,
-            'coutMatiere' => round($fc, 2), 'coutMatierePct' => $pct($fc),
-            'margeBrute' => round($mb, 2), 'margeBrutePct' => $pct($mb),
+            'coutMatiere' => $fc !== null ? round($fc, 2) : null, 'coutMatierePct' => $pct($fc), 'coutMatiereSource' => $matSrc,
+            'margeBrute' => $mb !== null ? round($mb, 2) : null, 'margeBrutePct' => $pct($mb),
             'labour' => $netOk ? round($labour, 2) : null, 'labourPct' => $netOk ? $pct($labour) : null,
             'overhead' => $netOk ? round($oh, 2) : null, 'overheadPct' => $netOk ? $pct($oh) : null,
             'net' => $net !== null ? round($net, 2) : null, 'netPct' => $pct($net),
-            'motifNet' => $netOk ? ($ohManque ? 'frais généraux absents du panel pour ce magasin — résultat avant frais généraux' : null) : ($joursHorsMoisC > 0
+            'motifNet' => $netOk ? ($ohManque ? 'frais généraux absents du panel pour ce magasin — résultat avant frais généraux' : null) : ($mb === null ? 'coût matière inconnu — le panel ne le chiffre pas et les tickets ne sont pas lus' : ($joursHorsMoisC > 0
                 ? 'main-d’œuvre et frais généraux connus pour le mois courant seulement'
-                : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles'),
+                : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles')),
             'joursOuverts' => array_keys($wdOuverts),
             'jours' => $jours] + resProSplit($proJ === null ? null : $pro, $realise, $tickets);
         // Les clients manquants se comptent au comptoir : (CA comptoir − attendu)
@@ -285,7 +300,7 @@ function ep_exploitation_periode(): array
             $proAucun = false; $proR['jours'] += $l['proJours']; $proR['lus'] += $l['proJoursLus'];
             $proR['ca'] += (float) ($l['caPro'] ?? 0); $proR['tk'] += (int) ($l['ticketsPro'] ?? 0);
         }
-        $t['realise'] += $l['realise']; $t['tickets'] += $l['tickets']; $t['fc'] += $l['coutMatiere']; $t['mb'] += $l['margeBrute'];
+        $t['realise'] += $l['realise']; $t['tickets'] += $l['tickets']; $t['fc'] += (float) ($l['coutMatiere'] ?? 0); $t['mb'] += (float) ($l['margeBrute'] ?? 0);
         if ($l['objectif'] !== null) {
             $nObj++; $t['objectif'] += $l['objectif']; $t['attendu'] += $l['attendu']; $t['prevu'] += $l['prevu']; $realiseObj += $l['realise'];
         }
