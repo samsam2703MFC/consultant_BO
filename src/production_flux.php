@@ -151,7 +151,15 @@ function pfJourParams(array $gp, array $pf, int $jour): array
     foreach ($gp['categories'] as $k => $e) {
         $co = array_values(array_filter((array) $e['cuissons'], static fn ($x) => in_array($x, $ids, true)));
         if ($co === [] && (array) $e['cuissons'] !== []) { $co = [$der]; }
-        $cats[(string) $k] = array_merge($e, ['cuissons' => $co]);
+        // Les parts propres d'une cuisson absente ce jour-là vont à la dernière cuisson de la catégorie qui reste.
+        $pa = null;
+        if (is_array($e['parts'] ?? null) && $e['parts'] !== []) {
+            $pa = []; $hors = 0.0;
+            foreach ($e['parts'] as $id => $v) { if (in_array($id, $ids, true)) { $pa[$id] = (float) $v; } else { $hors += (float) $v; } }
+            if ($pa === []) { $pa = [$der => $hors]; } elseif ($hors > 0) { $dc = array_key_last($pa); $pa[$dc] += $hors; }
+            $co = array_keys($pa);
+        }
+        $cats[(string) $k] = array_merge($e, ['cuissons' => $co, 'parts' => $pa]);
     }
     return ['params' => array_merge($gp, ['cuissons' => $C, 'categories' => $cats]), 'minPct' => (float) $j['minPct'] / 100, 'cuissons' => count($C)];
 }
@@ -398,7 +406,7 @@ function ep_production_flux_params(): array
     $cats = [];
     foreach ($gp['categories'] as $k => $e) {
         $cats[] = ['cle' => (string) $k, 'nom' => $e['nom'], 'catId' => $e['catId'], 'groupe' => $e['catId'] > 0 ? (string) ($cc[$e['catId']]['groupe'] ?? '') : '',
-            'cuissons' => $e['cuissons'], 'plaque' => $e['plaque'], 'limite' => $e['limite'], 'auto' => $e['auto'],
+            'cuissons' => $e['cuissons'], 'parts' => $e['parts'] ?? null, 'plaque' => $e['plaque'], 'limite' => $e['limite'], 'auto' => $e['auto'],
             'veille' => in_array((string) $k, $pf['veille'], true), 'garde' => in_array((string) $k, $pf['garde'], true), 'stockMin' => (int) ($pf['stockMin'][(string) $k] ?? 0)];
     }
     // Les produits à régler : ceux de la base (vendus ces semaines-là) et les obligatoires.

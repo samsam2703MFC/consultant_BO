@@ -145,3 +145,7 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-pied select{font:600 12px var(--font-ui);padding:4px 6px;border-radius:6px;border:.5px solid var(--pf-trait2);background:#fff}
 .pf-tab b.or{color:#7d6310}
 .pf-tab .pf-tag{white-space:nowrap}
+/* Les parts de cuisson par catégorie (demande du 03/10/2026). */
+.pf-in.pct{width:58px;text-align:right}
+.pf-in.pct.def::placeholder{color:#a9a29a}
+.pf-in.pct.def{background:#faf7f2}
