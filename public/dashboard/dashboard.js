@@ -915,7 +915,8 @@
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
     if (S.vue === 'jour' || coPer()) { h += murR([murCanaux(), murOffres()]); }
-    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
+    // Vue Jour : rien que le jour — le résumé de la semaine a son onglet.
+    if (S.vue === 'jour') { murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
       murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
@@ -1068,7 +1069,7 @@
   const STATUT_CO = { 'remise': 'ok', 'livrée': 'ok', 'en route': 'enc', 'prête': 'enc', 'en préparation': 'att', 'à préparer': 'att' };
   const JOURS_CO = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
   const ceJour = () => S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-  /** Le corps de la carte : les 14 derniers jours empilés par canal, et la liste des commandes webshop du jour. */
+  /** Le corps de la carte : en vue Jour la liste des commandes du jour ; en Semaine et Mois, les jours empilés par canal et le tableau par jour ou par semaine. */
   function canauxCorps(C) {
     const per = coPer(), mois = S.vue === 'mois', J = per ? C.periode : C.jour;
     const serie = C.serie || [], max = Math.max(1, ...serie.map(s => (s.comptoir || 0) + s.cc + s.liv));
@@ -1095,7 +1096,9 @@
     const nW = J.cc.n + J.liv.n, nTot = per ? (C.nCommandes || 0) : L.length, nC = nTot - (C.nWebshop || 0);
     const AV = per ? C.aVenir : C.demain, avLib = per ? 'à venir : ' : 'demain : ';
     const pied = [nTot ? nTot + ' commande' + (nTot > 1 ? 's' : '') + (per ? ' sur ' + perLib() : '') + (nC ? ' dont ' + nC + ' au comptoir' : '') : (per ? 'aucune commande sur ' + perLib() : ''), nW ? 'webshop ' + fE(J.webshop) : '', C.aPreparer ? `<b>${C.aPreparer} à préparer</b>` : '', AV && AV.n ? avLib + AV.n + ' commande' + (AV.n > 1 ? 's' : '') + ' déjà prise' + (AV.n > 1 ? 's' : '') + ' (' + fE(AV.ca) + ')' : ''].filter(Boolean).join(' · ');
-    return `<div class="co-corps"><div><span class="db-lab">${per ? (mois ? 'Le mois' : 'La semaine') + ' — jour par jour, par canal' : 'Les 14 derniers jours — par canal'}</span>${piles}</div><div><span class="db-lab">${titre}</span>${table}${pied ? `<div class="db-mini" style="margin-top:8px">${pied}</div>` : ''}</div></div>`;
+    // En vue Jour, rien que le jour : pas de série sur 14 jours.
+    const gauche = per ? `<div><span class="db-lab">${(mois ? 'Le mois' : 'La semaine') + ' — jour par jour, par canal'}</span>${piles}</div>` : '';
+    return `<div class="co-corps${per ? '' : ' un'}">${gauche}<div><span class="db-lab">${titre}</span>${table}${pied ? `<div class="db-mini" style="margin-top:8px">${pied}</div>` : ''}</div></div>`;
   }
   /**
    * La carte « Commandes et canaux » : le comptoir (tickets caisse, dont clients pro), le click &
@@ -1136,20 +1139,22 @@
     if (!O) { return `<div class="db-card db-offres"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${err ? esc(err) : (S.enCours[cle] || !S.aux[cle] ? 'lecture des tickets…' : esc((S.aux[cle] || {}).error || 'lecture impossible'))}</span></div></div>`; }
     const L = O.offres, K = O.kpi || {};
     const PJ = O.periodeJours || {}, F = O.fen || {};
-    if (!L.length) { return `<div class="db-card db-offres"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(mini)}</span></div><div class="db-mini" style="padding:0 16px 14px">Aucune offre sur ${per ? lp : 'les 7 derniers jours'} : pas de bundle vendu${PJ.lus != null ? ' (' + PJ.lus + ' jour' + (PJ.lus > 1 ? 's' : '') + ' de tickets lu' + (PJ.lus > 1 ? 's' : '') + (PJ.jours ? ' sur ' + PJ.jours : '') + ')' : ''}, pas de promotion posée dans le cockpit.</div></div>`; }
+    if (!L.length) { return `<div class="db-card db-offres"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(mini)}</span></div><div class="db-mini" style="padding:0 16px 14px">Aucune offre en cours${per ? ' sur ' + lp : ''} : pas de bundle vendu${PJ.lus != null ? ' (' + PJ.lus + ' jour' + (PJ.lus > 1 ? 's' : '') + ' de tickets lu' + (PJ.lus > 1 ? 's' : '') + (PJ.jours ? ' sur ' + PJ.jours : '') + ')' : ''}, pas de promotion posée dans le cockpit.</div></div>`; }
     const spark = s => { const mx = Math.max(1, ...s); return `<span class="co-spark${s.length > 7 ? ' l' : ''}">${s.map((v, i) => `<i class="${i === s.length - 1 ? 'auj' : ''}" style="height:${Math.max(2, Math.round(100 * v / mx))}%"></i>`).join('')}</span>`; };
     const delta = o => o.delta == null ? '' : `<span class="co-d ${o.delta >= 0 ? 'ok' : 'ko'}">${o.delta >= 0 ? '+' : '−'}${nf(Math.abs(o.delta), 0)} %</span> `;
     const margeCoul = v => v >= 60 ? '#2d7a3e' : v >= 50 ? '#B26A00' : '#C0182B';
     const q = x => x == null ? '' : nf(x, 0);
-    const lignes = L.map(o => { const v = OFFRE_VERDICT[o.verdict] || OFFRE_VERDICT.tot; const auj = o.auj || {}, sept = o.sept || {}, pe = o.periode || {}; return `<tr><td class="off"><span class="co-type ${o.type === 'bundle' ? 'b' : 'p'}">${o.type === 'bundle' ? 'Bundle' : 'Promo'}</span><b style="display:inline">${esc(o.nom)}</b><small>${esc(o.regle || '')}</small></td><td>${(o.canaux || []).map(canalTag).join(' ')}</td><td class="mu">${o.depuis ? fD(o.depuis) : '—'}</td>${per ? `<td class="n">${pe.pieces != null ? '<b>' + q(pe.pieces) + '</b> · ' : ''}${fE(pe.ca)}</td>` : `<td class="n">${auj.ca || auj.pieces ? (auj.pieces != null ? q(auj.pieces) + ' · ' : '') + fE(auj.ca) : '<span class="mu">pas ce jour</span>'}</td><td class="n">${sept.pieces != null ? '<b>' + q(sept.pieces) + '</b> · ' : ''}${fE(sept.ca)}</td>`}<td class="n">${o.marge != null ? `<span style="color:${margeCoul(o.marge)};font-weight:600">${fP0(o.marge)}</span>${o.coef != null ? ` <span class="mu">× ${nf(o.coef, 2)}</span>` : ''}` : '<span class="mu">—</span>'}</td><td>${spark(o.spark || [])}</td><td>${delta(o)}<span class="db-mini">${esc(o.mot || '')}</span></td><td><span class="co-verdict ${v[1]}">${v[0]}</span></td></tr>`; }).join('');
-    const piecesJ = L.reduce((a, o) => a + ((o.auj || {}).pieces || 0), 0);
+    const lignes = L.map(o => { const v = OFFRE_VERDICT[o.verdict] || OFFRE_VERDICT.tot; const auj = o.auj || {}, pe = o.periode || {}; return `<tr><td class="off"><span class="co-type ${o.type === 'bundle' ? 'b' : 'p'}">${o.type === 'bundle' ? 'Bundle' : 'Promo'}</span><b style="display:inline">${esc(o.nom)}</b><small>${esc(o.regle || '')}</small></td><td>${(o.canaux || []).map(canalTag).join(' ')}</td><td class="mu">${o.depuis ? fD(o.depuis) : '—'}</td>${per ? `<td class="n">${pe.pieces != null ? '<b>' + q(pe.pieces) + '</b> · ' : ''}${fE(pe.ca)}</td>` : `<td class="n">${auj.ca || auj.pieces ? (auj.pieces != null ? '<b>' + q(auj.pieces) + '</b> · ' : '') + fE(auj.ca) : '<span class="mu">pas ce jour</span>'}</td>`}<td class="n">${o.marge != null ? `<span style="color:${margeCoul(o.marge)};font-weight:600">${fP0(o.marge)}</span>${o.coef != null ? ` <span class="mu">× ${nf(o.coef, 2)}</span>` : ''}` : '<span class="mu">—</span>'}</td>${per ? `<td>${spark(o.spark || [])}</td>` : ''}<td>${delta(o)}<span class="db-mini">${esc(o.mot || '')}</span></td><td><span class="co-verdict ${v[1]}">${v[0]}</span></td></tr>`; }).join('');
+    const piecesJ = L.reduce((a, o) => a + ((o.auj || {}).pieces || 0), 0), nVendues = L.filter(o => (o.auj || {}).ca > 0 || (o.auj || {}).pieces > 0).length;
+    // En vue Jour, les chiffres du jour seulement ; la marge et le verdict restent l'avis porté sur l'offre.
     const kpi = `<div class="db-obj-t4 co-kpi">
-      <div><div class="k">CA des offres · ${per ? lp : '7 jours'}</div><div class="v">${fE(K.ca)}</div><div class="s">${K.part != null ? fP(K.part) + ' du CA ' + (S.vue === 'mois' ? 'du mois' : 'de la semaine') : '—'}${K.pieces ? ' · ' + nf(K.pieces, 0) + ' pièces' : ''}</div></div>
-      ${per ? `<div><div class="k">Par jour lu</div><div class="v">${fE(PJ.lus ? K.ca / PJ.lus : 0)}</div><div class="s">${PJ.lus || 0} jour${PJ.lus > 1 ? 's' : ''} de tickets lu${PJ.lus > 1 ? 's' : ''}${PJ.jours ? ' sur ' + PJ.jours : ''}</div></div>` : `<div><div class="k">${S.date === AUJ ? 'Aujourd’hui' : 'Ce jour'}</div><div class="v">${fE(K.caJour)}</div><div class="s">${piecesJ ? nf(piecesJ, 0) + ' pièces' : 'pas de vente ce jour'}</div></div>`}
-      <div><div class="k">Marge brute des offres</div><div class="v">${K.marge != null ? fP0(K.marge) : '—'}</div><div class="s">${K.marge != null && K.marge < 100 ? 'coef × ' + nf(1 / (1 - K.marge / 100), 2) + ' · sur les bundles, ' + (F.jours ? F.jours + ' jours' : '7 jours') : 'coût matière inconnu'}</div></div>
+      ${per ? `<div><div class="k">CA des offres · ${lp}</div><div class="v">${fE(K.ca)}</div><div class="s">${K.part != null ? fP(K.part) + ' du CA ' + (S.vue === 'mois' ? 'du mois' : 'de la semaine') : '—'}${K.pieces ? ' · ' + nf(K.pieces, 0) + ' pièces' : ''}</div></div>
+      <div><div class="k">Par jour lu</div><div class="v">${fE(PJ.lus ? K.ca / PJ.lus : 0)}</div><div class="s">${PJ.lus || 0} jour${PJ.lus > 1 ? 's' : ''} de tickets lu${PJ.lus > 1 ? 's' : ''}${PJ.jours ? ' sur ' + PJ.jours : ''}</div></div>` : `<div><div class="k">CA des offres · ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}</div><div class="v">${fE(K.caJour)}</div><div class="s">${piecesJ ? nf(piecesJ, 0) + ' pièce' + (piecesJ > 1 ? 's' : '') : 'pas de vente ce jour'}</div></div>
+      <div><div class="k">Vendues ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}</div><div class="v">${nVendues} / ${L.length}</div><div class="s">offre${nVendues > 1 ? 's' : ''} avec au moins une vente</div></div>`}
+      <div><div class="k">Marge brute des offres</div><div class="v">${K.marge != null ? fP0(K.marge) : '—'}</div><div class="s">${K.marge != null && K.marge < 100 ? 'coef × ' + nf(1 / (1 - K.marge / 100), 2) + ' · sur les bundles' + (per && F.jours ? ', ' + F.jours + ' jours' : '') : 'coût matière inconnu'}</div></div>
       <div><div class="k">Actives</div><div class="v">${K.bundles || 0} + ${K.promos || 0}</div><div class="s">${K.bundles || 0} bundle${K.bundles > 1 ? 's' : ''}, ${K.promos || 0} promotion${K.promos > 1 ? 's' : ''}${K.aAjuster ? ' · <b>' + K.aAjuster + ' à ajuster</b>' : ''}</div></div></div>`;
     return `<div class="db-card db-offres${K.aAjuster ? ' att' : ''}"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(mini)}</span></div>${kpi}
-      <div class="co-defil"><table class="db-pro-tab co-tab"><thead><tr><th>Offre</th><th>Canaux</th><th>Depuis</th>${per ? `<th class="n">${S.vue === 'mois' ? 'Le mois' : 'La semaine'}</th>` : `<th class="n">${S.date === AUJ ? 'Aujourd’hui' : 'Ce jour'}</th><th class="n">7 jours</th>`}<th class="n">Marge</th><th>${per ? 'Jour par jour' : '7 jours'}</th><th>Face à la référence</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div>
+      <div class="co-defil"><table class="db-pro-tab co-tab"><thead><tr><th>Offre</th><th>Canaux</th><th>Depuis</th>${per ? `<th class="n">${S.vue === 'mois' ? 'Le mois' : 'La semaine'}</th>` : `<th class="n">${S.date === AUJ ? 'Aujourd’hui' : 'Ce jour'}</th>`}<th class="n">Marge</th>${per ? '<th>Jour par jour</th>' : ''}<th>Face à la référence</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div>
       <div class="db-leg" style="padding-top:10px"><span><span class="co-verdict ok">Garder</span> l’offre rapporte : ≥ +8 % face à la référence, ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous ${CO_SEUIL_MARGE} %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div></div>`;
   }
   /** Les tuiles du mur mobile : le webshop du jour, et les offres sur 7 jours. */
@@ -1157,15 +1162,19 @@
     const C = canauxData(), cle = cleCanaux();
     if (!C || C.indispo) { return murC('Webshop', C ? '—' : '…', C ? 'panel muet' : (S.err[cle] ? esc(S.err[cle]) : 'lecture des commandes…')); }
     const per = coPer(), J = per ? C.periode : C.jour, n = J.cc.n + J.liv.n, Q = C.quatorze || {};
-    return murC('Webshop', n ? fK(J.webshop) : '0', n ? J.cc.n + ' click & collect · ' + J.liv.n + ' livraison' + (J.part != null ? ' · ' + fP(J.part) + ' du CA' : '') + (C.aPreparer ? ' · <b>' + C.aPreparer + ' à préparer</b>' : '') : 'aucune commande ' + (per ? 'sur ' + perLib() : ceJour()) + (!per && Q.webshop ? ' · 14 j : ' + fK(Q.webshop) : ''), C.aPreparer ? 'wa' : '');
+    return murC('Webshop', n ? fK(J.webshop) : '0', n ? J.cc.n + ' click & collect · ' + J.liv.n + ' livraison' + (J.part != null ? ' · ' + fP(J.part) + ' du CA' : '') + (C.aPreparer ? ' · <b>' + C.aPreparer + ' à préparer</b>' : '') : 'aucune commande ' + (per ? 'sur ' + perLib() : ceJour()), C.aPreparer ? 'wa' : '');
   }
   function murOffres() {
     const O = offresData(), cle = cleOffres();
     if (!O) { return murC('Offres', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
     const K = O.kpi || {};
     const per = coPer();
-    if (!O.offres.length) { return murC('Offres', '0', 'aucun bundle vendu, aucune promotion sur ' + (per ? perLib() : '7 jours')); }
-    return murC('Offres', fK(K.ca), (K.bundles || 0) + ' bundle' + (K.bundles > 1 ? 's' : '') + ' · ' + (K.promos || 0) + ' promo' + (K.promos > 1 ? 's' : '') + ' · ' + (per ? perLib() : '7 j') + (K.part != null ? ' · ' + fP(K.part) + ' du CA' : '') + (K.aAjuster ? ' · <b>' + K.aAjuster + ' à ajuster</b>' : ''), K.aAjuster ? 'wa' : 'ok');
+    if (!O.offres.length) { return murC('Offres', '0', 'aucune offre en cours' + (per ? ' sur ' + perLib() : '')); }
+    if (!per) {
+      const nV = O.offres.filter(o => (o.auj || {}).ca > 0 || (o.auj || {}).pieces > 0).length;
+      return murC('Offres', fK(K.caJour), nV + ' vendue' + (nV > 1 ? 's' : '') + ' ' + ceJour() + ' sur ' + O.offres.length + ' · ' + (K.bundles || 0) + ' bundle' + (K.bundles > 1 ? 's' : '') + ', ' + (K.promos || 0) + ' promo' + (K.promos > 1 ? 's' : '') + (K.aAjuster ? ' · <b>' + K.aAjuster + ' à ajuster</b>' : ''), K.aAjuster ? 'wa' : 'ok');
+    }
+    return murC('Offres', fK(K.ca), (K.bundles || 0) + ' bundle' + (K.bundles > 1 ? 's' : '') + ' · ' + (K.promos || 0) + ' promo' + (K.promos > 1 ? 's' : '') + ' · ' + perLib() + (K.part != null ? ' · ' + fP(K.part) + ' du CA' : '') + (K.aAjuster ? ' · <b>' + K.aAjuster + ' à ajuster</b>' : ''), K.aAjuster ? 'wa' : 'ok');
   }
 
   /* --- les clients pro (B2B) : ce que les tickets du panel disent des ventes aux sociétés --- */
@@ -1189,18 +1198,19 @@
     const J = P.jour, M = P.mois || {};
     const detail = mobile === 'detail';
     const rienJour = !J || !J.ticketsPro, rienMois = !(M.ticketsPro > 0);
-    const sous = `tickets portés par un client dont la fiche est professionnelle · ${M.jours ? '30 jours : ' + (M.part != null ? fP(M.part) + ' du CA, ' : '') + fE(M.caPro) + ' sur ' + fN(M.ticketsPro) + ' tickets' : 'aucun jour lu sur 30 jours'}${M.manquants ? ' · ' + M.manquants + ' jour' + (M.manquants > 1 ? 's' : '') + ' non lu' + (M.manquants > 1 ? 's' : '') : ''}`;
-    if (rienJour && rienMois) {
-      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} ni sur les 30 derniers jours lus.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
+    // La vue Jour ne parle que du jour choisi : ni les 30 jours, ni les comptes, ni la série (demande du 03/10/2026).
+    const sous = 'tickets portés par un client dont la fiche est professionnelle';
+    if (rienJour) {
+      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
       if (detail) { return t; }
       return mobile ? `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${t}</div>` : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${t}</div>`;
     }
     // Dans le bloc fusionné, le CA pro et le comptoir sont déjà en tête : le détail ne les répète pas.
     const kpi = detail ? (J ? `<div class="db-obj-t4 db-pro-kpi">
-        <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
-        <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${M.panierPro != null ? '30 jours : ' + fU(M.panierPro) : ''}</div></div>
+        <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">sur ${fN(J.tickets)} ticket${J.tickets > 1 ? 's' : ''} ${auj ? 'aujourd’hui' : 'ce jour'}</div></div>
+        <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'contre ' + fU(J.panierComptoir) + ' au comptoir' : ''}</div></div>
         <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
-        <div><div class="k">30 jours</div><div class="v">${M.part != null ? fP(M.part) : '—'}</div><div class="s">${M.jours ? fE(M.caPro) + ' de CA pro sur ' + fN(M.ticketsPro) + ' tickets' : 'aucun jour lu'}</div></div>
+        <div><div class="k">Sociétés</div><div class="v">${fN(J.societes)}</div><div class="s">servie${J.societes > 1 ? 's' : ''} ${auj ? 'aujourd’hui' : 'ce jour'}</div></div>
       </div>` : `<div class="db-mini" style="padding:10px 16px 0">Les tickets de ce jour ne sont pas lus.</div>`) : J ? `<div class="db-obj-t4 db-pro-kpi">
         <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
         <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">sur ${fN(J.tickets)} · ${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
@@ -1210,13 +1220,9 @@
     const tickets = J && Array.isArray(J.liste) ? J.liste : [];
     const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
       ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th>Société</th><th class="n">Montant</th><th></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="nom">${esc(t.societe || 'sans nom')}</td><td class="n">${fU(t.montant)}</td><td>${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="4" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
-    const comptes = Array.isArray(M.comptes) ? M.comptes : [];
-    const droite = `<div><span class="db-lab">Les comptes — 30 jours</span>
-      ${comptes.length ? `<table class="db-pro-tab"><thead><tr><th>Société</th><th class="n">Tickets</th><th class="n">CA</th><th class="n">Dernier</th></tr></thead><tbody>${comptes.slice(0, mobile ? 6 : 9).map(c => { const vieux = (new Date(S.date + 'T12:00:00') - new Date(c.dernier + 'T12:00:00')) / 86400000 > 21; return `<tr><td class="nom">${esc(c.societe)}</td><td class="n">${fN(c.n)}</td><td class="n">${fE(c.ca)}</td><td class="n ${vieux ? 'att' : 'mu'}">${fD(c.dernier)}</td></tr>`; }).join('')}</tbody></table>` : '<div class="db-mini" style="margin-top:6px">Aucun compte pro sur 30 jours.</div>'}
-      ${proSerie(P.serie) ? `<div style="margin-top:12px"><span class="db-lab">La part pro, jour par jour</span>${proSerie(P.serie)}<div class="db-mini" style="margin-top:4px">${M.part != null ? fP(M.part) + ' du CA sur ' + M.jours + ' jours lus' : ''}${M.panierPro != null ? ' · panier pro ' + fU(M.panierPro) : ''} · en orange, un compte sans commande depuis trois semaines</div></div>` : ''}</div>`;
     // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
-    if (detail) { return `${M.manquants ? `<div class="db-mini db-pro-def">${M.manquants} jour${M.manquants > 1 ? 's' : ''} non lu${M.manquants > 1 ? 's' : ''} sur les 30 derniers</div>` : ''}${kpi}<div class="db-pro-corps">${gauche}${droite}</div>`; }
-    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div></div>`; }
+    if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>`; }
+    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div></div>`; }
     // Sur ordinateur, la carte se replie : l'en-tête garde le jour en une
     // ligne (CA pro, sa part, clients, à facturer) et le mois ; le clic
     // déplie les chiffres, les tickets, les comptes et la série.
@@ -1224,7 +1230,7 @@
     const resume = J ? (J.ticketsPro
       ? `<b class="pro">${fE(J.caPro)}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
       : `aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} · comptoir ${fE(J.ca)}`) : 'tickets du jour non lus';
-    const mois = M.jours ? ' · 30 jours : ' + (M.part != null ? fP(M.part) + ' du CA' : fE(M.caPro)) : '';
+    const mois = '';
     return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
       <span class="db-cdr" style="padding:0;margin-left:auto">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>
       ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div>` : ''}</div>`;
@@ -1263,7 +1269,7 @@
     const pro = !!(J && J.ticketsPro) || (m.ticketsPro > 0);
     if (!X.lu) { return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span>${bascule}</div>${deplie}</div>`; }
     const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i></div>` : '';
-    const plusP = jour && P ? [J && J.aFacturer ? 'à facturer ' + fE(J.aFacturer) : '', M.jours && M.part != null ? '30 jours : ' + fP(M.part) + ' du CA' : ''].filter(Boolean).join(' · ') : '';
+    const plusP = jour && P ? [J && J.aFacturer ? 'à facturer ' + fE(J.aFacturer) : ''].filter(Boolean).join(' · ') : '';
     return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
       <div class="db-split-g"><div class="c"><div class="k">Comptoir</div><div class="v">${m.caComptoir != null ? fK(m.caComptoir) : '—'}</div><div class="s">${X.sC}</div></div>
       <div class="p"><div class="k">Clients pro B2B</div><div class="v">${fK(m.caPro)}</div><div class="s">${X.sP}${plusP ? '<br>' + esc(plusP) : ''}</div></div></div>${deplie}</div>`;
@@ -1273,8 +1279,8 @@
     const P = proData(), cle = clePro();
     if (!P) { return murC('Clients pro', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
     const J = P.jour, M = P.mois || {};
-    if (!J) { return murC('Clients pro', '—', 'tickets du jour non lus' + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) + ' du CA' : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, '', 'prodrop'); }
-    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + (M.ticketsPro ? ' · 30 j : ' + fP(M.part) : '') + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
+    if (!J) { return murC('Clients pro', '—', 'tickets du jour non lus' + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, '', 'prodrop'); }
+    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
   }
 
   /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
