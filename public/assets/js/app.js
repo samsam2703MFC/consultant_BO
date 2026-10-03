@@ -2746,12 +2746,13 @@ class App {
       oc.kpi.push(['CA des offres', fE(K.ca), (K.part != null ? fP(K.part) + ' du CA ' + libPer : '—') + (per !== 'jour' && K.caJour ? ' · aujourd’hui ' + fE(K.caJour) : '')]);
       const VERD = { garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'], tot: ['Trop tôt', 'tot'] };
       oc.offres = (O.offres || []).map(o => {
-        const cells = M.map(m => { const v = o.magasins[m.shop]; if (!v) { return { txt: '', verdict: '' }; } const verd = VERD[v.verdict] || VERD.tot; return { txt: v.pieces != null ? nf(v.pieces) : fE(v.ca), sous: v.pieces != null ? fE(v.ca) : '', verdict: verd[1], titre: verd[0] + ' · ' + (v.mot || '') }; });
+        const dlt = v => v.delta == null ? '' : (v.delta >= 0 ? '+' : '−') + nf(Math.abs(v.delta)) + ' % ';
+        const cells = M.map(m => { const v = o.magasins[m.shop]; if (!v) { return { txt: '', verdict: '' }; } const verd = VERD[v.verdict] || VERD.tot; return { txt: v.pieces != null ? nf(v.pieces) : fE(v.ca), sous: v.pieces != null ? fE(v.ca) : '', verdict: verd[1], titre: m.nom + ' : ' + verd[0] + ' · ' + dlt(v) + (v.mot || '') }; });
         const comptes = {}; Object.values(o.magasins).forEach(v => { comptes[v.verdict] = (comptes[v.verdict] || 0) + 1; });
         const verdicts = ['garder', 'ajuster', 'arreter', 'tot'].filter(k => comptes[k]).map(k => ({ lib: VERD[k][0], cls: VERD[k][1], n: comptes[k] }));
         const premier = Object.values(o.magasins)[0] || {};
         return { type: o.type, typeLib: o.type === 'bundle' ? 'Bundle' : 'Promo', nom: o.nom, regle: o.regle || '', canaux: (o.canaux || []).map(c => ({ lib: { comptoir: 'Comptoir', cc: 'Click & collect', liv: 'Livraison', webshop: 'Webshop' }[c] || c, cls: { comptoir: 'c', cc: 'w', liv: 'l', webshop: 'w' }[c] || 'c' })),
-          cells, total: o.pieces ? nf(o.pieces) : fE(o.ca), totalSous: o.pieces ? fE(o.ca) : '', verdicts, mot: Object.keys(o.magasins).length === 1 ? (premier.mot || '') : '' };
+          cells, total: o.pieces ? nf(o.pieces) : fE(o.ca), totalSous: o.pieces ? fE(o.ca) : '', verdicts, mot: Object.keys(o.magasins).length === 1 ? dlt(premier) + (premier.mot || '') : '' };
       });
       if (!oc.offres.length) { oc.vide = 'Aucune offre ' + libPer + ' : pas de bundle vendu dans les tickets, pas de promotion posée sur les jours creux.'; }
       oc.okpi = K;
