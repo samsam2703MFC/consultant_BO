@@ -168,3 +168,16 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-leg i.late{background:var(--pf-ko)}.pf-leg i.gvl{border-left:1.5px dashed var(--pf-ko);width:0 !important;background:none}
 @media (max-width:900px){.pf-gantt .gl{flex-basis:96px}}
 .pf-gantt .gl small.ut{color:#555;font-weight:600}
+/* Le Gantt des opérateurs et les étapes (demande du 03/10/2026). */
+.pf-gantt i.gs{position:absolute;top:3px;bottom:3px;background:rgba(45,122,62,.08);border-left:2px solid rgba(45,122,62,.35);border-right:2px solid rgba(45,122,62,.35);border-radius:4px}
+.pf-gantt .gb.hs{box-shadow:0 0 0 2px var(--pf-att)}
+.pf-gantt .gb.ap{opacity:.85;background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.14) 0 3px,transparent 3px 8px)}
+.pf-gantt .gb.late.hs{box-shadow:0 0 0 2px var(--pf-ko)}
+.pf-leg i.hs{background:#fff;box-shadow:inset 0 0 0 2px var(--pf-att)}.pf-leg i.gsl{background:rgba(45,122,62,.15);box-shadow:inset 2px 0 0 rgba(45,122,62,.45)}
+.pf-tuiles>div.op{border-left-color:var(--pf-ok)}
+.pf-tab.etapes tr.etc td{background:#faf7f2;font-weight:600}
+.pf-tab.etapes tr.et td{border-top:none;padding-top:3px;padding-bottom:3px}
+.pf-tab.etapes .pf-in{width:170px}.pf-tab.etapes .pf-in.court{width:64px}
+.pf-tab td.nom small{display:block;font-size:10px;color:#888;font-weight:500}
+.pf-ct select{font:600 11.5px var(--font-ui);padding:5px 8px;border-radius:8px;border:.5px solid var(--pf-trait2);background:#fff;margin-left:auto}
+.pf-in[type=time]{width:104px}
