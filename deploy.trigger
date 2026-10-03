@@ -514,3 +514,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T05:59:11Z tablette vendeuses : accueil en vignettes et cartes de bundles
 2026-10-03T06:30:44Z tablette vendeuses : fiche produit, vente additionnelle, arguments et bundles
 2026-10-03T06:45:00Z ventes par categorie : pourcentages entiers et coefficient
+2026-10-03T07:34:57Z canaux et offres : commandes par canal, promotions et bundles (dashboard + cockpit)
