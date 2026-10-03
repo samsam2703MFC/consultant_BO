@@ -1472,7 +1472,7 @@
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
     return `<div class="db-cascade">
       ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
-      ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues', fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
+      ${ligne('− Coût matière', (se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues') + (m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''), m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
       ${ligne('− Main-d’œuvre', (se.labour != null ? 'seuil ' + fP(se.labour) : '') + (m.labourSource ? ' · ' + esc(m.labourSource) : ''), m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
       ${ligne('− Frais généraux', (se.overhead != null ? 'seuil ' + fP(se.overhead) : '') + (m.overheadSource ? ' · ' + esc(m.overheadSource) : ''), m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
@@ -1483,7 +1483,7 @@
     const ov = m.overhead == null ? null : m.overhead;
     return `<div class="db-casc">
       <div><div class="k">Chiffre d’affaires</div><div class="v">${fK(m.ca != null ? m.ca : m.realise)}</div><div class="s">${m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : ''}</div></div>
-      <div><div class="k">− Coût matière</div><div class="v">${fK(m.coutMatiere)}</div><div class="s">${fP(m.coutMatierePct)} · food cost</div></div>
+      <div><div class="k">− Coût matière</div><div class="v">${fK(m.coutMatiere)}</div><div class="s">${fP(m.coutMatierePct)} · food cost${m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''}</div></div>
       <div><div class="k">= Marge brute</div><div class="v">${fK(m.margeBrute)}</div><div class="s">${fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null))}</div></div>
       <div><div class="k">− Personnel</div><div class="v">${fK(m.labour)}</div><div class="s">${fP(m.labourPct)}${m.labourSource ? ' · ' + esc(m.labourSource) : ''}</div></div>
       <div><div class="k">− Frais généraux</div><div class="v">${fK(ov)}</div><div class="s">${fP(m.overheadPct)}${m.overheadSource ? ' · ' + esc(m.overheadSource) : ''}</div></div>
