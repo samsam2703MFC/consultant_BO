@@ -425,9 +425,17 @@ rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand ri
 
 ### `/production/plan` — la gestion de production (module franchisé)
 
-Demande du 03/10/2026, maquettes `docs/maquettes/gestion-production`. Écran : dashboard magasin, onglet
-**Production** (ordinateur seulement, pas de version téléphone), trois sous-onglets : Plan du jour, Suivi et
-recuissons, Paramètres.
+Demande du 03/10/2026, maquettes `docs/maquettes/gestion-production`. Écran : **cockpit, rail ERP franchisé ›
+Gestion de production** (sous-menu : Plan du jour, Suivi et recuissons, Paramètres ; `#/production-plan`,
+`#/production-suivi`, `#/production-parametres`), un magasin et un jour choisis dans la barre (‹ › Aujourd'hui,
+Demain, jusqu'à sept jours devant). L'écran charge la page du dashboard en mode intégré
+(`dashboard/?embed=1&shop=&date=&onglet=plan|suivi|params` : ni entête ni onglets) — la même page servira telle
+quelle côté franchisé. Le dashboard magasin n'a plus d'onglet Production (ni Campagne, ni Plan d'action).
+
+Les lignes du plan portent `groupe` (la section : le groupe de la catégorie au panel), `prix` (prix de vente du
+magasin, `products/available`, la moyenne du réseau à défaut) et `ca` = pièces à sortir × prix ; chaque cuisson,
+`total.ca` et `total.sansPrix`. L'écran range section › catégorie › produit, avec le sous-total de chaque catégorie,
+le total de chaque section et le total de la cuisson, en pièces, plaques et CA.
 
 `GET /production/plan?shop=4&date=YYYY-MM-DD` (aujourd'hui par défaut, jusqu'à 7 jours devant) :
 

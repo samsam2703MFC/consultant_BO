@@ -247,7 +247,8 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
         $x = $cat['produits'][$pid] ?? null;
         $catId = (int) ($x['catId'] ?? 0); $catNom = (string) ($x['cat'] ?? '');
         if ($catNom === '' && function_exists('svCategories')) { $catNom = (string) (svCategories()[$pid] ?? ''); }
-        $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $catId, 'cat' => $catNom !== '' ? $catNom : 'Sans catégorie', 'catCle' => gpCleCat($catId, $catNom !== '' ? $catNom : 'Sans catégorie'), 'h' => $h];
+        $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $catId, 'cat' => $catNom !== '' ? $catNom : 'Sans catégorie', 'catCle' => gpCleCat($catId, $catNom !== '' ? $catNom : 'Sans catégorie'),
+            'groupe' => $catId > 0 ? (string) ($cat['categories'][$catId]['groupe'] ?? '') : '', 'h' => $h];
     }
     $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods];
     if ($manquants === []) { gpEcrire($cle, ['ts' => time(), 'b' => $b]); }
@@ -387,6 +388,14 @@ function gpValider(array $p): array
     return [true, null, ['cuissons' => $out, 'categories' => $cats, 'regles' => $r]];
 }
 
+/** Le prix de vente de chaque produit dans ce magasin (products/available), la moyenne du réseau à défaut : [pid => €]. */
+function gpPrix(int $sid): array
+{
+    $m = function_exists('cataloguePrixMagasin') ? cataloguePrixMagasin($sid) : [];
+    $r = function_exists('cataloguePrix') ? cataloguePrix() : [];
+    return $m + $r;
+}
+
 /** Arrondi à la plaque : [plaques|null, pièces à sortir]. */
 function gpArrondi(float $aCuire, ?int $plaque, int $minPlaques): array
 {
@@ -413,7 +422,7 @@ function gpCmdZone(array $cmds, int $pid, float $a, float $b): array
  * part, prévu + sécurité, commandes, webshop, stock estimé, à cuire, plaques. `faits` (ce qui
  * a été réellement enfourné, validé à l'écran) remplace la sortie prévue pour le stock suivant.
  */
-function gpPlan(array $params, array $base, array $cmds, array $faits = []): array
+function gpPlan(array $params, array $base, array $cmds, array $faits = [], array $prix = []): array
 {
     $C = $params['cuissons']; $R = $params['regles'];
     $sec = 1 + (float) $R['securite'] / 100; $minPl = (int) $R['minPlaques'];
@@ -421,12 +430,15 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = []): arr
     if (!$R['webshop']) { $cmds = array_values(array_filter($cmds, static fn ($o) => empty($o['webshop']))); }
     $pct = []; foreach ($C as $c) { $pct[$c['id']] = (float) $c['pct']; }
     $lignes = []; foreach ($C as $c) { $lignes[$c['id']] = []; }
-    $poidsCat = [];
+    $poidsCat = []; $poidsGrp = [];
     foreach ($base['produits'] as $pid => $p) {
         $cfg = $params['categories'][$p['catCle']] ?? null;
         $prevJ = array_sum($p['h']);
         if ($cfg === null || $cfg['cuissons'] === [] || $prevJ < PP_MIN_JOUR) { continue; }
         $poidsCat[$p['catCle']] = ($poidsCat[$p['catCle']] ?? 0.0) + $prevJ;
+        $grp = (string) ($p['groupe'] ?? '') !== '' ? (string) $p['groupe'] : $p['cat'];
+        $poidsGrp[$grp] = ($poidsGrp[$grp] ?? 0.0) + $prevJ;
+        $pu = isset($prix[(int) $pid]) ? (float) $prix[(int) $pid] : null;
         $z = gpZones($C, $cfg['cuissons']);
         $tp = 0.0; foreach ($z as $id => $_) { $tp += $pct[$id]; }
         $stock = 0.0; $prec = null;
@@ -442,7 +454,7 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = []): arr
             $aCuire = max(0.0, $ap + $cm + $ws - $stock);
             [$pl, $sortie] = gpArrondi($aCuire, $cfg['plaque'], $minPl);
             $fait = $faits[$id][(string) $pid] ?? null;
-            $lignes[$id][] = ['pid' => (int) $pid, 'nom' => $p['nom'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'prevJ' => round($prevJ, 2), 'h' => $p['h'],
+            $lignes[$id][] = ['pid' => (int) $pid, 'nom' => $p['nom'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'groupe' => $grp, 'prix' => $pu, 'ca' => $pu !== null ? round($pu * $sortie, 2) : null, 'prevJ' => round($prevJ, 2), 'h' => $p['h'],
                 'zone' => [gpHhmm($za), gpHhmm($zb)], 'fenetre' => round(gpSomme($p['h'], $za, $zb), 2), 'part' => round(100 * $part, 1), 'prevu' => round($ap, 2),
                 'cmd' => round($cm, 2), 'ws' => round($ws, 2), 'stock' => round($stock, 2), 'aCuire' => round($aCuire, 2), 'plaque' => $cfg['plaque'], 'plaques' => $pl, 'sortie' => $sortie,
                 'fait' => $fait !== null ? (float) $fait : null];
@@ -453,14 +465,16 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = []): arr
     $out = [];
     foreach ($C as $i => $c) {
         $L = $lignes[$c['id']];
-        usort($L, static fn ($a, $b) => [($poidsCat[$b['catCle']] ?? 0), $a['cat'], $b['prevJ']] <=> [($poidsCat[$a['catCle']] ?? 0), $b['cat'], $a['prevJ']]);
-        $t = ['pieces' => 0, 'plaques' => 0, 'prevu' => 0.0, 'cmd' => 0.0, 'ws' => 0.0, 'stock' => 0.0];
+        // Section (groupe du panel) › catégorie › produit, chacun du plus vendu au moins vendu : les sous-totaux se lisent d'un bloc.
+        usort($L, static fn ($a, $b) => [($poidsGrp[$b['groupe']] ?? 0), $a['groupe'], ($poidsCat[$b['catCle']] ?? 0), $a['cat'], $b['prevJ']] <=> [($poidsGrp[$a['groupe']] ?? 0), $b['groupe'], ($poidsCat[$a['catCle']] ?? 0), $b['cat'], $a['prevJ']]);
+        $t = ['pieces' => 0, 'plaques' => 0, 'prevu' => 0.0, 'cmd' => 0.0, 'ws' => 0.0, 'stock' => 0.0, 'ca' => 0.0, 'sansPrix' => 0];
         $cats = [];
-        foreach ($L as $l) { $t['pieces'] += $l['sortie']; $t['plaques'] += (int) $l['plaques']; $t['prevu'] += $l['prevu']; $t['cmd'] += $l['cmd']; $t['ws'] += $l['ws']; $t['stock'] += $l['stock']; $cats[$l['catCle']] = true; }
+        foreach ($L as $l) { $t['pieces'] += $l['sortie']; $t['plaques'] += (int) $l['plaques']; $t['prevu'] += $l['prevu']; $t['cmd'] += $l['cmd']; $t['ws'] += $l['ws']; $t['stock'] += $l['stock']; $cats[$l['catCle']] = true;
+            if ($l['ca'] !== null) { $t['ca'] += $l['ca']; } elseif ($l['sortie'] > 0) { $t['sansPrix']++; } }
         $h1 = gpHeure($c['de']);
         $out[] = ['id' => $c['id'], 'k' => $i + 1, 'nom' => $c['nom'], 'de' => $c['de'], 'a' => $c['a'], 'pct' => $c['pct'], 'panel' => !empty($c['daypart']),
             'four' => gpHhmm(max(0.0, $h1 - $av / 60)), 'lignes' => $L,
-            'total' => ['pieces' => $t['pieces'], 'plaques' => $t['plaques'], 'prevu' => round($t['prevu'], 1), 'cmd' => round($t['cmd'], 1), 'ws' => round($t['ws'], 1), 'stock' => round($t['stock'], 1), 'categories' => count($cats)]];
+            'total' => ['pieces' => $t['pieces'], 'plaques' => $t['plaques'], 'prevu' => round($t['prevu'], 1), 'cmd' => round($t['cmd'], 1), 'ws' => round($t['ws'], 1), 'stock' => round($t['stock'], 1), 'categories' => count($cats), 'ca' => round($t['ca'], 2), 'sansPrix' => $t['sansPrix']]];
     }
     return $out;
 }
@@ -471,7 +485,7 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = []): arr
  * jeté, stock, besoin jusqu'à la cuisson suivante de la catégorie, à enfourner et verdict.
  * null quand la journée n'a plus de cuisson.
  */
-function gpSuivi(array $params, array $base, array $cmds, array $plan, array $vendu, array $jete, float $now, array $faits = []): ?array
+function gpSuivi(array $params, array $base, array $cmds, array $plan, array $vendu, array $jete, float $now, array $faits = [], array $prix = []): ?array
 {
     $C = $params['cuissons']; $R = $params['regles'];
     $sec = 1 + (float) $R['securite'] / 100; $minPl = (int) $R['minPlaques'];
@@ -482,7 +496,7 @@ function gpSuivi(array $params, array $base, array $cmds, array $plan, array $ve
     if ($prochaine === null) { return null; }
     $planDe = []; foreach ($plan as $pc) { foreach ($pc['lignes'] as $l) { $planDe[$pc['id']][$l['pid']] = $l; } }
     $fin = 0.0; foreach ($C as $c) { $fin = max($fin, gpHeure($c['a'])); }
-    $L = []; $t = ['vendu' => 0.0, 'prevu' => 0.0, 'cuire' => 0, 'plaques' => 0, 'plan' => 0, 'planPlaques' => 0];
+    $L = []; $t = ['vendu' => 0.0, 'prevu' => 0.0, 'cuire' => 0, 'plaques' => 0, 'plan' => 0, 'planPlaques' => 0, 'ca' => 0.0];
     foreach ($planDe[$prochaine['id']] ?? [] as $pid => $lp) {
         $cfg = $params['categories'][$lp['catCle']] ?? null;
         if ($cfg === null) { continue; }
@@ -514,19 +528,20 @@ function gpSuivi(array $params, array $base, array $cmds, array $plan, array $ve
         elseif (100 * $couv >= (float) $R['seuilRecuisson'] || $sortie === 0 || $besoin < 0.5) { $v = 'tient'; }
         else { $v = 'recuire'; }
         if ($v !== 'recuire') { $pl = $cfg['plaque'] ? 0 : null; $sortie = 0; }
-        $L[] = ['pid' => (int) $pid, 'nom' => $lp['nom'], 'cat' => $lp['cat'], 'catCle' => $lp['catCle'], 'h' => $h, 'plaque' => $cfg['plaque'], 'limite' => $cfg['limite'],
+        $pu = isset($prix[(int) $pid]) ? (float) $prix[(int) $pid] : ($lp['prix'] ?? null);
+        $L[] = ['pid' => (int) $pid, 'nom' => $lp['nom'], 'cat' => $lp['cat'], 'catCle' => $lp['catCle'], 'groupe' => $lp['groupe'] ?? '', 'prix' => $pu, 'ca' => $pu !== null ? round($pu * $sortie, 2) : null, 'h' => $h, 'plaque' => $cfg['plaque'], 'limite' => $cfg['limite'],
             'produit' => round($produit, 1), 'vendu' => round($vd, 1), 'jete' => round($jt, 1), 'prevuMaintenant' => round($prevuMaint, 1),
             'ecart' => $prevuMaint >= 1 ? round(100 * ($vd / $prevuMaint - 1), 1) : null, 'stock' => round($stock, 1), 'jusqua' => gpHhmm($jusqua),
             'cmd' => round($cm, 2), 'ws' => round($ws, 2), 'besoin' => round($besoin, 1), 'couverture' => round(min(9.0, $couv) * 100, 1),
             'plan' => (int) $lp['sortie'], 'planPlaques' => $lp['plaques'], 'verdict' => $v, 'aEnfourner' => $sortie, 'plaques' => $pl];
-        $t['vendu'] += $vd; $t['prevu'] += $prevuMaint; $t['cuire'] += $sortie; $t['plaques'] += (int) $pl; $t['plan'] += (int) $lp['sortie']; $t['planPlaques'] += (int) $lp['plaques'];
+        $t['vendu'] += $vd; $t['prevu'] += $prevuMaint; $t['cuire'] += $sortie; $t['plaques'] += (int) $pl; $t['plan'] += (int) $lp['sortie']; $t['planPlaques'] += (int) $lp['plaques']; $t['ca'] += $pu !== null ? $pu * $sortie : 0;
     }
     $nb = []; foreach ($L as $l) { $nb[$l['verdict']] = ($nb[$l['verdict']] ?? 0) + 1; }
     $h1 = gpHeure($prochaine['de']);
     return ['maintenant' => gpHhmm($now), 'cuisson' => ['id' => $prochaine['id'], 'nom' => $prochaine['nom'], 'de' => $prochaine['de'], 'a' => $prochaine['a'], 'four' => gpHhmm(max(0.0, $h1 - (int) $R['avance'] / 60))],
         'lignes' => $L, 'verdicts' => $nb,
         'total' => ['vendu' => round($t['vendu'], 1), 'prevuMaintenant' => round($t['prevu'], 1), 'ecart' => $t['prevu'] > 0 ? round(100 * ($t['vendu'] / $t['prevu'] - 1), 1) : null,
-            'aEnfourner' => $t['cuire'], 'plaques' => $t['plaques'], 'plan' => $t['plan'], 'planPlaques' => $t['planPlaques']]];
+            'aEnfourner' => $t['cuire'], 'plaques' => $t['plaques'], 'plan' => $t['plan'], 'planPlaques' => $t['planPlaques'], 'ca' => round($t['ca'], 2)]];
 }
 
 /** Les commandes du jour avec, pour chaque ligne, le produit et la cuisson où elle entre. */
@@ -575,7 +590,8 @@ function ep_production_plan(): array
     $cmds = $cmdsLus ?? [];
     $faitsS = setting('ppFait:' . $sid . ':' . $date);
     $faits = is_array($faitsS) && is_array($faitsS['c'] ?? null) ? $faitsS['c'] : [];
-    $plan = gpPlan($params, $base, $cmds, $faits);
+    $prix = gpPrix($sid);
+    $plan = gpPlan($params, $base, $cmds, $faits, $prix);
     $suivi = null;
     if ($date === $auj) {
         $now = (int) date('G') + (int) date('i') / 60;
@@ -583,7 +599,7 @@ function ep_production_plan(): array
         $vendu = gpPlier($pv)['q'];
         $jete = [];
         if (function_exists('invLignes')) { foreach ((array) invLignes($sid, $date, $date) as $l) { $jete[(int) $l['pid']] = ($jete[(int) $l['pid']] ?? 0.0) + (float) $l['pieces']; } }
-        $suivi = gpSuivi($params, $base, $cmds, $plan, $vendu, $jete, $now, $faits);
+        $suivi = gpSuivi($params, $base, $cmds, $plan, $vendu, $jete, $now, $faits, $prix);
         if ($suivi !== null) { $suivi['ventesLues'] = $pv !== null; }
     }
     // Les catégories pour l'écran des paramètres : la part de leurs ventes dans chaque cuisson.

@@ -14,7 +14,10 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'campagne', 'actions', 'reclamation', 'production'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  // ?embed=1 : la page servie dans le cockpit (Gestion de production) — sans entête, sans onglets ;
+  // seule la vue Production y vit, le sous-onglet vient du rail (?onglet=plan|suivi|params).
+  const EMBED = q.get('embed') === '1';
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : 'jour'),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -22,7 +25,7 @@
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
-    ppOnglet: 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
+    ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
@@ -150,6 +153,7 @@
   function urlMaj() {
     const u = new URL(location.href);
     u.searchParams.set('shop', S.shop); u.searchParams.set('vue', S.vue); u.searchParams.set('date', S.date);
+    if (EMBED) { u.searchParams.set('onglet', S.ppOnglet); }
     history.replaceState(null, '', u.toString());
   }
 
@@ -542,6 +546,7 @@
    * dessous, puis des cartes ouvertes qu'un seul défilement parcourt. */
   const MOB_MAX = 560;
   function estMobile() {
+    if (EMBED) { return false; }
     const f = new URLSearchParams(location.search).get('mobile');
     if (f === '1') { return true; }
     if (f === '0') { return false; }
@@ -958,7 +963,7 @@
   /** Le menu du téléphone : le jour, la semaine, le plan d'action, et la
    * réclamation fournisseur — un onglet à part, pas une carte du mur. */
   function mbOnglets() {
-    return `<div class="mb-tabs mb-tabs5">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['campagne', 'Campagne', CP_ICONE], ['actions', 'Plan d’action', '✓'], ['reclamation', 'Réclamation', RC_ICONE]]
+    return `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['reclamation', 'Réclamation', RC_ICONE]]
       .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
   }
 
@@ -1188,6 +1193,7 @@
   const ppPl = (pl, plaque) => pl == null ? (plaque ? '<span class="mu">—</span>' : '<span class="mu">à l’unité</span>') : (pl ? pl + ' × ' + plaque : '<span class="mu">—</span>');
   function ppOnglets(P) {
     const auj = S.date === AUJ;
+    if (EMBED) { return P && P.base ? `<div class="pp-nav emb"><span class="pp-quand">base : ${P.base.lus.length} ${PP_JOURS[P.jourSemaine] || 'jours'} lus sur ${P.base.jours.length}${P.base.manquants.length ? ' · ' + P.base.manquants.length + ' à lire' : ''}</span></div>` : ''; }
     const o = [['plan', 'Plan du jour'], ['suivi', 'Suivi et recuissons'], ['params', 'Paramètres']];
     return `<div class="pp-nav">${o.map(([k, n]) => `<button data-pponglet="${k}" class="${S.ppOnglet === k ? 'on' : ''}">${n}</button>`).join('')}
       <span class="pp-quand">${S.date === AUJ ? 'aujourd’hui' : (S.date === ppDemain() ? 'demain' : fD(S.date))}${P && P.base ? ` · base : ${P.base.lus.length} ${PP_JOURS[P.jourSemaine] || 'jours'} lus sur ${P.base.jours.length}` : ''}</span>
@@ -1204,17 +1210,17 @@
     return h + ppPlan(P, mobile);
   }
   function ppTuiles(P) {
-    return `<div class="pp-cuis">${P.plan.map(c => { const f = P.faits && P.faits[c.id]; return `<div class="k${Math.min(c.k, 6)}${c.panel ? '' : ' loc'}"><div class="k">Cuisson ${c.k} · ${esc(c.nom)} · four ${c.four}</div><div class="v">${fN(c.total.pieces)} <small>pièces${c.total.plaques ? ' · ' + fN(c.total.plaques) + ' plaques' : ''}</small></div><div class="s">vente ${c.de}–${c.a} · ${nf(c.pct, 0)} % de la journée · ${c.total.categories} catégorie${c.total.categories > 1 ? 's' : ''}${c.total.cmd + c.total.ws ? ` · dont <b>${fN(c.total.cmd + c.total.ws)} commandées</b>` : ''}${f ? '<br><span class="pp-tag ok">validée</span>' : ''}${c.panel ? '' : '<br><span class="pp-tag loc">cuisson locale — absente du panel</span>'}</div></div>`; }).join('')}</div>`;
+    return `<div class="pp-cuis">${P.plan.map(c => { const f = P.faits && P.faits[c.id]; return `<div class="k${Math.min(c.k, 6)}${c.panel ? '' : ' loc'}"><div class="k">Cuisson ${c.k} · ${esc(c.nom)} · four ${c.four}</div><div class="v">${fN(c.total.pieces)} <small>pièces${c.total.plaques ? ' · ' + fN(c.total.plaques) + ' plaques' : ''}</small></div><div class="s"><b>${fE(c.total.ca)}</b> de CA à sortir · vente ${c.de}–${c.a} · ${nf(c.pct, 0)} % de la journée · ${c.total.categories} catégorie${c.total.categories > 1 ? 's' : ''}${c.total.cmd + c.total.ws ? ` · dont <b>${fN(c.total.cmd + c.total.ws)} commandées</b>` : ''}${f ? '<br><span class="pp-tag ok">validée</span>' : ''}${c.panel ? '' : '<br><span class="pp-tag loc">cuisson locale — absente du panel</span>'}</div></div>`; }).join('')}</div>`;
   }
   function ppPlan(P, mobile) {
-    const tot = P.plan.reduce((a, c) => ({ p: a.p + c.total.pieces, pl: a.pl + c.total.plaques }), { p: 0, pl: 0 });
+    const tot = P.plan.reduce((a, c) => ({ p: a.p + c.total.pieces, pl: a.pl + c.total.plaques, ca: a.ca + (c.total.ca || 0), sp: a.sp + (c.total.sansPrix || 0) }), { p: 0, pl: 0, ca: 0, sp: 0 });
     const nCmd = (P.commandes || []).length;
     let h = `<div class="db-card"><div class="ct"><span class="db-lab">Les cuissons ${S.date === AUJ ? 'du jour' : (S.date === ppDemain() ? 'de demain' : 'du ' + fD(S.date))}</span><span class="db-mini">prévision = moyenne des ${P.base.semaines} derniers ${PP_JOURS[P.jourSemaine] || 'jours'}, heure par heure · + ${nf(P.params.regles.securite, 0)} % de sécurité · commandes et webshop inclus</span></div>${ppTuiles(P)}
-      <div class="pp-pied"><b>${fN(tot.p)} pièces${tot.pl ? ' en ' + fN(tot.pl) + ' plaques' : ''}</b> à sortir · ${nCmd ? nCmd + ' commande' + (nCmd > 1 ? 's' : '') + ' à retirer' : (P.commandesLues ? 'aucune commande à retirer' : 'commandes du panel non lues')} · base : ${fN(P.base.piecesParJour)} pièces par ${(PP_JOURS[P.jourSemaine] || 'jour').replace(/s$/, '')} en moyenne${P.base.fermes.length ? ' · ' + P.base.fermes.length + ' jour' + (P.base.fermes.length > 1 ? 's' : '') + ' fermé' + (P.base.fermes.length > 1 ? 's' : '') + ' écarté' + (P.base.fermes.length > 1 ? 's' : '') : ''}${P.params.enregistre ? '' : ' · <b>paramètres proposés</b> : réglez-les dans l’onglet Paramètres'}</div></div>`;
+      <div class="pp-pied"><b>${fN(tot.p)} pièces${tot.pl ? ' en ' + fN(tot.pl) + ' plaques' : ''} · ${fE(tot.ca)} de CA</b> à sortir (prix de vente du magasin${tot.sp ? ', ' + tot.sp + ' référence' + (tot.sp > 1 ? 's' : '') + ' sans prix' : ''}) · ${nCmd ? nCmd + ' commande' + (nCmd > 1 ? 's' : '') + ' à retirer' : (P.commandesLues ? 'aucune commande à retirer' : 'commandes du panel non lues')} · base : ${fN(P.base.piecesParJour)} pièces par ${(PP_JOURS[P.jourSemaine] || 'jour').replace(/s$/, '')} en moyenne${P.base.fermes.length ? ' · ' + P.base.fermes.length + ' jour' + (P.base.fermes.length > 1 ? 's' : '') + ' fermé' + (P.base.fermes.length > 1 ? 's' : '') + ' écarté' + (P.base.fermes.length > 1 ? 's' : '') : ''}${P.params.enregistre ? '' : ' · <b>paramètres proposés</b> : réglez-les dans l’onglet Paramètres'}</div></div>`;
     const suiv = P.suivi && P.suivi.cuisson ? P.suivi.cuisson.id : null;
     P.plan.forEach((c, i) => {
       const ouvert = S.ppOuvert[c.id] != null ? S.ppOuvert[c.id] : (suiv ? c.id === suiv : i === 0);
-      const tete = `<div class="ct" data-ppcu="${c.id}" style="cursor:pointer"><span class="db-lab">Cuisson ${c.k} · ${esc(c.nom)} — four à ${c.four}, vente ${c.de}–${c.a}</span><span class="db-mini">${nf(c.pct, 0)} % de la journée · ${fN(c.total.pieces)} pièces${c.total.plaques ? ' · ' + fN(c.total.plaques) + ' plaques' : ''}</span><span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>`;
+      const tete = `<div class="ct" data-ppcu="${c.id}" style="cursor:pointer"><span class="db-lab">Cuisson ${c.k} · ${esc(c.nom)} — four à ${c.four}, vente ${c.de}–${c.a}</span><span class="db-mini">${nf(c.pct, 0)} % de la journée · ${fN(c.total.pieces)} pièces${c.total.plaques ? ' · ' + fN(c.total.plaques) + ' plaques' : ''} · ${fE(c.total.ca)}</span><span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>`;
       if (!ouvert) { h += `<div class="db-card">${tete}</div>`; return; }
       if (!c.lignes.length) { h += `<div class="db-card">${tete}<div class="db-mini" style="padding:12px 16px">Aucune catégorie cochée pour cette cuisson.</div></div>`; return; }
       // Les références à moins d'une demi-pièce, sans commande ni rien à cuire, encombrent sans rien dire : comptées en pied.
@@ -1222,11 +1228,11 @@
       let g = '';
       const corps = mobile
         ? vues.map(l => { const t = l.cat !== g ? `<tr class="grp"><td colspan="3">${esc(l.cat)}</td></tr>` : ''; g = l.cat; return t + `<tr><td class="nom">${esc(l.nom)}<small>prévu ${fN(l.prevu)}${l.cmd + l.ws ? ' · + ' + fN(l.cmd + l.ws) + ' commandés' : ''}${l.stock ? ' · − ' + fN(l.stock) + ' en stock' : ''}</small></td><td class="n"><b>${fN(l.sortie)}</b></td><td class="n">${ppPl(l.plaques, l.plaque)}</td></tr>`; }).join('')
-        : vues.map(l => { const t = l.cat !== g ? `<tr class="grp"><td colspan="10">${esc(l.cat)}</td></tr>` : ''; g = l.cat; return t + `<tr><td class="nom">${esc(l.nom)}</td><td>${ppSpark(l.h, ppH(l.zone[0]), ppH(l.zone[1]))} <small class="mu">${nf(l.fenetre, 0)} sur la période</small></td><td class="n">${nf(l.prevJ, l.prevJ < 10 ? 1 : 0)}</td><td class="n mu">${nf(l.part, 0)} %</td><td class="n">${fN(l.prevu)}</td><td class="n">${l.cmd >= 0.5 ? '<b>+ ' + fN(l.cmd) + '</b>' : '<span class="mu">—</span>'}</td><td class="n">${l.ws >= 0.5 ? '<b>+ ' + fN(l.ws) + '</b>' : '<span class="mu">—</span>'}</td><td class="n">${l.stock >= 0.5 ? '− ' + fN(l.stock) : '<span class="mu">—</span>'}</td><td class="n"><b>${fN(l.sortie)}</b>${l.fait != null ? `<small class="ok"> · fait ${fN(l.fait)}</small>` : ''}</td><td class="n">${ppPl(l.plaques, l.plaque)}</td></tr>`; }).join('');
+        : ppLignesPlan(vues, l => `<tr><td class="nom">${esc(l.nom)}</td><td>${ppSpark(l.h, ppH(l.zone[0]), ppH(l.zone[1]))} <small class="mu">${nf(l.fenetre, 0)} sur la période</small></td><td class="n">${nf(l.prevJ, l.prevJ < 10 ? 1 : 0)}</td><td class="n mu">${nf(l.part, 0)} %</td><td class="n">${fN(l.prevu)}</td><td class="n">${l.cmd >= 0.5 ? '<b>+ ' + fN(l.cmd) + '</b>' : '<span class="mu">—</span>'}</td><td class="n">${l.ws >= 0.5 ? '<b>+ ' + fN(l.ws) + '</b>' : '<span class="mu">—</span>'}</td><td class="n">${l.stock >= 0.5 ? '− ' + fN(l.stock) : '<span class="mu">—</span>'}</td><td class="n"><b>${fN(l.sortie)}</b>${l.fait != null ? `<small class="ok"> · fait ${fN(l.fait)}</small>` : ''}</td><td class="n">${ppPl(l.plaques, l.plaque)}</td><td class="n">${l.ca != null ? fE(l.ca) : '<span class="mu">sans prix</span>'}</td></tr>`);
       const tete2 = mobile ? '<tr><th>Produit</th><th class="n">À cuire</th><th class="n">Plaques</th></tr>'
-        : `<tr><th>Produit</th><th>Prévision heure par heure</th><th class="n">Par jour<br><small>${P.base.semaines} dern. ${esc((PP_JOURS[P.jourSemaine] || 'jours'))}</small></th><th class="n">Part C${c.k}</th><th class="n">Prévu + ${nf(P.params.regles.securite, 0)} %</th><th class="n">Commandes</th><th class="n">Webshop</th><th class="n">Stock estimé</th><th class="n">À cuire</th><th class="n">Plaques</th></tr>`;
+        : `<tr><th>Produit</th><th>Prévision heure par heure</th><th class="n">Par jour<br><small>${P.base.semaines} dern. ${esc((PP_JOURS[P.jourSemaine] || 'jours'))}</small></th><th class="n">Part C${c.k}</th><th class="n">Prévu + ${nf(P.params.regles.securite, 0)} %</th><th class="n">Commandes</th><th class="n">Webshop</th><th class="n">Stock estimé</th><th class="n">À cuire</th><th class="n">Plaques</th><th class="n">CA</th></tr>`;
       h += `<div class="db-card">${tete}<div class="pp-defil"><table class="pp-tab"><thead>${tete2}</thead><tbody>${corps}
-        ${mobile ? '' : `<tr class="tot"><td>Cuisson ${c.k}</td><td></td><td></td><td></td><td class="n">${fN(c.total.prevu)}</td><td class="n">${c.total.cmd ? '+ ' + fN(c.total.cmd) : '—'}</td><td class="n">${c.total.ws ? '+ ' + fN(c.total.ws) : '—'}</td><td class="n">${c.total.stock ? '− ' + fN(c.total.stock) : '—'}</td><td class="n">${fN(c.total.pieces)}</td><td class="n">${c.total.plaques ? fN(c.total.plaques) : ''}</td></tr>`}</tbody></table></div>
+        ${mobile ? '' : `<tr class="tot"><td>Total cuisson ${c.k}</td><td></td><td></td><td></td><td class="n">${fN(c.total.prevu)}</td><td class="n">${c.total.cmd ? '+ ' + fN(c.total.cmd) : '—'}</td><td class="n">${c.total.ws ? '+ ' + fN(c.total.ws) : '—'}</td><td class="n">${c.total.stock ? '− ' + fN(c.total.stock) : '—'}</td><td class="n">${fN(c.total.pieces)}</td><td class="n">${c.total.plaques ? fN(c.total.plaques) : ''}</td><td class="n">${fE(c.total.ca)}</td></tr>`}</tbody></table></div>
         <div class="pp-pied">${cachees ? cachees + ' référence' + (cachees > 1 ? 's' : '') + ' à moins d’une demi-pièce prévue, rien à cuire, non affichée' + (cachees > 1 ? 's' : '') + '. ' : ''}<b>À cuire = prévision du jour × part de la cuisson × ${nf(1 + P.params.regles.securite / 100, 2).replace(/0$/, '')} + commandes et webshop à retirer d’ici la cuisson suivante − stock estimé</b>, arrondi à la plaque. ${i === 0 ? 'Le stock de départ vaut zéro : le panel ne rend pas les reports de la veille.' : 'Le stock estimé = sorti à la cuisson précédente − ventes prévues jusqu’à l’ouverture de celle-ci ; avant le four, l’onglet « Suivi et recuissons » le remplace par le réel.'}</div></div>`;
     });
     const C = P.commandes || [];
@@ -1236,16 +1242,39 @@
     }
     return h;
   }
+  /**
+   * Les lignes d'une cuisson, rangées section (groupe du panel) › catégorie › produit : un en-tête de
+   * section, un en-tête de catégorie, les produits, le sous-total de la catégorie, le total de la
+   * section — en pièces à cuire, plaques et CA (prix de vente du magasin).
+   */
+  function ppLignesPlan(L, ligne) {
+    const somme = arr => arr.reduce((a, l) => ({ p: a.p + l.sortie, pl: a.pl + (l.plaques || 0), ca: a.ca + (l.ca || 0), prevu: a.prevu + l.prevu, n: a.n + 1 }), { p: 0, pl: 0, ca: 0, prevu: 0, n: 0 });
+    const st = (cls, lib, t) => `<tr class="${cls}"><td>${lib}</td><td></td><td></td><td></td><td class="n">${fN(t.prevu)}</td><td></td><td></td><td></td><td class="n">${fN(t.p)}</td><td class="n">${t.pl ? fN(t.pl) : ''}</td><td class="n">${fE(t.ca)}</td></tr>`;
+    let h = '';
+    const sections = [];
+    L.forEach(l => { const g = l.groupe || l.cat; let s = sections[sections.length - 1]; if (!s || s.nom !== g) { s = { nom: g, cats: [] }; sections.push(s); } let c = s.cats[s.cats.length - 1]; if (!c || c.nom !== l.cat) { c = { nom: l.cat, lignes: [] }; s.cats.push(c); } c.lignes.push(l); });
+    sections.forEach(s => {
+      const plusieurs = s.cats.length > 1 || s.cats[0].nom !== s.nom;
+      h += `<tr class="sec"><td colspan="11">${esc(s.nom)}</td></tr>`;
+      s.cats.forEach(c => {
+        if (plusieurs) { h += `<tr class="grp"><td colspan="11">${esc(c.nom)}</td></tr>`; }
+        h += c.lignes.map(ligne).join('');
+        if (plusieurs && c.lignes.length > 1) { h += st('stc', 'Sous-total ' + esc(c.nom), somme(c.lignes)); }
+      });
+      h += st('sts', 'Total ' + esc(s.nom), somme(s.cats.flatMap(c => c.lignes)));
+    });
+    return h;
+  }
   function ppSuivi(P, mobile) {
-    if (S.date !== AUJ) { return `<div class="db-card"><div class="db-mini" style="padding:16px">Le suivi et les recuissons se calculent le jour même, sur les ventes réelles. <button class="pp-lien" data-auj="1">Revenir à aujourd’hui ›</button></div></div>`; }
+    if (S.date !== AUJ) { return `<div class="db-card"><div class="db-mini" style="padding:16px">Le suivi et les recuissons se calculent le jour même, sur les ventes réelles.${EMBED ? ' Choisissez aujourd’hui dans la barre du haut.' : ' <button class="pp-lien" data-auj="1">Revenir à aujourd’hui ›</button>'}</div></div>`; }
     const V = P.suivi;
-    if (!V) { return `<div class="db-card"><div class="db-mini" style="padding:16px">Plus de cuisson aujourd’hui : la dernière période de vente est ouverte. Le plan de demain est dans « Préparer demain ».</div></div>`; }
+    if (!V) { return `<div class="db-card"><div class="db-mini" style="padding:16px">Plus de cuisson aujourd’hui : la dernière période de vente est ouverte. ${EMBED ? 'Le plan de demain : choisissez demain dans la barre du haut.' : 'Le plan de demain est dans « Préparer demain ».'}</div></div>`; }
     const T = V.total, c = P.plan.find(x => x.id === V.cuisson.id) || { k: '?' }, fait = P.faits && P.faits[V.cuisson.id];
     const ec = T.ecart, ecTxt = ec == null ? '—' : (ec >= 0 ? '+ ' : '− ') + nf(Math.abs(ec), 0) + ' %';
     const rec = V.lignes.filter(l => l.verdict === 'recuire'), trop = V.lignes.filter(l => l.verdict === 'trop');
     const tete = `<div class="db-card"><div class="ct"><span class="db-lab">La journée en cours</span><span class="pp-now">${esc(V.maintenant)}</span><span class="db-mini">${V.ventesLues ? 'tickets relus toutes les 10 minutes' : 'tickets du jour pas encore lus'} · ${ecTxt} face à la prévision à la même heure, sur les produits de la cuisson ${c.k}</span></div>
       <div class="pp-cuis">${P.plan.map(x => { const avant = ppH(x.de) <= ppH(V.maintenant), ici = x.id === V.cuisson.id; return `<div class="k${Math.min(x.k, 6)}${x.panel ? '' : ' loc'}"><div class="k">Cuisson ${x.k} · ${esc(x.nom)} · four ${x.four}</div><div class="v">${ici ? fN(T.plaques || T.aEnfourner) + ` <small>${T.plaques ? 'plaques · ' + fN(T.aEnfourner) + ' pièces' : 'pièces'}</small>` : (avant ? (P.faits && P.faits[x.id] ? '✓' : fN(x.total.pieces)) : '—')}</div><div class="s">${ici ? `plan de la nuit : ${fN(T.planPlaques || T.plan)} ${T.planPlaques ? 'plaques' : 'pièces'} · <b>recalculée à ${esc(V.maintenant)}</b>` : (avant ? (P.faits && P.faits[x.id] ? 'validée' : 'sortie prévue (non validée)') : 'se recalculera avant le four')}</div></div>`; }).join('')}</div></div>`;
-    const alerte = `<div class="pp-alerte${rec.length ? '' : ' ok'}"><b>Cuisson ${c.k} — ${esc(V.cuisson.nom)}, four à ${esc(V.cuisson.four)} : ${rec.length ? fN(T.aEnfourner) + ' pièces' + (T.plaques ? ' en ' + fN(T.plaques) + ' plaques' : '') + ' à enfourner' : 'rien à recuire'}${T.plan ? ' (plan de la nuit : ' + fN(T.plan) + ')' : ''}</b><span class="mu">${rec.length} produit${rec.length > 1 ? 's' : ''} à recuire${trop.length ? ' · ' + trop.length + ' en trop, à ne pas recuire (' + trop.slice(0, 4).map(l => esc(l.nom)).join(', ') + (trop.length > 4 ? '…' : '') + ')' : ''}</span>
+    const alerte = `<div class="pp-alerte${rec.length ? '' : ' ok'}"><b>Cuisson ${c.k} — ${esc(V.cuisson.nom)}, four à ${esc(V.cuisson.four)} : ${rec.length ? fN(T.aEnfourner) + ' pièces' + (T.plaques ? ' en ' + fN(T.plaques) + ' plaques' : '') + ' à enfourner · ' + fE(T.ca) + ' de CA' : 'rien à recuire'}${T.plan ? ' (plan de la nuit : ' + fN(T.plan) + ')' : ''}</b><span class="mu">${rec.length} produit${rec.length > 1 ? 's' : ''} à recuire${trop.length ? ' · ' + trop.length + ' en trop, à ne pas recuire (' + trop.slice(0, 4).map(l => esc(l.nom)).join(', ') + (trop.length > 4 ? '…' : '') + ')' : ''}</span>
       ${fait ? '<span class="pp-tag ok" style="margin-left:auto">cuisson validée</span>' : `<button class="pp-btn" data-ppvalider="${V.cuisson.id}"${S.ppEnvoi ? ' disabled' : ''}>${S.ppEnvoi ? 'Envoi…' : 'Valider la cuisson ' + c.k}</button>`}</div>`;
     let g = '';
     const lignes = V.lignes.map(l => { const t = l.cat !== g ? `<tr class="grp"><td colspan="${mobile ? 3 : 10}">${esc(l.cat)}</td></tr>` : ''; g = l.cat; const vd = PP_VERDICT[l.verdict] || PP_VERDICT.tient;
@@ -1615,7 +1644,7 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['jour', 'semaine', 'campagne', 'actions', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['jour', 'semaine', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
         const champ = rcGarder();
@@ -1638,12 +1667,13 @@
     }
     // La réclamation fournisseur n'existe qu'au téléphone.
     if (S.vue === 'reclamation') { S.vue = 'jour'; urlMaj(); charger(false); return; }
+    if (EMBED) { const g = ppGarder(); $.classList.remove('mob'); document.body.classList.add('pp-emb'); $.innerHTML = rendProduction(); brancher(); ppRestaurer(g); return; }
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['production', 'Production'], ['campagne', 'Campagne'], ['actions', 'Plan d’action']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       <span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}

@@ -1132,3 +1132,10 @@ html.rc-direct-ouvert,html.rc-direct-ouvert body{overflow:hidden}
 .pp-regles .r{font-size:12.5px;line-height:1.7}.pp-regles .r b{display:block;font-size:12px}.pp-regles .r small{display:block;color:var(--color-text-muted);font-size:11px;line-height:1.4}
 .pp-regles .pp-in{width:58px;margin:0 4px}
 @media (max-width:900px){.pp-regles{grid-template-columns:1fr}.pp-cuis{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 0 4px}}
+.pp-tab tr.sec td{background:#efe7dc;font:700 11px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text);padding:7px 12px;border-top:1px solid var(--color-border-secondary)}
+.pp-tab tr.stc td{font-weight:600;font-size:11.5px;color:var(--color-text-muted);background:#faf7f3}
+.pp-tab tr.sts td{font-weight:700;font-size:12px;background:#f3ece3;border-top:1px solid var(--color-border-secondary)}
+.pp-nav.emb{margin:0 0 8px}
+body.pp-emb #dash{padding:6px 4px 30px;max-width:none}
+body.pp-emb{background:var(--color-bg)}
+.mb-tabs.mb-tabs3{grid-template-columns:repeat(3,1fr)}
