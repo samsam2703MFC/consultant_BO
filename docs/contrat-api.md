@@ -422,6 +422,43 @@ plus `proJours` (jours ouverts de l'étendue), `proJoursLus` et `proComplet` : l
 gravés, complétés par au plus 30 listes lues en parallèle, les plus récentes d'abord) ; le comptoir et la part ne sont
 rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand rien n'est lu.
 
+
+### `/exploitation/invendus` — les invendus et la poubelle
+
+`GET /exploitation/invendus?shop=4&date=2026-10-02` (le jour), `?shop=4&du=&au=` (la semaine, le mois), sans `shop` le
+réseau magasin par magasin. Source unique, mesurée le 03/10/2026 : `GET /shops/{id}/products/waste?date_from=&date_to=`
+du panel, qui rend par produit les pièces jetées (`waste_qty`), le coût de recette de ces pièces (`recipe_waste_gross`,
+**TTC** : 0,725 € le croissant pour 0,684 € net), la valeur de vente perdue (`ca_waste_net`) et le motif dominant
+(`top_reason` : `expiration`, `damage`, `tasting`, `quality`). Le filtre par motif n'existe pas (mesuré : `reason=`
+ignoré), seul le motif dominant d'un produit est connu.
+
+```json
+{ "shop": 4, "magasin": "Atelier by - Halle", "lu": true, "declare": true, "date": "2026-10-02",
+  "pieces": 41, "cout": 89.83, "coutBrut": 95.23, "caPerdu": 297.96, "references": 2, "coutSource": "panel",
+  "produits": [ { "pid": 1300017, "nom": "Sandwich (10 + 5)", "categorie": "Petite Boulangerie", "pieces": 27, "cout": 80.26, "coutBrut": 85.08,
+                  "caPerdu": 274.16, "motif": "expiration", "motifLib": "fin de journée", "motifPieces": 27, "vendus": 30, "taux": 47.4 } ],
+  "parMotif": [ { "motif": "expiration", "lib": "fin de journée", "pieces": 41, "cout": 89.83 } ],
+  "report": { "dispo": false, "motif": "Les reports au lendemain ne se lisent pas dans le panel : …" }, "source": "…" }
+```
+
+`lu` est faux quand le panel ne répond pas (rien n'est alors retranché du résultat) ; `declare` est faux quand la
+réponse est vide — mesuré : Corbais et Sombreffe ne déclarent rien, Halle et Gosselies déclarent. `cout` est le coût
+de production **net** : le coût de recette du panel pour ce magasin × pièces quand il existe et tient face au brut
+(entre 70 % et 100 %), sinon le brut ÷ 1,06. En vue Jour, `vendus` et `taux` (jetées ÷ (jetées + vendues)) viennent du
+relevé gravé des ventes du jour, sans lecture de plus. Cache `inv:{shop}:{du}:{au}` : dix minutes quand la fenêtre
+touche aujourd'hui ou hier, six heures sinon ; un panel muet ressert la dernière lecture.
+
+**Les reports au lendemain** (« carryover ») n'ont pas de route de lecture : la caisse les écrit comme une production du
+matin (`POST /product-movements`, motif `carryover`, lu dans le journal `product_movement` de la base partagée qui
+s'arrête à la mi-juillet) et le document OpenAPI du panel (`/swagger/openapi.json`, 933 routes) n'en expose aucune
+lecture. L'écran le dit (`report.motif`) plutôt que de les inventer.
+
+**Dans le P&L.** `GET /exploitation/jour` et `GET /exploitation/periode` portent sur chaque magasin et sur le réseau
+`invendus` (coût net, `null` si le panel est muet), `invendusPct`, `invendusPieces`, `invendusDeclare`,
+`invendusSource`, et le résultat les retranche : `net = CA − coût matière − invendus − main-d'œuvre − frais généraux`
+(demande du 03/10/2026). Rien de déclaré vaut zéro ; un panel muet ne retranche rien et le dit. La série du mois
+(`serie[].net`) ne les porte pas : une fenêtre par jour coûterait trente lectures par magasin.
+
 ### `/planogramme/standard` — le comptoir standard : un seul plan, ses moments, ses rotations
 
 Un seul plan pour tous les magasins. La géométrie est fixe (`src/plano_std.php`) : 25 sections de 30 cm, sections 1–2 =

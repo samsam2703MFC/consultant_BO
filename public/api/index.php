@@ -155,6 +155,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/canaux'           => ep_exploitation_canaux(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
+            $path === '/exploitation/invendus'         => ep_exploitation_invendus(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),

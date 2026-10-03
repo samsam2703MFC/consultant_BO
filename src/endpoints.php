@@ -2304,6 +2304,9 @@ function ep_exploitation_jour(): array
     $joursMois = (int) date('t', strtotime($date));
     $premier   = new DateTimeImmutable($mois1);
     $moisAff   = substr($date, 0, 7);
+    // Les invendus du jour (pièces jetées, coût de production net) : une lecture par magasin,
+    // en parallèle, en cache dix minutes. Ils se retranchent du résultat.
+    $invM = function_exists('invCoutsMagasins') ? invCoutsMagasins(array_map(static fn ($s) => (int) $s['id'], $shops), $date, $date) : [];
     $lignes = [];
     foreach ($shops as $s) {
         $id = (int) $s['id']; $nom = (string) $s['name'];
@@ -2439,7 +2442,11 @@ function ep_exploitation_jour(): array
         $ohSource = 'reparti';
         $oh = $ohJ;
         if ($dsOh !== null && $dsOh > 0) { $oh = $dsOh; $ohSource = 'mesure'; }
-        $net = ($fc !== null && $labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
+        // Les invendus : le coût de production de ce qui a été jeté se retranche du résultat ;
+        // rien de déclaré vaut zéro, un panel muet ne retranche rien et le dit.
+        $inv = $invM[$id] ?? ['cout' => null, 'pieces' => null, 'declare' => null, 'source' => 'panel muet'];
+        $invCout = $inv['cout'] ?? 0.0;
+        $net = ($fc !== null && $labour !== null && $oh !== null) ? $ca - $fc - $invCout - $labour - $oh : null;
 
         // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
         // Une catégorie absente d'un jour de référence OUVERT compte zéro : ne
@@ -2740,6 +2747,9 @@ function ep_exploitation_jour(): array
             'coutMatiere' => $fc !== null ? round($fc, 2) : null, 'coutMatierePct' => ($fc !== null && $ca > 0) ? round($fc / $ca * 100, 1) : null,
             'coutMatiereSource' => $matSrc,
             'margeBrute' => $mb !== null ? round($mb, 2) : null, 'margeBrutePct' => ($mb !== null && $ca > 0) ? round($mb / $ca * 100, 1) : null,
+            'invendus' => $inv['cout'] !== null ? round((float) $inv['cout'], 2) : null,
+            'invendusPct' => ($inv['cout'] !== null && $ca > 0) ? round((float) $inv['cout'] / $ca * 100, 1) : null,
+            'invendusPieces' => $inv['pieces'], 'invendusDeclare' => $inv['declare'], 'invendusSource' => $inv['source'],
             'labour' => $labour !== null ? round($labour, 2) : null,
             'labourPct' => ($labour !== null && $ca > 0) ? round($labour / $ca * 100, 1) : null,
             'labourSource' => $labourSource,
@@ -2781,8 +2791,8 @@ function ep_exploitation_jour(): array
 
     // --- Réseau : la somme de ce qui est connu, jamais une extrapolation.
     $t = ['ca' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
-        'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0];
-    $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = [];
+        'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0, 'invendus' => 0.0, 'invendusPieces' => 0.0];
+    $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = []; $invLus = 0; $invDeclarent = 0;
     $pro = ['ca' => 0.0, 'tickets' => 0, 'caMag' => 0.0, 'ticketsMag' => 0, 'n' => 0];
     foreach ($lignes as $l) {
         if (empty($l['ouvert'])) { continue; }
@@ -2793,6 +2803,7 @@ function ep_exploitation_jour(): array
         }
         $t['ca'] += $l['ca']; $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
         $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
+        if (($l['invendus'] ?? null) !== null) { $invLus++; $t['invendus'] += (float) $l['invendus']; $t['invendusPieces'] += (float) ($l['invendusPieces'] ?? 0); if (!empty($l['invendusDeclare'])) { $invDeclarent++; } }
         if ($l['refCa'] === null) { $refComplet = false; }
         else { $t['refCa'] += $l['refCa']; $refMin = $refMin === null ? $l['refJours'] : min($refMin, $l['refJours']); }
         if ($l['labour'] === null || $l['overhead'] === null) { $netComplet = false; }
@@ -2825,6 +2836,11 @@ function ep_exploitation_jour(): array
         'coutMatierePct' => $ca > 0 ? round($t['coutMatiere'] / $ca * 100, 1) : null,
         'margeBrute' => round($t['margeBrute'], 2),
         'margeBrutePct' => $ca > 0 ? round($t['margeBrute'] / $ca * 100, 1) : null,
+        'invendus' => $invLus ? round($t['invendus'], 2) : null,
+        'invendusPct' => ($invLus && $ca > 0) ? round($t['invendus'] / $ca * 100, 1) : null,
+        'invendusPieces' => $invLus ? round($t['invendusPieces'], 1) : null,
+        'invendusDeclare' => $invLus ? $invDeclarent > 0 : null,
+        'invendusSource' => $invLus ? ($invDeclarent . ' magasin' . ($invDeclarent > 1 ? 's' : '') . ' sur ' . $ouverts . ' déclare' . ($invDeclarent > 1 ? 'nt' : '') . ' la poubelle') : 'panel muet',
         'labour' => $netComplet ? round($t['labour'], 2) : null,
         'labourPct' => ($netComplet && $ca > 0) ? round($t['labour'] / $ca * 100, 1) : null,
         'overhead' => $netComplet ? round($t['overhead'], 2) : null,

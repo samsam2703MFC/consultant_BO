@@ -21,7 +21,7 @@
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
-    stockOuvert: false, stockVues: null, cmdOuvert: false,
+    stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
@@ -117,6 +117,7 @@
     if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
     if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
+    if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
     if (estMobile() && S.vue === 'jour') { lireAux('sem|' + bornesSemaine()[0], '/exploitation/periode?vue=semaine&date=' + S.date, force); }
@@ -914,7 +915,7 @@
     }
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
-    if (S.vue === 'jour' || coPer()) { h += murR([murCanaux(), murOffres()]); }
+    if (S.vue === 'jour' || coPer()) { h += murR([murCanaux(), murOffres()]); h += murR([murInv()], true); }
     // Vue Jour : rien que le jour — le résumé de la semaine a son onglet.
     if (S.vue === 'jour') { murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
@@ -941,6 +942,7 @@
     if (S.objOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
     if (S.proOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${proCarte(true)}</div>`; }
+    if (S.invOuvert && (S.vue === 'jour' || coPer())) { h += `<div class="mb-tir">${invCarte(true)}</div>`; }
     if (S.noteOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
     if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
     if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
@@ -1098,7 +1100,7 @@
     const pied = [nTot ? nTot + ' commande' + (nTot > 1 ? 's' : '') + (per ? ' sur ' + perLib() : '') + (nC ? ' dont ' + nC + ' au comptoir' : '') : (per ? 'aucune commande sur ' + perLib() : ''), nW ? 'webshop ' + fE(J.webshop) : '', C.aPreparer ? `<b>${C.aPreparer} à préparer</b>` : '', AV && AV.n ? avLib + AV.n + ' commande' + (AV.n > 1 ? 's' : '') + ' déjà prise' + (AV.n > 1 ? 's' : '') + ' (' + fE(AV.ca) + ')' : ''].filter(Boolean).join(' · ');
     // En vue Jour, rien que le jour : pas de série sur 14 jours.
     const gauche = per ? `<div><span class="db-lab">${(mois ? 'Le mois' : 'La semaine') + ' — jour par jour, par canal'}</span>${piles}</div>` : '';
-    return `<div class="co-corps${per ? '' : ' un'}">${gauche}<div><span class="db-lab">${titre}</span>${table}${pied ? `<div class="db-mini" style="margin-top:8px">${pied}</div>` : ''}</div></div>`;
+    return `<div class="co-corps${per ? '' : ' un'}">${gauche}<div><span class="db-lab">${titre}</span>${per ? '' : `<span class="db-cdr db-cdr-inl" data-cmdliste="1">${S.cmdListeOuvert ? 'replier ▴' : 'voir les commandes ▾'}</span>`}${per || S.cmdListeOuvert ? table : ''}${pied ? `<div class="db-mini" style="margin-top:8px">${pied}</div>` : ''}</div></div>`;
   }
   /**
    * La carte « Commandes et canaux » : le comptoir (tickets caisse, dont clients pro), le click &
@@ -1158,6 +1160,48 @@
       <div class="db-leg" style="padding-top:10px"><span><span class="co-verdict ok">Garder</span> l’offre rapporte : ≥ +8 % face à la référence, ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous ${CO_SEUIL_MARGE} %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div></div>`;
   }
   /** Les tuiles du mur mobile : le webshop du jour, et les offres sur 7 jours. */
+  /* --- les invendus et la poubelle : ce que le panel sait des pièces jetées (route /shops/{id}/products/waste) --- */
+  function cleInv() { return 'inv|' + S.shop + '|' + (coPer() ? bornes().join('|') : S.date); }
+  function cheminInv() { const b = '/exploitation/invendus?shop=' + encodeURIComponent(S.shop); if (!coPer()) { return b + '&date=' + S.date; } const [du, au] = bornes(); return b + '&du=' + du + '&au=' + au; }
+  function invData() { const I = S.aux[cleInv()]; return I && !I.error ? I : null; }
+  const INV_TAG = { expiration: 'fdj', damage: 'casse', tasting: 'degu', quality: 'qual', carryover: 'rep' };
+  function invTag(p) { return `<span class="db-inv-tag ${INV_TAG[p.motif] || ''}" title="${esc(p.motifPieces ? p.motifPieces + ' pièce' + (p.motifPieces > 1 ? 's' : '') + ' pour ce motif' : '')}">${esc(p.motifLib || p.motif || 'sans motif')}</span>`; }
+  /** La carte « Invendus et poubelle » : les pièces jetées, leur coût de production (retranché du résultat), la valeur de vente perdue, le détail par produit. */
+  function invCarte(mobile) {
+    const cle = cleInv(), I = invData(), err = S.err[cle], per = coPer();
+    const quand = per ? perLib() : (S.date === AUJ ? 'la journée' : 'ce jour'), lib = 'Invendus et poubelle — ' + (per ? perLib() : 'la journée');
+    const sous = 'pièces jetées déclarées en caisse · leur coût de production se retranche du résultat';
+    const carte = (corps, mini) => mobile ? `<div class="db-inv mob"><div class="db-notej-t" style="padding:4px 4px 0">Invendus et poubelle<small>${esc(mini || sous)}</small></div>${corps}</div>`
+      : `<div class="db-card db-inv"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini${err ? ' ko' : ''}">${esc(mini || sous)}</span></div>${corps}</div>`;
+    if (!I) { return carte('', err || 'lecture de la poubelle…'); }
+    const note = I.report && I.report.motif ? `<div class="db-mini db-inv-note">${esc(I.report.motif)}</div>` : '';
+    if (!I.lu) { return carte(`<div class="db-mini" style="padding:${mobile ? '4px 4px 8px' : '12px 16px'}">Le panel ne répond pas : rien n’est retranché du résultat.</div>${note}`); }
+    if (!I.declare) { return carte(`<div class="db-mini" style="padding:${mobile ? '4px 4px 8px' : '12px 16px'}">Rien déclaré au panel ${per ? 'sur ' + perLib() : ceJour()} : aucune pièce jetée encodée en caisse, rien n’est retranché du résultat.</div>${note}`); }
+    const M = I.parMotif || [], P = I.produits || [], jour = !per && P.some(p => p.vendus != null);
+    const kpi = `<div class="db-obj-t4 db-pro-kpi db-inv-kpi">
+      <div><div class="k">Jetées</div><div class="v">${fN(I.pieces)}</div><div class="s">pièce${I.pieces > 1 ? 's' : ''} · ${I.references} référence${I.references > 1 ? 's' : ''} ${per ? 'sur ' + perLib() : ceJour()}</div></div>
+      <div><div class="k">Coût de production</div><div class="v ko">${fE(I.cout)}</div><div class="s">retranché du résultat · ${fE(I.coutBrut)} TTC au panel</div></div>
+      <div><div class="k">${mobile ? 'Vente perdue' : 'Valeur de vente perdue'}</div><div class="v">${fE(I.caPerdu)}</div><div class="s">au prix de vente du panel</div></div>
+      <div><div class="k">Motifs</div><div class="v">${M.length ? esc(M[0].lib) : '—'}</div><div class="s">${M.map(x => esc(x.lib) + ' ' + fN(x.pieces)).join(' · ')}</div></div>
+    </div>`;
+    const nMax = mobile ? 8 : 12;
+    // Sur ordinateur, six colonnes ; au téléphone, quatre : les vendues et la valeur perdue passent sous le nom.
+    const vd = p => p.vendus != null ? fN(p.vendus) + ' vendue' + (p.vendus > 1 ? 's' : '') + (p.taux != null ? ' · ' + fP(p.taux) + ' jeté' : '') : '';
+    const table = mobile
+      ? `<table class="db-pro-tab db-inv-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th><th class="n">Coût</th></tr></thead><tbody>${P.slice(0, nMax).map(p => `<tr><td class="nom">${esc(p.nom)}<small>${esc([p.categorie, jour ? vd(p) : '', p.caPerdu ? fE(p.caPerdu) + ' de vente perdue' : ''].filter(Boolean).join(' · '))}</small></td><td>${invTag(p)}</td><td class="n">${fN(p.pieces)}</td><td class="n">${fE(p.cout)}</td></tr>`).join('')}${P.length > nMax ? `<tr><td colspan="4" class="mu">… et ${P.length - nMax} ${P.length - nMax > 1 ? 'autres références' : 'autre référence'}</td></tr>` : ''}</tbody></table>`
+      : `<table class="db-pro-tab db-inv-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th>${jour ? '<th class="n">Vendues</th>' : ''}<th class="n">Coût</th><th class="n">Valeur perdue</th></tr></thead><tbody>${P.slice(0, nMax).map(p => `<tr><td class="nom">${esc(p.nom)}${p.categorie ? `<small>${esc(p.categorie)}</small>` : ''}</td><td>${invTag(p)}</td><td class="n">${fN(p.pieces)}</td>${jour ? `<td class="n mu">${p.vendus != null ? fN(p.vendus) + (p.taux != null ? ' <small>(' + fP(p.taux) + ' jeté)</small>' : '') : '—'}</td>` : ''}<td class="n">${fE(p.cout)}</td><td class="n mu">${fE(p.caPerdu)}</td></tr>`).join('')}${P.length > nMax ? `<tr><td colspan="${jour ? 6 : 5}" class="mu">… et ${P.length - nMax} ${P.length - nMax > 1 ? 'autres références' : 'autre référence'}</td></tr>` : ''}</tbody></table>`;
+    if (mobile) { return carte(`${kpi}<div class="db-pro-corps un"><div><span class="db-lab">Par produit</span>${table}</div></div>${note}`); }
+    // Sur ordinateur, le détail par produit se déplie sous les chiffres de tête.
+    const ouvert = !!S.invOuvert;
+    return `<div class="db-card db-inv"><div class="ct" data-invdrop="1" style="cursor:pointer"><span class="db-lab">${lib}</span><span class="db-mini">${esc(sous)}</span><span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>${kpi}${ouvert ? `<div class="db-pro-corps un"><div><span class="db-lab">Par produit — du plus coûteux au moins coûteux</span>${table}</div></div>` : ''}${note}</div>`;
+  }
+  function murInv() {
+    const I = invData(), cle = cleInv(), per = coPer();
+    if (!I) { return murC('Invendus', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture de la poubelle…', '', 'invdrop'); }
+    if (!I.lu) { return murC('Invendus', '—', 'panel muet', '', 'invdrop'); }
+    if (!I.declare) { return murC('Invendus', '0', 'rien déclaré ' + (per ? 'sur ' + perLib() : ceJour()) + '<span class="dr"> · détail ▾</span>', '', 'invdrop'); }
+    return murC('Invendus', fK(I.cout), fN(I.pieces) + ' pièce' + (I.pieces > 1 ? 's' : '') + ' jetée' + (I.pieces > 1 ? 's' : '') + ' · ' + fK(I.caPerdu) + ' de valeur de vente' + `<span class="dr"> · ${S.invOuvert ? 'replier ▴' : 'détail ▾'}</span>`, 'ko', 'invdrop');
+  }
   function murCanaux() {
     const C = canauxData(), cle = cleCanaux();
     if (!C || C.indispo) { return murC('Webshop', C ? '—' : '…', C ? 'panel muet' : (S.err[cle] ? esc(S.err[cle]) : 'lecture des commandes…')); }
@@ -1475,6 +1519,7 @@
       ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
       ${ligne('− Coût matière', (se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues') + (m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''), m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
+      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? 'coût de production des pièces jetées' + (m.invendusPieces ? ' · ' + fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false)}
       ${ligne('− Main-d’œuvre', (se.labour != null ? 'seuil ' + fP(se.labour) : '') + (m.labourSource ? ' · ' + esc(m.labourSource) : ''), m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
       ${ligne('− Frais généraux', (se.overhead != null ? 'seuil ' + fP(se.overhead) : '') + (m.overheadSource ? ' · ' + esc(m.overheadSource) : ''), m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
       ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
@@ -1507,6 +1552,7 @@
     </div>`;
     h += splitCarte(m);
     h += offresCarte();
+    h += invCarte(false);
     if (m.objectifJour) {
       // Objectif atteint : la ligne passe en or, badge trophée et pluie de
       // confettis (V1). Record de jour du magasin : bandeau plein or, feux
@@ -1734,6 +1780,7 @@
     </div>`;
     h += splitCarte(m);
     h += offresCarte();
+    h += invCarte(false);
     // Le calendrier : une case par jour, colorée par l'atteinte de SON objectif.
     if (jours.length) {
       const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#2d7a3e', false] : a >= 100 ? ['#6aa84f', false] : a >= 90 ? ['#e8c9a0', true] : a >= 75 ? ['#F5B26B', true] : ['#F08A2C', false]; };
@@ -3416,6 +3463,8 @@
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
+    $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
+    $.querySelectorAll('[data-cmdliste]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.cmdListeOuvert = !S.cmdListeOuvert; rendre(); }));
     // Les contrôles en photo : filtres, flèches, loupe.
     $.querySelectorAll('[data-cqf]').forEach(b => b.addEventListener('click', () => { S.cqFiltre = b.dataset.cqf; S.cqRaz = true; rendre(); }));
     $.querySelectorAll('[data-cqvoir]').forEach(b => b.addEventListener('click', () => { S.cqVoir = b.dataset.cqvoir; rendre(); }));
