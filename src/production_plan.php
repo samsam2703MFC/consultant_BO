@@ -207,6 +207,18 @@ function gpCatalogue(): array
         foreach ((array) ($pc['produits'] ?? []) as $pid => $x) { $prods[(int) $pid] = ['nom' => (string) ($x['nom'] ?? ''), 'catId' => (int) ($x['catId'] ?? 0), 'cat' => (string) ($x['cat'] ?? '')]; }
         foreach ((array) ($pc['categories'] ?? []) as $cid => $x) { $cats[(int) $cid] = ['nom' => (string) ($x['nom'] ?? ''), 'groupe' => $x['groupe'] ?? null]; }
     }
+    // Le groupe (la section) : le panel ne le porte que sur une partie des catégories — mesuré le
+    // 03/10/2026, la plupart rendent null ; catalogueCategories() le complète. Une catégorie rangée
+    // dans deux groupes (« Pâtisserie · Tartes ») prend le premier.
+    if (function_exists('catalogueCategories')) {
+        foreach ((array) catalogueCategories() as $cid => $x) {
+            $g = isset($x['groupe']) && $x['groupe'] !== null && $x['groupe'] !== '' ? (string) $x['groupe'] : null;
+            if ($g === null) { continue; }
+            $avant = $cats[(int) $cid] ?? ['nom' => (string) ($x['nom'] ?? ''), 'groupe' => null];
+            $cats[(int) $cid] = ['nom' => $avant['nom'] !== '' ? $avant['nom'] : (string) ($x['nom'] ?? ''), 'groupe' => ($avant['groupe'] ?? '') !== '' && $avant['groupe'] !== null ? $avant['groupe'] : $g];
+        }
+    }
+    foreach ($cats as $cid => $x) { if (is_string($x['groupe']) && str_contains($x['groupe'], ' · ')) { $cats[$cid]['groupe'] = explode(' · ', $x['groupe'])[0]; } }
     return $memo = ['produits' => $prods, 'categories' => $cats];
 }
 
@@ -223,7 +235,7 @@ function gpCleCat(int $catId, string $cat): string
  */
 function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget): array
 {
-    $cle = 'gpBase:' . $sid . ':' . $date . ':' . $semaines;
+    $cle = 'gpBase2:' . $sid . ':' . $date . ':' . $semaines;
     $c = setting($cle);
     if (is_array($c) && isset($c['b']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_BASE) { return $c['b']; }
     $jours = []; for ($i = 1; $i <= $semaines; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
