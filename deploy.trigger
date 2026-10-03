@@ -553,3 +553,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T15:02:20Z production dans le rail, sous-totaux
 2026-10-03T15:06:20Z production : sections
 2026-10-03T15:37:50Z dashboard : vue jour en lignes
+2026-10-03T15:57:55Z production : application /production
