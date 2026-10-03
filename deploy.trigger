@@ -515,3 +515,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T06:30:44Z tablette vendeuses : fiche produit, vente additionnelle, arguments et bundles
 2026-10-03T06:45:00Z ventes par categorie : pourcentages entiers et coefficient
 2026-10-03T07:34:57Z canaux et offres : commandes par canal, promotions et bundles (dashboard + cockpit)
+2026-10-03T07:39:16Z canaux : commande encaissée = remise, liste du jour avec le comptoir
