@@ -529,3 +529,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T12:00:50Z vue jour : carte des offres vide
 2026-10-03T12:10:35Z P&L : cout matiere recompose depuis les tickets
 2026-10-03T12:17:10Z matiere : periode, rentabilite, performance
+2026-10-03T12:20:00Z matiere : couts invraisemblables ecartes
