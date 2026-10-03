@@ -936,13 +936,16 @@ function pfFoursValider(array $p): array
 function pfGantt(array $plan, array $F): array
 {
     $fours = []; foreach ($F['fours'] as $f) { $fours[$f['id']] = $f + ['fournees' => [], 'occupation' => 0, 'plaquesTot' => 0, 'libre' => null]; }
-    $hors = []; $retards = 0;
+    $hors = []; $retards = 0; $entree = [];
     foreach ($plan as $c) {
         $de = gpHeure($c['de']); if ($de === null) { continue; }
         // Les plaques par four et par réglage.
         $grp = [];
         $parCat = [];
         foreach ($c['lignes'] as $l) { if ((int) $l['sortie'] > 0) { $parCat[(string) $l['catCle']]['pieces'] = ($parCat[(string) $l['catCle']]['pieces'] ?? 0) + (int) $l['sortie']; $parCat[(string) $l['catCle']]['nom'] = $l['cat']; $parCat[(string) $l['catCle']]['groupe'] = $l['groupe']; } }
+        // Ce que l'écran recalcule lui-même quand on change un four sans l'enregistrer.
+        $entree[] = ['id' => $c['id'], 'nom' => $c['nom'], 'de' => $c['de'], 'four' => $c['four'] ?? null,
+            'categories' => array_map(static fn ($k, $x) => ['cle' => (string) $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'pieces' => $x['pieces']], array_keys($parCat), array_values($parCat))];
         foreach ($parCat as $k => $x) {
             $r = $F['categories'][$k] ?? null;
             if ($r === null || $r['four'] === null || !isset($fours[$r['four']])) { $hors[$k] = ['cle' => $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'pieces' => ($hors[$k]['pieces'] ?? 0) + $x['pieces']]; continue; }
@@ -992,9 +995,21 @@ function pfGantt(array $plan, array $F): array
     $d = null; $a = null;
     foreach ($fours as $f) { foreach ($f['fournees'] as $x) { $d = min($d ?? 99, $x['d']); $a = max($a ?? 0, $x['f']); } }
     foreach ($plan as $c) { $h = gpHeure($c['de']); if ($h !== null) { $d = min($d ?? $h, $h); $a = max($a ?? $h, $h); } }
+    // L'utilisation d'un four : ses minutes de cuisson sur la plage de production (de la 1re mise
+    // au four prévue à la dernière ouverture de vente) ; le remplissage : ses plaques sur la
+    // capacité de ses fournées.
+    $pd = null; $pa = null;
+    foreach ($plan as $c) { $h = gpHeure($c['de']); $q = gpHeure($c['four'] ?? null) ?? $h; if ($h !== null) { $pd = min($pd ?? $q, $q); $pa = max($pa ?? $h, $h); } }
+    $fen = $pd !== null && $pa !== null ? max(1, (int) round(($pa - $pd) * 60)) : null;
     $out = [];
-    foreach ($fours as $f) { unset($f['libre']); $f['nFournees'] = count($f['fournees']); $out[] = $f; }
-    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)]];
+    foreach ($fours as $f) {
+        unset($f['libre']); $f['nFournees'] = count($f['fournees']);
+        $f['utilisation'] = $fen !== null ? (int) round(100 * $f['occupation'] / $fen) : null;
+        $f['remplissage'] = $f['nFournees'] > 0 ? (int) round(100 * $f['plaquesTot'] / ($f['nFournees'] * $f['plaques'])) : null;
+        $out[] = $f;
+    }
+    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
+        'fenetre' => $pd !== null ? ['de' => gpHhmm($pd), 'a' => gpHhmm($pa), 'minutes' => $fen] : null, 'entree' => $entree];
 }
 
 /** GET /production/flux/fours?shop=4&date=YYYY-MM-DD — les fours, les réglages de cuisson et le Gantt du jour. */

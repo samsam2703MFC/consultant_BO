@@ -167,3 +167,4 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-gantt .gb.late{box-shadow:0 0 0 2px var(--pf-ko);background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 6px,transparent 6px 12px)}
 .pf-leg i.late{background:var(--pf-ko)}.pf-leg i.gvl{border-left:1.5px dashed var(--pf-ko);width:0 !important;background:none}
 @media (max-width:900px){.pf-gantt .gl{flex-basis:96px}}
+.pf-gantt .gl small.ut{color:#555;font-weight:600}
