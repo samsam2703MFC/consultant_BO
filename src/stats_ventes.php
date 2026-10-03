@@ -313,12 +313,17 @@ function svMatiereJour(int $sid, string $j, int &$cout, int $budget): ?array
     if ($j < SV_DEBUT) { return $memo[$k] = null; }
     $p = svProduitsJour($sid, $j, $cout, $budget);
     if ($p === null) { return $memo[$k] = null; }
-    $connu = 0.0; $caConnu = 0.0; $caInconnu = 0.0; $parHeure = [];
+    $connu = 0.0; $caConnu = 0.0; $caInconnu = 0.0; $parHeure = []; $aberrantes = 0;
     foreach ($p as $h => $lst) {
         $hc = 0.0; $hk = 0.0; $hi = 0.0;
         foreach ((array) $lst as $x) {
             $v = (float) ($x[2] ?? 0);
-            if (($x[3] ?? null) === null) { $hi += $v; } else { $hc += (float) $x[3]; $hk += $v; }
+            $c = $x[3] ?? null;
+            // Un coût invraisemblable (au-dessus du prix de vente, ou sous 5 % de celui-ci : une
+            // recette mal chiffrée en amont, comme le contrôle du scoring) vaut un coût inconnu —
+            // mesuré à Gosselies, trois jours à −100 % de marge venaient de là.
+            if ($c !== null && $v > 0 && !svCoutPlausible((float) $c, $v)) { $aberrantes++; $c = null; }
+            if ($c === null) { $hi += $v; } else { $hc += (float) $c; $hk += $v; }
         }
         $parHeure[(int) $h] = [$hc, $hk, $hi];
         $connu += $hc; $caConnu += $hk; $caInconnu += $hi;
@@ -330,8 +335,18 @@ function svMatiereJour(int $sid, string $j, int &$cout, int $budget): ?array
     foreach ($parHeure as $h => [$hc, $hk, $hi]) { $est[$h] = round($hc + $hi * $taux, 2); }
     $couv = round(100 * $caConnu / $ca, 1);
     return $memo[$k] = ['estime' => round($connu + $caInconnu * $taux, 2), 'connu' => round($connu, 2), 'ca' => round($ca, 2),
-        'couverture' => $couv, 'taux' => round(100 * $taux, 1), 'parHeure' => $est,
+        'couverture' => $couv, 'taux' => round(100 * $taux, 1), 'parHeure' => $est, 'aberrantes' => $aberrantes,
         'source' => 'recettes vendues' . ($couv < 99.5 ? ' · estimé, ' . round($couv) . ' % du CA avec coût connu' : '')];
+}
+
+/** Un coût de ligne est-il plausible face à sa vente ? Entre 5 % et 100 % du prix, exclu. */
+function svCoutPlausible(float $cout, float $vente): bool
+{
+    if ($vente <= 0) { return true; }
+    if ($cout <= 0 || $cout >= $vente) { return false; }
+    $p = setting('production', []);
+    $min = (is_array($p) && isset($p['coutRatioMin'])) ? (float) $p['coutRatioMin'] : 0.05;
+    return $min <= 0 || ($cout / $vente) >= $min;
 }
 
 /**
