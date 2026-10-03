@@ -134,11 +134,19 @@
 
   /* --- 1. Paramètres ------------------------------------------------------------ */
   function brouillon(d) {
-    const cats = {}; (d.categories || []).forEach(c => { cats[c.cle] = { cuissons: (c.cuissons || []).slice(), plaque: c.plaque, limite: c.limite, nom: c.nom, catId: c.catId, groupe: c.groupe, veille: !!c.veille, garde: !!c.garde, auto: !!c.auto, stockMin: c.stockMin || 0 }; });
+    const cats = {}; (d.categories || []).forEach(c => { cats[c.cle] = { cuissons: (c.cuissons || []).slice(), parts: c.parts ? Object.assign({}, c.parts) : null, plaque: c.plaque, limite: c.limite, nom: c.nom, catId: c.catId, groupe: c.groupe, veille: !!c.veille, garde: !!c.garde, auto: !!c.auto, stockMin: c.stockMin || 0 }; });
     const ob = {}; (d.produits || []).forEach(p => { if (p.oblig) { ob[p.pid] = { jours: (p.oblig.jours || []).slice(), min: p.oblig.min, reseau: !!p.oblig.reseau }; } });
     const jours = {}; Object.keys(d.flux.jours).forEach(j => { jours[j] = { cuissons: d.flux.jours[j].cuissons, minPct: d.flux.jours[j].minPct }; });
     return { cuissons: d.cuissons.map(c => Object.assign({}, c)), regles: Object.assign({}, d.regles), categories: cats, jours, oblig: ob, ajusterJ7: d.flux.ajusterJ7 !== false, modePeu: d.flux.modePeu === 'stock' ? 'stock' : 'production' };
   }
+  /** Les parts de la journée ramenées aux cuissons d'une catégorie : {id: %}. */
+  function partsDefaut(E, c) {
+    const ids = E.cuissons.map(x => x.id).filter(id => c.cuissons.includes(id));
+    const tot = E.cuissons.filter(x => ids.includes(x.id)).reduce((a, x) => a + (+x.pct || 0), 0);
+    const o = {}; ids.forEach(id => { const x = E.cuissons.find(y => y.id === id); o[id] = tot > 0 ? Math.round(100 * (+x.pct || 0) / tot) : Math.round(100 / ids.length); });
+    return o;
+  }
+  const totPart = (t, propre) => propre ? (Math.abs(t - 100) < 0.5 ? `<b>${fN(t)} %</b>` : `<b class="wa" title="les parts se répartissent au prorata">${fN(t)} %</b>`) : `<span class="mu">${t ? fN(t) + ' %' : '—'}</span>`;
   function pageParams(d) {
     const E = S.edit || (S.edit = brouillon(d));
     const C = E.cuissons, nC = C.length, av = +E.regles.avance || 0;
@@ -166,11 +174,13 @@
     // Les catégories.
     const cats = Object.entries(E.categories).sort((a, b) => [(a[1].groupe || 'zzz'), a[1].nom].join('|').localeCompare([(b[1].groupe || 'zzz'), b[1].nom].join('|')));
     let g = null;
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">3 · Les catégories</span><span class="pf-mini">à quelles cuissons chaque catégorie se cuit · le step de production (pièces par fournée : la production et la proposition J−7 s’arrondissent à ce step) · le stock minimum en vitrine qui déclenche une recuisson · préparée la veille (1re cuisson du lendemain) · se garde au lendemain (clôture)</span></div>
-      <table class="pf-tab"><thead><tr><th>Catégorie</th>${C.map((c, i) => `<th class="c">${i + 1}<small>${esc(c.nom)}</small></th>`).join('')}<th class="n">Step de production</th><th class="n">Stock minimum de recuisson</th><th class="c">Préparée la veille</th><th class="c">Se garde</th></tr></thead><tbody>
-      ${cats.map(([k, c]) => { const gr = c.groupe || 'Sans section'; const t = gr !== g ? `<tr class="grp"><td colspan="${C.length + 5}">${esc(gr)}</td></tr>` : ''; g = gr;
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">3 · Les catégories</span><span class="pf-mini">la part de chaque cuisson, catégorie par catégorie (vide = pas cuite à cette cuisson ; en gris, les parts de la journée ; une catégorie à ses propres parts ne suit pas le minimum de la 1re cuisson) · le step de production (pièces par fournée : la production et la proposition J−7 s’arrondissent à ce step) · le stock minimum en vitrine qui déclenche une recuisson · préparée la veille (1re cuisson du lendemain) · se garde au lendemain (clôture)</span></div>
+      <table class="pf-tab"><thead><tr><th>Catégorie</th>${C.map((c, i) => `<th class="c">${i + 1}<small>${esc(c.nom)} %</small></th>`).join('')}<th class="n">Total</th><th class="n">Step de production</th><th class="n">Stock minimum de recuisson</th><th class="c">Préparée la veille</th><th class="c">Se garde</th></tr></thead><tbody>
+      ${cats.map(([k, c]) => { const gr = c.groupe || 'Sans section'; const t = gr !== g ? `<tr class="grp"><td colspan="${C.length + 6}">${esc(gr)}</td></tr>` : ''; g = gr;
+        const pd = c.parts || partsDefaut(E, c); const tot = Object.values(pd).reduce((a, v) => a + (+v || 0), 0);
         const st = c.plaque == null || c.plaque === '' ? 1 : +c.plaque; const opts = [...new Set((d.steps || [1, 8, 20]).concat([st]))].sort((a, b) => a - b);
-        return t + `<tr><td class="nom">${esc(c.nom)}${c.auto ? ' <span class="pf-tag">proposé</span>' : ''}</td>${C.map(cu => `<td class="c"><input type="checkbox" data-catcu="${esc(k)}" data-cu-id="${esc(cu.id)}"${c.cuissons.includes(cu.id) ? ' checked' : ''}></td>`).join('')}
+        return t + `<tr><td class="nom">${esc(c.nom)}${c.auto ? ' <span class="pf-tag">proposé</span>' : ''}</td>${C.map(cu => { const v = c.parts ? (c.parts[cu.id] || '') : ''; const ph = !c.parts && pd[cu.id] ? pd[cu.id] : ''; return `<td class="c"><input class="pf-in pct${c.parts ? '' : ' def'}" type="number" min="0" max="100" step="5" data-catpart="${esc(k)}" data-cu-id="${esc(cu.id)}" data-f="cp${esc(k)}-${esc(cu.id)}" value="${esc(v)}" placeholder="${esc(ph)}"></td>`; }).join('')}
+          <td class="n" data-cattot="${esc(k)}">${totPart(tot, !!c.parts)}${c.parts ? ` <button class="pf-mini-btn" data-catreset="${esc(k)}" title="revenir aux parts de la journée">jour</button>` : ''}</td>
           <td class="n"><select data-catpl="${esc(k)}">${opts.map(v => `<option value="${v}"${v === st ? ' selected' : ''}>${v === 1 ? '1 · à l’unité' : 'par ' + v}</option>`).join('')}</select></td>
           <td class="n"><input class="pf-in court" type="number" min="0" max="500" data-catsm="${esc(k)}" data-f="sm${esc(k)}" value="${c.stockMin ? esc(c.stockMin) : ''}" placeholder="0"></td>
           <td class="c"><input type="checkbox" data-catv="${esc(k)}"${c.veille ? ' checked' : ''}></td><td class="c"><input type="checkbox" data-catg="${esc(k)}"${c.garde ? ' checked' : ''}></td></tr>`; }).join('')}</tbody></table>
@@ -197,7 +207,8 @@
   }
   function enregistrerParams() {
     const E = S.edit, d = S.data[cle()];
-    const cats = {}; Object.entries(E.categories).forEach(([k, c]) => { cats[k] = { cuissons: c.cuissons.filter(id => E.cuissons.some(x => x.id === id)), plaque: c.plaque === '' || c.plaque == null || +c.plaque <= 1 ? null : +c.plaque, limite: c.limite, nom: c.nom, catId: c.catId }; });
+    const cats = {}; Object.entries(E.categories).forEach(([k, c]) => { const pa = c.parts ? Object.fromEntries(Object.entries(c.parts).filter(([id, v]) => E.cuissons.some(x => x.id === id) && +v > 0).map(([id, v]) => [id, +v])) : null;
+      cats[k] = { cuissons: pa && Object.keys(pa).length ? E.cuissons.map(x => x.id).filter(id => pa[id]) : c.cuissons.filter(id => E.cuissons.some(x => x.id === id)), parts: pa && Object.keys(pa).length ? pa : null, plaque: c.plaque === '' || c.plaque == null || +c.plaque <= 1 ? null : +c.plaque, limite: c.limite, nom: c.nom, catId: c.catId }; });
     const sm = {}; Object.entries(E.categories).forEach(([k, c]) => { if (+c.stockMin > 0) { sm[k] = Math.round(+c.stockMin); } });
     const ob = {}; Object.entries(E.oblig).forEach(([pid, o]) => { if (o.jours.length || o.reseau) { ob[pid] = { jours: o.jours, min: +o.min || 0 }; } });
     const n = E.cuissons.length;
@@ -404,9 +415,14 @@
     on('[data-jour-min]', 'input', i => { E.jours[i.dataset.jourMin].minPct = i.value; });
     on('[data-cu]', 'input', i => { const c = E.cuissons[+i.dataset.cu]; c[i.dataset.k] = i.dataset.k === 'pct' ? i.value : i.value; });
     on('[data-cu]', 'change', () => rendre());
-    on('[data-cusup]', 'click', b => { const i = +b.dataset.cusup; const id = E.cuissons[i].id; E.cuissons.splice(i, 1); Object.values(E.categories).forEach(c => { c.cuissons = c.cuissons.filter(x => x !== id); }); Object.values(E.jours).forEach(j => { j.cuissons = Math.min(j.cuissons, E.cuissons.length); }); rendre(); });
+    on('[data-cusup]', 'click', b => { const i = +b.dataset.cusup; const id = E.cuissons[i].id; E.cuissons.splice(i, 1); Object.values(E.categories).forEach(c => { c.cuissons = c.cuissons.filter(x => x !== id); if (c.parts) { delete c.parts[id]; } }); Object.values(E.jours).forEach(j => { j.cuissons = Math.min(j.cuissons, E.cuissons.length); }); rendre(); });
     on('[data-cuajout]', 'click', () => { let n = 1; while (E.cuissons.some(c => c.id === 'c' + n)) { n++; } const der = E.cuissons[E.cuissons.length - 1]; E.cuissons.push({ id: 'c' + n, nom: 'Cuisson ' + (E.cuissons.length + 1), de: der ? der.a : '16:00', a: '19:00', pct: 0, daypart: null }); rendre(); });
     on('[data-regle]', 'input', i => { E.regles[i.dataset.regle] = i.value === '' ? '' : +i.value; });
+    on('[data-catpart]', 'input', i => { const x = E.categories[i.dataset.catpart]; if (!x.parts) { x.parts = partsDefaut(E, x); }
+      x.parts[i.dataset.cuId] = i.value === '' ? 0 : Math.max(0, Math.min(100, +i.value)); x.cuissons = E.cuissons.map(y => y.id).filter(id => +x.parts[id] > 0); x.auto = false;
+      const td = $.querySelector(`[data-cattot="${i.dataset.catpart.replace(/"/g, '\\"')}"]`); if (td) { td.innerHTML = totPart(Object.values(x.parts).reduce((a, v) => a + (+v || 0), 0), true); } });
+    on('[data-catpart]', 'change', () => rendre());
+    on('[data-catreset]', 'click', b => { const x = E.categories[b.dataset.catreset]; x.parts = null; rendre(); });
     on('[data-catcu]', 'change', c => { const x = E.categories[c.dataset.catcu]; const id = c.dataset.cuId; x.cuissons = c.checked ? E.cuissons.map(y => y.id).filter(y => y === id || x.cuissons.includes(y)) : x.cuissons.filter(y => y !== id); x.auto = false; });
     on('[data-catpl]', 'change', s => { E.categories[s.dataset.catpl].plaque = +s.value > 1 ? +s.value : null; });
     on('[data-catsm]', 'input', i => { E.categories[i.dataset.catsm].stockMin = i.value === '' ? 0 : +i.value; });

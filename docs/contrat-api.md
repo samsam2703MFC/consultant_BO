@@ -538,6 +538,12 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   `j7.commandes` en tête) ; la prévision comptoir du jour ; le
   report de la veille (la clôture d'hier, déduite de la 1re cuisson) ; à produire par cuisson
   (`c[id] = {sortie, plaques, plaque, stock, prevu, fait, zone, ajustJ7, cmd, ws}`), le total, le CA au prix du magasin.
+- **Parts de cuisson par catégorie** (`gp.categories[cat].parts = {idCuisson: %}`, demande du
+  03/10/2026 : « les tartes, 30 matin, 30 midi, 30 après-midi ») : la production du jour de la
+  catégorie se répartit selon ces parts (au prorata si elles ne font pas 100) ; `cuissons` en
+  découle (les parts non nulles). Sans parts propres (`null`), la catégorie suit les parts de la
+  journée et le minimum de la 1re cuisson ; avec, le minimum ne s'y applique pas. Un jour à moins de
+  cuissons, la part d'une cuisson absente va à la dernière cuisson de la catégorie qui reste.
 - **Step de production** (`gp.categories[cat].plaque`, les pièces par fournée ; `steps` = `[1, 8, 20]`
   proposés, un autre nombre reste permis, `null` = à l'unité) : la production et la proposition J−7
   s'arrondissent à ce step. **Stock minimum de recuisson** (`flux.stockMin[cat]`, pièces) : en

@@ -449,18 +449,33 @@ function gpParams(int $sid, array $dp, array $base): array
     $cats = [];
     foreach ($prof as $k => $hs) {
         $e = $cfgS[$k] ?? null;
+        $pa = is_array($e) ? gpParts($e['parts'] ?? null, $ids) : null;
         $cats[(string) $k] = is_array($e)
-            ? ['cuissons' => array_values(array_filter((array) ($e['cuissons'] ?? []), static fn ($c) => in_array($c, $ids, true))), 'plaque' => isset($e['plaque']) && (int) $e['plaque'] > 0 ? (int) $e['plaque'] : null, 'limite' => gpHeure($e['limite'] ?? null) !== null ? gpHhmm(gpHeure($e['limite'])) : null, 'auto' => false]
-            : ['cuissons' => gpCochesDefaut($cuissons, $hs, $noms[$k][1] > 0 ? (gpCatalogue()['categories'][$noms[$k][1]]['groupe'] ?? null) : null), 'plaque' => null, 'limite' => null, 'auto' => true];
+            ? ['cuissons' => $pa !== null ? array_keys($pa) : array_values(array_filter((array) ($e['cuissons'] ?? []), static fn ($c) => in_array($c, $ids, true))), 'parts' => $pa, 'plaque' => isset($e['plaque']) && (int) $e['plaque'] > 0 ? (int) $e['plaque'] : null, 'limite' => gpHeure($e['limite'] ?? null) !== null ? gpHhmm(gpHeure($e['limite'])) : null, 'auto' => false]
+            : ['cuissons' => gpCochesDefaut($cuissons, $hs, $noms[$k][1] > 0 ? (gpCatalogue()['categories'][$noms[$k][1]]['groupe'] ?? null) : null), 'parts' => null, 'plaque' => null, 'limite' => null, 'auto' => true];
         $cats[(string) $k]['nom'] = $noms[$k][0]; $cats[(string) $k]['catId'] = $noms[$k][1];
     }
     // Une catégorie réglée mais absente de la base (elle ne s'est pas vendue ces semaines-là) garde son réglage.
     foreach ($cfgS as $k => $e) {
         if (isset($cats[(string) $k]) || !is_array($e)) { continue; }
-        $cats[(string) $k] = ['cuissons' => array_values(array_filter((array) ($e['cuissons'] ?? []), static fn ($c) => in_array($c, $ids, true))), 'plaque' => isset($e['plaque']) && (int) $e['plaque'] > 0 ? (int) $e['plaque'] : null,
+        $pa = gpParts($e['parts'] ?? null, $ids);
+        $cats[(string) $k] = ['cuissons' => $pa !== null ? array_keys($pa) : array_values(array_filter((array) ($e['cuissons'] ?? []), static fn ($c) => in_array($c, $ids, true))), 'parts' => $pa, 'plaque' => isset($e['plaque']) && (int) $e['plaque'] > 0 ? (int) $e['plaque'] : null,
             'limite' => gpHeure($e['limite'] ?? null) !== null ? gpHhmm(gpHeure($e['limite'])) : null, 'auto' => false, 'nom' => (string) ($e['nom'] ?? $k), 'catId' => (int) ($e['catId'] ?? 0)];
     }
     return ['cuissons' => $cuissons, 'regles' => $regles, 'categories' => $cats, 'enregistre' => isset($s['cuissons']) || isset($s['categories']) || isset($s['regles']), 'maj' => $s['maj'] ?? null];
+}
+
+/**
+ * Les parts propres d'une catégorie (demande du 03/10/2026 : « les tartes, c'est 30 matin, 30 midi,
+ * 30 après-midi ») : [id de cuisson => %], dans l'ordre des cuissons, sans les parts nulles ; null
+ * quand la catégorie suit les parts de la journée.
+ */
+function gpParts(mixed $p, array $ids): ?array
+{
+    if (!is_array($p)) { return null; }
+    $o = [];
+    foreach ($ids as $id) { $v = $p[$id] ?? null; if (is_numeric($v) && (float) $v > 0) { $o[$id] = round(min(100.0, (float) $v), 1); } }
+    return $o === [] ? null : $o;
 }
 
 /**
@@ -495,7 +510,10 @@ function gpValider(array $p): array
         if ($pl !== null && $pl !== '' && (!is_numeric($pl) || (int) $pl < 1 || (int) $pl > 500)) { return [false, 'pièces par plaque invalides pour « ' . ($e['nom'] ?? $k) . ' »', null]; }
         $lim = $e['limite'] ?? null;
         if ($lim !== null && $lim !== '' && gpHeure($lim) === null) { return [false, 'dernière recuisson invalide pour « ' . ($e['nom'] ?? $k) . ' »', null]; }
-        $cats[(string) $k] = ['cuissons' => array_values(array_unique(array_filter((array) ($e['cuissons'] ?? []), static fn ($x) => in_array($x, $ids, true)))),
+        $pa = $e['parts'] ?? null;
+        if (is_array($pa)) { foreach ($pa as $v) { if ($v !== null && $v !== '' && (!is_numeric($v) || (float) $v < 0 || (float) $v > 100)) { return [false, 'part de cuisson invalide pour « ' . ($e['nom'] ?? $k) . ' »', null]; } } }
+        $pa = gpParts($pa, $ids);
+        $cats[(string) $k] = ['cuissons' => $pa !== null ? array_keys($pa) : array_values(array_unique(array_filter((array) ($e['cuissons'] ?? []), static fn ($x) => in_array($x, $ids, true)))), 'parts' => $pa,
             'plaque' => $pl !== null && $pl !== '' ? (int) $pl : null, 'limite' => $lim !== null && $lim !== '' ? gpHhmm(gpHeure($lim)) : null,
             'nom' => mb_substr((string) ($e['nom'] ?? ''), 0, 80), 'catId' => (int) ($e['catId'] ?? 0)];
     }
@@ -600,8 +618,13 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
         $tp = 0.0; foreach ($z as $id => $_) { $tp += $pct[$id]; }
         // La part de chaque cuisson ; la 1re relevée à la production minimum, les suivantes réduites d'autant.
         $parts = []; foreach ($z as $id => $_) { $parts[$id] = $tp > 0 ? $pct[$id] / $tp : 0.0; }
+        // Une catégorie qui a ses propres parts les suit ; le minimum de la 1re cuisson du jour ne vaut
+        // que pour celles qui suivent les parts de la journée.
+        $propres = is_array($cfg['parts'] ?? null) ? array_intersect_key($cfg['parts'], $z) : [];
+        $tq = array_sum($propres);
+        if ($tq > 0) { foreach ($z as $id => $_) { $parts[$id] = (float) ($propres[$id] ?? 0) / $tq; } }
         $id0 = array_key_first($z);
-        if ($minPct !== null && $id0 !== null && count($z) > 1 && $parts[$id0] < $minPct) {
+        if ($tq <= 0 && $minPct !== null && $id0 !== null && count($z) > 1 && $parts[$id0] < $minPct) {
             $r0 = 1 - $parts[$id0];
             foreach ($parts as $id => $v) { $parts[$id] = $id === $id0 ? $minPct : ($r0 > 0 ? $v * (1 - $minPct) / $r0 : 0.0); }
         }
