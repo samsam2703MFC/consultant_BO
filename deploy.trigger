@@ -526,3 +526,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T11:43:08Z catalogue, categories et prix en direct API
 2026-10-03T11:47:56Z catalogue complet du panel
 2026-10-03T11:58:15Z dashboard vue jour : rien que le jour
+2026-10-03T12:00:50Z vue jour : carte des offres vide
