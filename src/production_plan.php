@@ -260,7 +260,7 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
  */
 function gpCommandes(int $sid, string $date): ?array
 {
-    $cle = 'ppCmd3:' . $sid . ':' . $date;
+    $cle = 'ppCmd4:' . $sid . ':' . $date;
     $c = setting($cle);
     if (is_array($c) && isset($c['l']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_CMD) { return $c['l']; }
     $ancien = is_array($c) && isset($c['l']) ? $c['l'] : null;
@@ -288,8 +288,10 @@ function gpCommandes(int $sid, string $date): ?array
             if ($items === [] && is_array($r) && isset($r['products']) && is_array($r['products'])) { $items = $r['products']; }
             $l = gpArticles($items);
             $out[$i]['lignes'] = $l; $out[$i]['sansDetail'] = $l === [];
-            // Diagnostic : les CLÉS d'un article quand aucune ligne n'est reconnue (jamais les valeurs).
+            // Diagnostic : les CLÉS d'un article quand aucune ligne n'est reconnue (jamais les valeurs),
+            // ou la forme de la réponse quand elle n'en porte pas (null, liste vide, clés de l'objet).
             if ($l === [] && $items !== [] && is_array(reset($items))) { $out[$i]['clesArticle'] = array_slice(array_keys(reset($items)), 0, 30); }
+            elseif ($l === []) { $out[$i]['clesArticle'] = $r === null ? ['(sans réponse : ' . mb_substr((string) PanelApi::$lastError, 0, 120) . ')'] : (is_array($r) ? ($r === [] ? ['(liste vide)'] : array_merge(['(réponse)'], array_slice(array_keys($r), 0, 12), isset($r['description']) && is_string($r['description']) ? ['description=' . mb_substr($r['description'], 0, 80)] : [])) : ['(' . gettype($r) . ')']); }
         }
     }
     foreach ($out as &$o) { unset($o['id']); } unset($o);
