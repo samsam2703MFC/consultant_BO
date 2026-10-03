@@ -1,0 +1,679 @@
+{
+ "source": "Instantané lu en lecture seule sur le serveur le samedi 3 octobre 2026 vers 17 h 15 (Halle, shop 4) : /ventes/stats, /exploitation/jour, /exploitation/canaux, /exploitation/pro, /exploitation/invendus, /pwa/tasks/nc, /pwa/tasks/photos, /ventes/record. Le réseau est anonyme, aucun nom de client.",
+ "magasin": "Atelier by - Halle",
+ "date": "2026-10-03",
+ "jourLib": "samedi 3 octobre 2026",
+ "relu": "17:13",
+ "ca": 2643.9,
+ "tickets": 177,
+ "panier": 14.94,
+ "produits": 976,
+ "ppc": 5.51,
+ "j7": {
+  "date": "2026-09-26",
+  "moment": "17:13",
+  "tickets": 179,
+  "ca": 2763.34,
+  "ticketsJour": 184,
+  "caJour": 2852.15
+ },
+ "clientsDelta": -2,
+ "caVsJ7": -7.3,
+ "panierReseau": 16.11,
+ "projection": 2703.6,
+ "projectionPart": 97.6,
+ "objectif": 2325.64,
+ "atteinte": 113.7,
+ "record": {
+  "ca": 3435.5,
+  "date": "04/04"
+ },
+ "pnl": {
+  "ca": 2643.9,
+  "mat": 1048.55,
+  "matPct": 39.7,
+  "matSeuil": 32,
+  "mb": 1595.35,
+  "mbPct": 60.3,
+  "inv": 0,
+  "mo": 368.05,
+  "moPct": 13.9,
+  "moSeuil": 33,
+  "fg": 486.38,
+  "fgPct": 18.4,
+  "fgSeuil": 13.5,
+  "net": 740.92,
+  "netPct": 28,
+  "franchiseH": 8.0
+ },
+ "bench": [
+  {
+   "ca": 5540.05,
+   "tickets": 286,
+   "panier": 19.37,
+   "mbPct": 57.7,
+   "moi": false
+  },
+  {
+   "ca": 2643.9,
+   "tickets": 177,
+   "panier": 14.94,
+   "mbPct": 60.3,
+   "moi": true
+  },
+  {
+   "ca": 2246.4,
+   "tickets": 168,
+   "panier": 13.37,
+   "mbPct": 57.9,
+   "moi": false
+  },
+  {
+   "ca": 1957.45,
+   "tickets": 138,
+   "panier": 14.18,
+   "mbPct": 60.1,
+   "moi": false
+  }
+ ],
+ "canaux": {
+  "comptoir": 2546.7,
+  "comptoirPct": 96.3,
+  "comptoirTickets": 177,
+  "comptoirPanier": 14.39,
+  "pro": 258,
+  "proTickets": 3,
+  "cc": 97.2,
+  "ccN": 1,
+  "ccPct": 3.7,
+  "liv": 0,
+  "commandes": 7,
+  "commandesComptoir": 6,
+  "aPreparer": 2,
+  "demainN": 5,
+  "demainCa": 295
+ },
+ "groupes": [
+  {
+   "nom": "Viennoiserie",
+   "cats": 2,
+   "q": 531,
+   "ca": 965.3,
+   "part": 36.5,
+   "mb": 584.5,
+   "taux": 60.5,
+   "coef": 2.53
+  },
+  {
+   "nom": "Tartes",
+   "cats": 6,
+   "q": 36,
+   "ca": 596.6,
+   "part": 22.6,
+   "mb": 377.2,
+   "taux": 63.2,
+   "coef": 2.72
+  },
+  {
+   "nom": "Boulangerie",
+   "cats": 3,
+   "q": 310,
+   "ca": 572.5,
+   "part": 21.7,
+   "mb": 306.0,
+   "taux": 53.5,
+   "coef": 2.15
+  },
+  {
+   "nom": "Pâtisserie",
+   "cats": 5,
+   "q": 28,
+   "ca": 174.6,
+   "part": 6.6,
+   "mb": 121.9,
+   "taux": 69.8,
+   "coef": 3.31
+  },
+  {
+   "nom": "Quiches",
+   "cats": 1,
+   "q": 15,
+   "ca": 172.2,
+   "part": 6.5,
+   "mb": 108.3,
+   "taux": 62.9,
+   "coef": 2.7
+  },
+  {
+   "nom": "Biscuiterie",
+   "cats": 1,
+   "q": 31,
+   "ca": 80.3,
+   "part": 3.0,
+   "mb": 43.7,
+   "taux": 54.4,
+   "coef": 2.19
+  },
+  {
+   "nom": "Boissons",
+   "cats": 2,
+   "q": 20,
+   "ca": 50.1,
+   "part": 1.9,
+   "mb": null,
+   "taux": null,
+   "coef": null
+  },
+  {
+   "nom": "Traiteur",
+   "cats": 1,
+   "q": 4,
+   "ca": 22.4,
+   "part": 0.8,
+   "mb": 10.6,
+   "taux": 47.1,
+   "coef": 1.89
+  },
+  {
+   "nom": "Épicerie",
+   "cats": 1,
+   "q": 1,
+   "ca": 9.9,
+   "part": 0.4,
+   "mb": 6.2,
+   "taux": 62.8,
+   "coef": 2.69
+  }
+ ],
+ "nGroupes": 9,
+ "nCats": 22,
+ "coefTotal": 2.45,
+ "mbTotal": 1595.35,
+ "heures": [
+  {
+   "h": 6,
+   "tickets": 6,
+   "ca": 43.1,
+   "mat": 16.13,
+   "mb": 26.97,
+   "trav": 31.4,
+   "poste": 3,
+   "res": -4.43,
+   "panier": 7.18,
+   "top": [
+    {
+     "nom": "Pain au Chocolat",
+     "q": 7,
+     "m": 7.8
+    },
+    {
+     "nom": "Pain au Chocolat Nappé",
+     "q": 6,
+     "m": 7.66
+    },
+    {
+     "nom": "Croissant",
+     "q": 4,
+     "m": 4.46
+    }
+   ]
+  },
+  {
+   "h": 7,
+   "tickets": 23,
+   "ca": 297.7,
+   "mat": 120.2,
+   "mb": 177.5,
+   "trav": 31.4,
+   "poste": 3,
+   "res": 146.1,
+   "panier": 12.94,
+   "top": [
+    {
+     "nom": "Croissant",
+     "q": 31,
+     "m": 34.6
+    },
+    {
+     "nom": "Pain au Chocolat",
+     "q": 27,
+     "m": 30.08
+    },
+    {
+     "nom": "Pain au Chocolat Nappé",
+     "q": 16,
+     "m": 20.42
+    }
+   ]
+  },
+  {
+   "h": 8,
+   "tickets": 24,
+   "ca": 279.2,
+   "mat": 110.36,
+   "mb": 168.84,
+   "trav": 44.8,
+   "poste": 4,
+   "res": 124.04,
+   "panier": 11.63,
+   "top": [
+    {
+     "nom": "Pain au Chocolat",
+     "q": 21,
+     "m": 23.39
+    },
+    {
+     "nom": "Croissant",
+     "q": 19,
+     "m": 21.2
+    },
+    {
+     "nom": "Couque à la Crème",
+     "q": 7,
+     "m": 19.71
+    }
+   ]
+  },
+  {
+   "h": 9,
+   "tickets": 25,
+   "ca": 515.8,
+   "mat": 215.81,
+   "mb": 299.99,
+   "trav": 44.8,
+   "poste": 4,
+   "res": 255.19,
+   "panier": 20.63,
+   "top": [
+    {
+     "nom": "Pain au Chocolat",
+     "q": 40,
+     "m": 44.56
+    },
+    {
+     "nom": "Couque au Beurre",
+     "q": 37,
+     "m": 39.85
+    },
+    {
+     "nom": "Croissant",
+     "q": 35,
+     "m": 39.06
+    }
+   ]
+  },
+  {
+   "h": 10,
+   "tickets": 25,
+   "ca": 506.1,
+   "mat": 196.18,
+   "mb": 309.92,
+   "trav": 44.8,
+   "poste": 4,
+   "res": 265.12,
+   "panier": 20.24,
+   "top": [
+    {
+     "nom": "Entremet 120Ø -  Duo Chocolat",
+     "q": 2,
+     "m": 20.68
+    },
+    {
+     "nom": "Brownies",
+     "q": 1,
+     "m": 16.42
+    },
+    {
+     "nom": "Brookie",
+     "q": 1,
+     "m": 14.96
+    }
+   ]
+  },
+  {
+   "h": 11,
+   "tickets": 16,
+   "ca": 199.4,
+   "mat": 73.35,
+   "mb": 126.05,
+   "trav": 26.8,
+   "poste": 3,
+   "res": 99.25,
+   "panier": 12.46,
+   "top": [
+    {
+     "nom": "Tarte TuttiFrutti",
+     "q": 1,
+     "m": 23.7
+    },
+    {
+     "nom": "Brownies",
+     "q": 1,
+     "m": 16.42
+    },
+    {
+     "nom": "Croûte aux fraises",
+     "q": 1,
+     "m": 14.47
+    }
+   ]
+  },
+  {
+   "h": 12,
+   "tickets": 17,
+   "ca": 185.3,
+   "mat": 77.81,
+   "mb": 107.49,
+   "trav": 25.9,
+   "poste": 3,
+   "res": 81.59,
+   "panier": 10.9,
+   "top": [
+    {
+     "nom": "Brookie",
+     "q": 1,
+     "m": 14.96
+    },
+    {
+     "nom": "Rhubarbe & Fraises",
+     "q": 1,
+     "m": 14.16
+    },
+    {
+     "nom": "Pain 10 Céréales",
+     "q": 5,
+     "m": 9.63
+    }
+   ]
+  },
+  {
+   "h": 13,
+   "tickets": 13,
+   "ca": 223.3,
+   "mat": 84.9,
+   "mb": 138.4,
+   "trav": 25.9,
+   "poste": 2,
+   "res": 112.5,
+   "panier": 17.18,
+   "top": [
+    {
+     "nom": "Riz",
+     "q": 2,
+     "m": 25.43
+    },
+    {
+     "nom": "Cerise",
+     "q": 1,
+     "m": 13.9
+    },
+    {
+     "nom": "Cookie Avoine Raisins et Noisette",
+     "q": 6,
+     "m": 11.71
+    }
+   ]
+  },
+  {
+   "h": 14,
+   "tickets": 15,
+   "ca": 176.8,
+   "mat": 70.42,
+   "mb": 106.38,
+   "trav": 12.5,
+   "poste": 1,
+   "res": 93.88,
+   "panier": 11.79,
+   "top": [
+    {
+     "nom": "Brownies",
+     "q": 1,
+     "m": 16.42
+    },
+    {
+     "nom": "Fromage",
+     "q": 1,
+     "m": 12.31
+    },
+    {
+     "nom": "Pain Demi-Gris",
+     "q": 5,
+     "m": 8.13
+    }
+   ]
+  },
+  {
+   "h": 15,
+   "tickets": 7,
+   "ca": 135,
+   "mat": 50.81,
+   "mb": 84.19,
+   "trav": 12.5,
+   "poste": 1,
+   "res": 71.69,
+   "panier": 19.29,
+   "top": [
+    {
+     "nom": "Tarte Sucre Blanc",
+     "q": 1,
+     "m": 11.2
+    },
+    {
+     "nom": "Croissant",
+     "q": 10,
+     "m": 11.16
+    },
+    {
+     "nom": "Pain au Chocolat",
+     "q": 10,
+     "m": 11.14
+    }
+   ]
+  },
+  {
+   "h": 16,
+   "tickets": 6,
+   "ca": 82.2,
+   "mat": 32.58,
+   "mb": 49.62,
+   "trav": 12.5,
+   "poste": 1,
+   "res": 37.12,
+   "panier": 13.7,
+   "top": [
+    {
+     "nom": "Bleuet",
+     "q": 1,
+     "m": 13.19
+    },
+    {
+     "nom": "éclair chocolat",
+     "q": 4,
+     "m": 9.78
+    },
+    {
+     "nom": "Tian de Legumes — 1/2",
+     "q": 1,
+     "m": 7.57
+    }
+   ]
+  }
+ ],
+ "heuresTot": {
+  "mb": 1595.35,
+  "trav": 313.3,
+  "res": 1282.05,
+  "resPct": 48.5
+ },
+ "personnel": {
+  "personnes": 5,
+  "heures": 33.5,
+  "franchiseH": 8.0,
+  "cout": 368.05,
+  "pct": 13.9,
+  "seuil": 33,
+  "budget": 872,
+  "reste": 504,
+  "caParH": 79
+ },
+ "mois": [
+  {
+   "date": "2026-10-01",
+   "ca": 1691.85,
+   "net": 459.21,
+   "netPct": 27.1
+  },
+  {
+   "date": "2026-10-02",
+   "ca": 1880.6,
+   "net": 537.09,
+   "netPct": 28.6
+  },
+  {
+   "date": "2026-10-03",
+   "ca": 2643.9,
+   "net": 1090.08,
+   "netPct": 41.2
+  }
+ ],
+ "taches": {
+  "obligatoires": 11,
+  "faites": 8,
+  "aControler": 1,
+  "nonFaites": 3,
+  "bloquantes": 3,
+  "derniere": "09:30",
+  "par": "Nathan C.",
+  "fil": [
+   "ko",
+   "ko",
+   "ko",
+   "ctl",
+   "ok",
+   "ok",
+   "ok",
+   "ok",
+   "ok",
+   "ok",
+   "ok"
+  ]
+ },
+ "photos": [
+  [
+   "Comptoir · Pains & Boulangerie",
+   "ctl",
+   "09:28"
+  ],
+  [
+   "Comptoir · Viennoiseries",
+   "ok",
+   "09:28"
+  ],
+  [
+   "Magasin propre",
+   "ok",
+   "09:28"
+  ],
+  [
+   "Comptoir · Boissons",
+   "ok",
+   "09:29"
+  ],
+  [
+   "Comptoir · Épicerie",
+   "ok",
+   "09:29"
+  ],
+  [
+   "Comptoir · Quiches",
+   "ok",
+   "09:29"
+  ],
+  [
+   "Comptoir · Tartes",
+   "ok",
+   "09:29"
+  ],
+  [
+   "Prix et allergènes",
+   "ok",
+   "09:30"
+  ],
+  [
+   "Comptoir · Biscuiterie",
+   "ko",
+   null
+  ],
+  [
+   "Comptoir · Pâtisseries",
+   "ko",
+   null
+  ],
+  [
+   "Comptoir · Traiteur",
+   "ko",
+   null
+  ]
+ ],
+ "photosNote": {
+  "moyenne": 4.0,
+  "notees": 7,
+  "noteA": "16:09"
+ },
+ "stock": {
+  "refs": 632,
+  "compte": "01/10",
+  "ilya": "1 jour"
+ },
+ "nc": {
+  "jour": "vendredi 2 octobre",
+  "notees": 7,
+  "nc": 0,
+  "semaine": [
+   {
+    "jour": "2026-09-26",
+    "notees": 0,
+    "nc": 0
+   },
+   {
+    "jour": "2026-09-27",
+    "notees": 0,
+    "nc": 0
+   },
+   {
+    "jour": "2026-09-28",
+    "notees": 0,
+    "nc": 0
+   },
+   {
+    "jour": "2026-09-29",
+    "notees": 1,
+    "nc": 0
+   },
+   {
+    "jour": "2026-09-30",
+    "notees": 0,
+    "nc": 0
+   },
+   {
+    "jour": "2026-10-01",
+    "notees": 0,
+    "nc": 0
+   },
+   {
+    "jour": "2026-10-02",
+    "notees": 7,
+    "nc": 0
+   }
+  ]
+ },
+ "offres": null,
+ "invendus": {
+  "declare": false,
+  "cout": 0
+ },
+ "note": null,
+ "messagesPanel": 0,
+ "mbCategories": 1567,
+ "tauxCategories": 59
+}
