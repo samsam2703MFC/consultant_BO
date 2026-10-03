@@ -1172,22 +1172,31 @@ function pfGantt(array $plan, array $F): array
             foreach ($fours as $fid => $f) { $m = 0; foreach ($grp[$fid] ?? [] as $g) { $m += (int) ceil(array_sum(array_column($g['cats'], 'plaques')) / max(1, $f['plaques'])) * $g['duree']; } $charge[$fid] = $m; }
             $fenetre = static function (string $fid) use ($fours, $au, $de): float { $deb = max($fours[$fid]['libre'] ?? -1.0e9, $au ?? -1.0e9); return $deb < -1.0e8 ? 1.0e6 : ($de - $deb) * 60; };
             uasort($rep, static fn ($a, $b) => [$b['temp'], $b['duree']] <=> [$a['temp'], $a['duree']]);
+            // Les catégories d'un même réglage partagent leurs fournées : le lot de plaques du réglage
+            // part fournée pleine par fournée pleine, chacune au four qui la sortirait le plus tôt.
             foreach ($rep as $g) {
-                foreach ($g['cats'] as $x) {
-                    $reste = $x['plaques']; $pieces = $x['pieces'];
-                    while ($reste > 0) {
-                        $choix = null; $score = null;
-                        foreach ($fours as $fid => $f) { $sc = $charge[$fid] + $g['duree'] - $fenetre((string) $fid); if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; } }
-                        $mis = min($reste, $fours[$choix]['plaques']);
-                        $pc = (int) round($pieces * $mis / max(1, $reste)); $pieces -= $pc; $reste -= $mis;
-                        $key = $choix . '|' . $g['temp'] . '|' . $g['duree'];
-                        $grp[$choix][$key] ??= ['temp' => $g['temp'], 'duree' => $g['duree'], 'cats' => []];
+                $file = $g['cats'];
+                foreach ($file as &$x) { $x['reste'] = $x['plaques']; } unset($x);
+                $total = array_sum(array_column($file, 'plaques'));
+                $i = 0;
+                while ($total > 0) {
+                    $choix = null; $score = null;
+                    foreach ($fours as $fid => $f) { $sc = $charge[$fid] + $g['duree'] - $fenetre((string) $fid); if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; } }
+                    $place = min($total, $fours[$choix]['plaques']); $total -= $place;
+                    $key = $choix . '|' . $g['temp'] . '|' . $g['duree'];
+                    $grp[$choix][$key] ??= ['temp' => $g['temp'], 'duree' => $g['duree'], 'cats' => []];
+                    while ($place > 0 && isset($file[$i])) {
+                        $x = &$file[$i];
+                        $mis = min($place, $x['reste']);
+                        $pc = (int) round($x['pieces'] * $mis / max(1, $x['reste'])); $x['pieces'] -= $pc; $x['reste'] -= $mis; $place -= $mis;
                         $vu = false;
                         foreach ($grp[$choix][$key]['cats'] as &$y) { if ($y['cle'] === $x['cle']) { $y['plaques'] += $mis; $y['pieces'] += $pc; $vu = true; break; } }
                         unset($y);
                         if (!$vu) { $grp[$choix][$key]['cats'][] = ['cle' => $x['cle'], 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $mis, 'pieces' => $pc]; }
-                        $charge[$choix] += $g['duree'];
+                        if ($x['reste'] <= 0) { $i++; }
+                        unset($x);
                     }
+                    $charge[$choix] += $g['duree'];
                 }
             }
         }
@@ -1252,7 +1261,8 @@ function pfGantt(array $plan, array $F): array
         $f['remplissage'] = $f['nFournees'] > 0 ? (int) round(100 * $f['plaquesTot'] / ($f['nFournees'] * $f['plaques'])) : null;
         $out[] = $f;
     }
-    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
+    $rmax = 0; foreach ($out as $f) { foreach ($f['fournees'] as $x) { $rmax = max($rmax, (int) $x['retard']); } }
+    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'retardMax' => $rmax, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
         'fenetre' => $pd !== null ? ['de' => gpHhmm($pd), 'a' => gpHhmm($pa), 'minutes' => $fen] : null, 'entree' => $entree];
 }
 
