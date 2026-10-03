@@ -1795,8 +1795,13 @@ function ep_exploitation_rentabilite(): array
         $jours = []; $caTot = 0.0; $netTot = 0.0; $netOk = true;
         foreach ((array) $hm['days'] as $d) {
             $ca = (float) ($d['ca'] ?? 0);
-            $mb = isset($d['margin_value']) && is_numeric($d['margin_value']) ? (float) $d['margin_value'] : null;
+            // La marge du panel ne vaut que si son coût est COMPLET (cost_unknown faux) ; sinon la
+            // journée se recompose depuis les tickets gravés, et le P&L quotidien du panel, qui
+            // porte le même coût incomplet, ne la remplace pas.
+            $incomplet = !empty($d['cost_unknown']);
+            $mb = !$incomplet && isset($d['margin_value']) && is_numeric($d['margin_value']) ? (float) $d['margin_value'] : null;
             $ouvert = !empty($d['has_data']) && $ca > 0;
+            $eR = null;
             if ($mb === null && $ouvert && function_exists('svMatiereJour')) {
                 $zeroR = 0; $eR = svMatiereJour($id, (string) ($d['date'] ?? ''), $zeroR, 0);
                 if ($eR !== null) { $mb = $ca - (float) $eR['estime']; }
@@ -1810,7 +1815,7 @@ function ep_exploitation_rentabilite(): array
             if ($ouvert && is_array($q)) {
                 $rev = isset($q['revenue']) ? (float) $q['revenue'] : null;
                 $mat = isset($q['material']) ? (float) $q['material'] : null;
-                if ($rev !== null && $mat !== null) { $mb = $rev - $mat; }
+                if ($rev !== null && $mat !== null && !$incomplet) { $mb = $rev - $mat; }
                 if (isset($q['labour'])) { $lj = (float) $q['labour']; }
                 if (isset($q['overhead'])) { $oj = (float) $q['overhead']; }
                 $net = isset($q['result']) ? (float) $q['result']
@@ -2313,7 +2318,7 @@ function ep_exploitation_jour(): array
                 $ca = (float) ($d['ca'] ?? 0);
                 // La marge du panel vaut quand il la connaît ; nulle (COST_INCOMPLETE), elle se
                 // recompose depuis les tickets — jamais zéro, qui ferait un coût matière de 100 %.
-                $mbConnu = isset($d['margin_value']) && is_numeric($d['margin_value']);
+                $mbConnu = isset($d['margin_value']) && is_numeric($d['margin_value']) && empty($d['cost_unknown']);
                 $parJour[$j] = ['ca' => $ca, 'mb' => $mbConnu ? (float) $d['margin_value'] : null, 'mbConnu' => $mbConnu,
                     'tickets' => (int) ($d['tickets'] ?? 0), 'weekday' => (int) ($d['weekday'] ?? 0),
                     'ouvert' => !empty($d['has_data']) && $ca > 0];
@@ -5787,9 +5792,24 @@ function ep_perf(): array
             foreach (PanelApi::getParallele($chemins) as $cle => $hm) {
                 $tot = is_array($hm) ? ($hm['totals'] ?? null) : null;
                 $ca2 = is_array($tot) ? (float) ($tot['ca'] ?? 0) : 0.0;
-                $mg2 = is_array($tot) ? (float) ($tot['margin_value'] ?? 0) : 0.0;
-                $cache[$cle] = $ca2 > 0 ? round((($ca2 - $mg2) / $ca2) * 100, 1) : null;
-                $change = true;
+                // La marge du mois ne vaut que si le panel la chiffre ; sinon les journées se
+                // recomposent depuis les tickets gravés, et le mois ne prend un ratio que si ces
+                // journées portent au moins 80 % de son CA. Jamais 100 % faute de marge connue.
+                $mg2 = is_array($tot) && isset($tot['margin_value']) && is_numeric($tot['margin_value']) ? (float) $tot['margin_value'] : null;
+                $pct2 = ($mg2 !== null && $ca2 > 0) ? round((($ca2 - $mg2) / $ca2) * 100, 1) : null;
+                if ($pct2 === null && is_array($hm) && function_exists('svMatiereJour')) {
+                    [$sid2] = explode('-', (string) $cle);
+                    $caE = 0.0; $matE = 0.0; $zero2 = 0;
+                    foreach ((array) ($hm['days'] ?? []) as $d2) {
+                        $caJ = (float) ($d2['ca'] ?? 0);
+                        if ($caJ <= 0 || empty($d2['has_data'])) { continue; }
+                        $e2 = svMatiereJour((int) $sid2, (string) ($d2['date'] ?? ''), $zero2, 0);
+                        if ($e2 !== null) { $caE += $caJ; $matE += (float) $e2['estime']; }
+                    }
+                    if ($ca2 > 0 && $caE >= 0.8 * $ca2 && $caE > 0) { $pct2 = round(100 * $matE / $caE, 1); }
+                }
+                // Un mois sans ratio ne se mémorise pas : il se recalculera quand ses journées seront lues.
+                if ($pct2 !== null) { $cache[$cle] = $pct2; $change = true; } else { unset($cache[$cle]); }
             }
             if ($change) {
                 try {
