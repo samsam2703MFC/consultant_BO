@@ -346,14 +346,21 @@ function ep_catalogue_produits(): array
     if (mb_strlen($q) < 2) { return ['q' => $q, 'mois' => $mois, 'produits' => []]; }
     $cats = function_exists('catalogueCategories') ? (catalogueCategories() ?? []) : [];
     $rows = [];
-    try { $rows = Db::rows('SELECT id, name, id_category FROM product WHERE is_active = 1 AND name LIKE ? ORDER BY name LIMIT 300', ['%' . $q . '%']); }
-    catch (PDOException $e) { $rows = []; }
+    // Le catalogue du panel d'abord (products/available), la copie `product` si le panel se tait.
+    foreach (function_exists('panelCatalogue') ? panelCatalogue()['produits'] : [] as $x) {
+        if (!empty($x['actif']) && mb_stripos((string) $x['nom'], $q) !== false) { $rows[] = ['id' => $x['id'], 'name' => $x['nom'], 'id_category' => $x['catId'] ?? 0, 'cat' => $x['cat'] ?? '']; }
+    }
+    if ($rows === []) {
+        try { $rows = Db::rows('SELECT id, name, id_category FROM product WHERE is_active = 1 AND name LIKE ? ORDER BY name LIMIT 300', ['%' . $q . '%']); }
+        catch (PDOException $e) { $rows = []; }
+    }
     $vol = opVolumesMoisClos();
     $out = [];
     foreach ($rows as $r) {
         $pid = (int) $r['id'];
         if ($pid <= 0) { continue; }
-        $cat = trim((string) ($cats[(int) ($r['id_category'] ?? 0)]['nom'] ?? ''));
+        $cat = trim((string) ($r['cat'] ?? ''));
+        if ($cat === '') { $cat = trim((string) ($cats[(int) ($r['id_category'] ?? 0)]['nom'] ?? '')); }
         if ($cat === '') { $cat = (string) ($vol[$pid]['cat'] ?? ''); }
         $out[$pid] = ['id' => $pid, 'nom' => trim((string) $r['name']), 'categorie' => $cat, 'volume' => (int) round($vol[$pid]['vol'] ?? 0)];
     }

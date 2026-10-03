@@ -73,6 +73,7 @@ function ep_stats_ventes_sonde(): array
             foreach (['id', 'product_id', 'id_product'] as $k) { if (isset($l[$k]) && (int) $l[$k] === $pid) { $ligne = $l; break 2; } }
         }
         $d['disponible'] = $ligne === null ? null : $propre(array_map(static fn ($x) => is_array($x) ? ['n' => count($x), 'cles' => array_keys($x)] : $x, $ligne));
+        $d['disponibleCategorie'] = $ligne['category'] ?? null;
         $g = PanelApi::get('/shops/' . $sid . '/statistics/sales/product-category-groups?date_from=' . $date . '&date_to=' . $date);
         $d['groupes'] = ['cles' => is_array($g) && analyseListe($g) !== [] ? array_keys((array) analyseListe($g)[0]) : null,
             'ligne' => array_values(array_filter(analyseListe(is_array($g) ? $g : []), static fn ($l) => (int) ($l['product_id'] ?? 0) === $pid))];
@@ -508,6 +509,16 @@ function svCatalogue(): array
 {
     static $memo = null;
     if ($memo !== null) { return $memo; }
+    // Une seule lecture du panel pour tout le monde : le catalogue complet (panelCatalogue) quand
+    // il est chargé, sa propre lecture sinon (banc, module seul).
+    if (function_exists('panelCatalogue')) {
+        $pc = panelCatalogue();
+        if ($pc['produits'] !== []) {
+            $memo = [];
+            foreach ($pc['produits'] as $pid => $x) { $memo[(int) $pid] = ['nom' => (string) ($x['nom'] ?? ''), 'cat' => (string) ($x['cat'] ?? '')]; }
+            return $memo;
+        }
+    }
     $c = setting('svCatalogue');
     if (is_string($c)) { $c = json_decode($c, true); }
     if (is_array($c) && isset($c['ts'], $c['p']) && time() - (int) $c['ts'] < 3600) { return $memo = (array) $c['p']; }

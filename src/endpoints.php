@@ -3484,8 +3484,104 @@ function ep_prod_suivi(): array
  * regroupement, la jointure dupliquerait la catégorie autant de fois.
  * Rend null si la base partagée n'est pas là.
  */
+/**
+ * Le catalogue du panel, lu EN DIRECT : les groupes (/product-category-groups), les
+ * catégories (/product-categories) et les produits de chaque magasin du compte
+ * (/shops/{id}/products/available) avec leur catégorie, leurs groupes et leur prix pratiqué.
+ * Mémo d'une heure dans ceo_app_setting (`panelCatalogue`), la dernière lecture servie si le
+ * panel se tait, jamais une lecture vide. Demande du 03/10/2026 : plus de copie locale.
+ *
+ * @return array{produits: array<int, array>, categories: array<int, array{nom: string, groupe: ?string, actif: int}>, groupes: array<int, string>}
+ */
+function panelCatalogue(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $vide = ['produits' => [], 'categories' => [], 'groupes' => []];
+    $c = setting('panelCatalogue');
+    if (is_string($c)) { $c = json_decode($c, true); }
+    $deCache = static fn ($c) => ['produits' => (array) ($c['produits'] ?? []), 'categories' => (array) ($c['categories'] ?? []), 'groupes' => (array) ($c['groupes'] ?? [])];
+    if (is_array($c) && isset($c['ts'], $c['produits'], $c['categories']) && time() - (int) $c['ts'] < 3600) { return $memo = $deCache($c); }
+    if (!PanelApi::configured()) { return $memo = is_array($c) ? $deCache($c) : $vide; }
+    $lis = static function (array $x, array $cles): string { foreach ($cles as $k) { if (!empty($x[$k]) && is_string($x[$k])) { return trim($x[$k]); } } return ''; };
+    $num = static function (array $x, array $cles): int { foreach ($cles as $k) { if (isset($x[$k]) && is_numeric($x[$k])) { return (int) $x[$k]; } } return 0; };
+    $groupes = [];
+    foreach (PanelApi::productCategoryGroups() as $g) { $id = $num($g, ['id', 'id_group', 'group_id']); $n = $lis($g, ['base_name', 'name', 'group_name', 'label']); if ($id > 0 && $n !== '') { $groupes[$id] = $n; } }
+    $cats = [];
+    foreach (PanelApi::productCategories() as $r) { $id = $num($r, ['id', 'id_category', 'category_id']); $n = $lis($r, ['base_name', 'name', 'category_name', 'label']); if ($id > 0 && $n !== '') { $cats[$id] = ['nom' => $n, 'groupe' => null, 'actif' => isset($r['is_active']) ? (int) $r['is_active'] : 1]; } }
+    $prods = []; $prix = [];
+    foreach (PanelApi::consultantShops() ?? [] as $sh) {
+        $sid = (int) ($sh['id'] ?? 0);
+        if ($sid <= 0) { continue; }
+        foreach (PanelApi::produitsDisponibles($sid) as $l) {
+            $pid = $num($l, ['id', 'product_id', 'id_product']);
+            if ($pid <= 0) { continue; }
+            $cid = $num($l, ['id_category', 'category_id']);
+            $co = isset($l['category']) && is_array($l['category']) ? $l['category'] : null;
+            if ($co !== null) {
+                if ($cid <= 0) { $cid = $num($co, ['id']); }
+                $cn = $lis($co, ['base_name', 'name']);
+                if ($cid > 0 && !isset($cats[$cid]) && $cn !== '') { $cats[$cid] = ['nom' => $cn, 'groupe' => null, 'actif' => isset($co['is_active']) ? (int) $co['is_active'] : 1]; }
+                // Les groupes de la catégorie, quand la ligne les porte : objets, identifiants ou noms.
+                if ($cid > 0 && isset($cats[$cid]) && $cats[$cid]['groupe'] === null && isset($co['groups']) && is_array($co['groups'])) {
+                    $noms = [];
+                    foreach ($co['groups'] as $g) {
+                        $n = is_array($g) ? ($lis($g, ['base_name', 'name', 'group_name']) ?: ($groupes[$num($g, ['id', 'id_group', 'group_id'])] ?? '')) : (is_numeric($g) ? ($groupes[(int) $g] ?? '') : trim((string) $g));
+                        if ($n !== '') { $noms[$n] = true; }
+                    }
+                    if ($noms !== []) { $cats[$cid]['groupe'] = implode(' · ', array_keys($noms)); }
+                }
+            }
+            $pp = 0.0;
+            foreach (['portion_price_gross', 'portion_price'] as $k) { if (isset($l[$k]) && is_numeric($l[$k]) && (float) $l[$k] > 0) { $pp = (float) $l[$k]; break; } }
+            if ($pp > 0) { $prix[$pid][$sid] = round($pp, 2); }
+            if (!isset($prods[$pid])) {
+                $prods[$pid] = ['id' => $pid, 'nom' => $lis($l, ['base_name', 'name', 'product_name']), 'catId' => $cid,
+                    'cat' => $lis($l, ['base_category_name', 'category_name']) ?: (string) ($cats[$cid]['nom'] ?? ''),
+                    'actif' => isset($l['is_active']) ? (int) $l['is_active'] : 1,
+                    'recette' => $num($l, ['id_recipe', 'recipe_id']) ?: null,
+                    'suggere' => isset($l['suggested_sale_price']) && is_numeric($l['suggested_sale_price']) ? (float) $l['suggested_sale_price'] : null,
+                    'attendu' => isset($l['expected_margin']) && is_numeric($l['expected_margin']) ? (float) $l['expected_margin'] : null,
+                    'shelf' => $num($l, ['shelf_life_minutes']), 'prepare' => (int) ($l['is_prepared_before_sales'] ?? 0), 'poids' => $num($l, ['single_weight']),
+                    'nutriscore' => (string) ($l['nutriscore'] ?? ''), 'allergene' => (string) ($l['allergene'] ?? ''),
+                    'prix' => null, 'prixParMagasin' => []];
+            }
+        }
+    }
+    foreach ($prix as $pid => $m) { $prods[$pid]['prixParMagasin'] = $m; $prods[$pid]['prix'] = round(array_sum($m) / count($m), 2); }
+    if ($prods === [] && $cats === []) { return $memo = is_array($c) ? $deCache($c) : $vide; }
+    $v = ['ts' => time(), 'produits' => $prods, 'categories' => $cats, 'groupes' => $groupes];
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['panelCatalogue', json_encode($v, JSON_UNESCAPED_UNICODE)]);
+    } catch (PDOException $e) { /* sans mémo */ }
+    return $memo = $deCache($v);
+}
+
 function catalogueCategories(): ?array
 {
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    // L'API du panel d'abord : les catégories qu'elle liste, leurs groupes quand les lignes
+    // produit les portent. La table de liaison de la copie locale ne sert plus qu'à combler
+    // un groupe que l'API ne donne pas — et la copie entière, que si le panel se tait.
+    $pc = panelCatalogue();
+    if ($pc['categories'] !== []) {
+        $cat = [];
+        foreach ($pc['categories'] as $id => $x) { $cat[(int) $id] = ['nom' => (string) $x['nom'], 'groupe' => isset($x['groupe']) && $x['groupe'] !== '' ? (string) $x['groupe'] : null]; }
+        if (array_filter($cat, static fn ($x) => $x['groupe'] === null) !== []) {
+            try {
+                foreach (Db::rows("SELECT c.id, GROUP_CONCAT(DISTINCT g.name ORDER BY g.id SEPARATOR ' · ') AS groupe
+                                     FROM product_category c
+                                     JOIN product_category_group_connection k ON k.id_category = c.id
+                                     JOIN product_category_group g ON g.id = k.id_group
+                                 GROUP BY c.id") as $r) {
+                    $id = (int) $r['id'];
+                    if (isset($cat[$id]) && $cat[$id]['groupe'] === null && !empty($r['groupe'])) { $cat[$id]['groupe'] = (string) $r['groupe']; }
+                }
+            } catch (PDOException $e) { /* sans copie : les groupes de l'API suffisent */ }
+        }
+        return $memo = $cat;
+    }
     $sql = "SELECT c.id, c.name,
                    GROUP_CONCAT(DISTINCT g.name ORDER BY g.id SEPARATOR ' · ') AS groupe
               FROM product_category c
@@ -3504,7 +3600,7 @@ function catalogueCategories(): ?array
         $cat[(int) $c['id']] = ['nom' => (string) $c['name'],
             'groupe' => !empty($c['groupe']) ? (string) $c['groupe'] : null];
     }
-    return $cat ?: null;
+    return $memo = ($cat ?: null);
 }
 
 /**
@@ -3653,15 +3749,31 @@ function coutVraisemblable(?float $mat, ?float $prix): bool
     return ($mat / $prix) >= $min;
 }
 
-/** Prix de vente réellement pratiqué, moyenne réseau (`shop_product`). */
+/**
+ * Prix de vente réellement pratiqué, moyenne des magasins du compte : `portion_price` de
+ * /shops/{id}/products/available (l'API, en direct), la copie `shop_product` ne comblant que
+ * les références que le panel ne liste plus.
+ */
 function cataloguePrix(): array
 {
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
     $out = [];
+    foreach (panelCatalogue()['produits'] as $pid => $x) { if (($x['prix'] ?? null) !== null && (float) $x['prix'] > 0) { $out[(int) $pid] = round((float) $x['prix'], 2); } }
     try {
-        $rows = Db::rows('SELECT id_product, AVG(portion_price) prix
-                            FROM shop_product WHERE portion_price > 0 GROUP BY id_product');
-    } catch (PDOException $e) { return []; }
-    foreach ($rows as $r) { $out[(int) $r['id_product']] = round((float) $r['prix'], 2); }
+        foreach (Db::rows('SELECT id_product, AVG(portion_price) prix
+                             FROM shop_product WHERE portion_price > 0 GROUP BY id_product') as $r) {
+            if (!isset($out[(int) $r['id_product']])) { $out[(int) $r['id_product']] = round((float) $r['prix'], 2); }
+        }
+    } catch (PDOException $e) { /* sans copie : le panel suffit */ }
+    return $memo = $out;
+}
+
+/** Le prix pratiqué par UN magasin, par produit, tel que products/available le donne pour lui. */
+function cataloguePrixMagasin(int $sid): array
+{
+    $out = [];
+    foreach (panelCatalogue()['produits'] as $pid => $x) { $m = $x['prixParMagasin'] ?? []; $v = $m[$sid] ?? ($m[(string) $sid] ?? null); if ($v !== null && (float) $v > 0) { $out[(int) $pid] = (float) $v; } }
     return $out;
 }
 
@@ -3709,10 +3821,22 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
     } catch (PDOException $e) { /* sans gamme : le produit reste permanent */ }
 
     try {
-        $prods = Db::rows('SELECT id, name, id_category, id_recipe, is_active,
-                                  suggested_sale_price, expected_margin, shelf_life_minutes,
-                                  is_prepared_before_sales, single_weight, nutriscore, allergene
-                             FROM product WHERE is_active = 1 ORDER BY id_category, name');
+        // Les produits : ceux que le panel liste pour les magasins du compte (products/available),
+        // dans la forme de la table `product` ; la copie locale seulement si le panel se tait.
+        $prods = [];
+        foreach (panelCatalogue()['produits'] as $x) {
+            if (empty($x['actif'])) { continue; }
+            $prods[] = ['id' => (int) $x['id'], 'name' => (string) $x['nom'], 'id_category' => (int) ($x['catId'] ?? 0), 'id_recipe' => $x['recette'] ?? null, 'is_active' => 1,
+                'suggested_sale_price' => $x['suggere'] ?? null, 'expected_margin' => $x['attendu'] ?? null, 'shelf_life_minutes' => (int) ($x['shelf'] ?? 0),
+                'is_prepared_before_sales' => (int) ($x['prepare'] ?? 0), 'single_weight' => (int) ($x['poids'] ?? 0), 'nutriscore' => (string) ($x['nutriscore'] ?? ''), 'allergene' => (string) ($x['allergene'] ?? '')];
+        }
+        if ($prods !== []) { usort($prods, static fn ($a, $b) => [$a['id_category'], $a['name']] <=> [$b['id_category'], $b['name']]); }
+        else {
+            $prods = Db::rows('SELECT id, name, id_category, id_recipe, is_active,
+                                      suggested_sale_price, expected_margin, shelf_life_minutes,
+                                      is_prepared_before_sales, single_weight, nutriscore, allergene
+                                 FROM product WHERE is_active = 1 ORDER BY id_category, name');
+        }
     } catch (PDOException $e) { return null; }
     if (!$prods) { return null; }
     $fins = [];
@@ -5274,9 +5398,17 @@ function ep_prod_produit_fiche(): array
     $pid = $cat['pwaId'] ?? null;
     if ($pid !== null) {
         try {
-            $r = Db::row('SELECT * FROM product WHERE id = ?', [(int) $pid]);
+            // La fiche du panel (/products/{id}) porte les mêmes champs que la table `product`,
+            // et en plus les libellés (conservation, positionnement, secteur) ; la copie en repli.
+            $r = null;
+            if (PanelApi::configured()) {
+                $f = PanelApi::get('/products/' . (int) $pid);
+                if (is_array($f) && isset($f['data']) && is_array($f['data'])) { $f = $f['data']; }
+                if (is_array($f) && isset($f['id'])) { $r = $f; $out['source'] = 'panel'; }
+            }
+            if ($r === null) { $r = Db::row('SELECT * FROM product WHERE id = ?', [(int) $pid]); }
             if ($r !== null) {
-                $out['source'] = 'caisse';
+                $out['source'] = $out['source'] ?? 'caisse';
                 // Libellé lisible → valeur, en ne gardant que le renseigné : un
                 // champ vide affiché ferait passer une absence pour un zéro.
                 $champs = [
@@ -6458,13 +6590,18 @@ function ep_products(): array
         // id numérique n'y trouvait jamais rien, et la catégorie retombait
         // silencieusement sur « Non catégorisé » dès que l'API était muette.
         $cat = [];
-        $refCat = catalogueCategories();
+        // La catégorie de chaque produit : le panel d'abord (svCategories lit products/available),
+        // la copie `product` ne comblant que les références que le panel ne liste plus.
+        if (function_exists('svCategories')) {
+            // Le nom se nettoie : « Viennoiserie réduction » suivi d'une
+            // espace fabriquait une seconde catégorie d'une référence.
+            foreach (svCategories() as $pid => $n) { $cat[(int) $pid] = trim((string) $n); }
+        }
+        $refCat = $cat === [] ? catalogueCategories() : null;
         if ($refCat !== null) {
             try {
                 foreach (Db::rows('SELECT id, id_category FROM product WHERE is_active = 1') as $c) {
                     $k = (int) $c['id_category'];
-                    // Le nom se nettoie : « Viennoiserie réduction » suivi d'une
-                    // espace fabriquait une seconde catégorie d'une référence.
                     if (isset($refCat[$k])) { $cat[(int) $c['id']] = trim((string) $refCat[$k]['nom']); }
                 }
             } catch (PDOException $eCat) { /* catalogue absent : catégorie vide */ }
@@ -7736,7 +7873,7 @@ function ep_lacunes(): array
             if ($sansPrix > 0) {
                 $out['catalogue'][] = lacune('Prix de vente',
                     $sansPrix . ' référence(s) sur ' . $n . ' sans prix',
-                    'Caisse du panel — shop_product.portion_price absent pour ces références', 'api');
+                    'Caisse du panel — portion_price absent de products/available pour ces références', 'api');
             }
             // Le batch : sans lui, l'assortiment ne peut pas proposer de minimum
             // tenable, et le suivi de production n'a pas d'unité de fournée.
