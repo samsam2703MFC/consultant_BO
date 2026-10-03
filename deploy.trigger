@@ -525,3 +525,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T11:30:42Z cout matiere en direct API, par magasin
 2026-10-03T11:43:08Z catalogue, categories et prix en direct API
 2026-10-03T11:47:56Z catalogue complet du panel
+2026-10-03T11:58:15Z dashboard vue jour : rien que le jour
