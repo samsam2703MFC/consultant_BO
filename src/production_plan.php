@@ -260,7 +260,7 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
  */
 function gpCommandes(int $sid, string $date): ?array
 {
-    $cle = 'ppCmd2:' . $sid . ':' . $date;
+    $cle = 'ppCmd3:' . $sid . ':' . $date;
     $c = setting($cle);
     if (is_array($c) && isset($c['l']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_CMD) { return $c['l']; }
     $ancien = is_array($c) && isset($c['l']) ? $c['l'] : null;
@@ -275,24 +275,45 @@ function gpCommandes(int $sid, string $date): ?array
         $canal = function_exists('coCanal') ? coCanal($o) : (!empty($o['is_webshop']) ? 'cc' : 'compt');
         $statut = function_exists('coStatut') ? coStatut($o, $canal) : '';
         if ($statut === 'annulée') { continue; }
-        $lignes = [];
-        foreach ((array) ($o['products'] ?? []) as $p) {
-            if (!is_array($p)) { continue; }
-            $pp = isset($p['product']) && is_array($p['product']) ? $p['product'] + $p : $p;
-            $pid = 0; foreach (['id_product', 'product_id', 'id'] as $k) { if (isset($pp[$k]) && is_numeric($pp[$k]) && (int) $pp[$k] > 0) { $pid = (int) $pp[$k]; break; } }
-            if ($pid <= 0) { continue; }
-            $q = 1.0; foreach (['quantity', 'qty', 'amount'] as $k) { if (isset($pp[$k]) && is_numeric($pp[$k]) && (float) $pp[$k] > 0) { $q = (float) $pp[$k]; break; } }
-            $lignes[] = [$pid, round($q, 3)];
-        }
-        $prem = is_array($o['products'] ?? null) && $o['products'] !== [] ? reset($o['products']) : null;
-        $out[] = ['heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt', 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'lignes' => $lignes, 'sansDetail' => $lignes === [],
-            'nArticles' => is_array($o['products'] ?? null) ? count($o['products']) : 0,
-            // Diagnostic : les CLÉS d'un article quand aucune ligne n'est reconnue (jamais les valeurs).
-            'clesArticle' => $lignes === [] && is_array($prem) ? array_slice(array_keys($prem), 0, 30) : (is_scalar($prem) ? ['(scalaire)'] : null)];
+        $lignes = gpArticles((array) ($o['products'] ?? []));
+        $out[] = ['id' => (int) ($o['id'] ?? 0), 'heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt', 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'lignes' => $lignes, 'sansDetail' => $lignes === [], 'clesArticle' => null];
     }
+    // La liste ne joint pas les articles (mesuré le 03/10/2026 : products vide) : une lecture par
+    // commande, /client-orders/{id}/products, en parallèle — produits et quantités seulement.
+    $paths = [];
+    foreach ($out as $i => $o) { if ($o['lignes'] === [] && $o['id'] > 0 && count($paths) < 60) { $paths[$i] = '/client-orders/' . $o['id'] . '/products'; } }
+    if ($paths !== []) {
+        foreach (PanelApi::getParallele($paths, 6, 15) as $i => $r) {
+            $items = is_array($r) ? (function_exists('analyseListe') ? analyseListe($r) : $r) : [];
+            if ($items === [] && is_array($r) && isset($r['products']) && is_array($r['products'])) { $items = $r['products']; }
+            $l = gpArticles($items);
+            $out[$i]['lignes'] = $l; $out[$i]['sansDetail'] = $l === [];
+            // Diagnostic : les CLÉS d'un article quand aucune ligne n'est reconnue (jamais les valeurs).
+            if ($l === [] && $items !== [] && is_array(reset($items))) { $out[$i]['clesArticle'] = array_slice(array_keys(reset($items)), 0, 30); }
+        }
+    }
+    foreach ($out as &$o) { unset($o['id']); } unset($o);
     usort($out, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
     gpEcrire($cle, ['ts' => time(), 'l' => $out]);
     return $out;
+}
+
+/** Les articles d'une commande : [[pid, quantité]] — l'identifiant du produit et la quantité, rien d'autre. */
+function gpArticles(array $items): array
+{
+    $l = [];
+    foreach ($items as $p) {
+        if (!is_array($p)) { continue; }
+        // L'identifiant du PRODUIT : jamais celui de la ligne de commande quand le produit est imbriqué.
+        $sous = isset($p['product']) && is_array($p['product']) ? $p['product'] : null;
+        $cands = [$p['id_product'] ?? null, $p['product_id'] ?? null, $p['productId'] ?? null, $sous['id_product'] ?? null, $sous['id'] ?? null, $sous === null ? ($p['id'] ?? null) : null];
+        $pid = 0; foreach ($cands as $v) { if (is_numeric($v) && (int) $v > 0) { $pid = (int) $v; break; } }
+        $pp = $sous !== null ? $p + $sous : $p;
+        if ($pid <= 0) { continue; }
+        $q = 1.0; foreach (['quantity', 'qty', 'amount', 'count'] as $k) { if (isset($pp[$k]) && is_numeric($pp[$k]) && (float) $pp[$k] > 0) { $q = (float) $pp[$k]; break; } }
+        $l[] = [$pid, round($q, 3)];
+    }
+    return $l;
 }
 
 /**
@@ -535,7 +556,7 @@ function gpCommandesVues(array $cmds, array $params, array $base): array
             $lig[] = ['pid' => (int) $pid, 'nom' => $nom, 'q' => $q, 'cuisson' => $dans];
         }
         $out[] = ['heure' => $o['heure'], 'canal' => $o['canal'], 'webshop' => $o['webshop'], 'montant' => $o['montant'], 'statut' => $o['statut'], 'sansDetail' => $o['sansDetail'], 'lignes' => $lig, 'cuissons' => array_keys($cu),
-            'nArticles' => $o['nArticles'] ?? null, 'clesArticle' => $o['clesArticle'] ?? null];
+            'clesArticle' => $o['clesArticle'] ?? null];
     }
     return $out;
 }
