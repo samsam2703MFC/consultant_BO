@@ -23,7 +23,8 @@
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
   const EMBED = q.get('embed') === '1';
-  const PAGES = [['params', 'Paramètres'], ['plan', 'Plan de production'], ['suivi', 'Validation et suivi'], ['cloture', 'Clôture']];
+  const PAGES = [['params', 'Paramètres'], ['plan', 'Plan de production'], ['suivi', 'Validation et suivi'], ['cloture', 'Clôture'], ['fours', 'Fours']];
+  const FUTUR = p => p === 'plan' || p === 'fours';   // les pages qui se préparent jusqu'à J+7
   const AUJ = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
   const dateOk = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
   const decale = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() + n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
@@ -32,7 +33,7 @@
     page: PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan',
     date: dateOk(q.get('date')) ? q.get('date') : AUJ,   // ramené à aujourd'hui hors du plan, au départ
     stores: [], data: {}, err: {}, enCours: {},
-    edit: null, editShop: null, filtre: '', seulsOblig: false, alertes: false, ecartsJ7: false,
+    edit: null, editShop: null, editF: null, editFCle: null, filtre: '', seulsOblig: false, alertes: false, ecartsJ7: false,
     valid: null, clot: null, msg: null, envoi: false,
     par: (() => { try { return localStorage.getItem('pf.par') || ''; } catch (e) { return ''; } })(),
   };
@@ -77,7 +78,7 @@
     u.set('shop', S.shop); u.set('page', S.page); u.set('date', S.date);
     history.replaceState(null, '', location.pathname + '?' + u.toString());
   }
-  function aller(page) { S.page = page; S.valid = null; S.clot = null; S.msg = null; if (page !== 'plan' && S.date > AUJ) { S.date = AUJ; } urlMaj(); charger(false); }
+  function aller(page) { S.page = page; S.valid = null; S.clot = null; S.msg = null; if (!FUTUR(page) && S.date > AUJ) { S.date = AUJ; } urlMaj(); charger(false); }
   function signe(v) { S.par = v; try { localStorage.setItem('pf.par', v); } catch (e) { /* navigation privée */ } }
 
   /* --- le cadre --------------------------------------------------------------- */
@@ -92,10 +93,10 @@
    * et la clôture sur les sept derniers jours ; une autre date au calendrier. Elle est dans la page,
    * donc aussi dans l'écran intégré au cockpit. */
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-  const maxDate = () => S.page === 'plan' ? decale(AUJ, 7) : AUJ;
+  const maxDate = () => FUTUR(S.page) ? decale(AUJ, 7) : AUJ;
   function barreJours() {
     if (S.page === 'params') { return ''; }
-    const plan = S.page === 'plan';
+    const plan = FUTUR(S.page);
     const ecarts = plan ? [-1, 0, 1, 2, 3, 4, 5, 6, 7] : [-6, -5, -4, -3, -2, -1, 0];
     const dedans = ecarts.some(n => decale(AUJ, n) === S.date);
     return `<div class="pf-jours"><span class="pf-k">${plan ? 'Jour du plan' : 'Jour'}</span><div class="ch">${ecarts.map(n => { const d = decale(AUJ, n), t = new Date(d + 'T12:00:00');
@@ -123,6 +124,7 @@
     else if (S.page === 'params') { h += pageParams(d); }
     else if (S.page === 'plan') { h += pagePlan(d); }
     else if (S.page === 'suivi') { h += pageSuivi(d); }
+    else if (S.page === 'fours') { h += pageFours(d); }
     else { h += pageCloture(d); }
     const garde = garderFocus();
     $.innerHTML = h;
@@ -397,11 +399,71 @@
       .finally(() => { S.envoi = false; rendre(); });
   }
 
+  /* --- 5. Les fours ----------------------------------------------------------------- */
+  // Une couleur par section, stable d'un jour à l'autre.
+  const TEINTES = ['#8D1D2C', '#C9A227', '#1f5f8b', '#2d7a3e', '#D97706', '#6b4c9a', '#0f766e', '#b45309', '#475569', '#be185d'];
+  const teinte = n => { let x = 0; for (const ch of String(n || '')) { x = (x * 31 + ch.charCodeAt(0)) % 997; } return TEINTES[x % TEINTES.length]; };
+  const hm = m => (m >= 60 ? Math.floor(m / 60) + ' h ' : '') + String(m % 60).padStart(m >= 60 ? 2 : 1, '0') + ' min';
+  function brouillonF(d) { return { fours: d.fours.map(f => Object.assign({}, f)), categories: Object.fromEntries(d.categories.map(c => [c.cle, { four: c.four, temp: c.temp, duree: c.duree, parPlaque: c.parPlaque, nom: c.nom, groupe: c.groupe, auto: c.auto }])) }; }
+  function pageFours(d) {
+    if (!S.editF || S.editFCle !== S.shop) { S.editF = brouillonF(d); S.editFCle = S.shop; }
+    const E = S.editF, G = d.gantt, A = G.axe, span = Math.max(1, A.a - A.de);
+    const pos = h => (100 * (h - A.de) / span).toFixed(2) + '%';
+    let h = `<div class="pf-intro"><b>Les fours du ${esc(fDL(d.date))}.</b> Chaque cuisson du plan devient des fournées : les plaques de chaque catégorie (pièces ÷ pièces par plaque), regroupées par four et par réglage, la plus chaude d’abord, enchaînées pour sortir à l’ouverture de la vente. Une fournée qui sort après l’ouverture est en retard : à enfourner plus tôt, ou à répartir sur un autre four.${d.enregistre ? '' : ' Rien n’est encore enregistré : un four et des réglages proposés.'}</div>`;
+    // Le Gantt.
+    const heures = []; for (let x = A.de; x <= A.a; x++) { heures.push(x); }
+    const sections = {};
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Le Gantt des fours</span><span class="pf-mini">${G.fours.reduce((a, f) => a + f.nFournees, 0)} fournées · ${G.fours.reduce((a, f) => a + f.plaquesTot, 0)} plaques${G.retards ? ` · <b class="ko">${G.retards} fournée${G.retards > 1 ? 's' : ''} en retard</b>` : ' · tout sort à l’heure'}</span></div>
+      <div class="pf-gantt"><div class="gx"><div class="gl"></div><div class="gt">${heures.map(x => `<span style="left:${pos(x)}">${x} h</span>`).join('')}</div></div>
+      ${G.fours.map(f => `<div class="gr"><div class="gl"><b>${esc(f.nom)}</b><small>${f.plaques} plaques · ${f.nFournees} fournée${f.nFournees > 1 ? 's' : ''} · ${hm(f.occupation)}</small></div><div class="gt">
+        ${heures.map(x => `<i class="gh" style="left:${pos(x)}"></i>`).join('')}
+        ${d.cuissons.map(c => `<i class="gv" style="left:${pos(hDe(c.de))}" title="${esc(c.nom)} : ouverture de la vente à ${esc(c.de)}"></i>`).join('')}
+        ${f.fournees.map(x => { const sec = x.categories[0] ? x.categories[0].groupe || x.categories[0].nom : ''; x.categories.forEach(c => { sections[c.groupe || c.nom] = true; });
+          const lib = x.categories.map(c => `${c.nom} ${c.plaques} pl.`).join(' + ');
+          return `<div class="gb${x.retard ? ' late' : ''}" style="left:${pos(x.d)};width:calc(${(100 * (x.f - x.d) / span).toFixed(2)}% - 2px);background:${teinte(sec)}" title="${esc(x.cuissonNom)} · ${esc(x.debut)}–${esc(x.fin)} · ${x.temp} °C · ${x.duree} min · ${x.plaques}/${x.capacite} plaques : ${esc(x.categories.map(c => c.nom + ' ' + c.plaques + ' pl. (' + c.pieces + ' pièces)').join(', '))}${x.retard ? ' · en retard de ' + x.retard + ' min' : ''}"><span>${esc(lib)}</span></div>`; }).join('')}
+      </div></div>`).join('')}
+      <div class="gx bas"><div class="gl"></div><div class="gt">${d.cuissons.map(c => `<span class="cu" style="left:${pos(hDe(c.de))}">${esc(c.nom)} ${esc(c.de)}</span>`).join('')}</div></div></div>
+      <div class="pf-leg">${Object.keys(sections).map(n => `<span><i style="background:${teinte(n)}"></i>${esc(n)}</span>`).join('')}<span><i class="late"></i>en retard</span><span><i class="gvl"></i>ouverture de la vente</span></div>
+      ${G.horsFour.length ? `<div class="pf-pied mu">Hors four : ${G.horsFour.map(x => esc(x.nom) + ' (' + fN(x.pieces) + ')').join(' · ')}</div>` : ''}</div>`;
+    // Les fournées en liste, four par four.
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Les fournées</span><span class="pf-mini">à enfourner dans l’ordre, four par four</span></div>
+      <table class="pf-tab"><thead><tr><th>Four</th><th>Cuisson</th><th class="n">Enfourner</th><th class="n">Sortir</th><th class="n">°C</th><th class="n">Plaques</th><th>Catégories</th></tr></thead><tbody>
+      ${G.fours.map(f => f.fournees.map((x, i) => `<tr><td class="nom">${i === 0 ? esc(f.nom) : ''}</td><td>${esc(x.cuissonNom)}</td><td class="n"><b>${esc(x.debut)}</b></td><td class="n ${x.retard ? 'ko' : ''}">${esc(x.fin)}${x.retard ? ' <small>+' + x.retard + ' min</small>' : ''}</td><td class="n">${x.temp}</td><td class="n">${x.plaques} / ${x.capacite}</td><td>${x.categories.map(c => `${esc(c.nom)} <span class="mu">${c.plaques} pl. · ${fN(c.pieces)} p.</span>`).join(' · ')}</td></tr>`).join('')).join('') || '<tr><td colspan="7" class="mu">Aucune fournée : rien à cuire ce jour, ou aucune catégorie n’a de four.</td></tr>'}</tbody></table></div>`;
+    // Les fours.
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Les fours du magasin</span><span class="pf-mini">le nombre de plaques qu’une fournée peut contenir</span></div>
+      <table class="pf-tab"><thead><tr><th>Four</th><th class="n">Plaques par fournée</th><th></th></tr></thead><tbody>
+      ${E.fours.map((f, i) => `<tr><td><input class="pf-in" data-fn="${i}" data-f="fn${i}" value="${esc(f.nom)}"></td><td class="n"><input class="pf-in court" type="number" min="1" max="100" data-fp="${i}" data-f="fp${i}" value="${esc(f.plaques)}"></td><td>${E.fours.length > 1 ? `<button class="pf-x" data-fsup="${i}" title="retirer">×</button>` : ''}</td></tr>`).join('')}</tbody></table>
+      <div class="pf-pied">${E.fours.length < 6 ? '<button class="pf-btn" data-fajout="1">+ ajouter un four</button>' : ''}</div></div>`;
+    // Les réglages de cuisson par catégorie.
+    let g = null;
+    const cats = Object.entries(E.categories).sort((a, b) => [(a[1].groupe || 'zzz'), a[1].nom].join('|').localeCompare([(b[1].groupe || 'zzz'), b[1].nom].join('|')));
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">La cuisson de chaque catégorie</span><span class="pf-mini">le four (aucun = ne passe pas au four), la température, la durée d’une fournée, les pièces par plaque</span></div>
+      <table class="pf-tab"><thead><tr><th>Catégorie</th><th>Four</th><th class="n">Température °C</th><th class="n">Durée min</th><th class="n">Pièces par plaque</th></tr></thead><tbody>
+      ${cats.map(([k, c]) => { const gr = c.groupe || 'Sans section'; const t = gr !== g ? `<tr class="grp"><td colspan="5">${esc(gr)}</td></tr>` : ''; g = gr;
+        return t + `<tr><td class="nom">${esc(c.nom)}${c.auto ? ' <span class="pf-tag">proposé</span>' : ''}</td>
+          <td><select data-cf="${esc(k)}"><option value="">aucun</option>${E.fours.map(f => `<option value="${esc(f.id)}"${f.id === c.four ? ' selected' : ''}>${esc(f.nom)}</option>`).join('')}</select></td>
+          <td class="n"><input class="pf-in court" type="number" min="50" max="300" step="5" data-ct="${esc(k)}" data-f="ct${esc(k)}" value="${esc(c.temp)}"${c.four ? '' : ' disabled'}></td>
+          <td class="n"><input class="pf-in court" type="number" min="1" max="240" data-cd="${esc(k)}" data-f="cd${esc(k)}" value="${esc(c.duree)}"${c.four ? '' : ' disabled'}></td>
+          <td class="n"><input class="pf-in court" type="number" min="1" max="200" data-cpp="${esc(k)}" data-f="cpp${esc(k)}" value="${esc(c.parPlaque)}"${c.four ? '' : ' disabled'}></td></tr>`; }).join('')}</tbody></table></div>`;
+    h += `<div class="pf-barre"><label>Signé <input class="pf-in" data-par="1" data-f="par" value="${esc(S.par)}" placeholder="prénom"></label><span class="sp"></span><button class="pf-btn" data-fannuler="1">Revenir aux réglages enregistrés</button><button class="pf-btn prim" data-fenreg="1"${S.envoi ? ' disabled' : ''}>${S.envoi ? 'Enregistrement…' : 'Enregistrer les fours'}</button></div>`;
+    h += `<div class="pf-pied mu" style="border:none">${esc(d.source)}</div>`;
+    return h;
+  }
+  function enregistrerFours() {
+    const E = S.editF; if (!E) { return; }
+    const corps = { shop: +S.shop, par: S.par, fours: E.fours.map(f => ({ id: f.id, nom: f.nom, plaques: +f.plaques })),
+      categories: Object.fromEntries(Object.entries(E.categories).map(([k, c]) => [k, { four: c.four || null, temp: +c.temp, duree: +c.duree, parPlaque: +c.parPlaque, nom: c.nom }])) };
+    S.envoi = true; S.msg = null; rendre();
+    ecrire('/production/flux/fours', corps).then(r => { S.msg = { ok: true, t: `Fours enregistrés : ${r.fours} four${r.fours > 1 ? 's' : ''}, ${r.categories} catégories réglées. Le Gantt les reprend.` }; S.editF = null; Object.keys(S.data).forEach(k => { if (k.startsWith('fours|')) { delete S.data[k]; } }); charger(true); })
+      .catch(e => { S.msg = { ok: false, t: 'Pas enregistrés : ' + e.message }; })
+      .finally(() => { S.envoi = false; rendre(); });
+  }
+
   /* --- branchements --------------------------------------------------------------- */
   function brancher() {
     const on = (sel, ev, f) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => f(el, e)));
     on('[data-page]', 'click', b => aller(b.dataset.page));
-    on('#pf-shop', 'change', s => { S.shop = s.value; S.edit = null; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
+    on('#pf-shop', 'change', s => { S.shop = s.value; S.edit = null; S.editF = null; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
     on('#pf-date', 'change', i => choisirJour(i.value));
     on('[data-pas]', 'click', b => choisirJour(decale(S.date, +b.dataset.pas)));
     on('[data-jour]', 'click', b => choisirJour(b.dataset.jour));
@@ -451,13 +513,28 @@
     on('[data-cr],[data-cj]', 'change', () => rendre());
     on('[data-tout]', 'click', b => { const d = S.data[cle()]; d.lignes.forEach(l => { const r = Math.round(l.reste); S.clot.l[l.pid] = b.dataset.tout === 'garder' ? { report: r, jete: 0 } : (b.dataset.tout === 'jeter' ? { report: 0, jete: r } : { report: l.garde ? r : 0, jete: l.garde ? 0 : r }); }); rendre(); });
     on('[data-cloturer]', 'click', () => enregistrerCloture());
+    // Fours
+    const F = S.editF;
+    if (F) {
+      on('[data-fn]', 'input', i => { F.fours[+i.dataset.fn].nom = i.value; });
+      on('[data-fn]', 'change', () => rendre());
+      on('[data-fp]', 'input', i => { F.fours[+i.dataset.fp].plaques = i.value; });
+      on('[data-fsup]', 'click', b => { const i = +b.dataset.fsup; const id = F.fours[i].id; F.fours.splice(i, 1); Object.values(F.categories).forEach(c => { if (c.four === id) { c.four = F.fours[0] ? F.fours[0].id : null; } }); rendre(); });
+      on('[data-fajout]', 'click', () => { let n = 1; while (F.fours.some(f => f.id === 'f' + n)) { n++; } F.fours.push({ id: 'f' + n, nom: 'Four ' + (F.fours.length + 1), plaques: 10 }); rendre(); });
+      on('[data-cf]', 'change', s => { const c = F.categories[s.dataset.cf]; c.four = s.value || null; c.auto = false; rendre(); });
+      on('[data-ct]', 'input', i => { F.categories[i.dataset.ct].temp = i.value; F.categories[i.dataset.ct].auto = false; });
+      on('[data-cd]', 'input', i => { F.categories[i.dataset.cd].duree = i.value; F.categories[i.dataset.cd].auto = false; });
+      on('[data-cpp]', 'input', i => { F.categories[i.dataset.cpp].parPlaque = i.value; F.categories[i.dataset.cpp].auto = false; });
+      on('[data-fannuler]', 'click', () => { S.editF = null; S.msg = null; rendre(); });
+      on('[data-fenreg]', 'click', () => enregistrerFours());
+    }
   }
 
   /* --- départ ------------------------------------------------------------------------- */
   if (EMBED) { document.body.classList.add('pf-emb'); }
   // La validation et la clôture ne vont pas au-delà d'aujourd'hui ; le plan, sept jours.
-  if (S.page !== 'plan' && S.date > AUJ) { S.date = AUJ; }
-  if (S.page === 'plan' && S.date > decale(AUJ, 7)) { S.date = AUJ; }
+  if (!FUTUR(S.page) && S.date > AUJ) { S.date = AUJ; }
+  if (FUTUR(S.page) && S.date > decale(AUJ, 7)) { S.date = AUJ; }
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
   charger(false);

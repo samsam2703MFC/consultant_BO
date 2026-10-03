@@ -281,7 +281,7 @@ class App {
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
       tablette: 'tablette-vendeuses',
       posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle',
-      productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture',
+      productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
     };
   }
   /**
@@ -949,6 +949,7 @@ class App {
       productionParams: ['Production — 1. Paramètres', 'Par jour de la semaine, le nombre de cuissons et la production minimum de la 1re cuisson ; les cuissons et leur part de la journée ; les catégories (cuissons, plaques, préparées la veille, se gardent au lendemain) ; les produits obligatoires et leurs jours.'],
       productionPlan: ['Production — 2. Plan de production', 'Section › catégorie › produit : vendu à J\u22127 (en magasin, webshop, commandes magasin), à produire pour la 1re période, à préparer pour la 2e cuisson et les suivantes, à préparer pour la 1re cuisson du lendemain — en pièces, en plaques et en chiffre d\u2019affaires.'],
       productionSuivi: ['Production — 3. Validation et suivi', 'Ce qui est réellement sorti du four, cuisson par cuisson ; le stock de chaque produit heure par heure, vendu d\u2019après les tickets et projeté d\u2019après les 6 derniers mêmes jours, et le manque prévu.'],
+      productionFours: ['Production — 5. Fours', 'Le Gantt des fours du jour : les fournées de chaque cuisson, four par four, enchaînées pour sortir à l’ouverture de la vente ; les fours du magasin et la cuisson de chaque catégorie (four, température, durée, pièces par plaque).'],
       productionCloture: ['Production — 4. Clôture', 'En fin de journée, produit par produit : ce qui reste, ce qui se garde pour demain (le stock de départ du plan du lendemain) et ce qui se jette (à déclarer en caisse).'],
       creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
@@ -1366,7 +1367,7 @@ class App {
         ['newsletterShop', 'Newsletter magasin', 0],
         // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,
         // par magasin et par jour — le plan, le suivi avant chaque cuisson, les paramètres.
-        { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0]] }]],
+        { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0], ['productionFours', '5 · Fours', 0]] }]],
       ['Contrôle', [
         ['suivi', 'Tâches', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
         ['posts', 'Contrôle posts Facebook', this.fbAttente().length],
@@ -1401,7 +1402,7 @@ class App {
     this._navDef = navDef;
 
     ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
@@ -2829,9 +2830,9 @@ class App {
     const aujD = new Date(), iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const auj = iso(aujD);
     const shop = String(S.gpShop || (ms[0] ? ms[0].id : '4'));
-    const onglet = { productionPlan: 'plan', productionSuivi: 'suivi', productionParams: 'params', productionCloture: 'cloture' }[S.screen] || 'plan';
-    // Le plan se prépare jusqu'à 7 jours à l'avance ; la validation et la clôture s'arrêtent à aujourd'hui.
-    const max = onglet === 'plan' ? (() => { const x = new Date(aujD); x.setDate(x.getDate() + 7); return iso(x); })() : auj;
+    const onglet = { productionPlan: 'plan', productionSuivi: 'suivi', productionParams: 'params', productionCloture: 'cloture', productionFours: 'fours' }[S.screen] || 'plan';
+    // Le plan et les fours se préparent jusqu'à 7 jours à l'avance ; la validation et la clôture s'arrêtent à aujourd'hui.
+    const max = onglet === 'plan' || onglet === 'fours' ? (() => { const x = new Date(aujD); x.setDate(x.getDate() + 7); return iso(x); })() : auj;
     // Le jour se choisit dans la page (sa barre des jours) ; le cockpit garde le dernier choisi.
     const jourDe = () => { let d = /^\d{4}-\d{2}-\d{2}$/.test(this.gpDateVu || '') ? this.gpDateVu : auj; if (d > max) { d = max; } return d; };
     const date = jourDe();

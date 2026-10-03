@@ -149,3 +149,21 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-in.pct{width:58px;text-align:right}
 .pf-in.pct.def::placeholder{color:#a9a29a}
 .pf-in.pct.def{background:#faf7f2}
+/* Le Gantt des fours (demande du 03/10/2026). */
+.pf-gantt{padding:10px 16px 6px}
+.pf-gantt .gx,.pf-gantt .gr{display:flex;align-items:stretch}
+.pf-gantt .gl{flex:0 0 170px;padding:6px 10px 6px 0;font-size:12px;line-height:1.25}
+.pf-gantt .gl small{display:block;font-size:10px;color:#888}
+.pf-gantt .gt{position:relative;flex:1;min-width:0}
+.pf-gantt .gx .gt{height:20px}.pf-gantt .gx.bas .gt{height:22px}
+.pf-gantt .gx span{position:absolute;top:2px;transform:translateX(-50%);font:600 9.5px var(--font-ui);color:#888;white-space:nowrap}
+.pf-gantt .gx span.cu{color:var(--pf-ko);font-size:9px}
+.pf-gantt .gr .gt{height:46px;border-top:.5px solid var(--pf-trait);background:#fcfaf7}
+.pf-gantt .gr:last-of-type .gt{border-bottom:.5px solid var(--pf-trait)}
+.pf-gantt i.gh{position:absolute;top:0;bottom:0;width:0;border-left:.5px solid rgba(34,34,34,.07)}
+.pf-gantt i.gv{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--pf-ko);opacity:.55;z-index:2}
+.pf-gantt .gb{position:absolute;top:7px;height:32px;border-radius:6px;color:#fff;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);z-index:1;display:flex;align-items:center}
+.pf-gantt .gb span{font:600 10px var(--font-ui);padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-gantt .gb.late{box-shadow:0 0 0 2px var(--pf-ko);background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 6px,transparent 6px 12px)}
+.pf-leg i.late{background:var(--pf-ko)}.pf-leg i.gvl{border-left:1.5px dashed var(--pf-ko);width:0 !important;background:none}
+@media (max-width:900px){.pf-gantt .gl{flex-basis:96px}}

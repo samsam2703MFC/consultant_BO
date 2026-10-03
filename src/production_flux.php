@@ -851,3 +851,179 @@ function ep_production_flux_sonde(): array
     $out['tickets'] = $T;
     return $out;
 }
+
+/* --- 5. Les fours (demande du 03/10/2026) ----------------------------------------------------
+ * Les fours du magasin (nom, plaques par fournée) et, par catégorie, la cuisson : le four, la
+ * température, la durée, les pièces par plaque. Le Gantt du jour en découle : pour chaque
+ * cuisson du plan, les plaques de chaque catégorie, regroupées par four et par réglage
+ * (température, durée), en fournées de la capacité du four ; chaque four enchaîne ses fournées
+ * pour finir à l'ouverture de la vente de la cuisson, sans recouvrir la précédente — une fournée
+ * qui finit après l'ouverture est en retard. Réglages : setting pfFours:{shop}.
+ */
+const PF_FOURS_MAX = 6;
+
+/** Le réglage proposé d'une catégorie d'après son nom et sa section : [four ?, °C, minutes, pièces par plaque]. */
+function pfFourDefaut(string $nom, string $groupe, ?int $step): array
+{
+    $t = mb_strtolower($nom . ' ' . $groupe);
+    $parPl = static fn (int $d) => $step !== null && $step > 1 ? $step : $d;
+    if (preg_match('/boisson|sandwich|épicerie|epicerie|confiserie|glace|entremets|pâtisserie ind|patisserie ind|salade|soupe|café|cafe|jus/u', $t)) { return [false, 180, 20, $parPl(10)]; }
+    if (preg_match('/viennois/u', $t)) { return [true, 175, 18, $parPl(12)]; }
+    if (preg_match('/pain|boulang|baguette|pistolet/u', $t)) { return [true, 230, 25, $parPl(8)]; }
+    if (preg_match('/quiche|traiteur|pizza|feuillet/u', $t)) { return [true, 190, 30, $parPl(6)]; }
+    if (preg_match('/tarte|tartiss/u', $t)) { return [true, 180, 35, $parPl(4)]; }
+    if (preg_match('/cookie|biscuit/u', $t)) { return [true, 170, 12, $parPl(12)]; }
+    if (preg_match('/cake/u', $t)) { return [true, 170, 45, $parPl(6)]; }
+    return [true, 180, 20, $parPl(10)];
+}
+
+/** Les fours et le réglage de cuisson de chaque catégorie, enregistrés sinon proposés. */
+function pfFoursParams(int $sid, array $gpCats): array
+{
+    $s = setting('pfFours:' . $sid);
+    $s = is_array($s) ? $s : [];
+    $fours = [];
+    foreach ((array) ($s['fours'] ?? []) as $f) { if (is_array($f) && isset($f['id'])) { $fours[] = ['id' => (string) $f['id'], 'nom' => (string) ($f['nom'] ?? $f['id']), 'plaques' => max(1, (int) ($f['plaques'] ?? 10))]; } }
+    if ($fours === []) { $fours = [['id' => 'f1', 'nom' => 'Four 1', 'plaques' => 10]]; }
+    $ids = array_column($fours, 'id');
+    $cc = gpCatalogue()['categories'];
+    $cats = [];
+    foreach ($gpCats as $k => $e) {
+        $groupe = (int) ($e['catId'] ?? 0) > 0 ? (string) ($cc[(int) $e['catId']]['groupe'] ?? '') : '';
+        $x = is_array($s['categories'][(string) $k] ?? null) ? $s['categories'][(string) $k] : null;
+        [$auFour, $temp, $duree, $parPl] = pfFourDefaut((string) ($e['nom'] ?? $k), $groupe, $e['plaque'] ?? null);
+        $cats[(string) $k] = $x !== null
+            ? ['four' => in_array($x['four'] ?? null, $ids, true) ? (string) $x['four'] : null, 'temp' => (int) ($x['temp'] ?? $temp), 'duree' => (int) ($x['duree'] ?? $duree), 'parPlaque' => (int) ($x['parPlaque'] ?? $parPl), 'auto' => false]
+            : ['four' => $auFour ? $ids[0] : null, 'temp' => $temp, 'duree' => $duree, 'parPlaque' => $parPl, 'auto' => true];
+        $cats[(string) $k] += ['nom' => (string) ($e['nom'] ?? $k), 'groupe' => $groupe];
+    }
+    return ['fours' => $fours, 'categories' => $cats, 'enregistre' => isset($s['fours']), 'maj' => $s['maj'] ?? null, 'par' => $s['par'] ?? null];
+}
+
+/** Valide les fours et les réglages envoyés par l'écran : [ok, erreur|null, réglages]. */
+function pfFoursValider(array $p): array
+{
+    $f = array_values(array_filter((array) ($p['fours'] ?? []), 'is_array'));
+    if (count($f) < 1 || count($f) > PF_FOURS_MAX) { return [false, 'entre un et ' . PF_FOURS_MAX . ' fours', null]; }
+    $fours = []; $vus = [];
+    foreach ($f as $i => $x) {
+        $nom = mb_substr(trim((string) ($x['nom'] ?? '')), 0, 40) ?: 'Four ' . ($i + 1);
+        $pl = $x['plaques'] ?? null;
+        if (!is_numeric($pl) || (int) $pl < 1 || (int) $pl > 100) { return [false, 'plaques par fournée invalides pour « ' . $nom . ' » (1 à 100)', null]; }
+        $id = preg_match('/^f\d{1,2}$/', (string) ($x['id'] ?? '')) && !isset($vus[(string) $x['id']]) ? (string) $x['id'] : null;
+        if ($id === null) { $n = 1; while (isset($vus['f' . $n])) { $n++; } $id = 'f' . $n; }
+        $vus[$id] = true;
+        $fours[] = ['id' => $id, 'nom' => $nom, 'plaques' => (int) $pl];
+    }
+    $cats = [];
+    foreach ((array) ($p['categories'] ?? []) as $k => $x) {
+        if (!is_array($x) || !preg_match('/^(\d{1,9}|n:.{1,80})$/u', (string) $k)) { continue; }
+        $nom = (string) ($x['nom'] ?? $k);
+        foreach (['temp' => [50, 300, 'température'], 'duree' => [1, 240, 'durée'], 'parPlaque' => [1, 200, 'pièces par plaque']] as $c => [$lo, $hi, $lib]) {
+            if (!is_numeric($x[$c] ?? null) || (float) $x[$c] < $lo || (float) $x[$c] > $hi) { return [false, $lib . ' invalide pour « ' . $nom . ' » (' . $lo . ' à ' . $hi . ')', null]; }
+        }
+        $cats[(string) $k] = ['four' => isset($vus[(string) ($x['four'] ?? '')]) ? (string) $x['four'] : null, 'temp' => (int) $x['temp'], 'duree' => (int) $x['duree'], 'parPlaque' => (int) $x['parPlaque']];
+    }
+    return [true, null, ['fours' => $fours, 'categories' => $cats]];
+}
+
+/**
+ * Le Gantt d'un plan : par four, les fournées de chaque cuisson. Les plaques d'une catégorie =
+ * ses pièces de la cuisson ÷ pièces par plaque, arrondi au-dessus ; les catégories d'un même four
+ * au même réglage partagent les fournées ; la plus chaude d'abord. Les fournées d'une cuisson
+ * s'enchaînent pour finir à l'ouverture de sa vente (« de »), jamais avant la fin de la précédente.
+ */
+function pfGantt(array $plan, array $F): array
+{
+    $fours = []; foreach ($F['fours'] as $f) { $fours[$f['id']] = $f + ['fournees' => [], 'occupation' => 0, 'plaquesTot' => 0, 'libre' => null]; }
+    $hors = []; $retards = 0;
+    foreach ($plan as $c) {
+        $de = gpHeure($c['de']); if ($de === null) { continue; }
+        // Les plaques par four et par réglage.
+        $grp = [];
+        $parCat = [];
+        foreach ($c['lignes'] as $l) { if ((int) $l['sortie'] > 0) { $parCat[(string) $l['catCle']]['pieces'] = ($parCat[(string) $l['catCle']]['pieces'] ?? 0) + (int) $l['sortie']; $parCat[(string) $l['catCle']]['nom'] = $l['cat']; $parCat[(string) $l['catCle']]['groupe'] = $l['groupe']; } }
+        foreach ($parCat as $k => $x) {
+            $r = $F['categories'][$k] ?? null;
+            if ($r === null || $r['four'] === null || !isset($fours[$r['four']])) { $hors[$k] = ['cle' => $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'pieces' => ($hors[$k]['pieces'] ?? 0) + $x['pieces']]; continue; }
+            $pl = (int) ceil($x['pieces'] / max(1, $r['parPlaque']));
+            $g = $r['four'] . '|' . $r['temp'] . '|' . $r['duree'];
+            $grp[$r['four']][$g] ??= ['temp' => $r['temp'], 'duree' => $r['duree'], 'cats' => []];
+            $grp[$r['four']][$g]['cats'][] = ['cle' => $k, 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $pl, 'pieces' => $x['pieces']];
+        }
+        foreach ($grp as $fid => $gs) {
+            $cap = $fours[$fid]['plaques'];
+            usort($gs, static fn ($a, $b) => [$b['temp'], $b['duree']] <=> [$a['temp'], $a['duree']]);
+            // Les fournées du four pour cette cuisson, remplies catégorie après catégorie.
+            $fn = [];
+            foreach ($gs as $g) {
+                $cur = null;
+                foreach ($g['cats'] as $x) {
+                    $reste = $x['plaques']; $pieces = $x['pieces'];
+                    while ($reste > 0) {
+                        if ($cur === null || $cur['plaques'] >= $cap) { if ($cur !== null) { $fn[] = $cur; } $cur = ['temp' => $g['temp'], 'duree' => $g['duree'], 'plaques' => 0, 'categories' => []]; }
+                        $mis = min($reste, $cap - $cur['plaques']);
+                        $pc = (int) round($pieces * $mis / max(1, $reste)); $pieces -= $pc;
+                        $cur['plaques'] += $mis; $reste -= $mis;
+                        $cur['categories'][] = ['cle' => $x['cle'], 'nom' => $x['nom'], 'groupe' => $x['groupe'], 'plaques' => $mis, 'pieces' => $pc];
+                    }
+                }
+                if ($cur !== null) { $fn[] = $cur; }
+            }
+            // Au plus tard : la dernière fournée sort à l'ouverture de la vente ; jamais avant que le four soit libre.
+            $tot = array_sum(array_map(static fn ($x) => $x['duree'], $fn)) / 60;
+            $t = $de - $tot;
+            if ($fours[$fid]['libre'] !== null && $t < $fours[$fid]['libre']) { $t = $fours[$fid]['libre']; }
+            foreach ($fn as $x) {
+                $fin = $t + $x['duree'] / 60;
+                $ret = (int) round(max(0.0, $fin - $de) * 60);
+                if ($ret > 0) { $retards++; }
+                $fours[$fid]['fournees'][] = ['cuisson' => $c['id'], 'cuissonNom' => $c['nom'], 'debut' => gpHhmm($t), 'fin' => gpHhmm($fin), 'd' => round($t, 3), 'f' => round($fin, 3), 'temp' => $x['temp'], 'duree' => $x['duree'],
+                    'plaques' => $x['plaques'], 'capacite' => $cap, 'categories' => $x['categories'], 'retard' => $ret];
+                $fours[$fid]['occupation'] += $x['duree']; $fours[$fid]['plaquesTot'] += $x['plaques'];
+                $t = $fin;
+            }
+            $fours[$fid]['libre'] = $t;
+        }
+    }
+    $d = null; $a = null;
+    foreach ($fours as $f) { foreach ($f['fournees'] as $x) { $d = min($d ?? 99, $x['d']); $a = max($a ?? 0, $x['f']); } }
+    foreach ($plan as $c) { $h = gpHeure($c['de']); if ($h !== null) { $d = min($d ?? $h, $h); $a = max($a ?? $h, $h); } }
+    $out = [];
+    foreach ($fours as $f) { unset($f['libre']); $f['nFournees'] = count($f['fournees']); $out[] = $f; }
+    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)]];
+}
+
+/** GET /production/flux/fours?shop=4&date=YYYY-MM-DD — les fours, les réglages de cuisson et le Gantt du jour. */
+function ep_production_flux_fours(): array
+{
+    [$sid, $date, $auj] = pfShopDate(true);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    @set_time_limit(120);
+    $budget = defined('SV_BUDGET_DEMANDE') ? SV_BUDGET_DEMANDE : 500;
+    $cout = 0;
+    $K = pfCalcul($sid, $date, $cout, $budget);
+    $F = pfFoursParams($sid, $K['gp']['categories']);
+    $G = pfGantt($K['plan'], $F);
+    $cats = [];
+    foreach ($F['categories'] as $k => $x) { $cats[] = ['cle' => (string) $k] + $x; }
+    usort($cats, static fn ($a, $b) => [$a['groupe'] === '' ? 'zzz' : $a['groupe'], $a['nom']] <=> [$b['groupe'] === '' ? 'zzz' : $b['groupe'], $b['nom']]);
+    return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'jourNom' => PF_JOURS[$K['jour']],
+        'cuissons' => array_map(static fn ($c) => ['id' => $c['id'], 'nom' => $c['nom'], 'de' => $c['de'], 'a' => $c['a'], 'four' => $c['four'], 'pieces' => $c['total']['pieces']], $K['plan']),
+        'fours' => $F['fours'], 'categories' => $cats, 'enregistre' => $F['enregistre'], 'maj' => $F['maj'], 'par' => $F['par'],
+        'gantt' => $G, 'base' => ['lus' => count($K['base']['lus']), 'manquants' => $K['base']['manquants']],
+        'source' => 'plan de production du jour (comptoir + commandes) · plaques = pièces ÷ pièces par plaque · fournées enchaînées pour sortir à l’ouverture de la vente'];
+}
+
+/** POST /production/flux/fours {shop, fours: [{id, nom, plaques}], categories: {cat: {four, temp, duree, parPlaque}}, par}. */
+function wr_production_flux_fours(): array
+{
+    $b = body();
+    $sid = (int) ($b['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'magasin manquant']; }
+    [$ok, $err, $v] = pfFoursValider($b);
+    if (!$ok) { http_response_code(422); return ['error' => $err]; }
+    $v['maj'] = date('c'); $v['par'] = mb_substr(trim((string) ($b['par'] ?? '')), 0, 80) ?: null;
+    gpEcrire('pfFours:' . $sid, $v);
+    return ['ok' => true, 'fours' => count($v['fours']), 'categories' => count($v['categories'])];
+}
