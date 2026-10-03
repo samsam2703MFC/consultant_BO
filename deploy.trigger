@@ -542,3 +542,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T13:44:20Z sonde : routes de production
 2026-10-03T14:11:57Z gestion de production
 2026-10-03T14:21:13Z production : correctif chargement
+2026-10-03T14:26:36Z production : articles de commande
