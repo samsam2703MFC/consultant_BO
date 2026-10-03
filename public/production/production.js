@@ -481,7 +481,7 @@
     // La cuisson de chaque catégorie.
     let g = null;
     const cats = Object.entries(E.categories).sort((a, b) => [(a[1].groupe || 'zzz'), a[1].nom].join('|').localeCompare([(b[1].groupe || 'zzz'), b[1].nom].join('|')));
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">La cuisson de chaque catégorie</span><span class="pf-mini">le four (« répartir » = le four qui la sort le plus tôt ; aucun = ne passe pas au four), la température, la durée d’une fournée, les pièces par plaque</span></div>
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">La cuisson de chaque catégorie</span><span class="pf-mini">le four (« répartir » = le four qui la sort le plus tôt ; aucun = ne passe pas au four), la température, la durée d’une fournée, les pièces par plaque</span>${E.fours.length > 1 && Object.values(E.categories).some(c => c.four && c.four !== '*') ? '<button class="pf-btn" data-toutrep="1" title="toutes les catégories qui passent au four : répartir sur les fours">Tout répartir sur les fours</button>' : ''}</div>
       <table class="pf-tab"><thead><tr><th>Catégorie</th><th>Four</th><th class="n">Température °C</th><th class="n">Durée min</th><th class="n">Pièces par plaque</th></tr></thead><tbody>
       ${cats.map(([k, c]) => { const gr = c.groupe || 'Sans section'; const t = gr !== g ? `<tr class="grp"><td colspan="5">${esc(gr)}</td></tr>` : ''; g = gr;
         return t + `<tr><td class="nom">${esc(c.nom)}${c.auto ? ' <span class="pf-tag">proposé</span>' : ''}</td>
@@ -593,6 +593,7 @@
       on('[data-fp]', 'input', i => { F.fours[+i.dataset.fp].plaques = i.value; majF(); });
       on('[data-fsup]', 'click', b => { const i = +b.dataset.fsup; const id = F.fours[i].id; F.fours.splice(i, 1); Object.values(F.categories).forEach(c => { if (c.four === id) { c.four = '*'; } }); rendre(); });
       on('[data-fajout]', 'click', () => { let n = 1; while (F.fours.some(f => f.id === 'f' + n)) { n++; } F.fours.push({ id: 'f' + n, nom: 'Four ' + (F.fours.length + 1), plaques: 10 }); rendre(); });
+      on('[data-toutrep]', 'click', () => { Object.values(F.categories).forEach(c => { if (c.four) { c.four = '*'; c.auto = false; } }); rendre(); });
       on('[data-cf]', 'change', s => { const c = F.categories[s.dataset.cf]; c.four = s.value || null; c.auto = false; rendre(); });
       on('[data-ct]', 'input', i => { F.categories[i.dataset.ct].temp = i.value; F.categories[i.dataset.ct].auto = false; majF(); });
       on('[data-cd]', 'input', i => { F.categories[i.dataset.cd].duree = i.value; F.categories[i.dataset.cd].auto = false; majF(); });
