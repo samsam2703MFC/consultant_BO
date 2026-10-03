@@ -458,15 +458,18 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now): array
         $prevJ = array_sum($prof);
         $finJour = $proj;
         $verdict = 'ok';
-        if ($now < 24 && $stockNow <= 0.5 && $prevJ > 0 && gpSomme($prof, $now, 24) > 0.5) { $verdict = 'rupture'; }
+        $resteJ = gpSomme($prof, $now, (float) $h1 + 1);   // ce que la journée vend encore, jusqu'à la fermeture
+        if ($now < 24 && $stockNow <= 0.5 && $prevJ > 0 && $resteJ > 0.5) { $verdict = 'rupture'; }
         elseif ($manque !== null) { $verdict = 'manque'; }
         elseif ($prevJ > 0 && $finJour > PF_TROP * $prevJ && $finJour >= 2) { $verdict = 'trop'; }
         // Le conseil : de quoi tenir jusqu'à la fermeture (déficit projeté), arrondi à la plaque.
         $conseil = null;
         if ($verdict === 'rupture' || $verdict === 'manque') {
-            $def = max($manque['q'] ?? 0.0, -$finJour);
+            // De quoi tenir jusqu'à la fermeture : le déficit projeté, ou en rupture ce que la journée vend encore.
+            $def = max($manque['q'] ?? 0.0, -$finJour, $verdict === 'rupture' ? $resteJ - max(0.0, $stockNow) : 0.0);
             $pl = null; foreach ($p['c'] as $x) { if (!empty($x['plaque'])) { $pl = (int) $x['plaque']; } }
-            $conseil = ['pieces' => (int) ceil($def), 'plaques' => $pl ? (int) ceil($def / $pl) : null, 'plaque' => $pl];
+            $n = max(1, (int) ceil($def - 1e-6));
+            $conseil = ['pieces' => $n, 'plaques' => $pl ? (int) ceil($n / $pl) : null, 'plaque' => $pl];
         }
         $T['sorti'] += $sortiTot; $T['vendu'] += $venduTot; $T['stock'] += max(0.0, $stockNow); $T['finJour'] += max(0.0, $finJour); $T['report'] += $s0;
         if ($verdict === 'manque') { $T['manques']++; } elseif ($verdict === 'rupture') { $T['ruptures']++; } elseif ($verdict === 'trop') { $T['trop']++; }
