@@ -286,11 +286,73 @@ function svLigneHeure(array $r): ?array
     $h = (int) substr((string) ($r['hour_from'] ?? ''), 0, 2);
     if ($h < 0 || $h > 23) { return null; }
     $ca = round((float) ($r['income'] ?? 0), 2);
-    $mat = round((float) ($r['material_cost'] ?? 0), 2);
+    // Le coût matière de l'heure : null quand le panel ne le connaît pas (material_cost absent,
+    // margin_status COST_INCOMPLETE) — pas zéro, qui ferait une marge de 100 %. Il se recompose
+    // ensuite depuis les tickets (svMatiereJour).
+    $matConnu = isset($r['material_cost']) && is_numeric($r['material_cost']);
+    $mat = $matConnu ? round((float) $r['material_cost'], 2) : null;
     $trav = round((float) ($r['employee_cost'] ?? 0), 2);
-    return ['h' => $h, 'tickets' => (int) ($r['transactions_qty'] ?? 0), 'ca' => $ca, 'mat' => $mat,
+    return ['h' => $h, 'tickets' => (int) ($r['transactions_qty'] ?? 0), 'ca' => $ca, 'mat' => $mat, 'matConnu' => $matConnu,
         'trav' => $trav, 'poste' => (int) ($r['employee_qty'] ?? 0),
-        'marge' => isset($r['total_margin']) ? round((float) $r['total_margin'], 2) : round($ca - $mat - $trav, 2)];
+        'marge' => isset($r['total_margin']) && is_numeric($r['total_margin']) ? round((float) $r['total_margin'], 2) : ($mat !== null ? round($ca - $mat - $trav, 2) : null)];
+}
+
+/**
+ * Le coût matière d'une journée recomposé depuis les tickets : la somme des coûts de recette des
+ * lignes vendues (svProduitsJour, le coût du panel pour ce magasin, la portion à sa fraction), et
+ * pour les lignes dont la recette n'a pas de coût, leur CA au taux des lignes connues. Mesuré à
+ * Halle le 03/10/2026 : le panel rend margin_value et material_cost nuls (COST_INCOMPLETE) dès
+ * qu'un produit vendu n'a pas de coût, et le P&L affichait un coût matière de 100 %. Null si les
+ * tickets du jour ne sont pas lus ; avec $budget = 0, ne lit que le gravé.
+ */
+function svMatiereJour(int $sid, string $j, int &$cout, int $budget): ?array
+{
+    static $memo = [];
+    $k = $sid . ':' . $j;
+    if (array_key_exists($k, $memo) && ($memo[$k] !== null || $budget <= 0)) { return $memo[$k]; }
+    if ($j < SV_DEBUT) { return $memo[$k] = null; }
+    $p = svProduitsJour($sid, $j, $cout, $budget);
+    if ($p === null) { return $memo[$k] = null; }
+    $connu = 0.0; $caConnu = 0.0; $caInconnu = 0.0; $parHeure = [];
+    foreach ($p as $h => $lst) {
+        $hc = 0.0; $hk = 0.0; $hi = 0.0;
+        foreach ((array) $lst as $x) {
+            $v = (float) ($x[2] ?? 0);
+            if (($x[3] ?? null) === null) { $hi += $v; } else { $hc += (float) $x[3]; $hk += $v; }
+        }
+        $parHeure[(int) $h] = [$hc, $hk, $hi];
+        $connu += $hc; $caConnu += $hk; $caInconnu += $hi;
+    }
+    $ca = $caConnu + $caInconnu;
+    if ($ca <= 0 || $caConnu <= 0) { return $memo[$k] = null; }
+    $taux = $connu / $caConnu;
+    $est = [];
+    foreach ($parHeure as $h => [$hc, $hk, $hi]) { $est[$h] = round($hc + $hi * $taux, 2); }
+    $couv = round(100 * $caConnu / $ca, 1);
+    return $memo[$k] = ['estime' => round($connu + $caInconnu * $taux, 2), 'connu' => round($connu, 2), 'ca' => round($ca, 2),
+        'couverture' => $couv, 'taux' => round(100 * $taux, 1), 'parHeure' => $est,
+        'source' => 'recettes vendues' . ($couv < 99.5 ? ' · estimé, ' . round($couv) . ' % du CA avec coût connu' : '')];
+}
+
+/**
+ * Les heures d'une journée avec le coût matière recomposé quand le panel ne le donne pas : les
+ * heures à `mat` null prennent l'estimation de svMatiereJour pour cette heure. Le gravé seul,
+ * jamais de lecture de tickets ici.
+ */
+function svHeuresAvecMatiere(int $sid, string $j, array $hs): array
+{
+    $manque = false;
+    foreach ($hs as $l) { if (is_array($l) && ($l['mat'] ?? null) === null) { $manque = true; break; } }
+    if (!$manque) { return $hs; }
+    $zero = 0;
+    $e = svMatiereJour($sid, $j, $zero, 0);
+    foreach ($hs as $h => $l) {
+        if (!is_array($l) || ($l['mat'] ?? null) !== null) { continue; }
+        $m = $e !== null ? ($e['parHeure'][(int) $h] ?? 0.0) : null;
+        $hs[$h]['mat'] = $m; $hs[$h]['matEstime'] = $e !== null;
+        if ($m !== null && ($l['marge'] ?? null) === null) { $hs[$h]['marge'] = round((float) $l['ca'] - $m - (float) ($l['trav'] ?? 0), 2); }
+    }
+    return $hs;
 }
 
 /**
@@ -392,6 +454,7 @@ function svHeuresJours(int $sid, array $jours): array
         }
     }
     ksort($out);
+    foreach ($out as $j => $hs) { $out[$j] = svHeuresAvecMatiere($sid, (string) $j, $hs); }
     return $out;
 }
 
@@ -645,15 +708,18 @@ function ep_stats_ventes(): array
     }
 
     // Agrégat par heure : somme sur les jours ouverts (CA > 0 dans l'heure ou le jour).
-    $agg = []; $joursOuverts = [];
+    $agg = []; $joursOuverts = []; $matEstimee = 0; $matInconnue = 0;
     foreach ($heures as $j => $hs) {
         $tot = 0.0; foreach ($hs as $l) { $tot += $l['ca']; }
         if ($tot <= 0) { continue; }
         $joursOuverts[] = $j;
+        // Les tickets viennent d'être lus : une heure sans coût chez le panel prend l'estimation.
+        $hs = svHeuresAvecMatiere($sid, (string) $j, $hs);
         foreach ($hs as $h => $l) {
             if (!isset($agg[$h])) { $agg[$h] = ['h' => (int) $h, 'tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'poste' => 0.0, 'marge' => 0.0, 'jours' => 0]; }
             $a =& $agg[$h];
-            $a['tickets'] += $l['tickets']; $a['ca'] += $l['ca']; $a['mat'] += $l['mat']; $a['trav'] += $l['trav']; $a['marge'] += $l['marge'];
+            if (!empty($l['matEstime'])) { $matEstimee++; } elseif (($l['mat'] ?? null) === null) { $matInconnue++; }
+            $a['tickets'] += $l['tickets']; $a['ca'] += $l['ca']; $a['mat'] += (float) ($l['mat'] ?? 0); $a['trav'] += $l['trav']; $a['marge'] += (float) ($l['marge'] ?? ($l['ca'] - (float) ($l['mat'] ?? 0) - $l['trav']));
             if ($l['ca'] > 0 || $l['poste'] > 0) { $a['poste'] += $l['poste']; $a['jours']++; }
             unset($a);
         }
@@ -763,6 +829,8 @@ function ep_stats_ventes(): array
             'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
         'heures' => $lignes, 'categories' => $catsT, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'matiere' => ['heuresEstimees' => $matEstimee, 'heuresInconnues' => $matInconnue,
+            'source' => $matInconnue > 0 ? 'coût matière inconnu sur ' . $matInconnue . ' heure' . ($matInconnue > 1 ? 's' : '') . ' (tickets non lus)' : ($matEstimee > 0 ? 'recettes vendues sur ' . $matEstimee . ' heure' . ($matEstimee > 1 ? 's' : '') . ' que le panel ne chiffre pas' : 'panel')],
         'periodes' => svPeriodes($heures),
         'meilleure' => $meilleure ? ['h' => $meilleure['h'], 'res' => $meilleure['res'], 'moy' => $meilleure['moy']['res']] : null,
         'pire' => $pire ? ['h' => $pire['h'], 'res' => $pire['res'], 'moy' => $pire['moy']['res']] : null,

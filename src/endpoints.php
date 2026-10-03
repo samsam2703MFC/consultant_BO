@@ -1794,11 +1794,16 @@ function ep_exploitation_rentabilite(): array
 
         $jours = []; $caTot = 0.0; $netTot = 0.0; $netOk = true;
         foreach ((array) $hm['days'] as $d) {
-            $ca = (float) ($d['ca'] ?? 0); $mb = (float) ($d['margin_value'] ?? 0);
+            $ca = (float) ($d['ca'] ?? 0);
+            $mb = isset($d['margin_value']) && is_numeric($d['margin_value']) ? (float) $d['margin_value'] : null;
             $ouvert = !empty($d['has_data']) && $ca > 0;
+            if ($mb === null && $ouvert && function_exists('svMatiereJour')) {
+                $zeroR = 0; $eR = svMatiereJour($id, (string) ($d['date'] ?? ''), $zeroR, 0);
+                if ($eR !== null) { $mb = $ca - (float) $eR['estime']; }
+            }
             $dansMois = str_starts_with((string) ($d['date'] ?? ''), $moisCourant);
             $lj = $dansMois ? $labJ : null; $oj = $dansMois ? $ovJ : null;
-            $net = ($ouvert && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null;
+            $net = ($ouvert && $mb !== null && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null;
             // La source du jour l'emporte sur la reconstruction : elle connaît
             // les heures réellement prestées ce jour-là, pas une moyenne.
             $q = $pj[(string) ($d['date'] ?? '')] ?? null;
@@ -1809,7 +1814,7 @@ function ep_exploitation_rentabilite(): array
                 if (isset($q['labour'])) { $lj = (float) $q['labour']; }
                 if (isset($q['overhead'])) { $oj = (float) $q['overhead']; }
                 $net = isset($q['result']) ? (float) $q['result']
-                    : (($lj !== null && $oj !== null) ? $mb - $lj - $oj : null);
+                    : (($mb !== null && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null);
             }
             if ($ouvert) { $caTot += $ca; if ($net === null) { $netOk = false; } else { $netTot += $net; } }
             $jours[] = [
@@ -1818,9 +1823,9 @@ function ep_exploitation_rentabilite(): array
                 'ca' => $ouvert ? round($ca, 2) : null,
                 'tickets' => $ouvert ? (int) ($d['tickets'] ?? 0) : null,
                 'panier' => $ouvert ? round((float) ($d['avg_basket'] ?? 0), 2) : null,
-                'coutMatiere' => $ouvert ? round($ca - $mb, 2) : null,
-                'margeBrute' => $ouvert ? round($mb, 2) : null,
-                'margePct' => $ouvert && $ca > 0 ? round($mb / $ca * 100, 1) : null,
+                'coutMatiere' => $ouvert && $mb !== null ? round($ca - $mb, 2) : null,
+                'margeBrute' => $ouvert && $mb !== null ? round($mb, 2) : null,
+                'margePct' => $ouvert && $mb !== null && $ca > 0 ? round($mb / $ca * 100, 1) : null,
                 'labourJour' => $ouvert && $lj !== null ? round($lj, 2) : null,
                 'overheadJour' => $ouvert && $oj !== null ? round($oj, 2) : null,
                 'net' => $net !== null ? round($net, 2) : null,
@@ -2306,7 +2311,10 @@ function ep_exploitation_jour(): array
                 $j = (string) ($d['date'] ?? '');
                 if ($j === '') { continue; }
                 $ca = (float) ($d['ca'] ?? 0);
-                $parJour[$j] = ['ca' => $ca, 'mb' => (float) ($d['margin_value'] ?? 0),
+                // La marge du panel vaut quand il la connaît ; nulle (COST_INCOMPLETE), elle se
+                // recompose depuis les tickets — jamais zéro, qui ferait un coût matière de 100 %.
+                $mbConnu = isset($d['margin_value']) && is_numeric($d['margin_value']);
+                $parJour[$j] = ['ca' => $ca, 'mb' => $mbConnu ? (float) $d['margin_value'] : null, 'mbConnu' => $mbConnu,
                     'tickets' => (int) ($d['tickets'] ?? 0), 'weekday' => (int) ($d['weekday'] ?? 0),
                     'ouvert' => !empty($d['has_data']) && $ca > 0];
             }
@@ -2350,10 +2358,20 @@ function ep_exploitation_jour(): array
         $labJ = ($labourMois !== null && $joursOuverts > 0) ? $labourMois / $joursOuverts : null;
         $ohJ  = ($ohMois !== null && $joursOuverts > 0) ? $ohMois / $joursOuverts : null;
 
+        // La marge brute d'un jour : celle du panel, sinon recomposée depuis les tickets gravés
+        // (svMatiereJour, le gravé seul), sinon inconnue.
+        $zeroMb = 0;
+        $mbDe = static function (string $j, array $d) use ($id, &$zeroMb): ?float {
+            if (!empty($d['mbConnu'])) { return (float) $d['mb']; }
+            if (!function_exists('svMatiereJour')) { return null; }
+            $e = svMatiereJour($id, $j, $zeroMb, 0);
+            return $e !== null ? (float) $d['ca'] - (float) $e['estime'] : null;
+        };
         $serie = [];
         foreach ($parJour as $j => $d) {
             if (!str_starts_with($j, $moisAff)) { continue; }   // la série montre le MOIS
-            $net = ($d['ouvert'] && $labJ !== null && $ohJ !== null) ? $d['mb'] - $labJ - $ohJ : null;
+            $mbJ = $d['ouvert'] ? $mbDe($j, $d) : null;
+            $net = ($d['ouvert'] && $mbJ !== null && $labJ !== null && $ohJ !== null) ? $mbJ - $labJ - $ohJ : null;
             $serie[] = ['date' => $j, 'ouvert' => $d['ouvert'],
                 'ca' => $d['ouvert'] ? round($d['ca'], 2) : null,
                 'tickets' => $d['ouvert'] ? $d['tickets'] : null,
@@ -2380,8 +2398,15 @@ function ep_exploitation_jour(): array
             => ($v !== null && $ref !== null && $ref > 0) ? round(($v / $ref - 1) * 100, 1) : null;
 
         $ca = $jour['ca'];
-        $mb = $jour['mb'];
-        $fc = $ca - $mb;
+        $mb = $jour['mb']; $matSrc = 'panel';
+        if (!$jour['mbConnu'] && function_exists('svMatiereJour')) {
+            // Le jour regardé mérite une lecture de tickets si elle manque encore.
+            $coutMat = 0;
+            $e = svMatiereJour($id, $date, $coutMat, SV_BUDGET_DEMANDE);
+            if ($e !== null) { $mb = $ca - (float) $e['estime']; $matSrc = (string) $e['source']; }
+            else { $mb = null; $matSrc = 'coût matière inconnu : le panel ne le chiffre pas et les tickets ne sont pas lus'; }
+        }
+        $fc = $mb !== null ? $ca - $mb : null;
         $k = $res['kpi' . $id] ?? null;
         $tickets  = (int) (nombreOuNull(is_array($k) ? $k : [], ['tickets', 'ticket_count']) ?? $jour['tickets']);
         $produits = nombreOuNull(is_array($k) ? $k : [], ['products', 'product_count']);
@@ -2409,7 +2434,7 @@ function ep_exploitation_jour(): array
         $ohSource = 'reparti';
         $oh = $ohJ;
         if ($dsOh !== null && $dsOh > 0) { $oh = $dsOh; $ohSource = 'mesure'; }
-        $net = ($labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
+        $net = ($fc !== null && $labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
 
         // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
         // Une catégorie absente d'un jour de référence OUVERT compte zéro : ne
@@ -2603,7 +2628,8 @@ function ep_exploitation_jour(): array
             }
             $d6 = $parJour[$j6] ?? null;
             $ouv6 = $d6 !== null && $d6['ouvert'];
-            $net6 = ($ouv6 && $labJ !== null && $ohJ !== null) ? $d6['mb'] - $labJ - $ohJ : null;
+            $mb6 = $ouv6 ? $mbDe($j6, $d6) : null;
+            $net6 = ($ouv6 && $mb6 !== null && $labJ !== null && $ohJ !== null) ? $mb6 - $labJ - $ohJ : null;
             if ($j6 === $date && $net !== null) { $net6 = $net; }
             $semaine[] = ['date' => $j6, 'wd' => $wd6, 'passe' => $j6 <= $date, 'aujourdhui' => $j6 === $date,
                 'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null, 'tickets' => $ouv6 ? $d6['tickets'] : null,
@@ -2706,8 +2732,9 @@ function ep_exploitation_jour(): array
             'panier' => $panier !== null ? round($panier, 2) : null,
             'produits' => $produits !== null ? (int) $produits : null,
             'produitsParClient' => $ppc !== null ? round($ppc, 2) : null,
-            'coutMatiere' => round($fc, 2), 'coutMatierePct' => $ca > 0 ? round($fc / $ca * 100, 1) : null,
-            'margeBrute' => round($mb, 2), 'margeBrutePct' => $ca > 0 ? round($mb / $ca * 100, 1) : null,
+            'coutMatiere' => $fc !== null ? round($fc, 2) : null, 'coutMatierePct' => ($fc !== null && $ca > 0) ? round($fc / $ca * 100, 1) : null,
+            'coutMatiereSource' => $matSrc,
+            'margeBrute' => $mb !== null ? round($mb, 2) : null, 'margeBrutePct' => ($mb !== null && $ca > 0) ? round($mb / $ca * 100, 1) : null,
             'labour' => $labour !== null ? round($labour, 2) : null,
             'labourPct' => ($labour !== null && $ca > 0) ? round($labour / $ca * 100, 1) : null,
             'labourSource' => $labourSource,
@@ -2733,7 +2760,7 @@ function ep_exploitation_jour(): array
             'objectifAtteinte' => ($objJour !== null && $objJour > 0) ? round($ca / $objJour, 4) : null,
             'net' => $net !== null ? round($net, 2) : null,
             'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null,
-            'motifNet' => $net === null ? 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles' : null,
+            'motifNet' => $net === null ? ($fc === null ? 'coût matière inconnu — le panel ne le chiffre pas et les tickets ne sont pas lus' : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles') : null,
             'categories' => $cats, 'serie' => $serie]
             // Le split pro / comptoir : les tickets des clients pro du panel,
             // le reste du CA de la ligne au comptoir.
@@ -2759,7 +2786,7 @@ function ep_exploitation_jour(): array
             $pro['n']++; $pro['ca'] += $l['caPro']; $pro['tickets'] += (int) $l['ticketsPro'];
             $pro['caMag'] += $l['ca']; $pro['ticketsMag'] += (int) $l['tickets'];
         }
-        $t['ca'] += $l['ca']; $t['coutMatiere'] += $l['coutMatiere']; $t['margeBrute'] += $l['margeBrute'];
+        $t['ca'] += $l['ca']; $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
         $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
         if ($l['refCa'] === null) { $refComplet = false; }
         else { $t['refCa'] += $l['refCa']; $refMin = $refMin === null ? $l['refJours'] : min($refMin, $l['refJours']); }

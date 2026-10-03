@@ -1148,6 +1148,21 @@ comblent plus que les références que le panel ne chiffre pas, et le disent
 dans `source` (« … (copie locale) »). La saisie du cockpit garde la main en
 aval, comme avant.
 
+### Le coût matière du P&L quand le panel ne le chiffre pas
+
+Mesuré à Halle le 03/10/2026 : dès qu'un produit vendu n'a pas de coût de
+recette, le panel rend `margin_value` (margin-heatmap) et `material_cost`
+(hourly-distribution) nuls, `margin_status` COST_INCOMPLETE — et le P&L
+lisait un coût matière de 100 %, une marge brute de 0. Désormais
+(`svMatiereJour`) : le coût matière d'une journée se recompose depuis les
+tickets, la somme des coûts de recette des lignes vendues (le coût du panel
+pour ce magasin, la portion à sa fraction), les lignes sans coût prenant leur
+CA au taux des lignes connues. `coutMatiereSource` le dit sur le résultat du
+jour (« recettes vendues · estimé, x % du CA avec coût connu »), la série du
+mois, la semaine et la rentabilité font de même sur les journées gravées, les
+heures des stats de vente aussi (`matiere.source`). Sans tickets lus, le
+coût reste inconnu, jamais zéro.
+
 ### `GET /exploitation/jour` — les clients de J−7 au même moment
 
 Chaque magasin porte `j7` : `{ date, moment, tickets, ca, ticketsJour, caJour }`,
