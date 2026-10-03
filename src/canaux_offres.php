@@ -159,7 +159,11 @@ function ep_exploitation_canaux(): array
     $periode = (string) ($_GET['periode'] ?? 'jour');
     if (!in_array($periode, ['jour', '7', '30'], true)) { $periode = 'jour'; }
     $shop = (int) ($_GET['shop'] ?? 0);
+    $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? '');
     @set_time_limit(120);
+    if ($shop > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) && $du <= $au && $du <= $auj) {
+        return coCanauxPeriode($shop, $du, $au, $auj);
+    }
     if ($shop > 0) {
         // Un magasin : la journée, les 14 derniers jours, la liste du jour, demain.
         $jours14 = []; for ($i = 13; $i >= 0; $i--) { $jours14[] = date('Y-m-d', strtotime($date . ' -' . $i . ' day')); }
@@ -199,6 +203,64 @@ function ep_exploitation_canaux(): array
     $out['reseau'] = ['comptoir' => round($r['comptoir'], 2), 'cc' => ['n' => $r['cc']['n'], 'ca' => round($r['cc']['ca'], 2)], 'liv' => ['n' => $r['liv']['n'], 'ca' => round($r['liv']['ca'], 2)],
         'webshop' => round($web, 2), 'total' => round($total, 2), 'part' => $total > 0 ? round(100 * $web / $total, 1) : null, 'livrent' => $r['livrent'], 'vendent' => $r['vendent']];
     return $out;
+}
+
+/**
+ * Un magasin sur une période close ou en cours (la semaine, le mois du dashboard) : le split
+ * sur les jours lus, la série jour par jour (les jours à venir portent déjà les commandes
+ * prises), le compte par jour, par semaine au-delà de quinze jours, ce qui reste à préparer
+ * et ce qui est déjà pris pour la suite.
+ */
+function coCanauxPeriode(int $sid, string $du, string $au, string $auj): array
+{
+    $jours = []; for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $jours[] = $d; if (count($jours) > 62) { break; } }
+    $lus = array_values(array_filter($jours, static fn ($j) => $j <= $auj));
+    $cmds = coCommandes($sid, $du);
+    $m = coMagasin($sid, $lus, $cmds);
+    $serie = $m['serie']; unset($m['serie']);
+    $parJourW = [];
+    foreach ((array) $cmds as $c) { $j = substr($c['quand'], 0, 10); $parJourW[$j][] = $c; }
+    // Les jours à venir : pas de caisse, mais les commandes déjà prises.
+    foreach ($jours as $j) {
+        if ($j <= $auj) { continue; }
+        $w = ['cc' => [0, 0.0], 'liv' => [0, 0.0]];
+        foreach ($parJourW[$j] ?? [] as $c) { if ($c['canal'] !== 'compt') { $w[$c['canal']][0]++; $w[$c['canal']][1] += $c['montant']; } }
+        $serie[] = ['j' => $j, 'lu' => false, 'caisse' => null, 'tickets' => null, 'comptoir' => null, 'cc' => round($w['cc'][1], 2), 'liv' => round($w['liv'][1], 2), 'ccN' => $w['cc'][0], 'livN' => $w['liv'][0]];
+    }
+    $maintenant = date('Y-m-d H:i');
+    $parJour = []; $liste = []; $aPreparer = 0; $aVenir = ['n' => 0, 'ca' => 0.0]; $nTot = 0; $nWeb = 0;
+    foreach ($jours as $j) {
+        $L = $parJourW[$j] ?? [];
+        $pj = ['j' => $j, 'lu' => $j <= $auj, 'n' => count($L), 'compt' => 0, 'ccN' => 0, 'cc' => 0.0, 'livN' => 0, 'liv' => 0.0, 'aPreparer' => 0];
+        foreach ($L as $c) {
+            $nTot++;
+            if ($c['canal'] === 'compt') { $pj['compt']++; } else { $nWeb++; $pj[$c['canal'] . 'N']++; $pj[$c['canal']] += $c['montant']; }
+            $ouverte = in_array($c['statut'], ['à préparer', 'en préparation'], true);
+            if ($ouverte && $c['quand'] <= $maintenant) { $pj['aPreparer']++; $aPreparer++; }
+            if ($c['quand'] > $maintenant) { $aVenir['n']++; $aVenir['ca'] += $c['montant']; }
+            if (count($jours) <= 7) { $liste[] = ['jour' => $j, 'heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut']]; }
+        }
+        $pj['cc'] = round($pj['cc'], 2); $pj['liv'] = round($pj['liv'], 2);
+        $parJour[] = $pj;
+    }
+    // Par semaine, quand la période dépasse quinze jours : le lundi de chaque semaine.
+    $parSemaine = [];
+    if (count($jours) > 15) {
+        $S = [];
+        foreach ($serie as $x) {
+            $lundi = date('Y-m-d', strtotime($x['j'] . ' monday this week'));
+            // Les bornes de la semaine restent dans la période : la première et la dernière sont tronquées.
+            if (!isset($S[$lundi])) { $S[$lundi] = ['du' => $x['j'], 'au' => $x['j'], 'joursLus' => 0, 'caisse' => 0.0, 'comptoir' => 0.0, 'ccN' => 0, 'cc' => 0.0, 'livN' => 0, 'liv' => 0.0]; }
+            if ($x['j'] > $S[$lundi]['au']) { $S[$lundi]['au'] = $x['j']; }
+            if ($x['lu']) { $S[$lundi]['joursLus']++; $S[$lundi]['caisse'] += (float) $x['caisse']; $S[$lundi]['comptoir'] += (float) $x['comptoir']; }
+            $S[$lundi]['ccN'] += $x['ccN']; $S[$lundi]['cc'] += $x['cc']; $S[$lundi]['livN'] += $x['livN']; $S[$lundi]['liv'] += $x['liv'];
+        }
+        foreach ($S as $w) { $web = $w['cc'] + $w['liv']; $tot = $w['comptoir'] + $web; $w['webshop'] = round($web, 2); $w['part'] = $tot > 0 && $w['joursLus'] > 0 ? round(100 * $web / $tot, 1) : null; $w['caisse'] = round($w['caisse'], 2); $w['comptoir'] = round($w['comptoir'], 2); $w['cc'] = round($w['cc'], 2); $w['liv'] = round($w['liv'], 2); $parSemaine[] = $w; }
+    }
+    return ['shop' => (string) $sid, 'du' => $du, 'au' => $au, 'periode' => $m + ['du' => $du, 'au' => $au, 'joursLus' => $m['joursLus'], 'joursEcoules' => count($lus)],
+        'serie' => $serie, 'parJour' => $parJour, 'parSemaine' => $parSemaine, 'liste' => $liste, 'nCommandes' => $nTot, 'nWebshop' => $nWeb,
+        'aPreparer' => $aPreparer, 'aVenir' => ['n' => $aVenir['n'], 'ca' => round($aVenir['ca'], 2)],
+        'indispo' => $cmds === null, 'source' => $cmds === null ? 'panel muet' : 'commandes du panel + tickets caisse'];
 }
 
 /* --- les offres : bundles et promotions ------------------------------------------- */
@@ -242,41 +304,49 @@ function coVerdictBundle(int $joursLus, ?float $delta, ?float $marge): array
 }
 
 /** Les offres d'un magasin : bundles (tickets) et promotions (jours creux), sur la période, avec le 7 jours et le jour. */
-function coOffresMagasin(int $sid, string $date, string $periode, int &$cout, float $tempsMax = SV_TEMPS_DEMANDE): array
+function coOffresMagasin(int $sid, string $date, string $periode, int &$cout, float $tempsMax = SV_TEMPS_DEMANDE, ?string $du = null, ?string $au = null): array
 {
-    $jours = coJours($date, $periode);
+    $auj = date('Y-m-d');
+    if ($du !== null && $au !== null) {
+        // La période du dashboard (la semaine, le mois), jusqu'à aujourd'hui au plus.
+        $jours = []; for ($d = $du; $d <= $au && $d <= $auj; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $jours[] = $d; if (count($jours) > 62) { break; } }
+        if ($jours === []) { $jours = [$du]; }
+        $date = $jours[count($jours) - 1];
+    } else { $jours = coJours($date, $periode); }
     $sept = coJours($date, '7');
-    // Les 35 derniers jours : les 7 derniers, et les 4 semaines d'avant pour la référence.
-    $j35 = []; for ($i = 34; $i >= 0; $i--) { $j35[] = date('Y-m-d', strtotime($date . ' -' . $i . ' day')); }
-    $fenetre = array_values(array_unique(array_merge($j35, $jours)));
+    // La fenêtre qui porte la marge, la tendance et le verdict : la période dès qu'elle fait
+    // sept jours, sinon les sept derniers jours. La référence : les 4 semaines d'avant.
+    $fen = count($jours) >= 7 ? $jours : $sept;
+    $refJours = []; for ($i = 28; $i >= 1; $i--) { $refJours[] = date('Y-m-d', strtotime($fen[0] . ' -' . $i . ' day')); }
+    $fenetre = array_values(array_unique(array_merge($refJours, $fen, $sept, $jours)));
     sort($fenetre);
     $lus = [];
     $B = coBundlesJours($sid, $fenetre, $cout, SV_BUDGET_DEMANDE, $lus, $tempsMax);
     $caisse = coCaisse($sid, $jours);
     $caPeriode = 0.0; foreach ($caisse as $k) { $caPeriode += $k['ca']; }
     $offres = [];
-    $refJours = array_slice($j35, 0, 28);
+    $fenLus = count(array_filter($fen, static fn ($j) => isset($lus[$j])));
     foreach ($B as $pid => $b) {
         $som = static function (array $js) use ($b): array { $q = 0.0; $v = 0.0; $c = 0.0; $cInc = false; foreach ($js as $j) { $x = $b['jours'][$j] ?? null; if ($x === null) { continue; } $q += $x[0]; $v += $x[1]; if ($x[2] === null) { $cInc = true; } else { $c += $x[2]; } } return [$q, $v, $cInc ? null : $c]; };
-        [$qP, $vP, $cP] = $som($jours); [$q7, $v7, $c7] = $som($sept); [$qJ, $vJ] = $som([$date]); [$qR, $vR] = $som($refJours);
-        $marge = ($c7 !== null && $v7 > 0) ? round(100 * ($v7 - $c7) / $v7, 1) : null;
+        [$qP, $vP, $cP] = $som($jours); [$q7, $v7, $c7] = $som($sept); [$qJ, $vJ] = $som([$date]); [$qR, $vR] = $som($refJours); [$qF, $vF, $cF] = $som($fen);
+        $marge = ($cF !== null && $vF > 0) ? round(100 * ($vF - $cF) / $vF, 1) : null;
         $joursVendus = array_keys(array_filter($b['jours'], static fn ($x) => $x[0] > 0));
         sort($joursVendus);
         $depuis = $joursVendus[0] ?? null;
         $refLus = count(array_filter($refJours, static fn ($j) => isset($lus[$j])));
-        $sept7Lus = count(array_filter($sept, static fn ($j) => isset($lus[$j])));
         $refParJour = $refLus > 0 && $qR > 0 ? $qR / $refLus : null;
-        $delta = ($refParJour !== null && $sept7Lus > 0) ? round(100 * (($q7 / $sept7Lus) - $refParJour) / $refParJour, 1) : null;
-        // Un bundle qui n'a rien vendu ni sur la période ni sur 7 jours n'est plus une offre en cours.
-        if ($qP <= 0 && $q7 <= 0) { continue; }
-        [$verdict, $lib] = coVerdictBundle(count(array_filter($joursVendus, static fn ($j) => $j >= $sept[0])), $delta, $marge);
+        $delta = ($refParJour !== null && $fenLus > 0) ? round(100 * (($qF / $fenLus) - $refParJour) / $refParJour, 1) : null;
+        // Un bundle qui n'a rien vendu ni sur la période ni sur la fenêtre n'est plus une offre en cours.
+        if ($qP <= 0 && $qF <= 0) { continue; }
+        [$verdict, $lib] = coVerdictBundle(count(array_filter($joursVendus, static fn ($j) => $j >= $fen[0] && $j <= $fen[count($fen) - 1])), $delta, $marge);
         $mot = $delta !== null ? 'de pièces par jour face aux 4 semaines d’avant'
             : ($depuis !== null && $depuis >= $refJours[0] ? 'nouveau : pas de référence' : 'pas de vente sur les 4 semaines d’avant');
         if ($marge !== null) { $mot .= ' · marge ' . number_format($marge, 0, ',', ' ') . ' %'; }
         $offres[] = ['type' => 'bundle', 'id' => 'b' . $pid, 'nom' => $b['nom'], 'regle' => 'bundle du panel', 'canaux' => ['comptoir'], 'depuis' => $depuis,
             'periode' => ['pieces' => round($qP, 1), 'ca' => round($vP, 2)], 'auj' => ['pieces' => round($qJ, 1), 'ca' => round($vJ, 2)], 'sept' => ['pieces' => round($q7, 1), 'ca' => round($v7, 2)],
+            'fen' => ['pieces' => round($qF, 1), 'ca' => round($vF, 2)],
             'marge' => $marge, 'coef' => ($marge !== null && $marge < 100) ? round(1 / (1 - $marge / 100), 2) : null,
-            'spark' => array_map(static fn ($j) => round(($b['jours'][$j][0] ?? 0.0), 1), $sept),
+            'spark' => array_map(static fn ($j) => round(($b['jours'][$j][0] ?? 0.0), 1), $fen),
             'delta' => $delta, 'verdict' => $verdict, 'verdictLib' => $lib, 'mot' => $mot];
     }
     // Les promotions des jours creux : en cours, ou finies depuis moins de 30 jours.
@@ -291,7 +361,8 @@ function coOffresMagasin(int $sid, string $date, string $periode, int &$cout, fl
                 $offres[] = ['type' => 'promo', 'id' => 'p' . $p['id'], 'nom' => $p['nom'], 'regle' => trim(($p['regle'] ?: $p['offre']) . ' · ' . jcNomBloc($p['jours'], range($p['heureDe'], $p['heureA'])), ' ·'),
                     'canaux' => $p['canaux'] ?: ['comptoir'], 'depuis' => $p['du'], 'au' => $p['au'], 'statut' => $p['statut'], 'levier' => $p['levier'],
                     'periode' => ['pieces' => null, 'ca' => round($caDe($jours), 2)], 'auj' => ['pieces' => null, 'ca' => round($caDe([$date]), 2)], 'sept' => ['pieces' => null, 'ca' => round($caDe($sept), 2)],
-                    'marge' => null, 'coef' => null, 'spark' => array_map(static fn ($j) => round((float) (($e['parJour'][$j]['caH'] ?? 0)), 1), $sept),
+                    'fen' => ['pieces' => null, 'ca' => round($caDe($fen), 2)],
+                    'marge' => null, 'coef' => null, 'spark' => array_map(static fn ($j) => round((float) (($e['parJour'][$j]['caH'] ?? 0)), 1), $fen),
                     'delta' => $e['deltaCaPct'], 'deltaTk' => $e['deltaTkPct'], 'verdict' => $e['verdict'], 'verdictLib' => $e['verdictLib'],
                     'mot' => $e['caH'] !== null ? ($e['deltaCaPct'] !== null ? 'de CA/h sur le créneau · ' : '') . number_format($e['caH'], 0, ',', ' ') . ' €/h contre ' . number_format((float) ($p['ref']['caH'] ?? 0), 0, ',', ' ') . ' €/h en référence · ' . $e['joursLus'] . ' jour' . ($e['joursLus'] > 1 ? 's' : '') . ' lu' . ($e['joursLus'] > 1 ? 's' : '') : 'pas encore de jour lu'];
             }
@@ -301,9 +372,11 @@ function coOffresMagasin(int $sid, string $date, string $periode, int &$cout, fl
     $caOff = 0.0; $caOffJ = 0.0; $pieces = 0.0; $mV = 0.0; $mM = 0.0;
     foreach ($offres as $o) {
         $caOff += $o['periode']['ca']; $caOffJ += $o['auj']['ca']; $pieces += (float) ($o['periode']['pieces'] ?? 0);
-        if ($o['marge'] !== null) { $mV += $o['sept']['ca']; $mM += $o['sept']['ca'] * $o['marge'] / 100; }
+        if ($o['marge'] !== null) { $mV += $o['fen']['ca']; $mM += $o['fen']['ca'] * $o['marge'] / 100; }
     }
-    return ['offres' => $offres, 'kpi' => ['ca' => round($caOff, 2), 'caJour' => round($caOffJ, 2), 'pieces' => round($pieces, 1), 'caPeriode' => round($caPeriode, 2),
+    return ['offres' => $offres, 'fen' => ['du' => $fen[0], 'au' => $fen[count($fen) - 1], 'jours' => count($fen), 'lus' => $fenLus],
+        'periodeJours' => ['du' => $jours[0], 'au' => $jours[count($jours) - 1], 'jours' => count($jours), 'lus' => count(array_filter($jours, static fn ($j) => isset($lus[$j])))],
+        'kpi' => ['ca' => round($caOff, 2), 'caJour' => round($caOffJ, 2), 'pieces' => round($pieces, 1), 'caPeriode' => round($caPeriode, 2),
         'part' => $caPeriode > 0 ? round(100 * $caOff / $caPeriode, 1) : null, 'marge' => $mV > 0 ? round(100 * $mM / $mV, 1) : null,
         'bundles' => count(array_filter($offres, static fn ($o) => $o['type'] === 'bundle')), 'promos' => count(array_filter($offres, static fn ($o) => $o['type'] === 'promo')),
         'aAjuster' => count(array_filter($offres, static fn ($o) => in_array($o['verdict'], ['ajuster', 'arreter'], true))),
@@ -320,8 +393,11 @@ function ep_exploitation_offres(): array
     if (!in_array($periode, ['jour', '7', '30'], true)) { $periode = '7'; }
     $shop = (int) ($_GET['shop'] ?? 0);
     @set_time_limit(180);
+    $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? '');
+    $parBornes = preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) && $du <= $au && $du <= $auj;
     if ($shop > 0) {
         $cout = 0;
+        if ($parBornes) { return ['shop' => (string) $shop, 'date' => $date, 'periode' => 'bornes', 'du' => $du, 'au' => $au] + coOffresMagasin($shop, $date, $periode, $cout, SV_TEMPS_DEMANDE, $du, $au); }
         return ['shop' => (string) $shop, 'date' => $date, 'periode' => $periode] + coOffresMagasin($shop, $date, $periode, $cout);
     }
     // Le réseau : les offres en lignes, les magasins en colonnes.

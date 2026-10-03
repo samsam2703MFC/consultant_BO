@@ -2030,6 +2030,28 @@ function profilHeureBatir(int $shopId, string $date): int
     return $retenus;
 }
 
+/**
+ * J−7 au même moment : les clients et le CA du même jour de la semaine d'avant, arrêtés à
+ * l'heure qu'il est quand la journée regardée est aujourd'hui (l'heure en cours comptée au
+ * prorata des minutes), la journée entière sinon. Lu dans les heures gravées (svHeuresJours).
+ */
+function exJ7(int $sid, string $date, bool $estAuj): ?array
+{
+    $j7 = date('Y-m-d', strtotime($date . ' -7 day'));
+    try { $hs = svHeuresJours($sid, [$j7])[$j7] ?? null; } catch (Throwable $e) { $hs = null; }
+    if (!is_array($hs) || $hs === []) { return null; }
+    $hNow = (int) date('G'); $frac = ((int) date('i')) / 60;
+    $tk = 0.0; $ca = 0.0; $tkJour = 0; $caJour = 0.0;
+    foreach ($hs as $l) {
+        $h = (int) ($l['h'] ?? -1); $t = (int) ($l['tickets'] ?? 0); $c = (float) ($l['ca'] ?? 0);
+        $tkJour += $t; $caJour += $c;
+        if (!$estAuj || $h < $hNow) { $tk += $t; $ca += $c; }
+        elseif ($h === $hNow) { $tk += $t * $frac; $ca += $c * $frac; }
+    }
+    return ['date' => $j7, 'moment' => $estAuj ? sprintf('%02d:%02d', $hNow, (int) date('i')) : null,
+        'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2)];
+}
+
 function ep_exploitation_jour(): array
 {
     $auj  = date('Y-m-d');
@@ -2678,6 +2700,9 @@ function ep_exploitation_jour(): array
             'tickets' => $tickets,
             'refTickets' => $refTickets !== null ? round($refTickets) : null,
             'ticketsDelta' => $ecart((float) $tickets, $refTickets),
+            // Les clients du même jour de la semaine passée, AU MÊME MOMENT : la journée en cours
+            // se compare à J−7 arrêté à la même heure, une journée close à J−7 entière.
+            'j7' => exJ7($id, $date, $estAuj),
             'panier' => $panier !== null ? round($panier, 2) : null,
             'produits' => $produits !== null ? (int) $produits : null,
             'produitsParClient' => $ppc !== null ? round($ppc, 2) : null,
