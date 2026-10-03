@@ -1,0 +1,1479 @@
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit CEO — L'Atelier by</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="assets/img/logo.png">
+<link rel="stylesheet" href="assets/ds/global.css">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div id="app">
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
+
+  <aside style="width:236px;flex:0 0 236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto">
+    <div style="padding:22px 20px 14px">
+      <img src="/consulant_bo/assets/img/logo.png" alt="L'Atelier by" style="width:176px;max-width:100%;height:auto;display:block">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">Pilotage Réseau</div>
+    </div>
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div style="padding:0 12px 12px;position:relative">
+      <div style="position:relative">
+        <input id="rail-q" value="" data-i="0" placeholder="Rechercher partout…" style="width: 100%; box-sizing: border-box; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text); border-radius: 9px; height: 32px; padding: 0px 10px; font-family: var(--font-ui); font-size: 12px;">
+        
+      </div>
+      
+    </div>
+
+    <nav style="flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px">
+      
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Pilotage</div>
+          
+    <button data-h="1" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Résultat</span>
+      
+    </button>
+    <button data-h="2" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Performance</span>
+      
+    </button>
+    <button data-h="3" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Magasins</div>
+          
+    <button data-h="4" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Analyse magasin</span>
+      
+    </button>
+    <button data-h="5" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Scoring du trimestre</span>
+      
+    </button>
+    <button data-h="6" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Budget</span>
+      
+    </button>
+    <button data-h="7" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Jours creux</span>
+      
+    </button>
+    <button data-h="8" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Plan de développement</span>
+      
+    </button>
+    <button data-h="9" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Produits</div>
+          
+    <button data-h="10" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Catalogue</span>
+      <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">6</span>
+    </button>
+    <button data-h="11" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Gamme · scoring</span>
+      
+    </button>
+    <button data-h="12" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Où ça se vend</span>
+      
+    </button>
+    <button data-h="13" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Dans le temps</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Centrale d’achat</div>
+          
+    <button data-h="14" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Achats</span>
+      
+    </button>
+    <button data-h="15" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Marque &amp; marketing</div>
+          
+    <button data-h="16" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Campagnes</span>
+      
+    </button>
+    <button data-h="17" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Projets de développement</span>
+      
+    </button>
+    <button data-h="18" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">ERP franchisé</div>
+          
+    <button data-h="19" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Développement commercial</span>
+      
+    </button>
+    <button data-h="20" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Prospection</span>
+      
+    </button>
+    <button data-h="21" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Prospection mobile</span>
+      
+    </button>
+    <button data-h="22" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Newsletter</span>
+      
+    </button>
+    <button data-h="23" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Newsletter magasin</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Contrôle</div>
+          
+    <button data-h="24" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">
+      <span>Tâches</span>
+      <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">15</span>
+    </button>
+    <button data-h="25" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Contrôle posts Facebook</span>
+      
+    </button>
+    <button data-h="26" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Reporting automatisé</span>
+      
+    </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">Administration</div>
+          
+    <button data-h="27" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Paramètres</span>
+      
+    </button>
+    <button data-h="28" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;font-weight:300;background:transparent;color:var(--color-text)">
+      <span>Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </nav>
+    <div style="padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+      <button data-h="29" title="Mon compte et le compte consultant" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:none;background:transparent;padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui)">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:0 0 auto">SV</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--color-text)">Sam Verheyden</div>
+          <div style="font-size:10px;color:var(--color-text-muted)">Stratégie et Développement</div>
+        </div>
+      </button>
+      <span title="Version en ligne — si elle est plus ancienne que la livraison, le navigateur sert une version en cache (Ctrl+Maj+R)" style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">v01/10 15:52</span>
+      <button data-h="30" title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>
+    </div>
+  </aside>
+
+  <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
+    <div style="padding:26px 32px 60px;max-width:1460px">
+      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
+        <div>
+          <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">Tâches</h1>
+          <p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+          <span style="font-size:12px;color:var(--color-text-muted)"></span>
+          <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-secondary);color:var(--color-on-abricot)"></span>
+          <button data-h="31" title="Ce que cet écran ne peut pas afficher, et pourquoi" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;cursor:pointer">⚠ 2 limites API ▾</button>
+        </div>
+      </header>
+
+      
+      <div class="no-print" style="display:inline-flex;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px">
+    <button data-h="32" style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:transparent;color:var(--color-text)">Suivi</button><button data-h="33" style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:var(--color-primary);color:#fff">Contrôle</button><button data-h="34" style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:transparent;color:var(--color-text)">Mensuel</button>
+  </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div data-screen="controle" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+      
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Tâches évaluées</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">64</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">4 boutique(s) — journée du 01/10/2026</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">À noter</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">15</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Tâches rendues sans évaluation — la note vaut validation</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Validées</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">0</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Tâches évaluées : une note posée vaut validation</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Non conformes</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">0</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Évaluées sous le seuil de conformité</div>
+        </div>
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Note moyenne</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1"></div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Moyenne des notes consultants du jour</div>
+        </div>
+    </div>
+    
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500">Répartition des avis par niveau de conformité</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">0 notée(s) · 64 sans note</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:14px">
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#2d7a3e;margin-bottom:8px">Conforme</div>
+          
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#C9A227"></span>
+                <span style="font-size:12.5px;flex:1">Exemplaire</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#C9A227;width:0%"></span></span>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#2D7A3E"></span>
+                <span style="font-size:12.5px;flex:1">Conforme</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#2D7A3E;width:0%"></span></span>
+            </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#8D1D2C;margin-bottom:8px">Non conforme</div>
+          
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#D97706"></span>
+                <span style="font-size:12.5px;flex:1">Non conforme — mineur</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#D97706;width:0%"></span></span>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#C0182B"></span>
+                <span style="font-size:12.5px;flex:1">Non conforme — majeur</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#C0182B;width:0%"></span></span>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#8D1D2C"></span>
+                <span style="font-size:12.5px;flex:1">Non conforme — critique</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">0 · 0 %</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="display:block;height:5px;border-radius:999px;background:#8D1D2C;width:0%"></span></span>
+            </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Journée</span>
+      <select data-c="35" style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"><option value="2026-10-01" selected="">01/10/2026</option><option value="2026-09-30">30/09/2026</option><option value="2026-09-29">29/09/2026</option><option value="2026-09-24">24/09/2026</option><option value="2026-09-20">20/09/2026</option><option value="2026-09-19">19/09/2026</option><option value="2026-09-18">18/09/2026</option><option value="2026-09-17">17/09/2026</option><option value="2026-09-16">16/09/2026</option><option value="2026-09-15">15/09/2026</option><option value="2026-09-14">14/09/2026</option><option value="2026-09-11">11/09/2026</option><option value="2026-09-09">09/09/2026</option><option value="2026-09-07">07/09/2026</option><option value="2026-09-06">06/09/2026</option><option value="2026-09-04">04/09/2026</option><option value="2026-09-03">03/09/2026</option><option value="2026-09-02">02/09/2026</option><option value="2026-09-01">01/09/2026</option><option value="2026-08-31">31/08/2026</option><option value="2026-08-28">28/08/2026</option><option value="2026-08-27">27/08/2026</option><option value="2026-08-26">26/08/2026</option><option value="2026-08-25">25/08/2026</option><option value="2026-08-24">24/08/2026</option><option value="2026-08-23">23/08/2026</option><option value="2026-08-22">22/08/2026</option><option value="2026-08-21">21/08/2026</option><option value="2026-08-20">20/08/2026</option><option value="2026-08-19">19/08/2026</option><option value="2026-08-18">18/08/2026</option><option value="2026-08-17">17/08/2026</option><option value="2026-08-15">15/08/2026</option><option value="2026-08-14">14/08/2026</option><option value="2026-08-13">13/08/2026</option><option value="2026-08-12">12/08/2026</option><option value="2026-08-07">07/08/2026</option><option value="2026-08-06">06/08/2026</option><option value="2026-08-05">05/08/2026</option><option value="2026-08-04">04/08/2026</option><option value="2026-08-01">01/08/2026</option><option value="2026-07-31">31/07/2026</option></select>
+      <select data-c="36" style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"><option value="Toutes les boutiques" selected="">Toutes les boutiques</option><option value="Atelier by Berlo - Corbais">Atelier by Berlo - Corbais</option><option value="Atelier by Max &amp; Sandra - Gosselies">Atelier by Max &amp; Sandra - Gosselies</option><option value="Atelier by - Halle">Atelier by - Halle</option><option value="Atelier by Harmonie - Sombreffe">Atelier by Harmonie - Sombreffe</option></select>
+      <select data-c="37" style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"><option value="tous" selected="">Toutes les tâches</option><option value="acontroler">À contrôler — photographiées, non notées</option><option value="sansphoto">Rendues sans photo</option><option value="avalider">Toutes les non notées</option><option value="refuses">Non conformes seulement</option></select>
+    </div>
+    
+    
+      <div style="display:flex;flex-direction:column;gap:14px">
+        
+          <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="font-size:13.5px;font-weight:600">Atelier by Berlo - Corbais</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">0 / 16 notée(s) — donc validée(s)</div>
+            </div>
+            <div style="overflow-x:auto">
+            <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Tâche</th>
+                <th style="text-align:center;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:78px">Note</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:120px">Conformité</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:150px">Consultant</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">Commentaire</th>
+                <th style="text-align:right;text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);width:200px">Validation (note posée)</th>
+              </tr></thead>
+              <tbody>
+                
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="38" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Vérifier si le magasin est propre.</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="39" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="40" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Biscuiterie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="41" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="42" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Boissons</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="43" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="44" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Épicerie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="45" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="46" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pâtisseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="47" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="48" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Quiches</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="49" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="50" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Tartes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="51" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="52" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Traiteur</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="53" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="54" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Viennoiseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="55" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="56" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pains &amp; Boulangerie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="57" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="58" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">étiquetage des prix et allergènes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="59" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="60" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'Amatriciana</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="61" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="62" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'arrabiata</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="63" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="64" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Cacahuète &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="65" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="66" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Jaune &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="67" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="68" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Spaghetti Bolognaise</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="69" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+              </tbody>
+            </table>
+            </div>
+            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
+                 jour sans disparaître. Le motif reste lisible et un bouton
+                 ramène la tâche tout de suite — un contrôle qui s'efface sans
+                 dire pourquoi ressemble à un oubli. -->
+            
+          </div>
+          <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="font-size:13.5px;font-weight:600">Atelier by Max &amp; Sandra - Gosselies</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">0 / 16 notée(s) — donc validée(s)</div>
+            </div>
+            <div style="overflow-x:auto">
+            <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Tâche</th>
+                <th style="text-align:center;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:78px">Note</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:120px">Conformité</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:150px">Consultant</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">Commentaire</th>
+                <th style="text-align:right;text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);width:200px">Validation (note posée)</th>
+              </tr></thead>
+              <tbody>
+                
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="70" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Vérifier si le magasin est propre.</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:56 · Obchette S.</span>
+                        </span>
+                        <button data-h="71" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="72" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Boissons</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:57 · Obchette S.</span>
+                        </span>
+                        <button data-h="73" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="74" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pâtisseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="75" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="76" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Quiches</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:57 · Obchette S.</span>
+                        </span>
+                        <button data-h="77" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="78" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Tartes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:57 · Obchette S.</span>
+                        </span>
+                        <button data-h="79" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="80" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Traiteur</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:58 · Obchette S.</span>
+                        </span>
+                        <button data-h="81" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="82" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Viennoiseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:57 · Obchette S.</span>
+                        </span>
+                        <button data-h="83" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="84" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pains &amp; Boulangerie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:56 · Obchette S.</span>
+                        </span>
+                        <button data-h="85" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="86" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">étiquetage des prix et allergènes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 03:58 · Obchette S.</span>
+                        </span>
+                        <button data-h="87" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="88" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'arrabiata</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="89" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="90" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Cacahuète &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="91" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="92" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Jaune &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="93" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+              </tbody>
+            </table>
+            </div>
+            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
+                 jour sans disparaître. Le motif reste lisible et un bouton
+                 ramène la tâche tout de suite — un contrôle qui s'efface sans
+                 dire pourquoi ressemble à un oubli. -->
+            <div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+              <button data-h="94" style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
+                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">4 contrôle(s) maîtrisé(s)</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">— afficher</span>
+              </button>
+              
+            </div>
+          </div>
+          <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="font-size:13.5px;font-weight:600">Atelier by - Halle</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">0 / 16 notée(s) — donc validée(s)</div>
+            </div>
+            <div style="overflow-x:auto">
+            <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Tâche</th>
+                <th style="text-align:center;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:78px">Note</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:120px">Conformité</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:150px">Consultant</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">Commentaire</th>
+                <th style="text-align:right;text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);width:200px">Validation (note posée)</th>
+              </tr></thead>
+              <tbody>
+                
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="95" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Vérifier si le magasin est propre.</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:33 · Sara D.</span>
+                        </span>
+                        <button data-h="96" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="97" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Biscuiterie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="98" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="99" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Boissons</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:35 · Sara D.</span>
+                        </span>
+                        <button data-h="100" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="101" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Épicerie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:35 · Sara D.</span>
+                        </span>
+                        <button data-h="102" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="103" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pâtisseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="104" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="105" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Quiches</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:35 · Sara D.</span>
+                        </span>
+                        <button data-h="106" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="107" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Tartes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">En cuisson</td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:34 · Sara D.</span>
+                        </span>
+                        <button data-h="108" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="109" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Traiteur</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">En preparation</td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:34 · Sara D.</span>
+                        </span>
+                        <button data-h="110" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="111" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Viennoiseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          <br><span style="font-size:10.5px;color:var(--color-text-muted)">Photo à 05:33 · Sara D.</span>
+                        </span>
+                        <button data-h="112" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="113" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">étiquetage des prix et allergènes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="114" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="115" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'Amatriciana</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="116" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="117" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'arrabiata</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="118" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="119" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Cacahuète &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="120" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="121" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Jaune &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="122" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="123" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Spaghetti Bolognaise</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="124" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+              </tbody>
+            </table>
+            </div>
+            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
+                 jour sans disparaître. Le motif reste lisible et un bouton
+                 ramène la tâche tout de suite — un contrôle qui s'efface sans
+                 dire pourquoi ressemble à un oubli. -->
+            <div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+              <button data-h="125" style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
+                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">1 contrôle(s) maîtrisé(s)</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">— afficher</span>
+              </button>
+              
+            </div>
+          </div>
+          <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="font-size:13.5px;font-weight:600">Atelier by Harmonie - Sombreffe</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">0 / 16 notée(s) — donc validée(s)</div>
+            </div>
+            <div style="overflow-x:auto">
+            <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)">Tâche</th>
+                <th style="text-align:center;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:78px">Note</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:120px">Conformité</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);width:150px">Consultant</th>
+                <th style="text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">Commentaire</th>
+                <th style="text-align:right;text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);width:200px">Validation (note posée)</th>
+              </tr></thead>
+              <tbody>
+                
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="126" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Vérifier si le magasin est propre.</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="127" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="128" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Biscuiterie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="129" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="130" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Boissons</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="131" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="132" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Épicerie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="133" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="134" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pâtisseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="135" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="136" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Quiches</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="137" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="138" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Tartes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="139" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="140" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Traiteur</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="141" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="142" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Viennoiseries</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="143" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="144" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Photo du comptoir - Pains &amp; Boulangerie</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="145" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="146" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">étiquetage des prix et allergènes</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="147" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="148" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'Amatriciana</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="149" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="150" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Pâtes à l'arrabiata</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="151" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="152" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Cacahuète &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="153" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="154" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Poulet Jaune &amp; Riz</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="155" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button data-h="156" title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">Contrôle Qualité – Spaghetti Bolognaise</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text)"></td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty"><span style="opacity:0.6"></span></td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:var(--color-text-muted)">Pas encore noté</span>
+                          
+                        </span>
+                        <button data-h="157" style="cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid transparent;background:var(--color-primary);color:#fff">Noter</button>
+                      </div>
+                    </td>
+                  </tr>
+              </tbody>
+            </table>
+            </div>
+            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
+                 jour sans disparaître. Le motif reste lisible et un bouton
+                 ramène la tâche tout de suite — un contrôle qui s'efface sans
+                 dire pourquoi ressemble à un oubli. -->
+            
+          </div>
+      </div>
+    
+  </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+<script src="assets/js/prospection.js"></script>
+<script src="assets/js/newsletter.js"></script>
+<script type="module" src="assets/js/app.js"></script>
+
+
+</body></html>
