@@ -347,7 +347,7 @@ function ep_catalogue_produits(): array
     $cats = function_exists('catalogueCategories') ? (catalogueCategories() ?? []) : [];
     $rows = [];
     // Le catalogue du panel d'abord (products/available), la copie `product` si le panel se tait.
-    foreach (function_exists('panelCatalogue') ? panelCatalogue()['produits'] : [] as $x) {
+    foreach (function_exists('panelCatalogueComplet') ? panelCatalogueComplet()['produits'] : [] as $x) {
         if (!empty($x['actif']) && mb_stripos((string) $x['nom'], $q) !== false) { $rows[] = ['id' => $x['id'], 'name' => $x['nom'], 'id_category' => $x['catId'] ?? 0, 'cat' => $x['cat'] ?? '']; }
     }
     if ($rows === []) {

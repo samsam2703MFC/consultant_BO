@@ -1131,7 +1131,9 @@ magasin, prix conseillé, recette, DLV, poids, marge attendue). Dessus :
 `catalogueCategories` (les groupes manquants comblés par la table de liaison
 de la copie, seule à les porter sinon), `cataloguePrix` (la moyenne des
 magasins, `cataloguePrixMagasin` pour un seul), la liste du référentiel
-(`/production/catalogue`), la fiche produit (`/products/{id}` d'abord), les
+(`/production/catalogue`, sur `panelCatalogueComplet` : les produits de chaque
+catégorie, `/product-categories/{id}/products`, lus en parallèle, pour garder
+les références qu'aucun magasin ne propose en ce moment, `dispo` = false), la fiche produit (`/products/{id}` d'abord), les
 recherches de produits (`/marketing/catalogue`, `/promo/recherche`) et la
 catégorie de chaque produit du scoring. La copie locale (`product`,
 `product_category`, `shop_product`) ne sert plus que si le panel se tait.
