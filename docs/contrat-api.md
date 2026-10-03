@@ -597,7 +597,9 @@ garde `shop` sur l'appareil.
                     "price": 1.3, "unit": ["pièce", "stuk"], "best": true, "name": ["Croissant", ""], "desc": ["", ""],
                     "pitch": ["", ""], "ingr": ["", ""], "al": ["gluten", "oeufs", "lait"], "tr": [], "alKnown": true,
                     "trKnown": false, "alRaw": "", "diet": null, "keep": ["Conservation : Comptoir Frigo - 1 (2°C – 4°C).", ""],
-                    "dlc": 1, "cross": [], "crossLine": ["", ""] } ] },
+                    "dlc": 1, "cross": ["1700012"], "crossLine": ["", ""],
+                    "combos": [ { "avec": ["Boissons chaudes", ""], "quand": ["Matin (avant 11 h)", "Ochtend (voor 11 u)"],
+                                  "nom": ["", ""], "cible": 7.5, "ids": [] } ] } ] },
   "manque": { "total": 98, "photos": 39, "nl": 98, "allergenes": 43, "descriptions": 98 },
   "photosRestantes": 12,
   "sources": { "produits": "…", "photos": "…", "best": "…", "saisons": "…", "allergenes": "…" } }
@@ -605,7 +607,13 @@ garde `shop` sur l'appareil.
 
 - **Textes** : paires `[FR, NL]`, `""` quand le néerlandais n'existe pas (la tablette affiche alors le français). Seuls
   les noms de groupes ont un néerlandais (brouillon `TB_GROUPES_NL`, à faire valider) et les saisons dont le panel porte
-  un alias `nl`. `pitch`, `ingr`, `tip`, `cross`, `crossLine` sont vides : aucune source n'existe.
+  un alias `nl`. `pitch`, `ingr`, `tip`, `crossLine` sont vides : aucune source n'existe.
+- **Vente additionnelle** (`combos`, `cross`) : les combos du réseau (écran Croisements, table `ceo_combo`) dont le
+  produit fait partie de A — même règle que l'écran : groupe, catégorie ou produit exacts. Pour chacun : `avec` = B en
+  toutes lettres (« (groupe) » retiré), `quand` = le moment (`matin`, `midi`, `apresmidi` ; vide = toute la journée),
+  `nom` = le surnom du combo (vide quand ce n'est que « A × B »), `cible` = la target d'attache en % (ou `null`), `ids`
+  = les produits de B présents au book, meilleures ventes d'abord, 4 au plus, le produit lui-même exclu (vide quand B
+  est hors comptoir, comme les boissons). `cross` = ces produits réunis, sans doublon. Sans combo : `[]`.
 - **Produits** : `ensemble=comptoir` (défaut) = les produits du planogramme standard + ceux des gammes saisonnières
   ouvertes ou qui ouvrent sous 45 jours + les obligatoires exigées ; planogramme vide → tout le catalogue actif.
   `tout` = tout le catalogue actif. `id` = l'id produit du panel (`pwaId`). Triés par catégorie puis par nom.
