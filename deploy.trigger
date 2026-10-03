@@ -523,3 +523,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T11:08:02Z sonde des ventes : tous les tickets
 2026-10-03T11:14:07Z detail des ventes : noms, categories et portions depuis le panel
 2026-10-03T11:30:42Z cout matiere en direct API, par magasin
+2026-10-03T11:43:08Z catalogue, categories et prix en direct API
