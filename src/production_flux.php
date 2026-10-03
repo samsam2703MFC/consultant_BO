@@ -1182,9 +1182,33 @@ function pfGantt(array $plan, array $F): array
                 $temps[$fid] = $ts !== [] ? $ts : ($f['temp'] !== null ? [$f['temp']] : []);
             }
             $fenetre = static function (string $fid) use ($fours, $au, $de): float { $deb = max($fours[$fid]['libre'] ?? -1.0e9, $au ?? -1.0e9); return $deb < -1.0e8 ? 1.0e6 : ($de - $deb) * 60; };
-            krsort($rep);
-            foreach ($rep as $temp => $cats) {
+            // Une température entière va à un seul four — le moins chargé, chauffe comprise ; seule une
+            // température qui pèse plus que la part d'un four se partage, fournée pleine par fournée pleine.
+            $capMoy = array_sum(array_column($fours, 'plaques')) / max(1, count($fours));
+            $poids = [];
+            foreach ($rep as $temp => $cats) { $poids[$temp] = (int) ceil(array_sum(array_column($cats, 'plaques')) / max(1, $capMoy)) * max(array_column($cats, 'duree')); }
+            $part = (array_sum($poids) + array_sum($charge)) / max(1, count($fours));
+            arsort($poids);
+            foreach ($poids as $temp => $poidsT) {
+                $cats = $rep[$temp];
                 usort($cats, static fn ($a, $b) => $b['duree'] <=> $a['duree']);
+                if ($poidsT <= $part || count($fours) === 1) {
+                    $choix = null; $score = null; $poidsF = 0;
+                    foreach ($fours as $fid => $f) {
+                        $pf = (int) ceil(array_sum(array_column($cats, 'plaques')) / max(1, $f['plaques'])) * max(array_column($cats, 'duree'));
+                        $chg = $temps[$fid] !== [] && !in_array($temp, $temps[$fid], true) ? PF_CHAUFFE : 0;
+                        $sc = $charge[$fid] + $pf + $chg - $fenetre((string) $fid);
+                        if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; $poidsF = $pf + $chg; }
+                    }
+                    foreach ($cats as $x) {
+                        $vu = false;
+                        foreach ($grp[$choix][$temp] ?? [] as $j => $y) { if ($y['cle'] === $x['cle']) { $grp[$choix][$temp][$j]['plaques'] += $x['plaques']; $grp[$choix][$temp][$j]['pieces'] += $x['pieces']; $vu = true; break; } }
+                        if (!$vu) { $grp[$choix][$temp][] = $x; }
+                    }
+                    $charge[$choix] += $poidsF;
+                    if (!in_array($temp, $temps[$choix], true)) { $temps[$choix][] = $temp; }
+                    continue;
+                }
                 foreach ($cats as &$x) { $x['reste'] = $x['plaques']; $x['resteP'] = $x['pieces']; } unset($x);
                 $total = array_sum(array_column($cats, 'plaques'));
                 $i = 0;
