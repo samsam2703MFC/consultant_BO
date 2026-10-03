@@ -583,9 +583,17 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   pas), `remplissage` (% : plaques enfournées sur la capacité des fournées), `horsFour`, `retards`,
   `axe` (heures du Gantt), `entree` (par cuisson, les pièces de chaque catégorie : l'écran recalcule
   le Gantt avec des fours ou des réglages pas encore enregistrés, bouton « Rafraîchir le Gantt »).
-- **Répartir sur les fours** : `four = '*'` (proposé pour toute catégorie qui passe au four) : fournée
-  après fournée, au four qui la sortirait le plus tôt (sa charge de la cuisson face à sa fenêtre
-  libre avant l'ouverture) ; ajouter un four et « Rafraîchir » répartit la charge.
+- **Grouper par température** (demande du 03/10/2026) : une fournée réunit les catégories d'un four
+  à la même température ; chacune sort à sa durée (`categories[].sortie`), la fournée dure la plus
+  longue. La plus chaude d'abord, mais un four commence par la température où il est resté ;
+  changer de température coûte `chauffe` minutes (10, `fournees[].chauffe`), comptées dans
+  l'occupation. Chaque catégorie d'une fournée porte ses `produits` ([nom, pièces], dans l'ordre
+  des fournées) : les feuilles de cuisson de la journée (une page par cuisson, four par four)
+  et la page de chaque four à l'impression.
+- **Répartir sur les fours** : `four = '*'` (proposé pour toute catégorie qui passe au four) : les
+  plaques d'une même température, fournée pleine par fournée pleine, au four qui la sortirait le
+  plus tôt (sa charge de la cuisson face à sa fenêtre libre avant l'ouverture, chauffe comprise :
+  le four déjà à cette température passe devant) ; ajouter un four et « Rafraîchir » répartit.
 - **Étapes et opérateurs** (demande du 03/10/2026) : une étape = `{nom, quand: avant|apres, minutes,
   par: plaque|piece|lot, op}` ; par catégorie (`etapes`, proposées tant que rien n'est enregistré,
   `etapesAuto`) et propres à un produit (`etapesProduits`, elles remplacent celles de sa catégorie).
@@ -596,7 +604,10 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   `retards`, `horsService`, `axe`. Avant cuisson : au plus tard pour finir à l'entrée au four (à
   l'ouverture de la vente hors four) ; après cuisson : au plus tôt dès la sortie ; les étapes d'un
   même produit se suivent dans leur ordre, même à deux opérateurs. Une catégorie finie après
-  cuisson sort du four d'autant plus tôt (`fournees[].cible`).
+  cuisson sort du four d'autant plus tôt (`fournees[].cible`). Chaque tâche porte `pieces` et
+  `produits` ([nom, pièces], du plus produit au moins produit) : l'écran en tire l'impression par
+  poste, une page A4 par four et par opérateur (fournées ou tâches dans l'ordre, détail des
+  produits, case à cocher, signature).
 - **Sonde** : `GET /production/flux/sonde?shop=&date=` (lecture seule, des comptes et des noms de
   champs, jamais un client) : les commandes du jour, encaissées ou non, les routes du panel essayées
   pour leurs articles, la part des tickets pro qui sont des commandes ; `&liste=1` : la taille et
