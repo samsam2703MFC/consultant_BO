@@ -14,8 +14,9 @@
  *
  * Lectures : ../api/cockpit/production/flux/{params,plan,suivi,cloture}. Écritures :
  * POST …/params, …/valider, …/cloture — rien ne part au panel.
- * ?embed=1 : sans en-tête, pour l'écran Gestion de production du cockpit (le magasin, le jour
- * et la page viennent du cockpit).
+ * ?embed=1 : sans en-tête, pour l'écran Gestion de production du cockpit (le magasin et la page
+ * viennent du cockpit ; le jour se choisit dans la barre des jours de la page, et le cockpit retient
+ * celui qu'elle lui renvoie par postMessage).
  */
 (function () {
   'use strict';
@@ -82,13 +83,33 @@
   /* --- le cadre --------------------------------------------------------------- */
   function entete() {
     if (EMBED) { return ''; }
-    const futurOk = S.page === 'plan';
-    const max = futurOk ? decale(AUJ, 7) : AUJ;
     return `<div class="pf-hd"><img src="../assets/img/logo.png" alt=""><div><div class="pf-titre">Production</div><div class="pf-sous">${esc(nomShop())} · ${esc(fDL(S.date))}${S.date === AUJ ? ' · aujourd’hui' : (S.date === decale(AUJ, 1) ? ' · demain' : '')}</div></div><span class="sp"></span>
       <label class="pf-lab">Magasin <select id="pf-shop">${(S.stores.length ? S.stores : [{ id: S.shop, nom: 'Magasin ' + S.shop }]).map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select></label>
-      ${S.page === 'params' ? '' : `<button class="pf-btn" data-pas="-1">‹</button><input type="date" id="pf-date" value="${S.date}" max="${max}"><button class="pf-btn" data-pas="1"${S.date >= max ? ' disabled' : ''}>›</button>
-      <button class="pf-btn${S.date === AUJ ? ' on' : ''}" data-jour="${AUJ}">Aujourd’hui</button>${futurOk ? `<button class="pf-btn${S.date === decale(AUJ, 1) ? ' on' : ''}" data-jour="${decale(AUJ, 1)}">Demain</button>` : ''}`}</div>
+      </div>
       <div class="pf-ong">${PAGES.map((p, i) => `<button data-page="${p[0]}" class="${S.page === p[0] ? 'on' : ''}"><b>${i + 1}</b>${p[1]}</button>`).join('')}</div>`;
+  }
+  /* La barre des jours (demande du 03/10/2026) : le plan se choisit d'hier à J+7, la validation
+   * et la clôture sur les sept derniers jours ; une autre date au calendrier. Elle est dans la page,
+   * donc aussi dans l'écran intégré au cockpit. */
+  const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const maxDate = () => S.page === 'plan' ? decale(AUJ, 7) : AUJ;
+  function barreJours() {
+    if (S.page === 'params') { return ''; }
+    const plan = S.page === 'plan';
+    const ecarts = plan ? [-1, 0, 1, 2, 3, 4, 5, 6, 7] : [-6, -5, -4, -3, -2, -1, 0];
+    const dedans = ecarts.some(n => decale(AUJ, n) === S.date);
+    return `<div class="pf-jours"><span class="pf-k">${plan ? 'Jour du plan' : 'Jour'}</span><div class="ch">${ecarts.map(n => { const d = decale(AUJ, n), t = new Date(d + 'T12:00:00');
+      const lib = n === 0 ? 'Aujourd’hui' : (n === 1 ? 'Demain' : (n === -1 ? 'Hier' : JOURS_L[t.getDay()]));
+      return `<button data-jour="${d}" class="${d === S.date ? 'on' : ''}${n === 0 ? ' auj' : ''}"><b>${lib}</b><small>${n === 0 || n === 1 || n === -1 ? JOURS_L[t.getDay()].slice(0, 3) + '. ' : ''}${fD(d)}</small></button>`; }).join('')}</div>
+      <span class="autre"><button class="pf-btn" data-pas="-1" title="jour précédent">‹</button><input type="date" id="pf-date" class="${dedans ? '' : 'on'}" value="${S.date}" max="${maxDate()}"><button class="pf-btn" data-pas="1" title="jour suivant"${S.date >= maxDate() ? ' disabled' : ''}>›</button></span></div>`;
+  }
+  /** Changer de jour : la page relit, l'adresse suit, et le cockpit qui l'intègre retient le jour. */
+  function choisirJour(d) {
+    if (!dateOk(d) || d > maxDate()) { return; }
+    S.date = d; S.valid = null; S.clot = null; S.msg = null;
+    urlMaj();
+    if (EMBED) { try { window.parent.postMessage({ pfDate: d }, location.origin); } catch (e) { /* hors cockpit */ } }
+    charger(false);
   }
   function nomShop() { const s = S.stores.find(x => String(x.id) === String(S.shop)); return s ? s.nom : 'Magasin ' + S.shop; }
   function attente(n) { return `<div class="pf-card">${Array.from({ length: n || 6 }, () => '<div class="pf-sk"></div>').join('')}</div>`; }
@@ -96,7 +117,7 @@
 
   function rendre() {
     const k = cle(), d = S.data[k];
-    let h = entete() + message();
+    let h = entete() + message() + barreJours();
     if (S.err[k]) { h += `<div class="pf-err">${esc(S.err[k])} <button class="pf-btn" data-relire="1">Relire</button></div>`; }
     else if (!d) { h += `<div class="pf-note">Lecture des ventes et des réglages… la première lecture d’un jour relit les tickets des six dernières semaines.</div>` + attente(8); }
     else if (S.page === 'params') { h += pageParams(d); }
@@ -318,9 +339,9 @@
     const on = (sel, ev, f) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => f(el, e)));
     on('[data-page]', 'click', b => aller(b.dataset.page));
     on('#pf-shop', 'change', s => { S.shop = s.value; S.edit = null; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
-    on('#pf-date', 'change', i => { if (dateOk(i.value)) { S.date = i.value; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); } });
-    on('[data-pas]', 'click', b => { const n = decale(S.date, +b.dataset.pas); const max = S.page === 'plan' ? decale(AUJ, 7) : AUJ; if (n > max) { return; } S.date = n; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
-    on('[data-jour]', 'click', b => { S.date = b.dataset.jour; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
+    on('#pf-date', 'change', i => choisirJour(i.value));
+    on('[data-pas]', 'click', b => choisirJour(decale(S.date, +b.dataset.pas)));
+    on('[data-jour]', 'click', b => choisirJour(b.dataset.jour));
     on('[data-relire]', 'click', () => charger(true));
     on('[data-par]', 'input', i => signe(i.value));
     on('[data-imprimer]', 'click', () => window.print());

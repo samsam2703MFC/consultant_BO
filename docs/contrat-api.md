@@ -500,7 +500,10 @@ le calcul les prendra d'office le jour où `products` sera rempli.
 
 Une application à part, `/production/?shop=4&date=YYYY-MM-DD&page=params|plan|suivi|cloture`
 (`&embed=1` sans en-tête : c'est elle que le rail du cockpit intègre, ERP franchisé › Gestion de
-production, quatre pages). Le flux de la journée, en quatre pages :
+production, quatre pages). Le jour se choisit dans la barre des jours de la page : d'hier à J+7
+pour le plan, les sept derniers jours pour la validation et la clôture, toute autre date au
+calendrier ; intégrée, la page renvoie le jour au cockpit (`postMessage({pfDate})`), qui le garde
+d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 
 | Page | Lecture | Écriture |
 |---|---|---|

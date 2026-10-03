@@ -201,6 +201,12 @@ class App {
     }
     // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
     // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
+    // L'application Production intégrée renvoie le jour choisi dans sa barre des jours : le
+    // cockpit le retient (sans se redessiner) pour la garder sur ce jour d'une page à l'autre.
+    window.addEventListener('message', e => {
+      if (e.origin !== location.origin || !e.data || typeof e.data.pfDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.data.pfDate)) { return; }
+      this.gpDateVu = e.data.pfDate;
+    });
     window.addEventListener('hashchange', () => {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
@@ -2821,22 +2827,20 @@ class App {
   valsGP(common){
     const S = this.state, ms = this.open();
     const aujD = new Date(), iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const auj = iso(aujD), dem = (() => { const d = new Date(aujD); d.setDate(d.getDate() + 1); return iso(d); })();
+    const auj = iso(aujD);
     const shop = String(S.gpShop || (ms[0] ? ms[0].id : '4'));
     const onglet = { productionPlan: 'plan', productionSuivi: 'suivi', productionParams: 'params', productionCloture: 'cloture' }[S.screen] || 'plan';
     // Le plan se prépare jusqu'à 7 jours à l'avance ; la validation et la clôture s'arrêtent à aujourd'hui.
     const max = onglet === 'plan' ? (() => { const x = new Date(aujD); x.setDate(x.getDate() + 7); return iso(x); })() : auj;
-    let date = /^\d{4}-\d{2}-\d{2}$/.test(S.gpDate || '') ? S.gpDate : auj;
-    if (date > max) { date = max; }
-    const pas = n => { const d = new Date(date + 'T12:00:00'); d.setDate(d.getDate() + n); const v = iso(d); if (v <= max) { this.setState({ gpDate: v }); } };
-    const jour = new Date(date + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
-    common.gp = { onglet, date, jour, auj: date === auj, demain: date === dem, demainOk: onglet === 'plan', parJour: onglet !== 'params',
+    // Le jour se choisit dans la page (sa barre des jours) ; le cockpit garde le dernier choisi.
+    const jourDe = () => { let d = /^\d{4}-\d{2}-\d{2}$/.test(this.gpDateVu || '') ? this.gpDateVu : auj; if (d > max) { d = max; } return d; };
+    const date = jourDe();
+    common.gp = { onglet, date,
       magasins: ms.map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === shop })),
       setShop: e => this.setState({ gpShop: e.target.value }),
-      setDate: e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) { this.setState({ gpDate: e.target.value }); } },
-      prec: () => pas(-1), suiv: () => pas(1), versAuj: () => this.setState({ gpDate: auj }), versDemain: () => this.setState({ gpDate: dem }),
       src: 'production/?embed=1&shop=' + encodeURIComponent(shop) + '&date=' + date + '&page=' + onglet,
-      pleinEcran: 'production/?shop=' + encodeURIComponent(shop) + '&date=' + date + '&page=' + onglet };
+      // Le jour choisi dans la page depuis le dernier rendu : lu au clic.
+      pleinEcran: () => { window.open('production/?shop=' + encodeURIComponent(shop) + '&date=' + jourDe() + '&page=' + onglet, '_blank', 'noopener'); } };
   }
   valsCreux(common){
     const S = this.state;

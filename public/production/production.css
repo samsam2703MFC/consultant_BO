@@ -32,6 +32,18 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-ong button.on{background:var(--color-primary,#8D1D2C);color:#fff;border-color:var(--color-primary,#8D1D2C)}
 .pf-ong button.on b{background:rgba(255,255,255,.25)}
 
+/* La barre des jours */
+.pf-jours{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:.5px solid var(--pf-trait);border-radius:12px;padding:8px 12px;margin:0 0 14px}
+.pf-jours .ch{display:flex;gap:6px;flex-wrap:wrap}
+.pf-jours .ch button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;font:600 12px var(--font-ui);padding:6px 11px;border-radius:9px;border:.5px solid var(--pf-trait2);background:#fff;color:#222;cursor:pointer;min-width:84px;text-transform:capitalize}
+.pf-jours .ch button small{font:500 10px var(--font-ui);color:#888;text-transform:none}
+.pf-jours .ch button.auj{border-color:#222}
+.pf-jours .ch button.on{background:var(--color-primary,#8D1D2C);border-color:var(--color-primary,#8D1D2C);color:#fff}
+.pf-jours .ch button.on small{color:rgba(255,255,255,.8)}
+.pf-jours .autre{margin-left:auto;display:flex;align-items:center;gap:6px}
+.pf-jours input[type=date]{font:600 12px var(--font-ui);padding:6px 10px;border:.5px solid var(--pf-trait2);border-radius:8px;background:#fff}
+.pf-jours input[type=date].on{border-color:var(--color-primary,#8D1D2C);box-shadow:0 0 0 2px rgba(141,29,44,.15)}
+
 /* Cartes, tableaux */
 .pf-card{background:var(--pf-carte);border:.5px solid var(--pf-trait);border-radius:12px;margin-bottom:14px;overflow:hidden}
 .pf-ct{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 16px;border-bottom:.5px solid var(--pf-trait)}
@@ -113,7 +125,7 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 @media print{
   @page{size:A4 landscape;margin:10mm}
   body{background:#fff}
-  .pf-hd .pf-lab,.pf-hd .pf-btn,.pf-hd input,.pf-ong,.pf-btn,.pf-barre,.pf-note{display:none!important}
+  .pf-hd .pf-lab,.pf-hd .pf-btn,.pf-hd input,.pf-ong,.pf-btn,.pf-barre,.pf-note,.pf-jours{display:none!important}
   #pf{padding:0;max-width:none}
   .pf-card{border:none;break-inside:auto}
   .pf-tab td,.pf-tab th{padding:3px 5px;font-size:9px}
