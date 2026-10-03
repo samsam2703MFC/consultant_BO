@@ -27,6 +27,8 @@ seule : le DOM de la carte est transformé dans le navigateur (pourcentages
 arrondis, colonne ajoutée, grille élargie d'une colonne de 66 px), puis
 photographié. Régénérer : `node docs/maquettes/ventes-coef/generer.js`.
 
-À coder, si retenu : dans `accordeon()` de `dashboard.js`, `fP` sans décimale
-pour la part et le taux, une huitième colonne dans `ligne()`, `entete` et le
-pied, et la grille `.db-ent, .db-al` de `dashboard.css` (bureau et téléphone).
+**Codée et déployée le 03/10/2026** : `fP0` (pourcentage entier) pour la part
+et le taux, le coefficient (`coef`, `coefTxt`) en huitième colonne de
+`ligne()`, de l'en-tête et du pied dans `accordeon()` de `dashboard.js`, la
+grille `.db-ent, .db-al` élargie dans `dashboard.css` (bureau et fenêtre
+étroite). Le treemap ne change pas.
