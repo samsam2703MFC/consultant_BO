@@ -163,6 +163,7 @@ function route(string $method, string $path): mixed
             $path === '/production/flux/plan'          => ep_production_flux_plan(),
             $path === '/production/flux/suivi'         => ep_production_flux_suivi(),
             $path === '/production/flux/cloture'       => ep_production_flux_cloture(),
+            $path === '/production/flux/sonde'         => ep_production_flux_sonde(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),

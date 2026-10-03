@@ -724,3 +724,65 @@ function wr_production_flux_cloture(): array
     $rep = 0.0; $jet = 0.0; foreach ($l as $x) { $rep += $x['report']; $jet += $x['jete']; }
     return ['ok' => true, 'lignes' => count($l), 'report' => round($rep, 1), 'jete' => round($jet, 1)];
 }
+
+/**
+ * GET /production/flux/sonde?shop=4&date=YYYY-MM-DD — lecture seule, des comptes et des noms de
+ * champs, jamais un client : les commandes du jour (canal, encaissée ou non, articles joints ou
+ * non), les routes du panel qui pourraient joindre les articles d'une commande à venir, et la
+ * part des tickets pro (B2B) qui sont des commandes encaissées.
+ */
+function ep_production_flux_sonde(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 4);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d'); }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $cles = static fn ($b) => is_array($b) ? array_values(array_filter(array_keys($b), 'is_string')) : null;
+    $articles = static function ($b) {
+        if (!is_array($b)) { return null; }
+        $o = [];
+        foreach ($b as $k => $v) { if (is_array($v) && array_is_list($v) && $v !== [] && is_array($v[0])) { $o[(string) $k] = ['n' => count($v), 'champs' => array_slice(array_keys($v[0]), 0, 30)]; } }
+        if (array_is_list($b) && $b !== [] && is_array($b[0])) { $o['(liste)'] = ['n' => count($b), 'champs' => array_slice(array_keys($b[0]), 0, 30)]; }
+        return $o;
+    };
+    $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $date, 25);
+    $L = analyseListe(is_array($r['corps'] ?? null) ? $r['corps'] : []);
+    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'commandes' => [], 'routes' => []];
+    $ids = []; $tick = [];
+    foreach ($L as $o) {
+        if (!is_array($o) || substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10) !== $date) { continue; }
+        $canal = coCanal($o);
+        $t = (int) ($o['id_transaction'] ?? 0);
+        $paye = []; foreach ($o as $k => $v) { if (is_string($k) && preg_match('/paid|payment|prepa|online/i', $k) && !is_array($v)) { $paye[$k] = $v; } }
+        $out['commandes'][] = ['canal' => $canal, 'statut' => coStatut($o, $canal), 'heure' => substr((string) $o['pick_up_datetime'], 11, 5), 'montant' => round((float) ($o['total_value'] ?? 0), 2),
+            'ticket' => $t > 0, 'articlesJoints' => count((array) ($o['products'] ?? [])), 'paiement' => $paye];
+        if (count($ids) < 2 && (int) ($o['id'] ?? 0) > 0) { $ids[] = (int) $o['id']; }
+        if ($t > 0) { $tick[$t] = $canal; }
+    }
+    foreach ($ids as $i => $id) {
+        foreach (['/client-order/' . $id, '/client-orders/' . $id, '/client-order/' . $id . '/pickup-transaction', '/client-orders/' . $id . '/products'] as $p) {
+            $x = PanelApi::sondeGet($p, 10);
+            $out['routes'][] = ['commande' => $i + 1, 'route' => preg_replace('#/\d+#', '/{id}', $p), 'code' => $x['code'] ?? null, 'champs' => $cles($x['corps'] ?? null), 'listes' => $articles($x['corps'] ?? null)];
+        }
+    }
+    foreach (['/franchisee-shop/' . $sid . '/client-order/' . $date, '/franchise/1/client-order/unpicked'] as $p) {
+        $x = PanelApi::sondeGet($p, 10);
+        $out['routes'][] = ['route' => $p, 'code' => $x['code'] ?? null, 'champs' => $cles($x['corps'] ?? null), 'listes' => $articles($x['corps'] ?? null)];
+    }
+    // Les tickets du jour : combien de pro, combien sont des commandes encaissées, et les champs
+    // d'un ticket qui parlent de commande ou de pro.
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+    $T = ['tickets' => 0, 'pro' => 0, 'commandes' => 0, 'commandesPro' => 0, 'commandesParCanal' => [], 'champsLies' => []];
+    foreach (analyseListe(is_array($liste) ? $liste : []) as $t) {
+        if (!is_array($t)) { continue; }
+        $T['tickets']++;
+        $pro = !empty($t['is_client_b2b']);
+        if ($pro) { $T['pro']++; }
+        if ($T['champsLies'] === []) { $T['champsLies'] = array_values(array_filter(array_keys($t), static fn ($k) => is_string($k) && preg_match('/order|b2b|webshop|pick|source|channel|type/i', $k))); }
+        $id = (int) ($t['id'] ?? 0);
+        if (isset($tick[$id])) { $T['commandes']++; $T['commandesParCanal'][$tick[$id]] = ($T['commandesParCanal'][$tick[$id]] ?? 0) + 1; if ($pro) { $T['commandesPro']++; } }
+    }
+    $T['commandesEncaissees'] = count($tick);
+    $out['tickets'] = $T;
+    return $out;
+}
