@@ -814,6 +814,8 @@ final class PanelApi
 
     /** Coût matière par produit, mémoïsé : plusieurs écrans le demandent. */
     private static ?array $couts = null;
+    /** Le coût matière de chaque magasin, par produit — [sid => [pid => coût]], lu avec la moyenne. */
+    private static array $coutsParMagasin = [];
 
     /**
      * Coût matière (food cost) par produit, lu chez le panel.
@@ -851,6 +853,7 @@ final class PanelApi
 
         $somme = []; $n = [];
         foreach ($ids as $sid) {
+            self::$coutsParMagasin[$sid] = [];
             foreach (self::$dispo[$sid] ?? [] as $p) {
                 $pid = 0;
                 foreach (['id', 'product_id', 'id_product'] as $k) {
@@ -862,12 +865,20 @@ final class PanelApi
                     if (isset($p[$k]) && is_numeric($p[$k]) && (float) $p[$k] > 0) { $c = (float) $p[$k]; break; }
                 }
                 if ($c <= 0) { continue; }
+                self::$coutsParMagasin[$sid][$pid] = round($c, 3);
                 $somme[$pid] = ($somme[$pid] ?? 0.0) + $c;
                 $n[$pid]     = ($n[$pid] ?? 0) + 1;
             }
         }
         foreach ($somme as $pid => $s) { self::$couts[$pid] = round($s / $n[$pid], 3); }
         return self::$couts;
+    }
+
+    /** Le coût matière PAR MAGASIN — [sid => [pid => coût]] — tel que products/available le chiffre pour chacun. */
+    public static function coutsMatiereParMagasin(): array
+    {
+        self::coutsMatiere();
+        return self::$coutsParMagasin;
     }
 
     /**
