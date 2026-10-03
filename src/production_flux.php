@@ -408,9 +408,14 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now): array
     $parH = [];
     foreach ($P as $p) { foreach ($p['h'] as $h => $q) { $parH[(int) $h] = ($parH[(int) $h] ?? 0.0) + (float) $q; } }
     foreach ($vendu as $hs) { foreach ($hs as $h => $q) { $parH[(int) $h] = max($parH[(int) $h] ?? 0.0, 0.0) + (float) $q; } }
-    $vraies = array_keys(array_filter($parH, static fn ($q) => $q >= 1.0));
-    $h0 = $vraies ? min($vraies) : 6; $h1 = $vraies ? max($vraies) : 19;
-    foreach ($plan as $c) { if ($c['total']['pieces'] ?? 1) { $h0 = min($h0, (int) floor(gpHeure($c['de']) ?? 6)); } }
+    // Bornée par les périodes de vente des cuissons (de l'ouverture de la 1re à la fin de la
+    // dernière) et par les heures réellement vendues ce jour : la base garde parfois un ticket
+    // tardif (mesuré à Halle, des ventes vers 21 h certains samedis) qui n'est pas une heure d'ouverture.
+    $vendues = []; foreach ($vendu as $hs) { foreach ($hs as $h => $q) { if ($q > 0) { $vendues[] = (int) $h; } } }
+    $deb = []; $fin = [];
+    foreach ($plan as $c) { $a = gpHeure($c['de'] ?? null); $b = gpHeure($c['a'] ?? null); if ($a !== null) { $deb[] = (int) floor($a); } if ($b !== null) { $fin[] = (int) ceil($b) - 1; } }
+    if ($deb !== [] && $fin !== []) { $h0 = min(array_merge($deb, $vendues)); $h1 = max(array_merge($fin, $vendues)); }
+    else { $vraies = array_keys(array_filter($parH, static fn ($q) => $q >= 1.0)); $h0 = $vraies ? min($vraies) : 6; $h1 = $vraies ? max($vraies) : 19; }
     if ($h0 > $h1) { $h0 = 6; $h1 = 19; }
     $heures = range($h0, $h1);
     $out = []; $T = ['sorti' => 0.0, 'vendu' => 0.0, 'stock' => 0.0, 'finJour' => 0.0, 'manques' => 0, 'ruptures' => 0, 'trop' => 0, 'report' => 0.0];
