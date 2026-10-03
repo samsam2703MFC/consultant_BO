@@ -535,3 +535,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T12:52:44Z sonde invendus : sans donnees sensibles
 2026-10-03T12:55:18Z sonde invendus : documentation
 2026-10-03T12:59:51Z sonde invendus : documentation du panel
+2026-10-03T13:03:24Z sonde invendus : prefixe
