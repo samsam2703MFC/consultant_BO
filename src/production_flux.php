@@ -857,8 +857,8 @@ function ep_production_flux_sonde(): array
  * température, la durée, les pièces par plaque. Le Gantt du jour en découle : pour chaque
  * cuisson du plan, les plaques de chaque catégorie, regroupées par four et par réglage
  * (température, durée), en fournées de la capacité du four ; chaque four enchaîne ses fournées
- * pour finir à l'ouverture de la vente de la cuisson, sans recouvrir la précédente — une fournée
- * qui finit après l'ouverture est en retard. Réglages : setting pfFours:{shop}.
+ * pour finir à l'ouverture de la vente de la cuisson, au plus tôt à l'heure « au four » de la
+ * cuisson et sans recouvrir la précédente — une fournée qui finit après l'ouverture est en retard. Réglages : setting pfFours:{shop}.
  */
 const PF_FOURS_MAX = 6;
 
@@ -970,9 +970,12 @@ function pfGantt(array $plan, array $F): array
                 }
                 if ($cur !== null) { $fn[] = $cur; }
             }
-            // Au plus tard : la dernière fournée sort à l'ouverture de la vente ; jamais avant que le four soit libre.
+            // Au plus tard : la dernière fournée sort à l'ouverture de la vente ; jamais avant l'heure « au
+            // four » de la cuisson ni avant que le four soit libre — ce qui ne tient pas sort en retard.
             $tot = array_sum(array_map(static fn ($x) => $x['duree'], $fn)) / 60;
             $t = $de - $tot;
+            $au = gpHeure($c['four'] ?? null);
+            if ($au !== null && $t < $au) { $t = $au; }
             if ($fours[$fid]['libre'] !== null && $t < $fours[$fid]['libre']) { $t = $fours[$fid]['libre']; }
             foreach ($fn as $x) {
                 $fin = $t + $x['duree'] / 60;
