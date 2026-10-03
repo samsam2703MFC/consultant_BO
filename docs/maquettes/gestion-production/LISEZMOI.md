@@ -2,9 +2,11 @@
 
 > **Codé** (03/10/2026) : serveur `src/production_plan.php` (`GET /production/plan`,
 > `POST /production/plan/params`, `POST /production/plan/fait` — voir `docs/contrat-api.md`),
-> dashboard magasin, onglet **Production** (ordinateur seulement : pas d'écran au
-> téléphone, demande du 03/10). Les trois écrans des maquettes sont les trois
-> sous-onglets ; les chiffres viennent du panel, plus rien d'illustré.
+> cockpit, rail **ERP franchisé › Gestion de production** (sous-menu Plan du jour,
+> Suivi et recuissons, Paramètres ; un magasin, un jour), qui charge la page du
+> dashboard en mode intégré (`?embed=1`). Pas d'écran au téléphone ni d'onglet dans
+> le dashboard magasin (demandes du 03/10). Le plan porte des sous-totaux en pièces
+> et en CA par catégorie, section et cuisson ; les chiffres viennent du panel.
 
 Demande du 03/10/2026 : un module de **gestion de production**, à transférer
 côté franchisé. Le process :

@@ -167,6 +167,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isOffres ? tplOffres(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
+      ${c.isGP ? tplGP(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
@@ -6064,6 +6065,29 @@ function tplOffres(c, x){
     </tbody></table></div>`}
     <div class="co-leg"><span><span class="co-verdict ok">Garder</span> ≥ +8 % face aux 4 semaines d’avant, ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous 50 %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div></div>`;
   return `<div data-screen="offres-canaux">${onglets}${kpis}${canaux}${offres}</div>`;
+}
+/* Gestion de production (ERP franchisé) : la barre magasin + jour, puis la page du dashboard en mode
+ * intégré. L'iframe vient en dernier : la fusion du rendu compare les nœuds par position, ce qui change
+ * au-dessus (le jour, le magasin) ne la recrée pas — seul son src change, et elle se recharge. */
+function tplGP(c, x){
+  const { esc } = x, g = c.gp;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const btn = on => `font-family:var(--font-ui);font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:${on ? 'var(--color-text)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};cursor:pointer`;
+  return `<div data-screen="gestion-production" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Magasin</label>
+      <select ${x.C(g.setShop)} style="${SEL}">${g.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>
+      <span style="width:14px"></span>
+      <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Jour</label>
+      <button ${x.A(g.prec)} style="${btn(false)}" title="jour précédent">‹</button>
+      <input type="date" value="${esc(g.date)}" ${x.C(g.setDate)} style="${SEL}">
+      <button ${x.A(g.suiv)} style="${btn(false)}" title="jour suivant">›</button>
+      <button ${x.A(g.versAuj)} style="${btn(g.auj)}">Aujourd’hui</button>
+      <button ${x.A(g.versDemain)} style="${btn(g.demain)}">Demain</button>
+      <span style="font-size:12.5px;color:var(--color-text-muted);margin-left:6px">${esc(g.jour)}</span>
+    </div>
+    <iframe src="${esc(g.src)}" title="Gestion de production" style="width:100%;height:calc(100vh - 210px);min-height:640px;border:0.5px solid var(--color-border-tertiary);border-radius:12px;background:var(--color-bg)"></iframe>
+  </div>`;
 }
 /* Invendus et poubelle (Magasins) : le réseau, magasin par magasin, et les produits les plus jetés. */
 function tplInvendus(c, x){
