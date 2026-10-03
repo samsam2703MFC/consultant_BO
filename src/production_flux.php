@@ -261,7 +261,7 @@ function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, in
         $peu = $manque > 0; $trop = $w > 0;
         $verdict = $v7 === null ? null : ($d === null ? 'aucune' : ($peu && $trop ? 'mixte' : ($peu ? 'peu' : ($trop ? 'trop' : 'juste'))));
         $par[$pid] = ['derniere' => $d, 'poubelle' => ($jete === null && !isset($jeteCl[$pid])) ? null : round($w, 1), 'manque' => round($manque, 1), 'verdict' => $verdict, 'step' => $step,
-            'plus' => $peu ? (int) (ceil($manque / $step - 1e-9) * $step) : 0, 'moins' => $trop ? (int) (floor($w / $step + 1e-9) * $step) : 0];
+            'plus' => $peu ? (int) (ceil(round($manque) / $step - 1e-9) * $step) : 0, 'moins' => $trop ? (int) (floor($w / $step + 1e-9) * $step) : 0];
     }
     return ['date' => $j7, 'lu' => $v7 !== null, 'v7' => $v7, 'fin' => $fin, 'poubelleLue' => $jete !== null, 'poubelle' => $jete === null ? null : round(array_sum($jete), 1), 'par' => $par];
 }
