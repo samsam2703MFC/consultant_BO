@@ -227,7 +227,7 @@ function gpNomCle(string $n): string { return trim((string) preg_replace('/\s+/u
 
 /**
  * La catégorie d'un produit : celle du catalogue du panel ; à défaut, la catégorie du même NOM ;
- * à défaut encore (pas de nom), celle dont l'identifiant préfixe celui du produit (1410016 → 14100).
+ * l'identifiant qui préfixe celui du produit départage deux catégories du même nom (1410016 → 14100).
  * Mesuré le 03/10/2026 dans les quatre magasins : des produits récents (« Quiche Poulet &
  * Gorgonzola », « Mini - Gosette Pomme »…) manquent au catalogue et ne portaient que le nom de leur
  * catégorie — une seconde « Quiches », une « Viennoiserie réduction » hors de la section Viennoiserie.
@@ -241,8 +241,11 @@ function gpCatDe(int $pid, ?array $x = null): array
     $x = $x ?? ($cat['produits'][$pid] ?? null);
     $catId = (int) ($x['catId'] ?? 0); $nom = (string) ($x['cat'] ?? '');
     if ($nom === '' && function_exists('svCategories')) { $nom = (string) (svCategories()[$pid] ?? ''); }
+    // Le préfixe d'abord quand il désigne une catégorie de ce nom : le panel a deux « Quiches »
+    // (14000 et 14100), et 1410016 est une 14100.
+    $pre = $pid >= 100000 ? intdiv($pid, 100) : 0;
+    if ($catId <= 0 && $pre > 0 && isset($cat['categories'][$pre]) && ($nom === '' || gpNomCle((string) ($cat['categories'][$pre]['nom'] ?? '')) === gpNomCle($nom))) { $catId = $pre; }
     if ($catId <= 0 && $nom !== '' && isset($parNom[gpNomCle($nom)])) { $catId = $parNom[gpNomCle($nom)]; }
-    if ($catId <= 0 && $nom === '' && $pid >= 100000 && isset($cat['categories'][intdiv($pid, 100)])) { $catId = intdiv($pid, 100); }
     if ($catId > 0 && (string) ($cat['categories'][$catId]['nom'] ?? '') !== '') { $nom = (string) $cat['categories'][$catId]['nom']; }
     if ($nom === '') { $nom = 'Sans catégorie'; }
     return ['catId' => $catId, 'cat' => $nom, 'catCle' => gpCleCat($catId, $nom), 'groupe' => $catId > 0 ? (string) ($cat['categories'][$catId]['groupe'] ?? '') : ''];
@@ -261,7 +264,7 @@ function gpCleCat(int $catId, string $cat): string
  */
 function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget): array
 {
-    $cle = 'gpBase3:' . $sid . ':' . $date . ':' . $semaines;
+    $cle = 'gpBase4:' . $sid . ':' . $date . ':' . $semaines;
     $c = setting($cle);
     if (is_array($c) && isset($c['b']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_BASE) { return $c['b']; }
     $jours = []; for ($i = 1; $i <= $semaines; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }

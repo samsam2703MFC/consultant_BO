@@ -132,3 +132,14 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
   .pf-tab tr{break-inside:avoid}
   .pf-tuiles>div{padding:6px 8px}.pf-tuiles .v{font-size:18px}
 }
+/* J−7 : trop ou trop peu, et la proposition en steps (demande du 03/10/2026). */
+.bl{color:var(--pf-bleu)}
+.pf-tab td.q small.aj{font-weight:600}.pf-tab td.q small.aj.p{color:var(--pf-ok)}.pf-tab td.q small.aj.m{color:var(--pf-bleu)}
+.pf-tab td.prop,.pf-tab th.prop{background:#fbf7ee}
+.pf-tab td.prop small,.pf-tab th.prop small{display:block;font-size:9.5px;color:#999;font-weight:500;text-transform:none;letter-spacing:0}
+.pf-tab td.j7v{font-size:10.5px;white-space:nowrap}
+.pf-tuiles>div.j7t{border-left-color:var(--pf-att)}
+.pf-pied.j7{background:#fbf7ee}
+.pf-pied.j7 .pf-mini{flex-basis:100%}
+.pf-tab td.q .wa b{color:#B45309}
+.pf-pied select{font:600 12px var(--font-ui);padding:4px 6px;border-radius:6px;border:.5px solid var(--pf-trait2);background:#fff}
