@@ -328,6 +328,9 @@ function gpCommandesArticles(int $sid, string $du, int &$cout, int $budget): ?ar
     if ($liste === null) {
         $liste = is_array($c) && isset($c['l']) ? $c['l'] : null;
         $r = class_exists('PanelApi') && PanelApi::configured() ? PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $du, 25) : ['code' => 0];
+        // Mesuré à Gosselies : sans aucune commande, le panel répond {status: error, description:
+        // NO_ORDERS_FOR_PICKUP_DATE} — une liste vide, pas une panne.
+        if (is_array($r['corps'] ?? null) && str_contains((string) ($r['corps']['description'] ?? ''), 'NO_ORDERS')) { $r = ['code' => 200, 'corps' => []]; }
         if ((int) ($r['code'] ?? 0) === 200 && is_array($r['corps'] ?? null)) {
             $liste = [];
             foreach ((function_exists('analyseListe') ? analyseListe($r['corps']) : $r['corps']) as $o) {
