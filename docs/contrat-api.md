@@ -507,7 +507,7 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 
 | Page | Lecture | Écriture |
 |---|---|---|
-| 1. Paramètres | `GET /production/flux/params?shop=` | `POST /production/flux/params` `{shop, gp: {cuissons, categories, regles}, flux: {jours, obligatoires, veille, garde}, par}` |
+| 1. Paramètres | `GET /production/flux/params?shop=` | `POST /production/flux/params` `{shop, gp: {cuissons, categories, regles}, flux: {jours, obligatoires, veille, garde, stockMin, ajusterJ7, modePeu}, par}` |
 | 2. Plan de production | `GET /production/flux/plan?shop=&date=` (jusqu'à J+7) | — |
 | 3. Validation et suivi | `GET /production/flux/suivi?shop=&date=` (jusqu'à aujourd'hui) | `POST /production/flux/valider` `{shop, date, cuisson, lignes: {pid: pièces}, par}` |
 | 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste}}, par}` |
@@ -528,12 +528,27 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   nombre et le montant des commandes webshop et magasin de J−7 sont donnés à part) et commandes
   magasin (les tickets des clients pro, `pb` du gravé des tickets) ; la prévision du jour ; le
   report de la veille (la clôture d'hier, déduite de la 1re cuisson) ; à produire par cuisson
-  (`c[id] = {sortie, plaques, plaque, stock, prevu, fait, zone}`), le total, le CA au prix du magasin.
+  (`c[id] = {sortie, plaques, plaque, stock, prevu, fait, zone, ajustJ7}`), le total, le CA au prix du magasin.
+- **Step de production** (`gp.categories[cat].plaque`, les pièces par fournée ; `steps` = `[1, 8, 20]`
+  proposés, un autre nombre reste permis, `null` = à l'unité) : la production et la proposition J−7
+  s'arrondissent à ce step. **Stock minimum de recuisson** (`flux.stockMin[cat]`, pièces) : en
+  dessous, le suivi annonce un manque et conseille de recuire (jusqu'à la limite de la catégorie).
+- **J−7, trop ou trop peu** (demande du 03/10/2026) : par produit, `j7.derniere` (l'heure du
+  dernier ticket), `j7.poubelle` (le jeté du panel, ou de la clôture de J−7 si plus grand ; `null`
+  non lu), `j7.manque` (la prévision entre la dernière vente et la dernière vente du magasin,
+  `j7.derniereVente`), `j7.verdict` `peu` (épuisé avant la fermeture) | `trop` (poubelle) |
+  `mixte` | `juste` | `aucune` (pas vendu) | `null` (tickets pas lus), `j7.plus` (le manque arrondi
+  au step supérieur) et `j7.moins` (la poubelle arrondie au step inférieur), `step`. Avec
+  `flux.ajusterJ7` (oui par défaut), la proposition en tient compte : `plus` s'ajoute à la cuisson
+  qui couvre l'heure du manque (la dernière à défaut), `moins` se retire en partant de la dernière
+  cuisson (un obligatoire garde un step en 1re cuisson) ; `ajustJ7` = ce qui a été appliqué. Avec
+  `flux.modePeu = 'stock'`, le trop peu relève plutôt le stock minimum de recuisson du produit
+  (`stockMin` de la ligne, repris par le suivi).
 - **Suivi** : une cuisson met ses pièces en vitrine à l'ouverture de sa période (validé, sinon le
   plan). Pour chaque produit, `cases[]` heure par heure : passé = report + sorti − vendu (tickets),
   à venir = stock actuel + cuissons à venir − prévision (l'heure entamée au prorata). `manque`
   (première heure projetée sous zéro et le déficit), `verdict` rupture | manque | trop | ok,
-  `conseil` (pièces et plaques à recuire).
+  `conseil` (pièces et plaques à recuire), `stockMin` (le seuil de recuisson du produit).
 - **Validation** : le même enregistrement que l'écran historique (`ppFait:{shop}:{date}`, `c[cuisson]`),
   plus qui et quand (`v[cuisson] = {le, par}`).
 - **Clôture** : reste = report d'hier + sorti − vendu − jeté déjà déclaré au panel ; `report`

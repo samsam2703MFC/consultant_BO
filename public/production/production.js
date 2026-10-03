@@ -32,7 +32,7 @@
     page: PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan',
     date: dateOk(q.get('date')) ? q.get('date') : AUJ,   // ramené à aujourd'hui hors du plan, au départ
     stores: [], data: {}, err: {}, enCours: {},
-    edit: null, editShop: null, filtre: '', seulsOblig: false, alertes: false,
+    edit: null, editShop: null, filtre: '', seulsOblig: false, alertes: false, ecartsJ7: false,
     valid: null, clot: null, msg: null, envoi: false,
     par: (() => { try { return localStorage.getItem('pf.par') || ''; } catch (e) { return ''; } })(),
   };
@@ -134,10 +134,10 @@
 
   /* --- 1. Paramètres ------------------------------------------------------------ */
   function brouillon(d) {
-    const cats = {}; (d.categories || []).forEach(c => { cats[c.cle] = { cuissons: (c.cuissons || []).slice(), plaque: c.plaque, limite: c.limite, nom: c.nom, catId: c.catId, groupe: c.groupe, veille: !!c.veille, garde: !!c.garde, auto: !!c.auto }; });
+    const cats = {}; (d.categories || []).forEach(c => { cats[c.cle] = { cuissons: (c.cuissons || []).slice(), plaque: c.plaque, limite: c.limite, nom: c.nom, catId: c.catId, groupe: c.groupe, veille: !!c.veille, garde: !!c.garde, auto: !!c.auto, stockMin: c.stockMin || 0 }; });
     const ob = {}; (d.produits || []).forEach(p => { if (p.oblig) { ob[p.pid] = { jours: (p.oblig.jours || []).slice(), min: p.oblig.min, reseau: !!p.oblig.reseau }; } });
     const jours = {}; Object.keys(d.flux.jours).forEach(j => { jours[j] = { cuissons: d.flux.jours[j].cuissons, minPct: d.flux.jours[j].minPct }; });
-    return { cuissons: d.cuissons.map(c => Object.assign({}, c)), regles: Object.assign({}, d.regles), categories: cats, jours, oblig: ob };
+    return { cuissons: d.cuissons.map(c => Object.assign({}, c)), regles: Object.assign({}, d.regles), categories: cats, jours, oblig: ob, ajusterJ7: d.flux.ajusterJ7 !== false, modePeu: d.flux.modePeu === 'stock' ? 'stock' : 'production' };
   }
   function pageParams(d) {
     const E = S.edit || (S.edit = brouillon(d));
@@ -166,12 +166,17 @@
     // Les catégories.
     const cats = Object.entries(E.categories).sort((a, b) => [(a[1].groupe || 'zzz'), a[1].nom].join('|').localeCompare([(b[1].groupe || 'zzz'), b[1].nom].join('|')));
     let g = null;
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">3 · Les catégories</span><span class="pf-mini">à quelles cuissons chaque catégorie se cuit · pièces par plaque · préparée la veille (1re cuisson du lendemain) · se garde au lendemain (clôture)</span></div>
-      <table class="pf-tab"><thead><tr><th>Catégorie</th>${C.map((c, i) => `<th class="c">${i + 1}<small>${esc(c.nom)}</small></th>`).join('')}<th class="n">Pièces / plaque</th><th class="c">Préparée la veille</th><th class="c">Se garde</th></tr></thead><tbody>
-      ${cats.map(([k, c]) => { const gr = c.groupe || 'Sans section'; const t = gr !== g ? `<tr class="grp"><td colspan="${C.length + 4}">${esc(gr)}</td></tr>` : ''; g = gr;
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">3 · Les catégories</span><span class="pf-mini">à quelles cuissons chaque catégorie se cuit · le step de production (pièces par fournée : la production et la proposition J−7 s’arrondissent à ce step) · le stock minimum en vitrine qui déclenche une recuisson · préparée la veille (1re cuisson du lendemain) · se garde au lendemain (clôture)</span></div>
+      <table class="pf-tab"><thead><tr><th>Catégorie</th>${C.map((c, i) => `<th class="c">${i + 1}<small>${esc(c.nom)}</small></th>`).join('')}<th class="n">Step de production</th><th class="n">Stock minimum de recuisson</th><th class="c">Préparée la veille</th><th class="c">Se garde</th></tr></thead><tbody>
+      ${cats.map(([k, c]) => { const gr = c.groupe || 'Sans section'; const t = gr !== g ? `<tr class="grp"><td colspan="${C.length + 5}">${esc(gr)}</td></tr>` : ''; g = gr;
+        const st = c.plaque == null || c.plaque === '' ? 1 : +c.plaque; const opts = [...new Set((d.steps || [1, 8, 20]).concat([st]))].sort((a, b) => a - b);
         return t + `<tr><td class="nom">${esc(c.nom)}${c.auto ? ' <span class="pf-tag">proposé</span>' : ''}</td>${C.map(cu => `<td class="c"><input type="checkbox" data-catcu="${esc(k)}" data-cu-id="${esc(cu.id)}"${c.cuissons.includes(cu.id) ? ' checked' : ''}></td>`).join('')}
-          <td class="n"><input class="pf-in court" type="number" min="1" max="500" data-catpl="${esc(k)}" data-f="pl${esc(k)}" value="${c.plaque == null ? '' : esc(c.plaque)}" placeholder="unité"></td>
-          <td class="c"><input type="checkbox" data-catv="${esc(k)}"${c.veille ? ' checked' : ''}></td><td class="c"><input type="checkbox" data-catg="${esc(k)}"${c.garde ? ' checked' : ''}></td></tr>`; }).join('')}</tbody></table></div>`;
+          <td class="n"><select data-catpl="${esc(k)}">${opts.map(v => `<option value="${v}"${v === st ? ' selected' : ''}>${v === 1 ? '1 · à l’unité' : 'par ' + v}</option>`).join('')}</select></td>
+          <td class="n"><input class="pf-in court" type="number" min="0" max="500" data-catsm="${esc(k)}" data-f="sm${esc(k)}" value="${c.stockMin ? esc(c.stockMin) : ''}" placeholder="0"></td>
+          <td class="c"><input type="checkbox" data-catv="${esc(k)}"${c.veille ? ' checked' : ''}></td><td class="c"><input type="checkbox" data-catg="${esc(k)}"${c.garde ? ' checked' : ''}></td></tr>`; }).join('')}</tbody></table>
+      <div class="pf-pied j7"><label><input type="checkbox" data-ajust="1"${E.ajusterJ7 ? ' checked' : ''}> Ajuster la proposition sur J−7</label>
+        <label>Quand il y en a eu trop peu : <select data-modepeu="1"${E.ajusterJ7 ? '' : ' disabled'}><option value="production"${E.modePeu === 'production' ? ' selected' : ''}>augmenter la production</option><option value="stock"${E.modePeu === 'stock' ? ' selected' : ''}>augmenter le stock minimum de recuisson</option></select></label>
+        <span class="pf-mini">J−7, même jour la semaine passée : la dernière vente avant la fermeture dit « trop peu », la poubelle dit « trop ». Trop peu : la vente perdue, arrondie au step supérieur, s’ajoute à la cuisson de l’heure où il manquait, ou relève le stock minimum de recuisson. Trop : la poubelle, arrondie au step inférieur, se retire en partant de la dernière cuisson.</span></div></div>`;
     // Les produits obligatoires.
     const f = S.filtre.trim().toLowerCase();
     const P = (d.produits || []).filter(p => (!f || (p.nom + ' ' + p.cat + ' ' + p.groupe).toLowerCase().includes(f)) && (!S.seulsOblig || (E.oblig[p.pid] && E.oblig[p.pid].jours.length)));
@@ -192,12 +197,13 @@
   }
   function enregistrerParams() {
     const E = S.edit, d = S.data[cle()];
-    const cats = {}; Object.entries(E.categories).forEach(([k, c]) => { cats[k] = { cuissons: c.cuissons.filter(id => E.cuissons.some(x => x.id === id)), plaque: c.plaque === '' || c.plaque == null ? null : +c.plaque, limite: c.limite, nom: c.nom, catId: c.catId }; });
+    const cats = {}; Object.entries(E.categories).forEach(([k, c]) => { cats[k] = { cuissons: c.cuissons.filter(id => E.cuissons.some(x => x.id === id)), plaque: c.plaque === '' || c.plaque == null || +c.plaque <= 1 ? null : +c.plaque, limite: c.limite, nom: c.nom, catId: c.catId }; });
+    const sm = {}; Object.entries(E.categories).forEach(([k, c]) => { if (+c.stockMin > 0) { sm[k] = Math.round(+c.stockMin); } });
     const ob = {}; Object.entries(E.oblig).forEach(([pid, o]) => { if (o.jours.length || o.reseau) { ob[pid] = { jours: o.jours, min: +o.min || 0 }; } });
     const n = E.cuissons.length;
     const jours = {}; Object.keys(E.jours).forEach(j => { jours[j] = { cuissons: Math.min(n, +E.jours[j].cuissons || n), minPct: +E.jours[j].minPct }; });
     const corps = { shop: +S.shop, par: S.par, gp: { cuissons: E.cuissons.map(c => ({ id: c.id, nom: c.nom, de: c.de, a: c.a, pct: +c.pct, daypart: c.daypart || null })), categories: cats, regles: E.regles },
-      flux: { jours, obligatoires: ob, veille: Object.keys(E.categories).filter(k => E.categories[k].veille), garde: Object.keys(E.categories).filter(k => E.categories[k].garde) } };
+      flux: { jours, obligatoires: ob, veille: Object.keys(E.categories).filter(k => E.categories[k].veille), garde: Object.keys(E.categories).filter(k => E.categories[k].garde), stockMin: sm, ajusterJ7: !!E.ajusterJ7, modePeu: E.modePeu } };
     S.envoi = true; S.msg = null; rendre();
     ecrire('/production/flux/params', corps).then(r => { S.msg = { ok: true, t: `Réglages enregistrés : ${r.cuissons} cuisson${r.cuissons > 1 ? 's' : ''}, ${r.obligatoires} produit${r.obligatoires > 1 ? 's' : ''} réglé${r.obligatoires > 1 ? 's' : ''} en obligatoire. Le plan les reprend.` }; Object.keys(S.data).forEach(k => { if (!k.startsWith('params|')) { delete S.data[k]; } }); charger(true); })
       .catch(e => { S.msg = { ok: false, t: 'Pas enregistré : ' + e.message }; })
@@ -211,19 +217,46 @@
     L.forEach(l => { C.forEach(c => { const x = l.c[c.id]; tot.c[c.id] = (tot.c[c.id] || 0) + (x ? x.sortie : 0); }); tot.total += l.total; tot.veille += l.veille ? l.veille.sortie : 0; tot.ca += l.ca || 0; tot.report += l.report || 0; });
     const caC = id => L.reduce((a, l) => a + ((l.c[id] && l.prix != null) ? l.c[id].sortie * l.prix : 0), 0);
     const nomC = (c, i) => i === 0 ? '1re période' : (i + 1) + 'e cuisson';
+    // J−7 : trop ou trop peu, et ce que la proposition en a fait.
+    const V7 = { peu: 0, trop: 0, mixte: 0, plus: 0, moins: 0, smin: 0 };
+    L.forEach(l => { const v = l.j7.verdict; if (v === 'peu') { V7.peu++; } else if (v === 'trop') { V7.trop++; } else if (v === 'mixte') { V7.mixte++; }
+      if (l.ajustJ7 > 0) { V7.plus += l.ajustJ7; } else if (l.ajustJ7 < 0) { V7.moins -= l.ajustJ7; }
+      if (l.j7.plus > 0 && d.j7.modePeu === 'stock') { V7.smin++; } });
     let h = `<div class="pf-intro"><b>${esc(fDL(d.date))} — ${d.nCuissons} cuisson${d.nCuissons > 1 ? 's' : ''}</b>, la 1re à ${fP(d.minPct)} de la journée au minimum. Prévision : moyenne des ${d.base.lus} derniers ${esc(d.jourNom)}s lus heure par heure, + sécurité.${d.base.manquants.length ? ` <b class="wa">${d.base.manquants.length} jour(s) encore en lecture : le plan se complète tout seul.</b>` : ''}</div>`;
     h += `<div class="pf-tuiles">${C.map((c, i) => `<div><div class="k">${nomC(c, i)} · ${esc(c.nom)}</div><div class="v">${fN(tot.c[c.id] || 0)} <small>pièces</small></div><div class="s">au four ${esc(c.four)} · vente ${esc(c.de)}–${esc(c.a)} · ${fE(caC(c.id))}</div></div>`).join('')}
       <div class="veille"><div class="k">Préparer pour demain matin</div><div class="v">${fN(tot.veille)} <small>pièces</small></div><div class="s">1re cuisson de ${esc(d.lendemain.jourNom)} · ${d.lendemain.categories} catégorie${d.lendemain.categories > 1 ? 's' : ''} préparée${d.lendemain.categories > 1 ? 's' : ''} la veille${d.lendemain.complet ? '' : ' · <b class="wa">lecture en cours</b>'}</div></div>
-      <div><div class="k">Report de la veille</div><div class="v">${fN(d.reportVeille.pieces)} <small>pièces</small></div><div class="s">${d.reportVeille.cloture ? d.reportVeille.produits + ' produit' + (d.reportVeille.produits > 1 ? 's' : '') + ' gardé' + (d.reportVeille.produits > 1 ? 's' : '') + ' à la clôture d’hier, déduit' + (d.reportVeille.produits > 1 ? 's' : '') + ' de la 1re cuisson' : 'pas de clôture hier : rien de déduit'}</div></div></div>`;
-    h += `<div class="pf-note">J−7 (${esc(fDL(d.j7.date))}) : ${d.j7.lu ? 'tickets lus' : '<b class="wa">tickets pas encore lus</b>'} · webshop ${d.j7.webshop.n} commande${d.j7.webshop.n > 1 ? 's' : ''} (${fE(d.j7.webshop.ca)}) · commandes magasin ${d.j7.commandes.n} (${fE(d.j7.commandes.ca)}). Le panel ne joint pas les articles des commandes webshop : la colonne reste vide ; une commande retirée en magasin passe en caisse et compte dans « en magasin ». « Commandes magasin » = les tickets des clients pro.</div>`;
+      <div><div class="k">Report de la veille</div><div class="v">${fN(d.reportVeille.pieces)} <small>pièces</small></div><div class="s">${d.reportVeille.cloture ? d.reportVeille.produits + ' produit' + (d.reportVeille.produits > 1 ? 's' : '') + ' gardé' + (d.reportVeille.produits > 1 ? 's' : '') + ' à la clôture d’hier, déduit' + (d.reportVeille.produits > 1 ? 's' : '') + ' de la 1re cuisson' : 'pas de clôture hier : rien de déduit'}</div></div>
+      <div class="j7t"><div class="k">J−7 · trop ou trop peu</div><div class="v">${d.j7.lu ? `${fN(V7.peu)} <small>trop peu</small> · ${fN(V7.trop)} <small>trop</small>` : '<small>tickets pas encore lus</small>'}</div><div class="s">${d.j7.lu ? `${V7.mixte ? V7.mixte + ' les deux · ' : ''}poubelle ${d.j7.poubelleLue ? fN(d.j7.poubelle) + ' pièces' : 'pas lue'} · ${d.j7.ajuster ? (d.j7.modePeu === 'stock' ? `stock minimum relevé sur ${fN(V7.smin)} produit${V7.smin > 1 ? 's' : ''}, ` : `+${fN(V7.plus)} pièces, `) + `−${fN(V7.moins)} pièces au plan` : 'proposition non ajustée (réglage)'}` : ''}</div></div></div>`;
+    h += `<div class="pf-note">J−7 (${esc(fDL(d.j7.date))}) : ${d.j7.lu ? 'tickets lus' : '<b class="wa">tickets pas encore lus</b>'} · webshop ${d.j7.webshop.n} commande${d.j7.webshop.n > 1 ? 's' : ''} (${fE(d.j7.webshop.ca)}) · commandes magasin ${d.j7.commandes.n} (${fE(d.j7.commandes.ca)})${d.j7.derniereVente != null ? ` · dernière vente du magasin à ${d.j7.derniereVente} h` : ''}. « Dernière vente » : l’heure du dernier ticket du produit ; avant la fermeture, il en a manqué (trop peu). « Poubelle » : ce qui a été jeté ce jour-là (trop). La proposition se compte en steps de la catégorie. Le panel ne joint pas les articles des commandes webshop : la colonne reste vide ; une commande retirée en magasin passe en caisse et compte dans « en magasin ». « Commandes magasin » = les tickets des clients pro.</div>`;
     // Le tableau : section › catégorie › produit, sous-totaux en pièces et en CA.
     const cols = C.length;
     const somme = (rows, f) => rows.reduce((a, l) => a + (f(l) || 0), 0);
-    const cellQ = x => !x || !x.sortie ? '<span class="mu">—</span>' : `<b>${fN(x.sortie)}</b>${x.plaque ? `<small>${fN(x.plaques)} × ${fN(x.plaque)}</small>` : ''}`;
-    const sousTot = (cls, lib, rows) => `<tr class="${cls}"><td>${lib}</td><td class="n">${fQ(somme(rows, l => l.j7.magasin))}</td><td class="n mu">—</td><td class="n">${fQ(somme(rows, l => l.j7.commandes))}</td><td class="n">${fQ(somme(rows, l => l.prevJ))}</td><td class="n">${fQ(somme(rows, l => l.report))}</td>
-      ${C.map(c => `<td class="n">${fN(somme(rows, l => l.c[c.id] ? l.c[c.id].sortie : 0))}</td>`).join('')}<td class="n">${fN(somme(rows, l => l.total))}</td><td class="n">${fN(somme(rows, l => l.veille ? l.veille.sortie : 0))}</td><td class="n">${fE(somme(rows, l => l.ca))}</td></tr>`;
+    const sg = n => (n > 0 ? '+' : '−') + fN(Math.abs(n));
+    const cellQ = x => !x || !x.sortie ? (x && x.ajustJ7 ? `<span class="mu">—</span><small class="aj m">${sg(x.ajustJ7)} J−7</small>` : '<span class="mu">—</span>') : `<b>${fN(x.sortie)}</b>${x.plaque ? `<small>${fN(x.plaques)} × ${fN(x.plaque)}</small>` : ''}${x.ajustJ7 ? `<small class="aj ${x.ajustJ7 > 0 ? 'p' : 'm'}">${sg(x.ajustJ7)} J−7</small>` : ''}`;
+    const VJ = { peu: ['att', 'Trop peu'], trop: ['bleu', 'Trop'], mixte: ['att', 'Les deux'], juste: ['ok', 'Juste'], aucune: ['', 'Pas vendu'] };
+    const fin7 = d.j7.derniereVente;
+    const cDer = l => { const j = l.j7; if (j.derniere == null) { return `<span class="mu">${j.verdict === 'aucune' ? 'aucune' : '—'}</span>`; }
+      const tot = j.verdict === 'peu' || j.verdict === 'mixte';
+      return `<span class="${tot ? 'wa' : ''}" title="dernier ticket entre ${j.derniere} h et ${j.derniere + 1} h${fin7 != null ? ' · le magasin a vendu jusqu’à ' + (fin7 + 1) + ' h' : ''}${j.manque ? ' · vente perdue estimée ' + fQ(j.manque) + ' pièces' : ''}">${tot ? '<b>' + j.derniere + ' h</b>' : j.derniere + ' h'}</span>${j.manque ? `<small>il en a manqué ${fN(j.manque)}</small>` : ''}`; };
+    const cPoub = l => l.j7.poubelle == null ? '<span class="mu" title="poubelle pas lue">—</span>' : (l.j7.poubelle > 0 ? `<b class="ko">${fQ(l.j7.poubelle)}</b>` : '<span class="mu">0</span>');
+    const cVerd = l => { const v = VJ[l.j7.verdict]; return v ? `<span class="pf-tag ${v[0]}">${v[1]}</span>` : '<span class="mu">—</span>'; };
+    const steps = (n, st) => st > 1 && n % st === 0 ? `<small>${fN(Math.abs(n) / st)} step${Math.abs(n) / st > 1 ? 's' : ''} de ${fN(st)}</small>` : (st > 1 ? `<small>step de ${fN(st)}</small>` : '<small>à l’unité</small>');
+    const cProp = l => { const j = l.j7, st = l.step || 1, stock = d.j7.modePeu === 'stock';
+      if (!j.verdict || j.verdict === 'juste' || j.verdict === 'aucune') { return '<span class="mu">—</span>'; }
+      let h = '';
+      if (stock && j.plus > 0) { h += `<span class="${d.j7.ajuster ? '' : 'mu'}" title="trop peu à J−7 : le stock minimum de recuisson est relevé de ${fN(j.plus)} pièces">stock min. <b>${fN(d.j7.ajuster ? l.stockMin : j.plus)}</b></span><small>+${fN(j.plus)} en vitrine</small>`; }
+      const net = d.j7.ajuster ? l.ajustJ7 : (stock ? 0 : j.plus) - j.moins;
+      if (net) { h += (h ? '<br>' : '') + `<b class="${d.j7.ajuster ? (net > 0 ? 'ok' : 'bl') : 'mu'}">${sg(net)}</b>` + steps(net, st); }
+      else if (j.moins === 0 && j.poubelle > 0 && !(stock && j.plus > 0) && !j.plus) { h += `<span class="mu">0</span><small>poubelle sous le step de ${fN(st)}</small>`; }
+      if (!h) { h = '<span class="mu">0</span>'; }
+      return h + (d.j7.ajuster ? '' : '<small>pas appliquée</small>'); };
+    const nV = (rows, v) => rows.filter(l => l.j7.verdict === v).length;
+    const sousTot = (cls, lib, rows) => { const np = nV(rows, 'peu') + nV(rows, 'mixte'), nt = nV(rows, 'trop'), aj = somme(rows, l => d.j7.ajuster ? l.ajustJ7 : (d.j7.modePeu === 'stock' ? 0 : l.j7.plus) - l.j7.moins);
+      return `<tr class="${cls}"><td>${lib}</td><td class="n">${fQ(somme(rows, l => l.j7.magasin))}</td><td class="n mu">—</td><td class="n">${fQ(somme(rows, l => l.j7.commandes))}</td><td class="n mu"></td><td class="n">${fQ(somme(rows, l => l.j7.poubelle))}</td><td class="n j7v">${np || nt ? `${np ? `<span class="wa">${np} peu</span>` : ''}${np && nt ? ' · ' : ''}${nt ? `<span class="bl">${nt} trop</span>` : ''}` : '<span class="mu">—</span>'}</td><td class="n">${fQ(somme(rows, l => l.prevJ))}</td><td class="n">${fQ(somme(rows, l => l.report))}</td><td class="n">${aj ? sg(aj) : '<span class="mu">0</span>'}</td>
+      ${C.map(c => `<td class="n">${fN(somme(rows, l => l.c[c.id] ? l.c[c.id].sortie : 0))}</td>`).join('')}<td class="n">${fN(somme(rows, l => l.total))}</td><td class="n">${fN(somme(rows, l => l.veille ? l.veille.sortie : 0))}</td><td class="n">${fE(somme(rows, l => l.ca))}</td></tr>`; };
     let corps = '';
-    const groupes = []; L.forEach(l => { let g = groupes.find(x => x.nom === l.groupe); if (!g) { g = { nom: l.groupe, cats: [] }; groupes.push(g); } let c = g.cats.find(x => x.cle === l.catCle); if (!c) { c = { cle: l.catCle, nom: l.cat, lignes: [] }; g.cats.push(c); } c.lignes.push(l); });
+    const LF = S.ecartsJ7 ? L.filter(l => ['peu', 'trop', 'mixte'].includes(l.j7.verdict)) : L;
+    const groupes = []; LF.forEach(l => { let g = groupes.find(x => x.nom === l.groupe); if (!g) { g = { nom: l.groupe, cats: [] }; groupes.push(g); } let c = g.cats.find(x => x.cle === l.catCle); if (!c) { c = { cle: l.catCle, nom: l.cat, lignes: [] }; g.cats.push(c); } c.lignes.push(l); });
     groupes.forEach(g => {
       const rowsG = g.cats.flatMap(c => c.lignes);
       corps += sousTot('sec', esc(g.nom), rowsG);
@@ -231,15 +264,16 @@
         if (g.cats.length > 1 || c.nom !== g.nom) { corps += sousTot('scat', esc(c.nom), c.lignes); }
         corps += c.lignes.map(l => `<tr><td class="nom">${l.oblig ? '<span class="pf-ob" title="obligatoire ce jour">★</span> ' : ''}${esc(l.nom)}</td>
           <td class="n">${fQ(l.j7.magasin)}</td><td class="n mu">${l.j7.webshop == null ? '—' : fQ(l.j7.webshop)}</td><td class="n">${l.j7.commandes ? fQ(l.j7.commandes) : '<span class="mu">0</span>'}</td>
-          <td class="n mu">${fQ(l.prevJ)}</td><td class="n">${l.report ? fQ(l.report) : '<span class="mu">—</span>'}</td>
+          <td class="n q">${cDer(l)}</td><td class="n">${cPoub(l)}</td><td class="c">${cVerd(l)}</td>
+          <td class="n mu">${fQ(l.prevJ)}</td><td class="n">${l.report ? fQ(l.report) : '<span class="mu">—</span>'}</td><td class="n q prop">${cProp(l)}</td>
           ${C.map(c => `<td class="n q">${cellQ(l.c[c.id])}</td>`).join('')}<td class="n"><b>${fN(l.total)}</b></td>
           <td class="n q veille">${l.veille ? cellQ(l.veille) : '<span class="mu">—</span>'}</td><td class="n mu">${l.ca == null ? '—' : fE(l.ca)}</td></tr>`).join('');
       });
     });
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Le tableau de production</span><span class="pf-mini">${L.length} produits · ${d.obligatoires} obligatoire${d.obligatoires > 1 ? 's' : ''} ce jour (★) · quantités arrondies à la plaque</span><button class="pf-btn" data-imprimer="1">Imprimer</button></div>
-      <div class="pf-defile"><table class="pf-tab plan"><thead><tr><th rowspan="2">Section › catégorie › produit</th><th colspan="3" class="c bd">Vendu à J−7 (${esc(fD(d.j7.date))})</th><th rowspan="2" class="n">Prévision du jour</th><th rowspan="2" class="n">Report de la veille</th><th colspan="${cols}" class="c bd">À produire aujourd’hui</th><th rowspan="2" class="n">Total</th><th rowspan="2" class="n veille">À préparer pour demain matin</th><th rowspan="2" class="n">CA</th></tr>
-        <tr><th class="n">En magasin</th><th class="n">Webshop</th><th class="n">Commandes magasin</th>${C.map((c, i) => `<th class="n">${nomC(c, i)}<small>${esc(c.nom)} · four ${esc(c.four)}</small></th>`).join('')}</tr></thead>
-        <tbody>${corps || `<tr><td colspan="${8 + cols}" class="mu">Rien à produire : aucune catégorie n’est cochée pour ce jour, ou les ventes de référence ne sont pas encore lues.</td></tr>`}</tbody>
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Le tableau de production</span><span class="pf-mini">${L.length} produits · ${d.obligatoires} obligatoire${d.obligatoires > 1 ? 's' : ''} ce jour (★) · quantités arrondies au step de la catégorie${d.j7.ajuster ? ' · ajustées sur J−7' : ''}</span><label class="pf-mini"><input type="checkbox" data-ecarts="1"${S.ecartsJ7 ? ' checked' : ''}> seulement trop ou trop peu à J−7</label><button class="pf-btn" data-imprimer="1">Imprimer</button></div>
+      <div class="pf-defile"><table class="pf-tab plan"><thead><tr><th rowspan="2">Section › catégorie › produit</th><th colspan="6" class="c bd">J−7 · ${esc(fDL(d.j7.date))}</th><th rowspan="2" class="n">Prévision du jour</th><th rowspan="2" class="n">Report de la veille</th><th rowspan="2" class="n prop">Proposition J−7${d.j7.ajuster ? '' : '<small>pas appliquée</small>'}</th><th colspan="${cols}" class="c bd">À produire aujourd’hui</th><th rowspan="2" class="n">Total</th><th rowspan="2" class="n veille">À préparer pour demain matin</th><th rowspan="2" class="n">CA</th></tr>
+        <tr><th class="n">Vendu en magasin</th><th class="n">Webshop</th><th class="n">Commandes magasin</th><th class="n">Dernière vente</th><th class="n">Poubelle</th><th class="c">Trop ou trop peu</th>${C.map((c, i) => `<th class="n">${nomC(c, i)}<small>${esc(c.nom)} · four ${esc(c.four)}</small></th>`).join('')}</tr></thead>
+        <tbody>${corps || `<tr><td colspan="${12 + cols}" class="mu">${S.ecartsJ7 && L.length ? 'Aucun produit en trop ou en trop peu à J−7.' : 'Rien à produire : aucune catégorie n’est cochée pour ce jour, ou les ventes de référence ne sont pas encore lues.'}</td></tr>`}</tbody>
         <tfoot>${L.length ? sousTot('tot', 'Total de la journée', L) : ''}</tfoot></table></div>
       <div class="pf-pied mu">${esc(d.source)}</div></div>`;
     return h;
@@ -276,11 +310,11 @@
       <span class="pf-mini">sorti ${fN(T.sorti)} · vendu ${fN(T.vendu)} · en vitrine ${fN(T.stock)} · fin de journée projetée ${fN(T.finJour)}${d.ventesLues ? '' : ' · <b class="wa">tickets du jour pas encore lus</b>'}</span>
       <label class="pf-mini"><input type="checkbox" data-alertes="1"${S.alertes ? ' checked' : ''}> seulement les alertes</label></div>
       <div class="pf-defile"><table class="pf-tab suivi"><thead><tr><th>Produit</th><th class="n">Report</th><th class="n">Sorti</th><th class="n">Vendu</th><th class="n">En vitrine</th>${H.map(x => `<th class="c h${x <= now && now < x + 1 ? ' now' : ''}">${x} h</th>`).join('')}<th>Verdict</th><th>Conseil</th></tr></thead><tbody>
-      ${P.map(p => `<tr><td class="nom">${p.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(p.nom)}<small>${esc(p.cat)}</small></td><td class="n mu">${p.report ? fQ(p.report) : '—'}</td><td class="n">${fQ(p.sorti)}</td><td class="n">${fQ(p.vendu)}</td><td class="n"><b>${fQ(p.stock)}</b></td>
+      ${P.map(p => `<tr><td class="nom">${p.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(p.nom)}<small>${esc(p.cat)}</small></td><td class="n mu">${p.report ? fQ(p.report) : '—'}</td><td class="n">${fQ(p.sorti)}</td><td class="n">${fQ(p.vendu)}</td><td class="n q"><b>${fQ(p.stock)}</b>${p.stockMin ? `<small title="stock minimum de recuisson : sous ce seuil, la recuisson est conseillée">min. ${fN(p.stockMin)}</small>` : ''}</td>
         ${H.map(x => { const c = (p.cases || []).find(y => y.h === x); if (!c) { return '<td class="c h"></td>'; } const cls = c.reel ? (c.q < -0.5 ? 'r neg' : 'r') : (c.q < -0.5 ? 'ko' : (c.q < Math.max(1, (c.prev || 0) * 0.25) ? 'att' : 'ok')); return `<td class="c h ${cls}${x <= now && now < x + 1 ? ' now' : ''}" title="${x} h – ${x + 1} h · ${c.reel ? 'stock réel en fin d’heure · vendu ' + fQ(c.v) : 'projeté · prévision ' + fQ(c.prev)}">${fQ(c.q)}</td>`; }).join('')}
         <td><span class="pf-tag ${VERD[p.verdict][0]}">${VERD[p.verdict][1]}</span>${p.manque ? `<small>à ${p.manque.h} h · −${fQ(p.manque.q)}</small>` : ''}</td>
         <td>${p.conseil ? `recuire <b>${p.conseil.plaques != null ? pl(p.conseil.plaques, 'plaque') + ' (' + fN(p.conseil.plaques * p.conseil.plaque) + ')' : fN(p.conseil.pieces)}</b>` : (p.verdict === 'trop' ? `<span class="mu">${fQ(p.finJour)} en fin de journée</span>` : '')}</td></tr>`).join('') || `<tr><td colspan="${7 + H.length}" class="mu">${S.alertes ? 'Aucune alerte.' : 'Rien à suivre : aucune cuisson planifiée ce jour.'}</td></tr>`}</tbody></table></div>
-      <div class="pf-leg"><span><i class="r"></i>stock réel en fin d’heure (rouge : plus vendu que sorti — une cuisson non validée ou un report non compté)</span><span><i class="ok"></i>projeté, tient</span><span><i class="att"></i>projeté, sous le quart de la vente de l’heure</span><span><i class="ko"></i>projeté, manque</span><span><i class="now"></i>l’heure en cours</span></div>
+      <div class="pf-leg"><span><i class="r"></i>stock réel en fin d’heure (rouge : plus vendu que sorti — une cuisson non validée ou un report non compté)</span><span><i class="ok"></i>projeté, tient</span><span><i class="att"></i>projeté, sous le quart de la vente de l’heure</span><span><i class="ko"></i>projeté, manque (sous le stock minimum de recuisson quand il est réglé)</span><span><i class="now"></i>l’heure en cours</span></div>
       <div class="pf-pied mu">${esc(d.source)}</div></div>`;
     return h;
   }
@@ -345,6 +379,7 @@
     on('[data-relire]', 'click', () => charger(true));
     on('[data-par]', 'input', i => signe(i.value));
     on('[data-imprimer]', 'click', () => window.print());
+    on('[data-ecarts]', 'change', c => { S.ecartsJ7 = c.checked; rendre(); });
     // Paramètres
     const E = S.edit;
     on('[data-jour-n]', 'change', s => { E.jours[s.dataset.jourN].cuissons = +s.value; rendre(); });
@@ -355,7 +390,10 @@
     on('[data-cuajout]', 'click', () => { let n = 1; while (E.cuissons.some(c => c.id === 'c' + n)) { n++; } const der = E.cuissons[E.cuissons.length - 1]; E.cuissons.push({ id: 'c' + n, nom: 'Cuisson ' + (E.cuissons.length + 1), de: der ? der.a : '16:00', a: '19:00', pct: 0, daypart: null }); rendre(); });
     on('[data-regle]', 'input', i => { E.regles[i.dataset.regle] = i.value === '' ? '' : +i.value; });
     on('[data-catcu]', 'change', c => { const x = E.categories[c.dataset.catcu]; const id = c.dataset.cuId; x.cuissons = c.checked ? E.cuissons.map(y => y.id).filter(y => y === id || x.cuissons.includes(y)) : x.cuissons.filter(y => y !== id); x.auto = false; });
-    on('[data-catpl]', 'input', i => { E.categories[i.dataset.catpl].plaque = i.value === '' ? null : +i.value; });
+    on('[data-catpl]', 'change', s => { E.categories[s.dataset.catpl].plaque = +s.value > 1 ? +s.value : null; });
+    on('[data-catsm]', 'input', i => { E.categories[i.dataset.catsm].stockMin = i.value === '' ? 0 : +i.value; });
+    on('[data-ajust]', 'change', c => { E.ajusterJ7 = c.checked; rendre(); });
+    on('[data-modepeu]', 'change', s => { E.modePeu = s.value === 'stock' ? 'stock' : 'production'; });
     on('[data-catv]', 'change', c => { E.categories[c.dataset.catv].veille = c.checked; });
     on('[data-catg]', 'change', c => { E.categories[c.dataset.catg].garde = c.checked; });
     const ob = pid => E.oblig[pid] || (E.oblig[pid] = { jours: [], min: 2, reseau: false });

@@ -26,6 +26,7 @@ declare(strict_types=1);
 const PF_MIN_OBLIG = 2;           // pièces minimum d'un obligatoire sans réglage
 const PF_RISQUE = 0.25;           // stock projeté sous 25 % de la vente de l'heure suivante : risque
 const PF_TROP = 0.35;             // fin de journée projetée au-delà de 35 % de la prévision : trop produit
+const PF_STEPS = [1, 8, 20];      // les steps de production proposés (pièces par fournée) ; un autre nombre reste permis
 const PF_JOURS = [1 => 'lundi', 2 => 'mardi', 3 => 'mercredi', 4 => 'jeudi', 5 => 'vendredi', 6 => 'samedi', 7 => 'dimanche'];
 
 /** Le jour de la semaine ISO (1 = lundi) d'une date. */
@@ -90,7 +91,11 @@ function pfParams(int $sid, array $gp, ?string $date = null): array
         sort($j);
         $ob[(int) $pid] = ['jours' => $j, 'min' => max(0, (int) ($e['min'] ?? PF_MIN_OBLIG)), 'reseau' => isset($res[(int) $pid])];
     }
+    // J−7 : ajuster la proposition (oui par défaut) ; le « trop peu » relève la production, ou le
+    // stock minimum de recuisson (modePeu = stock) ; le stock minimum de recuisson par catégorie.
+    $smin = []; foreach ((array) ($s['stockMin'] ?? []) as $k => $q) { if (is_numeric($q) && (int) $q > 0) { $smin[(string) $k] = (int) $q; } }
     return ['jours' => $jours, 'obligatoires' => $ob, 'veille' => $veille, 'garde' => $garde,
+        'ajusterJ7' => !array_key_exists('ajusterJ7', $s) || !empty($s['ajusterJ7']), 'modePeu' => ($s['modePeu'] ?? '') === 'stock' ? 'stock' : 'production', 'stockMin' => $smin,
         'enregistre' => $s !== [], 'maj' => $s['maj'] ?? null, 'par' => $s['par'] ?? null];
 }
 
@@ -117,7 +122,16 @@ function pfValiderParams(array $p, int $nCuissons): array
     }
     if (count($ob) > 2000) { return [false, 'trop de produits obligatoires', null]; }
     $cle = static fn ($l) => array_values(array_unique(array_filter(array_map('strval', (array) $l), static fn ($k) => (bool) preg_match('/^(\d{1,9}|n:.{1,80})$/u', $k))));
-    return [true, null, ['jours' => $jours, 'obligatoires' => $ob, 'veille' => $cle($p['veille'] ?? []), 'garde' => $cle($p['garde'] ?? [])]];
+    $smin = [];
+    foreach ((array) ($p['stockMin'] ?? []) as $k => $q) {
+        if (!preg_match('/^(\d{1,9}|n:.{1,80})$/u', (string) $k) || $q === null || $q === '') { continue; }
+        if (!is_numeric($q) || (int) $q < 0 || (int) $q > 500) { return [false, 'stock minimum de recuisson invalide pour « ' . $k . ' »', null]; }
+        if ((int) $q > 0) { $smin[(string) $k] = (int) $q; }
+    }
+    $mode = (string) ($p['modePeu'] ?? 'production');
+    if (!in_array($mode, ['production', 'stock'], true)) { return [false, 'réponse au « trop peu » inconnue', null]; }
+    return [true, null, ['jours' => $jours, 'obligatoires' => $ob, 'veille' => $cle($p['veille'] ?? []), 'garde' => $cle($p['garde'] ?? []),
+        'ajusterJ7' => !array_key_exists('ajusterJ7', $p) || !empty($p['ajusterJ7']), 'modePeu' => $mode, 'stockMin' => $smin]];
 }
 
 /**
@@ -196,7 +210,106 @@ function pfCalcul(int $sid, string $date, int &$cout, int $budget, bool $avecCom
     $cmds = $avecCommandes ? (gpCommandes($sid, $date) ?? []) : [];
     $prix = gpPrix($sid);
     $plan = gpPlan($jp['params'], $base, $cmds, $F['faits'], $prix, ['stock0' => $stock0, 'minPct' => $jp['minPct'], 'oblig' => $oblig]);
-    return ['sem' => $sem, 'base' => $base, 'gp' => $gp, 'pf' => $pf, 'jour' => $jour, 'jp' => $jp, 'oblig' => $oblig, 'stock0' => $stock0, 'faits' => $F['faits'], 'valid' => $F['valid'], 'cmds' => $cmds, 'prix' => $prix, 'plan' => $plan];
+    // J−7 : trop ou trop peu, et la proposition ajustée en steps entiers.
+    $J7 = pfJ7($sid, $date, $base, $jp['params'], $cout, $budget);
+    if ($pf['ajusterJ7'] && $J7['lu']) { $plan = pfAjuster($plan, $J7['par'], $pf['modePeu']); }
+    // Le stock minimum de recuisson de chaque produit : celui de sa catégorie, relevé du « trop
+    // peu » de J−7 quand c'est la réponse choisie ; il ne vaut que jusqu'à la dernière recuisson.
+    $smin = [];
+    foreach ($plan as $c) {
+        foreach ($c['lignes'] as $l) {
+            $pid = (int) $l['pid'];
+            if (isset($smin[$pid])) { continue; }
+            $q = (int) ($pf['stockMin'][(string) $l['catCle']] ?? 0);
+            if ($pf['ajusterJ7'] && $pf['modePeu'] === 'stock') { $q += (int) ($J7['par'][$pid]['plus'] ?? 0); }
+            $lim = gpHeure($jp['params']['categories'][(string) $l['catCle']]['limite'] ?? null);
+            if ($q > 0) { $smin[$pid] = ['q' => $q, 'limite' => $lim]; }
+        }
+    }
+    return ['sem' => $sem, 'base' => $base, 'gp' => $gp, 'pf' => $pf, 'jour' => $jour, 'jp' => $jp, 'oblig' => $oblig, 'stock0' => $stock0, 'faits' => $F['faits'], 'valid' => $F['valid'], 'cmds' => $cmds, 'prix' => $prix, 'plan' => $plan, 'j7' => $J7, 'smin' => $smin];
+}
+
+/** Le step de production d'une catégorie (pièces par fournée) : le réglage, 1 — à l'unité — sinon. */
+function pfStep(?array $cfg): int { $p = (int) ($cfg['plaque'] ?? 0); return $p > 0 ? $p : 1; }
+
+/**
+ * J−7, le même jour la semaine d'avant, produit par produit (demande du 03/10/2026) : y en a-t-il
+ * eu trop ou trop peu ? Trop : des pièces jetées (la poubelle déclarée au panel, ou le jeté de la
+ * clôture). Trop peu : le produit ne vendait plus à partir d'une heure où les 6 derniers mêmes
+ * jours vendent encore au moins une pièce jusqu'à la fermeture — il était sans doute épuisé.
+ * En steps entiers : le manque arrondi au step supérieur (plus), le jeté au step inférieur
+ * (moins) — moins d'un step jeté ne retire rien.
+ */
+function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, int $budget): array
+{
+    $j7 = pfDecale($date, -7);
+    $v7 = pfVentesJour($sid, $j7, $cout, $budget);
+    $jete = null;
+    if (function_exists('invLignes')) { $il = invLignes($sid, $j7, $j7); if (is_array($il)) { $jete = []; foreach ($il as $x) { $jete[(int) $x['pid']] = ($jete[(int) $x['pid']] ?? 0.0) + (float) $x['pieces']; } } }
+    $cl = setting('pfCloture:' . $sid . ':' . $j7);
+    $jeteCl = []; if (is_array($cl) && is_array($cl['l'] ?? null)) { foreach ($cl['l'] as $pid => $x) { $jeteCl[(int) $pid] = (float) ($x['jete'] ?? 0); } }
+    $der = []; $fin = null;
+    if ($v7 !== null) { foreach ($v7['h'] as $pid => $hs) { $hh = array_keys(array_filter($hs, static fn ($q) => $q > 0)); if ($hh !== []) { $der[(int) $pid] = (int) max($hh); $fin = max($fin ?? 0, (int) max($hh)); } } }
+    $par = [];
+    foreach ($base['produits'] as $pid => $p) {
+        $pid = (int) $pid;
+        $step = pfStep($params['categories'][$p['catCle']] ?? null);
+        $d = $der[$pid] ?? null;
+        $w = max((float) ($jete[$pid] ?? 0), (float) ($jeteCl[$pid] ?? 0));
+        $manque = ($d !== null && $fin !== null) ? gpSomme($p['h'], $d + 1, $fin + 1) : 0.0;
+        if ($manque < 1) { $manque = 0.0; }
+        $peu = $manque > 0; $trop = $w > 0;
+        $verdict = $v7 === null ? null : ($d === null ? 'aucune' : ($peu && $trop ? 'mixte' : ($peu ? 'peu' : ($trop ? 'trop' : 'juste'))));
+        $par[$pid] = ['derniere' => $d, 'poubelle' => ($jete === null && !isset($jeteCl[$pid])) ? null : round($w, 1), 'manque' => round($manque, 1), 'verdict' => $verdict, 'step' => $step,
+            'plus' => $peu ? (int) (ceil($manque / $step - 1e-9) * $step) : 0, 'moins' => $trop ? (int) (floor($w / $step + 1e-9) * $step) : 0];
+    }
+    return ['date' => $j7, 'lu' => $v7 !== null, 'v7' => $v7, 'fin' => $fin, 'poubelleLue' => $jete !== null, 'poubelle' => $jete === null ? null : round(array_sum($jete), 1), 'par' => $par];
+}
+
+/**
+ * La proposition ajustée sur J−7 : « trop peu » ajoute ses steps à la cuisson qui couvre l'heure
+ * où le produit manquait (la dernière à défaut) — sauf si la réponse choisie est le stock minimum
+ * de recuisson ; « trop » retire ses steps en partant de la dernière cuisson (un obligatoire garde
+ * au moins un step en 1re cuisson). Plaques, CA et totaux recalculés.
+ */
+function pfAjuster(array $plan, array $par, string $mode): array
+{
+    $ix = [];
+    foreach ($plan as $ci => $c) { foreach ($c['lignes'] as $li => $l) { $ix[(int) $l['pid']][] = [$ci, $li]; } }
+    foreach ($par as $pid => $j) {
+        if (!isset($ix[$pid])) { continue; }
+        $delta = ($mode === 'stock' ? 0 : (int) $j['plus']) - (int) $j['moins'];
+        if ($delta === 0) { continue; }
+        $L = $ix[$pid];
+        if ($delta > 0) {
+            $t = (float) (($j['derniere'] ?? 0) + 1); $cible = $L[count($L) - 1];
+            foreach ($L as [$ci, $li]) { $z = $plan[$ci]['lignes'][$li]['zone']; $a = gpHeure($z[0]) ?? 0.0; $b = gpHeure($z[1]) ?? 24.0; if ($t >= $a && $t < $b) { $cible = [$ci, $li]; } }
+            [$ci, $li] = $cible;
+            $plan[$ci]['lignes'][$li]['sortie'] += $delta;
+            $plan[$ci]['lignes'][$li]['ajustJ7'] = ($plan[$ci]['lignes'][$li]['ajustJ7'] ?? 0) + $delta;
+        } else {
+            $reste = -$delta; $n = count($L);
+            for ($k = $n - 1; $k >= 0 && $reste > 0; $k--) {
+                [$ci, $li] = $L[$k];
+                $l = $plan[$ci]['lignes'][$li];
+                $garde = (!empty($l['oblig']) && $k === 0) ? min((int) $l['sortie'], (int) $j['step']) : 0;
+                $pris = min($reste, max(0, (int) $l['sortie'] - $garde));
+                if ($pris > 0) { $plan[$ci]['lignes'][$li]['sortie'] -= $pris; $plan[$ci]['lignes'][$li]['ajustJ7'] = ($l['ajustJ7'] ?? 0) - $pris; $reste -= $pris; }
+            }
+        }
+    }
+    foreach ($plan as $ci => $c) {
+        $t = ['pieces' => 0, 'plaques' => 0, 'ca' => 0.0, 'sansPrix' => 0];
+        foreach ($c['lignes'] as $li => $l) {
+            if (!empty($l['plaque'])) { $l['plaques'] = (int) round($l['sortie'] / $l['plaque']); }
+            $l['ca'] = $l['prix'] !== null ? round((float) $l['prix'] * $l['sortie'], 2) : null;
+            $t['pieces'] += $l['sortie']; $t['plaques'] += (int) $l['plaques'];
+            if ($l['ca'] !== null) { $t['ca'] += $l['ca']; } elseif ($l['sortie'] > 0) { $t['sansPrix']++; }
+            $plan[$ci]['lignes'][$li] = $l;
+        }
+        $plan[$ci]['total'] = array_merge($c['total'], ['pieces' => $t['pieces'], 'plaques' => $t['plaques'], 'ca' => round($t['ca'], 2), 'sansPrix' => $t['sansPrix']]);
+    }
+    return $plan;
 }
 
 /** Les lignes du plan regroupées par produit : une ligne par produit, une colonne par cuisson. */
@@ -207,7 +320,7 @@ function pfParProduit(array $plan): array
         foreach ($c['lignes'] as $l) {
             $pid = (int) $l['pid'];
             $out[$pid] ??= ['pid' => $pid, 'nom' => $l['nom'], 'groupe' => $l['groupe'], 'cat' => $l['cat'], 'catCle' => $l['catCle'], 'prix' => $l['prix'], 'prevJ' => $l['prevJ'], 'oblig' => !empty($l['oblig']), 'h' => $l['h'], 'c' => []];
-            $out[$pid]['c'][$c['id']] = ['sortie' => $l['sortie'], 'plaques' => $l['plaques'], 'plaque' => $l['plaque'], 'stock' => $l['stock'], 'prevu' => $l['prevu'], 'fait' => $l['fait'], 'zone' => $l['zone']];
+            $out[$pid]['c'][$c['id']] = ['sortie' => $l['sortie'], 'plaques' => $l['plaques'], 'plaque' => $l['plaque'], 'stock' => $l['stock'], 'prevu' => $l['prevu'], 'fait' => $l['fait'], 'zone' => $l['zone'], 'ajustJ7' => (int) ($l['ajustJ7'] ?? 0)];
         }
     }
     return $out;
@@ -247,7 +360,7 @@ function ep_production_flux_params(): array
     foreach ($gp['categories'] as $k => $e) {
         $cats[] = ['cle' => (string) $k, 'nom' => $e['nom'], 'catId' => $e['catId'], 'groupe' => $e['catId'] > 0 ? (string) ($cc[$e['catId']]['groupe'] ?? '') : '',
             'cuissons' => $e['cuissons'], 'plaque' => $e['plaque'], 'limite' => $e['limite'], 'auto' => $e['auto'],
-            'veille' => in_array((string) $k, $pf['veille'], true), 'garde' => in_array((string) $k, $pf['garde'], true)];
+            'veille' => in_array((string) $k, $pf['veille'], true), 'garde' => in_array((string) $k, $pf['garde'], true), 'stockMin' => (int) ($pf['stockMin'][(string) $k] ?? 0)];
     }
     // Les produits à régler : ceux de la base (vendus ces semaines-là) et les obligatoires.
     $prods = [];
@@ -265,7 +378,8 @@ function ep_production_flux_params(): array
     usort($prods, static fn ($a, $b) => [$a['groupe'] === '' ? 'zzz' : $a['groupe'], $a['cat'], -$a['parJour'], $a['nom']] <=> [$b['groupe'] === '' ? 'zzz' : $b['groupe'], $b['cat'], -$b['parJour'], $b['nom']]);
     usort($cats, static fn ($a, $b) => [$a['groupe'] === '' ? 'zzz' : $a['groupe'], $a['nom']] <=> [$b['groupe'] === '' ? 'zzz' : $b['groupe'], $b['nom']]);
     return ['shop' => $sid, 'aujourdhui' => $auj, 'jours' => PF_JOURS,
-        'flux' => ['jours' => $pf['jours'], 'veille' => $pf['veille'], 'garde' => $pf['garde'], 'enregistre' => $pf['enregistre'], 'maj' => $pf['maj'], 'par' => $pf['par']],
+        'flux' => ['jours' => $pf['jours'], 'veille' => $pf['veille'], 'garde' => $pf['garde'], 'ajusterJ7' => $pf['ajusterJ7'], 'modePeu' => $pf['modePeu'], 'enregistre' => $pf['enregistre'], 'maj' => $pf['maj'], 'par' => $pf['par']],
+        'steps' => PF_STEPS,
         'cuissons' => $gp['cuissons'], 'regles' => $gp['regles'], 'gpEnregistre' => $gp['enregistre'], 'dayparts' => $dp,
         'categories' => $cats, 'produits' => $prods, 'reseau' => count(pfObligReseau($auj)),
         'base' => ['semaines' => $sem, 'lus' => count($base['lus']), 'jours' => count($base['jours']), 'manquants' => $base['manquants']]];
@@ -308,8 +422,7 @@ function ep_production_flux_plan(): array
     $L = pfParProduit($K['plan']);
     // J−7 : le même jour la semaine d'avant, par canal. Les tickets donnent le comptoir et les
     // clients pro (les commandes passées en magasin) ; le webshop n'a pas d'articles au panel.
-    $j7 = pfDecale($date, -7);
-    $v7 = pfVentesJour($sid, $j7, $cout, $budget);
+    $J7 = $K['j7']; $j7 = $J7['date']; $v7 = $J7['v7'];
     $c7 = gpCommandes($sid, $j7);
     $ws7 = ['n' => 0, 'ca' => 0.0]; $cm7 = ['n' => 0, 'ca' => 0.0];
     foreach ((array) $c7 as $o) { if (!empty($o['webshop'])) { $ws7['n']++; $ws7['ca'] += (float) $o['montant']; } else { $cm7['n']++; $cm7['ca'] += (float) $o['montant']; } }
@@ -334,7 +447,12 @@ function ep_production_flux_plan(): array
         if ($l['prix'] !== null) { $ca = round($tot * (float) $l['prix'], 2); }
         $mag = $v7 !== null ? (float) ($v7['tot'][$pid] ?? 0) - (float) ($v7['pro'][$pid] ?? 0) : null;
         $lignes[] = ['pid' => $pid, 'nom' => $l['nom'], 'groupe' => $l['groupe'] !== '' ? $l['groupe'] : $l['cat'], 'cat' => $l['cat'], 'catCle' => $l['catCle'], 'oblig' => $l['oblig'], 'prix' => $l['prix'],
-            'j7' => ['magasin' => $mag !== null ? round(max(0.0, $mag), 1) : null, 'webshop' => null, 'commandes' => $v7 !== null ? round((float) ($v7['pro'][$pid] ?? 0), 1) : null],
+            'j7' => ['magasin' => $mag !== null ? round(max(0.0, $mag), 1) : null, 'webshop' => null, 'commandes' => $v7 !== null ? round((float) ($v7['pro'][$pid] ?? 0), 1) : null,
+                'derniere' => $J7['par'][$pid]['derniere'] ?? null, 'poubelle' => $J7['par'][$pid]['poubelle'] ?? ($J7['poubelleLue'] ? 0.0 : null),
+                'verdict' => $J7['par'][$pid]['verdict'] ?? null, 'manque' => $J7['par'][$pid]['manque'] ?? 0, 'plus' => $J7['par'][$pid]['plus'] ?? 0, 'moins' => $J7['par'][$pid]['moins'] ?? 0],
+            'step' => $J7['par'][$pid]['step'] ?? pfStep($K['jp']['params']['categories'][(string) $l['catCle']] ?? null),
+            'ajustJ7' => array_sum(array_map(static fn ($x) => (int) ($x['ajustJ7'] ?? 0), (array) $l['c'])),
+            'stockMin' => $K['smin'][$pid]['q'] ?? 0,
             'prevJ' => $l['prevJ'], 'report' => round((float) ($K['stock0'][$pid] ?? 0), 1),
             'c' => (object) $l['c'], 'total' => $tot, 'ca' => $l['prix'] !== null ? $ca : null,
             'veille' => isset($veille[$pid]) ? ['sortie' => $veille[$pid]['sortie'], 'plaques' => $veille[$pid]['plaques'], 'plaque' => $veille[$pid]['plaque']] : null];
@@ -347,7 +465,9 @@ function ep_production_flux_plan(): array
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'jourSemaine' => $K['jour'], 'jourNom' => PF_JOURS[$K['jour']],
         'cuissons' => $C, 'minPct' => round(100 * $K['jp']['minPct'], 1), 'nCuissons' => $K['jp']['cuissons'],
         'lignes' => $lignes, 'obligatoires' => count($K['oblig']), 'reportVeille' => ['pieces' => round(array_sum($K['stock0']), 1), 'produits' => count($K['stock0']), 'cloture' => setting('pfCloture:' . $sid . ':' . pfDecale($date, -1)) !== null],
-        'j7' => ['date' => $j7, 'lu' => $v7 !== null, 'webshop' => ['n' => $ws7['n'], 'ca' => round($ws7['ca'], 2)], 'commandes' => ['n' => $cm7['n'], 'ca' => round($cm7['ca'], 2)], 'commandesLues' => $c7 !== null],
+        'j7' => ['date' => $j7, 'lu' => $v7 !== null, 'webshop' => ['n' => $ws7['n'], 'ca' => round($ws7['ca'], 2)], 'commandes' => ['n' => $cm7['n'], 'ca' => round($cm7['ca'], 2)], 'commandesLues' => $c7 !== null,
+            'derniereVente' => $J7['fin'], 'poubelleLue' => $J7['poubelleLue'], 'poubelle' => $J7['poubelle'],
+            'ajuster' => $K['pf']['ajusterJ7'], 'modePeu' => $K['pf']['modePeu']],
         'lendemain' => ['date' => $d1, 'jourNom' => PF_JOURS[pfJour($d1)], 'categories' => count($K['pf']['veille']), 'complet' => $K1 === null || $K1['base']['manquants'] === [], 'lus' => $K1 !== null ? count($K1['base']['lus']) : 0, 'jours' => $K1 !== null ? count($K1['base']['jours']) : 0],
         'base' => ['semaines' => $K['sem'], 'jours' => count($K['base']['jours']), 'lus' => count($K['base']['lus']), 'manquants' => $K['base']['manquants']],
         'source' => 'prévision : tickets du panel, moyenne des ' . $K['sem'] . ' derniers ' . PF_JOURS[$K['jour']] . 's heure par heure · J−7 : tickets du ' . $j7 . ' (clients pro = commandes passées en magasin) · webshop : commandes du panel, sans articles'];
@@ -372,7 +492,7 @@ function ep_production_flux_suivi(): array
     $jete = [];
     if (function_exists('invLignes')) { foreach ((array) invLignes($sid, $date, $date) as $l) { $jete[(int) $l['pid']] = ($jete[(int) $l['pid']] ?? 0.0) + (float) $l['pieces']; } }
     $R = (float) $K['gp']['regles']['securite'];
-    $suivi = pfSuivi($K['plan'], $K['stock0'], $V !== null ? $V['h'] : [], $now);
+    $suivi = pfSuivi($K['plan'], $K['stock0'], $V !== null ? $V['h'] : [], $now, $K['smin']);
     $C = [];
     foreach ($K['plan'] as $c) {
         $v = $K['valid'][$c['id']] ?? null;
@@ -395,7 +515,7 @@ function ep_production_flux_suivi(): array
  * Heures à venir : le stock actuel + les cuissons à venir − la prévision (au prorata de
  * l'heure entamée). Le premier manque, le stock projeté à la fermeture, le verdict.
  */
-function pfSuivi(array $plan, array $stock0, array $vendu, float $now): array
+function pfSuivi(array $plan, array $stock0, array $vendu, float $now, array $smin = []): array
 {
     $P = pfParProduit($plan);
     $dispo = [];   // pid => [heure de mise en vitrine => pièces]
@@ -427,6 +547,10 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now): array
         $vd = $vendu[$pid] ?? [];
         $prof = $p['h'];
         $cases = []; $stockNow = null; $manque = null; $sortiTot = 0.0; $venduTot = array_sum($vd);
+        // Le stock minimum de recuisson : la vitrine ne doit pas passer dessous avant la dernière
+        // recuisson de la catégorie (sinon la dernière heure) — en dessous, c'est un manque.
+        $sm = (float) ($smin[$pid]['q'] ?? 0); $smJusqua = $smin[$pid]['limite'] ?? null; if ($smJusqua === null) { $smJusqua = (float) $h1; }
+        $defMax = 0.0;
         $cumDispo = static function (float $t) use ($dispo, $pid): float { $s = 0.0; foreach ($dispo[$pid] ?? [] as $h => $q) { if ((float) $h <= $t + 1e-9) { $s += $q; } } return $s; };
         foreach ($dispo[$pid] ?? [] as $q) { $sortiTot += $q; }
         $vCum = 0.0;
@@ -450,7 +574,9 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now): array
                 // Les cuissons qui sortent pendant l'heure à venir.
                 foreach ($dispo[$pid] ?? [] as $hh => $q) { if ((float) $hh > $now + 1e-9 && (float) $hh >= (float) $h && (float) $hh < $fin) { $proj += $q; } }
                 $proj -= $prev;
-                if ($manque === null && $proj < -0.5) { $manque = ['h' => $h, 'q' => round(-$proj, 1)]; }
+                $seuil = (float) $h < $smJusqua ? $sm : 0.0;
+                if ($manque === null && $proj < $seuil - 0.5) { $manque = ['h' => $h, 'q' => round($seuil - $proj, 1)]; }
+                $defMax = max($defMax, $seuil - $proj);
                 $cases[] = ['h' => $h, 'q' => round($proj, 1), 'prev' => round($prev, 1), 'reel' => false];
             }
         }
@@ -466,14 +592,14 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now): array
         $conseil = null;
         if ($verdict === 'rupture' || $verdict === 'manque') {
             // De quoi tenir jusqu'à la fermeture : le déficit projeté, ou en rupture ce que la journée vend encore.
-            $def = max($manque['q'] ?? 0.0, -$finJour, $verdict === 'rupture' ? $resteJ - max(0.0, $stockNow) : 0.0);
+            $def = max($manque['q'] ?? 0.0, $defMax, -$finJour, $verdict === 'rupture' ? $resteJ - max(0.0, $stockNow) : 0.0);
             $pl = null; foreach ($p['c'] as $x) { if (!empty($x['plaque'])) { $pl = (int) $x['plaque']; } }
             $n = max(1, (int) ceil($def - 1e-6));
             $conseil = ['pieces' => $n, 'plaques' => $pl ? (int) ceil($n / $pl) : null, 'plaque' => $pl];
         }
         $T['sorti'] += $sortiTot; $T['vendu'] += $venduTot; $T['stock'] += max(0.0, $stockNow); $T['finJour'] += max(0.0, $finJour); $T['report'] += $s0;
         if ($verdict === 'manque') { $T['manques']++; } elseif ($verdict === 'rupture') { $T['ruptures']++; } elseif ($verdict === 'trop') { $T['trop']++; }
-        $out[] = ['pid' => $pid, 'nom' => $p['nom'], 'groupe' => $p['groupe'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'oblig' => $p['oblig'], 'prix' => $p['prix'],
+        $out[] = ['pid' => $pid, 'nom' => $p['nom'], 'groupe' => $p['groupe'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'oblig' => $p['oblig'], 'prix' => $p['prix'], 'stockMin' => $sm,
             'report' => round($s0, 1), 'sorti' => round($sortiTot, 1), 'vendu' => round($venduTot, 1), 'stock' => round($stockNow, 1), 'finJour' => round($finJour, 1), 'prevJ' => round($prevJ, 1),
             'manque' => $manque, 'verdict' => $verdict, 'conseil' => $conseil, 'cases' => $cases];
     }
