@@ -1090,9 +1090,20 @@ Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le l
 **Contrôle des tâches**, l'écran qui porte la responsabilité de l'avis. Une contresignature
 déjà posée s'affiche ici — c'est un fait à connaître, pas une commande à actionner.
 
+### `GET /exploitation/jour` — les clients de J−7 au même moment
+
+Chaque magasin porte `j7` : `{ date, moment, tickets, ca, ticketsJour, caJour }`,
+le même jour de la semaine d'avant lu dans ses heures gravées. Quand la journée
+regardée est aujourd'hui, `tickets` et `ca` s'arrêtent à l'heure qu'il est
+(`moment`, l'heure en cours comptée au prorata des minutes) ; une journée close
+prend J−7 entière et `moment` est nul. Le dashboard pose le delta à côté du
+nombre de clients (tuile Clients, bureau et téléphone) et dit dessous « n
+clients à J−7 à la même heure (sam. 26/09) · ± x % ». Nul si J−7 n'est pas lu.
+
 ### `GET /exploitation/canaux` — par où passent les commandes : comptoir, click & collect, livraison
 
     ?shop=4&date=2026-10-02            un magasin, la journée
+    ?shop=4&du=2026-09-28&au=2026-10-04   un magasin, une période (la semaine, le mois du dashboard)
     ?periode=jour|7|30&date=…          le réseau, magasin par magasin (sans shop)
 
 La source est double et mesurée : les **commandes du panel**
@@ -1123,6 +1134,14 @@ Un magasin :
       liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut } ],   toutes les commandes du jour, précommandes au comptoir comprises
       nWebshop, aPreparer, demain: { n, ca }, indispo, source }
 
+Une période (`du`, `au`, 62 jours au plus) rend `periode` à la place de
+`jour` (le même bloc, plus `du`, `au`, `joursEcoules`), `serie` jour par jour
+sur toute la période (les jours à venir sans caisse, mais avec les commandes
+déjà prises), `parJour` (commandes, comptoir, click & collect, livraison, à
+préparer), `parSemaine` au-delà de quinze jours (bornée à la période),
+`liste` jusqu'à sept jours, `nCommandes`, `aPreparer` (dues et ouvertes) et
+`aVenir` (prises pour plus tard).
+
 `indispo` est vrai quand le panel n'a pas répondu : le split retombe sur la
 caisse seule, le dashboard garde alors la carte « Comptoir et clients pro ».
 Le réseau rend `magasins[]` (le même bloc sans `serie`, plus `shop`, `nom`)
@@ -1131,7 +1150,8 @@ et `reseau` (comptoir, cc, liv, webshop, total, part, `livrent` et `vendent`
 
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 
-    ?shop=4&date=2026-10-02&periode=7      un magasin
+    ?shop=4&date=2026-10-02&periode=7      un magasin, les 7 derniers jours
+    ?shop=4&du=2026-09-28&au=2026-10-04    un magasin, la semaine ou le mois du dashboard
     ?periode=jour|7|30&date=…              le réseau : les offres en lignes, les magasins en colonnes
 
 Deux familles d'offres, une ligne chacune :
@@ -1155,7 +1175,12 @@ Deux familles d'offres, une ligne chacune :
                   marge, coef, spark[7], delta, deltaTk?, verdict: tot|garder|ajuster|arreter, verdictLib, mot } ],
       kpi: { ca, caJour, pieces, caPeriode, part, marge, bundles, promos, aAjuster, joursLus, ticketsLus } }
 
-Le verdict d'un bundle : **trop tôt** sous 5 jours vendus sur les 7 ;
+La **fenêtre** (`fen` : du, au, jours, lus) porte la marge, la tendance
+(`spark`, une barre par jour) et le delta : la période dès qu'elle fait sept
+jours, sinon les sept derniers jours ; la référence est toujours les 28 jours
+qui la précèdent. `periodeJours` dit combien de jours de la période sont lus.
+
+Le verdict d'un bundle : **trop tôt** sous 5 jours vendus sur la fenêtre ;
 **garder** à partir de +8 % face à la référence ; **ajuster** entre −3 % et
 +8 % ; **arrêter** sous −3 %. Sans référence (bundle nouveau), c'est la marge
 qui tranche : garder à 50 % et plus, ajuster dessous. Le réseau rend
@@ -1163,8 +1188,8 @@ qui tranche : garder à 50 % et plus, ajuster dessous. Le réseau rend
 verdictLib, mot, delta}}`, `pieces`, `ca` totaux), `magasins[]` avec leur
 `kpi`, et un `kpi` réseau.
 
-Qui les lit : le dashboard magasin en vue Jour (les cartes « Commandes et
-canaux — la journée », qui remplace « Comptoir et clients pro » dès que les
+Qui les lit : le dashboard magasin en vues Jour, Semaine et Mois (les cartes
+« Commandes et canaux », qui remplace « Comptoir et clients pro » dès que les
 commandes sont lues, et « Promotions et bundles — ce qu'elles rapportent » ;
 au téléphone, les tuiles Webshop et Offres du mur) et le cockpit, Marque &
 marketing › **Offres et canaux** (`#/offres-canaux`), sur la journée, 7 ou

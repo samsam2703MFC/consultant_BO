@@ -830,6 +830,8 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .co-pile>span.we i.c{opacity:.55}.co-pile>span.na i.c{opacity:.2}
 .co-axe{display:flex;gap:4px;margin-top:4px}.co-axe span{flex:1;text-align:center;font-size:9.5px;color:var(--color-text-muted)}
 .co-axe span.we{opacity:.6}
+.co-axe.dense span:nth-child(even){visibility:hidden}
+.co-tab td b.att{color:#B26A00}
 .co-tab td.mu,.co-tab span.mu{color:var(--color-text-muted)}
 .co-mode{display:inline-flex;align-items:center;gap:5px;font:600 10.5px var(--font-ui);border-radius:999px;padding:2px 8px;white-space:nowrap}
 .co-mode.w{background:#e6eef5;color:#1f5f8b}.co-mode.l{background:#dde7ef;color:#0f3b5c}.co-mode.c{background:var(--color-background-secondary);color:var(--color-text)}
@@ -844,6 +846,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .co-tab td.off b{display:block;font-size:12.5px}.co-tab td.off small{display:block;color:var(--color-text-muted);font-size:10.5px;margin-top:1px}
 .co-spark{display:inline-flex;align-items:flex-end;gap:2px;height:22px;width:70px;vertical-align:middle}
 .co-spark i{flex:1;background:#b8ad9f;border-radius:1px 1px 0 0;min-width:3px}.co-spark i.auj{background:var(--color-primary)}
+.co-spark.l{width:140px;gap:1px}.co-spark.l i{min-width:0}
 .co-verdict{font:700 10.5px var(--font-ui);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .co-verdict.ok{background:#E6F2E9;color:#2d7a3e}.co-verdict.att{background:#FBEFE0;color:#B26A00}.co-verdict.ko{background:#F8E3E5;color:#C0182B}.co-verdict.tot{background:var(--color-background-secondary);color:var(--color-text-muted)}
 .co-d{font-variant-numeric:tabular-nums;font-weight:600}.co-d.ok{color:#2d7a3e}.co-d.ko{color:#C0182B}
@@ -1038,3 +1041,7 @@ html.rc-direct-ouvert,html.rc-direct-ouvert body{overflow:hidden}
 .rc-direct .pied button[data-photo]{background:#fff;color:#111}
 .rc-direct .pied button.on{background:#ffd54a;color:#111}
 @media (prefers-reduced-motion:reduce){.rc-direct .vise i{animation:none}}
+
+/* Le delta de clients face à J−7, à côté du nombre. */
+.db-j7{font:700 .5em var(--font-ui);vertical-align:middle;margin-left:2px;padding:2px 6px;border-radius:999px;background:var(--color-background-secondary)}
+.db-j7.ok{color:#2d7a3e;background:#E6F2E9}.db-j7.ko{color:#C0182B;background:#F8E3E5}.db-j7.mu{color:var(--color-text-muted)}
