@@ -1,0 +1,26 @@
+{
+ "a": {
+  "ouvert": 1342,
+  "ferme": 1034,
+  "q": "Quelles heures rapportent",
+  "pire": 1426,
+  "pireQ": "Qu’est-ce qui se vend",
+  "deborde": false
+ },
+ "b": {
+  "ouvert": 1591,
+  "ferme": 1185,
+  "q": "Qu’est-ce qui se vend",
+  "pire": 1591,
+  "pireQ": "Qu’est-ce qui se vend",
+  "deborde": false
+ },
+ "c": {
+  "ouvert": 1407,
+  "ferme": 1044,
+  "q": "Combien me reste-t-il",
+  "pire": 1447,
+  "pireQ": "Qu’est-ce qui se vend",
+  "deborde": false
+ }
+}

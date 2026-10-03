@@ -27,6 +27,7 @@
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
+    a4: null, a4Vise: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -1683,6 +1684,18 @@
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
+    if (S.vue === 'jour') {
+      if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
+      else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
+      h += rendJourA4(m, d, st, ks);
+      h += cqLoupe(false);
+      $.innerHTML = h;
+      brancher();
+      noteRestaurer(garde);
+      cqRestaurer(cqPos);
+      a4Viser();
+      return;
+    }
     h += rendNC();
     if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
     // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
@@ -1693,7 +1706,7 @@
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
-    else if (m) { h += S.vue === 'jour' ? rendJour(m, d, st) : rendPeriode(m, d); }
+    else if (m) { h += rendPeriode(m, d); }
     const autreJ = S.vue === 'jour' && S.jourH && S.jourH !== S.date;
     h += `<div class="db-sec">Les heures — ${S.vue === 'jour' ? esc(fDL(dateH())) : 'ventes, matière, rémunération, marge nette'}<small>${S.vue === 'jour' ? 'heure par heure · cliquer un jour dans « le jour dans le mois » pour le lire' : 'moyenne par jour ouvert de la période, ou total'}</small>${autreJ ? `<button class="db-btn" data-jh="">↩ revenir au ${esc(fD(S.date))}</button>` : ''}</div>`;
     if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? " — nouvelle lecture dans quelques secondes" : ""}</div>`; }
@@ -1754,8 +1767,11 @@
     </div>`;
   }
 
-  /* Résultat › Jour, déplié pour le magasin. */
-  function rendJour(m, d, st) {
+  /* Résultat › Jour, déplié pour le magasin : chaque carte de la journée,
+   * rendue à part. La vue Jour en une page (rendJourA4) les range chacune
+   * dans la liste déroulante de sa ligne. */
+  function jourPieces(m, d, st) {
+    const P = {};
     const TT = S.aux['tend|' + S.shop + '|' + S.date], TJ = TT && Array.isArray(TT.jours) ? TT.jours : [];
     const ref = d.reference || {};
     const att = m.objectifJour ? Math.min(100, 100 * m.ca / m.objectifJour) : 0;
@@ -1767,9 +1783,8 @@
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
-    h += splitCarte(m);
-    h += offresCarte();
-    h += invCarte(false);
+    P.tuiles = h; h = '';
+    P.split = splitCarte(m);
     if (m.objectifJour) {
       // Objectif atteint : la ligne passe en or, badge trophée et pluie de
       // confettis (V1). Record de jour du magasin : bandeau plein or, feux
@@ -1791,11 +1806,9 @@
           <div class="db-mini" style="margin-top:5px">${or ? '<b>' + fP(attReel) + ' réalisé</b> · dépassé de ' + fK(m.ca - m.objectifJour) : fP(att) + ' réalisé'}${R && R.meilleur ? ' · record des ' + esc(nomJ) + 's : ' + fK(R.meilleur.ca) + ' le ' + fD(R.meilleur.date) : ''}${repere}</div></div></div>`;
       }
     }
-    h += objectifsCarte(false);
-    h += promosCarte(false);
-    h += noteCarte(false);
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
-    // Catégories et planning côte à côte.
+    P.objectif = h; h = '';
+    h = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
+    P.pnl = h; h = '';
     const cats = Array.isArray(m.categories) ? m.categories : [];
     const plan = Array.isArray(m.planning) ? m.planning : [];
     // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
@@ -1811,6 +1824,7 @@
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
       : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence'}</span></div>
       ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+    P.categories = h; h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
     const seuilLab = (d.seuils && d.seuils.labour) || 33;
@@ -1826,6 +1840,7 @@
       ${frise}
       <div class="db-cdr" data-pdrop="1">${S.pOuvert ? 'replier le planning ▴' : 'voir le planning ▾'}</div>
       ${S.pOuvert ? planningSecteurs(plan, hMin, hMax) : ''}</div>`;
+    P.poste = h; h = '';
     const serie = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert) : [];
     if (serie.length) {
       // Le jour dans le mois : la marge nette en % des ventes, une barre par
@@ -1844,7 +1859,287 @@
           return `<div class="jh${x.date === dateH() ? ' sel' : ''}" data-jh="${esc(x.date)}" title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)}${pct == null ? '' : ' (' + fP(pct) + ')'} · cliquer pour lire ses heures"><div class="bb">${pct == null ? '' : `<i class="${o ? 'o' : ''}${neg ? ' neg' : ''}" style="${neg ? `top:${(100 - y0).toFixed(2)}%;height:${(y0 - yy).toFixed(2)}%` : `bottom:${y0.toFixed(2)}%;height:${(yy - y0).toFixed(2)}%`};${o ? '' : 'background:' + p.c};${x.date === dateH() ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i>`}</div><span>${fD(x.date)}</span></div>`; }).join('')}</div></div>
         <div class="db-leg">${PALIERS.map(p => `<span><i class="${p.c === 'or' ? 'or' : ''}" style="${p.c === 'or' ? '' : 'background:' + p.c}"></i>${p.l}</span>`).join('')}<span style="margin-left:auto"><i style="background:#fff;outline:2px solid #222;outline-offset:-1px"></i>jour lu dans « les heures »</span></div></div>`;
     }
+    P.mois = h;
+    return P;
+  }
+
+  /* --- La vue Jour en une page ---------------------------------------------
+   * Maquette A, retenue le 03/10/2026 : seize sections en quatre chapitres,
+   * une ligne chacune — la pastille du verdict, le titre, la valeur, la phrase
+   * qui la justifie, un mini-graphique — et la carte complète de la section
+   * dans une liste déroulante sous sa ligne. Des titres, pas des questions
+   * (demande du 03/10/2026). Une seule section ouverte à la fois : repliée,
+   * la journée tient dans une page A4. */
+  const A4_CHAP = [
+    ['ouv', 'Ouverture et contrôles', 'hier, les tâches, les photos, le stock'],
+    ['chiffre', 'Le chiffre du jour', 'les ventes, l’objectif, le résultat, le réseau'],
+    ['detail', 'Le détail des ventes', 'les canaux, les catégories, les offres, la poubelle'],
+    ['journee', 'La journée', 'les heures, l’équipe, le mois, la note'],
+  ];
+  const A4_VD = { ko: 'à reprendre', att: 'à surveiller', ok: 'en ordre', or: 'en ordre', neutre: 'pour information' };
+  /** La couleur d'un taux de marge brute, sur l'échelle des catégories. */
+  const a4Marge = t => { let c = MARGES[0].c; for (const p of MARGES) { if (t >= p.s) { c = p.c; } } return c === 'or' ? '#E2B93B' : c; };
+  const a4Barres = (vals, coul, haut) => { const H = haut || 22, mx = Math.max(1e-9, ...vals.map(v => Math.abs(v || 0))); return `<span class="a4-mv" style="height:${H}px">${vals.map((v, i) => `<i style="height:${Math.max(2, H * Math.abs(v || 0) / mx).toFixed(1)}px;background:${coul(v, i)}"></i>`).join('')}</span>`; };
+  const a4Pile = segs => `<span class="a4-pile">${segs.filter(x => x[0] > 0).map(([p, c, t]) => `<i style="width:${Math.min(100, p).toFixed(1)}%;background:${c}"${t ? ` title="${esc(t)}"` : ''}></i>`).join('')}</span>`;
+  const a4Cases = (cls, titres) => `<span class="a4-cases">${cls.map((c, i) => `<i class="${c}"${titres ? ` title="${esc(titres[i])}"` : ''}></i>`).join('')}</span>`;
+  const a4Jauge = (pct, repere) => `<span class="a4-jauge"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i>${repere != null ? `<b style="left:${Math.max(0, Math.min(100, repere)).toFixed(1)}%"></b>` : ''}</span>`;
+  function a4Points(vals, moi) {
+    const v = vals.filter(x => x != null && isFinite(x));
+    if (v.length < 2 || moi == null) { return ''; }
+    const mn = Math.min(...v), e = Math.max(...v) - mn, pos = x => e > 0 ? 4 + 92 * (x - mn) / e : 50;
+    let vu = false;
+    return `<span class="a4-pts">${v.map(x => { const me = !vu && x === moi; if (me) { vu = true; } return `<i class="${me ? 'moi' : ''}" style="left:${pos(x).toFixed(1)}%"></i>`; }).join('')}</span>`;
+  }
+  const a4Puce = (cls, t) => `<span class="a4-puce ${cls || ''}">${t}</span>`;
+  const a4Lect = (cle, txt) => ({ v: '…', s: S.err[cle] ? esc(S.err[cle]) : txt, vd: 'neutre', mini: '' });
+  const pl = (n, mot, motPl) => n + ' ' + (n > 1 ? (motPl || mot + 's') : mot);
+
+  /** Les seize lignes : le résumé de chaque section et sa carte complète. */
+  function a4Lignes(m, d, st, P, ks) {
+    const L = [];
+    const ajoute = (k, ch, t, x, corps) => L.push(Object.assign({ k, ch, t, corps: corps || '' }, x));
+    const kr = cleRes();
+    const attente = n => S.err[kr] ? `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>` : squelette(n || 2);
+    const resume = f => !m ? { v: d ? '—' : '…', s: d ? 'ce magasin n’est pas dans la réponse de Résultat' : (S.err[kr] ? esc(S.err[kr]) : 'lecture du résultat…'), vd: 'neutre', mini: '' } : f();
+    const LH = st && Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0 || x.poste > 0) : [];
+
+    /* 1. Ouverture et contrôles */
+    ajoute('nc', 'ouv', 'Non-conformités d’hier', (() => {
+      const cle = cleNC(), D = S.aux[cle];
+      if (!D) { return a4Lect(cle, 'lecture d’hier…'); }
+      if (D.indispo) { return { v: '—', s: 'les avis des contrôles ne sont pas lisibles', vd: 'neutre', mini: '' }; }
+      const N = ncLignes(), hier = esc(fDL(veille()));
+      if (!N.length) {
+        return { v: D.notees ? 'Aucune' : '—', s: hier + (D.notees ? ' · ' + pl(D.notees, 'tâche') + ' ' + (D.notees > 1 ? 'notées' : 'notée') + ', rien à reprendre' : ' · aucune tâche notée'),
+          vd: D.notees ? 'ok' : 'neutre', mini: D.notees ? a4Puce('ok', D.notees + ' notée' + (D.notees > 1 ? 's' : '') + ' · 0 à reprendre') : '' };
+      }
+      const ouv = N.filter(x => x.etat.c !== 'ok').length;
+      return { v: String(N.length), s: hier + ' · ' + (ouv ? `<b class="ko">${ouv} à reprendre</b>` : 'toutes reprises') + ' · ' + D.notees + ' notée' + (D.notees > 1 ? 's' : ''),
+        vd: ouv ? 'ko' : 'ok', mini: a4Cases(N.map(x => x.etat.c === 'ok' ? 'ok' : 'ko'), N.map(x => x.tache || '')) };
+    })(), rendNC());
+
+    ajoute('taches', 'ouv', 'Tâches du jour', (() => {
+      const cle = 'taches|' + S.date, D = S.aux[cle];
+      if (!D) { return a4Lect(cle, 'lecture du panel…'); }
+      const T = tachesJour(D);
+      if (!T.length) { return { v: '—', s: D.indispo ? 'panel injoignable' : 'aucune tâche pour ce magasin ce jour', vd: 'neutre', mini: '' }; }
+      const faite = t => t.statut !== 'nonRendue';
+      const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
+      const ctl = t => t.statut === 'aControler' || t.statut === 'aValider';
+      const nF = T.filter(faite).length, nB = T.filter(bloq).length, nC = T.filter(ctl).length, nA = T.length - nF - nB;
+      const dern = T.filter(t => t.faitLe).sort((a, b) => String(b.faitLe).localeCompare(String(a.faitLe)))[0];
+      const rg = t => faite(t) ? (ctl(t) ? 2 : 3) : (bloq(t) ? 0 : 1);
+      const O = T.slice().sort((a, b) => rg(a) - rg(b));
+      return { v: nF + ' / ' + T.length,
+        s: [nB ? `<b class="ko">${pl(nB, 'bloquante')} pas ${nB > 1 ? 'rendues' : 'rendue'}</b>` : '', nA > 0 ? nA + ' autre' + (nA > 1 ? 's' : '') + ' pas ' + (nA > 1 ? 'rendues' : 'rendue') : '', nC ? nC + ' à contrôler' : '',
+          dern ? 'dernière rendue à ' + esc(String(dern.faitLe).slice(11, 16)) + (dern.faitePar ? ' par ' + esc(dern.faitePar) : '') : ''].filter(Boolean).join(' · ') || 'toutes rendues',
+        vd: nB ? 'ko' : (nA ? 'att' : 'ok'), mini: a4Cases(O.map(t => faite(t) ? (ctl(t) ? 'ctl' : 'ok') : (bloq(t) ? 'ko' : 'att')), O.map(t => t.tache || '')) };
+    })(), rendTaches());
+
+    ajoute('photos', 'ouv', 'Contrôles en photo', (() => {
+      const Q = cqListe();
+      if (Q === null) { return a4Lect('taches|' + S.date, 'lecture des photos…'); }
+      if (!Q.length) { return { v: '—', s: 'aucun contrôle en photo ce jour', vd: 'neutre', mini: '' }; }
+      const n = c => Q.filter(x => x.e.c === c).length;
+      const rendues = Q.length - n('ko'), notees = Q.filter(x => x.note != null);
+      const moy = notees.length ? notees.reduce((a, x) => a + x.note, 0) / notees.length : null;
+      return { v: n('ok') + ' / ' + rendues,
+        s: [(n('ok') > 1 ? 'conformes' : 'conforme') + ' sur ' + pl(rendues, 'rendue'), n('nc') ? `<b class="ko">${pl(n('nc'), 'écart')}</b>` : '', n('ctl') ? n('ctl') + ' à contrôler' : '', n('ko') ? n('ko') + ' pas ' + (n('ko') > 1 ? 'rendues' : 'rendue') : '', moy != null ? 'moyenne ' + nf(moy, 1) + ' / 5' : ''].filter(Boolean).join(' · '),
+        vd: n('nc') ? 'ko' : (n('ctl') || n('ko') ? 'att' : 'ok'),
+        mini: a4Cases(Q.map(x => ({ ok: 'ok', nc: 'ko', ctl: 'ctl', ko: 'vide', mu: 'mu' })[x.e.c] || 'mu'), Q.map(x => cqNom(x))) };
+    })(), rendCQ(false));
+
+    ajoute('stock', 'ouv', 'Stock', (() => {
+      const E = stockEtat();
+      if (!E) { return a4Lect('stock|' + S.shop, 'lecture de l’inventaire…'); }
+      if (E.indispo) { return { v: '—', s: esc(E.motif), vd: 'neutre', mini: '' }; }
+      if (!E.n) { return { v: '—', s: 'pas d’inventaire dans le panel', vd: 'neutre', mini: '' }; }
+      return { v: E.alertes ? String(E.alertes) : (E.vieux ? E.jours + ' jours' : 'À jour'),
+        s: (E.alertes ? `<b class="ko">${E.alertes > 1 ? 'références' : 'référence'} sous le minimum</b>${E.ruptures ? ' · ' + E.ruptures + ' à zéro' : ''} · ` : (E.vieux ? 'inventaire non recompté · ' : '')) + stockSous(E),
+        vd: E.alertes ? 'ko' : (E.vieux ? 'att' : 'ok'),
+        mini: a4Puce(E.alertes ? 'ko' : (E.vieux ? 'att' : 'ok'), E.alertes ? E.alertes + ' en alerte' : (E.dernier ? 'compté le ' + fD(E.dernier.slice(0, 10)) : 'au complet')) };
+    })(), rendStock());
+
+    /* 2. Le chiffre du jour */
+    const TT = S.aux['tend|' + S.shop + '|' + S.date], TJ = TT && Array.isArray(TT.jours) ? TT.jours : [];
+    ajoute('ventes', 'chiffre', 'Ventes du jour', resume(() => {
+      const der = TJ.length ? TJ[TJ.length - 1] : null, dp = der && der.ca ? 100 * (m.ca - der.ca) / der.ca : null;
+      const mx = Math.max(0, ...LH.map(x => x.ca));
+      return { v: fK(m.ca),
+        s: [fN(m.tickets) + ' clients' + j7Delta(m), 'panier ' + fU(m.panier), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> face au ${esc(fD(der.date))}` : '',
+          m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? 'projection ' + fK(m.projection) : ''].filter(Boolean).join(' · '),
+        vd: 'neutre', mini: LH.length ? a4Barres(LH.map(x => x.ca), v => v === mx ? 'var(--color-primary)' : '#cfa3a9') : '' };
+    }), m ? P.tuiles : attente(1));
+
+    ajoute('objectif', 'chiffre', 'Objectif du jour', resume(() => {
+      if (!m.objectifJour) { return { v: '—', s: 'pas d’objectif du jour', vd: 'neutre', mini: '' }; }
+      const att = 100 * m.ca / m.objectifJour, ec = m.ca - m.objectifJour;
+      const R = S.aux['record|' + S.shop + '|' + S.date];
+      const attendu = m.projectionPart != null ? m.projectionPart : 100;
+      return { v: fP(att),
+        s: 'objectif ' + fK(m.objectifJour) + ' · ' + (ec >= 0 ? 'dépassé de <b>' + fK(ec) + '</b>' : 'il manque <b>' + fK(-ec) + '</b>' + (attendu < 100 ? ' · ' + fP(attendu) + ' de la journée écoulée' : ''))
+          + (R && R.meilleur ? ' · record des ' + esc(R.nom || 'jour') + 's : ' + fK(R.meilleur.ca) + ' le ' + esc(fD(R.meilleur.date)) : ''),
+        vd: ec >= 0 ? 'or' : (att >= attendu * 0.95 ? 'ok' : 'att'), mini: a4Jauge(att / 1.2, 100 / 1.2) };
+    }), (m ? P.objectif || '' : attente(1)) + objectifsCarte(false));
+
+    const se = (d && d.seuils) || {};
+    ajoute('resultat', 'chiffre', 'Résultat net', resume(() => {
+      if (m.net == null) { return { v: '—', s: esc(m.motifNet || 'P&L incomplet'), vd: 'neutre', mini: '' }; }
+      const trop = (v, s) => v != null && s != null && v > s;
+      return { v: fSK(m.net),
+        s: [fP(m.netPct) + ' des ventes', 'matière ' + (trop(m.coutMatierePct, se.food) ? `<b class="wa">${fP(m.coutMatierePct)}</b> pour un seuil de ${fP(se.food)}` : fP(m.coutMatierePct)),
+          'main-d’œuvre ' + (trop(m.labourPct, se.labour) ? `<b class="wa">${fP(m.labourPct)}</b>` : fP(m.labourPct)), 'frais ' + (trop(m.overheadPct, se.overhead) ? `<b class="wa">${fP(m.overheadPct)}</b>` : fP(m.overheadPct)),
+          m.invendus ? 'poubelle ' + fK(m.invendus) : ''].filter(Boolean).join(' · '),
+        vd: m.netPct >= 15 ? 'ok' : (m.netPct >= 5 ? 'att' : 'ko'),
+        mini: a4Pile([[m.coutMatierePct || 0, '#e5c9a0', 'matière'], [m.invendusPct || 0, '#8a5a2b', 'poubelle'], [m.labourPct || 0, '#D97706', 'main-d’œuvre'], [m.overheadPct || 0, '#C0182B', 'frais généraux'], [Math.max(0, m.netPct || 0), '#2d7a3e', 'résultat']]) };
+    }), m ? P.pnl : attente(2));
+
+    ajoute('reseau', 'chiffre', 'Place dans le réseau', resume(() => {
+      const R = (d.magasins || []).filter(x => x.ouvert !== false);
+      if (R.length < 2) { return { v: '—', s: 'un seul magasin ouvert', vd: 'neutre', mini: '' }; }
+      const rang = k => { const v = R.map(x => x[k]).filter(x => x != null && isFinite(x)).sort((a, b) => b - a); return m[k] == null || !v.length ? null : v.findIndex(x => x <= m[k]) + 1; };
+      const ord = n => n === 1 ? '1er' : n + 'e';
+      const rCa = rang('ca');
+      const premiers = [['clients', 'tickets'], ['panier', 'panier'], ['marge brute', 'margeBrutePct'], ['résultat net', 'netPct']].filter(([, k]) => rang(k) === 1).map(([l]) => l);
+      const tete = R.map(x => x.ca).filter(x => x != null).sort((a, b) => b - a)[0];
+      return { v: rCa ? ord(rCa) + ' / ' + R.length : '—',
+        s: 'en chiffre d’affaires sur ' + R.length + ' magasins ouverts' + (premiers.length ? ' · <b>1er en ' + premiers.join(', ') + '</b>' : '') + (rCa > 1 ? ' · le 1er vend ' + fK(tete) : '') + ' · anonyme',
+        vd: rCa === 1 ? 'or' : 'neutre', mini: a4Points(R.map(x => x.ca), m.ca) };
+    }), m && d ? rendBench(m, d) : attente(1));
+
+    /* 3. Le détail des ventes */
+    ajoute('canaux', 'detail', 'Commandes et canaux', (() => {
+      const C = canauxData(), cle = cleCanaux();
+      if (!C) { return a4Lect(cle, 'lecture des commandes…'); }
+      if (C.indispo) { return { v: '—', s: 'panel muet', vd: 'neutre', mini: '' }; }
+      const J = C.jour, cc = J.cc || { n: 0, ca: 0 }, lv = J.liv || { n: 0, ca: 0 }, tot = (J.comptoir || 0) + (cc.ca || 0) + (lv.ca || 0);
+      const pc = tot ? 100 * (J.comptoir || 0) / tot : null;
+      return { v: pc != null ? nf(pc, 0) + ' % comptoir' : '—',
+        s: [cc.n ? 'click & collect ' + fK(cc.ca) + ' (' + cc.n + ')' : 'pas de click & collect', lv.n ? 'livraison ' + fK(lv.ca) + ' (' + lv.n + ')' : '', m && m.caPro ? 'clients pro ' + fK(m.caPro) : '',
+          C.aPreparer ? `<b class="wa">${C.aPreparer} à préparer</b>` : '', C.demain && C.demain.n ? 'demain : ' + pl(C.demain.n, 'commande') + ' (' + fK(C.demain.ca) + ')' : ''].filter(Boolean).join(' · '),
+        vd: C.aPreparer ? 'att' : 'neutre', mini: tot ? a4Pile([[pc, '#b8ad9f', 'comptoir'], [100 * (cc.ca || 0) / tot, '#1f5f8b', 'click & collect'], [100 * (lv.ca || 0) / tot, '#0f3b5c', 'livraison']]) : '' };
+    })(), m ? P.split : attente(1));
+
+    ajoute('categories', 'detail', 'Ventes par catégorie', (() => {
+      if (!st) { return a4Lect(ks, 'lecture des tickets…'); }
+      const G = {};
+      (st.categories || []).filter(c => c.v > 0).forEach(c => {
+        const g = String(c.groupe || c.nom || 'Autres').split(' · ')[0];
+        const x = G[g] || (G[g] = { nom: g, v: 0, m: 0, c: 0, inc: false });
+        x.v += c.v; if (c.c == null || c.m == null) { x.inc = true; } else { x.m += c.m; x.c += c.c; }
+      });
+      const Gs = Object.values(G).sort((a, b) => b.v - a.v), tot = Gs.reduce((a, x) => a + x.v, 0);
+      if (!Gs.length || !tot) { return { v: '—', s: 'pas de ventilation par catégorie pour ce jour', vd: 'neutre', mini: '' }; }
+      const C = Gs.filter(x => !x.inc && x.c), mb = C.reduce((a, x) => a + x.m, 0), caC = C.reduce((a, x) => a + x.v, 0);
+      const pc = x => nf(100 * x.v / tot, 0) + ' %';
+      return { v: esc(Gs[0].nom),
+        s: pc(Gs[0]) + ' du CA' + (Gs[1] ? ' · puis ' + esc(Gs[1].nom.toLowerCase()) + ' ' + pc(Gs[1]) : '') + (Gs[2] ? ' et ' + esc(Gs[2].nom.toLowerCase()) + ' ' + pc(Gs[2]) : '') + (caC ? ' · marge brute ' + nf(100 * mb / caC, 0) + ' %' : ''),
+        vd: 'neutre', mini: a4Pile(Gs.map(x => [100 * x.v / tot, x.inc || !x.c ? '#B9B2A8' : a4Marge(100 * x.m / x.v), x.nom])) };
+    })(), m ? P.categories : attente(3));
+
+    ajoute('offres', 'detail', 'Promotions et bundles', (() => {
+      const O = offresData(), cle = cleOffres(), PR = promoListe();
+      if (!O) { return a4Lect(cle, 'lecture des tickets…'); }
+      const K = O.kpi || {};
+      const jc = PR.length ? pl(PR.length, 'promotion') + ' de jour creux en cours' : '';
+      if (!O.offres.length) {
+        return { v: PR.length ? String(PR.length) : 'Aucune', s: [jc, 'pas de bundle vendu' + (PR.length ? '' : ', pas de promotion posée dans le cockpit')].filter(Boolean).join(' · '),
+          vd: 'neutre', mini: a4Puce('', PR.length ? 'jours creux' : 'rien en cours') };
+      }
+      const nV = O.offres.filter(o => (o.auj || {}).ca > 0 || (o.auj || {}).pieces > 0).length;
+      return { v: fK(K.caJour),
+        s: [pl(nV, 'offre') + ' ' + (nV > 1 ? 'vendues' : 'vendue') + ' ' + ceJour() + ' sur ' + O.offres.length, pl(K.bundles || 0, 'bundle') + ', ' + pl(K.promos || 0, 'promo'), K.aAjuster ? `<b class="wa">${K.aAjuster} à ajuster</b>` : '', jc].filter(Boolean).join(' · '),
+        vd: K.aAjuster ? 'att' : 'ok', mini: a4Puce(K.aAjuster ? 'att' : 'ok', O.offres.length + ' en cours') };
+    })(), offresCarte() + promosCarte(false));
+
+    ajoute('invendus', 'detail', 'Invendus et poubelle', (() => {
+      const I = invData(), cle = cleInv();
+      if (!I) { return a4Lect(cle, 'lecture de la poubelle…'); }
+      if (!I.lu) { return { v: '—', s: 'le panel ne rend pas la poubelle', vd: 'neutre', mini: '' }; }
+      if (!I.declare) {
+        return { v: '0 €', s: 'rien déclaré au panel ' + ceJour() + (S.date === AUJ ? ' · à encoder avant la fermeture' : '') + ' · le coût de ce qui est jeté se retranche du résultat', vd: 'att', mini: a4Puce('att', 'pas déclaré') };
+      }
+      const pc = m && m.ca ? 100 * I.cout / m.ca : null;
+      const vd = pc == null ? 'att' : (pc > 5 ? 'ko' : (pc > 2 ? 'att' : 'ok'));
+      return { v: fK(I.cout), s: [fN(I.pieces) + ' pièce' + (I.pieces > 1 ? 's jetées' : ' jetée'), fK(I.caPerdu) + ' de valeur de vente', pc != null ? fP(pc) + ' du CA' : ''].filter(Boolean).join(' · '),
+        vd, mini: a4Puce(vd === 'ok' ? '' : vd, fN(I.pieces) + ' pièce' + (I.pieces > 1 ? 's' : '') + ' jetée' + (I.pieces > 1 ? 's' : '')) };
+    })(), invCarte(false));
+
+    /* 4. La journée */
+    const autreJ = !!S.jourH && S.jourH !== S.date;
+    const corpsHeures = (autreJ ? `<div class="db-a4-ret">Les heures du ${esc(fDL(dateH()))}<button class="db-btn" data-jh="">↩ revenir au ${esc(fD(S.date))}</button></div>` : '')
+      + (S.err[ks] ? `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? ' — nouvelle lecture dans quelques secondes' : ''}</div>` : '')
+      + (st && st.produits && st.produits.aSuivre ? `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>` : '')
+      + (!st ? (S.err[ks] ? '' : squelette(4)) : rendHeures(st));
+    ajoute('heures', 'journee', 'Les heures', (() => {
+      if (!st) { return a4Lect(ks, 'lecture des heures…'); }
+      const V = (st.heures || []).filter(x => x.ca > 0);
+      if (!V.length || !st.meilleure) { return { v: '—', s: 'pas d’heure vendue ' + (autreJ ? 'le ' + esc(fD(dateH())) : 'ce jour'), vd: 'neutre', mini: '' }; }
+      const t = st.totaux || {}, b = st.meilleure, p = st.pire;
+      return { v: b.h + ' – ' + (b.h + 1) + ' h',
+        s: (autreJ ? '<b>lu le ' + esc(fD(dateH())) + '</b> · ' : '') + fSK(b.res) + ' de marge nette' + (p && p.h !== b.h ? ' · la moins bonne : ' + p.h + ' – ' + (p.h + 1) + ' h (' + fSK(p.res) + ')' : '') + ' · ' + fSK(t.res) + ' sur la journée',
+        vd: t.resPct == null ? 'neutre' : (t.resPct >= 20 ? 'ok' : (t.resPct >= 0 ? 'att' : 'ko')),
+        mini: a4Barres(V.map(x => x.res), v => v < 0 ? '#C0182B' : (v === b.res ? '#1f5e2e' : '#8fbf9a')) };
+    })(), corpsHeures);
+
+    ajoute('equipe', 'journee', 'Qui est en poste', resume(() => {
+      const seuil = (d.seuils && d.seuils.labour) || 33, plan = Array.isArray(m.planning) ? m.planning : [];
+      if (m.labourPct == null && !plan.length) { return { v: '—', s: 'pas de planning dans le panel', vd: 'neutre', mini: '' }; }
+      const rouges = LH.filter(x => x.trav > x.ca * seuil / 100).map(x => x.h + ' h');
+      return { v: m.labourPct != null ? fP(m.labourPct) : '—',
+        s: ['du CA en coût du personnel, seuil ' + seuil + ' %', pl(plan.length, 'personne') + (m.planningHeures != null ? ', ' + nf(m.planningHeures, 1) + ' h' : ''), rouges.length ? 'au-dessus du seuil : ' + rouges.join(', ') : 'aucune heure au-dessus du seuil'].join(' · '),
+        vd: m.labourPct == null ? 'neutre' : (m.labourPct <= seuil ? 'ok' : (m.labourPct <= seuil * 1.3 ? 'att' : 'ko')),
+        mini: LH.length ? a4Cases(LH.map(x => !x.ca ? 'mu' : (x.trav > x.ca * seuil / 100 ? 'ko' : 'okc')), LH.map(x => x.h + ' h · ' + (x.ca ? fP(100 * x.trav / x.ca) : '—'))) : '' };
+    }), m ? P.poste : attente(1));
+
+    ajoute('mois', 'journee', 'Le jour dans le mois', resume(() => {
+      const J = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert && x.netPct != null) : [];
+      const moi = J.find(x => x.date === S.date);
+      if (!moi) { return { v: '—', s: 'pas de marge nette pour ce jour', vd: 'neutre', mini: '' }; }
+      const rang = J.slice().sort((a, b) => b.netPct - a.netPct).findIndex(x => x.date === S.date) + 1;
+      const cumN = J.reduce((a, x) => a + (x.net || 0), 0), cumC = J.reduce((a, x) => a + (x.ca || 0), 0);
+      return { v: J.length < 2 ? '1er jour' : (rang === 1 ? 'Le meilleur' : rang + 'e sur ' + J.length),
+        s: fP(moi.netPct) + ' de marge nette · ' + (J.length < 2 ? 'premier jour ouvert du mois' : (rang === 1 ? 'meilleur' : rang + 'e') + ' des ' + J.length + ' jours ouverts du mois') + ' · ' + fK(cumN) + ' cumulés sur ' + fK(cumC) + ' de ventes',
+        vd: moi.netPct >= 40 ? 'or' : (moi.netPct >= 10 ? 'ok' : (moi.netPct >= 0 ? 'att' : 'ko')),
+        mini: a4Barres(J.map(x => x.netPct), (v, i) => J[i].date === S.date ? (v >= 40 ? '#E2B93B' : 'var(--color-text)') : (v < 0 ? '#C0182B' : '#9cc5a6')) };
+    }), m ? P.mois : attente(1));
+
+    ajoute('note', 'journee', 'Note du jour', (() => {
+      const cle = cleNote(), N = S.aux[cle];
+      if (!N) { return a4Lect(cle, 'lecture…'); }
+      const nt = N.note ? N.note.texte : '', n1 = N.n1 && Array.isArray(N.n1.notes) ? N.n1.notes.length : 0;
+      return { v: nt ? 'Écrite' : 'Pas de note',
+        s: nt ? esc(nt.length > 110 ? nt.slice(0, 110) + '…' : nt) + (N.note.par ? ' · ' + esc(N.note.par) : '')
+          : 'ce qui explique la journée, relu l’an prochain la même semaine' + (n1 ? ' · ' + pl(n1, 'note') + ' la même semaine l’an dernier' : ''),
+        vd: nt ? 'ok' : 'att', mini: a4Puce(nt ? 'ok' : 'att', nt ? '✎ écrite' : '✎ à écrire') };
+    })(), noteCarte(false));
+    return L;
+  }
+
+  function rendJourA4(m, d, st, ks) {
+    const P = m && d ? jourPieces(m, d, st) : {};
+    const L = a4Lignes(m, d, st, P, ks);
+    if (S.a4 && !L.some(x => x.k === S.a4)) { S.a4 = null; }
+    const n = v => L.filter(x => x.vd === v).length;
+    const puce = (cls, k, t) => k ? `<span class="a4-puce ${cls}"><i class="a4-vd ${cls}"></i>${k} ${t}</span>` : '';
+    let h = `<div class="db-a4c"><b>${L.length} sections</b>${puce('ko', n('ko'), 'à reprendre')}${puce('att', n('att'), 'à surveiller')}${puce('ok', n('ok') + n('or'), 'en ordre')}${puce('', n('neutre'), 'pour information')}<span class="sp"></span><span>un clic sur une ligne ouvre la section · un second clic la replie</span></div>`;
+    A4_CHAP.forEach(([c, t, s], i) => {
+      h += `<div class="db-a4h"><span class="n">${i + 1}</span><span class="t">${t}</span><small>${s}</small></div><div class="db-a4">`;
+      L.filter(x => x.ch === c).forEach(x => {
+        const on = S.a4 === x.k;
+        h += `<div class="db-a4l${on ? ' on' : ''}" data-a4="${x.k}" role="button" tabindex="0" aria-expanded="${on}"><i class="a4-vd ${x.vd}" title="${A4_VD[x.vd]}"></i><span class="t">${x.t}</span><span class="v ${x.vd}">${x.v}</span><span class="s">${x.s}</span><span class="mi">${x.mini || ''}</span><span class="fl">▾</span></div>`;
+        if (on) { h += `<div class="db-a4d">${x.corps || '<div class="db-note" style="padding:4px 4px 12px">Rien de plus à montrer pour ce jour.</div>'}</div>`; }
+      });
+      h += '</div>';
+    });
     return h;
+  }
+  /** Après un clic : la ligne ouverte reste sous les yeux, même si celle qui se referme était au-dessus. */
+  function a4Viser() {
+    if (!S.a4Vise) { return; }
+    S.a4Vise = false;
+    const r = $.querySelector('.db-a4l.on');
+    if (r) { const b = r.getBoundingClientRect(); if (b.top < 0 || b.top > window.innerHeight - 120) { r.scrollIntoView({ block: 'start' }); } }
   }
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
@@ -3678,7 +3973,13 @@
       S.ncLigne = S.ncLigne === b.dataset.ncrow ? null : b.dataset.ncrow; rendre(); }));
     $.querySelectorAll('[data-ncgrp]').forEach(b => b.addEventListener('click', () => {
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
-    $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
+    // Un jour cliqué dans « le jour dans le mois » se lit dans « les heures » : la vue en lignes ouvre celles-ci.
+    $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; if (S.a4 === 'mois' && S.jourH) { S.a4 = 'heures'; S.a4Vise = true; } charger(false); }));
+    $.querySelectorAll('[data-a4]').forEach(b => {
+      const basculer = () => { S.a4 = S.a4 === b.dataset.a4 ? null : b.dataset.a4; S.a4Vise = true; rendre(); };
+      b.addEventListener('click', basculer);
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); } });
+    });
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
     ppBrancher();
