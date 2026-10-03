@@ -35,7 +35,7 @@ function ep_exploitation_invendus_sonde(): array
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d', strtotime('-1 day')); }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
     @set_time_limit(120);
-    $out = ['shop' => $sid, 'date' => $date];
+    $out = ['shop' => $sid, 'date' => $date, 'prefixe' => (string) (parse_url((string) (PanelApi::config()['base'] ?? ''), PHP_URL_PATH) ?: '/')];
     $q = http_build_query(['from' => $date, 'date_from' => $date, 'to' => $date, 'date_to' => $date]);
     $w = PanelApi::sondeGet('/shops/' . $sid . '/products/waste?' . $q, 20);
     $out['waste'] = ['code' => $w['code'], 'corps' => invScrub($w['corps'])];
@@ -58,12 +58,12 @@ function ep_exploitation_invendus_sonde(): array
     if ($extra !== '') {
         $cands = [];
         foreach (array_slice(array_filter(array_map('trim', explode(',', $extra))), 0, 30) as $e) {
-            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
+            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|(\.\./){0,3}(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
         }
     }
     // `texte` : une page lue telle quelle (documentation) ; `spec` : un document OpenAPI dont on liste les chemins.
     $texte = (string) ($_GET['texte'] ?? '');
-    if ($texte !== '' && preg_match('#^/(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*(\?[A-Za-z0-9_=&\-%.]*)?$#', $texte)) {
+    if ($texte !== '' && preg_match('#^/(\.\./){0,3}(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*(\?[A-Za-z0-9_=&\-%.]*)?$#', $texte)) {
         $t = PanelApi::sondeTexte($texte);
         $out['texte'] = ['chemin' => $texte, 'code' => $t['code'], 'longueur' => $t['texte'] === null ? null : mb_strlen($t['texte']),
             'urls' => $t['texte'] === null ? [] : array_values(array_unique(array_slice(preg_match_all('#["\']([^"\' ]*(?:swagger|openapi|spec|api-docs|\.json|\.yaml)[^"\' ]*)["\']#i', $t['texte'], $m) ? $m[1] : [], 0, 40))),
