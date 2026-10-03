@@ -267,6 +267,8 @@ function coOffresMagasin(int $sid, string $date, string $periode, int &$cout, fl
         $sept7Lus = count(array_filter($sept, static fn ($j) => isset($lus[$j])));
         $refParJour = $refLus > 0 && $qR > 0 ? $qR / $refLus : null;
         $delta = ($refParJour !== null && $sept7Lus > 0) ? round(100 * (($q7 / $sept7Lus) - $refParJour) / $refParJour, 1) : null;
+        // Un bundle qui n'a rien vendu ni sur la période ni sur 7 jours n'est plus une offre en cours.
+        if ($qP <= 0 && $q7 <= 0) { continue; }
         [$verdict, $lib] = coVerdictBundle(count(array_filter($joursVendus, static fn ($j) => $j >= $sept[0])), $delta, $marge);
         $mot = $delta !== null ? 'de pièces par jour face aux 4 semaines d’avant'
             : ($depuis !== null && $depuis >= $refJours[0] ? 'nouveau : pas de référence' : 'pas de vente sur les 4 semaines d’avant');
