@@ -863,7 +863,7 @@ function ep_production_flux_sonde(): array
 const PF_FOURS_MAX = 6;
 const PF_OPS_MAX = 12;
 const PF_ETAPES_MAX = 8;
-const PF_CHAUFFE = 10;   // minutes pour changer la température d'un four
+const PF_CHAUFFE = 10;   // minutes pour changer la température d'un four, par défaut (réglable four par four)
 
 /**
  * Les étapes proposées d'une catégorie (demande du 03/10/2026 : production et finition, avant ou
@@ -917,8 +917,8 @@ function pfFoursParams(int $sid, array $gpCats): array
     $s = setting('pfFours:' . $sid);
     $s = is_array($s) ? $s : [];
     $fours = [];
-    foreach ((array) ($s['fours'] ?? []) as $f) { if (is_array($f) && isset($f['id'])) { $fours[] = ['id' => (string) $f['id'], 'nom' => (string) ($f['nom'] ?? $f['id']), 'plaques' => max(1, (int) ($f['plaques'] ?? 10))]; } }
-    if ($fours === []) { $fours = [['id' => 'f1', 'nom' => 'Four 1', 'plaques' => 10]]; }
+    foreach ((array) ($s['fours'] ?? []) as $f) { if (is_array($f) && isset($f['id'])) { $fours[] = ['id' => (string) $f['id'], 'nom' => (string) ($f['nom'] ?? $f['id']), 'plaques' => max(1, (int) ($f['plaques'] ?? 10)), 'chauffe' => max(0, (int) ($f['chauffe'] ?? PF_CHAUFFE))]; } }
+    if ($fours === []) { $fours = [['id' => 'f1', 'nom' => 'Four 1', 'plaques' => 10, 'chauffe' => PF_CHAUFFE]]; }
     $ids = array_column($fours, 'id');
     $cc = gpCatalogue()['categories'];
     $cats = [];
@@ -961,7 +961,9 @@ function pfFoursValider(array $p): array
         $id = preg_match('/^f\d{1,2}$/', (string) ($x['id'] ?? '')) && !isset($vus[(string) $x['id']]) ? (string) $x['id'] : null;
         if ($id === null) { $n = 1; while (isset($vus['f' . $n])) { $n++; } $id = 'f' . $n; }
         $vus[$id] = true;
-        $fours[] = ['id' => $id, 'nom' => $nom, 'plaques' => (int) $pl];
+        $ch = $x['chauffe'] ?? PF_CHAUFFE;
+        if (!is_numeric($ch) || (int) $ch < 0 || (int) $ch > 120) { return [false, 'chauffe invalide pour « ' . $nom . ' » (0 à 120 min)', null]; }
+        $fours[] = ['id' => $id, 'nom' => $nom, 'plaques' => (int) $pl, 'chauffe' => (int) $ch];
     }
     $cats = [];
     foreach ((array) ($p['categories'] ?? []) as $k => $x) {
@@ -1135,7 +1137,7 @@ function pfEquipe(array $plan, array $G, array $F): array
  * les cuissons par température). Les plaques d'une catégorie = ses pièces de la cuisson ÷ pièces
  * par plaque, arrondi au-dessus. Une fournée réunit les catégories d'un four à la même température
  * (chacune sort à sa durée, la fournée dure la plus longue) ; la plus chaude d'abord ; changer la
- * température d'un four coûte PF_CHAUFFE minutes. Les catégories « répartir » partagent leurs
+ * température d'un four coûte sa chauffe (réglée four par four, PF_CHAUFFE minutes par défaut). Les catégories « répartir » partagent leurs
  * plaques par température, fournée pleine par fournée pleine, au four qui la sortirait le plus tôt
  * — celui qui est déjà à cette température passe devant. Les fournées d'une cuisson s'enchaînent
  * pour finir à l'ouverture de sa vente (plus tôt quand une finition suit la cuisson), jamais avant
@@ -1144,9 +1146,8 @@ function pfEquipe(array $plan, array $G, array $F): array
  */
 function pfGantt(array $plan, array $F): array
 {
-    $fours = []; foreach ($F['fours'] as $f) { $fours[$f['id']] = $f + ['fournees' => [], 'occupation' => 0, 'plaquesTot' => 0, 'libre' => null, 'temp' => null]; }
+    $fours = []; foreach ($F['fours'] as $f) { $fours[$f['id']] = $f + ['chauffe' => PF_CHAUFFE] + ['fournees' => [], 'occupation' => 0, 'plaquesTot' => 0, 'libre' => null, 'temp' => null]; }
     $hors = []; $retards = 0; $entree = [];
-    $chauffe = PF_CHAUFFE / 60;
     foreach ($plan as $c) {
         $de = gpHeure($c['de']); if ($de === null) { continue; }
         $au = gpHeure($c['four'] ?? null);
@@ -1177,7 +1178,7 @@ function pfGantt(array $plan, array $F): array
             foreach ($fours as $fid => $f) {
                 $m = 0.0; $ts = array_keys($grp[$fid] ?? []);
                 foreach ($grp[$fid] ?? [] as $cats) { $m += (int) ceil(array_sum(array_column($cats, 'plaques')) / max(1, $f['plaques'])) * max(array_column($cats, 'duree')); }
-                $charge[$fid] = $m + max(0, count($ts) - 1) * PF_CHAUFFE;
+                $charge[$fid] = $m + max(0, count($ts) - 1) * (int) $f['chauffe'];
                 // Un four sans fournée encore pour cette cuisson reste à la température de la précédente.
                 $temps[$fid] = $ts !== [] ? $ts : ($f['temp'] !== null ? [$f['temp']] : []);
             }
@@ -1196,7 +1197,7 @@ function pfGantt(array $plan, array $F): array
                     $choix = null; $score = null; $poidsF = 0;
                     foreach ($fours as $fid => $f) {
                         $pf = (int) ceil(array_sum(array_column($cats, 'plaques')) / max(1, $f['plaques'])) * max(array_column($cats, 'duree'));
-                        $chg = $temps[$fid] !== [] && !in_array($temp, $temps[$fid], true) ? PF_CHAUFFE : 0;
+                        $chg = $temps[$fid] !== [] && !in_array($temp, $temps[$fid], true) ? (int) $f['chauffe'] : 0;
                         $sc = $charge[$fid] + $pf + $chg - $fenetre((string) $fid);
                         if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; $poidsF = $pf + $chg; }
                     }
@@ -1216,7 +1217,7 @@ function pfGantt(array $plan, array $F): array
                     $choix = null; $score = null;
                     foreach ($fours as $fid => $f) {
                         // Un four qui n'est pas encore à cette température paie la chauffe.
-                        $chg = $temps[$fid] !== [] && !in_array($temp, $temps[$fid], true) ? PF_CHAUFFE : 0;
+                        $chg = $temps[$fid] !== [] && !in_array($temp, $temps[$fid], true) ? (int) $f['chauffe'] : 0;
                         $sc = $charge[$fid] + $cats[min($i, count($cats) - 1)]['duree'] + $chg - $fenetre((string) $fid);
                         if ($score === null || $sc < $score - 1e-9) { $score = $sc; $choix = (string) $fid; }
                     }
@@ -1233,7 +1234,7 @@ function pfGantt(array $plan, array $F): array
                         if ($x['reste'] <= 0) { $i++; }
                         unset($x);
                     }
-                    $charge[$choix] += $dmax + ($temps[$choix] !== [] && !in_array($temp, $temps[$choix], true) ? PF_CHAUFFE : 0);
+                    $charge[$choix] += $dmax + ($temps[$choix] !== [] && !in_array($temp, $temps[$choix], true) ? (int) $fours[$choix]['chauffe'] : 0);
                     if (!in_array($temp, $temps[$choix], true)) { $temps[$choix][] = $temp; }
                 }
             }
@@ -1271,13 +1272,14 @@ function pfGantt(array $plan, array $F): array
             // Au plus tard pour sortir à la cible ; la chauffe entre deux températures (et depuis la
             // cuisson précédente) compte ; jamais avant l'heure « au four » ni avant que le four soit libre.
             $tot = 0.0; $prev = $fours[$fid]['temp'];
-            foreach ($fn as $x) { $tot += $x['duree'] / 60 + ($prev !== null && $prev !== $x['temp'] ? $chauffe : 0.0); $prev = $x['temp']; }
+            $chauffe = (int) $fours[$fid]['chauffe'];
+            foreach ($fn as $x) { $tot += ($x['duree'] + ($prev !== null && $prev !== $x['temp'] ? $chauffe : 0)) / 60; $prev = $x['temp']; }
             $t = $cible - $tot;
             if ($au !== null && $t < $au) { $t = $au; }
             if ($fours[$fid]['libre'] !== null && $t < $fours[$fid]['libre']) { $t = $fours[$fid]['libre']; }
             $prev = $fours[$fid]['temp'];
             foreach ($fn as $x) {
-                $ch = $prev !== null && $prev !== $x['temp'] ? PF_CHAUFFE : 0;
+                $ch = $prev !== null && $prev !== $x['temp'] ? $chauffe : 0;
                 $t += $ch / 60;
                 $fin = $t + $x['duree'] / 60;
                 $ret = (int) round(max(0.0, $fin - $cible) * 60);
@@ -1320,7 +1322,7 @@ function pfGantt(array $plan, array $F): array
         foreach ($f['fournees'] as $x) { $rmax = max($rmax, (int) $x['retard']); }
         $out[] = $f;
     }
-    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'retardMax' => $rmax, 'chauffe' => PF_CHAUFFE, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
+    return ['fours' => $out, 'horsFour' => array_values($hors), 'retards' => $retards, 'retardMax' => $rmax, 'axe' => ['de' => (int) floor($d ?? 5), 'a' => (int) ceil($a ?? 19)],
         'fenetre' => $pd !== null ? ['de' => gpHhmm($pd), 'a' => gpHhmm($pa), 'minutes' => $fen] : null, 'entree' => $entree];
 }
 
