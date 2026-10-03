@@ -260,7 +260,7 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
  */
 function gpCommandes(int $sid, string $date): ?array
 {
-    $cle = 'ppCmd:' . $sid . ':' . $date;
+    $cle = 'ppCmd2:' . $sid . ':' . $date;
     $c = setting($cle);
     if (is_array($c) && isset($c['l']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_CMD) { return $c['l']; }
     $ancien = is_array($c) && isset($c['l']) ? $c['l'] : null;
@@ -284,7 +284,11 @@ function gpCommandes(int $sid, string $date): ?array
             $q = 1.0; foreach (['quantity', 'qty', 'amount'] as $k) { if (isset($pp[$k]) && is_numeric($pp[$k]) && (float) $pp[$k] > 0) { $q = (float) $pp[$k]; break; } }
             $lignes[] = [$pid, round($q, 3)];
         }
-        $out[] = ['heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt', 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'lignes' => $lignes, 'sansDetail' => $lignes === []];
+        $prem = is_array($o['products'] ?? null) && $o['products'] !== [] ? reset($o['products']) : null;
+        $out[] = ['heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt', 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'lignes' => $lignes, 'sansDetail' => $lignes === [],
+            'nArticles' => is_array($o['products'] ?? null) ? count($o['products']) : 0,
+            // Diagnostic : les CLÉS d'un article quand aucune ligne n'est reconnue (jamais les valeurs).
+            'clesArticle' => $lignes === [] && is_array($prem) ? array_slice(array_keys($prem), 0, 30) : (is_scalar($prem) ? ['(scalaire)'] : null)];
     }
     usort($out, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
     gpEcrire($cle, ['ts' => time(), 'l' => $out]);
@@ -374,7 +378,7 @@ function gpValider(array $p): array
 /** Arrondi à la plaque : [plaques|null, pièces à sortir]. */
 function gpArrondi(float $aCuire, ?int $plaque, int $minPlaques): array
 {
-    if ($aCuire <= 1e-6) { return [$plaque ? 0 : null, 0]; }
+    if ($aCuire < 0.5) { return [$plaque ? 0 : null, 0]; }
     if (!$plaque) { return [null, (int) ceil($aCuire - 1e-6)]; }
     $n = max($minPlaques, (int) ceil($aCuire / $plaque - 1e-6));
     return [$n, $n * $plaque];
@@ -495,7 +499,7 @@ function gpSuivi(array $params, array $base, array $cmds, array $plan, array $ve
         if ($lim !== null && $now >= $lim) { $v = 'tard'; }
         elseif ($besoin > 0 && 100 * $couv >= (float) $R['seuilTrop']) { $v = 'trop'; }
         elseif ($besoin <= 0 && $stock > 0) { $v = 'trop'; }
-        elseif (100 * $couv >= (float) $R['seuilRecuisson'] || $sortie === 0) { $v = 'tient'; }
+        elseif (100 * $couv >= (float) $R['seuilRecuisson'] || $sortie === 0 || $besoin < 0.5) { $v = 'tient'; }
         else { $v = 'recuire'; }
         if ($v !== 'recuire') { $pl = $cfg['plaque'] ? 0 : null; $sortie = 0; }
         $L[] = ['pid' => (int) $pid, 'nom' => $lp['nom'], 'cat' => $lp['cat'], 'catCle' => $lp['catCle'], 'h' => $h, 'plaque' => $cfg['plaque'], 'limite' => $cfg['limite'],
@@ -530,7 +534,8 @@ function gpCommandesVues(array $cmds, array $params, array $base): array
             if ($dans !== null) { $cu[$dans] = true; }
             $lig[] = ['pid' => (int) $pid, 'nom' => $nom, 'q' => $q, 'cuisson' => $dans];
         }
-        $out[] = ['heure' => $o['heure'], 'canal' => $o['canal'], 'webshop' => $o['webshop'], 'montant' => $o['montant'], 'statut' => $o['statut'], 'sansDetail' => $o['sansDetail'], 'lignes' => $lig, 'cuissons' => array_keys($cu)];
+        $out[] = ['heure' => $o['heure'], 'canal' => $o['canal'], 'webshop' => $o['webshop'], 'montant' => $o['montant'], 'statut' => $o['statut'], 'sansDetail' => $o['sansDetail'], 'lignes' => $lig, 'cuissons' => array_keys($cu),
+            'nArticles' => $o['nArticles'] ?? null, 'clesArticle' => $o['clesArticle'] ?? null];
     }
     return $out;
 }
