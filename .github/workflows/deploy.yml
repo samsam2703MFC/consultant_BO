@@ -207,6 +207,16 @@ jobs:
           if ! echo "$bk" | grep -q '"products":\['; then
             echo "::error::/tablette/book ne rend pas de produits : $(echo "$bk" | head -c 300)"; fail=1
           else echo "OK  /tablette/book rend $(echo "$bk" | grep -o '"alKnown":' | wc -l) produit(s)"; fi
+          # L'accueil de la tablette : les objectifs (CA, vente additionnelle) du réseau.
+          ob=$(curl -fsS --max-time 120 "${APP_BASE}/api/cockpit/tablette/objectifs" || echo '{}')
+          if ! echo "$ob" | grep -q '"ca":{'; then
+            echo "::error::/tablette/objectifs ne rend pas de bloc ca : $(echo "$ob" | head -c 300)"; fail=1
+          else echo "OK  /tablette/objectifs rend le CA du réseau : $(echo "$ob" | grep -o '"semaine":{[^}]*}' | head -1)"; fi
+          # Les remarques des clients saisies sur la tablette (lecture seule : la recette n'en crée aucune).
+          rq=$(curl -fsS "${APP_BASE}/api/cockpit/tablette/remarques?jours=30" || echo '{}')
+          if ! echo "$rq" | grep -q '"remarques":\['; then
+            echo "::error::/tablette/remarques ne rend pas de liste remarques : $(echo "$rq" | head -c 300)"; fail=1
+          else echo "OK  /tablette/remarques rend $(echo "$rq" | grep -o '"nonTraitees":[0-9]*') sur 30 jours"; fi
 
           # Les identifiants d'intervenant sont le point de jointure avec le
           # panel : `owner_id` doit s'écrire « u<membership> » pour que le

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * DONNÉES : GET /tablette/book rend le catalogue du réseau dans les noms de
  * champs de la tablette (BookData : categories, seasons, products), et
  * POST /tablette/photos télécharge les photos de recette du panel qui manquent,
- * avec leur vignette 640 px. Contrat : docs/contrat-api.md.
+ * avec leur vignette carrée de 640 px. Contrat : docs/contrat-api.md.
  *
  * Tout vient de ce que le BO lit déjà : le catalogue (ep_prod_catalogue, gammes
  * comprises), la fiche produit de la base partagée (UNE lecture groupée de
@@ -22,13 +22,25 @@ declare(strict_types=1);
  * Les textes sont des paires [FR, NL] ; le néerlandais manque presque partout
  * (texte vide : la tablette retombe sur le français).
  *
- * ALLERGÈNES. `product.allergene` est relu tel quel (`alRaw`). Mesuré en ligne
- * le 02/10/2026 : vide sur les 115 fiches sondées (les 68 du planogramme et une
- * par catégorie). Il n'est converti en identifiants UE (`al`, `alKnown: true`)
- * que si TOUT le texte se lit comme une liste d'allergènes nommés, sans mot de
- * trace ni de négation ; sinon `al: []` et `alKnown: false`, que la tablette
- * affiche « à vérifier sur l'étiquette » et jamais « sans ». Les traces
- * n'existent nulle part : `tr: []`, `trKnown: false`.
+ * ALLERGÈNES. D'abord `product.allergene` : il fait foi quand TOUT le texte se
+ * lit comme une liste d'allergènes nommés, sans mot de trace ni de négation.
+ * Mesuré en ligne le 02/10/2026 : vide partout. Sinon, la recette du produit au
+ * panel (GET /recipes/{id_recipe}, ses sous-recettes GET /subrecipes/{id}) et
+ * les allergènes de chacune de ses matières premières (GET /materials/{id}) :
+ * `al` = leur union, `alKnown: true` seulement si tout l'arbre a été lu et que
+ * CHAQUE matière (hors emballages) porte une liste non vide — une liste vide
+ * veut dire « jamais saisie », pas « sans allergène » (le beurre, les œufs, les
+ * fromages du traiteur en ont une vide). Sinon `alKnown: false` avec les
+ * allergènes connus, que la tablette montre « contient » en laissant le reste
+ * « à vérifier sur l'étiquette », jamais « sans » ; `alRaw` dit ce qui manque.
+ * Les traces n'existent nulle part : `tr: []`, `trKnown: false`. Recettes et
+ * matières sont gardées 24 h (ceo_app_setting `tabletteAllergenes`) et lues en
+ * parallèle, 8 s au plus par calcul : le reste sera lu au calcul suivant.
+ *
+ * CONSERVATION. La fiche de la base partagée ne porte que l'id du lieu de
+ * stockage : son nom et sa consigne viennent de GET /products du panel (une
+ * lecture pour tout le catalogue, gardée 24 h dans `tablettePanelProduits`),
+ * avec la réchauffe et la durée de vie quand la base n'en a pas.
  */
 
 const TB_SCHEMA = 1;
@@ -36,14 +48,32 @@ const TB_CACHE_HEURES = 6;
 const TB_BEST = 8;                         // meilleures ventes marquées
 const TB_BEST_JOURS = 28;
 const TB_SAISON_AVANT_JOURS = 45;          // une gamme qui ouvre dans 45 jours entre au comptoir
-const TB_VIGNETTE_PX = 640;                // grand côté des vignettes
+const TB_VIGNETTE_PX = 640;                // côté des vignettes (carrées)
+const TB_VIGNETTE_FIN = '-640c.jpg';       // fin du nom d'une vignette : « c » = carrée (le nom a changé avec le format, les tablettes rechargent)
 const TB_VIGNETTES_LECTURE = 40;           // vignettes faites au plus par GET /tablette/book…
 const TB_VIGNETTES_LECTURE_S = 3.0;        // … et en 3 s au plus : la tablette n'attend que 6 s
 const TB_VIGNETTES_ECRITURE = 80;          // par POST /tablette/photos
 const TB_VIGNETTES_ECRITURE_S = 25.0;
+const TB_PANEL_FRONT = 6;                  // GET menés de front au panel (au-delà, l'API laisse des requêtes sans réponse)
+const TB_PANEL_S = 8.0;                    // recettes et matières lues au panel : 8 s au plus par calcul du book…
+const TB_PANEL_PRODUITS_S = 6;             // … et GET /products (tout le catalogue) : 6 s au plus
+const TB_PANEL_HEURES = 24;                // une recette, une matière, la liste des produits : relues après 24 h…
+const TB_PANEL_AVANCE_HEURES = 6;          // … et dès 18 à 24 h (étalé par entrée) quand le temps le permet
+const TB_PANEL_OUBLI_JOURS = 30;           // une entrée du cache que plus rien ne relit est oubliée
+const TB_AL_PROFONDEUR = 6;                // niveaux de sous-recettes lus au plus
+const TB_CACHE_INCOMPLET_MIN = 30;         // un book aux lectures du panel inachevées se recalcule après 30 min
+
+/** Les champs de GET /products que le book garde (`tablettePanelProduits`). */
+const TB_PANEL_PRODUIT_CHAMPS = ['storage_name', 'storage_description', 'reheating_time_minutes', 'reheating_temperature_celsius',
+    'shelf_life_minutes', 'id_recipe'];
 
 /** Les 14 allergènes UE, dans l'ordre et sous les identifiants de la tablette. */
 const TB_ALLERGENES = ['gluten', 'crust', 'oeufs', 'poisson', 'arach', 'soja', 'lait', 'noix', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques'];
+
+/** Les codes allergènes du panel (GET /allergens, les 14 du règlement UE) → identifiants de la tablette. */
+const TB_ALLERGENES_PANEL = ['cereals_gluten' => 'gluten', 'crustaceans' => 'crust', 'eggs' => 'oeufs', 'fish' => 'poisson',
+    'peanuts' => 'arach', 'soybeans' => 'soja', 'milk' => 'lait', 'nuts' => 'noix', 'celery' => 'celeri', 'mustard' => 'moutarde',
+    'sesame_seeds' => 'sesame', 'sulphur_dioxide_sulphites' => 'sulfites', 'lupin' => 'lupin', 'molluscs' => 'mollusques'];
 
 /** Leurs noms reconnus (minuscules, sans accent) : français, néerlandais, anglais. */
 const TB_ALLERGENES_MOTS = [
@@ -145,7 +175,7 @@ function ep_tablette_book(): array
 /**
  * POST /tablette/photos — {shop, ensemble?} : au plus PS_PHOTOS_PAR_APPEL photos
  * du panel téléchargées (recette lue par l'id_recipe du catalogue, sans passer
- * par un magasin), puis les vignettes 640 px. L'écran BO rappelle tant que
+ * par un magasin), puis les vignettes carrées de 640 px. L'écran BO rappelle tant que
  * `restants` > 0 ; la tablette ne l'appelle jamais.
  * `faites` : références traitées par cet appel (photo lue au panel, absence
  * notée pour sept jours, ou vignette faite) ; `restants` : ce qu'un prochain
@@ -179,13 +209,18 @@ function wr_tablette_photos(): array
 
 /* --- Le book : construit, gardé six heures, complété des photos à chaque lecture --------------- */
 
-/** Le book de base (sans les photos) : depuis le cache s'il a moins de six heures, sinon recalculé. */
+/**
+ * Le book de base (sans les photos) : depuis le cache s'il a moins de six heures, sinon recalculé. Un book dont les
+ * lectures au panel n'ont pas abouti (temps écoulé, panel muet) ne se garde que trente minutes : le calcul suivant
+ * lit ce qui manque.
+ */
 function tbBase(?array $shop, string $ensemble, bool $forcer): array
 {
     $cle = 'tabletteBook:' . ($shop['id'] ?? 'reseau') . ':' . $ensemble;
     if (!$forcer) {
         try { $c = setting($cle); } catch (Throwable $e) { $c = null; }
-        if (is_array($c) && isset($c['le'], $c['base']['book']['products']) && time() - (int) $c['le'] < TB_CACHE_HEURES * 3600) {
+        $duree = !empty($c['base']['aCompleter']) ? TB_CACHE_INCOMPLET_MIN * 60 : TB_CACHE_HEURES * 3600;
+        if (is_array($c) && isset($c['le'], $c['base']['book']['products']) && time() - (int) $c['le'] < $duree) {
             return $c['base'];
         }
     }
@@ -204,7 +239,7 @@ function tbBase(?array $shop, string $ensemble, bool $forcer): array
  */
 function tbConstruire(?array $shop, string $ensemble): array
 {
-    $sources = ['produits' => '', 'photos' => '', 'best' => '', 'saisons' => ''];
+    $sources = ['produits' => '', 'photos' => '', 'best' => '', 'saisons' => '', 'allergenes' => '', 'combos' => ''];
 
     // 1. Le catalogue (gammes comprises) : sans lui, pas de book.
     $cat = ep_prod_catalogue();
@@ -260,6 +295,33 @@ function tbConstruire(?array $shop, string $ensemble): array
         $noteFiches = 'fiche produit illisible (' . $e->getMessage() . ') : allergènes, régime et conservation vides';
     }
 
+    // 4 bis. La fiche du panel (GET /products, tout le catalogue en une lecture) : le stockage que la base n'a pas.
+    $aCompleter = false;
+    try {
+        $pp = tbProduitsPanel();
+        [$panelProduits, $notePanel] = [$pp['produits'], $pp['note']];
+        $aCompleter = $pp['aCompleter'];
+    } catch (Throwable $e) {
+        [$panelProduits, $notePanel] = [[], 'fiche du panel illisible (' . $e->getMessage() . ')'];
+    }
+
+    // 4 ter. Les allergènes des recettes du panel, pour les produits dont la fiche ne dit rien de lisible.
+    $rids = [];
+    foreach ($retenus as $c) {
+        $pid = ($c['pwaId'] ?? null) !== null ? (int) $c['pwaId'] : 0;
+        $rid = (int) ($c['recetteId'] ?? 0) ?: (int) ($panelProduits[$pid]['id_recipe'] ?? 0);
+        if ($rid > 0 && !tbAllergenes(tbTexte((string) ($fiches[$pid]['allergene'] ?? '')))['alKnown']) { $rids[$rid] = true; }
+    }
+    try {
+        $lu = tbAllergenesPanel(array_keys($rids));
+        $aCompleter = $aCompleter || $lu['aCompleter'];
+    } catch (Throwable $e) {
+        // Jamais rencontré : tbAllergenesPanel garde ses erreurs. Par prudence, le cache tel quel.
+        $lu = ['cache' => tbCacheAllergenes(), 'limite' => time() - TB_PANEL_HEURES * 3600,
+            'note' => 'lecture au panel en échec (' . $e->getMessage() . ')'];
+        $aCompleter = true;
+    }
+
     // 5. Les meilleures ventes.
     $book = [];
     foreach ($retenus as $c) { $book[] = tbIdProduit($c); }
@@ -271,18 +333,34 @@ function tbConstruire(?array $shop, string $ensemble): array
         $sources['best'] = 'relevés de ventes illisibles (' . $e->getMessage() . ') : aucune meilleure vente';
     }
 
+    // 5 bis. Les combos du réseau (écran Croisements) : la vente additionnelle de chaque produit.
+    $combos = tbCombos($retenus, $best);
+    $sources['combos'] = $combos['note'];
+
     // 6. Catégories, saisons et produits, dans les noms de champs de la tablette.
     $cats = []; $produits = [];
+    $etats = ['fiche' => 0, 'complet' => 0, 'partiel' => 0, 'aucun' => 0, 'sansRecette' => 0];
+    $aSaisir = [];
+    $n = ['keep' => 0, 'keepPanel' => 0, 'dlc' => 0, 'dlcPanel' => 0];
     foreach ($retenus as $c) {
         $id = tbIdProduit($c);
         $pid = ($c['pwaId'] ?? null) !== null ? (int) $c['pwaId'] : 0;
         $f = $fiches[$pid] ?? [];
+        $fp = $panelProduits[$pid] ?? [];
         $k = tbCategorie($c['groupe'] ?? null, $c['categorie'] ?? null);
         $cats[$k['id']] = $k['fr'];
         $brut = tbTexte(isset($f['allergene']) ? (string) $f['allergene'] : '');
-        $al = tbAllergenes($brut);
+        $rid = (int) ($c['recetteId'] ?? 0) ?: (int) ($fp['id_recipe'] ?? 0);
+        $al = tbAllergenesProduit($brut, $rid, $lu['cache'], (int) $lu['limite']);
+        $etats[$al['etat']]++;
+        foreach ($al['vides'] as $m) { $aSaisir[$m] = ($aSaisir[$m] ?? 0) + 1; }
         $poids = (int) ($c['poids'] ?? 0) ?: (int) ($f['single_weight'] ?? 0);
+        // La durée de vie : celle du BO (catalogue, sinon fiche de la base), celle du panel seulement à défaut.
         $minutes = (int) ($c['dlv'] ?? 0) > 0 ? (int) $c['dlv'] * 60 : (int) ($f['shelf_life_minutes'] ?? 0);
+        if ($minutes <= 0 && (int) ($fp['shelf_life_minutes'] ?? 0) > 0) { $minutes = (int) $fp['shelf_life_minutes']; $n['dlcPanel']++; }
+        $n['dlc'] += (int) ($minutes > 0);
+        $keep = tbConserver(tbFicheConservation($f, $fp));
+        if ($keep[0] !== '') { $n['keep']++; $n['keepPanel'] += (int) ($keep[0] !== tbConserver($f)[0]); }
         $p = ['id' => $id, 'cat' => $k['id']];
         $sid = tbSaisonProduit((array) ($c['saisons'] ?? []), $parSaison);
         if ($sid !== null) { $p['season'] = 's' . $sid; }
@@ -295,14 +373,15 @@ function tbConstruire(?array $shop, string $ensemble): array
             'desc' => [tbTexte(isset($f['positioning_description']) ? (string) $f['positioning_description'] : ''), ''],
             'pitch' => ['', ''],
             'ingr' => ['', ''],
-            'al' => $al['al'], 'tr' => [], 'alKnown' => $al['alKnown'], 'trKnown' => false, 'alRaw' => $brut,
+            'al' => $al['al'], 'tr' => [], 'alKnown' => $al['alKnown'], 'trKnown' => false, 'alRaw' => $al['alRaw'],
             'diet' => (int) ($f['is_vegetarian'] ?? 0) === 1 ? 'vege' : null,
-            'keep' => tbConserver($f),
+            'keep' => $keep,
             'dlc' => tbDlc($minutes),
-            'cross' => [],
+            'cross' => $combos['cross'][$id] ?? [],
             'crossLine' => ['', ''],
+            'combos' => $combos['parProduit'][$id] ?? [],
             '_ref' => (string) ($c['ref'] ?? $id),
-            '_recette' => (int) ($c['recetteId'] ?? 0),
+            '_recette' => $rid,
         ];
     }
     $ordre = [];
@@ -324,11 +403,23 @@ function tbConstruire(?array $shop, string $ensemble): array
     foreach ($seasons as &$s) { unset($s['_debut']); }
     unset($s);
 
-    $sources['produits'] = 'catalogue du BO, ' . $actifs . ' produit(s) actif(s) ; ' . $choix . ' → ' . count($produits) . ' retenu(s) ; '
-        . $noteFiches . ' ; prix réseau du catalogue ; noms, descriptions et argumentaires néerlandais absents';
+    $nb = count($produits);
+    $sources['produits'] = 'catalogue du BO, ' . $actifs . ' produit(s) actif(s) ; ' . $choix . ' → ' . $nb . ' retenu(s) ; '
+        . $noteFiches . ' ; conservation : ' . $n['keep'] . '/' . $nb . ' (dont ' . $n['keepPanel'] . ' depuis le panel), DLC connue : '
+        . $n['dlc'] . '/' . $nb . ' (dont ' . $n['dlcPanel'] . ' depuis le panel) — fiche du panel : ' . $notePanel
+        . ' ; prix réseau du catalogue ; noms, descriptions et argumentaires néerlandais absents';
+    arsort($aSaisir);
+    $top = [];
+    foreach (array_slice($aSaisir, 0, 5, true) as $m => $k) { $top[] = $m . ' (' . $k . ')'; }
+    $sources['allergenes'] = 'allergènes des matières premières du panel (recette → sous-recettes → matières, emballages exclus) : '
+        . $etats['complet'] . ' produit(s) complet(s), ' . $etats['partiel'] . ' partiel(s) (allergènes connus, liste à compléter), '
+        . $etats['aucun'] . ' sans allergène connu, ' . $etats['sansRecette'] . ' sans recette'
+        . ($etats['fiche'] > 0 ? ', ' . $etats['fiche'] . ' lu(s) sur la fiche produit' : '')
+        . ($top ? ' ; matières sans allergènes saisis au panel (nombre de produits) : ' . implode(', ', $top) : '')
+        . ' ; ' . $lu['note'] . ' ; traces jamais renseignées';
     return ['genereLe' => date('c'), 'shop' => $shop, 'ensemble' => $ensemble,
         'book' => ['categories' => $categories, 'seasons' => $seasons, 'products' => $produits],
-        'sources' => $sources];
+        'sources' => $sources, 'aCompleter' => $aCompleter];
 }
 
 /** La réponse : le book de base, ses photos relues (et vignettes faites), ce qui manque, sa version. */
@@ -339,7 +430,7 @@ function tbReponse(array $base): array
     try {
         $e = tbPhotosEtat($refs, TB_VIGNETTES_LECTURE, TB_VIGNETTES_LECTURE_S);
         $avec = count($produits) - $e['manquantes'];
-        $source = 'photo de recette du panel gardée sous uploads/plano/panel/, vignette ' . TB_VIGNETTE_PX . ' px sous uploads/tablette/ : '
+        $source = 'photo de recette du panel gardée sous uploads/plano/panel/, vignette carrée ' . TB_VIGNETTE_PX . ' px sous uploads/tablette/ : '
             . $avec . '/' . count($produits) . ' produit(s) avec photo, ' . $e['vignettes'] . ' en vignette'
             . ($e['restants'] > 0 ? ' ; ' . $e['restants'] . ' à récupérer (POST /tablette/photos)' : '');
     } catch (Throwable $ex) {
@@ -362,7 +453,8 @@ function tbReponse(array $base): array
         'manque' => tbManque($produits),
         'photosRestantes' => (int) $e['restants'],
         'sources' => ['produits' => (string) ($base['sources']['produits'] ?? ''), 'photos' => $source,
-            'best' => (string) ($base['sources']['best'] ?? ''), 'saisons' => (string) ($base['sources']['saisons'] ?? '')],
+            'best' => (string) ($base['sources']['best'] ?? ''), 'saisons' => (string) ($base['sources']['saisons'] ?? ''),
+            'allergenes' => (string) ($base['sources']['allergenes'] ?? '')],
     ];
 }
 
@@ -444,6 +536,212 @@ function tbFiches(array $ids): array
 }
 
 /**
+ * La fiche du panel de tout le catalogue — GET /products, UNE lecture — pour ce que la base partagée n'a pas : le nom
+ * et la consigne du lieu de stockage (la base n'en a que l'id), et à défaut la réchauffe, la durée de vie et l'id de
+ * recette. Gardée 24 h (ceo_app_setting `tablettePanelProduits`, les seuls champs utiles). Panel muet : la dernière
+ * liste lue, sinon rien — la fiche de la base reste seule, et le book se recalcule dans trente minutes.
+ *
+ * @return array{produits: array<int,array<string,mixed>>, note: string, aCompleter: bool}
+ */
+function tbProduitsPanel(): array
+{
+    try { $c = setting('tablettePanelProduits'); } catch (Throwable $e) { $c = null; }
+    $connus = is_array($c) && is_array($c['produits'] ?? null) ? $c['produits'] : [];
+    $le = is_array($c) ? (int) ($c['le'] ?? 0) : 0;
+    if ($connus && time() - $le < TB_PANEL_HEURES * 3600) {
+        return ['produits' => $connus, 'note' => count($connus) . ' produit(s) lus au panel le ' . date('d/m/Y à H:i', $le), 'aCompleter' => false];
+    }
+    $pourquoi = 'compte API du panel non configuré';
+    if (PanelApi::configured()) {
+        $st = ['lus' => 0, 'echecs' => 0, 'remis' => 0, 'muet' => false, 'erreur' => ''];
+        $r = tbPanelLire(['produits' => '/products'], microtime(true) + TB_PANEL_PRODUITS_S, $st)['produits'] ?? null;
+        $out = [];
+        foreach (is_array($r) ? PanelApi::liste($r) : [] as $p) {
+            if ((int) ($p['id'] ?? 0) > 0) { $out[(int) $p['id']] = array_intersect_key($p, array_flip(TB_PANEL_PRODUIT_CHAMPS)); }
+        }
+        if ($out) {
+            $j = json_encode(['le' => time(), 'produits' => $out], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+            if (is_string($j)) {
+                try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['tablettePanelProduits', $j]); }
+                catch (Throwable $e) { /* sans cache : relue au prochain calcul */ }
+            }
+            return ['produits' => $out, 'note' => count($out) . ' produit(s) lus au panel (GET /products)', 'aCompleter' => false];
+        }
+        $pourquoi = 'GET /products sans réponse' . ($st['erreur'] !== '' ? ' (' . $st['erreur'] . ')' : '');
+    }
+    if ($connus) {
+        return ['produits' => $connus, 'note' => $pourquoi . ' : liste du ' . date('d/m/Y à H:i', $le) . ' reprise', 'aCompleter' => PanelApi::configured()];
+    }
+    return ['produits' => [], 'note' => $pourquoi . ' : fiche de la base partagée seule', 'aCompleter' => PanelApi::configured()];
+}
+
+/**
+ * Les recettes des produits, leurs sous-recettes et leurs matières premières, avec le référentiel des allergènes du
+ * panel (GET /allergens) : depuis le cache (`tabletteAllergenes`), complété au panel de ce qui manque ou a plus de
+ * 24 h — en parallèle, 8 s au plus ; ce qui n'est pas lu à temps le sera au calcul suivant (`aCompleter`). Le temps
+ * qui reste relit d'avance les entrées de 18 à 24 h (l'heure exacte étalée par entrée) : sans cela tout le cache
+ * expirerait d'un bloc, et chaque jour un calcul ne suffirait pas à tout relire. Une sous-recette se lit sous
+ * /subrecipes/{id} (GET /recipes/{id} rend `[]` pour elle). Rien ici ne lève : une panne du panel laisse le cache tel
+ * quel et le dit dans `note`. `limite` : une entrée lue avant n'est plus à jour.
+ *
+ * @param list<int> $rids recettes des produits
+ * @return array{cache: array, limite: int, note: string, aCompleter: bool}
+ */
+function tbAllergenesPanel(array $rids): array
+{
+    $t0 = microtime(true);
+    $fin = $t0 + TB_PANEL_S;
+    $limite = time() - TB_PANEL_HEURES * 3600;
+    $c = tbCacheAllergenes();
+    $st = ['lus' => 0, 'echecs' => 0, 'remis' => 0, 'muet' => false, 'erreur' => ''];
+    $lire = PanelApi::configured();
+    $frais = static fn ($e): bool => is_array($e) && (int) ($e['le'] ?? 0) >= $limite;
+    // 2 : absente ou périmée, à lire d'abord ; 1 : dans sa fenêtre d'avance (de 18 à 24 h, décalée par entrée) ; 0 : à jour.
+    $aLire = static function ($e, string $cle) use ($limite, $lire): int {
+        if (!$lire) { return 0; }
+        if (!is_array($e) || (int) ($e['le'] ?? 0) < $limite) { return 2; }
+        return (int) $e['le'] < $limite + crc32($cle) % (TB_PANEL_AVANCE_HEURES * 3600) ? 1 : 0;
+    };
+    $panne = null;
+    try {
+        // Le référentiel : les 14 allergènes du panel, id → code.
+        if ($aLire($c['reference'], 'ref') > 0) {
+            $r = tbPanelLire(['ref' => '/allergens'], $fin, $st)['ref'] ?? null;
+            $ref = tbReferenceLue($r);
+            if ($ref) { $c['reference'] = ['codes' => $ref, 'le' => time()]; }
+        }
+        // Les recettes, puis les sous-recettes niveau par niveau (chacune une fois).
+        $niveau = array_map(static fn ($r) => ['recettes', (int) $r], $rids);
+        $vus = [];
+        for ($p = 0; $niveau && $p <= TB_AL_PROFONDEUR; $p++) {
+            $chemins = [[], [], []];
+            foreach ($niveau as [$t, $id]) {
+                $k = $t . ':' . $id;
+                if ($id <= 0 || isset($vus[$k])) { continue; }
+                $vus[$k] = [$t, $id];
+                $chemins[$aLire($c[$t][$id] ?? null, $k)][$k] = ($t === 'recettes' ? '/recipes/' : '/subrecipes/') . $id;
+            }
+            foreach (tbPanelLire($chemins[2] + $chemins[1], $fin, $st, count($chemins[2])) as $k => $d) {
+                [$t, $id] = $vus[$k];
+                $e = tbRecetteLue($d, $id);
+                if ($e !== null) { $c[$t][$id] = $e + ['le' => time()]; }
+            }
+            $suivant = [];
+            foreach ($niveau as [$t, $id]) {
+                foreach ((array) ($c[$t][$id]['sous'] ?? []) as $s) { $suivant[] = ['sousRecettes', (int) $s]; }
+            }
+            $niveau = $suivant;
+        }
+        // Les matières premières de tout l'arbre, emballages compris : un emballage qui porterait des allergènes compterait.
+        $chemins = [[], [], []];
+        foreach ($vus as [$t, $id]) {
+            foreach ((array) ($c[$t][$id]['materiaux'] ?? []) as $m) {
+                $mid = (int) ($m['id'] ?? 0);
+                if ($mid > 0) { $chemins[$aLire($c['materiaux'][$mid] ?? null, 'm:' . $mid)]['m:' . $mid] = '/materials/' . $mid; }
+            }
+        }
+        foreach (tbPanelLire($chemins[2] + $chemins[1], $fin, $st, count($chemins[2])) as $k => $d) {
+            $mid = (int) substr($k, 2);
+            $e = tbMatiereLue($d, $mid);
+            if ($e !== null) { $c['materiaux'][$mid] = $e + ['le' => time()]; }
+        }
+    } catch (Throwable $e) {
+        $panne = $e->getMessage();
+    }
+    if ($st['lus'] > 0) { tbCacheAllergenesEcrire($c); }
+
+    $ref = $c['reference']['codes'] ?? [];
+    $hors = array_values(array_diff(array_values($ref), array_keys(TB_ALLERGENES_PANEL)));
+    $note = ($ref ? 'référentiel : les ' . count($ref) . ' allergènes de GET /allergens du panel'
+            . ($frais($c['reference']) ? '' : ' (lu le ' . date('d/m/Y', (int) ($c['reference']['le'] ?? 0)) . ', à relire)')
+            . ($hors ? ', dont ' . count($hors) . ' inconnu(s) de la tablette (' . implode(', ', $hors) . ') : produits concernés à vérifier' : '')
+            : 'référentiel GET /allergens jamais lu : codes UE du panel en dur')
+        . ' ; en cache : ' . count($c['recettes']) . ' recette(s), ' . count($c['sousRecettes']) . ' sous-recette(s), '
+        . count($c['materiaux']) . ' matière(s), gardées ' . TB_PANEL_HEURES . ' h';
+    if (!$lire) {
+        $note .= ' ; compte API du panel non configuré : rien n’a été lu';
+    } else {
+        $note .= ' ; ' . $st['lus'] . ' lecture(s) au panel en ' . str_replace('.', ',', (string) round(microtime(true) - $t0, 1)) . ' s';
+        if ($st['remis'] > 0) { $note .= ' ; ' . $st['remis'] . ' remise(s) au calcul suivant (' . ($st['muet'] ? 'panel muet' : TB_PANEL_S . ' s écoulées') . ')'; }
+        if ($st['echecs'] > 0) { $note .= ' ; ' . $st['echecs'] . ' en échec' . ($st['erreur'] !== '' ? ' (' . $st['erreur'] . ')' : ''); }
+    }
+    if ($panne !== null) { $note .= ' ; lecture interrompue (' . $panne . ')'; }
+    // Relu dans trente minutes si une partie n'a pas été lue faute de temps, si le panel n'a rien rendu, ou en panne.
+    $aCompleter = $lire && ($st['remis'] > 0 || ($st['lus'] === 0 && $st['echecs'] > 0) || $panne !== null);
+    return ['cache' => $c, 'limite' => $limite, 'note' => $note, 'aCompleter' => $aCompleter];
+}
+
+/**
+ * Des GET au panel, TB_PANEL_FRONT de front, tant que le temps le permet : un paquet ne part que s'il reste au moins
+ * une seconde avant `$fin`, et chacune de ses requêtes n'a que le temps restant (deux secondes au moins). Un paquet
+ * entièrement en 401 est un jeton périmé (la lecture parallèle ne se reconnecte pas) : une lecture simple se
+ * reconnecte et le paquet repart une fois. Un paquet d'au moins trois chemins sans AUCUNE réponse, autrement qu'en
+ * 404 : le panel est muet, rien d'autre ne part (un chemin seul en échec, un 404, ne sont qu'une recette illisible).
+ * `$st` compte les réponses lues, les échecs et les lectures remises (non tentées) parmi les `$requis` premiers
+ * chemins — les suivants, des relectures d'avance, ne manquent à personne s'ils attendent.
+ *
+ * @param array<string,string> $chemins clé → chemin
+ * @return array<string,array> les réponses lues, par clé
+ */
+function tbPanelLire(array $chemins, float $fin, array &$st, ?int $requis = null): array
+{
+    $out = [];
+    $requis ??= count($chemins);
+    $i = 0;
+    foreach (array_chunk($chemins, TB_PANEL_FRONT, true) as $lot) {
+        $reste = $fin - microtime(true);
+        if ($st['muet'] || $reste < 1.0) { $st['remis'] += max(0, min(count($lot), $requis - $i)); $i += count($lot); continue; }
+        $i += count($lot);
+        $t = (int) max(2, min(15, ceil($reste)));
+        PanelApi::$lastError = null;
+        $res = PanelApi::getParallele($lot, TB_PANEL_FRONT, $t);
+        if (!array_filter($res, 'is_array') && str_contains((string) PanelApi::$lastError, 'HTTP 401')
+            && PanelApi::get((string) reset($lot)) !== null) {
+            $res = PanelApi::getParallele($lot, TB_PANEL_FRONT, $t);
+        }
+        $lus = 0;
+        foreach ($lot as $k => $_) {
+            if (is_array($res[$k] ?? null)) { $out[$k] = $res[$k]; $lus++; }
+        }
+        $st['lus'] += $lus;
+        $st['echecs'] += count($lot) - $lus;
+        if ($lus < count($lot)) { $st['erreur'] = (string) (PanelApi::$lastError ?? 'sans réponse'); }
+        if ($lus === 0 && count($lot) >= 3 && !str_contains($st['erreur'], 'HTTP 404')) { $st['muet'] = true; }
+    }
+    return $out;
+}
+
+/** Le cache des lectures du panel pour les allergènes, vide s'il est illisible. */
+function tbCacheAllergenes(): array
+{
+    try { $c = setting('tabletteAllergenes'); } catch (Throwable $e) { $c = null; }
+    $out = ['reference' => [], 'recettes' => [], 'sousRecettes' => [], 'materiaux' => []];
+    foreach ($out as $k => $_) { if (is_array($c[$k] ?? null)) { $out[$k] = $c[$k]; } }
+    return $out;
+}
+
+/**
+ * Le cache réécrit, fusionné avec ce qu'un calcul voisin (un autre magasin) a pu écrire entre-temps — l'entrée la plus
+ * récente gagne —, sans les entrées que plus rien n'a relues depuis TB_PANEL_OUBLI_JOURS jours.
+ */
+function tbCacheAllergenesEcrire(array $c): void
+{
+    $avant = tbCacheAllergenes();
+    if ((int) ($avant['reference']['le'] ?? 0) > (int) ($c['reference']['le'] ?? 0)) { $c['reference'] = $avant['reference']; }
+    $oubli = time() - TB_PANEL_OUBLI_JOURS * 86400;
+    foreach (['recettes', 'sousRecettes', 'materiaux'] as $k) {
+        foreach ($avant[$k] as $id => $e) {
+            if (!isset($c[$k][$id]) || (int) ($e['le'] ?? 0) > (int) ($c[$k][$id]['le'] ?? 0)) { $c[$k][$id] = $e; }
+        }
+        $c[$k] = array_filter($c[$k], static fn ($e) => is_array($e) && (int) ($e['le'] ?? 0) >= $oubli);
+    }
+    $j = json_encode($c, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if (!is_string($j)) { return; }
+    try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['tabletteAllergenes', $j]); }
+    catch (Throwable $e) { /* sans cache : relu au prochain calcul */ }
+}
+
+/**
  * Les meilleures ventes : le top 8 au comptoir du magasin sur 28 jours, parmi
  * les produits du book ; sans magasin, ou sans aucune vente relevée pour lui, le
  * top du réseau. Relevés quotidiens gravés (psVentesJour), aucun appel au panel.
@@ -513,7 +811,7 @@ function tbPhotosEtat(array $refs, int $max, float $secondes): array
             if ($l === null || !empty($l['fichier']) || time() - (strtotime((string) $l['maj']) ?: 0) >= 7 * 86400) { $out['aLire']++; }
             continue;
         }
-        $vig = 'uploads/tablette/' . tbFichierRef($ref) . '-' . TB_VIGNETTE_PX . '.jpg';
+        $vig = 'uploads/tablette/' . tbFichierRef($ref) . TB_VIGNETTE_FIN;
         $ok = is_file($pub . $vig) && (int) filemtime($pub . $vig) >= (int) filemtime($pub . $orig);
         if (!$ok) {
             if ($out['faites'] < $max && microtime(true) - $t0 < $secondes) {
@@ -531,11 +829,14 @@ function tbPhotosEtat(array $refs, int $max, float $secondes): array
 }
 
 /**
- * La vignette d'une photo : 640 px sur le grand côté, JPEG qualité 80, sous
- * public/uploads/tablette/<ref>-640.jpg — les originaux du panel montent à 8 Mo,
- * de quoi remplir une tablette hors ligne. Refaite quand l'original est plus
- * récent. Le chemin relatif à public/, ou null (pas d'original, image
- * illisible, trop grande pour la mémoire disponible).
+ * La vignette d'une photo : un carré de 640 px (moins si l'original est plus
+ * petit), JPEG qualité 80, sous public/uploads/tablette/<ref>-640c.jpg — les
+ * originaux du panel montent à 8 Mo, de quoi remplir une tablette hors ligne.
+ * La tablette montre les photos en carré : une photo qui ne l'est pas est
+ * posée entière au milieu et ses bords sont prolongés jusqu'au carré (le fond
+ * continue, rien n'est coupé — l'étiquette d'un sachet reste lisible). Refaite
+ * quand l'original est plus récent. Le chemin relatif à public/, ou null (pas
+ * d'original, image illisible, trop grande pour la mémoire disponible).
  */
 function tbVignette(string $ref, ?string $source = null): ?string
 {
@@ -550,7 +851,7 @@ function tbVignette(string $ref, ?string $source = null): ?string
     }
     $src = $pub . $source;
     if (!is_file($src)) { return null; }
-    $rel = 'uploads/tablette/' . $nom . '-' . TB_VIGNETTE_PX . '.jpg';
+    $rel = 'uploads/tablette/' . $nom . TB_VIGNETTE_FIN;
     $dst = $pub . $rel;
     if (is_file($dst) && (int) filemtime($dst) >= (int) filemtime($src)) { return $rel; }
 
@@ -574,12 +875,32 @@ function tbVignette(string $ref, ?string $source = null): ?string
         }
     }
     $w = imagesx($im); $h = imagesy($im);
-    $k = min(1.0, TB_VIGNETTE_PX / max($w, $h));
-    $nw = max(1, (int) round($w * $k)); $nh = max(1, (int) round($h * $k));
-    $v = imagecreatetruecolor($nw, $nh);
+    $c = min(TB_VIGNETTE_PX, max($w, $h));
+    $k = $c / max($w, $h);
+    $nw = max(1, min($c, (int) round($w * $k))); $nh = max(1, min($c, (int) round($h * $k)));
+    $p = imagecreatetruecolor($nw, $nh);
     // Fond blanc : la transparence d'un PNG ne passe pas en JPEG (elle virerait au noir).
-    imagefill($v, 0, 0, (int) imagecolorallocate($v, 255, 255, 255));
-    imagecopyresampled($v, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    imagefill($p, 0, 0, (int) imagecolorallocate($p, 255, 255, 255));
+    imagecopyresampled($p, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    unset($im);
+    // Le carré : la photo au milieu, puis une colonne (ou ligne) prise près de
+    // chaque bord étirée sur la marge, sans lissage (pixel pour pixel). Prise à
+    // 3 px du bord, qu'elle recouvre aussi : certaines photos du panel ont un
+    // liseré sombre d'un pixel, qui deviendrait sinon une bande noire.
+    $x = intdiv($c - $nw, 2); $y = intdiv($c - $nh, 2);
+    $v = imagecreatetruecolor($c, $c);
+    imagecopy($v, $p, $x, $y, 0, 0, $nw, $nh);
+    if ($x > 0) {
+        $i = min(3, intdiv($nw, 50));
+        imagecopyresized($v, $p, 0, $y, $i, 0, $x + $i, $nh, 1, $nh);
+        imagecopyresized($v, $p, $x + $nw - $i, $y, $nw - 1 - $i, 0, $c - $x - $nw + $i, $nh, 1, $nh);
+    }
+    if ($y > 0) {
+        $i = min(3, intdiv($nh, 50));
+        imagecopyresized($v, $p, $x, 0, 0, $i, $nw, $y + $i, $nw, 1);
+        imagecopyresized($v, $p, $x, $y + $nh - $i, 0, $nh - 1 - $i, $nw, $c - $y - $nh + $i, $nw, 1);
+    }
+    unset($p);
     $dos = dirname($dst);
     if (!is_dir($dos) && !@mkdir($dos, 0775, true) && !is_dir($dos)) { return null; }
     // Écrite à côté puis renommée : jamais une vignette à moitié écrite servie.
@@ -634,6 +955,78 @@ function tbFichierRef(string $ref): string
 }
 
 /** L'identifiant tablette d'un produit : l'id du panel (`pwaId`), sinon la référence. */
+/** Le moment d'un combo (`ceo_combo.dp`, voir CROIS_DAYPARTS) en [FR, NL] ; vide : toute la journée. */
+const TB_COMBO_MOMENTS = [
+    'matin' => ['Matin (avant 11 h)', 'Ochtend (voor 11 u)'],
+    'midi' => ['Midi (11 – 14 h)', 'Middag (11 – 14 u)'],
+    'apresmidi' => ['Après-midi (14 h et plus)', 'Namiddag (vanaf 14 u)'],
+];
+
+/** Produits du book montrés au plus par combo (les meilleures ventes d'abord). */
+const TB_COMBO_PRODUITS = 4;
+
+/**
+ * La vente additionnelle de chaque produit : les combos du réseau (`ceo_combo`,
+ * écran Croisements — « sur les tickets qui contiennent A, la part qui contient
+ * aussi B ») dont le produit fait partie de A. Pour chacun : ce qu'il faut
+ * proposer (B, en toutes lettres), le moment, le surnom quand le réseau en a
+ * donné un, la target d'attache, et les produits de B présents au book (pour
+ * les montrer sur la tablette) — B peut ne pas y être : les boissons sont hors
+ * comptoir. `cross` réunit ces produits, sans doublon, pour « Proposez aussi ».
+ * Même règle de sélection que croisIds() : groupe, catégorie ou produit exacts.
+ *
+ * @param list<array> $retenus produits du catalogue retenus pour le book
+ * @param array<string,bool> $best ids des meilleures ventes
+ * @return array{parProduit: array<string, list<array>>, cross: array<string, list<string>>, note: string}
+ */
+function tbCombos(array $retenus, array $best): array
+{
+    try {
+        $rows = Db::rows('SELECT * FROM ceo_combo ORDER BY id');
+    } catch (Throwable $e) {
+        return ['parProduit' => [], 'cross' => [], 'note' => 'combos illisibles (' . $e->getMessage() . ') : aucune vente additionnelle'];
+    }
+    $dans = static function (string $sel, array $c): bool {
+        $type = substr($sel, 0, 2);
+        $val = trim((string) substr($sel, 2));
+        if ($val === '') { return false; }
+        return match ($type) {
+            'g:' => trim((string) ($c['groupe'] ?? '')) === $val,
+            'c:' => trim((string) ($c['categorie'] ?? '')) === $val,
+            'p:' => ($c['pwaId'] ?? null) !== null && (string) (int) $c['pwaId'] === $val,
+            default => false,
+        };
+    };
+    $parProduit = []; $cross = []; $servis = 0;
+    foreach ($rows as $r) {
+        $aSel = (string) $r['a_sel']; $bSel = (string) $r['b_sel'];
+        // B au book : les meilleures ventes d'abord, puis par nom.
+        $b = array_values(array_filter($retenus, static fn ($c) => $dans($bSel, $c)));
+        usort($b, static fn ($x, $y) => [isset($best[tbIdProduit($y)]), tbCle((string) ($x['nom'] ?? ''))]
+            <=> [isset($best[tbIdProduit($x)]), tbCle((string) ($y['nom'] ?? ''))]);
+        $bIds = array_map('tbIdProduit', $b);
+        $surnom = trim((string) ($r['surnom'] ?? ''));
+        // Un surnom fait de « A × B » n'apprend rien de plus que le combo lui-même.
+        if (str_contains($surnom, '×')) { $surnom = ''; }
+        $cible = isset($r['target']) && $r['target'] !== null && is_numeric($r['target']) ? round((float) $r['target'], 1) : null;
+        $moment = TB_COMBO_MOMENTS[(string) ($r['dp'] ?? '')] ?? ['', ''];
+        $avec = trim((string) preg_replace('/\s*\(groupe\)\s*$/u', '', (string) $r['b_lib']));
+        $touche = false;
+        foreach ($retenus as $c) {
+            if (!$dans($aSel, $c)) { continue; }
+            $id = tbIdProduit($c);
+            $ids = array_slice(array_values(array_filter($bIds, static fn ($x) => $x !== $id)), 0, TB_COMBO_PRODUITS);
+            $parProduit[$id][] = ['avec' => [$avec, ''], 'quand' => $moment, 'nom' => [$surnom, ''], 'cible' => $cible, 'ids' => $ids];
+            $cross[$id] = array_values(array_unique(array_merge($cross[$id] ?? [], $ids)));
+            $touche = true;
+        }
+        $servis += (int) $touche;
+    }
+    return ['parProduit' => $parProduit, 'cross' => $cross,
+        'note' => 'combos du réseau (écran Croisements, table ceo_combo) : ' . count($rows) . ' combo(s), ' . $servis
+            . ' concernant des produits du book ; ' . count($parProduit) . ' produit(s) avec une vente additionnelle'];
+}
+
 function tbIdProduit(array $c): string
 {
     return ($c['pwaId'] ?? null) !== null ? (string) (int) $c['pwaId'] : (string) ($c['ref'] ?? '');
@@ -703,6 +1096,223 @@ function tbAllergenes(string $brut): array
 }
 
 /**
+ * Les allergènes d'un produit du book. `product.allergene` fait foi quand il se lit en entier (tbAllergenes). Sinon
+ * l'arbre de sa recette au panel : `al` = l'union des allergènes de ses matières premières, `alKnown: true` seulement
+ * si l'arbre est lu en entier et à jour, qu'il compte au moins une matière (hors emballages), que CHACUNE porte une
+ * liste d'allergènes non vide et entièrement reconnue, et que la fiche ne dit rien d'autre (un texte de fiche
+ * illisible garde le produit « à vérifier », et reste affiché). Sinon les allergènes connus restent dans `al` — la
+ * tablette les montre « contient », le reste « à vérifier » — et `alRaw` dit ce qui manque, en une ou deux phrases.
+ * `etat` (fiche, complet, partiel, aucun, sansRecette) et `vides` (matières sans allergènes saisis) servent `sources`.
+ *
+ * @param array $cache le cache des lectures du panel (tbCacheAllergenes) ; `$limite` : lu avant, plus à jour
+ * @return array{al: list<string>, alKnown: bool, alRaw: string, etat: string, vides: list<string>}
+ */
+function tbAllergenesProduit(string $brut, int $rid, array $cache, int $limite): array
+{
+    $fiche = tbAllergenes($brut);
+    if ($fiche['alKnown']) { return $fiche + ['alRaw' => $brut, 'etat' => 'fiche', 'vides' => []]; }
+    if ($rid <= 0) { return ['al' => [], 'alKnown' => false, 'alRaw' => tbPhrases([$brut, 'Pas de recette au panel.']), 'etat' => 'sansRecette', 'vides' => []]; }
+    $a = tbArbreAllergenes($rid, $cache, $limite);
+    $manque = [];
+    if ($a['absente']) { $manque[] = 'Recette introuvable au panel.'; }
+    if ($a['nonLu'] || $a['perime']) { $manque[] = 'Recette du panel pas encore lue en entier.'; }
+    if ($a['trop']) { $manque[] = 'Recette du panel trop imbriquée pour être lue en entier.'; }
+    if ($a['matieres'] === 0 && !$manque) { $manque[] = 'Recette du panel sans matière première.'; }
+    if ($a['vides']) { $manque[] = 'Allergènes non renseignés au panel pour : ' . tbListeCourte($a['vides']) . '.'; }
+    if ($a['inconnus']) { $manque[] = 'Allergène du panel non reconnu : ' . tbListeCourte($a['inconnus']) . '.'; }
+    $al = array_values(array_filter(TB_ALLERGENES, static fn ($id) => isset($a['codes'][$id])));
+    $complet = !$manque && $brut === '';
+    return ['al' => $al, 'alKnown' => $complet, 'alRaw' => $complet ? '' : tbPhrases(array_merge([$brut], $manque)),
+        'etat' => $complet ? 'complet' : ($al ? 'partiel' : 'aucun'), 'vides' => $a['vides']];
+}
+
+/**
+ * Ce que l'arbre d'une recette dit de ses allergènes, lu dans le cache : la recette, ses sous-recettes (chacune une
+ * fois, TB_AL_PROFONDEUR niveaux au plus) et leurs matières premières (chacune une fois). Un emballage (catégorie
+ * « … (Emballage) ») ne compte pas, sauf s'il porte des allergènes — `is_part_of_package` n'en est PAS un indice
+ * (0 même pour eux, et il pourrait marquer une matière d'un lot). `codes` : identifiants tablette trouvés ;
+ * `vides` : matières à la liste vide ; `inconnus` : allergènes hors référentiel ; `nonLu` : une recette ou une
+ * matière absente du cache ; `perime` : lue il y a plus de 24 h ; `absente` : recette que le panel n'a pas ;
+ * `trop` : sous-recettes trop profondes ; `matieres` : matières comptées (hors emballages).
+ *
+ * @return array{codes: array<string,true>, vides: list<string>, inconnus: list<string>, nonLu: bool, perime: bool,
+ *               absente: bool, trop: bool, matieres: int}
+ */
+function tbArbreAllergenes(int $rid, array $cache, int $limite): array
+{
+    $a = ['codes' => [], 'vides' => [], 'inconnus' => [], 'nonLu' => false, 'perime' => false, 'absente' => false, 'trop' => false, 'matieres' => 0];
+    $ref = is_array($cache['reference']['codes'] ?? null) && $cache['reference']['codes'] ? $cache['reference']['codes'] : null;
+    $vues = []; $mats = [];
+    $file = [['recettes', $rid, 0]];
+    while ($file) {
+        [$t, $id, $prof] = array_shift($file);              // en largeur : chaque sous-recette vue à son niveau le plus haut
+        if (isset($vues[$t . ':' . $id])) { continue; }
+        $vues[$t . ':' . $id] = true;
+        if ($prof > TB_AL_PROFONDEUR) { $a['trop'] = true; continue; }
+        $r = $id > 0 ? ($cache[$t][$id] ?? null) : null;
+        if (!is_array($r)) { $a['nonLu'] = true; continue; }
+        if ((int) ($r['le'] ?? 0) < $limite) { $a['perime'] = true; }
+        if (!empty($r['absente'])) { $a['absente'] = true; continue; }
+        foreach ((array) ($r['materiaux'] ?? []) as $m) {
+            $mid = (int) ($m['id'] ?? 0);
+            if ($mid > 0) {
+                if (isset($mats[$mid])) { continue; }
+                $mats[$mid] = true;
+            }
+            $x = $mid > 0 && is_array($cache['materiaux'][$mid] ?? null) ? $cache['materiaux'][$mid] : null;
+            $emb = tbEmballage((string) ($x !== null && ($x['cat'] ?? '') !== '' ? $x['cat'] : ($m['cat'] ?? '')));
+            $liste = $x !== null && is_array($x['allergenes'] ?? null) ? $x['allergenes'] : null;
+            if ($liste === null || $liste === []) {
+                if ($emb) { continue; }                     // un emballage sans allergène ne compte pas, lu ou non
+                $a['matieres']++;
+                if ($liste === null) { $a['nonLu'] = true; continue; }
+                $a['vides'][] = tbTexte((string) ($x['nom'] ?? '')) ?: tbTexte((string) ($m['nom'] ?? '')) ?: 'matière #' . $mid;
+            } else {
+                $a['matieres'] += (int) !$emb;
+                foreach ($liste as $al) {
+                    $l = tbAllergenePanel(is_array($al) ? $al : [], $ref);
+                    foreach ($l['ids'] as $i) { $a['codes'][$i] = true; }
+                    if (!$l['ok']) { $a['inconnus'][] = (is_array($al) ? tbTexte((string) ($al['code'] ?? '')) : '') ?: '#' . (int) ($al['id'] ?? 0); }
+                }
+            }
+            if ((int) ($x['le'] ?? 0) < $limite) { $a['perime'] = true; }
+        }
+        foreach ((array) ($r['sous'] ?? []) as $s) { $file[] = ['sousRecettes', (int) $s, $prof + 1]; }
+    }
+    $a['vides'] = array_values(array_unique($a['vides']));
+    $a['inconnus'] = array_values(array_unique($a['inconnus']));
+    return $a;
+}
+
+/**
+ * Un allergène d'une matière du panel ({id, code}) → identifiants de la tablette. Le référentiel du panel (GET
+ * /allergens, id → code) fait foi : l'id d'abord, puis le code. `ok: false` — le produit reste « à vérifier » — dès
+ * que quelque chose ne colle pas : un id hors du référentiel, un code qui contredit celui de son id, un code qu'aucun
+ * des 14 identifiants UE ne reprend. Les identifiants reconnus restent (la tablette les montre « contient ») : rien
+ * n'est écarté en silence. Sans référentiel (jamais lu) : le code seul, par TB_ALLERGENES_PANEL.
+ *
+ * @param array<int,string>|null $ref id → code
+ * @return array{ids: list<string>, ok: bool}
+ */
+function tbAllergenePanel(array $al, ?array $ref): array
+{
+    $id = is_numeric($al['id'] ?? null) ? (int) $al['id'] : 0;
+    $code = is_scalar($al['code'] ?? null) ? strtolower(trim((string) $al['code'])) : '';
+    $codes = []; $ok = true;
+    if ($ref !== null && $id > 0 && isset($ref[$id])) {
+        $codes[] = (string) $ref[$id];
+        if ($code !== '' && $code !== (string) $ref[$id]) { $codes[] = $code; $ok = false; }
+    } else {
+        if ($ref !== null && $id > 0) { $ok = false; }
+        if ($code === '' || ($ref !== null && !in_array($code, $ref, true))) { $ok = false; }
+        if ($code !== '') { $codes[] = $code; }
+    }
+    $ids = [];
+    foreach ($codes as $c) {
+        if (isset(TB_ALLERGENES_PANEL[$c])) { $ids[] = TB_ALLERGENES_PANEL[$c]; } else { $ok = false; }
+    }
+    return ['ids' => array_values(array_unique($ids)), 'ok' => $ok && $ids !== []];
+}
+
+/** Une matière d'emballage, à sa catégorie (« Matières premières (Emballage) ») ? */
+function tbEmballage(string $categorie): bool
+{
+    return preg_match('/\b(emballages?|packaging|verpakking(en)?)\b/', tbCle($categorie)) === 1;
+}
+
+/**
+ * Le référentiel des allergènes du panel (GET /allergens : {"1": {id, code, name}, …}) → [id => code] ; vide pour une
+ * réponse illisible.
+ *
+ * @return array<int,string>
+ */
+function tbReferenceLue(mixed $d): array
+{
+    $out = [];
+    $l = is_array($d) ? (PanelApi::liste($d) ?: array_values(array_filter($d, 'is_array'))) : [];
+    foreach ($l as $a) {
+        $id = is_numeric($a['id'] ?? null) ? (int) $a['id'] : 0;
+        $code = is_scalar($a['code'] ?? null) ? strtolower(trim((string) $a['code'])) : '';
+        if ($id > 0 && $code !== '') { $out[$id] = $code; }
+    }
+    return $out;
+}
+
+/**
+ * Une recette (ou sous-recette) du panel telle que le cache la garde : son nom, ses matières premières {id, nom, cat}
+ * et les id de ses sous-recettes (0 : ligne illisible, l'arbre ne sera jamais complet). `['absente' => true]` quand le
+ * panel répond sans recette (GET /recipes/<id> d'un id qui n'en est pas une rend `200 []`) ; null pour une réponse
+ * illisible, relue au calcul suivant.
+ */
+function tbRecetteLue(mixed $d, int $id): ?array
+{
+    if (!is_array($d)) { return null; }
+    if ($d === []) { return ['absente' => true]; }
+    foreach (['data', 'recipe', 'subrecipe'] as $k) { if (isset($d[$k]) && is_array($d[$k]) && !array_is_list($d[$k])) { $d = $d[$k]; } }
+    if (array_is_list($d) || (isset($d['id']) && (int) $d['id'] !== $id)) { return null; }
+    if (!is_array($d['materials'] ?? null) && !is_array($d['subrecipes'] ?? null)) { return null; }
+    $txt = static fn ($v): string => is_scalar($v) ? tbTexte((string) $v) : '';
+    $num = static function (array $l, array $cles): int {
+        foreach ($cles as $k) { if (is_numeric($l[$k] ?? null)) { return (int) $l[$k]; } }
+        return 0;
+    };
+    $mat = [];
+    foreach ((array) ($d['materials'] ?? []) as $m) {
+        $m = is_array($m) ? $m : [];
+        $mat[] = ['id' => $num($m, ['id_material', 'material_id', 'id']), 'nom' => $txt($m['name'] ?? ''), 'cat' => $txt($m['category_name'] ?? '')];
+    }
+    $sous = [];
+    foreach ((array) ($d['subrecipes'] ?? []) as $s) { $sous[] = $num(is_array($s) ? $s : [], ['id_subrecipe', 'subrecipe_id', 'id']); }
+    return ['nom' => $txt($d['name'] ?? ''), 'materiaux' => $mat, 'sous' => $sous];
+}
+
+/**
+ * Une matière première du panel (GET /materials/{id} — la liste /materials ne porte pas les allergènes) telle que le
+ * cache la garde : nom, catégorie, allergènes [{id, code}] — `[]` : jamais saisis (pas « sans allergène ») ; null :
+ * la réponse n'en dit rien. null pour une réponse illisible, relue au calcul suivant.
+ */
+function tbMatiereLue(mixed $d, int $id): ?array
+{
+    if (!is_array($d) || $d === []) { return null; }
+    foreach (['data', 'material'] as $k) { if (isset($d[$k]) && is_array($d[$k]) && !array_is_list($d[$k])) { $d = $d[$k]; } }
+    if (array_is_list($d) || (isset($d['id']) && (int) $d['id'] !== $id)) { return null; }
+    $al = null;
+    if (is_array($d['allergens'] ?? null)) {
+        $al = [];
+        foreach ($d['allergens'] as $x) {
+            $x = is_array($x) ? $x : ['code' => $x];
+            $al[] = ['id' => is_numeric($x['id'] ?? null) ? (int) $x['id'] : 0,
+                'code' => is_scalar($x['code'] ?? null) ? strtolower(trim((string) $x['code'])) : ''];
+        }
+    }
+    return ['nom' => is_scalar($d['name'] ?? null) ? tbTexte((string) $d['name']) : '',
+        'cat' => is_scalar($d['category_name'] ?? null) ? tbTexte((string) $d['category_name']) : '', 'allergenes' => $al];
+}
+
+/** « A, B et C » ; au-delà de `$n` noms, « A, B, C et 4 autres ». */
+function tbListeCourte(array $noms, int $n = 3): string
+{
+    $noms = array_values(array_unique(array_filter(array_map('strval', $noms), static fn ($s) => $s !== '')));
+    if (count($noms) <= 1) { return $noms[0] ?? ''; }
+    if (count($noms) > $n) {
+        $r = count($noms) - $n;
+        return implode(', ', array_slice($noms, 0, $n)) . ' et ' . $r . ' autre' . ($r > 1 ? 's' : '');
+    }
+    return implode(', ', array_slice($noms, 0, -1)) . ' et ' . $noms[count($noms) - 1];
+}
+
+/** Des phrases mises bout à bout, les vides écartées, chacune terminée par un point. */
+function tbPhrases(array $phrases): string
+{
+    $out = [];
+    foreach ($phrases as $p) {
+        $p = tbTexte((string) $p);
+        if ($p !== '') { $out[] = preg_match('/[.!?…]$/u', $p) ? $p : $p . '.'; }
+    }
+    return implode(' ', $out);
+}
+
+/**
  * La durée de vie en jours entiers, comme la tablette l'affiche (0 « immédiat »,
  * 1 « jour même »). Arrondie vers le BAS, à une heure près (1 444 min = 1 jour,
  * pas 2) : une DLC ne s'allonge jamais. Moins de six heures, ou inconnue → 0.
@@ -730,9 +1340,24 @@ function tbUnite(int $poids, bool $piece): array
 }
 
 /**
- * La conservation, en français : la consigne de stockage quand la fiche en porte
- * une (la seule température ne suffit pas — elle vaut 4 °C par défaut, pain
- * compris), puis la réchauffe (0 = pas de réchauffe).
+ * La fiche de la base partagée complétée de celle du panel (GET /products) pour la conservation : le nom et la
+ * consigne du lieu de stockage (la base n'en porte que l'id) et la réchauffe — la valeur du panel quand elle est
+ * renseignée (texte non vide, nombre > 0), sinon celle de la base.
+ */
+function tbFicheConservation(array $f, array $panel): array
+{
+    foreach (['storage_name', 'storage_description', 'reheating_time_minutes', 'reheating_temperature_celsius'] as $k) {
+        $v = $panel[$k] ?? null;
+        if (is_numeric($v) ? (float) $v > 0 : (is_string($v) && tbTexte($v) !== '')) { $f[$k] = $v; }
+    }
+    return $f;
+}
+
+/**
+ * La conservation, en français : le lieu de stockage et sa consigne quand la
+ * fiche en porte (« Conservation : Comptoir Frigo - 1 (2°C – 4°C). »), jamais la
+ * seule température (elle vaut 4 °C par défaut, pain compris), puis la
+ * réchauffe (0 = pas de réchauffe).
  *
  * @return array{0:string,1:string}
  */
@@ -744,12 +1369,10 @@ function tbConserver(array $f): array
     if (in_array(mb_strtolower($nom), $vides, true)) { $nom = ''; }
     if (in_array(mb_strtolower($desc), $vides, true)) { $desc = ''; }
     $bouts = [];
-    if ($desc !== '') {
-        $bouts[] = 'Conservation : ' . rtrim($desc, '. ') . '.';
-    } elseif ($nom !== '') {
-        $deg = (float) ($f['storage_temperature'] ?? 0);
-        $bouts[] = 'Conservation : ' . rtrim($nom, '. ') . ($deg > 0 ? ' (' . str_replace('.', ',', (string) round($deg, 1)) . ' °C)' : '') . '.';
-    }
+    $lieu = $nom !== '' && $desc !== '' && !str_contains(tbCle($desc), tbCle($nom))
+        ? rtrim($nom, '. ') . ' (' . rtrim($desc, '. ') . ')'
+        : ($desc !== '' ? $desc : $nom);
+    if ($lieu !== '') { $bouts[] = 'Conservation : ' . rtrim($lieu, '. ') . '.'; }
     $min = (int) ($f['reheating_time_minutes'] ?? 0);
     $deg = (int) ($f['reheating_temperature_celsius'] ?? 0);
     if ($min > 0) { $bouts[] = 'Réchauffer ' . $min . ' min' . ($deg > 0 ? ' à ' . $deg . ' °C' : '') . '.'; }

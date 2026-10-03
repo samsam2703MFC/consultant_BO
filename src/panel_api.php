@@ -131,8 +131,11 @@ final class PanelApi
      *
      * Le jeton est obtenu AVANT la volée : sans cela douze requêtes se
      * heurteraient au même 401 et relanceraient douze connexions.
+     *
+     * `$timeout` : secondes accordées à chaque requête (25 par défaut) — un
+     * appelant tenu par un budget de temps (le book de la tablette) le réduit.
      */
-    public static function getParallele(array $paths, int $front = 4): array
+    public static function getParallele(array $paths, int $front = 4, int $timeout = 25): array
     {
         if (!$paths) { return []; }
         $tok = self::token();
@@ -143,7 +146,7 @@ final class PanelApi
         if (count($paths) > $front) {
             $out = [];
             foreach (array_chunk($paths, $front, true) as $lot) {
-                $out += self::getParallele($lot, $front);
+                $out += self::getParallele($lot, $front, $timeout);
             }
             return $out;
         }
@@ -155,8 +158,8 @@ final class PanelApi
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
-                CURLOPT_TIMEOUT        => 25,
-                CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_TIMEOUT        => max(1, $timeout),
+                CURLOPT_CONNECTTIMEOUT => min(6, max(1, $timeout)),
             ]);
             curl_multi_add_handle($multi, $ch);
             $hs[$k] = $ch;
