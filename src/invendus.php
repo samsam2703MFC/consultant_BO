@@ -15,6 +15,19 @@ declare(strict_types=1);
  * connus du journal des mouvements, et l'existence de quelques routes
  * candidates (stock, report, motifs). Produits seulement : jamais un client.
  */
+/** Rien de sensible dans une sonde : la fiche magasin se réduit à l'id et au nom, et toute clé qui sent l'identifiant disparaît. */
+function invScrub(mixed $v): mixed
+{
+    if (!is_array($v)) { return $v; }
+    if (isset($v['shop']) && is_array($v['shop'])) { $v['shop'] = ['id' => $v['shop']['id'] ?? null, 'nom' => $v['shop']['representative_name'] ?? ($v['shop']['name'] ?? null)]; }
+    $o = [];
+    foreach ($v as $k => $x) {
+        if (is_string($k) && preg_match('/pass|secret|token|mail|phone|iban|bank|street|address|zip|city|vat|tva|login|owner/i', $k)) { continue; }
+        $o[$k] = is_array($x) ? invScrub($x) : $x;
+    }
+    return $o;
+}
+
 function ep_exploitation_invendus_sonde(): array
 {
     $sid = (int) ($_GET['shop'] ?? 4);
@@ -25,7 +38,7 @@ function ep_exploitation_invendus_sonde(): array
     $out = ['shop' => $sid, 'date' => $date];
     $q = http_build_query(['from' => $date, 'date_from' => $date, 'to' => $date, 'date_to' => $date]);
     $w = PanelApi::sondeGet('/shops/' . $sid . '/products/waste?' . $q, 20);
-    $out['waste'] = ['code' => $w['code'], 'corps' => $w['corps']];
+    $out['waste'] = ['code' => $w['code'], 'corps' => invScrub($w['corps'])];
     $out['mouvements'] = null;
     try {
         $out['mouvements'] = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */ movement_type, reason, COUNT(*) n, MIN(DATE(created_at)) premier, MAX(DATE(created_at)) dernier FROM product_movement WHERE created_at >= ? GROUP BY movement_type, reason ORDER BY movement_type, n DESC", ['2026-06-01 00:00:00']);
@@ -40,8 +53,14 @@ function ep_exploitation_invendus_sonde(): array
         '/shops/{s}/products/waste/reasons?from={d}&to={d}', '/shops/{s}/products/waste-details?from={d}&to={d}', '/shops/{s}/waste?from={d}&to={d}',
         '/shops/{s}/product-waste?from={d}&to={d}', '/shops/{s}/products/waste?from={d}&to={d}&group_by=reason', '/waste-reasons', '/product-waste-reasons', '/products/waste-reasons',
         '/shops/{s}/waste-reasons', '/shops/{s}/products/waste/summary?from={d}&to={d}'] as $c) { $cands[] = $c; }
+    // `q` : d'autres chemins à essayer, séparés par des virgules — produits, stock, mouvements, documentation ; jamais un client.
     $extra = (string) ($_GET['q'] ?? '');
-    if ($extra !== '' && preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste)[A-Za-z0-9_\-/]*|[a-z\-]*waste[a-z\-/]*)(\?[A-Za-z0-9_=&\-]*)?$#', $extra)) { $cands[] = $extra; }
+    if ($extra !== '') {
+        $cands = [];
+        foreach (array_slice(array_filter(array_map('trim', explode(',', $extra))), 0, 30) as $e) {
+            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|docs?|api-docs|openapi(\.json|\.yaml)?|swagger(\.json|\.yaml)?|api/documentation|documentation|v\d/docs|schema)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
+        }
+    }
     $out['candidats'] = [];
     foreach ($cands as $c) {
         $p = str_replace(['{s}', '{d}'], [(string) $sid, $date], $c);
@@ -52,7 +71,7 @@ function ep_exploitation_invendus_sonde(): array
             if (array_is_list($b)) { $ap = ['liste' => count($b), 'premier' => is_array($b[0] ?? null) ? array_slice($b[0], 0, 20, true) : ($b[0] ?? null)]; }
             else { $ap = ['cles' => array_slice(array_keys($b), 0, 20), 'extrait' => array_map(static fn ($v) => is_array($v) ? (array_is_list($v) ? ['liste' => count($v), 'premier' => $v[0] ?? null] : array_slice($v, 0, 12, true)) : $v, array_slice($b, 0, 8, true))]; }
         } elseif ($b !== null) { $ap = ['brut' => mb_substr((string) $b, 0, 300)]; }
-        $out['candidats'][] = ['chemin' => $p, 'code' => $r['code'], 'erreur' => $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 200) : null, 'apercu' => $ap];
+        $out['candidats'][] = ['chemin' => $p, 'code' => $r['code'], 'erreur' => $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 200) : null, 'apercu' => invScrub($ap)];
     }
     return $out;
 }
