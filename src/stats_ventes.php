@@ -61,6 +61,29 @@ function ep_stats_ventes_sonde(): array
         return ['cles' => array_keys($v), 'valeur' => array_map(static fn ($x) => is_array($x) ? ['n' => count($x), 'premier' => array_slice($x, 0, 2)] : $x, $v)];
     };
     $out = ['shop' => $sid, 'date' => $date];
+    // Un produit précis (?pid=) : ce que chaque source du panel en dit — la fiche, la ligne
+    // « disponible » du magasin, le rapport par catégorie du jour, la copie locale, le ticket.
+    $pid = (int) ($_GET['pid'] ?? 0);
+    if ($pid > 0) {
+        $d = [];
+        $fiche = PanelApi::get('/products/' . $pid);
+        $d['fiche'] = is_array($fiche) ? $propre(array_map(static fn ($x) => is_array($x) ? ['n' => count($x), 'cles' => array_keys($x)] : $x, $fiche)) : $fiche;
+        $ligne = null;
+        foreach (method_exists('PanelApi', 'produitsDisponibles') ? PanelApi::produitsDisponibles($sid) : [] as $l) {
+            foreach (['id', 'product_id', 'id_product'] as $k) { if (isset($l[$k]) && (int) $l[$k] === $pid) { $ligne = $l; break 2; } }
+        }
+        $d['disponible'] = $ligne === null ? null : $propre(array_map(static fn ($x) => is_array($x) ? ['n' => count($x), 'cles' => array_keys($x)] : $x, $ligne));
+        $g = PanelApi::get('/shops/' . $sid . '/statistics/sales/product-category-groups?date_from=' . $date . '&date_to=' . $date);
+        $d['groupes'] = ['cles' => is_array($g) && analyseListe($g) !== [] ? array_keys((array) analyseListe($g)[0]) : null,
+            'ligne' => array_values(array_filter(analyseListe(is_array($g) ? $g : []), static fn ($l) => (int) ($l['product_id'] ?? 0) === $pid))];
+        try { $d['copie'] = Db::rows('SELECT id, name, id_category, is_active FROM product WHERE id = ?', [$pid]); } catch (Throwable $e) { $d['copie'] = 'table absente'; }
+        $d['categorieLocale'] = svCategories()[$pid] ?? null;
+        $gr = setting('svP' . $sid . ':' . $date);
+        $d['ticketGrave'] = null;
+        foreach ((array) ($gr['p'] ?? []) as $h => $lst) { if (isset($lst[$pid])) { $d['ticketGrave'] = ['h' => $h, 'ligne' => $lst[$pid]]; break; } }
+        $out['produit'] = $d;
+        return $out;
+    }
     foreach ($chemins as $k => $p) { $out[$k] = ['route' => $p, 'reponse' => $coupe($res[$k] ?? null)]; }
     $lt = analyseListe($res['trans'] ?? null);
     if ($lt !== []) {
