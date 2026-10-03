@@ -528,3 +528,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T11:58:15Z dashboard vue jour : rien que le jour
 2026-10-03T12:00:50Z vue jour : carte des offres vide
 2026-10-03T12:10:35Z P&L : cout matiere recompose depuis les tickets
+2026-10-03T12:17:10Z matiere : periode, rentabilite, performance
