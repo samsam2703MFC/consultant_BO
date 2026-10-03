@@ -426,7 +426,10 @@ rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand ri
 ### `/exploitation/invendus` — les invendus et la poubelle
 
 `GET /exploitation/invendus?shop=4&date=2026-10-02` (le jour), `?shop=4&du=&au=` (la semaine, le mois), sans `shop` le
-réseau magasin par magasin. Source unique, mesurée le 03/10/2026 : `GET /shops/{id}/products/waste?date_from=&date_to=`
+réseau magasin par magasin (`?periode=jour|7|30` pour le cockpit : `magasins[]` avec `ca` et `part` = coût ÷ CA lu en
+une fois sur `/consultant/shops/sales-kpis`, `produits[]` additionnés d'un magasin à l'autre — trente au plus, avec
+`parMagasin` — `parMotif` du réseau, et `reseau` : `cout`, `part`, `pieces`, `caPerdu`, `declarent` sur `magasins`).
+L'écran cockpit **Magasins › Invendus et poubelle** (`#/invendus-poubelle`) le lit tel quel. Source unique, mesurée le 03/10/2026 : `GET /shops/{id}/products/waste?date_from=&date_to=`
 du panel, qui rend par produit les pièces jetées (`waste_qty`), le coût de recette de ces pièces (`recipe_waste_gross`,
 **TTC** : 0,725 € le croissant pour 0,684 € net), la valeur de vente perdue (`ca_waste_net`) et le motif dominant
 (`top_reason` : `expiration`, `damage`, `tasting`, `quality`). Le filtre par motif n'existe pas (mesuré : `reason=`

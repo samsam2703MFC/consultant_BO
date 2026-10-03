@@ -863,3 +863,19 @@ svg.pxv-nuage .lab .mu{font-weight:500;fill:var(--color-text-muted)}
 [data-screen="offres-canaux"] .co-cell::after{content:"";position:absolute;right:0;top:6px;width:7px;height:7px;border-radius:50%;background:var(--color-border-secondary)}
 [data-screen="offres-canaux"] .co-cell.ok::after{background:#2d7a3e}[data-screen="offres-canaux"] .co-cell.att::after{background:#B26A00}[data-screen="offres-canaux"] .co-cell.ko::after{background:#C0182B}
 [data-screen="offres-canaux"] .co-cell small{font-size:10.5px;color:var(--color-text-muted)}
+
+/* Invendus et poubelle (Magasins) : la part de chaque magasin dans le jeté du réseau, les motifs, l'état de déclaration. */
+[data-screen="invendus-poubelle"] .iv-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--color-background-secondary);min-width:120px}
+[data-screen="invendus-poubelle"] .iv-bar i{display:block;height:100%;background:#C0182B;border-radius:4px}
+[data-screen="invendus-poubelle"] .iv-tag{display:inline-block;font:600 10.5px var(--font-ui);letter-spacing:.03em;padding:2px 8px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);white-space:nowrap;margin:1px 0}
+[data-screen="invendus-poubelle"] .iv-tag b{font-weight:700}
+[data-screen="invendus-poubelle"] .iv-tag.fdj{background:#efe9e1;color:#5c5247}
+[data-screen="invendus-poubelle"] .iv-tag.casse{background:#fbe3e5;color:#9f1424}
+[data-screen="invendus-poubelle"] .iv-tag.degu{background:#e2eef7;color:#1f5f8b}
+[data-screen="invendus-poubelle"] .iv-tag.qual{background:#fdf0d8;color:#9a5a00}
+[data-screen="invendus-poubelle"] .iv-tag.rep{background:#e3f1e5;color:#2d7a3e}
+[data-screen="invendus-poubelle"] .iv-etat{font:600 10.5px var(--font-ui);border-radius:999px;padding:3px 9px;white-space:nowrap}
+[data-screen="invendus-poubelle"] .iv-etat.declare{background:#E6F2E9;color:#2d7a3e}
+[data-screen="invendus-poubelle"] .iv-etat.rien{background:var(--color-background-secondary);color:var(--color-text-muted)}
+[data-screen="invendus-poubelle"] .iv-etat.muet{background:#FBEFE0;color:#B26A00}
+[data-screen="invendus-poubelle"] .iv-leg{display:flex;gap:12px;flex-wrap:wrap;padding:8px 18px 12px;font-size:10.5px;color:var(--color-text-muted);align-items:center}
