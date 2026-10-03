@@ -455,11 +455,15 @@ function ep_promo_recherche(): array
     if ($cat === []) {
         foreach (svCategories() as $pid => $c) { if (mb_stripos($c, $q) !== false && !isset($cats[$c])) { $cats[$c] = ['sel' => 'c:' . $c, 'nom' => $c, 'type' => 'catégorie', 'info' => '']; } }
         $cats = array_values($cats);
-        try {
+        foreach (function_exists('panelCatalogue') ? panelCatalogue()['produits'] : [] as $x) {
+            if (!empty($x['actif']) && mb_stripos((string) $x['nom'], $q) !== false) { $prods[] = ['sel' => 'p:' . (int) $x['id'], 'nom' => (string) $x['nom'], 'type' => 'produit', 'info' => (string) ($x['cat'] ?? '')]; }
+            if (count($prods) >= 80) { break; }
+        }
+        if ($prods === []) { try {
             foreach (Db::rows('SELECT id, name FROM product WHERE is_active = 1 AND name LIKE ? ORDER BY name LIMIT 80', ['%' . $q . '%']) as $r) {
                 $prods[] = ['sel' => 'p:' . (int) $r['id'], 'nom' => (string) $r['name'], 'type' => 'produit', 'info' => svCategories()[(int) $r['id']] ?? ''];
             }
-        } catch (PDOException $e) { /* pas de table produit */ }
+        } catch (PDOException $e) { /* pas de table produit */ } }
     }
     usort($prods, static fn ($a, $b) => strcmp($a['nom'], $b['nom']));
     return ['q' => $q, 'resultats' => array_merge(array_slice($groupes, 0, 10), array_slice($cats, 0, 20), array_slice($prods, 0, 50))];

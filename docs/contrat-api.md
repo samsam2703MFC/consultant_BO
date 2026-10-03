@@ -1121,6 +1121,21 @@ Les tickets d'une journée close restent gravés tels qu'ils ont été lus : une
 journée lue avant cette règle garde ses portions fondues dans la pièce, et
 n'est relue que si on efface son gravé.
 
+**Le catalogue, les catégories et les prix, en direct** (`panelCatalogue`) :
+une lecture par heure, gardée dans `ceo_app_setting` (`panelCatalogue`),
+compose les groupes (`/product-category-groups`), les catégories
+(`/product-categories`, le nom réseau `base_name`) et les produits de chaque
+magasin du compte (`/shops/{id}/products/available` : nom réseau, catégorie et
+ses groupes quand la ligne les porte, prix pratiqué `portion_price` par
+magasin, prix conseillé, recette, DLV, poids, marge attendue). Dessus :
+`catalogueCategories` (les groupes manquants comblés par la table de liaison
+de la copie, seule à les porter sinon), `cataloguePrix` (la moyenne des
+magasins, `cataloguePrixMagasin` pour un seul), la liste du référentiel
+(`/production/catalogue`), la fiche produit (`/products/{id}` d'abord), les
+recherches de produits (`/marketing/catalogue`, `/promo/recherche`) et la
+catégorie de chaque produit du scoring. La copie locale (`product`,
+`product_category`, `shop_product`) ne sert plus que si le panel se tait.
+
 **Le coût matière, aussi en direct** (`catalogueCouts`, `coutsPanelMagasin`) :
 le panel d'abord — `recipe_cost_net` de `/shops/{id}/products/available`, le
 coût de CE magasin pour le détail de ses ventes, la moyenne des magasins du
