@@ -1048,3 +1048,27 @@ html.rc-direct-ouvert,html.rc-direct-ouvert body{overflow:hidden}
 /* Le delta de clients face à J−7, à côté du nombre. */
 .db-j7{font:700 .5em var(--font-ui);vertical-align:middle;margin-left:2px;padding:2px 6px;border-radius:999px;background:var(--color-background-secondary)}
 .db-j7.ok{color:#2d7a3e;background:#E6F2E9}.db-j7.ko{color:#C0182B;background:#F8E3E5}.db-j7.mu{color:var(--color-text-muted)}
+
+/* --- Invendus et poubelle --- */
+.db-inv .db-inv-kpi{margin:10px 16px 12px}
+.db-inv .db-inv-kpi .v.ko{color:#C0182B}
+.db-inv .db-pro-corps{padding:0 16px 12px}
+.db-inv-tab td.nom{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px}
+.db-inv-tab td.nom small{display:block;font-weight:400;color:var(--color-text-muted);font-size:10.5px}
+.db-inv-tab td.n small{font-weight:400;color:var(--color-text-muted)}
+.db-inv-tag{display:inline-block;font:600 10px var(--font-ui);letter-spacing:.03em;padding:2px 7px;border-radius:9px;background:var(--color-background-secondary);color:var(--color-text-muted);white-space:nowrap}
+.db-inv-tag.fdj{background:#efe9e1;color:#5c5247}
+.db-inv-tag.casse{background:#fbe3e5;color:#9f1424}
+.db-inv-tag.degu{background:#e2eef7;color:#1f5f8b}
+.db-inv-tag.qual{background:#fdf0d8;color:#9a5a00}
+.db-inv-tag.rep{background:#e3f1e5;color:#2d7a3e}
+.db-inv-note{padding:0 16px 12px;color:var(--color-text-muted)}
+.db-inv.mob .db-inv-kpi{margin:8px 0 10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.db-inv.mob .db-pro-corps{padding:0}
+.db-inv.mob .db-inv-tab td.nom{max-width:0;width:100%}
+.db-inv.mob .db-inv-note{padding:8px 4px 0}
+@media (max-width:900px){.db-inv-tab td.nom{max-width:0;width:100%}}
+.db-cdr-inl{display:inline;padding:0;margin:0 0 0 10px;border-top:none;cursor:pointer;white-space:nowrap;text-align:left}
+.db-inv.mob .db-inv-tab td.nom{white-space:normal;max-width:none;width:auto}
+.db-inv.mob .db-inv-tab td.nom small{white-space:normal}
+.db-inv.mob .db-inv-tab td{padding:6px 5px}

@@ -123,6 +123,9 @@ function ep_exploitation_periode(): array
 
     $joursMoisC = (int) date('t', strtotime($auj));
     $premierC   = new DateTimeImmutable(date('Y-m-01', strtotime($auj)));
+    // Les invendus de l'étendue : une lecture par magasin sur la fenêtre, le coût de
+    // production net des pièces jetées se retranche du résultat.
+    $invM = function_exists('invCoutsMagasins') ? invCoutsMagasins(array_map(static fn ($s) => (int) $s['id'], $shops), $du, $jusqua) : [];
     $lignes = [];
     foreach ($shops as $s) {
         $id = (int) $s['id']; $nom = (string) $s['name'];
@@ -248,7 +251,8 @@ function ep_exploitation_periode(): array
         // Le résultat n'est complet que si chaque jour vendu a sa main-d'œuvre
         // et ses frais : hors du mois courant, le panel ne les rend pas.
         $netOk = $mb !== null && $labJ !== null && $ohJ !== null && $joursHorsMoisC === 0 && $joursOuvertsPasses > 0;
-        $net = $netOk ? $mb - $labour - $oh : null;
+        $inv = $invM[$id] ?? ['cout' => null, 'pieces' => null, 'declare' => null, 'source' => 'panel muet'];
+        $net = $netOk ? $mb - ($inv['cout'] ?? 0.0) - $labour - $oh : null;
         $panier = $tickets > 0 ? $realise / $tickets : null;
         $ecart = $objAucun ? null : $realise - $attendu;
         $pct = static fn (?float $v) => ($v !== null && $realise > 0) ? round($v / $realise * 100, 1) : null;
@@ -268,6 +272,8 @@ function ep_exploitation_periode(): array
             'clientsManquants' => ($ecart !== null && $panier !== null && $panier > 0) ? (int) round(-$ecart / $panier) : null,
             'coutMatiere' => $fc !== null ? round($fc, 2) : null, 'coutMatierePct' => $pct($fc), 'coutMatiereSource' => $matSrc,
             'margeBrute' => $mb !== null ? round($mb, 2) : null, 'margeBrutePct' => $pct($mb),
+            'invendus' => $inv['cout'] !== null ? round((float) $inv['cout'], 2) : null, 'invendusPct' => $inv['cout'] !== null ? $pct((float) $inv['cout']) : null,
+            'invendusPieces' => $inv['pieces'], 'invendusDeclare' => $inv['declare'], 'invendusSource' => $inv['source'],
             'labour' => $netOk ? round($labour, 2) : null, 'labourPct' => $netOk ? $pct($labour) : null,
             'overhead' => $netOk ? round($oh, 2) : null, 'overheadPct' => $netOk ? $pct($oh) : null,
             'net' => $net !== null ? round($net, 2) : null, 'netPct' => $pct($net),
@@ -289,8 +295,8 @@ function ep_exploitation_periode(): array
     // Réseau : la somme de ce qui est connu. Un magasin sans objectif ne
     // compte pas pour zéro dans l'objectif — la ligne le dit.
     $t = ['objectif' => 0.0, 'attendu' => 0.0, 'prevu' => 0.0, 'realise' => 0.0, 'tickets' => 0, 'fc' => 0.0,
-        'mb' => 0.0, 'labour' => 0.0, 'oh' => 0.0, 'net' => 0.0];
-    $nObj = 0; $nOuv = 0; $netComplet = true; $realiseObj = 0.0;
+        'mb' => 0.0, 'labour' => 0.0, 'oh' => 0.0, 'net' => 0.0, 'inv' => 0.0, 'invPieces' => 0.0];
+    $nObj = 0; $nOuv = 0; $netComplet = true; $realiseObj = 0.0; $invLus = 0; $invDeclarent = 0;
     $parJourR = [];
     $proR = ['ca' => 0.0, 'tk' => 0, 'lus' => 0, 'jours' => 0]; $proAucun = true;
     foreach ($lignes as $l) {
@@ -301,6 +307,7 @@ function ep_exploitation_periode(): array
             $proR['ca'] += (float) ($l['caPro'] ?? 0); $proR['tk'] += (int) ($l['ticketsPro'] ?? 0);
         }
         $t['realise'] += $l['realise']; $t['tickets'] += $l['tickets']; $t['fc'] += (float) ($l['coutMatiere'] ?? 0); $t['mb'] += (float) ($l['margeBrute'] ?? 0);
+        if (($l['invendus'] ?? null) !== null) { $invLus++; $t['inv'] += (float) $l['invendus']; $t['invPieces'] += (float) ($l['invendusPieces'] ?? 0); if (!empty($l['invendusDeclare'])) { $invDeclarent++; } }
         if ($l['objectif'] !== null) {
             $nObj++; $t['objectif'] += $l['objectif']; $t['attendu'] += $l['attendu']; $t['prevu'] += $l['prevu']; $realiseObj += $l['realise'];
         }
@@ -342,6 +349,9 @@ function ep_exploitation_periode(): array
         'ecartComptoir' => $ecR,
         'coutMatiere' => round($t['fc'], 2), 'coutMatierePct' => $pctR($t['fc']),
         'margeBrute' => round($t['mb'], 2), 'margeBrutePct' => $pctR($t['mb']),
+        'invendus' => $invLus ? round($t['inv'], 2) : null, 'invendusPct' => $invLus ? $pctR($t['inv']) : null,
+        'invendusPieces' => $invLus ? round($t['invPieces'], 1) : null, 'invendusDeclare' => $invLus ? $invDeclarent > 0 : null,
+        'invendusSource' => $invLus ? ($invDeclarent . ' magasin' . ($invDeclarent > 1 ? 's' : '') . ' sur ' . $nOuv . ' déclare' . ($invDeclarent > 1 ? 'nt' : '') . ' la poubelle') : 'panel muet',
         'labour' => $netComplet ? round($t['labour'], 2) : null, 'labourPct' => $netComplet ? $pctR($t['labour']) : null,
         'overhead' => $netComplet ? round($t['oh'], 2) : null, 'overheadPct' => $netComplet ? $pctR($t['oh']) : null,
         'net' => $netComplet ? round($t['net'], 2) : null, 'netPct' => $netComplet ? $pctR($t['net']) : null,
