@@ -114,6 +114,21 @@ function invCoutNet(int $sid, array $l): array
     return [$repli, $brut > 0 ? 'brut ÷ 1,06' : 'sans coût'];
 }
 
+/**
+ * La valeur de vente perdue d'une ligne : celle du panel quand il la chiffre, sinon
+ * pièces × prix de vente du magasin (mesuré : sur une fenêtre d'un jour, le panel rend
+ * 0,00 là où la semaine rend 274,16 € pour les mêmes pièces). [valeur, source]
+ */
+function invValeurPerdue(int $sid, array $l): array
+{
+    if ((float) $l['caPerdu'] > 0) { return [round((float) $l['caPerdu'], 2), 'panel']; }
+    $prix = null;
+    if (function_exists('cataloguePrixMagasin')) { $prix = cataloguePrixMagasin($sid)[$l['pid']] ?? null; }
+    if ($prix === null && function_exists('cataloguePrix')) { $prix = cataloguePrix()[$l['pid']] ?? null; }
+    if ($prix !== null && (float) $prix > 0) { return [round((float) $prix * (float) $l['pieces'], 2), 'catalogue']; }
+    return [0.0, 'inconnue'];
+}
+
 /** Les pièces vendues du jour par produit, dans le relevé gravé (jamais une lecture de plus). */
 function invVendusJour(int $sid, string $j): array
 {
@@ -136,15 +151,18 @@ function invBilan(int $sid, string $du, string $au, ?array $lignes): ?array
 {
     if ($lignes === null) { return null; }
     $vendus = $du === $au ? invVendusJour($sid, $du) : [];
-    $prods = []; $pieces = 0.0; $cout = 0.0; $brut = 0.0; $perdu = 0.0; $motifs = []; $sources = [];
+    $prods = []; $pieces = 0.0; $cout = 0.0; $brut = 0.0; $perdu = 0.0; $motifs = []; $sources = []; $sansCout = 0; $auCatalogue = 0; $perduCatalogue = 0;
     foreach ($lignes as $l) {
         [$c, $src] = invCoutNet($sid, $l);
+        [$v, $vSrc] = invValeurPerdue($sid, $l);
         $sources[$src] = ($sources[$src] ?? 0) + 1;
+        if ($c <= 0) { $sansCout++; } elseif ((float) $l['coutBrut'] <= 0) { $auCatalogue++; }
+        if ($vSrc === 'catalogue') { $perduCatalogue++; }
         $m = $l['motif'];
         $motifs[$m] = $motifs[$m] ?? ['motif' => $m, 'lib' => invMotif($m), 'pieces' => 0.0, 'cout' => 0.0];
         $motifs[$m]['pieces'] += $l['pieces']; $motifs[$m]['cout'] += $c;
         $r = ['pid' => $l['pid'], 'nom' => function_exists('svNomProduit') ? svNomProduit($l['pid'], $l['nom']) : $l['nom'], 'categorie' => $l['cat'],
-            'pieces' => round($l['pieces'], 1), 'cout' => $c, 'coutBrut' => $l['coutBrut'], 'caPerdu' => $l['caPerdu'], 'motif' => $m, 'motifLib' => invMotif($m),
+            'pieces' => round($l['pieces'], 1), 'cout' => $c, 'coutSource' => $src, 'coutBrut' => $l['coutBrut'], 'caPerdu' => $v, 'caPerduSource' => $vSrc, 'motif' => $m, 'motifLib' => invMotif($m),
             'motifPieces' => round($l['motifN'], 1)];
         if ($vendus !== []) {
             $vd = $vendus[$l['pid']] ?? 0.0;
@@ -152,7 +170,7 @@ function invBilan(int $sid, string $du, string $au, ?array $lignes): ?array
             $r['taux'] = $vd + $l['pieces'] > 0 ? round(100 * $l['pieces'] / ($vd + $l['pieces']), 1) : null;
         }
         $prods[] = $r;
-        $pieces += $l['pieces']; $cout += $c; $brut += $l['coutBrut']; $perdu += $l['caPerdu'];
+        $pieces += $l['pieces']; $cout += $c; $brut += $l['coutBrut']; $perdu += $v;
     }
     usort($prods, static fn ($a, $b) => $b['cout'] <=> $a['cout'] ?: $b['pieces'] <=> $a['pieces']);
     $pm = array_values($motifs);
@@ -161,6 +179,10 @@ function invBilan(int $sid, string $du, string $au, ?array $lignes): ?array
     arsort($sources);
     return ['declare' => $prods !== [], 'pieces' => round($pieces, 1), 'cout' => round($cout, 2), 'coutBrut' => round($brut, 2), 'caPerdu' => round($perdu, 2),
         'produits' => $prods, 'parMotif' => $pm, 'references' => count($prods),
+        // Ce que le chiffre ne dit pas seul : les références sans aucun coût connu (comptées
+        // zéro), celles prises au coût de recette actuel faute de coût au panel, et les
+        // valeurs de vente reconstituées au prix du catalogue.
+        'sansCout' => $sansCout, 'auCatalogue' => $auCatalogue, 'perduCatalogue' => $perduCatalogue,
         'coutSource' => $sources === [] ? null : (string) array_key_first($sources)];
 }
 
