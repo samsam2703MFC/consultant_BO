@@ -564,3 +564,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T17:42:26Z production J-7 besoin vendu plus manque
 2026-10-03T17:44:40Z production J-7 tuile
 2026-10-03T18:43:18Z production plan lisible
+2026-10-03T18:47:31Z production plan nombres entiers
