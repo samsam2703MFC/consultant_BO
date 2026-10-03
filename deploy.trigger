@@ -555,3 +555,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T15:37:50Z dashboard : vue jour en lignes
 2026-10-03T15:57:55Z production : application /production
 2026-10-03T16:00:30Z production : heures du suivi
+2026-10-03T16:11:17Z production : plage du suivi
