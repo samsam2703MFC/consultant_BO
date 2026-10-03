@@ -511,6 +511,7 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 | 2. Plan de production | `GET /production/flux/plan?shop=&date=` (jusqu'à J+7) | — |
 | 3. Validation et suivi | `GET /production/flux/suivi?shop=&date=` (jusqu'à aujourd'hui) | `POST /production/flux/valider` `{shop, date, cuisson, lignes: {pid: pièces}, par}` |
 | 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste}}, par}` |
+| 5. Fours | `GET /production/flux/fours?shop=&date=` (jusqu'à J+7) | `POST /production/flux/fours` `{shop, fours: [{id, nom, plaques}], categories: {cat: {four, temp, duree, parPlaque}}, par}` |
 
 - **Par jour de la semaine** (`flux.jours[1..7]`) : le nombre de cuissons du jour (les n premières
   cuissons du magasin, leurs parts ramenées à 100 %) et la **production minimum de la 1re cuisson**
@@ -569,6 +570,15 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   `conseil` (pièces et plaques à recuire), `stockMin` (le seuil de recuisson du produit).
 - **Suivi et clôture** : la vitrine se vide du comptoir et des commandes retirées (à leur heure de
   retrait) ; le ticket d'une commande payée pour un autre jour n'en sort rien.
+- **Fours** (demande du 03/10/2026) : les fours du magasin (1 à 6 ; `plaques` = plaques par
+  fournée) et, par catégorie, la cuisson : `four` (`null` = hors four), `temp` (°C), `duree` (min
+  par fournée), `parPlaque` (pièces par plaque) ; proposés d'après le nom et la section
+  (`auto`) tant que rien n'est enregistré (`pfFours:{shop}`). `gantt.fours[].fournees[]` : pour
+  chaque cuisson du plan, les plaques de chaque catégorie (pièces ÷ pièces par plaque, au-dessus),
+  regroupées par four et par réglage, la plus chaude d'abord, en fournées de la capacité du four,
+  enchaînées pour sortir à l'ouverture de la vente sans recouvrir la cuisson précédente
+  (`debut`, `fin`, `temp`, `duree`, `plaques`, `capacite`, `categories`, `retard` en minutes) ;
+  `occupation` (min), `horsFour`, `retards`, `axe` (heures du Gantt).
 - **Sonde** : `GET /production/flux/sonde?shop=&date=` (lecture seule, des comptes et des noms de
   champs, jamais un client) : les commandes du jour, encaissées ou non, les routes du panel essayées
   pour leurs articles, la part des tickets pro qui sont des commandes ; `&liste=1` : la taille et
