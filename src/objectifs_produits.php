@@ -175,7 +175,7 @@ function opVentes(int $sid, array $pids, string $du, string $au, int &$cout, int
                 $pid = (int) $pid;
                 if (!isset($set[$pid])) { continue; }
                 $q += (float) $x[1];
-                $parProduit[$pid] ??= ['id' => $pid, 'nom' => (string) $x[0], 'q' => 0.0];
+                $parProduit[$pid] ??= ['id' => $pid, 'nom' => svNomProduit($pid, (string) $x[0]), 'q' => 0.0];
                 $parProduit[$pid]['q'] += (float) $x[1];
             }
         }

@@ -1090,6 +1090,37 @@ Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le l
 **Contrôle des tâches**, l'écran qui porte la responsabilité de l'avis. Une contresignature
 déjà posée s'affiche ici — c'est un fait à connaître, pas une commande à actionner.
 
+### Le détail des ventes : noms, catégories et portions lus chez le panel
+
+Mesuré à Halle le 03/10/2026 : une demi-tarte « Frangipane & Pommes - 1/2 »
+vendue n'apparaissait pas dans « Ventes par catégorie ». La ligne de ticket
+portait le nom de la caisse du magasin (« Frangipanes & Appels », en
+néerlandais), la copie locale de la base ignorait ce produit créé depuis son
+extraction (donc « Sans catégorie »), et la portion comptait comme une pièce
+au coût d'une pièce entière. Trois règles, toutes en direct depuis l'API :
+
+- **Le catalogue** (`svCatalogue`) : `/shops/{id}/products/available` de
+  chaque magasin du compte, le nom réseau (`base_name`) et la catégorie
+  (`base_category_name`), une lecture par heure gardée dans `ceo_app_setting`
+  (`svCatalogue`), la dernière lecture servie si le panel se tait. La copie
+  locale de `product` ne comble que les références que le panel ne liste plus.
+- **Les portions** (`svPortion`) : une ligne de ticket avec
+  `id_product_portion` est une ligne à part, clé « produit:portion »
+  (`6700284:77`), nom « Frangipane & Pommes — 1/2 »
+  (`product_portion_label`), coût = coût de la pièce × `portion_fraction`
+  du `manufacturing_cost_snapshot` (sinon le type `ONE_HALF`, `ONE_QUARTER`…,
+  sinon le libellé « 1/3 »), ou le coût chiffré par le panel quand la pièce
+  n'a pas de recette connue. Les lecteurs qui raisonnent par pièce
+  (planogramme, objectifs produits, jours creux, bundles) ramènent la portion
+  à son produit par `(int)` de la clé.
+- **Les noms** (`svNomProduit`) : à l'affichage, le nom du catalogue remplace
+  celui de la ligne de ticket, la portion conservée — y compris pour les
+  journées gravées avant cette règle.
+
+Les tickets d'une journée close restent gravés tels qu'ils ont été lus : une
+journée lue avant cette règle garde ses portions fondues dans la pièce, et
+n'est relue que si on efface son gravé.
+
 ### `GET /exploitation/jour` — les clients de J−7 au même moment
 
 Chaque magasin porte `j7` : `{ date, moment, tickets, ca, ticketsJour, caJour }`,
