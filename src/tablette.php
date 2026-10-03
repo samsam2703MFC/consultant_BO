@@ -239,7 +239,7 @@ function tbBase(?array $shop, string $ensemble, bool $forcer): array
  */
 function tbConstruire(?array $shop, string $ensemble): array
 {
-    $sources = ['produits' => '', 'photos' => '', 'best' => '', 'saisons' => '', 'allergenes' => ''];
+    $sources = ['produits' => '', 'photos' => '', 'best' => '', 'saisons' => '', 'allergenes' => '', 'combos' => ''];
 
     // 1. Le catalogue (gammes comprises) : sans lui, pas de book.
     $cat = ep_prod_catalogue();
@@ -333,6 +333,10 @@ function tbConstruire(?array $shop, string $ensemble): array
         $sources['best'] = 'relevés de ventes illisibles (' . $e->getMessage() . ') : aucune meilleure vente';
     }
 
+    // 5 bis. Les combos du réseau (écran Croisements) : la vente additionnelle de chaque produit.
+    $combos = tbCombos($retenus, $best);
+    $sources['combos'] = $combos['note'];
+
     // 6. Catégories, saisons et produits, dans les noms de champs de la tablette.
     $cats = []; $produits = [];
     $etats = ['fiche' => 0, 'complet' => 0, 'partiel' => 0, 'aucun' => 0, 'sansRecette' => 0];
@@ -373,8 +377,9 @@ function tbConstruire(?array $shop, string $ensemble): array
             'diet' => (int) ($f['is_vegetarian'] ?? 0) === 1 ? 'vege' : null,
             'keep' => $keep,
             'dlc' => tbDlc($minutes),
-            'cross' => [],
+            'cross' => $combos['cross'][$id] ?? [],
             'crossLine' => ['', ''],
+            'combos' => $combos['parProduit'][$id] ?? [],
             '_ref' => (string) ($c['ref'] ?? $id),
             '_recette' => $rid,
         ];
@@ -950,6 +955,78 @@ function tbFichierRef(string $ref): string
 }
 
 /** L'identifiant tablette d'un produit : l'id du panel (`pwaId`), sinon la référence. */
+/** Le moment d'un combo (`ceo_combo.dp`, voir CROIS_DAYPARTS) en [FR, NL] ; vide : toute la journée. */
+const TB_COMBO_MOMENTS = [
+    'matin' => ['Matin (avant 11 h)', 'Ochtend (voor 11 u)'],
+    'midi' => ['Midi (11 – 14 h)', 'Middag (11 – 14 u)'],
+    'apresmidi' => ['Après-midi (14 h et plus)', 'Namiddag (vanaf 14 u)'],
+];
+
+/** Produits du book montrés au plus par combo (les meilleures ventes d'abord). */
+const TB_COMBO_PRODUITS = 4;
+
+/**
+ * La vente additionnelle de chaque produit : les combos du réseau (`ceo_combo`,
+ * écran Croisements — « sur les tickets qui contiennent A, la part qui contient
+ * aussi B ») dont le produit fait partie de A. Pour chacun : ce qu'il faut
+ * proposer (B, en toutes lettres), le moment, le surnom quand le réseau en a
+ * donné un, la target d'attache, et les produits de B présents au book (pour
+ * les montrer sur la tablette) — B peut ne pas y être : les boissons sont hors
+ * comptoir. `cross` réunit ces produits, sans doublon, pour « Proposez aussi ».
+ * Même règle de sélection que croisIds() : groupe, catégorie ou produit exacts.
+ *
+ * @param list<array> $retenus produits du catalogue retenus pour le book
+ * @param array<string,bool> $best ids des meilleures ventes
+ * @return array{parProduit: array<string, list<array>>, cross: array<string, list<string>>, note: string}
+ */
+function tbCombos(array $retenus, array $best): array
+{
+    try {
+        $rows = Db::rows('SELECT * FROM ceo_combo ORDER BY id');
+    } catch (Throwable $e) {
+        return ['parProduit' => [], 'cross' => [], 'note' => 'combos illisibles (' . $e->getMessage() . ') : aucune vente additionnelle'];
+    }
+    $dans = static function (string $sel, array $c): bool {
+        $type = substr($sel, 0, 2);
+        $val = trim((string) substr($sel, 2));
+        if ($val === '') { return false; }
+        return match ($type) {
+            'g:' => trim((string) ($c['groupe'] ?? '')) === $val,
+            'c:' => trim((string) ($c['categorie'] ?? '')) === $val,
+            'p:' => ($c['pwaId'] ?? null) !== null && (string) (int) $c['pwaId'] === $val,
+            default => false,
+        };
+    };
+    $parProduit = []; $cross = []; $servis = 0;
+    foreach ($rows as $r) {
+        $aSel = (string) $r['a_sel']; $bSel = (string) $r['b_sel'];
+        // B au book : les meilleures ventes d'abord, puis par nom.
+        $b = array_values(array_filter($retenus, static fn ($c) => $dans($bSel, $c)));
+        usort($b, static fn ($x, $y) => [isset($best[tbIdProduit($y)]), tbCle((string) ($x['nom'] ?? ''))]
+            <=> [isset($best[tbIdProduit($x)]), tbCle((string) ($y['nom'] ?? ''))]);
+        $bIds = array_map('tbIdProduit', $b);
+        $surnom = trim((string) ($r['surnom'] ?? ''));
+        // Un surnom fait de « A × B » n'apprend rien de plus que le combo lui-même.
+        if (str_contains($surnom, '×')) { $surnom = ''; }
+        $cible = isset($r['target']) && $r['target'] !== null && is_numeric($r['target']) ? round((float) $r['target'], 1) : null;
+        $moment = TB_COMBO_MOMENTS[(string) ($r['dp'] ?? '')] ?? ['', ''];
+        $avec = trim((string) preg_replace('/\s*\(groupe\)\s*$/u', '', (string) $r['b_lib']));
+        $touche = false;
+        foreach ($retenus as $c) {
+            if (!$dans($aSel, $c)) { continue; }
+            $id = tbIdProduit($c);
+            $ids = array_slice(array_values(array_filter($bIds, static fn ($x) => $x !== $id)), 0, TB_COMBO_PRODUITS);
+            $parProduit[$id][] = ['avec' => [$avec, ''], 'quand' => $moment, 'nom' => [$surnom, ''], 'cible' => $cible, 'ids' => $ids];
+            $cross[$id] = array_values(array_unique(array_merge($cross[$id] ?? [], $ids)));
+            $touche = true;
+        }
+        $servis += (int) $touche;
+    }
+    return ['parProduit' => $parProduit, 'cross' => $cross,
+        'note' => 'combos du réseau (écran Croisements, table ceo_combo) : ' . count($rows) . ' combo(s), ' . $servis
+            . ' concernant des produits du book ; ' . count($parProduit) . ' produit(s) avec une vente additionnelle'];
+}
+
 function tbIdProduit(array $c): string
 {
     return ($c['pwaId'] ?? null) !== null ? (string) (int) $c['pwaId'] : (string) ($c['ref'] ?? '');
