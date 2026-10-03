@@ -518,3 +518,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T07:39:16Z canaux : commande encaissée = remise, liste du jour avec le comptoir
 2026-10-03T07:42:41Z offres : bundle sans vente retiré, delta dans les cases du cockpit
 2026-10-03T09:16:58Z canaux et offres en semaine et mois, clients à J-7 au même moment
+2026-10-03T11:02:57Z sonde des ventes : un produit precis
