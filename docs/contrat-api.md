@@ -537,8 +537,11 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   dernier ticket), `j7.poubelle` (le jeté du panel, ou de la clôture de J−7 si plus grand ; `null`
   non lu), `j7.manque` (la prévision entre la dernière vente et la dernière vente du magasin,
   `j7.derniereVente`), `j7.verdict` `peu` (épuisé avant la fermeture) | `trop` (poubelle) |
-  `mixte` | `juste` | `aucune` (pas vendu) | `null` (tickets pas lus), `j7.plus` (le manque arrondi
-  au step supérieur) et `j7.moins` (la poubelle arrondie au step inférieur), `step`. Avec
+  `mixte` | `juste` | `aucune` (pas vendu) | `null` (tickets pas lus), `j7.plus` (arrondi au step
+  supérieur) et `j7.moins` (arrondi au step inférieur), `step`. La
+  proposition vise le besoin de J−7, `j7.besoin` = `j7.vendu` + manqué, face à `j7.plan` (le plan
+  du jour avant ajustement) : `plus` = ce qui manque au plan pour l'atteindre, `moins` = ce qui le
+  dépasse, au plus la poubelle (pas de double compte quand la prévision est déjà sous J−7). Avec
   `flux.ajusterJ7` (oui par défaut), la proposition en tient compte : `plus` s'ajoute à la cuisson
   qui couvre l'heure du manque (la dernière à défaut), `moins` se retire en partant de la dernière
   cuisson (un obligatoire garde un step en 1re cuisson) ; `ajustJ7` = ce qui a été appliqué. Avec

@@ -211,7 +211,8 @@ function pfCalcul(int $sid, string $date, int &$cout, int $budget, bool $avecCom
     $prix = gpPrix($sid);
     $plan = gpPlan($jp['params'], $base, $cmds, $F['faits'], $prix, ['stock0' => $stock0, 'minPct' => $jp['minPct'], 'oblig' => $oblig]);
     // J−7 : trop ou trop peu, et la proposition ajustée en steps entiers.
-    $J7 = pfJ7($sid, $date, $base, $jp['params'], $cout, $budget);
+    $T = []; foreach ($plan as $c) { foreach ($c['lignes'] as $l) { $T[(int) $l['pid']] = ($T[(int) $l['pid']] ?? 0) + (int) $l['sortie']; } }
+    $J7 = pfJ7($sid, $date, $base, $jp['params'], $cout, $budget, $T);
     if ($pf['ajusterJ7'] && $J7['lu']) { $plan = pfAjuster($plan, $J7['par'], $pf['modePeu']); }
     // Le stock minimum de recuisson de chaque produit : celui de sa catégorie, relevé du « trop
     // peu » de J−7 quand c'est la réponse choisie ; il ne vaut que jusqu'à la dernière recuisson.
@@ -237,10 +238,11 @@ function pfStep(?array $cfg): int { $p = (int) ($cfg['plaque'] ?? 0); return $p 
  * eu trop ou trop peu ? Trop : des pièces jetées (la poubelle déclarée au panel, ou le jeté de la
  * clôture). Trop peu : le produit ne vendait plus à partir d'une heure où les 6 derniers mêmes
  * jours vendent encore au moins une pièce jusqu'à la fermeture — il était sans doute épuisé.
- * En steps entiers : le manque arrondi au step supérieur (plus), le jeté au step inférieur
- * (moins) — moins d'un step jeté ne retire rien.
+ * La proposition vise le besoin de J−7 (vendu + manqué) : ce qui manque au plan du jour pour
+ * l'atteindre, arrondi au step supérieur (plus) ; ce qui le dépasse, au plus la poubelle, arrondi
+ * au step inférieur (moins) — moins d'un step ne retire rien.
  */
-function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, int $budget): array
+function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, int $budget, array $T = []): array
 {
     $j7 = pfDecale($date, -7);
     $v7 = pfVentesJour($sid, $j7, $cout, $budget);
@@ -260,8 +262,18 @@ function pfJ7(int $sid, string $date, array $base, array $params, int &$cout, in
         if ($manque < 1) { $manque = 0.0; }
         $peu = $manque > 0; $trop = $w > 0;
         $verdict = $v7 === null ? null : ($d === null ? 'aucune' : ($peu && $trop ? 'mixte' : ($peu ? 'peu' : ($trop ? 'trop' : 'juste'))));
+        // Ce qu'il fallait à J−7 : le vendu et ce qui a manqué. Le plan du jour (avant ajustement)
+        // n'est relevé que s'il reste en dessous, et ne descend pas sous ce besoin : la poubelle de
+        // J−7 ne se retire que de ce qui le dépasse (pas de double compte quand la prévision est
+        // déjà plus basse que J−7). Sans plan pour le produit : le manque et la poubelle bruts.
+        $vendu = $v7 !== null ? (float) ($v7['tot'][$pid] ?? 0) : 0.0;
+        $besoin = $vendu + round($manque);
+        $t = $T[$pid] ?? null;
+        $plus = !$peu ? 0 : round($t === null ? $manque : max(0.0, $besoin - $t));
+        $moins = !$trop ? 0 : ($t === null ? $w : min($w, max(0.0, $t - $besoin)));
         $par[$pid] = ['derniere' => $d, 'poubelle' => ($jete === null && !isset($jeteCl[$pid])) ? null : round($w, 1), 'manque' => round($manque, 1), 'verdict' => $verdict, 'step' => $step,
-            'plus' => $peu ? (int) (ceil(round($manque) / $step - 1e-9) * $step) : 0, 'moins' => $trop ? (int) (floor($w / $step + 1e-9) * $step) : 0];
+            'vendu' => round($vendu, 1), 'besoin' => round($besoin, 1), 'plan' => $t,
+            'plus' => $plus > 0 ? (int) (ceil($plus / $step - 1e-9) * $step) : 0, 'moins' => $moins > 0 ? (int) (floor($moins / $step + 1e-9) * $step) : 0];
     }
     return ['date' => $j7, 'lu' => $v7 !== null, 'v7' => $v7, 'fin' => $fin, 'poubelleLue' => $jete !== null, 'poubelle' => $jete === null ? null : round(array_sum($jete), 1), 'par' => $par];
 }
@@ -449,7 +461,8 @@ function ep_production_flux_plan(): array
         $lignes[] = ['pid' => $pid, 'nom' => $l['nom'], 'groupe' => $l['groupe'] !== '' ? $l['groupe'] : $l['cat'], 'cat' => $l['cat'], 'catCle' => $l['catCle'], 'oblig' => $l['oblig'], 'prix' => $l['prix'],
             'j7' => ['magasin' => $mag !== null ? round(max(0.0, $mag), 1) : null, 'webshop' => null, 'commandes' => $v7 !== null ? round((float) ($v7['pro'][$pid] ?? 0), 1) : null,
                 'derniere' => $J7['par'][$pid]['derniere'] ?? null, 'poubelle' => $J7['par'][$pid]['poubelle'] ?? ($J7['poubelleLue'] ? 0.0 : null),
-                'verdict' => $J7['par'][$pid]['verdict'] ?? null, 'manque' => $J7['par'][$pid]['manque'] ?? 0, 'plus' => $J7['par'][$pid]['plus'] ?? 0, 'moins' => $J7['par'][$pid]['moins'] ?? 0],
+                'verdict' => $J7['par'][$pid]['verdict'] ?? null, 'manque' => $J7['par'][$pid]['manque'] ?? 0, 'plus' => $J7['par'][$pid]['plus'] ?? 0, 'moins' => $J7['par'][$pid]['moins'] ?? 0,
+                'vendu' => $J7['par'][$pid]['vendu'] ?? null, 'besoin' => $J7['par'][$pid]['besoin'] ?? null, 'plan' => $J7['par'][$pid]['plan'] ?? null],
             'step' => $J7['par'][$pid]['step'] ?? pfStep($K['jp']['params']['categories'][(string) $l['catCle']] ?? null),
             'ajustJ7' => array_sum(array_map(static fn ($x) => (int) ($x['ajustJ7'] ?? 0), (array) $l['c'])),
             'stockMin' => $K['smin'][$pid]['q'] ?? 0,
