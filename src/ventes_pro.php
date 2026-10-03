@@ -3,10 +3,16 @@ declare(strict_types=1);
 
 /**
  * Clients pro (B2B) — la part professionnelle des ventes, lue dans les tickets
- * du panel : chaque ticket porte `is_client_b2b`, le nom de la société, s'il
- * sera facturé (`will_be_invoiced`) et s'il est en paiement différé
- * (`deferral_payment`). Rien d'autre que l'API du panel : ni la table client,
- * ni le webshop. Un ticket sans client pro est une vente comptoir.
+ * du panel : chaque ticket porte `is_client_b2b`, s'il sera facturé
+ * (`will_be_invoiced`) et s'il est en paiement différé (`deferral_payment`).
+ * Rien d'autre que l'API du panel : ni la table client, ni le webshop. Un
+ * ticket sans client pro est une vente comptoir.
+ *
+ * Pas de nom de client : le panel range sous « société » des noms de
+ * personnes. Le relevé ne garde qu'une clé de compte (l'identifiant du
+ * client s'il est là, sinon une empreinte du nom) pour compter les sociétés
+ * servies, et l'écran ne montre que l'heure et le montant (demande du
+ * 03/10/2026).
  *
  * La lecture s'accroche à la moisson des tickets : la LISTE des tickets d'un
  * jour (`/shops/{id}/transactions?date=`) suffit — un appel par jour et par
@@ -20,7 +26,17 @@ const VP_JOURS = 30;        // la fenêtre des comptes : 30 jours glissants
 const VP_BUDGET_CRON = 40;  // listes relues par battement du cron pour compléter les jours d'avant
 const VP_TTL = 600;         // un jour en cours : dix minutes, comme le reste du dashboard
 
-/** Le pro d'une liste de tickets du panel : total du jour, tickets pro (heure, société, montant, facturé, différé), par heure. */
+/** La clé de compte d'un ticket pro, jamais le nom : l'identifiant du client, sinon une empreinte du nom ; '' sans l'un ni l'autre. */
+function vpCleCompte(array $x): string
+{
+    foreach (['id_client', 'client_id', 'id_customer', 'customer_id', 'id_company', 'company_id'] as $k) {
+        if (isset($x[$k]) && is_scalar($x[$k]) && (string) $x[$k] !== '' && (string) $x[$k] !== '0') { return 'c' . $x[$k]; }
+    }
+    $nom = trim((string) ($x['client_name'] ?? $x['company_name'] ?? ''));
+    return $nom === '' ? '' : 'h' . hash('crc32b', mb_strtolower($nom));
+}
+
+/** Le pro d'une liste de tickets du panel : total du jour, tickets pro (heure, clé de compte, montant, facturé, différé), par heure. */
 function vpDuListe(array $liste): array
 {
     $t = []; $h = []; $ca = 0.0; $n = 0;
@@ -31,7 +47,7 @@ function vpDuListe(array $liste): array
         if (empty($x['is_client_b2b'])) { continue; }
         $ts = (string) ($x['insert_timestamp'] ?? '');
         $hh = (string) (int) substr($ts, 11, 2);
-        $t[] = [substr($ts, 11, 5), mb_substr(trim((string) ($x['client_name'] ?? '')), 0, 80), round($m, 2), !empty($x['will_be_invoiced']) ? 1 : 0, !empty($x['deferral_payment']) ? 1 : 0];
+        $t[] = [substr($ts, 11, 5), vpCleCompte($x), round($m, 2), !empty($x['will_be_invoiced']) ? 1 : 0, !empty($x['deferral_payment']) ? 1 : 0];
         $h[$hh] = $h[$hh] ?? [0.0, 0];
         $h[$hh][0] += $m; $h[$hh][1]++;
     }
@@ -141,10 +157,10 @@ function vpJoursLus(array $sids, array $jours, int $budget = 30): array
     return $out;
 }
 
-/** Les tickets pro d'un jour, mis en forme pour l'écran. */
+/** Les tickets pro d'un jour, mis en forme pour l'écran : l'heure et le montant, jamais le nom du compte. */
 function vpTickets(array $b): array
 {
-    return array_map(static fn ($t) => ['heure' => (string) $t[0], 'societe' => (string) $t[1], 'montant' => (float) $t[2], 'facture' => (int) $t[3] === 1, 'differe' => (int) $t[4] === 1], $b['t']);
+    return array_map(static fn ($t) => ['heure' => (string) $t[0], 'montant' => (float) $t[2], 'facture' => (int) $t[3] === 1, 'differe' => (int) $t[4] === 1], $b['t']);
 }
 
 /** Les chiffres d'un jour : total, pro, comptoir, à facturer. */
@@ -160,8 +176,9 @@ function vpBilanJour(array $b): array
 
 /**
  * GET /exploitation/pro?shop=5&date=YYYY-MM-DD — la carte « Clients pro » du
- * dashboard : le jour (tickets pro, à facturer), les 30 jours (part, comptes),
- * la série jour par jour.
+ * dashboard : le jour (tickets pro à l'heure et au montant, à facturer), les
+ * 30 jours (part, nombre de comptes servis), la série jour par jour. Aucun
+ * nom de compte ne sort.
  */
 function ep_exploitation_pro(): array
 {
@@ -174,7 +191,7 @@ function ep_exploitation_pro(): array
     $appels = 0;
     $bJ = vpJour($sid, $date, true, $appels, 2);
     $jour = $bJ === null ? null : vpBilanJour($bJ) + ['heures' => (object) $bJ['h'], 'liste' => vpTickets($bJ)];
-    $serie = []; $comptes = []; $caPro = 0.0; $ca = 0.0; $tkPro = 0; $tk = 0; $lus = 0; $manquants = 0;
+    $serie = []; $comptes = []; $caPro = 0.0; $ca = 0.0; $tkPro = 0; $tk = 0; $lus = 0; $manquants = 0; $sansCle = 0;
     for ($i = VP_JOURS - 1; $i >= 0; $i--) {
         $j = date('Y-m-d', strtotime($date . ' -' . $i . ' days'));
         if (defined('SV_DEBUT') && $j < SV_DEBUT) { continue; }
@@ -185,21 +202,17 @@ function ep_exploitation_pro(): array
         $cp = 0.0;
         foreach ($b['t'] as $t) {
             $cp += (float) $t[2];
-            $s = $t[1] !== '' ? $t[1] : 'Client pro sans nom';
-            $comptes[$s] = $comptes[$s] ?? ['societe' => $s, 'n' => 0, 'ca' => 0.0, 'dernier' => $j, 'factures' => 0];
-            $comptes[$s]['n']++; $comptes[$s]['ca'] += (float) $t[2]; $comptes[$s]['factures'] += (int) $t[3];
-            if ($j > $comptes[$s]['dernier']) { $comptes[$s]['dernier'] = $j; }
+            if ((string) $t[1] !== '') { $comptes[(string) $t[1]] = true; } else { $sansCle++; }
         }
         $serie[] = ['j' => $j, 'ca' => round((float) $b['ca'], 2), 'caPro' => round($cp, 2), 'tickets' => (int) $b['n'], 'ticketsPro' => count($b['t'])];
         $caPro += $cp; $ca += (float) $b['ca']; $tkPro += count($b['t']); $tk += (int) $b['n'];
     }
-    usort($comptes, static fn ($a, $b) => $b['ca'] <=> $a['ca']);
-    $comptes = array_map(static fn ($c) => ['societe' => $c['societe'], 'n' => $c['n'], 'ca' => round($c['ca'], 2), 'panier' => round($c['ca'] / max(1, $c['n']), 2), 'dernier' => $c['dernier'], 'factures' => $c['factures']], array_slice($comptes, 0, 12));
     return ['shop' => $sid, 'date' => $date, 'jour' => $jour,
         'mois' => ['du' => $serie[0]['j'] ?? $date, 'au' => $date, 'jours' => $lus, 'manquants' => $manquants, 'caPro' => round($caPro, 2), 'ca' => round($ca, 2),
-            'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'ticketsPro' => $tkPro, 'tickets' => $tk, 'panierPro' => $tkPro > 0 ? round($caPro / $tkPro, 2) : null, 'comptes' => $comptes],
+            'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'ticketsPro' => $tkPro, 'tickets' => $tk, 'panierPro' => $tkPro > 0 ? round($caPro / $tkPro, 2) : null,
+            'societes' => count($comptes), 'ticketsSansCompte' => $sansCle],
         'serie' => $serie, 'appels' => $appels,
-        'source' => 'tickets du panel : is_client_b2b, client_name, will_be_invoiced, deferral_payment — un ticket sans client pro est une vente comptoir'];
+        'source' => 'tickets du panel : is_client_b2b, will_be_invoiced, deferral_payment — un ticket sans client pro est une vente comptoir ; aucun nom de compte ne sort'];
 }
 
 /**

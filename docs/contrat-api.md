@@ -385,24 +385,29 @@ semaine est un jour du créneau.
 ### `/exploitation/pro` — les clients pro (B2B) du dashboard magasin
 
 `GET /exploitation/pro?shop=5&date=2026-09-29` — ce que les tickets du panel disent des ventes aux sociétés. Un ticket
-porte `is_client_b2b`, `client_name`, `will_be_invoiced`, `deferral_payment` : rien d'autre que l'API du panel (ni la
-table client, ni le webshop). Un ticket sans client pro est une vente comptoir.
+porte `is_client_b2b`, `will_be_invoiced`, `deferral_payment` : rien d'autre que l'API du panel (ni la table client, ni
+le webshop). Un ticket sans client pro est une vente comptoir. **Aucun nom de compte ne sort** : le panel range sous
+« société » des noms de personnes, l'écran ne montre que l'heure et le montant de chaque ticket pro (demande du
+03/10/2026). Le relevé ne garde qu'une clé de compte (`c{id_client}` quand le ticket porte l'identifiant, sinon
+`h{empreinte du nom}`) pour compter les sociétés servies.
 
 ```json
 { "shop": 5, "date": "2026-09-29",
   "jour": { "ca": 4828.39, "tickets": 300, "caPro": 269.99, "ticketsPro": 4, "societes": 3, "panierPro": 67.5, "panierComptoir": 15.4,
             "part": 5.6, "aFacturer": 240.82, "differes": 1, "heures": { "8": [111.0, 2] },
-            "liste": [ { "heure": "07:13", "societe": "École Saint-Joseph", "montant": 83.4, "facture": true, "differe": false } ] },
+            "liste": [ { "heure": "07:13", "montant": 83.4, "facture": true, "differe": false } ] },
   "mois": { "du": "2026-08-31", "au": "2026-09-29", "jours": 26, "manquants": 0, "caPro": 7980.68, "ca": 108619.68, "part": 7.3,
-            "ticketsPro": 65, "tickets": 6600, "panierPro": 122.78,
-            "comptes": [ { "societe": "SA Global University Training", "n": 12, "ca": 4152.43, "panier": 346.04, "dernier": "2026-09-24", "factures": 10 } ] },
+            "ticketsPro": 65, "tickets": 6600, "panierPro": 122.78, "societes": 9, "ticketsSansCompte": 0 },
   "serie": [ { "j": "2026-08-31", "ca": 4120.5, "caPro": 310.2, "tickets": 280, "ticketsPro": 3 } ],
   "appels": 1, "source": "…" }
 ```
 
 `jour` est `null` si les tickets du jour ne sont pas lus (panel muet). `mois` couvre les 30 jours jusqu'à la date, sur les
 jours lus ; `manquants` compte les jours sans lecture, `serie[].ferme` marque un jour sans ticket. `aFacturer` additionne
-les tickets pro marqués à facturer ; `differes` compte ceux en paiement différé.
+les tickets pro marqués à facturer ; `differes` compte ceux en paiement différé. `jour.societes` et `mois.societes`
+comptent les comptes distincts (par clé, jamais par nom) ; `mois.ticketsSansCompte`, les tickets pro sans client
+identifiable. Les jours gravés avant le 03/10/2026 portent encore le nom sous la clé : il ne sort pas, et un jour en
+cours se regrave à la lecture suivante.
 
 Le pro d'un jour se lit dans la **liste** des tickets (`/shops/{id}/transactions?date=`, un appel par jour et par magasin)
 et se grave sous `b` dans le relevé du jour (`svP{shop}:{date}`), à côté des produits : la moisson des tickets le pose au
