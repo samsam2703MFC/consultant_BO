@@ -783,6 +783,25 @@ function ep_production_flux_sonde(): array
         if (isset($tick[$id])) { $T['commandes']++; $T['commandesParCanal'][$tick[$id]] = ($T['commandesParCanal'][$tick[$id]] ?? 0) + 1; if ($pro) { $T['commandesPro']++; } }
     }
     $T['commandesEncaissees'] = count($tick);
+    // Les sources des tickets et la référence de commande : des comptes par valeur de source,
+    // jamais la référence elle-même.
+    $T['sources'] = []; $T['avecRefCommande'] = 0; $T['refCommandePro'] = 0; $T['refCommandeEncaissee'] = 0; $T['sourceDesRefs'] = [];
+    $vus = [];
+    foreach (analyseListe(is_array($liste) ? $liste : []) as $t) {
+        if (!is_array($t)) { continue; }
+        $src = (string) ($t['source'] ?? '');
+        $T['sources'][$src] = ($T['sources'][$src] ?? 0) + 1;
+        $ref = trim((string) ($t['order_ref'] ?? ''));
+        $vus[(int) ($t['id'] ?? 0)] = true;
+        if ($ref !== '' && $ref !== '0') { $T['avecRefCommande']++; $T['sourceDesRefs'][$src] = ($T['sourceDesRefs'][$src] ?? 0) + 1; if (!empty($t['is_client_b2b'])) { $T['refCommandePro']++; } if (isset($tick[(int) $t['id']])) { $T['refCommandeEncaissee']++; } }
+    }
+    // Les commandes encaissées dont le ticket n'est pas de ce jour : le jour du ticket.
+    $T['ticketsAilleurs'] = [];
+    foreach ($tick as $id => $canal) {
+        if (isset($vus[$id])) { continue; }
+        $x = PanelApi::sondeGet('/transactions/' . $id, 10); $b = is_array($x['corps'] ?? null) ? $x['corps'] : [];
+        $T['ticketsAilleurs'][] = ['canal' => $canal, 'code' => $x['code'] ?? null, 'jour' => substr((string) ($b['insert_timestamp'] ?? ''), 0, 10), 'heure' => substr((string) ($b['insert_timestamp'] ?? ''), 11, 2), 'pro' => !empty($b['is_client_b2b']), 'source' => $b['source'] ?? null, 'refCommande' => trim((string) ($b['order_ref'] ?? '')) !== ''];
+    }
     $out['tickets'] = $T;
     return $out;
 }
