@@ -1217,15 +1217,16 @@
         <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'contre ' + fU(J.panierComptoir) + ' au comptoir' : ''}</div></div>
         <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
       </div>` : `<div class="db-mini" style="padding:10px 16px 0">Les tickets de ce jour ne sont pas lus.</div>`;
+    // L'heure et le montant seulement : le panel range sous « société » des noms de personnes (demande du 03/10/2026).
     const tickets = J && Array.isArray(J.liste) ? J.liste : [];
     const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
-      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th>Société</th><th class="n">Montant</th><th></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="nom">${esc(t.societe || 'sans nom')}</td><td class="n">${fU(t.montant)}</td><td>${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="4" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
+      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
     // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
     if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>`; }
     if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div></div>`; }
     // Sur ordinateur, la carte se replie : l'en-tête garde le jour en une
-    // ligne (CA pro, sa part, clients, à facturer) et le mois ; le clic
-    // déplie les chiffres, les tickets, les comptes et la série.
+    // ligne (CA pro, sa part, clients, à facturer) ; le clic déplie les
+    // chiffres et les tickets du jour.
     const ouvert = !!S.proOuvert;
     const resume = J ? (J.ticketsPro
       ? `<b class="pro">${fE(J.caPro)}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
@@ -1233,7 +1234,7 @@
     const mois = '';
     return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
       <span class="db-cdr" style="padding:0;margin-left:auto">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>
-      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps">${gauche}${droite}</div>` : ''}</div>`;
+      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps un">${gauche}</div>` : ''}</div>`;
   }
   /** Le split comptoir / pro de la vue (jour, semaine, mois) : lu dans la réponse de Résultat, pas un appel de plus. */
   function splitDe(m) {

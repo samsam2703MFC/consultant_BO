@@ -802,17 +802,18 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-pro-tab th{text-align:left;font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 8px 5px}
 .db-pro-tab th.n,.db-pro-tab td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .db-pro-tab td{padding:6px 8px;border-top:.5px solid var(--color-border-tertiary);font-size:12px;vertical-align:middle}
-.db-pro-tab td.nom{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.db-pro-tab th.r,.db-pro-tab td.r{text-align:right;white-space:nowrap}
+.db-pro-corps.un .db-pro-tab{max-width:460px}
+.db-pro-tab td.n{font-weight:600}
 .db-pro-tab td.att{color:#B26A00;font-weight:600}
 .db-pro-tag{font:600 9.5px var(--font-ui);padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text);white-space:nowrap}
 .db-pro-tag.f{background:#e7f0f7;color:#1f5f8b}.db-pro-tag.d{background:#fff2e3;color:#B26A00}
 .db-pro-serie{display:flex;align-items:flex-end;gap:2px;height:36px;margin-top:6px}
 .db-pro-serie i{flex:1;background:#1f5f8b;border-radius:2px 2px 0 0;opacity:.85;min-width:3px}.db-pro-serie i.we{opacity:.35}.db-pro-serie i.na{height:3px;background:var(--color-border-secondary);opacity:1}
 .db-pro.mob .db-pro-kpi{padding:8px 4px 0;grid-template-columns:repeat(2,minmax(0,1fr))}
-.db-pro.mob .db-pro-tab td.nom{max-width:0;width:100%}
 .db-pro.mob .db-notej-t{display:block}.db-pro.mob .db-notej-t small{display:block;margin-top:3px}
 .db-pro.mob .db-pro-corps{grid-template-columns:1fr}.db-pro.mob .db-pro-corps>div{padding:8px 4px 6px}.db-pro.mob .db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}
-@media (max-width:900px){.db-pro-tab td.nom{max-width:0;width:100%}.db-pro-corps{grid-template-columns:1fr}.db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}.db-pro-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.db-pro-corps{grid-template-columns:1fr}.db-pro-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}.db-pro-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Comptoir et clients pro : un seul bloc, qui se déplie sur le détail pro. */
 .db-split.on{border-left:4px solid #1f5f8b}
 .db-split-det{border-top:.5px solid var(--color-border-tertiary);padding-top:4px}
