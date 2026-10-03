@@ -1040,7 +1040,7 @@ final class PanelApi
      * GET /shops/{ref}/products/available — chaque ligne produit porte id ET
      * id_recipe. En cache par boutique le temps de la requête.
      */
-    private static function produitsDisponibles(int $shopId): array
+    public static function produitsDisponibles(int $shopId): array
     {
         if (self::$dispo === null) { self::$dispo = []; }
         if (!isset(self::$dispo[$shopId])) {
