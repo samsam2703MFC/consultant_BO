@@ -574,3 +574,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T19:16:42Z production parts de cuisson par categorie
 2026-10-03T19:23:46Z production page fours gantt
 2026-10-03T19:25:44Z production fours heure au four
+2026-10-03T19:31:32Z production fours rafraichir utilisation
