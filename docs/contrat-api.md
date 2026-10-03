@@ -480,9 +480,13 @@ six heures quand tous les jours sont lus, `ppCmd:{shop}:{date}` dix minutes (jam
 - `POST /production/plan/fait` `{ shop, date, cuisson, lignes: { pid: pièces } }` — ce qui a été enfourné à une
   cuisson (« Valider la cuisson ») ; la cuisson suivante part de là. Enregistré sous `ppFait:{shop}:{date}`.
 
-**Ce que le panel ne donne pas** : les reports de la veille (le stock de départ vaut zéro) ;
-`/shops/{id}/statistics/production-planning` ne rend que la journée entière (aucun mode horaire accepté) ; la liste
-des commandes ne joint pas toujours les articles (`sansDetail`).
+**Ce que le panel ne donne pas** (mesuré le 03/10/2026) : les reports de la veille (le stock de départ vaut zéro) ;
+`/shops/{id}/statistics/production-planning` ne rend que la journée entière (aucun mode horaire accepté) ; **les
+articles des commandes** : `products` est vide dans la liste comme dans la commande seule (`/client-orders/{id}`),
+`/client-orders/{id}/products` répond 404 et `/franchisee-shop/{id}/client-orders/{date}/products` 500. Une commande
+retirée est dans les tickets (`id_transaction`), donc dans les ventes et la prévision ; une commande à venir s'affiche
+(`sansDetail: true`, heure, canal, montant) sans changer le plan tant que le panel n'en joint pas les articles —
+le calcul les prendra d'office le jour où `products` sera rempli.
 
 ### `/exploitation/invendus` — les invendus et la poubelle
 

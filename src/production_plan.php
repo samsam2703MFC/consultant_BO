@@ -260,7 +260,7 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
  */
 function gpCommandes(int $sid, string $date): ?array
 {
-    $cle = 'ppCmd4:' . $sid . ':' . $date;
+    $cle = 'ppCmd5:' . $sid . ':' . $date;
     $c = setting($cle);
     if (is_array($c) && isset($c['l']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_CMD) { return $c['l']; }
     $ancien = is_array($c) && isset($c['l']) ? $c['l'] : null;
@@ -278,22 +278,11 @@ function gpCommandes(int $sid, string $date): ?array
         $lignes = gpArticles((array) ($o['products'] ?? []));
         $out[] = ['id' => (int) ($o['id'] ?? 0), 'heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt', 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'lignes' => $lignes, 'sansDetail' => $lignes === [], 'clesArticle' => null];
     }
-    // La liste ne joint pas les articles (mesuré le 03/10/2026 : products vide) : une lecture par
-    // commande, /client-orders/{id}/products, en parallèle — produits et quantités seulement.
-    $paths = [];
-    foreach ($out as $i => $o) { if ($o['lignes'] === [] && $o['id'] > 0 && count($paths) < 60) { $paths[$i] = '/client-orders/' . $o['id'] . '/products'; } }
-    if ($paths !== []) {
-        foreach (PanelApi::getParallele($paths, 6, 15) as $i => $r) {
-            $items = is_array($r) ? (function_exists('analyseListe') ? analyseListe($r) : $r) : [];
-            if ($items === [] && is_array($r) && isset($r['products']) && is_array($r['products'])) { $items = $r['products']; }
-            $l = gpArticles($items);
-            $out[$i]['lignes'] = $l; $out[$i]['sansDetail'] = $l === [];
-            // Diagnostic : les CLÉS d'un article quand aucune ligne n'est reconnue (jamais les valeurs),
-            // ou la forme de la réponse quand elle n'en porte pas (null, liste vide, clés de l'objet).
-            if ($l === [] && $items !== [] && is_array(reset($items))) { $out[$i]['clesArticle'] = array_slice(array_keys(reset($items)), 0, 30); }
-            elseif ($l === []) { $out[$i]['clesArticle'] = $r === null ? ['(sans réponse : ' . mb_substr((string) PanelApi::$lastError, 0, 120) . ')'] : (is_array($r) ? ($r === [] ? ['(liste vide)'] : array_merge(['(réponse)'], array_slice(array_keys($r), 0, 12), isset($r['description']) && is_string($r['description']) ? ['description=' . mb_substr($r['description'], 0, 80)] : [])) : ['(' . gettype($r) . ')']); }
-        }
-    }
+    // Mesuré le 03/10/2026 : ni la liste ni la commande seule (/client-orders/{id}) ne joignent
+    // d'articles (products vide), /client-orders/{id}/products répond 404 et
+    // /franchisee-shop/{id}/client-orders/{date}/products 500. Une commande retirée est dans les
+    // tickets (id_transaction) donc dans les ventes ; une commande à venir ne compte que si le
+    // panel en joint un jour les articles — sans eux, elle s'affiche sans changer le plan.
     foreach ($out as &$o) { unset($o['id']); } unset($o);
     usort($out, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
     gpEcrire($cle, ['ts' => time(), 'l' => $out]);
