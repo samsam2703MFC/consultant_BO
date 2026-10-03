@@ -232,12 +232,14 @@
     const cols = C.length;
     const somme = (rows, f) => rows.reduce((a, l) => a + (f(l) || 0), 0);
     const sg = n => (n > 0 ? '+' : '−') + fN(Math.abs(n));
-    const cellQ = x => !x || !x.sortie ? (x && x.ajustJ7 ? `<span class="mu">—</span><small class="aj m">${sg(x.ajustJ7)} J−7</small>` : '<span class="mu">—</span>') : `<b>${fN(x.sortie)}</b>${x.plaque ? `<small>${fN(x.plaques)} × ${fN(x.plaque)}</small>` : ''}${x.ajustJ7 ? `<small class="aj ${x.ajustJ7 > 0 ? 'p' : 'm'}">${sg(x.ajustJ7)} J−7</small>` : ''}`;
+    // L'ajustement J−7 de la cuisson reste au survol : la colonne « Proposition J−7 » le porte déjà.
+    const cellQ = x => { const t = x && x.ajustJ7 ? ` title="dont ${sg(x.ajustJ7)} ajusté sur J−7"` : '';
+      return !x || !x.sortie ? `<span class="mu"${t}>—</span>` : `<b${t}>${fN(x.sortie)}</b>${x.plaque ? `<small>${fN(x.plaques)} × ${fN(x.plaque)}</small>` : ''}`; };
     const VJ = { peu: ['att', 'Trop peu'], trop: ['bleu', 'Trop'], mixte: ['att', 'Les deux'], juste: ['ok', 'Juste'], aucune: ['', 'Pas vendu'] };
     const fin7 = d.j7.derniereVente;
     const cDer = l => { const j = l.j7; if (j.derniere == null) { return `<span class="mu">${j.verdict === 'aucune' ? 'aucune' : '—'}</span>`; }
       const tot = j.verdict === 'peu' || j.verdict === 'mixte';
-      return `<span class="${tot ? 'wa' : ''}" title="dernier ticket entre ${j.derniere} h et ${j.derniere + 1} h${fin7 != null ? ' · le magasin a vendu jusqu’à ' + (fin7 + 1) + ' h' : ''}${j.manque ? ' · vente perdue estimée ' + fQ(j.manque) + ' pièces' : ''}">${tot ? '<b>' + j.derniere + ' h</b>' : j.derniere + ' h'}</span>${j.manque ? `<small>il en a manqué ${fN(j.manque)}</small>` : ''}`; };
+      return `<span class="${tot ? 'wa' : ''}" title="dernier ticket entre ${j.derniere} h et ${j.derniere + 1} h${fin7 != null ? ' · le magasin a vendu jusqu’à ' + (fin7 + 1) + ' h' : ''}${j.manque ? ' · vente perdue estimée ' + fQ(j.manque) + ' pièces' : ''}">${tot ? '<b>' + j.derniere + ' h</b>' : j.derniere + ' h'}</span>`; };
     const cPoub = l => l.j7.poubelle == null ? '<span class="mu" title="poubelle pas lue">—</span>' : (l.j7.poubelle > 0 ? `<b class="ko">${fQ(l.j7.poubelle)}</b>` : '<span class="mu">0</span>');
     const cVerd = l => { const v = VJ[l.j7.verdict]; return v ? `<span class="pf-tag ${v[0]}">${v[1]}</span>` : '<span class="mu">—</span>'; };
     const steps = (n, st) => st > 1 && n % st === 0 ? `<small>${fN(Math.abs(n) / st)} step${Math.abs(n) / st > 1 ? 's' : ''} de ${fN(st)}</small>` : (st > 1 ? `<small>step de ${fN(st)}</small>` : '<small>à l’unité</small>');
