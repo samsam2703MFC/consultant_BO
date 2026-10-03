@@ -423,6 +423,67 @@ gravés, complétés par au plus 30 listes lues en parallèle, les plus récente
 rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand rien n'est lu.
 
 
+### `/production/plan` — la gestion de production (module franchisé)
+
+Demande du 03/10/2026, maquettes `docs/maquettes/gestion-production`. Écran : dashboard magasin, onglet
+**Production** (ordinateur seulement, pas de version téléphone), trois sous-onglets : Plan du jour, Suivi et
+recuissons, Paramètres.
+
+`GET /production/plan?shop=4&date=YYYY-MM-DD` (aujourd'hui par défaut, jusqu'à 7 jours devant) :
+
+```json
+{ "shop": 4, "date": "2026-10-03", "jourSemaine": 6,
+  "params": { "cuissons": [ { "id": "c1", "nom": "Matin", "de": "06:00", "a": "11:00", "pct": 50, "daypart": 1 } ],
+              "regles": { "semaines": 6, "securite": 10, "minPlaques": 1, "seuilRecuisson": 80, "seuilTrop": 140, "avance": 45, "commandes": true, "webshop": true },
+              "enregistre": true, "maj": "…" },
+  "categories": [ { "cle": "16100", "nom": "Viennoiserie Ind.", "groupe": "Viennoiserie", "parJour": 280, "ventesParCuisson": { "c1": 84, "c2": 11 },
+                    "cuissons": ["c1", "c2"], "plaque": 12, "limite": "10:30", "auto": false } ],
+  "dayparts": [ { "id": 1, "nom": "Matin", "de": "06:00", "a": "11:00" } ],
+  "base": { "semaines": 6, "jours": ["2026-09-26", "…"], "lus": ["…"], "fermes": [], "manquants": [], "piecesParJour": 651 },
+  "plan": [ { "id": "c1", "k": 1, "nom": "Matin", "de": "06:00", "a": "11:00", "pct": 50, "panel": true, "four": "05:15",
+              "lignes": [ { "pid": 1610006, "nom": "Croissant", "cat": "Viennoiserie Ind.", "prevJ": 65, "h": { "6": 9.1 }, "zone": ["00:00", "11:00"],
+                            "part": 66.7, "prevu": 47.7, "cmd": 20, "ws": 0, "stock": 0, "aCuire": 67.7, "plaque": 12, "plaques": 6, "sortie": 72, "fait": null } ],
+              "total": { "pieces": 721, "plaques": 74, "prevu": 435, "cmd": 36, "ws": 0, "stock": 0, "categories": 12 } } ],
+  "commandes": [ { "heure": "08:30", "canal": "compt", "webshop": false, "montant": 91, "lignes": [ { "pid": 1610006, "nom": "Croissant", "q": 20, "cuisson": "c1" } ], "cuissons": ["c1"], "sansDetail": false } ],
+  "suivi": { "maintenant": "10:00", "cuisson": { "id": "c2", "four": "10:15" }, "lignes": [ { "pid": 1610006, "produit": 72, "vendu": 52, "jete": 0, "prevuMaintenant": 48,
+             "ecart": 8.3, "stock": 20, "jusqua": "19:00", "besoin": 19, "couverture": 105, "plan": 24, "verdict": "tient", "aEnfourner": 0, "plaques": 0 } ],
+             "total": { "aEnfourner": 132, "plaques": 10, "plan": 193, "planPlaques": 16, "ecart": 6.2 } },
+  "faits": { "c1": { "1610006": 72 } } }
+```
+
+**Le calcul.** La prévision d'un produit = la moyenne, heure par heure, des `semaines` derniers mêmes jours de la
+semaine (les tickets du panel gravés par le module des ventes, `svP{shop}:{jour}` ; une portion compte pour sa
+fraction de la pièce ; un jour sans ticket est écarté). Pour chaque cuisson cochée d'une catégorie : part = % de la
+cuisson ÷ somme des % des cuissons cochées ; à cuire = prévision du jour × part × (1 + sécurité) + commandes (comptoir,
+clients pro) + webshop dont le retrait tombe dans sa zone (de l'ouverture de sa période — minuit pour la première —
+à l'ouverture de la cuisson cochée suivante) − stock estimé (sorti à la cuisson précédente, ou ce qui a été validé,
+− ventes prévues jusqu'à l'ouverture), arrondi à la plaque (au moins `minPlaques`). Four = ouverture − `avance`.
+
+**Le suivi** (le jour même) : avant la prochaine cuisson (la première dont la période n'est pas ouverte), pour chaque
+produit concerné : stock = sorti aux cuissons d'avant − vendu (tickets du jour, relus toutes les dix minutes) − jeté
+(`/shops/{id}/products/waste`) ; besoin = prévision de maintenant jusqu'à la cuisson suivante de la catégorie (la
+fermeture s'il n'y en a plus) × (1 + sécurité) + commandes à retirer d'ici là ; couverture = stock ÷ besoin. Verdict :
+`tard` (après la dernière recuisson de la catégorie), `trop` (couverture ≥ `seuilTrop`), `tient` (≥
+`seuilRecuisson`), sinon `recuire` : `aEnfourner` = besoin − stock, arrondi à la plaque.
+
+**Les défauts** : les cuissons = les périodes de vente du panel (`/admin/sales-dayparts/active`, six heures en cache) ;
+moins de quatre et une dernière période d'au moins quatre heures → elle se coupe en deux, la seconde moitié étant
+une cuisson locale ; parts 50 / 25 / 15 / 10. Une catégorie non réglée est cochée pour les cuissons qui captent au
+moins 20 % de ses ventes (`auto: true`) ; boissons, épicerie, B2B et bundles : rien. Caches : `ppBase:{shop}:{date}:{N}`
+six heures quand tous les jours sont lus, `ppCmd:{shop}:{date}` dix minutes (jamais le client : produit et quantité).
+
+**Écritures** (le franchisé, depuis l'écran) :
+
+- `POST /production/plan/params` `{ shop, params: { cuissons, categories, regles }, par? }` — une à six cuissons, horaires
+  croissants sans chevauchement, parts à 100 % (± 0,5), plaque 1–500, dernière recuisson `hh:mm`, règles bornées ;
+  422 avec le motif sinon. Enregistré sous `ppParams:{shop}`.
+- `POST /production/plan/fait` `{ shop, date, cuisson, lignes: { pid: pièces } }` — ce qui a été enfourné à une
+  cuisson (« Valider la cuisson ») ; la cuisson suivante part de là. Enregistré sous `ppFait:{shop}:{date}`.
+
+**Ce que le panel ne donne pas** : les reports de la veille (le stock de départ vaut zéro) ;
+`/shops/{id}/statistics/production-planning` ne rend que la journée entière (aucun mode horaire accepté) ; la liste
+des commandes ne joint pas toujours les articles (`sansDetail`).
+
 ### `/exploitation/invendus` — les invendus et la poubelle
 
 `GET /exploitation/invendus?shop=4&date=2026-10-02` (le jour), `?shop=4&du=&au=` (la semaine, le mois), sans `shop` le
