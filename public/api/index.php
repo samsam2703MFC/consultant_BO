@@ -60,6 +60,7 @@ require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/invendus.php';
 require __DIR__ . '/../../src/production_plan.php';
+require __DIR__ . '/../../src/production_flux.php';
 require __DIR__ . '/../../src/croisements.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
@@ -158,6 +159,10 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
             $path === '/exploitation/invendus'         => ep_exploitation_invendus(),
             $path === '/production/plan'               => ep_production_plan(),
+            $path === '/production/flux/params'        => ep_production_flux_params(),
+            $path === '/production/flux/plan'          => ep_production_flux_plan(),
+            $path === '/production/flux/suivi'         => ep_production_flux_suivi(),
+            $path === '/production/flux/cloture'       => ep_production_flux_cloture(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),
@@ -359,6 +364,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
+    if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
+    if ($method === 'POST' && $path === '/production/flux/valider') { return wr_production_flux_valider(); }
+    if ($method === 'POST' && $path === '/production/flux/cloture') { return wr_production_flux_cloture(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
