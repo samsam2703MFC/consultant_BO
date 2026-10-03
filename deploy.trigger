@@ -532,3 +532,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T12:20:00Z matiere : couts invraisemblables ecartes
 2026-10-03T12:42:46Z clients pro : heure et montant seulement
 2026-10-03T12:50:05Z invendus : sonde
+2026-10-03T12:52:44Z sonde invendus : sans donnees sensibles
