@@ -284,7 +284,7 @@ function coBundlesJours(int $sid, array $jours, int &$cout, int $budget, array &
         foreach ($p as $h => $lst) {
             foreach ((array) $lst as $pid => $x) {
                 if (!isset($ids[(int) $pid])) { continue; }
-                if (!isset($out[$pid])) { $out[$pid] = ['nom' => $x[0], 'jours' => []]; }
+                if (!isset($out[$pid])) { $out[$pid] = ['nom' => svNomProduit($pid, (string) $x[0]), 'jours' => []]; }
                 if (!isset($out[$pid]['jours'][$j])) { $out[$pid]['jours'][$j] = [0.0, 0.0, 0.0]; }
                 $out[$pid]['jours'][$j][0] += $x[1]; $out[$pid]['jours'][$j][1] += $x[2];
                 if ($x[3] === null) { $out[$pid]['jours'][$j][2] = null; } elseif ($out[$pid]['jours'][$j][2] !== null) { $out[$pid]['jours'][$j][2] += $x[3]; }

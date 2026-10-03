@@ -666,8 +666,9 @@ function psVentesJour(string $sid, string $j, int &$cout, int $budget): array
         foreach ($lst as $pid => $x) {
             if (!is_array($x)) { continue; }
             $q = (float) ($x[1] ?? 0);
-            $u[(string) $pid] = ($u[(string) $pid] ?? 0.0) + $q;
-            $h[(int) $heure][(string) $pid] = ($h[(int) $heure][(string) $pid] ?? 0.0) + $q;
+            $pid = (string) (int) $pid;   // une portion (« produit:portion ») compte pour sa pièce
+            $u[$pid] = ($u[$pid] ?? 0.0) + $q;
+            $h[(int) $heure][$pid] = ($h[(int) $heure][$pid] ?? 0.0) + $q;
         }
     }
     $total = array_sum($u);

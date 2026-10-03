@@ -432,11 +432,24 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
                 if ($pid <= 0) { continue; }
                 $q = (float) ($l['quantity'] ?? 0);
                 $v = (float) ($l['total_gross_value_after_discount'] ?? 0);
-                $cu = isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] : null;
-                if (!isset($p[$h][$pid])) { $p[$h][$pid] = [trim((string) ($l['product_name'] ?? ('Produit ' . $pid))), 0.0, 0.0, $cu === null ? null : 0.0]; }
-                $p[$h][$pid][1] += $q;
-                $p[$h][$pid][2] += $v;
-                if ($cu !== null && $p[$h][$pid][3] !== null) { $p[$h][$pid][3] += $q * $cu; }
+                // Une PORTION (une demi-tarte, un quart) est une ligne à part : sa clé est
+                // « produit:portion », son nom porte le libellé, son coût est la fraction du
+                // coût de la pièce — mesuré à Halle, le panel chiffre la demi Frangipane &
+                // Pommes à 4,42 € quand la pièce vaut 8,85 €.
+                $portion = svPortion($l);
+                $k = $portion['id'] > 0 ? $pid . ':' . $portion['id'] : $pid;   // la clé de la ligne, pas celle du gravé
+                $cu = isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] * $portion['fraction'] : $portion['cout'];
+                if (!isset($p[$h][$k])) {
+                    // Le nom du catalogue du panel (le nom réseau, en français) avant celui de
+                    // la ligne de ticket, qui est celui de la caisse du magasin — en néerlandais à Halle.
+                    $nom = svCatalogue()[$pid]['nom'] ?? trim((string) ($l['product_name'] ?? ('Produit ' . $pid)));
+                    if ($nom === '') { $nom = trim((string) ($l['product_name'] ?? ('Produit ' . $pid))); }
+                    if ($portion['id'] > 0) { $nom .= ' — ' . $portion['libelle']; }
+                    $p[$h][$k] = [$nom, 0.0, 0.0, $cu === null ? null : 0.0];
+                }
+                $p[$h][$k][1] += $q;
+                $p[$h][$k][2] += $v;
+                if ($cu !== null && $p[$h][$k][3] !== null) { $p[$h][$k][3] += $q * $cu; }
                 if (isset($pro[$id])) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q; }
             }
         }
@@ -452,19 +465,105 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     return $p;
 }
 
-/** La catégorie de chaque produit du panel — [pid => nom de catégorie], lue une fois. */
+/**
+ * La portion d'une ligne de ticket : son identifiant, son libellé, la fraction de la pièce
+ * et, quand le panel l'a chiffré, le coût matière de la portion. Mesuré à Halle : la ligne
+ * porte id_product_portion (77), product_portion_type (ONE_HALF), product_portion_label
+ * (« 1/2 ») et manufacturing_cost_snapshot — un JSON avec portion_fraction (0.5),
+ * cost_complete et recipe_cost.net (le coût de LA portion). Une pièce entière : id 0, fraction 1.
+ */
+function svPortion(array $l): array
+{
+    $id = (int) ($l['id_product_portion'] ?? $l['product_portion_id'] ?? 0);
+    $type = strtoupper((string) ($l['product_portion_type'] ?? ''));
+    $lib = trim((string) ($l['product_portion_label'] ?? ''));
+    $snap = $l['manufacturing_cost_snapshot'] ?? null;
+    if (is_string($snap)) { $snap = json_decode($snap, true); }
+    $frac = is_array($snap) && isset($snap['portion_fraction']) && (float) $snap['portion_fraction'] > 0 ? (float) $snap['portion_fraction'] : 0.0;
+    if ($frac <= 0) {
+        $frac = ['ONE_HALF' => 0.5, 'HALF' => 0.5, 'ONE_THIRD' => 1 / 3, 'ONE_QUARTER' => 0.25, 'QUARTER' => 0.25, 'THREE_QUARTERS' => 0.75, 'ONE_SIXTH' => 1 / 6, 'ONE_EIGHTH' => 0.125][$type] ?? 0.0;
+        if ($frac <= 0 && preg_match('#^(\d+)\s*/\s*(\d+)$#', $lib, $m) && (int) $m[2] > 0) { $frac = (int) $m[1] / (int) $m[2]; }
+        if ($frac <= 0) { $frac = 1.0; }
+    }
+    if ($id > 0 && $lib === '') { $lib = $type !== '' ? strtolower(str_replace('_', ' ', $type)) : 'portion'; }
+    $cout = null;
+    if (is_array($snap) && !empty($snap['cost_complete'])) {
+        $n = $snap['recipe_cost']['net'] ?? ($snap['manufacturing_cost']['net'] ?? null);
+        if (is_numeric($n) && (float) $n > 0) { $cout = (float) $n; }
+    }
+    return ['id' => $id, 'libelle' => $lib, 'fraction' => $id > 0 ? $frac : 1.0, 'cout' => $cout];
+}
+
+/**
+ * Le catalogue produit lu CHEZ LE PANEL — [pid => ['nom', 'cat']] — depuis
+ * /shops/{id}/products/available de chaque magasin du compte : le nom réseau (base_name,
+ * en français) et la catégorie. Pas la copie locale de la base, qui ignore toute référence
+ * créée depuis son extraction. Gardé une heure dans ceo_app_setting ; si le panel se tait,
+ * la dernière lecture ressert.
+ */
+function svCatalogue(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $c = setting('svCatalogue');
+    if (is_string($c)) { $c = json_decode($c, true); }
+    if (is_array($c) && isset($c['ts'], $c['p']) && time() - (int) $c['ts'] < 3600) { return $memo = (array) $c['p']; }
+    $out = [];
+    if (PanelApi::configured()) {
+        foreach (PanelApi::consultantShops() ?? [] as $sh) {
+            $sid = (int) ($sh['id'] ?? 0);
+            if ($sid <= 0) { continue; }
+            foreach (PanelApi::produitsDisponibles($sid) as $l) {
+                $pid = 0;
+                foreach (['id', 'product_id', 'id_product'] as $k) { if (isset($l[$k]) && is_numeric($l[$k])) { $pid = (int) $l[$k]; break; } }
+                if ($pid <= 0 || isset($out[$pid])) { continue; }
+                $nom = '';
+                foreach (['base_name', 'name', 'product_name'] as $k) { if (!empty($l[$k]) && is_string($l[$k])) { $nom = trim($l[$k]); break; } }
+                $cat = '';
+                foreach (['base_category_name', 'category_name'] as $k) { if (!empty($l[$k]) && is_string($l[$k])) { $cat = trim($l[$k]); break; } }
+                if ($cat === '' && isset($l['category']) && is_array($l['category'])) { $cat = trim((string) ($l['category']['base_name'] ?? $l['category']['name'] ?? '')); }
+                $out[$pid] = ['nom' => $nom, 'cat' => $cat];
+            }
+        }
+    }
+    if ($out !== []) {
+        try { svGrave('svCatalogue', ['ts' => time(), 'p' => $out]); } catch (Throwable $e) { /* sans mémo */ }
+        return $memo = $out;
+    }
+    return $memo = (is_array($c) && isset($c['p'])) ? (array) $c['p'] : [];
+}
+
+/** Le nom à afficher d'une ligne gravée : celui du catalogue du panel, la portion conservée ; sinon le nom lu. */
+function svNomProduit(int|string $cle, string $nomLu): string
+{
+    $c = svCatalogue()[(int) $cle] ?? null;
+    if ($c === null || ($c['nom'] ?? '') === '') { return $nomLu; }
+    if (str_contains((string) $cle, ':')) {
+        $pos = mb_strrpos($nomLu, ' — ');
+        return $c['nom'] . ($pos !== false ? mb_substr($nomLu, $pos) : '');
+    }
+    return (string) $c['nom'];
+}
+
+/**
+ * La catégorie de chaque produit — [pid => nom de catégorie]. D'abord le catalogue du panel
+ * (l'API), la copie locale de la base ne comblant que les références que le panel ne liste
+ * plus (retirées de la vente mais encore dans d'anciens tickets).
+ */
 function svCategories(): array
 {
     static $cache = null;
     if ($cache !== null) { return $cache; }
     $cache = [];
+    foreach (svCatalogue() as $pid => $c) { if (($c['cat'] ?? '') !== '') { $cache[(int) $pid] = (string) $c['cat']; } }
     $cats = function_exists('catalogueCategories') ? (catalogueCategories() ?? []) : [];
     try {
         foreach (Db::rows('SELECT id, id_category FROM product') as $r) {
+            if (isset($cache[(int) $r['id']])) { continue; }
             $c = $cats[(int) ($r['id_category'] ?? 0)] ?? null;
             if ($c !== null) { $cache[(int) $r['id']] = (string) $c['nom']; }
         }
-    } catch (PDOException $e) { /* sans catégories : le top reste par produit */ }
+    } catch (PDOException $e) { /* sans copie : le panel suffit */ }
     return $cache;
 }
 
@@ -560,7 +659,7 @@ function ep_stats_ventes(): array
         $pp = [];
         foreach ($prod as $j => $ph) {
             foreach ((array) ($ph[(string) $h] ?? []) as $pid => $x) {
-                if (!isset($pp[$pid])) { $pp[$pid] = ['id' => (int) $pid, 'nom' => $x[0], 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false]; }
+                if (!isset($pp[$pid])) { $pp[$pid] = ['id' => is_numeric($pid) ? (int) $pid : (string) $pid, 'pid' => (int) $pid, 'nom' => svNomProduit($pid, (string) $x[0]), 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false]; }
                 $pp[$pid]['q'] += $x[1]; $pp[$pid]['v'] += $x[2];
                 if ($x[3] === null) { $pp[$pid]['cInconnu'] = true; } else { $pp[$pid]['c'] += $x[3]; }
             }
@@ -572,7 +671,7 @@ function ep_stats_ventes(): array
                 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
                 'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null];
             // La même somme par catégorie : ce qui fait la marge de l'heure, famille par famille.
-            $cn = $catDe[$x['id']] ?? 'Sans catégorie';
+            $cn = $catDe[$x['pid']] ?? 'Sans catégorie';
             if (!isset($cc[$cn])) { $cc[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => 0]; }
             $cc[$cn]['q'] += $x['q']; $cc[$cn]['v'] += $x['v']; $cc[$cn]['refs']++;
             if ($x['cInconnu']) { $cc[$cn]['cInconnu'] = true; } else { $cc[$cn]['c'] += $x['c']; }

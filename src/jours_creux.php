@@ -514,7 +514,7 @@ function jcVentesCreneau(int $sid, array $wds, int $hde, int $ha, array $jours, 
             if ($h < $hde || $h > $ha) { continue; }
             foreach ((array) $lst as $pid => $x) {
                 $pid = (int) $pid; $vu = true;
-                $prod[$pid] ??= ['nom' => (string) $x[0], 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false];
+                $prod[$pid] ??= ['nom' => svNomProduit($pid, (string) $x[0]), 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false];
                 $prod[$pid]['q'] += (float) $x[1]; $prod[$pid]['v'] += (float) $x[2];
                 if ($x[3] === null) { $prod[$pid]['cInconnu'] = true; } else { $prod[$pid]['c'] += (float) $x[3]; }
             }
