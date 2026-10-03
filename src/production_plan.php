@@ -262,17 +262,21 @@ function gpCleCat(int $catId, string $cat): string
  * pièce par pièce — [jours, lus, fermes, manquants, produits: pid => {nom, cat, catCle, h: [h => moyenne]}].
  * Six heures en cache quand tous les jours sont lus.
  */
-function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget): array
+function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget, ?array $A = null): array
 {
-    $cle = 'gpBase4:' . $sid . ':' . $date . ':' . $semaines;
+    $cle = 'gpBase5:' . $sid . ':' . $date . ':' . $semaines;
     $c = setting($cle);
     if (is_array($c) && isset($c['b']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_BASE) { return $c['b']; }
     $jours = []; for ($i = 1; $i <= $semaines; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
-    $somme = []; $noms = []; $lus = []; $fermes = []; $manquants = [];
+    // Les commandes (POS et webshop) ne sont pas des ventes comptoir : leurs articles sortent de la
+    // base le jour et à l'heure de leur ticket — souvent payé avant le retrait (demande du 03/10/2026).
+    $A ??= $jours !== [] ? gpCommandesArticles($sid, min($jours), $cout, $budget) : null;
+    $somme = []; $noms = []; $lus = []; $fermes = []; $manquants = []; $retire = 0.0;
     foreach ($jours as $j) {
         $p = function_exists('svProduitsJour') ? svProduitsJour($sid, $j, $cout, $budget) : null;
         if ($p === null) { $manquants[] = $j; continue; }
         $f = gpPlier($p);
+        if ($A !== null) { foreach (gpCmdTicketsDuJour($A, $j) as $pid => $hs) { foreach ($hs as $h => $q) { if (isset($f['q'][$pid][$h])) { $r = min($q, $f['q'][$pid][$h]); $f['q'][$pid][$h] -= $r; $retire += $r; } } } }
         $tot = 0.0; foreach ($f['q'] as $hs) { $tot += array_sum($hs); }
         if ($tot <= 0) { $fermes[] = $j; continue; }
         $lus[] = $j;
@@ -289,8 +293,9 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
         $k = gpCatDe((int) $pid, $x);
         $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => $h];
     }
-    $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods];
-    if ($manquants === []) { gpEcrire($cle, ['ts' => time(), 'b' => $b]); }
+    $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods,
+        'commandes' => ['lues' => $A !== null, 'complet' => $A !== null && !$A['incomplet'], 'retirees' => round($retire / max(1, $n), 1)]];
+    if ($manquants === [] && $A !== null && !$A['incomplet']) { gpEcrire($cle, ['ts' => time(), 'b' => $b]); }
     return $b;
 }
 
@@ -300,33 +305,108 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
  */
 function gpCommandes(int $sid, string $date): ?array
 {
-    $cle = 'ppCmd5:' . $sid . ':' . $date;
+    $cout = 0;
+    $A = gpCommandesArticles($sid, $date, $cout, defined('SV_BUDGET_DEMANDE') ? SV_BUDGET_DEMANDE : 300);
+    return $A === null ? null : gpCmdRetraits($A, $date);
+}
+
+/**
+ * Les commandes d'un magasin retirées depuis `$du`, avec leurs articles (demande du 03/10/2026 :
+ * les commandes ne sont pas des ventes comptoir). Mesuré le 03/10/2026 : le panel ne joint aucun
+ * article aux commandes (`products` vide, /client-orders/{id}/products 404) ; ils sont dans le
+ * ticket de la commande (`id_transaction`), souvent payé un autre jour que le retrait. Chaque
+ * commande : retrait (jour, heure), canal, webshop, montant, statut, ticket (jour, heure) et
+ * lignes [[pid, pièces]] ; sans ticket (à payer au retrait) : sansDetail. Jamais le client.
+ * La liste se relit toutes les dix minutes ; un ticket lu se garde (il ne change plus).
+ * `incomplet` : des tickets restent à lire (budget de la requête) ; null si le panel n'a jamais répondu.
+ */
+function gpCommandesArticles(int $sid, string $du, int &$cout, int $budget): ?array
+{
+    $cle = 'ppCmdA:' . $sid . ':' . $du;
     $c = setting($cle);
-    if (is_array($c) && isset($c['l']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_CMD) { return $c['l']; }
-    $ancien = is_array($c) && isset($c['l']) ? $c['l'] : null;
-    if (!class_exists('PanelApi') || !PanelApi::configured()) { return $ancien; }
-    $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $date, 25);
-    if ((int) ($r['code'] ?? 0) !== 200 || !is_array($r['corps'] ?? null)) { return $ancien; }
-    $out = [];
-    foreach ((function_exists('analyseListe') ? analyseListe($r['corps']) : $r['corps']) as $o) {
-        if (!is_array($o)) { continue; }
-        $quand = (string) ($o['pick_up_datetime'] ?? '');
-        if (substr($quand, 0, 10) !== $date) { continue; }
-        $canal = function_exists('coCanal') ? coCanal($o) : (!empty($o['is_webshop']) ? 'cc' : 'compt');
-        $statut = function_exists('coStatut') ? coStatut($o, $canal) : '';
-        if ($statut === 'annulée') { continue; }
-        $lignes = gpArticles((array) ($o['products'] ?? []));
-        $out[] = ['id' => (int) ($o['id'] ?? 0), 'heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt', 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'lignes' => $lignes, 'sansDetail' => $lignes === [], 'clesArticle' => null];
+    $liste = is_array($c) && isset($c['l']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_CMD ? $c['l'] : null;
+    if ($liste === null) {
+        $liste = is_array($c) && isset($c['l']) ? $c['l'] : null;
+        $r = class_exists('PanelApi') && PanelApi::configured() ? PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $du, 25) : ['code' => 0];
+        if ((int) ($r['code'] ?? 0) === 200 && is_array($r['corps'] ?? null)) {
+            $liste = [];
+            foreach ((function_exists('analyseListe') ? analyseListe($r['corps']) : $r['corps']) as $o) {
+                if (!is_array($o)) { continue; }
+                $quand = (string) ($o['pick_up_datetime'] ?? '');
+                if (substr($quand, 0, 10) < $du) { continue; }
+                $canal = function_exists('coCanal') ? coCanal($o) : (!empty($o['is_webshop']) ? 'cc' : 'compt');
+                $statut = function_exists('coStatut') ? coStatut($o, $canal) : '';
+                if ($statut === 'annulée') { continue; }
+                $liste[] = ['jour' => substr($quand, 0, 10), 'heure' => substr($quand, 11, 5), 'canal' => $canal, 'webshop' => $canal !== 'compt',
+                    'montant' => round((float) ($o['total_value'] ?? 0), 2), 'statut' => $statut, 'tk' => (int) ($o['id_transaction'] ?? 0)];
+            }
+            gpEcrire($cle, ['ts' => time(), 'l' => $liste]);
+        }
     }
-    // Mesuré le 03/10/2026 : ni la liste ni la commande seule (/client-orders/{id}) ne joignent
-    // d'articles (products vide), /client-orders/{id}/products répond 404 et
-    // /franchisee-shop/{id}/client-orders/{date}/products 500. Une commande retirée est dans les
-    // tickets (id_transaction) donc dans les ventes ; une commande à venir ne compte que si le
-    // panel en joint un jour les articles — sans eux, elle s'affiche sans changer le plan.
-    foreach ($out as &$o) { unset($o['id']); } unset($o);
-    usort($out, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
-    gpEcrire($cle, ['ts' => time(), 'l' => $out]);
-    return $out;
+    if ($liste === null) { return null; }
+    // Les tickets des commandes : lus une fois, gardés par magasin (les plus vieux de 120 jours tombent).
+    $ck = 'ppTk:' . $sid;
+    $T = setting($ck); $T = is_array($T) ? $T : [];
+    $aLire = []; foreach ($liste as $o) { if ($o['tk'] > 0 && !isset($T[(string) $o['tk']])) { $aLire[$o['tk']] = true; } }
+    if ($aLire !== [] && $cout < $budget && class_exists('PanelApi') && PanelApi::configured()) {
+        $lus = 0;
+        foreach (array_chunk(array_slice(array_keys($aLire), 0, $budget - $cout), 40) as $lot) {
+            $ch = []; foreach ($lot as $id) { $ch[$id] = '/transactions/' . $id . '?include=products'; }
+            $res = PanelApi::getParallele($ch, 8);
+            $cout += count($lot);
+            foreach ($lot as $id) {
+                $t = $res[$id] ?? null;
+                if (!is_array($t) || !isset($t['insert_timestamp'])) { continue; }
+                $l = [];
+                foreach ((array) ($t['products'] ?? []) as $x) {
+                    $pid = (int) ($x['id_product'] ?? 0);
+                    if ($pid <= 0 || !is_array($x)) { continue; }
+                    $f = function_exists('svPortion') ? (float) (svPortion($x)['fraction'] ?? 1) : 1.0;
+                    $l[] = [$pid, round((float) ($x['quantity'] ?? 0) * ($f > 0 ? $f : 1.0), 3)];
+                }
+                $ts = (string) $t['insert_timestamp'];
+                $T[(string) $id] = ['j' => substr($ts, 0, 10), 'h' => (int) substr($ts, 11, 2), 'l' => $l];
+                $lus++;
+            }
+        }
+        if ($lus > 0) {
+            $lim = date('Y-m-d', strtotime('-120 days'));
+            $T = array_filter($T, static fn ($x) => is_array($x) && ($x['j'] ?? '') >= $lim);
+            gpEcrire($ck, $T);
+        }
+    }
+    $out = []; $incomplet = false;
+    foreach ($liste as $o) {
+        $t = $o['tk'] > 0 ? ($T[(string) $o['tk']] ?? null) : null;
+        if ($o['tk'] > 0 && $t === null) { $incomplet = true; }
+        unset($o['tk']);
+        $out[] = $o + ['ticket' => $t === null ? null : ['jour' => $t['j'], 'h' => $t['h']], 'lignes' => $t['l'] ?? [], 'sansDetail' => $t === null];
+    }
+    return ['du' => $du, 'commandes' => $out, 'incomplet' => $incomplet];
+}
+
+/** Les articles des tickets de commande encaissés un jour, à retirer du comptoir : [pid][heure] => pièces. */
+function gpCmdTicketsDuJour(array $A, string $jour): array
+{
+    $o = [];
+    foreach ($A['commandes'] as $c) {
+        if (($c['ticket']['jour'] ?? null) !== $jour) { continue; }
+        $h = (int) $c['ticket']['h'];
+        foreach ($c['lignes'] as [$pid, $q]) { $o[(int) $pid][$h] = ($o[(int) $pid][$h] ?? 0.0) + (float) $q; }
+    }
+    return $o;
+}
+
+/** Les commandes retirées un jour, au format du plan : [{heure, canal, webshop, montant, statut, lignes, sansDetail}]. */
+function gpCmdRetraits(array $A, string $jour): array
+{
+    $o = [];
+    foreach ($A['commandes'] as $c) {
+        if ($c['jour'] !== $jour) { continue; }
+        $o[] = ['heure' => $c['heure'], 'canal' => $c['canal'], 'webshop' => $c['webshop'], 'montant' => $c['montant'], 'statut' => $c['statut'], 'lignes' => $c['lignes'], 'sansDetail' => $c['sansDetail'], 'clesArticle' => null];
+    }
+    usort($o, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    return $o;
 }
 
 /** Les articles d'une commande : [[pid, quantité]] — l'identifiant du produit et la quantité, rien d'autre. */
@@ -487,13 +567,28 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
             $prods[$pid] = ['nom' => (string) $x['nom'] !== '' ? (string) $x['nom'] : 'Produit ' . $pid, 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => []];
         }
     }
+    // Un produit commandé ce jour-là se planifie même sans vente comptoir dans la base.
+    $commandes = [];
+    foreach ($cmds as $o) { foreach ((array) ($o['lignes'] ?? []) as [$cpid, $cq]) { if ((float) $cq > 0) { $commandes[(int) $cpid] = true; } } }
+    if ($commandes !== []) {
+        $cat = gpCatalogue();
+        foreach ($commandes as $cpid => $_) {
+            if (isset($prods[$cpid])) { continue; }
+            $x = $cat['produits'][$cpid] ?? null;
+            if ($x === null) { continue; }
+            $k = gpCatDe((int) $cpid, $x);
+            $prods[$cpid] = ['nom' => (string) $x['nom'] !== '' ? (string) $x['nom'] : 'Produit ' . $cpid, 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => []];
+        }
+    }
     foreach ($prods as $pid => $p) {
         $cfg = $params['categories'][$p['catCle']] ?? null;
         $prevJ = array_sum($p['h']);
         $ob = $oblig[(int) $pid] ?? null;
+        // Une catégorie qui ne passe pas au four ce jour-là cuit ses commandes à la 1re cuisson.
+        if ($ob === null && isset($commandes[(int) $pid]) && ($cfg === null || $cfg['cuissons'] === [])) { $cfg = ['cuissons' => [$C[0]['id']], 'plaque' => $cfg['plaque'] ?? null, 'limite' => null]; }
         // Un obligatoire d'une catégorie qui ne passe pas au four ce jour-là : la 1re cuisson.
         if ($ob !== null && ($cfg === null || $cfg['cuissons'] === [])) { $cfg = ['cuissons' => [$C[0]['id']], 'plaque' => $cfg['plaque'] ?? null]; }
-        if ($cfg === null || $cfg['cuissons'] === [] || ($prevJ < PP_MIN_JOUR && $ob === null)) { continue; }
+        if ($cfg === null || $cfg['cuissons'] === [] || ($prevJ < PP_MIN_JOUR && $ob === null && !isset($commandes[(int) $pid]))) { continue; }
         $poidsCat[$p['catCle']] = ($poidsCat[$p['catCle']] ?? 0.0) + $prevJ;
         $grp = (string) ($p['groupe'] ?? '') !== '' ? (string) $p['groupe'] : $p['cat'];
         $poidsGrp[$grp] = ($poidsGrp[$grp] ?? 0.0) + $prevJ;

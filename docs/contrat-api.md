@@ -523,12 +523,21 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   porte la colonne « à préparer pour demain matin » = la 1re cuisson du lendemain (base des mêmes
   jours que le lendemain). **Se garde** (`flux.garde` ; biscuits, cakes, épicerie, boissons par
   défaut) : la clôture propose de les garder, le reste se jette.
-- **Plan** : par produit (section › catégorie › produit, triés par volume), vendu à J−7 en magasin
-  (tickets − clients pro), webshop (`null` : le panel ne joint pas les articles des commandes ; le
-  nombre et le montant des commandes webshop et magasin de J−7 sont donnés à part) et commandes
-  magasin (les tickets des clients pro, `pb` du gravé des tickets) ; la prévision du jour ; le
+- **Comptoir et commandes** (demande du 03/10/2026) : les commandes ne sont pas des ventes
+  comptoir. Le panel ne joint aucun article aux commandes (`/shops/{id}/client-orders`, `products`
+  vide) ; ils sont dans le ticket de la commande (`id_transaction`), souvent payé avant le jour du
+  retrait. La prévision part du comptoir seul : les tickets de chaque jour de la base moins ceux
+  des commandes encaissées ce jour-là, à l'heure de leur ticket (`base.commandes.retirees`, pièces
+  par jour retirées en moyenne). Les commandes POS et webshop retirées le jour planifié
+  s'ajoutent ensuite à la cuisson de leur heure de retrait (`commandes` : `pos`, `webshop`, `ca`,
+  `pieces`, `sansDetail` = à payer au retrait, articles encore inconnus ; par ligne
+  `commandesJour = {pos, webshop}`). Les tickets de commande lus se gardent (`ppTk:{shop}`).
+- **Plan** : par produit (section › catégorie › produit, triés par volume), vendu à J−7 au comptoir
+  (`j7.magasin` : tickets moins ceux des commandes), webshop et commandes POS retirées ce jour-là
+  (`j7.webshop`, `j7.commandes`, articles de leur ticket ; nombre et montant dans `j7.webshop`,
+  `j7.commandes` en tête) ; la prévision comptoir du jour ; le
   report de la veille (la clôture d'hier, déduite de la 1re cuisson) ; à produire par cuisson
-  (`c[id] = {sortie, plaques, plaque, stock, prevu, fait, zone, ajustJ7}`), le total, le CA au prix du magasin.
+  (`c[id] = {sortie, plaques, plaque, stock, prevu, fait, zone, ajustJ7, cmd, ws}`), le total, le CA au prix du magasin.
 - **Step de production** (`gp.categories[cat].plaque`, les pièces par fournée ; `steps` = `[1, 8, 20]`
   proposés, un autre nombre reste permis, `null` = à l'unité) : la production et la proposition J−7
   s'arrondissent à ce step. **Stock minimum de recuisson** (`flux.stockMin[cat]`, pièces) : en
@@ -552,6 +561,12 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   à venir = stock actuel + cuissons à venir − prévision (l'heure entamée au prorata). `manque`
   (première heure projetée sous zéro et le déficit), `verdict` rupture | manque | trop | ok,
   `conseil` (pièces et plaques à recuire), `stockMin` (le seuil de recuisson du produit).
+- **Suivi et clôture** : la vitrine se vide du comptoir et des commandes retirées (à leur heure de
+  retrait) ; le ticket d'une commande payée pour un autre jour n'en sort rien.
+- **Sonde** : `GET /production/flux/sonde?shop=&date=` (lecture seule, des comptes et des noms de
+  champs, jamais un client) : les commandes du jour, encaissées ou non, les routes du panel essayées
+  pour leurs articles, la part des tickets pro qui sont des commandes ; `&liste=1` : la taille et
+  les bornes de la liste des commandes.
 - **Validation** : le même enregistrement que l'écran historique (`ppFait:{shop}:{date}`, `c[cuisson]`),
   plus qui et quand (`v[cuisson] = {le, par}`).
 - **Clôture** : reste = report d'hier + sorti − vendu − jeté déjà déclaré au panel ; `report`
