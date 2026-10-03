@@ -1121,6 +1121,16 @@ Les tickets d'une journée close restent gravés tels qu'ils ont été lus : une
 journée lue avant cette règle garde ses portions fondues dans la pièce, et
 n'est relue que si on efface son gravé.
 
+**Le coût matière, aussi en direct** (`catalogueCouts`, `coutsPanelMagasin`) :
+le panel d'abord — `recipe_cost_net` de `/shops/{id}/products/available`, le
+coût de CE magasin pour le détail de ses ventes, la moyenne des magasins du
+compte pour les écrans réseau (scoring, référentiel, prix × volume) — en mémo
+une heure (`coutsPanel` : ts, couts, parMagasin), la dernière lecture servie
+si le panel se tait. Les recettes de la copie locale (`recipe_cost`) ne
+comblent plus que les références que le panel ne chiffre pas, et le disent
+dans `source` (« … (copie locale) »). La saisie du cockpit garde la main en
+aval, comme avant.
+
 ### `GET /exploitation/jour` — les clients de J−7 au même moment
 
 Chaque magasin porte `j7` : `{ date, moment, tickets, ca, ticketsJour, caJour }`,

@@ -415,6 +415,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     }
     if ($cout + count($ids) > $budget && $cout > 0) { return null; }   // ce jour attendra le prochain lot
     $couts = catalogueCouts();
+    // Le coût de CE magasin d'abord (products/available le chiffre pour chacun), la moyenne du réseau sinon.
+    $coutsM = function_exists('coutsPanelMagasin') ? coutsPanelMagasin($sid) : [];
     $p = [];
     // La part des clients pro, produit par produit : elle ne passe pas par le
     // comptoir, les rotations du planogramme la retirent.
@@ -438,7 +440,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
                 // Pommes à 4,42 € quand la pièce vaut 8,85 €.
                 $portion = svPortion($l);
                 $k = $portion['id'] > 0 ? $pid . ':' . $portion['id'] : $pid;   // la clé de la ligne, pas celle du gravé
-                $cu = isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] * $portion['fraction'] : $portion['cout'];
+                $piece = isset($coutsM[$pid]) ? (float) $coutsM[$pid] : (isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] : null);
+                $cu = $piece !== null ? $piece * $portion['fraction'] : $portion['cout'];
                 if (!isset($p[$h][$k])) {
                     // Le nom du catalogue du panel (le nom réseau, en français) avant celui de
                     // la ligne de ticket, qui est celui de la caisse du magasin — en néerlandais à Halle.

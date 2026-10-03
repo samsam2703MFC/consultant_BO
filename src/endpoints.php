@@ -3508,7 +3508,8 @@ function catalogueCategories(): ?array
 }
 
 /**
- * Coût matière par référence, depuis les recettes du réseau.
+ * Coût matière par référence : l'API du panel d'abord, les recettes de la copie locale en
+ * dernier recours (demande du 03/10/2026 : tout en direct depuis l'API, plus de copie).
  *
  * `product` ne porte aucun coût : il vit dans `recipe_cost`, rattaché à la
  * recette et non au produit. Deux natures de lignes s'y côtoient — le coût
@@ -3520,7 +3521,16 @@ function catalogueCategories(): ?array
  */
 function catalogueCouts(): array
 {
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    // L'API DU PANEL D'ABORD : chaque ligne de GET /shops/{id}/products/available porte
+    // recipe_cost_net, le coût de la recette tel que le panel le calcule aujourd'hui — la
+    // moyenne des magasins du compte, en mémo une heure (coutsPanelEnCache). La copie
+    // locale des recettes ne comble plus que les références que le panel ne chiffre pas.
     $out = [];
+    foreach (coutsPanelEnCache() as $pid => $c) {
+        $out[(int) $pid] = ['mat' => (float) $c, 'rendement' => 1.0, 'source' => 'panel (products/available)'];
+    }
     try {
         // Le rendement divise le coût quand la recette en déclare un. Mesuré
         // sur la base : il vaut 1,00 partout aujourd'hui, la division ne change
@@ -3539,8 +3549,9 @@ function catalogueCouts(): array
                        LEFT JOIN product_recipe r ON r.id = p.id_recipe
                            WHERE p.id_recipe IS NOT NULL AND p.is_active = 1
                         GROUP BY p.id, r.yield_quantity");
-    } catch (PDOException $e) { return []; }
+    } catch (PDOException $e) { return $memo = $out; }
     foreach ($rows as $r) {
+        if (isset($out[(int) $r['pid']])) { continue; }   // le panel l'a chiffré : il a la main
         $res = $r['reseau'] !== null ? (float) $r['reseau'] : null;
         $mag = $r['magasins'] !== null ? (float) $r['magasins'] : null;
         $v = $res ?? $mag;
@@ -3548,7 +3559,7 @@ function catalogueCouts(): array
         $rend = $r['rendement'] !== null ? (float) $r['rendement'] : 1.0;
         if ($rend > 0) { $v /= $rend; }
         $out[(int) $r['pid']] = ['mat' => round($v, 3), 'rendement' => $rend,
-            'source' => $res !== null ? 'recette réseau' : 'moyenne magasins'];
+            'source' => $res !== null ? 'recette réseau (copie locale)' : 'moyenne magasins (copie locale)'];
     }
 
     // Les références que recipe_cost ne couvre pas (~289 sur 711) ne restent
@@ -3566,12 +3577,14 @@ function catalogueCouts(): array
     // client de 20 s pour certains navigateurs, et l'écran s'affichait vide.
     // Des coûts de recette vieux de quelques heures ne changent aucun
     // arbitrage ; un écran vide, si.
-    foreach (coutsPanelEnCache() as $pid => $c) {
-        if (!isset($out[(int) $pid])) {
-            $out[(int) $pid] = ['mat' => (float) $c, 'rendement' => 1.0, 'source' => 'panel (products/available)'];
-        }
-    }
-    return $out;
+    return $memo = $out;
+}
+
+/** Le coût matière d'un magasin, par produit, tel que le panel le chiffre pour lui ; sinon la moyenne du réseau. */
+function coutsPanelMagasin(int $sid): array
+{
+    $m = coutsPanelParMagasinEnCache();
+    return $m[$sid] ?? ($m[(string) $sid] ?? []);
 }
 
 /**
@@ -3586,20 +3599,41 @@ function catalogueCouts(): array
  */
 function coutsPanelEnCache(): array
 {
+    return coutsPanelLecture()['couts'];
+}
+
+/** Le même mémo, par magasin — [sid => [pid => coût]]. */
+function coutsPanelParMagasinEnCache(): array
+{
+    return coutsPanelLecture()['parMagasin'];
+}
+
+/**
+ * La lecture du panel, mémoïsée dans la requête et gardée UNE HEURE dans ceo_app_setting
+ * (`coutsPanel` : ts, couts = la moyenne du réseau, parMagasin). Le panel muet ressert la
+ * dernière lecture plutôt que rien ; une lecture vide ne s'écrit jamais.
+ */
+function coutsPanelLecture(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
     $cache = setting('coutsPanel');
-    $frais = is_array($cache) && isset($cache['ts'], $cache['couts'])
-        && (time() - (int) $cache['ts']) < 6 * 3600;
-    if ($frais) { return (array) $cache['couts']; }
+    if (is_string($cache)) { $cache = json_decode($cache, true); }
+    $frais = is_array($cache) && isset($cache['ts'], $cache['couts'], $cache['parMagasin'])
+        && (time() - (int) $cache['ts']) < 3600;
+    if ($frais) { return $memo = ['couts' => (array) $cache['couts'], 'parMagasin' => (array) $cache['parMagasin']]; }
 
     $panel = PanelApi::coutsMatiere();
     if ($panel !== []) {
+        $v = ['ts' => time(), 'couts' => $panel, 'parMagasin' => PanelApi::coutsMatiereParMagasin()];
         try {
             Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                ['coutsPanel', json_encode(['ts' => time(), 'couts' => $panel])]);
+                ['coutsPanel', json_encode($v)]);
         } catch (PDOException $e) { /* pas de cache : on servira quand même */ }
-        return $panel;
+        return $memo = ['couts' => $panel, 'parMagasin' => $v['parMagasin']];
     }
-    return is_array($cache) && isset($cache['couts']) ? (array) $cache['couts'] : [];
+    return $memo = ['couts' => is_array($cache) && isset($cache['couts']) ? (array) $cache['couts'] : [],
+        'parMagasin' => is_array($cache) && isset($cache['parMagasin']) ? (array) $cache['parMagasin'] : []];
 }
 
 /**
