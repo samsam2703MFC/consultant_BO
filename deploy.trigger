@@ -578,3 +578,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T19:42:18Z production equipe operateurs etapes
 2026-10-03T19:44:26Z production tout repartir
 2026-10-03T19:48:13Z production fours fournees partagees
+2026-10-03T19:58:41Z production temperature impression postes feuilles de cuisson
