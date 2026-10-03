@@ -561,3 +561,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T17:15:13Z production : categories hors catalogue
 2026-10-03T17:36:17Z production J-7 trop ou trop peu, step, stock minimum
 2026-10-03T17:38:50Z production J-7 manque arrondi
+2026-10-03T17:42:26Z production J-7 besoin vendu plus manque
