@@ -58,7 +58,7 @@ function ep_exploitation_invendus_sonde(): array
     if ($extra !== '') {
         $cands = [];
         foreach (array_slice(array_filter(array_map('trim', explode(',', $extra))), 0, 30) as $e) {
-            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|docs?|api-docs|openapi(\.json|\.yaml)?|swagger(\.json|\.yaml)?|api/documentation|documentation|v\d/docs|schema)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
+            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
         }
     }
     $out['candidats'] = [];
@@ -66,6 +66,7 @@ function ep_exploitation_invendus_sonde(): array
         $p = str_replace(['{s}', '{d}'], [(string) $sid, $date], $c);
         $r = PanelApi::sondeGet($p, 8);
         $b = $r['corps'];
+        if (is_string($b) && preg_match('/(href|location)=["\']?([^"\' >]+)/i', $b, $mm)) { $b = ['redirection' => $mm[2]]; }
         $ap = null;
         if (is_array($b)) {
             if (array_is_list($b)) { $ap = ['liste' => count($b), 'premier' => is_array($b[0] ?? null) ? array_slice($b[0], 0, 20, true) : ($b[0] ?? null)]; }
