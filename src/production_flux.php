@@ -747,7 +747,13 @@ function ep_production_flux_sonde(): array
     };
     $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $date, 25);
     $L = analyseListe(is_array($r['corps'] ?? null) ? $r['corps'] : []);
-    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'commandes' => [], 'routes' => []];
+    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'commandes' => [], 'routes' => [],
+        'liste' => ['n' => count($L), 'enveloppe' => is_array($r['corps'] ?? null) && !array_is_list($r['corps']) ? array_keys($r['corps']) : 'liste',
+            'meta' => is_array($r['corps'] ?? null) && !array_is_list($r['corps']) ? array_map(static fn ($v) => is_array($v) ? array_slice($v, 0, 8, true) : $v, array_diff_key($r['corps'], ['data' => 1, 'items' => 1])) : null,
+            'retraitMin' => $L !== [] ? min(array_map(static fn ($o) => substr((string) ($o['pick_up_datetime'] ?? '9'), 0, 10), $L)) : null,
+            'retraitMax' => $L !== [] ? max(array_map(static fn ($o) => substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10), $L)) : null,
+            'avecTicket' => count(array_filter($L, static fn ($o) => (int) ($o['id_transaction'] ?? 0) > 0))]];
+    if (!empty($_GET['liste'])) { return ['shop' => $sid, 'date' => $date, 'liste' => $out['liste']]; }
     $ids = []; $tick = [];
     foreach ($L as $o) {
         if (!is_array($o) || substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10) !== $date) { continue; }
