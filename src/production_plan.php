@@ -222,6 +222,32 @@ function gpCatalogue(): array
     return $memo = ['produits' => $prods, 'categories' => $cats];
 }
 
+/** Un nom de catégorie comparable : minuscules, espaces simples. */
+function gpNomCle(string $n): string { return trim((string) preg_replace('/\s+/u', ' ', mb_strtolower($n))); }
+
+/**
+ * La catégorie d'un produit : celle du catalogue du panel ; à défaut, la catégorie du même NOM ;
+ * à défaut encore (pas de nom), celle dont l'identifiant préfixe celui du produit (1410016 → 14100).
+ * Mesuré le 03/10/2026 dans les quatre magasins : des produits récents (« Quiche Poulet &
+ * Gorgonzola », « Mini - Gosette Pomme »…) manquent au catalogue et ne portaient que le nom de leur
+ * catégorie — une seconde « Quiches », une « Viennoiserie réduction » hors de la section Viennoiserie.
+ * [catId, cat, catCle, groupe].
+ */
+function gpCatDe(int $pid, ?array $x = null): array
+{
+    static $parNom = null;
+    $cat = gpCatalogue();
+    if ($parNom === null) { $parNom = []; foreach ($cat['categories'] as $cid => $c) { $k = gpNomCle((string) ($c['nom'] ?? '')); if ($k !== '' && !isset($parNom[$k])) { $parNom[$k] = (int) $cid; } } }
+    $x = $x ?? ($cat['produits'][$pid] ?? null);
+    $catId = (int) ($x['catId'] ?? 0); $nom = (string) ($x['cat'] ?? '');
+    if ($nom === '' && function_exists('svCategories')) { $nom = (string) (svCategories()[$pid] ?? ''); }
+    if ($catId <= 0 && $nom !== '' && isset($parNom[gpNomCle($nom)])) { $catId = $parNom[gpNomCle($nom)]; }
+    if ($catId <= 0 && $nom === '' && $pid >= 100000 && isset($cat['categories'][intdiv($pid, 100)])) { $catId = intdiv($pid, 100); }
+    if ($catId > 0 && (string) ($cat['categories'][$catId]['nom'] ?? '') !== '') { $nom = (string) $cat['categories'][$catId]['nom']; }
+    if ($nom === '') { $nom = 'Sans catégorie'; }
+    return ['catId' => $catId, 'cat' => $nom, 'catCle' => gpCleCat($catId, $nom), 'groupe' => $catId > 0 ? (string) ($cat['categories'][$catId]['groupe'] ?? '') : ''];
+}
+
 /** La clé d'une catégorie : son identifiant du panel ; à défaut, son nom. */
 function gpCleCat(int $catId, string $cat): string
 {
@@ -235,7 +261,7 @@ function gpCleCat(int $catId, string $cat): string
  */
 function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget): array
 {
-    $cle = 'gpBase2:' . $sid . ':' . $date . ':' . $semaines;
+    $cle = 'gpBase3:' . $sid . ':' . $date . ':' . $semaines;
     $c = setting($cle);
     if (is_array($c) && isset($c['b']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_BASE) { return $c['b']; }
     $jours = []; for ($i = 1; $i <= $semaines; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
@@ -257,10 +283,8 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget):
         ksort($hs);
         $h = []; foreach ($hs as $hh => $q) { $h[(int) $hh] = round($q / max(1, $n), 3); }
         $x = $cat['produits'][$pid] ?? null;
-        $catId = (int) ($x['catId'] ?? 0); $catNom = (string) ($x['cat'] ?? '');
-        if ($catNom === '' && function_exists('svCategories')) { $catNom = (string) (svCategories()[$pid] ?? ''); }
-        $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $catId, 'cat' => $catNom !== '' ? $catNom : 'Sans catégorie', 'catCle' => gpCleCat($catId, $catNom !== '' ? $catNom : 'Sans catégorie'),
-            'groupe' => $catId > 0 ? (string) ($cat['categories'][$catId]['groupe'] ?? '') : '', 'h' => $h];
+        $k = gpCatDe((int) $pid, $x);
+        $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => $h];
     }
     $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods];
     if ($manquants === []) { gpEcrire($cle, ['ts' => time(), 'b' => $b]); }
@@ -456,9 +480,8 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
             if (isset($prods[$pid])) { continue; }
             $x = $cat['produits'][$pid] ?? null;
             if ($x === null) { continue; }
-            $catId = (int) $x['catId']; $catNom = (string) $x['cat'] !== '' ? (string) $x['cat'] : 'Sans catégorie';
-            $prods[$pid] = ['nom' => (string) $x['nom'] !== '' ? (string) $x['nom'] : 'Produit ' . $pid, 'catId' => $catId, 'cat' => $catNom, 'catCle' => gpCleCat($catId, $catNom),
-                'groupe' => $catId > 0 ? (string) ($cat['categories'][$catId]['groupe'] ?? '') : '', 'h' => []];
+            $k = gpCatDe((int) $pid, $x);
+            $prods[$pid] = ['nom' => (string) $x['nom'] !== '' ? (string) $x['nom'] : 'Produit ' . $pid, 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => []];
         }
     }
     foreach ($prods as $pid => $p) {

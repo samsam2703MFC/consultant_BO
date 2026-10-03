@@ -257,8 +257,8 @@ function ep_production_flux_params(): array
     foreach ($pf['obligatoires'] as $pid => $e) {
         if (isset($prods[$pid])) { continue; }
         $x = $cat['produits'][$pid] ?? null;
-        $catId = (int) ($x['catId'] ?? 0); $cn = (string) ($x['cat'] ?? '') !== '' ? (string) $x['cat'] : 'Sans catégorie';
-        $prods[$pid] = ['pid' => $pid, 'nom' => (string) ($x['nom'] ?? ('Produit ' . $pid)), 'cat' => $cn, 'catCle' => gpCleCat($catId, $cn), 'groupe' => $catId > 0 ? (string) ($cc[$catId]['groupe'] ?? '') : '', 'parJour' => 0.0];
+        $k = gpCatDe((int) $pid, $x);
+        $prods[$pid] = ['pid' => $pid, 'nom' => (string) ($x['nom'] ?? ('Produit ' . $pid)), 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'parJour' => 0.0];
     }
     foreach ($prods as $pid => &$p) { $o = $pf['obligatoires'][$pid] ?? null; $p['oblig'] = $o; } unset($p);
     $prods = array_values($prods);
