@@ -6072,20 +6072,11 @@ function tplOffres(c, x){
 function tplGP(c, x){
   const { esc } = x, g = c.gp;
   const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
-  const btn = on => `font-family:var(--font-ui);font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:${on ? 'var(--color-text)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};cursor:pointer`;
   return `<div data-screen="gestion-production" style="display:flex;flex-direction:column;gap:12px">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Magasin</label>
       <select ${x.C(g.setShop)} style="${SEL}">${g.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>
-      ${g.parJour ? `<span style="width:14px"></span>
-      <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Jour</label>
-      <button ${x.A(g.prec)} style="${btn(false)}" title="jour précédent">‹</button>
-      <input type="date" value="${esc(g.date)}" ${x.C(g.setDate)} style="${SEL}">
-      <button ${x.A(g.suiv)} style="${btn(false)}" title="jour suivant">›</button>
-      <button ${x.A(g.versAuj)} style="${btn(g.auj)}">Aujourd’hui</button>
-      ${g.demainOk ? `<button ${x.A(g.versDemain)} style="${btn(g.demain)}">Demain</button>` : ''}
-      <span style="font-size:12.5px;color:var(--color-text-muted);margin-left:6px">${esc(g.jour)}</span>` : ''}
-      <a href="${esc(g.pleinEcran)}" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--color-primary);text-decoration:none">Ouvrir l’application Production ↗</a>
+      <button ${x.A(g.pleinEcran)} style="margin-left:auto;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--color-primary);background:none;border:none;cursor:pointer">Ouvrir l’application Production ↗</button>
     </div>
     <iframe src="${esc(g.src)}" title="Production" style="width:100%;height:calc(100vh - 210px);min-height:640px;border:0.5px solid var(--color-border-tertiary);border-radius:12px;background:var(--color-bg)"></iframe>
   </div>`;
