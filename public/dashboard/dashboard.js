@@ -114,7 +114,7 @@
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
@@ -902,6 +902,7 @@
     }
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
+    if (S.vue === 'jour') { h += murR([murCanaux(), murOffres()]); }
     if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
@@ -1040,6 +1041,98 @@
     });
   }
 
+  /* --- les canaux : comptoir, click & collect, livraison — et les offres : bundles, promotions --- */
+  function cleCanaux() { return 'canaux|' + S.shop + '|' + S.date; }
+  function cheminCanaux() { return '/exploitation/canaux?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
+  function canauxData() { const C = S.aux[cleCanaux()]; return C && !C.error && C.jour ? C : null; }
+  function cleOffres() { return 'offres|' + S.shop + '|' + S.date; }
+  function cheminOffres() { return '/exploitation/offres?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&periode=7'; }
+  function offresData() { const O = S.aux[cleOffres()]; return O && !O.error && Array.isArray(O.offres) ? O : null; }
+  const CANAL = { compt: ['Comptoir', 'c'], comptoir: ['Comptoir', 'c'], cc: ['Click & collect', 'w'], liv: ['Livraison', 'l'], webshop: ['Webshop', 'w'] };
+  const canalTag = k => { const c = CANAL[k] || [k, 'c']; return `<span class="co-mode ${c[1]}">${esc(c[0])}</span>`; };
+  const STATUT_CO = { 'remise': 'ok', 'livrée': 'ok', 'en route': 'enc', 'prête': 'enc', 'en préparation': 'att', 'à préparer': 'att' };
+  const JOURS_CO = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
+  const ceJour = () => S.date === AUJ ? 'aujourd’hui' : 'ce jour';
+  /** Le corps de la carte : les 14 derniers jours empilés par canal, et la liste des commandes webshop du jour. */
+  function canauxCorps(C) {
+    const serie = C.serie || [], max = Math.max(1, ...serie.map(s => (s.comptoir || 0) + s.cc + s.liv));
+    const Q = C.quatorze || {};
+    const piles = `<div class="co-pile">${serie.map(s => { const d = new Date(s.j + 'T12:00:00').getDay(), we = d === 0 || d === 6; const h = v => (100 * (v || 0) / max).toFixed(1) + '%'; const t = (s.comptoir || 0) + s.cc + s.liv; return `<span class="${we ? 'we' : ''}${s.lu ? '' : ' na'}" title="${fD(s.j)} · ${s.lu ? fE(t) + ' dont webshop ' + fE(s.cc + s.liv) : 'caisse non lue' + (s.cc + s.liv ? ' · webshop ' + fE(s.cc + s.liv) : '')}"><i class="c" style="height:${h(s.comptoir)}"></i><i class="w" style="height:${h(s.cc)}"></i><i class="l" style="height:${h(s.liv)}"></i></span>`; }).join('')}</div>
+      <div class="co-axe">${serie.map(s => { const d = new Date(s.j + 'T12:00:00'); const we = d.getDay() === 0 || d.getDay() === 6; return `<span class="${we ? 'we' : ''}">${JOURS_CO[d.getDay()]} ${d.getDate()}</span>`; }).join('')}</div>
+      <div class="db-leg" style="padding:8px 0 0"><span><i style="background:#b8ad9f"></i>comptoir</span><span><i style="background:#1f5f8b"></i>click &amp; collect</span><span><i style="background:#0f3b5c"></i>livraison</span><span style="margin-left:auto">14 jours : <b>${fE(Q.webshop || 0)}</b> de webshop sur ${fE(Q.total || 0)}</span></div>`;
+    const L = C.liste || [];
+    const table = L.length ? `<table class="db-pro-tab co-tab" style="margin:6px 0 0;width:100%"><thead><tr><th>Retrait</th><th>Canal</th><th class="n">Articles</th><th class="n">Montant</th><th></th></tr></thead><tbody>${L.map(c => `<tr><td class="mu">${esc(c.heure)}</td><td>${canalTag(c.canal)}</td><td class="n">${c.articles == null ? '—' : nf(c.articles, 0)}</td><td class="n">${fU(c.montant)}</td><td><span class="co-st ${STATUT_CO[c.statut] || ''}">${esc(c.statut)}</span></td></tr>`).join('')}</tbody></table>` : `<div class="db-mini" style="margin-top:8px">Aucune commande webshop ${ceJour()}.</div>`;
+    const J = C.jour, nW = J.cc.n + J.liv.n;
+    const pied = [nW ? nW + ' commande' + (nW > 1 ? 's' : '') + ' · ' + fE(J.webshop) : '', C.aPreparer ? `<b>${C.aPreparer} à préparer</b>` : '', C.demain && C.demain.n ? 'demain : ' + C.demain.n + ' commande' + (C.demain.n > 1 ? 's' : '') + ' déjà prise' + (C.demain.n > 1 ? 's' : '') + ' (' + fE(C.demain.ca) + ')' : ''].filter(Boolean).join(' · ');
+    return `<div class="co-corps"><div><span class="db-lab">Les 14 derniers jours — par canal</span>${piles}</div><div><span class="db-lab">Les commandes webshop ${S.date === AUJ ? 'du jour' : 'de ce jour'}</span>${table}${pied ? `<div class="db-mini" style="margin-top:8px">${pied}</div>` : ''}</div></div>`;
+  }
+  /**
+   * La carte « Commandes et canaux » : le comptoir (tickets caisse, dont clients pro), le click &
+   * collect et la livraison (les commandes webshop du panel). Elle remplace « Comptoir et clients
+   * pro » en vue Jour dès que les commandes du panel sont lues ; le détail des clients pro reste
+   * sous le même déclencheur.
+   */
+  function canauxCarte(m, C) {
+    const J = C.jour, P = proData(), PJ = P ? P.jour : null;
+    const ouvert = !!S.proOuvert, lue = J.joursLus > 0;
+    const comptoir = lue ? J.comptoir : null, cc = J.cc, liv = J.liv, total = (comptoir || 0) + J.webshop;
+    const pct = v => total > 0 ? 100 * v / total : 0;
+    const caPro = m && m.caPro != null ? m.caPro : (PJ ? PJ.caPro : null), tkPro = m && m.ticketsPro != null ? m.ticketsPro : (PJ ? PJ.ticketsPro : null);
+    const pro = !!(PJ && PJ.ticketsPro) || !!(m && m.ticketsPro > 0);
+    const L = C.liste || [], nSt = (canal, st) => L.filter(c => c.canal === canal && c.statut === st).length;
+    const bascule = `<span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'détail des clients pro ▾'}</span>`;
+    const deplie = ouvert ? `<div class="db-split-det">${proCarte('detail')}</div>` : '';
+    const mini = 'comptoir = tickets caisse (dont clients pro) · click & collect = commande webshop retirée en boutique · livraison = commande webshop livrée';
+    const bar = lue && total > 0 ? `<div class="db-split-bar" title="comptoir ${fP(pct(comptoir))} · click & collect ${fP(pct(cc.ca))} · livraison ${fP(pct(liv.ca))}"><i class="c" style="width:${pct(comptoir).toFixed(1)}%"></i><i class="w" style="width:${pct(cc.ca).toFixed(1)}%"></i><i class="l" style="width:${pct(liv.ca).toFixed(1)}%"></i></div>` : '';
+    const sC = lue ? [fP(pct(comptoir)) + ' du CA', fN(J.tickets) + ' ticket' + (J.tickets > 1 ? 's' : ''), J.tickets ? 'panier ' + fU(comptoir / J.tickets) : ''].filter(Boolean).join(' · ')
+      + (caPro != null && tkPro ? `<br>dont clients pro <b>${fE(caPro)}</b> (${fN(tkPro)} ticket${tkPro > 1 ? 's' : ''}${PJ && PJ.aFacturer ? ', à facturer ' + fE(PJ.aFacturer) : ''})` : '') : 'caisse pas encore lue';
+    const sW = cc.n ? [fP(pct(cc.ca)) + ' du CA', cc.n + ' commande' + (cc.n > 1 ? 's' : ''), 'panier ' + fU(cc.ca / cc.n)].join(' · ') + '<br>' + [nSt('cc', 'remise') ? `<b>${nSt('cc', 'remise')} remise${nSt('cc', 'remise') > 1 ? 's' : ''}</b>` : '', nSt('cc', 'prête') ? nSt('cc', 'prête') + ' prête' + (nSt('cc', 'prête') > 1 ? 's' : '') : '', C.aPreparer ? C.aPreparer + ' à préparer' : ''].filter(Boolean).join(' · ') : 'aucune commande ' + ceJour();
+    const sL = liv.n ? [fP(pct(liv.ca)) + ' du CA', liv.n + ' commande' + (liv.n > 1 ? 's' : ''), 'panier ' + fU(liv.ca / liv.n)].join(' · ') + '<br>' + [nSt('liv', 'livrée') ? `<b>${nSt('liv', 'livrée')} livrée${nSt('liv', 'livrée') > 1 ? 's' : ''}</b>` : '', nSt('liv', 'en route') ? nSt('liv', 'en route') + ' en route' : ''].filter(Boolean).join(' · ') : 'aucune livraison ' + ceJour();
+    return `<div class="db-card db-split co${pro ? ' on' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer"><span class="db-lab">Commandes et canaux — la journée</span><span class="db-mini">${esc(mini)}</span>${bascule}</div>${bar}
+      <div class="db-split-g co3"><div class="c"><div class="k">Comptoir</div><div class="v">${comptoir != null ? fK(comptoir) : '—'}</div><div class="s">${sC}</div></div>
+      <div class="w"><div class="k">Click &amp; collect</div><div class="v">${fK(cc.ca)}</div><div class="s">${sW}</div></div>
+      <div class="l"><div class="k">Livraison</div><div class="v">${fK(liv.ca)}</div><div class="s">${sL}</div></div></div>${canauxCorps(C)}${deplie}</div>`;
+  }
+  const CO_SEUIL_MARGE = 50;
+  const OFFRE_VERDICT = { tot: ['Trop tôt', 'tot'], garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'] };
+  /** La carte « Promotions et bundles » : une ligne par offre sur 7 jours, le verdict face à la référence. */
+  function offresCarte() {
+    const cle = cleOffres(), O = offresData(), err = S.err[cle];
+    const lib = 'Promotions et bundles — ce qu’elles rapportent';
+    const mini = 'bundles = produits de la catégorie « Bundle & Promotion » du panel · promotions = celles posées par le cockpit sur les jours creux · référence : les 4 semaines d’avant';
+    if (!O) { return `<div class="db-card db-offres"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${err ? esc(err) : (S.enCours[cle] || !S.aux[cle] ? 'lecture des tickets…' : esc((S.aux[cle] || {}).error || 'lecture impossible'))}</span></div></div>`; }
+    const L = O.offres, K = O.kpi || {};
+    if (!L.length) { return `<div class="db-card db-offres"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(mini)}</span></div><div class="db-mini" style="padding:0 16px 14px">Aucune offre sur les 7 derniers jours : pas de bundle vendu${K.joursLus ? ' (' + K.joursLus + ' jours de tickets lus)' : ''}, pas de promotion posée dans le cockpit.</div></div>`; }
+    const spark = s => { const mx = Math.max(1, ...s); return `<span class="co-spark">${s.map((v, i) => `<i class="${i === s.length - 1 ? 'auj' : ''}" style="height:${Math.max(2, Math.round(100 * v / mx))}%"></i>`).join('')}</span>`; };
+    const delta = o => o.delta == null ? '' : `<span class="co-d ${o.delta >= 0 ? 'ok' : 'ko'}">${o.delta >= 0 ? '+' : '−'}${nf(Math.abs(o.delta), 0)} %</span> `;
+    const margeCoul = v => v >= 60 ? '#2d7a3e' : v >= 50 ? '#B26A00' : '#C0182B';
+    const q = x => x == null ? '' : nf(x, 0);
+    const lignes = L.map(o => { const v = OFFRE_VERDICT[o.verdict] || OFFRE_VERDICT.tot; const auj = o.auj || {}, sept = o.sept || {}; return `<tr><td class="off"><span class="co-type ${o.type === 'bundle' ? 'b' : 'p'}">${o.type === 'bundle' ? 'Bundle' : 'Promo'}</span><b style="display:inline">${esc(o.nom)}</b><small>${esc(o.regle || '')}</small></td><td>${(o.canaux || []).map(canalTag).join(' ')}</td><td class="mu">${o.depuis ? fD(o.depuis) : '—'}</td><td class="n">${auj.ca || auj.pieces ? (auj.pieces != null ? q(auj.pieces) + ' · ' : '') + fE(auj.ca) : '<span class="mu">pas ce jour</span>'}</td><td class="n">${sept.pieces != null ? '<b>' + q(sept.pieces) + '</b> · ' : ''}${fE(sept.ca)}</td><td class="n">${o.marge != null ? `<span style="color:${margeCoul(o.marge)};font-weight:600">${fP0(o.marge)}</span>${o.coef != null ? ` <span class="mu">× ${nf(o.coef, 2)}</span>` : ''}` : '<span class="mu">—</span>'}</td><td>${spark(o.spark || [])}</td><td>${delta(o)}<span class="db-mini">${esc(o.mot || '')}</span></td><td><span class="co-verdict ${v[1]}">${v[0]}</span></td></tr>`; }).join('');
+    const piecesJ = L.reduce((a, o) => a + ((o.auj || {}).pieces || 0), 0);
+    const kpi = `<div class="db-obj-t4 co-kpi">
+      <div><div class="k">CA des offres · 7 jours</div><div class="v">${fE(K.ca)}</div><div class="s">${K.part != null ? fP(K.part) + ' du CA de la semaine' : '—'}${K.pieces ? ' · ' + nf(K.pieces, 0) + ' pièces' : ''}</div></div>
+      <div><div class="k">${S.date === AUJ ? 'Aujourd’hui' : 'Ce jour'}</div><div class="v">${fE(K.caJour)}</div><div class="s">${piecesJ ? nf(piecesJ, 0) + ' pièces' : 'pas de vente ce jour'}</div></div>
+      <div><div class="k">Marge brute des offres</div><div class="v">${K.marge != null ? fP0(K.marge) : '—'}</div><div class="s">${K.marge != null && K.marge < 100 ? 'coef × ' + nf(1 / (1 - K.marge / 100), 2) + ' · sur les bundles, 7 jours' : 'coût matière inconnu'}</div></div>
+      <div><div class="k">Actives</div><div class="v">${K.bundles || 0} + ${K.promos || 0}</div><div class="s">${K.bundles || 0} bundle${K.bundles > 1 ? 's' : ''}, ${K.promos || 0} promotion${K.promos > 1 ? 's' : ''}${K.aAjuster ? ' · <b>' + K.aAjuster + ' à ajuster</b>' : ''}</div></div></div>`;
+    return `<div class="db-card db-offres${K.aAjuster ? ' att' : ''}"><div class="ct"><span class="db-lab">${lib}</span><span class="db-mini">${esc(mini)}</span></div>${kpi}
+      <div class="co-defil"><table class="db-pro-tab co-tab"><thead><tr><th>Offre</th><th>Canaux</th><th>Depuis</th><th class="n">${S.date === AUJ ? 'Aujourd’hui' : 'Ce jour'}</th><th class="n">7 jours</th><th class="n">Marge</th><th>7 jours</th><th>Face à la référence</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div>
+      <div class="db-leg" style="padding-top:10px"><span><span class="co-verdict ok">Garder</span> l’offre rapporte : ≥ +8 % face à la référence, ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous ${CO_SEUIL_MARGE} %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div></div>`;
+  }
+  /** Les tuiles du mur mobile : le webshop du jour, et les offres sur 7 jours. */
+  function murCanaux() {
+    const C = canauxData(), cle = cleCanaux();
+    if (!C || C.indispo) { return murC('Webshop', C ? '—' : '…', C ? 'panel muet' : (S.err[cle] ? esc(S.err[cle]) : 'lecture des commandes…')); }
+    const J = C.jour, n = J.cc.n + J.liv.n, Q = C.quatorze || {};
+    return murC('Webshop', n ? fK(J.webshop) : '0', n ? J.cc.n + ' click & collect · ' + J.liv.n + ' livraison' + (J.part != null ? ' · ' + fP(J.part) + ' du CA' : '') + (C.aPreparer ? ' · <b>' + C.aPreparer + ' à préparer</b>' : '') : 'aucune commande ' + ceJour() + (Q.webshop ? ' · 14 j : ' + fK(Q.webshop) : ''), C.aPreparer ? 'wa' : '');
+  }
+  function murOffres() {
+    const O = offresData(), cle = cleOffres();
+    if (!O) { return murC('Offres', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
+    const K = O.kpi || {};
+    if (!O.offres.length) { return murC('Offres', '0', 'aucun bundle vendu, aucune promotion sur 7 jours'); }
+    return murC('Offres', fK(K.ca), (K.bundles || 0) + ' bundle' + (K.bundles > 1 ? 's' : '') + ' · ' + (K.promos || 0) + ' promo' + (K.promos > 1 ? 's' : '') + ' · 7 j' + (K.part != null ? ' · ' + fP(K.part) + ' du CA' : '') + (K.aAjuster ? ' · <b>' + K.aAjuster + ' à ajuster</b>' : ''), K.aAjuster ? 'wa' : 'ok');
+  }
+
   /* --- les clients pro (B2B) : ce que les tickets du panel disent des ventes aux sociétés --- */
   function clePro() { return 'pro|' + S.shop + '|' + S.date; }
   function cheminPro() { return '/exploitation/pro?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
@@ -1122,6 +1215,8 @@
   function splitCarte(m) {
     const X = splitDe(m);
     const jour = S.vue === 'jour';
+    const C = jour ? canauxData() : null;
+    if (C && !C.indispo) { return canauxCarte(m, C); }
     if (!X) { return jour ? proCarte(false) : ''; }
     const lib = 'Comptoir et clients pro — ' + (jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois'));
     const P = jour ? proData() : null, J = P ? P.jour : null, M = P ? (P.mois || {}) : {};
@@ -1369,6 +1464,7 @@
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
     h += splitCarte(m);
+    h += offresCarte();
     if (m.objectifJour) {
       // Objectif atteint : la ligne passe en or, badge trophée et pluie de
       // confettis (V1). Record de jour du magasin : bandeau plein or, feux

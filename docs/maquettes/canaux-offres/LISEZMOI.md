@@ -1,5 +1,15 @@
 # Commandes par canal, promotions et bundles — trois maquettes
 
+> **Codé** (03/10/2026) : les trois. Serveur `src/canaux_offres.php`
+> (`GET /exploitation/canaux`, `GET /exploitation/offres` — voir
+> `docs/contrat-api.md`), dashboard `public/dashboard/dashboard.js`
+> (`canauxCarte`, `offresCarte`, tuiles `murCanaux`/`murOffres`), cockpit
+> `valsOffres`/`tplOffres` (`#/offres-canaux`). Le choix laissé ouvert plus
+> bas est tranché : une commande webshop encaissée en caisse (`id_transaction`)
+> est dans les tickets, le comptoir = tickets − ces commandes ; payée en
+> ligne, elle s'ajoute. Tant que le réseau n'a ni commande webshop ni offre,
+> les cartes le disent en une ligne.
+
 Deux demandes : **un suivi des promotions et des bundles**, et **le split des
 commandes** entre le comptoir, le click & collect et la livraison (ces deux
 derniers via le webshop). Trois formes :

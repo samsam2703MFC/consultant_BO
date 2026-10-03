@@ -274,7 +274,7 @@ class App {
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
       tablette: 'tablette-vendeuses',
-      posts: 'controle-posts-facebook', brandGuard: 'brand-guard',
+      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux',
     };
   }
   /**
@@ -937,6 +937,7 @@ class App {
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
+      offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
       creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
@@ -1335,6 +1336,7 @@ class App {
       // l'autre — les deux anciennes sections n'en font qu'une.
       ['Marque & marketing', [
         ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mktObjectifs', 'mesure']],
+        ['offres', 'Offres et canaux', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
@@ -1383,7 +1385,7 @@ class App {
     this._navDef = navDef;
 
     ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
@@ -1806,6 +1808,7 @@ class App {
     // --- contrôle des posts Facebook
     if (common.isPosts) this.valsPosts(common);
     if (common.isBrandGuard) this.valsBrandGuard(common);
+    if (common.isOffres) this.valsOffres(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches
@@ -2696,6 +2699,64 @@ class App {
   cxMecSuppr(m){
     if (!window.confirm('Supprimer « ' + m.nom + ' » ? Une mécanique utilisée par une promotion en cours sera refusée : désactivez-la plutôt.')) { return; }
     this.api('DELETE', '/promo/mecaniques/' + m.id, {}).then(r => { if (r && r.ok !== false) { this.notify('Mécanique supprimée'); this.setState({ cxMecEdit: null }); this.cxMecsCharge(true); } });
+  }
+  /* --- offres et canaux : les deux lectures réseau, sur la période choisie --- */
+  ocCharge(force){
+    // Une lecture par période, gardée : revenir sur « Aujourd’hui » ne relit pas ; « Relire » si.
+    const per = this.state.ocPeriode || 'jour', M = this.state.oc || {}, b = M[per];
+    if (!force && b && (b.d || b.chargement)) { return; }
+    if (this._ocEnCours === per && !force) { return; }
+    this._ocEnCours = per;
+    this.setState({ oc: Object.assign({}, M, { [per]: { chargement: true, d: b ? b.d : null } }) });
+    Promise.all([readOne('/exploitation/canaux?periode=' + per).catch(() => null), readOne('/exploitation/offres?periode=' + per).catch(() => null)])
+      .then(([canaux, offres]) => { this._ocEnCours = null; this.setState({ oc: Object.assign({}, this.state.oc || {}, { [per]: { chargement: false, d: { canaux, offres } } }) }); });
+  }
+  valsOffres(common){
+    const S = this.state, per = S.ocPeriode || 'jour';
+    this.ocCharge(false);
+    const b = (S.oc || {})[per] || {}, d = b.d || {}, C = d.canaux && !d.canaux.error ? d.canaux : null, O = d.offres && !d.offres.error ? d.offres : null;
+    const nf = (n, dd) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: dd || 0, maximumFractionDigits: dd || 0 });
+    const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
+    const fU = n => n == null ? '—' : nf(n, 2) + ' €';
+    const fP = n => n == null ? '—' : nf(n, 1) + ' %';
+    const fD = v => v ? v.slice(8, 10) + '/' + v.slice(5, 7) : '';
+    const libPer = { jour: 'du jour', '7': 'des 7 jours', '30': 'des 30 jours' }[per];
+    const oc = { periode: per, libPer,
+      periodes: [['jour', 'Aujourd’hui'], ['7', '7 jours'], ['30', '30 jours']].map(([v, nom]) => ({ v, nom, on: per === v, choisir: () => this.setState({ ocPeriode: v }) })),
+      chargement: !!b.chargement && !b.d, rafraichir: () => this.ocCharge(true),
+      date: C ? C.date : (O ? O.date : ''), du: C ? C.du : '', au: C ? C.au : '',
+      indispo: !b.chargement && b.d && !C && !O ? 'Lecture impossible — API injoignable.' : '', kpi: [], mags: [], reseau: null, offres: [], cols: [], vide: '', canauxVide: '', okpi: null };
+    const pluriel = (n, u) => n + ' ' + u + (n > 1 ? 's' : '');
+    if (C && C.reseau) {
+      const R = C.reseau, tot = R.total || 0;
+      const w = v => tot > 0 ? (100 * v / tot).toFixed(1) : '0';
+      oc.mags = (C.magasins || []).map(m => { const t = m.total || 0; const pw = v => t > 0 ? (100 * v / t).toFixed(1) : '0'; return { nom: m.nom, comptoir: fE(m.comptoir), lu: m.joursLus > 0, indispo: !!m.indispo, cc: m.cc.n ? fE(m.cc.ca) : '', ccN: m.cc.n, liv: m.liv.n ? fE(m.liv.ca) : '', livN: m.liv.n, part: m.cc.n + m.liv.n ? fP(m.part) : '', wC: pw(m.comptoir), wW: pw(m.cc.ca), wL: pw(m.liv.ca), tickets: m.tickets }; });
+      oc.reseau = { comptoir: fE(R.comptoir), cc: fE(R.cc.ca), liv: fE(R.liv.ca), part: fP(R.part), wC: w(R.comptoir), wW: w(R.cc.ca), wL: w(R.liv.ca) };
+      const nW = R.cc.n + R.liv.n;
+      oc.kpi.push(['Webshop · réseau', fE(R.webshop), (R.part != null ? fP(R.part) + ' du CA ' + libPer : '—') + ' · ' + pluriel(nW, 'commande') + (R.vendent ? ' · ' + pluriel(R.vendent, 'magasin') + ' vend' + (R.vendent > 1 ? 'ent' : '') + ' en ligne' : '')]);
+      oc.kpi.push(['Click & collect', fE(R.cc.ca), R.cc.n ? pluriel(R.cc.n, 'commande') + ' · panier ' + fU(R.cc.ca / R.cc.n) : 'aucune commande ' + libPer]);
+      oc.kpi.push(['Livraison', fE(R.liv.ca), R.liv.n ? pluriel(R.liv.n, 'commande') + ' · panier ' + fU(R.liv.ca / R.liv.n) + (R.livrent ? ' · ' + pluriel(R.livrent, 'magasin') + ' livre' + (R.livrent > 1 ? 'nt' : '') : '') : 'aucune livraison ' + libPer]);
+      if (!nW) { oc.canauxVide = 'Aucune commande webshop ' + libPer + ' : tout passe au comptoir.'; }
+    }
+    if (O) {
+      const K = O.kpi || {}, M = O.magasins || [];
+      oc.cols = M.map(m => ({ shop: m.shop, nom: m.nom }));
+      const nAj = (O.offres || []).filter(o => Object.values(o.magasins || {}).some(v => v.verdict === 'ajuster' || v.verdict === 'arreter')).length;
+      oc.kpi.push(['Offres actives', String((K.bundles || 0) + (K.promos || 0)), pluriel(K.bundles || 0, 'bundle') + ' · ' + pluriel(K.promos || 0, 'promotion') + (nAj ? ' · ' + nAj + ' à ajuster quelque part' : '')]);
+      oc.kpi.push(['CA des offres', fE(K.ca), (K.part != null ? fP(K.part) + ' du CA ' + libPer : '—') + (per !== 'jour' && K.caJour ? ' · aujourd’hui ' + fE(K.caJour) : '')]);
+      const VERD = { garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'], tot: ['Trop tôt', 'tot'] };
+      oc.offres = (O.offres || []).map(o => {
+        const cells = M.map(m => { const v = o.magasins[m.shop]; if (!v) { return { txt: '', verdict: '' }; } const verd = VERD[v.verdict] || VERD.tot; return { txt: v.pieces != null ? nf(v.pieces) : fE(v.ca), sous: v.pieces != null ? fE(v.ca) : '', verdict: verd[1], titre: verd[0] + ' · ' + (v.mot || '') }; });
+        const comptes = {}; Object.values(o.magasins).forEach(v => { comptes[v.verdict] = (comptes[v.verdict] || 0) + 1; });
+        const verdicts = ['garder', 'ajuster', 'arreter', 'tot'].filter(k => comptes[k]).map(k => ({ lib: VERD[k][0], cls: VERD[k][1], n: comptes[k] }));
+        const premier = Object.values(o.magasins)[0] || {};
+        return { type: o.type, typeLib: o.type === 'bundle' ? 'Bundle' : 'Promo', nom: o.nom, regle: o.regle || '', canaux: (o.canaux || []).map(c => ({ lib: { comptoir: 'Comptoir', cc: 'Click & collect', liv: 'Livraison', webshop: 'Webshop' }[c] || c, cls: { comptoir: 'c', cc: 'w', liv: 'l', webshop: 'w' }[c] || 'c' })),
+          cells, total: o.pieces ? nf(o.pieces) : fE(o.ca), totalSous: o.pieces ? fE(o.ca) : '', verdicts, mot: Object.keys(o.magasins).length === 1 ? (premier.mot || '') : '' };
+      });
+      if (!oc.offres.length) { oc.vide = 'Aucune offre ' + libPer + ' : pas de bundle vendu dans les tickets, pas de promotion posée sur les jours creux.'; }
+      oc.okpi = K;
+    }
+    common.oc = oc;
   }
   valsCreux(common){
     const S = this.state;

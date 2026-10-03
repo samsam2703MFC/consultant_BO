@@ -57,6 +57,7 @@ require __DIR__ . '/../../src/prod_manque.php';
 require __DIR__ . '/../../src/analyse_magasin.php';
 require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/commandes.php';
+require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/croisements.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
@@ -150,6 +151,8 @@ function route(string $method, string $path): mixed
             $path === '/promo/propositions'            => ep_promo_propositions(),
             $path === '/promo'                         => ep_promos(),
             $path === '/exploitation/promos'           => ep_promos_magasin(),
+            $path === '/exploitation/canaux'           => ep_exploitation_canaux(),
+            $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),

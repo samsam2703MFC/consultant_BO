@@ -846,3 +846,20 @@ svg.pxv-nuage .lab .mu{font-weight:500;fill:var(--color-text-muted)}
 .cq-vue{margin-left:auto;display:inline-flex;gap:2px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:9px;padding:3px}
 .cq-vue button{border:none;border-radius:7px;padding:6px 12px;font:600 12px var(--font-ui);background:transparent;color:var(--color-text);cursor:pointer}
 .cq-vue button.on{background:var(--color-text);color:#fff}
+
+/* Offres et canaux (Marque & marketing) : la part de chaque canal, les pastilles d'offre et de verdict. */
+[data-screen="offres-canaux"] .co-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--color-background-secondary);min-width:120px}
+[data-screen="offres-canaux"] .co-bar i{display:block;height:100%}
+[data-screen="offres-canaux"] .co-bar i.c{background:#b8ad9f}[data-screen="offres-canaux"] .co-bar i.w{background:#1f5f8b}[data-screen="offres-canaux"] .co-bar i.l{background:#0f3b5c}
+[data-screen="offres-canaux"] .co-leg{display:flex;gap:12px;flex-wrap:wrap;padding:8px 18px 12px;font-size:10.5px;color:var(--color-text-muted);align-items:center}
+[data-screen="offres-canaux"] .co-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+[data-screen="offres-canaux"] .co-mode{display:inline-flex;align-items:center;font:600 10.5px var(--font-ui);border-radius:999px;padding:2px 8px;white-space:nowrap}
+[data-screen="offres-canaux"] .co-mode.w{background:#e6eef5;color:#1f5f8b}[data-screen="offres-canaux"] .co-mode.l{background:#dde7ef;color:#0f3b5c}[data-screen="offres-canaux"] .co-mode.c{background:var(--color-background-secondary);color:var(--color-text)}
+[data-screen="offres-canaux"] .co-type{display:inline-block;font:700 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;border-radius:5px;padding:2px 6px;margin-right:6px;color:#fff}
+[data-screen="offres-canaux"] .co-type.b{background:#7a4a12}[data-screen="offres-canaux"] .co-type.p{background:#F08A2C}
+[data-screen="offres-canaux"] .co-verdict{font:700 10.5px var(--font-ui);border-radius:999px;padding:3px 9px;white-space:nowrap}
+[data-screen="offres-canaux"] .co-verdict.ok{background:#E6F2E9;color:#2d7a3e}[data-screen="offres-canaux"] .co-verdict.att{background:#FBEFE0;color:#B26A00}[data-screen="offres-canaux"] .co-verdict.ko{background:#F8E3E5;color:#C0182B}[data-screen="offres-canaux"] .co-verdict.tot{background:var(--color-background-secondary);color:var(--color-text-muted)}
+[data-screen="offres-canaux"] .co-cell{display:inline-flex;flex-direction:column;align-items:flex-end;padding-right:12px;position:relative}
+[data-screen="offres-canaux"] .co-cell::after{content:"";position:absolute;right:0;top:6px;width:7px;height:7px;border-radius:50%;background:var(--color-border-secondary)}
+[data-screen="offres-canaux"] .co-cell.ok::after{background:#2d7a3e}[data-screen="offres-canaux"] .co-cell.att::after{background:#B26A00}[data-screen="offres-canaux"] .co-cell.ko::after{background:#C0182B}
+[data-screen="offres-canaux"] .co-cell small{font-size:10.5px;color:var(--color-text-muted)}
