@@ -540,3 +540,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T13:25:31Z invendus : valeur perdue et compteurs
 2026-10-03T13:40:43Z cockpit : invendus et poubelle
 2026-10-03T13:44:20Z sonde : routes de production
+2026-10-03T14:11:57Z gestion de production
