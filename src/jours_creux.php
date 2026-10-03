@@ -455,7 +455,7 @@ function ep_promo_recherche(): array
     if ($cat === []) {
         foreach (svCategories() as $pid => $c) { if (mb_stripos($c, $q) !== false && !isset($cats[$c])) { $cats[$c] = ['sel' => 'c:' . $c, 'nom' => $c, 'type' => 'catégorie', 'info' => '']; } }
         $cats = array_values($cats);
-        foreach (function_exists('panelCatalogue') ? panelCatalogue()['produits'] : [] as $x) {
+        foreach (function_exists('panelCatalogueComplet') ? panelCatalogueComplet()['produits'] : [] as $x) {
             if (!empty($x['actif']) && mb_stripos((string) $x['nom'], $q) !== false) { $prods[] = ['sel' => 'p:' . (int) $x['id'], 'nom' => (string) $x['nom'], 'type' => 'produit', 'info' => (string) ($x['cat'] ?? '')]; }
             if (count($prods) >= 80) { break; }
         }

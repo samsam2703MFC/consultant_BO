@@ -3557,6 +3557,64 @@ function panelCatalogue(): array
     return $memo = $deCache($v);
 }
 
+/**
+ * Le catalogue COMPLET du panel : panelCatalogue (ce que les magasins vendent aujourd'hui),
+ * complété par les produits de chaque catégorie (/product-categories/{id}/products) — les
+ * références qu'aucun magasin ne propose en ce moment (saisonnières, retirées de la vente)
+ * y figurent, marquées `dispo` = false. Lu en parallèle, en mémo une heure
+ * (`panelCatalogueComplet`). Le référentiel et les recherches le lisent ; le détail des
+ * ventes se contente de panelCatalogue, plus léger.
+ */
+function panelCatalogueComplet(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $base = panelCatalogue();
+    $c = setting('panelCatalogueComplet');
+    if (is_string($c)) { $c = json_decode($c, true); }
+    if (is_array($c) && isset($c['ts'], $c['produits']) && time() - (int) $c['ts'] < 3600) {
+        $prods = (array) $c['produits'];
+        foreach ($base['produits'] as $pid => $x) { $prods[(int) $pid] = $x + ['dispo' => true]; }
+        return $memo = ['produits' => $prods, 'categories' => $base['categories'], 'groupes' => $base['groupes']];
+    }
+    $prods = [];
+    foreach ($base['produits'] as $pid => $x) { $prods[(int) $pid] = $x + ['dispo' => true]; }
+    if (PanelApi::configured() && $base['categories'] !== []) {
+        $lis = static function (array $x, array $cles): string { foreach ($cles as $k) { if (!empty($x[$k]) && is_string($x[$k])) { return trim($x[$k]); } } return ''; };
+        $num = static function (array $x, array $cles): int { foreach ($cles as $k) { if (isset($x[$k]) && is_numeric($x[$k])) { return (int) $x[$k]; } } return 0; };
+        $chemins = [];
+        foreach (array_keys($base['categories']) as $cid) { $chemins[(int) $cid] = '/product-categories/' . (int) $cid . '/products'; }
+        $hors = []; $lus = 0;
+        foreach (PanelApi::getParallele($chemins, 8, 25) as $cid => $r) {
+            if (!is_array($r)) { continue; }
+            $lus++;
+            foreach (PanelApi::liste($r) as $l) {
+                $pid = $num($l, ['id', 'id_product', 'product_id']);
+                $nom = $lis($l, ['base_name', 'name', 'product_name', 'label']);
+                if ($pid <= 0 || $nom === '' || isset($prods[$pid])) { continue; }
+                $hors[$pid] = ['id' => $pid, 'nom' => $nom, 'catId' => (int) $cid, 'cat' => (string) ($base['categories'][$cid]['nom'] ?? ''),
+                    'actif' => isset($l['is_active']) ? (int) $l['is_active'] : 1,
+                    'recette' => $num($l, ['id_recipe', 'recipe_id']) ?: null,
+                    'suggere' => isset($l['suggested_sale_price']) && is_numeric($l['suggested_sale_price']) ? (float) $l['suggested_sale_price'] : null,
+                    'attendu' => isset($l['expected_margin']) && is_numeric($l['expected_margin']) ? (float) $l['expected_margin'] : null,
+                    'shelf' => $num($l, ['shelf_life_minutes']), 'prepare' => (int) ($l['is_prepared_before_sales'] ?? 0), 'poids' => $num($l, ['single_weight']),
+                    'nutriscore' => (string) ($l['nutriscore'] ?? ''), 'allergene' => (string) ($l['allergene'] ?? ''),
+                    'prix' => null, 'prixParMagasin' => [], 'dispo' => false];
+            }
+        }
+        // Une lecture qui n'a rien rendu ne s'écrit pas : le panel s'est tu, on ressert la précédente.
+        if ($lus > 0) {
+            try {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['panelCatalogueComplet', json_encode(['ts' => time(), 'produits' => $hors], JSON_UNESCAPED_UNICODE)]);
+            } catch (PDOException $e) { /* sans mémo */ }
+            foreach ($hors as $pid => $x) { $prods[$pid] = $x; }
+            return $memo = ['produits' => $prods, 'categories' => $base['categories'], 'groupes' => $base['groupes']];
+        }
+    }
+    foreach ((array) ($c['produits'] ?? []) as $pid => $x) { if (!isset($prods[(int) $pid])) { $prods[(int) $pid] = $x; } }
+    return $memo = ['produits' => $prods, 'categories' => $base['categories'], 'groupes' => $base['groupes']];
+}
+
 function catalogueCategories(): ?array
 {
     static $memo = null;
@@ -3824,7 +3882,7 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         // Les produits : ceux que le panel liste pour les magasins du compte (products/available),
         // dans la forme de la table `product` ; la copie locale seulement si le panel se tait.
         $prods = [];
-        foreach (panelCatalogue()['produits'] as $x) {
+        foreach (panelCatalogueComplet()['produits'] as $x) {
             if (empty($x['actif'])) { continue; }
             $prods[] = ['id' => (int) $x['id'], 'name' => (string) $x['nom'], 'id_category' => (int) ($x['catId'] ?? 0), 'id_recipe' => $x['recette'] ?? null, 'is_active' => 1,
                 'suggested_sale_price' => $x['suggere'] ?? null, 'expected_margin' => $x['attendu'] ?? null, 'shelf_life_minutes' => (int) ($x['shelf'] ?? 0),
