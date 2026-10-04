@@ -644,6 +644,16 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 - **Clôture** : reste = report d'hier + sorti − vendu − jeté déjà déclaré au panel ; `report`
   (gardé pour demain) devient le stock de départ du plan du lendemain (`pfCloture:{shop}:{date}`).
   Rien n'est écrit au panel : ce qui se jette est à encoder en caisse.
+- **Comptage réel à la clôture** (demande du 04/10/2026) : le panel n'a aucune route pour la
+  production réelle ni pour le stock de fin de journée (26 routes sondées, seule la poubelle répond ;
+  les mouvements de production de la caisse ne vivent que dans la copie de la base, arrêtée au 13/07).
+  Le reste calculé repose donc sur le sorti validé, sinon sur le plan. L'équipe peut compter la
+  vitrine : `POST /production/flux/cloture` accepte par produit `compte` (0 à 5 000, vide ou null =
+  pas compté, 422 sinon) et rend `comptes`. `GET` rend par ligne `compte`, `ecart` (compté − reste
+  calculé) et `sortiReel` (compté + vendu + jeté déclaré − report d'hier : la production que le
+  compté laisse supposer), et en totaux `compte`, `comptes`, `ecart`, `valeurEcart` (au prix de
+  vente). À l'écran, une saisie du compté répartit la ligne (gardé pour une catégorie « se garde »,
+  jeté sinon) ; « Tout garder », « Tout jeter » et « Proposition » partent du compté quand il existe.
 
 ### `/exploitation/semaine-jours` — la semaine jour par jour (dashboard téléphone, onglet Semaine)
 
