@@ -842,7 +842,7 @@ function ep_production_flux_cloture(): array
     // Les cuissons qui ont quelque chose à sortir ; une cuisson vide n'attend pas de validation.
     $aValider = array_values(array_map(static fn ($c) => $c['id'], array_filter($K['plan'], static fn ($c) => $c['total']['pieces'] > 0)));
     $valides = array_values(array_intersect($aValider, array_map('strval', array_keys($K['faits']))));
-    $lignes = []; $T = ['reste' => 0.0, 'report' => 0.0, 'jete' => 0.0, 'aDeclarer' => 0.0, 'valeurJetee' => 0.0, 'valeurGardee' => 0.0];
+    $lignes = []; $T = ['reste' => 0.0, 'report' => 0.0, 'jete' => 0.0, 'aDeclarer' => 0.0, 'valeurJetee' => 0.0, 'valeurGardee' => 0.0, 'compte' => 0.0, 'comptes' => 0, 'ecart' => 0.0, 'valeurEcart' => 0.0];
     $pids = array_unique(array_merge(array_keys($P), array_map('intval', array_keys($K['stock0']))));
     foreach ($pids as $pid) {
         $p = $P[$pid] ?? null;
@@ -855,24 +855,29 @@ function ep_production_flux_cloture(): array
         $nom = $p['nom'] ?? (gpCatalogue()['produits'][$pid]['nom'] ?? ('Produit ' . $pid));
         $catCle = $p['catCle'] ?? null; $garde = $catCle !== null && in_array((string) $catCle, $K['pf']['garde'], true);
         $e = $E !== null ? ($E[(string) $pid] ?? null) : null;
+        $co = $e !== null && isset($e['compte']) && is_numeric($e['compte']) ? (float) $e['compte'] : null;
         $rep = $e !== null ? (float) ($e['report'] ?? 0) : ($garde ? round($reste) : 0.0);
         $jet = $e !== null ? (float) ($e['jete'] ?? 0) : ($garde ? 0.0 : round($reste));
         if ($reste < 0.5 && $e === null && $s0 <= 0 && $sorti <= 0) { continue; }
         $prix = $p['prix'] ?? null;
         $lignes[] = ['pid' => $pid, 'nom' => $nom, 'groupe' => $p !== null ? $p['groupe'] : '', 'cat' => $p['cat'] ?? '', 'catCle' => $catCle, 'garde' => $garde, 'prix' => $prix,
             'report0' => round($s0, 1), 'sorti' => round($sorti, 1), 'sortiValide' => $p !== null && $toutValide, 'vendu' => round($vd, 1), 'jeteDeclare' => round($jd, 1),
-            'reste' => round($reste, 1), 'report' => round($rep, 1), 'jete' => round($jet, 1), 'aDeclarer' => round(max(0.0, $jet), 1)];
+            'reste' => round($reste, 1), 'report' => round($rep, 1), 'jete' => round($jet, 1), 'aDeclarer' => round(max(0.0, $jet), 1),
+            // Compté : ce que l'équipe a vu en vitrine. L'écart au calcul, et le sorti qu'il laisse supposer
+            // (compté + vendu + jeté déclaré − report d'hier) : la production réelle, quand la cuisson n'a pas été validée.
+            'compte' => $co, 'ecart' => $co !== null ? round($co - $reste, 1) : null, 'sortiReel' => $co !== null ? round(max(0.0, $co + $vd + $jd - $s0), 1) : null];
+        if ($co !== null) { $T['compte'] += $co; $T['comptes']++; $T['ecart'] += $co - $reste; if ($prix !== null) { $T['valeurEcart'] += ($co - $reste) * (float) $prix; } }
         $T['reste'] += $reste; $T['report'] += $rep; $T['jete'] += $jet; $T['aDeclarer'] += max(0.0, $jet);
         if ($prix !== null) { $T['valeurJetee'] += $jet * (float) $prix; $T['valeurGardee'] += $rep * (float) $prix; }
     }
     // Section › catégorie › produit, la section qui a le plus de reste d'abord.
     $pg = []; foreach ($lignes as $x) { $pg[$x['groupe']] = ($pg[$x['groupe']] ?? 0) + $x['reste']; }
     usort($lignes, static fn ($a, $b) => [-($pg[$a['groupe']] ?? 0), $a['groupe'], $a['cat'], -$a['reste'], $a['nom']] <=> [-($pg[$b['groupe']] ?? 0), $b['groupe'], $b['cat'], -$b['reste'], $b['nom']]);
-    foreach ($T as $k => $v) { $T[$k] = round($v, 1); }
+    foreach ($T as $k => $v) { if (is_float($v)) { $T[$k] = round($v, 1); } }
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'jourNom' => PF_JOURS[$K['jour']], 'lendemain' => pfDecale($date, 1),
         'lignes' => $lignes, 'totaux' => $T, 'enregistree' => $E !== null, 'le' => is_array($enr) ? ($enr['le'] ?? null) : null, 'par' => is_array($enr) ? ($enr['par'] ?? null) : null,
         'cuissonsValidees' => count($valides), 'cuissons' => count($aValider), 'ventesLues' => $V !== null, 'poubelleLue' => $invLu,
-        'source' => 'sorti : cuissons validées (sinon le plan) · vendu : tickets du panel · jeté déclaré : /shops/{id}/products/waste · le report devient le stock de départ du plan du lendemain'];
+        'source' => 'sorti : cuissons validées (sinon le plan) · vendu : tickets du panel · jeté déclaré : /shops/{id}/products/waste · compté : saisi à la clôture · le report devient le stock de départ du plan du lendemain'];
 }
 
 /** POST /production/flux/cloture — { shop, date, lignes: { pid: {report, jete, reste} }, par }. */
@@ -887,13 +892,17 @@ function wr_production_flux_cloture(): array
     foreach ((array) ($b['lignes'] ?? []) as $pid => $x) {
         if (!preg_match('/^\d{1,9}$/', (string) $pid) || !is_array($x)) { continue; }
         $r = $x['report'] ?? 0; $j = $x['jete'] ?? 0; $re = $x['reste'] ?? null;
+        // Le comptage réel en vitrine (demande du 04/10/2026) : facultatif, produit par produit.
+        $co = $x['compte'] ?? null; if ($co === '') { $co = null; }
         if (!is_numeric($r) || !is_numeric($j) || (float) $r < 0 || (float) $j < 0 || (float) $r > 5000 || (float) $j > 5000) { http_response_code(422); return ['error' => 'quantité invalide pour le produit ' . $pid]; }
-        $l[(string) $pid] = ['report' => round((float) $r, 1), 'jete' => round((float) $j, 1), 'reste' => is_numeric($re) ? round((float) $re, 1) : null];
+        if ($co !== null && (!is_numeric($co) || (float) $co < 0 || (float) $co > 5000)) { http_response_code(422); return ['error' => 'comptage invalide pour le produit ' . $pid]; }
+        $l[(string) $pid] = ['report' => round((float) $r, 1), 'jete' => round((float) $j, 1), 'reste' => is_numeric($re) ? round((float) $re, 1) : null,
+            'compte' => $co === null ? null : round((float) $co, 1)];
     }
     if (count($l) > 3000) { http_response_code(422); return ['error' => 'trop de lignes']; }
     gpEcrire('pfCloture:' . $sid . ':' . $date, ['l' => $l, 'le' => date('c'), 'par' => mb_substr(trim((string) ($b['par'] ?? '')), 0, 80) ?: null]);
-    $rep = 0.0; $jet = 0.0; foreach ($l as $x) { $rep += $x['report']; $jet += $x['jete']; }
-    return ['ok' => true, 'lignes' => count($l), 'report' => round($rep, 1), 'jete' => round($jet, 1)];
+    $rep = 0.0; $jet = 0.0; $nC = 0; foreach ($l as $x) { $rep += $x['report']; $jet += $x['jete']; if ($x['compte'] !== null) { $nC++; } }
+    return ['ok' => true, 'lignes' => count($l), 'report' => round($rep, 1), 'jete' => round($jet, 1), 'comptes' => $nC];
 }
 
 /**

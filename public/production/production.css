@@ -228,3 +228,8 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 /* L'heure maximum de vente d'un produit (04/10/2026) : vide en gris, réglée en or. */
 .pf-in.heure{width:96px;color:#999}
 .pf-in.heure.on{color:#222;border-color:var(--pf-or);background:#fdf8e8}
+/* La clôture : la colonne du comptage réel (04/10/2026). */
+.pf-tab th.cpt,.pf-tab td.cpt{background:#fbf7ee}
+.pf-tab td.cpt .pf-in{border-color:#d8c9a6}
+.pf-tab td.cpt .pf-in.on{border-color:var(--pf-or);background:#fdf8e8;font-weight:700}
+.pf-tab td.cpt .pf-in::placeholder{color:#b9ad98}
