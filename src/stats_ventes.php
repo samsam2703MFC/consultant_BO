@@ -500,6 +500,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     // La part des clients pro, produit par produit : elle ne passe pas par le
     // comptoir, les rotations du planogramme la retirent.
     $pb = [];
+    // La minute du dernier ticket de chaque produit (portions comprises) : la clôture la montre.
+    $der = [];
     foreach (array_chunk($ids, 40) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -508,6 +510,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
             $t = $res[$id] ?? null;
             if (!is_array($t)) { return null; }
             $h = (string) (int) substr((string) ($t['insert_timestamp'] ?? '00'), 11, 2);
+            $mn = substr((string) ($t['insert_timestamp'] ?? ''), 11, 5);
+            if (!preg_match('/^\d{2}:\d{2}$/', $mn)) { $mn = null; }
             foreach ((array) ($t['products'] ?? []) as $l) {
                 $pid = (int) ($l['id_product'] ?? 0);
                 if ($pid <= 0) { continue; }
@@ -533,6 +537,7 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
                 $p[$h][$k][2] += $v;
                 if ($cu !== null && $p[$h][$k][3] !== null) { $p[$h][$k][3] += $q * $cu; }
                 if (isset($pro[$id])) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q; }
+                if ($mn !== null && $q > 0 && $mn > ($der[(string) $pid] ?? '')) { $der[(string) $pid] = $mn; }
             }
         }
     }
@@ -541,10 +546,22 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
     // Le pro du jour (tickets B2B) se grave avec les produits : la liste est déjà lue.
     // `pb` = les unités vendues aux clients pro, par produit ({} si aucune).
-    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb];
+    // `d` = la minute du dernier ticket par produit ({pid: "HH:MM"}) ; absente des jours gravés avant le 04/10/2026.
+    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
     return $p;
+}
+
+/** La minute du dernier ticket de chaque produit un jour : [pid => "HH:MM"] ; vide si le relevé ne la porte pas. */
+function svDernieresVentes(int $sid, string $j): array
+{
+    $c = setting('svP' . $sid . ':' . $j);
+    $out = [];
+    foreach (is_array($c) && is_array($c['d'] ?? null) ? $c['d'] : [] as $pid => $mn) {
+        if ((int) $pid > 0 && is_string($mn) && preg_match('/^\d{2}:\d{2}$/', $mn)) { $out[(int) $pid] = $mn; }
+    }
+    return $out;
 }
 
 /**

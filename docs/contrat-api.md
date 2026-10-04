@@ -510,7 +510,7 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 | 1. Paramètres | `GET /production/flux/params?shop=` | `POST /production/flux/params` `{shop, gp: {cuissons, categories, regles}, flux: {jours, obligatoires, veille, garde, stockMin, ajusterJ7, modePeu}, par}` |
 | 2. Plan de production | `GET /production/flux/plan?shop=&date=` (jusqu'à J+7) | — |
 | 3. Validation et suivi | `GET /production/flux/suivi?shop=&date=` (jusqu'à aujourd'hui) | `POST /production/flux/valider` `{shop, date, cuisson, lignes: {pid: pièces}, par}` |
-| 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste}}, par}` |
+| 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste, compte}}, par}` |
 | 5. Fours et équipe | `GET /production/flux/fours?shop=&date=` (jusqu'à J+7) | `POST /production/flux/fours` `{shop, fours: [{id, nom, plaques, chauffe}], categories: {cat: {four, temp, duree, parPlaque}}, operateurs: [{id, nom, de, a}], etapes: {cat: [étape]}, etapesProduits: {pid: [étape]}, par}` ; `POST /production/flux/fours/simuler` (même corps + `date`) : les deux Gantt sans rien écrire |
 
 - **Par jour de la semaine** (`flux.jours[1..7]`) : le nombre de cuissons du jour (les n premières
@@ -654,6 +654,18 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   compté laisse supposer), et en totaux `compte`, `comptes`, `ecart`, `valeurEcart` (au prix de
   vente). À l'écran, une saisie du compté répartit la ligne (gardé pour une catégorie « se garde »,
   jeté sinon) ; « Tout garder », « Tout jeter » et « Proposition » partent du compté quand il existe.
+- **Dernière vente à la clôture** (demande du 04/10/2026) : `GET` rend par ligne `derniere` (l'heure
+  entamée du dernier ticket du produit au comptoir, les tickets des commandes retirés ; null si
+  rien au comptoir), `derniereA` (`"HH:MM"`, la minute de ce ticket, quand le relevé la porte et
+  qu'elle tombe dans la même heure ; null sinon), `venteApres` (ce que le produit vend d'habitude
+  après cette heure, sur son profil, jusqu'à la dernière vente du magasin ou à son heure maximum de
+  vente), `epuise` (`venteApres` ≥ 1 et vitrine vide : compté 0, sinon reste calculé 0) et
+  `heureMax`. En tête : `derniereVente` et `derniereVenteA` (le dernier ticket du magasin), et en
+  totaux `epuises`. La minute vient du relevé des tickets (`svP{shop}:{date}`, champ
+  `d: {pid: "HH:MM"}`), gravé à la lecture du jour depuis le 04/10/2026 ; un jour relevé avant ne
+  donne que l'heure. À l'écran : la colonne « Dernière vente » après « Vendu », « 16:42 » ou
+  « 16 h », en orange avec « épuisé » ; une tuile « Vides avant la fin » compte ces produits et la
+  vente perdue estimée. Le compté saisi recalcule « épuisé » sans recharger.
 
 ### `/exploitation/semaine-jours` — la semaine jour par jour (dashboard téléphone, onglet Semaine)
 

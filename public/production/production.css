@@ -95,6 +95,8 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tuiles>div{background:#fff;border:.5px solid var(--pf-trait);border-radius:12px;padding:11px 14px;border-left:4px solid #8D1D2C}
 .pf-tuiles>div.veille{border-left-color:var(--pf-bleu);background:#f6f9fc}
 .pf-tuiles>div.jete{border-left-color:var(--pf-ko)}
+.pf-tuiles>div.vide{border-left-color:var(--pf-att)}
+.pf-tab td.der{white-space:nowrap}
 .pf-tuiles .k,.pf-cuis .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#666}
 .pf-tuiles .v,.pf-cuis .v{font:400 26px var(--font-display);margin:3px 0 2px}
 .pf-tuiles .v small,.pf-cuis .v small{font:400 12px var(--font-ui);color:#777}
