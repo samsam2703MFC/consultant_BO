@@ -1187,3 +1187,70 @@ body.pp-emb{background:var(--color-bg)}
 .a4-puce{display:inline-flex;align-items:center;gap:5px;font:600 10.5px var(--font-ui);padding:3px 9px;border-radius:999px;background:var(--color-background-secondary);color:#555;white-space:nowrap}
 .a4-puce.ok{background:#e3f0e6;color:#2d7a3e}.a4-puce.att{background:#fbecd8;color:#9a5a06}.a4-puce.ko{background:#f8e0e3;color:#C0182B}
 @media (max-width:1100px){.db-a4l{grid-template-columns:12px 160px 120px minmax(0,1fr) 24px}.db-a4l .mi{display:none}}
+
+/* ==========================================================================
+ * LE TÉLÉPHONE EN TROIS ONGLETS (04/10/2026, maquette A « les feux ») :
+ * Exploitation · Contrôle · Semaine. Une pastille par tuile, la couleur de
+ * chaque onglet dans la barre du bas. docs/maquettes/dashboard-3-onglets/
+ * ========================================================================== */
+#dash.mob .ma{display:flex;flex-direction:column;gap:8px;padding-top:2px}
+.ma-d{display:flex;align-items:center;gap:4px}
+.ma-d b{font-weight:600;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ma-pas{border:none;background:none;font:600 14px var(--font-ui);color:var(--color-text-muted);padding:0 5px;cursor:pointer;line-height:1}
+.ma-pas:disabled{opacity:.25;cursor:default}
+.ma .pt,.ma-v .dots i,.ma-tabs .pt,.ma-leg i{background:rgba(34,34,34,.18)}
+.ma .pt.pv,.ma-v .dots i.v,.ma-tabs .pt.pv,.ma-leg i.v{background:#2d7a3e}
+.ma .pt.po,.ma-v .dots i.o,.ma-tabs .pt.po,.ma-leg i.o{background:#D98A0B}
+.ma .pt.pr,.ma-v .dots i.r,.ma-tabs .pt.pr,.ma-leg i.r{background:#C0182B}
+.ma-v{display:flex;align-items:center;gap:10px;background:var(--color-surface);border-radius:14px;padding:9px 12px;border:.5px solid var(--color-border-tertiary)}
+.ma-v .n{font-family:var(--font-display);font-size:26px;line-height:1;white-space:nowrap}
+.ma-v .n.long{font-size:20px}
+.ma-v .t{font-size:12.5px;font-weight:600;line-height:1.25;min-width:0;flex:1}
+.ma-v .t em{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:var(--color-text-muted)}
+.ma-v .dots{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:92px}
+.ma-v .dots i{width:9px;height:9px;border-radius:50%}
+.ma-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;grid-auto-flow:row dense}
+.ma-t{position:relative;background:var(--color-surface);border-radius:14px;padding:10px 12px;border:.5px solid var(--color-border-tertiary);min-height:60px;min-width:0}
+.ma-t[role=button]{cursor:pointer}
+.ma-t.w,.ma-tir{grid-column:1 / -1}
+.ma-t.r{background:#fdf5f6;border-color:#f0c9cf}.ma-t.o{background:#fdf9f2;border-color:#f0dcb8}
+.ma-t .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);display:flex;align-items:center;gap:6px;padding-right:14px}
+.ma-t .k .pt{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.ma-t .v{font-family:var(--font-display);font-size:24px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+.ma-t .v:empty{display:none}
+.ma-t .v small{font:600 13px var(--font-ui)}
+.ma-t .v sup{font-size:.5em}
+.ma-t .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.35;margin-top:2px}
+.ma-t .ch{position:absolute;right:11px;top:9px;color:var(--color-text-muted);font-size:13px}
+.ma-t .mb-jauge{margin-top:7px}
+.ma-tir{min-width:0}
+.ma-tir>.mb-r{margin:0}
+.ma-bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;height:46px;align-items:end;margin-top:8px}
+.ma-bars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;font-size:9px;color:var(--color-text-muted);min-width:0}
+.ma-bars i{width:100%;border-radius:4px 4px 0 0;background:#d9cfc3}
+.ma-bars i.top{background:var(--color-primary)}
+.ma-bars i.pv{background:#2d7a3e}.ma-bars i.po{background:#D98A0B}.ma-bars i.pr{background:#C0182B}
+.ma-car{background:var(--color-surface);border-radius:14px;border:.5px solid var(--color-border-tertiary);padding:0 0 0 12px;overflow:hidden}
+.ma-car .mb-cq{border-bottom:none;padding:9px 0 10px}
+.ma-car .mb-cq .db-cqc{flex:0 0 96px}
+.ma-dam{background:var(--color-surface);border-radius:14px;border:.5px solid var(--color-border-tertiary);padding:10px 10px}
+.ma-dam table{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed}
+.ma-dam th{font:600 9px var(--font-ui);color:var(--color-text-muted);text-align:center;padding-bottom:2px;white-space:nowrap}
+.ma-dam th.l{text-align:left;width:66px;letter-spacing:.04em;text-transform:uppercase;font-size:8px}
+.ma-dam th.auj{color:var(--color-primary)}
+.ma-dam td{height:26px;border-radius:7px;text-align:center;font:600 9.5px var(--font-ui);color:#fff;white-space:nowrap;overflow:hidden}
+.ma-dam td.l{background:none;color:var(--color-text);text-align:left;font:600 10px var(--font-ui)}
+.ma-dam td.v{background:#2d7a3e}.ma-dam td.o{background:#D98A0B}.ma-dam td.r{background:#C0182B}
+.ma-dam td.n{background:rgba(34,34,34,.07);color:var(--color-text-muted)}
+.ma-dam td.f{background:none;color:var(--color-text-muted)}
+.ma-leg{display:flex;flex-wrap:wrap;gap:10px;font-size:9.5px;color:var(--color-text-muted);margin-top:6px}
+.ma-leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.ma-rc{display:block;width:100%;border:1px solid var(--color-primary);color:var(--color-primary);border-radius:12px;padding:10px;font:600 12px var(--font-ui);background:var(--color-surface);cursor:pointer}
+.ma-ext{margin-top:0}
+.ma-tabs button i{position:relative;display:inline-block}
+.ma-tabs button i svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;vertical-align:0}
+.ma-tabs button{display:flex;flex-direction:column;align-items:center}
+.ma-tabs .pt{position:absolute;top:-1px;right:-6px;width:9px;height:9px;border-radius:50%;border:2px solid var(--color-surface)}
+.ma-tabs button i{opacity:1}
+.ma-tabs button i svg{opacity:.55}
+.ma-tabs button.on i svg{opacity:1}
