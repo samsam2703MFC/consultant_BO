@@ -2062,7 +2062,94 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
         'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2)];
 }
 
+/* --- Le Résultat gardé quelques minutes (04/10/2026 : « extrêmement lent ») ------------------
+ * Une lecture de /exploitation/jour fait ~45 appels au panel (tous les magasins : le classement
+ * réseau en a besoin), /exploitation/periode une trentaine : 10 à 60 s, à chaque affichage. Le
+ * calcul se garde donc, pour tous les appelants (dashboard, cockpit, tablette, visites, PDF). */
+const RC_PERIME_S = 7200;   // sous PHP-FPM : servi périmé jusqu'à deux heures, recalculé après la réponse
+const RC_VERROU_S = 45;     // attente au plus du calcul qu'un autre appel a lancé
+
+/**
+ * Une réponse lourde du Résultat. Fraîche (plus jeune que la durée que `$ttl` lui a donnée), elle
+ * part du cache ; périmée de moins de deux heures sous PHP-FPM, elle part aussi et se recalcule
+ * APRÈS la réponse (`cache.relu` : relire dans une demi-minute) ; sinon elle se calcule sous
+ * verrou MySQL — les appels qui arrivent ensemble attendent le même calcul. `$ttl($r)` : secondes
+ * de fraîcheur de la réponse calculée, 0 pour ne pas la garder. `cache` dit l'âge de ce qui part.
+ */
+function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = false): array
+{
+    $fond = !empty($GLOBALS['rcFond']);
+    $c = $forcer ? null : setting($cle);
+    $ok = is_array($c) && is_array($c['r'] ?? null);
+    $age = $ok ? max(0, time() - (int) ($c['le'] ?? 0)) : null;
+    $avec = static fn (array $r, int $le, bool $frais, bool $relu = false): array => $r + ['cache' => ['le' => date('c', $le), 'age' => max(0, time() - $le), 'frais' => $frais, 'relu' => $relu]];
+    if ($ok && $age < (int) ($c['ttl'] ?? 0)) { return $avec($c['r'], (int) $c['le'], true); }
+    if ($ok && !$fond && $age < RC_PERIME_S && function_exists('fastcgi_finish_request')) {
+        $get = $_GET;
+        register_shutdown_function(static function () use ($cle, $calc, $ttl, $get): void {
+            try { fastcgi_finish_request(); @set_time_limit(180); $_GET = $get; $GLOBALS['rcFond'] = true; rcServi($cle, $calc, $ttl); }
+            catch (Throwable $e) { /* le prochain appel recalculera */ }
+        });
+        return $avec($c['r'], (int) $c['le'], false, true);
+    }
+    $verrou = false;
+    try { $l = Db::row('SELECT GET_LOCK(?, ?) AS l', [$cle, $fond ? 0 : RC_VERROU_S]); $verrou = $l !== null && (int) $l['l'] === 1; }
+    catch (Throwable $e) { /* sans verrou : on calcule quand même */ }
+    try {
+        // Après l'attente, un autre appel a pu finir le même calcul.
+        if ($verrou && !$forcer) { $c2 = setting($cle); if (is_array($c2) && is_array($c2['r'] ?? null) && time() - (int) ($c2['le'] ?? 0) < (int) ($c2['ttl'] ?? 0)) { return $avec($c2['r'], (int) $c2['le'], true); } }
+        // En arrière-plan, un calcul déjà en cours ailleurs suffit (sans rien en cache, on calcule quand même).
+        if ($fond && !$verrou && $ok) { return $avec($c['r'], (int) $c['le'], false); }
+        $r = $calc();
+        $t = (int) $ttl($r);
+        if ($t > 0) {
+            $j = json_encode(['le' => time(), 'ttl' => $t, 'r' => $r], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+            if (is_string($j)) { try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, $j]); } catch (Throwable $e) { /* sans cache : la réponse part quand même */ } }
+        }
+        return $avec($r, time(), true);
+    } finally {
+        if ($verrou) { try { Db::row('SELECT RELEASE_LOCK(?) AS l', [$cle]); } catch (Throwable $e) { /* le verrou tombe avec la connexion */ } }
+    }
+}
+
+/** La fraîcheur d'un Résultat calculé : rien s'il est indisponible, une minute s'il manque une réponse du panel. */
+function rcTtl(array $r, int $normal): int
+{
+    if (!empty($r['indispo'])) { return 0; }
+    $m = json_encode($r['magasins'] ?? [], JSON_UNESCAPED_UNICODE);
+    return is_string($m) && str_contains($m, 'sans réponse') ? 60 : $normal;
+}
+
+/**
+ * Au battement horaire (cron des rapports) : le Résultat d'aujourd'hui — jour, semaine, mois —
+ * recalculé s'il n'est plus frais, pour que le premier écran du matin n'attende pas le panel.
+ */
+function exPrechauffer(): string
+{
+    $mem = $_GET; $fond = $GLOBALS['rcFond'] ?? null; $GLOBALS['rcFond'] = true; $dit = [];
+    try {
+        foreach ([['jour', null], ['periode', 'semaine'], ['periode', 'mois']] as [$q, $vue]) {
+            $_GET = ['date' => date('Y-m-d')] + ($vue !== null ? ['vue' => $vue] : []);
+            $t0 = microtime(true);
+            try { $r = $q === 'jour' ? ep_exploitation_jour() : ep_exploitation_periode(); $dit[] = ($vue ?? 'jour') . ' ' . (!empty($r['cache']['frais']) && ($r['cache']['age'] ?? 0) > 0 ? 'frais' : round(microtime(true) - $t0, 1) . ' s'); }
+            catch (Throwable $e) { $dit[] = ($vue ?? 'jour') . ' échec'; }
+        }
+    } finally { $_GET = $mem; if ($fond === null) { unset($GLOBALS['rcFond']); } else { $GLOBALS['rcFond'] = $fond; } }
+    return implode(' · ', $dit);
+}
+
+/** GET /exploitation/jour?date= — le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant. */
 function ep_exploitation_jour(): array
+{
+    $auj = date('Y-m-d');
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    $_GET['date'] = $date;
+    $n = $date === $auj ? 180 : ($date === date('Y-m-d', strtotime('-1 day')) ? 900 : 3600);
+    return rcServi('exJour:' . $date, 'exJourCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']));
+}
+
+function exJourCalcul(): array
 {
     $auj  = date('Y-m-d');
     $date = (string) ($_GET['date'] ?? $auj);

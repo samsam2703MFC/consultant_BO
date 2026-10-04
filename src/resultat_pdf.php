@@ -15,7 +15,10 @@ declare(strict_types=1);
 function ep_exploitation_mois_pdf(): array
 {
     $_GET['vue'] = 'mois';
+    // Le papier ne part pas d'un calcul périmé : s'il n'est plus frais, il se refait pendant l'appel.
+    $GLOBALS['rcFond'] = true;
     $p = ep_exploitation_periode();
+    unset($GLOBALS['rcFond'], $p['cache']);
     if (!empty($p['indispo']) || empty($p['magasins'])) {
         http_response_code(422);
         return ['error' => $p['motif'] ?? 'aucun magasin à imprimer'];

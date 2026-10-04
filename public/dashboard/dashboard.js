@@ -19,7 +19,7 @@
   const EMBED = q.get('embed') === '1';
   const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : 'jour'),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
@@ -85,11 +85,18 @@
     const au = new Date(du); au.setDate(du.getDate() + 6);
     return [du.toISOString().slice(0, 10), au.toISOString().slice(0, 10)];
   }
+  /** Une réponse servie d'un calcul ancien (le serveur la refait après coup, `cache.relu`) se relit une fois, une demi-minute plus tard. */
+  function relirePerime(cle, d, relire) {
+    if (!d || !d.cache || !d.cache.relu || S.relus[cle]) { return; }
+    S.relus[cle] = true;
+    setTimeout(() => { relire(); setTimeout(() => { delete S.relus[cle]; }, 60000); }, 30000);
+  }
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
       S.enCours[cle] = true; delete S.err[cle];
       lire(path).then(d => {
         S.aux[cle] = d; S.auxLu[cle] = Date.now();
+        relirePerime(cle, d, () => lireAux(cle, path, true));
         // Le stock vient d'être relu : si une référence est passée sous son
         // minimum depuis la lecture précédente, on le dit.
         if (cle === 'stock|' + S.shop) { stockAvertirSiNouveau(stockEtat()); }
@@ -143,7 +150,9 @@
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
       S.enCours[kr] = true; delete S.err[kr];
       const p = S.vue === 'jour' ? '/exploitation/jour?date=' + S.date : '/exploitation/periode?vue=' + S.vue + '&date=' + S.date;
-      lire(p).then(d => { S.res[kr] = d; }).catch(e => { S.err[kr] = e.message; }).finally(() => { S.enCours[kr] = false; rendre(); });
+      lire(p).then(d => { S.res[kr] = d;
+        relirePerime(kr, d, () => lire(p).then(d2 => { S.res[kr] = d2; rendre(); }).catch(() => {})); })
+        .catch(e => { S.err[kr] = e.message; }).finally(() => { S.enCours[kr] = false; rendre(); });
     }
     if ((force || !S.st[ks]) && !S.enCours[ks]) {
       S.enCours[ks] = true; delete S.err[ks];

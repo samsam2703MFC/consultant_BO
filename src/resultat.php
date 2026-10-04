@@ -22,8 +22,21 @@ declare(strict_types=1);
  * dit et renvoie vers le calcul, il n'invente pas une répartition plate.
  */
 
-/** GET /exploitation/periode?vue=semaine|mois&date=YYYY-MM-DD */
+/** GET /exploitation/periode?vue=semaine|mois&date=YYYY-MM-DD — le calcul gardé (rcServi) : cinq minutes pour l'étendue en cours, une heure pour une étendue close. */
 function ep_exploitation_periode(): array
+{
+    $auj = date('Y-m-d');
+    $vue = (string) ($_GET['vue'] ?? 'semaine');
+    if (!in_array($vue, ['semaine', 'mois'], true)) { $vue = 'semaine'; }
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    $_GET['vue'] = $vue; $_GET['date'] = $date;
+    $fin = $vue === 'semaine' ? date('Y-m-d', strtotime(date('Y-m-d', strtotime('monday this week', strtotime($date))) . ' +6 days')) : date('Y-m-t', strtotime($date));
+    $n = $fin >= $auj ? 300 : 3600;
+    return rcServi('exPer:' . $vue . ':' . $date, 'exPeriodeCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']));
+}
+
+function exPeriodeCalcul(): array
 {
     $auj  = date('Y-m-d');
     $vue  = (string) ($_GET['vue'] ?? 'semaine');
