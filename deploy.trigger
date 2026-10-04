@@ -593,3 +593,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-04T07:06:52Z dashboard : pastilles des photos lisibles
 2026-10-04T18:09:19Z production : comptage réel à la clôture
 2026-10-04T18:19:49Z cloture-derniere-vente
+2026-10-04T18:34:17Z suivi-moyenne-6-semaines
