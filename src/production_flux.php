@@ -550,6 +550,8 @@ function pfClientNom(array $o, bool $complet): string
         $m = explode(' ', $tout); $pre = (string) array_shift($m); $nom = implode(' ', $m);
     }
     if ($complet) { return trim($pre . ' ' . $nom); }
+    // Le nom entier rangé dans le seul prénom (mesuré à Corbais) : le premier mot, puis l'initiale du reste.
+    if ($nom === '' && str_contains($pre, ' ')) { [$pre, $nom] = explode(' ', $pre, 2); }
     if ($pre === '') { return mb_strtoupper(mb_substr($nom, 0, 1)) . '.'; }
     return $pre . ($nom !== '' ? ' ' . mb_strtoupper(mb_substr($nom, 0, 1)) . '.' : '');
 }
