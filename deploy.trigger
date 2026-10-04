@@ -595,3 +595,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-04T18:19:49Z cloture-derniere-vente
 2026-10-04T18:34:17Z suivi-moyenne-6-semaines
 2026-10-04T18:45:37Z suivi-valeurs-vendu-moyenne
+2026-10-04T18:50:08Z suivi-moyenne-entiers
