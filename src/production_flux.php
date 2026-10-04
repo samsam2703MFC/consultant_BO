@@ -521,9 +521,9 @@ function ep_production_flux_plan(): array
             'derniereVente' => $J7['fin'], 'poubelleLue' => $J7['poubelleLue'], 'poubelle' => $J7['poubelle'],
             'ajuster' => $K['pf']['ajusterJ7'], 'modePeu' => $K['pf']['modePeu']],
         'lendemain' => ['date' => $d1, 'jourNom' => PF_JOURS[pfJour($d1)], 'categories' => count($K['pf']['veille']), 'complet' => $K1 === null || $K1['base']['manquants'] === [], 'lus' => $K1 !== null ? count($K1['base']['lus']) : 0, 'jours' => $K1 !== null ? count($K1['base']['jours']) : 0],
-        'base' => ['semaines' => $K['sem'], 'jours' => count($K['base']['jours']), 'lus' => count($K['base']['lus']), 'manquants' => $K['base']['manquants'], 'commandes' => $K['base']['commandes'] ?? null],
+        'base' => ['semaines' => $K['sem'], 'jours' => count($K['base']['jours']), 'lus' => count($K['base']['lus']), 'manquants' => $K['base']['manquants'], 'commandes' => $K['base']['commandes'] ?? null, 'poidsJ7' => $K['base']['poidsJ7'] ?? null],
         'commandes' => ['lues' => $K['A'] !== null, 'complet' => $K['A'] !== null && !$K['A']['incomplet'], 'pos' => $nJ['pos'], 'webshop' => $nJ['web'], 'ca' => round($nJ['ca'], 2), 'sansDetail' => $nJ['sansDetail'], 'pieces' => round($nJ['pieces'], 1)],
-        'source' => 'prévision : ventes comptoir du panel (tickets moins ceux des commandes), moyenne des ' . $K['sem'] . ' derniers ' . PF_JOURS[$K['jour']] . 's heure par heure, + les commandes POS et webshop du jour (articles de leur ticket) · J−7 : tickets du ' . $j7];
+        'source' => 'prévision : ventes comptoir du panel (tickets moins ceux des commandes), les ' . $K['sem'] . ' derniers ' . PF_JOURS[$K['jour']] . 's heure par heure' . (($K['base']['poidsJ7'] ?? null) ? ', le dernier à ' . $K['base']['poidsJ7'] . ' %' : '') . ', + les commandes POS et webshop du jour (articles de leur ticket) · J−7 : tickets du ' . $j7];
 }
 
 /**

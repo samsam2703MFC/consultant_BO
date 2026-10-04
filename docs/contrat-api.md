@@ -524,6 +524,10 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   porte la colonne « à préparer pour demain matin » = la 1re cuisson du lendemain (base des mêmes
   jours que le lendemain). **Se garde** (`flux.garde` ; biscuits, cakes, épicerie, boissons par
   défaut) : la clôture propose de les garder, le reste se jette.
+- **Poids de J−7** (`gp.regles.poidsJ7`, 0 à 100, 40 par défaut, demande du 04/10/2026) : le même
+  jour de la semaine passée pèse ce pourcentage de la prévision, les autres jours lus de la base
+  se partagent le reste ; à 0, la moyenne simple (toutes les semaines pareil). `base.poidsJ7` :
+  le poids appliqué (`null` quand c'est la moyenne simple : poids 0, J−7 pas lu ou fermé).
 - **Comptoir et commandes** (demande du 03/10/2026) : les commandes ne sont pas des ventes
   comptoir. Le panel ne joint aucun article aux commandes (`/shops/{id}/client-orders`, `products`
   vide) ; ils sont dans le ticket de la commande (`id_transaction`), souvent payé avant le jour du
