@@ -119,7 +119,8 @@ function gpCuissonsDefaut(array $dp): array
 /** Les règles par défaut. */
 function gpReglesDefaut(): array
 {
-    return ['semaines' => 6, 'securite' => 10, 'minPlaques' => 1, 'seuilRecuisson' => 80, 'seuilTrop' => 140, 'avance' => 45, 'commandes' => true, 'webshop' => true];
+    // poidsJ7 : la part du même jour de la semaine passée dans la prévision, en % (demande du 04/10/2026).
+    return ['semaines' => 6, 'securite' => 10, 'minPlaques' => 1, 'seuilRecuisson' => 80, 'seuilTrop' => 140, 'avance' => 45, 'poidsJ7' => 40, 'commandes' => true, 'webshop' => true];
 }
 
 /**
@@ -264,14 +265,17 @@ function gpCleCat(int $catId, string $cat): string
  */
 function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget, ?array $A = null): array
 {
-    $cle = 'gpBase5:' . $sid . ':' . $date . ':' . $semaines;
+    // Le poids de J−7 (le même jour la semaine passée) : réglé par magasin, 40 % par défaut.
+    $sp = setting('gpParams:' . $sid);
+    $poids = max(0, min(100, (int) ((is_array($sp) ? ($sp['regles']['poidsJ7'] ?? null) : null) ?? gpReglesDefaut()['poidsJ7'])));
+    $cle = 'gpBase6:' . $sid . ':' . $date . ':' . $semaines . ':' . $poids;
     $c = setting($cle);
     if (is_array($c) && isset($c['b']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_BASE) { return $c['b']; }
     $jours = []; for ($i = 1; $i <= $semaines; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
     // Les commandes (POS et webshop) ne sont pas des ventes comptoir : leurs articles sortent de la
     // base le jour et à l'heure de leur ticket — souvent payé avant le retrait (demande du 03/10/2026).
     $A ??= $jours !== [] ? gpCommandesArticles($sid, min($jours), $cout, $budget) : null;
-    $somme = []; $noms = []; $lus = []; $fermes = []; $manquants = []; $retire = 0.0;
+    $somme = []; $noms = []; $lus = []; $fermes = []; $manquants = []; $retire = 0.0; $parJour = [];
     foreach ($jours as $j) {
         $p = function_exists('svProduitsJour') ? svProduitsJour($sid, $j, $cout, $budget) : null;
         if ($p === null) { $manquants[] = $j; continue; }
@@ -280,20 +284,30 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget, 
         $tot = 0.0; foreach ($f['q'] as $hs) { $tot += array_sum($hs); }
         if ($tot <= 0) { $fermes[] = $j; continue; }
         $lus[] = $j;
+        $parJour[$j] = $f['q'];
         foreach ($f['q'] as $pid => $hs) { foreach ($hs as $h => $q) { $somme[$pid][$h] = ($somme[$pid][$h] ?? 0.0) + $q; } }
         foreach ($f['noms'] as $pid => $n) { $noms[$pid] = $noms[$pid] ?? $n; }
     }
     $cat = gpCatalogue();
     $prods = [];
     $n = count($lus);
+    // J−7 pèse `poidsJ7` %, les autres jours lus se partagent le reste. La moyenne simple (toutes
+    // les semaines pareil) à 0 %, ou quand J−7 n'est pas lu, fermé, ou seul jour lu.
+    $j7 = $jours[0] ?? null;
+    $w = $poids > 0 && $j7 !== null && isset($parJour[$j7]) && $n >= 2 ? $poids / 100 : null;
     foreach ($somme as $pid => $hs) {
         ksort($hs);
-        $h = []; foreach ($hs as $hh => $q) { $h[(int) $hh] = round($q / max(1, $n), 3); }
+        $h = [];
+        foreach ($hs as $hh => $q) {
+            if ($w === null) { $h[(int) $hh] = round($q / max(1, $n), 3); continue; }
+            $q7 = (float) ($parJour[$j7][$pid][$hh] ?? 0.0);
+            $h[(int) $hh] = round($w * $q7 + (1 - $w) * ($q - $q7) / ($n - 1), 3);
+        }
         $x = $cat['produits'][$pid] ?? null;
         $k = gpCatDe((int) $pid, $x);
         $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => $h];
     }
-    $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods,
+    $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods, 'poidsJ7' => $w === null ? null : $poids, 'j7' => $j7,
         'commandes' => ['lues' => $A !== null, 'complet' => $A !== null && !$A['incomplet'], 'retirees' => round($retire / max(1, $n), 1)]];
     if ($manquants === [] && $A !== null && !$A['incomplet']) { gpEcrire($cle, ['ts' => time(), 'b' => $b]); }
     return $b;
@@ -518,7 +532,7 @@ function gpValider(array $p): array
             'nom' => mb_substr((string) ($e['nom'] ?? ''), 0, 80), 'catId' => (int) ($e['catId'] ?? 0)];
     }
     $r = array_merge(gpReglesDefaut(), is_array($p['regles'] ?? null) ? $p['regles'] : []);
-    $bornes = ['semaines' => [1, 12], 'securite' => [0, 50], 'minPlaques' => [0, 10], 'seuilRecuisson' => [0, 100], 'seuilTrop' => [100, 400], 'avance' => [0, 180]];
+    $bornes = ['semaines' => [1, 12], 'securite' => [0, 50], 'minPlaques' => [0, 10], 'seuilRecuisson' => [0, 100], 'seuilTrop' => [100, 400], 'avance' => [0, 180], 'poidsJ7' => [0, 100]];
     foreach ($bornes as $k => [$lo, $hi]) {
         if (!is_numeric($r[$k]) || (float) $r[$k] < $lo || (float) $r[$k] > $hi) { return [false, 'règle « ' . $k . ' » hors bornes (' . $lo . ' à ' . $hi . ')', null]; }
         $r[$k] = $k === 'securite' ? round((float) $r[$k], 1) : (int) $r[$k];
