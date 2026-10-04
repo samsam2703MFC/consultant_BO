@@ -581,3 +581,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T19:58:41Z production temperature impression postes feuilles de cuisson
 2026-10-03T20:01:00Z production temperature par four
 2026-10-03T20:21:42Z production chauffe par four
+2026-10-04T05:15:08Z production : poids de J−7 dans la prévision (40 %, réglable)
