@@ -1531,10 +1531,15 @@ classement réseau du dashboard en a besoin), 15 à 60 s à chaque affichage ; `
 | une réponse du panel a manqué (« sans réponse ») | 1 min |
 | `indispo` | pas gardée |
 
-Chaque réponse porte `cache: {le, age, frais, relu}`. Périmée de moins de deux heures, sous
-PHP-FPM, elle part tout de suite (`frais: false, relu: true`) et le serveur la recalcule après
-la réponse ; le dashboard la relit alors une fois, trente secondes plus tard. Sinon le calcul
-se fait pendant l'appel, sous verrou MySQL : des appels simultanés attendent le même calcul.
+Chaque réponse porte `cache: {le, age, frais, relu}`. Périmée de moins d'une demi-heure, elle
+part tout de suite (`frais: false, relu: true`) et le serveur la recalcule en arrière-plan :
+après la réponse sous PHP-FPM ; sinon (le serveur en ligne tourne sous mod_php, mesuré le
+04/10/2026) par une requête à lui-même, `http://127.0.0.1/…/api/cockpit/exploitation/…&fond=1`,
+qu'il n'attend pas (la route continue seule, `ignore_user_abort`) — pas pendant un calcul en
+cours, pas deux fois par minute (`rcRelance:{clé}`), et si elle est refusée (une
+authentification), le calcul se fait pendant l'appel. Le dashboard relit une réponse `relu` une
+fois, trente secondes plus tard. Plus vieille qu'une demi-heure, ou sans cache, la réponse se
+calcule pendant l'appel, sous verrou MySQL : des appels simultanés attendent le même calcul.
 `?rafraichir=1` force un calcul neuf (le bouton « mettre à jour » du cockpit, qui affiche
 l'heure du calcul, `cache.le`). Le PDF du mois ne part jamais d'un calcul périmé. Le cron
 horaire des rapports recalcule le jour, la semaine et le mois d'aujourd'hui (`resultat` dans sa

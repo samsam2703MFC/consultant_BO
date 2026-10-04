@@ -2066,17 +2066,18 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
  * Une lecture de /exploitation/jour fait ~45 appels au panel (tous les magasins : le classement
  * réseau en a besoin), /exploitation/periode une trentaine : 10 à 60 s, à chaque affichage. Le
  * calcul se garde donc, pour tous les appelants (dashboard, cockpit, tablette, visites, PDF). */
-const RC_PERIME_S = 7200;   // sous PHP-FPM : servi périmé jusqu'à deux heures, recalculé après la réponse
+const RC_PERIME_S = 1800;   // servi périmé jusqu'à une demi-heure, recalculé en arrière-plan
 const RC_VERROU_S = 45;     // attente au plus du calcul qu'un autre appel a lancé
 
 /**
  * Une réponse lourde du Résultat. Fraîche (plus jeune que la durée que `$ttl` lui a donnée), elle
- * part du cache ; périmée de moins de deux heures sous PHP-FPM, elle part aussi et se recalcule
- * APRÈS la réponse (`cache.relu` : relire dans une demi-minute) ; sinon elle se calcule sous
- * verrou MySQL — les appels qui arrivent ensemble attendent le même calcul. `$ttl($r)` : secondes
- * de fraîcheur de la réponse calculée, 0 pour ne pas la garder. `cache` dit l'âge de ce qui part.
+ * part du cache ; périmée de moins d'une demi-heure, elle part aussi et se recalcule en
+ * arrière-plan (`cache.relu` : relire dans une demi-minute) — après la réponse sous PHP-FPM,
+ * sinon par une requête interne à `$route` (rcRelancer) ; sinon elle se calcule sous verrou
+ * MySQL — les appels qui arrivent ensemble attendent le même calcul. `$ttl($r)` : secondes de
+ * fraîcheur de la réponse calculée, 0 pour ne pas la garder. `cache` dit l'âge de ce qui part.
  */
-function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = false): array
+function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = false, ?string $route = null): array
 {
     $fond = !empty($GLOBALS['rcFond']);
     $c = $forcer ? null : setting($cle);
@@ -2092,6 +2093,8 @@ function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = fals
         });
         return $avec($c['r'], (int) $c['le'], false, true);
     }
+    // Sans PHP-FPM (mesuré en ligne le 04/10/2026 : mod_php) : une requête interne refait le calcul.
+    if ($ok && !$fond && $age < RC_PERIME_S && $route !== null && rcRelancer($cle, $route)) { return $avec($c['r'], (int) $c['le'], false, true); }
     $verrou = false;
     try { $l = Db::row('SELECT GET_LOCK(?, ?) AS l', [$cle, $fond ? 0 : RC_VERROU_S]); $verrou = $l !== null && (int) $l['l'] === 1; }
     catch (Throwable $e) { /* sans verrou : on calcule quand même */ }
@@ -2110,6 +2113,40 @@ function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = fals
     } finally {
         if ($verrou) { try { Db::row('SELECT RELEASE_LOCK(?) AS l', [$cle]); } catch (Throwable $e) { /* le verrou tombe avec la connexion */ } }
     }
+}
+
+/**
+ * Relance le calcul en arrière-plan : une requête à soi-même (`$route?…&fond=1`, 127.0.0.1)
+ * qu'on n'attend pas — la route continue seule (ignore_user_abort). Pas pendant un calcul en
+ * cours, pas deux fois par minute. Faux si elle n'a pas pu partir ou a été refusée (une
+ * authentification, par exemple) : l'appelant calcule alors lui-même.
+ */
+function rcRelancer(string $cle, string $route): bool
+{
+    try { $l = Db::row('SELECT IS_FREE_LOCK(?) AS l', [$cle]); if ($l !== null && (int) $l['l'] === 0) { return true; } }
+    catch (Throwable $e) { /* sans verrou lisible : on relance */ }
+    $k = 'rcRelance:' . $cle; $t = setting($k);
+    if (is_numeric($t) && time() - (int) $t < 60) { return true; }
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? ''); $p = strpos($uri, '/api/cockpit');
+    if ($p === false || !function_exists('curl_init')) { return false; }
+    try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$k, (string) time()]); }
+    catch (Throwable $e) { /* la relance part quand même */ }
+    $get = $_GET; unset($get['rafraichir'], $get['fond']);
+    $ch = curl_init('http://127.0.0.1' . substr($uri, 0, $p) . '/api/cockpit' . $route . '?' . http_build_query($get + ['fond' => 1]));
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_NOSIGNAL => true, CURLOPT_TIMEOUT_MS => 600, CURLOPT_CONNECTTIMEOUT_MS => 300]);
+    curl_exec($ch);
+    $err = curl_errno($ch); $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    // Le calcul dure des secondes : le délai dépassé dit qu'il tourne. Une réponse immédiate n'est bonne qu'en 200.
+    return $err === CURLE_OPERATION_TIMEDOUT || ($err === 0 && $code === 200);
+}
+
+/** Une requête interne de rcRelancer (`fond=1`) : elle calcule sans servir de périmé et continue sans client. */
+function rcFondDemande(): void
+{
+    if (empty($_GET['fond'])) { return; }
+    ignore_user_abort(true); @set_time_limit(180);
+    $GLOBALS['rcFond'] = true;
 }
 
 /** La fraîcheur d'un Résultat calculé : rien s'il est indisponible, une minute s'il manque une réponse du panel. */
@@ -2146,7 +2183,8 @@ function ep_exploitation_jour(): array
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
     $_GET['date'] = $date;
     $n = $date === $auj ? 180 : ($date === date('Y-m-d', strtotime('-1 day')) ? 900 : 3600);
-    return rcServi('exJour:' . $date, 'exJourCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']));
+    rcFondDemande();
+    return rcServi('exJour:' . $date, 'exJourCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']), '/exploitation/jour');
 }
 
 function exJourCalcul(): array

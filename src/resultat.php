@@ -33,7 +33,8 @@ function ep_exploitation_periode(): array
     $_GET['vue'] = $vue; $_GET['date'] = $date;
     $fin = $vue === 'semaine' ? date('Y-m-d', strtotime(date('Y-m-d', strtotime('monday this week', strtotime($date))) . ' +6 days')) : date('Y-m-t', strtotime($date));
     $n = $fin >= $auj ? 300 : 3600;
-    return rcServi('exPer:' . $vue . ':' . $date, 'exPeriodeCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']));
+    rcFondDemande();
+    return rcServi('exPer:' . $vue . ':' . $date, 'exPeriodeCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']), '/exploitation/periode');
 }
 
 function exPeriodeCalcul(): array
