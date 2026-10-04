@@ -693,12 +693,16 @@ function ep_production_flux_suivi(): array
         $m = (array) ($K['base']['produits'][$p['pid']]['moy'] ?? []);
         $p['moy'] = []; foreach ($suivi['heures'] as $h) { $p['moy'][(string) $h] = round((float) ($m[$h] ?? 0), 1); }
         $p['moyJ'] = round(array_sum(array_map('floatval', $m)), 1);
+        // Le vendu au comptoir de chaque heure passée ou entamée (sans les commandes, comme la moyenne).
+        $vc = $V !== null ? (array) ($V['h'][$p['pid']] ?? []) : [];
+        $p['vc'] = []; foreach ($suivi['heures'] as $h) { $p['vc'][(string) $h] = (float) $h < $now ? round((float) ($vc[$h] ?? 0), 1) : null; }
+        $p['vcJ'] = $V !== null ? round(array_sum(array_map('floatval', $vc)), 1) : null;
     } unset($p);
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'maintenant' => $date === $auj ? date('H:i') : null, 'jourNom' => PF_JOURS[$K['jour']],
         'cuissons' => $C, 'heures' => $suivi['heures'], 'produits' => $suivi['produits'], 'totaux' => $suivi['totaux'],
         'ventesLues' => $V !== null, 'securite' => $R,
         'base' => ['semaines' => $K['sem'], 'lus' => count($K['base']['lus']), 'jours' => count($K['base']['jours']), 'manquants' => $K['base']['manquants'], 'joursLus' => $K['base']['lus'], 'commandesRetirees' => !empty($K['base']['commandes']['lues'])],
-        'source' => 'sorti : cuissons validées en magasin (le plan tant qu’une cuisson n’est pas validée) · vendu : tickets du panel heure par heure · moyenne : vendu au comptoir des ' . count($K['base']['lus']) . ' derniers ' . PF_JOURS[$K['jour']] . 's lus, sans les commandes · projeté : la prévision du plan'];
+        'source' => 'sorti : cuissons validées en magasin (le plan tant qu’une cuisson n’est pas validée) · vendu : tickets du panel heure par heure · vendu comptoir : les tickets sans les commandes · moyenne : vendu au comptoir des ' . count($K['base']['lus']) . ' derniers ' . PF_JOURS[$K['jour']] . 's lus, sans les commandes · projeté : la prévision du plan'];
 }
 
 /**

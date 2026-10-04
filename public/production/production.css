@@ -118,8 +118,16 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab.suivi td.h.att{background:#fbecd8;color:#9a5a06}
 .pf-tab.suivi td.h.ko{background:#f8e0e3;color:var(--pf-ko)}
 .pf-tab.suivi .now{box-shadow:inset 0 0 0 2px #222}
-.pf-tab.suivi small.moy{display:block;font:500 9.5px var(--font-ui);color:#8a7f72;margin-top:1px;white-space:nowrap}
-.pf-leg small.moy{font:600 10px var(--font-ui);color:#8a7f72;background:#f4f1ec;border-radius:3px;padding:0 3px;margin-right:3px}
+/* Les lignes de valeurs sous chaque produit : vendu comptoir et moyenne, heure par heure */
+.pf-tab.suivi tr.sub td{border-top:none;padding-top:1px;padding-bottom:1px;font-size:11px}
+.pf-tab.suivi tr.sub td.lib{font:600 10px var(--font-ui);color:#777;text-align:right;white-space:nowrap;padding-right:6px}
+.pf-tab.suivi tr.sub td.h{font-weight:600;color:#222;background:#fff}
+.pf-tab.suivi tr.sub.moy td.h{font-weight:500;color:#5f574e}
+.pf-tab.suivi tr.sub.moy td{padding-bottom:6px}
+.pf-tab.suivi tr.sub td.h.encours{background:#f4f1ec}
+.pf-tab.suivi tr.sub td.h.plus{color:#1f5e2e;background:#e3f0e6}
+.pf-tab.suivi tr.sub td.h.moins{color:#9a5a06;background:#fbecd8}
+.pf-leg i.plus{background:#e3f0e6}.pf-leg i.moins{background:#fbecd8}
 .pf-tab.suivi th.now{color:#222}
 .pf-leg{display:flex;gap:14px;flex-wrap:wrap;padding:8px 16px;font-size:10.5px;color:#666}
 .pf-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
