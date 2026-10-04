@@ -98,7 +98,8 @@ function pfParams(int $sid, array $gp, ?string $date = null): array
     $hmax = []; foreach ((array) ($s['heureMax'] ?? []) as $pid => $h) { $v = gpHeure($h); if (preg_match('/^\d{1,9}$/', (string) $pid) && $v !== null && $v > 0 && $v < 24) { $hmax[(int) $pid] = gpHhmm($v); } }
     return ['jours' => $jours, 'obligatoires' => $ob, 'veille' => $veille, 'garde' => $garde, 'heureMax' => $hmax,
         'ajusterJ7' => !array_key_exists('ajusterJ7', $s) || !empty($s['ajusterJ7']), 'modePeu' => ($s['modePeu'] ?? '') === 'stock' ? 'stock' : 'production', 'stockMin' => $smin,
-        'enregistre' => $s !== [], 'maj' => $s['maj'] ?? null, 'par' => $s['par'] ?? null];
+        // Enregistré : les réglages de l'écran, pas la seule heure maximum posée à part.
+        'enregistre' => array_diff_key($s, ['heureMax' => 1, 'heureMaxMaj' => 1, 'heureMaxPar' => 1]) !== [], 'maj' => $s['maj'] ?? null, 'par' => $s['par'] ?? null];
 }
 
 /** Valide les réglages du flux envoyés par l'écran : [ok, erreur|null, réglages]. */
@@ -464,6 +465,33 @@ function wr_production_flux_params(): array
     gpEcrire('gpParams:' . $sid, $gp);
     gpEcrire('pfParams:' . $sid, $pf);
     return ['ok' => true, 'cuissons' => count($gp['cuissons']), 'obligatoires' => count($pf['obligatoires'])];
+}
+
+/**
+ * POST /production/flux/heure-max — { shop, heureMax: {pid: "HH:MM" | "" | null}, par } : pose ou
+ * retire l'heure maximum de vente de quelques produits, sans rien toucher d'autre aux réglages du
+ * magasin (demande du 04/10/2026 : « 11:00 pour les pistolets dans les 4 magasins », dont trois
+ * n'ont encore rien enregistré — leurs réglages proposés ne sont pas figés pour autant).
+ */
+function wr_production_flux_heure_max(): array
+{
+    $b = body();
+    $sid = (int) ($b['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'magasin manquant']; }
+    if (!is_array($b['heureMax'] ?? null) || $b['heureMax'] === []) { http_response_code(422); return ['error' => 'aucune heure maximum à poser']; }
+    $s = setting('pfParams:' . $sid); $s = is_array($s) ? $s : [];
+    $h = is_array($s['heureMax'] ?? null) ? $s['heureMax'] : [];
+    foreach ($b['heureMax'] as $pid => $v) {
+        if (!preg_match('/^\d{1,9}$/', (string) $pid)) { http_response_code(422); return ['error' => 'produit invalide : ' . $pid]; }
+        if ($v === null || $v === '') { unset($h[(string) $pid]); continue; }
+        $x = gpHeure((string) $v);
+        if ($x === null || $x <= 0 || $x >= 24) { http_response_code(422); return ['error' => 'heure maximum de vente invalide pour le produit ' . $pid . ' : une heure entre 00:01 et 23:59']; }
+        $h[(string) $pid] = gpHhmm($x);
+    }
+    if (count($h) > 2000) { http_response_code(422); return ['error' => 'trop de produits à heure maximum de vente']; }
+    $s['heureMax'] = $h; $s['heureMaxMaj'] = date('c'); $s['heureMaxPar'] = mb_substr(trim((string) ($b['par'] ?? '')), 0, 80) ?: null;
+    gpEcrire('pfParams:' . $sid, $s);
+    return ['ok' => true, 'shop' => $sid, 'heureMax' => (object) $h];
 }
 
 /**

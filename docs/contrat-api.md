@@ -531,7 +531,10 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   plus tard ; à J−7, une dernière vente juste avant l'heure n'est pas « trop peu » ; le stock minimum de
   recuisson s'arrête à cette heure. Vide = toute la journée ; une heure hors de 00:01–23:59 est refusée
   (422). Le plan la rend par produit (`lignes[].heureMax`), l'écran la montre « ≤ 11 h » à côté du nom ;
-  Paramètres › 4 · Les produits : colonne « Vendu jusqu'à ».
+  Paramètres › 4 · Les produits : colonne « Vendu jusqu'à ». `POST /production/flux/heure-max`
+  `{shop, heureMax: {pid: "HH:MM" | "" | null}, par}` la pose ou la retire (vide ou null) pour quelques
+  produits sans toucher au reste des réglages : un magasin qui n'a rien enregistré garde ses réglages
+  proposés (`flux.enregistre` reste faux). 422 pour une heure invalide, rien d'écrit.
 - **Poids de J−7** (`gp.regles.poidsJ7`, 0 à 100, 40 par défaut, demande du 04/10/2026) : le même
   jour de la semaine passée pèse ce pourcentage de la prévision, les autres jours lus de la base
   se partagent le reste ; à 0, la moyenne simple (toutes les semaines pareil). `base.poidsJ7` :
