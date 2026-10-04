@@ -290,7 +290,7 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget, 
     // Le poids de J−7 (le même jour la semaine passée) : réglé par magasin, 40 % par défaut.
     $sp = setting('gpParams:' . $sid);
     $poids = max(0, min(100, (int) ((is_array($sp) ? ($sp['regles']['poidsJ7'] ?? null) : null) ?? gpReglesDefaut()['poidsJ7'])));
-    $cle = 'gpBase6:' . $sid . ':' . $date . ':' . $semaines . ':' . $poids;
+    $cle = 'gpBase7:' . $sid . ':' . $date . ':' . $semaines . ':' . $poids;
     $c = setting($cle);
     if (is_array($c) && isset($c['b']) && (int) ($c['ts'] ?? 0) > time() - PP_TTL_BASE) { return $c['b']; }
     $jours = []; for ($i = 1; $i <= $semaines; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
@@ -319,15 +319,17 @@ function gpBase(int $sid, string $date, int $semaines, int &$cout, int $budget, 
     $w = $poids > 0 && $j7 !== null && isset($parJour[$j7]) && $n >= 2 ? $poids / 100 : null;
     foreach ($somme as $pid => $hs) {
         ksort($hs);
-        $h = [];
+        $h = []; $moy = [];
         foreach ($hs as $hh => $q) {
-            if ($w === null) { $h[(int) $hh] = round($q / max(1, $n), 3); continue; }
+            // La moyenne simple des jours lus, hors commandes : ce que le suivi montre heure par heure.
+            $moy[(int) $hh] = round($q / max(1, $n), 3);
+            if ($w === null) { $h[(int) $hh] = $moy[(int) $hh]; continue; }
             $q7 = (float) ($parJour[$j7][$pid][$hh] ?? 0.0);
             $h[(int) $hh] = round($w * $q7 + (1 - $w) * ($q - $q7) / ($n - 1), 3);
         }
         $x = $cat['produits'][$pid] ?? null;
         $k = gpCatDe((int) $pid, $x);
-        $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => $h];
+        $prods[$pid] = ['nom' => ($x['nom'] ?? '') !== '' ? $x['nom'] : ($noms[$pid] ?? ('Produit ' . $pid)), 'catId' => $k['catId'], 'cat' => $k['cat'], 'catCle' => $k['catCle'], 'groupe' => $k['groupe'], 'h' => $h, 'moy' => $moy];
     }
     $b = ['jours' => $jours, 'lus' => $lus, 'fermes' => $fermes, 'manquants' => $manquants, 'produits' => $prods, 'poidsJ7' => $w === null ? null : $poids, 'j7' => $j7,
         'commandes' => ['lues' => $A !== null, 'complet' => $A !== null && !$A['incomplet'], 'retirees' => round($retire / max(1, $n), 1)]];

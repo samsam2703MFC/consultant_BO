@@ -583,6 +583,14 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   à venir = stock actuel + cuissons à venir − prévision (l'heure entamée au prorata). `manque`
   (première heure projetée sous zéro et le déficit), `verdict` rupture | manque | trop | ok,
   `conseil` (pièces et plaques à recuire), `stockMin` (le seuil de recuisson du produit).
+- **Moyenne vendue au suivi** (demande du 04/10/2026) : chaque produit porte `moy` (`{heure:
+  pièces}`, une valeur par heure de `heures`) et `moyJ` (la journée) : la moyenne simple de ce
+  qui s'est vendu au comptoir les mêmes jours des semaines lues (6 par défaut, réglage
+  `semaines`), sans les commandes (les articles de leur ticket sortent de la base), portions
+  ramenées à la pièce. Ce n'est pas la prévision : celle-ci pondère J−7 (`poidsJ7`) et coupe à
+  l'heure maximum de vente. `base.joursLus` liste les jours de la moyenne, `base.commandesRetirees`
+  dit si les commandes ont pu être lues. La base de prévision la garde à côté du profil (`moy`,
+  cache `gpBase7:…`). À l'écran : en petit sous le stock de chaque heure, et « moy. » sous le vendu.
 - **Suivi et clôture** : la vitrine se vide du comptoir et des commandes retirées (à leur heure de
   retrait) ; le ticket d'une commande payée pour un autre jour n'en sort rien.
 - **Fours** (demande du 03/10/2026) : les fours du magasin (1 à 6 ; `plaques` = plaques par

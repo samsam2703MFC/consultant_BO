@@ -118,6 +118,8 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab.suivi td.h.att{background:#fbecd8;color:#9a5a06}
 .pf-tab.suivi td.h.ko{background:#f8e0e3;color:var(--pf-ko)}
 .pf-tab.suivi .now{box-shadow:inset 0 0 0 2px #222}
+.pf-tab.suivi small.moy{display:block;font:500 9.5px var(--font-ui);color:#8a7f72;margin-top:1px;white-space:nowrap}
+.pf-leg small.moy{font:600 10px var(--font-ui);color:#8a7f72;background:#f4f1ec;border-radius:3px;padding:0 3px;margin-right:3px}
 .pf-tab.suivi th.now{color:#222}
 .pf-leg{display:flex;gap:14px;flex-wrap:wrap;padding:8px 16px;font-size:10.5px;color:#666}
 .pf-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
