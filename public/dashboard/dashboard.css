@@ -1254,3 +1254,4 @@ body.pp-emb{background:var(--color-bg)}
 .ma-tabs button i{opacity:1}
 .ma-tabs button i svg{opacity:.55}
 .ma-tabs button.on i svg{opacity:1}
+.ma-note{font-size:9.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.35}

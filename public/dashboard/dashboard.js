@@ -1069,7 +1069,7 @@
       s: (att != null ? fP(att) + ' de l’attendu' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
       apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
     T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
-      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
+      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct), s: 'seuil 35 % · la semaine' });
     T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
       v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
@@ -1090,7 +1090,7 @@
     h += ligne('Notés', j => { const c = X[j.date] && X[j.date].controles; return c ? (c.nc ? cell('r', c.nc + ' NC') : (c.notes ? cell('v', String(c.notes)) : cell('n', '—'))) : cell('n', SJ ? '—' : '…'); });
     h += ligne('Poubelle', j => { const p = X[j.date] && X[j.date].poubelle; if (!p) { return cell('n', SJ ? '—' : '…'); } if (!p.pieces) { return cell('n', '0'); }
       return cell(auj(j) ? 'n' : MA.poub(j.ca ? 100 * p.cout / j.ca : null), nf(Math.round(p.cout), 0) + '€'); });
-    h += '</table><div class="ma-leg"><span><i class="v"></i>bon</span><span><i class="o"></i>à surveiller</span><span><i class="r"></i>à reprendre</span><span><i class="n"></i>rien ou en cours</span></div></div>';
+    h += `</table><div class="ma-leg"><span><i class="v"></i>bon</span><span><i class="o"></i>à surveiller</span><span><i class="r"></i>à reprendre</span><span><i class="n"></i>rien ou en cours</span></div><div class="ma-note">Résultat : la main-d’œuvre du mois répartie sur les jours, mesurée au planning pour le ${esc(fD(S.date))} seulement.</div></div>`;
     return h;
   }
   /** La couleur d'un jour de la semaine face à son objectif ; aujourd'hui, en dessous, n'est pas encore jugé. */
