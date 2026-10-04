@@ -409,13 +409,28 @@
     return { e: e, c: c, split: split, titre: titre,
       cls: 'n ' + (split ? 'ko' : (Math.abs(e) < 0.05 ? 'mu' : 'wa')), txt: Math.abs(e) < 0.05 ? '=' : (e > 0 ? '+' : '−') + fQ(Math.abs(e)) };
   }
-  /** Les tuiles de la clôture : reste (compté ou calculé), écart au calcul, gardé, jeté. */
+  /** Épuisé : la vitrine vide (compté 0, sinon reste calculé 0) alors que le produit se vend d'habitude encore après son dernier ticket. */
+  const cloEpuise = (l, v) => l.derniere != null && (l.venteApres || 0) >= 1 && cloBase(l, v) < 0.5;
+  const cloHeure = l => l.derniereA || l.derniere + ' h';
+  /** La dernière vente d'un produit : l'heure de son dernier ticket au comptoir, à la minute quand elle est connue. */
+  function cloDer(l, v, d) {
+    if (l.derniere == null) { return `<span class="mu" title="${l.vendu > 0 ? 'vendu en commandes seulement' : 'pas vendu au comptoir'}">—</span>`; }
+    const ep = cloEpuise(l, v);
+    const fin = d.derniereVenteA ? 'à ' + d.derniereVenteA : (d.derniereVente != null ? `entre ${d.derniereVente} h et ${d.derniereVente + 1} h` : '');
+    const titre = (l.derniereA ? 'dernier ticket à ' + l.derniereA : `dernier ticket entre ${l.derniere} h et ${l.derniere + 1} h`) + (fin ? ' · dernier ticket du magasin ' + fin : '') + (l.heureMax ? ' · vendu jusqu’à ' + l.heureMax : '')
+      + (ep ? ` · vitrine vide : vente perdue estimée ${fN(l.venteApres)} pièce${Math.round(l.venteApres) > 1 ? 's' : ''}` : ((l.venteApres || 0) >= 1 ? ' · il en restait en vitrine' : ''));
+    return `<span class="${ep ? 'wa' : ''}" title="${esc(titre)}">${ep ? `<b>${esc(cloHeure(l))}</b> <span class="pf-tag att">épuisé</span>` : esc(cloHeure(l))}</span>`;
+  }
+  /** Les tuiles de la clôture : reste (compté ou calculé), écart au calcul, épuisés, gardé, jeté. */
   function cloTuiles(L, X) {
     const tot = { report: 0, jete: 0, valJ: 0, valR: 0, compte: 0, comptes: 0, ecart: 0, valE: 0 };
     L.forEach(l => { const v = X[l.pid] || {}; tot.report += +v.report || 0; tot.jete += +v.jete || 0; if (l.prix != null) { tot.valJ += (+v.jete || 0) * l.prix; tot.valR += (+v.report || 0) * l.prix; }
       const c = cloCompte(v); if (c != null) { tot.compte += c; tot.comptes++; tot.ecart += c - Math.round(l.reste); if (l.prix != null) { tot.valE += (c - Math.round(l.reste)) * l.prix; } } });
+    const ep = L.filter(l => cloEpuise(l, X[l.pid])).sort((a, b) => (a.derniere - b.derniere) || cloHeure(a).localeCompare(cloHeure(b)));
+    const perdu = ep.reduce((a, l) => a + l.venteApres, 0);
     return `<div class="pf-tuiles"><div><div class="k">Reste en vitrine</div><div class="v">${fN(tot.comptes ? L.reduce((a, l) => a + cloBase(l, X[l.pid]), 0) : L.reduce((a, l) => a + Math.round(l.reste), 0))} <small>pièces</small></div><div class="s">${tot.comptes ? `compté sur ${tot.comptes} produit${tot.comptes > 1 ? 's' : ''} de ${L.length}, calculé pour les autres` : 'calculé · ' + L.length + ' produit' + (L.length > 1 ? 's' : '') + ', rien de compté'}</div></div>
       ${tot.comptes ? `<div class="${Math.abs(tot.ecart) < 0.5 ? '' : 'jete'}"><div class="k">Écart au calcul</div><div class="v">${tot.ecart > 0 ? '+' : (tot.ecart < 0 ? '−' : '')}${fN(Math.abs(tot.ecart))} <small>pièces</small></div><div class="s">${fE(Math.abs(tot.valE))} au prix de vente · ${tot.ecart < 0 ? 'moins en vitrine que calculé' : (tot.ecart > 0 ? 'plus en vitrine que calculé' : 'le compté tombe juste')}</div></div>` : ''}
+      ${ep.length ? `<div class="vide"><div class="k">Vides avant la fin</div><div class="v">${ep.length} <small>produit${ep.length > 1 ? 's' : ''}</small></div><div class="s">vente perdue estimée ${fN(perdu)} pièce${Math.round(perdu) > 1 ? 's' : ''} · ${ep.slice(0, 3).map(l => esc(l.nom) + ' ' + esc(cloHeure(l))).join(', ')}${ep.length > 3 ? '…' : ''}</div></div>` : ''}
       <div class="veille"><div class="k">Se garde pour demain</div><div class="v">${fN(tot.report)} <small>pièces</small></div><div class="s">${fE(tot.valR)} au prix de vente</div></div>
       <div class="jete"><div class="k">À jeter</div><div class="v">${fN(tot.jete)} <small>pièces</small></div><div class="s">${fE(tot.valJ)} au prix de vente · à déclarer en caisse</div></div></div>`;
   }
@@ -428,13 +443,13 @@
     h += cloTuiles(L, X);
     let g = null;
     h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Ce qui reste, produit par produit</span><span class="pf-mini">le compté remplace le calcul · les catégories « se garde » sont gardées, le reste est jeté</span><button class="pf-btn" data-tout="garder">Tout garder</button><button class="pf-btn" data-tout="jeter">Tout jeter</button><button class="pf-btn" data-tout="propose">Proposition</button></div>
-      <table class="pf-tab"><thead><tr><th>Produit</th><th class="n">Report d’hier</th><th class="n">Sorti</th><th class="n">Vendu</th><th class="n">Jeté déclaré</th><th class="n">Reste calculé</th><th class="n cpt">Compté</th><th class="n">Garder pour demain</th><th class="n">Jeter</th><th class="n">Écart</th></tr></thead><tbody>
-      ${L.map(l => { const v = X[l.pid] || { report: 0, jete: 0, compte: '' }; const E = cloEcart(l, v); const t = l.groupe !== g ? `<tr class="grp"><td colspan="10">${esc(l.groupe || 'Sans section')}</td></tr>` : ''; g = l.groupe;
-        return t + `<tr><td class="nom">${esc(l.nom)}${l.garde ? ' <span class="pf-tag bleu">se garde</span>' : ''}</td><td class="n mu">${l.report0 ? fQ(l.report0) : '—'}</td><td class="n">${fQ(l.sorti)}${l.sortiValide ? '' : '<small>plan</small>'}</td><td class="n">${fQ(l.vendu)}</td><td class="n mu">${l.jeteDeclare ? fQ(l.jeteDeclare) : '—'}</td><td class="n${E.c != null ? ' mu' : ''}"><b>${fQ(l.reste)}</b></td>
+      <table class="pf-tab"><thead><tr><th>Produit</th><th class="n">Report d’hier</th><th class="n">Sorti</th><th class="n">Vendu</th><th class="n" title="le dernier ticket du produit au comptoir, sans les commandes">Dernière vente</th><th class="n">Jeté déclaré</th><th class="n">Reste calculé</th><th class="n cpt">Compté</th><th class="n">Garder pour demain</th><th class="n">Jeter</th><th class="n">Écart</th></tr></thead><tbody>
+      ${L.map(l => { const v = X[l.pid] || { report: 0, jete: 0, compte: '' }; const E = cloEcart(l, v); const t = l.groupe !== g ? `<tr class="grp"><td colspan="11">${esc(l.groupe || 'Sans section')}</td></tr>` : ''; g = l.groupe;
+        return t + `<tr><td class="nom">${esc(l.nom)}${l.garde ? ' <span class="pf-tag bleu">se garde</span>' : ''}</td><td class="n mu">${l.report0 ? fQ(l.report0) : '—'}</td><td class="n">${fQ(l.sorti)}${l.sortiValide ? '' : '<small>plan</small>'}</td><td class="n">${fQ(l.vendu)}</td><td class="n der" data-cd="${l.pid}">${cloDer(l, v, d)}</td><td class="n mu">${l.jeteDeclare ? fQ(l.jeteDeclare) : '—'}</td><td class="n${E.c != null ? ' mu' : ''}"><b>${fQ(l.reste)}</b></td>
           <td class="n cpt"><input class="pf-in court${E.c != null ? ' on' : ''}" type="number" min="0" max="5000" inputmode="numeric" data-cc="${l.pid}" data-f="cc${l.pid}" value="${esc(v.compte)}" placeholder="${esc(fQ(l.reste))}" title="ce que vous comptez en vitrine ; vide = le reste calculé"></td>
           <td class="n"><input class="pf-in court" type="number" min="0" max="5000" data-cr="${l.pid}" data-f="cr${l.pid}" value="${esc(v.report)}"></td><td class="n"><input class="pf-in court" type="number" min="0" max="5000" data-cj="${l.pid}" data-f="cj${l.pid}" value="${esc(v.jete)}"></td>
-          <td class="${E.cls}" data-ce="${l.pid}" title="${esc(E.titre)}">${E.txt}</td></tr>`; }).join('') || '<tr><td colspan="10" class="mu">Rien ne reste : aucune production ni report pour ce jour.</td></tr>'}</tbody></table>
-      <div class="pf-pied mu">« Compté » : ce que l’équipe compte en vitrine ; vide, le reste calculé fait foi. « Écart » : ce qui est vraiment là (le compté, sinon garder + jeter) face au reste calculé. Un écart négatif dit une vente, une casse ou une production plus petite que le plan ; positif, une production plus grande. Au survol : la production que le compté laisse supposer. En rouge : garder + jeter ne font pas le compté. ${esc(d.source)}</div></div>`;
+          <td class="${E.cls}" data-ce="${l.pid}" title="${esc(E.titre)}">${E.txt}</td></tr>`; }).join('') || '<tr><td colspan="11" class="mu">Rien ne reste : aucune production ni report pour ce jour.</td></tr>'}</tbody></table>
+      <div class="pf-pied mu">« Compté » : ce que l’équipe compte en vitrine ; vide, le reste calculé fait foi. « Écart » : ce qui est vraiment là (le compté, sinon garder + jeter) face au reste calculé. Un écart négatif dit une vente, une casse ou une production plus petite que le plan ; positif, une production plus grande. Au survol : la production que le compté laisse supposer. En rouge : garder + jeter ne font pas le compté. « Dernière vente » : le dernier ticket du produit au comptoir, sans les commandes, à la minute quand elle est connue${d.derniereVente != null ? ` ; celui du magasin ${d.derniereVenteA ? 'à ' + esc(d.derniereVenteA) : 'entre ' + d.derniereVente + ' h et ' + (d.derniereVente + 1) + ' h'}` : ''}. « Épuisé » : la vitrine est vide et le produit se vend d’habitude encore après ; au survol, la vente perdue estimée. ${esc(d.source)}</div></div>`;
     h += `<div class="pf-barre"><label>Signé <input class="pf-in" data-par="1" data-f="par" value="${esc(S.par)}" placeholder="prénom"></label><span class="sp"></span><button class="pf-btn prim" data-cloturer="1"${S.envoi || !L.length ? ' disabled' : ''}>${S.envoi ? 'Enregistrement…' : (d.enregistree ? 'Mettre à jour la clôture' : 'Valider la clôture')}</button></div>`;
     return h;
   }
@@ -689,7 +704,8 @@
     on('[data-validok]', 'click', () => enregistrerValid());
     on('[data-alertes]', 'change', c => { S.alertes = c.checked; rendre(); });
     // Clôture
-    const ecart = pid => { const d = S.data[cle()]; const l = d.lignes.find(x => String(x.pid) === String(pid)); const v = S.clot.l[pid]; const td = $.querySelector(`[data-ce="${pid}"]`); if (!l || !td) { return; } const E = cloEcart(l, v); td.className = E.cls; td.textContent = E.txt; td.title = E.titre; };
+    const ecart = pid => { const d = S.data[cle()]; const l = d.lignes.find(x => String(x.pid) === String(pid)); const v = S.clot.l[pid]; const td = $.querySelector(`[data-ce="${pid}"]`); if (!l || !td) { return; } const E = cloEcart(l, v); td.className = E.cls; td.textContent = E.txt; td.title = E.titre;
+      const dv = $.querySelector(`[data-cd="${pid}"]`); if (dv) { dv.innerHTML = cloDer(l, v, d); } };
     on('[data-cc]', 'input', i => { const pid = i.dataset.cc, d = S.data[cle()], l = d.lignes.find(x => String(x.pid) === String(pid)); const v = S.clot.l[pid] = S.clot.l[pid] || {};
       v.compte = i.value; const b = cloBase(l, v); v.report = l.garde ? b : 0; v.jete = l.garde ? 0 : b;
       const r = $.querySelector(`[data-cr="${pid}"]`), j = $.querySelector(`[data-cj="${pid}"]`); if (r) { r.value = v.report; } if (j) { j.value = v.jete; } i.classList.toggle('on', cloCompte(v) != null); ecart(pid); });

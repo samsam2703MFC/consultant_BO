@@ -222,7 +222,9 @@ function pfVentesJour(int $sid, string $date, int &$cout, int $budget, ?array $A
             $hr[$pid][$hh] = ($hr[$pid][$hh] ?? 0.0) + (float) $q;
         }
     }
-    return ['tot' => $tot, 'h' => $h, 'cmd' => $cmd, 'ws' => $ws, 'hRetraits' => $hr, 'commandes' => $n, 'cmdLues' => $A !== null, 'noms' => $f['noms']];
+    // La minute du dernier ticket par produit, quand le relevé la porte (jours relus depuis le 04/10/2026).
+    $mn = function_exists('svDernieresVentes') ? svDernieresVentes($sid, $date) : [];
+    return ['tot' => $tot, 'h' => $h, 'cmd' => $cmd, 'ws' => $ws, 'hRetraits' => $hr, 'commandes' => $n, 'cmdLues' => $A !== null, 'noms' => $f['noms'], 'minutes' => $mn];
 }
 
 /** Ce qui est sorti de la vitrine heure par heure : le comptoir et les commandes retirées. */
@@ -842,7 +844,17 @@ function ep_production_flux_cloture(): array
     // Les cuissons qui ont quelque chose à sortir ; une cuisson vide n'attend pas de validation.
     $aValider = array_values(array_map(static fn ($c) => $c['id'], array_filter($K['plan'], static fn ($c) => $c['total']['pieces'] > 0)));
     $valides = array_values(array_intersect($aValider, array_map('strval', array_keys($K['faits']))));
-    $lignes = []; $T = ['reste' => 0.0, 'report' => 0.0, 'jete' => 0.0, 'aDeclarer' => 0.0, 'valeurJetee' => 0.0, 'valeurGardee' => 0.0, 'compte' => 0.0, 'comptes' => 0, 'ecart' => 0.0, 'valeurEcart' => 0.0];
+    // La dernière vente au comptoir de chaque produit : l'heure de son dernier ticket (ceux des
+    // commandes retirés), à la minute quand le relevé la porte. Ce que le produit vend d'habitude
+    // après (son profil, jusqu'à la dernière vente du magasin ou à son heure maximum de vente) :
+    // la vente perdue si la vitrine est vide (compté 0, sinon reste calculé 0) — épuisé.
+    $der = []; $fin = null;
+    if ($V !== null) { foreach ($V['h'] as $pid => $hs) { $hh = array_keys(array_filter($hs, static fn ($q) => $q > 0)); if ($hh !== []) { $der[(int) $pid] = (int) max($hh); $fin = max($fin ?? 0, (int) max($hh)); } } }
+    $M = $V !== null ? (array) ($V['minutes'] ?? []) : [];
+    $aLaMinute = static fn (int $pid, ?int $h) => $h !== null && isset($M[$pid]) && (int) substr((string) $M[$pid], 0, 2) === $h ? (string) $M[$pid] : null;
+    $finA = null; foreach ($der as $pid => $h) { if ($h === $fin && ($m = $aLaMinute($pid, $h)) !== null && $m > ($finA ?? '')) { $finA = $m; } }
+    $hMax = []; foreach ((array) ($K['pf']['heureMax'] ?? []) as $pid => $h) { $x = gpHeure($h); if ($x !== null) { $hMax[(int) $pid] = (float) $x; } }
+    $lignes = []; $T = ['reste' => 0.0, 'report' => 0.0, 'jete' => 0.0, 'aDeclarer' => 0.0, 'valeurJetee' => 0.0, 'valeurGardee' => 0.0, 'compte' => 0.0, 'comptes' => 0, 'ecart' => 0.0, 'valeurEcart' => 0.0, 'epuises' => 0];
     $pids = array_unique(array_merge(array_keys($P), array_map('intval', array_keys($K['stock0']))));
     foreach ($pids as $pid) {
         $p = $P[$pid] ?? null;
@@ -860,12 +872,18 @@ function ep_production_flux_cloture(): array
         $jet = $e !== null ? (float) ($e['jete'] ?? 0) : ($garde ? 0.0 : round($reste));
         if ($reste < 0.5 && $e === null && $s0 <= 0 && $sorti <= 0) { continue; }
         $prix = $p['prix'] ?? null;
+        $d = $der[$pid] ?? null;
+        $prof = $K['base']['produits'][$pid]['h'] ?? null;
+        $apres = ($d !== null && $fin !== null && is_array($prof)) ? gpSomme($prof, $d + 1, min($fin + 1, $hMax[$pid] ?? 24.0)) : 0.0;
+        $epuise = $apres >= 1 && ($co ?? $reste) < 0.5;
+        if ($epuise) { $T['epuises']++; }
         $lignes[] = ['pid' => $pid, 'nom' => $nom, 'groupe' => $p !== null ? $p['groupe'] : '', 'cat' => $p['cat'] ?? '', 'catCle' => $catCle, 'garde' => $garde, 'prix' => $prix,
             'report0' => round($s0, 1), 'sorti' => round($sorti, 1), 'sortiValide' => $p !== null && $toutValide, 'vendu' => round($vd, 1), 'jeteDeclare' => round($jd, 1),
             'reste' => round($reste, 1), 'report' => round($rep, 1), 'jete' => round($jet, 1), 'aDeclarer' => round(max(0.0, $jet), 1),
             // Compté : ce que l'équipe a vu en vitrine. L'écart au calcul, et le sorti qu'il laisse supposer
             // (compté + vendu + jeté déclaré − report d'hier) : la production réelle, quand la cuisson n'a pas été validée.
-            'compte' => $co, 'ecart' => $co !== null ? round($co - $reste, 1) : null, 'sortiReel' => $co !== null ? round(max(0.0, $co + $vd + $jd - $s0), 1) : null];
+            'compte' => $co, 'ecart' => $co !== null ? round($co - $reste, 1) : null, 'sortiReel' => $co !== null ? round(max(0.0, $co + $vd + $jd - $s0), 1) : null,
+            'derniere' => $d, 'derniereA' => $aLaMinute($pid, $d), 'venteApres' => round($apres, 1), 'epuise' => $epuise, 'heureMax' => isset($hMax[$pid]) ? gpHhmm($hMax[$pid]) : null];
         if ($co !== null) { $T['compte'] += $co; $T['comptes']++; $T['ecart'] += $co - $reste; if ($prix !== null) { $T['valeurEcart'] += ($co - $reste) * (float) $prix; } }
         $T['reste'] += $reste; $T['report'] += $rep; $T['jete'] += $jet; $T['aDeclarer'] += max(0.0, $jet);
         if ($prix !== null) { $T['valeurJetee'] += $jet * (float) $prix; $T['valeurGardee'] += $rep * (float) $prix; }
@@ -877,7 +895,8 @@ function ep_production_flux_cloture(): array
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'jourNom' => PF_JOURS[$K['jour']], 'lendemain' => pfDecale($date, 1),
         'lignes' => $lignes, 'totaux' => $T, 'enregistree' => $E !== null, 'le' => is_array($enr) ? ($enr['le'] ?? null) : null, 'par' => is_array($enr) ? ($enr['par'] ?? null) : null,
         'cuissonsValidees' => count($valides), 'cuissons' => count($aValider), 'ventesLues' => $V !== null, 'poubelleLue' => $invLu,
-        'source' => 'sorti : cuissons validées (sinon le plan) · vendu : tickets du panel · jeté déclaré : /shops/{id}/products/waste · compté : saisi à la clôture · le report devient le stock de départ du plan du lendemain'];
+        'derniereVente' => $fin, 'derniereVenteA' => $finA,
+        'source' => 'sorti : cuissons validées (sinon le plan) · vendu : tickets du panel · dernière vente : dernier ticket au comptoir (sans les commandes) · jeté déclaré : /shops/{id}/products/waste · compté : saisi à la clôture · le report devient le stock de départ du plan du lendemain'];
 }
 
 /** POST /production/flux/cloture — { shop, date, lignes: { pid: {report, jete, reste} }, par }. */
