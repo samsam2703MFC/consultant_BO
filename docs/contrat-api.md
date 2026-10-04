@@ -1514,6 +1514,34 @@ prend J−7 entière et `moment` est nul. Le dashboard pose le delta à côté d
 nombre de clients (tuile Clients, bureau et téléphone) et dit dessous « n
 clients à J−7 à la même heure (sam. 26/09) · ± x % ». Nul si J−7 n'est pas lu.
 
+### `GET /exploitation/jour` et `/exploitation/periode` — le calcul gardé (04/10/2026)
+
+Mesuré le 04/10/2026 : `/exploitation/jour` faisait ~45 appels au panel (tous les magasins, le
+classement réseau du dashboard en a besoin), 15 à 60 s à chaque affichage ; `/exploitation/periode`
+10 s. Le calcul se garde désormais dans `ceo_app_setting` (`exJour:{date}`,
+`exPer:{vue}:{date}` : `{le, ttl, r}`), pour tous les appelants :
+
+| Réponse | Fraîche pendant |
+|---|---|
+| jour, aujourd'hui | 3 min |
+| jour, hier | 15 min |
+| jour, avant | 1 h |
+| semaine ou mois en cours | 5 min |
+| semaine ou mois clos | 1 h |
+| une réponse du panel a manqué (« sans réponse ») | 1 min |
+| `indispo` | pas gardée |
+
+Chaque réponse porte `cache: {le, age, frais, relu}`. Périmée de moins de deux heures, sous
+PHP-FPM, elle part tout de suite (`frais: false, relu: true`) et le serveur la recalcule après
+la réponse ; le dashboard la relit alors une fois, trente secondes plus tard. Sinon le calcul
+se fait pendant l'appel, sous verrou MySQL : des appels simultanés attendent le même calcul.
+`?rafraichir=1` force un calcul neuf (le bouton « mettre à jour » du cockpit, qui affiche
+l'heure du calcul, `cache.le`). Le PDF du mois ne part jamais d'un calcul périmé. Le cron
+horaire des rapports recalcule le jour, la semaine et le mois d'aujourd'hui (`resultat` dans sa
+réponse). Les appels au panel partent en file, six de front : dès qu'une réponse arrive, la
+requête suivante part (`PanelApi::getParallele`), au lieu de paquets qui attendaient chacun
+leur appel le plus lent.
+
 ### `GET /exploitation/canaux` — par où passent les commandes : comptoir, click & collect, livraison
 
     ?shop=4&date=2026-10-02            un magasin, la journée

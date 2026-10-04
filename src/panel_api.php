@@ -142,19 +142,17 @@ final class PanelApi
         if ($tok === null) { return array_fill_keys(array_keys($paths), null); }
         // Quatre connexions de front, pas davantage : à douze, l'API amont a
         // laissé neuf requêtes sur douze sans réponse. Au-delà on n'accélère
-        // plus, on fabrique des trous. Les paquets s'enchaînent.
-        if (count($paths) > $front) {
-            $out = [];
-            foreach (array_chunk($paths, $front, true) as $lot) {
-                $out += self::getParallele($lot, $front, $timeout);
-            }
-            return $out;
-        }
+        // plus, on fabrique des trous. Une FILE, pas des paquets : dès qu'une
+        // réponse arrive, la requête suivante part (04/10/2026 — par paquets,
+        // chacun attendait son plus lent : 45 appels du Résultat prenaient 15 s).
         $base = self::config()['base'];
         $multi = curl_multi_init();
-        $hs = [];
-        foreach ($paths as $k => $p) {
-            $ch = curl_init($base . $p);
+        $file = array_keys($paths);
+        $cle = [];      // spl_object_id du handle => clé du chemin
+        $actifs = 0;
+        $lancer = static function () use (&$file, &$cle, &$actifs, $multi, $paths, $base, $tok, $timeout): void {
+            $k = array_shift($file);
+            $ch = curl_init($base . $paths[$k]);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
@@ -162,30 +160,37 @@ final class PanelApi
                 CURLOPT_CONNECTTIMEOUT => min(6, max(1, $timeout)),
             ]);
             curl_multi_add_handle($multi, $ch);
-            $hs[$k] = $ch;
-        }
-        $en = null;
+            $cle[spl_object_id($ch)] = $k;
+            $actifs++;
+        };
+        while ($actifs < max(1, $front) && $file) { $lancer(); }
+        $out = [];
         do {
             $st = curl_multi_exec($multi, $en);
-            if ($en) { curl_multi_select($multi, 1.0); }
-        } while ($en > 0 && $st === CURLM_OK);
-
-        $out = [];
-        foreach ($hs as $k => $ch) {
-            $raw  = curl_multi_getcontent($ch);
-            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_multi_remove_handle($multi, $ch);
-            curl_close($ch);
-            $res = is_string($raw) ? json_decode($raw, true) : null;
-            if ($code < 200 || $code >= 300) {
-                self::$lastError = 'GET ' . $paths[$k] . ' → HTTP ' . $code;
-                $out[$k] = null;
-                continue;
+            while (($info = curl_multi_info_read($multi)) !== false) {
+                $ch = $info['handle'];
+                $k = $cle[spl_object_id($ch)];
+                $raw  = curl_multi_getcontent($ch);
+                $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_multi_remove_handle($multi, $ch);
+                curl_close($ch);
+                $actifs--;
+                $res = is_string($raw) ? json_decode($raw, true) : null;
+                if ($code < 200 || $code >= 300) {
+                    self::$lastError = 'GET ' . $paths[$k] . ' → HTTP ' . $code;
+                    $out[$k] = null;
+                } else {
+                    $out[$k] = $res['data'] ?? $res;
+                }
+                if ($file) { $lancer(); }
             }
-            $out[$k] = $res['data'] ?? $res;
-        }
+            if ($actifs > 0 && curl_multi_select($multi, 1.0) === -1) { usleep(2000); }
+        } while ($actifs > 0 && $st === CURLM_OK);
         curl_multi_close($multi);
-        return $out;
+        // L'ordre des chemins fournis, comme avant.
+        $rang = [];
+        foreach (array_keys($paths) as $k) { $rang[$k] = array_key_exists($k, $out) ? $out[$k] : null; }
+        return $rang;
     }
 
     /** Jeton en cache, sinon connexion. `$force` ignore le cache (retry sur 401). */

@@ -7928,7 +7928,7 @@ class App {
       .catch(() => { this._clEnCours = null; this.D.classement[cle] = { indispo: true }; this.setState({ clMaj: cle }); });
   }
 
-  rjCharge(force){
+  rjCharge(force, frais){
     const cle = this.rjCle();
     if (!this.D.rjour) { this.D.rjour = {}; }
     // On ne VIDE pas le cache avant d'avoir la réponse : l'écran se serait
@@ -7939,7 +7939,9 @@ class App {
     if (this.D.rjour[cle] && !force) { return; }
     this._rjEnCours = cle;
     if (force) { this.setState({ rjMaj: 'en-cours' }); }
-    readOne('/exploitation/jour' + (cle ? '?date=' + encodeURIComponent(cle) : '')).then(d => {
+    // Le serveur garde le calcul quelques minutes (cache.le) : le bouton « mettre à jour » en demande un neuf.
+    const qs = [cle ? 'date=' + encodeURIComponent(cle) : '', frais ? 'rafraichir=1' : ''].filter(Boolean).join('&');
+    readOne('/exploitation/jour' + (qs ? '?' + qs : '')).then(d => {
       this._rjEnCours = null;
       const v = d || { erreur: true };
       this.D.rjour[cle] = v;
@@ -7947,7 +7949,7 @@ class App {
       // revenir sur « aujourd'hui » par la flèche rechargerait tout.
       if (v.date) { this.D.rjour[v.date] = v; }
       this._rjLuA = Date.now();
-      this.setState({ rjMaj: new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
+      this.setState({ rjMaj: (v.cache && v.cache.le ? new Date(v.cache.le) : new Date()).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
     });
   }
 
@@ -9528,7 +9530,7 @@ class App {
   rpCle(vue){ return (vue || this.state.rjOnglet || 'semaine') + '|' + (this.state.rpDate || ''); }
   /** La période lue une fois puis gardée — même règle que la journée : on ne
    *  vide pas le cache avant la réponse, l'ancienne étendue reste lisible. */
-  rpCharge(force, vueDemandee){
+  rpCharge(force, vueDemandee, frais){
     const vue = vueDemandee || this.state.rjOnglet || 'semaine', cle = this.rpCle(vue);
     if (!this.D.rper) { this.D.rper = {}; }
     if (!this._rpEnCours) { this._rpEnCours = {}; }
@@ -9537,12 +9539,12 @@ class App {
     this._rpEnCours[cle] = true;
     if (force) { this.setState({ rpMaj: 'en-cours' }); }
     readOne('/exploitation/periode?vue=' + vue
-      + (this.state.rpDate ? '&date=' + encodeURIComponent(this.state.rpDate) : '')).then(d => {
+      + (this.state.rpDate ? '&date=' + encodeURIComponent(this.state.rpDate) : '') + (frais ? '&rafraichir=1' : '')).then(d => {
       this._rpEnCours[cle] = false;
       const v = d || { erreur: true };
       this.D.rper[cle] = v;
       if (v.date) { this.D.rper[vue + '|' + v.date] = v; }
-      this.setState({ rpMaj: new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
+      this.setState({ rpMaj: (v.cache && v.cache.le ? new Date(v.cache.le) : new Date()).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
     });
   }
   /**
@@ -9755,7 +9757,7 @@ class App {
     common.rpMois = vue === 'mois'; common.rpSemaine = vue === 'semaine';
     common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null;
     common.rpMaj = S.rpMaj === 'en-cours' ? 'lecture…' : (S.rpMaj ? 'lu à ' + S.rpMaj : '');
-    common.rpRefresh = () => this.rpCharge(true);
+    common.rpRefresh = () => this.rpCharge(true, undefined, true);
     common.rpRegler = () => this.setState({ screen: 'budgetparam' });
     common.rpChargementTxt = vue === 'semaine' ? 'Lecture de la semaine…' : 'Lecture du mois…';
     if (!r || common.rpErreur) { return; }
@@ -10046,7 +10048,7 @@ class App {
     // Relire la journée : elle bouge pendant qu'on la regarde. Discret, à
     // côté des flèches — et il dit l'heure de la dernière lecture, sinon on
     // ne sait pas si l'on regarde 11 h ou 16 h.
-    common.rjRefresh = () => this.rjCharge(true);
+    common.rjRefresh = () => this.rjCharge(true, true);
     common.rjMaj = S.rjMaj === 'en-cours' ? 'lecture…' : (S.rjMaj ? 'lu à ' + S.rjMaj : '');
     common.rjAuj = jour < auj ? () => this.setState({ rjDate: null }) : null;
     common.rjEstAuj = !!r.estAujourdhui;
