@@ -122,7 +122,7 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab.suivi tr.sub td{border-top:none;padding-top:1px;padding-bottom:1px;font-size:11px}
 .pf-tab.suivi tr.sub td.lib{font:600 10px var(--font-ui);color:#777;text-align:right;white-space:nowrap;padding-right:6px}
 .pf-tab.suivi tr.sub td.h{font-weight:600;color:#222;background:#fff}
-.pf-tab.suivi tr.sub.moy td.h{font-weight:500;color:#5f574e}
+.pf-tab.suivi tr.sub.moy td.h{font-weight:600;color:#3d3730}
 .pf-tab.suivi tr.sub.moy td{padding-bottom:6px}
 .pf-tab.suivi tr.sub td.h.encours{background:#f4f1ec}
 .pf-tab.suivi tr.sub td.h.plus{color:#1f5e2e;background:#e3f0e6}

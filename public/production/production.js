@@ -33,7 +33,7 @@
     page: PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan',
     date: dateOk(q.get('date')) ? q.get('date') : AUJ,   // ramené à aujourd'hui hors du plan, au départ
     stores: [], data: {}, err: {}, enCours: {},
-    edit: null, editShop: null, editF: null, editFCle: null, simF: null, simEnCours: false, filtre: '', seulsOblig: false, alertes: false, vm: true, ecartsJ7: false,
+    edit: null, editShop: null, editF: null, editFCle: null, simF: null, simEnCours: false, filtre: '', seulsOblig: false, alertes: false, moyH: true, vcH: false, ecartsJ7: false,
     valid: null, clot: null, msg: null, envoi: false,
     cmd: {}, cmdOuv: {},   // les commandes du jour (magasin|date) et les produits dépliés (magasin|date|pid)
     par: (() => { try { return localStorage.getItem('pf.par') || ''; } catch (e) { return ''; } })(),
@@ -45,6 +45,8 @@
   const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
   const fN = n => n == null ? '—' : nf(Math.round(n));
   const fQ = n => n == null ? '—' : (Math.abs(n - Math.round(n)) < 0.05 ? nf(Math.round(n)) : nf(n, 1));
+  /** Un nombre entier, sans « −0 ». */
+  const fI = n => n == null ? '—' : nf(Math.round(n) + 0);
   const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
   const fP = n => n == null ? '—' : nf(n, n % 1 ? 1 : 0) + ' %';
   const fD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
@@ -364,30 +366,32 @@
     const P = (d.produits || []).filter(p => !S.alertes || p.verdict !== 'ok');
     const VERD = { rupture: ['ko', 'Rupture'], manque: ['att', 'Manque prévu'], trop: ['bleu', 'Trop produit'], ok: ['ok', 'Tient'] };
     // La moyenne vendue au comptoir à chaque heure, les semaines lues, sans les commandes.
-    const nMoy = d.base.lus, libMoy = `moyenne des ${nMoy} dernier${nMoy > 1 ? 's' : ''} ${esc(d.jourNom)}${nMoy > 1 ? 's' : ''}, hors commandes`;
+    const nMoy = d.base.lus, libDerniers = `${nMoy} dernier${nMoy > 1 ? 's' : ''} ${esc(d.jourNom)}${nMoy > 1 ? 's' : ''}`, libMoy = `moyenne des ${libDerniers}, hors commandes`;
     const libJours = `${nMoy} ${esc(d.jourNom)}${nMoy > 1 ? 's' : ''}`;
-    // Sous chaque produit, deux lignes de valeurs heure par heure : le vendu au comptoir et la moyenne.
+    // Sous chaque produit, la moyenne vendue à chaque heure en nombres entiers ; le vendu au comptoir sur demande.
     const sousLignes = p => {
-      if (!S.vm || !p.moy) { return ''; }
-      const cV = x => { const v = p.vc ? p.vc[x] : null, m = p.moy[x]; if (v == null) { return '<td class="c h"></td>'; } const enCours = x <= now && now < x + 1;
-        const cls = !enCours && m != null && m >= 2 ? (v >= m * 1.25 ? ' plus' : (v <= m * 0.75 ? ' moins' : '')) : '';
-        return `<td class="c h${cls}${enCours ? ' encours' : ''}" title="${x} h – ${x + 1} h · vendu au comptoir ${fQ(v)}${enCours ? ' jusqu’ici' : ''}${m != null ? ' · moyenne ' + fQ(m) : ''}">${v >= 0.05 ? fQ(v) : '<span class="mu">0</span>'}</td>`; };
-      const cM = x => { const m = p.moy[x]; return `<td class="c h${x <= now && now < x + 1 ? ' encours' : ''}">${m != null && m >= 0.05 ? fQ(m) : '<span class="mu">0</span>'}</td>`; };
-      return `<tr class="sub vc"><td class="lib">vendu comptoir</td><td></td><td></td><td class="n">${p.vcJ != null ? fQ(p.vcJ) : ''}</td><td></td>${H.map(cV).join('')}<td></td><td></td></tr>
-        <tr class="sub moy"><td class="lib" title="${libMoy}">moy. ${libJours}</td><td></td><td></td><td class="n">${fQ(p.moyJ)}</td><td></td>${H.map(cM).join('')}<td></td><td></td></tr>`;
+      if (!p.moy || (!S.moyH && !S.vcH)) { return ''; }
+      const enC = x => x <= now && now < x + 1;
+      const cV = x => { const v = p.vc ? p.vc[x] : null, m = p.moy[x]; if (v == null) { return '<td class="c h"></td>'; }
+        const cls = !enC(x) && m != null && m >= 2 ? (v >= m * 1.25 ? ' plus' : (v <= m * 0.75 ? ' moins' : '')) : '';
+        return `<td class="c h${cls}${enC(x) ? ' encours' : ''}" title="${x} h – ${x + 1} h · vendu au comptoir ${fI(v)}${enC(x) ? ' jusqu’ici' : ''}${m != null ? ' · moyenne ' + fI(m) : ''}">${Math.round(v) ? fI(v) : '<span class="mu">0</span>'}</td>`; };
+      const cM = x => { const m = p.moy[x]; return `<td class="c h${enC(x) ? ' encours' : ''}" title="${x} h – ${x + 1} h · ${libMoy}">${m != null && Math.round(m) ? fI(m) : '<span class="mu">0</span>'}</td>`; };
+      return (S.moyH ? `<tr class="sub moy"><td class="lib" title="${libMoy}">moy. ${libJours}</td><td></td><td></td><td class="n">${fI(p.moyJ)}</td><td></td>${H.map(cM).join('')}<td></td><td></td></tr>` : '')
+        + (S.vcH ? `<tr class="sub vc"><td class="lib">vendu comptoir</td><td></td><td></td><td class="n">${p.vcJ != null ? fI(p.vcJ) : ''}</td><td></td>${H.map(cV).join('')}<td></td><td></td></tr>` : '');
     };
     h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Surveillance heure par heure</span>
       <span class="pf-chips"><span class="pf-tag ko">${T.ruptures} en rupture</span><span class="pf-tag att">${T.manques} manque${T.manques > 1 ? 's' : ''} prévu${T.manques > 1 ? 's' : ''}</span><span class="pf-tag bleu">${T.trop} trop produit${T.trop > 1 ? 's' : ''}</span></span>
       <span class="pf-mini">sorti ${fN(T.sorti)} · vendu ${fN(T.vendu)} · en vitrine ${fN(T.stock)} · fin de journée projetée ${fN(T.finJour)}${d.ventesLues ? '' : ' · <b class="wa">tickets du jour pas encore lus</b>'}</span>
-      <label class="pf-mini"><input type="checkbox" data-vm="1"${S.vm ? ' checked' : ''}> vendu et moyenne par heure</label>
+      <label class="pf-mini"><input type="checkbox" data-moyh="1"${S.moyH ? ' checked' : ''}> moyenne par heure</label>
+      <label class="pf-mini"><input type="checkbox" data-vch="1"${S.vcH ? ' checked' : ''}> vendu comptoir par heure</label>
       <label class="pf-mini"><input type="checkbox" data-alertes="1"${S.alertes ? ' checked' : ''}> seulement les alertes</label></div>
       <div class="pf-defile"><table class="pf-tab suivi"><thead><tr><th>Produit</th><th class="n">Report</th><th class="n">Sorti</th><th class="n">Vendu</th><th class="n">En vitrine</th>${H.map(x => `<th class="c h${x <= now && now < x + 1 ? ' now' : ''}">${x} h</th>`).join('')}<th>Verdict</th><th>Conseil</th></tr></thead><tbody>
-      ${P.map(p => `<tr${S.vm && p.moy ? ' class="pr"' : ''}><td class="nom">${p.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(p.nom)}<small>${esc(p.cat)}</small></td><td class="n mu">${p.report ? fQ(p.report) : '—'}</td><td class="n">${fQ(p.sorti)}</td><td class="n">${fQ(p.vendu)}</td><td class="n q"><b>${fQ(p.stock)}</b>${p.stockMin ? `<small title="stock minimum de recuisson : sous ce seuil, la recuisson est conseillée">min. ${fN(p.stockMin)}</small>` : ''}</td>
-        ${H.map(x => { const c = (p.cases || []).find(y => y.h === x); if (!c) { return '<td class="c h"></td>'; } const cls = c.reel ? (c.q < -0.5 ? 'r neg' : 'r') : (c.q < -0.5 ? 'ko' : (c.q < Math.max(1, (c.prev || 0) * 0.25) ? 'att' : 'ok')); return `<td class="c h ${cls}${x <= now && now < x + 1 ? ' now' : ''}" title="${x} h – ${x + 1} h · ${c.reel ? 'stock réel en fin d’heure · vendu ' + fQ(c.v) : 'projeté · prévision ' + fQ(c.prev)}${p.moy && p.moy[x] != null ? ' · vendu en moyenne ' + fQ(p.moy[x]) + ' (' + libMoy + ')' : ''}">${fQ(c.q)}</td>`; }).join('')}
-        <td><span class="pf-tag ${VERD[p.verdict][0]}">${VERD[p.verdict][1]}</span>${p.manque ? `<small>à ${p.manque.h} h · −${fQ(p.manque.q)}</small>` : ''}</td>
-        <td>${p.conseil ? `recuire <b>${p.conseil.plaques != null ? pl(p.conseil.plaques, 'plaque') + ' (' + fN(p.conseil.plaques * p.conseil.plaque) + ')' : fN(p.conseil.pieces)}</b>` : (p.verdict === 'trop' ? `<span class="mu">${fQ(p.finJour)} en fin de journée</span>` : '')}</td></tr>${sousLignes(p)}`).join('') || `<tr><td colspan="${7 + H.length}" class="mu">${S.alertes ? 'Aucune alerte.' : 'Rien à suivre : aucune cuisson planifiée ce jour.'}</td></tr>`}</tbody></table></div>
+      ${P.map(p => `<tr${(S.moyH || S.vcH) && p.moy ? ' class="pr"' : ''}><td class="nom">${p.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(p.nom)}<small>${esc(p.cat)}</small></td><td class="n mu">${p.report ? fI(p.report) : '—'}</td><td class="n">${fI(p.sorti)}</td><td class="n">${fI(p.vendu)}</td><td class="n q"><b>${fI(p.stock)}</b>${p.stockMin ? `<small title="stock minimum de recuisson : sous ce seuil, la recuisson est conseillée">min. ${fN(p.stockMin)}</small>` : ''}</td>
+        ${H.map(x => { const c = (p.cases || []).find(y => y.h === x); if (!c) { return '<td class="c h"></td>'; } const cls = c.reel ? (c.q < -0.5 ? 'r neg' : 'r') : (c.q < -0.5 ? 'ko' : (c.q < Math.max(1, (c.prev || 0) * 0.25) ? 'att' : 'ok')); return `<td class="c h ${cls}${x <= now && now < x + 1 ? ' now' : ''}" title="${x} h – ${x + 1} h · ${c.reel ? 'stock réel en fin d’heure · vendu ' + fI(c.v) : 'projeté · prévision ' + fI(c.prev)}${p.moy && p.moy[x] != null ? ' · vendu en moyenne ' + fI(p.moy[x]) + ' (' + libMoy + ')' : ''}">${fI(c.q)}</td>`; }).join('')}
+        <td><span class="pf-tag ${VERD[p.verdict][0]}">${VERD[p.verdict][1]}</span>${p.manque ? `<small>à ${p.manque.h} h · −${fI(p.manque.q)}</small>` : ''}</td>
+        <td>${p.conseil ? `recuire <b>${p.conseil.plaques != null ? pl(p.conseil.plaques, 'plaque') + ' (' + fN(p.conseil.plaques * p.conseil.plaque) + ')' : fN(p.conseil.pieces)}</b>` : (p.verdict === 'trop' ? `<span class="mu">${fI(p.finJour)} en fin de journée</span>` : '')}</td></tr>${sousLignes(p)}`).join('') || `<tr><td colspan="${7 + H.length}" class="mu">${S.alertes ? 'Aucune alerte.' : 'Rien à suivre : aucune cuisson planifiée ce jour.'}</td></tr>`}</tbody></table></div>
       <div class="pf-leg"><span><i class="r"></i>stock réel en fin d’heure (rouge : plus vendu que sorti — une cuisson non validée ou un report non compté)</span><span><i class="ok"></i>projeté, tient</span><span><i class="att"></i>projeté, sous le quart de la vente de l’heure</span><span><i class="ko"></i>projeté, manque (sous le stock minimum de recuisson quand il est réglé)</span><span><i class="now"></i>l’heure en cours</span></div>
-      ${S.vm ? `<div class="pf-leg"><span><b>vendu comptoir</b> : les pièces vendues dans l’heure, sans les commandes</span><span><b>moy. ${libJours}</b> : la ${libMoy}</span><span><i class="plus"></i>au moins 25 % au-dessus de la moyenne</span><span><i class="moins"></i>au moins 25 % en dessous</span></div>` : ''}
+      ${S.moyH || S.vcH ? `<div class="pf-leg">${S.moyH ? `<span><b>moy. ${libJours}</b> : les pièces vendues en moyenne à cette heure-là les ${libDerniers}, hors commandes, arrondies à l’unité</span>` : ''}${S.vcH ? `<span><b>vendu comptoir</b> : les pièces vendues dans l’heure, sans les commandes</span><span><i class="plus"></i>au moins 25 % au-dessus de la moyenne</span><span><i class="moins"></i>au moins 25 % en dessous</span>` : ''}</div>` : ''}
       <div class="pf-pied mu">${esc(d.source)}</div></div>`;
     return h;
   }
@@ -718,7 +722,8 @@
     on('[data-commeprevu]', 'click', () => { const d = S.data[cle()]; const c = d.cuissons.find(x => x.id === S.valid.cuisson); c.lignes.forEach(l => { S.valid.lignes[l.pid] = l.sortie; }); rendre(); });
     on('[data-validok]', 'click', () => enregistrerValid());
     on('[data-alertes]', 'change', c => { S.alertes = c.checked; rendre(); });
-    on('[data-vm]', 'change', c => { S.vm = c.checked; rendre(); });
+    on('[data-moyh]', 'change', c => { S.moyH = c.checked; rendre(); });
+    on('[data-vch]', 'change', c => { S.vcH = c.checked; rendre(); });
     // Clôture
     const ecart = pid => { const d = S.data[cle()]; const l = d.lignes.find(x => String(x.pid) === String(pid)); const v = S.clot.l[pid]; const td = $.querySelector(`[data-ce="${pid}"]`); if (!l || !td) { return; } const E = cloEcart(l, v); td.className = E.cls; td.textContent = E.txt; td.title = E.titre;
       const dv = $.querySelector(`[data-cd="${pid}"]`); if (dv) { dv.innerHTML = cloDer(l, v, d); } };
