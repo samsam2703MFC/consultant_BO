@@ -687,12 +687,18 @@ function ep_production_flux_suivi(): array
             'pieces' => $c['total']['pieces'], 'fait' => isset($K['faits'][$c['id']]) ? round(array_sum(array_map('floatval', $K['faits'][$c['id']])), 1) : null,
             'lignes' => array_map(static fn ($l) => ['pid' => $l['pid'], 'nom' => $l['nom'], 'groupe' => $l['groupe'], 'cat' => $l['cat'], 'sortie' => $l['sortie'], 'plaques' => $l['plaques'], 'plaque' => $l['plaque'], 'fait' => $l['fait'], 'oblig' => !empty($l['oblig'])], $c['lignes'])];
     }
-    foreach ($suivi['produits'] as &$p) { $p['jete'] = round((float) ($jete[$p['pid']] ?? 0), 1); } unset($p);
+    // La moyenne vendue au comptoir heure par heure sur les semaines lues, hors commandes (demande du 04/10/2026).
+    foreach ($suivi['produits'] as &$p) {
+        $p['jete'] = round((float) ($jete[$p['pid']] ?? 0), 1);
+        $m = (array) ($K['base']['produits'][$p['pid']]['moy'] ?? []);
+        $p['moy'] = []; foreach ($suivi['heures'] as $h) { $p['moy'][(string) $h] = round((float) ($m[$h] ?? 0), 1); }
+        $p['moyJ'] = round(array_sum(array_map('floatval', $m)), 1);
+    } unset($p);
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'maintenant' => $date === $auj ? date('H:i') : null, 'jourNom' => PF_JOURS[$K['jour']],
         'cuissons' => $C, 'heures' => $suivi['heures'], 'produits' => $suivi['produits'], 'totaux' => $suivi['totaux'],
         'ventesLues' => $V !== null, 'securite' => $R,
-        'base' => ['semaines' => $K['sem'], 'lus' => count($K['base']['lus']), 'jours' => count($K['base']['jours']), 'manquants' => $K['base']['manquants']],
-        'source' => 'sorti : cuissons validées en magasin (le plan tant qu’une cuisson n’est pas validée) · vendu : tickets du panel heure par heure · projeté : moyenne des ' . $K['sem'] . ' derniers ' . PF_JOURS[$K['jour']] . 's'];
+        'base' => ['semaines' => $K['sem'], 'lus' => count($K['base']['lus']), 'jours' => count($K['base']['jours']), 'manquants' => $K['base']['manquants'], 'joursLus' => $K['base']['lus'], 'commandesRetirees' => !empty($K['base']['commandes']['lues'])],
+        'source' => 'sorti : cuissons validées en magasin (le plan tant qu’une cuisson n’est pas validée) · vendu : tickets du panel heure par heure · moyenne : vendu au comptoir des ' . count($K['base']['lus']) . ' derniers ' . PF_JOURS[$K['jour']] . 's lus, sans les commandes · projeté : la prévision du plan'];
 }
 
 /**
