@@ -583,3 +583,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-03T20:21:42Z production chauffe par four
 2026-10-04T05:15:08Z production : poids de J−7 dans la prévision (40 %, réglable)
 2026-10-04T05:28:41Z production : commandes d'un produit au clic (client, heure de retrait)
+2026-10-04T05:31:14Z production : nom du client réduit aussi quand il est entier dans le prénom
