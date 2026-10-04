@@ -540,17 +540,20 @@ function pfClientNom(array $o, bool $complet): string
         foreach ($ks as $k) { $v = $a[$k] ?? null; if (is_string($v) && trim($v) !== '') { return trim(preg_replace('/\s+/u', ' ', $v)); } }
         return '';
     };
+    // Tout en capitales : écrit comme un nom (demande du 04/10/2026, « SASKIA B. »).
+    $casse = static fn (string $x): string => $x !== '' && mb_strtoupper($x) === $x && mb_strtolower($x) !== $x ? mb_convert_case(mb_strtolower($x), MB_CASE_TITLE) : $x;
     $soc = $lis($c, ['company_name', 'company', 'business_name']);
-    if ($soc !== '') { return $soc; }
     $pre = $lis($c, ['name', 'first_name', 'firstname', 'firstName', 'given_name']);
     $nom = $lis($c, ['surname', 'last_name', 'lastname', 'lastName', 'family_name']);
+    // La société : pour un client pro, ou quand elle est le seul nom connu. Un particulier qui a
+    // aussi rempli « société » (mesuré à Halle, Corbais, Sombreffe) garde son prénom et son initiale.
+    $pro = (is_array($c) && !empty($c['is_b2b'])) || ($o['id_client_department'] ?? null) !== null;
+    if ($soc !== '' && ($pro || ($pre === '' && $nom === ''))) { return $casse($soc); }
     if ($pre === '' && $nom === '') {
         $tout = is_string($c) ? trim(preg_replace('/\s+/u', ' ', $c)) : $lis($c, ['display_name', 'full_name']);
         if ($tout === '') { return ''; }
         $m = explode(' ', $tout); $pre = (string) array_shift($m); $nom = implode(' ', $m);
     }
-    // Tout en capitales : écrit comme un nom (demande du 04/10/2026, « SASKIA B. »).
-    $casse = static fn (string $x): string => $x !== '' && mb_strtoupper($x) === $x && mb_strtolower($x) !== $x ? mb_convert_case(mb_strtolower($x), MB_CASE_TITLE) : $x;
     $pre = $casse($pre); $nom = $casse($nom);
     if ($complet) { return trim($pre . ' ' . $nom); }
     // Le nom entier rangé dans le seul prénom (mesuré à Corbais) : le premier mot, puis l'initiale du reste.
@@ -874,14 +877,20 @@ function ep_production_flux_sonde(): array
     };
     $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $date, 25);
     $L = analyseListe(is_array($r['corps'] ?? null) ? $r['corps'] : []);
-    $cc = []; foreach ($L as $o) { if (is_array($o) && is_array($o['client'] ?? null)) { $cc += array_flip(array_filter(array_keys($o['client']), 'is_string')); } }
-    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'champsClient' => array_keys($cc), 'commandes' => [], 'routes' => [],
+    $cc = []; $sn = [];
+    foreach ($L as $o) {
+        if (!is_array($o) || !is_array($o['client'] ?? null)) { continue; }
+        $cc += array_flip(array_filter(array_keys($o['client']), 'is_string'));
+        $f = []; foreach (['name', 'surname', 'company_name', 'is_b2b'] as $k) { $v = $o['client'][$k] ?? null; if ($v !== null && $v !== '' && $v !== false && $v !== 0 && $v !== '0') { $f[] = $k; } }
+        $k = implode('+', $f) ?: 'rien'; $sn[$k] = ($sn[$k] ?? 0) + 1;
+    }
+    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'champsClient' => array_keys($cc), 'sourcesNom' => $sn, 'commandes' => [], 'routes' => [],
         'liste' => ['n' => count($L), 'enveloppe' => is_array($r['corps'] ?? null) && !array_is_list($r['corps']) ? array_keys($r['corps']) : 'liste',
             'meta' => is_array($r['corps'] ?? null) && !array_is_list($r['corps']) ? array_map(static fn ($v) => is_array($v) ? array_slice($v, 0, 8, true) : $v, array_diff_key($r['corps'], ['data' => 1, 'items' => 1])) : null,
             'retraitMin' => $L !== [] ? min(array_map(static fn ($o) => substr((string) ($o['pick_up_datetime'] ?? '9'), 0, 10), $L)) : null,
             'retraitMax' => $L !== [] ? max(array_map(static fn ($o) => substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10), $L)) : null,
             'avecTicket' => count(array_filter($L, static fn ($o) => (int) ($o['id_transaction'] ?? 0) > 0))]];
-    if (!empty($_GET['liste'])) { return ['shop' => $sid, 'date' => $date, 'liste' => $out['liste'], 'champsClient' => $out['champsClient']]; }
+    if (!empty($_GET['liste'])) { return ['shop' => $sid, 'date' => $date, 'liste' => $out['liste'], 'champsClient' => $out['champsClient'], 'sourcesNom' => $out['sourcesNom']]; }
     $ids = []; $tick = [];
     foreach ($L as $o) {
         if (!is_array($o) || substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10) !== $date) { continue; }
