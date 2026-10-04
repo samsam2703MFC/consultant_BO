@@ -549,6 +549,9 @@ function pfClientNom(array $o, bool $complet): string
         if ($tout === '') { return ''; }
         $m = explode(' ', $tout); $pre = (string) array_shift($m); $nom = implode(' ', $m);
     }
+    // Tout en capitales : écrit comme un nom (demande du 04/10/2026, « SASKIA B. »).
+    $casse = static fn (string $x): string => $x !== '' && mb_strtoupper($x) === $x && mb_strtolower($x) !== $x ? mb_convert_case(mb_strtolower($x), MB_CASE_TITLE) : $x;
+    $pre = $casse($pre); $nom = $casse($nom);
     if ($complet) { return trim($pre . ' ' . $nom); }
     // Le nom entier rangé dans le seul prénom (mesuré à Corbais) : le premier mot, puis l'initiale du reste.
     if ($nom === '' && str_contains($pre, ' ')) { [$pre, $nom] = explode(' ', $pre, 2); }

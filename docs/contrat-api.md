@@ -625,9 +625,9 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   (`ppTk:{shop}`). Le client se relit au panel à chaque appel et ne s'écrit nulle part : une société
   garde son nom ; une personne sort en « Prénom N. », en entier seulement quand l'API exige une
   session (`nomsComplets`) ; jamais de téléphone ni d'e-mail. Panel muet : les commandes du plan
-  sans client (`clientsLus: false`). L'écran du plan les lit au premier produit déplié : un clic
-  sur un produit commandé (le jour ou à J−7) ouvre sous sa ligne les deux listes, heure de
-  retrait, client, canal, pièces de ce produit, n° et état.
+  sans client (`clientsLus: false`). Un nom tout en capitales sort écrit comme un nom. L'écran du
+  plan les lit au premier produit déplié : un clic sur un produit commandé ce jour-là ouvre sous
+  sa ligne l'heure de retrait, le client et la quantité de ce produit, rien d'autre.
 - **Validation** : le même enregistrement que l'écran historique (`ppFait:{shop}:{date}`, `c[cuisson]`),
   plus qui et quand (`v[cuisson] = {le, par}`).
 - **Clôture** : reste = report d'hier + sorti − vendu − jeté déjà déclaré au panel ; `report`
