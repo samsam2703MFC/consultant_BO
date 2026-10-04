@@ -164,6 +164,7 @@ function route(string $method, string $path): mixed
             $path === '/production/flux/suivi'         => ep_production_flux_suivi(),
             $path === '/production/flux/cloture'       => ep_production_flux_cloture(),
             $path === '/production/flux/sonde'         => ep_production_flux_sonde(),
+            $path === '/production/flux/commandes'     => ep_production_flux_commandes(),
             $path === '/production/flux/fours'         => ep_production_flux_fours(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
             $path === '/scoring'                       => ep_scoring(),
