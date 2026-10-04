@@ -588,3 +588,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-04T05:50:55Z production : nom du client particulier même avec une société remplie
 2026-10-04T06:00:47Z production : heure maximum de vente par produit
 2026-10-04T06:07:05Z production : heure maximum de vente posée à part
+2026-10-04T06:55:14Z dashboard téléphone en trois onglets : exploitation, contrôle, semaine
