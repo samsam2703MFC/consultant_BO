@@ -645,6 +645,40 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   (gardé pour demain) devient le stock de départ du plan du lendemain (`pfCloture:{shop}:{date}`).
   Rien n'est écrit au panel : ce qui se jette est à encoder en caisse.
 
+### `/exploitation/semaine-jours` — la semaine jour par jour (dashboard téléphone, onglet Semaine)
+
+Demande du 04/10/2026 : le dashboard magasin au téléphone passe en trois onglets, Exploitation,
+Contrôle et Semaine (maquette A « les feux », `docs/maquettes/dashboard-3-onglets/`). L'onglet
+Semaine montre un damier jour × mesure. Le chiffre, l'objectif et le résultat de chaque jour
+viennent déjà de `/exploitation/jour?date=` (`magasins[].semaine`) ; cette route ajoute ce qui ne se
+lit que jour par jour.
+
+`GET /exploitation/semaine-jours?shop=4&date=YYYY-MM-DD` — la semaine (lundi → dimanche) de la date :
+
+```json
+{ "shop": 4, "du": "2026-09-28", "au": "2026-10-04",
+  "jours": [ { "date": "2026-10-03", "futur": false, "aujourdhui": false,
+               "controles": { "rendus": 8, "total": 11, "notes": 7, "nc": 0, "aControler": 1,
+                              "manquent": ["Photo du comptoir - Biscuiterie", "…"] },
+               "poubelle": { "pieces": 76, "cout": 36.2 } }, … ] }
+```
+
+- **Contrôles** : les tâches obligatoires du panel ce jour-là (`/pwa/tasks?date=&shop=`, une tâche
+  dont le panel ne dit pas qu'elle est facultative compte), comptées comme l'onglet Contrôle :
+  rendues (tout sauf « non rendue »), notées, non conformes (note sous le seuil, 4), à contrôler,
+  et les noms de celles qui manquent. Gardées cinq minutes pour aujourd'hui, une demi-heure pour un
+  jour passé (`dsCtrl:{shop}:{date}`) : les notes du consultant arrivent après coup.
+- **Poubelle** : les pièces jetées déclarées et leur coût net, comme `/exploitation/invendus` sur un
+  jour (mêmes caches `inv:{shop}:{d}:{d}`, les jours manquants lus au panel en parallèle).
+- Les jours à venir sont rendus vides (`futur: true`, `null`), sans appel au panel ; un jour dont le
+  panel n'a jamais répondu : `controles: null`.
+
+Côté écran, les couleurs suivent des seuils réunis dans `MA` (public/dashboard/dashboard.js) : chiffre
+≥ 100 % de l'objectif vert, ≥ 90 % orange ; résultat ≥ 15 % des ventes vert, ≥ 5 % orange ; matière
+≤ 35 % vert, ≤ 45 % orange ; main-d'œuvre ≤ 20 % vert, ≤ 25 % orange ; poubelle ≤ 1,5 % du chiffre
+vert, ≤ 3 % orange ; contrôles tous rendus vert, ≥ 80 % orange ; clients ≥ 95 % de J−7 vert, ≥ 85 %
+orange. Une journée en cours ne passe pas au rouge : gris tant qu'elle n'est pas finie.
+
 ### `/exploitation/invendus` — les invendus et la poubelle
 
 `GET /exploitation/invendus?shop=4&date=2026-10-02` (le jour), `?shop=4&du=&au=` (la semaine, le mois), sans `shop` le

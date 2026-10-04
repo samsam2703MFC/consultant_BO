@@ -59,6 +59,7 @@ require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/invendus.php';
+require __DIR__ . '/../../src/dashboard_semaine.php';
 require __DIR__ . '/../../src/production_plan.php';
 require __DIR__ . '/../../src/production_flux.php';
 require __DIR__ . '/../../src/croisements.php';
@@ -158,6 +159,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
             $path === '/exploitation/invendus'         => ep_exploitation_invendus(),
+            $path === '/exploitation/semaine-jours'    => ep_exploitation_semaine_jours(),
             $path === '/production/plan'               => ep_production_plan(),
             $path === '/production/flux/params'        => ep_production_flux_params(),
             $path === '/production/flux/plan'          => ep_production_flux_plan(),

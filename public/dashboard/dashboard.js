@@ -28,6 +28,7 @@
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     a4: null, a4Vise: false,
+    mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -127,6 +128,12 @@
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
     if (estMobile() && S.vue === 'jour') { lireAux('sem|' + bornesSemaine()[0], '/exploitation/periode?vue=semaine&date=' + S.date, force); }
+    // L'onglet Semaine du téléphone : le résultat de chaque jour (porté par la lecture du jour) et,
+    // jour par jour, les contrôles et la poubelle.
+    if (estMobile() && S.vue === 'semaine') {
+      lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force);
+      lireAux(cleSemJ(), '/exploitation/semaine-jours?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force);
+    }
     // Les commandes clients et les livraisons : une seule lecture, elle porte
     // les deux et ne dépend pas de la période regardée.
     if (estMobile()) { lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force); }
@@ -155,6 +162,7 @@
     const u = new URL(location.href);
     u.searchParams.set('shop', S.shop); u.searchParams.set('vue', S.vue); u.searchParams.set('date', S.date);
     if (EMBED) { u.searchParams.set('onglet', S.ppOnglet); }
+    if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
     history.replaceState(null, '', u.toString());
   }
 
@@ -891,81 +899,260 @@
     setTimeout(() => { n.remove(); }, 3600);
   }
 
-  function rendMobile(m, d) {
-    const T = mobTaches();
-    const v = valeurMagasin();
-    const E = stockEtat();
-    const ca = m ? (m.ca != null ? m.ca : m.realise) : null;
-    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
-      <div><div class="t">${esc(nomShop())}</div><div class="d">${esc(libPeriode())}</div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
-      <div class="mb-sc">`;
-    if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
-    h += '<div class="mb-mur">';
-    h += murR([m ? murPeriode(m) : murC('Chiffre d’affaires', '…', 'lecture en cours…')], true);
-    h += murClassement(m, d);
-    h += rendCQ(true);
-    h += murR([
-      murC('Clients', m && m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', [j7Texte(m), m && m.panier ? 'panier ' + fU(m.panier) : ''].filter(Boolean).join(' · ')),
-      murC('Résultat', m && m.net != null ? fS(m.net) : '—', m && m.netPct != null ? fPS(m.netPct) + ' des ventes' : 'P&amp;L incomplet',
-        m && m.net != null ? (m.net >= 0 ? 'ok' : 'ko') : '')
-    ]);
-    h += murR([
-      murC('Matière', m ? fP(m.coutMatierePct) : '—', m && m.margeBrutePct != null ? 'marge brute ' + fP(m.margeBrutePct) : '',
-        m && m.coutMatierePct > 35 ? 'wa' : ''),
-      murC('Main-d’œuvre', m && m.labourPct != null ? fP(m.labourPct) : '—', ca != null ? 'des ventes' : '')
-    ]);
-    const X = splitDe(m);
-    if (X) {
-      h += murR([
-        murC('Comptoir', X.complet ? fK(m.caComptoir) : '—', X.complet ? X.sC : esc(X.manque)),
-        S.vue === 'jour' ? murPro() : murC('Clients pro', X.lu ? fK(m.caPro) : '—', X.lu ? X.sP : '', 'pro')
-      ]);
+  /* --- Le téléphone en trois onglets (demande du 04/10/2026, maquette A « les feux ») -----------
+   * Exploitation (le chiffre, les marges, les clients) et Contrôle (les photos, les contrôles, le
+   * stock, les commandes) lisent le jour ; Semaine lit la semaine, jour par jour, en damier.
+   * Chaque tuile porte une pastille : vert, orange, rouge, gris tant qu'on ne peut pas juger (une
+   * journée en cours, une lecture qui n'est pas revenue). La barre du bas porte la couleur de
+   * chaque onglet : le premier coup d'œil lit les couleurs, le second les seules tuiles qui ne
+   * sont pas vertes. La réclamation fournisseur devient un bouton de l'onglet Contrôle.
+   * Les seuils sont réunis ici. */
+  const MA = {
+    ca: p => p == null ? 'n' : (p >= 100 ? 'v' : (p >= 90 ? 'o' : 'r')),             // chiffre face à l'objectif, %
+    net: p => p == null ? 'n' : (p >= 15 ? 'v' : (p >= 5 ? 'o' : 'r')),               // résultat, % des ventes
+    mat: p => p == null ? 'n' : (p <= 35 ? 'v' : (p <= 45 ? 'o' : 'r')),              // matière, % des ventes
+    mo: p => p == null ? 'n' : (p <= 20 ? 'v' : (p <= 25 ? 'o' : 'r')),               // main-d'œuvre, % des ventes
+    poub: p => p == null ? 'n' : (p <= 1.5 ? 'v' : (p <= 3 ? 'o' : 'r')),             // poubelle, % du chiffre
+    ctrl: (r, t) => !t ? 'n' : (r >= t ? 'v' : (r / t >= 0.8 ? 'o' : 'r')),           // contrôles rendus
+    cli: (n, j7) => n == null || !j7 ? 'n' : (n >= 0.95 * j7 ? 'v' : (n >= 0.85 * j7 ? 'o' : 'r')),
+  };
+  /** La poubelle du jour regardé, même depuis l'onglet Semaine (qui lit celle de la semaine). */
+  function maInvJour() { const I = S.aux['inv|' + S.shop + '|' + S.date]; return I && !I.error ? I : null; }
+  const maPire = L => L.includes('r') ? 'r' : (L.includes('o') ? 'o' : (L.includes('v') ? 'v' : 'n'));
+  const maPl = (n, mot) => fN(n) + ' ' + mot + (Math.abs(n) > 1 ? 's' : '');
+  const maOrd = n => n === 1 ? '1<sup>er</sup>' : n + '<sup>e</sup>';
+  /** Le rang du magasin dans le réseau sur une mesure (le plus haut d'abord) : [rang, nombre] ou null. */
+  function maRang(d, m, k) {
+    if (!d || !m || m[k] == null) { return null; }
+    const v = (d.magasins || []).filter(x => x.ouvert !== false && x[k] != null && isFinite(x[k])).map(x => x[k]).sort((a, b) => b - a);
+    return v.length >= 2 ? [v.findIndex(x => x <= m[k]) + 1, v.length] : null;
+  }
+  const maRangPt = r => !r ? 'n' : (r[0] <= Math.ceil(r[1] / 2) ? 'v' : (r[0] < r[1] ? 'o' : 'r'));
+  /** Les petites barres : la hauteur dit la valeur, la plus haute en couleur. */
+  function maBarres(L, plafond) {
+    const mx = plafond || Math.max(1, ...L.map(x => x.v || 0));
+    return `<div class="ma-bars">${L.map(x => `<div><i class="${x.c || ''}" style="height:${x.v == null ? 3 : Math.max(3, Math.round(Math.min(1, x.v / mx) * 30))}px"></i>${esc(x.l)}</div>`).join('')}</div>`;
+  }
+  /** Une tuile : {k, pt, v, s, w (pleine largeur), ouvre (le tiroir), attr, apres, ouvert, tir()}. */
+  function maTuile(o) {
+    return `<div class="ma-t${o.w ? ' w' : ''}${o.pt === 'r' ? ' r' : (o.pt === 'o' ? ' o' : '')}"${o.ouvre ? ` data-${o.ouvre}="1" role="button"` : ''}${o.attr || ''}>`
+      + `<div class="k"><i class="pt p${o.pt || 'n'}"></i>${o.k}</div><div class="v">${o.v}</div>${o.s ? `<div class="s">${o.s}</div>` : ''}${o.apres || ''}`
+      + `${o.ouvre || o.attr ? `<span class="ch">${o.ouvert ? '▴' : '›'}</span>` : ''}</div>`
+      + (o.ouvert && o.tir ? `<div class="ma-tir">${o.tir()}</div>` : '');
+  }
+  const maGrille = T => `<div class="ma-g">${T.map(maTuile).join('')}</div>`;
+  /** La ligne du haut : combien de tuiles ne sont pas vertes, lesquelles, et toutes les pastilles. */
+  function maVerdict(T, regler) {
+    const pb = T.filter(t => t.pt === 'r' || t.pt === 'o'), n = pb.length;
+    const cls = pb.some(t => t.pt === 'r') ? 'ko' : (n ? 'wa' : 'ok');
+    const titre = n ? maPl(n, 'point').replace(/^\d+ /, '') + (regler ? ' à régler' : ' à surveiller') : 'tout est au vert';
+    const vert = T.filter(t => t.pt === 'v').length, gris = T.filter(t => !t.pt || t.pt === 'n').length;
+    const em = n ? pb.map(t => t.court || t.k).join(' · ') : (vert + ' au vert' + (gris ? ' · ' + gris + ' pas encore jugé' + (gris > 1 ? 's' : '') : ''));
+    return `<div class="ma-v"><span class="n ${cls}">${n || '✓'}</span><span class="t">${titre}<em>${em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
+  }
+
+  /** Exploitation : le jour, ce qu'il rapporte. */
+  function maTuilesExp(m, d) {
+    if (!m) { return null; }
+    const auj = S.date === AUJ, obj = m.objectifJour, att = obj ? 100 * m.ca / obj : null;
+    const enCours = auj && m.projectionPart != null && m.projectionPart < 100;
+    const proj = enCours && m.projectionAtteinte != null ? 100 * m.projectionAtteinte : null;
+    const CJ = clientsJour(m), cl = CJ ? Math.abs(CJ.n) : null;
+    const I = maInvJour();
+    const rc = maRang(d, m, 'ca'), rt = maRang(d, m, 'tickets'), rp = maRang(d, m, 'panier');
+    const C = S.aux['canaux|' + S.shop + '|' + S.date], web = C && !C.error && C.jour ? C.jour.webshop : null;
+    const H = Array.isArray(m.heures) ? m.heures : [];
+    const pic = H.reduce((a, x) => (x.ca || 0) > ((a && a.ca) || 0) ? x : a, null);
+    const T = [];
+    T.push({ k: 'Chiffre d’affaires' + (obj && m.ca >= obj ? ' · objectif atteint' : ''), court: 'le chiffre', w: true,
+      pt: att != null && att >= 100 ? 'v' : (enCours ? MA.ca(proj) : (auj ? 'n' : MA.ca(att))),
+      v: fE(m.ca) + (obj ? ` <small class="${m.ca >= obj ? 'ok' : 'ko'}">${fS(m.ca - obj)}</small>` : ''),
+      s: obj ? `objectif ${fE(obj)} · ${fP(att)}` + (proj != null && m.ca < obj ? ` · projection ${fK(m.projection)}` : '')
+        + (cl ? ` · ${fN(cl)} client${cl > 1 ? 's' : ''}${CJ.comptoir ? ' comptoir' : ''} ${CJ.n <= 0 ? 'd’avance' : 'de moins'}` : '') : 'pas d’objectif du jour',
+      apres: obj ? murJauge(att, att >= 100 ? '#2d7a3e' : '') : '' });
+    T.push({ k: 'Résultat', court: 'le résultat', pt: auj || m.net == null ? 'n' : MA.net(m.netPct),
+      v: m.net != null ? fS(m.net) : '—', s: m.netPct != null ? fPS(m.netPct) + ' des ventes' + (auj ? ' · la journée continue' : '') : 'P&amp;L incomplet' });
+    T.push({ k: 'Clients', court: 'les clients', pt: MA.cli(m.tickets, m.j7 && m.j7.tickets),
+      v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', m.panier ? 'panier ' + fU(m.panier) : ''].filter(Boolean).join(' · ') });
+    T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct),
+      s: 'seuil 35 %' + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
+    T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct), v: m.labourPct != null ? fP(m.labourPct) : '—',
+      s: m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : 'des ventes' });
+    T.push({ k: 'Invendus', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true),
+      pt: !I || !I.lu ? 'n' : (!I.declare ? (auj ? 'n' : 'o') : MA.poub(m.ca ? 100 * I.cout / m.ca : null)),
+      v: !I ? '…' : (I.declare ? fE(I.cout) : '0'), s: !I ? 'lecture de la poubelle…' : (!I.lu ? 'panel muet' : (I.declare ? maPl(I.pieces, 'pièce') + (m.ca ? ' · ' + fP(100 * I.cout / m.ca) + ' du chiffre' : '') : (auj ? 'se déclare à la fermeture' : 'rien déclaré'))) });
+    T.push({ k: 'Réseau', court: 'le rang', ouvre: 'rgdrop', ouvert: S.rgOuvert, tir: () => murClassement(m, d), pt: maRangPt(rc),
+      v: rc ? maOrd(rc[0]) + ' / ' + rc[1] : '—', s: rc ? 'chiffre' + (rt ? ' · clients ' + maOrd(rt[0]) : '') + (rp ? ' · panier ' + maOrd(rp[0]) : '') : 'lecture du réseau…' });
+    const P = proData();
+    T.push({ k: 'Canaux', w: true, pt: 'n', ouvre: P ? 'prodrop' : '', ouvert: S.proOuvert && !!P, tir: () => proCarte(true),
+      v: m.caComptoir != null ? fE(m.caComptoir) : fE(m.ca), s: 'comptoir' + (m.caPro != null ? ' · pro ' + fE(m.caPro) + (m.ticketsPro ? ' (' + maPl(m.ticketsPro, 'client') + ')' : '') : '') + (web != null ? ' · web ' + fE(web) : '') });
+    if (H.length) {
+      T.push({ k: 'Heure par heure' + (pic ? ` · pic à ${pic.h} h, ${fE(pic.ca)}` : ''), w: true, pt: 'n', v: '',
+        apres: maBarres(H.map(x => ({ l: String(x.h), v: x.ca, c: x === pic ? 'top' : '' }))) });
     }
-    // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
-    // un bon jour rattrape quelque chose ou s'il masque un retard.
-    if (S.vue === 'jour' || coPer()) { h += murR([murCanaux(), murOffres()]); h += murR([murInv()], true); }
-    // Vue Jour : rien que le jour — le résumé de la semaine a son onglet.
-    if (S.vue === 'jour') { murObjectifs().forEach(t => { h += murR([t], true); }); murPromos().forEach(t => { h += murR([t], true); }); if (!X) { h += murR([murPro()], true); } h += murR([murNote()], true); }
-    h += murR([murCommandes(), murLivraisons()]);
-    h += murR([
-      murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
-        T && T.total ? (T.bloquantes ? `<span class="ko">${T.bloquantes} bloquante${T.bloquantes > 1 ? 's' : ''}</span> · ` : '')
-            + T.nonFaites + ' non faite' + (T.nonFaites > 1 ? 's' : '')
-          : (T ? 'aucune tâche relevée' : 'lecture du panel…'),
-        T && T.bloquantes ? 'ko' : ''),
-      murNC()
-    ]);
-    h += murR([
-      E && !E.indispo && E.n
-        ? murC('Stock', E.ruptures ? String(E.ruptures) : (E.alertes ? String(E.alertes) : (E.vieux ? '⏳' : '✓')),
-            E.ruptures ? `références à zéro · ${E.alertes} sous le minimum`
-              : (E.alertes ? 'sous leur minimum' : (E.vieux ? 'non recompté depuis ' + E.jours + ' jours' : 'au complet')),
-            E.alertes ? 'ko' : (E.vieux ? 'wa' : 'ok'), 'stdrop')
-        : murC('Stock', '…', E && E.indispo ? esc(E.motif) : 'lecture de l’inventaire…'),
-      murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')
-    ]);
-    h += '</div>';
-    // Les tiroirs : la seule chose qui flotte au-dessus du mur, donc la seule
-    // qui a droit à un cadre.
-    if (S.objOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
-    if (S.promoOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
-    if (S.proOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${proCarte(true)}</div>`; }
-    if (S.invOuvert && (S.vue === 'jour' || coPer())) { h += `<div class="mb-tir">${invCarte(true)}</div>`; }
-    if (S.noteOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
-    if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
-    if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
-    if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
+    return T;
+  }
+  function maPageExp(m, d) {
+    const T = maTuilesExp(m, d);
+    if (!T) { return `<div class="ma-v"><span class="n mu">…</span><span class="t">lecture de la journée<em>le chiffre, les marges, les clients</em></span></div>${squeletteMa(6)}`; }
+    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + maGrille(T);
+    // Les campagnes et les promotions du jour, quand il y en a : leurs cellules et leurs tiroirs.
+    const ext = []; murObjectifs().forEach(t => ext.push(murR([t], true))); murPromos().forEach(t => ext.push(murR([t], true)));
+    if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
+    if (S.objOuvert) { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
+    if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
+    return h;
+  }
+
+  /** Contrôle : les photos, les contrôles, les commandes, le stock, la poubelle. */
+  function maTuilesCtrl() {
+    const auj = S.date === AUJ, L = cqListe(), T = [];
+    const nom = x => cqNom(x).replace(/^(Comptoir|CQ) · /, '');
+    if (L) {
+      const ko = L.filter(x => x.e.c === 'ko'), ctl = L.filter(x => x.e.c === 'ctl'), nc = L.filter(x => x.e.c === 'nc'), notees = L.filter(x => x.note != null);
+      const r = L.length - ko.length;
+      T.push({ k: 'Contrôles', court: ko.length ? maPl(ko.length, 'contrôle') + ' non rendu' + (ko.length > 1 ? 's' : '') : '', pt: !L.length ? 'n' : (ko.length && auj ? 'o' : MA.ctrl(r, L.length)),
+        v: L.length ? r + ' / ' + L.length : '—', s: !L.length ? 'aucun contrôle ce jour' : (ko.length ? (auj ? 'pas encore : ' : 'manquent ') + ko.map(nom).join(', ') : 'tous rendus') });
+      T.push({ k: 'À contrôler', court: ctl.length ? maPl(ctl.length, 'photo') + ' à contrôler' : '', pt: ctl.length ? 'o' : (r ? 'v' : 'n'), v: String(ctl.length),
+        s: ctl.length ? ctl.map(nom).join(', ') + ', pas encore notée' + (ctl.length > 1 ? 's' : '') : (r ? 'tout est noté' : 'rien de rendu'), attr: ctl.length ? ` data-cqvoir="${esc(ctl[0].taskId)}"` : '' });
+      T.push({ k: 'Non-conformités', court: nc.length ? maPl(nc.length, 'non-conformité') : '', pt: nc.length ? 'r' : (notees.length ? 'v' : 'n'), v: String(nc.length),
+        s: nc.length ? nc.map(nom).join(', ') : (notees.length ? maPl(notees.length, 'photo') + ' notée' + (notees.length > 1 ? 's' : '') + ', toutes conformes' : 'pas encore notées'), attr: nc.length ? ` data-cqvoir="${esc(nc[0].taskId)}"` : '' });
+    } else {
+      ['Contrôles', 'À contrôler', 'Non-conformités'].forEach(k => T.push({ k: k, pt: 'n', v: '…', s: S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…' }));
+    }
+    const D = cmdEtat(), C = D && D.commandes;
+    T.push({ k: 'Commandes', court: C && C.retard ? maPl(C.retard, 'commande') + ' en retard' : '', ouvre: 'cmddrop', ouvert: S.cmdOuvert, tir: () => `<div class="db-stdl">${cmdTiroir()}</div>`,
+      pt: !C || C.indispo ? 'n' : (C.retard ? 'r' : 'v'), v: !C ? '…' : (C.indispo ? '—' : (C.auj ? C.auj + ' auj.' : fN(C.enCours || 0))),
+      s: !C ? 'lecture des commandes…' : (C.indispo ? esc(C.motif || 'indisponible') : ([C.retard ? C.retard + ' en retard' : '', C.aVenir ? C.aVenir + ' à venir' : '', C.montant ? fE(C.montant) : ''].filter(Boolean).join(' · ') || 'aucune en cours')) });
+    const E = stockEtat();
+    T.push({ k: 'Stock', court: E && !E.indispo ? (E.ruptures ? maPl(E.ruptures, 'référence') + ' à zéro' : (E.alertes ? maPl(E.alertes, 'référence') + ' sous le minimum' : (E.vieux ? 'stock pas recompté' : ''))) : '',
+      ouvre: E && !E.indispo ? 'stdrop' : '', ouvert: S.stockOuvert && E && !E.indispo, tir: () => `<div class="db-stdl">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`,
+      pt: !E || E.indispo ? 'n' : (E.ruptures ? 'r' : (E.alertes || E.vieux ? 'o' : 'v')),
+      v: !E ? '…' : (E.indispo ? '—' : (E.ruptures ? String(E.ruptures) : (E.alertes ? String(E.alertes) : '✓'))),
+      s: !E ? 'lecture de l’inventaire…' : (E.indispo ? esc(E.motif) : (E.ruptures ? 'à zéro · ' + E.alertes + ' sous le minimum' : (E.alertes ? 'sous leur minimum' : maPl(E.n, 'référence') + (E.dernier ? ' · compté le ' + fD(E.dernier.slice(0, 10)) : '') + (E.vieux ? ' · à recompter' : '')))) });
+    const I = maInvJour(), top = I && Array.isArray(I.produits) && I.produits[0];
+    T.push({ k: 'Poubelle', court: I && I.lu && !I.declare && !auj ? 'poubelle pas déclarée' : '', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true),
+      pt: !I || !I.lu ? 'n' : (I.declare ? 'v' : (auj ? 'n' : 'o')), v: !I ? '…' : (I.declare ? maPl(I.pieces, 'p.').replace(/s$/, '') : '—'),
+      s: !I ? 'lecture de la poubelle…' : (!I.lu ? 'panel muet' : (I.declare ? 'déclarée' + (top ? ' · surtout ' + esc(String(top.nom).toLowerCase()) + ', ' + fN(top.pieces) : '') : (auj ? 'se déclare à la fermeture' : 'pas déclarée ce jour'))) });
+    return { T: T, L: L };
+  }
+  function maPageCtrl() {
+    const { T } = maTuilesCtrl();
+    let h = maVerdict(T, true);
+    h += `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
+    h += maGrille(T);
+    h += `<button type="button" class="ma-rc" data-vue="reclamation">✎ Réclamer un produit au fournisseur</button>`;
+    h += `<div class="mb-mur ma-ext">${murR([murNote()], true)}</div>`;
+    if (S.noteOuvert) { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
+    return h;
+  }
+
+  /** Semaine : la semaine en une vue — le chiffre jour par jour, et le damier jour × mesure. */
+  function cleSemJ() { return 'semJ|' + S.shop + '|' + bornesSemaine()[0]; }
+  function maTuilesSem(m, d) {
+    if (!m) { return null; }
+    const J = Array.isArray(m.jours) ? m.jours : [];
+    const realise = m.realise != null ? m.realise : m.ca, att = m.attendu ? 100 * realise / m.attendu : null;
+    const JM = magasin(S.aux['jourM|' + S.date]), NET = {}; (JM && Array.isArray(JM.semaine) ? JM.semaine : []).forEach(x => { NET[x.date] = x; });
+    const SJ = S.aux[cleSemJ()], X = {}; (SJ && Array.isArray(SJ.jours) ? SJ.jours : []).forEach(x => { X[x.date] = x; });
+    const passes = J.filter(j => j.passe && !j.ferme && j.ca != null);
+    const avecNet = passes.filter(j => NET[j.date] && NET[j.date].net != null);
+    const complet = avecNet.length && passes.every(j => (NET[j.date] && NET[j.date].net != null) || j.aujourdhui);
+    const netSem = m.net != null ? m.net : (complet ? avecNet.reduce((a, j) => a + NET[j.date].net, 0) : null);
+    const dessous = passes.filter(j => j.objectif && j.ca < j.objectif && !j.aujourdhui), dessus = passes.filter(j => j.objectif && j.ca >= j.objectif);
+    const jl = j => (j.court || fD(j.date)).replace(/\s+\d+$/, '');
+    const rc = maRang(d, m, 'realise');
+    const prochain = J.find(j => !j.passe && !j.ferme && j.objectif);
+    const T = [];
+    T.push({ k: 'Chiffre de la semaine' + (passes.length ? ' · au ' + esc(fD(passes[passes.length - 1].date)) : ''), court: 'le chiffre', w: true, pt: MA.ca(att),
+      v: fE(realise) + (m.attendu ? ` <small class="mu">/ ${fE(m.attendu)}</small>` : ''),
+      s: (att != null ? fP(att) + ' de l’attendu' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
+      apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
+    T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
+      v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
+    T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct), s: 'seuil 35 % · la semaine' });
+    T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
+      v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
+    T.push({ k: 'Réseau', court: 'le rang', ouvre: 'rgdrop', ouvert: S.rgOuvert, tir: () => murClassement(m, d), pt: maRangPt(rc),
+      v: rc ? maOrd(rc[0]) + ' / ' + rc[1] : '—', s: m.panier ? 'panier ' + fU(m.panier) : '' });
+    return { T: T, J: J, NET: NET, X: X, SJ: SJ, att: att, dessous: dessous.map(jl), dessus: dessus.map(jl) };
+  }
+  function maDamier(R) {
+    const { J, NET, X, SJ } = R;
+    const cell = (c, v) => `<td class="${c}">${v}</td>`;
+    const ligne = (lib, f) => `<tr><td class="l">${lib}</td>${J.map(j => (!j.passe || j.ferme) ? cell('f', j.ferme ? '×' : '·') : f(j)).join('')}</tr>`;
+    const auj = j => j.date === AUJ;
+    let h = `<div class="ma-dam"><table><tr><th class="l">la semaine</th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date))}</th>`).join('')}</tr>`;
+    h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
+    const jmLu = !!S.aux['jourM|' + S.date];
+    h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net(x.ca ? 100 * x.net / x.ca : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
+    h += ligne('Contrôles', j => { const c = X[j.date] && X[j.date].controles; return c ? cell(c.total ? (auj(j) && c.rendus < c.total ? 'o' : MA.ctrl(c.rendus, c.total)) : 'n', c.total ? c.rendus + '/' + c.total : '—') : cell('n', SJ ? '—' : '…'); });
+    h += ligne('Notés', j => { const c = X[j.date] && X[j.date].controles; return c ? (c.nc ? cell('r', c.nc + ' NC') : (c.notes ? cell('v', String(c.notes)) : cell('n', '—'))) : cell('n', SJ ? '—' : '…'); });
+    h += ligne('Poubelle', j => { const p = X[j.date] && X[j.date].poubelle; if (!p) { return cell('n', SJ ? '—' : '…'); } if (!p.pieces) { return cell('n', '0'); }
+      return cell(auj(j) ? 'n' : MA.poub(j.ca ? 100 * p.cout / j.ca : null), nf(Math.round(p.cout), 0) + '€'); });
+    h += '</table><div class="ma-leg"><span><i class="v"></i>bon</span><span><i class="o"></i>à surveiller</span><span><i class="r"></i>à reprendre</span><span><i class="n"></i>rien ou en cours</span></div></div>';
+    return h;
+  }
+  /** La couleur d'un jour de la semaine face à son objectif ; aujourd'hui, en dessous, n'est pas encore jugé. */
+  const maJourCA = j => j.date === AUJ && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif);
+  const fSigne = v => (v < 0 ? '−' : '') + nf(Math.abs(Math.round(v)), 0);
+  function maPageSem(m, d) {
+    const R = maTuilesSem(m, d);
+    if (!R) { return `<div class="ma-v"><span class="n mu">…</span><span class="t">lecture de la semaine<em>le chiffre jour par jour, les contrôles, la poubelle</em></span></div>${squeletteMa(5)}`; }
+    const [ca, ...reste] = R.T;
+    const ecart = m.ecart;
+    const em = [R.dessous.length ? 'en dessous : ' + R.dessous.join(', ') : '', R.dessus.length ? 'au-dessus : ' + R.dessus.join(', ') : ''].filter(Boolean).join(' · ') || 'la semaine commence';
+    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’attendu' : 'sur l’attendu à ce jour')}<em>${em}</em></span>`
+      + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
+    h += maGrille([ca]) + maDamier(R) + maGrille(reste);
+    const v = valeurMagasin();
+    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
-    h += '</div>';
+    return h;
+  }
+  function squeletteMa(n) { return `<div class="ma-g">${Array.from({ length: n }, () => '<div class="ma-t"><div class="db-sk" style="width:55%"></div><div class="db-sk" style="height:22px;margin:8px 0 6px;width:70%"></div><div class="db-sk" style="width:85%"></div></div>').join('')}</div>`; }
+
+  /** La couleur de chaque onglet, pour la barre du bas : ce qu'on sait déjà, sans relire. */
+  function maEtats() {
+    const dj = S.res['jour|' + S.date], mj = magasin(dj);
+    const te = mj ? maTuilesExp(mj, dj) : null;
+    const tc = cqListe() ? maTuilesCtrl().T : null;
+    const ds = S.vue === 'semaine' ? S.res[cleRes()] : S.aux['sem|' + bornesSemaine()[0]], ms = magasin(ds);
+    const ts = ms ? maTuilesSem(ms, ds) : null;
+    return { exp: te ? maPire(te.map(t => t.pt || 'n')) : 'n', ctrl: tc ? maPire(tc.map(t => t.pt || 'n')) : 'n', sem: ts ? maPire(ts.T.map(t => t.pt || 'n')) : 'n' };
+  }
+  function maDate() {
+    if (S.vue === 'semaine') { const [du, au] = bornesSemaine(); return 'du ' + fD(du) + ' au ' + fD(au); }
+    const t = new Date(S.date + 'T12:00:00');
+    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+
+  function rendMobile(m, d) {
+    if (S.vue !== 'semaine' && !['exp', 'ctrl'].includes(S.mo)) { S.mo = 'exp'; }
+    const on = S.vue === 'semaine' ? 'sem' : S.mo;
+    const fin = S.vue === 'semaine' ? bornesSemaine()[1] >= AUJ : S.date >= AUJ;
+    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button></div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <div class="mb-sc"><div class="ma">`;
+    if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
+    h += on === 'exp' ? maPageExp(m, d) : (on === 'ctrl' ? maPageCtrl() : maPageSem(m, d));
+    h += '</div></div>';
     h += mbOnglets();
     return h;
   }
-  /** Le menu du téléphone : le jour, la semaine, le plan d'action, et la
-   * réclamation fournisseur — un onglet à part, pas une carte du mur. */
+  const MA_ICO = {
+    exp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/></svg>',
+    ctrl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
+    sem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  };
+  /** Le menu du téléphone : Exploitation, Contrôle, Semaine, chacun avec sa couleur. La réclamation
+   * fournisseur s'ouvre depuis Contrôle et y ramène. */
   function mbOnglets() {
-    return `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['reclamation', 'Réclamation', RC_ICONE]]
-      .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
+    const P = maEtats();
+    const on = S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'jour' ? S.mo : ''));
+    return `<div class="mb-tabs mb-tabs3 ma-tabs">${[['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine']]
+      .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
   /* --- l'objectif produits d'une campagne : « 500 tartes aux pommes en octobre », et où l'on en est --- */
@@ -1663,7 +1850,7 @@
       // La fête attend que le jour soit lu : lancée sur un mur encore vide,
       // elle serait finie avant que le premier chiffre s'affiche.
       const forcee = !!m && feteDemandee();
-      if (forcee || objectifAtteint(m)) { feteObjectif(forcee); }
+      if (forcee || (objectifAtteint(m) && (S.vue !== 'jour' || S.mo === 'exp'))) { feteObjectif(forcee); }
       return;
     }
     // La réclamation fournisseur n'existe qu'au téléphone.
@@ -3981,6 +4168,12 @@
       b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); } });
     });
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
+    $.querySelectorAll('[data-rgdrop]').forEach(b => b.addEventListener('click', () => { S.rgOuvert = !S.rgOuvert; rendre(); }));
+    $.querySelectorAll('[data-mo]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.mo, avant = S.vue;
+      if (k === 'sem') { S.vue = 'semaine'; } else { S.vue = 'jour'; S.mo = k; }
+      S.heure = null; S.jourH = null; urlMaj();
+      if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
     ppBrancher();
     $.querySelectorAll('[data-cmdliste]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.cmdListeOuvert = !S.cmdListeOuvert; rendre(); }));
