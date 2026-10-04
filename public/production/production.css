@@ -214,3 +214,19 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pp-tab small.ch,.pp-ch{color:#B45309;font-size:8.5px}
 .pp-sans{font-size:10.5px;line-height:1.6}
 .pf-tab td.n small.mu{display:block;font-size:9.5px}
+/* Le plan : un produit commandé se déplie sur ses commandes, client et heure de retrait (04/10/2026). */
+.pf-tab.plan tr.cl{cursor:pointer}
+.pf-tab.plan tr.cl:hover td{background:#fbf8f2}
+.pf-tab.plan tr.cl.ouv td{background:#f7f1e6}
+.pf-car{display:inline-block;width:13px;color:var(--pf-or);font-size:10px}
+.pf-tab.plan tr.pf-cmdl>td{padding:0;background:#fdfbf7;border-top:0}
+.pf-cmdd{position:sticky;left:0;display:flex;flex-wrap:wrap;gap:10px 32px;padding:8px 14px 12px 28px;max-width:min(1100px,92vw);box-sizing:border-box;font:12px var(--font-ui);text-align:left}
+.pf-cmdb{min-width:300px}
+.pf-cmdt{font-size:11.5px;color:#555;margin:2px 0 4px}
+.pf-cmdt b{color:#222}
+.pf-cmdn{flex-basis:100%;font-size:11px}
+.pf-tab.plan .pf-cmdtab{border-collapse:collapse;width:auto}
+.pf-tab.plan .pf-cmdtab th{font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#888;padding:3px 12px 3px 0;border-bottom:.5px solid var(--pf-trait);min-width:0;white-space:nowrap}
+.pf-tab.plan .pf-cmdtab td{white-space:nowrap;padding:4px 12px 4px 0;border-top:.5px solid var(--pf-trait);font-size:12px;background:none;min-width:0}
+.pf-tab.plan .pf-cmdtab td:first-child{min-width:0}
+@media print{.pf-car{display:none}}

@@ -615,7 +615,19 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 - **Sonde** : `GET /production/flux/sonde?shop=&date=` (lecture seule, des comptes et des noms de
   champs, jamais un client) : les commandes du jour, encaissées ou non, les routes du panel essayées
   pour leurs articles, la part des tickets pro qui sont des commandes ; `&liste=1` : la taille et
-  les bornes de la liste des commandes.
+  les bornes de la liste des commandes. `champsClient` : les noms des champs du client d'une
+  commande (jamais leurs valeurs).
+- **Commandes d'un produit** (demande du 04/10/2026) : `GET /production/flux/commandes?shop=&date=`
+  rend les commandes retirées le jour planifié et à J−7, non annulées :
+  `{date, j7, clientsLus, nomsComplets, commandes: [{jour, heure (retrait), id (n° de commande),
+  canal (compt = POS, cc = webshop, liv = webshop livré), statut, client, pro, montant,
+  lignes: [[pid, pièces]], sansDetail}]}`. Les articles sont ceux des tickets déjà lus pour le plan
+  (`ppTk:{shop}`). Le client se relit au panel à chaque appel et ne s'écrit nulle part : une société
+  garde son nom ; une personne sort en « Prénom N. », en entier seulement quand l'API exige une
+  session (`nomsComplets`) ; jamais de téléphone ni d'e-mail. Panel muet : les commandes du plan
+  sans client (`clientsLus: false`). L'écran du plan les lit au premier produit déplié : un clic
+  sur un produit commandé (le jour ou à J−7) ouvre sous sa ligne les deux listes, heure de
+  retrait, client, canal, pièces de ce produit, n° et état.
 - **Validation** : le même enregistrement que l'écran historique (`ppFait:{shop}:{date}`, `c[cuisson]`),
   plus qui et quand (`v[cuisson] = {le, par}`).
 - **Clôture** : reste = report d'hier + sorti − vendu − jeté déjà déclaré au panel ; `report`

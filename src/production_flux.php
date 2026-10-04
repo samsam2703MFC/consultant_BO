@@ -527,6 +527,88 @@ function ep_production_flux_plan(): array
 }
 
 /**
+ * Le client d'une commande, tel que l'écran du plan l'affiche (demande du 04/10/2026). Une société
+ * (client pro) garde son nom ; une personne sort en « Prénom N. » — en entier seulement quand
+ * l'API exige une session ($complet). Le panel donne `client` {name, surname, company_name,
+ * is_b2b…} ; les variantes first_name / last_name / display_name sont lues aussi. '' si inconnu.
+ */
+function pfClientNom(array $o, bool $complet): string
+{
+    $c = $o['client'] ?? null;
+    $lis = static function ($a, array $ks): string {
+        if (!is_array($a)) { return ''; }
+        foreach ($ks as $k) { $v = $a[$k] ?? null; if (is_string($v) && trim($v) !== '') { return trim(preg_replace('/\s+/u', ' ', $v)); } }
+        return '';
+    };
+    $soc = $lis($c, ['company_name', 'company', 'business_name']);
+    if ($soc !== '') { return $soc; }
+    $pre = $lis($c, ['name', 'first_name', 'firstname', 'firstName', 'given_name']);
+    $nom = $lis($c, ['surname', 'last_name', 'lastname', 'lastName', 'family_name']);
+    if ($pre === '' && $nom === '') {
+        $tout = is_string($c) ? trim(preg_replace('/\s+/u', ' ', $c)) : $lis($c, ['display_name', 'full_name']);
+        if ($tout === '') { return ''; }
+        $m = explode(' ', $tout); $pre = (string) array_shift($m); $nom = implode(' ', $m);
+    }
+    if ($complet) { return trim($pre . ' ' . $nom); }
+    if ($pre === '') { return mb_strtoupper(mb_substr($nom, 0, 1)) . '.'; }
+    return $pre . ($nom !== '' ? ' ' . mb_strtoupper(mb_substr($nom, 0, 1)) . '.' : '');
+}
+
+/**
+ * GET /production/flux/commandes?shop=4&date=YYYY-MM-DD — les commandes retirées le jour planifié
+ * et à J−7, avec leurs articles, le client et l'heure de retrait : la liste déroulante d'un produit
+ * du plan (demande du 04/10/2026). Les articles viennent des tickets déjà lus pour le plan ; le
+ * client se relit au panel à chaque appel et ne s'écrit nulle part. Sans session exigée par l'API
+ * (auth intégrée éteinte), une personne sort en « Prénom N. ».
+ */
+function ep_production_flux_commandes(): array
+{
+    [$sid, $date] = pfShopDate(true);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    @set_time_limit(120);
+    $budget = defined('SV_BUDGET_DEMANDE') ? SV_BUDGET_DEMANDE : 500;
+    $cout = 0;
+    $j7 = pfDecale($date, -7);
+    $s = setting('gpParams:' . $sid);
+    $sem = is_array($s) && isset($s['regles']['semaines']) ? max(1, min(12, (int) $s['regles']['semaines'])) : gpReglesDefaut()['semaines'];
+    // Les mêmes commandes que le plan (même cache) : leurs tickets sont lus, leurs articles connus.
+    $A = gpCommandesArticles($sid, pfDecale($date, -7 * $sem), $cout, $budget);
+    $T = setting('ppTk:' . $sid); $T = is_array($T) ? $T : [];
+    $complet = function_exists('authEnabled') && authEnabled();
+    $r = class_exists('PanelApi') && PanelApi::configured() ? PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $j7, 25) : ['code' => 0];
+    if (is_array($r['corps'] ?? null) && str_contains((string) ($r['corps']['description'] ?? ''), 'NO_ORDERS')) { $r = ['code' => 200, 'corps' => []]; }
+    $out = [];
+    if ((int) ($r['code'] ?? 0) === 200 && is_array($r['corps'] ?? null)) {
+        foreach ((function_exists('analyseListe') ? analyseListe($r['corps']) : $r['corps']) as $o) {
+            if (!is_array($o)) { continue; }
+            $quand = (string) ($o['pick_up_datetime'] ?? '');
+            $jour = substr($quand, 0, 10);
+            if ($jour !== $date && $jour !== $j7) { continue; }
+            $canal = function_exists('coCanal') ? coCanal($o) : (!empty($o['is_webshop']) ? 'cc' : 'compt');
+            $statut = function_exists('coStatut') ? coStatut($o, $canal) : '';
+            if ($statut === 'annulée') { continue; }
+            $tk = (int) ($o['id_transaction'] ?? 0);
+            $t = $tk > 0 ? ($T[(string) $tk] ?? null) : null;
+            $cl = $o['client'] ?? null;
+            $out[] = ['jour' => $jour, 'heure' => substr($quand, 11, 5), 'id' => (int) ($o['id'] ?? 0), 'canal' => $canal, 'statut' => $statut,
+                'client' => pfClientNom($o, $complet), 'pro' => (is_array($cl) && !empty($cl['is_b2b'])) || ($o['id_client_department'] ?? null) !== null,
+                'montant' => round((float) ($o['total_value'] ?? 0), 2), 'lignes' => is_array($t) ? ($t['l'] ?? []) : [], 'sansDetail' => !is_array($t)];
+        }
+        $lu = true;
+    } else {
+        // Le panel ne répond pas : les commandes du plan, sans le client.
+        $lu = false;
+        foreach ($A !== null ? $A['commandes'] : [] as $c) {
+            if ($c['jour'] !== $date && $c['jour'] !== $j7) { continue; }
+            $out[] = ['jour' => $c['jour'], 'heure' => $c['heure'], 'id' => 0, 'canal' => $c['canal'], 'statut' => $c['statut'], 'client' => '', 'pro' => false,
+                'montant' => $c['montant'], 'lignes' => $c['lignes'], 'sansDetail' => $c['sansDetail']];
+        }
+    }
+    usort($out, static fn ($a, $b) => strcmp($a['jour'] . $a['heure'], $b['jour'] . $b['heure']));
+    return ['shop' => $sid, 'date' => $date, 'j7' => $j7, 'clientsLus' => $lu, 'nomsComplets' => $complet, 'commandes' => $out];
+}
+
+/**
  * GET /production/flux/suivi?shop=4&date=YYYY-MM-DD — la validation des cuissons et la
  * surveillance heure par heure : pour chaque produit, le stock à la fin de chaque heure
  * passée (report + sorti − vendu) et projeté pour les heures à venir (6 derniers mêmes jours),
@@ -787,13 +869,14 @@ function ep_production_flux_sonde(): array
     };
     $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $date, 25);
     $L = analyseListe(is_array($r['corps'] ?? null) ? $r['corps'] : []);
-    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'commandes' => [], 'routes' => [],
+    $cc = []; foreach ($L as $o) { if (is_array($o) && is_array($o['client'] ?? null)) { $cc += array_flip(array_filter(array_keys($o['client']), 'is_string')); } }
+    $out = ['shop' => $sid, 'date' => $date, 'listeCode' => $r['code'] ?? null, 'champsCommande' => $L !== [] && is_array($L[0]) ? array_keys($L[0]) : [], 'champsClient' => array_keys($cc), 'commandes' => [], 'routes' => [],
         'liste' => ['n' => count($L), 'enveloppe' => is_array($r['corps'] ?? null) && !array_is_list($r['corps']) ? array_keys($r['corps']) : 'liste',
             'meta' => is_array($r['corps'] ?? null) && !array_is_list($r['corps']) ? array_map(static fn ($v) => is_array($v) ? array_slice($v, 0, 8, true) : $v, array_diff_key($r['corps'], ['data' => 1, 'items' => 1])) : null,
             'retraitMin' => $L !== [] ? min(array_map(static fn ($o) => substr((string) ($o['pick_up_datetime'] ?? '9'), 0, 10), $L)) : null,
             'retraitMax' => $L !== [] ? max(array_map(static fn ($o) => substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10), $L)) : null,
             'avecTicket' => count(array_filter($L, static fn ($o) => (int) ($o['id_transaction'] ?? 0) > 0))]];
-    if (!empty($_GET['liste'])) { return ['shop' => $sid, 'date' => $date, 'liste' => $out['liste']]; }
+    if (!empty($_GET['liste'])) { return ['shop' => $sid, 'date' => $date, 'liste' => $out['liste'], 'champsClient' => $out['champsClient']]; }
     $ids = []; $tick = [];
     foreach ($L as $o) {
         if (!is_array($o) || substr((string) ($o['pick_up_datetime'] ?? ''), 0, 10) !== $date) { continue; }
