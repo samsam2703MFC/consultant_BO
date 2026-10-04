@@ -590,7 +590,12 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   ramenées à la pièce. Ce n'est pas la prévision : celle-ci pondère J−7 (`poidsJ7`) et coupe à
   l'heure maximum de vente. `base.joursLus` liste les jours de la moyenne, `base.commandesRetirees`
   dit si les commandes ont pu être lues. La base de prévision la garde à côté du profil (`moy`,
-  cache `gpBase7:…`). À l'écran : en petit sous le stock de chaque heure, et « moy. » sous le vendu.
+  cache `gpBase7:…`). Pour comparer, chaque produit porte aussi `vc` (`{heure: pièces}`, le vendu au
+  comptoir de chaque heure passée ou entamée, sans les commandes ; null pour une heure à venir) et
+  `vcJ` (la journée) ; `vendu` reste la vitrine, commandes retirées comprises. À l'écran, sous chaque
+  produit, deux lignes de valeurs heure par heure : « vendu comptoir » et « moy. 6 dimanches »
+  (le jour suit la date), le vendu en vert à 25 % au-dessus de la moyenne, en orange à 25 % en
+  dessous ; la case « vendu et moyenne par heure » les masque.
 - **Suivi et clôture** : la vitrine se vide du comptoir et des commandes retirées (à leur heure de
   retrait) ; le ticket d'une commande payée pour un autre jour n'en sort rien.
 - **Fours** (demande du 03/10/2026) : les fours du magasin (1 à 6 ; `plaques` = plaques par
