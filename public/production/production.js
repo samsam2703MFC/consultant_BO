@@ -151,7 +151,7 @@
     const cats = {}; (d.categories || []).forEach(c => { cats[c.cle] = { cuissons: (c.cuissons || []).slice(), parts: c.parts ? Object.assign({}, c.parts) : null, plaque: c.plaque, limite: c.limite, nom: c.nom, catId: c.catId, groupe: c.groupe, veille: !!c.veille, garde: !!c.garde, auto: !!c.auto, stockMin: c.stockMin || 0 }; });
     const ob = {}; (d.produits || []).forEach(p => { if (p.oblig) { ob[p.pid] = { jours: (p.oblig.jours || []).slice(), min: p.oblig.min, reseau: !!p.oblig.reseau }; } });
     const jours = {}; Object.keys(d.flux.jours).forEach(j => { jours[j] = { cuissons: d.flux.jours[j].cuissons, minPct: d.flux.jours[j].minPct }; });
-    return { cuissons: d.cuissons.map(c => Object.assign({}, c)), regles: Object.assign({}, d.regles), categories: cats, jours, oblig: ob, ajusterJ7: d.flux.ajusterJ7 !== false, modePeu: d.flux.modePeu === 'stock' ? 'stock' : 'production' };
+    return { cuissons: d.cuissons.map(c => Object.assign({}, c)), regles: Object.assign({}, d.regles), categories: cats, jours, oblig: ob, hmax: Object.assign({}, d.flux.heureMax || {}), ajusterJ7: d.flux.ajusterJ7 !== false, modePeu: d.flux.modePeu === 'stock' ? 'stock' : 'production' };
   }
   /** Les parts de la journée ramenées aux cuissons d'une catégorie : {id: %}. */
   function partsDefaut(E, c) {
@@ -163,6 +163,7 @@
   const totPart = (t, propre) => propre ? (Math.abs(t - 100) < 0.5 ? `<b>${fN(t)} %</b>` : `<b class="wa" title="les parts se répartissent au prorata">${fN(t)} %</b>`) : `<span class="mu">${t ? fN(t) + ' %' : '—'}</span>`;
   function pageParams(d) {
     const E = S.edit || (S.edit = brouillon(d));
+    E.hmax = E.hmax || {};
     const C = E.cuissons, nC = C.length, av = +E.regles.avance || 0;
     const totPct = C.reduce((a, c) => a + (+c.pct || 0), 0);
     let h = `<div class="pf-intro"><b>Les réglages de production du magasin.</b> Ils valent pour chaque jour : le plan, la validation et la clôture les relisent. La prévision lit les ${E.regles.semaines} derniers mêmes jours, heure par heure, ${+E.regles.poidsJ7 > 0 ? `le dernier pesant ${fN(+E.regles.poidsJ7)} %` : 'tous au même poids'}${d.base ? ` (${d.base.lus} sur ${d.base.jours} lus pour demain)` : ''}.${d.flux.maj ? ` Dernier enregistrement le ${esc(fD(d.flux.maj.slice(0, 10)))} à ${esc(d.flux.maj.slice(11, 16))}${d.flux.par ? ' par ' + esc(d.flux.par) : ''}.` : ' Rien n’est encore enregistré : ce sont les valeurs proposées.'}</div>`;
@@ -204,19 +205,20 @@
         <span class="pf-mini">J−7, même jour la semaine passée : la dernière vente avant la fermeture dit « trop peu », la poubelle dit « trop ». Le besoin de J−7 = vendu + manqué. Trop peu : ce qui manque au plan pour l’atteindre, arrondi au step supérieur, s’ajoute à la cuisson de l’heure où il manquait, ou relève le stock minimum de recuisson. Trop : ce qui dépasse ce besoin, au plus la poubelle, arrondi au step inférieur, se retire en partant de la dernière cuisson.</span></div></div>`;
     // Les produits obligatoires.
     const f = S.filtre.trim().toLowerCase();
-    const P = (d.produits || []).filter(p => (!f || (p.nom + ' ' + p.cat + ' ' + p.groupe).toLowerCase().includes(f)) && (!S.seulsOblig || (E.oblig[p.pid] && E.oblig[p.pid].jours.length)));
-    const nOb = Object.values(E.oblig).filter(o => o.jours.length).length;
+    const P = (d.produits || []).filter(p => (!f || (p.nom + ' ' + p.cat + ' ' + p.groupe).toLowerCase().includes(f)) && (!S.seulsOblig || (E.oblig[p.pid] && E.oblig[p.pid].jours.length) || E.hmax[p.pid]));
+    const nOb = Object.values(E.oblig).filter(o => o.jours.length).length, nH = Object.values(E.hmax).filter(Boolean).length;
     g = null; let gc = null;
-    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">4 · Les produits obligatoires</span><span class="pf-mini">${nOb} obligatoire${nOb > 1 ? 's' : ''} · les jours où le produit doit être en vitrine, et le minimum à produire même sans vente · « réseau » : l’assortiment obligatoire du cockpit</span></div>
-      <div class="pf-pied" style="border-top:none;padding-top:0"><input class="pf-in" style="width:260px" placeholder="chercher un produit, une catégorie…" data-filtre="1" data-f="filtre" value="${esc(S.filtre)}"><label><input type="checkbox" data-seuls="1"${S.seulsOblig ? ' checked' : ''}> seulement les obligatoires</label><span class="pf-mini">${P.length} produit${P.length > 1 ? 's' : ''}</span></div>
-      <table class="pf-tab"><thead><tr><th>Produit</th><th class="n">Vendu / jour</th>${[1, 2, 3, 4, 5, 6, 7].map(j => `<th class="c" title="${esc(d.jours[j])}">${JOURS_C[j]}</th>`).join('')}<th class="c">Tous</th><th class="n">Minimum</th></tr></thead><tbody>
+    h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">4 · Les produits : obligatoires et heure maximum de vente</span><span class="pf-mini">${nOb} obligatoire${nOb > 1 ? 's' : ''} · ${nH} vendu${nH > 1 ? 's' : ''} jusqu’à une heure · les jours où le produit doit être en vitrine, et le minimum à produire même sans vente · « réseau » : l’assortiment obligatoire du cockpit · « Vendu jusqu’à » : rien n’est prévu après cette heure, ni cuisson qui ouvre plus tard</span></div>
+      <div class="pf-pied" style="border-top:none;padding-top:0"><input class="pf-in" style="width:260px" placeholder="chercher un produit, une catégorie…" data-filtre="1" data-f="filtre" value="${esc(S.filtre)}"><label><input type="checkbox" data-seuls="1"${S.seulsOblig ? ' checked' : ''}> seulement les produits réglés</label><span class="pf-mini">${P.length} produit${P.length > 1 ? 's' : ''}</span></div>
+      <table class="pf-tab"><thead><tr><th>Produit</th><th class="n">Vendu / jour</th>${[1, 2, 3, 4, 5, 6, 7].map(j => `<th class="c" title="${esc(d.jours[j])}">${JOURS_C[j]}</th>`).join('')}<th class="c">Tous</th><th class="n">Minimum</th><th class="c">Vendu jusqu’à</th></tr></thead><tbody>
       ${P.slice(0, 400).map(p => { const o = E.oblig[p.pid] || { jours: [], min: 2, reseau: false }; const gr = p.groupe || 'Sans section';
-        let t = ''; if (gr !== g) { t += `<tr class="grp"><td colspan="11">${esc(gr)}</td></tr>`; g = gr; gc = null; } if (p.cat !== gc) { t += `<tr class="scat"><td colspan="11">${esc(p.cat)}</td></tr>`; gc = p.cat; }
+        let t = ''; if (gr !== g) { t += `<tr class="grp"><td colspan="12">${esc(gr)}</td></tr>`; g = gr; gc = null; } if (p.cat !== gc) { t += `<tr class="scat"><td colspan="12">${esc(p.cat)}</td></tr>`; gc = p.cat; }
         return t + `<tr class="${o.jours.length ? 'ob' : ''}"><td class="nom">${esc(p.nom)}${o.reseau ? ' <span class="pf-tag or">réseau</span>' : ''}</td><td class="n mu">${p.parJour ? fQ(p.parJour) : '—'}</td>
           ${[1, 2, 3, 4, 5, 6, 7].map(j => `<td class="c"><input type="checkbox" data-obj="${p.pid}" data-jj="${j}"${o.jours.includes(j) ? ' checked' : ''}></td>`).join('')}
           <td class="c"><button class="pf-mini-btn" data-obtous="${p.pid}">${o.jours.length === 7 ? 'aucun' : '7/7'}</button></td>
-          <td class="n"><input class="pf-in court" type="number" min="0" max="500" data-obmin="${p.pid}" data-f="om${p.pid}" value="${esc(o.min)}"${o.jours.length ? '' : ' disabled'}></td></tr>`; }).join('')}
-      ${P.length > 400 ? `<tr><td colspan="11" class="mu">+ ${P.length - 400} produits : affinez la recherche.</td></tr>` : ''}</tbody></table></div>`;
+          <td class="n"><input class="pf-in court" type="number" min="0" max="500" data-obmin="${p.pid}" data-f="om${p.pid}" value="${esc(o.min)}"${o.jours.length ? '' : ' disabled'}></td>
+          <td class="c"><input class="pf-in heure${E.hmax[p.pid] ? ' on' : ''}" type="time" step="900" data-hmax="${p.pid}" data-f="hx${p.pid}" value="${esc(E.hmax[p.pid] || '')}" title="vendu jusqu’à cette heure ; vide = toute la journée"></td></tr>`; }).join('')}
+      ${P.length > 400 ? `<tr><td colspan="12" class="mu">+ ${P.length - 400} produits : affinez la recherche.</td></tr>` : ''}</tbody></table></div>`;
     h += `<div class="pf-barre"><label>Signé <input class="pf-in" data-par="1" data-f="par" value="${esc(S.par)}" placeholder="prénom"></label><span class="sp"></span><button class="pf-btn" data-annuler="1">Revenir aux réglages enregistrés</button><button class="pf-btn prim" data-enreg="1"${S.envoi ? ' disabled' : ''}>${S.envoi ? 'Enregistrement…' : 'Enregistrer les réglages'}</button></div>`;
     return h;
   }
@@ -229,7 +231,7 @@
     const n = E.cuissons.length;
     const jours = {}; Object.keys(E.jours).forEach(j => { jours[j] = { cuissons: Math.min(n, +E.jours[j].cuissons || n), minPct: +E.jours[j].minPct }; });
     const corps = { shop: +S.shop, par: S.par, gp: { cuissons: E.cuissons.map(c => ({ id: c.id, nom: c.nom, de: c.de, a: c.a, pct: +c.pct, daypart: c.daypart || null })), categories: cats, regles: E.regles },
-      flux: { jours, obligatoires: ob, veille: Object.keys(E.categories).filter(k => E.categories[k].veille), garde: Object.keys(E.categories).filter(k => E.categories[k].garde), stockMin: sm, ajusterJ7: !!E.ajusterJ7, modePeu: E.modePeu } };
+      flux: { jours, obligatoires: ob, veille: Object.keys(E.categories).filter(k => E.categories[k].veille), garde: Object.keys(E.categories).filter(k => E.categories[k].garde), stockMin: sm, heureMax: Object.fromEntries(Object.entries(E.hmax).filter(([, v]) => /^\d{2}:\d{2}$/.test(v || ''))), ajusterJ7: !!E.ajusterJ7, modePeu: E.modePeu } };
     S.envoi = true; S.msg = null; rendre();
     ecrire('/production/flux/params', corps).then(r => { S.msg = { ok: true, t: `Réglages enregistrés : ${r.cuissons} cuisson${r.cuissons > 1 ? 's' : ''}, ${r.obligatoires} produit${r.obligatoires > 1 ? 's' : ''} réglé${r.obligatoires > 1 ? 's' : ''} en obligatoire. Le plan les reprend.` }; Object.keys(S.data).forEach(k => { if (!k.startsWith('params|')) { delete S.data[k]; } }); charger(true); })
       .catch(e => { S.msg = { ok: false, t: 'Pas enregistré : ' + e.message }; })
@@ -318,7 +320,7 @@
       corps += sousTot('sec', esc(g.nom), rowsG);
       g.cats.forEach(c => {
         if (g.cats.length > 1 || c.nom !== g.nom) { corps += sousTot('scat', esc(c.nom), c.lignes); }
-        corps += c.lignes.map(l => `<tr${aCmd(l) ? ` class="cl${ouvert(l) ? ' ouv' : ''}" data-cmdp="${l.pid}" title="voir les commandes"` : ''}><td class="nom">${aCmd(l) ? `<span class="pf-car">${ouvert(l) ? '▾' : '▸'}</span>` : ''}${l.oblig ? '<span class="pf-ob" title="obligatoire ce jour">★</span> ' : ''}${esc(l.nom)}</td>
+        corps += c.lignes.map(l => `<tr${aCmd(l) ? ` class="cl${ouvert(l) ? ' ouv' : ''}" data-cmdp="${l.pid}" title="voir les commandes"` : ''}><td class="nom">${aCmd(l) ? `<span class="pf-car">${ouvert(l) ? '▾' : '▸'}</span>` : ''}${l.oblig ? '<span class="pf-ob" title="obligatoire ce jour">★</span> ' : ''}${esc(l.nom)}${l.heureMax ? ` <span class="pf-tag" title="vendu jusqu’à ${esc(l.heureMax)} : rien n’est prévu après">≤ ${esc(l.heureMax.replace(':00', ' h'))}</span>` : ''}</td>
           <td class="n">${fN(l.j7.magasin)}</td><td class="n">${l.j7.webshop == null ? '<span class="mu">—</span>' : (Math.round(l.j7.webshop) ? fN(l.j7.webshop) : '<span class="mu">0</span>')}</td><td class="n">${Math.round(l.j7.commandes || 0) ? fN(l.j7.commandes) : '<span class="mu">0</span>'}</td>
           <td class="n q">${cDer(l)}</td><td class="n">${cPoub(l)}</td><td class="c">${cVerd(l)}</td>
           <td class="n mu">${fN(l.prevJ)}</td><td class="n">${cCmd(l)}</td><td class="n">${Math.round(l.report || 0) ? fN(l.report) : '<span class="mu">—</span>'}</td><td class="n q prop">${cProp(l)}</td>
@@ -653,6 +655,7 @@
     on('[data-obj]', 'change', c => { const o = ob(c.dataset.obj), j = +c.dataset.jj; o.jours = c.checked ? [...new Set(o.jours.concat([j]))].sort() : o.jours.filter(x => x !== j); rendre(); });
     on('[data-obtous]', 'click', b => { const o = ob(b.dataset.obtous); o.jours = o.jours.length === 7 ? [] : [1, 2, 3, 4, 5, 6, 7]; rendre(); });
     on('[data-obmin]', 'input', i => { ob(i.dataset.obmin).min = i.value; });
+    on('[data-hmax]', 'change', i => { if (/^\d{2}:\d{2}$/.test(i.value)) { E.hmax[i.dataset.hmax] = i.value; } else { delete E.hmax[i.dataset.hmax]; } i.classList.toggle('on', !!E.hmax[i.dataset.hmax]); });
     on('[data-filtre]', 'input', i => { S.filtre = i.value; rendre(); });
     on('[data-seuls]', 'change', c => { S.seulsOblig = c.checked; rendre(); });
     on('[data-annuler]', 'click', () => { const d = S.data[cle()]; if (d) { S.edit = brouillon(d); S.msg = null; rendre(); } });

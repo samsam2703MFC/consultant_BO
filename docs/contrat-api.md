@@ -524,6 +524,14 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
   porte la colonne « à préparer pour demain matin » = la 1re cuisson du lendemain (base des mêmes
   jours que le lendemain). **Se garde** (`flux.garde` ; biscuits, cakes, épicerie, boissons par
   défaut) : la clôture propose de les garder, le reste se jette.
+- **Heure maximum de vente** (`flux.heureMax`, `{pid: "HH:MM"}`, demande du 04/10/2026, « pistolet
+  11:00 ») : le produit ne se vend plus après cette heure. Sa prévision s'arrête là (l'heure entamée
+  au prorata) ; seules les cuissons dont la vente ouvre avant elle le portent (la 1re au moins), chacune
+  pour ce que le produit vend dans sa période, la dernière gardée prenant aussi les commandes retirées
+  plus tard ; à J−7, une dernière vente juste avant l'heure n'est pas « trop peu » ; le stock minimum de
+  recuisson s'arrête à cette heure. Vide = toute la journée ; une heure hors de 00:01–23:59 est refusée
+  (422). Le plan la rend par produit (`lignes[].heureMax`), l'écran la montre « ≤ 11 h » à côté du nom ;
+  Paramètres › 4 · Les produits : colonne « Vendu jusqu'à ».
 - **Poids de J−7** (`gp.regles.poidsJ7`, 0 à 100, 40 par défaut, demande du 04/10/2026) : le même
   jour de la semaine passée pèse ce pourcentage de la prévision, les autres jours lus de la base
   se partagent le reste ; à 0, la moyenne simple (toutes les semaines pareil). `base.poidsJ7` :

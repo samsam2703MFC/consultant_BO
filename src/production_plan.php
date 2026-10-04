@@ -148,6 +148,28 @@ function gpSomme(array $prof, float $a, float $b): float
     return $s;
 }
 
+/** Le profil horaire d'un produit vendu jusqu'à une heure : rien après (l'heure entamée au prorata). */
+function gpAvant(array $prof, float $hx): array
+{
+    $o = [];
+    foreach ($prof as $h => $q) { $f = max(0.0, min(1.0, $hx - (float) $h)); if ($f > 0) { $o[$h] = round((float) $q * $f, 3); } }
+    return $o;
+}
+
+/**
+ * Les zones d'un produit vendu jusqu'à une heure : les cuissons dont la vente ouvre avant elle (la
+ * 1re au moins). La dernière gardée s'étend jusqu'à la fin de la journée : une commande retirée
+ * plus tard s'y prépare encore.
+ */
+function gpZonesAvant(array $z, float $hx): array
+{
+    if ($z === []) { return $z; }
+    $k = array_filter($z, static fn ($x) => $x[0] < $hx - 1e-9);
+    if ($k === []) { $id = array_key_first($z); $k = [$id => $z[$id]]; }
+    $k[array_key_last($k)][1] = max(array_map(static fn ($x) => (float) $x[1], $z));
+    return $k;
+}
+
 /**
  * Les cuissons cochées par défaut pour une catégorie : celles dont la période capte au moins
  * 20 % de ses ventes de la journée (la fenêtre de la première commence à minuit, celle de la
@@ -584,6 +606,8 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
     $stock0 = (array) ($opts['stock0'] ?? []);
     $minPct = isset($opts['minPct']) && is_numeric($opts['minPct']) ? max(0.0, min(1.0, (float) $opts['minPct'])) : null;
     $oblig = []; foreach ((array) ($opts['oblig'] ?? []) as $k => $v) { $oblig[(int) $k] = max(0, (int) $v); }
+    // L'heure maximum de vente d'un produit (demande du 04/10/2026, « pistolet 11:00 ») : pid => heure décimale.
+    $hMax = []; foreach ((array) ($opts['heureMax'] ?? []) as $k => $v) { $v = is_numeric($v) ? (float) $v : gpHeure($v); if ($v !== null && $v > 0 && $v < 24) { $hMax[(int) $k] = $v; } }
     $C = $params['cuissons']; $R = $params['regles'];
     $sec = 1 + (float) $R['securite'] / 100; $minPl = (int) $R['minPlaques'];
     if (!$R['commandes']) { $cmds = array_values(array_filter($cmds, static fn ($o) => !empty($o['webshop']))); }
@@ -616,6 +640,9 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
         }
     }
     foreach ($prods as $pid => $p) {
+        // Vendu jusqu'à une heure : la prévision s'arrête là, et seules les cuissons qui ouvrent avant le portent.
+        $hx = $hMax[(int) $pid] ?? null;
+        if ($hx !== null) { $p['h'] = gpAvant($p['h'], $hx); }
         $cfg = $params['categories'][$p['catCle']] ?? null;
         $prevJ = array_sum($p['h']);
         $ob = $oblig[(int) $pid] ?? null;
@@ -629,6 +656,7 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
         $poidsGrp[$grp] = ($poidsGrp[$grp] ?? 0.0) + $prevJ;
         $pu = isset($prix[(int) $pid]) ? (float) $prix[(int) $pid] : null;
         $z = gpZones($C, $cfg['cuissons']);
+        if ($hx !== null) { $z = gpZonesAvant($z, $hx); }
         $tp = 0.0; foreach ($z as $id => $_) { $tp += $pct[$id]; }
         // La part de chaque cuisson ; la 1re relevée à la production minimum, les suivantes réduites d'autant.
         $parts = []; foreach ($z as $id => $_) { $parts[$id] = $tp > 0 ? $pct[$id] / $tp : 0.0; }
@@ -637,8 +665,11 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
         $propres = is_array($cfg['parts'] ?? null) ? array_intersect_key($cfg['parts'], $z) : [];
         $tq = array_sum($propres);
         if ($tq > 0) { foreach ($z as $id => $_) { $parts[$id] = (float) ($propres[$id] ?? 0) / $tq; } }
+        // Vendu jusqu'à une heure : chaque cuisson gardée porte ce que le produit vend dans sa période.
+        $profil = $hx !== null && $prevJ > 0 && count($z) > 1;
+        if ($profil) { foreach ($z as $id => [$za, $zb]) { $parts[$id] = gpSomme($p['h'], $za, $zb) / $prevJ; } }
         $id0 = array_key_first($z);
-        if ($tq <= 0 && $minPct !== null && $id0 !== null && count($z) > 1 && $parts[$id0] < $minPct) {
+        if (!$profil && $tq <= 0 && $minPct !== null && $id0 !== null && count($z) > 1 && $parts[$id0] < $minPct) {
             $r0 = 1 - $parts[$id0];
             foreach ($parts as $id => $v) { $parts[$id] = $id === $id0 ? $minPct : ($r0 > 0 ? $v * (1 - $minPct) / $r0 : 0.0); }
         }
@@ -659,7 +690,7 @@ function gpPlan(array $params, array $base, array $cmds, array $faits = [], arra
             $lignes[$id][] = ['pid' => (int) $pid, 'nom' => $p['nom'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'groupe' => $grp, 'prix' => $pu, 'ca' => $pu !== null ? round($pu * $sortie, 2) : null, 'prevJ' => round($prevJ, 2), 'h' => $p['h'],
                 'zone' => [gpHhmm($za), gpHhmm($zb)], 'fenetre' => round(gpSomme($p['h'], $za, $zb), 2), 'part' => round(100 * $part, 1), 'prevu' => round($ap, 2),
                 'cmd' => round($cm, 2), 'ws' => round($ws, 2), 'stock' => round($stock, 2), 'aCuire' => round($aCuire, 2), 'plaque' => $cfg['plaque'], 'plaques' => $pl, 'sortie' => $sortie,
-                'fait' => $fait !== null ? (float) $fait : null, 'oblig' => $ob !== null];
+                'fait' => $fait !== null ? (float) $fait : null, 'oblig' => $ob !== null, 'heureMax' => $hx !== null ? gpHhmm($hx) : null];
             $prec = ['id' => $id, 'stock' => $stock, 'sortie' => $fait !== null ? (float) $fait : (float) $sortie, 'cmd' => $cm, 'ws' => $ws];
         }
     }

@@ -225,3 +225,6 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab.plan .pf-cmdtab td{white-space:nowrap;padding:4px 12px 4px 0;border-top:.5px solid var(--pf-trait);font-size:12px;background:none;min-width:0}
 .pf-tab.plan .pf-cmdtab td:first-child{min-width:0}
 @media print{.pf-car{display:none}}
+/* L'heure maximum de vente d'un produit (04/10/2026) : vide en gris, réglée en or. */
+.pf-in.heure{width:96px;color:#999}
+.pf-in.heure.on{color:#222;border-color:var(--pf-or);background:#fdf8e8}
