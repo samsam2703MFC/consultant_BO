@@ -294,19 +294,16 @@
     const cCmd = l => { const n = Math.round(cmdJ(l)); return n ? `<b title="POS ${fN(l.commandesJour.pos)} · webshop ${fN(l.commandesJour.webshop)}">${fN(n)}</b>` : '<span class="mu">—</span>'; };
     // Au clic sur un produit commandé : ses commandes, le client et l'heure de retrait (demande du 04/10/2026).
     const kC = S.shop + '|' + d.date;
-    const aCmd = l => cmdJ(l) > 0 || (l.j7.webshop || 0) > 0 || (l.j7.commandes || 0) > 0;
+    const aCmd = l => cmdJ(l) > 0;
     const ouvert = l => !!S.cmdOuv[kC + '|' + l.pid];
-    const CANAL = { compt: 'POS', cc: 'Webshop', liv: 'Webshop · livraison' };
+    // L'heure de retrait, le client et la quantité (demande du 04/10/2026) : les commandes retirées ce jour-là.
     const listeCmd = l => { const R = S.cmd[kC];
       if (!R || R.charge) { return '<div class="pf-cmdd mu">Lecture des commandes…</div>'; }
       if (R.err) { return `<div class="pf-cmdd"><b class="wa">Commandes illisibles : ${esc(R.err)}</b> <button class="pf-btn" data-cmdrelire="1">Relire</button></div>`; }
       const q = c => c.lignes.reduce((a, x) => a + (+x[0] === +l.pid ? +x[1] : 0), 0);
-      const bloc = (jour, titre) => { const Lc = R.commandes.filter(c => c.jour === jour && q(c) > 0), sd = R.commandes.filter(c => c.jour === jour && c.sansDetail).length;
-        return `<div class="pf-cmdb"><div class="pf-cmdt"><b>${titre}</b> · ${Lc.length ? pl(Lc.length, 'commande') + ' · ' + pl(Lc.reduce((a, c) => a + q(c), 0), 'pièce') : 'aucune commande de ce produit'}</div>
-          ${Lc.length ? `<table class="pf-cmdtab"><thead><tr><th>Retrait</th><th>Client</th><th>Canal</th><th class="n">Pièces</th><th class="n">N°</th><th>État</th></tr></thead><tbody>${Lc.map(c => `<tr><td><b>${esc(c.heure)}</b></td><td>${c.client ? esc(c.client) : '<span class="mu">sans nom</span>'}${c.pro ? ' <span class="pf-tag bleu">pro</span>' : ''}</td><td>${esc(CANAL[c.canal] || c.canal)}</td><td class="n"><b>${fQ(q(c))}</b></td><td class="n mu">${c.id ? esc(c.id) : '—'}</td><td class="mu">${esc(c.statut)}</td></tr>`).join('')}</tbody></table>` : ''}
-          ${sd ? `<div class="mu">${pl(sd, 'commande')} à payer au retrait ce jour-là : leurs articles ne sont pas encore connus.</div>` : ''}</div>`; };
-      return `<div class="pf-cmdd">${bloc(d.date, 'Retraits du ' + esc(fDL(d.date)))}${bloc(R.j7, 'J−7 · ' + esc(fDL(R.j7)))}
-        ${R.clientsLus ? (R.nomsComplets ? '' : '<div class="pf-cmdn mu">Prénom et initiale du nom : le nom complet s’affichera quand la connexion à l’application sera activée.</div>') : '<div class="pf-cmdn wa">Le panel ne répond pas : les commandes sans le client.</div>'}</div>`; };
+      const P = []; R.commandes.forEach(c => { const n = c.jour === d.date ? q(c) : 0; if (n <= 0) { return; }
+        const x = c.client ? P.find(y => y.client === c.client && y.heure === c.heure) : null; if (x) { x.n += n; } else { P.push({ heure: c.heure, client: c.client, n }); } });
+      return `<div class="pf-cmdd">${P.length ? `<table class="pf-cmdtab"><tbody>${P.map(x => `<tr><td><b>${esc(x.heure)}</b></td><td>${x.client ? esc(x.client) : '<span class="mu">sans nom</span>'}</td><td class="n"><b>${fQ(x.n)}</b></td></tr>`).join('')}</tbody></table>` : '<span class="mu">aucune commande connue</span>'}</div>`; };
     // Trop ou trop peu d'une catégorie : une seule somme, ce qui a manqué moins ce qui a été jeté.
     const cNet = rows => { const m = somme(rows, l => l.j7.manque), p = somme(rows, l => l.j7.poubelle), n = m - p;
       return `<td class="n j7v" title="manqué ${fN(m)} · jeté ${fN(p)}">${n ? `<span class="${n > 0 ? 'wa' : 'bl'}">${sg(n)}</span>` : '<span class="mu">0</span>'}</td>`; };
