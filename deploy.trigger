@@ -586,3 +586,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-04T05:31:14Z production : nom du client réduit aussi quand il est entier dans le prénom
 2026-10-04T05:36:31Z production : commandes d'un produit, heure de retrait, client et quantité seulement
 2026-10-04T05:50:55Z production : nom du client particulier même avec une société remplie
+2026-10-04T06:00:47Z production : heure maximum de vente par produit
