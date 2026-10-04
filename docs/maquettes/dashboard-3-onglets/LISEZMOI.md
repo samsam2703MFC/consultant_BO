@@ -61,3 +61,12 @@ npx http-server . -p 8099 -c-1
 node docs/maquettes/dashboard-3-onglets/capturer.js
 # → http://127.0.0.1:8099/docs/maquettes/dashboard-3-onglets/planche.html
 ```
+
+## Retenue : A, codée le 04/10/2026
+
+`public/dashboard/dashboard.js` (au téléphone), `GET /exploitation/semaine-jours` pour le damier.
+Captures de la version codée, Halle, samedi 3 octobre : `code-exploitation.png`,
+`code-controle.png`, `code-semaine.png`. Les seuils de couleur sont réunis dans `MA`
+(dashboard.js) et décrits dans docs/contrat-api.md. Différences avec la maquette : une journée en
+cours reste grise tant qu'elle n'est pas finie ; la ligne Résultat de la semaine répartit la
+main-d'œuvre du mois, sauf pour le jour regardé qui la mesure au planning.
