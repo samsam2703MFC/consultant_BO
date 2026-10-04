@@ -111,27 +111,22 @@
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
-    // La valeur du magasin ne dépend pas de la période regardée : elle se lit
-    // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
-    // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
-    // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
-    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'annee' || S.vue === 'trimestre') {
+      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
       lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
       rendre(); return;
     }
-    if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
-    lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
-    // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
-    if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
-    // Le stock est vivant : il se relit avec la page, et la page se relit
-    // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
-    lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
-    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
-    if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
-    if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
+    // Le Résultat et les ventes d'abord : le navigateur n'ouvre que six connexions vers le serveur
+    // et sert les lectures dans l'ordre où elles partent (04/10/2026 : demandé en dernier, le
+    // Résultat attendait derrière dix-sept autres lectures, 6 à 8 s pour une réponse d'une seconde).
+    if ((force || !S.res[kr]) && !S.enCours[kr]) {
+      S.enCours[kr] = true; delete S.err[kr];
+      const p = S.vue === 'jour' ? '/exploitation/jour?date=' + S.date : '/exploitation/periode?vue=' + S.vue + '&date=' + S.date;
+      lire(p).then(d => { S.res[kr] = d;
+        relirePerime(kr, d, () => lire(p).then(d2 => { S.res[kr] = d2; rendre(); }).catch(() => {})); })
+        .catch(e => { S.err[kr] = e.message; }).finally(() => { S.enCours[kr] = false; rendre(); });
+    }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
     if (estMobile() && S.vue === 'jour') { lireAux('sem|' + bornesSemaine()[0], '/exploitation/periode?vue=semaine&date=' + S.date, force); }
@@ -140,19 +135,6 @@
     if (estMobile() && S.vue === 'semaine') {
       lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force);
       lireAux(cleSemJ(), '/exploitation/semaine-jours?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force);
-    }
-    // Les commandes clients et les livraisons : une seule lecture, elle porte
-    // les deux et ne dépend pas de la période regardée.
-    if (estMobile()) { lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force); }
-    // Les non-conformités se lisent sous les trois vues : la veille en Jour,
-    // la période affichée en Semaine et en Mois.
-    lireAux(cleNC(), urlNC(ncFenetre()), force);
-    if ((force || !S.res[kr]) && !S.enCours[kr]) {
-      S.enCours[kr] = true; delete S.err[kr];
-      const p = S.vue === 'jour' ? '/exploitation/jour?date=' + S.date : '/exploitation/periode?vue=' + S.vue + '&date=' + S.date;
-      lire(p).then(d => { S.res[kr] = d;
-        relirePerime(kr, d, () => lire(p).then(d2 => { S.res[kr] = d2; rendre(); }).catch(() => {})); })
-        .catch(e => { S.err[kr] = e.message; }).finally(() => { S.enCours[kr] = false; rendre(); });
     }
     if ((force || !S.st[ks]) && !S.enCours[ks]) {
       S.enCours[ks] = true; delete S.err[ks];
@@ -165,6 +147,28 @@
           if ((S.relances[ks] || 0) < 3) { S.relances[ks] = (S.relances[ks] || 0) + 1; setTimeout(() => { if (cleSt() === ks) { charger(true); } }, 5000); } })
         .finally(() => { S.enCours[ks] = false; rendre(); });
     }
+    // La valeur du magasin ne dépend pas de la période regardée : elle se lit
+    // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
+    // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
+    // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
+    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
+    if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
+    lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
+    // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
+    if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
+    // Le stock est vivant : il se relit avec la page, et la page se relit
+    // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
+    lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
+    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
+    if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
+    if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
+    // Les commandes clients et les livraisons : une seule lecture, elle porte
+    // les deux et ne dépend pas de la période regardée.
+    if (estMobile()) { lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force); }
+    // Les non-conformités se lisent sous les trois vues : la veille en Jour,
+    // la période affichée en Semaine et en Mois.
+    lireAux(cleNC(), urlNC(ncFenetre()), force);
     rendre();
   }
   function urlMaj() {
