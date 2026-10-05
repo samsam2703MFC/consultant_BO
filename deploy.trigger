@@ -599,3 +599,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-04T19:16:14Z resultat-cache-et-file-panel
 2026-10-04T19:26:50Z resultat-relance-arriere-plan
 2026-10-04T19:33:29Z dashboard-resultat-en-premier
+2026-10-05T17:39:47Z fiche-reference-magasin-tableau-jour
