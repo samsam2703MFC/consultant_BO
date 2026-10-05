@@ -1206,6 +1206,28 @@ La fiche d'une référence (**Produits › Où ça se vend › Par référence**
 La tranche en cours porte un astérisque et la note dit combien de jours elle compte. Les cartes
 des magasins disent aussi la moyenne par jour de la période.
 
+**Jour par jour** (demande du 05/10/2026 : « les 6 derniers mercredis d'un magasin, pour évaluer
+les promotions ») :
+
+    GET /analyse/produits/jours?pid=1540001&jour=3&n=6   les 6 derniers mercredis (jour 1 = lundi … 7 = dimanche ; n de 2 à 12, 6 par défaut)
+    GET /analyse/produits/jours?pid=1540001&n=14         les 14 derniers jours (n de 7 à 28, 14 par défaut)
+
+Réponse : `{ pid, nom, cat, jour, n, dates: [YYYY-MM-DD…], libelles: ["mer. 30/09"…], enCours
+(le dernier jour est aujourd'hui), magasins: [{id, nom}], parShop: {sid: [pièces | null]},
+reseau: [moyenne des magasins lus ce jour-là], promos: [{id, shop, nom, du, au, statut, heures,
+jours: [index dans dates], surProduit}], muets }`. Mêmes lectures que la grille
+(product-category-groups), une par magasin et par jour, gravées une fois le jour clos ; `null` =
+le panel n'a pas répondu pour ce magasin ce jour-là. Les promotions sont celles des jours creux
+(`ceo_promo`, hors brouillons) actives ce jour-là, dans leurs jours de la semaine ;
+`surProduit` quand un de leurs articles nomme la référence.
+
+Dans la fiche, « Semaines | Jours » : en Jours, « Tous les jours » ou un jour de la semaine, et
+le nombre de jours. Un magasin seul porte une bande jaune sur ses jours de promotion ; tous les
+magasins, une marque de leur couleur sous l'axe. Le tableau surligne les cases en promotion.
+« L'effet des promotions sur cette référence » : pour chaque promotion, la moyenne de ses jours
+face aux autres jours de la série (sans promotion, sans le jour en cours), en %, et ce que les
+autres magasins ont fait ces mêmes jours ; l'écart net en points retire la tendance du réseau.
+
 ### `/analyse/prix-volume` — le prix encaissé de chaque magasin, face à ce qu'il vend
 
     GET /analyse/prix-volume?mois=1      le dernier mois clos (défaut)
