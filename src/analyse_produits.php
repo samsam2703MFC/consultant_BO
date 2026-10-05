@@ -228,6 +228,10 @@ function ep_analyse_produits(): array
     sort($cats);
     return ['mois' => $mois,
         'tranches' => array_map(fn ($t) => $t[2], $tranches),
+        // Les bornes et le nombre de jours de chaque tranche (la dernière s'arrête à aujourd'hui) :
+        // la fiche en tire la moyenne par jour, et dit la tranche en cours.
+        'bornes' => array_map(fn ($t) => [$t[0], $t[1]], $tranches),
+        'jours' => array_map(fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches),
         'pas' => $mois <= 6 ? 'semaine' : 'mois',
         'magasins' => array_map(fn ($id, $n) => ['id' => $id, 'nom' => $n], array_keys($shops), $shops),
         'categories' => $cats, 'produits' => $prods,

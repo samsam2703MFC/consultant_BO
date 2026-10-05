@@ -719,31 +719,54 @@ function tplAnaprod(c, x){
 
   if (c.apFiche) {
     const F = c.apFiche;
+    // Les choix de la fiche : un magasin seul face au réseau, courbe ou tableau, total ou moyenne par jour.
+    const seg = (liste) => `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">${liste.map(o2 => `<button ${x.A(o2.choisir)} style="border:0;padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;background:${o2.on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${o2.on ? '#fff' : 'var(--color-text-muted)'}">${esc(o2.lib)}</button>`).join('')}</span>`;
+    const puce = k => k.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${k.coul};margin-right:5px;vertical-align:-1px"></i>` : '';
+    const thT = 'font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);font-weight:500;padding:6px 7px;border-bottom:0.5px solid var(--color-border-secondary);text-align:right;white-space:nowrap';
+    const tdT = 'padding:6px 7px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;' + num;
+    const courbe = `
+        <div style="overflow-x:auto;margin-top:10px">
+        <svg width="${F.w}" height="${F.h + 32}" style="display:block"><g transform="translate(0,10)">
+          ${F.ticks.map(t2 => `<line x1="${F.x0}" y1="${t2.y}" x2="${F.w}" y2="${t2.y}" stroke="var(--color-border-tertiary)" stroke-width="1"/><text x="${F.x0 - 6}" y="${(+t2.y + 3).toFixed(1)}" font-size="9" text-anchor="end" fill="var(--color-text-muted)">${esc(t2.t)}</text>`).join('')}
+          <line x1="${F.x0}" y1="${F.h}" x2="${F.w}" y2="${F.h}" stroke="var(--color-border-secondary)" stroke-width="1"/>
+          ${F.courbes.map(cb => `<polyline points="${cb.pts}" fill="none" stroke="${cb.coul}" stroke-width="${cb.ep}" ${cb.dash ? `stroke-dasharray="${cb.dash}"` : ''}/>`).join('')}
+          ${F.courbes.map(cb => cb.points.map(pt => `<circle cx="${pt.x}" cy="${pt.y}" r="${pt.voir ? 2.6 : 5}" fill="${pt.voir ? cb.coul : 'transparent'}"><title>${esc(pt.t)}</title></circle>`).join('')).join('')}
+          ${F.labels.map(l2 => `<text x="${l2.x}" y="${F.h + 16}" font-size="9" fill="var(--color-text-muted)">${esc(l2.t)}</text>`).join('')}
+        </g></svg></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:6px">
+          ${F.legende.map(l2 => `<span><i style="display:inline-block;width:16px;height:0;border-top:${l2.epais ? '3px' : '2px'} ${l2.dash ? 'dashed' : 'solid'} ${l2.coul};vertical-align:3px"></i> ${esc(l2.nom)}</span>`).join('')}
+        </div>`;
+    const tableau = `
+        <div style="overflow-x:auto;margin-top:10px;border:0.5px solid var(--color-border-tertiary);border-radius:10px">
+        <table style="border-collapse:collapse;font-size:11.5px;min-width:100%">
+          <tr><th style="${thT};text-align:left;position:sticky;left:0;background:var(--color-surface);z-index:1">Magasin</th><th style="${thT};border-right:0.5px solid var(--color-border-secondary)">${esc(F.tTotal)}</th>${F.tEntetes.map(h2 => `<th style="${thT}" title="${esc(h2.titre)}">${esc(h2.t)}</th>`).join('')}</tr>
+          ${F.tLignes.map(l2 => l2.ecart
+            ? `<tr><td style="${tdT};text-align:left;position:sticky;left:0;background:var(--color-background-secondary);font-size:10.5px;color:var(--color-text-muted)">${esc(l2.nom)}</td><td style="${tdT};font-weight:700;border-right:0.5px solid var(--color-border-secondary);color:${l2.total.vide ? 'var(--color-text-muted)' : (l2.total.pos ? '#2d7a3e' : '#C0182B')}">${esc(l2.total.t)}</td>${l2.cells.map(c2 => `<td style="${tdT};font-size:10.5px;font-weight:600;color:${c2.vide ? 'var(--color-text-muted)' : (c2.pos ? '#2d7a3e' : '#C0182B')}">${esc(c2.t)}</td>`).join('')}</tr>`
+            : `<tr${l2.gras ? ' style="background:#FBF4F5"' : ''}><td style="${tdT};text-align:left;position:sticky;left:0;background:${l2.gras ? '#FBF4F5' : 'var(--color-surface)'};font-weight:${l2.gras ? 700 : 600}">${puce(l2)}${esc(l2.nom)}</td><td style="${tdT};font-weight:700;border-right:0.5px solid var(--color-border-secondary)">${esc(l2.total)}</td>${l2.cells.map(v => `<td style="${tdT}${l2.gras ? ';font-weight:700' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('')}
+        </table></div>`;
     return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">
       <div style="${carte};padding:16px 18px">${entete}</div>
       <div style="${carte};padding:17px 19px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
           <div>
             <button ${x.A(F.fermer)} style="${pill(false)};margin-bottom:8px">← Retour à la grille</button>
             <div style="font-family:var(--font-display);font-size:19px">${esc(F.nom)}</div>
             <div style="font-size:11px;color:var(--color-text-muted)">${esc(F.cat)}${F.adEnCours ? ' · lecture de l’an dernier…' : ''}</div>
           </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${seg(F.vueChoix)}${seg(F.jourChoix)}</div>
         </div>
-        <div style="overflow-x:auto;margin-top:10px">
-        <svg width="${F.w}" height="${F.h + 22}" style="display:block">
-          ${[1, 2, 3].map(g2 => `<line x1="0" y1="${(F.h - g2 * F.h / 4).toFixed(0)}" x2="${F.w}" y2="${(F.h - g2 * F.h / 4).toFixed(0)}" stroke="var(--color-border-tertiary)" stroke-width="1"/>`).join('')}
-          ${F.courbes.map(cb => `<polyline points="${cb.pts}" fill="none" stroke="${cb.coul}" stroke-width="${cb.ep}" ${cb.dash ? `stroke-dasharray="${cb.dash}"` : ''}/>`).join('')}
-          ${F.labels.map(l2 => `<text x="${l2.x}" y="${F.h + 16}" font-size="9" fill="var(--color-text-muted)">${esc(l2.t)}</text>`).join('')}
-        </svg></div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:6px">
-          ${F.legende.map(l2 => `<span><i style="display:inline-block;width:16px;height:${l2.epais ? '3px' : '2px'};background:${l2.coul};vertical-align:3px;border-radius:2px"></i> ${esc(l2.nom)}</span>`).join('')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+          ${F.isoChoix.map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${o2.coul ? `<i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${o2.coul};margin-right:5px;vertical-align:0;${o2.on ? 'box-shadow:0 0 0 1.5px #fff' : ''}"></i>` : ''}${esc(o2.nom)}</button>`).join('')}
         </div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">${esc(F.note)}</div>
+        ${F.enTableau ? tableau : courbe}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">
         ${F.cartes.map(k2 => `
-        <div style="${carte};padding:12px 14px${k2.alerte ? ';background:#FDF3F0;border-color:#E8C0B5' : ''}">
+        <div ${x.A(k2.isoler)} title="${k2.on ? 'revoir tous les magasins' : 'voir ce magasin seul face à la moyenne réseau'}" class="hv-bg" style="${carte};padding:12px 14px;cursor:pointer${k2.alerte ? ';background:#FDF3F0;border-color:#E8C0B5' : ''}${k2.on ? ';box-shadow:0 0 0 2px ' + k2.coul : ''}">
           <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12.5px">${esc(k2.nom)}</b><i style="width:10px;height:10px;border-radius:3px;background:${k2.coul}"></i></div>
           <div style="font-family:var(--font-display);font-size:20px;margin-top:4px;${num}">${esc(k2.tot)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);${num}">${esc(k2.parJour)}</div>
           <div style="font-size:11px;font-weight:600;color:${k2.evolPos ? '#2d7a3e' : '#C0182B'};${num}">${esc(k2.evol)}</div>
           <div style="font-size:10px;margin-top:5px;color:${k2.alerte ? '#C0182B' : 'var(--color-text-muted)'};font-weight:${k2.alerte ? '700' : '400'}">${esc(k2.etat)}</div>
           <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(k2.part)}</div>

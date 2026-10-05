@@ -1188,6 +1188,24 @@ client mystère s'il est joint ; les `destinataires` de la ligne reçoivent le d
 magasin à cette seule adresse, sans journal. Réponse : `{ ok, resume, magasins: [ { magasin, statut: envoye|sans-adresse|echec|erreur, envoyes, note } ], copies, runId }`.
 Le cron du reporting fait la même chose le **1er jour de chaque trimestre à 8 h** pour le trimestre révolu (`scoringCron`).
 
+### `/analyse/produits` — la fiche d'une référence : un magasin seul, le tableau, la moyenne par jour
+
+    GET /analyse/produits?mois=1|3|6|12        la grille « Par référence » (semaines jusqu'à 6 mois, mois à 12)
+    GET /analyse/produits?mois=6&pid=1540001   l'an dernier de la référence, mêmes tranches décalées d'un an
+
+La réponse de la grille porte aussi, depuis le 05/10/2026, `bornes` (`[[du, au], …]`, une par
+tranche) et `jours` (le nombre de jours de chaque tranche ; la dernière s'arrête à aujourd'hui).
+La fiche d'une référence (**Produits › Où ça se vend › Par référence**, clic sur une ligne) :
+
+| Choix | Ce qu'il fait |
+|---|---|
+| Tous les magasins, ou un magasin | un magasin seul face à la moyenne réseau (en pointillé) et à l'an dernier ; l'axe se recale sur eux, chaque point se lit au survol ; un clic sur la carte du magasin fait de même, un second revient à tous |
+| Courbe ou Tableau | le tableau des quantités : une ligne par magasin montré, la moyenne réseau, l'an dernier, et pour un magasin seul son écart à la moyenne en %, tranche par tranche ; le total (ou la moyenne par jour) juste après le nom |
+| Total ou Moyenne par jour | chaque tranche divisée par ses jours : la semaine en cours, incomplète, ne plonge plus ; la colonne de tête devient la moyenne par jour de toute la période |
+
+La tranche en cours porte un astérisque et la note dit combien de jours elle compte. Les cartes
+des magasins disent aussi la moyenne par jour de la période.
+
 ### `/analyse/prix-volume` — le prix encaissé de chaque magasin, face à ce qu'il vend
 
     GET /analyse/prix-volume?mois=1      le dernier mois clos (défaut)

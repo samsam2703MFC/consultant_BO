@@ -8134,6 +8134,8 @@ class App {
 
     // --- LA FICHE DE VIE : courbe fine par magasin, moyenne réseau épaisse,
     //     an dernier en pointillé, et les cartes « vendu ou pas, où ».
+    //     Demande du 05/10/2026 : isoler un magasin face à la moyenne réseau,
+    //     basculer courbe ↔ tableau des quantités, et total ↔ moyenne par jour.
     common.apFiche = null;
     if (S.apFiche) {
       const p = tousProds.find(p2 => p2.pid === S.apFiche);
@@ -8141,32 +8143,80 @@ class App {
         const reseau = reseauDe(p);
         const ad = (this.D.aprodAd || {})[mois + ':' + p.pid] || null;
         const COULS = ['#C17A2A', '#5B7FA6', '#7A9E7E', '#A67AA6', '#8a6d12', '#607080'];
-        const toutes = mags.map((m2, i) => ({ nom: court(m2.nom), coul: COULS[i % COULS.length],
-            vals: (p.parShop || {})[m2.id] || Array(nT).fill(0), ep: 1.3, dash: '' }))
-          .concat([{ nom: 'Moyenne réseau', coul: '#8D1D2C', vals: reseau, ep: 2.6, dash: '' }])
-          .concat(ad && ad.some(v => v != null) ? [{ nom: 'An dernier (réseau)', coul: '#b8b2a8',
-            vals: ad.map(v => v || 0), ep: 1.2, dash: '4 4' }] : []);
-        const W = 880, H = 190;
-        const maxv = Math.max(...toutes.map(t2 => Math.max(...t2.vals)), 1) * 1.12;
-        const totR = reseau.reduce((a2, v) => a2 + v, 0);
+        // Les jours de chaque tranche (la dernière s'arrête à aujourd'hui) : la moyenne par jour en part.
+        const jours = Array.isArray(d.jours) && d.jours.length === nT ? d.jours : Array(nT).fill(d.pas === 'semaine' ? 7 : 30);
+        const plein = d.pas === 'semaine' ? 7 : 28;
+        const enCours = jours[nT - 1] < plein ? jours[nT - 1] : 0;
+        const iso = S.apIso != null && mags.some(m2 => String(m2.id) === String(S.apIso)) ? String(S.apIso) : null;
+        const parJour = !!S.apParJour, enTableau = S.apVue === 'tableau';
+        const surJour = vals => vals.map((v, i) => v == null ? null : (parJour ? v / Math.max(1, jours[i]) : v));
+        const fmt = v => v == null ? '—' : (parJour ? (Math.round(v * 10) / 10).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(v).toLocaleString('fr-BE'));
+        const unite = parJour ? 'pcs / jour' : (d.pas === 'semaine' ? 'pcs / semaine' : 'pcs / mois');
+        const libT = (d.tranches || []).map((l2, i) => i === nT - 1 && enCours ? l2 + '*' : l2);
+        const totalJ = jours.reduce((a2, v) => a2 + v, 0);
+        const magsV = mags.map((m2, i) => ({ id: String(m2.id), nom: court(m2.nom), coul: COULS[i % COULS.length],
+          brut: (p.parShop || {})[m2.id] || Array(nT).fill(0) }));
+        const series = magsV.filter(m2 => !iso || m2.id === iso).map(m2 => ({ nom: m2.nom, coul: m2.coul, brut: m2.brut, ep: iso ? 2.4 : 1.3, dash: '', mag: true }))
+          .concat([{ nom: 'Moyenne réseau', coul: '#8D1D2C', brut: reseau, ep: 2.6, dash: iso ? '6 3' : '', reseau: true }])
+          .concat(ad && ad.some(v => v != null) ? [{ nom: 'An dernier (réseau)', coul: '#b8b2a8', brut: ad, ep: 1.2, dash: '4 4' }] : [])
+          .map(t2 => Object.assign(t2, { vals: surJour(t2.brut) }));
+        // L'axe : un maximum rond, trois graduations chiffrées.
+        const brutMax = Math.max(...series.map(t2 => Math.max(...t2.vals.map(v => v || 0))), parJour ? 0.5 : 1);
+        const pas10 = Math.pow(10, Math.floor(Math.log10(brutMax / 4)));
+        const cran = [1, 2, 2.5, 3, 4, 5, 10].map(k => k * pas10).find(k => k * 4 >= brutMax) || brutMax / 4;
+        const maxv = cran * 4;
+        const W = 880, H = 190, X0 = 38, PW = W - X0;
+        const px = i => (X0 + i / (nT - 1) * PW).toFixed(1), py = v => (H - (v || 0) / maxv * H).toFixed(1);
+        const titreT = i => (d.bornes && d.bornes[i] ? 'du ' + d.bornes[i][0].split('-').reverse().slice(0, 2).join('/') + ' au ' + d.bornes[i][1].split('-').reverse().slice(0, 2).join('/') : libT[i]) + (i === nT - 1 && enCours ? ' (en cours, ' + enCours + ' j)' : '');
+        // Le tableau : une ligne par magasin montré, la moyenne réseau, l'an dernier, et l'écart du magasin isolé.
+        const ligneT = t2 => {
+          const tot = t2.brut.reduce((a2, v) => a2 + (v || 0), 0);
+          return { nom: t2.nom, coul: t2.coul, gras: !!t2.reseau, cells: t2.vals.map(v => fmt(v)),
+            total: parJour ? fmt(tot / Math.max(1, totalJ)) : fmt(tot) };
+        };
+        const lignes = series.map(ligneT);
+        if (iso) {
+          const m0 = series.find(t2 => t2.mag);
+          const pct = (a2, b2) => b2 > 0 ? Math.round((a2 / b2 - 1) * 100) : null;
+          const sgn = v => v == null ? '—' : (v >= 0 ? '+ ' : '− ') + Math.abs(v) + ' %';
+          const totM = m0.brut.reduce((a2, v) => a2 + (v || 0), 0), totR = reseau.reduce((a2, v) => a2 + v, 0);
+          lignes.push({ nom: 'Écart à la moyenne', ecart: true, cells: m0.brut.map((v, i) => { const e = pct(v, reseau[i]); return { t: sgn(e), pos: (e || 0) >= 0, vide: e == null }; }),
+            total: (() => { const e = pct(totM, totR); return { t: sgn(e), pos: (e || 0) >= 0, vide: e == null }; })() });
+        }
         common.apFiche = {
-          nom: p.nom, cat: p.cat, w: W, h: H,
+          nom: p.nom, cat: p.cat, w: W, h: H, x0: X0,
           fermer: () => this.setState({ apFiche: null }),
           adEnCours: !ad,
-          courbes: toutes.map(t2 => ({ coul: t2.coul, ep: t2.ep, dash: t2.dash,
-            pts: t2.vals.map((v, i) => (i / (nT - 1) * W).toFixed(1) + ',' + (H - v / maxv * (H - 8)).toFixed(1)).join(' ') })),
-          legende: toutes.map(t2 => ({ nom: t2.nom, coul: t2.coul, epais: t2.ep >= 2 })),
-          labels: (d.tranches || []).map((l2, i) => ({ x: (i / (nT - 1) * (W - 26)).toFixed(0), t: l2 })),
-          cartes: mags.map((m2, i) => {
-            const serie = (p.parShop || {})[m2.id] || Array(nT).fill(0);
+          // Les choix : un magasin seul face au réseau, courbe ou tableau, total ou moyenne par jour.
+          isoChoix: [{ nom: 'Tous les magasins', coul: '', on: !iso, choisir: () => this.setState({ apIso: null }) }]
+            .concat(magsV.map(m2 => ({ nom: m2.nom, coul: m2.coul, on: iso === m2.id, choisir: () => this.setState({ apIso: iso === m2.id ? null : m2.id }) }))),
+          vueChoix: [['courbe', 'Courbe'], ['tableau', 'Tableau']].map(([k, lib]) => ({ lib, on: (S.apVue || 'courbe') === k, choisir: () => this.setState({ apVue: k }) })),
+          jourChoix: [[false, d.pas === 'semaine' ? 'Total par semaine' : 'Total par mois'], [true, 'Moyenne par jour']].map(([k, lib]) => ({ lib, on: parJour === k, choisir: () => this.setState({ apParJour: k }) })),
+          enTableau, unite,
+          note: (iso ? magsV.find(m2 => m2.id === iso).nom + ' face à la moyenne des ' + mags.length + ' magasins' : 'Les ' + mags.length + ' magasins et leur moyenne') + ' · ' + unite
+            + (enCours ? ' · * ' + libT[nT - 1].replace('*', '') + ' en cours : ' + enCours + ' jour' + (enCours > 1 ? 's' : '') + (parJour ? '' : ', le total y est incomplet') : ''),
+          ticks: [1, 2, 3, 4].map(g2 => ({ y: py(cran * g2), t: (Math.round(cran * g2 * 10) / 10).toLocaleString('fr-BE') })),
+          courbes: series.map(t2 => ({ coul: t2.coul, ep: t2.ep, dash: t2.dash,
+            pts: t2.vals.map((v, i) => px(i) + ',' + py(v)).join(' '),
+            points: t2.vals.map((v, i) => ({ x: px(i), y: py(v), voir: !!iso && (t2.mag || t2.reseau), t: titreT(i) + ' · ' + t2.nom + ' : ' + fmt(v) + ' ' + unite })) })),
+          legende: series.map(t2 => ({ nom: t2.nom, coul: t2.coul, epais: t2.ep >= 2, dash: !!t2.dash })),
+          labels: libT.map((l2, i) => ({ x: (X0 + i / (nT - 1) * (PW - 26)).toFixed(0), t: l2 })),
+          tEntetes: libT.map((l2, i) => ({ t: l2, titre: titreT(i) })),
+          tTotal: parJour ? 'Moy. / jour' : 'Total',
+          tLignes: lignes,
+          cartes: magsV.map(m2 => {
+            const serie = m2.brut;
             const tot = serie.reduce((a2, v) => a2 + v, 0);
             const demi = Math.floor(nT / 2);
             const m1 = serie.slice(0, demi).reduce((a2, v) => a2 + v, 0);
             const m2b = serie.slice(demi).reduce((a2, v) => a2 + v, 0);
             const evol = m1 > 0 ? Math.round((m2b - m1) / m1 * 100) : null;
             const dort = dortDepuis(serie);
-            return { nom: court(m2.nom), coul: COULS[i % COULS.length],
+            const totR = reseau.reduce((a2, v) => a2 + v, 0);
+            return { nom: m2.nom, coul: m2.coul, on: iso === m2.id,
+              isoler: () => this.setState({ apIso: iso === m2.id ? null : m2.id }),
               tot: Math.round(tot).toLocaleString('fr-BE') + ' pcs',
+              parJour: (Math.round(tot / Math.max(1, totalJ) * 10) / 10).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pcs / jour',
               evol: evol == null ? '' : (evol >= 0 ? '+ ' : '− ') + Math.abs(evol) + ' % (2e moitié vs 1re)',
               evolPos: (evol || 0) >= 0,
               etat: tot === 0 ? 'jamais vendu sur la période'
