@@ -601,3 +601,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-04T19:33:29Z dashboard-resultat-en-premier
 2026-10-05T17:39:47Z fiche-reference-magasin-tableau-jour
 2026-10-05T17:57:29Z fiche-reference-jour-par-jour-promotions
+2026-10-05T19:32:48Z tickets-relecture-incrementale
