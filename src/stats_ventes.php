@@ -477,6 +477,12 @@ function svHeuresJours(int $sid, array $jours): array
  * Les produits d'un jour, heure par heure — {h: {pid: [nom, q, ventes, coût|null]}}.
  * Lit les tickets du jour si le jour n'est pas gravé ; null si le budget est
  * épuisé ou le panel muet (un jour à moitié lu ne se grave pas).
+ *
+ * La relecture est INCRÉMENTALE (05/10/2026) : le relevé garde les tickets déjà lus
+ * (`ids`) ; la liste du jour se relit (un appel), seuls les tickets nouveaux se lisent
+ * (un appel chacun) et s'ajoutent au relevé. Mesuré avant : la journée entière relue
+ * toutes les dix minutes, 298 tickets à Corbais, 8 s. Un ticket déjà lu qui a disparu
+ * de la liste (annulé) fait tout relire.
  */
 function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
 {
@@ -492,17 +498,24 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
         $ids[] = (int) $t['id'];
         if (!empty($t['is_client_b2b'])) { $pro[(int) $t['id']] = true; }
     }
-    if ($cout + count($ids) > $budget && $cout > 0) { return null; }   // ce jour attendra le prochain lot
+    // Ce qui est déjà lu : un relevé qui garde ses tickets, et aucun d'eux disparu de la liste.
+    $base = null;
+    if (is_array($c) && isset($c['p']) && is_array($c['p']) && is_array($c['ids'] ?? null)) {
+        $lus = array_map('intval', $c['ids']);
+        if (array_diff($lus, $ids) === []) { $base = $c; }
+    }
+    $nouveaux = $base !== null ? array_values(array_diff($ids, $lus)) : $ids;
+    if ($cout + count($nouveaux) > $budget && $cout > 0) { return null; }   // ce jour attendra le prochain lot
     $couts = catalogueCouts();
     // Le coût de CE magasin d'abord (products/available le chiffre pour chacun), la moyenne du réseau sinon.
     $coutsM = function_exists('coutsPanelMagasin') ? coutsPanelMagasin($sid) : [];
-    $p = [];
+    $p = $base !== null ? $base['p'] : [];
     // La part des clients pro, produit par produit : elle ne passe pas par le
     // comptoir, les rotations du planogramme la retirent.
-    $pb = [];
+    $pb = $base !== null ? (array) ($base['pb'] ?? []) : [];
     // La minute du dernier ticket de chaque produit (portions comprises) : la clôture la montre.
-    $der = [];
-    foreach (array_chunk($ids, 40) as $lot) {
+    $der = $base !== null ? (array) ($base['d'] ?? []) : [];
+    foreach (array_chunk($nouveaux, 40) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
         $res = PanelApi::getParallele($chemins, 8);
@@ -541,13 +554,14 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
             }
         }
     }
-    $cout += count($ids);
+    $cout += count($nouveaux);
     foreach ($p as $h => $lst) { foreach ($lst as $pid => $x) { $p[$h][$pid] = [$x[0], round($x[1], 3), round($x[2], 2), $x[3] === null ? null : round($x[3], 2)]; } }
     foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
     // Le pro du jour (tickets B2B) se grave avec les produits : la liste est déjà lue.
     // `pb` = les unités vendues aux clients pro, par produit ({} si aucune).
     // `d` = la minute du dernier ticket par produit ({pid: "HH:MM"}) ; absente des jours gravés avant le 04/10/2026.
-    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der];
+    // `ids` = les tickets déjà lus : la relecture suivante ne lit que les nouveaux.
+    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der, 'ids' => $ids];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
     return $p;
