@@ -8043,6 +8043,127 @@ class App {
     });
   }
 
+  /** La référence jour par jour : les n derniers jours, ou les n derniers d'un jour de la semaine. */
+  apChargeJ(pid, jour, n){
+    if (!this.D.aprodJ) { this.D.aprodJ = {}; }
+    const k = pid + ':' + jour + ':' + n;
+    if (this.D.aprodJ[k] || this._apJEnCours === k) { return; }
+    this._apJEnCours = k;
+    readOne('/analyse/produits/jours?pid=' + pid + (jour ? '&jour=' + jour : '') + '&n=' + n).then(d => {
+      if (this._apJEnCours === k) { this._apJEnCours = null; }
+      this.D.aprodJ[k] = d || { indispo: true, motif: 'lecture impossible' };
+      this.setState({});
+    });
+  }
+
+  /**
+   * La fiche en JOURS (demande du 05/10/2026 : « les 6 derniers mercredis d'un magasin, pour
+   * évaluer les promotions ») : un point par jour, les promotions des jours creux marquées, et
+   * pour chacune la moyenne des jours en promotion face aux autres jours de la série — et ce
+   * que les autres magasins ont fait ces jours-là, pour ne pas prendre la météo pour un effet.
+   */
+  apFicheJours(common, p, mags, court){
+    const S = this.state;
+    const JN = ['Tous les jours', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+    const JL = ['jours', 'lundis', 'mardis', 'mercredis', 'jeudis', 'vendredis', 'samedis', 'dimanches'];
+    const jour = S.apJour || 0;
+    const nOpts = jour ? [4, 6, 8, 12] : [7, 14, 28];
+    const n = nOpts.includes(S.apNj) ? S.apNj : (jour ? 6 : 14);
+    const k = p.pid + ':' + jour + ':' + n;
+    const dj = (this.D.aprodJ || {})[k];
+    if (!dj) { this.apChargeJ(p.pid, jour, n); }
+    const COULS = ['#C17A2A', '#5B7FA6', '#7A9E7E', '#A67AA6', '#8a6d12', '#607080'];
+    const iso = S.apIso != null && mags.some(m2 => String(m2.id) === String(S.apIso)) ? String(S.apIso) : null;
+    const magsV = mags.map((m2, i) => ({ id: String(m2.id), nom: court(m2.nom), coul: COULS[i % COULS.length] }));
+    const F = { nom: p.nom, cat: p.cat, fermer: () => this.setState({ apFiche: null }), adEnCours: false,
+      perChoix: [['semaines', 'Semaines'], ['jours', 'Jours']].map(([v, lib]) => ({ lib, on: v === 'jours', choisir: () => this.setState({ apPer: v }) })),
+      joursChips: JN.map((lib, j) => ({ lib, on: j === jour, choisir: () => this.setState({ apJour: j, apNj: null }) })),
+      nChoix: nOpts.map(v => ({ lib: v + ' ' + (jour ? JL[jour] : 'jours'), on: v === n, choisir: () => this.setState({ apNj: v }) })),
+      isoChoix: [{ nom: 'Tous les magasins', coul: '', on: !iso, choisir: () => this.setState({ apIso: null }) }]
+        .concat(magsV.map(m2 => ({ nom: m2.nom, coul: m2.coul, on: iso === m2.id, choisir: () => this.setState({ apIso: iso === m2.id ? null : m2.id }) }))),
+      vueChoix: [['courbe', 'Courbe'], ['tableau', 'Tableau']].map(([v, lib]) => ({ lib, on: (S.apVue || 'courbe') === v, choisir: () => this.setState({ apVue: v }) })),
+      jourChoix: null, enTableau: S.apVue === 'tableau', unite: 'pcs / jour', cartes: [], evals: [], tLignes: [] };
+    common.apFiche = F;
+    if (!dj) { F.chargement = 'Lecture des ' + n + ' derniers ' + JL[jour] + ' chez le panel, un appel par magasin et par jour — les jours clos se gardent, la prochaine lecture est instantanée…'; return; }
+    if (dj.indispo || dj.error) { F.chargement = dj.motif || dj.error || 'indisponible'; return; }
+    const nT = (dj.dates || []).length;
+    const enCours = !!dj.enCours;
+    const lib = (dj.libelles || []).map((l2, i) => i === nT - 1 && enCours ? l2 + '*' : l2);
+    const parShop = dj.parShop || {};
+    const serie = id => (parShop[id] || Array(nT).fill(null));
+    const fmt = v => v == null ? '—' : (Math.round(v * 10) / 10).toLocaleString('fr-BE', { maximumFractionDigits: 1 });
+    const moy = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((s2, x) => s2 + x, 0) / v.length : null; };
+    const promos = (dj.promos || []).filter(pr => magsV.some(m2 => m2.id === String(pr.shop)));
+    const promosDe = id => promos.filter(pr => String(pr.shop) === id);
+    const enPromo = (id, i) => promosDe(id).filter(pr => pr.jours.includes(i));
+    const montres = magsV.filter(m2 => !iso || m2.id === iso);
+    const series = montres.map(m2 => ({ id: m2.id, nom: m2.nom, coul: m2.coul, vals: serie(m2.id), ep: iso ? 2.4 : 1.3, dash: '', mag: true }))
+      .concat([{ nom: 'Moyenne réseau', coul: '#8D1D2C', vals: dj.reseau || [], ep: 2.6, dash: iso ? '6 3' : '', reseau: true }]);
+    // L'axe : un maximum rond, trois graduations.
+    const brutMax = Math.max(...series.map(t2 => Math.max(...t2.vals.map(v => v || 0))), 1);
+    const pas10 = Math.pow(10, Math.floor(Math.log10(brutMax / 4)));
+    const cran = [1, 2, 2.5, 3, 4, 5, 10].map(k2 => k2 * pas10).find(k2 => k2 * 4 >= brutMax) || brutMax / 4;
+    const maxv = cran * 4;
+    const W = 880, H = 190, X0 = 38, PW = W - X0;
+    const px = i => (X0 + (nT > 1 ? i / (nT - 1) : 0.5) * PW), py = v => (H - (v || 0) / maxv * H).toFixed(1);
+    const pas = Math.max(1, Math.ceil(nT * 52 / PW));
+    const segs = vals => { const out = []; let cur = []; vals.forEach((v, i) => { if (v == null) { if (cur.length) { out.push(cur.join(' ')); } cur = []; } else { cur.push(px(i).toFixed(1) + ',' + py(v)); } }); if (cur.length) { out.push(cur.join(' ')); } return out; };
+    const titreP = (id, i) => enPromo(id, i).map(pr => 'promotion « ' + pr.nom + ' » ' + pr.heures + (pr.surProduit ? ', sur ce produit' : '')).join(' · ');
+    Object.assign(F, { w: W, h: H, x0: X0,
+      note: (iso ? magsV.find(m2 => m2.id === iso).nom + ' face à la moyenne des ' + mags.length + ' magasins' : 'Les ' + mags.length + ' magasins et leur moyenne')
+        + ' · les ' + nT + ' derniers ' + JL[jour] + ' · pcs / jour' + (enCours ? ' · * aujourd’hui, en cours' : '') + (dj.muets ? ' · ' + dj.muets + ' lecture(s) sans réponse du panel' : ''),
+      ticks: [1, 2, 3, 4].map(g2 => ({ y: py(cran * g2), t: (Math.round(cran * g2 * 10) / 10).toLocaleString('fr-BE') })),
+      courbes: series.map(t2 => ({ coul: t2.coul, ep: t2.ep, dash: t2.dash, segs: segs(t2.vals),
+        points: t2.vals.map((v, i) => v == null ? null : ({ x: px(i).toFixed(1), y: py(v), voir: !!iso || nT <= 14,
+          t: (dj.libelles || [])[i] + ' · ' + t2.nom + ' : ' + fmt(v) + ' pcs' + (t2.mag && enPromo(t2.id, i).length ? ' · ' + titreP(t2.id, i) : '') })).filter(Boolean) })),
+      legende: series.map(t2 => ({ nom: t2.nom, coul: t2.coul, epais: t2.ep >= 2, dash: !!t2.dash })),
+      labels: lib.map((l2, i) => ({ x: px(i).toFixed(0), anc: i === 0 ? 'start' : (i === nT - 1 ? 'end' : 'middle'), t: i % pas === (nT - 1) % pas ? l2 : '' })),
+      // Les promotions : une bande pour le magasin seul, une marque de couleur par magasin sinon.
+      bandes: iso ? lib.map((l2, i) => enPromo(iso, i).length ? { x: (px(i) - PW / Math.max(1, nT - 1) / 2).toFixed(1), w: (PW / Math.max(1, nT - 1)).toFixed(1), t: titreP(iso, i) } : null).filter(Boolean) : [],
+      marques: [].concat(...montres.map((m2, r) => lib.map((l2, i) => enPromo(m2.id, i).length ? { x: (px(i) - 4).toFixed(1), y: H + 22 + r * 6, coul: m2.coul, t: m2.nom + ' · ' + titreP(m2.id, i) } : null).filter(Boolean))),
+      rangsMarques: montres.length,
+      tEntetes: lib.map((l2, i) => ({ t: l2, titre: (dj.dates || [])[i] || '' })), tTotal: 'Moyenne' });
+    const lignes = series.map(t2 => ({ nom: t2.nom, coul: t2.coul, gras: !!t2.reseau,
+      cells: t2.vals.map((v, i) => t2.mag && enPromo(t2.id, i).length ? { t: fmt(v), promo: true, titre: titreP(t2.id, i) } : fmt(v)),
+      total: fmt(moy(t2.vals.filter((v, i) => !(enCours && i === nT - 1)))) }));
+    if (iso) {
+      const a = serie(iso), r2 = dj.reseau || [];
+      const pct = (x, y) => x == null || y == null || y <= 0 ? null : Math.round((x / y - 1) * 100);
+      const sgn = v => v == null ? '—' : (v >= 0 ? '+ ' : '− ') + Math.abs(v) + ' %';
+      lignes.push({ nom: 'Écart à la moyenne', ecart: true, cells: a.map((v, i) => { const e = pct(v, r2[i]); return { t: sgn(e), pos: (e || 0) >= 0, vide: e == null }; }),
+        total: (() => { const e = pct(moy(a), moy(r2)); return { t: sgn(e), pos: (e || 0) >= 0, vide: e == null }; })() });
+    }
+    F.tLignes = lignes;
+    // L'effet de chaque promotion : ses jours face aux autres jours de la série (sans promotion, sans le jour en cours),
+    // et les autres magasins les mêmes jours.
+    const clos = i => !(enCours && i === nT - 1);
+    F.evals = promos.filter(pr => !iso || String(pr.shop) === iso).map(pr => {
+      const id = String(pr.shop), m2 = magsV.find(x => x.id === id), a = serie(id);
+      const jp = pr.jours.filter(i => clos(i) && a[i] != null);
+      const jo = a.map((v, i) => i).filter(i => clos(i) && a[i] != null && !enPromo(id, i).length);
+      const autres = i => moy(magsV.filter(x => x.id !== id).map(x => serie(x.id)[i]));
+      const mp = moy(jp.map(i => a[i])), mo = moy(jo.map(i => a[i]));
+      const ap = moy(jp.map(autres)), ao = moy(jo.map(autres));
+      const ef = mp != null && mo != null && mo > 0 ? Math.round((mp / mo - 1) * 100) : null;
+      const efA = ap != null && ao != null && ao > 0 ? Math.round((ap / ao - 1) * 100) : null;
+      const sgn = v => (v >= 0 ? '+ ' : '− ') + Math.abs(v) + ' %';
+      return { mag: m2.nom, coul: m2.coul, nom: pr.nom, surProduit: pr.surProduit, heures: pr.heures,
+        txt: ef == null ? (jp.length ? 'pas assez de jours sans promotion pour comparer' : 'aucun jour clos en promotion dans la série')
+          : jp.length + ' jour' + (jp.length > 1 ? 's' : '') + ' en promotion : ' + fmt(mp) + ' pcs en moyenne, contre ' + fmt(mo) + ' les ' + jo.length + ' autres',
+        effet: ef == null ? '' : sgn(ef), pos: (ef || 0) >= 0,
+        contexte: efA == null ? '' : 'les autres magasins ces jours-là : ' + sgn(efA) + (ef != null ? ' · écart net ' + sgn(ef - efA).replace(' %', ' pts') : '') };
+    });
+    F.cartes = magsV.map(m2 => {
+      const a = serie(m2.id), aC = a.filter((v, i) => clos(i));
+      const tot = a.reduce((s2, v) => s2 + (v || 0), 0), mo = moy(aC), mr = moy((dj.reseau || []).filter((v, i) => clos(i)));
+      const np = promosDe(m2.id).reduce((s2, pr) => s2 + pr.jours.length, 0);
+      return { nom: m2.nom, coul: m2.coul, on: iso === m2.id, isoler: () => this.setState({ apIso: iso === m2.id ? null : m2.id }),
+        tot: Math.round(tot).toLocaleString('fr-BE') + ' pcs', parJour: fmt(mo) + ' pcs / jour en moyenne',
+        evol: '', evolPos: true, etat: np ? np + ' jour' + (np > 1 ? 's' : '') + ' en promotion dans la série' : 'aucune promotion dans la série', alerte: false,
+        part: mo != null && mr ? (mo / mr).toFixed(1).replace('.', ',') + ' × la moyenne réseau' : '' };
+    });
+  }
+
   apChargeAd(pid){
     const S = this.state, mois = S.apMois || 3;
     const k = mois + ':' + pid;
@@ -8137,7 +8258,10 @@ class App {
     //     Demande du 05/10/2026 : isoler un magasin face à la moyenne réseau,
     //     basculer courbe ↔ tableau des quantités, et total ↔ moyenne par jour.
     common.apFiche = null;
-    if (S.apFiche) {
+    if (S.apFiche && S.apPer === 'jours') {
+      const p = tousProds.find(p2 => p2.pid === S.apFiche);
+      if (p) { this.apFicheJours(common, p, mags, court); }
+    } else if (S.apFiche) {
       const p = tousProds.find(p2 => p2.pid === S.apFiche);
       if (p && nT > 1) {
         const reseau = reseauDe(p);
@@ -8187,6 +8311,7 @@ class App {
           nom: p.nom, cat: p.cat, w: W, h: H, x0: X0,
           fermer: () => this.setState({ apFiche: null }),
           adEnCours: !ad,
+          perChoix: [['semaines', 'Semaines'], ['jours', 'Jours']].map(([v, lib]) => ({ lib, on: v === 'semaines', choisir: () => this.setState({ apPer: v }) })),
           // Les choix : un magasin seul face au réseau, courbe ou tableau, total ou moyenne par jour.
           isoChoix: [{ nom: 'Tous les magasins', coul: '', on: !iso, choisir: () => this.setState({ apIso: null }) }]
             .concat(magsV.map(m2 => ({ nom: m2.nom, coul: m2.coul, on: iso === m2.id, choisir: () => this.setState({ apIso: iso === m2.id ? null : m2.id }) }))),
@@ -8197,7 +8322,7 @@ class App {
             + (enCours ? ' · * ' + libT[nT - 1].replace('*', '') + ' en cours : ' + enCours + ' jour' + (enCours > 1 ? 's' : '') + (parJour ? '' : ', le total y est incomplet') : ''),
           ticks: [1, 2, 3, 4].map(g2 => ({ y: py(cran * g2), t: (Math.round(cran * g2 * 10) / 10).toLocaleString('fr-BE') })),
           courbes: series.map(t2 => ({ coul: t2.coul, ep: t2.ep, dash: t2.dash,
-            pts: t2.vals.map((v, i) => px(i) + ',' + py(v)).join(' '),
+            segs: [t2.vals.map((v, i) => px(i) + ',' + py(v)).join(' ')],
             points: t2.vals.map((v, i) => ({ x: px(i), y: py(v), voir: !!iso && (t2.mag || t2.reseau), t: titreT(i) + ' · ' + t2.nom + ' : ' + fmt(v) + ' ' + unite })) })),
           legende: series.map(t2 => ({ nom: t2.nom, coul: t2.coul, epais: t2.ep >= 2, dash: !!t2.dash })),
           labels: libT.map((l2, i) => ({ x: (X0 + i / (nT - 1) * (PW - 26)).toFixed(0), t: l2 })),

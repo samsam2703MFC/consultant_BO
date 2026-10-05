@@ -141,6 +141,86 @@ function apTranches2(array $couples): array
 }
 
 /**
+ * Les dates d'un suivi jour par jour : les `$n` derniers jours jusqu'à aujourd'hui, ou, avec
+ * `$jour` (1 = lundi … 7 = dimanche), les `$n` derniers de ce jour-là. Du plus ancien au plus récent.
+ */
+function apDatesJours(int $jour, int $n, string $auj): array
+{
+    $d = $auj;
+    if ($jour > 0) { while ((int) date('N', strtotime($d . ' 12:00:00')) !== $jour) { $d = date('Y-m-d', strtotime($d . ' 12:00:00 -1 day')); } }
+    $out = [];
+    for ($i = 0; $i < $n; $i++) { $out[] = $d; $d = date('Y-m-d', strtotime($d . ' 12:00:00 ' . ($jour > 0 ? '-7 days' : '-1 day'))); }
+    return array_reverse($out);
+}
+
+/**
+ * GET /analyse/produits/jours?pid=1540001[&jour=3][&n=6] — une référence jour par jour (demande du
+ * 05/10/2026 : « les 6 derniers mercredis d'un magasin, pour évaluer les promotions »). Sans
+ * `jour` : les `n` derniers jours (14 par défaut, 7 à 28) ; avec : les `n` derniers de ce jour de
+ * la semaine (6 par défaut, 2 à 12). Mêmes lectures que la grille (product-category-groups),
+ * une par magasin et par jour, gravées une fois le jour clos. Les promotions des jours creux
+ * (ceo_promo, hors brouillons) actives ces jours-là sont jointes, magasin par magasin.
+ */
+function ep_analyse_produits_jours(): array
+{
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $pid = (int) ($_GET['pid'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'référence manquante']; }
+    $jour = (int) ($_GET['jour'] ?? 0);
+    if ($jour < 0 || $jour > 7) { $jour = 0; }
+    $n = (int) ($_GET['n'] ?? ($jour > 0 ? 6 : 14));
+    $n = $jour > 0 ? max(2, min(12, $n)) : max(7, min(28, $n));
+    @set_time_limit(120);
+    $auj = date('Y-m-d');
+    $dates = apDatesJours($jour, $n, $auj);
+    $shops = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) { $shops[(int) $s['id']] = (string) $s['name']; }
+    $couples = [];
+    foreach (array_keys($shops) as $sid) { foreach ($dates as $d) { $couples[] = [$sid, $d, $d]; } }
+    $lu = apTranches2($couples);
+    $par = []; $muets = 0; $nom = null; $cat = null;
+    foreach (array_keys($shops) as $sid) {
+        foreach ($dates as $i => $d) {
+            $p = $lu[$sid . ':' . $d] ?? null;
+            if (!is_array($p)) { $muets++; $par[$sid][$i] = null; continue; }
+            $par[$sid][$i] = round((float) ($p[$pid][2] ?? 0), 1);
+            if ($nom === null && isset($p[$pid])) { $nom = (string) $p[$pid][0]; $cat = (string) $p[$pid][1]; }
+        }
+    }
+    // La moyenne réseau d'un jour : sur les magasins lus ce jour-là.
+    $reseau = [];
+    foreach ($dates as $i => $d) {
+        $v = array_values(array_filter(array_map(static fn ($s) => $par[$s][$i], array_keys($shops)), static fn ($x) => $x !== null));
+        $reseau[] = $v === [] ? null : round(array_sum($v) / count($v), 1);
+    }
+    // Les promotions de ces jours-là : un jour compte s'il est dans la période et dans les jours de la promotion.
+    $promos = [];
+    if (function_exists('ensureJoursCreux') && function_exists('jcPromoLigne')) {
+        try {
+            ensureJoursCreux();
+            $nomBas = mb_strtolower((string) $nom);
+            foreach (Db::rows("SELECT * FROM ceo_promo WHERE statut <> 'brouillon' AND du <= ? AND au >= ? ORDER BY du, id", [end($dates), $dates[0]]) as $r) {
+                $x = jcPromoLigne($r);
+                $sur = [];
+                foreach ($dates as $i => $d) { if ($x['du'] <= $d && $x['au'] >= $d && ($x['jours'] === [] || in_array((int) date('N', strtotime($d . ' 12:00:00')), $x['jours'], true))) { $sur[] = $i; } }
+                if ($sur === []) { continue; }
+                $surProduit = false;
+                foreach ($x['article'] as $a) { $a = mb_strtolower(trim($a)); if ($a !== '' && ($a === (string) $pid || ($nomBas !== '' && (str_contains($a, $nomBas) || str_contains($nomBas, $a))))) { $surProduit = true; } }
+                $promos[] = ['id' => $x['id'], 'shop' => (int) $x['shop'], 'nom' => $x['nom'], 'du' => $x['du'], 'au' => $x['au'], 'statut' => $x['statut'],
+                    'heures' => sprintf('%02d h – %02d h', $x['heureDe'], $x['heureA'] + 1), 'jours' => $sur, 'surProduit' => $surProduit];
+            }
+        } catch (Throwable $e) { /* sans promotions lisibles, la série reste */ }
+    }
+    $JS = ['', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+    return ['pid' => $pid, 'nom' => $nom, 'cat' => $cat, 'jour' => $jour, 'n' => $n, 'dates' => $dates,
+        'libelles' => array_map(static fn ($d) => $JS[(int) date('N', strtotime($d . ' 12:00:00'))] . ' ' . date('d/m', strtotime($d . ' 12:00:00')), $dates),
+        'enCours' => end($dates) === $auj,
+        'magasins' => array_map(fn ($id, $nm) => ['id' => $id, 'nom' => $nm], array_keys($shops), $shops),
+        'parShop' => $par, 'reseau' => $reseau, 'promos' => $promos, 'muets' => $muets,
+        'source' => 'product-category-groups du panel, un appel par magasin et par jour, gravé une fois le jour clos · promotions : jours creux (hors brouillons)'];
+}
+
+/**
  * GET /analyse/produits?mois=3 — la grille entière : chaque référence, sa
  * série par magasin et la moyenne réseau, tranche par tranche.
  * Avec ?pid= : la MÊME période un an plus tôt, réduite à ce produit — la
