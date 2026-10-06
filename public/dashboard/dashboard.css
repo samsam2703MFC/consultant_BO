@@ -1424,3 +1424,22 @@ body.pp-emb{background:var(--color-bg)}
 .op-hb .c span small{font-size:8.5px;font-weight:600;color:#8a847c;line-height:1}
 .op-hb .c span.vr{color:#3d3a36}
 .op-hb .c span.j small{color:#ccc}
+/* Short life en dépliant : catégorie › sous-catégorie › produit (demande du 06/10/2026). */
+.op-arbre .fl{display:inline-block;width:14px;color:var(--color-text-muted);transition:transform .15s;font-size:10px}
+.op-arbre .on>td .fl,.op-arbre .r.on .fl{transform:rotate(90deg)}
+.op-arbre tr.nv1,.op-arbre tr.nv2{cursor:pointer}
+.op-arbre tr.nv1>td{background:#fcfaf7;border-top:1px solid var(--color-border-tertiary)}
+.op-arbre tr.nv1>td:first-child b{font-size:13px}
+.op-arbre tr.nv1:hover>td,.op-arbre tr.nv2:hover>td{background:#f6f1ea}
+.op-arbre tr.nv2>td:first-child{padding-left:26px}
+.op-arbre tr.nv2>td:first-child b{font-weight:600}
+.op-arbre tr.nv3>td:first-child{padding-left:46px}
+.op-arbre tr.nv3>td:first-child b{font-weight:500}
+.op-arbre tr.nv1>td.h.vr,.op-arbre tr.nv2>td.h.vr{background:#efe9e1}
+.op-arbre tr.nv1>td.h.vp,.op-arbre tr.nv2>td.h.vp{background:#dcebdf}
+.op-vl.op-arbre .r.nv1,.op-vl.op-arbre .r.nv2{cursor:pointer}
+.op-vl.op-arbre .r.nv1{background:#fcfaf7}
+.op-vl.op-arbre .r.nv2{padding-left:22px}
+.op-vl.op-arbre .r.nv3{padding-left:34px}
+.op-vl.op-arbre .r.nv1 .n b{font-size:13px}
+.op-vl.op-arbre .r .e .op-vd{font-size:9.5px}
