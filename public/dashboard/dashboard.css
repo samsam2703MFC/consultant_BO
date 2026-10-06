@@ -1448,3 +1448,62 @@ body.pp-emb{background:var(--color-bg)}
 .op-tbla td.ko{color:#C0182B}
 .op-tbla th:nth-child(6),.op-tbla td:nth-child(6),.op-tbla th:nth-child(8),.op-tbla td:nth-child(8){text-align:left}
 .op-tbh td small,.op-tbla td small{display:block;font-size:10px;color:var(--color-text-muted);font-weight:500}
+
+/* La fiche d'un produit (demande du 06/10/2026, maquette B, le magasin actif seulement). */
+.db-al.clic{cursor:pointer}
+.db-al.clic:hover{background:#f6f1ea}
+.db-al.clic:focus-visible{outline:2px solid #2a78d6;outline-offset:-2px}
+html.db-fiche-ouverte{overflow:hidden}
+#db-fiche .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
+#db-fiche .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:980px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);font-family:var(--font-ui);color:var(--color-text,#222)}
+.fi-hd{display:flex;align-items:flex-start;gap:14px;padding:18px 22px 12px}
+.fi-hd .t{flex:1;min-width:0}
+.fi-hd h2{margin:0;font:400 26px/1.1 var(--font-display)}
+.fi-hd .s{font-size:12px;color:var(--color-text-muted);margin-top:4px}
+.fi-x{width:32px;height:32px;border-radius:50%;border:.5px solid var(--color-border-secondary,rgba(34,34,34,.18));background:#fff;font-size:15px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
+.fi-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.fi-chip{font:600 11px var(--font-ui);padding:4px 9px;border-radius:999px;background:#fcfaf7;border:.5px solid var(--color-border-tertiary);color:var(--color-text-muted)}
+.fi-chip b{color:var(--color-text,#222)}
+.fi-ong{display:flex;gap:4px;padding:0 22px;border-bottom:.5px solid var(--color-border-tertiary)}
+.fi-ong button{padding:10px 14px;font:600 12.5px var(--font-ui);color:var(--color-text-muted);background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-.5px;cursor:pointer}
+.fi-ong button.on{color:var(--color-text,#222);border-bottom-color:#8D1D2C}
+.fi-ong button small{font-weight:500;color:var(--color-text-muted)}
+.fi-bd{padding:16px 22px 20px}
+.fi-barre{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.fi-note{font-size:11px;color:var(--color-text-muted);line-height:1.45}
+.fi-barre .fi-note{margin-left:auto}
+.fi-seg{display:inline-flex;border:.5px solid var(--color-border-secondary,rgba(34,34,34,.18));border-radius:8px;overflow:hidden}
+.fi-seg button{padding:5px 11px;font:600 11px var(--font-ui);color:var(--color-text-muted);background:#fff;border:none;border-left:.5px solid var(--color-border-secondary,rgba(34,34,34,.18));cursor:pointer}
+.fi-seg button:first-child{border-left:none}
+.fi-seg button.on{background:#222;color:#fff}
+.fi-deux{display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start}
+.fi-cote{border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
+.fi-cote .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px}
+.fi-cote .r{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin:6px 0}
+.fi-cote .r b{font-variant-numeric:tabular-nums}
+.fi-cote .up{color:#2d7a3e}.fi-cote .dn{color:#B45309}
+.fi-cote .sep{border-top:.5px solid var(--color-border-tertiary);margin:9px 0 7px}
+.fi-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted);margin:2px 0 6px}
+.fi-leg i{display:inline-block;width:16px;height:2px;vertical-align:3px;margin-right:6px}
+.fi-graph{display:block;width:100%;height:auto}
+.fi-graph text{font-family:var(--font-ui);fill:#5f5a54}
+.fi-graph .ax{font-size:10.5px}
+.fi-graph .lab{font-size:11px;font-weight:600;fill:#222}
+.fi-tab{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+.fi-tab th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:5px 6px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.fi-tab td{padding:5px 6px;text-align:right;border-bottom:.5px dashed var(--color-border-tertiary);font-variant-numeric:tabular-nums;white-space:nowrap}
+.fi-tab th:first-child,.fi-tab td:first-child{text-align:left}
+.fi-tab tr.moi td{background:#f2f7fd;font-weight:700}
+.fi-msg{padding:14px 0;font-size:12.5px;color:var(--color-text-muted)}
+/* Au téléphone : une feuille plein écran. */
+@media (max-width:760px){
+  #db-fiche .fi-modale{left:0;top:0;transform:none;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0}
+  .fi-hd{padding:14px 14px 10px}.fi-hd h2{font-size:22px}
+  .fi-ong{padding:0 8px}.fi-ong button{padding:10px 8px;font-size:12px}.fi-ong button small{display:none}
+  .fi-bd{padding:12px 14px 24px}
+  .fi-deux{grid-template-columns:1fr}
+  .fi-barre .fi-note{margin-left:0}
+  .fi-tab{display:block;overflow-x:auto}
+}
+.fi-leg i.pt{width:10px;height:10px;border-radius:50%;background:#2a78d6;vertical-align:-1px}
+.fi-leg i.zn{width:14px;height:10px;border-radius:3px;background:rgba(235,104,52,.14);vertical-align:-1px}

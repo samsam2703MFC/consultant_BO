@@ -1,0 +1,101 @@
+/* Maquettes « la modale d'un produit » : par-dessus global.css. */
+:root{
+  --mp-encre:#222;--mp-doux:#5f5a54;--mp-muet:#8a847c;--mp-trait:rgba(34,34,34,.10);--mp-trait2:rgba(34,34,34,.18);--mp-fond:#fcfaf7;
+  /* les séries : la palette validée (slots 1, 2, 3), le magasin en premier */
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--grille:#ece6de;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:var(--font-ui);color:var(--mp-encre);background:linear-gradient(rgba(34,30,26,.48),rgba(34,30,26,.48)),url(fond.png) no-repeat top center/1440px auto,#EAE4DC}
+.voile{display:none}
+.mq{position:fixed;left:16px;top:12px;font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#222;color:#fff;padding:5px 10px;border-radius:999px;z-index:5}
+.modale{position:relative;z-index:2;width:980px;max-width:calc(100% - 32px);margin:36px auto 40px;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden}
+.m-hd{display:flex;align-items:flex-start;gap:14px;padding:18px 22px 12px}
+.m-hd .t{flex:1;min-width:0}
+.m-hd h1{margin:0;font:400 26px/1.1 var(--font-display)}
+.m-hd .s{font-size:12px;color:var(--mp-doux);margin-top:4px}
+.m-hd .x{width:32px;height:32px;border-radius:50%;border:.5px solid var(--mp-trait2);background:#fff;font-size:15px;color:var(--mp-doux);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font:600 11px var(--font-ui);padding:4px 9px;border-radius:999px;background:var(--mp-fond);border:.5px solid var(--mp-trait);color:var(--mp-doux)}
+.chip b{color:var(--mp-encre)}
+.onglets{display:flex;gap:4px;padding:0 22px;border-bottom:.5px solid var(--mp-trait)}
+.onglets span{padding:10px 14px;font:600 12.5px var(--font-ui);color:var(--mp-muet);border-bottom:3px solid transparent;margin-bottom:-.5px;display:flex;align-items:center;gap:7px}
+.onglets span.on{color:var(--mp-encre);border-bottom-color:#8D1D2C}
+.onglets span small{font-weight:500;color:var(--mp-muet)}
+.m-bd{padding:16px 22px 20px}
+.barre{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.seg{display:inline-flex;border:.5px solid var(--mp-trait2);border-radius:8px;overflow:hidden}
+.seg span{padding:5px 11px;font:600 11px var(--font-ui);color:var(--mp-doux);background:#fff;border-left:.5px solid var(--mp-trait2)}
+.seg span:first-child{border-left:none}
+.seg span.on{background:#222;color:#fff}
+.note{font-size:11px;color:var(--mp-muet)}
+.barre .note{margin-left:auto}
+/* Les tuiles */
+.tuiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.tuile{border:.5px solid var(--mp-trait);border-radius:12px;padding:10px 13px;background:#fff}
+.tuile .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--mp-muet)}
+.tuile .v{font:600 24px var(--font-ui);margin-top:3px}
+.tuile .v small{font-size:12px;font-weight:500;color:var(--mp-doux)}
+.tuile .d{font-size:11px;color:var(--mp-doux);margin-top:2px}
+.tuile .d b.up{color:#2d7a3e}.tuile .d b.dn{color:#B45309}
+/* La légende et les graphiques */
+.leg{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--mp-doux);margin:2px 0 6px}
+.leg i{display:inline-block;vertical-align:-1px;margin-right:6px}
+.leg i.bar{width:10px;height:12px;border-radius:3px 3px 0 0}
+.leg i.ln{width:16px;height:2px;vertical-align:3px}
+.leg i.band{width:14px;height:10px;border-radius:2px}
+.graph{display:block;width:100%;height:auto}
+.graph text{font-family:var(--font-ui);fill:var(--mp-doux)}
+.graph .ax{font-size:10.5px}
+.graph .lab{font-size:11px;font-weight:600;fill:var(--mp-encre)}
+/* Les tableaux */
+.tab{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.tab th{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--mp-muet);text-align:right;padding:7px 8px;border-bottom:.5px solid var(--mp-trait);white-space:nowrap}
+.tab th:first-child,.tab td:first-child{text-align:left}
+.tab td{padding:6px 8px;text-align:right;border-bottom:.5px dashed var(--mp-trait);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tab tr.moi td{background:#f2f7fd;font-weight:700}
+.tab td .sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.tab .up{color:#2d7a3e}.tab .dn{color:#B45309}.tab .mu{color:var(--mp-muet)}
+.tab.sem td,.tab.sem th{padding:5px 6px;font-size:11px}
+/* Le tableau croisé (A) */
+.croise{display:grid;grid-template-columns:150px repeat(3,1fr);gap:4px;margin-top:4px}
+.croise .cx{font:600 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--mp-muet);display:flex;align-items:flex-end;justify-content:center;text-align:center;padding:4px}
+.croise .cy{font:600 11px var(--font-ui);color:var(--mp-doux);display:flex;flex-direction:column;justify-content:center;padding:8px;background:var(--mp-fond);border-radius:8px}
+.croise .cy small{font-weight:500;color:var(--mp-muet);font-size:10px}
+.croise .cl{min-height:84px;border-radius:10px;background:#f7f4ef;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;justify-content:center}
+.croise .cl.vide{background:repeating-linear-gradient(45deg,#faf8f5,#faf8f5 6px,#f4f0ea 6px,#f4f0ea 12px)}
+.croise .titre-y{grid-column:1;font:600 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--mp-muet);align-self:end;padding:4px}
+.mag{display:flex;align-items:center;gap:7px;background:#fff;border:.5px solid var(--mp-trait2);border-radius:999px;padding:4px 10px 4px 5px;font:600 11.5px var(--font-ui)}
+.mag i{width:10px;height:10px;border-radius:50%;background:var(--mp-muet);box-shadow:0 0 0 2px #fff}
+.mag small{font-weight:500;color:var(--mp-doux)}
+.mag.moi{background:var(--s1);border-color:var(--s1);color:#fff}
+.mag.moi i{background:#fff;box-shadow:none}
+.mag.moi small{color:#e6efff}
+.lecture{margin-top:12px;padding:10px 13px;border-radius:10px;background:var(--mp-fond);border:.5px solid var(--mp-trait);font-size:12.5px;line-height:1.5}
+.lecture b.gain{color:#2d7a3e}
+/* B : le rang dans le réseau, à côté de la courbe */
+.deux{display:grid;grid-template-columns:1fr 250px;gap:16px;align-items:start}
+.deux.d270{grid-template-columns:1fr 270px}
+.rang{border:.5px solid var(--mp-trait);border-radius:12px;padding:10px 12px}
+.rang .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--mp-muet);margin-bottom:6px}
+.rang .r{display:grid;grid-template-columns:76px 1fr 38px;gap:6px;align-items:center;font-size:11.5px;margin:5px 0}
+.rang .r .b{height:12px;background:#f0ebe4;border-radius:0 4px 4px 0;position:relative}
+.rang .r .b i{position:absolute;left:0;top:0;bottom:0;background:#b9b1a6;border-radius:0 4px 4px 0}
+.rang .r.moi{font-weight:700}.rang .r.moi .b i{background:var(--s1)}
+.rang .r .n{text-align:right;font-variant-numeric:tabular-nums}
+.rang .sep{border-top:.5px solid var(--mp-trait);margin:9px 0 7px}
+/* Le téléphone : la modale devient une feuille plein écran */
+@media (max-width:640px){
+  body{background:#fff}
+  .voile{display:none}
+  .modale{width:100%;max-width:100%;margin:0;border-radius:0;box-shadow:none}
+  .m-hd{padding:14px 14px 10px}.m-hd h1{font-size:22px}
+  .onglets{padding:0 8px}.onglets span{padding:10px 8px;font-size:12px}.onglets span small{display:none}
+  .m-bd{padding:12px 14px 18px}
+  .tuiles{grid-template-columns:1fr 1fr;gap:8px}.tuile .v{font-size:20px}
+  .deux,.deux.d270{grid-template-columns:1fr}
+  .croise{grid-template-columns:78px repeat(3,1fr);gap:3px}
+  .croise .cy{font-size:10px;padding:6px}.croise .cl{min-height:70px;padding:5px}
+  .mag{font-size:10.5px;padding:3px 7px 3px 4px}.mag small{display:none}
+  .tab.large{display:block;overflow-x:auto}
+  .mq{position:static;display:inline-block;margin:8px 14px 0}
+}

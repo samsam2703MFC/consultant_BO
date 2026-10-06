@@ -1271,6 +1271,45 @@ magasins, une marque de leur couleur sous l'axe. Le tableau surligne les cases e
 face aux autres jours de la série (sans promotion, sans le jour en cours), en %, et ce que les
 autres magasins ont fait ces mêmes jours ; l'écart net en points retire la tendance du réseau.
 
+### `/analyse/produits/magasin` — la fiche d'un produit dans le dashboard d'un magasin
+
+    GET /analyse/produits/magasin?pid=3210004&shop=4&mois=1|3|12
+
+Demande du 06/10/2026 (maquette B, « seulement le magasin actif ») : dans le dashboard magasin,
+un clic sur un produit de la liste des catégories (groupe › catégorie › produit) ouvre une modale
+à deux onglets. **Aucun autre magasin n'y est nommé ni chiffré à part** : le réseau n'est qu'un
+repère anonyme.
+
+```json
+{ "pid": 3210004, "shop": 4, "nom": "Cookie Chocolat Lait", "cat": "Cookies",
+  "semaines": { "tranches": ["S29", "…", "S41"], "bornes": [["2026-07-13", "2026-07-19"], "…"], "jours": [7, "…", 2],
+                "magasin": [3, 12, "…", 8], "reseau": [25, 22, "…", 7], "anDernier": [56.3, "…"], "muettes": [], "magasins": 4 },
+  "prix": { "mois": 1, "periode": "septembre 2026", "du": "2026-09-01", "au": "2026-09-30",
+            "magasin": { "q": 116, "qm": 116, "ca": 290, "p": 2.5, "ec": -7.7, "v10k": 22.56, "rel": 9.8, "auMed": 24.26, "peu": false },
+            "reseau": { "med": 2.71, "min": 2.5, "max": 2.9, "volMoyen": 21.06, "volMin": 12.28, "volMax": 32.41, "magasins": 4 } },
+  "prixMotif": null }
+```
+
+- **`semaines`** — les 12 dernières semaines closes et la semaine en cours (lundi → dimanche, la
+  dernière coupée à aujourd'hui) : `magasin` ses pièces, `reseau` la moyenne par magasin des
+  magasins lus cette semaine-là, `anDernier` la moyenne par magasin l'an dernier (la même lecture
+  que la fiche « Où ça se vend »). Mêmes tranches gravées que la grille `/analyse/produits`.
+- **`prix`** — sur le dernier mois clos (`mois=1`), 3 ou 12 : le prix encaissé du magasin, son écart
+  au prix réseau (`ec`), son volume à taille égale (`v10k`, pièces pour 10 000 € de chiffre) et son
+  écart aux autres (`rel`), ce qu'un alignement au prix réseau changerait par mois (`auMed`) ; le
+  réseau : prix médian, bornes de prix et de volume, volume moyen, nombre de magasins. Même calcul
+  que `/analyse/prix-volume`. `null` avec `prixMotif` quand le produit n'est vendu que par un
+  magasin, est hors comparaison ou n'est pas vendu par ce magasin sur la période.
+- 400 sans `pid` ou `shop` ; 404 pour un magasin inconnu ou fermé. Lecture seule. Le dashboard la lit
+  avec `_cache=900`.
+
+L'écran : onglet **Ventes · 12 semaines**, la courbe du magasin face à la moyenne du réseau, ses
+chiffres (pièces, par semaine, 6 dernières semaines face aux 6 d'avant, face au réseau) et le
+tableau semaine par semaine ; onglet **Prix face au réseau**, le nuage prix encaissé × volume à
+taille égale avec le seul point du magasin, coupé en quatre par le prix réseau et le volume moyen,
+la plage du réseau en fond, ses chiffres à côté, et le choix dernier mois, 3 mois, 12 mois. Échap,
+la croix ou un clic hors de la modale la ferment. Au téléphone, une feuille plein écran.
+
 ### `/analyse/prix-volume` — le prix encaissé de chaque magasin, face à ce qu'il vend
 
     GET /analyse/prix-volume?mois=1      le dernier mois clos (défaut)
