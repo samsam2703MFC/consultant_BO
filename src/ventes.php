@@ -834,6 +834,10 @@ function wr_ventes_primes(): array
         journalAdd('CEO', 'Vente', $x['nom'],
             'Prime magasin ' . $m . ' — ' . $montants['magasin'] . ' € (' . $x['caHeure'] . ' €/h, ' . $x['magasin'] . ')');
     }
+    // Les primes de l'app worker (ventes croisées, prime magasin) se gravent du même geste.
+    if (function_exists('primesEnregistrer')) {
+        try { $enr['appWorker'] = primesEnregistrer($m); } catch (Throwable $e) { $enr['appWorker'] = ['erreur' => $e->getMessage()]; }
+    }
     $hist[$m] = $enr;
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['ventePrimesHist', json_encode($hist, JSON_UNESCAPED_UNICODE)]);

@@ -546,6 +546,14 @@ vente (`src/primes.php`) :
   jours clos tels quels, puis chaque jour restant au rythme moyen de son genre de jour (semaine ou
   week-end). Mis en cache 15 minutes (mois en cours) ou un jour (mois clos) par personne ;
   `&frais=1` recalcule.
+- `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut), tel que
+  l'app le montre à chacune : `magasins[] {id, nom, objectif, ca, atteinte, atteinteProj, palier,
+  heuresEquipe, personnes, equipe, cible}`, `personnes[] {id, nom, shopId, magasinNom, heures, tickets,
+  croisees: {taux, montant}, record: {lt, record, montant}, meilleure, magasin, total}`, `totaux`, et
+  `enregistre` (ce que le CEO a gravé). Écran : Équipe & ventes › Résultats, la carte « Les primes du
+  mois ». **« Enregistrer les primes »** (`POST /ventes/primes {m}`) grave en plus, sous
+  `appWorker`, la prime magasin et les ventes croisées de chacune (identifiants et montants, jamais de
+  nom) et une ligne de journal par personne primée ; l'app marque alors le mois « payée ».
 - `GET /ventes/primes-reglages?shop=` : tous les réglages (`magasin`, `croisees`, `record`,
   `meilleure`), les magasins, l'`apercu` du mois en cours du magasin (objectif, encaissé, projection,
   paliers avec ce qu'il manque et la prime de l'équipe, `heuresEquipe`, `personnes`) et les `mesures`
