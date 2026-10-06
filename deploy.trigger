@@ -617,3 +617,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T13:27:20Z vitrine depliant categorie medium et long life
 2026-10-06T14:08:05Z dashboard fiche produit magasin actif
 2026-10-06T14:53:15Z app worker employes sous employee
+2026-10-06T15:53:56Z primes app worker B, prime magasin euros par heure, ventes croisees, parametres cockpit
