@@ -1562,9 +1562,12 @@ clients à J−7 à la même heure (sam. 26/09) · ± x % ». Nul si J−7 n'est
 
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 
-Premier onglet du dashboard au bureau, ouvert par défaut quand l'adresse ne donne pas de vue
-(`/dashboard/?shop=4`, ou `vue=ops`). Le téléphone garde ses trois onglets et retombe sur la vue
-Jour. La journée en cours, centrée sur le terrain, relue toutes les deux minutes sur aujourd'hui :
+Premier onglet du dashboard, au bureau comme au téléphone, ouvert par défaut quand l'adresse ne
+donne pas de vue (`/dashboard/?shop=4`, ou `vue=ops`). Au téléphone, il est le premier des quatre
+onglets du bas (Opérationnel, Exploitation, Contrôle, Semaine), en une colonne : les mêmes tuiles,
+la vitrine en liste courte, les heures, l'équipe et les cuissons en lignes, les photos du jour, le
+P&L court et les catégories, les cartes et le stock. La journée en cours, centrée sur le terrain,
+relue toutes les deux minutes sur aujourd'hui :
 
 | Bloc | Lecture |
 |---|---|
