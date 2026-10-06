@@ -284,3 +284,33 @@ a.acc-etape{text-decoration:none;color:inherit}
 .cl-row.moi{background:#fbf4ee;border-radius:10px;border-top-color:transparent}
 .cl-row.moi .nom{font-weight:700;color:var(--la-rubis)}
 .cl-row .mag{font-size:10.5px;color:var(--la-muet);margin-left:4px}
+/* Mes ventes, mois par mois : le graphique et les lignes. */
+.vm-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 8px}
+.vm-kpis div{background:var(--la-beige-doux);border-radius:12px;padding:8px 6px;text-align:center;min-width:0}
+.vm-kpis b{display:block;font:400 20px/1.1 var(--font-display);white-space:nowrap}
+.vm-kpis small{display:block;font:500 10px var(--font-ui);color:var(--la-muet);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gvm{width:100%;height:auto;display:block;font-family:var(--font-ui)}
+.gvm .bar{fill:#e2d6c8}
+.gvm .bar.on{fill:var(--la-rubis)}
+.gvm .ca{font-size:8.5px;font-weight:600;fill:var(--la-encre);paint-order:stroke;stroke:#fff;stroke-width:2.5px;stroke-linejoin:round}
+.gvm .mo{font-size:8px;fill:var(--la-muet)}
+.gvm .pill{fill:var(--la-beige-doux)}
+.gvm .pill.or{fill:#f6e3a1}
+.gvm .pt{font-size:7.5px;font-weight:700;fill:var(--la-encre)}
+.gvm .med{stroke:var(--la-encre);stroke-width:1;stroke-dasharray:3 3;opacity:.45}
+.gvm .hl{fill:none;stroke:#2a78d6;stroke-width:2;stroke-linejoin:round}
+.gvm .hp{fill:#2a78d6;stroke:#fff;stroke-width:1.5}
+.gvm .hv{font-size:8px;font-weight:700;fill:#2a78d6;paint-order:stroke;stroke:#fff;stroke-width:2.5px;stroke-linejoin:round}
+.gvm .ax{font-size:7px;fill:var(--la-muet)}
+.vm-liste{margin-top:6px}
+.vm-row{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"m h r" "d h r";align-items:center;column-gap:10px;padding:8px 6px;border-top:.5px solid var(--la-trait)}
+.vm-row.enc{background:#fbf4ee;border-radius:10px;border-top-color:transparent}
+.vm-m{grid-area:m;font-size:13px}
+.vm-m b{font-weight:600}
+.vm-m small{margin-left:6px;font:600 9.5px var(--font-ui);color:var(--la-rubis);text-transform:uppercase;letter-spacing:.06em}
+.vm-d{grid-area:d;font-size:11px;color:var(--la-muet);margin-top:1px}
+.vm-h{grid-area:h;font:400 20px/1 var(--font-display);text-align:right;white-space:nowrap}
+.vm-h small{font:500 10px var(--font-ui);color:var(--la-muet);margin-left:2px}
+.vm-r{grid-area:r;font:700 11.5px var(--font-ui);background:var(--la-beige-doux);border-radius:999px;padding:5px 9px;white-space:nowrap;min-width:52px;text-align:center}
+.vm-r small{font-weight:500;color:var(--la-muet)}
+.vm-r.or{background:#f6e3a1}
