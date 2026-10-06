@@ -504,7 +504,53 @@ et liée depuis le rail, ERP franchisé › **App worker ↗** (demande du 06/10
 à l'API du cockpit : elle appelle l'API du panel (`panelApi.base`) avec les identifiants de
 l'employé (`POST /employees/authenticate`, puis `/employees/{id}`, `/employees/{id}/tasks`,
 `/employees/{id}/schedule`, `/shops/{id}`). Code dans `apps/employee`, détails dans
-`apps/employee/LISEZMOI.md`. Aux couleurs et à la typo de la marque.
+`apps/employee/LISEZMOI.md`. Aux couleurs et à la typo de la marque. Seule exception : l'onglet
+**Primes** lit le cockpit (`GET /ventes/moi`, ci-dessous) avec le jeton d'employé.
+
+### Les primes dans l'app worker — `GET /ventes/moi`, `GET /ventes/primes-reglages`
+
+Demande du 06/10/2026, maquette B (`docs/maquettes/primes/`) : l'onglet **Primes** de l'app employés,
+deux onglets, Moi et Mon magasin. Deux primes qui s'additionnent, chaque mois, pour chaque personne de
+vente (`src/primes.php`) :
+
+| Prime | Mesure | Règle | Réglages |
+|---|---|---|---|
+| Ventes croisées (nouveau) | ses tickets à **2 lignes ou plus** (deux produits différents ; trois croissants font une ligne), en % de ses tickets, sur les jours moissonnés | le plus haut palier franchi au-dessus de la **cible du magasin** (sinon celle du réseau) ; 30 tickets minimum | `POST /ventes/croisees {cibleDefaut, cibles: {shop: pct ou ""}, paliers: [{plus, m}], minTickets}` (défaut : 50 %, cible 40 €, + 5 pts 70 €, + 10 pts 100 €) |
+| Bats ton record (existant) | lignes par ticket face à son record 12 mois | 100 € par dixième dès le 2e, 3 au plus | `POST /ventes/record` |
+| Meilleure vendeuse (existant) | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` |
+| **Prime magasin** (nouveau) | l'atteinte de l'**objectif du mois** (le budget du magasin, `ceo_shop_month_perf`, sinon le CA théorique) | le palier atteint fin de mois donne tant d'**euros par heure prestée** (planning du panel, le mois entier) à chaque personne du magasin ; sous `heuresMin`, pas de part | `POST /ventes/prime-magasin {paliers: [{pct, eh, lib}], heuresMin}` (défaut : 97 % 0,50 €/h · 100 % 1 €/h · 105 % 1,50 €/h · 110 % 2 €/h · 20 h) |
+
+- `GET /ventes/moi?m=AAAA-MM` **avec le jeton d'employé de l'app** (`Authorization: Bearer …`) : la
+  route est ouverte avant la session du cockpit, mais l'identifiant du jeton (`sub`) est **confirmé
+  par le panel** (`GET /employees/{id}` avec ce même jeton, 200 pour lui seul, vérifié une fois par
+  dix minutes) ; sans cela, 401. Depuis le cockpit (session), `GET /ventes/moi?emp=&m=` montre la
+  même fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom}, heures: {mois, faites, equipe,
+  personnes}, aujourdhui: {tickets, croisees, lignes, taux, quand} | null, acquis, aPortee,
+  briques: {croisees: {croisees, tickets, taux, cible, montant, palier, prochain: {taux, montant,
+  manque}, jours, complet, motif}, record: {lt, record, recordMois, ecart, tranches, montant,
+  eurDixieme, maxDixiemes}, meilleure: {score, caHeure, heures, ca, tickets, rangMag, surMag,
+  scorePremier, rangRes, surRes, montantMag, montantRes, montant}}, prime: {objectif, ca, atteinte,
+  projection, atteinteProj, moySem, moyWe, joursRestants, objectifJour, jours: [{date, ca, we, auj}],
+  paliers: [{pct, eh, lib, atteint, manque, parJour, vous, equipe}], palier, heures, heuresMin,
+  sousMin, heuresEquipe, part, vous, equipe}, semaines: [{lib, du, tickets, croisees, taux}],
+  mois: [{m, lib, total, paye, detail[], croisees, record, meilleure, magasin}]}`. Jamais un autre
+  nom que celui du magasin : les collègues sont des heures. `acquis` = ce que le mois donnerait s'il
+  finissait comme ça ; `aPortee` = un cran de plus sur chaque règle. La projection du magasin : les
+  jours clos tels quels, puis chaque jour restant au rythme moyen de son genre de jour (semaine ou
+  week-end). Mis en cache 15 minutes (mois en cours) ou un jour (mois clos) par personne ;
+  `&frais=1` recalcule.
+- `GET /ventes/primes-reglages?shop=` : tous les réglages (`magasin`, `croisees`, `record`,
+  `meilleure`), les magasins, l'`apercu` du mois en cours du magasin (objectif, encaissé, projection,
+  paliers avec ce qu'il manque et la prime de l'équipe, `heuresEquipe`, `personnes`) et les `mesures`
+  (taux de ventes croisées par magasin sur le dernier mois clos). Écran : Équipe & ventes ›
+  **Paramètres**.
+- La moisson des lignes par ticket (`pvL{shop}:{jour}`) compte désormais `c`, les tickets à deux
+  lignes ou plus, par vendeuse ; les jours moissonnés avant ce compte se refont du plus récent au
+  plus ancien avec le reste du budget du cron (`pvCroiseesComplement`). Le compteur du jour d'une
+  personne lit ses seuls tickets du jour (`pvLJ{shop}:{emp}`, dix minutes). Le CA d'un magasin jour
+  par jour se grave (`pvJ{shop}:{jour}`), le jour en cours toutes les dix minutes.
+- L'app (`apps/employee`, route `/primes`, `PrimesService`) appelle le cockpit à
+  `COCKPIT_API_URL` (déduit de son adresse, sinon `EMPLOYEE_COCKPIT_API`) avec le jeton de la session.
 
 ### `/production/flux/*` — l'application Production du magasin (`/production`)
 

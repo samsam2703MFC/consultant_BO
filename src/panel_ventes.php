@@ -143,11 +143,11 @@ function pvLignesDebut(): string
  * Un jour-magasin : lignes et tickets par vendeuse, gravé. Rend null si
  * l'API n'a pas répondu ; le coût (nb de tickets lus) sort par référence.
  */
-function pvLignesJour(int $sid, string $jour, int &$cout): ?array
+function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): ?array
 {
     $cle = 'pvL' . $sid . ':' . $jour;
     $cache = setting($cle);
-    if (is_array($cache) && isset($cache['e'])) { return $cache['e']; }
+    if (!$force && is_array($cache) && isset($cache['e'])) { return $cache['e']; }
 
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $jour);
     if (!is_array($liste)) { return null; }
@@ -167,11 +167,14 @@ function pvLignesJour(int $sid, string $jour, int &$cout): ?array
             // partiel paierait des primes fausses.
             if (!is_array($t)) { return null; }
             $e = (int) ($t['id_employee'] ?? $tickets[$id]);
-            if (!isset($emp[$e])) { $emp[$e] = ['l' => 0, 't' => 0]; }
+            if (!isset($emp[$e])) { $emp[$e] = ['l' => 0, 't' => 0, 'c' => 0]; }
             $emp[$e]['t']++;
             // La règle maison : le nombre de LIGNES du ticket, pas la somme
             // des quantités — la même mesure que la table locale.
-            $emp[$e]['l'] += count((array) ($t['products'] ?? []));
+            $n = count((array) ($t['products'] ?? []));
+            $emp[$e]['l'] += $n;
+            // La VENTE CROISÉE (primes de l'app worker, 06/10/2026) : un ticket à deux lignes ou plus.
+            if ($n >= 2) { $emp[$e]['c']++; }
         }
     }
     $cout += count($tickets);
@@ -211,7 +214,169 @@ function pvLignesMoisson(int $budget = 600): array
 function pvLignesCron(): string
 {
     $r = pvLignesMoisson(600);
-    return $r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'));
+    if (!$r['ok']) { return 'échec : ' . ($r['motif'] ?? '?'); }
+    $txt = $r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat'];
+    // La moisson à jour : les jours moissonnés avant le compte des ventes croisées se refont,
+    // du plus récent au plus ancien, avec ce qui reste de budget.
+    if ($r['joursRestants'] === 0) {
+        $c = pvCroiseesComplement(max(0, 600 - (int) $r['tickets']));
+        if ($c['joursFaits'] > 0 || $c['joursRestants'] > 0) { $txt .= ' · ventes croisées : ' . $c['joursFaits'] . ' jour(s) recomptés, ' . $c['etat']; }
+    }
+    return $txt;
+}
+
+/**
+ * Les jours-magasins moissonnés AVANT le compte des ventes croisées (pas de « c ») se relisent,
+ * du plus récent au plus ancien, dans la limite d'un budget de tickets : le mois en cours
+ * d'abord, puis les mois d'avant, sans jamais bloquer la moisson courante.
+ */
+function pvCroiseesComplement(int $budget): array
+{
+    if ($budget <= 0 || !PanelApi::configured()) { return ['joursFaits' => 0, 'joursRestants' => 0, 'etat' => 'sans budget']; }
+    try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return ['joursFaits' => 0, 'joursRestants' => 0, 'etat' => 'magasins illisibles']; }
+    $cout = 0; $faits = 0; $restants = 0;
+    $debut = pvLignesDebut() . '-01';
+    for ($j = date('Y-m-d', strtotime('-1 day')); $j >= $debut; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
+        foreach ($shops as $sid) {
+            $c = setting('pvL' . $sid . ':' . $j);
+            if (!is_array($c) || !isset($c['e'])) { continue; }          // pas encore moissonné : la moisson s'en charge
+            if (pvLignesAvecC((array) $c['e'])) { continue; }            // déjà compté
+            if ($cout >= $budget) { $restants++; continue; }
+            if (pvLignesJour($sid, $j, $cout, true) !== null) { $faits++; } else { $restants++; }
+        }
+    }
+    return ['joursFaits' => $faits, 'joursRestants' => $restants, 'tickets' => $cout,
+        'etat' => $restants === 0 ? 'à jour' : $restants . ' jour(s)-magasin à recompter'];
+}
+
+/** Un jour moissonné porte-t-il le compte des ventes croisées ? (Un jour sans ticket : oui.) */
+function pvLignesAvecC(array $e): bool
+{
+    foreach ($e as $x) { return is_array($x) && array_key_exists('c', $x); }
+    return true;
+}
+
+/**
+ * Les ventes croisées d'un mois, par personne, depuis les jours moissonnés : tickets, ventes
+ * croisées (tickets à deux lignes ou plus), lignes. Le mois en cours s'arrête à hier. Null tant
+ * qu'aucun jour n'est moissonné. « complet » : tous les jours du mois sont là, avec leur compte.
+ */
+function pvCroiseesMois(string $m): ?array
+{
+    try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return null; }
+    $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d', strtotime('-1 day')));
+    $out = []; $jours = 0; $manquants = 0; $sansC = 0; $joursVus = [];
+    for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
+        foreach ($shops as $sid) {
+            $c = setting('pvL' . $sid . ':' . $j);
+            if (!is_array($c) || !isset($c['e'])) { $manquants++; continue; }
+            $e = (array) $c['e'];
+            $avecC = pvLignesAvecC($e);
+            if (!$avecC) { $sansC++; }
+            $joursVus[$j] = true;
+            foreach ($e as $id => $x) {
+                $id = (int) $id;
+                if (!isset($out[$id])) { $out[$id] = ['t' => 0, 'l' => 0, 'c' => 0, 'tc' => 0]; }
+                $out[$id]['t'] += (int) ($x['t'] ?? 0);
+                $out[$id]['l'] += (int) ($x['l'] ?? 0);
+                // Le taux se mesure sur les seuls jours comptés : tc = les tickets de ces jours-là.
+                if ($avecC) { $out[$id]['c'] += (int) ($x['c'] ?? 0); $out[$id]['tc'] += (int) ($x['t'] ?? 0); }
+            }
+        }
+    }
+    $jours = count($joursVus);
+    if ($jours === 0) { return null; }
+    // Sans aucun jour compté, le « c » d'une personne n'existe pas encore.
+    foreach ($out as $id => $x) {
+        if ($x['tc'] === 0 && $sansC > 0) { unset($out[$id]['c']); }
+        elseif ($x['tc'] > 0 && $x['tc'] < $x['t']) { $out[$id]['t'] = $x['tc']; }   // le taux sur les jours comptés
+        unset($out[$id]['tc']);
+    }
+    return ['e' => $out, 'jours' => $jours, 'manquants' => $manquants, 'sansC' => $sansC,
+        'complet' => $manquants === 0 && $sansC === 0];
+}
+
+/** Le taux de ventes croisées d'un mois, magasin par magasin (sur les jours comptés). */
+function pvCroiseesMoisMagasins(string $m): array
+{
+    try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return []; }
+    $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d', strtotime('-1 day')));
+    $out = [];
+    foreach ($shops as $sid) {
+        $t = 0; $c = 0; $jours = 0;
+        for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
+            $x = setting('pvL' . $sid . ':' . $j);
+            if (!is_array($x) || !isset($x['e']) || !pvLignesAvecC((array) $x['e'])) { continue; }
+            $jours++;
+            foreach ((array) $x['e'] as $y) { $t += (int) ($y['t'] ?? 0); $c += (int) ($y['c'] ?? 0); }
+        }
+        $out[(string) $sid] = ['tickets' => $t, 'croisees' => $c, 'jours' => $jours, 'taux' => $t > 0 ? round(100 * $c / $t, 1) : null];
+    }
+    return $out;
+}
+
+/**
+ * Les ventes croisées d'une personne, semaine par semaine (lundi à dimanche), sur les n dernières
+ * semaines, depuis les jours moissonnés de son magasin.
+ */
+function pvCroiseesSemaines(int $emp, int $n, int $sid): array
+{
+    $out = [];
+    $lundi = date('Y-m-d', strtotime('monday this week'));
+    for ($i = $n - 1; $i >= 0; $i--) {
+        $du = date('Y-m-d', strtotime($lundi . ' -' . (7 * $i) . ' days'));
+        $t = 0; $c = 0; $jours = 0;
+        for ($k = 0; $k < 7; $k++) {
+            $j = date('Y-m-d', strtotime($du . ' +' . $k . ' days'));
+            if ($j >= date('Y-m-d')) { break; }
+            $x = setting('pvL' . $sid . ':' . $j);
+            if (!is_array($x) || !isset($x['e']) || !pvLignesAvecC((array) $x['e'])) { continue; }
+            $jours++;
+            $y = $x['e'][$emp] ?? ($x['e'][(string) $emp] ?? null);
+            if (is_array($y)) { $t += (int) ($y['t'] ?? 0); $c += (int) ($y['c'] ?? 0); }
+        }
+        $out[] = ['lib' => 'S' . (int) date('W', strtotime($du)), 'du' => $du, 'tickets' => $t, 'croisees' => $c, 'jours' => $jours,
+            'taux' => $t > 0 ? round(100 * $c / $t, 1) : null];
+    }
+    return $out;
+}
+
+/**
+ * Le compteur du jour d'une personne : ses tickets d'aujourd'hui dans son magasin, et combien
+ * portent deux lignes ou plus — seulement SES tickets (la liste du jour dit le vendeur de chacun),
+ * relus toutes les dix minutes. Null si le panel ne répond pas.
+ */
+function pvLignesJourPersonne(int $sid, int $emp): ?array
+{
+    $cle = 'pvLJ' . $sid . ':' . $emp;
+    $c = setting($cle);
+    if (is_array($c) && isset($c['t']) && (string) ($c['jour'] ?? '') === date('Y-m-d') && (int) ($c['quand'] ?? 0) > time() - 600) { return $c; }
+    if (!PanelApi::configured()) { return null; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . date('Y-m-d'));
+    if (!is_array($liste)) { return null; }
+    $ids = [];
+    foreach (analyseListe($liste) as $t) {
+        if ((int) ($t['id'] ?? 0) > 0 && (int) ($t['id_employee'] ?? 0) === $emp) { $ids[] = (int) $t['id']; }
+    }
+    $l = 0; $cc = 0;
+    foreach (array_chunk($ids, 40) as $lot) {
+        $chemins = [];
+        foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        $res = PanelApi::getParallele($chemins, 8);
+        foreach ($lot as $id) {
+            $t = $res[$id] ?? null;
+            if (!is_array($t)) { return null; }
+            $n = count((array) ($t['products'] ?? []));
+            $l += $n;
+            if ($n >= 2) { $cc++; }
+        }
+    }
+    $out = ['t' => count($ids), 'c' => $cc, 'l' => $l, 'jour' => date('Y-m-d'), 'quand' => time()];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out)]);
+    return $out;
 }
 
 /** POST /ventes/lignes-moisson — forcer une passe plus large, voir l'état. */

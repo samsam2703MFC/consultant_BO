@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Employee\app\Http\Controllers\Primes;
+
+use App\Employee\app\Http\Controllers\Controller;
+use App\Employee\app\Services\Primes\PrimesService;
+use App\Employee\core\Support\Route;
+
+/** « Mes primes » : deux onglets, Moi et Mon magasin (maquette B du 06/10/2026). */
+class PrimesController extends Controller
+{
+    public function __construct(
+        private PrimesService $primesService,
+    ) {}
+
+    #[Route('GET', '/primes')]
+    public function index()
+    {
+        $mois = $_GET['m'] ?? null;
+        if (!is_string($mois) || !preg_match('/^\d{4}-\d{2}$/', $mois)) { $mois = null; }
+        $data['primes'] = $this->primesService->pourMoi($mois);
+        $data['jour'] = (int) date('j');
+        $data['heure'] = date('H:i');
+        $data['onglet'] = ($_GET['onglet'] ?? '') === 'magasin' ? 'magasin' : 'moi';
+
+        $this->view("primes/primes", $data);
+    }
+}

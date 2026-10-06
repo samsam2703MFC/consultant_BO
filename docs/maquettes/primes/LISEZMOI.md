@@ -1,6 +1,6 @@
 # Les primes dans l'app worker : prime individuelle à la vente, prime magasin sur objectif
 
-**Statut : maquettes à choisir (06/10/2026), rien n'est codé.**
+**Statut : B retenue le 06/10/2026, avec la prime magasin en euros par heure prestée, et codée** (`src/primes.php`, `apps/employee` route `/primes`, cockpit Équipe & ventes › Paramètres ; voir `docs/contrat-api.md`).
 
 Demande du 06/10/2026 : « rajouter tout le modeling et le système de prime à la vente et objectif
 magasin », « prime individuelle et prime magasin », avec « son nombre de ventes croisées ».

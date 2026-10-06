@@ -2,7 +2,7 @@
 
 L'application mobile des employés du réseau (TFB-Employee, livrée en zip le 06/10/2026), servie par
 le cockpit à l'adresse `/consulant_bo/employee/`, et liée depuis le rail du cockpit, ERP franchisé ›
-**App worker ↗**, vers sa page de connexion. Horaire, tâches à faire (avec photo), profil.
+**App worker ↗**, vers sa page de connexion. Horaire, tâches à faire (avec photo), primes, profil.
 
 ## Où vit quoi
 
@@ -46,3 +46,15 @@ python3 apps/employee/marque/teinter.py
 Un serveur PHP avec un routeur qui rejoue le `.htaccess` (`php -S 127.0.0.1:8098 -t public
 router.php`) et une API simulée (`demo` / `demo`) : connexion, accueil, planning, tâches, profil,
 déconnexion. Aucune écriture vers le panel.
+
+## L'onglet Primes (06/10/2026, maquette B)
+
+`/primes` : deux onglets, **Moi** (le compteur de ventes croisées du jour, les trois primes
+individuelles, les semaines, les mois passés) et **Mon magasin** (l'objectif du mois, jour par jour,
+ce qu'il manque par palier, l'équipe au prorata des heures). La page ne calcule rien : `PrimesService`
+appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec le jeton de la session ; le cockpit
+le fait confirmer par le panel et ne rend que la fiche de la personne connectée (voir
+`docs/contrat-api.md`, « Les primes dans l'app worker »). `COCKPIT_API_URL` se déduit de l'adresse
+de l'app (`…/consulant_bo/api/cockpit`), sinon `EMPLOYEE_COCKPIT_API`. Styles :
+`public/employee/assets/atelier/primes.css` ; textes : `translations/page/{fr,en}/primes.json`
+(les autres langues retombent sur l'anglais).
