@@ -1,6 +1,6 @@
 # Suivi de production : short life, medium life, long life
 
-**Statut : maquettes à choisir, rien n'est codé.**
+**Statut : C retenue le 06/10/2026 et codée** (`public/production/production.js`, `POST /production/flux/vie`, voir `docs/contrat-api.md`).
 
 Demande du 06/10/2026 : garder seulement la vue Suivi de la production
 (`/production/?shop=4&date=2026-10-06&page=suivi`) et y ajouter trois interrupteurs, short life,
