@@ -2077,15 +2077,16 @@ const RC_VERROU_S = 45;     // attente au plus du calcul qu'un autre appel a lan
  * MySQL — les appels qui arrivent ensemble attendent le même calcul. `$ttl($r)` : secondes de
  * fraîcheur de la réponse calculée, 0 pour ne pas la garder. `cache` dit l'âge de ce qui part.
  */
-function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = false, ?string $route = null): array
+function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = false, ?string $route = null, int $perime = RC_PERIME_S): array
 {
     $fond = !empty($GLOBALS['rcFond']);
     $c = $forcer ? null : setting($cle);
     $ok = is_array($c) && is_array($c['r'] ?? null);
     $age = $ok ? max(0, time() - (int) ($c['le'] ?? 0)) : null;
-    $avec = static fn (array $r, int $le, bool $frais, bool $relu = false): array => $r + ['cache' => ['le' => date('c', $le), 'age' => max(0, time() - $le), 'frais' => $frais, 'relu' => $relu]];
+    // Une liste reste une liste : elle ne porte pas l'âge de son calcul.
+    $avec = static fn (array $r, int $le, bool $frais, bool $relu = false): array => array_is_list($r) ? $r : $r + ['cache' => ['le' => date('c', $le), 'age' => max(0, time() - $le), 'frais' => $frais, 'relu' => $relu]];
     if ($ok && $age < (int) ($c['ttl'] ?? 0)) { return $avec($c['r'], (int) $c['le'], true); }
-    if ($ok && !$fond && $age < RC_PERIME_S && function_exists('fastcgi_finish_request')) {
+    if ($ok && !$fond && $age < $perime && function_exists('fastcgi_finish_request')) {
         $get = $_GET;
         register_shutdown_function(static function () use ($cle, $calc, $ttl, $get): void {
             try { fastcgi_finish_request(); @set_time_limit(180); $_GET = $get; $GLOBALS['rcFond'] = true; rcServi($cle, $calc, $ttl); }
@@ -2094,7 +2095,7 @@ function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = fals
         return $avec($c['r'], (int) $c['le'], false, true);
     }
     // Sans PHP-FPM (mesuré en ligne le 04/10/2026 : mod_php) : une requête interne refait le calcul.
-    if ($ok && !$fond && $age < RC_PERIME_S && $route !== null && rcRelancer($cle, $route)) { return $avec($c['r'], (int) $c['le'], false, true); }
+    if ($ok && !$fond && $age < $perime && $route !== null && rcRelancer($cle, $route)) { return $avec($c['r'], (int) $c['le'], false, true); }
     $verrou = false;
     try { $l = Db::row('SELECT GET_LOCK(?, ?) AS l', [$cle, $fond ? 0 : RC_VERROU_S]); $verrou = $l !== null && (int) $l['l'] === 1; }
     catch (Throwable $e) { /* sans verrou : on calcule quand même */ }

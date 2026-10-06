@@ -1555,6 +1555,25 @@ prend J−7 entière et `moment` est nul. Le dashboard pose le delta à côté d
 nombre de clients (tuile Clients, bureau et téléphone) et dit dessous « n
 clients à J−7 à la même heure (sam. 26/09) · ± x % ». Nul si J−7 n'est pas lu.
 
+### `_cache=N` — une lecture gardée à la demande (06/10/2026)
+
+Toute lecture `GET` peut demander `_cache=N` (secondes, 900 au plus) : le serveur la garde N
+secondes (`ceo_app_setting`, clé `rcG:` + md5 du chemin et des paramètres triés), la sert
+périmée jusqu'à 2 × N secondes en la refaisant en arrière-plan, et la refait pendant l'appel
+au-delà — le même mécanisme que le Résultat ci-dessous. Une erreur, un 4xx ou un `indispo` ne
+se gardent pas ; une liste repart sans le champ `cache` ; `rafraichir=1` force le calcul.
+`/exploitation/jour` et `/periode` gardent leur propre cache. Le dashboard magasin la demande
+pour ses lectures lentes qu'il ne relit pas après une écriture :
+
+| Lecture | Gardée |
+|---|---|
+| ventes des 30 mois, 6 semaines, record, tâches du mois, rentabilité | 10 min |
+| tendance, canaux, offres, invendus, non-conformités | 5 min |
+| stock, tâches du jour, commandes, notifications | 2 min |
+
+Pas les photos des contrôles (leurs liens expirent), ni les notes, objectifs, promotions et pro
+(rapides, et écrits depuis le dashboard).
+
 ### `GET /exploitation/jour` et `/exploitation/periode` — le calcul gardé (04/10/2026)
 
 Mesuré le 04/10/2026 : `/exploitation/jour` faisait ~45 appels au panel (tous les magasins, le

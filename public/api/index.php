@@ -114,7 +114,7 @@ try {
             http_response_code(401);
             $out = ['error' => 'auth', 'setup' => authIsSetup()];
         } else {
-            $out = route($method, $path);
+            $out = routeGardee($method, $path);
         }
     }
     echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -124,6 +124,30 @@ try {
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+}
+
+/**
+ * Une lecture qui demande `_cache=N` (secondes, 900 au plus) passe par le cache du Résultat
+ * (rcServi, 06/10/2026) : fraîche, elle part du cache ; périmée depuis moins de N secondes de
+ * plus, elle part aussi et se refait en arrière-plan ; plus vieille, elle se refait pendant
+ * l'appel. Le dashboard magasin la demande pour ses lectures lentes qu'il ne relit pas après
+ * une écriture (stock, tâches, commandes, ventes des 30 mois…). Une erreur, un 4xx ou un
+ * `indispo` ne se gardent pas. L'authentification est un mot de passe commun : la même réponse
+ * vaut pour tous.
+ */
+function routeGardee(string $method, string $path): mixed
+{
+    $n = $method === 'GET' ? min(900, max(0, (int) ($_GET['_cache'] ?? 0))) : 0;
+    if ($n <= 0 || !function_exists('rcServi') || in_array($path, ['/exploitation/jour', '/exploitation/periode'], true)) { return route($method, $path); }
+    $q = $_GET; unset($q['_cache'], $q['fond'], $q['rafraichir']); ksort($q);
+    $cle = 'rcG:' . md5($path . '?' . http_build_query($q));
+    rcFondDemande();
+    $tenu = null;
+    $r = rcServi($cle, static function () use ($method, $path, &$tenu) { $x = route($method, $path); $tenu = $x; return is_array($x) ? $x : []; },
+        static function (array $x) use (&$tenu, $n): int { return http_response_code() >= 400 || !is_array($tenu) || isset($x['error']) || !empty($x['indispo']) ? 0 : $n; },
+        !empty($_GET['rafraichir']), $path, 2 * $n);
+    // Une réponse qui n'était pas un tableau repart telle quelle.
+    return $tenu !== null && !is_array($tenu) ? $tenu : $r;
 }
 
 function route(string $method, string $path): mixed
