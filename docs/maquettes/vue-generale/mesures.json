@@ -1,0 +1,26 @@
+{
+ "a": {
+  "hauteur": 1565,
+  "debordement": false
+ },
+ "a-replie": {
+  "hauteur": 1226,
+  "debordement": false
+ },
+ "b": {
+  "hauteur": 1452,
+  "debordement": false
+ },
+ "b-replie": {
+  "hauteur": 1162,
+  "debordement": false
+ },
+ "c": {
+  "hauteur": 1308,
+  "debordement": false
+ },
+ "c-replie": {
+  "hauteur": 950,
+  "debordement": false
+ }
+}
