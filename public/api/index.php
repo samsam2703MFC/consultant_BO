@@ -418,6 +418,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/production/flux/cloture') { return wr_production_flux_cloture(); }
     if ($method === 'POST' && $path === '/production/flux/fours') { return wr_production_flux_fours(); }
     if ($method === 'POST' && $path === '/production/flux/heure-max') { return wr_production_flux_heure_max(); }
+    if ($method === 'POST' && $path === '/production/flux/vie') { return wr_production_flux_vie(); }
     if ($method === 'POST' && $path === '/production/flux/fours/simuler') { return wr_production_flux_fours_simuler(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }

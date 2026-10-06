@@ -514,6 +514,39 @@ d'une page du rail à l'autre. Le flux de la journée, en quatre pages :
 | 4. Clôture | `GET /production/flux/cloture?shop=&date=` | `POST /production/flux/cloture` `{shop, date, lignes: {pid: {report, jete, reste, compte}}, par}` |
 | 5. Fours et équipe | `GET /production/flux/fours?shop=&date=` (jusqu'à J+7) | `POST /production/flux/fours` `{shop, fours: [{id, nom, plaques, chauffe}], categories: {cat: {four, temp, duree, parPlaque}}, operateurs: [{id, nom, de, a}], etapes: {cat: [étape]}, etapesProduits: {pid: [étape]}, par}` ; `POST /production/flux/fours/simuler` (même corps + `date`) : les deux Gantt sans rien écrire |
 
+**Hors du cockpit, la page Suivi seule** (demande du 06/10/2026) : `/production/?shop=4&date=…`
+ouvre toujours le suivi, sans les étapes (`page=` est ignoré) ; Paramètres, Plan, Clôture et Fours
+restent dans l'écran Gestion de production du cockpit (`&embed=1`).
+
+- **Durée de vie** (demande du 06/10/2026, maquette C) : chaque produit est **short life** (S, vendu
+  le jour même), **medium life** (M, se garde 2 à 3 jours) ou **long life** (L, une semaine et plus).
+  Elle se règle par catégorie, avec des exceptions produit. Rangée dans `pfParams:{shop}` sous
+  `vie: {cat: {catCle: S|M|L}, prod: {pid: S|M|L}}` : seulement ce qui s'écarte de la proposition.
+  Proposition par catégorie : long life pour ce qui se garde au lendemain (`flux.garde`) et la
+  biscuiterie, les cookies, les cakes, l'épicerie, la confiserie ; medium life pour les pains, tartes,
+  tartissières, quiches, entremets à partager, salades et plats ; short life pour le reste
+  (viennoiserie, petite boulangerie, sandwichs, wraps, pâtisserie et entremets individuels). Par
+  produit : brownies et brookies en long life. Ordre : le réglage du produit, puis la proposition
+  du produit, puis la catégorie (son réglage, sinon sa proposition).
+  - `GET /production/flux/suivi` porte sur chaque produit `vie`, `vieCat` (celle de sa catégorie),
+    `vieAuto` (la proposition propre au produit, ou null), `vieProd` (le réglage du produit, ou null),
+    `vieExc` (il s'écarte de sa catégorie), et `vie: {categories: [{cle, nom, groupe, vie, defaut,
+    regle, produits, exceptions}], maj}` : les catégories suivies ce jour.
+  - `POST /production/flux/vie` `{shop, cat: {catCle: S|M|L|null}, prod: {pid: S|M|L|null}, par}` :
+    la pose depuis le suivi, sans toucher au reste des réglages ; null revient à la proposition ;
+    `flux.enregistre` reste faux pour un magasin qui n'a posé qu'elle. L'enregistrement des
+    Paramètres la garde. 400 sans magasin ; 422 pour une valeur hors S, M, L, un produit ou une
+    catégorie invalide, ou rien à poser.
+  - L'écran : trois onglets. Short et medium life gardent le suivi heure par heure ; le « trop »
+    devient « Jeté ce soir » (short) ou « Se garde demain » (medium). Le long life se lit en stock :
+    vendu par jour (`moyJ`, sinon `prevJ`), le stock face à 3 jours de vente, les jours de stock,
+    « Sous le stock » quand il ne dépasse pas son stock minimum de recuisson (0 sans réglage) ; le
+    conseil est la cuisson déjà prévue aujourd'hui, sinon de quoi tenir 3 jours. Le S · M · L sous
+    chaque produit pose son exception ; « Régler par catégorie » ouvre le réglage des catégories.
+    L'onglet suit l'adresse (`&vie=S|M|L`).
+  - La clôture : un produit medium ou long life se garde par défaut (`lignes[].garde`, `lignes[].vie`),
+    comme une catégorie « se garde » ; un short life se jette.
+
 - **Par jour de la semaine** (`flux.jours[1..7]`) : le nombre de cuissons du jour (les n premières
   cuissons du magasin, leurs parts ramenées à 100 %) et la **production minimum de la 1re cuisson**
   en % de la journée : la 1re cuisson est relevée à ce minimum, les suivantes réduites d'autant.

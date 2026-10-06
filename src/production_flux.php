@@ -98,8 +98,9 @@ function pfParams(int $sid, array $gp, ?string $date = null): array
     $hmax = []; foreach ((array) ($s['heureMax'] ?? []) as $pid => $h) { $v = gpHeure($h); if (preg_match('/^\d{1,9}$/', (string) $pid) && $v !== null && $v > 0 && $v < 24) { $hmax[(int) $pid] = gpHhmm($v); } }
     return ['jours' => $jours, 'obligatoires' => $ob, 'veille' => $veille, 'garde' => $garde, 'heureMax' => $hmax,
         'ajusterJ7' => !array_key_exists('ajusterJ7', $s) || !empty($s['ajusterJ7']), 'modePeu' => ($s['modePeu'] ?? '') === 'stock' ? 'stock' : 'production', 'stockMin' => $smin,
-        // Enregistré : les réglages de l'écran, pas la seule heure maximum posée à part.
-        'enregistre' => array_diff_key($s, ['heureMax' => 1, 'heureMaxMaj' => 1, 'heureMaxPar' => 1]) !== [], 'maj' => $s['maj'] ?? null, 'par' => $s['par'] ?? null];
+        'vie' => pfVieLue($s['vie'] ?? null), 'vieMaj' => $s['vieMaj'] ?? null,
+        // Enregistré : les réglages de l'écran, pas la seule heure maximum ni la seule durée de vie posées à part.
+        'enregistre' => array_diff_key($s, ['heureMax' => 1, 'heureMaxMaj' => 1, 'heureMaxPar' => 1, 'vie' => 1, 'vieMaj' => 1, 'viePar' => 1]) !== [], 'maj' => $s['maj'] ?? null, 'par' => $s['par'] ?? null];
 }
 
 /** Valide les réglages du flux envoyés par l'écran : [ok, erreur|null, réglages]. */
@@ -143,6 +144,81 @@ function pfValiderParams(array $p, int $nCuissons): array
     if (count($hmax) > 2000) { return [false, 'trop de produits à heure maximum de vente', null]; }
     return [true, null, ['jours' => $jours, 'obligatoires' => $ob, 'veille' => $cle($p['veille'] ?? []), 'garde' => $cle($p['garde'] ?? []), 'heureMax' => $hmax,
         'ajusterJ7' => !array_key_exists('ajusterJ7', $p) || !empty($p['ajusterJ7']), 'modePeu' => $mode, 'stockMin' => $smin]];
+}
+
+/*
+ * La durée de vie d'un produit (demande du 06/10/2026, maquette C) : short life (S) se vend le
+ * jour même, medium life (M) se garde deux à trois jours, long life (L) une semaine et plus. Elle
+ * se règle par catégorie, avec des exceptions produit ; rangée dans pfParams:{shop} sous « vie » :
+ * { cat: {catCle: S|M|L}, prod: {pid: S|M|L} } — seulement ce qui s'écarte de la proposition.
+ */
+const PF_VIES = ['S', 'M', 'L'];
+
+/** La durée de vie enregistrée, nettoyée : {cat: [catCle => S|M|L], prod: [pid => S|M|L]}. */
+function pfVieLue(mixed $v): array
+{
+    $out = ['cat' => [], 'prod' => []];
+    if (!is_array($v)) { return $out; }
+    foreach ((array) ($v['cat'] ?? []) as $k => $x) { if (preg_match('/^(\d{1,9}|n:.{1,80})$/u', (string) $k) && in_array($x, PF_VIES, true)) { $out['cat'][(string) $k] = $x; } }
+    foreach ((array) ($v['prod'] ?? []) as $k => $x) { if (preg_match('/^\d{1,9}$/', (string) $k) && in_array($x, PF_VIES, true)) { $out['prod'][(int) $k] = $x; } }
+    return $out;
+}
+
+/**
+ * La durée de vie proposée pour une catégorie : long life pour ce qui se garde au lendemain
+ * (biscuiterie, cookies, cakes, épicerie) ; medium life pour les pains, tartes, quiches,
+ * entremets à partager, salades et plats ; short life pour le reste (viennoiserie, petite
+ * boulangerie, sandwichs, pâtisserie et entremets individuels).
+ */
+function pfVieDefautCat(string $nom, string $groupe, bool $garde): string
+{
+    if ($garde || preg_match('/biscuit|cookie|cake|épicerie|epicerie|confiserie/iu', $groupe . ' ' . $nom)) { return 'L'; }
+    if (preg_match('/individ|réduction|reduction|petite/iu', $nom)) { return 'S'; }
+    if (preg_match('/\bpains?\b|tradition|tart|quiche|entremets|salade|\bplats?\b/iu', $nom)) { return 'M'; }
+    return 'S';
+}
+
+/** La durée de vie proposée pour un produit à part de sa catégorie (brownies, brookies : long life), sinon null. */
+function pfVieDefautProd(string $nom): ?string
+{
+    return preg_match('/brownie|brookie/iu', $nom) ? 'L' : null;
+}
+
+/**
+ * La durée de vie d'un produit : {vie, vieCat (celle de sa catégorie), vieAuto (la proposition
+ * propre au produit, ou null), vieProd (le réglage du produit, ou null), vieExc (il s'écarte de
+ * sa catégorie)}.
+ */
+function pfVieDe(array $pf, int $pid, string $nom, ?string $catCle, string $cat, string $groupe): array
+{
+    $k = (string) ($catCle ?? '');
+    $vc = $pf['vie']['cat'][$k] ?? pfVieDefautCat($cat, $groupe, $k !== '' && in_array($k, $pf['garde'], true));
+    $auto = pfVieDefautProd($nom);
+    $prod = $pf['vie']['prod'][$pid] ?? null;
+    $v = $prod ?? $auto ?? $vc;
+    return ['vie' => $v, 'vieCat' => $vc, 'vieAuto' => $auto, 'vieProd' => $prod, 'vieExc' => $v !== $vc];
+}
+
+/**
+ * Les changements de durée de vie envoyés par l'écran : {cat: {catCle: S|M|L|null}, prod: {pid:
+ * S|M|L|null}} — null revient à la proposition. [ok, erreur|null, {cat, prod}].
+ */
+function pfVieValider(array $b): array
+{
+    $out = ['cat' => [], 'prod' => []];
+    foreach ((array) ($b['cat'] ?? []) as $k => $x) {
+        if (!preg_match('/^(\d{1,9}|n:.{1,80})$/u', (string) $k)) { return [false, 'catégorie invalide : ' . $k, null]; }
+        if ($x !== null && !in_array($x, PF_VIES, true)) { return [false, 'durée de vie inconnue pour la catégorie ' . $k . ' : S, M ou L', null]; }
+        $out['cat'][(string) $k] = $x;
+    }
+    foreach ((array) ($b['prod'] ?? []) as $k => $x) {
+        if (!preg_match('/^\d{1,9}$/', (string) $k)) { return [false, 'produit invalide : ' . $k, null]; }
+        if ($x !== null && !in_array($x, PF_VIES, true)) { return [false, 'durée de vie inconnue pour le produit ' . $k . ' : S, M ou L', null]; }
+        $out['prod'][(string) $k] = $x;
+    }
+    if ($out['cat'] === [] && $out['prod'] === []) { return [false, 'aucune durée de vie à poser', null]; }
+    if (count($out['cat']) + count($out['prod']) > 2000) { return [false, 'trop de durées de vie à la fois', null]; }
+    return [true, null, $out];
 }
 
 /**
@@ -464,6 +540,9 @@ function wr_production_flux_params(): array
     $par = mb_substr(trim((string) ($b['par'] ?? '')), 0, 80) ?: null;
     $gp['maj'] = date('c'); $gp['par'] = $par;
     $pf['maj'] = date('c'); $pf['par'] = $par;
+    // La durée de vie se règle depuis le suivi : l'enregistrement des réglages la garde.
+    $avant = setting('pfParams:' . $sid);
+    foreach (['vie', 'vieMaj', 'viePar'] as $k) { if (is_array($avant) && array_key_exists($k, $avant)) { $pf[$k] = $avant[$k]; } }
     gpEcrire('gpParams:' . $sid, $gp);
     gpEcrire('pfParams:' . $sid, $pf);
     return ['ok' => true, 'cuissons' => count($gp['cuissons']), 'obligatoires' => count($pf['obligatoires'])];
@@ -494,6 +573,29 @@ function wr_production_flux_heure_max(): array
     $s['heureMax'] = $h; $s['heureMaxMaj'] = date('c'); $s['heureMaxPar'] = mb_substr(trim((string) ($b['par'] ?? '')), 0, 80) ?: null;
     gpEcrire('pfParams:' . $sid, $s);
     return ['ok' => true, 'shop' => $sid, 'heureMax' => (object) $h];
+}
+
+/**
+ * POST /production/flux/vie — { shop, cat: {catCle: S|M|L|null}, prod: {pid: S|M|L|null}, par } :
+ * la durée de vie d'une catégorie ou d'un produit, posée depuis le suivi (demande du 06/10/2026),
+ * sans rien toucher d'autre aux réglages du magasin. null revient à la proposition.
+ */
+function wr_production_flux_vie(): array
+{
+    $b = body();
+    $sid = (int) ($b['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'magasin manquant']; }
+    [$ok, $err, $ch] = pfVieValider($b);
+    if (!$ok) { http_response_code(422); return ['error' => $err]; }
+    $s = setting('pfParams:' . $sid); $s = is_array($s) ? $s : [];
+    $v = pfVieLue($s['vie'] ?? null);
+    foreach ($ch['cat'] as $k => $x) { if ($x === null) { unset($v['cat'][$k]); } else { $v['cat'][$k] = $x; } }
+    foreach ($ch['prod'] as $k => $x) { if ($x === null) { unset($v['prod'][(int) $k]); } else { $v['prod'][(int) $k] = $x; } }
+    if (count($v['cat']) + count($v['prod']) > 4000) { http_response_code(422); return ['error' => 'trop de durées de vie réglées']; }
+    $s['vie'] = ['cat' => (object) $v['cat'], 'prod' => (object) array_combine(array_map('strval', array_keys($v['prod'])), array_values($v['prod']))];
+    $s['vieMaj'] = date('c'); $s['viePar'] = mb_substr(trim((string) ($b['par'] ?? '')), 0, 80) ?: null;
+    gpEcrire('pfParams:' . $sid, $s);
+    return ['ok' => true, 'shop' => $sid, 'vie' => ['cat' => (object) $v['cat'], 'prod' => (object) $v['prod']]];
 }
 
 /**
@@ -697,9 +799,24 @@ function ep_production_flux_suivi(): array
         $vc = $V !== null ? (array) ($V['h'][$p['pid']] ?? []) : [];
         $p['vc'] = []; foreach ($suivi['heures'] as $h) { $p['vc'][(string) $h] = (float) $h < $now ? round((float) ($vc[$h] ?? 0), 1) : null; }
         $p['vcJ'] = $V !== null ? round(array_sum(array_map('floatval', $vc)), 1) : null;
+        // La durée de vie (demande du 06/10/2026) : short, medium ou long life.
+        $p += pfVieDe($K['pf'], (int) $p['pid'], (string) $p['nom'], $p['catCle'] ?? null, (string) $p['cat'], (string) $p['groupe']);
     } unset($p);
+    // Les catégories suivies ce jour, leur durée de vie et la proposition, pour le réglage par catégorie.
+    $vieCats = [];
+    foreach ($suivi['produits'] as $p) {
+        $k = (string) ($p['catCle'] ?? ''); if ($k === '') { continue; }
+        if (!isset($vieCats[$k])) {
+            $vieCats[$k] = ['cle' => $k, 'nom' => $p['cat'], 'groupe' => $p['groupe'], 'vie' => $p['vieCat'], 'defaut' => pfVieDefautCat((string) $p['cat'], (string) $p['groupe'], in_array($k, $K['pf']['garde'], true)),
+                'regle' => isset($K['pf']['vie']['cat'][$k]), 'produits' => 0, 'exceptions' => 0];
+        }
+        $vieCats[$k]['produits']++; if ($p['vieExc']) { $vieCats[$k]['exceptions']++; }
+    }
+    $vieCats = array_values($vieCats);
+    usort($vieCats, static fn ($a, $b) => [$a['groupe'] === '' ? 'zzz' : $a['groupe'], $a['nom']] <=> [$b['groupe'] === '' ? 'zzz' : $b['groupe'], $b['nom']]);
     return ['shop' => $sid, 'date' => $date, 'aujourdhui' => $auj, 'maintenant' => $date === $auj ? date('H:i') : null, 'jourNom' => PF_JOURS[$K['jour']],
         'cuissons' => $C, 'heures' => $suivi['heures'], 'produits' => $suivi['produits'], 'totaux' => $suivi['totaux'],
+        'vie' => ['categories' => $vieCats, 'maj' => $K['pf']['vieMaj'] ?? null],
         'ventesLues' => $V !== null, 'securite' => $R,
         'base' => ['semaines' => $K['sem'], 'lus' => count($K['base']['lus']), 'jours' => count($K['base']['jours']), 'manquants' => $K['base']['manquants'], 'joursLus' => $K['base']['lus'], 'commandesRetirees' => !empty($K['base']['commandes']['lues'])],
         'source' => 'sorti : cuissons validées en magasin (le plan tant qu’une cuisson n’est pas validée) · vendu : tickets du panel heure par heure · vendu comptoir : les tickets sans les commandes · moyenne : vendu au comptoir des ' . count($K['base']['lus']) . ' derniers ' . PF_JOURS[$K['jour']] . 's lus, sans les commandes · projeté : la prévision du plan'];
@@ -875,7 +992,12 @@ function ep_production_flux_cloture(): array
         $jd = (float) ($jete[$pid] ?? 0);
         $reste = max(0.0, $s0 + $sorti - $vd - $jd);
         $nom = $p['nom'] ?? (gpCatalogue()['produits'][$pid]['nom'] ?? ('Produit ' . $pid));
-        $catCle = $p['catCle'] ?? null; $garde = $catCle !== null && in_array((string) $catCle, $K['pf']['garde'], true);
+        // Se garde : sa catégorie est réglée « se garde au lendemain », ou sa durée de vie est
+        // medium ou long life (demande du 06/10/2026) ; un short life se jette le soir.
+        $cx = $p ?? gpCatDe((int) $pid);
+        $catCle = $cx['catCle'] ?? null;
+        $vie = pfVieDe($K['pf'], (int) $pid, (string) $nom, $catCle, (string) ($cx['cat'] ?? ''), (string) ($cx['groupe'] ?? ''))['vie'];
+        $garde = ($catCle !== null && in_array((string) $catCle, $K['pf']['garde'], true)) || $vie !== 'S';
         $e = $E !== null ? ($E[(string) $pid] ?? null) : null;
         $co = $e !== null && isset($e['compte']) && is_numeric($e['compte']) ? (float) $e['compte'] : null;
         $rep = $e !== null ? (float) ($e['report'] ?? 0) : ($garde ? round($reste) : 0.0);
@@ -887,7 +1009,7 @@ function ep_production_flux_cloture(): array
         $apres = ($d !== null && $fin !== null && is_array($prof)) ? gpSomme($prof, $d + 1, min($fin + 1, $hMax[$pid] ?? 24.0)) : 0.0;
         $epuise = $apres >= 1 && ($co ?? $reste) < 0.5;
         if ($epuise) { $T['epuises']++; }
-        $lignes[] = ['pid' => $pid, 'nom' => $nom, 'groupe' => $p !== null ? $p['groupe'] : '', 'cat' => $p['cat'] ?? '', 'catCle' => $catCle, 'garde' => $garde, 'prix' => $prix,
+        $lignes[] = ['pid' => $pid, 'nom' => $nom, 'groupe' => $p !== null ? $p['groupe'] : '', 'cat' => $p['cat'] ?? '', 'catCle' => $catCle, 'garde' => $garde, 'vie' => $vie, 'prix' => $prix,
             'report0' => round($s0, 1), 'sorti' => round($sorti, 1), 'sortiValide' => $p !== null && $toutValide, 'vendu' => round($vd, 1), 'jeteDeclare' => round($jd, 1),
             'reste' => round($reste, 1), 'report' => round($rep, 1), 'jete' => round($jet, 1), 'aDeclarer' => round(max(0.0, $jet), 1),
             // Compté : ce que l'équipe a vu en vitrine. L'écart au calcul, et le sorti qu'il laisse supposer
