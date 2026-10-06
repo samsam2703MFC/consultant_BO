@@ -605,3 +605,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-05T20:04:28Z tickets-relecture-incrementale-relance
 2026-10-05T21:55:22Z tickets-relecture-incrementale-apres-incident
 2026-10-06T05:18:09Z cache à la demande des lectures lentes du dashboard
+2026-10-06T05:26:30Z schéma vérifié une fois par version, Server-Timing
