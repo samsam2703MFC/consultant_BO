@@ -29,7 +29,7 @@
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
-    opVitTout: false,
+    opVitTout: false, opVie: 'S',
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -1908,7 +1908,7 @@
     return { de: c[i].h, a: j < 0 ? null : c[j].h };
   }
   function opEtat(p) {
-    if (p.verdict === 'trop') { return 'finira en trop'; }
+    if (p.verdict === 'trop') { return opVieDe(p) === 'M' ? 'se garde demain' : 'jeté ce soir'; }
     if (p.verdict === 'ok') { return 'en ordre'; }
     if (p.verdict === 'rupture' && !p.sorti) { return 'pas produite'; }
     const v = opVide(p);
@@ -1919,6 +1919,81 @@
   const OP_RANG = { rupture: 0, manque: 1, trop: 2, ok: 3 };
   function opTuile(cls, k, v, s) { return `<div class="op-tl ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
+
+  /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
+   * production — short life (vendu le jour même), medium life (se garde 2 à 3 jours), long life
+   * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
+   * suivi (`vie`), réglée dans /production. */
+  const OP_VIES = ['S', 'M', 'L'];
+  const OP_VIE_NOM = { S: 'Short life', M: 'Medium life', L: 'Long life' };
+  const OP_VIE_SOUS = { S: 'vendu le jour même', M: 'se garde 2 à 3 jours', L: 'se garde une semaine et plus' };
+  const OP_VIE_JOURS = 3;   // le stock d'un long life se lit face à trois jours de vente, comme au suivi
+  const opVieDe = p => OP_VIES.includes(p.vie) ? p.vie : 'S';
+  /** Un long life est sous le stock quand ce qui reste ne dépasse pas son stock minimum (0 sans réglage). */
+  const opSous = p => Math.round(p.stock) <= (p.stockMin || 0);
+  const opParJour = p => p.moyJ || p.prevJ || 0;
+  /** Ce qui se vendra encore aujourd'hui : la prévision des heures à venir. */
+  const opReste = p => (Array.isArray(p.cases) ? p.cases : []).reduce((a, c) => a + (c.reel ? 0 : (+c.prev || 0)), 0);
+  /** Le niveau d'une durée de vie : les références, les pièces et leur valeur en vitrine, ce qui se vendra encore, les alertes. */
+  function opNiveau(L) {
+    const pos = p => Math.max(0, +p.stock || 0);
+    return { n: L.length, st: L.reduce((a, p) => a + pos(p), 0), val: L.reduce((a, p) => a + pos(p) * (+p.prix || 0), 0), reste: L.reduce((a, p) => a + opReste(p), 0),
+      parJ: L.reduce((a, p) => a + opParJour(p), 0), fin: L.reduce((a, p) => a + Math.max(0, +p.finJour || 0), 0),
+      rupt: L.filter(p => p.verdict === 'rupture').length, manq: L.filter(p => p.verdict === 'manque').length, sous: L.filter(opSous).length };
+  }
+  /** La prochaine cuisson prévue aujourd'hui pour un produit : {de, q}, sinon null. */
+  function opProchaine(U, p, now) {
+    if (now == null) { return null; }
+    for (const c of (U && U.cuissons) || []) { const de = opMin(c.de); if (c.valide || de == null || de <= now) { continue; } const l = (c.lignes || []).find(x => x.pid === p.pid); if (l && l.sortie > 0) { return { de: c.de, q: l.sortie }; } }
+    return null;
+  }
+  /** À faire pour un long life : la cuisson déjà prévue, sinon de quoi tenir trois jours quand il est sous le stock. */
+  function opFaireLong(U, p, now) {
+    const pr = opProchaine(U, p, now);
+    if (pr) { return 'cuisson de ' + pr.de + ' : ' + fN(pr.q); }
+    if (!opSous(p)) { return ''; }
+    return 'recuire ' + fN(Math.max(1, (p.conseil && p.conseil.pieces) || 0, Math.ceil(opParJour(p) * OP_VIE_JOURS - Math.max(0, +p.stock || 0) - 1e-6)));
+  }
+  /** La carte « La vitrine » : trois onglets de durée de vie, le niveau de chacun, puis ses références. */
+  function opVitrine(D, mob) {
+    const { now, U, prods, lienProd } = D;
+    const k = S.opVie;
+    const N = {}; OP_VIES.forEach(x => { N[x] = opNiveau(prods.filter(p => opVieDe(p) === x)); });
+    const onglet = x => { const n = N[x];
+      const jauge = x === 'L' ? (n.parJ > 0 ? Math.min(100, 100 * n.st / (n.parJ * OP_VIE_JOURS)) : null) : (n.reste > 0.5 ? Math.min(100, 100 * n.st / n.reste) : null);
+      const lib = x === 'L' ? (n.parJ > 0 ? `${nf(n.st / n.parJ, 1)} jour${n.st / n.parJ >= 2 ? 's' : ''} de vente` : 'pas de vente lue')
+        : (now == null ? (x === 'S' ? `${fN(n.fin)} jeté${n.fin >= 2 ? 's' : ''} ce soir` : `${fN(n.fin)} pour demain`) : (n.reste > 0.5 ? `pour ${fN(n.reste)} à vendre d’ici la fermeture` : 'plus rien à vendre aujourd’hui'));
+      const al = x === 'L' ? (n.sous ? `<span class="op-vd rupture">${n.sous} sous le stock</span>` : '') : (n.rupt ? `<span class="op-vd rupture">${n.rupt} vide${n.rupt > 1 ? 's' : ''}</span>` : '') + (n.manq ? `<span class="op-vd manque">${n.manq} va manquer</span>` : '');
+      return `<button type="button" class="op-v3 ${x}${x === k ? ' on' : ''}" data-opvie="${x}"><span class="hd"><span class="op-vie ${x}">${x}</span><b>${OP_VIE_NOM[x]}</b><small>${fN(n.n)} réf.${mob ? '' : ' · ' + OP_VIE_SOUS[x]}</small></span>
+        <span class="niv"><b>${fN(n.st)}</b> pièce${n.st >= 2 ? 's' : ''} ${x === 'L' ? 'en stock' : 'en vitrine'}${n.val > 0 ? ` · ${fE(n.val)}` : ''}</span>
+        ${jauge != null ? `<span class="jg"><i style="width:${jauge.toFixed(0)}%"></i></span>` : ''}<span class="lib">${lib}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; };
+    const L = prods.filter(p => opVieDe(p) === k);
+    const aVoir = k === 'L' ? L.filter(opSous) : L.filter(p => p.verdict !== 'ok');
+    const ok = L.filter(p => !aVoir.includes(p));
+    let vis = S.opVitTout ? L : aVoir;
+    if (k === 'L') { vis = vis.slice().sort((a, b) => (opSous(b) - opSous(a)) || ((Math.max(0, a.stock) / (opParJour(a) || 1e-9)) - (Math.max(0, b.stock) / (opParJour(b) || 1e-9))) || a.nom.localeCompare(b.nom)); }
+    const jours = p => opParJour(p) > 0 ? Math.max(0, +p.stock || 0) / opParJour(p) : null;
+    const etatL = p => opSous(p) ? '<span class="op-vd rupture">sous le stock</span>' : '<span class="op-vd ok">en stock</span>';
+    let corps = '';
+    if (mob) {
+      corps = vis.length ? `<div class="op-vl">${vis.map(p => k === 'L'
+        ? `<div class="r"><span class="n"><b>${esc(p.nom)}</b><small><b class="${opSous(p) ? 'ko' : ''}">${fN(p.stock)}</b> en stock · ${opParJour(p) ? nf(opParJour(p), 1) + ' par jour · ' + (jours(p) == null ? '' : nf(jours(p), 1) + ' j') : 'pas de vente lue'}</small></span><span class="e">${etatL(p)}<b>${esc(opFaireLong(U, p, now))}</b></span></div>`
+        : `<div class="r"><span class="n"><b>${esc(p.nom)}</b><small>${fN(p.sorti)} sortie${Math.round(p.sorti) >= 2 ? 's' : ''} · ${fN(p.vendu)} vendue${Math.round(p.vendu) >= 2 ? 's' : ''} · <b class="${p.stock <= 0 ? 'ko' : ''}">${fN(p.stock)}</b> en vitrine</small></span><span class="e"><span class="op-vd ${esc(p.verdict)}">${esc(opEtat(p))}</span><b>${esc(opFaire(p))}</b></span></div>`).join('')}</div>` : '';
+    } else if (vis.length && k === 'L') {
+      corps = `<table class="db-t op-tbl"><thead><tr><th>Référence</th><th>Rayon</th><th class="n">Sorties</th><th class="n">Vendues</th><th class="n">En stock</th><th class="n">Vendu par jour</th><th>Stock face à ${OP_VIE_JOURS} jours de vente</th><th class="n">Jours de stock</th><th>État</th><th class="n">À faire</th></tr></thead><tbody>${vis.map(p => {
+        const pj = opParJour(p), st = Math.max(0, +p.stock || 0), pc = pj > 0 ? Math.min(100, 100 * st / (pj * OP_VIE_JOURS)) : (st > 0 ? 100 : 0);
+        return `<tr><td><b>${esc(p.nom)}</b></td><td class="mu">${esc(p.groupe || '')}</td><td class="n">${fN(p.sorti)}</td><td class="n">${fN(p.vendu)}</td><td class="n${opSous(p) ? ' ko' : ''}"><b>${fN(p.stock)}</b></td><td class="n">${pj ? nf(pj, 1) : '—'}</td>
+          <td><span class="op-jg"><i class="${pc < 34 ? 'ko' : (pc < 67 ? 'att' : 'ok')}" style="width:${pc.toFixed(0)}%"></i></span></td><td class="n">${jours(p) == null ? '—' : nf(jours(p), 1)}</td><td>${etatL(p)}</td><td class="n"><b>${esc(opFaireLong(U, p, now))}</b></td></tr>`; }).join('')}</tbody></table>`;
+    } else if (vis.length) {
+      corps = `<table class="db-t op-tb"><thead><tr><th>Référence</th><th>Rayon</th><th class="n">Sorties</th><th class="n">Vendues</th><th class="n">En vitrine</th><th class="n">Fin de journée prévue</th><th>État</th><th class="n">À faire</th></tr></thead><tbody>${vis.map(p => `<tr><td><b>${esc(p.nom)}</b></td><td class="mu">${esc(p.groupe || '')}</td><td class="n">${fN(p.sorti)}</td><td class="n">${fN(p.vendu)}</td><td class="n${p.stock <= 0 ? ' ko' : ''}"><b>${fN(p.stock)}</b></td><td class="n">${p.finJour > 0 ? '+' : ''}${nf(p.finJour || 0, 1)}</td><td><span class="op-vd ${esc(p.verdict)}">${esc(opEtat(p))}</span></td><td class="n"><b>${esc(opFaire(p))}</b></td></tr>`).join('')}</tbody></table>`;
+    }
+    const nOk = ok.length, motOk = k === 'L' ? 'en stock' : 'en ordre';
+    const plie = nOk ? `<button type="button" class="op-plie" data-opvit="1"><span class="vd ok"></span>${S.opVitTout ? 'replier les ' + fN(nOk) + (mob ? '' : ' références') + ' ' + motOk : fN(nOk) + (mob ? '' : ' référence' + (nOk > 1 ? 's' : '')) + ' ' + motOk}<span class="fl${S.opVitTout ? ' on' : ''}">▾</span></button>` : '';
+    const vide = !L.length ? `<div class="op-vvide">Aucune référence en ${OP_VIE_NOM[k].toLowerCase()} aujourd’hui.</div>` : (!vis.length && !nOk ? '' : '');
+    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi ›</a></span>`
+      : `<span class="db-mini">ce qui est sorti du four face à ce qui est vendu · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${esc(U.jourNom || '')}${/s$/.test(U.jourNom || '') ? '' : 's'}</span><span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span>`;
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div><div class="op-v3s">${OP_VIES.map(onglet).join('')}</div>${vide}${corps}${plie}</div>`;
+  }
 
   /** Ce que l'onglet Opérationnel lit et calcule : une fois, pour le bureau et pour le téléphone. */
   function opDonnees() {
@@ -2002,10 +2077,7 @@
     let h = `<div class="op-mnt">${opTuiles(D)}</div>`;
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
-      const lignes = prods.filter(p => p.verdict !== 'ok'), ok = prods.filter(p => p.verdict === 'ok'), vis = S.opVitTout ? prods : lignes;
-      h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi ›</a></span></div>
-        <div class="op-vl">${vis.map(p => `<div class="r"><span class="n"><b>${esc(p.nom)}</b><small>${fN(p.sorti)} sorties · ${fN(p.vendu)} vendues · <b class="${p.stock <= 0 ? 'ko' : ''}">${fN(p.stock)}</b> en vitrine</small></span><span class="e"><span class="op-vd ${esc(p.verdict)}">${esc(opEtat(p))}</span><b>${esc(opFaire(p))}</b></span></div>`).join('')}</div>
-        ${ok.length ? `<button type="button" class="op-plie" data-opvit="1"><span class="vd ok"></span>${S.opVitTout ? 'replier les ' + fN(ok.length) + ' en ordre' : fN(ok.length) + ' en ordre'}<span class="fl${S.opVitTout ? ' on' : ''}">▾</span></button>` : ''}</div>`;
+      h += opVitrine(D, true);
     } else { h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini">${S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…'}</span></div><div style="padding:10px 14px">${opSk()}</div></div>`; }
     // Les heures, puis l'équipe et les cuissons en lignes.
     const heures = opHeures(D);
@@ -2051,14 +2123,9 @@
     const heures = opHeures(D);
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span><span class="db-mini">de 04:00 à 20:00${now != null ? ' · le trait rouge : maintenant' : ''}</span></div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
 
-    /* 3. La vitrine */
+    /* 3. La vitrine, selon la durée de vie */
     if (U) {
-      const lignes = prods.filter(p => p.verdict !== 'ok'), ok = prods.filter(p => p.verdict === 'ok');
-      const vis = S.opVitTout ? prods : lignes;
-      const tr = p => `<tr><td><b>${esc(p.nom)}</b></td><td class="mu">${esc(p.groupe || '')}</td><td class="n">${fN(p.sorti)}</td><td class="n">${fN(p.vendu)}</td><td class="n${p.stock <= 0 ? ' ko' : ''}"><b>${fN(p.stock)}</b></td><td class="n">${p.finJour > 0 ? '+' : ''}${nf(p.finJour || 0, 1)}</td><td><span class="op-vd ${esc(p.verdict)}">${esc(opEtat(p))}</span></td><td class="n"><b>${esc(opFaire(p))}</b></td></tr>`;
-      h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini">ce qui est sorti du four face à ce qui est vendu · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${esc(U.jourNom || '')}${/s$/.test(U.jourNom || '') ? '' : 's'}</span><span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span></div>
-        ${vis.length ? `<table class="db-t op-tb"><thead><tr><th>Référence</th><th>Rayon</th><th class="n">Sorties</th><th class="n">Vendues</th><th class="n">En vitrine</th><th class="n">Fin de journée prévue</th><th>État</th><th class="n">À faire</th></tr></thead><tbody>${vis.map(tr).join('')}</tbody></table>` : ''}
-        ${ok.length ? `<button type="button" class="op-plie" data-opvit="1"><span class="vd ok"></span>${S.opVitTout ? 'replier les ' + fN(ok.length) + ' références en ordre' : fN(ok.length) + ' référence' + (ok.length > 1 ? 's' : '') + ' en ordre'}<span class="fl${S.opVitTout ? ' on' : ''}">▾</span></button>` : ''}</div>`;
+      h += opVitrine(D, false);
     } else if (S.err[cleOpSuivi()]) { h += `<div class="db-err">Suivi de production : ${esc(S.err[cleOpSuivi()])}</div>`; }
     else { h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini">lecture du suivi de production…</span></div><div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
 
@@ -4384,6 +4451,7 @@
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
+    $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
     $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
