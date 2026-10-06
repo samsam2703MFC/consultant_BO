@@ -612,3 +612,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T11:27:04Z suivi de production par duree de vie (short, medium, long life)
 2026-10-06T12:31:41Z dashboard vitrine par duree de vie
 2026-10-06T12:55:31Z vitrine short life vente heure par heure
+2026-10-06T13:12:40Z vitrine short life prevision de toute la journee
