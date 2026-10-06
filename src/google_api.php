@@ -83,6 +83,29 @@ final class GoogleApi
     }
 
     /**
+     * La même fiche que lieu(), lue par la recherche textuelle. Google refuse
+     * parfois (403) la lecture directe d'une fiche précise alors que la
+     * recherche la rend, avis compris : la synchronisation repasse alors par
+     * là. Seule la fiche au même identifiant est retenue — jamais une voisine.
+     */
+    public static function lieuParRecherche(string $texte, string $placeId): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '' || $placeId === '') { self::$lastError = 'recherche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        $champs = implode(',', array_map(fn($x) => 'places.' . $x, explode(',', self::CHAMPS_LIEU)));
+        [$code, $json] = self::http('POST', self::BASE . '/places:searchText', $champs, $c['cle'],
+            ['textQuery' => $texte, 'languageCode' => $c['langue'], 'maxResultCount' => 10]);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        foreach ((array) ($json['places'] ?? []) as $p) {
+            if (is_array($p) && (string) ($p['id'] ?? '') === $placeId) { return googleLieuNormalise($p); }
+        }
+        self::$lastError = 'fiche absente de la recherche';
+        return null;
+    }
+
+    /**
      * La position d'une fiche, et rien d'autre — le champ le moins cher de
      * l'API. Le scouting place ainsi les magasins du réseau à partir de la
      * fiche Google raccordée par la réputation, une fois, puis garde le point.

@@ -630,3 +630,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T17:51:01Z primes : refonte visuelle, concours tartes et quiches, note Google, PDF
 2026-10-06T17:56:11Z primes : jours du concours par magasin
 2026-10-06T18:07:09Z scouting : fiche Google refusee, recherche par le nom
+2026-10-06T18:09:49Z reputation : fiche refusee lue par la recherche

@@ -3208,6 +3208,14 @@ function reputationSynchroniser(?string $shopId): array
     foreach ($cibles as $c) {
         GoogleApi::$lastError = null;
         $lieu = GoogleApi::lieu((string) $c['place_id']);
+        // lecture directe refusée pour cette seule fiche : la recherche par le
+        // nom du magasin la rend, avec ses avis (même identifiant exigé)
+        if ($lieu === null && preg_match('/HTTP (403|404)\b/', (string) GoogleApi::$lastError)) {
+            $refus = GoogleApi::$lastError;
+            GoogleApi::$lastError = null;
+            $lieu = GoogleApi::lieuParRecherche((string) $c['name'], (string) $c['place_id']);
+            if ($lieu === null) { GoogleApi::$lastError = $refus . ' · recherche : ' . (GoogleApi::$lastError ?? 'réponse vide'); }
+        }
         if ($lieu === null) {
             $erreurs[] = $c['name'] . ' : ' . (GoogleApi::$lastError ?? 'réponse vide');
             continue;
