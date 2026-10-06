@@ -632,3 +632,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T18:07:09Z scouting : fiche Google refusee, recherche par le nom
 2026-10-06T18:09:49Z reputation : fiche refusee lue par la recherche
 2026-10-06T18:11:54Z scouting : etude creee, notes et fiches Google relues
+2026-10-06T18:14:01Z app worker : accueil centré sur la personne
