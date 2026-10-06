@@ -637,3 +637,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T18:42:16Z scouting : notes et photos Google dans le rayon
 2026-10-06T18:53:05Z scouting : onglet concurrents, notes et photos Google
 2026-10-06T18:53:39Z app worker : collection des titres, deux concours, classements
+2026-10-06T18:57:50Z scouting : zones candidates, notes et photos Google

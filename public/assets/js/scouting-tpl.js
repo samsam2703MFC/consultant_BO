@@ -684,6 +684,7 @@ export function renderOverlays(c, x){
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
       <div class="t-section-title" style="font-size:16px">Zones candidates</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${c.wiz.fait ? 'Balayage des arrondissements retenus par l’assistant — indépendant du cadrage de la carte' : 'Balayage de la vue carte courante'} · score minimum ${c.minScore} · clic sur une ligne pour ouvrir la fiche</div>
+      ${c.googleListe.ok ? `<button ${x.A(c.googleListe.chargerZones)} class="btn-secondary" title="Les concurrents du rayon de chaque zone, dans l’ordre du tableau (100 commerces au plus) : note, nombre d’avis, avis et photo relus chez Google ; les zones se recalculent" style="padding:7px 12px;font-size:12px">${esc(c.googleListe.label)}</button>` : ''}
       <button ${x.A(c.exportZones)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
@@ -697,7 +698,7 @@ export function renderOverlays(c, x){
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <span style="padding:8px;font-weight:600;color:#1b5e20">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
-        <span style="padding:8px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}</span>
+        <span style="padding:5px 8px;display:flex;align-items:center;gap:4px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}${r.photos.map(f => `<img src="${f.photo}" alt="" title="${esc(f.nom)}" style="width:24px;height:24px;object-fit:cover;border-radius:4px">`).join('')}</span>
         <span style="padding:8px;color:${r.forts ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${r.forts}</span>
         <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chainesN ? 'font-weight:500' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
         <span style="padding:8px">${esc(r.emprise)}</span>

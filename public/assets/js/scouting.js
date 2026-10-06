@@ -2345,7 +2345,7 @@ export class Scouting {
       const r = this.rating(o.b);
       return o.b.name + (r ? ' ' + r.toFixed(1).replace('.', ',') : '') + (this.isStrong(o.b) ? ' — fort' : '') + (this.estChaine(o.b) ? ' — chaîne' : '') + ' · ' + o.d.toFixed(1).replace('.', ',') + ' km';
     });
-    return { n: near.length, forts: forts.length, chaines: ch.length, chainesTxt: chainesTxt, marques: marques,
+    return { n: near.length, ids: near.map(o => o.b.id), forts: forts.length, chaines: ch.length, chainesTxt: chainesTxt, marques: marques,
       noms: noms.join('\n') + (near.length > 12 ? '\n… et ' + (near.length - 12) + ' autres' : '') };
   }
 
@@ -3494,11 +3494,40 @@ export class Scouting {
     const qq = (this.state.q || '').toLowerCase();
     const tous = this.shops().filter(b => !qq || (b.name || '').toLowerCase().includes(qq) || (b.commune || '').toLowerCase().includes(qq) || (b.arr || '').toLowerCase().includes(qq))
       .filter(b => b.name && !/sans nom/i.test(b.name));
-    const list = tous.slice(0, 100);
+    return this.chargerGoogleShops(tous.slice(0, 100), tous.length > 100 ? ' — les 100 premiers des ' + tous.length + ' de la liste ; filtre par commune pour viser une zone' : '');
+  }
+
+  // Onglet « Zones candidates » : les concurrents du rayon de chaque zone, dans
+  // l'ordre du tableau, jusqu'à cent commerces — les zones se recalculent avec
+  // les notes fraîches
+  chargerGoogleZones(){
+    if (this.state.googleListeBusy){ this._listeStop = true; return; }
+    const blocage = this.googleBlocage();
+    if (blocage){ this.notify(blocage); return; }
+    const vus = new Set(), list = [];
+    let zones = 0;
+    const scan = this.scanPrio();
+    for (const p of scan){
+      if (list.length >= 100) break;
+      const ids = this.concurrenceAu(p.lat, p.lng, this.state.radius).ids;
+      zones++;
+      ids.forEach(id => { if (!vus.has(id) && list.length < 100){ vus.add(id); const b = this.shopParId(id); if (b) list.push(b); } });
+    }
+    const nommes = list.filter(b => b.name && !/sans nom/i.test(b.name));
+    return this.chargerGoogleShops(nommes, ' — les concurrents des ' + zones + ' premières zones sur ' + scan.length);
+  }
+
+  shopParId(id){
+    if (!this._shopIdx || this._shopIdxRev !== this.state.bakeries){ this._shopIdx = {}; this.shops().forEach(b => { this._shopIdx[b.id] = b; }); this._shopIdxRev = this.state.bakeries; }
+    return this._shopIdx[id] || this.shops().find(b => b.id === id) || null;
+  }
+
+  // le cœur commun des deux onglets : lots de dix, interruptible, notes et
+  // fiches fusionnées au fil de l'eau
+  async chargerGoogleShops(list, precision){
     if (!list.length){ this.notify('Aucun concurrent nommé dans la liste.'); return; }
     if (list.length > 30 && !window.confirm(list.length + ' concurrents seront relus chez Google (note, avis, photo)'
-      + (tous.length > 100 ? ' — les 100 premiers des ' + tous.length + ' de la liste ; filtre par commune pour viser une zone' : '')
-      + '. Environ ' + list.length * 2 + ' appels Google facturés. Continuer ?')) return;
+      + (precision || '') + '. Environ ' + list.length * 2 + ' appels Google facturés. Continuer ?')) return;
     this._listeStop = false;
     this.setState({ googleListeBusy: true, googleListeFait: 0, googleListeTotal: list.length });
     const out = Object.assign({}, this.state.ratings);
@@ -3990,6 +4019,7 @@ export class Scouting {
         rang: i + 1, commune: p.commune, arr: p.arr, lat: p.lat, lng: p.lng,
         score: p.score, hh: fmtInt(p.hh), hhRaw: Math.round(p.hh), n: p.n,
         forts: cc.forts, chaines: cc.chainesTxt || (cc.chaines ? String(cc.chaines) : '—'), chainesN: cc.chaines, noms: cc.noms,
+        photos: cc.ids.map(id => (s.fichesListe && s.fichesListe[id]) || null).filter(f => f && f.photo).slice(0, 3).map(f => ({ photo: f.photo, nom: (f.nom || '') + (f.note != null ? ' · ' + f.note + ' ★' : '') })),
         emprise: (emp * 100).toFixed(1) + ' %', empriseRaw: (emp * 100).toFixed(1),
         ca: fmtEur(p.ca), caRaw: Math.round(p.ca),
         m2: fmtEur(p.ca / s.surface), m2Raw: Math.round(p.ca / s.surface),
@@ -4292,7 +4322,7 @@ export class Scouting {
       gkeyHint: 'Enrichit les boulangeries visibles à l\'écran (40 max par lot) : le serveur interroge Google Places avec la clé de Paramètres — elle ne transite jamais par le navigateur — et le résultat est en cache partagé. Sans clé, la force du concurrent est estimée sur les signaux OSM (enseigne, site web, horaires, terrasse).',
       enrich: () => self.enrich(),
       enrichAll: () => self.enrichAll(),
-      googleListe: { ok: self.useApi() && self.googleOk(), charger: () => self.chargerGoogleListe(),
+      googleListe: { ok: self.useApi() && self.googleOk(), charger: () => self.chargerGoogleListe(), chargerZones: () => self.chargerGoogleZones(),
         label: s.googleListeBusy ? 'Interrompre (' + (s.googleListeFait || 0) + '/' + (s.googleListeTotal || '?') + ')' : 'Charger notes et photos Google' },
       enrichAllLabel: s.enriching ? 'Interrompre (' + (s.enrichDone || 0) + '/' + (s.enrichTotal || '?') + ')' : 'Enrichir toute la sélection',
       enrichLabel: s.enriching ? 'Enrichissement… ' + (s.enrichDone || 0) + '/' + (s.enrichTotal || '?') : 'Enrichir les notes (vue actuelle)',
