@@ -1,6 +1,6 @@
 # La modale d'un produit : ventes sur 12 semaines, prix face au réseau
 
-**Statut : maquettes à choisir, rien n'est codé.**
+**Statut : B retenue le 06/10/2026, avec seulement le magasin actif, et codée** (`GET /analyse/produits/magasin`, la modale du dashboard ; voir `docs/contrat-api.md`). Le rang et les points des autres magasins ne sont pas repris : le réseau n'y est qu'un repère anonyme.
 
 Demande du 06/10/2026 : dans le dashboard magasin, un clic sur un produit de la liste des
 catégories (groupe › catégorie › produit) ouvre une modale à deux onglets.

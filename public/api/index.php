@@ -241,6 +241,7 @@ function route(string $method, string $path): mixed
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/analyse/produits'              => ep_analyse_produits(),
             $path === '/analyse/produits/jours'        => ep_analyse_produits_jours(),
+            $path === '/analyse/produits/magasin'      => ep_analyse_produit_magasin(),
             $path === '/analyse/prix-transfert'        => ep_prix_transfert(),
             $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),

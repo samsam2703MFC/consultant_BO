@@ -323,6 +323,81 @@ function ep_analyse_produits(): array
 }
 
 /**
+ * GET /analyse/produits/magasin?pid=3210004&shop=4&mois=1|3|12 — la fiche d'un produit pour le
+ * dashboard d'UN magasin (demande du 06/10/2026, maquette B, « seulement le magasin actif ») :
+ *   semaines : les ventes du magasin semaine par semaine (12 semaines closes + l'en cours), et des
+ *              repères réseau anonymes — la moyenne par magasin, cette année et l'an dernier ;
+ *   prix     : sur le dernier mois clos (ou 3, 12), le prix encaissé du magasin, son volume à
+ *              taille égale, et le réseau en repères anonymes : prix médian, volume moyen, bornes.
+ * Aucun autre magasin n'est nommé ni chiffré à part. Mêmes lectures que la grille « Par
+ * référence » et l'écran « Prix × volume » (tranches gravées une fois closes).
+ */
+function ep_analyse_produit_magasin(): array
+{
+    $pid = (int) ($_GET['pid'] ?? 0); $sid = (int) ($_GET['shop'] ?? 0);
+    if ($pid <= 0 || $sid <= 0) { http_response_code(400); return ['error' => 'pid et shop requis']; }
+    $mp = (int) ($_GET['mois'] ?? 1);
+    if (!in_array($mp, [1, 3, 12], true)) { $mp = 1; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $shops = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) { $shops[(int) $s['id']] = (string) $s['name']; }
+    if (!isset($shops[$sid])) { http_response_code(404); return ['error' => 'magasin inconnu ou fermé']; }
+
+    // 1. Les semaines : le magasin, la moyenne par magasin du réseau (les magasins lus).
+    $tranches = array_slice(apTranches(3), -13);
+    $couples = [];
+    foreach (array_keys($shops) as $s) { foreach ($tranches as [$du, $au]) { $couples[] = [$s, $du, $au]; } }
+    $lu = apTranches2($couples);
+    $nom = null; $cat = null; $moi = []; $res = []; $muet = [];
+    foreach ($tranches as $i => [$du, $au]) {
+        $tot = 0.0; $servis = 0;
+        foreach (array_keys($shops) as $s) {
+            $p = $lu[$s . ':' . $du] ?? null;
+            if (!is_array($p)) { if ($s === $sid) { $muet[] = $i; } continue; }
+            $servis++;
+            $x = $p[$pid] ?? null;
+            if ($x !== null && $nom === null) { $nom = (string) $x[0]; $cat = (string) $x[1]; }
+            $q = $x !== null ? (float) $x[2] : 0.0;
+            $tot += $q;
+            if ($s === $sid) { $moi[$i] = round($q, 1); }
+        }
+        $res[$i] = $servis > 0 ? round($tot / $servis, 1) : null;
+        $moi[$i] = $moi[$i] ?? null;
+    }
+    ksort($moi);
+    // Le réseau l'an dernier : la même lecture que la fiche du cockpit (moyenne par magasin).
+    $g0 = $_GET;
+    try { $_GET = ['mois' => 3, 'pid' => $pid]; $A = ep_analyse_produits(); } finally { $_GET = $g0; }
+    $ad = is_array($A['anDernier'] ?? null) ? array_slice($A['anDernier'], -13) : array_fill(0, count($tranches), null);
+    $semaines = ['tranches' => array_map(fn ($t) => $t[2], $tranches), 'bornes' => array_map(fn ($t) => [$t[0], $t[1]], $tranches),
+        'jours' => array_map(fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches),
+        'magasin' => array_values($moi), 'reseau' => array_values($res), 'anDernier' => array_values($ad), 'muettes' => $muet, 'magasins' => count($shops)];
+
+    // 2. Le prix face au réseau : la lecture de « Prix × volume », réduite au magasin et à des repères anonymes.
+    try { $_GET = ['mois' => $mp]; $PV = ep_prix_volume(); } finally { $_GET = $g0; }
+    $prix = null; $motif = null;
+    if (!empty($PV['indispo'])) { $motif = (string) ($PV['motif'] ?? 'prix indisponibles'); }
+    else {
+        $ref = null; foreach ((array) ($PV['refs'] ?? []) as $r) { if ((int) $r['pid'] === $pid) { $ref = $r; break; } }
+        if ($ref === null) { $motif = 'vendu dans moins de deux magasins sur la période, ou hors comparaison'; }
+        elseif (!isset($ref['mag'][(string) $sid])) { $motif = 'pas vendu par le magasin sur la période'; }
+        else {
+            $m = $ref['mag'][(string) $sid]; $v = array_column($ref['mag'], 'v10k');
+            $nom = $nom ?? (string) $ref['nom']; $cat = $cat ?? (string) $ref['cat'];
+            $prix = ['mois' => $mp, 'periode' => $PV['periode'], 'du' => $PV['du'], 'au' => $PV['au'],
+                'magasin' => ['q' => $m['q'], 'qm' => $m['qm'], 'ca' => $m['ca'], 'p' => $m['p'], 'ec' => $m['ec'], 'v10k' => $m['v10k'], 'rel' => $m['rel'], 'auMed' => $m['auMed'], 'peu' => $m['peu']],
+                'reseau' => ['med' => $ref['med'], 'min' => $ref['min'], 'max' => $ref['max'], 'volMoyen' => round(array_sum($v) / max(1, count($v)), 2),
+                    'volMin' => round(min($v), 2), 'volMax' => round(max($v), 2), 'magasins' => count($ref['mag'])]];
+        }
+    }
+    if ($nom === null) {
+        $c = function_exists('gpCatalogue') ? (gpCatalogue()['produits'][$pid] ?? null) : null;
+        $nom = $c ? (string) $c['nom'] : 'Produit ' . $pid; $cat = $c ? (string) $c['cat'] : '';
+    }
+    return ['pid' => $pid, 'shop' => $sid, 'nom' => $nom, 'cat' => $cat, 'semaines' => $semaines, 'prix' => $prix, 'prixMotif' => $motif];
+}
+
+/**
  * GET /analyse/prix-transfert?source=2&cible=4&m=2026-08
  *
  * « Si j'appliquais les prix de tel magasin à tel autre, qu'est-ce que ça
