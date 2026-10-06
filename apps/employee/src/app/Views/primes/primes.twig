@@ -173,20 +173,24 @@
 <div class="titre-section"><h2>{{ T.leaderboards ?? 'Classements' }}</h2><small>{{ mois(p.m) }}</small></div>
 <div class="pr-card" data-classements>
   <div class="cl-chips">{% for x in cls %}<span class="{{ loop.first ? 'on' }}" data-cl-cat="{{ x.cle }}">{% if x.unite == 'pieces' %}👑 {% else %}🛍️ {% endif %}{{ x.lib }}</span>{% endfor %}</div>
-  <div class="cl-tog"><span class="on" data-cl-niv="magasin">{{ T.my_shop_short ?? 'Mon magasin' }}</span><span data-cl-niv="reseau">{{ T.network ?? 'Réseau' }}</span></div>
-  {% for x in cls %}{% for niv in ['magasin', 'reseau'] %}
-  <div class="cl-liste {{ loop.parent.loop.first and niv == 'magasin' ? 'on' }}" data-cl="{{ x.cle }}:{{ niv }}">
-    {% set liste = attribute(x, niv) %}
+  <div class="cl-togs">
+    <div class="cl-tog"><span class="on" data-cl-niv="magasin">{{ T.my_shop_short ?? 'Mon magasin' }}</span><span data-cl-niv="reseau">{{ T.network ?? 'Réseau' }}</span></div>
+    <div class="cl-tog"><span class="on" data-cl-per="mois">{{ T.this_month ?? 'ce mois-ci' }}</span><span data-cl-per="semaine">{{ T.this_week ?? 'cette semaine' }}</span></div>
+  </div>
+  {% for x in cls %}{% for per in ['mois', 'semaine'] %}{% set src = per == 'mois' ? x : (x.semaine ?? null) %}{% for niv in ['magasin', 'reseau'] %}
+  <div class="cl-liste {{ loop.parent.parent.loop.first and per == 'mois' and niv == 'magasin' ? 'on' }}" data-cl="{{ x.cle }}:{{ niv }}:{{ per }}">
+    {% set liste = src ? attribute(src, niv) : [] %}
+    {% if per == 'semaine' and src %}<div class="k" style="margin:4px 0 6px">{{ src.lib }}{% if src.du %} · {{ T.from_date ?? 'dès le' }} {{ src.du|date('d/m') }}{% endif %}</div>{% endif %}
     {% if liste|length %}
     {% for row in liste %}
     <div class="cl-row {{ row.moi ? 'moi' }} {{ row.rang == 1 ? 'un' }}"><span class="r">{% if row.rang == 1 %}👑{% else %}{{ row.rang }}{% endif %}</span>
       <span class="nom">{{ row.moi ? (T.you_short ?? 'Toi') : row.nom }}{% if niv == 'reseau' %}<span class="mag">· {{ row.lieu ?? (T.other_shop ?? 'autre magasin') }}</span>{% endif %}</span>
       <span class="val">{% if x.unite == 'pieces' %}{{ row.pieces|number_format(0, ',', ' ') }}<small>{{ T.pieces ?? 'pièces' }}</small>{% else %}{{ row.taux|number_format(1, ',', ' ') }}&nbsp;%<small>{{ row.croisees }}/{{ row.tickets }}</small>{% endif %}</span></div>
     {% endfor %}
-    <div class="note">{% if x.unite == 'pieces' %}{{ T.lb_note_pieces ?? 'Au nombre de pièces vendues ce mois ; à égalité, moins de tickets gagne. La couronne demande' }} {{ x.minPieces }} {{ T.pieces ?? 'pièces' }}.{% else %}{{ T.lb_note_cross ?? 'Au taux de tickets à 2 articles ou plus, dès' }} {{ x.minTickets }} {{ T.tickets ?? 'tickets' }}.{% endif %} {{ niv == 'magasin' ? (x.nMag ~ ' ' ~ (T.in_the_race ?? 'dans la course')) : (x.nRes ~ ' ' ~ (T.in_the_race ?? 'dans la course')) }}.</div>
-    {% else %}<div class="note">{{ T.lb_empty ?? 'Personne n’est encore classée ce mois-ci.' }}</div>{% endif %}
+    <div class="note">{% if per == 'mois' %}{% if x.unite == 'pieces' %}{{ T.lb_note_pieces ?? 'Au nombre de pièces vendues ce mois ; à égalité, moins de tickets gagne. La couronne demande' }} {{ x.minPieces }} {{ T.pieces ?? 'pièces' }}.{% else %}{{ T.lb_note_cross ?? 'Au taux de tickets à 2 articles ou plus, dès' }} {{ x.minTickets }} {{ T.tickets ?? 'tickets' }}.{% endif %}{% else %}{{ T.lb_note_week ?? 'La semaine en cours, pour le plaisir : les couronnes se jouent sur le mois.' }}{% endif %} {{ niv == 'magasin' ? (src.nMag ~ ' ' ~ (T.in_the_race ?? 'dans la course')) : (src.nRes ~ ' ' ~ (T.in_the_race ?? 'dans la course')) }}.</div>
+    {% else %}<div class="note">{{ per == 'mois' ? (T.lb_empty ?? 'Personne n’est encore classée ce mois-ci.') : (T.lb_empty_week ?? 'Personne n’est encore classée cette semaine.') }}</div>{% endif %}
   </div>
-  {% endfor %}{% endfor %}
+  {% endfor %}{% endfor %}{% endfor %}
 </div>
 {% endif %}
 
@@ -278,14 +282,16 @@
 (function () {
   var bloc = document.querySelector('[data-classements]'); if (!bloc) { return; }
   var cat = (bloc.querySelector('[data-cl-cat].on') || {}).dataset ? bloc.querySelector('[data-cl-cat].on').dataset.clCat : '';
-  var niv = 'magasin';
+  var niv = 'magasin', per = 'mois';
   function montre() {
-    bloc.querySelectorAll('[data-cl]').forEach(function (l) { l.classList.toggle('on', l.dataset.cl === cat + ':' + niv); });
+    bloc.querySelectorAll('[data-cl]').forEach(function (l) { l.classList.toggle('on', l.dataset.cl === cat + ':' + niv + ':' + per); });
     bloc.querySelectorAll('[data-cl-cat]').forEach(function (c) { c.classList.toggle('on', c.dataset.clCat === cat); });
     bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.classList.toggle('on', c.dataset.clNiv === niv); });
+    bloc.querySelectorAll('[data-cl-per]').forEach(function (c) { c.classList.toggle('on', c.dataset.clPer === per); });
   }
   bloc.querySelectorAll('[data-cl-cat]').forEach(function (c) { c.addEventListener('click', function () { cat = c.dataset.clCat; montre(); }); });
   bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.addEventListener('click', function () { niv = c.dataset.clNiv; montre(); }); });
+  bloc.querySelectorAll('[data-cl-per]').forEach(function (c) { c.addEventListener('click', function () { per = c.dataset.clPer; montre(); }); });
 })();
 </script>
 {% endblock %}

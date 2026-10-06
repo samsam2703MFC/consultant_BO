@@ -757,6 +757,32 @@ function primesClassements(int $emp, string $shop, ?array $cr, array $emps, arra
     foreach ($tous as $i => $x) { $tous[$i]['rang'] = $i + 1; }
     foreach ($mag as $i => $x) { $mag[$i]['rang'] = $i + 1; }
     $out[] = ['cle' => 'croisees', 'lib' => 'Cross-selling', 'unite' => 'taux', 'minTickets' => (int) $cfgC['minTickets'], 'magasin' => $dix($mag, $emp), 'reseau' => $dix($tous, $emp), 'nMag' => count($mag), 'nRes' => count($tous)];
+
+    // La semaine en cours, à côté du mois : les mêmes listes depuis les agrégats hebdomadaires (dix tickets au moins pour le cross-selling).
+    $sems = function_exists('pvSemainesReseau') ? pvSemainesReseau(1) : [];
+    $sem = $sems !== [] ? end($sems) : null;
+    foreach ($out as $i => $x) {
+        $tousS = [];
+        foreach ((array) ($sem['e'] ?? []) as $id => $y) {
+            $id = (int) $id;
+            if (!isset($emps[$id])) { continue; }
+            $base = ['id' => $id, 'nom' => $emps[$id]['nom'], 'shop' => (string) $emps[$id]['shop'], 'lieu' => $lieu((string) $emps[$id]['shop']), 'tickets' => (int) ($y['t'] ?? 0), 'moi' => $id === $emp];
+            if ($x['unite'] === 'pieces') {
+                $pc = (float) ($y['q'][$x['cle']] ?? 0);
+                if ($pc <= 0) { continue; }
+                $tousS[] = $base + ['pieces' => $pc];
+            } else {
+                if ((int) ($y['t'] ?? 0) < 10) { continue; }
+                $tousS[] = $base + ['taux' => round(100 * (int) ($y['c'] ?? 0) / (int) $y['t'], 1), 'croisees' => (int) ($y['c'] ?? 0)];
+            }
+        }
+        if ($x['unite'] === 'pieces') { usort($tousS, static fn ($a, $b) => [$b['pieces'], $a['tickets']] <=> [$a['pieces'], $b['tickets']]); }
+        else { usort($tousS, static fn ($a, $b) => [$b['taux'], $b['tickets']] <=> [$a['taux'], $a['tickets']]); }
+        $magS = array_values(array_filter($tousS, static fn ($r) => $r['shop'] === $shop));
+        foreach ($tousS as $k2 => $r) { $tousS[$k2]['rang'] = $k2 + 1; }
+        foreach ($magS as $k2 => $r) { $magS[$k2]['rang'] = $k2 + 1; }
+        $out[$i]['semaine'] = ['lib' => (string) ($sem['lib'] ?? ''), 'du' => (string) ($sem['du'] ?? ''), 'magasin' => $dix($magS, $emp), 'reseau' => $dix($tousS, $emp), 'nMag' => count($magS), 'nRes' => count($tousS)];
+    }
     return $out;
 }
 
