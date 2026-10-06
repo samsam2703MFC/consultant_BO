@@ -599,7 +599,7 @@ function primesBriques(int $emp, string $m, ?array $moi, array $lignes, ?array $
     }
     $assezR = max($tickets, $tC) >= VENTE_CROSS_MIN_TICKETS;
     $prR = ($lt !== null && $assezR) ? venteRecordPrime((float) $lt, $rec, $regR['eurDixieme'], $regR['maxDixiemes']) : ['tranches' => 0, 'prime' => 0];
-    $record = ['lt' => $lt, 'record' => $rec, 'recordMois' => $recMois !== null ? primesLibMois($recMois) : null,
+    $record = ['lt' => $lt, 'record' => $rec, 'recordMois' => $recMois !== null ? primesLibMois($recMois) : null, 'recordM' => $recMois,
         'ecart' => ($lt !== null && $rec !== null) ? round($lt - $rec, 2) : null,
         'tranches' => $prR['tranches'], 'montant' => $prR['prime'],
         'eurDixieme' => $regR['eurDixieme'], 'maxDixiemes' => $regR['maxDixiemes'], 'minTickets' => VENTE_CROSS_MIN_TICKETS,

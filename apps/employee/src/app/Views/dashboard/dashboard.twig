@@ -18,7 +18,7 @@
   <div class="anneau"><svg viewBox="0 0 120 120"><circle class="fond" cx="60" cy="60" r="52"/><circle class="val" cx="60" cy="60" r="52" style="stroke-dasharray:{{ (part * 326.7)|round(1) }} 326.7"/></svg>
     <div class="centre"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.earned ?? 'acquis' }}</small></div></div>
   <div class="tx">
-    <div class="k">{{ T.my_bonuses ?? 'Mes primes' }} · {{ p.lib }}</div>
+    <div class="k">{{ T.my_bonuses ?? 'Mes primes' }} · {{ mois(p.m) }}</div>
     {% if p.enCours %}<div class="gros2">{{ T.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
     <div class="s">{{ T.earned_so_far ?? 'acquis si le mois finit comme ça' }} · {{ T.within_reach ?? 'à portée, un cran de plus' }}</div>
     {% else %}<div class="gros2">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div><div class="s">{{ T.month_closed ?? 'mois clos' }}</div>{% endif %}
@@ -29,6 +29,15 @@
 {% else %}
 <div class="pr-card"><div class="pr-h"><h2>{{ T.my_bonuses ?? 'Mes primes' }}</h2></div>
   <div class="note">{{ T.unavailable ?? 'Les primes ne peuvent pas être lues pour le moment.' }}{% if primesErreur %}<br><span class="mu" style="font-size:11px">{{ primesErreur }}</span>{% endif %}</div></div>
+{% endif %}
+
+{# ── Le bilan du service, quand il se termine ── #}
+{% if bilan %}
+<div class="pr-card acc-bilan {{ bilan.ok ? 'ok' : 'att' }}" data-bilan="{{ bilan.ok ? 'ok' : 'att' }}">
+  <i class="bi {{ bilan.ok ? 'bi-emoji-smile' : 'bi-lightning-charge' }}"></i>
+  <div><b>{{ bilan.fini ? (T.shift_over ?? 'Service terminé') : (T.shift_ending ?? 'Fin de service dans moins d’une heure') }}</b>
+    <div class="s">{% if bilan.ok %}{{ T.well_done ?? 'Bravo :' }} {{ bilan.taux }}&nbsp;% {{ T.today_vs_target ?? 'de ventes croisées aujourd’hui, la cible est à' }} {{ bilan.cible|number_format(0, ',', ' ') }}&nbsp;%.{% else %}{{ T.still_needed ?? 'Encore' }} <b>{{ bilan.manque }}</b> {{ bilan.manque == 1 ? (T.cross_sale_for_target_one ?? 'vente croisée pour la cible du jour') : (T.cross_sales_for_target ?? 'ventes croisées pour la cible du jour') }} ({{ bilan.taux }}&nbsp;% {{ T.vs ?? 'face à' }} {{ bilan.cible|number_format(0, ',', ' ') }}&nbsp;%).{% endif %}</div></div>
+</div>
 {% endif %}
 
 {# ── 2. Aujourd'hui : le compteur, le service, les tâches ── #}
@@ -51,7 +60,12 @@
 <div class="pr-card">
   <div class="pr-h"><h2>{{ T.next_steps ?? 'Mes prochaines étapes' }}</h2><small>{{ T.closest_first ?? 'la plus proche d’abord' }}</small></div>
   {% for e in etapes %}
-  <a class="ligne acc-etape" href="{{ ROOT }}/primes"><div><b>{{ e.lib }}</b><div class="d">{{ e.detail }}</div></div><span class="puce rubis">+ {{ e.gain }}&nbsp;{{ eur }}</span></a>
+  <a class="ligne acc-etape" href="{{ ROOT }}/primes"><div>
+    {% if e.cle == 'croisees' %}<b>{{ T.cross_sales_title ?? 'Ventes croisées' }}</b><div class="d">{{ e.n }} {{ T.more_cross_to_reach ?? 'ventes croisées de plus pour passer' }} {{ e.taux }}&nbsp;%</div>
+    {% elseif e.cle == 'record' %}<b>{{ T.beat_your_record ?? 'Bats ton record' }}</b><div class="d">{{ T.at_lines_from_record ?? 'à' }} {{ e.ecart }} {{ T.line_from_record ?? 'ligne par ticket du record' }} {{ e.record }}</div>
+    {% elseif e.cle == 'concours' %}<b>{{ T.contest ?? 'Concours' }} {{ e.lib }}</b><div class="d">{{ e.n }} {{ T.more_pieces_first_shop ?? 'pièces de plus pour passer 1re du magasin' }}</div>
+    {% else %}<b>{{ T.best_seller ?? 'Meilleure vendeuse' }}</b><div class="d">{{ T.score ?? 'score' }} {{ e.score }}, {{ T.first_shop_is_at ?? 'la 1re du magasin est à' }} {{ e.premier }}</div>{% endif %}
+  </div><span class="puce rubis">+ {{ e.gain }}&nbsp;{{ eur }}</span></a>
   {% endfor %}
 </div>
 {% endif %}

@@ -57,34 +57,50 @@ class DashboardController extends Controller
         } catch (\Throwable $e) { $taches = null; }
         $data['taches'] = $taches;
 
+        // Le bilan du service : dans la dernière heure du service, ou après, le compteur du jour face à la cible.
+        $data['bilan'] = ($service !== null && $fiche && !empty($fiche['enCours']) && !empty($fiche['aujourdhui'])) ? $this->bilan($service, $fiche) : null;
+
         $this->view("dashboard/dashboard", $data);
     }
 
-    /** Les prochaines étapes qui rapportent, la plus proche d'abord : [{lib, gain, detail}]. */
+    /** Le compteur du jour face à la cible, quand le service se termine : null tant qu'il reste plus d'une heure. */
+    private function bilan(array $service, array $f): ?array
+    {
+        $fin = strtotime(date('Y-m-d') . ' ' . $service['fin']);
+        if ($fin === false || time() < $fin - 3600) { return null; }
+        $a = $f['aujourdhui'];
+        $t = (int) ($a['tickets'] ?? 0); $c = (int) ($a['croisees'] ?? 0);
+        if ($t === 0) { return null; }
+        $cible = (float) ($f['briques']['croisees']['cible'] ?? 0);
+        $taux = 100 * $c / $t;
+        return ['fini' => time() >= $fin, 'taux' => (int) round($taux), 'cible' => $cible, 'ok' => $taux + 1e-9 >= $cible,
+            'manque' => max(0, (int) ceil($cible * $t / 100) - $c), 'tickets' => $t, 'croisees' => $c];
+    }
+
+    /** Les prochaines étapes qui rapportent, la plus proche d'abord : [{cle, gain, n, …}] ; la vue met les mots. */
     private function etapes(array $f): array
     {
         $b = $f['briques'] ?? [];
         $out = [];
         $c = $b['croisees'] ?? null;
         if ($c && !empty($c['prochain'])) {
-            $out[] = ['cle' => 'croisees', 'lib' => 'Ventes croisées', 'gain' => (int) $c['prochain']['montant'],
-                'detail' => (int) $c['prochain']['manque'] . ' ventes croisées de plus pour passer ' . number_format((float) $c['prochain']['taux'], 0, ',', ' ') . ' %', 'ordre' => (int) $c['prochain']['manque']];
+            $out[] = ['cle' => 'croisees', 'gain' => (int) $c['prochain']['montant'], 'n' => (int) $c['prochain']['manque'],
+                'taux' => number_format((float) $c['prochain']['taux'], 0, ',', ' '), 'ordre' => (int) $c['prochain']['manque']];
         }
         $r = $b['record'] ?? null;
         if ($r && isset($r['ecart']) && $r['ecart'] !== null && $r['ecart'] < 0 && !empty($r['eurDixieme'])) {
-            $out[] = ['cle' => 'record', 'lib' => 'Bats ton record', 'gain' => (int) $r['eurDixieme'],
-                'detail' => 'à ' . number_format(abs((float) $r['ecart']), 2, ',', ' ') . ' ligne par ticket du record ' . number_format((float) $r['record'], 1, ',', ' '), 'ordre' => (int) round(abs((float) $r['ecart']) * 100)];
+            $out[] = ['cle' => 'record', 'gain' => (int) $r['eurDixieme'], 'ecart' => number_format(abs((float) $r['ecart']), 2, ',', ' '),
+                'record' => number_format((float) $r['record'], 1, ',', ' '), 'ordre' => (int) round(abs((float) $r['ecart']) * 100)];
         }
         $k = $b['concours'] ?? null;
         if ($k && !empty($k['actif']) && ($k['rangMag'] ?? null) !== 1 && isset($k['premierMag']) && $k['premierMag'] !== null) {
             $manque = max(1, (int) ceil((float) $k['premierMag'] - (float) ($k['pieces'] ?? 0)) + 1);
-            $out[] = ['cle' => 'concours', 'lib' => 'Concours ' . ($k['lib'] ?? ''), 'gain' => (int) $k['montantMag'],
-                'detail' => $manque . ' pièces de plus pour passer 1re du magasin', 'ordre' => $manque];
+            $out[] = ['cle' => 'concours', 'gain' => (int) $k['montantMag'], 'n' => $manque, 'lib' => (string) ($k['lib'] ?? ''), 'ordre' => $manque];
         }
         $v = $b['meilleure'] ?? null;
         if ($v && ($v['rangMag'] ?? null) !== null && $v['rangMag'] !== 1 && !empty($v['scorePremier']) && isset($v['score'])) {
-            $out[] = ['cle' => 'meilleure', 'lib' => 'Meilleure vendeuse', 'gain' => (int) $v['montantMag'],
-                'detail' => 'score ' . number_format((float) $v['score'], 0, ',', ' ') . ', la 1re du magasin est à ' . number_format((float) $v['scorePremier'], 0, ',', ' '), 'ordre' => 50];
+            $out[] = ['cle' => 'meilleure', 'gain' => (int) $v['montantMag'], 'score' => number_format((float) $v['score'], 0, ',', ' '),
+                'premier' => number_format((float) $v['scorePremier'], 0, ',', ' '), 'ordre' => 50];
         }
         usort($out, static fn ($a, $z) => $a['ordre'] <=> $z['ordre']);
         return array_slice($out, 0, 3);
