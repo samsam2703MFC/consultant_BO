@@ -890,7 +890,8 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now, array $sm
                 $seuil = (float) $h < $smJusqua ? $sm : 0.0;
                 if ($manque === null && $proj < $seuil - 0.5) { $manque = ['h' => $h, 'q' => round($seuil - $proj, 1)]; }
                 $defMax = max($defMax, $seuil - $proj);
-                $cases[] = ['h' => $h, 'q' => round($proj, 1), 'prev' => round($prev, 1), 'reel' => false];
+                // L'heure entamée porte aussi ce qui s'y est déjà vendu (v) : vendu + prévu = la vente attendue de l'heure.
+                $cases[] = ['h' => $h, 'q' => round($proj, 1), 'prev' => round($prev, 1), 'reel' => false] + ($h < $now && $h + 1 > $now ? ['v' => round((float) ($vd[$h] ?? 0), 1)] : []);
             }
         }
         if ($stockNow === null) { $stockNow = $s0 + $sortiTot - $venduTot; $proj = $stockNow; }
