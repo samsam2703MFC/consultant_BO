@@ -1318,3 +1318,34 @@ body.pp-emb{background:var(--color-bg)}
 .db-stt .th span:nth-child(3),.db-stt .th span:nth-child(4),.db-stt .th span:nth-child(5){text-align:right}
 .db-stt .grp.ko{color:#C0182B;background:#fdf4f5}
 .op-stock{margin-top:12px}
+
+/* Onglet Opérationnel au téléphone (06/10/2026) : une colonne, quatre onglets en bas. */
+.mb-tabs.mb-tabs4{grid-template-columns:repeat(4,1fr)}
+.mb-tabs.mb-tabs4 button{font-size:10.5px;letter-spacing:0}
+.op-mob .op-mnt{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.op-mob .op-tl{min-height:0;padding:9px 11px}
+.op-mob .op-tl .v{font-size:22px}.op-mob .op-tl.heure .v{font-size:30px}
+.op-mob .op-tl .v small{font-size:12px}
+.op-mob .db-card{margin-bottom:10px}
+.op-mob .op-bloc>.ct{padding:9px 12px}
+.op-vl .r{display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:.5px solid var(--color-border-tertiary)}
+.op-vl .r:first-child{border-top:none}
+.op-vl .n{flex:1;min-width:0}
+.op-vl .n b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-vl .n small{font-size:10.5px;color:var(--color-text-muted)}
+.op-vl .n small b{display:inline;font-size:10.5px}.op-vl .n small b.ko{color:#C0182B}
+.op-vl .e{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto}
+.op-vl .e b{font-size:11px}
+.op-jour{padding:4px 12px 10px}
+.op-jl{display:grid;grid-template-columns:86px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:.5px solid var(--color-border-tertiary);font-size:12px}
+.op-jl:first-child{border-top:none}
+.op-jl .a{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.op-jl .b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.op-jl .c{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap}
+.op-jl.ici .c{color:#2d7a3e;font-weight:700}.op-jl.ici .a{color:#2d7a3e}
+.op-jl.fini{opacity:.55}
+.op-jl.av .c{color:#B26A00;font-weight:700}
+.op-large{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.op-mob .op-mini4{grid-template-columns:1fr 1fr;gap:8px;margin-top:0}
+.op-mob .op-mini .v{font-size:18px;white-space:normal}
+.op-mob .op-renvoi .db-lien{font-size:11px}
