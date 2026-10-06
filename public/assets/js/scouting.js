@@ -2367,7 +2367,11 @@ export class Scouting {
     carte();
     this.gardeCharger(x.lat, x.lng).then(carte);
     this.etudeLocale(x.lat, x.lng);
-    this.dossierGoogleCharger();
+    // une étude qui se crée repart de Google : toutes les notes du rayon
+    // recalculées, fiches, avis et photos relus — une fois par point et par
+    // session (rouvrir le même dossier ne repaie pas)
+    this._etudesFraiches = this._etudesFraiches || {};
+    this.dossierGoogleCharger(this._etudesFraiches[this.etudeCle(x.lat, x.lng)] ? false : 'etude');
   }
 
   // Google pour le dossier : d'abord les notes et adresses des concurrents du
@@ -2383,10 +2387,14 @@ export class Scouting {
     const cle = this.etudeCle(x.lat, x.lng);
     this._googleDossiers = this._googleDossiers || {};
     if (!frais && this._googleDossiers[cle]){ this.setState({ dossierGoogle: this._googleDossiers[cle], dossierGoogleBusy: false }); return Promise.resolve(); }
-    if (this._googleCle === cle && this._googleP) return frais ? this._googleP.then(() => this.dossierGoogleCharger(true)) : this._googleP;
+    if (this._googleCle === cle && this._googleP) return frais ? this._googleP.then(() => this.dossierGoogleCharger(frais)) : this._googleP;
+    // `etude` : l'étude se crée — en plus de la relecture des fiches, la note
+    // de CHAQUE concurrent nommé du rayon est redemandée, pas seulement celles
+    // qui manquent ; puis pression, emprise et CA sont recalculés
+    const etude = frais === 'etude';
     this._googleCle = cle;
     const avant = this._googleDossiers[cle] || null;
-    this.setState({ dossierGoogle: frais ? avant : null, dossierGoogleBusy: true, dossierGoogleFrais: !!frais });
+    this.setState({ dossierGoogle: frais ? avant : null, dossierGoogleBusy: true, dossierGoogleFrais: etude ? 'etude' : !!frais });
     const vivant = () => this._googleCle === cle && this.state.dossier;
     const run = (async () => {
     try {
@@ -2394,7 +2402,12 @@ export class Scouting {
       // un commerce sans nom dans OpenStreetMap ne se cherche pas chez Google :
       // la recherche rendrait la fiche du voisin le plus proche
       const nomme = b => b.name && !/sans nom/i.test(b.name);
-      const sansNote = x.near.map(o => o.b).filter(b => nomme(b) && !out[b.id]).slice(0, 40);
+      // en création d'étude : toutes les notes, hors notes saisies à la main et
+      // hors les trente plus proches, dont la fiche relue donne la note
+      const parFiche = new Set(x.near.filter(o => nomme(o.b)).slice(0, 30).map(o => o.b.id));
+      const sansNote = etude
+        ? x.near.map(o => o.b).filter(b => nomme(b) && !parFiche.has(b.id) && !(out[b.id] && out[b.id].manual)).slice(0, 150)
+        : x.near.map(o => o.b).filter(b => nomme(b) && !out[b.id]).slice(0, 40);
       if (sansNote.length && !this.state.enriching){
         this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: sansNote.length });
         const r = await this.enrichLots(sansNote, out);
@@ -2432,7 +2445,9 @@ export class Scouting {
         if (this.shops().length !== nAvant) this.reevaluer();
       }
       this._googleDossiers[cle] = g;
+      if (etude && !g.erreur) (this._etudesFraiches = this._etudesFraiches || {})[cle] = true;
       if (vivant()) this.setState({ dossierGoogle: g, dossierGoogleBusy: false, dossierGoogleFrais: false, ratings: Object.assign({}, out) });
+      if (etude && vivant()) this.reevaluer();
     } catch (e) {
       if (vivant()) this.setState({ dossierGoogleBusy: false, dossierGoogleFrais: false, enriching: false,
         dossierGoogle: frais && avant ? Object.assign({}, avant, { erreur: e.message || String(e) }) : { cle: cle, rows: [], erreur: e.message || String(e) } });
@@ -2742,7 +2757,7 @@ export class Scouting {
           dist: o ? o.d.toFixed(1).replace('.', ',') + ' km' : '', url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '',
           avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) };
       }),
-      googleAttente: s.dossierGoogleBusy ? (s.dossierGoogleFrais ? 'Relecture des avis Google pour le PDF' : 'Google en cours — notes, adresses, avis et photos des concurrents') + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + (s.dossierGoogle.faits != null ? s.dossierGoogle.faits : s.dossierGoogle.rows.length) + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
+      googleAttente: s.dossierGoogleBusy ? (s.dossierGoogleFrais === 'etude' ? 'Création de l’étude : notes Google de tous les concurrents recalculées, fiches, avis et photos relus' : s.dossierGoogleFrais ? 'Relecture des avis Google pour le PDF' : 'Google en cours — notes, adresses, avis et photos des concurrents') + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + (s.dossierGoogle.faits != null ? s.dossierGoogle.faits : s.dossierGoogle.rows.length) + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
       // la date dite est celle des fiches elles-mêmes : si Google a refusé la
       // relecture du PDF, le dossier part avec les fiches gardées, à leur date
       googleNote: (() => {

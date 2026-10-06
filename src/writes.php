@@ -3703,12 +3703,23 @@ function wr_scouting_concurrents_google(): array
                 if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
             }
             $neuf = $res !== null ? (string) ($res['placeId'] ?? '') : '';
-            if ($neuf === '' || $neuf === $placeId) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-            $placeId = $neuf;
-            GoogleApi::$lastError = null;
-            $f = GoogleApi::fiche($placeId);
-            $appels++;
-            if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+            if ($neuf === $placeId) {
+                // même identifiant : la fiche est bonne, c'est sa lecture directe
+                // que Google refuse — la recherche la rend, avis et photos compris
+                GoogleApi::$lastError = null;
+                $f = GoogleApi::ficheParRecherche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $placeId, $lat, $lng);
+                $appels++;
+                if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+                $neuf = '';
+            }
+            if ($f === null && $neuf === '') { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+            if ($f === null) {
+                $placeId = $neuf;
+                GoogleApi::$lastError = null;
+                $f = GoogleApi::fiche($placeId);
+                $appels++;
+                if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+            }
         }
         if ($f === null) {
             $msg = GoogleApi::$lastError ?? 'réponse vide';

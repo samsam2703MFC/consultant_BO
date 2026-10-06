@@ -177,6 +177,35 @@ final class GoogleApi
         [$code, $json] = self::http('GET', self::BASE . '/places/' . rawurlencode($placeId)
             . '?languageCode=' . rawurlencode($c['langue']), self::CHAMPS_FICHE, $c['cle'], null);
         if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        return self::ficheDepuis($json);
+    }
+
+    /**
+     * La fiche d'un concurrent lue par la recherche textuelle — même forme que
+     * fiche(). Pour la fiche dont Google refuse la lecture directe (403) mais
+     * que la recherche rend ; seule la fiche au même identifiant est retenue.
+     */
+    public static function ficheParRecherche(string $texte, string $placeId, float $lat, float $lng): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '' || $placeId === '') { self::$lastError = 'recherche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        $champs = implode(',', array_map(fn($x) => 'places.' . $x, explode(',', self::CHAMPS_FICHE)));
+        [$code, $json] = self::http('POST', self::BASE . '/places:searchText', $champs, $c['cle'], [
+            'textQuery' => $texte, 'languageCode' => $c['langue'], 'regionCode' => 'BE', 'maxResultCount' => 5,
+            'locationBias' => ['circle' => ['center' => ['latitude' => $lat, 'longitude' => $lng], 'radius' => 600.0]],
+        ]);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        foreach ((array) ($json['places'] ?? []) as $p) {
+            if (is_array($p) && (string) ($p['id'] ?? '') === $placeId) { return self::ficheDepuis($p); }
+        }
+        self::$lastError = 'fiche absente de la recherche';
+        return null;
+    }
+
+    private static function ficheDepuis(array $json): array
+    {
         $d = googleLieuNormalise($json);
         $d['statut'] = (string) ($json['businessStatus'] ?? '');
         $d['photos'] = [];
