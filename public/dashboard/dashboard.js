@@ -599,6 +599,11 @@
    * contrôles facultatifs (formation cuisine CQ-F…) restent dans Contrôle des
    * tâches du cockpit. Une tâche dont le panel ne dit rien est gardée. */
   const tacheObligatoire = t => t.obligatoire !== false;
+  /** Une tâche est faite quand elle est rendue AVEC sa photo (06/10/2026) : cochée sans photo,
+   * elle ne prouve rien et ne compte plus comme rendue. Elle n'est pas « pas rendue » non plus :
+   * elle se compte à part, « cochée sans photo ». */
+  const tacheFaite = t => t.statut !== 'nonRendue' && t.statut !== 'sansPhoto';
+  const tacheSansPhoto = t => t.statut === 'sansPhoto';
   /** Les tâches obligatoires du magasin pour la journée regardée. */
   function tachesJour(d) {
     const sh = d ? (d.shops || []).find(x => String(x.shopId) === String(S.shop)) : null;
@@ -623,8 +628,8 @@
     if (!d) { return null; }
     const T = tachesJour(d);
     if (!T.length) { return { total: 0 }; }
-    const faite = t => t.statut !== 'nonRendue';
-    const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
+    const faite = tacheFaite;
+    const bloq = t => t.statut === 'nonRendue' && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
     const nF = T.filter(faite).length;
     return { total: T.length, faites: nF, nonFaites: T.length - nF, bloquantes: T.filter(bloq).length };
   }
@@ -1043,9 +1048,10 @@
     const nom = x => cqNom(x).replace(/^(Comptoir|CQ) · /, '');
     if (L) {
       const ko = L.filter(x => x.e.c === 'ko'), ctl = L.filter(x => x.e.c === 'ctl'), nc = L.filter(x => x.e.c === 'nc'), notees = L.filter(x => x.note != null);
-      const r = L.length - ko.length;
-      T.push({ k: 'Contrôles', court: ko.length ? maPl(ko.length, 'contrôle') + ' non rendu' + (ko.length > 1 ? 's' : '') : '', pt: !L.length ? 'n' : (ko.length && auj ? 'o' : MA.ctrl(r, L.length)),
-        v: L.length ? r + ' / ' + L.length : '—', s: !L.length ? 'aucun contrôle ce jour' : (ko.length ? (auj ? 'pas encore : ' : 'manquent ') + ko.map(nom).join(', ') : 'tous rendus') });
+      // Cochée sans photo : pas rendue (06/10/2026), mais dite à part.
+      const sp = L.filter(x => x.e.c === 'mu'), r = L.length - ko.length - sp.length;
+      T.push({ k: 'Contrôles', court: ko.length || sp.length ? [ko.length ? maPl(ko.length, 'contrôle') + ' non rendu' + (ko.length > 1 ? 's' : '') : '', sp.length ? sp.length + ' sans photo' : ''].filter(Boolean).join(' · ') : '', pt: !L.length ? 'n' : ((ko.length || sp.length) && auj ? 'o' : MA.ctrl(r, L.length)),
+        v: L.length ? r + ' / ' + L.length : '—', s: !L.length ? 'aucun contrôle ce jour' : ([ko.length ? (auj ? 'pas encore : ' : 'manquent ') + ko.map(nom).join(', ') : '', sp.length ? 'cochés sans photo : ' + sp.map(nom).join(', ') : ''].filter(Boolean).join(' · ') || 'tous rendus avec leur photo') });
       T.push({ k: 'À contrôler', court: ctl.length ? maPl(ctl.length, 'photo') + ' à contrôler' : '', pt: ctl.length ? 'o' : (r ? 'v' : 'n'), v: String(ctl.length),
         s: ctl.length ? ctl.map(nom).join(', ') + ', pas encore notée' + (ctl.length > 1 ? 's' : '') : (r ? 'tout est noté' : 'rien de rendu'), attr: ctl.length ? ` data-cqvoir="${esc(ctl[0].taskId)}"` : '' });
       T.push({ k: 'Non-conformités', court: nc.length ? maPl(nc.length, 'non-conformité') : '', pt: nc.length ? 'r' : (notees.length ? 'v' : 'n'), v: String(nc.length),
@@ -2297,17 +2303,18 @@
       if (!D) { return a4Lect(cle, 'lecture du panel…'); }
       const T = tachesJour(D);
       if (!T.length) { return { v: '—', s: D.indispo ? 'panel injoignable' : 'aucune tâche pour ce magasin ce jour', vd: 'neutre', mini: '' }; }
-      const faite = t => t.statut !== 'nonRendue';
-      const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
+      const faite = tacheFaite;
+      const bloq = t => t.statut === 'nonRendue' && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
       const ctl = t => t.statut === 'aControler' || t.statut === 'aValider';
-      const nF = T.filter(faite).length, nB = T.filter(bloq).length, nC = T.filter(ctl).length, nA = T.length - nF - nB;
+      const nS = T.filter(tacheSansPhoto).length;
+      const nF = T.filter(faite).length, nB = T.filter(bloq).length, nC = T.filter(ctl).length, nA = T.length - nF - nB - nS;
       const dern = T.filter(t => t.faitLe).sort((a, b) => String(b.faitLe).localeCompare(String(a.faitLe)))[0];
-      const rg = t => faite(t) ? (ctl(t) ? 2 : 3) : (bloq(t) ? 0 : 1);
+      const rg = t => faite(t) ? (ctl(t) ? 3 : 4) : (bloq(t) ? 0 : (tacheSansPhoto(t) ? 1 : 2));
       const O = T.slice().sort((a, b) => rg(a) - rg(b));
       return { v: nF + ' / ' + T.length,
-        s: [nB ? `<b class="ko">${pl(nB, 'bloquante')} pas ${nB > 1 ? 'rendues' : 'rendue'}</b>` : '', nA > 0 ? nA + ' autre' + (nA > 1 ? 's' : '') + ' pas ' + (nA > 1 ? 'rendues' : 'rendue') : '', nC ? nC + ' à contrôler' : '',
+        s: [nB ? `<b class="ko">${pl(nB, 'bloquante')} pas ${nB > 1 ? 'rendues' : 'rendue'}</b>` : '', nS ? `<b class="wa">${nS} cochée${nS > 1 ? 's' : ''} sans photo</b>` : '', nA > 0 ? nA + ' autre' + (nA > 1 ? 's' : '') + ' pas ' + (nA > 1 ? 'rendues' : 'rendue') : '', nC ? nC + ' à contrôler' : '',
           dern ? 'dernière rendue à ' + esc(String(dern.faitLe).slice(11, 16)) + (dern.faitePar ? ' par ' + esc(dern.faitePar) : '') : ''].filter(Boolean).join(' · ') || 'toutes rendues',
-        vd: nB ? 'ko' : (nA ? 'att' : 'ok'), mini: a4Cases(O.map(t => faite(t) ? (ctl(t) ? 'ctl' : 'ok') : (bloq(t) ? 'ko' : 'att')), O.map(t => t.tache || '')) };
+        vd: nB ? 'ko' : (nA || nS ? 'att' : 'ok'), mini: a4Cases(O.map(t => faite(t) ? (ctl(t) ? 'ctl' : 'ok') : (bloq(t) ? 'ko' : (tacheSansPhoto(t) ? 'mu' : 'att'))), O.map(t => (t.tache || '') + (tacheSansPhoto(t) ? ' · cochée sans photo' : ''))) };
     })(), rendTaches());
 
     ajoute('photos', 'ouv', 'Contrôles en photo', (() => {
@@ -2315,11 +2322,11 @@
       if (Q === null) { return a4Lect('taches|' + S.date, 'lecture des photos…'); }
       if (!Q.length) { return { v: '—', s: 'aucun contrôle en photo ce jour', vd: 'neutre', mini: '' }; }
       const n = c => Q.filter(x => x.e.c === c).length;
-      const rendues = Q.length - n('ko'), notees = Q.filter(x => x.note != null);
+      const rendues = Q.length - n('ko') - n('mu'), notees = Q.filter(x => x.note != null);
       const moy = notees.length ? notees.reduce((a, x) => a + x.note, 0) / notees.length : null;
       return { v: n('ok') + ' / ' + rendues,
-        s: [(n('ok') > 1 ? 'conformes' : 'conforme') + ' sur ' + pl(rendues, 'rendue'), n('nc') ? `<b class="ko">${pl(n('nc'), 'écart')}</b>` : '', n('ctl') ? n('ctl') + ' à contrôler' : '', n('ko') ? n('ko') + ' pas ' + (n('ko') > 1 ? 'rendues' : 'rendue') : '', moy != null ? 'moyenne ' + nf(moy, 1) + ' / 5' : ''].filter(Boolean).join(' · '),
-        vd: n('nc') ? 'ko' : (n('ctl') || n('ko') ? 'att' : 'ok'),
+        s: [(n('ok') > 1 ? 'conformes' : 'conforme') + ' sur ' + pl(rendues, 'rendue'), n('nc') ? `<b class="ko">${pl(n('nc'), 'écart')}</b>` : '', n('ctl') ? n('ctl') + ' à contrôler' : '', n('mu') ? `<b class="wa">${n('mu')} cochée${n('mu') > 1 ? 's' : ''} sans photo</b>` : '', n('ko') ? n('ko') + ' pas ' + (n('ko') > 1 ? 'rendues' : 'rendue') : '', moy != null ? 'moyenne ' + nf(moy, 1) + ' / 5' : ''].filter(Boolean).join(' · '),
+        vd: n('nc') ? 'ko' : (n('ctl') || n('ko') || n('mu') ? 'att' : 'ok'),
         mini: a4Cases(Q.map(x => ({ ok: 'ok', nc: 'ko', ctl: 'ctl', ko: 'vide', mu: 'mu' })[x.e.c] || 'mu'), Q.map(x => cqNom(x))) };
     })(), rendCQ(false));
 
@@ -3083,11 +3090,11 @@
     if (jour) {
       const T = tachesJour(d);
       if (!T.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">${d.indispo ? 'panel injoignable' : 'aucune tâche pour ce magasin ce jour'}</div></div></div>`; }
-      const faite = t => t.statut !== 'nonRendue';
-      const bloq = t => !faite(t) && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
+      const faite = tacheFaite;
+      const bloq = t => t.statut === 'nonRendue' && (t.obligatoire != null ? !!t.obligatoire : /^CO-/i.test(String(t.checklist || '')));
       const nF = T.filter(faite).length, nN = T.length - nF, nB = T.filter(bloq).length;
-      const nCtrl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider').length, nSans = T.filter(t => t.statut === 'sansPhoto').length;
-      const nQ = T.filter(t => !faite(t) && !bloq(t)).length;
+      const nCtrl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider').length, nSans = T.filter(tacheSansPhoto).length;
+      const nQ = T.filter(t => t.statut === 'nonRendue' && !bloq(t)).length;
       // Les checklists, dans l'ordre de la journée.
       const cls = []; const par = {};
       T.forEach(t => { const c = String(t.checklist || 'Sans checklist'); if (!par[c]) { par[c] = []; cls.push(c); } par[c].push(t); });
@@ -3095,12 +3102,12 @@
       const rang = c => /^CO-01/i.test(c) ? '0' : (/^CO-02/i.test(c) ? '9' : '5' + (par[c].filter(t => t.faitLe).map(t => String(t.faitLe)).sort()[0] || '9999') + c);
       cls.sort((a, b) => rang(a).localeCompare(rang(b)));
       const hDe = t => t.faitLe ? String(t.faitLe).slice(11, 16) : '';
-      const mini = cls.map((c, i) => (i ? '<span class="sep"></span>' : '') + par[c].map(t => `<i class="${faite(t) ? 'f' : (bloq(t) ? 'b' : 'n')}" title="${esc(t.tache)}${faite(t) ? ' · ' + hDe(t) + (t.faitePar ? ' · ' + esc(t.faitePar) : '') : ' · non rendue'}"></i>`).join('')).join('');
+      const mini = cls.map((c, i) => (i ? '<span class="sep"></span>' : '') + par[c].map(t => `<i class="${faite(t) ? 'f' : (bloq(t) ? 'b' : 'n')}" title="${esc(t.tache)}${faite(t) ? ' · ' + hDe(t) + (t.faitePar ? ' · ' + esc(t.faitePar) : '') : (tacheSansPhoto(t) ? ' · cochée sans photo' : ' · non rendue')}"></i>`).join('')).join('');
       const dern = T.filter(t => t.faitLe).sort((a, b) => String(b.faitLe).localeCompare(String(a.faitLe)))[0];
       const court = c => c.replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '').replace(/\.$/, '');
       corps = `<div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">${T.length} obligatoire(s) · ${T.length ? Math.round(100 * nF / T.length) : 0} % faites${dern ? ' · dernière rendue à ' + hDe(dern) + (dern.faitePar ? ' par ' + esc(dern.faitePar) : '') : ''}</div></div>
-        ${tuileT('Faites', nF + '<small>/ ' + T.length + '</small>', (nCtrl ? nCtrl + ' à contrôler' : '') + (nSans ? (nCtrl ? ' · ' : '') + nSans + ' sans photo' : ''), 'ok')}
-        ${tuileT('Non faites', nN + '<small>/ ' + T.length + '</small>', (nQ ? nQ + ' contrôle(s) qualité' : '') + (nB ? (nQ ? ' · ' : '') + nB + ' d’exploitation' : ''), 'wa')}
+        ${tuileT('Faites', nF + '<small>/ ' + T.length + '</small>', (nCtrl ? nCtrl + ' à contrôler' : '') || 'avec leur photo', 'ok')}
+        ${tuileT('Non faites', nN + '<small>/ ' + T.length + '</small>', [nSans ? nSans + ' cochée(s) sans photo' : '', nQ ? nQ + ' contrôle(s) qualité' : '', nB ? nB + ' d’exploitation' : ''].filter(Boolean).join(' · '), 'wa')}
         ${tuileT('Bloquantes', String(nB), nB ? 'exploitation non rendue' : 'rien ne bloque', nB ? 'ko' : '')}
         <div class="db-bt fil" data-tdrop="1"><div class="k">Le fil de la journée <span class="dr">${S.tOuvert ? 'replier ▴' : 'détail ▾'}</span></div><div class="mini">${mini}</div><div class="s">${cls.map(court).map(esc).join(' · ')}</div></div>`;
       if (S.tOuvert) {
