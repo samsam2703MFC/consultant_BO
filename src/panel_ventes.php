@@ -319,7 +319,7 @@ function pvCroiseesMois(string $m): ?array
     try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
     catch (PDOException $e) { return null; }
     $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d', strtotime('-1 day')));
-    $out = []; $jours = 0; $manquants = 0; $sansC = 0; $sansTq = 0; $joursVus = [];
+    $out = []; $jours = 0; $manquants = 0; $sansC = 0; $sansTq = 0; $joursVus = []; $joursTqShop = [];
     for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
         foreach ($shops as $sid) {
             $c = setting('pvL' . $sid . ':' . $j);
@@ -328,7 +328,7 @@ function pvCroiseesMois(string $m): ?array
             $version = pvLignesVersion($c);
             $avecC = $version >= 1;
             if (!$avecC) { $sansC++; }
-            if ($version < 2) { $sansTq++; }
+            if ($version < 2) { $sansTq++; } else { $joursTqShop[$sid] = ($joursTqShop[$sid] ?? 0) + 1; }
             $joursVus[$j] = true;
             foreach ($e as $id => $x) {
                 $id = (int) $id;
@@ -351,7 +351,8 @@ function pvCroiseesMois(string $m): ?array
         if ($x['tqT'] === 0 && $sansTq > 0) { unset($out[$id]['tq']); } else { $out[$id]['tq'] = round($x['tq'], 2); }
         unset($out[$id]['tc']);
     }
-    return ['e' => $out, 'jours' => $jours, 'manquants' => $manquants, 'sansC' => $sansC, 'sansTq' => $sansTq,
+    // joursTqShop : par magasin, les jours dont les pièces du concours sont comptées (version 2).
+    return ['e' => $out, 'jours' => $jours, 'manquants' => $manquants, 'sansC' => $sansC, 'sansTq' => $sansTq, 'joursTqShop' => $joursTqShop,
         'complet' => $manquants === 0 && $sansC === 0, 'tqComplet' => $manquants === 0 && $sansTq === 0];
 }
 
