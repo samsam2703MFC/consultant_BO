@@ -607,3 +607,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T05:18:09Z cache à la demande des lectures lentes du dashboard
 2026-10-06T05:26:30Z schéma vérifié une fois par version, Server-Timing
 2026-10-06T06:31:45Z dashboard onglet Opérationnel
+2026-10-06T06:47:30Z heures locales et contrôles sans photo
