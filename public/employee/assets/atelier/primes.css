@@ -190,3 +190,25 @@
 .demi text.tl{font-size:8.5px;fill:rgba(255,255,255,.85)}
 .demi text.big{font-family:var(--font-display);font-size:28px}
 .demi text.sub{font-size:8.5px;fill:rgba(255,255,255,.85);letter-spacing:.06em;text-transform:uppercase}
+
+/* L'Accueil (06/10/2026) : la performance de la personne d'abord. */
+a.acc-lien{display:flex;text-decoration:none;color:inherit}
+a.acc-lien.rubis{color:#fff}
+.acc-voir{font:600 11.5px var(--font-ui);margin-top:8px;color:rgba(255,255,255,.9)}
+.acc-voir i{font-size:12px;margin-left:2px}
+.acc-grille{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.acc-tuile{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--la-beige-doux);text-decoration:none;color:inherit;min-width:0}
+.acc-tuile i{font-size:20px;color:var(--la-rubis);flex:0 0 auto}
+.acc-tuile b{display:block;font:400 17px/1.1 var(--font-display);white-space:nowrap}
+.acc-tuile small{display:block;font:500 10.5px var(--font-ui);color:var(--la-muet);margin-top:2px}
+.acc-tuile.att{background:#fdf0e0}
+.acc-tuile.att i{color:#b25f00}
+a.acc-etape{text-decoration:none;color:inherit}
+.acc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.acc-kpis div{text-align:center;min-width:0}
+.acc-kpis b{display:block;font:400 22px/1.1 var(--font-display)}
+.acc-kpis b sup{font-size:11px;vertical-align:top}
+.acc-kpis small{display:block;font:500 10px var(--font-ui);color:var(--la-muet);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-mag{align-items:center;justify-content:space-between;gap:10px}
+.acc-mag .s{font-size:12.5px;margin-top:3px}
+.acc-mag .s b{font-weight:600}

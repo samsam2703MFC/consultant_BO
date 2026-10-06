@@ -47,6 +47,16 @@ Un serveur PHP avec un routeur qui rejoue le `.htaccess` (`php -S 127.0.0.1:8098
 router.php`) et une API simulée (`demo` / `demo`) : connexion, accueil, planning, tâches, profil,
 déconnexion. Aucune écriture vers le panel.
 
+## L'Accueil (06/10/2026) : la performance de la personne d'abord
+
+`/dashboard` : l'anneau des primes acquises / à portée du mois (un lien vers `/primes`), le compteur
+de ventes croisées du jour avec le service du jour (planning) et les tâches à faire, « Mes prochaines
+étapes » (les trois paliers les plus proches qui rapportent, calculés dans `DashboardController`
+depuis la fiche), « Ma semaine » (place dans le réseau, ventes croisées, CA par heure, pièces du
+concours) et le magasin en une ligne, en dernier. Chaque lecture (primes, planning, tâches) est
+isolée : si l'une échoue, les autres s'affichent. Styles dans `primes.css` (`.acc-*`), textes dans
+`translations/page/{fr,en,it,nl,pl}/dashboard.json`.
+
 ## L'onglet Primes (06/10/2026, maquette B, refonte visuelle le même jour)
 
 `/primes` : deux onglets. **Moi** domine (l'app est centrée sur la performance individuelle) :
