@@ -620,3 +620,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T15:53:56Z primes app worker B, prime magasin euros par heure, ventes croisees, parametres cockpit
 2026-10-06T15:59:14Z primes : planning jusqu'au, budget du recomptage
 2026-10-06T16:43:18Z primes app : identite signee, personnel du panel, appel local
+2026-10-06T16:47:40Z primes : prenom unique, voie de l'app
