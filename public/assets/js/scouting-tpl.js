@@ -309,11 +309,12 @@ export function renderRight(c, x){
       <div class="t-admin-label" style="letter-spacing:0">Note / 5</div>
     </div>
     <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px;line-height:1.5">Saisis une note pour requalifier un concurrent : elle prime sur Google et recalcule zone rouge, emprise et CA.</div>
+    ${c.googleRayon.ok ? `<button ${x.A(c.googleRayon.charger)} class="btn-secondary" ${c.googleRayon.busy ? 'disabled' : ''} style="width:100%;padding:8px;margin-bottom:8px;font-size:12px">${c.googleRayon.busy ? esc(c.googleRayon.txt) : 'Charger notes et photos Google'}</button>` : ''}
     ${c.selCompetitors.map(k => `
     <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${k.color}"></div>
+      ${k.photo ? `<img src="${k.photo}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto">` : `<div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${k.color}"></div>`}
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.name)}</div>
+        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.photo ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px;background:${k.color}"></span>` : ''}${esc(k.name)}${k.url ? ` <a href="${esc(k.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</div>
         <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)} · ${esc(k.dist)}</div>
         <input id="sc-sm-${esc(k.id)}" type="text" maxlength="200" placeholder="Commentaire terrain (200 car.)" value="${esc(k.comment)}" ${x.C(k.setComment)} style="width:100%;margin-top:4px;${txtCss}">
       </div>

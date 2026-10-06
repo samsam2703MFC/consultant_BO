@@ -2395,7 +2395,9 @@ export class Scouting {
     this._googleCle = cle;
     const avant = this._googleDossiers[cle] || null;
     this.setState({ dossierGoogle: frais ? avant : null, dossierGoogleBusy: true, dossierGoogleFrais: etude ? 'etude' : !!frais });
-    const vivant = () => this._googleCle === cle && this.state.dossier;
+    // vivant tant que le dossier est ouvert, ou que la fiche du point reste
+    // affichée (chargement lancé depuis « Concurrents dans le rayon »)
+    const vivant = () => this._googleCle === cle && (this.state.dossier || (this.state.sel && this.etudeCle(this.state.sel.lat, this.state.sel.lng) === cle));
     const run = (async () => {
     try {
       const out = Object.assign({}, this.state.ratings);
@@ -3468,6 +3470,27 @@ export class Scouting {
   // que l'état. Sans API (repli local), aucune note ne peut être demandée.
   googleOk(){ const g = this.state.gconf; return !!(g && g.configure); }
 
+  // « Concurrents dans le rayon » : les notes de tout le rayon recalculées,
+  // les fiches (avis, photos) des trente plus proches relues — sans ouvrir le
+  // dossier, qui les reprend ensuite tels quels
+  chargerGoogleRayon(){
+    const blocage = this.googleBlocage();
+    if (blocage){ this.notify(blocage); return; }
+    if (!this.state.sel || this.state.dossierGoogleBusy) return;
+    this.dossierGoogleCharger('etude').then(() => {
+      const dg = this.state.dossierGoogle;
+      if (dg && dg.erreur) this.notify('Google : ' + dg.erreur);
+      else if (dg) this.notify('Notes et photos Google chargées — ' + dg.rows.filter(f => f.fiche).length + ' fiches');
+    });
+  }
+
+  // la fiche Google relue d'un concurrent du point affiché, s'il y en a une
+  ficheRayon(id){
+    const s = this.state, x = s.sel, dg = s.dossierGoogle;
+    if (!x || !dg || dg.cle !== this.etudeCle(x.lat, x.lng)) return null;
+    return dg.rows.find(f => f.id === id && f.fiche) || null;
+  }
+
   googleBlocage(){
     if (!this.useApi()) return 'Notes Google indisponibles hors ligne — l\'API du cockpit ne répond pas.';
     if (!this.googleOk()) return 'Aucune clé Google — renseigne-la dans Paramètres › Général (connecteur Google).';
@@ -4364,9 +4387,16 @@ export class Scouting {
       ].map(r => Object.assign(r, { i: TIP_FICHE[r.k] || '' })) : [],
       selCa: x ? fmtEur(x.ca) : '',
       selCaDetail: x ? fmtInt(x.hh) + ' ménages × ' + fmtEur(s.spend) + ' × ' + (x.emprise * 100).toFixed(1) + ' % d\'emprise, majoré de ' + s.passage + ' % de passage · sur ' + s.surface + ' m²' : '',
+      googleRayon: {
+        ok: self.useApi() && self.googleOk(), busy: !!s.dossierGoogleBusy,
+        txt: s.enriching && s.enrichTotal ? 'Notes Google… ' + s.enrichDone + ' / ' + s.enrichTotal
+          : 'Fiches Google…' + (s.dossierGoogle && s.dossierGoogle.partiel ? ' ' + s.dossierGoogle.faits + ' / ' + s.dossierGoogle.attendus : ''),
+        charger: () => self.chargerGoogleRayon()
+      },
       selCompetitors: x ? x.near.slice(0, 14).map(o => {
-        const rv = s.ratings[o.b.id], r = self.rating(o.b);
+        const rv = s.ratings[o.b.id], r = self.rating(o.b), f = self.ficheRayon(o.b.id);
         return {
+          photo: f && f.photo ? f.photo : '', url: f && f.url ? f.url : '',
           id: o.b.id, name: o.b.name, dist: o.d.toFixed(1) + ' km',
           color: self.isStrong(o.b) ? R_COL.low : R_COL.mid,
           note: r || '',
