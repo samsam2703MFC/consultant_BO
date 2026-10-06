@@ -3680,6 +3680,28 @@ function wr_scouting_concurrents_google(): array
         GoogleApi::$lastError = null;
         $f = GoogleApi::fiche($placeId);
         $appels++;
+        // Une fiche gardée peut être refusée seule (403) quand Google a changé
+        // son identifiant : la recherche par le nom en redonne un, et un refus
+        // qui ne touche qu'une fiche n'arrête pas les autres. La clé, elle, est
+        // en cause quand la recherche est refusée aussi.
+        if ($f === null && $cur !== null && trim((string) ($cur['place_id'] ?? '')) === $placeId
+            && preg_match('/HTTP (403|404)\b/', (string) GoogleApi::$lastError) && $lat !== 0.0 && $lng !== 0.0) {
+            $ou = trim((string) ($r['addr'] ?? ''));
+            GoogleApi::$lastError = null;
+            $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $lat, $lng);
+            $appels++;
+            if ($res === null) {
+                $msg = GoogleApi::$lastError ?? 'réponse vide';
+                if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
+            }
+            $neuf = $res !== null ? (string) ($res['placeId'] ?? '') : '';
+            if ($neuf === '' || $neuf === $placeId) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+            $placeId = $neuf;
+            GoogleApi::$lastError = null;
+            $f = GoogleApi::fiche($placeId);
+            $appels++;
+            if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+        }
         if ($f === null) {
             $msg = GoogleApi::$lastError ?? 'réponse vide';
             if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
