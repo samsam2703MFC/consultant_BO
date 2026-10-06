@@ -4,7 +4,7 @@
 {% block title %}{{ translations.my_bonuses ?? 'Mes primes' }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ ROOT }}/assets/atelier/primes.css">{% endblock %}
 {% block page_title %}{{ translations.my_bonuses ?? 'Mes primes' }}{% endblock %}
-{% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ primes.lib }}{% if primes.enCours %}, {{ translations.as_of ?? 'au' }} {{ jour }}{% endif %}{% endif %}{% endblock %}
+{% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ mois(primes.m) }}{% if primes.enCours %}, {{ translations.as_of ?? 'au' }} {{ jour }}{% endif %}{% endif %}{% endblock %}
 {% block content %}
 {% set p = primes %}
 {% if not p %}
@@ -77,7 +77,7 @@
     <div class="brique"><div class="t"><b><i class="bi bi-graph-up-arrow"></i> {{ T.beat_your_record ?? 'Bats ton record' }}</b>
       {% if r.montant > 0 %}<span class="puce ok">{{ r.montant }}&nbsp;{{ eur }} {{ T.earned ?? 'acquis' }}</span>{% elseif r.lt is null %}<span class="puce mu">{{ T.not_counted_yet ?? 'pas encore comptées' }}</span>{% elseif r.record is null %}<span class="puce mu">{{ T.no_record_yet ?? 'pas encore de record' }}</span>{% elseif r.ecart >= 0 %}<span class="puce ok">{{ T.new_record ?? 'nouveau record' }}</span>{% else %}<span class="puce att">{{ T.at ?? 'à' }} {{ (0 - r.ecart)|number_format(2, ',', ' ') }} {{ T.from_record ?? 'du record' }}</span>{% endif %}</div>
       {% if r.lt is not null %}
-      <div class="n">{{ r.lt|number_format(2, ',', ' ') }}<small>{{ T.lines_per_ticket ?? 'lignes par ticket' }}{% if r.record is not null %} · {{ T.record ?? 'record' }} {{ r.record|number_format(1, ',', ' ') }}{% if r.recordMois %} ({{ r.recordMois }}){% endif %}{% endif %}</small></div>
+      <div class="n">{{ r.lt|number_format(2, ',', ' ') }}<small>{{ T.lines_per_ticket ?? 'lignes par ticket' }}{% if r.record is not null %} · {{ T.record ?? 'record' }} {{ r.record|number_format(1, ',', ' ') }}{% if r.recordMois %} ({{ mois(r.recordM ?? r.recordMois) }}){% endif %}{% endif %}</small></div>
       {% if r.record is not null %}
       <div class="etapes">
         <div class="et {{ r.lt + 0.0001 >= r.record + 0.1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ (r.record + 0.1)|number_format(1, ',', ' ') }}</span><span class="v">{{ T.new_record_short ?? 'record' }}</span></div>
@@ -167,9 +167,9 @@
   {% set derMed = null %}{% for v in p.ventes %}{% if derMed is null and not v.enCours and v.medianeCaH is defined and v.medianeCaH %}{% set derMed = v.medianeCaH %}{% endif %}{% endfor %}
   <div class="pr-card"><div class="pr-h"><h2>{{ T.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ T.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
     <div class="sem">{% if derMed %}<span class="cible" style="bottom:{{ (100 * derMed / maxHM)|round }}%"></span>{% endif %}{% for v in p.ventes|reverse %}{% if v.caHeure is defined and v.caHeure is not null %}<i class="{{ v.enCours ? 'on' }}" style="height:{{ max(4, (100 * v.caHeure / maxHM)|round) }}%"><b>{{ v.caHeure }}</b></i>{% else %}<i class="vide" style="height:3px"></i>{% endif %}{% endfor %}</div>
-    <div class="sem-leg">{% for v in p.ventes|reverse %}<span>{{ v.lib|split(' ')|first|slice(0, 4) }}</span>{% endfor %}</div>
+    <div class="sem-leg">{% for v in p.ventes|reverse %}<span>{{ mois(v.m, true) }}</span>{% endfor %}</div>
     <table class="pr-tab"><thead><tr><th>{{ T.month ?? 'Mois' }}</th><th>{{ T.sales ?? 'CA' }}</th><th>{{ T.tickets_short ?? 'Tickets' }}</th><th>{{ T.hours ?? 'Heures' }}</th><th>€/h</th><th>{{ T.network ?? 'Réseau' }}</th></tr></thead><tbody>
-      {% for v in p.ventes %}<tr class="{{ v.enCours ? 'enc' }}"><td>{{ v.lib|split(' ')|first|capitalize }}{% if v.enCours %} <small>{{ T.in_progress ?? 'en cours' }}</small>{% endif %}</td>
+      {% for v in p.ventes %}<tr class="{{ v.enCours ? 'enc' }}"><td>{{ mois(v.m)|split(' ')|first|capitalize }}{% if v.enCours %} <small>{{ T.in_progress ?? 'en cours' }}</small>{% endif %}</td>
         {% if v.motif is defined %}<td colspan="5" class="mu">{{ v.motif }}</td>{% else %}
         <td>{{ v.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</td><td>{{ v.tickets|number_format(0, ',', ' ') }}</td><td>{{ v.heures|number_format(1, ',', ' ') }}</td>
         <td><b>{% if v.caHeure is not null %}{{ v.caHeure }}{% else %}—{% endif %}</b></td>
@@ -180,7 +180,7 @@
 
   {# Mes mois #}
   <div class="pr-card"><div class="pr-h"><h2>{{ T.my_months ?? 'Mes mois' }}</h2><small>{{ T.paid_in_vouchers ?? 'payés en bons' }}</small></div>
-    <div class="hist">{% for x in p.mois %}<div class="ligne"><span class="m">{{ x.lib|split(' ')|first|capitalize }}</span><span class="det">{{ x.detail|join(' · ') }}{% if x.paye %} · <b class="ok">{{ T.paid ?? 'payée' }}</b>{% endif %}</span><span class="tot{{ x.total ? '' : ' zero' }}">{{ x.total|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% else %}<div class="note">{{ T.no_month_yet ?? 'Pas encore de mois clos.' }}</div>{% endfor %}</div></div>
+    <div class="hist">{% for x in p.mois %}<div class="ligne"><span class="m">{{ mois(x.m)|split(' ')|first|capitalize }}</span><span class="det">{% if langue == 'fr' or x.croisees is not defined %}{{ x.detail|join(' · ') }}{% else %}{% set parts = [] %}{% if x.croisees %}{% set parts = parts|merge([(T.cross_sales ?? 'Ventes croisées')|lower ~ ' ' ~ x.croisees ~ ' ' ~ eur]) %}{% endif %}{% if x.record %}{% set parts = parts|merge([(T.record ?? 'record') ~ ' ' ~ x.record ~ ' ' ~ eur]) %}{% endif %}{% if x.meilleure %}{% set parts = parts|merge([(T.best_seller ?? 'Meilleure vendeuse')|lower ~ ' ' ~ x.meilleure ~ ' ' ~ eur]) %}{% endif %}{% if x.concours is defined and x.concours %}{% set parts = parts|merge([(T.contest ?? 'Concours')|lower ~ ' ' ~ x.concours ~ ' ' ~ eur]) %}{% endif %}{% if x.magasin %}{% set parts = parts|merge([(T.shop_bonus_title ?? 'Prime magasin')|lower ~ ' ' ~ x.magasin|number_format(2, ',', ' ') ~ ' ' ~ eur]) %}{% endif %}{% if x.coef is defined and x.coef and x.coef != 1 %}{% set parts = parts|merge(['Google × ' ~ x.coef|number_format(2, ',', ' ')]) %}{% endif %}{{ parts|length ? parts|join(' · ') : '—' }}{% endif %}{% if x.paye %} · <b class="ok">{{ T.paid ?? 'payée' }}</b>{% endif %}</span><span class="tot{{ x.total ? '' : ' zero' }}">{{ x.total|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% else %}<div class="note">{{ T.no_month_yet ?? 'Pas encore de mois clos.' }}</div>{% endfor %}</div></div>
 
   <div class="pr-card doux"><div class="note">{{ T.rules ?? 'Tout se calcule sur le mois complet et se paie début du mois suivant, en bons payés par la marque. Les ventes sont celles encaissées à votre nom ; les heures, celles du planning. Le calcul est le même pour toutes : s’il vous semble faux, dites-le, on vérifie.' }}</div></div>
 </section>
@@ -188,7 +188,7 @@
 {# ───────────────────────── MON MAGASIN ───────────────────────── #}
 <section class="pr-onglet {{ onglet == 'magasin' ? 'on' }}" data-panneau="magasin">
   {% set nbJours = (p.m ~ '-01')|date('t') %}
-  <div class="pr-card rubis demi-carte"><div class="k">{{ p.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ T.target_of ?? 'objectif de' }} {{ p.lib|split(' ')|first }}</div>
+  <div class="pr-card rubis demi-carte"><div class="k">{{ p.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ T.target_of ?? 'objectif de' }} {{ mois(p.m)|split(' ')|first }}</div>
     {% if g.objectif is null %}
     <div class="gros">—</div><div style="font-size:12.5px">{{ T.no_target ?? 'Pas d’objectif encodé pour ce mois.' }}</div>
     {% else %}

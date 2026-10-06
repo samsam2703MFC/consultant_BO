@@ -212,3 +212,9 @@ a.acc-etape{text-decoration:none;color:inherit}
 .acc-mag{align-items:center;justify-content:space-between;gap:10px}
 .acc-mag .s{font-size:12.5px;margin-top:3px}
 .acc-mag .s b{font-weight:600}
+.acc-bilan{display:flex;gap:12px;align-items:center;border-color:transparent}
+.acc-bilan>i{font-size:24px;flex:0 0 auto}
+.acc-bilan.ok{background:#e4f3e8}.acc-bilan.ok>i{color:#2d7a3e}
+.acc-bilan.att{background:#fdf0e0}.acc-bilan.att>i{color:#b25f00}
+.acc-bilan b{font-size:13.5px;font-weight:600}
+.acc-bilan .s{font-size:12.5px;margin-top:2px;line-height:1.4}

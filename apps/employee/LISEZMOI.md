@@ -54,8 +54,15 @@ de ventes croisées du jour avec le service du jour (planning) et les tâches à
 étapes » (les trois paliers les plus proches qui rapportent, calculés dans `DashboardController`
 depuis la fiche), « Ma semaine » (place dans le réseau, ventes croisées, CA par heure, pièces du
 concours) et le magasin en une ligne, en dernier. Chaque lecture (primes, planning, tâches) est
-isolée : si l'une échoue, les autres s'affichent. Styles dans `primes.css` (`.acc-*`), textes dans
-`translations/page/{fr,en,it,nl,pl}/dashboard.json`.
+isolée : si l'une échoue, les autres s'affichent. Dans la dernière heure du service et après, une
+carte « Service terminé » met le compteur du jour face à la cible (bravo, ou ce qu'il manque).
+Styles dans `primes.css` (`.acc-*`), textes dans `translations/page/{fr,en,it,nl,pl}/dashboard.json`.
+
+Les textes de l'Accueil et des Primes existent dans les cinq langues de l'app. Les noms de mois
+viennent de la fonction Twig `mois('AAAA-MM', court)` de `AppExtension`, dans la langue de la
+personne (`langue`, un global Twig). Les lignes de détail des mois payés sont écrites en français
+par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
+la ligne depuis les montants.
 
 ## L'onglet Primes (06/10/2026, maquette B, refonte visuelle le même jour)
 
