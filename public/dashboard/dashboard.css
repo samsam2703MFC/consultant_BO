@@ -1415,3 +1415,12 @@ body.pp-emb{background:var(--color-bg)}
 .op-hb .c span.vp.att,.op-hb .c span.vn.att{background:#fbecd8;color:#9a5a06}.op-hb .c span.vp.ko,.op-hb .c span.vn.ko{background:#f8e0e3;color:#C0182B}
 .op-hb .c span.j{background:#222;color:#fff;margin-left:3px}.op-hb .c span.j i{color:#ddd}
 .op-hbt{padding:8px 12px;border-bottom:.5px solid var(--color-border-tertiary);background:#fcfaf7}
+/* La prévision de toute la journée, en petit le vendu (demande du 06/10/2026). */
+.op-tbh td.h small{display:block;font-size:9.5px;font-weight:600;color:#8a847c;line-height:1.1;margin-top:1px}
+.op-tbh td.h small.plus,.op-hb .c span small.plus,.op-hleg b.plus{color:#2d7a3e}
+.op-tbh td.h small.moins,.op-hb .c span small.moins,.op-hleg b.moins{color:#B45309}
+.op-tbh td.h.vr{color:#3d3a36;font-weight:600}
+.op-hleg small{font-size:9.5px;font-weight:600;color:#8a847c}
+.op-hb .c span small{font-size:8.5px;font-weight:600;color:#8a847c;line-height:1}
+.op-hb .c span.vr{color:#3d3a36}
+.op-hb .c span.j small{color:#ccc}

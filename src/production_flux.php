@@ -915,7 +915,9 @@ function pfSuivi(array $plan, array $stock0, array $vendu, float $now, array $sm
         if ($verdict === 'manque') { $T['manques']++; } elseif ($verdict === 'rupture') { $T['ruptures']++; } elseif ($verdict === 'trop') { $T['trop']++; }
         $out[] = ['pid' => $pid, 'nom' => $p['nom'], 'groupe' => $p['groupe'], 'cat' => $p['cat'], 'catCle' => $p['catCle'], 'oblig' => $p['oblig'], 'prix' => $p['prix'], 'stockMin' => $sm,
             'report' => round($s0, 1), 'sorti' => round($sortiTot, 1), 'vendu' => round($venduTot, 1), 'stock' => round($stockNow, 1), 'finJour' => round($finJour, 1), 'prevJ' => round($prevJ, 1),
-            'manque' => $manque, 'verdict' => $verdict, 'conseil' => $conseil, 'cases' => $cases];
+            'manque' => $manque, 'verdict' => $verdict, 'conseil' => $conseil, 'cases' => $cases,
+            // La prévision de chaque heure de la journée, passées comprises (demande du 06/10/2026).
+            'prevH' => (object) array_combine(array_map('strval', $heures), array_map(static fn ($h) => round((float) ($prof[$h] ?? 0), 1), $heures))];
     }
     $rang = ['rupture' => 0, 'manque' => 1, 'trop' => 2, 'ok' => 3];
     usort($out, static fn ($a, $b) => [$rang[$a['verdict']], $a['manque']['h'] ?? 99, $a['groupe'], $a['cat'], -$a['prevJ']] <=> [$rang[$b['verdict']], $b['manque']['h'] ?? 99, $b['groupe'], $b['cat'], -$b['prevJ']]);
