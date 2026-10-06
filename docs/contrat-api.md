@@ -520,11 +520,18 @@ vente (`src/primes.php`) :
 | Meilleure vendeuse (existant) | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` |
 | **Prime magasin** (nouveau) | l'atteinte de l'**objectif du mois** (le budget du magasin, `ceo_shop_month_perf`, sinon le CA théorique) | le palier atteint fin de mois donne tant d'**euros par heure prestée** (planning du panel, le mois entier) à chaque personne du magasin ; sous `heuresMin`, pas de part | `POST /ventes/prime-magasin {paliers: [{pct, eh, lib}], heuresMin}` (défaut : 97 % 0,50 €/h · 100 % 1 €/h · 105 % 1,50 €/h · 110 % 2 €/h · 20 h) |
 
-- `GET /ventes/moi?m=AAAA-MM` **avec le jeton d'employé de l'app** (`Authorization: Bearer …`) : la
-  route est ouverte avant la session du cockpit, mais l'identifiant du jeton (`sub`) est **confirmé
-  par le panel** (`GET /employees/{id}` avec ce même jeton, 200 pour lui seul, vérifié une fois par
-  dix minutes) ; sans cela, 401. Depuis le cockpit (session), `GET /ventes/moi?emp=&m=` montre la
-  même fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom}, heures: {mois, faites, equipe,
+- `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
+  cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
+  `X-Worker-Nom` en base64, `X-Worker-Jour`, `X-Worker-Sign` = HMAC-SHA256 de `emp|nom|jour` avec
+  le secret que les deux déduisent du même `config/config.php`, le jour ou la veille), soit le
+  **jeton d'employé** (`Authorization: Bearer …` ou `X-Employee-Token`), dont l'identifiant (`sub`)
+  est confirmé par le panel (`GET /employees/{id}` avec ce même jeton, vérifié une fois par dix
+  minutes). Sans cela, 401. La personne se retrouve par son identifiant, sinon par son nom
+  d'affichage ; le personnel vient de la table locale **et** du panel (`/shops/{id}/employees`, gravé
+  une heure), pour qu'une embauche récente existe. Inconnue partout : 404 avec le nom reçu. Depuis
+  le cockpit (session), `GET /ventes/moi?emp=&m=` ou `?nom=` montre la même fiche. L'app appelle le
+  cockpit d'abord en local (127.0.0.1, l'hôte public en en-tête), puis par l'adresse publique, et
+  montre la réponse du cockpit quand elle n'est pas une fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom}, heures: {mois, faites, equipe,
   personnes}, aujourdhui: {tickets, croisees, lignes, taux, quand} | null, acquis, aPortee,
   briques: {croisees: {croisees, tickets, taux, cible, montant, palier, prochain: {taux, montant,
   manque}, jours, complet, motif}, record: {lt, record, recordMois, ecart, tranches, montant,
