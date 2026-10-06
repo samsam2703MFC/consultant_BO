@@ -72,6 +72,7 @@ require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
+$tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -81,8 +82,10 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
 $path = preg_replace('#^.*?/api/cockpit#', '', $uri) ?: '/';
 $path = rtrim($path, '/') ?: '/';
 
+$tInstall = $tCharge;
 try {
     ensureInstalled();
+    $tInstall = microtime(true);
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
@@ -117,13 +120,29 @@ try {
             $out = routeGardee($method, $path);
         }
     }
+    tempsServeur($tCharge, $tInstall);
     echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (PDOException $e) {
+    schemaOublier($e);
     http_response_code(503);
     echo json_encode(['error' => 'base de données indisponible', 'detail' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+}
+
+/**
+ * Le temps passé côté serveur, en trois temps, dans l'en-tête standard Server-Timing (visible
+ * dans l'onglet Réseau du navigateur) : charger le code, vérifier le schéma, répondre.
+ */
+function tempsServeur(float $tCharge, float $tInstall): void
+{
+    if (headers_sent()) { return; }
+    $t0 = (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? $tCharge);
+    $ms = static fn (float $d): string => number_format(max(0.0, $d) * 1000, 1, '.', '');
+    $opc = function_exists('opcache_get_status') && is_array($s = @opcache_get_status(false)) && !empty($s['opcache_enabled']) ? 'oui' : 'non';
+    header('Server-Timing: charge;dur=' . $ms($tCharge - $t0) . ';desc="opcache ' . $opc . '", schema;dur=' . $ms($tInstall - $tCharge)
+        . ', calcul;dur=' . $ms(microtime(true) - $tInstall));
 }
 
 /**

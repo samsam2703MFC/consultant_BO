@@ -15,8 +15,14 @@ declare(strict_types=1);
 
 function ensureInstalled(): void
 {
+    // Le schéma ne change qu'avec le code : l'empreinte des sources (date et taille de chaque
+    // fichier) dit si cette version l'a déjà vérifié. Sans elle, chaque appel de l'API rejouait
+    // toutes les vérifications ci-dessous (CREATE, ALTER, information_schema), près d'une seconde
+    // par lecture. Un déploiement change les dates : la première requête qui suit refait tout.
+    $emp = schemaEmpreinte();
     try {
-        Db::row('SELECT 1 FROM ceo_app_setting LIMIT 1');
+        $vu = Db::row('SELECT value FROM ceo_app_setting WHERE `key` = ?', ['schemaVu']);
+        if ($vu !== null && json_decode((string) $vu['value'], true) === $emp) { return; }
     } catch (PDOException $e) {
         if (!isMissingTable($e)) { throw $e; }
         runSqlFile(__DIR__ . '/../sql/schema.sql');
@@ -54,6 +60,28 @@ function ensureInstalled(): void
     ensureVisites();
     ensureFacebook();
     ensureTabletteRemarques();
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['schemaVu', json_encode($emp)]);
+}
+
+/** L'empreinte du code qui porte le schéma : nom, date et taille des sources et de schema.sql. */
+function schemaEmpreinte(): string
+{
+    $s = '';
+    foreach (array_merge(glob(__DIR__ . '/*.php') ?: [], [__DIR__ . '/../sql/schema.sql']) as $f) {
+        $s .= basename($f) . ':' . (int) @filemtime($f) . ':' . (int) @filesize($f) . ';';
+    }
+    return md5($s);
+}
+
+/**
+ * Une table ou une colonne manque pendant l'appel (base retouchée à la main entre deux
+ * déploiements) : l'empreinte est oubliée, l'appel suivant revérifie tout le schéma.
+ */
+function schemaOublier(PDOException $e): void
+{
+    if (!isMissingTable($e) && $e->getCode() !== '42S22' && !str_contains($e->getMessage(), '42S22')) { return; }
+    try { Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', ['schemaVu']); } catch (Throwable $x) { /* la base ne répond plus */ }
 }
 
 /**
