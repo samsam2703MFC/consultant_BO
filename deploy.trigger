@@ -626,3 +626,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T17:16:37Z app worker : ventes mois par mois, CA par heure, place reseau
 2026-10-06T17:31:07Z scouting : avis Google relus au PDF
 2026-10-06T17:38:18Z google : la raison des refus
+2026-10-06T17:41:52Z scouting : date reelle des fiches Google au PDF

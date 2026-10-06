@@ -549,7 +549,7 @@ export function dossierPage(d, esc, logo){
       ${f ? `<div class="cbody">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
         <div class="gtxt">${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px">Aucun avis rendu par Google.</div>'}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px">fiche Google ↗</a>` : ''}</div>
       </div>` : ''}
-    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
+    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : '') + (d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>

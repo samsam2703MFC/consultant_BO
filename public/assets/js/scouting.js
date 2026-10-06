@@ -2743,8 +2743,16 @@ export class Scouting {
           avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) };
       }),
       googleAttente: s.dossierGoogleBusy ? (s.dossierGoogleFrais ? 'Relecture des avis Google pour le PDF' : 'Google en cours — notes, adresses, avis et photos des concurrents') + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + (s.dossierGoogle.faits != null ? s.dossierGoogle.faits : s.dossierGoogle.rows.length) + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
-      googleNote: s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.rows.some(f => f.fiche)
-        ? 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), relevées le ' + new Date(s.dossierGoogle.le).toLocaleDateString('fr-BE') + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.' : '',
+      // la date dite est celle des fiches elles-mêmes : si Google a refusé la
+      // relecture du PDF, le dossier part avec les fiches gardées, à leur date
+      googleNote: (() => {
+        const dg = s.dossierGoogle;
+        const jours = dg && dg.cle === this.etudeCle(x.lat, x.lng) ? dg.rows.filter(f => f.fiche).map(f => f.le || dg.le).filter(Boolean).sort() : [];
+        if (!jours.length) return '';
+        const fr = j => new Date(j).toLocaleDateString('fr-BE');
+        const quand = jours[0] === jours[jours.length - 1] ? 'relevées le ' + fr(jours[0]) : 'relevées entre le ' + fr(jours[0]) + ' et le ' + fr(jours[jours.length - 1]);
+        return 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), ' + quand + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.';
+      })(),
       concurrenceNote: concurrenceNote,
       ecartesNote: (x.ecartes || []).length
         ? 'Écarté' + (x.ecartes.length > 1 ? 's' : '') + ' de l’étude, ' + x.ecartes.length + ' commerce' + (x.ecartes.length > 1 ? 's' : '') + ' relevé' + (x.ecartes.length > 1 ? 's' : '') + ' ' + dans + ' : '
@@ -2887,6 +2895,7 @@ export class Scouting {
     if (!d) return;
     if (!this.useApi()){ this.imprimerDossier(); return; }
     this.setState({ dossierBusy: true });
+    let avisNote = '';
     try {
       // l'étude locale en cours a jusqu'à trois minutes ; le dossier part avec elle
       if (this._etudeP){ await Promise.race([this._etudeP, new Promise(res => setTimeout(res, 190000))]); d = this.dossierDonnees() || d; }
@@ -2898,6 +2907,8 @@ export class Scouting {
         await Promise.race([this.dossierGoogleCharger(true), new Promise(res => setTimeout(res, 150000))]);
         this.setState({ dossierBusyTxt: '' });
         d = this.dossierDonnees() || d;
+        const dg = this.state.dossierGoogle;
+        if (dg && dg.erreur) avisNote = 'avis Google non relus (' + dg.erreur + ')' + (dg.rows.some(f => f.fiche) ? ' : fiches déjà relevées, à leur date' : '');
       }
       d.carte = await this.carteStatique();
       const ctl = new AbortController();
@@ -2913,7 +2924,7 @@ export class Scouting {
       const a = document.createElement('a');
       a.href = url; a.download = 'dossier-implantation-' + slugDe(d.commune) + '-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-      this.notify('Dossier PDF téléchargé — ' + d.commune);
+      this.notify('Dossier PDF téléchargé — ' + d.commune + (avisNote ? ' · ' + avisNote : ''));
     } catch (e) {
       this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
       this.imprimerDossier();
