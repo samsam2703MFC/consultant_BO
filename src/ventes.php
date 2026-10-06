@@ -1744,9 +1744,12 @@ function ep_ventes_explication_pdf(): array
             . 'Les heures sont celles du planning ; sous ' . (int) $regM['heuresMin'] . ' h dans le mois, pas de part. L\'app montre où en est le magasin, jour après jour, et ce qu\'il manque.</div>')
 
         . (($cfgK === null || !$cfgK['actif']) ? '' :
-            $blocTitre('5', 'Le concours ' . $e($cfgK['lib']) . ' — ' . (int) $cfgK['magasin'] . ' € / ' . (int) $cfgK['reseau'] . ' €')
-            . '<div>Le <b>nombre de pièces</b> de la famille vendues dans le mois, tout simplement. La première de chaque magasin gagne <b>' . (int) $cfgK['magasin'] . ' €</b>, la première du réseau <b>' . (int) $cfgK['reseau'] . ' €</b>. '
-            . 'À égalité, moins de tickets gagne : c\'est la proposition qui compte, pas le passage. <span style="color:#7a736a">(Au moins ' . (int) $cfgK['minPieces'] . ' pièces dans le mois.)</span></div>')
+            $blocTitre('5', 'Les concours — ' . implode(', ', array_map(static fn ($k) => $e($k['lib']), $cfgK['liste'])))
+            . '<div>Le <b>nombre de pièces</b> d\'une famille vendues dans le mois, tout simplement. Pour chaque concours, la première de chaque magasin gagne le titre et la prime, la première du réseau le titre du réseau. '
+            . 'À égalité, moins de tickets gagne : c\'est la proposition qui compte, pas le passage.</div>'
+            . '<table width="100%" cellpadding="3" cellspacing="0" style="margin-top:2mm;font-size:9.5pt"><tr style="color:#7a736a"><td>Titre</td><td>Famille</td><td align="right">1re du magasin</td><td align="right">1re du réseau</td><td align="right">Minimum</td></tr>'
+            . implode('', array_map(static fn ($k) => '<tr><td><b>' . $e($k['lib']) . '</b></td><td>' . $e($k['motif']) . '</td><td align="right">' . (int) $k['magasin'] . ' €</td><td align="right">' . (int) $k['reseau'] . ' €</td><td align="right">' . (int) $k['minPieces'] . ' pièces</td></tr>', $cfgK['liste']))
+            . '</table><div style="font-size:9pt;color:#7a736a;margin-top:1mm">Les titres se collectionnent dans l\'app, mois après mois.</div>')
 
         . (($regG === null || !$regG['actif']) ? '' :
             '<div class="encart" style="margin-top:6mm"><span class="k">La note Google du magasin</span>'
@@ -2050,7 +2053,8 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 . number_format(120 * ($regMag['paliers'][0]['eh'] ?? 0), 0, ',', ' ') . ' à ' . number_format(120 * (end($regMag['paliers'])['eh'] ?? 0), 0, ',', ' ') . ' €.</div></td>'
                 . '</tr></table>')
             . (($cfgKf === null || !$cfgKf['actif']) ? '' :
-                '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>🥧 Concours ' . $e($cfgKf['lib']) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">' . (int) $cfgKf['magasin'] . ' €</b>, la première du réseau <b class="acc">' . (int) $cfgKf['reseau'] . ' €</b>.'
+                '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>👑 ' . implode(' · ', array_map(static fn ($k) => $e($k['lib']), $cfgKf['liste'])) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">'
+                . implode(' / ', array_unique(array_map(static fn ($k) => (int) $k['magasin'] . ' €', $cfgKf['liste']))) . '</b>, la première du réseau <b class="acc">' . implode(' / ', array_unique(array_map(static fn ($k) => (int) $k['reseau'] . ' €', $cfgKf['liste']))) . '</b>, un titre à collectionner.'
                 . (($regGf !== null && $regGf['actif']) ? ' La note Google du magasin multiplie ces primes : ' . number_format($regGf['neutre'], 1, ',', ' ') . ' est neutre.' : '') . '</div>')
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 

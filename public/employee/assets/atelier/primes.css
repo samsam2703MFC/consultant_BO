@@ -218,3 +218,69 @@ a.acc-etape{text-decoration:none;color:inherit}
 .acc-bilan.att{background:#fdf0e0}.acc-bilan.att>i{color:#b25f00}
 .acc-bilan b{font-size:13.5px;font-weight:600}
 .acc-bilan .s{font-size:12.5px;margin-top:2px;line-height:1.4}
+
+/* ── Un seul écran, style mobile gen Z (06/10/2026) : ce qu'elle peut gagner, comment, sa collection, les classements. ── */
+.pr-card.hero{background:linear-gradient(140deg,#9a2233 0%,#8D1D2C 45%,#4e0f19 100%);color:#fff;border-color:transparent;box-shadow:0 14px 30px rgba(141,29,44,.25);padding:16px}
+.hero-haut{display:flex;align-items:center;gap:16px}
+.hero .k{color:rgba(255,255,255,.75)}
+.hero .gros2{font:400 30px/1.05 var(--font-display);margin:4px 0 2px}
+.hero .s{font-size:12.5px;color:rgba(255,255,255,.9)}
+.hero .anneau{position:relative;width:118px;height:118px;flex:0 0 auto}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);color:#fff;font:600 11.5px var(--font-ui);text-decoration:none;white-space:nowrap}
+.chip .emo{font-size:13px}
+.auj-carte{padding:12px 14px}
+.titre-section{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:18px 4px 10px}
+.titre-section h2{font:400 22px/1.1 var(--font-display);margin:0}
+.titre-section small{font:600 11px var(--font-ui);color:var(--la-muet);text-transform:uppercase;letter-spacing:.08em}
+.mission{background:#fff;border:.5px solid var(--la-trait);border-radius:18px;padding:14px 14px 12px;margin-bottom:10px;box-shadow:0 6px 18px rgba(50,30,20,.05)}
+.mission.gagne{border:1.5px solid #2d7a3e;background:linear-gradient(180deg,#fff 0%,#f3faf4 100%)}
+.m-haut{display:flex;align-items:flex-start;gap:10px}
+.m-haut .emo{width:40px;height:40px;border-radius:12px;background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 auto}
+.mission.gagne .m-haut .emo{background:#e4f3e8}
+.m-t{flex:1;min-width:0}
+.m-t b{display:block;font:600 14.5px/1.2 var(--font-ui)}
+.m-t small{display:block;font-size:11.5px;color:var(--la-muet);line-height:1.4;margin-top:2px}
+.m-gain{text-align:right;flex:0 0 auto;max-width:42%}
+.m-gain b{display:block;font:400 22px/1 var(--font-display);color:var(--la-rubis);white-space:nowrap}
+.mission.gagne .m-gain b{color:#2d7a3e}
+.m-gain small{display:block;font:600 10px var(--font-ui);color:var(--la-muet);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;white-space:normal}
+.mission .etapes{margin-top:12px}
+.m-etat{font-size:12px;margin-top:6px;color:var(--la-encre);line-height:1.45}
+.m-etat b{font-weight:600}
+.m-etat .next{color:var(--la-rubis);font-weight:600}
+.m-etat.mu{color:var(--la-muet)}
+.coll{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.tb{position:relative;background:#fff;border:.5px solid var(--la-trait);border-radius:16px;padding:14px 8px 10px;text-align:center;min-width:0}
+.tb .emo{display:block;font-size:30px;line-height:1;filter:drop-shadow(0 4px 6px rgba(141,29,44,.18))}
+.tb b{display:block;font:600 11px/1.2 var(--font-ui);margin-top:8px;overflow:hidden;text-overflow:ellipsis;color:var(--la-encre)}
+.tb small{display:block;font:500 10px var(--font-ui);color:var(--la-muet);margin-top:2px}
+.tb em{display:block;font:500 9.5px var(--font-ui);font-style:normal;color:var(--la-muet);margin-top:6px}
+.tb .n{position:absolute;top:8px;right:8px;background:var(--la-rubis);color:#fff;font:700 10px var(--font-ui);padding:2px 6px;border-radius:999px}
+.tb .tag{position:absolute;top:8px;left:8px;background:#fdf0e0;color:#b25f00;font:700 9px var(--font-ui);padding:2px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+.tb.on{background:linear-gradient(180deg,#fff 0%,#fbf4ee 100%);border-color:#e6cfc0}
+.tb.off{opacity:.5}
+.tb.off .emo{filter:grayscale(1);opacity:.6}
+.tb.live{border:1.5px solid var(--la-rubis);box-shadow:0 0 0 4px rgba(141,29,44,.12);opacity:1}
+.tb.live .emo{filter:drop-shadow(0 4px 8px rgba(141,29,44,.35))}
+.hist .mini{display:block;font-size:11px;letter-spacing:1px;margin-top:2px}
+/* Les classements, à la Strava. */
+.cl-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+.cl-chips::-webkit-scrollbar{display:none}
+.cl-chips span{flex:0 0 auto;padding:7px 12px;border-radius:999px;background:#fff;border:.5px solid var(--la-trait2);font:600 12px var(--font-ui);color:var(--la-muet)}
+.cl-chips span.on{background:var(--la-encre);color:#fff;border-color:var(--la-encre)}
+.cl-tog{display:inline-flex;background:var(--la-beige-doux);border-radius:999px;padding:3px;margin:6px 0 8px}
+.cl-tog span{padding:5px 12px;border-radius:999px;font:600 11.5px var(--font-ui);color:var(--la-muet)}
+.cl-tog span.on{background:#fff;color:var(--la-encre);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.cl-liste{display:none}
+.cl-liste.on{display:block}
+.cl-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-top:.5px solid var(--la-trait);font-size:13px}
+.cl-row:first-child{border-top:none}
+.cl-row .r{width:26px;font:400 17px/1 var(--font-display);color:var(--la-muet);text-align:center;flex:0 0 auto}
+.cl-row.un .r{color:#c9962a}
+.cl-row .nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl-row .val{font:600 13px var(--font-ui);white-space:nowrap}
+.cl-row .val small{font-weight:500;color:var(--la-muet);margin-left:3px}
+.cl-row.moi{background:#fbf4ee;border-radius:10px;border-top-color:transparent}
+.cl-row.moi .nom{font-weight:700;color:var(--la-rubis)}
+.cl-row .mag{font-size:10.5px;color:var(--la-muet);margin-left:4px}
