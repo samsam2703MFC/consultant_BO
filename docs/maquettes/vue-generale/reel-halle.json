@@ -1,0 +1,1109 @@
+{
+ "magasin": "Atelier by - Halle",
+ "shop": 4,
+ "lu": "2026-10-06 07:20",
+ "jour": {
+  "date": "2026-10-04",
+  "nom": "dimanche 4 octobre",
+  "ca": 2708.7,
+  "objectif": 2382.0,
+  "tickets": 186,
+  "panier": 14.56,
+  "j7": {
+   "ca": 2818.2,
+   "tickets": 188,
+   "date": "2026-09-27"
+  },
+  "record": {
+   "ca": 4336.5,
+   "date": "2026-05-10"
+  },
+  "matPct": 39.3,
+  "mat": 1064,
+  "mb": 1645,
+  "mbPct": 60.7,
+  "inv": 18.64,
+  "invPct": 0.7,
+  "invPieces": 33,
+  "labour": 571,
+  "labourPct": 21.1,
+  "heuresPlanning": 32.5,
+  "personnes": 5,
+  "overhead": 486,
+  "overheadPct": 18,
+  "net": 568.9,
+  "netPct": 21,
+  "rangCa": [
+   2,
+   4,
+   8006.8
+  ],
+  "heures": [
+   {
+    "h": 6,
+    "ca": 17.4
+   },
+   {
+    "h": 7,
+    "ca": 0
+   },
+   {
+    "h": 8,
+    "ca": 77.4
+   },
+   {
+    "h": 9,
+    "ca": 309
+   },
+   {
+    "h": 10,
+    "ca": 533.1
+   },
+   {
+    "h": 11,
+    "ca": 409.8
+   },
+   {
+    "h": 12,
+    "ca": 204.6
+   },
+   {
+    "h": 13,
+    "ca": 281.8
+   },
+   {
+    "h": 14,
+    "ca": 154.7
+   },
+   {
+    "h": 15,
+    "ca": 227.3
+   },
+   {
+    "h": 16,
+    "ca": 275.5
+   },
+   {
+    "h": 17,
+    "ca": 137.1
+   },
+   {
+    "h": 18,
+    "ca": 27.8
+   },
+   {
+    "h": 19,
+    "ca": 53.2
+   }
+  ],
+  "categories": [
+   {
+    "nom": "Viennoiserie Ind.",
+    "v": 742,
+    "part": 27.4,
+    "taux": 60.9,
+    "q": 377
+   },
+   {
+    "nom": "Tartes – Ø 28 cm",
+    "v": 522,
+    "part": 19.3,
+    "taux": null,
+    "q": 40
+   },
+   {
+    "nom": "Petite Boulangerie",
+    "v": 307,
+    "part": 11.3,
+    "taux": 58.6,
+    "q": 265
+   },
+   {
+    "nom": "Pain",
+    "v": 301,
+    "part": 11.1,
+    "taux": 57.3,
+    "q": 98
+   },
+   {
+    "nom": "Quiches",
+    "v": 268,
+    "part": 9.9,
+    "taux": null,
+    "q": 24
+   },
+   {
+    "nom": "Viennoiserie réduction",
+    "v": 84,
+    "part": 3.1,
+    "taux": 51.4,
+    "q": 84
+   }
+  ],
+  "canaux": {
+   "comptoir": 2574.5,
+   "cc": 134.2,
+   "ccN": 2,
+   "liv": 0,
+   "pro": 0,
+   "proN": 0
+  },
+  "controles": {
+   "rendus": 9,
+   "total": 11,
+   "notes": 0,
+   "nc": 0,
+   "aControler": 0,
+   "manquent": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  "poubelle": {
+   "pieces": 33,
+   "cout": 18.64
+  },
+  "taches": {
+   "j": "2026-10-04",
+   "releve": true,
+   "faites": 0,
+   "pasFaites": 11,
+   "part": 0
+  },
+  "semaine": [
+   {
+    "date": "2026-09-28",
+    "ca": 1307.3
+   },
+   {
+    "date": "2026-09-29",
+    "ca": 1139.15
+   },
+   {
+    "date": "2026-09-30",
+    "ca": 1453.4
+   },
+   {
+    "date": "2026-10-01",
+    "ca": 1691.85
+   },
+   {
+    "date": "2026-10-02",
+    "ca": 1880.6
+   },
+   {
+    "date": "2026-10-03",
+    "ca": 2683.2
+   },
+   {
+    "date": "2026-10-04",
+    "ca": 2708.7
+   }
+  ]
+ },
+ "semaine": {
+  "du": "2026-09-28",
+  "au": "2026-10-04",
+  "nom": "semaine 40",
+  "ca": 12864.2,
+  "objectif": 13962.82,
+  "atteinte": 92.1,
+  "tickets": 995,
+  "panier": 12.93,
+  "manquants": 165,
+  "matPct": 42,
+  "mb": 7460,
+  "mbPct": 58,
+  "inv": 186.98,
+  "invPct": 1.5,
+  "invPieces": 241,
+  "motifNet": "main-d’œuvre et frais généraux connus pour le mois courant seulement",
+  "rangCa": [
+   3,
+   4,
+   37964.76
+  ],
+  "rangAtt": [
+   4,
+   4,
+   1.1057
+  ],
+  "jours": [
+   {
+    "court": "L 28",
+    "date": "2026-09-28",
+    "ca": 1307.3,
+    "objectif": 1782.46,
+    "tickets": 130
+   },
+   {
+    "court": "Ma 29",
+    "date": "2026-09-29",
+    "ca": 1139.15,
+    "objectif": 1888.32,
+    "tickets": 114
+   },
+   {
+    "court": "Me 30",
+    "date": "2026-09-30",
+    "ca": 1453.4,
+    "objectif": 1889.75,
+    "tickets": 111
+   },
+   {
+    "court": "J 1",
+    "date": "2026-10-01",
+    "ca": 1691.85,
+    "objectif": 1833.57,
+    "tickets": 119
+   },
+   {
+    "court": "V 2",
+    "date": "2026-10-02",
+    "ca": 1880.6,
+    "objectif": 1861.06,
+    "tickets": 154
+   },
+   {
+    "court": "S 3",
+    "date": "2026-10-03",
+    "ca": 2683.2,
+    "objectif": 2325.64,
+    "tickets": 181
+   },
+   {
+    "court": "D 4",
+    "date": "2026-10-04",
+    "ca": 2708.7,
+    "objectif": 2382,
+    "tickets": 186
+   }
+  ],
+  "pro": {
+   "ca": 902.2,
+   "n": 10
+  },
+  "canaux": {
+   "caisse": 12864.2,
+   "comptoir": 12584.8,
+   "webshop": 281.9,
+   "part": 2.2,
+   "cc": {
+    "n": 7,
+    "ca": 281.9
+   },
+   "liv": {
+    "n": 0,
+    "ca": 0
+   }
+  },
+  "controles": [
+   {
+    "date": "2026-09-28",
+    "rendus": 9,
+    "total": 11,
+    "notes": 0,
+    "nc": 0,
+    "aControler": 9,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   },
+   {
+    "date": "2026-09-29",
+    "rendus": 10,
+    "total": 12,
+    "notes": 1,
+    "nc": 0,
+    "aControler": 6,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   },
+   {
+    "date": "2026-09-30",
+    "rendus": 10,
+    "total": 12,
+    "notes": 0,
+    "nc": 0,
+    "aControler": 9,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   },
+   {
+    "date": "2026-10-01",
+    "rendus": 9,
+    "total": 11,
+    "notes": 0,
+    "nc": 0,
+    "aControler": 8,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   },
+   {
+    "date": "2026-10-02",
+    "rendus": 9,
+    "total": 11,
+    "notes": 7,
+    "nc": 0,
+    "aControler": 1,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   },
+   {
+    "date": "2026-10-03",
+    "rendus": 9,
+    "total": 11,
+    "notes": 7,
+    "nc": 0,
+    "aControler": 1,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   },
+   {
+    "date": "2026-10-04",
+    "rendus": 9,
+    "total": 11,
+    "notes": 0,
+    "nc": 0,
+    "aControler": 0,
+    "manquent": [
+     "Photo du comptoir - Biscuiterie",
+     "Photo du comptoir - Pâtisseries"
+    ]
+   }
+  ],
+  "poubelleJours": [
+   {
+    "date": "2026-09-28",
+    "pieces": 44,
+    "cout": 22.24
+   },
+   {
+    "date": "2026-09-29",
+    "pieces": 21,
+    "cout": 6.43
+   },
+   {
+    "date": "2026-09-30",
+    "pieces": 0,
+    "cout": 0
+   },
+   {
+    "date": "2026-10-01",
+    "pieces": 26,
+    "cout": 13.62
+   },
+   {
+    "date": "2026-10-02",
+    "pieces": 41,
+    "cout": 89.85
+   },
+   {
+    "date": "2026-10-03",
+    "pieces": 76,
+    "cout": 36.2
+   },
+   {
+    "date": "2026-10-04",
+    "pieces": 33,
+    "cout": 18.64
+   }
+  ],
+  "taches": {
+   "faites": 35,
+   "pasFaites": 39,
+   "part": 47,
+   "jours": [
+    {
+     "j": "2026-09-28",
+     "releve": true,
+     "faites": 9,
+     "pasFaites": 11,
+     "part": 45
+    },
+    {
+     "j": "2026-09-29",
+     "releve": true,
+     "faites": 6,
+     "pasFaites": 5,
+     "part": 55
+    },
+    {
+     "j": "2026-09-30",
+     "releve": true,
+     "faites": 10,
+     "pasFaites": 3,
+     "part": 77
+    },
+    {
+     "j": "2026-10-01",
+     "releve": true,
+     "faites": 8,
+     "pasFaites": 3,
+     "part": 73
+    },
+    {
+     "j": "2026-10-02",
+     "releve": true,
+     "faites": 1,
+     "pasFaites": 3,
+     "part": 25
+    },
+    {
+     "j": "2026-10-03",
+     "releve": true,
+     "faites": 1,
+     "pasFaites": 3,
+     "part": 25
+    },
+    {
+     "j": "2026-10-04",
+     "releve": true,
+     "faites": 0,
+     "pasFaites": 11,
+     "part": 0
+    }
+   ]
+  },
+  "nc": {
+   "notees": 15,
+   "nc": 0
+  },
+  "six": [
+   {
+    "lab": "S35",
+    "ca": 11320.2,
+    "tickets": 913,
+    "panier": 12.4
+   },
+   {
+    "lab": "S36",
+    "ca": 11530.15,
+    "tickets": 921,
+    "panier": 12.52
+   },
+   {
+    "lab": "S37",
+    "ca": 12077.9,
+    "tickets": 994,
+    "panier": 12.15
+   },
+   {
+    "lab": "S38",
+    "ca": 12591.7,
+    "tickets": 998,
+    "panier": 12.62
+   },
+   {
+    "lab": "S39",
+    "ca": 11908.45,
+    "tickets": 993,
+    "panier": 11.99
+   },
+   {
+    "lab": "S40",
+    "ca": 12864.2,
+    "tickets": 995,
+    "panier": 12.93
+   }
+  ],
+  "categories": [
+   {
+    "nom": "Viennoiserie Ind.",
+    "v": 3674,
+    "part": 28.6,
+    "taux": 59.1,
+    "q": 1892
+   },
+   {
+    "nom": "Pain",
+    "v": 1532,
+    "part": 11.9,
+    "taux": 47.9,
+    "q": 501
+   },
+   {
+    "nom": "Petite Boulangerie",
+    "v": 1290,
+    "part": 10,
+    "taux": 55,
+    "q": 1134
+   },
+   {
+    "nom": "Quiches",
+    "v": 1084,
+    "part": 8.4,
+    "taux": null,
+    "q": 106
+   },
+   {
+    "nom": "Tartes",
+    "v": 1023,
+    "part": 8,
+    "taux": null,
+    "q": 109
+   },
+   {
+    "nom": "Tartes – Ø 28 cm",
+    "v": 994,
+    "part": 7.7,
+    "taux": null,
+    "q": 70
+   }
+  ],
+  "heures": [
+   {
+    "h": 6,
+    "ca": 145.8,
+    "res": 63.9,
+    "tickets": 9
+   },
+   {
+    "h": 7,
+    "ca": 221.6,
+    "res": 120.2,
+    "tickets": 16.9
+   },
+   {
+    "h": 8,
+    "ca": 231.0,
+    "res": 114.5,
+    "tickets": 17
+   },
+   {
+    "h": 9,
+    "ca": 220.6,
+    "res": 98.0,
+    "tickets": 16.3
+   },
+   {
+    "h": 10,
+    "ca": 192.6,
+    "res": 89.9,
+    "tickets": 15.1
+   },
+   {
+    "h": 11,
+    "ca": 159.2,
+    "res": 78.1,
+    "tickets": 14.6
+   },
+   {
+    "h": 12,
+    "ca": 170.1,
+    "res": 115.9,
+    "tickets": 15.9
+   },
+   {
+    "h": 13,
+    "ca": 121.8,
+    "res": 61.1,
+    "tickets": 8.6
+   },
+   {
+    "h": 14,
+    "ca": 119.4,
+    "res": 67.1,
+    "tickets": 10
+   },
+   {
+    "h": 15,
+    "ca": 111.8,
+    "res": 59.4,
+    "tickets": 8
+   },
+   {
+    "h": 16,
+    "ca": 64.6,
+    "res": 31.8,
+    "tickets": 5.9
+   },
+   {
+    "h": 17,
+    "ca": 60.4,
+    "res": 32.5,
+    "tickets": 4.4
+   },
+   {
+    "h": 18,
+    "ca": 17.5,
+    "res": 17.5,
+    "tickets": 0.4
+   },
+   {
+    "h": 20,
+    "ca": 1.3,
+    "res": 1.3,
+    "tickets": 0.1
+   }
+  ],
+  "meilleure": {
+   "h": 7,
+   "res": 841.78,
+   "moy": 120.25
+  },
+  "pire": {
+   "h": 20,
+   "res": 9.4,
+   "moy": 1.34
+  },
+  "invTop": [
+   {
+    "nom": "Sandwich (10 + 5)",
+    "pieces": 27,
+    "cout": 80.27,
+    "motif": "fin de journée"
+   },
+   {
+    "nom": "Croissant",
+    "pieces": 29,
+    "cout": 19.84,
+    "motif": "fin de journée"
+   },
+   {
+    "nom": "Couque au Beurre",
+    "pieces": 19,
+    "cout": 13.74,
+    "motif": "fin de journée"
+   },
+   {
+    "nom": "Sandwich",
+    "pieces": 56,
+    "cout": 11.09,
+    "motif": "fin de journée"
+   },
+   {
+    "nom": "Mini - Pomme",
+    "pieces": 18,
+    "cout": 10.1,
+    "motif": "fin de journée"
+   }
+  ],
+  "promos": 0
+ },
+ "mois": {
+  "du": "2026-09-01",
+  "au": "2026-09-30",
+  "nom": "septembre 2026",
+  "ca": 50849.75,
+  "objectif": 61000,
+  "atteinte": 83.4,
+  "tickets": 4156,
+  "panier": 12.24,
+  "manquants": 903,
+  "matPct": 43.5,
+  "mb": 28754,
+  "mbPct": 56.5,
+  "inv": 1310.54,
+  "invPct": 2.6,
+  "invPieces": 1826,
+  "motifNet": "main-d’œuvre et frais généraux connus pour le mois courant seulement",
+  "rangCa": [
+   4,
+   4,
+   142530.81
+  ],
+  "rangAtt": [
+   4,
+   4,
+   0.9502
+  ],
+  "jours": [
+   {
+    "court": "Ma 1",
+    "date": "2026-09-01",
+    "ca": 1057.75,
+    "objectif": 1888.32
+   },
+   {
+    "court": "Me 2",
+    "date": "2026-09-02",
+    "ca": 1080.1,
+    "objectif": 1889.75
+   },
+   {
+    "court": "J 3",
+    "date": "2026-09-03",
+    "ca": 1441.45,
+    "objectif": 1908.35
+   },
+   {
+    "court": "V 4",
+    "date": "2026-09-04",
+    "ca": 1457.15,
+    "objectif": 1936.96
+   },
+   {
+    "court": "S 5",
+    "date": "2026-09-05",
+    "ca": 2704.6,
+    "objectif": 2420.49
+   },
+   {
+    "court": "D 6",
+    "date": "2026-09-06",
+    "ca": 2630.8,
+    "objectif": 2479.14
+   },
+   {
+    "court": "L 7",
+    "date": "2026-09-07",
+    "ca": 1222.4,
+    "objectif": 1782.46
+   },
+   {
+    "court": "Ma 8",
+    "date": "2026-09-08",
+    "ca": 1347,
+    "objectif": 1888.32
+   },
+   {
+    "court": "Me 9",
+    "date": "2026-09-09",
+    "ca": 1430.3,
+    "objectif": 1889.75
+   },
+   {
+    "court": "J 10",
+    "date": "2026-09-10",
+    "ca": 1060.95,
+    "objectif": 1908.35
+   },
+   {
+    "court": "V 11",
+    "date": "2026-09-11",
+    "ca": 1691.25,
+    "objectif": 1936.96
+   },
+   {
+    "court": "S 12",
+    "date": "2026-09-12",
+    "ca": 2241.6,
+    "objectif": 2420.49
+   },
+   {
+    "court": "D 13",
+    "date": "2026-09-13",
+    "ca": 3084.4,
+    "objectif": 2479.14
+   },
+   {
+    "court": "L 14",
+    "date": "2026-09-14",
+    "ca": 1257.5,
+    "objectif": 1782.46
+   },
+   {
+    "court": "Ma 15",
+    "date": "2026-09-15",
+    "ca": 1271,
+    "objectif": 1888.32
+   },
+   {
+    "court": "Me 16",
+    "date": "2026-09-16",
+    "ca": 1439.1,
+    "objectif": 1889.75
+   },
+   {
+    "court": "J 17",
+    "date": "2026-09-17",
+    "ca": 1120.3,
+    "objectif": 1908.35
+   },
+   {
+    "court": "V 18",
+    "date": "2026-09-18",
+    "ca": 1489.3,
+    "objectif": 1936.96
+   },
+   {
+    "court": "S 19",
+    "date": "2026-09-19",
+    "ca": 2865.5,
+    "objectif": 2420.49
+   },
+   {
+    "court": "D 20",
+    "date": "2026-09-20",
+    "ca": 3149,
+    "objectif": 2479.14
+   },
+   {
+    "court": "L 21",
+    "date": "2026-09-21",
+    "ca": 1231.3,
+    "objectif": 1782.46
+   },
+   {
+    "court": "Ma 22",
+    "date": "2026-09-22",
+    "ca": 1137.45,
+    "objectif": 1888.32
+   },
+   {
+    "court": "Me 23",
+    "date": "2026-09-23",
+    "ca": 1419.4,
+    "objectif": 1889.75
+   },
+   {
+    "court": "J 24",
+    "date": "2026-09-24",
+    "ca": 1020.05,
+    "objectif": 1908.35
+   },
+   {
+    "court": "V 25",
+    "date": "2026-09-25",
+    "ca": 1429.9,
+    "objectif": 1936.96
+   },
+   {
+    "court": "S 26",
+    "date": "2026-09-26",
+    "ca": 2852.15,
+    "objectif": 2420.49
+   },
+   {
+    "court": "D 27",
+    "date": "2026-09-27",
+    "ca": 2818.2,
+    "objectif": 2479.14
+   },
+   {
+    "court": "L 28",
+    "date": "2026-09-28",
+    "ca": 1307.3,
+    "objectif": 1782.46
+   },
+   {
+    "court": "Ma 29",
+    "date": "2026-09-29",
+    "ca": 1139.15,
+    "objectif": 1888.32
+   },
+   {
+    "court": "Me 30",
+    "date": "2026-09-30",
+    "ca": 1453.4,
+    "objectif": 1889.75
+   }
+  ],
+  "pro": {
+   "ca": 754.6,
+   "n": 7
+  },
+  "canaux": {
+   "caisse": 50849.75,
+   "comptoir": 50795.95,
+   "webshop": 96.7,
+   "part": 0.2,
+   "cc": {
+    "n": 12,
+    "ca": 96.7
+   },
+   "liv": {
+    "n": 0,
+    "ca": 0
+   }
+  },
+  "taches": {
+   "faites": 164,
+   "pasFaites": 422,
+   "part": 28
+  },
+  "categories": [
+   {
+    "nom": "Viennoiserie Ind.",
+    "v": 14552,
+    "part": 28.6,
+    "taux": 57.8,
+    "q": 7564
+   },
+   {
+    "nom": "Tartes",
+    "v": 8033,
+    "part": 15.8,
+    "taux": null,
+    "q": 741
+   },
+   {
+    "nom": "Pain",
+    "v": 6245,
+    "part": 12.3,
+    "taux": null,
+    "q": 2047
+   },
+   {
+    "nom": "Petite Boulangerie",
+    "v": 4591,
+    "part": 9,
+    "taux": 53.9,
+    "q": 4096
+   },
+   {
+    "nom": "Quiches",
+    "v": 3464,
+    "part": 6.8,
+    "taux": null,
+    "q": 391
+   },
+   {
+    "nom": "Sandwiches garnis",
+    "v": 1986,
+    "part": 3.9,
+    "taux": null,
+    "q": 344
+   }
+  ],
+  "heures": [
+   {
+    "h": 5,
+    "ca": 4.7,
+    "res": 1.0,
+    "tickets": 0.1
+   },
+   {
+    "h": 6,
+    "ca": 96.3,
+    "res": 24.8,
+    "tickets": 9.3
+   },
+   {
+    "h": 7,
+    "ca": 172.4,
+    "res": 72.7,
+    "tickets": 14.6
+   },
+   {
+    "h": 8,
+    "ca": 232.6,
+    "res": 106.3,
+    "tickets": 17.9
+   },
+   {
+    "h": 9,
+    "ca": 168.9,
+    "res": 66.8,
+    "tickets": 15
+   },
+   {
+    "h": 10,
+    "ca": 195.8,
+    "res": 87.4,
+    "tickets": 15.1
+   },
+   {
+    "h": 11,
+    "ca": 210.4,
+    "res": 107.3,
+    "tickets": 16
+   },
+   {
+    "h": 12,
+    "ca": 172.7,
+    "res": 103.5,
+    "tickets": 16.5
+   },
+   {
+    "h": 13,
+    "ca": 128.0,
+    "res": 69.4,
+    "tickets": 9
+   },
+   {
+    "h": 14,
+    "ca": 102.0,
+    "res": 59.4,
+    "tickets": 8
+   },
+   {
+    "h": 15,
+    "ca": 82.4,
+    "res": 43.9,
+    "tickets": 7
+   },
+   {
+    "h": 16,
+    "ca": 69.5,
+    "res": 38.9,
+    "tickets": 5.4
+   },
+   {
+    "h": 17,
+    "ca": 54.0,
+    "res": 31.0,
+    "tickets": 4.4
+   },
+   {
+    "h": 18,
+    "ca": 4.0,
+    "res": 2.4,
+    "tickets": 0.2
+   },
+   {
+    "h": 20,
+    "ca": 0.3,
+    "res": 0.3,
+    "tickets": 0
+   },
+   {
+    "h": 21,
+    "ca": 1.1,
+    "res": 1.1,
+    "tickets": 0
+   }
+  ],
+  "meilleure": {
+   "h": 11,
+   "res": 3217.8,
+   "moy": 107.26
+  },
+  "invTop": [
+   {
+    "nom": "Croissant",
+    "pieces": 207,
+    "cout": 141.59
+   },
+   {
+    "nom": "Couque au Beurre",
+    "pieces": 194,
+    "cout": 140.26
+   },
+   {
+    "nom": "Suisse",
+    "pieces": 142,
+    "cout": 109.77
+   },
+   {
+    "nom": "Pain au Chocolat Nappé",
+    "pieces": 103,
+    "cout": 84.87
+   },
+   {
+    "nom": "Pain au Chocolat",
+    "pieces": 106,
+    "cout": 83.32
+   }
+  ]
+ },
+ "stock": {
+  "references": 632,
+  "alertes": 0,
+  "ruptures": 0,
+  "negatifs": 0,
+  "dernierComptage": "2026-10-05 06:35:03"
+ }
+}
