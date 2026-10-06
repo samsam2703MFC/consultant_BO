@@ -1,0 +1,11 @@
+{
+  "back": "Terug",
+  "error_code": "Foutcode",
+  "forbidden": "Toegang geweigerd",
+  "forbidden_subtitle": "Je hebt geen toestemming om deze pagina te bekijken.",
+  "not_found": "Niet gevonden",
+  "not_found_subtitle": "De pagina die je zoekt bestaat niet of is verplaatst.",
+  "reload": "Opnieuw laden",
+  "server_error": "Serverfout",
+  "server_error_subtitle": "Er is iets misgegaan aan onze kant. Probeer het opnieuw."
+}

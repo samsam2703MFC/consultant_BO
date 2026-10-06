@@ -1,0 +1,158 @@
+{# layouts/mobile_base.twig #}
+<!DOCTYPE html>
+<html lang="{{ lang_code ?? 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}{{ translations.employee_panel ?? 'Employee Panel' }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/app.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/marque.css">
+
+    <link rel="manifest" href="{{ ROOT }}/manifest.webmanifest">
+    <meta name="theme-color" content="#8D1D2C">
+
+    {# iOS #}
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="{{ ROOT }}/assets/pwa/icon-192.png">
+
+    <style>
+        :root{
+            --emp-tabbar-h: 72px;
+        }
+
+        body{
+            background: var(--la-beige); /* Mazer-ish */
+        }
+
+        /* CONTENT: zawsze nad tabbarem */
+        .emp-content{
+            padding-bottom: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+        }
+
+        /* TOP BAR */
+        .emp-topbar{
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding-top: env(safe-area-inset-top, 0px);
+            background: rgba(234,228,220,.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .emp-topbar-inner{
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .emp-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .emp-subtitle{
+            margin: 0;
+            font-size: .85rem;
+            color: var(--la-muet);
+        }
+
+        /* BOTTOM NAV */
+        .emp-bottom-nav{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1030;
+
+            height: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,.06);
+
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+        }
+
+        .emp-bottom-item{
+            text-decoration: none;
+            color: var(--la-muet);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .emp-bottom-item i{
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .emp-bottom-item.is-active{
+            color: var(--la-rubis); /* Mazer primary-ish */
+        }
+
+        .emp-bottom-item.is-active i{
+            transform: translateY(-1px);
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+{% block topbar %}
+    <div class="emp-topbar">
+        <div class="container">
+            <div class="emp-topbar-inner">
+                <div>
+                    <p class="emp-title">{% block page_title %}{{ translations.employee ?? 'Employee' }}{% endblock %}</p>
+                    <p class="emp-subtitle">{% block page_subtitle %}{% endblock %}</p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    {% block topbar_actions %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+<main class="emp-content">
+    <div class="container py-3">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+{% include "components/bottom_nav.twig" with { active_nav: active_nav|default('dashboard') } %}
+{% block scripts %}{% endblock %}
+
+<script>
+    (function () {
+        if (!("serviceWorker" in navigator)) return;
+
+        window.addEventListener("load", async () => {
+            try {
+                const reg = await navigator.serviceWorker.register("{{ ROOT }}/sw.js", { scope: "{{ ROOT }}/" });
+                // Opcjonalnie log:
+                console.log("SW registered", reg);
+            } catch (e) {
+                console.warn("SW register failed", e);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

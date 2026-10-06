@@ -1,0 +1,19 @@
+{% extends "layouts/error_mobile.twig" %}
+
+{% block title %}403{% endblock %}
+
+{% block illustration %}
+    <img class="merr-illu" src="{{ ROOT }}/assets/mazer/static/images/samples/error-403.svg" alt="{{ translations.forbidden ?? 'Access denied' }}">
+{% endblock %}
+
+{% block error_title %}
+    {{ translations.forbidden ?? 'Access denied' }}
+{% endblock %}
+
+{% block error_subtitle %}
+    {{ translations.forbidden_subtitle ?? 'You don’t have permission to view this page.' }}
+{% endblock %}
+
+{% block footer %}
+    <div class="small text-muted mt-3">{{ translations.error_code ?? 'Error code' }}: 403</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{# components/bottom_nav.twig #}
+{% set items = items ?? [
+    { key: 'dashboard', label: translations.home ?? 'Home', icon: 'bi-house', href: ROOT ~ '/dashboard' },
+    { key: 'schedule',  label: translations.schedule ?? 'Schedule', icon: 'bi-calendar3', href: ROOT ~ '/schedule' },
+    { key: 'tasks',     label: translations.tasks ?? 'Tasks', icon: 'bi-check2-square', href: ROOT ~ '/tasks' },
+    { key: 'profile',   label: translations.profile ?? 'Profile', icon: 'bi-person', href: ROOT ~ '/me' },
+] %}
+
+<nav class="emp-bottom-nav" role="navigation" aria-label="{{ translations.primary_navigation ?? 'Primary navigation' }}">
+    {% for it in items %}
+        {% set is_active = (active_nav ?? '') == it.key %}
+        <a class="emp-bottom-item {{ is_active ? 'is-active' : '' }}"
+           href="{{ it.href }}"
+           aria-current="{{ is_active ? 'page' : 'false' }}">
+            <i class="bi {{ it.icon }}"></i>
+            <span>{{ it.label }}</span>
+        </a>
+    {% endfor %}
+</nav>

@@ -1,0 +1,187 @@
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'tasks' %}
+
+{% block title %}{{ translations.task_done ?? 'Task done' }}{% endblock %}
+{% block page_title %}{{ translations.task_done ?? 'Task done' }}{% endblock %}
+{% block page_subtitle %}
+    {{ translations.task_done_subtitle ?? 'Completion details' }}
+{% endblock %}
+
+{% block head %}
+    <style>
+        /* bazuję na Twoich stylach z widoku taska */
+        .card{ border-radius:18px; border:1px solid rgba(0,0,0,.06); }
+        .soft{ background: rgba(255,255,255,.92); }
+        .hero{ border-radius:22px; border:1px solid rgba(0,0,0,.06); background: linear-gradient(135deg, rgba(25,135,84,.12), rgba(255,255,255,1) 55%); overflow:hidden; }
+        .hero-top{ padding:14px 14px 10px; }
+        .task-title{ margin:0; font-weight:950; letter-spacing:-0.02em; font-size:1.1rem; line-height:1.2; color:#1b4332; }
+        .task-path{ margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; color:var(--la-muet); font-size:.82rem; }
+        .pill{ display:inline-flex; align-items:center; gap:6px; padding:.28rem .55rem; border-radius:999px; border:1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.92); font-weight:900; font-size:.72rem; color:#3d3a36; white-space:nowrap; }
+        .pill-done{ border-color: rgba(25,135,84,.25); background: rgba(25,135,84,.10); color:#0f5132; }
+        .section-title{ font-weight:950; letter-spacing:-0.02em; font-size:1.02rem; margin: 14px 0 10px; }
+        .desc{ color:#3d3a36; font-size:.95rem; line-height:1.45; white-space:pre-line; }
+        .meta-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+        .meta-item{ border-radius:16px; border:1px solid rgba(0,0,0,.06); background: rgba(255,255,255,.96); padding:10px 10px; }
+        .meta-label{ color:var(--la-muet); font-size:.78rem; font-weight:800; }
+        .meta-value{ margin-top:3px; font-weight:950; font-size:.95rem; color:var(--la-encre); word-break: break-word; }
+        .helper{ display:flex; gap:10px; align-items:flex-start; padding:.7rem .75rem; border-radius:16px; border:1px solid rgba(25,135,84,.18); background: rgba(25,135,84,.08); color:#0f5132; font-size:.88rem; font-weight:700; }
+        .helper i{ font-size:1.05rem; margin-top:1px; }
+
+        .btn-primary{ border-radius:14px; padding:.95rem 1rem; font-weight:950; }
+        .btn-soft{ border-radius:14px; padding:.85rem .95rem; font-weight:900; border:1px solid rgba(0,0,0,.06); background: rgba(255,255,255,.9); }
+
+        .sticky-actions{ position: sticky; bottom: 0; padding-top: 12px; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1) 35%); }
+
+        .photo-box{ border-radius:16px; border:1px solid rgba(0,0,0,.08); overflow:hidden; background:#fff; }
+        .photo-box img{ width:100%; height:auto; display:block; }
+        .mini-note{ color:var(--la-muet); font-size:.82rem; margin-top:6px; }
+        .note-box{ border-radius:16px; border:1px solid rgba(0,0,0,.06); background: rgba(255,255,255,.96); padding:10px 10px; white-space:pre-line; }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    {% set completion = task_completion ?? null %}
+    {% set signed = presigned_url ?? null %}
+    {% set signedUrl = signed ? signed.getUrl() : null %}
+
+    {# HERO #}
+    <div class="hero mb-3">
+        <div class="hero-top">
+            <h2 class="task-title">{{ completion ? completion.getTaskName() : (translations.task_done ?? 'Task done') }}</h2>
+
+            <div class="task-path">
+                <span class="pill pill-done">
+                    <i class="bi bi-check2-circle"></i>{{ translations.done ?? 'Done' }}
+                </span>
+
+                {% if completion and completion.getCompletedAt() %}
+                    <span class="pill">
+                        <i class="bi bi-calendar-check me-1"></i>{{ completion.getCompletedAt() }}
+                    </span>
+                {% endif %}
+
+                {% if completion and completion.getCompletedByEmployeeDisplayName() %}
+                    <span class="pill">
+                        <i class="bi bi-person-check me-1"></i>{{ completion.getCompletedByEmployeeDisplayName() }}
+                    </span>
+                {% endif %}
+            </div>
+
+            {% if completion %}
+                <div class="mini-note">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    {{ translations.scheduled_for ?? 'Scheduled for' }}:
+                    <strong>{{ completion.getScheduledForDate() ?: '-' }}</strong>
+                    {% if completion.getScheduledTime() and completion.getScheduledTime() != '00:00:00' %}
+                        • <i class="bi bi-clock ms-1 me-1"></i><strong>{{ completion.getScheduledTime()|slice(0,5) }}</strong>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# SUMMARY / INFO #}
+    <div class="card soft mb-3">
+        <div class="card-body">
+            <div class="helper">
+                <i class="bi bi-info-circle"></i>
+                <div>
+                    {{ translations.task_done_info ?? 'This task has been completed. Below you can review the completion details.' }}
+                </div>
+            </div>
+
+            <div class="section-title">{{ translations.details ?? 'Details' }}</div>
+
+            {% if completion and completion.getTaskDescription() %}
+                <div class="desc">{{ completion.getTaskDescription() }}</div>
+            {% else %}
+                <div class="text-muted">{{ translations.no_description ?? 'No description.' }}</div>
+            {% endif %}
+
+            <div class="section-title mt-3">{{ translations.completion_metadata ?? 'Completion info' }}</div>
+
+            <div class="meta-grid">
+
+                <div class="meta-item">
+                    <div class="meta-label">{{ translations.completed_at ?? 'Completed at' }}</div>
+                    <div class="meta-value">{{ completion and completion.getCompletedAt() ? completion.getCompletedAt() : '-' }}</div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-label">{{ translations.completed_by ?? 'Completed by' }}</div>
+                    <div class="meta-value">
+                        {% if completion and completion.getCompletedByEmployeeDisplayName() %}
+                            {{ completion.getCompletedByEmployeeDisplayName() }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-label">{{ translations.scheduled_date ?? 'Scheduled date' }}</div>
+                    <div class="meta-value">{{ completion and completion.getScheduledForDate() ? completion.getScheduledForDate() : '-' }}</div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-label">{{ translations.scheduled_time ?? 'Scheduled time' }}</div>
+                    <div class="meta-value">
+                        {% if completion and completion.getScheduledTime() and completion.getScheduledTime() != '00:00:00' %}
+                            {{ completion.getScheduledTime()|slice(0,5) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {# NOTE #}
+    <div class="card soft mb-3">
+        <div class="card-body">
+            <div class="section-title">{{ translations.note ?? 'Note' }}</div>
+
+            {% if completion and completion.getNote() %}
+                <div class="note-box">{{ completion.getNote() }}</div>
+            {% else %}
+                <div class="text-muted">{{ translations.no_note ?? 'No note.' }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# PHOTO #}
+    <div class="card soft mb-4">
+        <div class="card-body">
+            <div class="section-title">{{ translations.photo ?? 'Photo' }}</div>
+
+            {% if signedUrl %}
+                <div class="photo-box">
+                    <img src="{{ signedUrl }}" alt="{{ translations.photo ?? 'Photo' }}" loading="lazy" />
+                </div>
+                <div class="mini-note">
+                    <i class="bi bi-shield-check me-1"></i>
+                    {{ translations.photo_link_temporary ?? 'This photo link is temporary (presigned URL).' }}
+                </div>
+
+                <div class="d-grid gap-2 mt-2">
+                    <a class="btn btn-soft w-100" href="{{ signedUrl }}" target="_blank" rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ translations.open_in_new_tab ?? 'Open in new tab' }}
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-muted">{{ translations.no_photo ?? 'No photo attached.' }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ACTIONS #}
+    <div class="sticky-actions mb-2">
+        <a href="{{ ROOT }}/tasks" class="btn btn-primary w-100">
+            <i class="bi bi-arrow-left me-1"></i>{{ translations.back_to_tasks ?? 'Back to tasks' }}
+        </a>
+    </div>
+
+{% endblock %}

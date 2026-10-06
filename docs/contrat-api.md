@@ -497,6 +497,15 @@ retirée est dans les tickets (`id_transaction`), donc dans les ventes et la pr�
 (`sansDetail: true`, heure, canal, montant) sans changer le plan tant que le panel n'en joint pas les articles —
 le calcul les prendra d'office le jour où `products` sera rempli.
 
+### L'app employés (`/employee`) — « App worker »
+
+L'application mobile des employés (TFB-Employee), hébergée par le cockpit sous `/consulant_bo/employee/`
+et liée depuis le rail, ERP franchisé › **App worker ↗** (demande du 06/10/2026). Elle ne parle pas
+à l'API du cockpit : elle appelle l'API du panel (`panelApi.base`) avec les identifiants de
+l'employé (`POST /employees/authenticate`, puis `/employees/{id}`, `/employees/{id}/tasks`,
+`/employees/{id}/schedule`, `/shops/{id}`). Code dans `apps/employee`, détails dans
+`apps/employee/LISEZMOI.md`. Aux couleurs et à la typo de la marque.
+
 ### `/production/flux/*` — l'application Production du magasin (`/production`)
 
 Une application à part, `/production/?shop=4&date=YYYY-MM-DD&page=params|plan|suivi|cloture`

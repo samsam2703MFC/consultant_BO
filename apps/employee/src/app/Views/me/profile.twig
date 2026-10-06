@@ -1,0 +1,642 @@
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'profile' %}
+
+{% block title %}{{ translations.my_profile ?? 'My profile' }}{% endblock %}
+{% block page_title %}{{ translations.my_profile ?? 'My profile' }}{% endblock %}
+{% block page_subtitle %}
+    {{ translations.profile_subtitle ?? 'Your employee details and roles' }}
+{% endblock %}
+
+{% block head %}
+    <style>
+        .hero-card{
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,.06);
+            background: linear-gradient(135deg, rgba(141,29,44,.12), rgba(255,255,255,1) 55%);
+        }
+        .hero-top{
+            padding: 16px 16px 10px;
+            display:flex;
+            align-items:center;
+            gap:12px;
+        }
+        .avatar{
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background: rgba(141,29,44,.14);
+            border: 1px solid rgba(141,29,44,.18);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #5A121C;
+            flex: 0 0 auto;
+        }
+        .hero-name{
+            margin: 0;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            font-size: 1.25rem;
+        }
+        .hero-sub{
+            margin: 4px 0 0;
+            color: var(--la-muet);
+            font-size: .9rem;
+        }
+        .chips{
+            padding: 0 16px 14px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+        }
+        .chip{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding: .4rem .65rem;
+            border-radius: 999px;
+            border: 1px solid rgba(0,0,0,.06);
+            background: rgba(255,255,255,.85);
+            font-weight: 700;
+            font-size: .78rem;
+            color: #3d3a36;
+        }
+        .chip i{ font-size: .95rem; opacity: .85; }
+
+        .section-title{
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            font-size: 1.02rem;
+            margin: 16px 0 10px;
+        }
+
+        .info-row{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,.06);
+        }
+        .info-row:last-child{ border-bottom: 0; }
+
+        .info-label{
+            color: var(--la-muet);
+            font-size: .86rem;
+            min-width: 110px;
+        }
+        .info-value{
+            text-align:right;
+            font-weight: 800;
+            color: var(--la-encre);
+            font-size: .92rem;
+            word-break: break-word;
+        }
+
+        .btn-soft{
+            border-radius: 14px;
+            padding: .85rem .95rem;
+            font-weight: 800;
+            border: 1px solid rgba(0,0,0,.06);
+            background: rgba(255,255,255,.9);
+        }
+
+        .card{
+            border-radius: 18px;
+            border: 1px solid rgba(0,0,0,.06);
+        }
+
+        .empty-state{
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px dashed rgba(0,0,0,.12);
+            background: rgba(255,255,255,.75);
+            color: var(--la-muet);
+            font-size: .92rem;
+        }
+
+        /* Position cards */
+        .pos-card{
+            border-radius: 18px;
+            border: 1px solid rgba(0,0,0,.06);
+            background: rgba(255,255,255,.92);
+            overflow: hidden;
+        }
+        .pos-top{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:12px;
+        }
+        .pos-name{
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.02rem;
+            line-height: 1.2;
+        }
+        .pos-desc{
+            margin: 6px 0 0;
+            color: var(--la-muet);
+            font-size: .9rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .badge-soft{
+            border-radius: 999px;
+            padding: .35rem .6rem;
+            font-weight: 900;
+            font-size: .75rem;
+            border: 1px solid rgba(141,29,44,.18);
+            background: rgba(141,29,44,.10);
+            color: #5A121C;
+            white-space: nowrap;
+        }
+        .badge-mini{
+            border-radius: 999px;
+            padding: .28rem .55rem;
+            font-weight: 800;
+            font-size: .72rem;
+            border: 1px solid rgba(0,0,0,.08);
+            background: rgba(255,255,255,.9);
+            color: #3d3a36;
+            white-space: nowrap;
+        }
+
+        /* Competency list */
+        .comp-item{
+            border-radius: 16px;
+            border: 1px solid rgba(0,0,0,.06);
+            background: rgba(255,255,255,.92);
+            padding: 12px 12px;
+        }
+        .comp-title{
+            font-weight: 900;
+            margin: 0;
+            font-size: .98rem;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+        .comp-meta{
+            margin-top: 6px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            align-items:center;
+            color:var(--la-muet);
+            font-size:.82rem;
+        }
+        .comp-desc{
+            margin: 8px 0 0;
+            color:var(--la-muet);
+            font-size:.9rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Collapsible competencies by category */
+        .cat-accordion{
+            border: 1px solid rgba(0,0,0,.06);
+            border-radius: 18px;
+            background: rgba(255,255,255,.92);
+            overflow: hidden;
+        }
+        .cat-accordion details{
+            border-top: 1px solid rgba(0,0,0,.06);
+        }
+        .cat-accordion details:first-child{ border-top: 0; }
+
+        .cat-accordion summary{
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            user-select:none;
+        }
+        .cat-accordion summary::-webkit-details-marker{ display:none; }
+
+        .cat-title{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-width:0;
+        }
+        .cat-title .name{
+            font-weight: 950;
+            letter-spacing: -0.02em;
+            color:#5A121C;
+            font-size: .95rem;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            max-width: 240px;
+        }
+        .cat-title .icon{
+            width: 34px; height: 34px;
+            border-radius: 12px;
+            display:flex; align-items:center; justify-content:center;
+            background: rgba(141,29,44,.10);
+            border: 1px solid rgba(141,29,44,.14);
+            color:#5A121C;
+            flex: 0 0 auto;
+        }
+        .cat-right{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex: 0 0 auto;
+        }
+        .cat-count{
+            font-weight: 900;
+            font-size: .75rem;
+            color: var(--la-muet);
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 999px;
+            padding: .18rem .45rem;
+            background: rgba(255,255,255,.9);
+            white-space: nowrap;
+        }
+        .chev{ color:var(--la-muet); transition: transform .12s ease; }
+        details[open] .chev{ transform: rotate(180deg); }
+
+        .cat-body{
+            padding: 0 14px 14px;
+        }
+        .subhead{
+            margin: 10px 0 8px;
+            font-weight: 900;
+            font-size: .86rem;
+            color:#3d3a36;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+        }
+        .subhead .mini-count{
+            font-weight: 900;
+            font-size: .72rem;
+            color: var(--la-muet);
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 999px;
+            padding: .12rem .4rem;
+            background: rgba(255,255,255,.9);
+            white-space: nowrap;
+        }
+
+        .shop-actions{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    {% set displayName = employee.getDisplayName() ?: (employee.getName() ~ ' ' ~ employee.getSurname()) %}
+    {% set initials = (employee.getName()|default('')|slice(0,1) ~ employee.getSurname()|default('')|slice(0,1))|upper %}
+    {% set lang = employee.getLangCode()|default('')|upper %}
+
+    {% set positions = employee.getPositions()|default([]) %}
+    {% set comps = employee.getCompetencies()|default([]) %}
+
+    {# HERO #}
+    <div class="hero-card mb-3">
+        <div class="hero-top">
+            <div class="avatar">{{ initials ?: (translations.me_abbr ?? 'ME') }}</div>
+            <div class="flex-grow-1">
+                <h2 class="hero-name">{{ displayName }}</h2>
+                <div class="hero-sub">
+                    {{ translations.employee_id ?? 'Employee ID' }}: {{ employee.getId() }}
+                    {% if employee.getLogin() %} • {{ translations.login ?? 'Login' }}: {{ employee.getLogin() }}{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="chips">
+        <span class="chip">
+            <i class="bi bi-shop"></i>
+            {{ shop.getRepresentativeName() ?: shop.getName() }}
+        </span>
+
+            {% if employee.getProductionAreaName() %}
+                <span class="chip">
+                <i class="bi bi-diagram-3"></i>
+                {{ employee.getProductionAreaName() }}
+            </span>
+            {% endif %}
+
+            {% if lang %}
+                <span class="chip">
+                <i class="bi bi-translate"></i>
+                {{ translations.language ?? 'Language' }}: {{ lang }}
+            </span>
+            {% endif %}
+
+            <span class="chip">
+            <i class="bi bi-award"></i>
+            {{ translations.positions ?? 'Positions' }}: {{ positions|length }}
+        </span>
+
+            <span class="chip">
+            <i class="bi bi-journal-check"></i>
+            {{ translations.competencies ?? 'Competencies' }}: {{ comps|length }}
+        </span>
+        </div>
+    </div>
+
+    {# CONTACT (tylko dane pracownika bez CTA do dzwonienia) #}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="section-title">{{ translations.contact ?? 'Contact' }}</div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.phone ?? 'Phone' }}</div>
+                <div class="info-value">{{ employee.getPhone() ?: '-' }}</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.email ?? 'Email' }}</div>
+                <div class="info-value">{{ employee.getEmail() ?: '-' }}</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.language ?? 'Language' }}</div>
+                <div class="info-value">{{ lang ?: '-' }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# WORKPLACE / SHOP + SHOP CONTACT CTA #}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="section-title">{{ translations.workplace ?? 'Workplace' }}</div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.shop ?? 'Shop' }}</div>
+                <div class="info-value">{{ shop.getRepresentativeName() ?: shop.getName() }}</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.address ?? 'Address' }}</div>
+                <div class="info-value">
+                    {{ shop.getStreet() }} {{ shop.getStreetNum() }},
+                    {{ shop.getZip() }} {{ shop.getCity() }}
+                    {% if shop.getCountryCode() %} ({{ shop.getCountryCode() }}){% endif %}
+                </div>
+            </div>
+
+            {% set open_h = shop.getOpeningHour() %}
+            {% set open_m = shop.getOpeningMinute() %}
+            {% set close_h = shop.getClosingHour() %}
+            {% set close_m = shop.getClosingMinute() %}
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.opening_hours ?? 'Hours' }}</div>
+                <div class="info-value">
+                    {{ "%02d"|format(open_h) }}:{{ "%02d"|format(open_m) }}
+                    –
+                    {{ "%02d"|format(close_h) }}:{{ "%02d"|format(close_m) }}
+                </div>
+            </div>
+
+            {% if shop.getTaxNumber() %}
+                <div class="info-row">
+                    <div class="info-label">{{ translations.tax_number ?? 'Tax no.' }}</div>
+                    <div class="info-value">{{ shop.getTaxNumberPrefixe() }} {{ shop.getTaxNumber() }}</div>
+                </div>
+            {% endif %}
+
+            {# Shop contact subsection #}
+            <div class="section-title" style="margin-top: 14px;">
+                {{ translations.shop_contact ?? 'Shop contact' }}
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.phone ?? 'Phone' }}</div>
+                <div class="info-value">{{ shop.getPhone() ?: '-' }}</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">{{ translations.email ?? 'Email' }}</div>
+                <div class="info-value">{{ shop.getEmail() ?: '-' }}</div>
+            </div>
+
+            <div class="shop-actions">
+                {% if shop.getPhone() %}
+                    <a class="btn btn-soft w-100" href="tel:{{ shop.getPhone() }}">
+                        <i class="bi bi-telephone me-1"></i>{{ translations.call_shop ?? 'Call shop' }}
+                    </a>
+                {% else %}
+                    <button class="btn btn-soft w-100" type="button" disabled>
+                        <i class="bi bi-telephone me-1"></i>{{ translations.call_shop ?? 'Call shop' }}
+                    </button>
+                {% endif %}
+
+                {% if shop.getEmail() %}
+                    <a class="btn btn-soft w-100" href="mailto:{{ shop.getEmail() }}">
+                        <i class="bi bi-envelope me-1"></i>{{ translations.email_shop ?? 'Email shop' }}
+                    </a>
+                {% else %}
+                    <button class="btn btn-soft w-100" type="button" disabled>
+                        <i class="bi bi-envelope me-1"></i>{{ translations.email_shop ?? 'Email shop' }}
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# POSITIONS (z levelem, bez level_order i bez id) #}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="section-title">{{ translations.positions ?? 'Positions' }}</div>
+
+            {% if positions is empty %}
+                <div class="empty-state">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ translations.no_positions ?? 'No positions assigned yet.' }}
+                </div>
+            {% else %}
+                <div class="d-grid gap-2">
+                    {% for p in positions %}
+                        <div class="pos-card">
+                            <div class="p-3">
+                                <div class="pos-top">
+                                    <div class="flex-grow-1">
+                                        <h3 class="pos-name">{{ p.getName() }}</h3>
+
+                                        {% if p.getLevelName() %}
+                                            <div class="mt-2 d-flex flex-wrap gap-2">
+                                            <span class="badge-soft">
+                                                <i class="bi bi-layers me-1"></i>
+                                                {{ p.getLevelName() }}
+                                            </span>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if p.getDescription() %}
+                                            <p class="pos-desc">{{ p.getDescription() }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {% if p.getLevelDescription() %}
+                                    <div class="mt-2 text-muted small">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        {{ p.getLevelDescription()|slice(0,140) }}{% if p.getLevelDescription()|length > 140 %}…{% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# COMPETENCIES (zwinięte domyślnie per KATEGORIA) #}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="section-title">{{ translations.competencies ?? 'Competencies' }}</div>
+
+            {% if comps is empty %}
+                <div class="empty-state">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ translations.no_competencies ?? 'No competencies assigned yet.' }}
+                </div>
+            {% else %}
+
+                {# 1) Zbuduj strukturę: category -> subcategory -> [competencies] #}
+                {% set catGroups = {} %}
+                {% for c in comps %}
+                    {% set cat = c.getCategoryName() ?: (translations.other ?? 'Other') %}
+                    {% set sub = c.getSubcategoryName() ?: (translations.other ?? 'Other') %}
+
+                    {% set catNode = catGroups[cat]|default({}) %}
+                    {% set subNode = catNode[sub]|default([]) %}
+
+                    {% set catNode = catNode|merge({ (sub): subNode|merge([c]) }) %}
+                    {% set catGroups = catGroups|merge({ (cat): catNode }) %}
+                {% endfor %}
+
+                <div class="cat-accordion">
+                    {# 2) Kategorie jako <details> (domyślnie ZWINIĘTE) #}
+                    {% for catName, subMap in catGroups %}
+                        {# policz ile kompetencji w kategorii #}
+                        {% set catCount = 0 %}
+                        {% for subName, arr in subMap %}
+                            {% set catCount = catCount + (arr|length) %}
+                        {% endfor %}
+
+                        <details>
+                            <summary>
+                                <div class="cat-title">
+                                    <div class="icon"><i class="bi bi-collection"></i></div>
+                                    <div class="name">{{ catName }}</div>
+                                </div>
+                                <div class="cat-right">
+                                    <span class="cat-count">{{ catCount }}</span>
+                                    <i class="bi bi-chevron-down chev"></i>
+                                </div>
+                            </summary>
+
+                            <div class="cat-body">
+                                {% for subName, items in subMap %}
+                                    <div class="subhead">
+                                        <span>{{ subName }}</span>
+                                        <span class="mini-count">{{ items|length }}</span>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        {% for c in items %}
+                                            <div class="comp-item">
+                                                <div class="d-flex align-items-start justify-content-between gap-2">
+                                                    <h4 class="comp-title">{{ c.getName() }}</h4>
+
+                                                    {% if c.getVerificationMethod() %}
+                                                        <span class="badge-mini">
+                                                        <i class="bi bi-check2-circle me-1"></i>{{ c.getVerificationMethod()|upper }}
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="comp-meta">
+                                                    <span><i class="bi bi-tag me-1"></i>#{{ c.getId() }}</span>
+                                                    {% if c.getCreatedAt() %}
+                                                        {# jeśli getCreatedAt() zwraca string, usuń |date(...) #}
+                                                        <span><i class="bi bi-clock me-1"></i>{{ c.getCreatedAt()|date('Y-m-d') }}</span>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if c.getDescription() %}
+                                                    <div class="comp-desc">{{ c.getDescription() }}</div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# WORKSTATIONS #}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="section-title">{{ translations.workstations ?? 'Workstations' }}</div>
+
+            {% set ws = employee.getWorkstations()|default([]) %}
+            {% if ws is empty %}
+                <div class="empty-state">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ translations.no_workstations ?? 'No workstations assigned yet.' }}
+                </div>
+            {% else %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for w in ws %}
+                        <span class="badge-soft">
+                        <i class="bi bi-grid-3x3-gap me-1"></i>
+                        {{ w.getName() ?? w.name ?? (translations.workstation ?? 'Workstation') }}
+                    </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# SETTINGS #}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="section-title">{{ translations.settings ?? 'Settings' }}</div>
+
+            <div class="d-grid gap-2">
+                <a class="btn btn-soft w-100" href="{{ ROOT }}/profile/language">
+                    <i class="bi bi-translate me-1"></i>
+                    {{ translations.change_language ?? 'Change language' }}
+                    <span class="text-muted ms-1">({{ lang ?: '-' }})</span>
+                </a>
+
+                <a class="btn btn-soft w-100" href="{{ ROOT }}/logout">
+                    <i class="bi bi-box-arrow-right me-1"></i>
+                    {{ translations.logout ?? 'Log out' }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,11 @@
+{
+  "back": "Back",
+  "error_code": "Error code",
+  "forbidden": "Access denied",
+  "forbidden_subtitle": "You do not have permission to view this page.",
+  "not_found": "Not found",
+  "not_found_subtitle": "The page you are looking for does not exist or has been moved.",
+  "reload": "Reload",
+  "server_error": "Server error",
+  "server_error_subtitle": "Something went wrong on our side. Please try again."
+}
