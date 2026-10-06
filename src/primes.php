@@ -318,7 +318,7 @@ function primesMagasinMois(int $sid, string $m, array $reg, ?float $heuresVous, 
  * Les heures du planning sur un mois, par personne : toutes (le mois entier, jours à venir
  * compris) et celles déjà prestées (jours passés). Le magasin de chacune vient de sa fiche.
  *
- * @return array<int, array{mois:float,faites:float,shop:string}>
+ * @return array<int, array{mois:float,faites:float,shop:string,fin:?string}>
  */
 function primesHeuresMois(string $m): array
 {
@@ -328,13 +328,16 @@ function primesHeuresMois(string $m): array
     try {
         foreach (Db::rows('SELECT s.id_employee, e.id_shop,
                                   SUM(' . $duree . ') / 3600 h,
-                                  SUM(CASE WHEN s.work_date < ? THEN ' . $duree . ' ELSE 0 END) / 3600 hf
+                                  SUM(CASE WHEN s.work_date < ? THEN ' . $duree . ' ELSE 0 END) / 3600 hf,
+                                  MAX(s.work_date) fin
                              FROM franchisee_employee_schedule s
                              JOIN franchisee_employee e ON e.id = s.id_employee
                             WHERE s.work_date >= ? AND s.work_date < ?
                             GROUP BY s.id_employee, e.id_shop',
             [date('Y-m-d'), substr($du, 0, 10), substr($au, 0, 10)]) as $r) {
-            $out[(int) $r['id_employee']] = ['mois' => round((float) $r['h'], 2), 'faites' => round((float) $r['hf'], 2), 'shop' => (string) $r['id_shop']];
+            $out[(int) $r['id_employee']] = ['mois' => round((float) $r['h'], 2), 'faites' => round((float) $r['hf'], 2), 'shop' => (string) $r['id_shop'],
+                // Le planning se saisit semaine après semaine : jusqu'où va-t-il ? Les heures du mois sont celles connues à ce jour.
+                'fin' => isset($r['fin']) ? substr((string) $r['fin'], 0, 10) : null];
         }
     } catch (PDOException $e) { /* planning illisible : zéro heure partout, l'écran le dit */ }
     return $out;
@@ -522,9 +525,10 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
 
     $h = primesHeuresMois($m);
     $hVous = (float) ($h[$emp]['mois'] ?? 0.0); $hFaites = (float) ($h[$emp]['faites'] ?? 0.0);
-    $hEq = 0.0; $nEq = 0;
-    foreach ($h as $id => $x) { if ($x['shop'] === $shop) { $hEq += $x['mois']; $nEq++; } }
+    $hEq = 0.0; $nEq = 0; $finPlan = null;
+    foreach ($h as $id => $x) { if ($x['shop'] === $shop) { $hEq += $x['mois']; $nEq++; if ($x['fin'] !== null && ($finPlan === null || $x['fin'] > $finPlan)) { $finPlan = $x['fin']; } } }
     $pm = primesMagasinMois((int) $shop, $m, primeMagasinReglages(), $hVous, $hEq);
+    $pm['planningJusquau'] = $finPlan;
     // Le mois en cours : le CA par heure se lit sur les heures déjà prestées, pas sur le planning
     // du mois entier (le score et le rang, eux, restent ceux du classement du cockpit).
     if ($enCours && $hFaites > 0 && ($b['meilleure']['ca'] ?? 0) > 0) {
@@ -566,7 +570,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
 
     $out = ['emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)],
-        'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq],
+        'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
         'aujourdhui' => $auj, 'acquis' => $acquis, 'aPortee' => $aPortee,
         'briques' => $b, 'prime' => $pm, 'semaines' => $semaines, 'mois' => $mois,
         'motif' => $r['motif']];
@@ -668,9 +672,9 @@ function ep_primes_reglages(): array
         'shop' => $shop, 'm' => $m, 'lib' => primesLibMois($m), 'apercu' => null, 'mesures' => []];
     if ($shop !== '') {
         $h = primesHeuresMois($m);
-        $hEq = 0.0; $n = 0;
-        foreach ($h as $x) { if ($x['shop'] === $shop) { $hEq += $x['mois']; $n++; } }
-        $out['apercu'] = primesMagasinMois((int) $shop, $m, $out['magasin'], null, $hEq) + ['personnes' => $n];
+        $hEq = 0.0; $n = 0; $finPlan = null;
+        foreach ($h as $x) { if ($x['shop'] === $shop) { $hEq += $x['mois']; $n++; if ($x['fin'] !== null && ($finPlan === null || $x['fin'] > $finPlan)) { $finPlan = $x['fin']; } } }
+        $out['apercu'] = primesMagasinMois((int) $shop, $m, $out['magasin'], null, $hEq) + ['personnes' => $n, 'planningJusquau' => $finPlan];
     }
     // Le taux de ventes croisées mesuré par magasin sur le dernier mois clos, pour poser les cibles.
     $mClos = date('Y-m', strtotime('first day of last month'));

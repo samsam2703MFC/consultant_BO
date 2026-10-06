@@ -64,6 +64,8 @@
   "people": "personnes",
   "per_day_more": "/ jour de plus",
   "planned": "au planning",
+  "planned_until": "jusqu’au",
+  "planning_grows": "Le planning se complète semaine après semaine : les heures et les montants suivent.",
   "prorata": "Répartie au prorata des heures prestées :",
   "reached": "atteint",
   "reached_at_pace": "atteint au rythme actuel",

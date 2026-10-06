@@ -9456,7 +9456,7 @@ function tplVentes(c, x){
         <div><div style="${lbl2}">Objectif${A.source ? ` · ${esc(A.source)}` : ''}</div><div style="font-family:var(--font-display);font-size:22px">${esc(A.objectif)}</div></div>
         <div><div style="${lbl2}">Encaissé</div><div style="font-family:var(--font-display);font-size:22px">${esc(A.ca)}</div><div style="font-size:11px;color:var(--color-text-muted)">${esc(A.atteinte)}</div></div>
         <div><div style="${lbl2}">Projection</div><div style="font-family:var(--font-display);font-size:22px;color:var(--color-primary)">${esc(A.projection)}</div><div style="font-size:11px;color:var(--color-text-muted)">${esc(A.atteinteProj)}${A.rythme ? ` · ${esc(A.rythme)}` : ''}</div></div>
-        <div><div style="${lbl2}">Équipe au planning</div><div style="font-family:var(--font-display);font-size:22px">${esc(A.heuresEquipe)}</div><div style="font-size:11px;color:var(--color-text-muted)">${esc(String(A.personnes))} personne(s) · palier : ${esc(A.palier)}</div></div>
+        <div><div style="${lbl2}">Équipe au planning</div><div style="font-family:var(--font-display);font-size:22px">${esc(A.heuresEquipe)}</div><div style="font-size:11px;color:var(--color-text-muted)">${esc(String(A.personnes))} personne(s)${esc(A.planningJusquau || '')} · palier : ${esc(A.palier)}</div></div>
       </div>
       <table style="border-collapse:collapse;width:100%;font-size:12.5px">
         <tr><th style="${th2};text-align:left">Palier</th><th style="${th2}">€ / heure</th><th style="${th2};text-align:left">Ce qu'il manque sur ${esc(String(A.joursRestants))} jours</th><th style="${th2}">Prime de l'équipe</th></tr>

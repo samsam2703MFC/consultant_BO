@@ -7086,6 +7086,7 @@ class App {
       projection: a.projection != null ? eur(a.projection) : '', atteinteProj: a.atteinteProj != null ? n1(a.atteinteProj) + ' %' : '',
       rythme: a.moySem != null ? eur(a.moySem) + ' les jours de semaine' + (a.moyWe != null ? ', ' + eur(a.moyWe) + ' le week-end' : '') : '',
       joursRestants: a.joursRestants, heuresEquipe: n1(a.heuresEquipe) + ' h', personnes: a.personnes,
+      planningJusquau: a.planningJusquau ? ' · planning saisi jusqu’au ' + a.planningJusquau.split('-').reverse().join('/') : '',
       palier: a.palier ? a.palier.pct + ' % · ' + n2(a.palier.eh) + ' €/h' : 'aucun palier au rythme actuel',
       paliers: (a.paliers || []).map(p => ({ pct: p.pct + ' %', lib: p.lib, atteint: p.atteint, eh: n2(p.eh) + ' €/h', equipe: eur(p.equipe),
         manque: p.atteint ? 'atteint au rythme actuel' : (p.manque != null ? eur(p.manque) + (p.parJour ? ' · ' + eur(p.parJour) + ' par jour' : '') : '') })),
