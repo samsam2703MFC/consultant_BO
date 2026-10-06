@@ -1,4 +1,4 @@
-{# primes/primes.twig — « Mes primes », deux onglets : Moi, Mon magasin (maquette B du 06/10/2026). #}
+{# primes/primes.twig — « Mes primes », deux onglets : Moi, Mon magasin (maquette B du 06/10/2026, visuel v2). #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'primes' %}
 {% block title %}{{ translations.my_bonuses ?? 'Mes primes' }}{% endblock %}
@@ -11,136 +11,238 @@
 <div class="pr-card"><div class="pr-h"><h2>{{ translations.my_bonuses ?? 'Mes primes' }}</h2></div>
   <div class="note">{{ translations.unavailable ?? 'Les primes ne peuvent pas être lues pour le moment. Réessayez dans un instant.' }}{% if primesErreur %}<br><span class="mu" style="font-size:11px">{{ translations.cockpit_said ?? 'Le cockpit a répondu :' }} {{ primesErreur }}</span>{% endif %}</div></div>
 {% else %}
-{% set b = p.briques %}{% set g = p.prime %}{% set c = b.croisees %}{% set r = b.record %}{% set v = b.meilleure %}
+{% set b = p.briques %}{% set g = p.prime %}{% set c = b.croisees %}{% set r = b.record %}{% set v = b.meilleure %}{% set k = b.concours ?? null %}
 {% set eur = '€' %}
-<div class="pr-tabs"><span class="{{ onglet == 'moi' ? 'on' }}" data-onglet="moi">{{ translations.me ?? 'Moi' }}</span><span class="{{ onglet == 'magasin' ? 'on' }}" data-onglet="magasin">{{ translations.my_shop ?? 'Mon magasin' }}</span></div>
+{% set T = translations %}
+<div class="pr-tabs"><span class="{{ onglet == 'moi' ? 'on' }}" data-onglet="moi">{{ T.me ?? 'Moi' }}</span><span class="{{ onglet == 'magasin' ? 'on' }}" data-onglet="magasin">{{ T.my_shop ?? 'Mon magasin' }}</span></div>
 
+{# ───────────────────────── MOI ───────────────────────── #}
 <section class="pr-onglet {{ onglet == 'moi' ? 'on' }}" data-panneau="moi">
+
+  {# Mon mois : l'anneau acquis / à portée #}
+  {% set part = p.aPortee > 0 ? min(1, p.acquis / p.aPortee) : 0 %}
+  <div class="pr-card rubis anneau-carte">
+    <div class="anneau" style="--p:{{ (part * 100)|round }}">
+      <svg viewBox="0 0 120 120"><circle class="fond" cx="60" cy="60" r="52"/><circle class="val" cx="60" cy="60" r="52" style="stroke-dasharray:{{ (part * 326.7)|round(1) }} 326.7"/></svg>
+      <div class="centre"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.earned ?? 'acquis' }}</small></div>
+    </div>
+    <div class="tx">
+      <div class="k">{{ T.my_month ?? 'Mon mois' }}{% if p.enCours %}, {{ T.as_of ?? 'au' }} {{ jour }}{% endif %}</div>
+      {% if p.enCours %}
+      <div class="gros2">{{ T.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
+      <div class="s">{{ T.earned_so_far ?? 'acquis si le mois finit comme ça' }} · {{ T.within_reach_steps ?? 'à portée, un cran de plus sur chaque prime' }}</div>
+      {% else %}
+      <div class="gros2">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
+      <div class="s">{{ T.month_closed ?? 'mois clos, payé en bons début du mois suivant' }}</div>
+      {% endif %}
+      <div class="s" style="margin-top:6px">{% if g.vous > 0 %}{{ T.including ?? 'dont' }} {{ g.vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.of_shop_bonus ?? 'de prime magasin' }}{% elseif p.enCours and g.paliers|length and g.paliers[0].vous is not null and not g.sousMin %}{{ T.shop_bonus ?? 'Prime magasin :' }} {{ g.paliers[0].vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.from_level ?? 'dès' }} {{ g.paliers[0].pct }}&nbsp;%{% if g.atteinteProj is not null %}, {{ g.atteinteProj|number_format(1, ',', ' ') }}&nbsp;% {{ T.at_current_pace ?? 'au rythme actuel' }}{% endif %}{% endif %}</div>
+      {% set gg = p.google ?? null %}
+      {% if gg and gg.actif and gg.note is not null %}<span class="puce google"><i class="bi bi-star-fill"></i> {{ T.google_coef ?? 'Note Google' }} {{ gg.note|number_format(1, ',', ' ') }} → × {{ gg.coef|number_format(2, ',', ' ') }}{% if gg.coef != 1 and p.acquisBrut is defined %} · {{ p.acquisBrut|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.before_coef ?? 'avant coefficient' }}{% endif %}</span>{% endif %}
+    </div>
+  </div>
+
+  {# Aujourd'hui #}
   {% if p.enCours %}
   {% set a = p.aujourdhui %}
   <div class="pr-card">
     {% if a %}
-    <div class="auj"><div class="cercle" style="--p:{{ a.tickets > 0 ? (100 * a.croisees / a.tickets)|round : 0 }}%"><b>{{ a.croisees }}</b><small>{{ translations.out_of ?? 'sur' }} {{ a.tickets }}</small></div>
-      <div class="tx"><div class="q">{{ a.croisees }} {{ translations.cross_sales_today ?? 'ventes croisées aujourd’hui' }}</div>
-        {% if a.tickets > 0 %}{{ a.taux|number_format(0, ',', ' ') }}&nbsp;% {{ translations.of_your_tickets_have ?? 'de vos tickets ont 2 articles ou plus.' }}{% else %}{{ translations.no_ticket_yet ?? 'Pas encore de ticket à votre nom aujourd’hui.' }}{% endif %}
-        {{ translations.shop_target ?? 'La cible du magasin :' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%.
-        <div class="mu" style="font-size:11.5px;margin-top:3px">{{ translations.read_at ?? 'lu à' }} {{ a.quand }} · « {{ translations.anything_else ?? 'Et avec ça ?' }} »</div></div></div>
+    <div class="auj"><div class="cercle" style="--p:{{ a.tickets > 0 ? (100 * a.croisees / a.tickets)|round : 0 }}%"><b>{{ a.croisees }}</b><small>{{ T.out_of ?? 'sur' }} {{ a.tickets }}</small></div>
+      <div class="tx"><div class="q">{{ a.croisees }} {{ T.cross_sales_today ?? 'ventes croisées aujourd’hui' }}</div>
+        {% if a.tickets > 0 %}{{ a.taux|number_format(0, ',', ' ') }}&nbsp;% {{ T.of_your_tickets_have ?? 'de vos tickets ont 2 articles ou plus.' }}{% else %}{{ T.no_ticket_yet ?? 'Pas encore de ticket à votre nom aujourd’hui.' }}{% endif %}
+        {{ T.shop_target ?? 'La cible du magasin :' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%.
+        <div class="mu" style="font-size:11.5px;margin-top:3px">{{ T.read_at ?? 'lu à' }} {{ a.quand }} · « {{ T.anything_else ?? 'Et avec ça ?' }} »</div></div></div>
     {% else %}
-    <div class="note">{{ translations.today_unavailable ?? 'Le compteur du jour n’a pas pu être lu.' }}</div>
+    <div class="note">{{ T.today_unavailable ?? 'Le compteur du jour n’a pas pu être lu.' }}</div>
     {% endif %}
   </div>
   {% endif %}
 
-  <div class="pr-card rubis"><div class="k">{{ translations.my_month ?? 'Mon mois' }}{% if p.enCours %}, {{ translations.as_of ?? 'au' }} {{ jour }}{% endif %}</div>
-    <div class="gros">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ p.enCours ? (translations.earned_so_far ?? 'acquis si le mois finit comme ça') : (translations.earned ?? 'acquis') }}</small></div>
-    <div style="font-size:12.5px">
-      {% if g.vous > 0 %}{{ translations.including ?? 'dont' }} {{ g.vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.of_shop_bonus ?? 'de prime magasin' }}{% elseif g.paliers|length and g.paliers[0].vous is not null and not g.sousMin %}{{ translations.shop_bonus ?? 'Prime magasin :' }} {{ g.paliers[0].vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.from_level ?? 'dès' }} {{ g.paliers[0].pct }}&nbsp;% {{ translations.of_target ?? 'de l’objectif' }}{% if g.atteinteProj is not null %}, {{ g.atteinteProj|number_format(1, ',', ' ') }}&nbsp;% {{ translations.at_current_pace ?? 'au rythme actuel' }}{% endif %}{% endif %}
-      {% if p.enCours %} · {{ translations.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.within_reach ?? 'à portée' }}{% endif %}
-    </div></div>
+  {# Les primes et les étapes pour les gagner #}
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.steps_title ?? 'Les étapes pour gagner' }}</h2><small>{{ v.tickets }} {{ T.tickets ?? 'tickets' }} · {{ p.heures.faites|number_format(1, ',', ' ') }}&nbsp;h</small></div>
 
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.my_three_bonuses ?? 'Mes trois primes' }}</h2><small>{{ v.tickets }} {{ translations.tickets ?? 'tickets' }} · {{ p.heures.faites|number_format(1, ',', ' ') }}&nbsp;h</small></div>
-
-    <div class="brique"><div class="t"><b>{{ translations.cross_sales ?? 'Ventes croisées' }}</b>
-      {% if c.montant > 0 %}<span class="puce ok">{{ c.montant }}&nbsp;{{ eur }} {{ translations.earned ?? 'acquis' }}</span>{% elseif c.taux is null %}<span class="puce mu">{{ translations.not_counted_yet ?? 'pas encore comptées' }}</span>{% else %}<span class="puce att">{{ translations.below_target ?? 'sous la cible' }}</span>{% endif %}</div>
+    {# 1 · Ventes croisées #}
+    <div class="brique"><div class="t"><b><i class="bi bi-bag-plus"></i> {{ T.cross_sales ?? 'Ventes croisées' }}</b>
+      {% if c.montant > 0 %}<span class="puce ok">{{ c.montant }}&nbsp;{{ eur }} {{ T.earned ?? 'acquis' }}</span>{% elseif c.taux is null %}<span class="puce mu">{{ T.not_counted_yet ?? 'pas encore comptées' }}</span>{% else %}<span class="puce att">{{ T.below_target ?? 'sous la cible' }}</span>{% endif %}</div>
       {% if c.taux is not null %}
-      <div class="n">{{ c.croisees }}<small>{{ translations.tickets_with_2 ?? 'tickets à 2 articles ou plus, sur' }} {{ c.tickets }}</small></div>
-      {% set maxC = max(70, c.taux + 10, c.cible + 15) %}
-      <div class="barre avec-cible"><i class="{{ c.montant > 0 ? 'ok' : 'att' }}" style="width:{{ (100 * c.taux / maxC)|round }}%"></i><span class="cible" data-l="{{ translations.target ?? 'cible' }} {{ c.cible|number_format(0, ',', ' ') }} %" style="left:{{ (100 * c.cible / maxC)|round }}%"></span></div>
-      <div class="s"><b>{{ c.taux|number_format(0, ',', ' ') }}&nbsp;%</b> {{ translations.of_your_tickets ?? 'de vos tickets' }}{% if c.jours %} ({{ c.jours }} {{ translations.days_counted ?? 'jours comptés' }}){% endif %}.
-        {% if c.prochain %} {{ translations.next_level ?? 'Prochain palier :' }} <b>{{ c.prochain.taux|number_format(0, ',', ' ') }}&nbsp;%</b> = {{ c.prochain.montant }}&nbsp;{{ eur }}{% if c.prochain.manque is defined and c.prochain.manque > 0 %}, {{ translations.ie ?? 'soit' }} {{ c.prochain.manque }} {{ translations.more_cross_sales ?? 'ventes croisées de plus sur les mêmes tickets' }}{% endif %}.{% endif %}
-        {% if c.tickets < c.minTickets %} {{ c.minTickets }} {{ translations.min_tickets ?? 'tickets au moins dans le mois.' }}{% endif %}</div>
-      {% else %}<div class="s">{{ c.motif ?? (translations.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.') }}</div>{% endif %}
+      <div class="n">{{ c.croisees }}<small>{{ T.tickets_with_2 ?? 'tickets à 2 articles ou plus, sur' }} {{ c.tickets }} · <b>{{ c.taux|number_format(0, ',', ' ') }}&nbsp;%</b></small></div>
+      <div class="etapes">
+        {% for pal in c.paliers %}{% set seuil = c.cible + pal.plus %}{% set fait = c.tickets >= c.minTickets and c.taux + 0.0001 >= seuil %}{% set ici = not fait and (loop.first or (c.taux + 0.0001 >= c.cible + c.paliers[loop.index0 - 1].plus)) %}
+        <div class="et {{ fait ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ seuil|number_format(0, ',', ' ') }}&nbsp;%</span><span class="v">{{ pal.m }}&nbsp;{{ eur }}</span></div>{% endfor %}
+      </div>
+      <div class="s">{{ T.you ?? 'vous' }} : <b>{{ c.taux|number_format(0, ',', ' ') }}&nbsp;%</b>{% if c.prochain %} · {{ T.next_level ?? 'prochain palier :' }} {{ c.prochain.taux|number_format(0, ',', ' ') }}&nbsp;% = {{ c.prochain.montant }}&nbsp;{{ eur }}{% if c.prochain.manque is defined and c.prochain.manque > 0 %}, {{ T.ie ?? 'soit' }} {{ c.prochain.manque }} {{ T.more_cross_sales ?? 'ventes croisées de plus sur les mêmes tickets' }}{% endif %}{% endif %}{% if c.tickets < c.minTickets %} · {{ c.minTickets }} {{ T.min_tickets ?? 'tickets au moins dans le mois.' }}{% endif %}</div>
+      {% else %}<div class="s">{{ c.motif ?? (T.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.') }}</div>{% endif %}
     </div>
 
-    <div class="brique"><div class="t"><b>{{ translations.beat_your_record ?? 'Bats ton record' }}</b>
-      {% if r.montant > 0 %}<span class="puce ok">{{ r.montant }}&nbsp;{{ eur }} {{ translations.earned ?? 'acquis' }}</span>{% elseif r.lt is null %}<span class="puce mu">{{ translations.not_counted_yet ?? 'pas encore comptées' }}</span>{% elseif r.record is null %}<span class="puce mu">{{ translations.no_record_yet ?? 'pas encore de record' }}</span>{% elseif r.ecart >= 0 %}<span class="puce ok">{{ translations.new_record ?? 'nouveau record' }}</span>{% else %}<span class="puce att">{{ translations.at ?? 'à' }} {{ (0 - r.ecart)|number_format(2, ',', ' ') }} {{ translations.from_record ?? 'du record' }}</span>{% endif %}</div>
+    {# 2 · Bats ton record #}
+    <div class="brique"><div class="t"><b><i class="bi bi-graph-up-arrow"></i> {{ T.beat_your_record ?? 'Bats ton record' }}</b>
+      {% if r.montant > 0 %}<span class="puce ok">{{ r.montant }}&nbsp;{{ eur }} {{ T.earned ?? 'acquis' }}</span>{% elseif r.lt is null %}<span class="puce mu">{{ T.not_counted_yet ?? 'pas encore comptées' }}</span>{% elseif r.record is null %}<span class="puce mu">{{ T.no_record_yet ?? 'pas encore de record' }}</span>{% elseif r.ecart >= 0 %}<span class="puce ok">{{ T.new_record ?? 'nouveau record' }}</span>{% else %}<span class="puce att">{{ T.at ?? 'à' }} {{ (0 - r.ecart)|number_format(2, ',', ' ') }} {{ T.from_record ?? 'du record' }}</span>{% endif %}</div>
       {% if r.lt is not null %}
-      <div class="n">{{ r.lt|number_format(2, ',', ' ') }}<small>{{ translations.lines_per_ticket ?? 'lignes par ticket' }}{% if r.record is not null %} · {{ translations.record ?? 'record' }} {{ r.record|number_format(1, ',', ' ') }}{% if r.recordMois %} ({{ r.recordMois }}){% endif %}{% endif %}</small></div>
-      {% set maxR = max(3.2, r.lt + 0.4, (r.record ?? 0) + 0.4) %}
-      <div class="barre avec-cible"><i class="{{ r.montant > 0 ? 'ok' : '' }}" style="width:{{ (100 * r.lt / maxR)|round }}%"></i>{% if r.record is not null %}<span class="cible" data-l="{{ translations.record ?? 'record' }} {{ r.record|number_format(1, ',', ' ') }}" style="left:{{ (100 * r.record / maxR)|round }}%"></span>{% endif %}</div>
-      <div class="s">{{ translations.record_rule ?? 'Le premier dixième au-dessus pose le record, puis' }} <b>{{ translations.each_tenth ?? 'chaque dixième =' }} {{ r.eurDixieme }}&nbsp;{{ eur }}</b> ({{ r.maxDixiemes }} {{ translations.at_most ?? 'au plus' }}).{% if r.record is not null %} {{ translations.at_value ?? 'À' }} {{ (r.record + 0.2)|number_format(1, ',', ' ') }} : {{ r.eurDixieme }}&nbsp;{{ eur }} · {{ translations.at ?? 'à' }} {{ (r.record + 0.3)|number_format(1, ',', ' ') }} : {{ 2 * r.eurDixieme }}&nbsp;{{ eur }}.{% endif %}</div>
-      {% else %}<div class="s">{{ translations.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.' }}</div>{% endif %}
+      <div class="n">{{ r.lt|number_format(2, ',', ' ') }}<small>{{ T.lines_per_ticket ?? 'lignes par ticket' }}{% if r.record is not null %} · {{ T.record ?? 'record' }} {{ r.record|number_format(1, ',', ' ') }}{% if r.recordMois %} ({{ r.recordMois }}){% endif %}{% endif %}</small></div>
+      {% if r.record is not null %}
+      <div class="etapes">
+        <div class="et {{ r.lt + 0.0001 >= r.record + 0.1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ (r.record + 0.1)|number_format(1, ',', ' ') }}</span><span class="v">{{ T.new_record_short ?? 'record' }}</span></div>
+        {% for tr in 1..max(1, r.maxDixiemes) %}{% set seuil = r.record + 0.1 * (tr + 1) %}{% set fait = r.lt + 0.0001 >= seuil %}{% set ici = not fait and r.lt + 0.0001 >= seuil - 0.1 %}
+        <div class="et {{ fait ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ seuil|number_format(1, ',', ' ') }}</span><span class="v">{{ tr * r.eurDixieme }}&nbsp;{{ eur }}</span></div>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="s">{{ T.record_rule ?? 'Le premier dixième au-dessus pose le record, puis' }} <b>{{ T.each_tenth ?? 'chaque dixième =' }} {{ r.eurDixieme }}&nbsp;{{ eur }}</b> ({{ r.maxDixiemes }} {{ T.at_most ?? 'au plus' }}).</div>
+      {% else %}<div class="s">{{ T.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.' }}</div>{% endif %}
     </div>
 
-    <div class="brique"><div class="t"><b>{{ translations.best_seller ?? 'Meilleure vendeuse' }}</b>
-      {% if v.montant > 0 %}<span class="puce ok">{{ v.montant }}&nbsp;{{ eur }} · {{ v.rangRes == 1 ? (translations.first_network ?? '1re du réseau') : (translations.first_shop ?? '1re du magasin') }}</span>{% elseif v.rangMag %}<span class="puce mu">{{ v.rangMag }}e {{ translations.of_shop ?? 'du magasin' }}</span>{% else %}<span class="puce mu">{{ translations.not_ranked ?? 'pas classée' }}</span>{% endif %}</div>
+    {# 3 · Meilleure vendeuse #}
+    <div class="brique"><div class="t"><b><i class="bi bi-trophy"></i> {{ T.best_seller ?? 'Meilleure vendeuse' }}</b>
+      {% if v.montant > 0 %}<span class="puce ok">{{ v.montant }}&nbsp;{{ eur }} · {{ v.rangRes == 1 ? (T.first_network ?? '1re du réseau') : (T.first_shop ?? '1re du magasin') }}</span>{% elseif v.rangMag %}<span class="puce mu">{{ v.rangMag }}e {{ T.of_shop ?? 'du magasin' }}</span>{% else %}<span class="puce mu">{{ T.not_ranked ?? 'pas classée' }}</span>{% endif %}</div>
       {% if v.score is not null %}
-      <div class="n">{{ v.score }}<small>{{ translations.score ?? 'score' }}{% if v.rangRes %} · {{ v.rangRes }}e {{ translations.of_network ?? 'du réseau' }} {{ translations.out_of ?? 'sur' }} {{ v.surRes }}{% endif %}</small></div>
-      {% set maxS = max(1, (v.scorePremier ?? v.score) * 1.15) %}
-      <div class="barre avec-cible"><i style="width:{{ (100 * v.score / maxS)|round }}%"></i>{% if v.scorePremier and v.rangMag != 1 %}<span class="cible" data-l="{{ translations.first_at ?? '1re à' }} {{ v.scorePremier }}" style="left:{{ (100 * v.scorePremier / maxS)|round }}%"></span>{% endif %}</div>
-      <div class="s">{{ translations.score_rule ?? 'Vos ventes ramenées à vos heures' }} ({{ (v.caHeure ?? 0)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h {{ translations.over ?? 'sur' }} {{ v.heures|number_format(1, ',', ' ') }}&nbsp;h), {{ translations.slot_adjusted ?? 'corrigées du créneau' }}. {{ translations.first_shop ?? '1re du magasin' }} : <b>{{ v.montantMag }}&nbsp;{{ eur }}</b> · {{ translations.first_network ?? '1re du réseau' }} : <b>{{ v.montantRes }}&nbsp;{{ eur }}</b>.</div>
-      {% else %}<div class="s">{{ v.motif ?? (translations.not_ranked_reason ?? 'Sans vente ou sans heure au planning ce mois-ci : pas de classement.') }}</div>{% endif %}
+      <div class="n">{{ v.score }}<small>{{ T.score ?? 'score' }}{% if v.rangRes %} · {{ v.rangRes }}e {{ T.of_network ?? 'du réseau' }} {{ T.out_of ?? 'sur' }} {{ v.surRes }}{% endif %}</small></div>
+      <div class="etapes deux">
+        <div class="et {{ v.rangMag == 1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ T.first_shop ?? '1re du magasin' }}{% if v.scorePremier and v.rangMag != 1 %} · {{ T.first_at ?? '1re à' }} {{ v.scorePremier }}{% endif %}</span><span class="v">{{ v.montantMag }}&nbsp;{{ eur }}</span></div>
+        <div class="et {{ v.rangRes == 1 ? 'ok' : (v.rangMag == 1 ? 'ici' : '') }}"><i></i><span class="l">{{ T.first_network ?? '1re du réseau' }}</span><span class="v">{{ v.montantRes }}&nbsp;{{ eur }}</span></div>
+      </div>
+      <div class="s">{{ T.score_rule ?? 'Vos ventes ramenées à vos heures' }} ({{ (v.caHeure ?? 0)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h {{ T.over ?? 'sur' }} {{ v.heures|number_format(1, ',', ' ') }}&nbsp;h), {{ T.slot_adjusted ?? 'corrigées du créneau' }}.</div>
+      {% else %}<div class="s">{{ v.motif ?? (T.not_ranked_reason ?? 'Sans vente ou sans heure au planning ce mois-ci : pas de classement.') }}</div>{% endif %}
     </div>
+
+    {# 4 · Le concours #}
+    {% if k and k.actif %}
+    <div class="brique"><div class="t"><b><i class="bi bi-award"></i> {{ T.contest ?? 'Concours' }} · {{ k.lib }}</b>
+      {% if k.montant > 0 %}<span class="puce ok">{{ k.montant }}&nbsp;{{ eur }} · {{ k.rangRes == 1 ? (T.first_network ?? '1re du réseau') : (T.first_shop ?? '1re du magasin') }}</span>{% elseif k.pieces is null %}<span class="puce mu">{{ T.not_counted_yet ?? 'pas encore comptées' }}</span>{% elseif k.rangMag %}<span class="puce mu">{{ k.rangMag }}e {{ T.of_shop ?? 'du magasin' }}</span>{% else %}<span class="puce mu">{{ k.minPieces }} {{ T.pieces_min ?? 'pièces au moins' }}</span>{% endif %}</div>
+      {% if k.pieces is not null %}
+      <div class="n">{{ k.pieces|number_format(0, ',', ' ') }}<small>{{ T.pieces_sold ?? 'pièces vendues' }}{% if k.par100 is not null %} · {{ k.par100|number_format(1, ',', ' ') }} {{ T.per_100_tickets ?? 'pour 100 tickets' }}{% endif %}{% if k.jours %} · {{ k.jours }} {{ T.days_counted ?? 'jours comptés' }}{% endif %}</small></div>
+      <div class="etapes deux">
+        <div class="et {{ k.rangMag == 1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ T.first_shop ?? '1re du magasin' }}{% if k.premierMag and k.rangMag != 1 %} · {{ T.first_at ?? '1re à' }} {{ k.premierMag|number_format(0, ',', ' ') }}{% endif %}</span><span class="v">{{ k.montantMag }}&nbsp;{{ eur }}</span></div>
+        <div class="et {{ k.rangRes == 1 ? 'ok' : (k.rangMag == 1 ? 'ici' : '') }}"><i></i><span class="l">{{ T.first_network ?? '1re du réseau' }}{% if k.premierRes and k.rangRes != 1 %} · {{ k.premierRes|number_format(0, ',', ' ') }}{% endif %}</span><span class="v">{{ k.montantRes }}&nbsp;{{ eur }}</span></div>
+      </div>
+      <div class="s">{{ T.contest_rule ?? 'Le nombre de pièces vendues dans le mois. À égalité, moins de tickets gagne.' }}{% if k.rangRes %} {{ T.you ?? 'vous' }} : {{ k.rangRes }}e {{ T.of_network ?? 'du réseau' }} {{ T.out_of ?? 'sur' }} {{ k.surRes }}.{% endif %}</div>
+      {% else %}<div class="s">{{ k.motif ?? (T.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.') }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    {# 5 · La prime magasin, pour vous #}
+    {% if g.objectif is not null %}
+    <div class="brique"><div class="t"><b><i class="bi bi-shop"></i> {{ T.shop_bonus_title ?? 'Prime magasin' }}</b>
+      {% if g.vous > 0 %}<span class="puce ok">{{ g.vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ g.clos ? (T.earned ?? 'acquis') : (T.at_pace ?? 'au rythme actuel') }}</span>{% elseif g.sousMin %}<span class="puce mu">{{ T.below ?? 'Sous' }} {{ g.heuresMin }}&nbsp;h</span>{% else %}<span class="puce att">{{ (g.atteinteProj ?? g.atteinte ?? 0)|number_format(1, ',', ' ') }}&nbsp;%</span>{% endif %}</div>
+      <div class="n">{{ (g.atteinteProj ?? g.atteinte ?? 0)|number_format(1, ',', ' ') }}&nbsp;%<small>{{ g.clos ? (T.reached ?? 'atteint') : (T.at_current_pace ?? 'au rythme actuel') }} · {{ p.heures.mois|number_format(0, ',', ' ') }}&nbsp;h {{ T.planned ?? 'au planning' }}</small></div>
+      <div class="etapes">
+        {% for x in g.paliers %}{% set ici = not x.atteint and (loop.first or g.paliers[loop.index0 - 1].atteint) %}
+        <div class="et {{ x.atteint ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ x.pct }}&nbsp;%</span><span class="v">{{ (x.vous ?? 0)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% endfor %}
+      </div>
+      <div class="s">{{ T.shop_bonus_rule ?? 'Le palier atteint fin de mois donne tant d’euros par heure prestée.' }} {{ T.see_shop_tab ?? 'Le détail, dans Mon magasin.' }}</div>
+    </div>
+    {% endif %}
   </div>
 
+  {# Les 12 dernières semaines, avec la place dans le réseau #}
+  {% set s12 = p.semaines12 ?? [] %}
+  {% if s12|length %}
+  {% set tauxVals = s12|filter(w => w.taux is not null)|map(w => w.taux) %}
+  {% set caHVals = s12|filter(w => w.caHeure is not null)|map(w => w.caHeure) %}
+  {% set maxT = max(60, max(tauxVals|merge([0]))) %}
+  {% set maxH = max(1, max(caHVals|merge([0]))) %}
+  {% set n = s12|length %}{% set pas = 348 / n %}
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.twelve_weeks ?? 'Les 12 dernières semaines' }}</h2><small>{{ T.twelve_sub ?? 'ventes croisées, place, CA par heure' }}</small></div>
+    <svg class="g12" viewBox="0 0 360 170" preserveAspectRatio="none">
+      <line x1="6" x2="354" y1="{{ (118 - 100 * c.cible / maxT)|round(1) }}" y2="{{ (118 - 100 * c.cible / maxT)|round(1) }}" class="cible"/>
+      {% for w in s12 %}{% set x = 6 + loop.index0 * pas %}
+        {% if w.taux is not null %}<rect class="col {{ loop.last ? 'on' }}" x="{{ (x + 3)|round(1) }}" y="{{ (118 - 100 * w.taux / maxT)|round(1) }}" width="{{ (pas - 6)|round(1) }}" height="{{ (100 * w.taux / maxT)|round(1) }}" rx="3"/>
+        <text class="val" x="{{ (x + pas / 2)|round(1) }}" y="{{ (113 - 100 * w.taux / maxT)|round(1) }}" text-anchor="middle">{{ w.taux|round }}</text>
+        {% if w.rang %}<text class="rang" x="{{ (x + pas / 2)|round(1) }}" y="132" text-anchor="middle">{{ w.rang }}e</text>{% endif %}
+        {% else %}<rect class="col vide" x="{{ (x + 3)|round(1) }}" y="115" width="{{ (pas - 6)|round(1) }}" height="3" rx="1.5"/>{% endif %}
+        <text class="sem" x="{{ (x + pas / 2)|round(1) }}" y="146" text-anchor="middle">{{ w.lib }}</text>
+        {% if w.pieces is not null and w.pieces > 0 %}<text class="pieces" x="{{ (x + pas / 2)|round(1) }}" y="162" text-anchor="middle">{{ w.pieces|round }}{% if w.rangPieces %}<tspan class="rang2"> {{ w.rangPieces }}e</tspan>{% endif %}</text>{% endif %}
+      {% endfor %}
+      {% if caHVals|length > 1 %}
+      <polyline class="cah" points="{% for w in s12 %}{% if w.caHeure is not null %}{{ (6 + loop.index0 * pas + pas / 2)|round(1) }},{{ (118 - 74 * w.caHeure / maxH)|round(1) }} {% endif %}{% endfor %}"/>
+      {% for w in s12 %}{% if w.caHeure is not null %}<circle class="cah" cx="{{ (6 + loop.index0 * pas + pas / 2)|round(1) }}" cy="{{ (118 - 74 * w.caHeure / maxH)|round(1) }}" r="2.6"/>{% if loop.last %}<text class="cahv" x="{{ (6 + loop.index0 * pas + pas / 2)|round(1) }}" y="{{ (112 - 74 * w.caHeure / maxH)|round(1) }}" text-anchor="end">{{ w.caHeure }}&nbsp;€/h</text>{% endif %}{% endif %}{% endfor %}
+      {% endif %}
+    </svg>
+    <div class="legende"><span><i class="b"></i>{{ T.cross_rate ?? 'ventes croisées, % de vos tickets' }}</span><span><i class="r"></i>{{ T.rank_network ?? 'votre place dans le réseau' }}</span>{% if caHVals|length > 1 %}<span><i class="h"></i>{{ T.sales_per_hour ?? 'CA par heure' }}</span>{% endif %}{% if k and k.actif %}<span><i class="p"></i>{{ k.lib }} : {{ T.pieces_and_rank ?? 'pièces et place' }}</span>{% endif %}</div>
+    <div class="note">{{ T.twelve_note ?? 'La place : parmi les vendeuses du réseau avec dix tickets au moins la semaine. Le trait : la cible du magasin.' }}</div>
+  </div>
+  {% endif %}
+
+  {# Mes ventes, mois par mois #}
   {% set vx = (p.ventes ?? [])|filter(v => v.caHeure is defined and v.caHeure is not null) %}
   {% if (p.ventes ?? [])|length %}
-  {% set maxH = max(1, max(vx|map(v => v.caHeure)|merge([0])), max(vx|map(v => v.medianeCaH ?? 0)|merge([0]))) * 1.15 %}
+  {% set maxHM = max(1, max(vx|map(v => v.caHeure)|merge([0])), max(vx|map(v => v.medianeCaH ?? 0)|merge([0]))) * 1.15 %}
   {% set derMed = null %}{% for v in p.ventes %}{% if derMed is null and not v.enCours and v.medianeCaH is defined and v.medianeCaH %}{% set derMed = v.medianeCaH %}{% endif %}{% endfor %}
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ translations.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
-    <div class="sem">{% if derMed %}<span class="cible" style="bottom:{{ (100 * derMed / maxH)|round }}%"></span>{% endif %}{% for v in p.ventes|reverse %}{% if v.caHeure is defined and v.caHeure is not null %}<i class="{{ v.enCours ? 'on' }}" style="height:{{ max(4, (100 * v.caHeure / maxH)|round) }}%"><b>{{ v.caHeure }}</b></i>{% else %}<i class="vide" style="height:3px"></i>{% endif %}{% endfor %}</div>
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ T.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
+    <div class="sem">{% if derMed %}<span class="cible" style="bottom:{{ (100 * derMed / maxHM)|round }}%"></span>{% endif %}{% for v in p.ventes|reverse %}{% if v.caHeure is defined and v.caHeure is not null %}<i class="{{ v.enCours ? 'on' }}" style="height:{{ max(4, (100 * v.caHeure / maxHM)|round) }}%"><b>{{ v.caHeure }}</b></i>{% else %}<i class="vide" style="height:3px"></i>{% endif %}{% endfor %}</div>
     <div class="sem-leg">{% for v in p.ventes|reverse %}<span>{{ v.lib|split(' ')|first|slice(0, 4) }}</span>{% endfor %}</div>
-    <table class="pr-tab"><thead><tr><th>{{ translations.month ?? 'Mois' }}</th><th>{{ translations.sales ?? 'CA' }}</th><th>{{ translations.tickets_short ?? 'Tickets' }}</th><th>{{ translations.hours ?? 'Heures' }}</th><th>€/h</th><th>{{ translations.network ?? 'Réseau' }}</th></tr></thead><tbody>
-      {% for v in p.ventes %}<tr class="{{ v.enCours ? 'enc' }}"><td>{{ v.lib|split(' ')|first|capitalize }}{% if v.enCours %} <small>{{ translations.in_progress ?? 'en cours' }}</small>{% endif %}</td>
+    <table class="pr-tab"><thead><tr><th>{{ T.month ?? 'Mois' }}</th><th>{{ T.sales ?? 'CA' }}</th><th>{{ T.tickets_short ?? 'Tickets' }}</th><th>{{ T.hours ?? 'Heures' }}</th><th>€/h</th><th>{{ T.network ?? 'Réseau' }}</th></tr></thead><tbody>
+      {% for v in p.ventes %}<tr class="{{ v.enCours ? 'enc' }}"><td>{{ v.lib|split(' ')|first|capitalize }}{% if v.enCours %} <small>{{ T.in_progress ?? 'en cours' }}</small>{% endif %}</td>
         {% if v.motif is defined %}<td colspan="5" class="mu">{{ v.motif }}</td>{% else %}
         <td>{{ v.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</td><td>{{ v.tickets|number_format(0, ',', ' ') }}</td><td>{{ v.heures|number_format(1, ',', ' ') }}</td>
         <td><b>{% if v.caHeure is not null %}{{ v.caHeure }}{% else %}—{% endif %}</b></td>
         <td>{% if v.rangCaH %}{{ v.rangCaH }}e <small>/ {{ v.surCaH }}</small>{% else %}—{% endif %}</td>{% endif %}</tr>{% endfor %}
     </tbody></table>
-    <div class="note">{{ translations.sales_note ?? '€/h : vos ventes divisées par vos heures du planning, ce mois-ci par les heures déjà prestées. Réseau : votre place au CA par heure parmi les vendeuses classées.' }}{% if derMed %} {{ translations.network_median ?? 'Médiane du réseau le mois dernier :' }} {{ derMed }}&nbsp;{{ eur }}/h, {{ translations.the_line ?? 'le trait' }}.{% endif %}</div></div>
+    <div class="note">{{ T.sales_note ?? '€/h : vos ventes divisées par vos heures du planning, ce mois-ci par les heures déjà prestées. Réseau : votre place au CA par heure parmi les vendeuses classées.' }}{% if derMed %} {{ T.network_median ?? 'Médiane du réseau le mois dernier :' }} {{ derMed }}&nbsp;{{ eur }}/h, {{ T.the_line ?? 'le trait' }}.{% endif %}</div></div>
   {% endif %}
 
-  {% set vals = p.semaines|filter(s => s.taux is not null)|map(s => s.taux) %}
-  {% if vals|length %}
-  {% set lo = max(0, min(min(vals), c.cible) - 5) %}{% set hi = max(max(vals), c.cible) + 5 %}
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.week_by_week ?? 'Semaine par semaine' }}</h2><small>{{ translations.cross_sales ?? 'Ventes croisées' }}</small></div>
-    <div class="sem"><span class="cible" style="bottom:{{ (100 * (c.cible - lo) / (hi - lo))|round }}%"></span>{% for s in p.semaines %}{% if s.taux is not null %}<i class="{{ loop.last ? 'on' }}" style="height:{{ max(4, (100 * (s.taux - lo) / (hi - lo))|round) }}%"><b>{{ s.taux|number_format(0, ',', ' ') }}</b></i>{% else %}<i class="vide" style="height:3px"></i>{% endif %}{% endfor %}</div>
-    <div class="sem-leg">{% for s in p.semaines %}<span>{{ s.lib }}</span>{% endfor %}</div>
-    <div class="note">{{ translations.weeks_note ?? 'Vos ventes croisées, semaine par semaine, en % de vos tickets. Le trait : la cible du magasin,' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%.</div></div>
-  {% endif %}
+  {# Mes mois #}
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.my_months ?? 'Mes mois' }}</h2><small>{{ T.paid_in_vouchers ?? 'payés en bons' }}</small></div>
+    <div class="hist">{% for x in p.mois %}<div class="ligne"><span class="m">{{ x.lib|split(' ')|first|capitalize }}</span><span class="det">{{ x.detail|join(' · ') }}{% if x.paye %} · <b class="ok">{{ T.paid ?? 'payée' }}</b>{% endif %}</span><span class="tot{{ x.total ? '' : ' zero' }}">{{ x.total|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% else %}<div class="note">{{ T.no_month_yet ?? 'Pas encore de mois clos.' }}</div>{% endfor %}</div></div>
 
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.my_months ?? 'Mes mois' }}</h2><small>{{ translations.paid_in_vouchers ?? 'payés en bons' }}</small></div>
-    <div class="hist">{% for x in p.mois %}<div class="ligne"><span class="m">{{ x.lib|split(' ')|first|capitalize }}</span><span class="det">{{ x.detail|join(' · ') }}{% if x.paye %} · <b class="ok">{{ translations.paid ?? 'payée' }}</b>{% endif %}</span><span class="tot{{ x.total ? '' : ' zero' }}">{{ x.total|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% else %}<div class="note">{{ translations.no_month_yet ?? 'Pas encore de mois clos.' }}</div>{% endfor %}</div></div>
-
-  <div class="pr-card doux"><div class="note">{{ translations.rules ?? 'Tout se calcule sur le mois complet et se paie début du mois suivant, en bons payés par la marque. Les ventes sont celles encaissées à votre nom ; les heures, celles du planning. Le calcul est le même pour toutes : s’il vous semble faux, dites-le, on vérifie.' }}</div></div>
+  <div class="pr-card doux"><div class="note">{{ T.rules ?? 'Tout se calcule sur le mois complet et se paie début du mois suivant, en bons payés par la marque. Les ventes sont celles encaissées à votre nom ; les heures, celles du planning. Le calcul est le même pour toutes : s’il vous semble faux, dites-le, on vérifie.' }}</div></div>
 </section>
 
+{# ───────────────────────── MON MAGASIN ───────────────────────── #}
 <section class="pr-onglet {{ onglet == 'magasin' ? 'on' }}" data-panneau="magasin">
   {% set nbJours = (p.m ~ '-01')|date('t') %}
-  <div class="pr-card rubis"><div class="k">{{ p.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ translations.target_of ?? 'objectif de' }} {{ p.lib|split(' ')|first }}</div>
+  <div class="pr-card rubis demi-carte"><div class="k">{{ p.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ T.target_of ?? 'objectif de' }} {{ p.lib|split(' ')|first }}</div>
     {% if g.objectif is null %}
-    <div class="gros">—</div><div style="font-size:12.5px">{{ translations.no_target ?? 'Pas d’objectif encodé pour ce mois.' }}</div>
+    <div class="gros">—</div><div style="font-size:12.5px">{{ T.no_target ?? 'Pas d’objectif encodé pour ce mois.' }}</div>
     {% else %}
     {% set att = g.atteinteProj ?? g.atteinte %}
-    <div class="gros">{{ att|number_format(1, ',', ' ') }}&nbsp;%<small>{{ (g.clos or g.atteinteProj is null) ? (translations.reached ?? 'atteint') : (translations.at_current_pace ?? 'au rythme actuel') }}</small></div>
-    <div style="font-size:12.5px">{{ g.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.cashed_on ?? 'encaissés sur' }} {{ g.objectif|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if g.projection is not null and not g.clos %} · {{ translations.month_would_end ?? 'le mois finirait à' }} {{ g.projection|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</div>
-    <div class="barre avec-cible"><i style="width:{{ min(100, (100 * (g.projection ?? g.ca) / (g.objectif * 1.1))|round) }}%"></i><span class="cible" data-l="100 %" style="left:{{ (100 / 1.1)|round }}%"></span></div>
-    {% endif %}</div>
+    {% set echelle = 115 %}
+    {% set fait = min(1, (g.atteinte ?? 0) / echelle) %}{% set proj = min(1, (att ?? 0) / echelle) %}
+    <div class="demi">
+      <svg viewBox="-14 0 228 112">
+        <path class="fond" d="M14 100 A86 86 0 0 1 186 100"/>
+        <path class="proj" d="M14 100 A86 86 0 0 1 186 100" style="stroke-dasharray:{{ (proj * 270.2)|round(1) }} 270.2"/>
+        <path class="fait" d="M14 100 A86 86 0 0 1 186 100" style="stroke-dasharray:{{ (fait * 270.2)|round(1) }} 270.2"/>
+        {% set np = g.paliers|length %}{% set pasL = np > 1 ? min(14, 42 / (np - 1)) : 0 %}
+        {% for x in g.paliers %}{% set ang = 3.14159 * (1 - x.pct / echelle) %}{% set yl = 90 - (np - loop.index) * pasL %}
+        <line class="tick {{ x.atteint ? 'ok' }}" x1="{{ (100 + 76 * cos(ang))|round(1) }}" y1="{{ (100 - 76 * sin(ang))|round(1) }}" x2="{{ (100 + 97 * cos(ang))|round(1) }}" y2="{{ (100 - 97 * sin(ang))|round(1) }}"/>
+        <line class="fil" x1="{{ (100 + 97 * cos(ang))|round(1) }}" y1="{{ (100 - 97 * sin(ang))|round(1) }}" x2="196" y2="{{ yl|round(1) }}"/>
+        <text class="tl" x="199" y="{{ (yl + 3)|round(1) }}" text-anchor="start">{{ x.pct }}</text>{% endfor %}
+        <text class="big" x="100" y="92" text-anchor="middle">{{ att|number_format(1, ',', ' ') }} %</text>
+        <text class="sub" x="100" y="108" text-anchor="middle">{{ (g.clos or g.atteinteProj is null) ? (T.reached ?? 'atteint') : (T.at_current_pace ?? 'au rythme actuel') }}</text>
+      </svg>
+    </div>
+    <div style="font-size:12.5px;text-align:center">{{ g.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.cashed_on ?? 'encaissés sur' }} {{ g.objectif|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if g.projection is not null and not g.clos %} · {{ T.month_would_end ?? 'le mois finirait à' }} {{ g.projection|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</div>
+    <div class="legende blanc"><span><i class="f"></i>{{ T.cashed ?? 'encaissé' }}</span><span><i class="pr"></i>{{ T.projection ?? 'projection' }}</span><span>{{ T.ticks ?? 'les traits : les paliers' }}</span></div>
+    {% endif %}
+    {% set gg = p.google ?? null %}
+    {% if gg and gg.actif %}<div class="note" style="color:rgba(255,255,255,.9);text-align:center;margin-top:8px"><i class="bi bi-star-fill"></i> {{ T.google_coef ?? 'Note Google' }} {% if gg.note is not null %}<b>{{ gg.note|number_format(1, ',', ' ') }}</b> ({{ gg.avis }} {{ T.reviews ?? 'avis' }}) → {{ T.coef ?? 'coefficient' }} <b>× {{ gg.coef|number_format(2, ',', ' ') }}</b>{% else %}{{ T.no_google ?? 'pas encore de note' }}{% endif %} · {{ T.google_neutral ?? 'neutre à' }} {{ gg.neutre|number_format(1, ',', ' ') }}, {{ T.google_rule ?? 'au-dessus la prime monte, en dessous elle baisse' }}{% if gg.porte == 'tout' %} ({{ T.on_all ?? 'sur toutes les primes' }}){% else %} ({{ T.on_app ?? 'ventes croisées, concours, prime magasin' }}){% endif %}.</div>{% endif %}</div>
 
   {% if g.jours|length %}
   {% set maxJ = max(g.objectifJour ?? 0, max(g.jours|map(j => j.ca ?? 0)), 1) * 1.05 %}
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.day_by_day ?? 'Jour par jour' }}</h2><small>{{ translations.day_target_line ?? 'CA, le trait : l’objectif du jour' }}</small></div>
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.day_by_day ?? 'Jour par jour' }}</h2><small>{{ T.day_target_line ?? 'CA, le trait : l’objectif du jour' }}</small></div>
     <div class="jours" style="position:relative">{% if g.objectifJour %}<span class="obj" style="position:absolute;bottom:{{ (100 * g.objectifJour / maxJ)|round }}%"></span>{% endif %}
       {% for j in g.jours %}{% if j.ca is null %}<i class="vide" style="height:3px"></i>{% else %}<i class="{{ j.auj ? 'auj' : (j.we ? 'we' : '') }}" style="height:{{ max(2, (100 * j.ca / maxJ)|round) }}%"></i>{% endif %}{% endfor %}
       {% if nbJours > g.jours|length %}{% for i in 1..(nbJours - g.jours|length) %}<i class="vide" style="height:3px"></i>{% endfor %}{% endif %}
     </div>
-    <div class="jours-leg"><span>1</span><span>{% if g.objectifJour %}{{ translations.day_target ?? 'objectif du jour' }} {{ g.objectifJour|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</span><span>{{ nbJours }}</span></div>
-    <div class="note">{% if g.moySem %}{{ translations.weekdays_avg ?? 'Les jours de semaine font' }} {{ g.moySem|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.on_average ?? 'en moyenne' }}{% if g.moyWe %}, {{ translations.weekend ?? 'le week-end' }} {{ g.moyWe|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}.{% endif %}
-      {% set dernier = g.jours|last %}{% if dernier.auj and dernier.ca is not null %} {{ translations.today ?? 'Aujourd’hui' }} : {{ dernier.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.at ?? 'à' }} {{ heure }}.{% endif %}</div></div>
+    <div class="jours-leg"><span>1</span><span>{% if g.objectifJour %}{{ T.day_target ?? 'objectif du jour' }} {{ g.objectifJour|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</span><span>{{ nbJours }}</span></div>
+    <div class="note">{% if g.moySem %}{{ T.weekdays_avg ?? 'Les jours de semaine font' }} {{ g.moySem|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.on_average ?? 'en moyenne' }}{% if g.moyWe %}, {{ T.weekend ?? 'le week-end' }} {{ g.moyWe|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}.{% endif %}
+      {% set dernier = g.jours|last %}{% if dernier.auj and dernier.ca is not null %} {{ T.today ?? 'Aujourd’hui' }} : {{ dernier.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.at ?? 'à' }} {{ heure }}.{% endif %}</div></div>
   {% endif %}
 
   {% if g.objectif is not null and not g.clos %}
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.what_is_missing ?? 'Ce qu’il manque' }}</h2><small>{{ translations.over ?? 'sur' }} {{ g.joursRestants }} {{ translations.days ?? 'jours' }}</small></div>
-    {% for x in g.paliers %}<div class="ligne"><span><b>{{ x.pct }}&nbsp;%</b> <span class="d">{{ x.lib }}</span></span><span class="d">{% if x.atteint %}{{ translations.reached_at_pace ?? 'atteint au rythme actuel' }}{% elseif x.parJour %}{{ x.parJour|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ translations.per_day_more ?? '/ jour de plus' }}{% endif %}</span><b>{{ (x.vous ?? 0)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b></div>{% endfor %}
-    <div class="note">{{ translations.right_column ?? 'La colonne de droite : votre part,' }} {{ p.heures.mois|number_format(0, ',', ' ') }}&nbsp;h × {{ translations.level_rate ?? 'le taux du palier' }} ({% for x in g.paliers %}{{ x.eh|number_format(2, ',', ' ') }}&nbsp;{{ eur }}/h {{ translations.at ?? 'à' }} {{ x.pct }}&nbsp;%{{ loop.last ? '' : ', ' }}{% endfor %}).{% if g.sousMin %} <b>{{ translations.below ?? 'Sous' }} {{ g.heuresMin }}&nbsp;h {{ translations.in_month_no_share ?? 'dans le mois, pas de part.' }}</b>{% endif %}</div></div>
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.what_is_missing ?? 'Ce qu’il manque' }}</h2><small>{{ T.over ?? 'sur' }} {{ g.joursRestants }} {{ T.days ?? 'jours' }}</small></div>
+    <div class="etapes">
+      {% for x in g.paliers %}{% set ici = not x.atteint and (loop.first or g.paliers[loop.index0 - 1].atteint) %}
+      <div class="et {{ x.atteint ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ x.pct }}&nbsp;%</span><span class="v">{{ x.eh|number_format(2, ',', ' ') }}&nbsp;{{ eur }}/h</span></div>{% endfor %}
+    </div>
+    {% for x in g.paliers %}<div class="ligne"><span><b>{{ x.pct }}&nbsp;%</b> <span class="d">{{ x.lib }}</span></span><span class="d">{% if x.atteint %}{{ T.reached_at_pace ?? 'atteint au rythme actuel' }}{% elseif x.parJour %}{{ x.parJour|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.per_day_more ?? '/ jour de plus' }}{% endif %}</span><b>{{ (x.vous ?? 0)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b></div>{% endfor %}
+    <div class="note">{{ T.right_column ?? 'La colonne de droite : votre part,' }} {{ p.heures.mois|number_format(0, ',', ' ') }}&nbsp;h × {{ T.level_rate ?? 'le taux du palier' }}.{% if g.sousMin %} <b>{{ T.below ?? 'Sous' }} {{ g.heuresMin }}&nbsp;h {{ T.in_month_no_share ?? 'dans le mois, pas de part.' }}</b>{% endif %}</div></div>
   {% endif %}
 
-  <div class="pr-card"><div class="pr-h"><h2>{{ translations.the_team ?? 'L’équipe' }}</h2><small>{{ p.heures.equipe|number_format(0, ',', ' ') }}&nbsp;h {{ translations.planned ?? 'au planning' }}{% if p.heures.planningJusquau is defined and p.heures.planningJusquau %} {{ translations.planned_until ?? 'jusqu’au' }} {{ p.heures.planningJusquau|date('d/m') }}{% endif %}</small></div>
+  <div class="pr-card"><div class="pr-h"><h2>{{ T.the_team ?? 'L’équipe' }}</h2><small>{{ p.heures.equipe|number_format(0, ',', ' ') }}&nbsp;h {{ T.planned ?? 'au planning' }}{% if p.heures.planningJusquau is defined and p.heures.planningJusquau %} {{ T.planned_until ?? 'jusqu’au' }} {{ p.heures.planningJusquau|date('d/m') }}{% endif %}</small></div>
     <div class="parts"><i class="moi" style="flex:{{ p.heures.mois }}"></i><i style="flex:{{ max(0, p.heures.equipe - p.heures.mois) }}"></i></div>
-    <div class="note">{{ translations.prorata ?? 'Répartie au prorata des heures prestées :' }} <b>{{ translations.you ?? 'vous' }} {{ p.heures.mois|number_format(0, ',', ' ') }}&nbsp;h</b>, {{ translations.team_of ?? 'l’équipe' }} {{ p.heures.equipe|number_format(0, ',', ' ') }}&nbsp;h ({{ p.heures.personnes }} {{ translations.people ?? 'personnes' }}), {{ translations.ie ?? 'soit' }} {{ (g.part ?? 0)|number_format(0, ',', ' ') }}&nbsp;% {{ translations.of_shop_bonus_for_you ?? 'de la prime du magasin pour vous.' }} {{ translations.below ?? 'Sous' }} {{ g.heuresMin }}&nbsp;h {{ translations.in_month_no_share ?? 'dans le mois, pas de part.' }}{% if p.enCours and p.heures.planningJusquau is defined and p.heures.planningJusquau %} {{ translations.planning_grows ?? 'Le planning se complète semaine après semaine : les heures et les montants suivent.' }}{% endif %}</div>
-    {% for x in g.paliers %}<div class="ligne"><span>{{ translations.team_bonus_at ?? 'Prime de l’équipe à' }} {{ x.pct }}&nbsp;%</span><b>{{ x.equipe|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b></div>{% endfor %}</div>
+    <div class="note">{{ T.prorata ?? 'Répartie au prorata des heures prestées :' }} <b>{{ T.you ?? 'vous' }} {{ p.heures.mois|number_format(0, ',', ' ') }}&nbsp;h</b>, {{ T.team_of ?? 'l’équipe' }} {{ p.heures.equipe|number_format(0, ',', ' ') }}&nbsp;h ({{ p.heures.personnes }} {{ T.people ?? 'personnes' }}), {{ T.ie ?? 'soit' }} {{ (g.part ?? 0)|number_format(0, ',', ' ') }}&nbsp;% {{ T.of_shop_bonus_for_you ?? 'de la prime du magasin pour vous.' }} {{ T.below ?? 'Sous' }} {{ g.heuresMin }}&nbsp;h {{ T.in_month_no_share ?? 'dans le mois, pas de part.' }}{% if p.enCours and p.heures.planningJusquau is defined and p.heures.planningJusquau %} {{ T.planning_grows ?? 'Le planning se complète semaine après semaine : les heures et les montants suivent.' }}{% endif %}</div>
+    {% for x in g.paliers %}<div class="ligne"><span>{{ T.team_bonus_at ?? 'Prime de l’équipe à' }} {{ x.pct }}&nbsp;%</span><b>{{ x.equipe|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b></div>{% endfor %}</div>
 
-  <div class="pr-card doux"><div class="note">{{ translations.target_note ?? 'L’objectif du mois est celui du budget du magasin. Il se lit dans le cockpit, personne ne le change en cours de mois.' }}</div></div>
+  <div class="pr-card doux"><div class="note">{{ T.target_note ?? 'L’objectif du mois est celui du budget du magasin. Il se lit dans le cockpit, personne ne le change en cours de mois.' }}</div></div>
 </section>
 {% endif %}
 {% endblock %}

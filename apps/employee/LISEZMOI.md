@@ -47,11 +47,17 @@ Un serveur PHP avec un routeur qui rejoue le `.htaccess` (`php -S 127.0.0.1:8098
 router.php`) et une API simulée (`demo` / `demo`) : connexion, accueil, planning, tâches, profil,
 déconnexion. Aucune écriture vers le panel.
 
-## L'onglet Primes (06/10/2026, maquette B)
+## L'onglet Primes (06/10/2026, maquette B, refonte visuelle le même jour)
 
-`/primes` : deux onglets, **Moi** (le compteur de ventes croisées du jour, les trois primes
-individuelles, les semaines, les mois passés) et **Mon magasin** (l'objectif du mois, jour par jour,
-ce qu'il manque par palier, l'équipe au prorata des heures). La page ne calcule rien : `PrimesService`
+`/primes` : deux onglets. **Moi** domine (l'app est centrée sur la performance individuelle) :
+l'anneau acquis / à portée avec la note Google et son coefficient, le compteur de ventes croisées
+du jour, « Les étapes pour gagner » (un palier à franchir sur chacune des cinq primes : ventes
+croisées, record, meilleure vendeuse, concours tartes & quiches, prime magasin), les douze dernières
+semaines en graphique (taux de ventes croisées, place dans le réseau, pièces du concours, CA par
+heure), les ventes mois par mois avec le CA par heure et la place dans le réseau, les mois payés.
+**Mon magasin** reste second (la demi-jauge de l'objectif du mois, jour par jour, ce qu'il manque
+par palier, l'équipe au prorata des heures). Les jauges sont des SVG dessinés dans le Twig
+(`cos` et `sin` sont des fonctions Twig de `core/Twig/AppExtension.php`). La page ne calcule rien : `PrimesService`
 appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec le jeton de la session ; le cockpit
 le fait confirmer par le panel et ne rend que la fiche de la personne connectée (voir
 `docs/contrat-api.md`, « Les primes dans l'app worker »). `COCKPIT_API_URL` se déduit de l'adresse
