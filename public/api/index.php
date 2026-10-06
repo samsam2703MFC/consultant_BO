@@ -114,7 +114,7 @@ try {
 
     // « Mes primes » dans l'app worker : la personne se présente avec SON jeton d'employé, que le
     // panel confirme — la fiche rendue est la sienne, personne d'autre (src/primes.php).
-    if ($method === 'GET' && $path === '/ventes/moi' && (primesIdentiteSignee() !== null || primesJetonRecu() !== null)) {
+    if ($method === 'GET' && $path === '/ventes/moi' && primesVoieApp()) {
         $out = ep_ventes_moi_jeton();
         tempsServeur($tCharge, $tInstall);
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

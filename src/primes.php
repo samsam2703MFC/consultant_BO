@@ -601,7 +601,17 @@ function primesResoudreEmploye(int $id, string $nom): ?int
     $n = mb_strtolower(trim($nom));
     if ($n === '') { return null; }
     foreach ($emps as $eid => $e) { if (mb_strtolower(trim((string) $e['nom'])) === $n) { return (int) $eid; } }
-    return null;
+    // Le prénom seul (« yousra » pour « Yousra B. ») : seulement s'il ne désigne qu'une personne.
+    $prenom = explode(' ', $n)[0];
+    $trouves = [];
+    foreach ($emps as $eid => $e) { if (explode(' ', mb_strtolower(trim((string) $e['nom'])))[0] === $prenom) { $trouves[] = (int) $eid; } }
+    return count($trouves) === 1 ? $trouves[0] : null;
+}
+
+/** La requête se présente-t-elle comme l'app worker (identité signée ou jeton) ? Alors la voie publique répond, 401 compris. */
+function primesVoieApp(): bool
+{
+    return trim((string) ($_SERVER['HTTP_X_WORKER_SIGN'] ?? '')) !== '' || primesJetonRecu() !== null;
 }
 
 /** GET /ventes/moi?emp=&m= (ou ?nom=) — depuis le cockpit (session), pour voir ce que l'app montre. */
