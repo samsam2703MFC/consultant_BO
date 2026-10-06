@@ -7076,6 +7076,36 @@ class App {
       modifie: JSON.stringify(cr) !== JSON.stringify({ cibleDefaut: d.croisees.cibleDefaut, cibles: d.croisees.cibles, paliers: d.croisees.paliers, minTickets: d.croisees.minTickets }),
       mesuresMois: d.mesuresMois || '',
     };
+    const kc = S.prK || Object.assign({}, d.concours || {});
+    common.prK = {
+      actif: !!kc.actif, lib: kc.lib || '', motif: kc.motif || '', magasin: String(kc.magasin ?? ''), reseau: String(kc.reseau ?? ''), minPieces: String(kc.minPieces ?? ''),
+      poserActif: e => { kc.actif = !!e.target.checked; this.setState({ prK: kc }); },
+      poserLib: e => { kc.lib = e.target.value; this.setState({ prK: kc }); },
+      poserMotif: e => { kc.motif = e.target.value; this.setState({ prK: kc }); },
+      poserMagasin: e => { const v = num(e.target.value); if (v != null) { kc.magasin = Math.round(v); } this.setState({ prK: kc }); },
+      poserReseau: e => { const v = num(e.target.value); if (v != null) { kc.reseau = Math.round(v); } this.setState({ prK: kc }); },
+      poserMin: e => { const v = num(e.target.value); if (v != null) { kc.minPieces = Math.max(0, Math.round(v)); } this.setState({ prK: kc }); },
+      enregistrer: () => this.api('POST', '/ventes/concours', { actif: !!kc.actif, lib: kc.lib, motif: kc.motif, magasin: kc.magasin, reseau: kc.reseau, minPieces: kc.minPieces }).then(r => {
+        if (r && r.ok === false) { return; }
+        this.notify('Concours enregistré — la moisson recompte les jours au fil du cron');
+        this._pr = {}; this.setState({ prK: undefined });
+      }),
+      modifie: JSON.stringify(kc) !== JSON.stringify(d.concours || {}),
+    };
+    const gg = S.prG || Object.assign({}, d.google || {});
+    common.prG = {
+      actif: !!gg.actif, neutre: String(gg.neutre ?? ''), pente: String(gg.pente ?? ''), min: String(gg.min ?? ''), max: String(gg.max ?? ''), porte: gg.porte || 'app',
+      poserActif: e => { gg.actif = !!e.target.checked; this.setState({ prG: gg }); },
+      poser: cle => e => { const v = num(e.target.value); if (v != null) { gg[cle] = v; } this.setState({ prG: gg }); },
+      poserPorte: e => { gg.porte = e.target.value === 'tout' ? 'tout' : 'app'; this.setState({ prG: gg }); },
+      exemples: [4.0, 4.3, 4.5, 4.7, 4.9].map(n => ({ note: n.toFixed(1).replace('.', ','), coef: Math.max(+gg.min || 0, Math.min(+gg.max || 9, 1 + (n - (+gg.neutre || 4.5)) * (+gg.pente || 0))).toFixed(2).replace('.', ',') })),
+      enregistrer: () => this.api('POST', '/ventes/prime-google', { actif: !!gg.actif, neutre: gg.neutre, pente: gg.pente, min: gg.min, max: gg.max, porte: gg.porte }).then(r => {
+        if (r && r.ok === false) { return; }
+        this.notify('Coefficient Google enregistré');
+        this._pr = {}; this.setState({ prG: undefined });
+      }),
+      modifie: JSON.stringify(gg) !== JSON.stringify(d.google || {}),
+    };
     common.prShops = (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: (shop || d.shop) === m.id, choisir: () => this.setState({ prShop: m.id }) }));
     const a = d.apercu;
     common.prApercu = !a ? null : {
@@ -7091,6 +7121,7 @@ class App {
       paliers: (a.paliers || []).map(p => ({ pct: p.pct + ' %', lib: p.lib, atteint: p.atteint, eh: n2(p.eh) + ' €/h', equipe: eur(p.equipe),
         manque: p.atteint ? 'atteint au rythme actuel' : (p.manque != null ? eur(p.manque) + (p.parJour ? ' · ' + eur(p.parJour) + ' par jour' : '') : '') })),
       pctEnv: (a.objectif > 0 && a.paliers && a.paliers[1]) ? n2(100 * a.paliers[1].equipe / a.objectif) + ' % de l’objectif' : '',
+      google: a.google && a.google.actif ? (a.google.note != null ? 'note Google ' + n1(a.google.note) + ' (' + a.google.avis + ' avis) → × ' + n2(a.google.coef) : 'pas encore de note Google : coefficient 1') : '',
     };
     common.prRecord = d.record || {}; common.prMeilleure = d.meilleure || {};
   }
@@ -7157,15 +7188,20 @@ class App {
         nom: court(m.nom), objectif: m.objectif != null ? eur(m.objectif) : 'pas d’objectif',
         atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % · ' + n2(m.palier.eh) + ' €/h' : 'aucun palier',
         equipe: eur(m.equipe), heures: nb1(m.heuresEquipe) + ' h · ' + m.personnes + ' pers.', cible: 'cible ' + nb1(m.cible) + ' %',
+        google: m.google && m.google.actif && m.google.note != null ? 'Google ' + nb1(m.google.note) + ' → × ' + n2(m.google.coef) : '',
       })),
       personnes: !pm ? [] : (pm.personnes || []).filter(l => !filtre || l.shopId === filtre).map(l => ({
         nom: l.nom, magasin: court(l.magasinNom), heures: nb1(l.heures) + ' h',
         croisees: l.croisees.taux != null ? nb1(l.croisees.taux) + ' %' : '', croiseesM: l.croisees.montant > 0 ? eur(l.croisees.montant) : '',
         record: l.record.lt != null ? nb1(l.record.lt) + (l.record.record != null ? ' / ' + nb1(l.record.record) : '') : '', recordM: l.record.montant > 0 ? eur(l.record.montant) : '',
         meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? n2(l.magasin) + ' €' : '',
+        concours: l.concours && l.concours.pieces != null ? Math.round(l.concours.pieces).toLocaleString('fr-BE') + (l.concours.rangMag ? ' · ' + l.concours.rangMag + 'e' : '') : '',
+        concoursM: l.concours && l.concours.montant > 0 ? eur(l.concours.montant) : '',
         total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
+        coef: l.coef != null && Math.abs(l.coef - 1) > 1e-9 ? '× ' + n2(l.coef) : '',
       })),
-      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), magasin: n2(pm.totaux.magasin) + ' €', total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), magasin: n2(pm.totaux.magasin) + ' €', total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      concoursLib: pm && pm.concours ? pm.concours.lib : 'Concours', concoursActif: !!(pm && pm.concours && pm.concours.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
       enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · ventes croisées et prime magasin : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
     };

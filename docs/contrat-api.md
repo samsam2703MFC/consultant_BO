@@ -519,6 +519,8 @@ vente (`src/primes.php`) :
 | Bats ton record (existant) | lignes par ticket face à son record 12 mois | 100 € par dixième dès le 2e, 3 au plus | `POST /ventes/record` |
 | Meilleure vendeuse (existant) | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` |
 | **Prime magasin** (nouveau) | l'atteinte de l'**objectif du mois** (le budget du magasin, `ceo_shop_month_perf`, sinon le CA théorique) | le palier atteint fin de mois donne tant d'**euros par heure prestée** (planning du panel, le mois entier) à chaque personne du magasin ; sous `heuresMin`, pas de part | `POST /ventes/prime-magasin {paliers: [{pct, eh, lib}], heuresMin}` (défaut : 97 % 0,50 €/h · 100 % 1 €/h · 105 % 1,50 €/h · 110 % 2 €/h · 20 h) |
+| **Concours tartes & quiches** (06/10/2026) | le nombre de **pièces** de la famille (motif `tarte\|quiche` sur la catégorie ou le nom, réglable) vendues dans le mois à son nom, `tq` dans la moisson v2 | 1re du magasin 50 €, 1re du réseau 100 € (sans cumul), 10 pièces au moins ; à égalité, moins de tickets gagne | `POST /ventes/concours {actif, lib, motif, magasin, reseau, minPieces}` |
+| **Note Google** (06/10/2026) | la note de la fiche Google du magasin (`ceo_shop_reputation`, la Réputation) | un **coefficient** sur la prime : `1 + (note − neutre) × pente`, borné ; neutre 4,5, pente 0,5 par point, de × 0,5 à × 1,5 ; sur les primes de l'app (`porte: app` : ventes croisées, concours, prime magasin) ou toutes (`tout`) | `POST /ventes/prime-google {actif, neutre, pente, min, max, porte}` |
 
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
@@ -532,37 +534,55 @@ vente (`src/primes.php`) :
   le cockpit (session), `GET /ventes/moi?emp=&m=` ou `?nom=` montre la même fiche. L'app appelle le
   cockpit d'abord en local (127.0.0.1, l'hôte public en en-tête), puis par l'adresse publique, et
   montre la réponse du cockpit quand elle n'est pas une fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom}, heures: {mois, faites, equipe,
-  personnes}, aujourdhui: {tickets, croisees, lignes, taux, quand} | null, acquis, aPortee,
+  personnes, planningJusquau}, aujourdhui: {tickets, croisees, lignes, taux, quand} | null, acquis, aPortee,
+  acquisBrut, google: {actif, note, avis, coef, neutre, porte}, montants: {croisees, record, meilleure,
+  concours, magasin, total, brut} (chaque montant après coefficient),
   briques: {croisees: {croisees, tickets, taux, cible, montant, palier, prochain: {taux, montant,
   manque}, jours, complet, motif}, record: {lt, record, recordMois, ecart, tranches, montant,
   eurDixieme, maxDixiemes}, meilleure: {score, caHeure, heures, ca, tickets, rangMag, surMag,
-  scorePremier, rangRes, surRes, montantMag, montantRes, montant}}, prime: {objectif, ca, atteinte,
+  scorePremier, rangRes, surRes, montantMag, montantRes, montant}, concours: {actif, lib, pieces,
+  tickets, pour100, jours, rangMag, surMag, rangRes, surRes, premierMag, premierRes, montantMag,
+  montantRes, montant, minPieces}}, prime: {objectif, ca, atteinte,
   projection, atteinteProj, moySem, moyWe, joursRestants, objectifJour, jours: [{date, ca, we, auj}],
   paliers: [{pct, eh, lib, atteint, manque, parJour, vous, equipe}], palier, heures, heuresMin,
   sousMin, heuresEquipe, part, vous, equipe}, semaines: [{lib, du, tickets, croisees, taux}],
+  semaines12: [{lib, du, jours, tickets, croisees, taux, rang, sur, pieces, rangPieces, surPieces, ca,
+  heures, caHeure}] (les douze dernières semaines ISO, la place au taux de ventes croisées et au
+  nombre de pièces parmi les vendeuses du réseau à dix tickets au moins, le CA par heure du planning ;
+  gravé une heure par personne, `primesS12:{emp}`),
   ventes: [{m, lib, enCours, ca, tickets, heures, caHeure, panier, rang, sur, rangCaH, surCaH, medianeCaH}] (six mois, le
   CA par heure sur les heures prestées pour le mois en cours, la place au CA par heure parmi les vendeuses classées),
-  mois: [{m, lib, total, paye, detail[], croisees, record, meilleure, magasin}]}`. Jamais un autre
+  mois: [{m, lib, total, paye, detail[], croisees, record, meilleure, concours, magasin, coef, brut}]}`. Jamais un autre
   nom que celui du magasin : les collègues sont des heures. `acquis` = ce que le mois donnerait s'il
-  finissait comme ça ; `aPortee` = un cran de plus sur chaque règle. La projection du magasin : les
+  finissait comme ça, coefficient Google compris (`acquisBrut` avant) ; `aPortee` = un cran de plus
+  sur chaque règle (un mois clos : `aPortee` = `acquis`). L'écran de l'app (refonte du 06/10/2026) :
+  l'onglet **Moi** domine (l'anneau acquis / à portée, le compteur du jour, « Les étapes pour gagner »
+  avec un palier sur chaque prime, les douze dernières semaines en graphique avec la place dans le
+  réseau et le CA par heure, les ventes mois par mois, les mois payés), l'onglet **Mon magasin** reste
+  second (la demi-jauge de l'objectif, jour par jour, ce qu'il manque, l'équipe). La projection du magasin : les
   jours clos tels quels, puis chaque jour restant au rythme moyen de son genre de jour (semaine ou
   week-end). Mis en cache 15 minutes (mois en cours) ou un jour (mois clos) par personne ;
   `&frais=1` recalcule.
 - `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut), tel que
   l'app le montre à chacune : `magasins[] {id, nom, objectif, ca, atteinte, atteinteProj, palier,
   heuresEquipe, personnes, equipe, cible}`, `personnes[] {id, nom, shopId, magasinNom, heures, tickets,
-  croisees: {taux, montant}, record: {lt, record, montant}, meilleure, magasin, total}`, `totaux`, et
+  croisees: {taux, montant}, record: {lt, record, montant}, meilleure, concours: {pieces, rangMag,
+  rangRes, montant}, magasin, coef, brut, avecCoef, total}` (le total après le coefficient Google du
+  magasin, `magasins[].google`), `totaux`, `concours` et `google` (les réglages), et
   `enregistre` (ce que le CEO a gravé). Écran : Équipe & ventes › Résultats, la carte « Les primes du
   mois ». **« Enregistrer les primes »** (`POST /ventes/primes {m}`) grave en plus, sous
-  `appWorker`, la prime magasin et les ventes croisées de chacune (identifiants et montants, jamais de
-  nom) et une ligne de journal par personne primée ; l'app marque alors le mois « payée ».
+  `appWorker`, la prime magasin, les ventes croisées et le concours de chacune, après coefficient
+  (identifiants, montants, coefficient ; jamais de nom) et une ligne de journal par personne primée ;
+  l'app marque alors le mois « payée ».
 - `GET /ventes/primes-reglages?shop=` : tous les réglages (`magasin`, `croisees`, `record`,
-  `meilleure`), les magasins, l'`apercu` du mois en cours du magasin (objectif, encaissé, projection,
-  paliers avec ce qu'il manque et la prime de l'équipe, `heuresEquipe`, `personnes`) et les `mesures`
+  `meilleure`, `concours`, `google`), les magasins, l'`apercu` du mois en cours du magasin (objectif, encaissé, projection,
+  paliers avec ce qu'il manque et la prime de l'équipe, `heuresEquipe`, `personnes`, `planningJusquau`,
+  `google` : la note du magasin et son coefficient) et les `mesures`
   (taux de ventes croisées par magasin sur le dernier mois clos). Écran : Équipe & ventes ›
   **Paramètres**.
-- La moisson des lignes par ticket (`pvL{shop}:{jour}`) compte désormais `c`, les tickets à deux
-  lignes ou plus, par vendeuse ; les jours moissonnés avant ce compte se refont du plus récent au
+- La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 2) compte désormais `c`, les tickets à deux
+  lignes ou plus, et `tq`, les pièces de la famille du concours, par vendeuse ; `pvE{shop}:{jour}`
+  grave les ventes du jour par vendeuse (CA, tickets) pour le CA par heure des semaines ; les jours moissonnés avant ce compte se refont du plus récent au
   plus ancien avec le reste du budget du cron (`pvCroiseesComplement`). Le compteur du jour d'une
   personne lit ses seuls tickets du jour (`pvLJ{shop}:{emp}`, dix minutes). Le CA d'un magasin jour
   par jour se grave (`pvJ{shop}:{jour}`), le jour en cours toutes les dix minutes.

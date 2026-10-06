@@ -147,6 +147,176 @@ function wr_croisees(): array
     return ['ok' => true, 'reglages' => $cur];
 }
 
+/**
+ * Le concours (demande du 06/10/2026) : le nombre de pièces d'une famille vendues dans le mois,
+ * tartes et quiches au départ. La première de chaque magasin et la première du réseau gagnent ;
+ * la famille est un motif sur la catégorie ou le nom du produit, réglable.
+ */
+function concoursReglages(): array
+{
+    $def = ['actif' => true, 'lib' => 'Tartes & quiches', 'motif' => 'tarte|quiche', 'magasin' => 50, 'reseau' => 100, 'minPieces' => 10];
+    $c = setting('venteConcoursTQ');
+    if (!is_array($c)) { return $def; }
+    $out = $def;
+    if (array_key_exists('actif', $c)) { $out['actif'] = (bool) $c['actif']; }
+    if (isset($c['lib']) && trim((string) $c['lib']) !== '') { $out['lib'] = mb_substr(trim((string) $c['lib']), 0, 40); }
+    if (isset($c['motif']) && trim((string) $c['motif']) !== '' && @preg_match('/' . $c['motif'] . '/iu', '') !== false) { $out['motif'] = mb_substr(trim((string) $c['motif']), 0, 120); }
+    foreach (['magasin', 'reseau', 'minPieces'] as $k) { if (isset($c[$k]) && is_numeric($c[$k])) { $out[$k] = max(0, (int) $c[$k]); } }
+    return $out;
+}
+
+/** Le motif de la famille du concours, pour la moisson. Vide : concours éteint, rien à compter. */
+function concoursMotif(): string
+{
+    $c = concoursReglages();
+    return $c['actif'] ? $c['motif'] : $c['motif'];
+}
+
+/** POST /ventes/concours {actif, lib, motif, magasin, reseau, minPieces}. */
+function wr_concours(): array
+{
+    $b = body();
+    $cur = concoursReglages();
+    if (array_key_exists('actif', $b)) { $cur['actif'] = (bool) $b['actif']; }
+    if (isset($b['lib']) && trim((string) $b['lib']) !== '') { $cur['lib'] = mb_substr(trim((string) $b['lib']), 0, 40); }
+    if (isset($b['motif'])) {
+        $m = trim((string) $b['motif']);
+        if ($m === '' || @preg_match('/' . $m . '/iu', '') === false) { http_response_code(422); return ['error' => 'motif invalide (une expression comme tarte|quiche)']; }
+        $cur['motif'] = mb_substr($m, 0, 120);
+    }
+    foreach (['magasin', 'reseau', 'minPieces'] as $k) { if (isset($b[$k]) && is_numeric($b[$k])) { $cur[$k] = max(0, min(5000, (int) $b[$k])); } }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['venteConcoursTQ', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Paramètre', 'Concours', ($cur['actif'] ? 'Actif' : 'Éteint') . ' · ' . $cur['lib'] . ' (' . $cur['motif'] . ') · ' . $cur['magasin'] . ' € magasin, ' . $cur['reseau'] . ' € réseau, ' . $cur['minPieces'] . ' pièces minimum');
+    return ['ok' => true, 'reglages' => $cur];
+}
+
+/**
+ * Le classement du concours sur un mois : par magasin et pour le réseau, au nombre de pièces (à
+ * égalité, moins de tickets gagne : la proposition compte plus que le passage). Rend, par personne,
+ * son rang dans le magasin et dans le réseau, et les pièces de la première.
+ *
+ * @return array<int, array{pieces:float,tickets:int,rangMag:?int,surMag:int,rangRes:?int,surRes:int,premierMag:float,premierRes:float}>
+ */
+function concoursClassement(?array $cr, array $emps, array $cfg): array
+{
+    $tous = [];
+    foreach ((array) ($cr['e'] ?? []) as $id => $x) {
+        $id = (int) $id;
+        if (!isset($emps[$id]) || !isset($x['tq'])) { continue; }
+        $tous[$id] = ['pieces' => (float) $x['tq'], 'tickets' => (int) ($x['t'] ?? 0), 'shop' => (string) $emps[$id]['shop']];
+    }
+    $cmp = static fn ($a, $b) => [$b['pieces'], $a['tickets']] <=> [$a['pieces'], $b['tickets']];
+    $parShop = [];
+    foreach ($tous as $id => $x) { $parShop[$x['shop']][$id] = $x; }
+    $out = [];
+    $reseau = array_filter($tous, static fn ($x) => $x['pieces'] >= $cfg['minPieces']);
+    uasort($reseau, $cmp);
+    $rangRes = []; $i = 0;
+    foreach ($reseau as $id => $x) { $rangRes[$id] = ++$i; }
+    $premierRes = $reseau !== [] ? (float) reset($reseau)['pieces'] : 0.0;
+    foreach ($parShop as $shop => $liste) {
+        $cl = array_filter($liste, static fn ($x) => $x['pieces'] >= $cfg['minPieces']);
+        uasort($cl, $cmp);
+        $rangMag = []; $j = 0;
+        foreach ($cl as $id => $x) { $rangMag[$id] = ++$j; }
+        $premierMag = $cl !== [] ? (float) reset($cl)['pieces'] : 0.0;
+        foreach ($liste as $id => $x) {
+            $out[$id] = ['pieces' => $x['pieces'], 'tickets' => $x['tickets'],
+                'rangMag' => $rangMag[$id] ?? null, 'surMag' => count($cl), 'rangRes' => $rangRes[$id] ?? null, 'surRes' => count($reseau),
+                'premierMag' => $premierMag, 'premierRes' => $premierRes];
+        }
+    }
+    return $out;
+}
+
+/** La prime du concours d'une personne : réseau, sinon magasin, sinon rien. */
+function concoursPrime(?array $cl, array $cfg): int
+{
+    if (!$cfg['actif'] || $cl === null) { return 0; }
+    if (($cl['rangRes'] ?? null) === 1) { return (int) $cfg['reseau']; }
+    if (($cl['rangMag'] ?? null) === 1) { return (int) $cfg['magasin']; }
+    return 0;
+}
+
+/**
+ * La note Google (demande du 06/10/2026) : un coefficient sur la prime. 4,5 est neutre ; au-dessus,
+ * la prime monte, en dessous elle baisse, d'une pente par point, bornée. « porte » dit sur quoi il
+ * joue : « app » = les trois primes de l'app worker (ventes croisées, concours, prime magasin),
+ * « tout » = les cinq. La note est celle de la fiche Google du magasin, lue par la Réputation.
+ */
+function googleReglages(): array
+{
+    $def = ['actif' => true, 'neutre' => 4.5, 'pente' => 0.5, 'min' => 0.5, 'max' => 1.5, 'porte' => 'app'];
+    $c = setting('ventePrimeGoogle');
+    if (!is_array($c)) { return $def; }
+    $out = $def;
+    if (array_key_exists('actif', $c)) { $out['actif'] = (bool) $c['actif']; }
+    foreach (['neutre' => [1, 5], 'pente' => [0, 5], 'min' => [0, 1], 'max' => [1, 3]] as $k => [$lo, $hi]) {
+        if (isset($c[$k]) && is_numeric($c[$k])) { $out[$k] = max($lo, min($hi, round((float) $c[$k], 2))); }
+    }
+    if (($c['porte'] ?? '') === 'tout') { $out['porte'] = 'tout'; }
+    return $out;
+}
+
+/** POST /ventes/prime-google {actif, neutre, pente, min, max, porte}. */
+function wr_prime_google(): array
+{
+    $b = body();
+    $cur = googleReglages();
+    if (array_key_exists('actif', $b)) { $cur['actif'] = (bool) $b['actif']; }
+    foreach (['neutre' => [1, 5], 'pente' => [0, 5], 'min' => [0, 1], 'max' => [1, 3]] as $k => [$lo, $hi]) {
+        if (isset($b[$k]) && is_numeric($b[$k])) { $cur[$k] = max($lo, min($hi, round((float) $b[$k], 2))); }
+    }
+    if (isset($b['porte'])) { $cur['porte'] = $b['porte'] === 'tout' ? 'tout' : 'app'; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['ventePrimeGoogle', json_encode($cur)]);
+    journalAdd('CEO', 'Paramètre', 'Note Google', ($cur['actif'] ? 'Actif' : 'Éteint') . ' · neutre ' . $cur['neutre'] . ', ' . $cur['pente'] . ' par point, de ' . $cur['min'] . ' à ' . $cur['max'] . ', sur ' . ($cur['porte'] === 'tout' ? 'toutes les primes' : 'les primes de l’app'));
+    return ['ok' => true, 'reglages' => $cur];
+}
+
+/** La note Google d'un magasin, telle que la Réputation la tient. Null sans fiche. */
+function googleNote(string $shop): ?array
+{
+    static $memo = null;
+    if ($memo === null) {
+        $memo = [];
+        try {
+            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count FROM ceo_shop_reputation') as $r) {
+                if ($r['rating_avg'] !== null) { $memo[(string) $r['shop_id']] = ['note' => round((float) $r['rating_avg'], 2), 'avis' => (int) ($r['rating_count'] ?? 0)]; }
+            }
+        } catch (PDOException $e) { /* pas de réputation : coefficient neutre */ }
+    }
+    return $memo[$shop] ?? null;
+}
+
+/** Le coefficient d'une note : 1 à la note neutre, la pente par point, borné. Sans note : 1. */
+function googleCoef(?float $note, array $reg): float
+{
+    if (!$reg['actif'] || $note === null) { return 1.0; }
+    return round(max($reg['min'], min($reg['max'], 1 + ($note - $reg['neutre']) * $reg['pente'])), 2);
+}
+
+/** Le coefficient d'un magasin, prêt à montrer. */
+function googleDuMagasin(string $shop): array
+{
+    $reg = googleReglages();
+    $n = googleNote($shop);
+    return ['actif' => (bool) $reg['actif'], 'note' => $n['note'] ?? null, 'avis' => $n['avis'] ?? 0,
+        'coef' => googleCoef($n['note'] ?? null, $reg), 'neutre' => $reg['neutre'], 'pente' => $reg['pente'], 'porte' => $reg['porte']];
+}
+
+/** Les montants d'un mois avec le coefficient : les primes de l'app, ou toutes. */
+function googleApplique(array $montants, array $g): array
+{
+    // $montants : croisees, record, meilleure, concours, magasin (bruts)
+    $coef = (float) $g['coef'];
+    $app = ['croisees', 'concours', 'magasin'];
+    $out = [];
+    foreach ($montants as $k => $v) { $out[$k] = ($g['porte'] === 'tout' || in_array($k, $app, true)) ? round($v * $coef, 2) : round($v, 2); }
+    $out['total'] = round(array_sum($out), 2);
+    $out['brut'] = round(array_sum($montants), 2);
+    return $out;
+}
+
 /** La cible d'un magasin : la sienne, sinon celle du réseau. */
 function croiseesCible(array $cfg, string $shop): float
 {
@@ -451,7 +621,21 @@ function primesBriques(int $emp, string $m, ?array $moi, array $lignes, ?array $
         'montant' => $rangRes === 1 ? $mv['reseau'] : ($rangMag === 1 ? $mv['magasin'] : 0),
         'motif' => $moi['motifHorsClassement'] ?? null];
 
-    return ['croisees' => $croisees, 'record' => $record, 'meilleure' => $meilleure];
+    // Le concours : ses pièces de la famille, sa place dans le magasin et dans le réseau.
+    $cfgK = concoursReglages();
+    $cl = concoursClassement($cr, venteEmployes(), $cfgK);
+    $k = $cl[$emp] ?? null;
+    $concours = ['actif' => (bool) $cfgK['actif'], 'lib' => $cfgK['lib'],
+        'pieces' => $k !== null ? $k['pieces'] : null, 'tickets' => $k['tickets'] ?? $tC,
+        'par100' => ($k !== null && ($k['tickets'] ?? 0) > 0) ? round(100 * $k['pieces'] / $k['tickets'], 1) : null,
+        'rangMag' => $k['rangMag'] ?? null, 'surMag' => $k['surMag'] ?? 0, 'rangRes' => $k['rangRes'] ?? null, 'surRes' => $k['surRes'] ?? 0,
+        'premierMag' => $k['premierMag'] ?? null, 'premierRes' => $k['premierRes'] ?? null,
+        'montantMag' => (int) $cfgK['magasin'], 'montantRes' => (int) $cfgK['reseau'], 'minPieces' => (int) $cfgK['minPieces'],
+        'montant' => concoursPrime($k, $cfgK),
+        'jours' => (int) ($cr['jours'] ?? 0) - (int) ($cr['sansTq'] ?? 0), 'complet' => (bool) ($cr['tqComplet'] ?? false),
+        'motif' => $cr === null ? 'pas encore moissonné' : ($k === null || !isset($cr['e'][$emp]['tq']) ? 'pièces pas encore comptées sur ces jours' : null)];
+
+    return ['croisees' => $croisees, 'record' => $record, 'meilleure' => $meilleure, 'concours' => $concours];
 }
 
 /**
@@ -489,13 +673,22 @@ function primesMoisClos(int $emp, string $m, string $shop, array $nomDe): array
     }
     if ($b['meilleure']['montant'] > 0) { $detail[] = ($b['meilleure']['rangRes'] === 1 ? 'meilleure du réseau' : 'meilleure du magasin') . ' : ' . $b['meilleure']['montant'] . ' €'; }
     elseif ($b['meilleure']['rangMag'] !== null) { $detail[] = $b['meilleure']['rangMag'] . 'e du magasin'; }
+    if (!empty($b['concours']['actif']) && $b['concours']['pieces'] !== null) {
+        $detail[] = $b['concours']['lib'] . ' : ' . str_replace('.', ',', (string) round($b['concours']['pieces'])) . ' pièces'
+            . ($b['concours']['montant'] > 0 ? ' : ' . $b['concours']['montant'] . ' €' : ($b['concours']['rangMag'] !== null ? ', ' . $b['concours']['rangMag'] . 'e du magasin' : ''));
+    }
     if ($pm['atteinte'] !== null) {
         $detail[] = 'magasin à ' . str_replace('.', ',', (string) $pm['atteinte']) . ' %'
             . ($pm['vous'] > 0 ? ' : ' . str_replace('.', ',', (string) $pm['heures']) . ' h × ' . number_format($pm['palier']['eh'], 2, ',', '') . ' € = ' . number_format($pm['vous'], 2, ',', ' ') . ' €' : '');
     }
-    $total = round($b['croisees']['montant'] + $b['record']['montant'] + $b['meilleure']['montant'] + $pm['vous'], 2);
-    $out = ['m' => $m, 'lib' => primesLibMois($m), 'total' => $total, 'paye' => $paye, 'detail' => $detail,
-        'croisees' => $b['croisees']['montant'], 'record' => $b['record']['montant'], 'meilleure' => $b['meilleure']['montant'], 'magasin' => $pm['vous'],
+    $google = googleDuMagasin($shop);
+    $avecCoef = googleApplique(['croisees' => $b['croisees']['montant'], 'record' => $b['record']['montant'], 'meilleure' => $b['meilleure']['montant'], 'concours' => $b['concours']['montant'], 'magasin' => $pm['vous']], $google);
+    if ($google['actif'] && $google['note'] !== null && abs($google['coef'] - 1) > 1e-9 && $avecCoef['brut'] > 0) {
+        $detail[] = 'note Google ' . str_replace('.', ',', (string) $google['note']) . ' : × ' . number_format($google['coef'], 2, ',', '');
+    }
+    $total = $avecCoef['total'];
+    $out = ['m' => $m, 'lib' => primesLibMois($m), 'total' => $total, 'paye' => $paye, 'detail' => $detail, 'coef' => $google['coef'], 'brut' => $avecCoef['brut'],
+        'croisees' => $b['croisees']['montant'], 'record' => $b['record']['montant'], 'meilleure' => $b['meilleure']['montant'], 'concours' => $b['concours']['montant'], 'magasin' => $pm['vous'],
         'quand' => time()];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
     return $out;
@@ -557,8 +750,14 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     // la fenêtre du record, déjà lue.
     $ventes = primesVentesMois($emp, $m, $r['lignes'], $parMois, $hFaites, 6);
 
+    // Les douze dernières semaines, avec sa place dans le réseau chaque semaine.
+    $semaines12 = $enCours ? primesSemaines12($emp, (int) $shop) : [];
+
     // Ce qui est acquis au rythme actuel, et ce qui est à portée en un cran de plus.
-    $acquis = round($b['croisees']['montant'] + $b['record']['montant'] + $b['meilleure']['montant'] + $pm['vous'], 2);
+    $google = googleDuMagasin($shop);
+    $montants = ['croisees' => $b['croisees']['montant'], 'record' => $b['record']['montant'], 'meilleure' => $b['meilleure']['montant'], 'concours' => $b['concours']['montant'], 'magasin' => $pm['vous']];
+    $avecCoef = googleApplique($montants, $google);
+    $acquis = $avecCoef['total'];
     $cfgC = croiseesReglages(); $regR = venteRecordReglages();
     $maxC = max(array_map(static fn ($p) => $p['m'], $cfgC['paliers']) ?: [0]);
     $cranC = $b['croisees']['prochain'] !== null ? max($b['croisees']['montant'], $b['croisees']['prochain']['montant']) : max($b['croisees']['montant'], $maxC);
@@ -566,7 +765,8 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     $cranM = $b['meilleure']['montant'] > 0 ? $b['meilleure']['montant'] : $b['meilleure']['montantMag'];
     $cranMag = $pm['vous'];
     foreach ($pm['paliers'] as $p) { if (!$p['atteint'] && $p['vous'] !== null && !$pm['sousMin']) { $cranMag = $p['vous']; break; } }
-    $aPortee = round($cranC + $cranR + $cranM + $cranMag, 2);
+    $cranK = !$b['concours']['actif'] ? 0 : ($b['concours']['montant'] > 0 ? $b['concours']['montant'] : $b['concours']['montantMag']);
+    $aPortee = $enCours ? googleApplique(['croisees' => $cranC, 'record' => $cranR, 'meilleure' => $cranM, 'concours' => $cranK, 'magasin' => $cranMag], $google)['total'] : $acquis;
 
     // Les mois passés : les trois derniers mois clos.
     $mois = [];
@@ -579,8 +779,8 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     $out = ['emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)],
         'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
-        'aujourdhui' => $auj, 'acquis' => $acquis, 'aPortee' => $aPortee,
-        'briques' => $b, 'prime' => $pm, 'semaines' => $semaines, 'ventes' => $ventes, 'mois' => $mois,
+        'aujourdhui' => $auj, 'acquis' => $acquis, 'aPortee' => $aPortee, 'acquisBrut' => $avecCoef['brut'], 'google' => $google, 'montants' => $avecCoef,
+        'briques' => $b, 'prime' => $pm, 'semaines' => $semaines, 'semaines12' => $semaines12, 'ventes' => $ventes, 'mois' => $mois,
         'motif' => $r['motif']];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
     return $out;
@@ -620,6 +820,82 @@ function primesVentesMois(int $emp, string $m, array $lignesM, array $parMois, f
     return $out;
 }
 
+/** Les heures du planning d'une personne, semaine par semaine (lundi), entre deux dates. */
+function primesHeuresSemaines(int $emp, string $du, string $au): array
+{
+    $duree = '((TIME_TO_SEC(s.end_hour) - TIME_TO_SEC(s.start_hour) + 86400) % 86400)';
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT YEARWEEK(s.work_date, 3) sem, SUM(' . $duree . ') / 3600 h
+                             FROM franchisee_employee_schedule s
+                            WHERE s.id_employee = ? AND s.work_date >= ? AND s.work_date <= ?
+                            GROUP BY YEARWEEK(s.work_date, 3)', [$emp, $du, $au]) as $r) {
+            $yw = (string) $r['sem'];
+            $lundi = date('Y-m-d', strtotime(substr($yw, 0, 4) . 'W' . substr($yw, 4, 2)));
+            $out[$lundi] = round((float) $r['h'], 2);
+        }
+    } catch (PDOException $e) { /* planning illisible : pas d'heures par semaine */ }
+    return $out;
+}
+
+/**
+ * Les douze dernières semaines d'une personne : ses ventes croisées (taux) et sa place au taux
+ * parmi les vendeuses du réseau (dix tickets au moins la semaine), ses pièces du concours et sa
+ * place, son CA, ses heures, son CA par heure. Mis en cache une heure.
+ */
+function primesSemaines12(int $emp, int $sid): array
+{
+    $cle = 'primesS12:' . $emp;
+    $c = setting($cle);
+    if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
+    $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];
+    if ($reseau === []) { return []; }
+    $du = $reseau[0]['du']; $au = date('Y-m-d', strtotime('-1 day'));
+    $heures = primesHeuresSemaines($emp, $du, $au);
+    // Les ventes par jour de son magasin : les jours manquants se lisent maintenant, trente au plus,
+    // le cron complète le reste.
+    if (function_exists('pvVentesJour')) {
+        $manquants = pvVentesJoursManquants($sid, $du, $au);
+        foreach (array_slice(array_reverse($manquants), 0, 30) as $j) { pvVentesJour($sid, $j); }
+    }
+    $cfgK = concoursReglages();
+    $out = [];
+    foreach ($reseau as $sem) {
+        $e = (array) ($sem['e'] ?? []);
+        $moi = $e[$emp] ?? ($e[(string) $emp] ?? null);
+        // La place au taux de ventes croisées, dix tickets au moins.
+        $taux = []; $tq = [];
+        foreach ($e as $id => $x) {
+            if ((int) ($x['t'] ?? 0) >= 10) { $taux[(int) $id] = 100 * (int) $x['c'] / (int) $x['t']; }
+            if ((float) ($x['tq'] ?? 0) > 0) { $tq[(int) $id] = (float) $x['tq']; }
+        }
+        $monTaux = ($moi !== null && (int) $moi['t'] >= 10) ? round(100 * (int) $moi['c'] / (int) $moi['t'], 1) : null;
+        $rang = $monTaux !== null ? 1 + count(array_filter($taux, static fn ($v) => $v > $monTaux + 1e-9)) : null;
+        $mesTq = $moi !== null ? round((float) ($moi['tq'] ?? 0), 1) : null;
+        $rangTq = ($mesTq !== null && $mesTq > 0) ? 1 + count(array_filter($tq, static fn ($v) => $v > $mesTq + 1e-9)) : null;
+        // Le CA de la semaine : ses jours dans son magasin.
+        $ca = 0.0; $tickets = 0; $joursCa = 0;
+        for ($k = 0; $k < 7; $k++) {
+            $j = date('Y-m-d', strtotime($sem['du'] . ' +' . $k . ' days'));
+            if ($j >= date('Y-m-d')) { break; }
+            $v = setting('pvE' . $sid . ':' . $j);
+            if (!is_array($v) || !isset($v['e'])) { continue; }
+            $joursCa++;
+            $y = $v['e'][$emp] ?? ($v['e'][(string) $emp] ?? null);
+            if (is_array($y)) { $ca += (float) ($y['ca'] ?? 0); $tickets += (int) ($y['t'] ?? 0); }
+        }
+        $h = (float) ($heures[$sem['du']] ?? 0.0);
+        $out[] = ['lib' => $sem['lib'], 'du' => $sem['du'], 'jours' => (int) $sem['jours'],
+            'tickets' => $moi !== null ? (int) $moi['t'] : 0, 'croisees' => $moi !== null ? (int) $moi['c'] : 0, 'taux' => $monTaux,
+            'rang' => $rang, 'sur' => count($taux),
+            'pieces' => $cfgK['actif'] ? $mesTq : null, 'rangPieces' => $cfgK['actif'] ? $rangTq : null, 'surPieces' => count($tq),
+            'ca' => $joursCa > 0 ? round($ca, 2) : null, 'heures' => round($h, 1),
+            'caHeure' => ($joursCa > 0 && $h > 0 && $ca > 0) ? (int) round($ca / $h) : null];
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out], JSON_UNESCAPED_UNICODE)]);
+    return $out;
+}
+
 /* ======================================================================
    Tout le monde sur un mois : ce que l'app montre à chacune, et ce que le CEO enregistre
    ====================================================================== */
@@ -645,6 +921,8 @@ function primesMoisTous(string $m, bool $frais = false): array
     $cr = function_exists('pvCroiseesMois') ? pvCroiseesMois($m) : null;
     $h = primesHeuresMois($m);
     $regM = primeMagasinReglages(); $cfgC = croiseesReglages(); $regR = venteRecordReglages(); $mv = ventePrimesConfig();
+    $cfgK = concoursReglages();
+    $classK = concoursClassement($cr, $emps, $cfgK);
     $g = venteGagnantes($r['lignes']);
     $reseauId = $g['reseau']['id'] ?? null;
     $magId = [];
@@ -658,7 +936,8 @@ function primesMoisTous(string $m, bool $frais = false): array
         $pm = primesMagasinMois((int) $sid, $m, $regM, null, (float) ($hEq[$sid] ?? 0.0), $budgets[$sid] ?? null);
         $magasins[$sid] = ['id' => (string) $sid, 'nom' => $nom, 'objectif' => $pm['objectif'], 'ca' => $pm['ca'],
             'atteinte' => $pm['atteinte'], 'atteinteProj' => $pm['atteinteProj'], 'palier' => $pm['palier'],
-            'heuresEquipe' => $pm['heuresEquipe'], 'personnes' => (int) ($nEq[$sid] ?? 0), 'equipe' => $pm['equipe'], 'cible' => croiseesCible($cfgC, (string) $sid)];
+            'heuresEquipe' => $pm['heuresEquipe'], 'personnes' => (int) ($nEq[$sid] ?? 0), 'equipe' => $pm['equipe'], 'cible' => croiseesCible($cfgC, (string) $sid),
+            'google' => googleDuMagasin((string) $sid)];
     }
 
     // Les personnes : toutes celles qui ont une ligne, des heures ou des tickets ce mois-là.
@@ -684,22 +963,30 @@ function primesMoisTous(string $m, bool $frais = false): array
         $heures = (float) ($h[$id]['mois'] ?? ($l['heures'] ?? 0.0));
         $pal = $magasins[$shop]['palier'] ?? null;
         $montantMag = ($pal !== null && $heures >= $regM['heuresMin']) ? round($pal['eh'] * $heures, 2) : 0.0;
-        $total = round($prC['montant'] + $prR['prime'] + $meilleure + $montantMag, 2);
+        $k = $classK[$id] ?? null;
+        $montantK = concoursPrime($k, $cfgK);
+        $gm = $magasins[$shop]['google'] ?? googleDuMagasin($shop);
+        $avec = googleApplique(['croisees' => $prC['montant'], 'record' => $prR['prime'], 'meilleure' => $meilleure, 'concours' => $montantK, 'magasin' => $montantMag], $gm);
+        $total = $avec['total'];
         $personnes[] = ['id' => $id, 'nom' => $emps[$id]['nom'], 'shopId' => $shop, 'magasinNom' => $nomDe[$shop] ?? ('Magasin ' . $shop),
             'heures' => round($heures, 1), 'tickets' => $tickets, 'ca' => (int) ($l['ca'] ?? 0), 'score' => $l['score'] ?? null, 'rang' => $l['rang'] ?? null,
             'croisees' => ['croisees' => $cC, 'tickets' => $tC, 'taux' => $taux, 'montant' => $prC['montant']],
             'record' => ['lt' => $lt, 'record' => $rec, 'tranches' => $prR['tranches'], 'montant' => $prR['prime']],
-            'meilleure' => $meilleure, 'magasin' => $montantMag, 'total' => $total];
+            'meilleure' => $meilleure,
+            'concours' => ['pieces' => $k['pieces'] ?? null, 'rangMag' => $k['rangMag'] ?? null, 'rangRes' => $k['rangRes'] ?? null, 'montant' => $montantK],
+            'magasin' => $montantMag, 'coef' => $gm['coef'], 'brut' => $avec['brut'], 'avecCoef' => $avec, 'total' => $total];
     }
     usort($personnes, static fn ($a, $b) => [$a['magasinNom'], -$a['total'], $a['nom']] <=> [$b['magasinNom'], -$b['total'], $b['nom']]);
-    $totaux = ['croisees' => 0.0, 'record' => 0.0, 'meilleure' => 0.0, 'magasin' => 0.0, 'total' => 0.0, 'personnes' => 0];
+    $totaux = ['croisees' => 0.0, 'record' => 0.0, 'meilleure' => 0.0, 'concours' => 0.0, 'magasin' => 0.0, 'brut' => 0.0, 'total' => 0.0, 'personnes' => 0];
     foreach ($personnes as $p) {
         $totaux['croisees'] += $p['croisees']['montant']; $totaux['record'] += $p['record']['montant'];
-        $totaux['meilleure'] += $p['meilleure']; $totaux['magasin'] += $p['magasin']; $totaux['total'] += $p['total'];
+        $totaux['meilleure'] += $p['meilleure']; $totaux['concours'] += $p['concours']['montant']; $totaux['magasin'] += $p['magasin']; $totaux['brut'] += $p['brut']; $totaux['total'] += $p['total'];
         if ($p['total'] > 0) { $totaux['personnes']++; }
     }
     $out = ['m' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(), 'motif' => $r['motif'],
         'croiseesComplet' => (bool) ($cr['complet'] ?? false), 'croiseesJours' => (int) ($cr['jours'] ?? 0),
+        'concours' => ['actif' => (bool) $cfgK['actif'], 'lib' => $cfgK['lib'], 'magasin' => (int) $cfgK['magasin'], 'reseau' => (int) $cfgK['reseau'], 'complet' => (bool) ($cr['tqComplet'] ?? false)],
+        'google' => googleReglages(),
         'magasins' => array_values($magasins), 'personnes' => $personnes, 'totaux' => $totaux];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
     return $out;
@@ -727,19 +1014,23 @@ function primesEnregistrer(string $m): array
     $enr = ['quand' => date('Y-m-d H:i'), 'magasins' => [], 'personnes' => [], 'total' => 0.0];
     foreach ($t['magasins'] as $mg) {
         $enr['magasins'][] = ['id' => $mg['id'], 'atteinte' => $mg['atteinte'], 'palier' => $mg['palier'] !== null ? $mg['palier']['pct'] : null,
-            'eh' => $mg['palier'] !== null ? $mg['palier']['eh'] : null, 'heuresEquipe' => $mg['heuresEquipe'], 'equipe' => $mg['equipe']];
+            'eh' => $mg['palier'] !== null ? $mg['palier']['eh'] : null, 'heuresEquipe' => $mg['heuresEquipe'], 'equipe' => $mg['equipe'],
+            'google' => $mg['google']['note'] ?? null, 'coef' => $mg['google']['coef'] ?? 1.0];
     }
     foreach ($t['personnes'] as $p) {
-        $deux = round($p['croisees']['montant'] + $p['magasin'], 2);
-        if ($deux <= 0) { continue; }
-        $enr['personnes'][] = ['id' => $p['id'], 'shopId' => $p['shopId'], 'heures' => $p['heures'],
-            'croisees' => $p['croisees']['montant'], 'tauxCroisees' => $p['croisees']['taux'], 'magasin' => $p['magasin'], 'total' => $deux];
-        $enr['total'] += $deux;
-        journalAdd('CEO', 'Vente', $p['nom'], 'Primes app worker ' . $m . ' — '
-            . ($p['croisees']['montant'] > 0 ? 'ventes croisées ' . $p['croisees']['montant'] . ' € (' . str_replace('.', ',', (string) $p['croisees']['taux']) . ' %)' : '')
-            . ($p['croisees']['montant'] > 0 && $p['magasin'] > 0 ? ' · ' : '')
-            . ($p['magasin'] > 0 ? 'prime magasin ' . number_format($p['magasin'], 2, ',', ' ') . ' € (' . str_replace('.', ',', (string) $p['heures']) . ' h)' : '')
-            . ' — ' . $p['magasinNom']);
+        $a = $p['avecCoef'];
+        $trois = round($a['croisees'] + $a['concours'] + $a['magasin'], 2);
+        if ($trois <= 0) { continue; }
+        $enr['personnes'][] = ['id' => $p['id'], 'shopId' => $p['shopId'], 'heures' => $p['heures'], 'coef' => $p['coef'],
+            'croisees' => $a['croisees'], 'tauxCroisees' => $p['croisees']['taux'],
+            'concours' => $a['concours'], 'pieces' => $p['concours']['pieces'], 'magasin' => $a['magasin'], 'total' => $trois];
+        $enr['total'] += $trois;
+        $parts = [];
+        if ($a['croisees'] > 0) { $parts[] = 'ventes croisées ' . number_format($a['croisees'], 2, ',', ' ') . ' € (' . str_replace('.', ',', (string) $p['croisees']['taux']) . ' %)'; }
+        if ($a['concours'] > 0) { $parts[] = 'concours ' . number_format($a['concours'], 2, ',', ' ') . ' € (' . str_replace('.', ',', (string) round((float) $p['concours']['pieces'])) . ' pièces)'; }
+        if ($a['magasin'] > 0) { $parts[] = 'prime magasin ' . number_format($a['magasin'], 2, ',', ' ') . ' € (' . str_replace('.', ',', (string) $p['heures']) . ' h)'; }
+        if (abs($p['coef'] - 1) > 1e-9) { $parts[] = 'note Google × ' . number_format($p['coef'], 2, ',', ''); }
+        journalAdd('CEO', 'Vente', $p['nom'], 'Primes app worker ' . $m . ' — ' . implode(' · ', $parts) . ' — ' . $p['magasinNom']);
     }
     $enr['total'] = round($enr['total'], 2);
     return $enr;
@@ -899,7 +1190,7 @@ function ep_primes_reglages(): array
     $shop = trim((string) ($_GET['shop'] ?? ''));
     if ($shop === '' || !isset($nomDe[$shop])) { $shop = (string) (array_key_first($nomDe) ?? ''); }
     $m = date('Y-m');
-    $out = ['magasin' => primeMagasinReglages(), 'croisees' => croiseesReglages(),
+    $out = ['magasin' => primeMagasinReglages(), 'croisees' => croiseesReglages(), 'concours' => concoursReglages(), 'google' => googleReglages(),
         'record' => venteRecordReglages(), 'meilleure' => ventePrimesConfig(),
         'magasins' => array_map(static fn ($id, $n) => ['id' => (string) $id, 'nom' => $n], array_keys($nomDe), $nomDe),
         'shop' => $shop, 'm' => $m, 'lib' => primesLibMois($m), 'apercu' => null, 'mesures' => []];
@@ -907,7 +1198,7 @@ function ep_primes_reglages(): array
         $h = primesHeuresMois($m);
         $hEq = 0.0; $n = 0; $finPlan = null;
         foreach ($h as $x) { if ($x['shop'] === $shop) { $hEq += $x['mois']; $n++; if ($x['fin'] !== null && ($finPlan === null || $x['fin'] > $finPlan)) { $finPlan = $x['fin']; } } }
-        $out['apercu'] = primesMagasinMois((int) $shop, $m, $out['magasin'], null, $hEq) + ['personnes' => $n, 'planningJusquau' => $finPlan];
+        $out['apercu'] = primesMagasinMois((int) $shop, $m, $out['magasin'], null, $hEq) + ['personnes' => $n, 'planningJusquau' => $finPlan, 'google' => googleDuMagasin($shop)];
     }
     // Le taux de ventes croisées mesuré par magasin sur le dernier mois clos, pour poser les cibles.
     $mClos = date('Y-m', strtotime('first day of last month'));

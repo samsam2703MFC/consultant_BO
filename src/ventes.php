@@ -1680,6 +1680,11 @@ function ep_ventes_explication_pdf(): array
     $primes = ventePrimesConfig();
     $reg = venteRecordReglages();
     $logo = rapLogoDataUri();
+    // Les deux primes de l'app worker (06/10/2026) : les ventes croisées et la prime magasin.
+    $cfgC = function_exists('croiseesReglages') ? croiseesReglages() : null;
+    $regM = function_exists('primeMagasinReglages') ? primeMagasinReglages() : null;
+    $cfgK = function_exists('concoursReglages') ? concoursReglages() : null;
+    $regG = function_exists('googleReglages') ? googleReglages() : null;
     $blocTitre = static fn (string $n, string $t2) =>
         '<div style="display:flex;align-items:baseline;gap:3mm;margin:6mm 0 2mm">'
         . '<span style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:16pt;color:#8D1D2C">' . $n . '</span>'
@@ -1694,7 +1699,7 @@ function ep_ventes_explication_pdf(): array
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:11mm">' : '') . '</td>'
         . '<td align="right" class="k">Les primes de vente — le mode d\'emploi de l\'équipe</td></tr></table>'
         . '<div style="border-bottom:2px solid #8D1D2C;margin:2mm 0 4mm"></div>'
-        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, deux façons de gagner. Elles s\'additionnent.</div>'
+        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, ' . (($cfgK !== null && $cfgK['actif']) ? 'cinq' : 'quatre') . ' façons de gagner. Elles s\'additionnent.</div>'
         . '<div style="color:#7a736a;font-size:9.5pt;margin-top:1mm">Un seul geste les nourrit toutes : proposer quelque chose en plus à chaque client. « Et avec ça ? »</div>'
 
         . $blocTitre('1', 'Bats ton record — ' . $reg['eurDixieme'] . ' € par dixième dès le deuxième')
@@ -1720,14 +1725,43 @@ function ep_ventes_explication_pdf(): array
         . '<td width="50%" class="encart" align="center"><span class="k">Meilleure du réseau</span><div class="eur">' . $primes['reseau'] . ' €</div></td>'
         . '</tr></table>'
 
+        . ($cfgC === null ? '' :
+            $blocTitre('3', 'Les ventes croisées — jusqu\'à ' . max(array_map(static fn ($x) => $x['m'], $cfgC['paliers']) ?: [0]) . ' €')
+            . '<div>Une vente croisée, c\'est un ticket à <b>deux articles ou plus</b> (deux produits différents — trois croissants font un article). '
+            . 'Chaque magasin a sa cible, en pourcentage de vos tickets : ' . number_format($cfgC['cibleDefaut'], 0, ',', ' ') . ' % pour le réseau, la vôtre est sur l\'affiche de votre magasin et dans l\'app. '
+            . 'Atteignez-la sur le mois, et chaque palier au-dessus paie davantage. <span style="color:#7a736a">(Au moins ' . (int) $cfgC['minTickets'] . ' tickets dans le mois.)</span></div>'
+            . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>'
+            . implode('', array_map(static fn ($x, $i) => '<td align="center" style="background:' . ['#a8734d', '#8d5a3a', '#8D1D2C'][min(2, $i)] . ';border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">'
+                . ($x['plus'] > 0 ? 'cible + ' . number_format($x['plus'], 0, ',', ' ') . ' points' : 'la cible') . '</div><div style="font-family:Georgia,serif;font-size:14pt">' . $x['m'] . ' €</div></td>', $cfgC['paliers'], array_keys($cfgC['paliers'])))
+            . '</tr></table>'
+            . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Le compteur du jour est dans l\'app, onglet Primes : « Et avec ça ? »</div>')
+
+        . ($regM === null ? '' :
+            $blocTitre('4', 'La prime magasin — l\'objectif du mois, pour toute l\'équipe')
+            . '<div>Chaque magasin a son objectif de chiffre du mois. S\'il est atteint, <b>chaque heure que vous avez prestée dans le mois</b> rapporte : '
+            . implode(' · ', array_map(static fn ($x) => $x['pct'] . ' % → <b>' . number_format($x['eh'], 2, ',', ' ') . ' €/h</b>', $regM['paliers'])) . '. '
+            . 'Pour 120 heures, de ' . number_format(120 * ($regM['paliers'][0]['eh'] ?? 0), 0, ',', ' ') . ' à ' . number_format(120 * (end($regM['paliers'])['eh'] ?? 0), 0, ',', ' ') . ' €. '
+            . 'Les heures sont celles du planning ; sous ' . (int) $regM['heuresMin'] . ' h dans le mois, pas de part. L\'app montre où en est le magasin, jour après jour, et ce qu\'il manque.</div>')
+
+        . (($cfgK === null || !$cfgK['actif']) ? '' :
+            $blocTitre('5', 'Le concours ' . $e($cfgK['lib']) . ' — ' . (int) $cfgK['magasin'] . ' € / ' . (int) $cfgK['reseau'] . ' €')
+            . '<div>Le <b>nombre de pièces</b> de la famille vendues dans le mois, tout simplement. La première de chaque magasin gagne <b>' . (int) $cfgK['magasin'] . ' €</b>, la première du réseau <b>' . (int) $cfgK['reseau'] . ' €</b>. '
+            . 'À égalité, moins de tickets gagne : c\'est la proposition qui compte, pas le passage. <span style="color:#7a736a">(Au moins ' . (int) $cfgK['minPieces'] . ' pièces dans le mois.)</span></div>')
+
+        . (($regG === null || !$regG['actif']) ? '' :
+            '<div class="encart" style="margin-top:6mm"><span class="k">La note Google du magasin</span>'
+            . '<div style="font-size:9.5pt;margin-top:1mm">Elle multiplie ' . ($regG['porte'] === 'tout' ? 'toutes les primes' : 'les ventes croisées, le concours et la prime magasin') . ' : <b>' . number_format($regG['neutre'], 1, ',', ' ') . ' est neutre</b>, au-dessus la prime monte, en dessous elle baisse — '
+            . number_format($regG['pente'], 2, ',', ' ') . ' par point, entre × ' . number_format($regG['min'], 2, ',', ' ') . ' et × ' . number_format($regG['max'], 2, ',', ' ') . '. '
+            . 'Un client content qui laisse un avis, c\'est aussi votre prime.</div></div>')
+
         . '<div class="encart" style="margin-top:6mm">'
         . '<span class="k">Les règles, en clair</span>'
         . '<div style="font-size:9.5pt;margin-top:1mm">Tout se calcule sur le <b>mois complet</b>, jamais en cours de route — les primes tombent au début du mois suivant, <b>en bons payés par la marque</b>, jamais par le magasin. '
-        . 'Rien n\'est caché : l\'affiche du magasin montre les cibles, les montants et le podium du mois dernier. '
+        . 'Rien n\'est caché : l\'affiche du magasin montre les cibles, les montants et le podium du mois dernier ; l\'app, onglet Primes, montre chaque jour où vous en êtes. '
         . 'Le calcul est le même pour toutes, écrit noir sur blanc — s\'il vous semble faux, dites-le, on vérifie.</div></div>'
 
         . '<div style="margin-top:5mm;font-family:Georgia,\'DejaVu Serif\',serif;font-size:12pt;text-align:center;color:#8D1D2C">'
-        . 'Un article en plus à chaque client : bon pour votre record et pour votre score.<br>Un seul geste, deux primes.</div>'
+        . 'Un article en plus à chaque client : bon pour votre record, votre score et vos ventes croisées.<br>Un seul geste, trois primes — et l\'objectif du magasin se gagne à plusieurs.</div>'
         . '</div>';
     $pdf = rapPdfRendu($h, ['magasin' => 'Réseau', 'rapport' => 'Primes de vente — mode d\'emploi',
         'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
@@ -1883,7 +1917,14 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
     foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
-    $maxTotal = $primes['reseau'] + $regAff['maxDixiemes'] * $regAff['eurDixieme'];
+    // Les deux primes de l'app worker (06/10/2026) : les ventes croisées, la prime magasin.
+    $cfgCr = function_exists('croiseesReglages') ? croiseesReglages() : null;
+    $regMag = function_exists('primeMagasinReglages') ? primeMagasinReglages() : null;
+    $cfgKf = function_exists('concoursReglages') ? concoursReglages() : null;
+    $regGf = function_exists('googleReglages') ? googleReglages() : null;
+    $budgetsAff = function_exists('primesBudgets') ? primesBudgets($m) : [];
+    $maxCrois = $cfgCr !== null ? max(array_map(static fn ($x) => $x['m'], $cfgCr['paliers']) ?: [0]) : 0;
+    $maxTotal = $primes['reseau'] + $regAff['maxDixiemes'] * $regAff['eurDixieme'] + $maxCrois;
 
     // Le classement du MOIS PRÉCÉDENT : le podium du magasin et la gagnante
     // réseau — c'est ce qui donne envie de détrôner. Calculé une fois pour
@@ -1986,7 +2027,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
 
             . '<div class="serif" style="font-size:26pt;margin:7mm 0 1mm;letter-spacing:-.01em">Ce qu’il y a à gagner ce mois-ci</div>'
-            . '<div style="font-size:11pt;color:#5d564e;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes — payées en bons par la marque, jamais par le magasin, et cumulables.</div>'
+            . '<div style="font-size:11pt;color:#5d564e;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes' . ($regMag !== null ? ', plus la prime magasin' : '') . ' — payées en bons par la marque, jamais par le magasin, et cumulables.</div>'
 
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 6mm"><tr>'
             . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏆 Meilleure vendeuse du réseau</div>'
@@ -1996,6 +2037,21 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<div class="gros">' . (int) $primes['magasin'] . ' €</div>'
             . '<div class="regle">Le meilleur score de ' . $e($court($nom)) . ' ce mois-ci.</div></td>'
             . '</tr></table>'
+            . (($cfgCr === null || $regMag === null) ? '' :
+                '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 6mm"><tr>'
+                . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">✚ Ventes croisées</div>'
+                . '<div class="gros">jusqu’à ' . $maxCrois . ' €</div>'
+                . '<div class="regle">Un ticket à 2 articles ou plus. Cible de ' . $e($court($nom)) . ' : <b>' . number_format(croiseesCible($cfgCr, (string) $sid), 0, ',', ' ') . ' %</b> de vos tickets → '
+                . implode(' · ', array_map(static fn ($x) => ($x['plus'] > 0 ? '+ ' . number_format($x['plus'], 0, ',', ' ') . ' pts : ' : '') . $x['m'] . ' €', $cfgCr['paliers'])) . '.</div></td>'
+                . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏪 Prime magasin</div>'
+                . '<div class="gros">' . (isset($budgetsAff[(string) $sid]) ? number_format((float) $budgetsAff[(string) $sid]['montant'], 0, ',', ' ') . ' €' : 'l’objectif') . '</div>'
+                . '<div class="regle">L’objectif de ' . $e($libMois) . '. Atteint, chaque heure prestée paie : '
+                . implode(' · ', array_map(static fn ($x) => $x['pct'] . ' % → ' . number_format($x['eh'], 2, ',', ' ') . ' €/h', $regMag['paliers'])) . '. Pour 120 h : de '
+                . number_format(120 * ($regMag['paliers'][0]['eh'] ?? 0), 0, ',', ' ') . ' à ' . number_format(120 * (end($regMag['paliers'])['eh'] ?? 0), 0, ',', ' ') . ' €.</div></td>'
+                . '</tr></table>')
+            . (($cfgKf === null || !$cfgKf['actif']) ? '' :
+                '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>🥧 Concours ' . $e($cfgKf['lib']) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">' . (int) $cfgKf['magasin'] . ' €</b>, la première du réseau <b class="acc">' . (int) $cfgKf['reseau'] . ' €</b>.'
+                . (($regGf !== null && $regGf['actif']) ? ' La note Google du magasin multiplie ces primes : ' . number_format($regGf['neutre'], 1, ',', ' ') . ' est neutre.' : '') . '</div>')
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'

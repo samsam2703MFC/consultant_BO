@@ -16,7 +16,12 @@ class AppExtension extends AbstractExtension
 
     public function getFunctions(): array
     {
-        return [ new TwigFunction('old', [ $this, 'getOld' ]) ];
+        return [
+            new TwigFunction('old', [ $this, 'getOld' ]),
+            // Trigonométrie pour les jauges dessinées en SVG (écran Mes primes).
+            new TwigFunction('cos', static fn (float $a): float => cos($a)),
+            new TwigFunction('sin', static fn (float $a): float => sin($a)),
+        ];
     }
 
     public function getOld(string $key, $default = '')

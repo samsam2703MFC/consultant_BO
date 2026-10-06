@@ -515,6 +515,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/primes-montants') { return wr_ventes_primes_montants(); }
     if ($method === 'POST' && $path === '/ventes/prime-magasin') { return wr_prime_magasin(); }
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
+    if ($method === 'POST' && $path === '/ventes/concours') { return wr_concours(); }
+    if ($method === 'POST' && $path === '/ventes/prime-google') { return wr_prime_google(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }
