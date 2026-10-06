@@ -245,3 +245,47 @@ body.pf-emb #pf{padding:4px 2px 30px;max-width:none}
 .pf-tab td.cpt .pf-in{border-color:#d8c9a6}
 .pf-tab td.cpt .pf-in.on{border-color:var(--pf-or);background:#fdf8e8;font-weight:700}
 .pf-tab td.cpt .pf-in::placeholder{color:#b9ad98}
+
+/* Le suivi selon la durée de vie (maquette C, demande du 06/10/2026) : short, medium, long life. */
+:root{--pf-vs:#C0182B;--pf-vm:#D97706;--pf-vl:#2F6EA5}
+.pf-titre small{font:600 11px var(--font-ui);color:#777;margin-left:8px;letter-spacing:.06em;text-transform:uppercase}
+.pf-vie{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;font:700 9.5px var(--font-ui);color:#fff;vertical-align:1px;margin-right:6px}
+.pf-vie.S{background:var(--pf-vs)}.pf-vie.M{background:var(--pf-vm)}.pf-vie.L{background:var(--pf-vl)}
+.pf-tabs3{display:flex;border-bottom:.5px solid var(--pf-trait)}
+.pf-t3{flex:1;display:flex;align-items:center;gap:8px;padding:11px 16px;font:600 12.5px var(--font-ui);color:#666;background:#fff;border:none;border-bottom:3px solid transparent;cursor:pointer;text-align:left;white-space:nowrap;min-width:0}
+.pf-t3>b{font:400 20px var(--font-display);color:#222}
+.pf-t3>small{font-weight:500;font-size:10.5px;color:#888;overflow:hidden;text-overflow:ellipsis}
+.pf-t3 .al{margin-left:auto;display:flex;gap:4px}
+.pf-t3:hover{background:#fcfaf7}
+.pf-t3.on{color:#222}
+.pf-t3.on.S{border-bottom-color:var(--pf-vs);background:#fdf6f7}.pf-t3.on.M{border-bottom-color:var(--pf-vm);background:#fdf8f1}.pf-t3.on.L{border-bottom-color:var(--pf-vl);background:#f3f7fb}
+.pf-regle3{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:11px;color:#555;background:#fcfaf7;border-bottom:.5px solid var(--pf-trait)}
+.pf-regle3>span{flex:1}.pf-regle3 b{color:#222}
+.pf-mini-btn.on{background:#222;color:#fff;border-color:#222}
+/* Le S · M · L d'un produit, sous son nom. */
+.pf-mseg{display:flex;align-items:center;gap:2px;margin-top:3px}
+.pf-mseg button{width:17px;height:15px;padding:0;border:none;border-radius:3px;font:700 8.5px var(--font-ui);background:#efe9e1;color:#999;cursor:pointer}
+.pf-mseg button:hover{background:#e2d9cc;color:#555}
+.pf-mseg button.on.S{background:var(--pf-vs);color:#fff}.pf-mseg button.on.M{background:var(--pf-vm);color:#fff}.pf-mseg button.on.L{background:var(--pf-vl);color:#fff}
+.pf-mseg button:disabled{cursor:wait}
+.pf-mseg i{font:600 9px var(--font-ui);font-style:normal;color:#8D1D2C;margin-left:5px;letter-spacing:.02em}
+/* Le réglage par catégorie. */
+.pf-viecats{padding:8px 16px 4px;border-bottom:.5px solid var(--pf-trait);background:#fff}
+.pf-viecats .pf-mini{display:block;margin:0 0 6px}
+.pf-viecats .pf-tab{max-width:640px}
+.pf-seg{display:inline-flex;border:.5px solid var(--pf-trait2);border-radius:7px;overflow:hidden}
+.pf-seg button{padding:3px 10px;font:700 10px var(--font-ui);color:#888;background:#fff;border:none;border-left:.5px solid var(--pf-trait2);cursor:pointer}
+.pf-seg button:first-child{border-left:none}
+.pf-seg button.on.S{background:var(--pf-vs);color:#fff}.pf-seg button.on.M{background:var(--pf-vm);color:#fff}.pf-seg button.on.L{background:var(--pf-vl);color:#fff}
+/* Le long life : le stock face à trois jours de vente. */
+.pf-jauge{position:relative;display:inline-block;width:120px;height:8px;border-radius:4px;background:#eee6da;vertical-align:middle}
+.pf-jauge i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.pf-jauge i.ko{background:var(--pf-ko)}.pf-jauge i.att{background:var(--pf-att)}.pf-jauge i.ok{background:var(--pf-ok)}
+@media (max-width:900px){
+  .pf-t3{flex-wrap:wrap;gap:4px 6px;padding:9px 10px}
+  .pf-t3>small{display:none}
+  .pf-t3 .al{margin-left:0;flex-basis:100%;flex-wrap:wrap}
+  .pf-regle3{flex-wrap:wrap}
+}
+@media (max-width:600px){.pf-t3 .lf{display:none}.pf-t3>b{font-size:17px}.pf-t3{font-size:12px}}
+@media print{.pf-tabs3 .pf-t3:not(.on),.pf-regle3 .pf-mini-btn,.pf-mseg button:not(.on){display:none}}
