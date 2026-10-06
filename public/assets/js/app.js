@@ -1363,6 +1363,9 @@ class App {
         // Prospection mobile — l'écran donne ses liens, un aperçu et l'état
         // des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
+        // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
+        // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
+        ['ext:employee/auth', 'App worker ↗', 0],
         ['newsletter', 'Newsletter', 0],
         ['newsletterShop', 'Newsletter magasin', 0],
         // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,

@@ -1,0 +1,11 @@
+{
+  "back": "Retour",
+  "error_code": "Code d'erreur",
+  "forbidden": "Acces refusé",
+  "forbidden_subtitle": "Vous n'avez pas l'autorisation d'afficher cette page.",
+  "not_found": "Introuvable",
+  "not_found_subtitle": "La page que vous recherchez n'existe pas ou a été déplacée.",
+  "reload": "Recharger",
+  "server_error": "Erreur serveur",
+  "server_error_subtitle": "Une erreur est survenue de notre cote. Veuillez réessayer."
+}

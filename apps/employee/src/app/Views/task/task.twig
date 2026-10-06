@@ -1,0 +1,586 @@
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'tasks' %}
+
+{% block title %}{{ translations.tasks ?? 'Tasks' }}{% endblock %}
+{% block page_title %}{{ translations.tasks ?? 'Tasks' }}{% endblock %}
+{% block page_subtitle %}
+    {{ translations.tasks_subtitle ?? 'Daily checklist & responsibilities' }}
+{% endblock %}
+
+{% block head %}
+    <style>
+        .card {
+            border-radius: 18px;
+            border: 1px solid rgba(0, 0, 0, .06);
+        }
+
+        .soft {
+            background: rgba(255, 255, 255, .92);
+        }
+
+        .chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: .38rem .6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 0, 0, .08);
+            background: rgba(255, 255, 255, .9);
+            font-weight: 800;
+            font-size: .78rem;
+            color: #3d3a36;
+            user-select: none;
+        }
+
+        .chip.is-active {
+            border-color: rgba(67, 94, 190, .30);
+            background: rgba(67, 94, 190, .10);
+            color: #5A121C;
+        }
+
+        .chip i {
+            opacity: .85;
+        }
+
+        .accordion {
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, .92);
+        }
+
+        .accordion details {
+            border-top: 1px solid rgba(0, 0, 0, .06);
+        }
+
+        .accordion details:first-child {
+            border-top: 0;
+        }
+
+        .accordion summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .accordion summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .acc-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .acc-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(67, 94, 190, .10);
+            border: 1px solid rgba(67, 94, 190, .14);
+            color: #5A121C;
+            flex: 0 0 auto;
+        }
+
+        .acc-name {
+            font-weight: 950;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+            color: #5A121C;
+            font-size: .95rem;
+        }
+
+        .acc-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 0 0 auto;
+        }
+
+        .acc-count {
+            font-weight: 900;
+            font-size: .75rem;
+            color: var(--la-muet);
+            border: 1px solid rgba(0, 0, 0, .08);
+            border-radius: 999px;
+            padding: .18rem .45rem;
+            background: rgba(255, 255, 255, .9);
+            white-space: nowrap;
+        }
+
+        .chev {
+            color: var(--la-muet);
+            transition: transform .12s ease;
+        }
+
+        details[open] .chev {
+            transform: rotate(180deg);
+        }
+
+        .acc-body {
+            padding: 0 14px 14px;
+        }
+
+        .subhead {
+            margin: 10px 0 8px;
+            font-weight: 900;
+            font-size: .86rem;
+            color: #3d3a36;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .mini-count {
+            font-weight: 900;
+            font-size: .72rem;
+            color: var(--la-muet);
+            border: 1px solid rgba(0, 0, 0, .08);
+            border-radius: 999px;
+            padding: .12rem .4rem;
+            background: rgba(255, 255, 255, .9);
+            white-space: nowrap;
+        }
+
+        .task-card {
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, .06);
+            background: rgba(255, 255, 255, .96);
+            padding: 12px 12px;
+        }
+
+        .task-title {
+            font-weight: 950;
+            letter-spacing: -0.01em;
+            margin: 0;
+            font-size: .98rem;
+            line-height: 1.2;
+        }
+
+        .task-desc {
+            margin: 7px 0 0;
+            color: var(--la-muet);
+            font-size: .9rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .meta {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            color: var(--la-muet);
+            font-size: .82rem;
+        }
+
+        .badge-mini {
+            border-radius: 999px;
+            padding: .28rem .55rem;
+            font-weight: 900;
+            font-size: .72rem;
+            border: 1px solid rgba(0, 0, 0, .08);
+            background: rgba(255, 255, 255, .95);
+            color: #3d3a36;
+            white-space: nowrap;
+        }
+
+        .badge-prio {
+            border-color: rgba(220, 53, 69, .25);
+            background: rgba(220, 53, 69, .08);
+            color: #842029;
+        }
+
+        .badge-mand {
+            border-color: rgba(255, 193, 7, .35);
+            background: rgba(255, 193, 7, .14);
+            color: #6c4b00;
+        }
+
+        .badge-photo {
+            border-color: rgba(13, 202, 240, .30);
+            background: rgba(13, 202, 240, .10);
+            color: #055160;
+        }
+
+        .task-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-soft {
+            border-radius: 14px;
+            padding: .78rem .95rem;
+            font-weight: 900;
+            border: 1px solid rgba(0, 0, 0, .06);
+            background: rgba(255, 255, 255, .9);
+        }
+
+        .task-card[data-done="1"] {
+            opacity: .99;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    {% set tasks = tasks|default([]) %}
+
+    {# FILTERS #}
+    <div class="card soft mb-3">
+        <div class="card-body">
+            <div class="fw-bold mb-2">{{ translations.filters ?? 'Filters' }}</div>
+
+            {# STATUS FILTER (default: undone) #}
+            <div class="mb-2">
+                <div class="text-muted small mb-2">
+                    <i class="bi bi-check2-square me-1"></i>
+                    {{ translations.status ?? 'Status' }}
+                </div>
+
+                <div class="chips" id="statusFilters">
+                <span class="chip is-active" data-status="undone">
+                    <i class="bi bi-circle"></i>{{ translations.only_undone ?? 'Only undone' }}
+                </span>
+                    <span class="chip" data-status="done">
+                    <i class="bi bi-check2-circle"></i>{{ translations.only_done ?? 'Only done' }}
+                </span>
+                    <span class="chip" data-status="all">
+                    <i class="bi bi-list-check"></i>{{ translations.all ?? 'All' }}
+                </span>
+                </div>
+            </div>
+
+            {# FEATURE FILTERS (your existing ones) #}
+            <div class="text-muted small mb-2">
+                <i class="bi bi-funnel me-1"></i>
+                {{ translations.details_filters ?? 'Details' }}
+            </div>
+
+            <div class="chips" id="taskFilters">
+                <span class="chip is-active" data-filter="all"><i
+                            class="bi bi-list-check"></i>{{ translations.all ?? 'All' }}</span>
+                <span class="chip" data-filter="mandatory"><i
+                            class="bi bi-exclamation-circle"></i>{{ translations.mandatory ?? 'Mandatory' }}</span>
+                <span class="chip" data-filter="photo"><i
+                            class="bi bi-camera"></i>{{ translations.requires_photo ?? 'Photo' }}</span>
+                <span class="chip" data-filter="prio5"><i
+                            class="bi bi-flag"></i>{{ translations.high_priority ?? 'Priority 5' }}</span>
+                <span class="chip" data-filter="daily"><i
+                            class="bi bi-calendar-check"></i>{{ translations.daily ?? 'Daily' }}</span>
+            </div>
+
+            <div class="text-muted small mt-2">
+                <i class="bi bi-info-circle me-1"></i>
+                {{ translations.tasks_filter_hint ?? 'Tap filters to narrow down your list.' }}
+            </div>
+        </div>
+    </div>
+
+    {# EMPTY #}
+    {% if tasks is empty %}
+        <div class="card">
+            <div class="card-body text-center py-4">
+                <div class="fw-bold mb-1">{{ translations.no_tasks ?? 'No tasks' }}</div>
+                <div class="text-muted small">{{ translations.no_tasks_subtitle ?? 'You have no assigned tasks right now.' }}</div>
+            </div>
+        </div>
+    {% else %}
+
+        {# BUILD: section -> category -> subcategory -> tasks #}
+        {% set sections = {} %}
+        {% for t in tasks %}
+            {% set sec = t.getSectionName() ?: (translations.other ?? 'Other') %}
+            {% set cat = t.getCategoryName() ?: (translations.other ?? 'Other') %}
+            {% set sub = t.getSubcategoryName() ?: (translations.other ?? 'Other') %}
+
+            {% set secNode = sections[sec]|default({}) %}
+            {% set catNode = secNode[cat]|default({}) %}
+            {% set subArr  = catNode[sub]|default([]) %}
+
+            {% set catNode = catNode|merge({ (sub): subArr|merge([t]) }) %}
+            {% set secNode = secNode|merge({ (cat): catNode }) %}
+            {% set sections = sections|merge({ (sec): secNode }) %}
+        {% endfor %}
+
+        <div class="accordion">
+
+            {# SECTION level #}
+            {% for secName, categories in sections %}
+                {# count tasks in section #}
+                {% set secCount = 0 %}
+                {% for catName, subs in categories %}
+                    {% for subName, arr in subs %}
+                        {% set secCount = secCount + (arr|length) %}
+                    {% endfor %}
+                {% endfor %}
+
+                <details open class="sec-node" data-sec="{{ secName|e('html_attr') }}">
+                    <summary>
+                        <div class="acc-title">
+                            <div class="acc-icon"><i class="bi bi-diagram-3"></i></div>
+                            <div class="acc-name">{{ secName }}</div>
+                        </div>
+                        <div class="acc-right">
+                            <span class="acc-count js-sec-count">{{ secCount }}</span>
+                            <i class="bi bi-chevron-down chev"></i>
+                        </div>
+                    </summary>
+
+                    <div class="acc-body">
+
+                        {# CATEGORY level #}
+                        {% for catName, subs in categories %}
+                            {# count tasks in category #}
+                            {% set catCount = 0 %}
+                            {% for subName, arr in subs %}
+                                {% set catCount = catCount + (arr|length) %}
+                            {% endfor %}
+
+                            <details class="cat-node" data-cat="{{ catName|e('html_attr') }}">
+                                <summary>
+                                    <div class="acc-title">
+                                        <div class="acc-icon"><i class="bi bi-collection"></i></div>
+                                        <div class="acc-name">{{ catName }}</div>
+                                    </div>
+                                    <div class="acc-right">
+                                        <span class="acc-count js-cat-count">{{ catCount }}</span>
+                                        <i class="bi bi-chevron-down chev"></i>
+                                    </div>
+                                </summary>
+
+                                <div class="acc-body">
+                                    {# SUBCATEGORY #}
+                                    {% for subName, items in subs %}
+                                        <div class="sub-node" data-sub="{{ subName|e('html_attr') }}">
+                                            <div class="subhead">
+                                                <span>{{ subName }}</span>
+                                                <span class="mini-count js-sub-count">{{ items|length }}</span>
+                                            </div>
+
+                                            <div class="d-grid gap-2 mb-2">
+                                                {% for t in items %}
+                                                    {% set freq = t.getFrequency()|default('') %}
+                                                    {% set prio = t.getPriority()|default(0) %}
+                                                    {% set mand = t.getIsMandatory() ? 1 : 0 %}
+                                                    {% set photo = t.getRequiresPhoto() ? 1 : 0 %}
+                                                    {% set done = t.isDone() ? 1 : 0 %}
+
+                                                    <div class="task-card"
+                                                         data-done="{{ done }}"
+                                                         data-mandatory="{{ mand }}"
+                                                         data-photo="{{ photo }}"
+                                                         data-priority="{{ prio }}"
+                                                         data-frequency="{{ freq }}">
+                                                        <div class="d-flex align-items-start justify-content-between gap-2">
+                                                            <h4 class="task-title">{{ t.getName() }}</h4>
+
+                                                            {% if prio %}
+                                                                <span class="badge-mini badge-prio">
+                                <i class="bi bi-flag me-1"></i>P{{ prio }}
+                            </span>
+                                                            {% endif %}
+                                                        </div>
+
+                                                        {% if t.getDescription() %}
+                                                            <div class="task-desc">{{ t.getDescription() }}</div>
+                                                        {% endif %}
+
+                                                        <div class="meta">
+                                                            {% if t.getExecutionTime() %}
+                                                                <span class="badge-mini">
+                                <i class="bi bi-clock me-1"></i>{{ t.getExecutionTime()|slice(0,5) }}
+                            </span>
+                                                            {% endif %}
+
+                                                            {% if freq %}
+                                                                <span class="badge-mini">
+                                <i class="bi bi-arrow-repeat me-1"></i>{{ freq }}
+                            </span>
+                                                            {% endif %}
+
+                                                            {% if mand %}
+                                                                <span class="badge-mini badge-mand">
+                                <i class="bi bi-exclamation-triangle me-1"></i>{{ translations.mandatory ?? 'Mandatory' }}
+                            </span>
+                                                            {% endif %}
+
+                                                            {% if photo %}
+                                                                <span class="badge-mini badge-photo">
+                                <i class="bi bi-camera me-1"></i>{{ translations.photo_required ?? 'Photo required' }}
+                            </span>
+                                                            {% endif %}
+                                                        </div>
+
+                                                        <div class="task-actions">
+                                                            {% if done == 1 %}
+                                                                <a href="{{ ROOT }}/tasks/completion/{{ t.getCompletionId() }}"
+                                                                   class="btn btn-soft w-100">
+                                                                    <i class="bi bi-eye me-1"></i>{{ translations.preview_task ?? 'Preview' }}
+                                                                    <i class="bi bi-chevron-right ms-1"></i>
+                                                                </a>
+                                                            {% else %}
+                                                                <a href="{{ ROOT }}/tasks/{{ t.getId() }}"
+                                                                   class="btn btn-primary w-100">
+                                                                    <i class="bi bi-play-circle me-1"></i>{{ translations.open_task ?? 'Open task' }}
+                                                                    <i class="bi bi-chevron-right ms-1"></i>
+                                                                </a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+
+                                </div>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </details>
+            {% endfor %}
+        </div>
+
+    {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        (function () {
+            const statusWrap = document.getElementById('statusFilters');
+            const featureWrap = document.getElementById('taskFilters');
+            if (!statusWrap || !featureWrap) return;
+
+            let statusFilter = 'undone'; // default
+            let featureFilter = 'all';   // default
+
+            function setActiveChips() {
+                statusWrap.querySelectorAll('.chip').forEach(c => {
+                    c.classList.toggle('is-active', c.dataset.status === statusFilter);
+                });
+                featureWrap.querySelectorAll('.chip').forEach(c => {
+                    c.classList.toggle('is-active', c.dataset.filter === featureFilter);
+                });
+            }
+
+            function matchesStatus(card) {
+                const done = card.dataset.done === "1";
+                if (statusFilter === 'undone') return !done;
+                if (statusFilter === 'done') return done;
+                return true;
+            }
+
+            function matchesFeature(card) {
+                const mandatory = card.dataset.mandatory === "1";
+                const photo = card.dataset.photo === "1";
+                const priority = parseInt(card.dataset.priority || "0", 10);
+                const frequency = (card.dataset.frequency || "").toUpperCase();
+
+                if (featureFilter === 'mandatory') return mandatory;
+                if (featureFilter === 'photo') return photo;
+                if (featureFilter === 'prio5') return priority === 5;
+                if (featureFilter === 'daily') return frequency === 'DAILY';
+                return true;
+            }
+
+            function applyCardVisibility() {
+                document.querySelectorAll('.task-card').forEach(card => {
+                    const show = matchesStatus(card) && matchesFeature(card);
+                    card.style.display = show ? '' : 'none';
+                });
+            }
+
+            function applyGroupVisibilityAndCounts() {
+                // 1) Subcategories
+                document.querySelectorAll('.sub-node').forEach(sub => {
+                    const visibleCards = sub.querySelectorAll('.task-card:not([style*="display: none"])').length;
+                    const subCountEl = sub.querySelector('.js-sub-count');
+                    if (subCountEl) subCountEl.textContent = visibleCards;
+
+                    sub.style.display = visibleCards > 0 ? '' : 'none';
+                });
+
+                // 2) Categories
+                document.querySelectorAll('.cat-node').forEach(cat => {
+                    const visibleSubs = cat.querySelectorAll('.sub-node:not([style*="display: none"])').length;
+                    const visibleCards = cat.querySelectorAll('.task-card:not([style*="display: none"])').length;
+
+                    const catCountEl = cat.querySelector('.js-cat-count');
+                    if (catCountEl) catCountEl.textContent = visibleCards;
+
+                    // hide whole category if no visible tasks
+                    cat.style.display = visibleCards > 0 ? '' : 'none';
+
+                    // if category is hidden, close it (optional UX)
+                    if (visibleCards === 0) cat.removeAttribute('open');
+                    else if (visibleSubs > 0) cat.setAttribute('open', '');
+                });
+
+                // 3) Sections
+                document.querySelectorAll('.sec-node').forEach(sec => {
+                    const visibleCats = sec.querySelectorAll('.cat-node:not([style*="display: none"])').length;
+                    const visibleCards = sec.querySelectorAll('.task-card:not([style*="display: none"])').length;
+
+                    const secCountEl = sec.querySelector('.js-sec-count');
+                    if (secCountEl) secCountEl.textContent = visibleCards;
+
+                    sec.style.display = visibleCards > 0 ? '' : 'none';
+
+                    // optional: auto close empty sections
+                    if (visibleCards === 0) sec.removeAttribute('open');
+                    else if (visibleCats > 0) sec.setAttribute('open', '');
+                });
+            }
+
+            function applyAll() {
+                setActiveChips();
+                applyCardVisibility();
+                applyGroupVisibilityAndCounts();
+            }
+
+            statusWrap.addEventListener('click', (e) => {
+                const chip = e.target.closest('.chip');
+                if (!chip) return;
+                statusFilter = chip.dataset.status || 'undone';
+                applyAll();
+            });
+
+            featureWrap.addEventListener('click', (e) => {
+                const chip = e.target.closest('.chip');
+                if (!chip) return;
+                featureFilter = chip.dataset.filter || 'all';
+                applyAll();
+            });
+
+            // init
+            applyAll();
+        })();
+    </script>
+{% endblock %}
+
+

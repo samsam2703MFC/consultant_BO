@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="{{ lang_code ?? 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}{{ translations.error ?? 'Error' }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/app.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/error.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/marque.css">
+
+    <style>
+        /* Mobile-first error layout tuned for iPhone 13 (390x844) */
+
+        .merr-wrap{
+            min-height: 100vh;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+            display: flex;
+            align-items: center;
+        }
+
+        .merr-card{
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .merr-illu{
+            width: 100%;
+            height: auto;
+            max-height: 240px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 14px;
+        }
+
+        .merr-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            font-size: 2rem;
+            margin-bottom: .25rem;
+        }
+
+        .merr-subtitle{
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .merr-actions .btn{
+            border-radius: 14px;
+            padding: .9rem 1rem;
+        }
+
+        @media (max-height: 500px) {
+            .merr-wrap { align-items: flex-start; }
+            .merr-illu { max-height: 160px; margin-bottom: 10px; }
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+<div id="error">
+    <div class="container merr-wrap">
+        <div class="merr-card text-center px-3">
+            {% block illustration %}
+                {# default illustration fallback #}
+                <img class="merr-illu" src="{{ ROOT }}/assets/mazer/static/images/samples/error-404.svg" alt="{{ translations.error ?? 'Error' }}">
+            {% endblock %}
+
+            <h1 class="merr-title">{% block error_title %}{{ translations.something_went_wrong ?? 'Something went wrong' }}{% endblock %}</h1>
+
+            <p class="merr-subtitle text-gray-600 mb-4">
+                {% block error_subtitle %}{{ translations.try_again_or_go_back ?? 'Please try again or go back.' }}{% endblock %}
+            </p>
+
+            <div class="merr-actions d-grid gap-2">
+                {% block actions %}
+                    <a href="{{ ROOT }}/dashboard" class="btn btn-outline-primary btn-lg w-100">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        {{ translations.back ?? 'Back' }}
+                    </a>
+                {% endblock %}
+            </div>
+
+            {% block footer %}
+                {# np. kod błędu / request id #}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

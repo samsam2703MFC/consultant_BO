@@ -1,0 +1,31 @@
+{% extends "layouts/error_mobile.twig" %}
+
+{% block title %}500{% endblock %}
+
+{% block illustration %}
+    <img class="merr-illu" src="{{ ROOT }}/assets/mazer/static/images/samples/error-500.svg" alt="{{ translations.server_error ?? 'Server error' }}">
+{% endblock %}
+
+{% block error_title %}
+    {{ translations.server_error ?? 'Server error' }}
+{% endblock %}
+
+{% block error_subtitle %}
+    {{ translations.server_error_subtitle ?? 'Something went wrong on our side. Please try again.' }}
+{% endblock %}
+
+{% block actions %}
+    <a href="{{ ROOT }}/Dashboard" class="btn btn-outline-primary btn-lg w-100">
+        <i class="bi bi-arrow-left me-1"></i>
+        {{ translations.back ?? 'Back' }}
+    </a>
+
+    <button type="button" class="btn btn-primary btn-lg w-100" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise me-1"></i>
+        {{ translations.reload ?? 'Reload' }}
+    </button>
+{% endblock %}
+
+{% block footer %}
+    <div class="small text-muted mt-3">{{ translations.error_code ?? 'Error code' }}: 500</div>
+{% endblock %}

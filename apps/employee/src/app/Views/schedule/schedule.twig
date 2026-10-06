@@ -1,0 +1,350 @@
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'schedule' %}
+
+{% block title %}{{ translations.schedule ?? 'Schedule' }}{% endblock %}
+{% block page_title %}{{ translations.schedule ?? 'Schedule' }}{% endblock %}
+{% block page_subtitle %}
+    {{ date_from }} → {{ date_to }}
+{% endblock %}
+
+{% block head %}
+    <style>
+        .wk-strip{
+            display:flex; gap:10px; overflow-x:auto; padding:2px 2px 8px; margin:0 -2px;
+            -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory;
+        }
+        .wk-strip::-webkit-scrollbar{ display:none; }
+
+        .wk-day{
+            min-width:62px; scroll-snap-align:start;
+            border-radius:16px; padding:10px; text-align:center;
+            border:1px solid rgba(0,0,0,.06);
+            background:rgba(255,255,255,.85);
+            text-decoration:none; color:#3d3a36;
+            transition:transform .08s ease, box-shadow .08s ease, border-color .08s ease;
+            user-select:none;
+        }
+        .wk-day:active{ transform:scale(.98); }
+        .wk-dow{ font-size:.78rem; color:var(--la-muet); margin-bottom:2px; font-weight:700; }
+        .wk-num{ font-size:1.05rem; font-weight:800; letter-spacing:-0.02em; line-height:1.1; }
+        .wk-meta{ margin-top:6px; font-size:.72rem; color:var(--la-muet); line-height:1.1; }
+
+        .wk-day.is-today{
+            border-color: rgba(141,29,44,.30);
+            box-shadow: 0 0 0 .2rem rgba(141,29,44,.10);
+        }
+        .wk-day.is-active{
+            background:var(--la-rubis); border-color:var(--la-rubis); color:#fff;
+            box-shadow:0 12px 24px rgba(141,29,44,.18);
+        }
+        .wk-day.is-active .wk-dow,
+        .wk-day.is-active .wk-meta{ color:rgba(255,255,255,.85); }
+
+        .shift-card{ border:1px solid rgba(0,0,0,.06); border-radius:18px; overflow:hidden; }
+        .shift-time{ font-weight:800; letter-spacing:-0.02em; font-size:1.15rem; margin:0; }
+        .shift-meta{ color:var(--la-muet); font-size:.9rem; }
+
+        .day-panel{ display:none; }
+        .day-panel.is-active{ display:block; }
+
+        /* Range form */
+        .range-panel{
+            border: 1px solid rgba(0,0,0,.06);
+            border-radius: 18px;
+            background: rgba(255,255,255,.85);
+        }
+
+        .range-panel.is-collapsed .range-body{ display:none; }
+
+        .hint-swipe{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:.55rem .75rem;
+            border-radius: 14px;
+            background: rgba(141,29,44,.08);
+            color: #5A121C;
+            font-size: .85rem;
+            font-weight: 600;
+        }
+        .hint-swipe i{ font-size: 1.05rem; }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    {# 1) Normalizacja danych #}
+    {% set entries = schedule|default([]) %}
+
+    {# 2) Budowa listy dni od date_from do date_to (max 31 dni) #}
+    {% set range_dates = [] %}
+    {% for i in 0..30 %}
+        {% set dt = date_from|date_modify('+' ~ i ~ ' day')|date('Y-m-d') %}
+        {% if dt <= date_to %}
+            {% set range_dates = range_dates|merge([dt]) %}
+        {% endif %}
+    {% endfor %}
+
+    {# 3) Domyślny aktywny dzień #}
+    {% set today = "now"|date("Y-m-d") %}
+    {% if selected_date is defined and selected_date %}
+        {% set initial_date = selected_date %}
+    {% elseif today >= date_from and today <= date_to %}
+        {% set initial_date = today %}
+    {% else %}
+        {% set initial_date = date_from %}
+    {% endif %}
+
+    {# --- Panel wyboru zakresu dat (GET) --- #}
+    {# --- Panel wyboru zakresu dat (GET) --- #}
+    {% set today = "now"|date("Y-m-d") %}
+    {% set d7  = "now"|date_modify("+6 day")|date("Y-m-d") %}
+    {% set d14 = "now"|date_modify("+13 day")|date("Y-m-d") %}
+    {% set d30 = "now"|date_modify("+29 day")|date("Y-m-d") %}
+
+    <div class="range-panel mb-3" id="rangePanel">
+        <div class="p-3 d-flex align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-bold">{{ translations.date_range ?? 'Date range' }}</div>
+                <div class="text-muted small">
+                    {{ translations.date_range_subtitle ?? 'Choose the range to display your schedule.' }}
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleRangePanel()">
+                <i class="bi bi-calendar-range me-1"></i>
+                {{ translations.change_range ?? 'Change range' }}
+            </button>
+        </div>
+
+        <div class="range-body px-3 pb-3">
+            {# QUICK RANGES (GET links) #}
+            <div class="mb-2">
+                <div class="text-muted small mb-2">{{ translations.quick_ranges ?? 'Quick ranges' }}</div>
+
+                <div class="d-grid gap-2">
+                    <a class="btn btn-light border w-100"
+                       href="{{ ROOT }}/schedule?date_from={{ today }}&date_to={{ d7 }}">
+                        <i class="bi bi-lightning-charge me-1"></i>
+                        {{ translations.next_7_days ?? 'Next 7 days' }}
+                        <span class="text-muted ms-1">({{ today }} → {{ d7 }})</span>
+                    </a>
+
+                    <a class="btn btn-light border w-100"
+                       href="{{ ROOT }}/schedule?date_from={{ today }}&date_to={{ d14 }}">
+                        <i class="bi bi-lightning-charge me-1"></i>
+                        {{ translations.next_14_days ?? 'Next 14 days' }}
+                        <span class="text-muted ms-1">({{ today }} → {{ d14 }})</span>
+                    </a>
+
+                    <a class="btn btn-light border w-100"
+                       href="{{ ROOT }}/schedule?date_from={{ today }}&date_to={{ d30 }}">
+                        <i class="bi bi-lightning-charge me-1"></i>
+                        {{ translations.next_30_days ?? 'Next 30 days' }}
+                        <span class="text-muted ms-1">({{ today }} → {{ d30 }})</span>
+                    </a>
+                </div>
+
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ translations.quick_ranges_hint ?? 'Use quick ranges for the fastest access. You can set custom dates below.' }}
+                </div>
+            </div>
+
+            <hr class="my-3">
+
+            {# MANUAL RANGE (fallback) #}
+            <div class="text-muted small mb-2">{{ translations.custom_range ?? 'Custom range' }}</div>
+
+            <form method="GET" action="{{ ROOT }}/schedule" class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small mb-1">{{ translations.from ?? 'From' }}</label>
+                    <input type="date"
+                           class="form-control"
+                           name="date_from"
+                           value="{{ date_from }}"
+                           max="{{ date_to }}">
+                </div>
+
+                <div class="col-6">
+                    <label class="form-label small mb-1">{{ translations.to ?? 'To' }}</label>
+                    <input type="date"
+                           class="form-control"
+                           name="date_to"
+                           value="{{ date_to }}"
+                           min="{{ date_from }}">
+                </div>
+
+                {% if selected_date is defined and selected_date %}
+                    <input type="hidden" name="selected_date" value="{{ selected_date }}">
+                {% endif %}
+
+                <div class="col-12 mt-2">
+                    <button class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>
+                        {{ translations.show_schedule ?? 'Show schedule' }}
+                    </button>
+
+                    <div class="text-muted small text-center mt-2">
+                        {{ translations.tip_short_range ?? 'Tip: keep the range short (e.g., 7–14 days) for faster browsing.' }}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    {# Jeśli zakres jest pusty / błędny #}
+    {% if range_dates is empty %}
+        <div class="card">
+            <div class="card-body text-center py-4">
+                <div class="fw-bold mb-1">{{ translations.no_date_range ?? 'No date range' }}</div>
+                <div class="text-muted small">{{ translations.provide_date_range ?? 'Provide date_from and date_to.' }}</div>
+            </div>
+        </div>
+    {% else %}
+
+        {# --- Info o przewijaniu suwaka --- #}
+        <div class="hint-swipe mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-hand-index-thumb"></i>
+                <span>{{ translations.swipe_hint ?? 'Swipe left/right on the dates to move through the range.' }}</span>
+            </div>
+            <i class="bi bi-arrow-left-right"></i>
+        </div>
+
+        {# --- Pasek dni (suwak) --- #}
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="fw-bold">
+                        {{ translations.schedule_range ?? 'Selected range' }}
+                    </div>
+                    <div class="text-muted small">
+                        {{ range_dates|length }} {{ translations.days ?? 'days' }}
+                    </div>
+                </div>
+
+                <div class="wk-strip" id="weekStrip" aria-label="{{ translations.days_strip ?? 'Days strip' }}">
+                    {% for dt in range_dates %}
+                        {% set day_entries = entries|filter(e => e.getWorkDate() == dt) %}
+                        {% set is_active = dt == initial_date %}
+                        {% set is_today = dt == today %}
+
+                        <a href="#"
+                           class="wk-day {{ is_today ? 'is-today' : '' }} {{ is_active ? 'is-active' : '' }}"
+                           data-date="{{ dt }}"
+                           onclick="return selectDay('{{ dt }}')"
+                           aria-label="{{ dt }}">
+                            <div class="wk-dow">{{ dt|date('D') }}</div>
+                            <div class="wk-num">{{ dt|date('d') }}</div>
+                            <div class="wk-meta">
+                                {% if day_entries|length == 0 %}
+                                    {{ translations.day_off ?? 'Off' }}
+                                {% else %}
+                                    {{ day_entries|length }}
+                                    {{ day_entries|length == 1 ? (translations.shift ?? 'shift') : (translations.shifts ?? 'shifts') }}
+                                {% endif %}
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# --- Agenda --- #}
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-bold">{{ translations.agenda ?? 'Agenda' }}</div>
+            <div class="text-muted small" id="selectedDayLabel"></div>
+        </div>
+
+        {% for dt in range_dates %}
+            {% set day_entries = entries|filter(e => e.getWorkDate() == dt) %}
+            {% set is_active = dt == initial_date %}
+
+            <div class="day-panel {{ is_active ? 'is-active' : '' }}" data-panel-date="{{ dt }}">
+                {% if day_entries is empty %}
+                    <div class="card">
+                        <div class="card-body text-center py-4">
+                            <div class="mb-1 fw-bold">{{ translations.no_shifts ?? 'No shifts' }}</div>
+                            <div class="text-muted small">{{ translations.day_off_subtitle ?? 'Enjoy your day off.' }}</div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="d-grid gap-2">
+                        {% for s in day_entries %}
+                            <div class="card shift-card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start justify-content-between gap-2">
+                                        <div>
+                                            <p class="shift-time">
+                                                {{ s.getStartHour()|slice(0,5) }}–{{ s.getEndHour()|slice(0,5) }}
+                                            </p>
+                                            <div class="shift-meta">
+                                                <i class="bi bi-geo-alt me-1"></i>
+                                                {{ translations.shop ?? 'Shop' }} #{{ s.getIdShop() }}
+                                            </div>
+                                        </div>
+
+                                        <div class="text-end">
+                                            <span class="badge bg-light text-dark border">
+                                                {{ translations.planned ?? 'Planned' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        function selectDay(dateStr){
+            document.querySelectorAll('.wk-day').forEach(el => {
+                el.classList.toggle('is-active', el.getAttribute('data-date') === dateStr);
+            });
+
+            document.querySelectorAll('.day-panel').forEach(p => {
+                p.classList.toggle('is-active', p.getAttribute('data-panel-date') === dateStr);
+            });
+
+            const labelEl = document.getElementById('selectedDayLabel');
+            if(labelEl) labelEl.textContent = dateStr;
+
+            return false;
+        }
+
+        function toggleRangePanel(){
+            const panel = document.getElementById('rangePanel');
+            panel.classList.toggle('is-collapsed');
+
+            // Na mobile fajnie jak po rozwinięciu od razu widzisz inputy
+            if(!panel.classList.contains('is-collapsed')){
+                const firstInput = panel.querySelector('input[type="date"]');
+                if(firstInput) firstInput.focus();
+            }
+        }
+
+        (function(){
+            // domyślnie panel zakresu jest zwinięty (żeby od razu widzieć grafik)
+            const panel = document.getElementById('rangePanel');
+            if(panel) panel.classList.add('is-collapsed');
+
+            const active = document.querySelector('.wk-day.is-active');
+            if(active){
+                const dateStr = active.getAttribute('data-date');
+                const labelEl = document.getElementById('selectedDayLabel');
+                if(labelEl) labelEl.textContent = dateStr;
+
+                try { active.scrollIntoView({behavior:'instant', inline:'center', block:'nearest'}); } catch(e) {}
+            }
+        })();
+    </script>
+{% endblock %}

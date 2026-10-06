@@ -1,0 +1,20 @@
+# L'app employés : toute adresse qui n'est pas un fichier passe par index.php?url=…
+# (le routeur de l'app lit $_GET['url']). Les règles du dossier parent ne s'appliquent
+# pas ici : un RewriteEngine à soi remplace celui du parent.
+RewriteEngine On
+
+# Rien ne s'exécute dans les assets.
+RewriteRule ^assets/.*\.(php|phtml|phar|phps)$ - [F,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>

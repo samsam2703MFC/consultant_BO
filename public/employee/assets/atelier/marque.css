@@ -1,0 +1,96 @@
+/* L'app employés aux couleurs et à la typo de L'Atelier by (demande du 06/10/2026).
+ * Chargée après app.css (le thème Mazer teint par apps/employee/marque/teinter.py) : les polices de
+ * la marque, ses couleurs en variables, et le style des pièces propres à l'app (barre du haut, barre
+ * du bas, cartes, boutons, formulaire de connexion). Les polices sont celles du cockpit, partagées. */
+
+@font-face{font-family:'Gotham';font-weight:300;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Light.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:400;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Regular.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:400;font-style:italic;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Italic.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:500;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Medium.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:600;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Medium.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:700;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Black.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:700;font-style:italic;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_ItalicBold.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:800;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Black.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:900;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Ultra.otf') format('opentype')}
+@font-face{font-family:'Vank';font-weight:400;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+
+:root{
+  --la-rubis:#8D1D2C;--la-rubis-fonce:#6E1622;--la-abricot:#F2C9A0;--la-beige:#EAE4DC;--la-beige-doux:#F4EFE8;
+  --la-blanc:#FFFFFF;--la-encre:#222222;--la-muet:#666666;--la-trait:rgba(34,34,34,.10);--la-trait2:rgba(34,34,34,.18);
+  --la-ok:#2d7a3e;--la-att:#D97706;--la-ko:#C0182B;
+  --font-ui:'Gotham',system-ui,-apple-system,'Segoe UI',sans-serif;--font-display:'Vank','Gotham',system-ui,sans-serif;
+  --bs-body-font-family:var(--font-ui);--bs-body-color:var(--la-encre);--bs-body-bg:var(--la-beige);
+  --bs-primary:var(--la-rubis);--bs-primary-rgb:141,29,44;--bs-link-color:var(--la-rubis);--bs-link-hover-color:var(--la-rubis-fonce);
+  --bs-border-color:var(--la-trait2);--bs-secondary-color:var(--la-muet);
+}
+html,body{font-family:var(--font-ui)}
+body{background:var(--la-beige);color:var(--la-encre);-webkit-font-smoothing:antialiased}
+h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-display);font-weight:400;letter-spacing:0}
+h4,h5,h6,.h4,.h5,.h6{font-family:var(--font-ui);font-weight:600}
+a{color:var(--la-rubis)}
+.text-muted,.text-secondary{color:var(--la-muet)!important}
+.text-primary{color:var(--la-rubis)!important}
+.bg-primary{background-color:var(--la-rubis)!important}
+.border-light-secondary,.border{border-color:var(--la-trait)!important}
+
+/* Les cartes : blanc, trait fin, coins doux, pas d'ombre lourde. */
+.card{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:14px;box-shadow:none}
+.card.shadow,.shadow,.shadow-sm{box-shadow:0 2px 10px rgba(34,34,34,.06)!important}
+.card-header{background:transparent;border-bottom:.5px solid var(--la-trait)}
+.list-group-item{border-color:var(--la-trait)}
+
+/* Les boutons : rubis, coins doux, Gotham. */
+.btn{font-family:var(--font-ui);font-weight:600;border-radius:10px;letter-spacing:.01em}
+.btn-primary,.btn-dark{background:var(--la-rubis);border-color:var(--la-rubis);color:#fff}
+.btn-primary:hover,.btn-dark:hover,.btn-primary:focus,.btn-dark:focus,.btn-primary:active,.btn-dark:active{background:var(--la-rubis-fonce)!important;border-color:var(--la-rubis-fonce)!important;color:#fff}
+.btn-outline-primary{color:var(--la-rubis);border-color:var(--la-rubis)}
+.btn-outline-primary:hover{background:var(--la-rubis);border-color:var(--la-rubis);color:#fff}
+.btn-light,.btn-outline-secondary{background:var(--la-blanc);border-color:var(--la-trait2);color:var(--la-encre)}
+.btn-check:checked+.btn,.btn.active{background:var(--la-rubis)!important;border-color:var(--la-rubis)!important;color:#fff!important}
+
+/* Les champs. */
+.form-control,.form-select{font-family:var(--font-ui);border:.5px solid var(--la-trait2);border-radius:10px;background:var(--la-blanc);color:var(--la-encre)}
+.form-control:focus,.form-select:focus{border-color:var(--la-rubis);box-shadow:0 0 0 3px rgba(141,29,44,.12)}
+.form-control::placeholder{color:#9a948c}
+.form-control-icon i{color:var(--la-muet)}
+.invalid-feedback{color:var(--la-ko)}
+.is-invalid{border-color:var(--la-ko)!important}
+
+/* Les badges et états. */
+.badge{font-family:var(--font-ui);font-weight:600;border-radius:999px}
+.bg-success,.badge.bg-success{background:var(--la-ok)!important}
+.bg-warning,.badge.bg-warning{background:var(--la-att)!important;color:#fff!important}
+.bg-danger,.badge.bg-danger{background:var(--la-ko)!important}
+.bg-info,.badge.bg-info{background:var(--la-abricot)!important;color:#6b4420!important}
+.bg-light{background:var(--la-beige-doux)!important}
+.alert{border-radius:12px;border:.5px solid var(--la-trait)}
+
+/* La barre du haut : beige translucide, le titre en Vank. */
+.emp-topbar{background:rgba(234,228,220,.94);border-bottom:.5px solid var(--la-trait)}
+.emp-title{font-family:var(--font-display);font-weight:400;font-size:1.35rem;letter-spacing:0}
+.emp-subtitle{font-family:var(--font-ui);color:var(--la-muet);font-size:.82rem}
+
+/* La barre du bas : blanc, l'onglet actif en rubis. */
+.emp-bottom-nav{background:rgba(255,255,255,.96);border-top:.5px solid var(--la-trait)}
+.emp-bottom-item{color:var(--la-muet);font-family:var(--font-ui);font-weight:600;font-size:.7rem;letter-spacing:.02em}
+.emp-bottom-item.is-active{color:var(--la-rubis)}
+.emp-bottom-item.is-active::after{content:'';display:block;width:18px;height:3px;border-radius:2px;background:var(--la-rubis);margin-top:2px}
+
+/* La connexion : la marque en haut de la carte. */
+#auth{background:var(--la-beige)}
+.emp-auth-card{border:.5px solid var(--la-trait);border-radius:18px;background:var(--la-blanc);box-shadow:0 12px 40px rgba(34,34,34,.10)!important}
+.emp-auth-marque{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 18px 6px}
+.emp-auth-marque img{height:34px;width:auto}
+.emp-auth-marque small{font:600 10px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--la-muet)}
+.emp-auth-header{justify-content:center;text-align:center;padding-top:6px}
+.emp-auth-title{font-family:var(--font-display);font-weight:400;font-size:1.7rem;letter-spacing:0}
+.emp-auth-subtitle{color:var(--la-muet)}
+.emp-auth-actions .btn{border-radius:12px}
+.emp-auth-help{color:var(--la-muet)}
+
+/* Les erreurs. */
+.merr-title{font-family:var(--font-display);font-weight:400}
+
+/* Les styles écrits dans chaque page (dans <head>, après ces liens) gardent la main sur la graisse :
+ * on repasse derrière eux, pour que les titres en Vank restent en graisse normale. */
+html .emp-title,html .emp-auth-title,html .merr-title{font-weight:400}

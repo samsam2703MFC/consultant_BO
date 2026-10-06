@@ -1,0 +1,11 @@
+{
+  "back": "Wróć",
+  "error_code": "Kod błędu",
+  "forbidden": "Brak dostępu",
+  "forbidden_subtitle": "Nie masz uprawnień do wyświetlenia tej strony.",
+  "not_found": "Nie znaleziono",
+  "not_found_subtitle": "Strona, której szukasz, nie istnieje lub została przeniesiona.",
+  "reload": "Odśwież",
+  "server_error": "Błąd serwera",
+  "server_error_subtitle": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie."
+}

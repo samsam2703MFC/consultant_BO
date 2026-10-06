@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="{{ lang_code ?? 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{ translations.employee_login ?? 'Employee login' }}</title>
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/app.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/auth.css">
+    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/marque.css">
+
+    <style>
+        /* Mobile-first layout tuned for iPhone 13 (390x844) */
+        #auth { min-height: 100vh; }
+
+        .emp-auth-wrap{
+            min-height: 100vh;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+            display: flex;
+            align-items: center;
+        }
+
+        .emp-auth-card{
+            width: 100%;
+            max-width: 430px; /* na większych telefonach nie będzie „na całą ścianę” */
+            margin: 0 auto;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .emp-auth-header{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 18px 10px;
+        }
+
+        .emp-auth-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.35rem;
+        }
+
+        .emp-auth-subtitle{
+            margin: 6px 0 0;
+            color: var(--la-muet);
+            font-size: .95rem;
+        }
+
+        .emp-auth-logo{
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            object-fit: cover;
+            box-shadow: 0 6px 20px rgba(0,0,0,.10);
+        }
+
+        .emp-auth-body{
+            padding: 14px 18px 18px;
+        }
+
+        /* Lepszy „touch target” na telefonie */
+        .form-control-xl{
+            padding-top: .95rem;
+            padding-bottom: .95rem;
+            border-radius: 14px;
+        }
+
+        /* Sticky action bar na dole (wygodne pod kciukiem) */
+        .emp-auth-actions{
+            position: sticky;
+            bottom: 0;
+            padding: 12px 0 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1) 35%);
+        }
+
+        .emp-auth-actions .btn{
+            border-radius: 14px;
+            padding: .95rem 1rem;
+        }
+
+        .emp-auth-help{
+            margin-top: 12px;
+            font-size: .9rem;
+            color: var(--la-muet);
+        }
+
+        .invalid-feedback{ display: block; } /* żeby komunikaty zawsze się pokazywały */
+
+        @media (min-width: 992px){
+            /* Na desktopie nadal wygląda schludnie, ale to nadal mobile-first */
+            .emp-auth-wrap{ padding-top: 48px; padding-bottom: 48px; }
+        }
+    </style>
+</head>
+
+<body>
+<div id="auth">
+    <div class="container emp-auth-wrap">
+        <div class="card border border-light-secondary shadow emp-auth-card">
+            <div class="emp-auth-marque"><img src="{{ ROOT }}/assets/atelier/logo.png" alt="L’Atelier by"><small>{{ translations.employee ?? 'Équipe' }}</small></div>
+            <div class="emp-auth-header">
+                <div>
+                    <h1 class="emp-auth-title">{{ translations.log_in ?? 'Log in' }}</h1>
+                    <p class="emp-auth-subtitle">{{ translations.sign_in_to_employee_panel ?? 'Sign in to your employee panel' }}</p>
+                </div>
+            </div>
+
+            <div class="emp-auth-body">
+                <form method="POST" autocomplete="on">
+                    <div class="form-group position-relative has-icon-left mb-3">
+                        <input
+                                type="text"
+                                class="form-control form-control-xl {{ errors.login is not empty ? 'is-invalid' : '' }}"
+                                name="login"
+                                placeholder="{{ translations.login ?? 'Login' }}"
+                                inputmode="text"
+                                autocomplete="username"
+                                autocapitalize="none"
+                                spellcheck="false"
+                                value="{{ old('login') }}"
+                        >
+                        <div class="form-control-icon">
+                            <i class="bi bi-person"></i>
+                        </div>
+
+                        {% if errors.login is not empty %}
+                            <div class="invalid-feedback mt-1">
+                                {{ errors.login }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group position-relative has-icon-left mb-2">
+                        <input
+                                type="password"
+                                class="form-control form-control-xl {{ errors.password is not empty ? 'is-invalid' : '' }}"
+                        name="password"
+                        placeholder="{{ translations.password ?? 'Password' }}"
+                        autocomplete="current-password"
+                        value="{{ old('password') }}"
+                        >
+                        <div class="form-control-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+
+                        {% if errors.password is not empty %}
+                            <div class="invalid-feedback mt-1">
+                                {{ errors.password }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if errors.invalid_credentials is not empty %}
+                        <div class="invalid-feedback mt-1">
+                            {{ errors.invalid_credentials }}
+                        </div>
+                    {% endif %}
+                    <div class="emp-auth-actions">
+                        <button class="btn btn-dark btn-lg w-100 shadow-sm">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>
+                            {{ translations.log_in ?? 'Log in' }}
+                        </button>
+
+                        <div class="emp-auth-help text-center">
+                            {{ translations.login_help_contact_manager ?? 'Problems logging in? Contact your manager.' }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
