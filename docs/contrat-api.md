@@ -1555,6 +1555,26 @@ prend J−7 entière et `moment` est nul. Le dashboard pose le delta à côté d
 nombre de clients (tuile Clients, bureau et téléphone) et dit dessous « n
 clients à J−7 à la même heure (sam. 26/09) · ± x % ». Nul si J−7 n'est pas lu.
 
+### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
+
+Premier onglet du dashboard au bureau, ouvert par défaut quand l'adresse ne donne pas de vue
+(`/dashboard/?shop=4`, ou `vue=ops`). Le téléphone garde ses trois onglets et retombe sur la vue
+Jour. La journée en cours, centrée sur le terrain, relue toutes les deux minutes sur aujourd'hui :
+
+| Bloc | Lecture |
+|---|---|
+| Maintenant : l'heure de Bruxelles, les ventes face à J−7 à la même heure, l'objectif, la vitrine, l'équipe en poste, la prochaine cuisson | `/ventes/stats?vue=jour`, `/exploitation/jour`, `/production/flux/suivi` (`_cache=90`) |
+| Ventes par catégorie (liste ou treemap) et P&L court de la journée, main-d'œuvre comprise | les cartes de la vue Jour |
+| La journée : l'équipe, le four, la vitrine, les commandes de 04:00 à 20:00 ; les ventes au comptoir de chaque heure face à la moyenne des 6 derniers mêmes jours | `/exploitation/jour` (planning), `/production/flux/suivi`, `/exploitation/canaux` |
+| La vitrine : vide, va manquer, finira en trop, à recuire ; les références en ordre repliées | `/production/flux/suivi` |
+| Les contrôles en photo | le carrousel de la vue Jour |
+| Commandes clients, non-conformités d'hier, poubelle, promotions | `/ventes/commandes`, `/pwa/tasks/nc`, `/exploitation/invendus`, `/exploitation/promos` |
+| Le stock du magasin, en liste déroulante : les alertes d'abord, puis tout l'inventaire par catégorie | `/ventes/stock` |
+
+Les ventes par heure se lisent sur `/ventes/stats` (tickets) : celles de `/exploitation/jour`
+(margin-heatmap) sont décalées de deux heures. Le tiroir du stock montre désormais toute la liste
+dans toutes les vues, pas seulement les références en alerte.
+
 ### `_cache=N` — une lecture gardée à la demande (06/10/2026)
 
 Toute lecture `GET` peut demander `_cache=N` (secondes, 900 au plus) : le serveur la garde N

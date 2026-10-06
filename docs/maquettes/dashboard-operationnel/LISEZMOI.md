@@ -1,6 +1,11 @@
 # Le dashboard opérationnel du magasin
 
-**Statut : maquette, puis codée dans le dashboard (onglet « Opérationnel »).**
+**Statut : codée le 06/10/2026, onglet « Opérationnel » du dashboard, premier onglet au bureau.**
+
+Changements demandés pendant le codage : la liste « À faire maintenant » est retirée ; les ventes
+par catégorie (liste ou treemap) et le P&L court de la journée, coût du personnel compris, sont
+ajoutés, repris de la vue Jour ; la liste du stock du magasin est en liste déroulante. Captures de
+la version codée : `code-bureau.png`.
 
 Demande du 06/10/2026 : « je veux un dashboard opérationnel », précisée ainsi : un dashboard centré
 sur le terrain, pour mener la journée du magasin. La finance passe au second plan : le chiffre, la
