@@ -219,22 +219,50 @@
 </div>
 {% endif %}
 
-{# ── 6. Mes ventes, mois par mois ── #}
-{% set vx = (p.ventes ?? [])|filter(v => v.caHeure is defined and v.caHeure is not null) %}
-{% if (p.ventes ?? [])|length %}
-{% set maxHM = max(1, max(vx|map(v => v.caHeure)|merge([0])), max(vx|map(v => v.medianeCaH ?? 0)|merge([0]))) * 1.15 %}
-{% set derMed = null %}{% for v2 in p.ventes %}{% if derMed is null and not v2.enCours and v2.medianeCaH is defined and v2.medianeCaH %}{% set derMed = v2.medianeCaH %}{% endif %}{% endfor %}
-<div class="pr-card"><div class="pr-h"><h2>{{ T.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ T.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
-  <div class="sem">{% if derMed %}<span class="cible" style="bottom:{{ (100 * derMed / maxHM)|round }}%"></span>{% endif %}{% for v2 in p.ventes|reverse %}{% if v2.caHeure is defined and v2.caHeure is not null %}<i class="{{ v2.enCours ? 'on' }}" style="height:{{ max(4, (100 * v2.caHeure / maxHM)|round) }}%"><b>{{ v2.caHeure }}</b></i>{% else %}<i class="vide" style="height:3px"></i>{% endif %}{% endfor %}</div>
-  <div class="sem-leg">{% for v2 in p.ventes|reverse %}<span>{{ mois(v2.m, true) }}</span>{% endfor %}</div>
-  <table class="pr-tab"><thead><tr><th>{{ T.month ?? 'Mois' }}</th><th>{{ T.sales ?? 'CA' }}</th><th>{{ T.tickets_short ?? 'Tickets' }}</th><th>{{ T.hours ?? 'Heures' }}</th><th>€/h</th><th>{{ T.network ?? 'Réseau' }}</th></tr></thead><tbody>
-    {% for v2 in p.ventes %}<tr class="{{ v2.enCours ? 'enc' }}"><td>{{ mois(v2.m)|split(' ')|first|capitalize }}{% if v2.enCours %} <small>{{ T.in_progress ?? 'en cours' }}</small>{% endif %}</td>
-      {% if v2.motif is defined %}<td colspan="5" class="mu">{{ v2.motif }}</td>{% else %}
-      <td>{{ v2.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</td><td>{{ v2.tickets|number_format(0, ',', ' ') }}</td><td>{{ v2.heures|number_format(1, ',', ' ') }}</td>
-      <td><b>{% if v2.caHeure is not null %}{{ v2.caHeure }}{% else %}—{% endif %}</b></td>
-      <td>{% if v2.rangCaH %}{{ v2.rangCaH }}e <small>/ {{ v2.surCaH }}</small>{% else %}—{% endif %}</td>{% endif %}</tr>{% endfor %}
-  </tbody></table>
-  <div class="note">{{ T.sales_note ?? '€/h : tes ventes divisées par tes heures du planning, ce mois-ci par les heures déjà prestées. Réseau : ta place au CA par heure parmi les vendeuses classées.' }}{% if derMed %} {{ T.network_median ?? 'Médiane du réseau le mois dernier :' }} {{ derMed }}&nbsp;{{ eur }}/h, {{ T.the_line ?? 'le trait' }}.{% endif %}</div></div>
+{# ── 6. Mes ventes, mois par mois : un graphique, puis une ligne par mois ── #}
+{% set vs = (p.ventes ?? [])|filter(v2 => v2.motif is not defined) %}
+{% if vs|length %}
+{% set vx = vs|filter(v2 => v2.caHeure is defined and v2.caHeure is not null) %}
+{% set maxCA = max(1, max(vs|map(v2 => v2.ca)|merge([0]))) %}
+{% set maxHM = max(1, max(vx|map(v2 => v2.caHeure)|merge([0])), max(vx|map(v2 => v2.medianeCaH ?? 0)|merge([0]))) %}
+{% set derMed = null %}{% for v2 in vs %}{% if derMed is null and not v2.enCours and v2.medianeCaH is defined and v2.medianeCaH %}{% set derMed = v2.medianeCaH %}{% endif %}{% endfor %}
+{% set enc = null %}{% for v2 in vs %}{% if v2.enCours %}{% set enc = v2 %}{% endif %}{% endfor %}
+{% set ordre = vs|reverse %}{% set nv = ordre|length %}{% set pasV = 348 / nv %}
+<div class="pr-card vm">
+  <div class="pr-h"><h2>{{ T.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ T.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
+  {% if enc %}
+  <div class="vm-kpis">
+    <div><b>{{ enc.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.this_month ?? 'ce mois-ci' }}</small></div>
+    <div><b>{% if enc.caHeure is not null %}{{ enc.caHeure }}&nbsp;{{ eur }}/h{% else %}—{% endif %}</b><small>{{ T.per_hour_worked ?? 'par heure prestée' }}</small></div>
+    <div><b>{% if enc.rangCaH %}{{ enc.rangCaH }}<span class="mu" style="font-size:12px">e</span> / {{ enc.surCaH }}{% else %}—{% endif %}</b><small>{{ T.in_network ?? 'dans le réseau' }}</small></div>
+  </div>
+  {% endif %}
+  <svg class="gvm" viewBox="0 0 360 200" preserveAspectRatio="none">
+    {% if derMed %}<line x1="6" x2="354" y1="{{ (50 - 34 * derMed / maxHM)|round(1) }}" y2="{{ (50 - 34 * derMed / maxHM)|round(1) }}" class="med"/>{% endif %}
+    {% for v2 in ordre %}{% set x = 6 + loop.index0 * pasV %}{% set hb = 62 * v2.ca / maxCA %}
+      <rect class="bar {{ v2.enCours ? 'on' }}" x="{{ (x + 5)|round(1) }}" y="{{ (124 - hb)|round(1) }}" width="{{ (pasV - 10)|round(1) }}" height="{{ max(2, hb)|round(1) }}" rx="5"/>
+      <text class="ca" x="{{ (x + pasV / 2)|round(1) }}" y="{{ (119 - hb)|round(1) }}" text-anchor="middle">{{ v2.ca >= 1000 ? (v2.ca / 1000)|number_format(1, ',', ' ') ~ 'k' : v2.ca|number_format(0, ',', ' ') }}</text>
+      <text class="mo" x="{{ (x + pasV / 2)|round(1) }}" y="142" text-anchor="middle">{{ mois(v2.m, true) }}</text>
+      {% if v2.rangCaH %}<rect class="pill {{ v2.rangCaH == 1 ? 'or' }}" x="{{ (x + pasV / 2 - 15)|round(1) }}" y="150" width="30" height="16" rx="8"/><text class="pt" x="{{ (x + pasV / 2)|round(1) }}" y="161.5" text-anchor="middle">{{ v2.rangCaH }}e/{{ v2.surCaH }}</text>{% endif %}
+    {% endfor %}
+    {% if vx|length > 1 %}
+    <polyline class="hl" points="{% for v2 in ordre %}{% if v2.caHeure is not null %}{{ (6 + loop.index0 * pasV + pasV / 2)|round(1) }},{{ (50 - 34 * v2.caHeure / maxHM)|round(1) }} {% endif %}{% endfor %}"/>
+    {% for v2 in ordre %}{% if v2.caHeure is not null %}<circle class="hp" cx="{{ (6 + loop.index0 * pasV + pasV / 2)|round(1) }}" cy="{{ (50 - 34 * v2.caHeure / maxHM)|round(1) }}" r="3.2"/><text class="hv" x="{{ (6 + loop.index0 * pasV + pasV / 2)|round(1) }}" y="{{ (43 - 34 * v2.caHeure / maxHM)|round(1) }}" text-anchor="middle">{{ v2.caHeure }}</text>{% endif %}{% endfor %}
+    {% endif %}
+    <text class="ax" x="6" y="192">{{ T.chart_bars ?? 'barres : le CA' }} · {{ T.chart_line ?? 'courbe : €/h' }}{% if derMed %} · {{ T.chart_median ?? 'pointillé : médiane du réseau' }} {{ derMed }}&nbsp;{{ eur }}/h{% endif %} · {{ T.chart_pill ?? 'pastille : ta place au €/h' }}</text>
+  </svg>
+  <div class="vm-liste">
+    {% for v2 in vs %}
+    <div class="vm-row {{ v2.enCours ? 'enc' }}">
+      <div class="vm-m"><b>{{ mois(v2.m)|split(' ')|first|capitalize }}</b>{% if v2.enCours %}<small>{{ T.in_progress ?? 'en cours' }}</small>{% endif %}</div>
+      <div class="vm-d">{{ v2.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} · {{ v2.tickets|number_format(0, ',', ' ') }} {{ T.tickets ?? 'tickets' }} · {{ v2.heures|number_format(1, ',', ' ') }}&nbsp;h</div>
+      <div class="vm-h">{% if v2.caHeure is not null %}{{ v2.caHeure }}<small>{{ eur }}/h</small>{% else %}—{% endif %}</div>
+      <div class="vm-r {{ v2.rangCaH == 1 ? 'or' : '' }}">{% if v2.rangCaH %}{{ v2.rangCaH }}e<small>/{{ v2.surCaH }}</small>{% else %}—{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="note">{{ T.sales_note ?? '€/h : tes ventes divisées par tes heures du planning, ce mois-ci par les heures déjà prestées. Réseau : ta place au CA par heure parmi les vendeuses classées.' }}</div>
+</div>
 {% endif %}
 
 {# ── 7. Mes mois ── #}
