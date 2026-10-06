@@ -91,10 +91,17 @@
     S.relus[cle] = true;
     setTimeout(() => { relire(); setTimeout(() => { delete S.relus[cle]; }, 60000); }, 30000);
   }
+  /**
+   * Les lectures lentes que le dashboard ne relit pas après une écriture : le serveur les garde
+   * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
+   * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
+   */
+  const CACHE_AUX = { 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'nc': 300 };
+  const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
       S.enCours[cle] = true; delete S.err[cle];
-      lire(path).then(d => {
+      lire(avecCache(cle, path)).then(d => {
         S.aux[cle] = d; S.auxLu[cle] = Date.now();
         relirePerime(cle, d, () => lireAux(cle, path, true));
         // Le stock vient d'être relu : si une référence est passée sous son
