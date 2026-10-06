@@ -7,6 +7,7 @@ const path = require('path');
 const D = __dirname;
 const R = JSON.parse(fs.readFileSync(path.join(D, 'reel-halle.json'), 'utf8'));
 const J = R.jour, S = R.semaine, M = R.mois;
+const PH = JSON.parse(fs.readFileSync(path.join(D, 'photos.json'), 'utf8'));
 
 const nf = (n, d = 0) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
 const fE = n => nf(Math.round(n)) + ' €';
@@ -26,11 +27,13 @@ const vTache = p => p >= 80 ? 'ok' : p >= 50 ? 'att' : 'ko';
 
 /* Chiffres dérivés */
 const attJ = 100 * J.ca / J.objectif;
-const ctrlR = somme(S.controles, c => c.rendus), ctrlT = somme(S.controles, c => c.total);
+// Les contrôles comptés sur les photos : une tâche cochée sans photo n'est pas un contrôle rendu.
+const CTRL = PH.jours.map(j => ({ date: j.date, rendus: j.photos.length, total: somme(Object.values(j.statuts), v => v), sans: j.sansPhoto.length, nr: j.nonRendues.length, manquent: j.nonRendues.concat(j.sansPhoto) }));
+const ctrlR = somme(CTRL, c => c.rendus), ctrlT = somme(CTRL, c => c.total), ctrlSans = somme(CTRL, c => c.sans), ctrlJ = CTRL[CTRL.length - 1];
 const ctrlP = 100 * ctrlR / ctrlT;
 const tachT = S.taches.faites + S.taches.pasFaites;
 const tachMT = M.taches.faites + M.taches.pasFaites;
-const jours = S.jours.map((j, i) => ({ ...j, att: 100 * j.ca / j.objectif, ctrl: S.controles[i], pb: S.poubelleJours[i], tache: S.taches.jours[i] }));
+const jours = S.jours.map((j, i) => ({ ...j, att: 100 * j.ca / j.objectif, ctrl: CTRL[i], pb: S.poubelleJours[i], tache: S.taches.jours[i] }));
 const joursOk = jours.filter(j => j.att >= 100).length;
 const six = S.six, s39 = six[six.length - 2];
 const dS39 = 100 * (S.ca - s39.ca) / s39.ca;
@@ -55,6 +58,41 @@ const spark = (vals, w = 130, h = 22, coul = '#8D1D2C') => {
 };
 const couleurPart = p => COUL[vPart(p)];
 
+/* Le carrousel des photos des tâches : la semaine du plus récent au plus ancien, un groupe par jour ;
+ * dans chaque jour, ce qui manque d'abord (une case), puis les photos à noter, puis les notées. */
+const JOURS_LONG = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const nomTache = t => String(t || '').replace(/^Photo du comptoir\s*-\s*/i, '').replace(/^Vérifier si le magasin est propre\.?$/i, 'Propreté du magasin')
+  .replace(/^étiquetage des prix et allergènes$/i, 'Étiquetage prix et allergènes').replace(/^Photo /i, '');
+const jourLong = d => { const x = new Date(d + 'T12:00:00'); return JOURS_LONG[x.getDay()] + ' ' + d.slice(8) + '/' + d.slice(5, 7); };
+const cqStat = (() => {
+  const t = { notee: 0, aControler: 0, sansPhoto: 0, nonRendue: 0 };
+  PH.jours.forEach(j => Object.entries(j.statuts).forEach(([k, v]) => { t[k] = (t[k] || 0) + v; }));
+  return { ...t, photos: somme(PH.jours, j => j.photos.length), total: somme(PH.jours, j => somme(Object.values(j.statuts), v => v)) };
+})();
+function carrousel(titre) {
+  const groupes = PH.jours.slice().reverse().map(j => {
+    const manque = j.nonRendues.length + j.sansPhoto.length;
+    const cases = [];
+    if (!j.photos.length) {
+      cases.push(`<div class="cq-c vide ko large"><span class="ph"><b>✗</b>aucune photo<br>${j.sansPhoto.length} tâches cochées sans photo<br>${j.nonRendues.length} pas rendues</span><span class="nm">Toute la journée</span><span class="e ko">cochées sans preuve</span></div>`);
+    } else if (manque) {
+      cases.push(`<div class="cq-c vide${j.nonRendues.length ? ' ko' : ''}"><span class="ph"><b>${j.nonRendues.length ? '✗' : '—'}</b>${j.nonRendues.length ? j.nonRendues.length + ' pas rendue' + (j.nonRendues.length > 1 ? 's' : '') : ''}${j.nonRendues.length && j.sansPhoto.length ? '<br>' : ''}${j.sansPhoto.length ? j.sansPhoto.length + ' sans photo' : ''}</span><span class="nm">${esc(j.nonRendues.concat(j.sansPhoto).map(nomTache).join(', '))}</span><span class="e ${j.nonRendues.length ? 'ko' : 'mu'}">${j.nonRendues.length ? 'pas rendues' : 'cochées sans photo'}</span></div>`);
+    }
+    const ordre = { aControler: 0, notee: 1 };
+    j.photos.slice().sort((a, b) => (ordre[a.statut] ?? 2) - (ordre[b.statut] ?? 2)).forEach(p => {
+      const note = p.note != null;
+      cases.push(`<div class="cq-c"><span class="ph"><img src="${p.f}" alt=""><em class="${note ? (p.note >= 4 ? 'ok' : 'nc') : 'ctl'}">${note ? p.note + '/5' : 'à noter'}</em></span><span class="nm">${esc(nomTache(p.tache))}</span><span class="e ${note ? (p.note >= 4 ? 'ok' : 'ko') : 'ctl'}">${note ? (p.note >= 4 ? 'conforme' : 'à reprendre') : 'déposée, pas encore notée'}</span></div>`);
+    });
+    const etat = !j.photos.length ? '<b class="c-ko">aucune photo</b>' : `<b>${j.photos.length} photos</b>${manque ? ` <b class="c-ko">· ${manque} manquent</b>` : ''}`;
+    return `<div class="cq-g"><div class="cq-j">${jourLong(j.date)} ${etat}</div><div class="cq-cs">${cases.join('')}</div></div>`;
+  }).join('');
+  const puces = `<span class="cqf"><span class="on">Toute la semaine<b>${cqStat.photos}</b></span>${PH.jours.map(j => `<span class="${j.photos.length ? '' : 'ko'}">${jourLong(j.date).split(' ')[0].slice(0, j.date.endsWith('29') || j.date.endsWith('30') ? 3 : 3)} ${j.date.slice(8).replace(/^0/, '')}<b>${j.photos.length}</b></span>`).join('')}</span>`;
+  const etats = `<span class="cqf"><span><i style="background:#2d7a3e"></i>notées<b>${cqStat.notee}</b></span><span><i style="background:#2F5D8A"></i>à noter<b>${cqStat.aControler}</b></span><span><i style="background:#8a8177"></i>sans photo<b>${cqStat.sansPhoto}</b></span><span><i style="background:#C0182B"></i>pas rendues<b>${cqStat.nonRendue}</b></span></span>`;
+  return `<div class="cq"><div class="cq-t"><span class="lab">${titre}</span>${puces}${etats}</div>
+<div class="cq-rail"><span class="cq-fl g">‹</span><div class="cq-piste">${groupes}</div><span class="cq-fl d">›</span></div>
+<div class="cq-pied">${cqStat.photos} photos sur ${cqStat.total} contrôles · ${cqStat.notee} notées, toutes à 4 / 5 · ${cqStat.aControler} attendent la note du consultant · les jours les plus récents d’abord · un clic ouvre la photo en grand</div></div>`;
+}
+
 const page = (lettre, titre, nav, corps) => `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${titre}</title>
 <link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="vg.css"></head>
 <body><div class="page">
@@ -78,7 +116,7 @@ function maquetteA() {
     ['Ouverture et contrôles', 'la semaine, les tâches, les photos, le stock', [
       ['ok', 'Non-conformités', '<span class="c-ok">Aucune</span>', `${S.nc.notees} photos notées dans la semaine · rien à reprendre`, `<span class="chip ok">${S.nc.notees} notées · 0 à reprendre</span>`],
       [vTache(S.taches.part), 'Tâches de la semaine', `<span class="c-${vTache(S.taches.part)}">${S.taches.faites} / ${tachT}</span>`, `${fP(S.taches.part, 0)} faites · dimanche 0 sur 11 · vendredi et samedi 1 sur 4`, carres(S.taches.jours.map(t => COUL[vTache(t.part)]))],
-      [vPart(ctrlP), 'Contrôles en photo', `<span class="c-${vPart(ctrlP)}">${ctrlR} / ${ctrlT}</span>`, `${fP(ctrlP, 0)} rendues · manquent chaque jour : Biscuiterie et Pâtisseries`, carres(S.controles.map(c => couleurPart(100 * c.rendus / c.total)))],
+      [vPart(ctrlP), 'Contrôles en photo', `<span class="c-${vPart(ctrlP)}">${ctrlR} / ${ctrlT}</span>`, `${fP(ctrlP, 0)} avec photo · ${ctrlSans} cochés sans photo, dont ${ctrlJ.sans} dimanche · Biscuiterie et Pâtisseries jamais rendues`, carres(CTRL.map(c => couleurPart(100 * c.rendus / c.total)))],
       ['ok', 'Stock', '<span class="c-ok">À jour</span>', `${nf(R.stock.references)} références · rien à zéro · compté le 05/10`, '<span class="chip ok">compté le 05/10</span>'],
     ]],
     ['Le chiffre de la semaine', 'les ventes, l’objectif, la marge, le réseau', [
@@ -101,7 +139,7 @@ function maquetteA() {
     ]],
   ];
   const ouverte = 'Les jours';
-  const detail = `<div class="deroule"><table class="tb"><thead><tr><th>Jour</th><th class="n">Objectif</th><th class="n">Chiffre</th><th style="width:250px">Face à l’objectif</th><th class="n">Atteinte</th><th class="n">Clients</th><th class="n">Panier</th><th class="n">Photos rendues</th><th class="n">Tâches faites</th><th class="n">Poubelle</th></tr></thead><tbody>
+  const detail = `<div class="deroule"><table class="tb"><thead><tr><th>Jour</th><th class="n">Objectif</th><th class="n">Chiffre</th><th style="width:250px">Face à l’objectif</th><th class="n">Atteinte</th><th class="n">Clients</th><th class="n">Panier</th><th class="n">Avec photo</th><th class="n">Tâches faites</th><th class="n">Poubelle</th></tr></thead><tbody>
 ${jours.map(j => `<tr><td><b>${nomJ(j.court)} ${j.date.slice(8)}/${j.date.slice(5, 7)}</b></td><td class="n">${fE(j.objectif)}</td><td class="n"><b>${fE(j.ca)}</b></td><td><div class="barre"><i style="width:${Math.min(100, j.att / 1.2).toFixed(1)}%;background:${COUL[vAtt(j.att)]}"></i><b style="left:${(100 / 1.2).toFixed(1)}%"></b></div></td><td class="n c-${vAtt(j.att)}"><b>${fP(j.att, 0)}</b></td><td class="n">${j.tickets}</td><td class="n">${fE2(j.ca / j.tickets)}</td><td class="n c-${vPart(100 * j.ctrl.rendus / j.ctrl.total)}">${j.ctrl.rendus} / ${j.ctrl.total}</td><td class="n c-${vTache(j.tache.part)}">${j.tache.faites} / ${j.tache.faites + j.tache.pasFaites}</td><td class="n">${fE(j.pb.cout)} · ${j.pb.pieces} p.</td></tr>`).join('')}
 <tr class="tot"><td>La semaine</td><td class="n">${fE(S.objectif)}</td><td class="n">${fE(S.ca)}</td><td><div class="barre"><i style="width:${(S.atteinte / 1.2).toFixed(1)}%;background:${COUL[vAtt(S.atteinte)]}"></i><b style="left:${(100 / 1.2).toFixed(1)}%"></b></div></td><td class="n c-${vAtt(S.atteinte)}">${fP(S.atteinte, 0)}</td><td class="n">${nf(S.tickets)}</td><td class="n">${fE2(S.panier)}</td><td class="n">${ctrlR} / ${ctrlT}</td><td class="n">${S.taches.faites} / ${tachT}</td><td class="n">${fE(somme(S.poubelleJours, p => p.cout))} · ${somme(S.poubelleJours, p => p.pieces)} p.</td></tr></tbody></table>
 <div class="note">Ce que la vue Semaine montre aujourd’hui en cinq blocs (le calendrier, le fil des jours, les tâches, la poubelle jour par jour) tient dans ce tableau. Les autres lignes s’ouvrent de la même façon : le P&L, les heures, les commandes jour par jour, la courbe des six semaines.</div></div>`;
@@ -110,7 +148,7 @@ ${jours.map(j => `<tr><td><b>${nomJ(j.court)} ${j.date.slice(8)}/${j.date.slice(
     + chapitres.map(([t, s, lignes], i) => `<div class="chap"><span class="no">${i + 1}</span><h2>${t}</h2><small>${s}</small></div><div class="liste">${lignes.map(l => {
       const o = l[1] === ouverte;
       return `<div class="li${o ? ' ouv' : ''}"><span class="vd ${l[0]}"></span><span class="q">${l[1]}</span><span class="r">${l[2]}</span><span class="p">${l[3]}</span><span class="m">${l[4]}</span><span class="fl">▾</span></div>${o ? detail : ''}`;
-    }).join('')}</div>`).join('');
+    }).join('')}</div>${i === 0 ? carrousel('Les contrôles en photo · semaine 40') : ''}`).join('');
   return page('A', 'Vue générale A : une ligne par section', { sous: `Dashboard magasin · ${S.nom}, du 28/09 au 04/10 · lu le 06/10 à 07:20`, ong: ONG('Semaine'), lab: 'Semaine du', date: '28/09/2026' }, corps);
 }
 
@@ -134,7 +172,7 @@ function maquetteB() {
       ['Résultat net', c(fE(J.net), vNet(J.netPct), `${fP(J.netPct, 0)} des ventes`), rien('frais du mois courant seulement'), rien('frais du mois courant seulement'), ''],
     ]],
     ['Le magasin', [
-      ['Contrôles en photo', c(`${J.controles.rendus} / ${J.controles.total}`, vPart(100 * J.controles.rendus / J.controles.total), 'manquent Biscuiterie, Pâtisseries'), c(`${ctrlR} / ${ctrlT}`, vPart(ctrlP), fP(ctrlP, 0)), rien('pas relu au mois'), carres(S.controles.map(x => couleurPart(100 * x.rendus / x.total)))],
+      ['Contrôles en photo', c(`${ctrlJ.rendus} / ${ctrlJ.total}`, vPart(100 * ctrlJ.rendus / ctrlJ.total), `avec photo · ${ctrlJ.sans} cochés sans photo`), c(`${ctrlR} / ${ctrlT}`, vPart(ctrlP), `${fP(ctrlP, 0)} · ${ctrlSans} sans photo`), rien('pas relu au mois'), carres(CTRL.map(x => couleurPart(100 * x.rendus / x.total)))],
       ['Tâches faites', c(`${J.taches.faites} / ${J.taches.faites + J.taches.pasFaites}`, vTache(J.taches.part)), c(`${S.taches.faites} / ${tachT}`, vTache(S.taches.part), fP(S.taches.part, 0)), c(`${M.taches.faites} / ${tachMT}`, vTache(M.taches.part), fP(M.taches.part, 0)), carres(S.taches.jours.map(t => COUL[vTache(t.part)]))],
       ['Non-conformités', c('0', 'ok'), c('0', 'ok', `sur ${S.nc.notees} notées`), rien(''), ''],
       ['Stock', `<span class="large"><span class="vd ok" style="align-self:center"></span><b style="font:400 17px var(--font-display)">À jour</b><span style="font-size:10.5px;color:#666">${nf(R.stock.references)} références · rien à zéro · compté le 05/10</span></span>`, ''],
@@ -168,7 +206,7 @@ ${pan('Le mois · septembre', `<span class="c-ko">${fP(M.atteinte, 0)}</span> ·
 </div><div class="note">Chaque ligne s’ouvre ainsi sur ses trois périodes côte à côte. Les onglets Jour, Semaine et Mois restent là pour le détail complet d’une seule période.</div></div>`;
   const phrase = `<div class="phrase"><div class="txt">Dimanche a dépassé son objectif <span class="c-or">(${fP(attJ, 0)})</span>. La semaine 40 finit à <span class="c-att">${fP(S.atteinte, 0)}</span> et septembre à <span class="c-ko">${fP(M.atteinte, 0)}</span> : le chiffre manque du lundi au mercredi, et la matière reste au-dessus de 35 %.</div><div style="display:flex;gap:6px">__COMPTE__</div></div>`;
   const tete = `<div class="tete"><div>Mesure</div><div>Le jour<b>dimanche 4 octobre</b></div><div>La semaine<b>40 · 28/09 au 04/10</b></div><div>Le mois<b>septembre</b></div><div>Tendance<b style="font:600 10.5px var(--font-ui);color:#666">6 semaines, 7 jours</b></div><div></div></div>`;
-  const corps = phrase + `<div class="croise">${tete}${groupes.map(([g, rgs]) => `<div class="gr">${g}</div>${rgs.map(r => {
+  const corps = phrase + carrousel('Les contrôles en photo · la semaine au 04/10').replace('class="cq"', 'class="cq" style="margin:0 0 12px"') + `<div class="croise">${tete}${groupes.map(([g, rgs]) => `<div class="gr">${g}</div>${rgs.map(r => {
     const o = r[0] === ouverte;
     const cellules = r.length === 3 ? r[1] + '<span></span>' : `${r[1]}${r[2]}${r[3]}<span>${r[4]}</span>`;
     return `<div class="rg${o ? ' ouv' : ''}"><span class="q">${r[0]}</span>${cellules}<span class="fl">▾</span></div>${o ? detail : ''}`;
@@ -191,8 +229,8 @@ function maquetteC() {
       '<span>résultat net : <b>frais connus pour le mois courant seulement</b></span>'],
     ['att', 'Clients', `${nf(S.tickets)}<small>clients</small>`, `${S.manquants} de moins que l’attendu au panier de ${fE2(S.panier)} · ${s39.lab} : ${nf(s39.tickets)}`,
       spark(six.map(w => w.tickets), 400, 54), `<span>panier <b>${fE2(S.panier)}</b></span><span>pro <b>${S.pro.n} tickets</b></span>`],
-    [vPart(ctrlP) === 'ok' && vTache(S.taches.part) === 'ok' ? 'ok' : 'ko', 'Contrôles et tâches', `${fP(ctrlP, 0)}<small>des photos rendues</small>`, `tâches faites ${fP(S.taches.part, 0)} · aucune non-conformité sur ${S.nc.notees} notées · Biscuiterie et Pâtisseries manquent chaque jour`,
-      ['photos', S.controles.map(x => couleurPart(100 * x.rendus / x.total)), 'tâches', S.taches.jours.map(t => COUL[vTache(t.part)])].reduce((h, v, i, a) => i % 2 ? h : h + `<div style="display:flex;align-items:center;gap:4px;margin-top:4px"><span style="width:50px;font-size:10px;color:#666">${v}</span>${a[i + 1].map(c => `<i style="display:block;flex:1;height:18px;border-radius:4px;background:${c}"></i>`).join('')}</div>`, ''),
+    [vPart(ctrlP) === 'ok' && vTache(S.taches.part) === 'ok' ? 'ok' : 'ko', 'Contrôles et tâches', `${fP(ctrlP, 0)}<small>des contrôles avec photo</small>`, `${ctrlSans} cochés sans photo, dont ${ctrlJ.sans} dimanche · tâches faites ${fP(S.taches.part, 0)} · aucune non-conformité sur ${S.nc.notees} notées`,
+      ['photos', CTRL.map(x => couleurPart(100 * x.rendus / x.total)), 'tâches', S.taches.jours.map(t => COUL[vTache(t.part)])].reduce((h, v, i, a) => i % 2 ? h : h + `<div style="display:flex;align-items:center;gap:4px;margin-top:4px"><span style="width:50px;font-size:10px;color:#666">${v}</span>${a[i + 1].map(c => `<i style="display:block;flex:1;height:18px;border-radius:4px;background:${c}"></i>`).join('')}</div>`, ''),
       `<span>stock <b>à jour</b></span><span>${nf(R.stock.references)} références</span>`],
     ['neutre', 'Produits', `${esc(S.categories[0].nom.replace(' Ind.', ''))}<small>${fP(S.categories[0].part, 0)} du CA</small>`, `puis ${esc(S.categories[1].nom)} ${fP(S.categories[1].part, 0)} et ${esc(S.categories[2].nom)} ${fP(S.categories[2].part, 0)} · le plus jeté : ${esc(S.invTop[0].nom)}`,
       S.categories.slice(0, 4).map(k => `<div style="display:flex;align-items:center;gap:8px;font-size:10.5px;margin-top:3px"><span style="width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(k.nom)}</span><span class="barre" style="flex:1;min-width:0;height:8px"><i style="width:${(100 * k.v / S.categories[0].v).toFixed(1)}%;background:#E58A2E"></i></span><span style="width:52px;text-align:right">${fE(k.v)}</span></div>`).join(''),
@@ -205,16 +243,16 @@ function maquetteC() {
   const cs = (cls, gros, petit) => `<div class="cs ${cls}"><b>${gros}</b>${petit || ''}</div>`;
   const tiroir = `<div class="tiroir" style="--x:0"><h3>Contrôles et tâches, jour par jour <small>semaine 40 · une case par jour · rouge : à reprendre · orange : à surveiller · vert : en ordre</small></h3>
 <div class="damier"><div class="h g"></div>${jours.map(j => `<div class="h">${nomJ(j.court)} ${j.date.slice(8)}</div>`).join('')}<div class="h">Semaine</div>
-${ligne('Photos rendues', jours.map(j => cs(vPart(100 * j.ctrl.rendus / j.ctrl.total), `${j.ctrl.rendus} / ${j.ctrl.total}`, j.ctrl.manquent.length ? `${j.ctrl.manquent.length} manquent` : '')).concat(`<div class="t">${ctrlR} / ${ctrlT}</div>`))}
+${ligne('Avec photo', jours.map(j => cs(vPart(100 * j.ctrl.rendus / j.ctrl.total), `${j.ctrl.rendus} / ${j.ctrl.total}`, [j.ctrl.sans ? j.ctrl.sans + ' sans photo' : '', j.ctrl.nr ? j.ctrl.nr + ' pas rendues' : ''].filter(Boolean).join(' · '))).concat(`<div class="t">${ctrlR} / ${ctrlT}</div>`))}
 ${ligne('Tâches faites', jours.map(j => cs(vTache(j.tache.part), `${j.tache.faites} / ${j.tache.faites + j.tache.pasFaites}`, fP(j.tache.part, 0))).concat(`<div class="t">${S.taches.faites} / ${tachT}</div>`))}
 ${ligne('Non-conformités', jours.map(() => cs('ok', '0')).concat('<div class="t">0</div>'))}
 ${ligne('Poubelle', jours.map(j => cs(vInv(100 * j.pb.cout / j.ca), fE(j.pb.cout), `${j.pb.pieces} pièces`)).concat(`<div class="t">${fE(somme(S.poubelleJours, p => p.cout))}</div>`))}
 ${ligne('Chiffre / objectif', jours.map(j => cs(vAtt(j.att), fP(j.att, 0), fE(j.ca))).concat(`<div class="t">${fP(S.atteinte, 0)}</div>`))}
-</div><div class="note">Les photos qui manquent : Biscuiterie et Pâtisseries, chaque jour. Les tâches lâchent à partir du vendredi : 1 sur 4 vendredi et samedi, 0 sur 11 dimanche. Les autres cartes s’ouvrent de la même façon : le P&L sous Marge, les heures sous Ventes, six semaines sous Clients.</div></div>`;
+</div><div class="note">Biscuiterie et Pâtisseries ne sont jamais rendues ; dimanche, 9 contrôles sont cochés sans aucune photo. Les tâches lâchent à partir du vendredi : 1 sur 4 vendredi et samedi, 0 sur 11 dimanche. Les autres cartes s’ouvrent de la même façon : le P&L sous Marge, les heures sous Ventes, six semaines sous Clients.</div></div>`;
   const carte = ([vd, k, v, s, g, pied]) => `<div class="carte${k === ouverte ? ' ouv' : ''}"><div class="k"><span class="vd ${vd}"></span>${k}<span class="fl">▾</span></div><div class="v">${v}</div><div class="s">${s}</div><div class="graph">${g}</div><div class="pied">${pied}</div></div>`;
-  const verdict = `<div class="verdict"><div class="gros c-att">${fP(S.atteinte, 0)}</div><div class="txt">Semaine 40 : ${fE(S.ca)} pour ${fE(S.objectif)}.<br>Il manque ${fE(S.objectif - S.ca)}, surtout du lundi au mercredi.</div><div class="chips"><span class="chip ko">les tâches : ${fP(S.taches.part, 0)}</span><span class="chip att">la matière : ${fP(S.matPct, 0)}</span><span class="chip att">les photos : ${fP(ctrlP, 0)}</span><span class="chip ok">la poubelle : ${fP(S.invPct)}</span><span class="chip ok">le stock</span></div></div>`;
+  const verdict = `<div class="verdict"><div class="gros c-att">${fP(S.atteinte, 0)}</div><div class="txt">Semaine 40 : ${fE(S.ca)} pour ${fE(S.objectif)}.<br>Il manque ${fE(S.objectif - S.ca)}, surtout du lundi au mercredi.</div><div class="chips"><span class="chip ko">les tâches : ${fP(S.taches.part, 0)}</span><span class="chip att">la matière : ${fP(S.matPct, 0)}</span><span class="chip ${vPart(ctrlP)}">les photos : ${fP(ctrlP, 0)}</span><span class="chip ok">la poubelle : ${fP(S.invPct)}</span><span class="chip ok">le stock</span></div></div>`;
   const idx = cartes.findIndex(c => c[1] === ouverte);
-  const corps = verdict + `<div class="dom">${cartes.slice(0, 3).map(carte).join('')}${cartes.slice(3).map(carte).join('')}${tiroir.replace('style="--x:0"', `style="--x:${idx % 3}"`)}</div>`
+  const corps = verdict + `<div class="dom">${cartes.slice(0, 3).map(carte).join('')}${cartes.slice(3).map(carte).join('')}${tiroir.replace('style="--x:0"', `style="--x:${idx % 3}"`)}</div>` + carrousel('Les contrôles en photo · semaine 40').replace('class="cq"', 'class="cq" style="margin-top:12px"')
     + `<style>.tiroir::before{left:calc(${(idx % 3)} * (100% + 12px) / 3 + 60px)}</style>`;
   return page('C', 'Vue générale C : six domaines en cartes', { sous: `Dashboard magasin · ${S.nom}, du 28/09 au 04/10 · lu le 06/10 à 07:20`, ong: ONG('Semaine'), lab: 'Semaine du', date: '28/09/2026' }, corps);
 }
@@ -243,7 +281,7 @@ body{margin:0;background:#EAE4DC;font-family:var(--font-ui);color:#222}.w{width:
 h4{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#666;margin:10px 0 4px}ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.5}ul.p li::marker{color:#2D7A3E}ul.m li::marker{color:#C0182B}
 .cap{font-size:11px;color:#777;margin:-4px 0 10px}</style></head><body><div class="w">
 <h1>Le dashboard magasin : une vue générale, le détail en liste déroulante</h1>
-<div class="sous">Atelier by - Halle · chiffres réels lus le 06/10/2026 · dimanche 4 octobre, semaine 40 (28/09 au 04/10), septembre · réseau anonyme · le téléphone garde ses trois onglets</div>
+<div class="sous">Atelier by - Halle · chiffres et photos réels lus le 06/10/2026 · dimanche 4 octobre, semaine 40 (28/09 au 04/10), septembre · réseau anonyme · le téléphone garde ses trois onglets · dans les trois, le carrousel des photos des tâches de la semaine reste visible, sans clic</div>
 <div class="g">${PL.map(([l, t, d, plus, moins]) => `<div class="col"><h2><span>${l}</span>${t}</h2><p>${d}</p>
 <img src="${l.toLowerCase()}-replie.png" alt=""><div class="cap">repliée</div><img src="${l.toLowerCase()}.png" alt=""><div class="cap">une section ouverte</div>
 <h4>Ce qu’elle apporte</h4><ul class="p">${plus.map(x => `<li>${x}</li>`).join('')}</ul><h4>Ce qu’elle coûte</h4><ul class="m">${moins.map(x => `<li>${x}</li>`).join('')}</ul></div>`).join('')}</div></div></body></html>`;

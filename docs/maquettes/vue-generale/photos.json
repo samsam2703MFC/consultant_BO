@@ -1,0 +1,525 @@
+{
+ "shop": 4,
+ "lu": "2026-10-06",
+ "jours": [
+  {
+   "date": "2026-09-28",
+   "photos": [
+    {
+     "f": "photos/2026-09-28-1216.jpg",
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CO-01 — Ouverture"
+    },
+    {
+     "f": "photos/2026-09-28-1206.jpg",
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1207.jpg",
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1209.jpg",
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1210.jpg",
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1211.jpg",
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1213.jpg",
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1214.jpg",
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-28-1267.jpg",
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie"
+    }
+   ],
+   "statuts": {
+    "aControler": 9,
+    "nonRendue": 2
+   },
+   "sansPhoto": [],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  {
+   "date": "2026-09-29",
+   "photos": [
+    {
+     "f": "photos/2026-09-29-1216.jpg",
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CO-01 — Ouverture"
+    },
+    {
+     "f": "photos/2026-09-29-1206.jpg",
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-29-1207.jpg",
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-29-1209.jpg",
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-29-1211.jpg",
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-29-1213.jpg",
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-29-1214.jpg",
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    }
+   ],
+   "statuts": {
+    "notee": 1,
+    "nonRendue": 2,
+    "aControler": 6,
+    "sansPhoto": 3
+   },
+   "sansPhoto": [
+    "Photo du comptoir - Traiteur",
+    "Est-ce que les promotions ont été encadrées et visibles ?",
+    "étiquetage des prix et allergènes"
+   ],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  {
+   "date": "2026-09-30",
+   "photos": [
+    {
+     "f": "photos/2026-09-30-1216.jpg",
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CO-01 — Ouverture"
+    },
+    {
+     "f": "photos/2026-09-30-1206.jpg",
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1207.jpg",
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1209.jpg",
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1210.jpg",
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1211.jpg",
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1213.jpg",
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1214.jpg",
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-09-30-1267.jpg",
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie"
+    }
+   ],
+   "statuts": {
+    "aControler": 9,
+    "nonRendue": 2,
+    "sansPhoto": 1
+   },
+   "sansPhoto": [
+    "Photo Chambre froide négative"
+   ],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "photos": [
+    {
+     "f": "photos/2026-10-01-1216.jpg",
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CO-01 — Ouverture"
+    },
+    {
+     "f": "photos/2026-10-01-1206.jpg",
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-01-1207.jpg",
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-01-1209.jpg",
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-01-1210.jpg",
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-01-1211.jpg",
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-01-1213.jpg",
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-01-1214.jpg",
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    }
+   ],
+   "statuts": {
+    "aControler": 8,
+    "nonRendue": 2,
+    "sansPhoto": 1
+   },
+   "sansPhoto": [
+    "étiquetage des prix et allergènes"
+   ],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  {
+   "date": "2026-10-02",
+   "photos": [
+    {
+     "f": "photos/2026-10-02-1216.jpg",
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CO-01 — Ouverture"
+    },
+    {
+     "f": "photos/2026-10-02-1206.jpg",
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-02-1207.jpg",
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-02-1209.jpg",
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "notee",
+     "note": 5,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-02-1210.jpg",
+     "taskId": "1210",
+     "tache": "Photo du comptoir - Traiteur",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-02-1211.jpg",
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "notee",
+     "note": 5,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-02-1213.jpg",
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "notee",
+     "note": 5,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-02-1214.jpg",
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    }
+   ],
+   "statuts": {
+    "notee": 7,
+    "nonRendue": 2,
+    "aControler": 1,
+    "sansPhoto": 1
+   },
+   "sansPhoto": [
+    "étiquetage des prix et allergènes"
+   ],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  {
+   "date": "2026-10-03",
+   "photos": [
+    {
+     "f": "photos/2026-10-03-1216.jpg",
+     "taskId": "1216",
+     "tache": "Vérifier si le magasin est propre.",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CO-01 — Ouverture"
+    },
+    {
+     "f": "photos/2026-10-03-1206.jpg",
+     "taskId": "1206",
+     "tache": "Photo du comptoir - Pains & Boulangerie",
+     "statut": "aControler",
+     "note": null,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-03-1207.jpg",
+     "taskId": "1207",
+     "tache": "Photo du comptoir - Viennoiseries",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-03-1209.jpg",
+     "taskId": "1209",
+     "tache": "Photo du comptoir - Tartes",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-03-1211.jpg",
+     "taskId": "1211",
+     "tache": "Photo du comptoir - Quiches",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-03-1213.jpg",
+     "taskId": "1213",
+     "tache": "Photo du comptoir - Boissons",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-03-1214.jpg",
+     "taskId": "1214",
+     "tache": "Photo du comptoir - Épicerie",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CQ-02 — Contrôle qualité d'ouverture."
+    },
+    {
+     "f": "photos/2026-10-03-1267.jpg",
+     "taskId": "1267",
+     "tache": "étiquetage des prix et allergènes",
+     "statut": "notee",
+     "note": 4,
+     "checklist": "CO-10 - Contrôle opérationnel Boulangerie"
+    }
+   ],
+   "statuts": {
+    "notee": 7,
+    "nonRendue": 2,
+    "sansPhoto": 1,
+    "aControler": 1
+   },
+   "sansPhoto": [
+    "Photo du comptoir - Traiteur"
+   ],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  },
+  {
+   "date": "2026-10-04",
+   "photos": [],
+   "statuts": {
+    "sansPhoto": 9,
+    "nonRendue": 2
+   },
+   "sansPhoto": [
+    "Vérifier si le magasin est propre.",
+    "Photo du comptoir - Boissons",
+    "Photo du comptoir - Épicerie",
+    "Photo du comptoir - Quiches",
+    "Photo du comptoir - Tartes",
+    "Photo du comptoir - Traiteur",
+    "Photo du comptoir - Viennoiseries",
+    "Photo du comptoir - Pains & Boulangerie",
+    "étiquetage des prix et allergènes"
+   ],
+   "nonRendues": [
+    "Photo du comptoir - Biscuiterie",
+    "Photo du comptoir - Pâtisseries"
+   ]
+  }
+ ]
+}
