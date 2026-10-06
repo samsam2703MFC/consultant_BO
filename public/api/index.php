@@ -72,6 +72,7 @@ require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
+require __DIR__ . '/../../src/primes.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -109,6 +110,15 @@ try {
             echo json_encode(wr_bg_webhook((string) file_get_contents('php://input'), $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? null), JSON_UNESCAPED_UNICODE);
             exit;
         }
+    }
+
+    // « Mes primes » dans l'app worker : la personne se présente avec SON jeton d'employé, que le
+    // panel confirme — la fiche rendue est la sienne, personne d'autre (src/primes.php).
+    if ($method === 'GET' && $path === '/ventes/moi' && primesJetonRecu() !== null) {
+        $out = ep_ventes_moi_jeton();
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
@@ -337,6 +347,8 @@ function route(string $method, string $path): mixed
             $path === '/ventes/classement'            => ep_ventes_classement(),
             $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),
+            $path === '/ventes/moi'                   => ep_ventes_moi(),
+            $path === '/ventes/primes-reglages'       => ep_primes_reglages(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),
             $path === '/ventes/affiche.pdf'           => ep_ventes_affiche(),
             $path === '/ventes/explication.pdf'        => ep_ventes_explication_pdf(),
@@ -500,6 +512,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-paliers') { return wr_ventes_cross_paliers(); }
     if ($method === 'POST' && $path === '/ventes/primes-montants') { return wr_ventes_primes_montants(); }
+    if ($method === 'POST' && $path === '/ventes/prime-magasin') { return wr_prime_magasin(); }
+    if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }

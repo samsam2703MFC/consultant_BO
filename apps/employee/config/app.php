@@ -45,6 +45,9 @@ if ($apiBase === '') { $apiBase = 'https://atelierby.tfbuddy.com/api/v1'; }
 define('API_BASE_URL', rtrim($apiBase, '/'));
 $panelHost = preg_replace('#/api/v1/?$#', '', API_BASE_URL);
 define('SHARED_FILES_URL', $env('EMPLOYEE_SHARED_FILES_URL', $panelHost . '/shared-assets'));
+// L'API du cockpit, pour « Mes primes » : celle qui héberge l'app (…/consulant_bo/api/cockpit),
+// sinon EMPLOYEE_COCKPIT_API. Le cockpit vérifie le jeton d'employé auprès du panel.
+define('COCKPIT_API_URL', rtrim($env('EMPLOYEE_COCKPIT_API', $scheme . $host . preg_replace('#/employee$#', '', $base) . '/api/cockpit'), '/'));
 define('THEME_CONFIG_PATH', $env('EMPLOYEE_THEME_CONFIG', $panelHost . '/shared/admin-theme-config.json'));
 
 // Le jeton n'est pas vérifié ici (l'API le vérifie) : ces réglages ne servent qu'aux durées.

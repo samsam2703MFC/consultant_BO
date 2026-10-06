@@ -1,0 +1,116 @@
+/* « Mes primes » dans l'app employés (maquette B du 06/10/2026) : par-dessus app.css et marque.css. */
+
+/* Les onglets de la maquette B. */
+.pr-tabs{display:flex;background:#fff;border:.5px solid var(--la-trait2);border-radius:12px;padding:3px;margin-bottom:12px}
+.pr-tabs span{flex:1;text-align:center;padding:8px 6px;font:600 12.5px var(--font-ui);color:var(--la-muet);border-radius:9px}
+.pr-tabs span.on{background:var(--la-rubis);color:#fff}
+
+/* Les cartes. */
+.pr-card{background:#fff;border:.5px solid var(--la-trait);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.pr-card.rubis{background:var(--la-rubis);color:#fff;border-color:transparent}
+.pr-card.rubis .k,.pr-card.rubis .mu{color:rgba(255,255,255,.78)}
+.pr-card.doux{background:var(--la-beige-doux)}
+.k{font:600 10px var(--font-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--la-muet)}
+.mu{color:var(--la-muet)}
+.pr-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.pr-h h2{font:400 20px/1.1 var(--font-display);margin:0}
+.pr-h small{font-size:11px;color:var(--la-muet)}
+.gros{font:400 40px/1 var(--font-display);margin:4px 0 2px}
+.gros small{font:600 14px var(--font-ui);margin-left:4px}
+.pr-card.rubis .gros{color:#fff}
+.ligne{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding:8px 0;border-top:.5px solid var(--la-trait)}
+.ligne:first-of-type{border-top:none}
+.ligne b{font-weight:600}
+.ligne .d{color:var(--la-muet);font-size:11.5px}
+
+/* Les briques de la prime individuelle. */
+.brique{padding:10px 0;border-top:.5px solid var(--la-trait)}
+.brique:first-of-type{border-top:none;padding-top:2px}
+.brique .t{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brique .t b{font-size:13.5px;font-weight:600}
+.brique .n{font:400 26px/1 var(--font-display);margin:6px 0 2px}
+.brique .n small{font:500 12px var(--font-ui);color:var(--la-muet);margin-left:4px}
+.brique .s{font-size:11.5px;color:var(--la-muet);margin-top:4px}
+.brique .s b{color:var(--la-encre);font-weight:600}
+.puce{font:600 11px var(--font-ui);padding:3px 9px;border-radius:999px;white-space:nowrap}
+.puce.ok{background:#e4f3e8;color:#2d7a3e}
+.puce.att{background:#fdf0e0;color:#b25f00}
+.puce.mu{background:var(--la-beige-doux);color:var(--la-muet)}
+.puce.rubis{background:var(--la-rubis);color:#fff}
+.puce.blanc{background:rgba(255,255,255,.18);color:#fff}
+
+/* Les barres. */
+.barre{position:relative;height:8px;border-radius:999px;background:var(--la-beige-doux);margin-top:8px;overflow:visible}
+.barre i{display:block;height:100%;border-radius:999px;background:var(--la-rubis)}
+.barre i.ok{background:#2d7a3e}
+.barre i.att{background:#D97706}
+.barre .cible{position:absolute;top:-4px;width:2px;height:16px;background:var(--la-encre);border-radius:1px}
+.barre .cible::after{content:attr(data-l);position:absolute;top:17px;left:50%;transform:translateX(-50%);font:600 9.5px var(--font-ui);color:var(--la-muet);white-space:nowrap}
+.barre.avec-cible{margin-bottom:22px}
+.pr-card.rubis .barre{background:rgba(255,255,255,.22)}
+.pr-card.rubis .barre i{background:#fff}
+
+/* La jauge de l'objectif magasin. */
+.jauge{margin-top:8px}
+.jauge .leg{display:flex;justify-content:space-between;font-size:11px;color:var(--la-muet);margin-top:4px}
+.jauge .b{position:relative;height:14px;border-radius:999px;background:var(--la-beige-doux);overflow:hidden}
+.jauge .b i{position:absolute;left:0;top:0;height:100%;border-radius:999px}
+.jauge .b i.fait{background:var(--la-rubis);z-index:2}
+.jauge .b i.proj{background:#f0c9cf;z-index:1}
+.jauge .rep{position:absolute;top:0;width:1.5px;height:100%;background:var(--la-encre);opacity:.55;z-index:3}
+
+/* L'échelle des paliers. */
+.paliers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.pal{border:.5px solid var(--la-trait2);border-radius:10px;padding:8px 4px;text-align:center}
+.pal .p{font:600 12px var(--font-ui)}
+.pal .e{font:400 18px/1.1 var(--font-display);margin-top:3px}
+.pal .v{font-size:10px;color:var(--la-muet);margin-top:3px}
+.pal.on{background:var(--la-rubis);color:#fff;border-color:transparent}
+.pal.on .v{color:rgba(255,255,255,.8)}
+.pal.prochain{border-color:var(--la-rubis);border-width:1.5px}
+
+/* Le jour par jour du mois. */
+.jours{display:flex;align-items:flex-end;gap:3px;height:70px;margin-top:10px}
+.jours i{flex:1;background:var(--la-rubis);border-radius:3px 3px 0 0;position:relative}
+.jours i.we{background:#b8505e}
+.jours i.auj{background:#f0c9cf;outline:1.5px dashed var(--la-rubis);outline-offset:-1.5px}
+.jours i.vide{background:var(--la-beige-doux)}
+.jours .obj{position:absolute;left:0;right:0;border-top:1.5px dashed var(--la-encre);opacity:.5}
+.jours-leg{display:flex;justify-content:space-between;font-size:10px;color:var(--la-muet);margin-top:4px}
+
+/* Le compteur du jour. */
+.auj{display:flex;align-items:center;gap:14px}
+.auj .cercle{width:84px;height:84px;border-radius:50%;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;background:conic-gradient(var(--la-rubis) var(--p),#f0e9e0 0);position:relative}
+.auj .cercle::before{content:'';position:absolute;inset:7px;border-radius:50%;background:#fff}
+.auj .cercle b{position:relative;font:400 26px/1 var(--font-display)}
+.auj .cercle small{position:relative;font:600 9.5px var(--font-ui);color:var(--la-muet);margin-top:2px}
+.auj .tx{flex:1;font-size:13px}
+.auj .tx .q{font:400 17px/1.2 var(--font-display);margin-bottom:3px}
+
+/* L'équipe : des parts anonymes. */
+.parts{display:flex;height:10px;border-radius:999px;overflow:hidden;margin-top:8px}
+.parts i{display:block;height:100%;background:#d8cec2}
+.parts i.moi{background:var(--la-rubis)}
+.parts i+i{margin-left:2px}
+
+/* L'historique. */
+.hist .ligne{align-items:flex-start}
+.hist .m{font-weight:600;font-size:13px;min-width:70px}
+.hist .det{flex:1;font-size:11.5px;color:var(--la-muet)}
+.hist .tot{font:400 18px/1 var(--font-display);white-space:nowrap}
+.hist .tot.zero{color:var(--la-muet);font-size:14px}
+
+/* Le mini-graphique des semaines. */
+.sem{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:10px;position:relative}
+.sem i{flex:1;background:#d8cec2;border-radius:4px 4px 0 0;position:relative}
+.sem i.on{background:var(--la-rubis)}
+.sem i b{position:absolute;top:-15px;left:0;right:0;text-align:center;font:600 10px var(--font-ui);color:var(--la-encre)}
+.sem .cible{position:absolute;left:0;right:0;border-top:1.5px dashed var(--la-encre);opacity:.5}
+.sem-leg{display:flex;gap:6px;font-size:10px;color:var(--la-muet);margin-top:4px}
+.sem-leg span{flex:1;text-align:center}
+.note{font-size:11px;color:var(--la-muet);line-height:1.45;margin-top:8px}
+.btn-lien{display:inline-block;margin-top:8px;font:600 12px var(--font-ui);color:var(--la-rubis)}
+.pr-onglet{display:none}
+.pr-onglet.on{display:block}
+.sem i.vide{background:var(--la-beige-doux)}
+.hist .ok{color:#2d7a3e;font-weight:600}

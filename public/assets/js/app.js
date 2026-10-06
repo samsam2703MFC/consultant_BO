@@ -6998,6 +6998,102 @@ class App {
           }) };
   }
 
+  /**
+   * Paramètres des primes de l'app worker (06/10/2026, maquette B) : la prime magasin (des euros par
+   * heure prestée selon le palier d'atteinte de l'objectif du mois) et les ventes croisées (cible par
+   * magasin, paliers), avec l'aperçu du mois en cours d'un magasin. Ce qu'on tape reste un brouillon
+   * jusqu'à « Enregistrer » : les paliers se règlent ensemble.
+   */
+  valsPrimesParams(common){
+    const S = this.state;
+    const shop = S.prShop || '';
+    const cle = shop || '_';
+    const court = nom => String(nom || '').split(' - ').pop();
+    if (!this._pr) { this._pr = {}; }
+    if (this._pr[cle] === undefined && !this._prEnCours) {
+      this._prEnCours = true;
+      readOne('/ventes/primes-reglages' + (shop ? '?shop=' + shop : ''))
+        .then(d => { this._prEnCours = false; this._pr[cle] = (d && !d.error) ? d : null; if (d && d.shop && !shop) { this._pr[d.shop] = this._pr[cle]; } this.setState({}); })
+        .catch(() => { this._prEnCours = false; this._pr[cle] = null; this.setState({}); });
+    }
+    const d = this._pr[cle];
+    common.prChargement = d === undefined;
+    common.prMotif = d === null ? 'Les paramètres des primes n’ont pas pu être lus.' : '';
+    if (!d) { return; }
+    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    const n2 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
+    const mag = S.prMag || { paliers: d.magasin.paliers.map(p => Object.assign({}, p)), heuresMin: d.magasin.heuresMin };
+    const cr = S.prCr || { cibleDefaut: d.croisees.cibleDefaut, cibles: Object.assign({}, d.croisees.cibles), paliers: d.croisees.paliers.map(p => Object.assign({}, p)), minTickets: d.croisees.minTickets };
+    const enregistrer = (chemin, corps, quoi) => this.api('POST', chemin, corps).then(r => {
+      if (r && r.ok === false) { return; }
+      this.notify(quoi + ' enregistrés — ils valent dès ce mois');
+      this._pr = {}; this.setState({ prMag: undefined, prCr: undefined });
+    });
+    const hEq = d.apercu ? d.apercu.heuresEquipe : 0;
+    common.prMag = {
+      paliers: mag.paliers.map((p, i) => ({
+        pct: String(p.pct), eh: String(p.eh), lib: p.lib || '',
+        equipe: hEq > 0 ? eur(p.eh * hEq) : '',
+        poserPct: e => { const v = num(e.target.value); if (v != null) { mag.paliers[i].pct = Math.round(v); } this.setState({ prMag: mag }); },
+        poserEh: e => { const v = num(e.target.value); if (v != null) { mag.paliers[i].eh = Math.round(v * 100) / 100; } this.setState({ prMag: mag }); },
+        poserLib: e => { mag.paliers[i].lib = e.target.value; this.setState({ prMag: mag }); },
+        retirer: () => { mag.paliers.splice(i, 1); this.setState({ prMag: mag }); },
+      })),
+      ajouter: () => { const der = mag.paliers[mag.paliers.length - 1] || { pct: 95, eh: 0.5 }; mag.paliers.push({ pct: der.pct + 5, eh: Math.round((der.eh + 0.5) * 100) / 100, lib: '' }); this.setState({ prMag: mag }); },
+      heuresMin: String(mag.heuresMin),
+      poserHeuresMin: e => { const v = num(e.target.value); if (v != null) { mag.heuresMin = Math.max(0, Math.round(v)); } this.setState({ prMag: mag }); },
+      enregistrer: () => enregistrer('/ventes/prime-magasin', { paliers: mag.paliers, heuresMin: mag.heuresMin }, 'Paliers de la prime magasin'),
+      modifie: JSON.stringify(mag) !== JSON.stringify({ paliers: d.magasin.paliers, heuresMin: d.magasin.heuresMin }),
+    };
+    const mes = d.mesures || {};
+    common.prCr = {
+      cibleDefaut: String(cr.cibleDefaut),
+      poserCibleDefaut: e => { const v = num(e.target.value); if (v != null) { cr.cibleDefaut = v; } this.setState({ prCr: cr }); },
+      magasins: (d.magasins || []).map(m => ({
+        id: m.id, nom: court(m.nom),
+        cible: cr.cibles[m.id] != null ? String(cr.cibles[m.id]) : '',
+        effective: (cr.cibles[m.id] != null ? cr.cibles[m.id] : cr.cibleDefaut) + ' %' + (cr.cibles[m.id] != null ? '' : ' (réseau)'),
+        mesure: mes[m.id] && mes[m.id].taux != null ? n1(mes[m.id].taux) + ' %' : '',
+        mesureSub: mes[m.id] && mes[m.id].jours ? (mes[m.id].jours + ' j · ' + (mes[m.id].tickets || 0).toLocaleString('fr-BE') + ' tickets') : 'pas encore moissonné',
+        poser: e => { const v = num(e.target.value); if (v == null || v <= 0) { delete cr.cibles[m.id]; } else { cr.cibles[m.id] = v; } this.setState({ prCr: cr }); },
+      })),
+      paliers: cr.paliers.map((p, i) => ({
+        plus: String(p.plus), m: String(p.m),
+        poserPlus: e => { const v = num(e.target.value); if (v != null) { cr.paliers[i].plus = v; } this.setState({ prCr: cr }); },
+        poserM: e => { const v = num(e.target.value); if (v != null) { cr.paliers[i].m = Math.round(v); } this.setState({ prCr: cr }); },
+        retirer: () => { cr.paliers.splice(i, 1); this.setState({ prCr: cr }); },
+      })),
+      ajouter: () => { const der = cr.paliers[cr.paliers.length - 1] || { plus: -5, m: 10 }; cr.paliers.push({ plus: der.plus + 5, m: der.m + 30 }); this.setState({ prCr: cr }); },
+      minTickets: String(cr.minTickets),
+      poserMinTickets: e => { const v = num(e.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } this.setState({ prCr: cr }); },
+      enregistrer: () => {
+        const cibles = {};
+        (d.magasins || []).forEach(m => { cibles[m.id] = cr.cibles[m.id] != null ? cr.cibles[m.id] : ''; });
+        enregistrer('/ventes/croisees', { cibleDefaut: cr.cibleDefaut, cibles, paliers: cr.paliers, minTickets: cr.minTickets }, 'Réglages des ventes croisées');
+      },
+      modifie: JSON.stringify(cr) !== JSON.stringify({ cibleDefaut: d.croisees.cibleDefaut, cibles: d.croisees.cibles, paliers: d.croisees.paliers, minTickets: d.croisees.minTickets }),
+      mesuresMois: d.mesuresMois || '',
+    };
+    common.prShops = (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: (shop || d.shop) === m.id, choisir: () => this.setState({ prShop: m.id }) }));
+    const a = d.apercu;
+    common.prApercu = !a ? null : {
+      nom: court(((d.magasins || []).find(m => m.id === (shop || d.shop)) || {}).nom || ''), lib: d.lib,
+      objectif: a.objectif != null ? eur(a.objectif) : 'pas d’objectif encodé',
+      source: a.objectifSource === 'budget' ? 'le budget' : (a.objectifSource === 'theorique' ? 'le CA théorique' : ''),
+      ca: eur(a.ca), atteinte: a.atteinte != null ? n1(a.atteinte) + ' %' : '',
+      projection: a.projection != null ? eur(a.projection) : '', atteinteProj: a.atteinteProj != null ? n1(a.atteinteProj) + ' %' : '',
+      rythme: a.moySem != null ? eur(a.moySem) + ' les jours de semaine' + (a.moyWe != null ? ', ' + eur(a.moyWe) + ' le week-end' : '') : '',
+      joursRestants: a.joursRestants, heuresEquipe: n1(a.heuresEquipe) + ' h', personnes: a.personnes,
+      palier: a.palier ? a.palier.pct + ' % · ' + n2(a.palier.eh) + ' €/h' : 'aucun palier au rythme actuel',
+      paliers: (a.paliers || []).map(p => ({ pct: p.pct + ' %', lib: p.lib, atteint: p.atteint, eh: n2(p.eh) + ' €/h', equipe: eur(p.equipe),
+        manque: p.atteint ? 'atteint au rythme actuel' : (p.manque != null ? eur(p.manque) + (p.parJour ? ' · ' + eur(p.parJour) + ' par jour' : '') : '') })),
+      pctEnv: (a.objectif > 0 && a.paliers && a.paliers[1]) ? n2(100 * a.paliers[1].equipe / a.objectif) + ' % de l’objectif' : '',
+    };
+    common.prRecord = d.record || {}; common.prMeilleure = d.meilleure || {};
+  }
+
   valsVentes(common){
     const S = this.state;
     const d = (this._tv || {})[S.tvMois || ''];
@@ -7012,8 +7108,9 @@ class App {
     // se mélange pas avec régler.
     const onglet = S.tvOnglet || 'resultats';
     common.tvOnglet = onglet;
-    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes']]
+    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes'], ['parametres', 'Paramètres']]
       .map(([v, nom]) => ({ nom, on: onglet === v, choisir: () => this.setState({ tvOnglet: v }) }));
+    if (onglet === 'parametres') { this.valsPrimesParams(common); }
     common.tvChargement = d === undefined;
     common.tvMotif = d === null ? 'Le classement n’a pas pu être calculé.' : ((d && d.motif) || '');
     common.tvMoisPills = ((d && d.mois) || []).map(m => ({
