@@ -1443,3 +1443,8 @@ body.pp-emb{background:var(--color-bg)}
 .op-vl.op-arbre .r.nv3{padding-left:34px}
 .op-vl.op-arbre .r.nv1 .n b{font-size:13px}
 .op-vl.op-arbre .r .e .op-vd{font-size:9.5px}
+/* Long life en dépliant : le stock face à trois jours de vente. */
+.op-tbla td,.op-tbla th{padding:5px 10px}
+.op-tbla td.ko{color:#C0182B}
+.op-tbla th:nth-child(6),.op-tbla td:nth-child(6),.op-tbla th:nth-child(8),.op-tbla td:nth-child(8){text-align:left}
+.op-tbh td small,.op-tbla td small{display:block;font-size:10px;color:var(--color-text-muted);font-weight:500}
