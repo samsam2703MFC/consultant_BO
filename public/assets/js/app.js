@@ -7139,6 +7139,37 @@ class App {
       sub: 'score ' + eur(x.score) + ' · ' + eur(x.caHeure) + ' / h · ' + nb1(x.heures) + ' h',
     })));
 
+    // Les primes du mois pour tout le monde, telles que l'app worker les montre : ventes croisées,
+    // record, meilleure vendeuse, prime magasin — par magasin et par personne.
+    if (!this._pm) { this._pm = {}; }
+    if (this._pm[d.m] === undefined && !this._pmEnCours) {
+      this._pmEnCours = true;
+      readOne('/ventes/primes-mois?m=' + d.m)
+        .then(x => { this._pmEnCours = false; this._pm[d.m] = (x && !x.error) ? x : null; this.setState({}); })
+        .catch(() => { this._pmEnCours = false; this._pm[d.m] = null; this.setState({}); });
+    }
+    const pm = this._pm[d.m];
+    const n2 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    common.tvPrimesMois = {
+      chargement: pm === undefined, motif: pm === null ? 'Les primes du mois n’ont pas pu être calculées.' : (pm && pm.motif) || '',
+      lib: pm ? pm.lib : '', enCours: !!(pm && pm.enCours),
+      magasins: !pm ? [] : (pm.magasins || []).filter(m => !filtre || m.id === filtre).map(m => ({
+        nom: court(m.nom), objectif: m.objectif != null ? eur(m.objectif) : 'pas d’objectif',
+        atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % · ' + n2(m.palier.eh) + ' €/h' : 'aucun palier',
+        equipe: eur(m.equipe), heures: nb1(m.heuresEquipe) + ' h · ' + m.personnes + ' pers.', cible: 'cible ' + nb1(m.cible) + ' %',
+      })),
+      personnes: !pm ? [] : (pm.personnes || []).filter(l => !filtre || l.shopId === filtre).map(l => ({
+        nom: l.nom, magasin: court(l.magasinNom), heures: nb1(l.heures) + ' h',
+        croisees: l.croisees.taux != null ? nb1(l.croisees.taux) + ' %' : '', croiseesM: l.croisees.montant > 0 ? eur(l.croisees.montant) : '',
+        record: l.record.lt != null ? nb1(l.record.lt) + (l.record.record != null ? ' / ' + nb1(l.record.record) : '') : '', recordM: l.record.montant > 0 ? eur(l.record.montant) : '',
+        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? n2(l.magasin) + ' €' : '',
+        total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
+      })),
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), magasin: n2(pm.totaux.magasin) + ' €', total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
+      enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · ventes croisées et prime magasin : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
+    };
+
     // La prime s'enregistre ici : le calcul désigne, l'humain confirme.
     common.tvPrime = hist
       ? { fait: true, txt: 'Primes de ' + d.m + ' enregistrées le ' + hist.quand }

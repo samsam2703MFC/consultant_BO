@@ -9593,6 +9593,46 @@ function tplVentes(c, x){
       </div>`).join('')}
     </div>`}
 
+    ${!c.tvPrimesMois ? '' : `
+    <div style="${carte};padding:14px 16px" data-tv="primes-mois">
+      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap">
+        <div style="${lbl}">Les primes de ${esc(c.tvPrimesMois.lib)}, telles que l'app worker les montre</div>
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(c.tvPrimesMois.note)}</span>
+        <span style="flex:1"></span>
+        <span style="font-size:11.5px;color:${c.tvPrimesMois.enregistre ? '#2d7a3e' : 'var(--color-text-muted)'}">${esc(c.tvPrimesMois.enregistre || (c.tvPrimesMois.enCours ? 'Mois en cours : une projection, rien ne se paie.' : 'À enregistrer avec le bouton ci-dessous.'))}</span>
+      </div>
+      ${c.tvPrimesMois.chargement ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:8px">Calcul en cours…</div>` : c.tvPrimesMois.motif ? `<div style="font-size:12px;color:#C0182B;margin-top:8px">${esc(c.tvPrimesMois.motif)}</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:10px 0 12px">
+        ${c.tvPrimesMois.magasins.map(m => `
+        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:9px 12px">
+          <div style="font-size:12px;font-weight:700">${esc(m.nom)} <span style="font-weight:500;color:var(--color-text-muted)">· ${esc(m.cible)}</span></div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">objectif ${esc(m.objectif)} · atteint <b style="color:var(--color-text)">${esc(m.atteinte)}</b></div>
+          <div style="font-size:11.5px;margin-top:3px">palier ${esc(m.palier)} → <b>${esc(m.equipe)}</b> <span style="color:var(--color-text-muted)">pour ${esc(m.heures)}</span></div>
+        </div>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left">Vendeur·se</th><th style="${th};text-align:left">Magasin</th><th style="${th}">Heures</th>
+          <th style="${th}">Ventes croisées</th><th style="${th}">€</th><th style="${th}" title="lignes par ticket / record 12 mois">Record</th><th style="${th}">€</th>
+          <th style="${th}">Meilleure</th><th style="${th}">Prime magasin</th><th style="${th}">Total</th>
+        </tr></thead>
+        <tbody>
+          ${c.tvPrimesMois.personnes.map(l => `
+          <tr style="${l.prime ? '' : 'color:#9a9186'}">
+            <td style="${td};text-align:left;font-weight:500">${esc(l.nom)}</td><td style="${td};text-align:left">${esc(l.magasin)}</td><td style="${td}">${esc(l.heures)}</td>
+            <td style="${td}">${esc(l.croisees)}</td><td style="${td};font-weight:600">${esc(l.croiseesM)}</td><td style="${td}">${esc(l.record)}</td><td style="${td};font-weight:600">${esc(l.recordM)}</td>
+            <td style="${td};font-weight:600">${esc(l.meilleure)}</td><td style="${td};font-weight:600">${esc(l.magasinM)}</td><td style="${td};font-weight:700;color:var(--color-primary)">${esc(l.total)}</td>
+          </tr>`).join('')}
+          ${!c.tvPrimesMois.totaux ? '' : `
+          <tr style="background:var(--color-background-secondary)">
+            <td style="${td};text-align:left;font-weight:700">Total · ${c.tvPrimesMois.totaux.personnes} personne(s) primée(s)</td><td style="${td}"></td><td style="${td}"></td>
+            <td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.croisees)}</td><td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.record)}</td>
+            <td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.meilleure)}</td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.magasin)}</td><td style="${td};font-weight:700;color:var(--color-primary)">${esc(c.tvPrimesMois.totaux.total)}</td>
+          </tr>`}
+        </tbody>
+      </table></div>`}
+    </div>`}
+
     <div style="${carte}">
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>

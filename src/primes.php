@@ -582,6 +582,131 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
 }
 
 /* ======================================================================
+   Tout le monde sur un mois : ce que l'app montre à chacune, et ce que le CEO enregistre
+   ====================================================================== */
+
+/**
+ * Les primes d'un mois pour toutes les personnes de vente, magasin par magasin : les quatre
+ * règles, les totaux. C'est la lecture du CEO (Équipe & ventes › Résultats) et ce qu'enregistre
+ * « Enregistrer les primes ». Mise en cache une heure (le mois en cours) ou un jour (mois clos).
+ */
+function primesMoisTous(string $m, bool $frais = false): array
+{
+    $cle = 'primesTous' . $m;
+    $enCours = $m === date('Y-m');
+    if (!$frais) {
+        $c = setting($cle);
+        if (is_array($c) && isset($c['personnes']) && (int) ($c['quand'] ?? 0) > time() - ($enCours ? 3600 : PRIMES_CACHE_CLOS)) { return $c; }
+    }
+    $nomDe = primesMagasins();
+    $emps = venteEmployes();
+    $r = venteMoisCache($m, $nomDe);
+    $parMois = [];
+    foreach (venteFenetreRecord($m) as $mF) { $rF = venteMoisCache($mF, $nomDe); $parMois[$mF] = $rF['motif'] === null ? $rF['lignes'] : null; }
+    $cr = function_exists('pvCroiseesMois') ? pvCroiseesMois($m) : null;
+    $h = primesHeuresMois($m);
+    $regM = primeMagasinReglages(); $cfgC = croiseesReglages(); $regR = venteRecordReglages(); $mv = ventePrimesConfig();
+    $g = venteGagnantes($r['lignes']);
+    $reseauId = $g['reseau']['id'] ?? null;
+    $magId = [];
+    foreach ($g['magasins'] as $x) { if ($x['id'] !== $reseauId) { $magId[(string) $x['shopId']] = $x['id']; } }
+    $budgets = primesBudgets($m);
+
+    // Les magasins : heures de l'équipe, objectif, palier.
+    $magasins = []; $hEq = []; $nEq = [];
+    foreach ($h as $id => $x) { $hEq[$x['shop']] = ($hEq[$x['shop']] ?? 0.0) + $x['mois']; $nEq[$x['shop']] = ($nEq[$x['shop']] ?? 0) + 1; }
+    foreach ($nomDe as $sid => $nom) {
+        $pm = primesMagasinMois((int) $sid, $m, $regM, null, (float) ($hEq[$sid] ?? 0.0), $budgets[$sid] ?? null);
+        $magasins[$sid] = ['id' => (string) $sid, 'nom' => $nom, 'objectif' => $pm['objectif'], 'ca' => $pm['ca'],
+            'atteinte' => $pm['atteinte'], 'atteinteProj' => $pm['atteinteProj'], 'palier' => $pm['palier'],
+            'heuresEquipe' => $pm['heuresEquipe'], 'personnes' => (int) ($nEq[$sid] ?? 0), 'equipe' => $pm['equipe'], 'cible' => croiseesCible($cfgC, (string) $sid)];
+    }
+
+    // Les personnes : toutes celles qui ont une ligne, des heures ou des tickets ce mois-là.
+    $ligneDe = [];
+    foreach ($r['lignes'] as $l) { $ligneDe[(int) $l['id']] = $l; }
+    $ids = array_unique(array_merge(array_keys($ligneDe), array_keys($h), array_map('intval', array_keys($cr['e'] ?? []))));
+    $personnes = [];
+    foreach ($ids as $id) {
+        if (!isset($emps[$id])) { continue; }
+        $shop = (string) $emps[$id]['shop'];
+        $l = $ligneDe[$id] ?? null;
+        $x = $cr['e'][$id] ?? null;
+        $tC = $x !== null ? (int) $x['t'] : 0;
+        $cC = ($x !== null && isset($x['c'])) ? (int) $x['c'] : null;
+        $taux = ($cC !== null && $tC > 0) ? round(100 * $cC / $tC, 1) : null;
+        $prC = croiseesPrime($taux, croiseesCible($cfgC, $shop), $cfgC, $tC);
+        $lt = $l['lignesTicket'] ?? null;
+        if ($lt === null && $x !== null && $tC > 0 && isset($x['l'])) { $lt = round((int) $x['l'] / $tC, 2); }
+        $tickets = max((int) ($l['tickets'] ?? 0), $tC);
+        $rec = venteRecordVendeuse($parMois, (string) $id, $m);
+        $prR = ($lt !== null && $tickets >= VENTE_CROSS_MIN_TICKETS) ? venteRecordPrime((float) $lt, $rec, $regR['eurDixieme'], $regR['maxDixiemes']) : ['tranches' => 0, 'prime' => 0];
+        $meilleure = $id === $reseauId ? $mv['reseau'] : ((($magId[$shop] ?? null) === $id) ? $mv['magasin'] : 0);
+        $heures = (float) ($h[$id]['mois'] ?? ($l['heures'] ?? 0.0));
+        $pal = $magasins[$shop]['palier'] ?? null;
+        $montantMag = ($pal !== null && $heures >= $regM['heuresMin']) ? round($pal['eh'] * $heures, 2) : 0.0;
+        $total = round($prC['montant'] + $prR['prime'] + $meilleure + $montantMag, 2);
+        $personnes[] = ['id' => $id, 'nom' => $emps[$id]['nom'], 'shopId' => $shop, 'magasinNom' => $nomDe[$shop] ?? ('Magasin ' . $shop),
+            'heures' => round($heures, 1), 'tickets' => $tickets, 'ca' => (int) ($l['ca'] ?? 0), 'score' => $l['score'] ?? null, 'rang' => $l['rang'] ?? null,
+            'croisees' => ['croisees' => $cC, 'tickets' => $tC, 'taux' => $taux, 'montant' => $prC['montant']],
+            'record' => ['lt' => $lt, 'record' => $rec, 'tranches' => $prR['tranches'], 'montant' => $prR['prime']],
+            'meilleure' => $meilleure, 'magasin' => $montantMag, 'total' => $total];
+    }
+    usort($personnes, static fn ($a, $b) => [$a['magasinNom'], -$a['total'], $a['nom']] <=> [$b['magasinNom'], -$b['total'], $b['nom']]);
+    $totaux = ['croisees' => 0.0, 'record' => 0.0, 'meilleure' => 0.0, 'magasin' => 0.0, 'total' => 0.0, 'personnes' => 0];
+    foreach ($personnes as $p) {
+        $totaux['croisees'] += $p['croisees']['montant']; $totaux['record'] += $p['record']['montant'];
+        $totaux['meilleure'] += $p['meilleure']; $totaux['magasin'] += $p['magasin']; $totaux['total'] += $p['total'];
+        if ($p['total'] > 0) { $totaux['personnes']++; }
+    }
+    $out = ['m' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(), 'motif' => $r['motif'],
+        'croiseesComplet' => (bool) ($cr['complet'] ?? false), 'croiseesJours' => (int) ($cr['jours'] ?? 0),
+        'magasins' => array_values($magasins), 'personnes' => $personnes, 'totaux' => $totaux];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    return $out;
+}
+
+/** GET /ventes/primes-mois?m= — tout le monde sur le mois, et ce qui est déjà enregistré. */
+function ep_primes_mois(): array
+{
+    $m = trim((string) ($_GET['m'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m) || $m > date('Y-m')) { $m = date('Y-m', strtotime('first day of last month')); }
+    $out = primesMoisTous($m, isset($_GET['frais']));
+    $hist = setting('ventePrimesHist');
+    $out['enregistre'] = is_array($hist) && isset($hist[$m]) ? ['quand' => $hist[$m]['quand'] ?? null, 'appWorker' => $hist[$m]['appWorker'] ?? null] : null;
+    return $out;
+}
+
+/**
+ * Ce que « Enregistrer les primes » grave pour l'app worker, en plus des gagnantes : la prime
+ * magasin et les ventes croisées de chacune (identifiants et montants, jamais de nom), et une ligne
+ * au journal par personne primée. Le record et la meilleure vendeuse ont leurs enregistrements à eux.
+ */
+function primesEnregistrer(string $m): array
+{
+    $t = primesMoisTous($m, true);
+    $enr = ['quand' => date('Y-m-d H:i'), 'magasins' => [], 'personnes' => [], 'total' => 0.0];
+    foreach ($t['magasins'] as $mg) {
+        $enr['magasins'][] = ['id' => $mg['id'], 'atteinte' => $mg['atteinte'], 'palier' => $mg['palier'] !== null ? $mg['palier']['pct'] : null,
+            'eh' => $mg['palier'] !== null ? $mg['palier']['eh'] : null, 'heuresEquipe' => $mg['heuresEquipe'], 'equipe' => $mg['equipe']];
+    }
+    foreach ($t['personnes'] as $p) {
+        $deux = round($p['croisees']['montant'] + $p['magasin'], 2);
+        if ($deux <= 0) { continue; }
+        $enr['personnes'][] = ['id' => $p['id'], 'shopId' => $p['shopId'], 'heures' => $p['heures'],
+            'croisees' => $p['croisees']['montant'], 'tauxCroisees' => $p['croisees']['taux'], 'magasin' => $p['magasin'], 'total' => $deux];
+        $enr['total'] += $deux;
+        journalAdd('CEO', 'Vente', $p['nom'], 'Primes app worker ' . $m . ' — '
+            . ($p['croisees']['montant'] > 0 ? 'ventes croisées ' . $p['croisees']['montant'] . ' € (' . str_replace('.', ',', (string) $p['croisees']['taux']) . ' %)' : '')
+            . ($p['croisees']['montant'] > 0 && $p['magasin'] > 0 ? ' · ' : '')
+            . ($p['magasin'] > 0 ? 'prime magasin ' . number_format($p['magasin'], 2, ',', ' ') . ' € (' . str_replace('.', ',', (string) $p['heures']) . ' h)' : '')
+            . ' — ' . $p['magasinNom']);
+    }
+    $enr['total'] = round($enr['total'], 2);
+    return $enr;
+}
+
+/* ======================================================================
    Les routes
    ====================================================================== */
 
