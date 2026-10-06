@@ -547,9 +547,10 @@ vente (`src/primes.php`) :
   mois[], montant}], enCours: [{cle, niveau, lib, montant}]} (les six derniers mois clos, un titre par
   mois et par prime : croisees, record, meilleure (magasin|reseau), concours:<cle> (magasin|reseau),
   magasin ; gravée un jour, `primesColl{emp}`), classements: [{cle, lib, unite: pieces|taux, magasin[],
-  reseau[], nMag, nRes}] (à la Strava : un concours par catégorie plus le cross-selling, les dix
-  premières et la personne, **avec les noms du panel** : c'est le seul endroit de la fiche qui en
-  porte), prime: {objectif, ca, atteinte,
+  reseau[], nMag, nRes, semaine: {lib, du, magasin[], reseau[], nMag, nRes}}] (à la Strava : un concours
+  par catégorie plus le cross-selling, le mois et la semaine en cours, les dix premières et la
+  personne, chaque ligne avec le nom du panel et la localité du magasin : c'est le seul endroit de la
+  fiche qui porte des noms), prime: {objectif, ca, atteinte,
   projection, atteinteProj, moySem, moyWe, joursRestants, objectifJour, jours: [{date, ca, we, auj}],
   paliers: [{pct, eh, lib, atteint, manque, parJour, vous, equipe}], palier, heures, heuresMin,
   sousMin, heuresEquipe, part, vous, equipe}, semaines: [{lib, du, tickets, croisees, taux}],

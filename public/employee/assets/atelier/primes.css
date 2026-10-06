@@ -269,7 +269,8 @@ a.acc-etape{text-decoration:none;color:inherit}
 .cl-chips::-webkit-scrollbar{display:none}
 .cl-chips span{flex:0 0 auto;padding:7px 12px;border-radius:999px;background:#fff;border:.5px solid var(--la-trait2);font:600 12px var(--font-ui);color:var(--la-muet)}
 .cl-chips span.on{background:var(--la-encre);color:#fff;border-color:var(--la-encre)}
-.cl-tog{display:inline-flex;background:var(--la-beige-doux);border-radius:999px;padding:3px;margin:6px 0 8px}
+.cl-togs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px}
+.cl-tog{display:inline-flex;background:var(--la-beige-doux);border-radius:999px;padding:3px}
 .cl-tog span{padding:5px 12px;border-radius:999px;font:600 11.5px var(--font-ui);color:var(--la-muet)}
 .cl-tog span.on{background:#fff;color:var(--la-encre);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .cl-liste{display:none}
