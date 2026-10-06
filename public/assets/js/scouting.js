@@ -555,7 +555,7 @@ export class Scouting {
       etude: null, etudeBusy: false, etudeErr: '',
       // Ce que Google dit des concurrents les plus proches du point du dossier
       // (fiche, avis, photo), et l'enrichissement en cours.
-      dossierGoogle: null, dossierGoogleBusy: false,
+      dossierGoogle: null, dossierGoogleBusy: false, googleListeBusy: false, fichesListe: {},
       // La page de garde du dossier : les isochrones de 5 et 10 minutes en
       // voiture autour du point et ce qu'elles contiennent ; le panier moyen
       // du réseau (caisse) pour traduire le CA en clients par jour.
@@ -3484,6 +3484,48 @@ export class Scouting {
     });
   }
 
+  // Onglet « Concurrents » : la liste filtrée (cent premiers commerces nommés,
+  // dans l'ordre du tableau) relue chez Google — note, nombre d'avis, avis et
+  // photo de chaque fiche, par lots de dix. Un second clic interrompt.
+  async chargerGoogleListe(){
+    if (this.state.googleListeBusy){ this._listeStop = true; return; }
+    const blocage = this.googleBlocage();
+    if (blocage){ this.notify(blocage); return; }
+    const qq = (this.state.q || '').toLowerCase();
+    const tous = this.shops().filter(b => !qq || (b.name || '').toLowerCase().includes(qq) || (b.commune || '').toLowerCase().includes(qq) || (b.arr || '').toLowerCase().includes(qq))
+      .filter(b => b.name && !/sans nom/i.test(b.name));
+    const list = tous.slice(0, 100);
+    if (!list.length){ this.notify('Aucun concurrent nommé dans la liste.'); return; }
+    if (list.length > 30 && !window.confirm(list.length + ' concurrents seront relus chez Google (note, avis, photo)'
+      + (tous.length > 100 ? ' — les 100 premiers des ' + tous.length + ' de la liste ; filtre par commune pour viser une zone' : '')
+      + '. Environ ' + list.length * 2 + ' appels Google facturés. Continuer ?')) return;
+    this._listeStop = false;
+    this.setState({ googleListeBusy: true, googleListeFait: 0, googleListeTotal: list.length });
+    const out = Object.assign({}, this.state.ratings);
+    const fiches = Object.assign({}, this.state.fichesListe || {});
+    let erreur = null, n = 0;
+    try {
+      for (let i = 0; i < list.length && !this._listeStop; i += 10){
+        const r = await apiWrite('POST', '/scouting/concurrents/google', { frais: true,
+          rows: list.slice(i, i + 10).map(b => ({ id: b.id, name: b.name, addr: b.addr || '', commune: b.commune || '', arr: b.arr || '', lat: b.lat, lng: b.lng })) });
+        ((r && Array.isArray(r.rows)) ? r.rows : []).forEach(f => {
+          if (!f.fiche) return;
+          fiches[f.id] = f; n++;
+          if (out[f.id] && out[f.id].manual) return;
+          const prec = out[f.id] || {};
+          out[f.id] = { rating: f.note != null ? +f.note : (prec.rating || null), n: f.n != null ? +f.n : (prec.n || 0), adresse: f.adresse || prec.adresse || '',
+            statut: f.statut || prec.statut || '', dernierAvis: f.dernierAvis || prec.dernierAvis || '' };
+        });
+        this.saveRatings(out);
+        this.setState({ ratings: Object.assign({}, out), fichesListe: Object.assign({}, fiches), googleListeFait: Math.min(list.length, i + 10) });
+        if (r && (r.erreur || r.error)){ erreur = r.erreur || r.error; break; }
+      }
+    } catch (e) { erreur = e.message || String(e); }
+    this.setState({ googleListeBusy: false });
+    this.notify(erreur ? 'Google : ' + erreur : 'Notes et photos Google chargées — ' + n + ' fiches' + (this._listeStop ? ' (interrompu)' : ''));
+    if (this.state.sel) this.reevaluer();
+  }
+
   // la fiche Google relue d'un concurrent du point affiché, s'il y en a une
   ficheRayon(id){
     const s = this.state, x = s.sel, dg = s.dossierGoogle;
@@ -3967,7 +4009,9 @@ export class Scouting {
     const concCount = fmtInt(concAll.length) + ' commerces' + (qq ? ' filtrés' : '') + ' · ' + fmtInt(concAll.filter(b => self.rating(b)).length) + ' notés';
     const concRows = (s.view === 'concurrents' ? concAll.slice(0, 400) : []).map(b => {
       const rv = s.ratings[b.id], r = self.rating(b), strong = self.isStrong(b);
+      const f = (s.fichesListe && s.fichesListe[b.id]) || self.ficheRayon(b.id);
       return {
+        photo: f && f.photo ? f.photo : '', url: f && f.url ? f.url : '',
         id: b.id, name: b.name, commune: b.commune || '—', arr: b.arr || '—',
         prov: (PROV.find(p => p.code === b.prov) || {}).name || '—',
         addr: b.addr || '', lat: b.lat, lng: b.lng,
@@ -4248,6 +4292,8 @@ export class Scouting {
       gkeyHint: 'Enrichit les boulangeries visibles à l\'écran (40 max par lot) : le serveur interroge Google Places avec la clé de Paramètres — elle ne transite jamais par le navigateur — et le résultat est en cache partagé. Sans clé, la force du concurrent est estimée sur les signaux OSM (enseigne, site web, horaires, terrasse).',
       enrich: () => self.enrich(),
       enrichAll: () => self.enrichAll(),
+      googleListe: { ok: self.useApi() && self.googleOk(), charger: () => self.chargerGoogleListe(),
+        label: s.googleListeBusy ? 'Interrompre (' + (s.googleListeFait || 0) + '/' + (s.googleListeTotal || '?') + ')' : 'Charger notes et photos Google' },
       enrichAllLabel: s.enriching ? 'Interrompre (' + (s.enrichDone || 0) + '/' + (s.enrichTotal || '?') + ')' : 'Enrichir toute la sélection',
       enrichLabel: s.enriching ? 'Enrichissement… ' + (s.enrichDone || 0) + '/' + (s.enrichTotal || '?') : 'Enrichir les notes (vue actuelle)',
       reload: () => { if (!s.busy) self.load(true); },

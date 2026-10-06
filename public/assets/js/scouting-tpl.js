@@ -672,7 +672,7 @@ const boxCss = 'background:var(--color-surface);border:0.5px solid var(--color-b
 const headCss = 'background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-secondary);min-width:max-content';
 const lineCss = 'align-items:center;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;min-width:max-content';
 const ZONES_GRID = '48px 180px 160px 62px 90px 112px 64px 220px 80px 130px 90px';
-const CONC_GRID = '16px 230px 150px 170px 76px 64px 74px 64px 280px 64px';
+const CONC_GRID = '44px 230px 150px 170px 76px 64px 74px 64px 280px 64px';
 const ARR_GRID = '190px 84px 104px 104px 150px 92px 76px 96px 84px 110px';
 
 export function renderOverlays(c, x){
@@ -751,6 +751,7 @@ export function renderOverlays(c, x){
       <input id="sc-q" type="text" placeholder="Filtrer par nom, commune, arrondissement" value="${esc(c.q)}" ${x.I(c.setQ)} style="flex:1;max-width:300px;padding:7px 9px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-surface);font-size:12px;font-family:var(--font-ui);color:var(--color-text)">
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(c.concCount)} · 400 lignes max</div>
       <button ${x.A(c.enrichAll)} class="btn-secondary" style="padding:7px 12px;font-size:12px">${esc(c.enrichAllLabel)}</button>
+      ${c.googleListe.ok ? `<button ${x.A(c.googleListe.charger)} class="btn-secondary" title="La liste filtrée (100 commerces au plus) : note, nombre d’avis, avis et photo relus chez Google" style="padding:7px 12px;font-size:12px">${esc(c.googleListe.label)}</button>` : ''}
       <button ${x.A(c.exportConc)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
@@ -760,8 +761,8 @@ export function renderOverlays(c, x){
       </div>
       ${c.concRows.map(r => `
       <div style="display:grid;grid-template-columns:${CONC_GRID};${lineCss}">
-        <span style="width:8px;height:8px;border-radius:50%;background:${r.color}"></span>
-        <span style="padding:6px 8px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span>
+        ${r.photo ? `<img src="${r.photo}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;margin:3px 0;box-shadow:0 0 0 2px ${r.color}">` : `<span style="width:8px;height:8px;border-radius:50%;background:${r.color};margin-left:4px"></span>`}
+        <span style="padding:6px 8px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}${r.url ? ` <a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</span>
         <span style="padding:6px 8px;color:var(--color-text-muted)">${esc(r.commune)}</span>
         <span style="padding:6px 8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <input id="sc-cn-${esc(r.id)}" type="number" min="0" max="5" step="0.1" placeholder="–" value="${esc(r.note)}" ${x.C(r.setNote)} style="width:58px;margin:4px 8px;${numCss}">
