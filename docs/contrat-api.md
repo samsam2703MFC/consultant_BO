@@ -1574,6 +1574,13 @@ pour ses lectures lentes qu'il ne relit pas après une écriture :
 Pas les photos des contrôles (leurs liens expirent), ni les notes, objectifs, promotions et pro
 (rapides, et écrits depuis le dashboard).
 
+Chaque réponse JSON porte l'en-tête standard `Server-Timing` : `charge` (le code, avec l'état
+d'opcache), `schema` (la vérification des tables) et `calcul` (la réponse), en millisecondes.
+La vérification des tables ne se fait plus qu'une fois par version du code : l'empreinte des
+sources (nom, date, taille) est gardée dans `ceo_app_setting` (`schemaVu`) ; un déploiement la
+change, et une table ou une colonne manquante pendant un appel l'efface (l'appel suivant
+revérifie tout).
+
 ### `GET /exploitation/jour` et `/exploitation/periode` — le calcul gardé (04/10/2026)
 
 Mesuré le 04/10/2026 : `/exploitation/jour` faisait ~45 appels au panel (tous les magasins, le
