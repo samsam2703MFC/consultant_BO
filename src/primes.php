@@ -324,18 +324,21 @@ function primesHeuresMois(string $m): array
 {
     [$du, $au] = venteBornes($m);
     $duree = '((TIME_TO_SEC(s.end_hour) - TIME_TO_SEC(s.start_hour) + 86400) % 86400)';
+    // Le magasin de chacune vient du référentiel (table locale et panel) : une embauche récente a
+    // déjà des heures au planning avant d'être dans la table locale, une jointure la perdrait.
+    $emps = venteEmployes();
     $out = [];
     try {
-        foreach (Db::rows('SELECT s.id_employee, e.id_shop,
+        foreach (Db::rows('SELECT s.id_employee,
                                   SUM(' . $duree . ') / 3600 h,
                                   SUM(CASE WHEN s.work_date < ? THEN ' . $duree . ' ELSE 0 END) / 3600 hf,
                                   MAX(s.work_date) fin
                              FROM franchisee_employee_schedule s
-                             JOIN franchisee_employee e ON e.id = s.id_employee
                             WHERE s.work_date >= ? AND s.work_date < ?
-                            GROUP BY s.id_employee, e.id_shop',
+                            GROUP BY s.id_employee',
             [date('Y-m-d'), substr($du, 0, 10), substr($au, 0, 10)]) as $r) {
-            $out[(int) $r['id_employee']] = ['mois' => round((float) $r['h'], 2), 'faites' => round((float) $r['hf'], 2), 'shop' => (string) $r['id_shop'],
+            $id = (int) $r['id_employee'];
+            $out[$id] = ['mois' => round((float) $r['h'], 2), 'faites' => round((float) $r['hf'], 2), 'shop' => (string) ($emps[$id]['shop'] ?? ''),
                 // Le planning se saisit semaine après semaine : jusqu'où va-t-il ? Les heures du mois sont celles connues à ce jour.
                 'fin' => isset($r['fin']) ? substr((string) $r['fin'], 0, 10) : null];
         }
