@@ -610,3 +610,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T06:47:30Z heures locales et contrôles sans photo
 2026-10-06T07:01:57Z onglet Opérationnel au téléphone
 2026-10-06T11:27:04Z suivi de production par duree de vie (short, medium, long life)
+2026-10-06T12:31:41Z dashboard vitrine par duree de vie
