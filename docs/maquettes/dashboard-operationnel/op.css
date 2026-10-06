@@ -1,0 +1,65 @@
+/* Maquette « dashboard opérationnel » — par-dessus global.css et ../vue-generale/vg.css. */
+.direct{display:inline-flex;align-items:center;gap:6px;font:600 11px var(--font-ui);color:#2d7a3e;background:#e3f0e6;border-radius:999px;padding:4px 10px}
+.direct i{width:7px;height:7px;border-radius:50%;background:#2d7a3e;box-shadow:0 0 0 3px rgba(45,122,62,.18)}
+.mnt{display:grid;grid-template-columns:150px repeat(5,1fr);gap:10px;margin-bottom:12px}
+.mnt .tl{background:#fff;border:.5px solid var(--trait);border-radius:12px;padding:10px 13px;min-height:96px;display:flex;flex-direction:column;position:relative}
+.mnt .tl.ko{border-left:4px solid var(--ko)}.mnt .tl.att{border-left:4px solid var(--att)}.mnt .tl.ok{border-left:4px solid var(--ok)}
+.mnt .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#777}
+.mnt .v{font:400 28px var(--font-display);line-height:1.05;margin:3px 0 2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mnt .v small{font:400 14px var(--font-display);color:#666;margin-left:4px}
+.mnt .s{font-size:10.5px;color:#555;line-height:1.35;margin-top:auto}
+.mnt .heure{background:#222;color:#fff;border:none}
+.mnt .heure .k{color:#bbb}.mnt .heure .v{font-size:40px}.mnt .heure .s{color:#ccc}
+
+.deux{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin-bottom:12px}
+.bloc{background:#fff;border:.5px solid var(--trait);border-radius:12px;overflow:hidden}
+.bloc>.t{display:flex;align-items:baseline;gap:10px;padding:10px 16px;border-bottom:.5px solid var(--trait)}
+.bloc>.t h2{margin:0;font:400 18px var(--font-display)}
+.bloc>.t small{font-size:11px;color:#777}
+.bloc>.t .dr{margin-left:auto;font-size:10.5px;color:#777;white-space:nowrap}
+
+/* À faire maintenant */
+.af{list-style:none;margin:0;padding:0}
+.af li{display:grid;grid-template-columns:6px 26px 1fr auto 24px;align-items:center;gap:10px;padding:8px 16px 8px 0;border-top:.5px solid var(--trait)}
+.af li:first-child{border-top:none}
+.af li>i{align-self:stretch;border-radius:0 3px 3px 0;background:#ccc}
+.af li.ko>i{background:var(--ko)}.af li.att>i{background:var(--att)}.af li.ctl>i{background:#2F6EA5}.af li.mu>i{background:#cfc6ba}
+.af .no{font:400 17px var(--font-display);color:#999;text-align:center}
+.af .q{font:700 13px var(--font-ui)}
+.af .d{font-size:11px;color:#555;margin-top:1px;line-height:1.35}
+.af .qd{font:600 11px var(--font-ui);white-space:nowrap;text-align:right}
+.af .qd small{display:block;font-weight:500;color:#777;font-size:10px}
+.af li.ko .qd{color:var(--ko)}.af li.att .qd{color:#B26A00}.af li.ctl .qd{color:#2F6EA5}.af li.mu .qd{color:#777}
+
+/* La journée en une frise */
+.frise{padding:10px 16px 12px}
+.fr-l{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px;height:30px}
+.fr-l .lb{font:600 10.5px var(--font-ui);color:#555;white-space:nowrap}
+.fr-l .pis{position:relative;height:22px;background:#f6f1ea;border-radius:5px}
+.fr-l .pis b{position:absolute;top:2px;bottom:2px;border-radius:4px;font:600 9.5px var(--font-ui);color:#fff;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden}
+.fr-l .pis b.eq{background:#8a7f72}.fr-l .pis b.fo{background:#D9822B}.fr-l .pis b.fo.av{background:#fff;color:#B26A00;border:1.5px dashed #D9822B}
+.fr-l .pis b.cmd{background:#2F6EA5;width:8px;padding:0;border-radius:50%;top:6px;bottom:6px}
+.fr-l .pis em{position:absolute;bottom:2px;width:9px;border-radius:2px 2px 0 0;font-style:normal}
+.fr-ax{display:grid;grid-template-columns:92px 1fr;gap:8px;margin-top:2px}
+.fr-ax .ax{position:relative;height:14px;font-size:9px;color:#888}
+.fr-ax .ax span{position:absolute;transform:translateX(-50%)}
+.fr-now{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ko);z-index:3}
+.fr-now::after{content:attr(data-h);position:absolute;top:-14px;left:50%;transform:translateX(-50%);font:700 9.5px var(--font-ui);color:var(--ko);background:#fff;padding:0 3px}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:#666;margin-top:8px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+/* La vitrine */
+.vit .tb td,.vit .tb th{padding:5px 10px}
+.vd2{display:inline-flex;align-items:center;gap:5px;font:700 10px var(--font-ui);padding:2px 7px;border-radius:5px;white-space:nowrap}
+.vd2.rupture{background:#f8e0e3;color:var(--ko)}.vd2.manque{background:#fbecd8;color:#9a5a06}.vd2.trop{background:#e2ecf5;color:#2F5D8A}.vd2.ok{background:#e3f0e6;color:var(--ok)}
+.plie{padding:8px 16px;border-top:.5px solid var(--trait);display:flex;align-items:center;gap:10px;font-size:11.5px;color:#555;background:#fcfaf7}
+.plie .fl{margin-left:auto}
+
+/* Les heures */
+.hr{padding:10px 16px 12px}
+.mini4{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px}
+.mini4 .bloc{padding:10px 14px}
+.mini4 .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#777;display:flex;align-items:center;gap:6px}
+.mini4 .v{font:400 24px var(--font-display);margin:4px 0 2px}
+.mini4 .s{font-size:10.5px;color:#555;line-height:1.4}
+.renvoi{margin-top:12px;font-size:11px;color:#666;text-align:center}

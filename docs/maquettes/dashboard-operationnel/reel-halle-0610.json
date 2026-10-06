@@ -1,0 +1,3737 @@
+{
+ "magasin": "Atelier by - Halle",
+ "date": "2026-10-06",
+ "jourNom": "mardi",
+ "maintenant": "08:14",
+ "ventes": {
+  "ca": 253.3,
+  "tickets": 28,
+  "panier": 9.05,
+  "objectif": 1814.33,
+  "j7": {
+   "date": "2026-09-29",
+   "moment": "08:05",
+   "tickets": 27,
+   "ca": 420.02,
+   "ticketsJour": 114,
+   "caJour": 1139.15
+  },
+  "heures": [
+   {
+    "h": 6,
+    "ca": 86.7,
+    "tickets": 12
+   },
+   {
+    "h": 7,
+    "ca": 152.6,
+    "tickets": 14
+   },
+   {
+    "h": 8,
+    "ca": 14,
+    "tickets": 2
+   }
+  ]
+ },
+ "moyHeure": {
+  "6": 66.3,
+  "7": 126.4,
+  "8": 115.7,
+  "9": 94.8,
+  "10": 94.4,
+  "11": 157.5,
+  "12": 117.4
+ },
+ "production": {
+  "totaux": {
+   "sorti": 412,
+   "vendu": 102,
+   "stock": 235,
+   "finJour": 136.7,
+   "manques": 2,
+   "ruptures": 9,
+   "trop": 7,
+   "report": 0
+  },
+  "cuissons": [
+   {
+    "id": "c1",
+    "nom": "Matin",
+    "de": "06:00",
+    "a": "11:00",
+    "four": "05:15",
+    "valide": false,
+    "pieces": 335
+   },
+   {
+    "id": "c2",
+    "nom": "Midi",
+    "de": "11:00",
+    "a": "13:00",
+    "four": "10:15",
+    "valide": false,
+    "pieces": 77
+   }
+  ],
+  "produits": [
+   {
+    "nom": "Cookie Chocolat Lait",
+    "groupe": "Biscuiterie",
+    "verdict": "rupture",
+    "sorti": 10,
+    "vendu": 2,
+    "stock": -2,
+    "finJour": 5.7,
+    "manque": {
+     "h": 8,
+     "q": 2.3
+    },
+    "conseil": 4,
+    "prix": 2.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": -2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": -2.3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -2.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -3.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 6.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 5.7,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cookie Chocolat Blanc",
+    "groupe": "Biscuiterie",
+    "verdict": "rupture",
+    "sorti": 10,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 7.4,
+    "manque": {
+     "h": 9,
+     "q": 1.1
+    },
+    "conseil": 3,
+    "prix": 2.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": -0.3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -1.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -1.2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 8.5,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 7.4,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cookie Noix & Caramel",
+    "groupe": "Biscuiterie",
+    "verdict": "rupture",
+    "sorti": 10,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 8.3,
+    "manque": {
+     "h": 9,
+     "q": 0.5
+    },
+    "conseil": 2,
+    "prix": 2.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": -0.3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.5,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 8.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 8.3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cookie Chocolat Noir",
+    "groupe": "Biscuiterie",
+    "verdict": "rupture",
+    "sorti": 10,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 8.7,
+    "manque": null,
+    "conseil": 2,
+    "prix": 2.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.2,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 9.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 8.7,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cookie Avoine Raisins et Noisette",
+    "groupe": "Biscuiterie",
+    "verdict": "rupture",
+    "sorti": 10,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 8.1,
+    "manque": null,
+    "conseil": 2,
+    "prix": 2.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 8.4,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 8.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cookie Double Chocolat",
+    "groupe": "Biscuiterie",
+    "verdict": "rupture",
+    "sorti": 10,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 9.3,
+    "manque": {
+     "h": 10,
+     "q": 0.6
+    },
+    "conseil": 1,
+    "prix": 2.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.2,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.6,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 9.3,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 9.3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain au Noix & Sésame",
+    "groupe": "Boulangerie",
+    "verdict": "rupture",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.6,
+    "manque": {
+     "h": 10,
+     "q": 0.5
+    },
+    "conseil": 1,
+    "prix": 4.2,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.4,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.5,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain Tradition - 4 Céréales",
+    "groupe": "Boulangerie",
+    "verdict": "rupture",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.5,
+    "manque": {
+     "h": 12,
+     "q": 0.5
+    },
+    "conseil": 1,
+    "prix": 3.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.5,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Omelette & Saumons",
+    "groupe": "Traiteur",
+    "verdict": "rupture",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.5,
+    "manque": {
+     "h": 12,
+     "q": 0.5
+    },
+    "conseil": 1,
+    "prix": 5.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.4,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.5,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain 10 Céréales",
+    "groupe": "Boulangerie",
+    "verdict": "manque",
+    "sorti": 11,
+    "vendu": 6,
+    "stock": 5,
+    "finJour": -3.3,
+    "manque": {
+     "h": 11,
+     "q": 1.6
+    },
+    "conseil": 4,
+    "prix": 3.2,
+    "cases": [
+     {
+      "h": 6,
+      "q": 9,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 5,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 4,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 2.6,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -1.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -3.3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain au Chocolat",
+    "groupe": "Viennoiserie",
+    "verdict": "manque",
+    "sorti": 35,
+    "vendu": 27,
+    "stock": 8,
+    "finJour": -0.5,
+    "manque": {
+     "h": 12,
+     "q": 0.5
+    },
+    "conseil": 1,
+    "prix": 1.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 19,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 8,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 6,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.4,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.3,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.5,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Sandwich",
+    "groupe": "Boulangerie",
+    "verdict": "trop",
+    "sorti": 38,
+    "vendu": 0,
+    "stock": 26,
+    "finJour": 17.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 0.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 26,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 26,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 22,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 20.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 12.7,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 20.4,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 17.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "1/4 - Quiches",
+    "groupe": "Quiches",
+    "verdict": "trop",
+    "sorti": 5,
+    "vendu": 0,
+    "stock": 5,
+    "finJour": 2.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 6.4,
+    "cases": [
+     {
+      "h": 6,
+      "q": 5,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 5,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 5,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 3.6,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 3.5,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 2.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 2.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "1/2 - Quiches",
+    "groupe": "Quiches",
+    "verdict": "trop",
+    "sorti": 3,
+    "vendu": 0,
+    "stock": 3,
+    "finJour": 2.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 11.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2.9,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 2.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 2.7,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 2.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 2.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "1/4",
+    "groupe": "Tartes",
+    "verdict": "trop",
+    "sorti": 5,
+    "vendu": 0,
+    "stock": 5,
+    "finJour": 3.4,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 5,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 5,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 4.9,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 4.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 4.8,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3.5,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 3.4,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Huit",
+    "groupe": "Viennoiserie",
+    "verdict": "trop",
+    "sorti": 19,
+    "vendu": 6,
+    "stock": 13,
+    "finJour": 6.4,
+    "manque": null,
+    "conseil": null,
+    "prix": 2.2,
+    "cases": [
+     {
+      "h": 6,
+      "q": 19,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 13,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 9.4,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 8.3,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 7.2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 6.7,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 6.4,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Tortillon",
+    "groupe": "Viennoiserie",
+    "verdict": "trop",
+    "sorti": 9,
+    "vendu": 2,
+    "stock": 7,
+    "finJour": 4.6,
+    "manque": null,
+    "conseil": null,
+    "prix": 1.7,
+    "cases": [
+     {
+      "h": 6,
+      "q": 9,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 7,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 5.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 4.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 4.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 4.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 4.6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Couque à la Crème",
+    "groupe": "Viennoiserie",
+    "verdict": "trop",
+    "sorti": 4,
+    "vendu": 0,
+    "stock": 4,
+    "finJour": 2.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 3.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 4,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 4,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 3.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 3.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 2.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 2.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 2.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain Doré",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 17,
+    "vendu": 2,
+    "stock": 12,
+    "finJour": 1.7,
+    "manque": null,
+    "conseil": null,
+    "prix": 2.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 12,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 12,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 10.7,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 8.5,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 4.3,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 4.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1.7,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain Demi-Gris",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 13,
+    "vendu": 5,
+    "stock": 8,
+    "finJour": 1,
+    "manque": null,
+    "conseil": null,
+    "prix": 2.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 11,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 8,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 6.9,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 6.6,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 5.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Fermier Seigle & Levain",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 0.8,
+    "manque": null,
+    "conseil": null,
+    "prix": 4.1,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 1.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.8,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pavé Seigle & Froment",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 4.1,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Promotie - 1.5 euros",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 1.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain Tradition - Olives",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 3.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.5,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain Tradition - Noix et Raisins",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 3.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.5,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pistolet à l'Ancienne",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 17,
+    "vendu": 2,
+    "stock": 15,
+    "finJour": 3.7,
+    "manque": null,
+    "conseil": null,
+    "prix": 0.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 17,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 15,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 11.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 8.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 3.7,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3.7,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 3.7,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Baguette Tradition 500 g.",
+    "groupe": "Boulangerie",
+    "verdict": "ok",
+    "sorti": 10,
+    "vendu": 0,
+    "stock": 10,
+    "finJour": 1.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 2.2,
+    "cases": [
+     {
+      "h": 6,
+      "q": 10,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 10,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 8.2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 6.3,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 5.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3.3,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cake Marbré - 300 g.",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.8,
+    "manque": null,
+    "conseil": null,
+    "prix": 8.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.8,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cake Nature - 300 g.",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 8.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Cake Citron - 350 g.",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 8.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Duo Framboise & Passion - 180⌀",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 0,
+    "manque": null,
+    "conseil": null,
+    "prix": 23.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Duo Chocolat - 180⌀",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 23.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Entremet 120Ø -  Duo Chocolat",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 0.8,
+    "manque": null,
+    "conseil": null,
+    "prix": 14.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.8,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Merveilleux",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.6,
+    "manque": null,
+    "conseil": null,
+    "prix": 4.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Javanais Ind.",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 0,
+    "manque": null,
+    "conseil": null,
+    "prix": 4.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Misérable Ind.",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 0,
+    "manque": null,
+    "conseil": null,
+    "prix": 4.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "éclair chocolat",
+    "groupe": "Pâtisserie",
+    "verdict": "ok",
+    "sorti": 6,
+    "vendu": 0,
+    "stock": 6,
+    "finJour": 1.6,
+    "manque": null,
+    "conseil": null,
+    "prix": 3,
+    "cases": [
+     {
+      "h": 6,
+      "q": 6,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 6,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 4.7,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 4.4,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 4.2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1.6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "1/2",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 1,
+    "manque": null,
+    "conseil": null,
+    "prix": 10.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.6,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 1.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Brownies",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.6,
+    "manque": null,
+    "conseil": null,
+    "prix": 24.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "1/4 - Chocolat",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.5,
+    "manque": null,
+    "conseil": null,
+    "prix": 6.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.5,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.5,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Frangipane & Poires",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 19.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Brookie",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 24.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "1/2 - Chocolat",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 12.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Fromage & Spéculoos - 120⌀",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 1,
+    "manque": null,
+    "conseil": null,
+    "prix": 9.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1.6,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.2,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 1.1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Citron Meringué - 120⌀",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.8,
+    "manque": null,
+    "conseil": null,
+    "prix": 9.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.8,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Passion Sauvage - 120⌀",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 0,
+    "manque": null,
+    "conseil": null,
+    "prix": 9.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Fromage & Spéculoos",
+    "groupe": "Tartes",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.7,
+    "manque": null,
+    "conseil": null,
+    "prix": 19.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.7,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.7,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.7,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pâtes Amatriciana",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 2,
+    "manque": null,
+    "conseil": null,
+    "prix": 12.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Spaghetti Bolognaise",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 2,
+    "manque": null,
+    "conseil": null,
+    "prix": 12.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Ebly à la niçoise",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 3,
+    "vendu": 0,
+    "stock": 3,
+    "finJour": 3,
+    "manque": null,
+    "conseil": null,
+    "prix": 10.4,
+    "cases": [
+     {
+      "h": 6,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Petit épeautre à la grecque",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 3,
+    "vendu": 0,
+    "stock": 3,
+    "finJour": 3,
+    "manque": null,
+    "conseil": null,
+    "prix": 10.4,
+    "cases": [
+     {
+      "h": 6,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Taboulé Petits Pois & Poulet",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 3,
+    "vendu": 0,
+    "stock": 3,
+    "finJour": 3,
+    "manque": null,
+    "conseil": null,
+    "prix": 10.4,
+    "cases": [
+     {
+      "h": 6,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 3,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Poulet César",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 3,
+    "vendu": 0,
+    "stock": 3,
+    "finJour": 0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 3,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2.7,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 2.5,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 2.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.5,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Italien",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 0.5,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 1.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.5,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Club",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 0.1,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.4,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.7,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.1,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Poulet Curry",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 2,
+    "vendu": 0,
+    "stock": 2,
+    "finJour": 0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 2,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1.5,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Saumons & CreamCheese",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": -0.4,
+    "manque": null,
+    "conseil": null,
+    "prix": 6.95,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.2,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.4,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Di Jour",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Thon",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.4,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Halloumi & Légumes grillés",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 1,
+    "finJour": 0.3,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 1,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0.7,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0.7,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.6,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "FlipFlap - Tomates & Mozzarella",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.2,
+    "manque": null,
+    "conseil": null,
+    "prix": 5.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.2,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Wrapps - Poulet & Parmesan",
+    "groupe": "Traiteur",
+    "verdict": "ok",
+    "sorti": 1,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": 0.5,
+    "manque": null,
+    "conseil": null,
+    "prix": 6.5,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.9,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.5,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Croissant",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 37,
+    "vendu": 19,
+    "stock": 18,
+    "finJour": 5.4,
+    "manque": null,
+    "conseil": null,
+    "prix": 1.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 28,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 18,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 13.3,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 7.9,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 5.4,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Pain au Chocolat Nappé",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 28,
+    "vendu": 11,
+    "stock": 17,
+    "finJour": 4.9,
+    "manque": null,
+    "conseil": null,
+    "prix": 2.1,
+    "cases": [
+     {
+      "h": 6,
+      "q": 25,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 17,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 13.4,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 9,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 7.2,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 5.7,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 4.9,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Suisse",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 19,
+    "vendu": 4,
+    "stock": 15,
+    "finJour": 6,
+    "manque": null,
+    "conseil": null,
+    "prix": 1.9,
+    "cases": [
+     {
+      "h": 6,
+      "q": 18,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 15,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 13.1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 11.8,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 9.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 7.8,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Couque au Beurre",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 18,
+    "vendu": 10,
+    "stock": 8,
+    "finJour": 1.4,
+    "manque": null,
+    "conseil": null,
+    "prix": 1.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 12,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 8,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 6.1,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 4.3,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 2.6,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 1.9,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1.4,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Baulus",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 7,
+    "vendu": 1,
+    "stock": 6,
+    "finJour": 1.6,
+    "manque": null,
+    "conseil": null,
+    "prix": 1.8,
+    "cases": [
+     {
+      "h": 6,
+      "q": 6,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 6,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 5.4,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 5.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 4.1,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 2.6,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 1.6,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Gosette Pomme",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 7,
+    "vendu": 5,
+    "stock": 2,
+    "finJour": 0.3,
+    "manque": null,
+    "conseil": null,
+    "prix": 2.2,
+    "cases": [
+     {
+      "h": 6,
+      "q": 6,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 2,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 1.8,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": 1.5,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": 0.7,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": 0.5,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": 0.3,
+      "reel": false
+     }
+    ]
+   },
+   {
+    "nom": "Mini - Huit",
+    "groupe": "Viennoiserie",
+    "verdict": "ok",
+    "sorti": 0,
+    "vendu": 0,
+    "stock": 0,
+    "finJour": -0.4,
+    "manque": null,
+    "conseil": null,
+    "prix": 1,
+    "cases": [
+     {
+      "h": 6,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 7,
+      "q": 0,
+      "reel": true
+     },
+     {
+      "h": 8,
+      "q": 0,
+      "reel": false
+     },
+     {
+      "h": 9,
+      "q": -0.1,
+      "reel": false
+     },
+     {
+      "h": 10,
+      "q": -0.4,
+      "reel": false
+     },
+     {
+      "h": 11,
+      "q": -0.4,
+      "reel": false
+     },
+     {
+      "h": 12,
+      "q": -0.4,
+      "reel": false
+     }
+    ]
+   }
+  ],
+  "base": {
+   "semaines": 6,
+   "joursLus": [
+    "2026-09-29",
+    "2026-09-22",
+    "2026-09-15",
+    "2026-09-08",
+    "2026-09-01",
+    "2026-08-25"
+   ]
+  }
+ },
+ "taches": [
+  {
+   "taskId": "1216",
+   "tache": "Vérifier si le magasin est propre.",
+   "statut": "aControler",
+   "faitLe": "05:47"
+  },
+  {
+   "taskId": "1212",
+   "tache": "Photo du comptoir - Biscuiterie",
+   "statut": "nonRendue",
+   "faitLe": null
+  },
+  {
+   "taskId": "1213",
+   "tache": "Photo du comptoir - Boissons",
+   "statut": "aControler",
+   "faitLe": "05:55"
+  },
+  {
+   "taskId": "1214",
+   "tache": "Photo du comptoir - Épicerie",
+   "statut": "aControler",
+   "faitLe": "05:55"
+  },
+  {
+   "taskId": "1208",
+   "tache": "Photo du comptoir - Pâtisseries",
+   "statut": "nonRendue",
+   "faitLe": null
+  },
+  {
+   "taskId": "1211",
+   "tache": "Photo du comptoir - Quiches",
+   "statut": "aControler",
+   "faitLe": "05:55"
+  },
+  {
+   "taskId": "1209",
+   "tache": "Photo du comptoir - Tartes",
+   "statut": "aControler",
+   "faitLe": "05:55"
+  },
+  {
+   "taskId": "1210",
+   "tache": "Photo du comptoir - Traiteur",
+   "statut": "aControler",
+   "faitLe": "05:55"
+  },
+  {
+   "taskId": "1207",
+   "tache": "Photo du comptoir - Viennoiseries",
+   "statut": "aControler",
+   "faitLe": "05:55"
+  },
+  {
+   "taskId": "1257",
+   "tache": "Est-ce que les promotions ont été encadrées et visibles ?",
+   "statut": "nonRendue",
+   "faitLe": null
+  },
+  {
+   "taskId": "1206",
+   "tache": "Photo du comptoir - Pains & Boulangerie",
+   "statut": "aControler",
+   "faitLe": "05:54"
+  },
+  {
+   "taskId": "1267",
+   "tache": "étiquetage des prix et allergènes",
+   "statut": "nonRendue",
+   "faitLe": null
+  }
+ ],
+ "photos": [
+  {
+   "f": "photos/2026-10-06-1216.jpg",
+   "taskId": "1216",
+   "tache": "Vérifier si le magasin est propre.",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1206.jpg",
+   "taskId": "1206",
+   "tache": "Photo du comptoir - Pains & Boulangerie",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1207.jpg",
+   "taskId": "1207",
+   "tache": "Photo du comptoir - Viennoiseries",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1209.jpg",
+   "taskId": "1209",
+   "tache": "Photo du comptoir - Tartes",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1210.jpg",
+   "taskId": "1210",
+   "tache": "Photo du comptoir - Traiteur",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1211.jpg",
+   "taskId": "1211",
+   "tache": "Photo du comptoir - Quiches",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1213.jpg",
+   "taskId": "1213",
+   "tache": "Photo du comptoir - Boissons",
+   "note": null
+  },
+  {
+   "f": "photos/2026-10-06-1214.jpg",
+   "taskId": "1214",
+   "tache": "Photo du comptoir - Épicerie",
+   "note": null
+  }
+ ],
+ "commandes": {
+  "total": 29,
+  "enCours": 12,
+  "auj": 0,
+  "aVenir": 3,
+  "retard": 9,
+  "lignes": [
+   {
+    "quand": "2026-09-29 08:30",
+    "montant": 2.5
+   },
+   {
+    "quand": "2026-10-01 06:00",
+    "montant": 91
+   },
+   {
+    "quand": "2026-10-03 09:00",
+    "montant": 173
+   },
+   {
+    "quand": "2026-10-03 11:00",
+    "montant": 29.9
+   },
+   {
+    "quand": "2026-10-03 12:00",
+    "montant": 41.5
+   },
+   {
+    "quand": "2026-10-04 12:30",
+    "montant": 49.8
+   },
+   {
+    "quand": "2026-10-04 13:00",
+    "montant": 44.8
+   },
+   {
+    "quand": "2026-10-04 14:00",
+    "montant": 66.3
+   },
+   {
+    "quand": "2026-10-05 06:30",
+    "montant": 19.6
+   },
+   {
+    "quand": "2026-10-07 14:00",
+    "montant": 46.8
+   },
+   {
+    "quand": "2026-10-10 09:00",
+    "montant": 53.4
+   },
+   {
+    "quand": "2026-10-12 07:00",
+    "montant": 41
+   }
+  ],
+  "demain": {
+   "n": 1,
+   "ca": 46.8
+  },
+  "aujourdhui": [
+   {
+    "heure": "06:00",
+    "canal": "compt",
+    "articles": null,
+    "montant": 3.2,
+    "statut": "remise"
+   }
+  ]
+ },
+ "equipe": {
+  "heures": 19.5,
+  "cout": 342.5,
+  "postes": [
+   {
+    "debut": "04:00",
+    "fin": "11:00",
+    "postes": [
+     "Production Patisserie",
+     "Production Boulangerie",
+     "Vente",
+     "Production Traiteur"
+    ]
+   },
+   {
+    "debut": "06:00",
+    "fin": "13:00",
+    "postes": [
+     "Vente"
+    ]
+   },
+   {
+    "debut": "13:00",
+    "fin": "18:30",
+    "postes": []
+   }
+  ]
+ },
+ "stock": {
+  "references": 632,
+  "alertes": 0,
+  "ruptures": 0,
+  "negatifs": 0,
+  "dernierComptage": "2026-10-05 06:35:03"
+ },
+ "hier": {
+  "date": "2026-10-05",
+  "notees": 6,
+  "nc": 0
+ },
+ "poubelle": {
+  "declare": false
+ },
+ "promos": 0
+}
