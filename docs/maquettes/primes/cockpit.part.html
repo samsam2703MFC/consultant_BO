@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cockpit — Paramètres des primes</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../prix-volume/pv.css">
+<style>
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.bloc{border-top:.5px solid var(--color-border-tertiary);padding:12px 0 2px;margin-top:12px}
+.bloc:first-of-type{border-top:none;margin-top:4px;padding-top:4px}
+.bloc h3{margin:0 0 4px;font:600 14px var(--font-ui);display:flex;align-items:center;gap:8px}
+.bloc h3 i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 8px;background:var(--color-primary);color:#fff}
+.bloc h3 i.ex{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.bloc p{margin:0 0 8px;font-size:12.5px;color:var(--color-text-muted);line-height:1.45}
+.ch{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;margin:2px 14px 6px 0}
+.ch i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--color-border-secondary);display:inline-block;background:#fff;position:relative}
+.ch i.on{border-color:var(--color-primary)}.ch i.on::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--color-primary)}
+.ch i.car{border-radius:3px}.ch i.car.on::after{border-radius:1px}
+.champ{display:inline-block;min-width:64px;padding:5px 9px;border:.5px solid var(--color-border-secondary);border-radius:7px;background:#fff;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.champ.l{text-align:left;font-weight:500;min-width:150px}
+.lig{display:flex;align-items:center;gap:10px;font-size:12.5px;margin:6px 0}
+.lig .lab{min-width:190px;color:var(--color-text-muted)}
+.apercu{background:#FCFAF7;border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px;font-size:12px;margin-top:10px}
+.apercu b.r{color:var(--color-primary)}
+.plus{font-size:12px;font-weight:600;color:var(--color-primary);margin-top:6px;display:inline-block}
+.t td .champ{min-width:56px;padding:3px 7px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:var(--color-background-secondary);padding:1px 5px;border-radius:4px}
+.flux{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.flux div{background:#FCFAF7;border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px;font-size:12px}
+.flux div b{display:block;font-size:12.5px;margin-bottom:3px}
+.bt{display:inline-block;padding:8px 14px;border-radius:9px;background:var(--color-primary);color:#fff;font-weight:600;font-size:12.5px}
+.bt.sec{background:#fff;color:var(--color-text);border:.5px solid var(--color-border-secondary)}
+</style></head>
+<body><div id="ecran"><div class="cap">Équipe de vente › Primes</div>
+<div class="barre"><div><h1>Les primes de vente</h1><div class="sous">Deux primes qui s’additionnent : la prime individuelle, à la vente, et la prime magasin, sur l’objectif du mois. Tout se règle ici, l’app worker lit le résultat.</div></div>
+<span class="simu">maquette · chiffres réels de Halle, octobre 2026 au 6 · aucun nom</span></div>
+<div class="ongl"><span>Résultats</span><span>Targets &amp; primes</span><span class="on">Paramètres <i>nouveau</i></span></div>
+<div class="tuiles">
+ <div class="tuile"><div class="cap">Halle · projection d’octobre</div><div class="v">{{projection}}</div><div class="s">{{atteinte}} de {{objectif}} · {{ca}} encaissés au 6 ({{faitPct}})</div></div>
+ <div class="tuile abricot"><div class="cap">Il manque pour 97 %</div><div class="v">{{manque97}}</div><div class="s">{{parJour97}} par jour de plus sur {{joursRestants}} jours</div></div>
+ <div class="tuile abricot"><div class="cap">Il manque pour 100 %</div><div class="v">{{manque100}}</div><div class="s">{{parJour100}} par jour de plus</div></div>
+ <div class="tuile or"><div class="cap">Prime magasin de l’équipe à 100 %</div><div class="v">{{env100}}</div><div class="s">{{heuresEquipe}} h au planning × 1,00 € · {{pctEnv}} % de l’objectif</div></div>
+</div>
+<div class="deux">
+ <div class="carte"><h2>La prime magasin <span class="mu" style="font-size:13px">· sur l’objectif du mois</span></h2>
+  <div class="bloc"><h3>L’objectif <i>nouveau</i></h3><p>Celui du budget, déjà dans le cockpit : {{objectif}} pour Halle en octobre. Il ne change pas en cours de mois.</p>
+   <span class="ch"><i class="on"></i>l’objectif du budget du magasin</span><span class="ch"><i></i>un objectif posé à la main, magasin par magasin</span></div>
+  <div class="bloc"><h3>La forme de la prime</h3><p>Des euros par heure prestée : chacune comprend sa prime à la minute, et l’enveloppe suit la taille de l’équipe.</p>
+   <span class="ch"><i class="on"></i>des euros <b>par heure prestée</b></span><span class="ch"><i></i>un pourcentage de l’objectif, partagé au prorata des heures</span></div>
+  <div class="bloc"><h3>Les paliers</h3><p>Le palier atteint fin de mois donne son taux à toutes les heures du mois. Un seul barème pour le réseau.</p>
+   <table class="t petit"><tr><th class="g">Palier</th><th>Atteinte</th><th>€ / heure</th><th>Équipe de Halle<small>{{heuresEquipe}} h</small></th><th>128 h<small>une vendeuse</small></th></tr>
+    <tr><td class="g"><span class="champ l">Encouragement</span></td><td class="num"><span class="champ">97 %</span></td><td class="num"><span class="champ">0,50</span></td><td class="num">{{env97}}</td><td class="num">64 €</td></tr>
+    <tr><td class="g"><span class="champ l">Objectif</span></td><td class="num"><span class="champ">100 %</span></td><td class="num"><span class="champ">1,00</span></td><td class="num">{{env100}}</td><td class="num">128 €</td></tr>
+    <tr><td class="g"><span class="champ l">Dépassé</span></td><td class="num"><span class="champ">105 %</span></td><td class="num"><span class="champ">1,50</span></td><td class="num">{{env105}}</td><td class="num">192 €</td></tr>
+    <tr><td class="g"><span class="champ l">Record</span></td><td class="num"><span class="champ">110 %</span></td><td class="num"><span class="champ">2,00</span></td><td class="num">{{env110}}</td><td class="num">256 €</td></tr></table>
+   <span class="plus">+ un palier</span></div>
+  <div class="bloc"><h3>Les règles</h3>
+   <div class="lig"><span class="lab">Heures comptées</span><span>celles du planning du panel, le mois entier</span></div>
+   <div class="lig"><span class="lab">Heures minimum dans le mois</span><span class="champ">20</span><span class="mu">h · en dessous, pas de part</span></div>
+   <div class="lig"><span class="lab">Ventes sans vendeur sur le ticket</span><span>comptent au magasin, jamais à une personne</span></div>
+   <div class="lig"><span class="lab">Payée par</span><span class="ch"><i class="on"></i>la marque, en bons</span><span class="ch"><i></i>le magasin, sur la paie</span></div>
+   <div class="lig"><span class="lab">Mois en cours</span><span>montré en projection dans l’app ; seul le mois clos se paie</span></div></div>
+  <div class="apercu"><b>Aperçu, Halle.</b> Septembre : {{sept}} sur {{septObj}}, soit {{septPct}} : aucun palier, 0 €. Octobre, au rythme de la première semaine ({{moySem}} en semaine, {{moyWe}} le week-end) : {{projection}}, soit <b class="r">{{atteinte}}</b> ; le palier 97 % est à {{manque97}}, soit {{parJour97}} de plus par jour.</div></div>
+
+ <div class="carte"><h2>La prime individuelle <span class="mu" style="font-size:13px">· à la vente, par personne</span></h2>
+  <div class="bloc"><h3>Les ventes croisées <i>nouveau</i></h3><p>Une vente croisée : un ticket à <b>2 lignes ou plus</b> (deux produits différents ; trois croissants font une ligne). Le compteur du jour est dans l’app ; la prime se joue sur le taux du mois, pas sur le nombre brut, pour ne pas primer les gros horaires.</p>
+   <table class="t petit"><tr><th class="g">Cible, en % des tickets</th><th>Mesuré en sept.</th><th>Cible</th></tr>
+    <tr><td class="g"><b>Réseau</b> <span class="mu">par défaut</span></td><td class="num">49 %</td><td class="num"><span class="champ">50 %</span></td></tr>
+    <tr><td class="g"><b>Halle</b></td><td class="num">52 %</td><td class="num"><span class="champ">55 %</span></td></tr>
+    <tr><td class="g"><span class="mu">chaque magasin peut avoir la sienne</span></td><td></td><td class="num"><span class="plus">+ un magasin</span></td></tr></table>
+   <div class="lig" style="margin-top:8px"><span class="lab">Paliers, au-dessus de la cible</span><span>cible <span class="champ">40</span> € · + 5 pts <span class="champ">70</span> € · + 10 pts <span class="champ">100</span> €</span></div>
+   <div class="lig"><span class="lab">Tickets minimum dans le mois</span><span class="champ">30</span></div></div>
+  <div class="bloc"><h3>Bats ton record <i class="ex">existant</i></h3><p>La référence : son record des 12 derniers mois en lignes par ticket. Le premier dixième au-dessus pose le record, puis chaque dixième paie.</p>
+   <div class="lig"><span class="lab">Euros par dixième</span><span class="champ">100</span><span class="mu">dès le deuxième</span></div>
+   <div class="lig"><span class="lab">Dixièmes payés au plus</span><span class="champ">3</span><span class="mu">soit 300 € par mois au plus</span></div></div>
+  <div class="bloc"><h3>Meilleure vendeuse <i class="ex">existant</i></h3><p>Score = CA ÷ (heures + 20) × coefficient de créneau. La première de chaque magasin, la première du réseau.</p>
+   <div class="lig"><span class="lab">Première du magasin</span><span class="champ">75</span><span class="mu">€</span><span class="lab" style="min-width:0;margin-left:14px">Première du réseau</span><span class="champ">150</span><span class="mu">€</span></div></div>
+  <div class="apercu"><b>Ce que ça peut faire, par mois et par personne.</b> Ventes croisées jusqu’à 100 € · record jusqu’à 300 € · meilleure vendeuse 75 ou 150 € · prime magasin 128 à 256 € pour 128 h. Une vendeuse qui coche tout : près de 800 €. Une qui ne vend qu’à son rythme : 0 €, sans rien perdre.</div></div>
+</div>
+<div class="carte"><h2>Ce que l’app worker lit</h2>
+ <div class="flux">
+  <div><b>Chaque nuit, et à la demande</b>Le cockpit calcule le mois en cours pour chaque personne : ses ventes (le vendeur du ticket), ses heures (le planning), ses ventes croisées, son record, son score, et l’objectif de son magasin avec la projection.</div>
+  <div><b><code>GET /ventes/moi?m=2026-10</code></b>Avec le jeton de l’app worker : <code>{acquis, aPortee, briques[3], magasin{objectif, ca, projection, paliers[], heures, part}, mois[]}</code>. Jamais un autre nom que le sien ; les collègues sont des heures, pas des personnes.</div>
+  <div><b>Début du mois suivant</b>« Enregistrer les primes » reste un geste humain : le calcul désigne, le CEO confirme. Le journal reçoit chaque prime, magasin comprise, et l’app passe de « projection » à « payée ».</div>
+ </div>
+ <div style="margin-top:12px;display:flex;gap:8px;align-items:center"><span class="bt">Enregistrer les paramètres</span><span class="bt sec">Aperçu dans l’app worker</span><span class="mu" style="font-size:11.5px">Les paramètres sont datés : un mois se calcule avec ceux en vigueur le 1er.</span></div></div>
+</div></body></html>

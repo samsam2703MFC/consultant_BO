@@ -1,0 +1,76 @@
+{
+ "lu": "2026-10-06 16:55",
+ "shop": 4,
+ "magasin": "Atelier by - Halle",
+ "octobre": {
+  "du": "2026-10-01",
+  "au": "2026-10-31",
+  "joursServis": 6,
+  "joursOuverts": 31,
+  "ca": 11463.15,
+  "tickets": 900,
+  "panier": 12.74,
+  "produitsParClient": 3.55,
+  "objectifMois": 61000,
+  "objectifSource": "budget",
+  "objectifJour": 1814.33,
+  "planningHeuresJour": 19.5,
+  "labourMois": 2477.75,
+  "jours": [
+   {
+    "date": "2026-10-01",
+    "ca": 1691.85,
+    "tickets": 119
+   },
+   {
+    "date": "2026-10-02",
+    "ca": 1880.6,
+    "tickets": 154
+   },
+   {
+    "date": "2026-10-03",
+    "ca": 2683.2,
+    "tickets": 181
+   },
+   {
+    "date": "2026-10-04",
+    "ca": 2708.7,
+    "tickets": 186
+   },
+   {
+    "date": "2026-10-05",
+    "ca": 1305.95,
+    "tickets": 138
+   },
+   {
+    "date": "2026-10-06",
+    "ca": 1192.85,
+    "tickets": 122
+   }
+  ]
+ },
+ "septembre": {
+  "du": "2026-09-01",
+  "au": "2026-09-30",
+  "ca": 50849.75,
+  "tickets": 4156,
+  "panier": 12.24,
+  "objectifMois": 61000,
+  "produitsParClient": 5.59,
+  "joursOuverts": 30
+ },
+ "planningAujourdhui": [
+  {
+   "debut": "04:00",
+   "fin": "11:00"
+  },
+  {
+   "debut": "06:00",
+   "fin": "13:00"
+  },
+  {
+   "debut": "13:00",
+   "fin": "18:30"
+  }
+ ]
+}
