@@ -623,3 +623,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T16:47:40Z primes : prenom unique, voie de l'app
 2026-10-06T16:50:41Z primes : heures du planning sans jointure
 2026-10-06T17:05:08Z primes : tout le monde sur le mois, carte Resultats, enregistrement
+2026-10-06T17:16:37Z app worker : ventes mois par mois, CA par heure, place reseau
