@@ -236,11 +236,21 @@ final class GoogleApi
         return [$code, json_decode((string) $raw, true)];
     }
 
-    /** Le message de Google plutôt qu'un « HTTP 403 » muet. */
+    /**
+     * Le message de Google plutôt qu'un « HTTP 403 » muet — et sa raison
+     * (SERVICE_DISABLED, API_KEY_SERVICE_BLOCKED, BILLING_DISABLED…) : un 403
+     * se dit souvent « The caller does not have permission », et seule la
+     * raison dit quoi régler dans Google Cloud.
+     */
     private static function erreur(int $code, mixed $json): string
     {
         $m = is_array($json) ? ($json['error']['message'] ?? null) : null;
-        return 'HTTP ' . $code . ($m ? ' — ' . $m : '');
+        $raison = null;
+        foreach ((array) (is_array($json) ? ($json['error']['details'] ?? []) : []) as $d) {
+            if (is_array($d) && !empty($d['reason'])) { $raison = (string) $d['reason']; break; }
+        }
+        if ($raison === null && is_array($json) && !empty($json['error']['status'])) { $raison = (string) $json['error']['status']; }
+        return 'HTTP ' . $code . ($m ? ' — ' . $m : '') . ($raison ? ' (' . $raison . ')' : '');
     }
 }
 
