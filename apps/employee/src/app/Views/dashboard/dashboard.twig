@@ -20,7 +20,7 @@
   <div class="tx">
     <div class="k">{{ T.my_bonuses ?? 'Mes primes' }} · {{ mois(p.m) }}</div>
     {% if p.enCours %}<div class="gros2">{{ T.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
-    <div class="s">{{ T.earned_so_far ?? 'acquis si le mois finit comme ça' }} · {{ T.within_reach ?? 'à portée, un cran de plus' }}</div>
+    <div class="s">{{ T.earned_so_far ?? 'acquis si le mois finit comme ça' }} · {{ T.within_reach ?? 'si tu passes un cran de plus partout' }}</div>
     {% else %}<div class="gros2">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div><div class="s">{{ T.month_closed ?? 'mois clos' }}</div>{% endif %}
     {% set gg = p.google ?? null %}{% if gg and gg.actif and gg.note is not null and gg.coef != 1 %}<span class="puce google"><i class="bi bi-star-fill"></i> Google {{ gg.note|number_format(1, ',', ' ') }} → × {{ gg.coef|number_format(2, ',', ' ') }}</span>{% endif %}
     <div class="acc-voir">{{ T.see_details ?? 'Voir le détail' }} <i class="bi bi-arrow-right"></i></div>
@@ -46,7 +46,7 @@
   {% if p and p.enCours and p.aujourdhui %}{% set a = p.aujourdhui %}{% set c = p.briques.croisees %}
   <div class="auj"><div class="cercle" style="--p:{{ a.tickets > 0 ? (100 * a.croisees / a.tickets)|round : 0 }}%"><b>{{ a.croisees }}</b><small>{{ T.out_of ?? 'sur' }} {{ a.tickets }}</small></div>
     <div class="tx"><div class="q">{{ a.croisees }} {{ T.cross_sales_today ?? 'ventes croisées aujourd’hui' }}</div>
-      {% if a.tickets > 0 %}{{ a.taux|number_format(0, ',', ' ') }}&nbsp;% {{ T.of_your_tickets ?? 'de vos tickets ont 2 articles ou plus' }} · {{ T.target ?? 'cible' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%{% else %}{{ T.no_ticket_yet ?? 'Pas encore de ticket à votre nom.' }}{% endif %}
+      {% if a.tickets > 0 %}{{ a.taux|number_format(0, ',', ' ') }}&nbsp;% {{ T.of_your_tickets ?? 'de tes tickets ont 2 articles ou plus' }} · {{ T.target ?? 'cible' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%{% else %}{{ T.no_ticket_yet ?? 'Pas encore de ticket à ton nom.' }}{% endif %}
       <div class="mu" style="font-size:11.5px;margin-top:3px">« {{ T.anything_else ?? 'Et avec ça ?' }} »</div></div></div>
   {% elseif p and p.enCours %}<div class="note" style="margin-top:0">{{ T.today_unavailable ?? 'Le compteur du jour n’a pas pu être lu.' }}</div>{% endif %}
   <div class="acc-grille">
@@ -63,7 +63,7 @@
   <a class="ligne acc-etape" href="{{ ROOT }}/primes"><div>
     {% if e.cle == 'croisees' %}<b>{{ T.cross_sales_title ?? 'Ventes croisées' }}</b><div class="d">{{ e.n }} {{ T.more_cross_to_reach ?? 'ventes croisées de plus pour passer' }} {{ e.taux }}&nbsp;%</div>
     {% elseif e.cle == 'record' %}<b>{{ T.beat_your_record ?? 'Bats ton record' }}</b><div class="d">{{ T.at_lines_from_record ?? 'à' }} {{ e.ecart }} {{ T.line_from_record ?? 'ligne par ticket du record' }} {{ e.record }}</div>
-    {% elseif e.cle == 'concours' %}<b>{{ T.contest ?? 'Concours' }} {{ e.lib }}</b><div class="d">{{ e.n }} {{ T.more_pieces_first_shop ?? 'pièces de plus pour passer 1re du magasin' }}</div>
+    {% elseif e.cle == 'concours' %}<b>👑 {{ e.lib }}</b><div class="d">{{ e.n }} {{ e.niveau == 'reseau' ? (T.more_pieces_network ?? 'pièces de plus pour la couronne du réseau') : (T.more_pieces_shop ?? 'pièces de plus pour la couronne du magasin') }}</div>
     {% else %}<b>{{ T.best_seller ?? 'Meilleure vendeuse' }}</b><div class="d">{{ T.score ?? 'score' }} {{ e.score }}, {{ T.first_shop_is_at ?? 'la 1re du magasin est à' }} {{ e.premier }}</div>{% endif %}
   </div><span class="puce rubis">+ {{ e.gain }}&nbsp;{{ eur }}</span></a>
   {% endfor %}
@@ -83,11 +83,11 @@
 </div>
 {% endif %}
 
-{# ── 5. Mon magasin, en une ligne ── #}
-{% if p and p.prime %}{% set g = p.prime %}
-<a class="pr-card doux acc-lien acc-mag" href="{{ ROOT }}/primes?onglet=magasin">
-  <div><div class="k">{{ T.my_shop ?? 'Mon magasin' }}</div>
-    <div class="s">{% set att = g.atteinteProj ?? g.atteinte %}{% if att is not null %}<b>{{ att|number_format(1, ',', ' ') }}&nbsp;%</b> {{ g.atteinteProj is not null ? (T.at_current_pace ?? 'de l’objectif au rythme actuel') : (T.reached ?? 'de l’objectif') }}{% if g.palier %} · {{ T.level ?? 'palier' }} {{ g.palier.pct }}&nbsp;%{% elseif g.paliers|length and g.paliers[0].manque %} · {{ g.paliers[0].manque|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.to_first_level ?? 'avant le premier palier' }}{% endif %}{% else %}{{ T.no_objective ?? 'pas d’objectif ce mois-ci' }}{% endif %}</div></div>
+{# ── 5. Ma collection, en une ligne ── #}
+{% if collection %}
+<a class="pr-card acc-lien acc-mag" href="{{ ROOT }}/primes#collection">
+  <div><div class="k">{{ T.my_collection ?? 'Ma collection' }}</div>
+    <div class="s"><b>👑 {{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }} 🔥{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ dt.cle starts with 'concours:' ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (T.shop_bonus_title ?? 'Prime magasin')))) }}{% endif %}</div></div>
   <i class="bi bi-chevron-right mu"></i>
 </a>
 {% endif %}

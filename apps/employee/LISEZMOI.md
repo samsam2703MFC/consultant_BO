@@ -64,17 +64,18 @@ personne (`langue`, un global Twig). Les lignes de détail des mois payés sont 
 par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
 la ligne depuis les montants.
 
-## L'onglet Primes (06/10/2026, maquette B, refonte visuelle le même jour)
+## L'onglet Primes (06/10/2026) : un seul écran, ce qu'elle peut gagner et comment
 
-`/primes` : deux onglets. **Moi** domine (l'app est centrée sur la performance individuelle) :
-l'anneau acquis / à portée avec la note Google et son coefficient, le compteur de ventes croisées
-du jour, « Les étapes pour gagner » (un palier à franchir sur chacune des cinq primes : ventes
-croisées, record, meilleure vendeuse, concours tartes & quiches, prime magasin), les douze dernières
-semaines en graphique (taux de ventes croisées, place dans le réseau, pièces du concours, CA par
-heure), les ventes mois par mois avec le CA par heure et la place dans le réseau, les mois payés.
-**Mon magasin** reste second (la demi-jauge de l'objectif du mois, jour par jour, ce qu'il manque
-par palier, l'équipe au prorata des heures). Les jauges sont des SVG dessinés dans le Twig
-(`cos` et `sin` sont des fonctions Twig de `core/Twig/AppExtension.php`). La page ne calcule rien : `PrimesService`
+`/primes` : plus d'onglets (« retirer Mon magasin, garder seulement Moi »). De haut en bas : le héros
+(déjà gagné, jusqu'à, le nombre de titres, la note Google), le compteur du jour, **« Ce que tu peux
+gagner »** en cartes-missions, une par prime (ventes croisées, record, meilleure vendeuse, un concours
+par famille — Queen of Tartes, Queen of Quiches —, la prime magasin en dernier) : ce que ça rapporte,
+comment en une phrase, où elle en est, le prochain cran ; **« Ma collection »** : les titres en badges
+(couronne du magasin / du réseau par concours, meilleure vendeuse, ventes croisées, record, prime
+magasin), gagnés, en cours ou à gagner ; **les classements** à la Strava (Tartes, Quiches,
+Cross-selling ; mon magasin / réseau ; les dix premières nommées, moi en évidence) ; les douze
+semaines ; les ventes mois par mois ; les mois payés. Style mobile gen Z : gradient, gros chiffres,
+émojis, badges ; tutoiement en français. La page ne calcule rien : `PrimesService`
 appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec le jeton de la session ; le cockpit
 le fait confirmer par le panel et ne rend que la fiche de la personne connectée (voir
 `docs/contrat-api.md`, « Les primes dans l'app worker »). `COCKPIT_API_URL` se déduit de l'adresse

@@ -157,8 +157,9 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
         if ($id > 0) { $tickets[$id] = (int) ($t['id_employee'] ?? 0); }
     }
     $emp = [];
-    // Le concours (tartes & quiches, 06/10/2026) : les produits de la famille, par identifiant.
-    $famille = function_exists('concoursMotif') ? pvFamilleIds(concoursMotif()) : [];
+    // Les concours (Queen of Tartes, Queen of Quiches, 06/10/2026) : les produits de chaque famille, par identifiant.
+    $idsDe = [];
+    foreach (function_exists('concoursFamilles') ? concoursFamilles() : [] as $cleF => $motifF) { $idsDe[$cleF] = pvFamilleIds($motifF); }
     foreach (array_chunk(array_keys($tickets), 40, true) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -169,7 +170,7 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
             // partiel paierait des primes fausses.
             if (!is_array($t)) { return null; }
             $e = (int) ($t['id_employee'] ?? $tickets[$id]);
-            if (!isset($emp[$e])) { $emp[$e] = ['l' => 0, 't' => 0, 'c' => 0, 'tq' => 0.0]; }
+            if (!isset($emp[$e])) { $emp[$e] = ['l' => 0, 't' => 0, 'c' => 0, 'tq' => 0.0, 'q' => []]; }
             $emp[$e]['t']++;
             // La règle maison : le nombre de LIGNES du ticket, pas la somme
             // des quantités — la même mesure que la table locale.
@@ -178,21 +179,27 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
             $emp[$e]['l'] += $n;
             // La VENTE CROISÉE (primes de l'app worker, 06/10/2026) : un ticket à deux lignes ou plus.
             if ($n >= 2) { $emp[$e]['c']++; }
-            // Le concours : les pièces de la famille vendues sur le ticket.
+            // Les concours : les pièces de chaque famille vendues sur le ticket (« q » par famille, « tq » en tout).
             foreach ($lignes as $l) {
-                if (isset($famille[(int) ($l['id_product'] ?? 0)])) { $emp[$e]['tq'] += (float) ($l['quantity'] ?? 1); }
+                $pid = (int) ($l['id_product'] ?? 0); $qte = (float) ($l['quantity'] ?? 1);
+                foreach ($idsDe as $cleF => $ids) {
+                    if (isset($ids[$pid])) { $emp[$e]['q'][$cleF] = ($emp[$e]['q'][$cleF] ?? 0.0) + $qte; $emp[$e]['tq'] += $qte; }
+                }
             }
         }
     }
-    foreach ($emp as $e => $x) { $emp[$e]['tq'] = round($x['tq'], 2); }
+    foreach ($emp as $e => $x) {
+        $emp[$e]['tq'] = round($x['tq'], 2);
+        foreach ($x['q'] as $cleF => $v) { $emp[$e]['q'][$cleF] = round($v, 2); }
+    }
     $cout += count($tickets);
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         [$cle, json_encode(['quand' => time(), 'v' => PV_LIGNES_VERSION, 'e' => $emp], JSON_UNESCAPED_UNICODE)]);
     return $emp;
 }
 
-/** La version de la moisson : 1 = lignes et ventes croisées, 2 = + les pièces du concours. */
-const PV_LIGNES_VERSION = 2;
+/** La version de la moisson : 1 = lignes et ventes croisées, 2 = + les pièces du concours, 3 = les pièces par famille (Queen of Tartes, Queen of Quiches). */
+const PV_LIGNES_VERSION = 3;
 
 /** La version d'un jour moissonné : celle gravée, sinon 1 s'il porte les ventes croisées, sinon 0. */
 function pvLignesVersion(array $entree): int
@@ -268,7 +275,7 @@ function pvLignesCron(): string
     // du plus récent au plus ancien, avec leur propre budget — à la suite de la moisson, ils
     // attendraient des jours (le mois en cours d'abord, puis les mois d'avant).
     if ($r['joursRestants'] === 0) {
-        $c = pvCroiseesComplement(450);
+        $c = pvCroiseesComplement(1500);
         if ($c['joursFaits'] > 0 || $c['joursRestants'] > 0) { $txt .= ' · ventes croisées : ' . $c['joursFaits'] . ' jour(s) recomptés, ' . $c['etat']; }
     }
     // Les ventes par vendeuse jour par jour (les semaines de l'app worker), 48 jours-magasins par passe.
@@ -328,17 +335,20 @@ function pvCroiseesMois(string $m): ?array
             $version = pvLignesVersion($c);
             $avecC = $version >= 1;
             if (!$avecC) { $sansC++; }
-            if ($version < 2) { $sansTq++; } else { $joursTqShop[$sid] = ($joursTqShop[$sid] ?? 0) + 1; }
+            if ($version < 3) { $sansTq++; } else { $joursTqShop[$sid] = ($joursTqShop[$sid] ?? 0) + 1; }
             $joursVus[$j] = true;
             foreach ($e as $id => $x) {
                 $id = (int) $id;
-                if (!isset($out[$id])) { $out[$id] = ['t' => 0, 'l' => 0, 'c' => 0, 'tc' => 0, 'tq' => 0.0, 'tqT' => 0]; }
+                if (!isset($out[$id])) { $out[$id] = ['t' => 0, 'l' => 0, 'c' => 0, 'tc' => 0, 'tq' => 0.0, 'tqT' => 0, 'q' => []]; }
                 $out[$id]['t'] += (int) ($x['t'] ?? 0);
                 $out[$id]['l'] += (int) ($x['l'] ?? 0);
                 // Le taux se mesure sur les seuls jours comptés : tc = les tickets de ces jours-là.
                 if ($avecC) { $out[$id]['c'] += (int) ($x['c'] ?? 0); $out[$id]['tc'] += (int) ($x['t'] ?? 0); }
-                // Les pièces du concours, sur les jours qui les comptent.
-                if ($version >= 2) { $out[$id]['tq'] += (float) ($x['tq'] ?? 0); $out[$id]['tqT'] += (int) ($x['t'] ?? 0); }
+                // Les pièces des concours, sur les jours qui les comptent par famille (version 3).
+                if ($version >= 3) {
+                    $out[$id]['tq'] += (float) ($x['tq'] ?? 0); $out[$id]['tqT'] += (int) ($x['t'] ?? 0);
+                    foreach ((array) ($x['q'] ?? []) as $cleF => $v) { $out[$id]['q'][$cleF] = ($out[$id]['q'][$cleF] ?? 0.0) + (float) $v; }
+                }
             }
         }
     }
@@ -348,8 +358,9 @@ function pvCroiseesMois(string $m): ?array
     foreach ($out as $id => $x) {
         if ($x['tc'] === 0 && $sansC > 0) { unset($out[$id]['c']); }
         elseif ($x['tc'] > 0 && $x['tc'] < $x['t']) { $out[$id]['t'] = $x['tc']; }   // le taux sur les jours comptés
-        if ($x['tqT'] === 0 && $sansTq > 0) { unset($out[$id]['tq']); } else { $out[$id]['tq'] = round($x['tq'], 2); }
-        unset($out[$id]['tc']);
+        if ($x['tqT'] === 0 && $sansTq > 0) { unset($out[$id]['tq'], $out[$id]['q']); }
+        else { $out[$id]['tq'] = round($x['tq'], 2); foreach ($x['q'] as $cleF => $v) { $out[$id]['q'][$cleF] = round($v, 2); } }
+        unset($out[$id]['tc'], $out[$id]['tqT']);
     }
     // joursTqShop : par magasin, les jours dont les pièces du concours sont comptées (version 2).
     return ['e' => $out, 'jours' => $jours, 'manquants' => $manquants, 'sansC' => $sansC, 'sansTq' => $sansTq, 'joursTqShop' => $joursTqShop,
@@ -429,13 +440,16 @@ function pvSemainesReseau(int $n): array
                 $version = pvLignesVersion($x);
                 if ($version < 1) { continue; }
                 $vu = true;
-                if ($version >= 2) { $sem['joursTq']++; }
+                if ($version >= 3) { $sem['joursTq']++; }
                 foreach ((array) $x['e'] as $id => $y) {
                     $id = (int) $id;
-                    if (!isset($sem['e'][$id])) { $sem['e'][$id] = ['t' => 0, 'c' => 0, 'tq' => 0.0, 'shop' => (string) $sid]; }
+                    if (!isset($sem['e'][$id])) { $sem['e'][$id] = ['t' => 0, 'c' => 0, 'tq' => 0.0, 'q' => [], 'shop' => (string) $sid]; }
                     $sem['e'][$id]['t'] += (int) ($y['t'] ?? 0);
                     $sem['e'][$id]['c'] += (int) ($y['c'] ?? 0);
-                    if ($version >= 2) { $sem['e'][$id]['tq'] += (float) ($y['tq'] ?? 0); }
+                    if ($version >= 3) {
+                        $sem['e'][$id]['tq'] += (float) ($y['tq'] ?? 0);
+                        foreach ((array) ($y['q'] ?? []) as $cleF => $v) { $sem['e'][$id]['q'][$cleF] = ($sem['e'][$id]['q'][$cleF] ?? 0.0) + (float) $v; }
+                    }
                 }
             }
             if ($vu) { $sem['jours']++; }

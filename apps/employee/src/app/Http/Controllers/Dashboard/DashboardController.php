@@ -40,6 +40,9 @@ class DashboardController extends Controller
         $data['primesErreur'] = $erreur;
         $data['etapes'] = $fiche ? $this->etapes($fiche) : [];
         $data['semaine'] = $fiche ? $this->semaine($fiche) : null;
+        $coll = $fiche['collection'] ?? null;
+        $nb = 0; foreach ((array) ($coll['titres'] ?? []) as $t) { $nb += (int) $t['n']; }
+        $data['collection'] = $coll ? ['n' => $nb, 'enCours' => count((array) ($coll['enCours'] ?? [])), 'derniers' => array_slice(array_reverse((array) ($coll['titres'] ?? [])), 0, 3)] : null;
 
         $service = null;
         try {
@@ -93,9 +96,15 @@ class DashboardController extends Controller
                 'record' => number_format((float) $r['record'], 1, ',', ' '), 'ordre' => (int) round(abs((float) $r['ecart']) * 100)];
         }
         $k = $b['concours'] ?? null;
-        if ($k && !empty($k['actif']) && ($k['rangMag'] ?? null) !== 1 && isset($k['premierMag']) && $k['premierMag'] !== null) {
-            $manque = max(1, (int) ceil((float) $k['premierMag'] - (float) ($k['pieces'] ?? 0)) + 1);
-            $out[] = ['cle' => 'concours', 'gain' => (int) $k['montantMag'], 'n' => $manque, 'lib' => (string) ($k['lib'] ?? ''), 'ordre' => $manque];
+        foreach (($k && !empty($k['actif'])) ? (array) ($k['liste'] ?? []) : [] as $q) {
+            if ($q['pieces'] === null || ($q['titre'] ?? null) === 'reseau') { continue; }
+            if (($q['rangMag'] ?? null) === 1) {
+                $manque = max(1, (int) ceil((float) ($q['premierRes'] ?? 0) - (float) $q['pieces']) + 1);
+                $out[] = ['cle' => 'concours', 'niveau' => 'reseau', 'gain' => (int) $q['montantRes'], 'n' => $manque, 'lib' => (string) $q['lib'], 'ordre' => $manque];
+            } else {
+                $manque = max(1, (int) ceil(max((float) ($q['premierMag'] ?? 0), (float) $q['minPieces']) - (float) $q['pieces']) + 1);
+                $out[] = ['cle' => 'concours', 'niveau' => 'magasin', 'gain' => (int) $q['montantMag'], 'n' => $manque, 'lib' => (string) $q['lib'], 'ordre' => $manque];
+            }
         }
         $v = $b['meilleure'] ?? null;
         if ($v && ($v['rangMag'] ?? null) !== null && $v['rangMag'] !== 1 && !empty($v['scorePremier']) && isset($v['score'])) {

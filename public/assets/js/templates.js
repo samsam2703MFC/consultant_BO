@@ -9446,19 +9446,26 @@ function tplVentes(c, x){
     </div>
     ${!c.prK ? '' : `
     <div style="${carte2};padding:16px 18px" data-pr="concours">
-      <div style="${lbl2}">Le concours — le nombre de pièces d'une famille</div>
-      <div style="font-size:12px;margin:5px 0 10px;color:var(--color-text-muted)">Tartes et quiches au départ : chaque mois, la première de chaque magasin et la première du réseau au <b>nombre de pièces vendues</b> gagnent. La famille est un motif sur la catégorie ou le nom du produit ; la moisson recompte les jours passés au fil du cron.</div>
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" ${c.prK.actif ? 'checked' : ''} ${x.C(c.prK.poserActif)}> Actif</label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Libellé <input value="${esc(c.prK.lib)}" ${x.C(c.prK.poserLib)} style="${inp(150)};text-align:left"></label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Famille (motif) <input value="${esc(c.prK.motif)}" ${x.C(c.prK.poserMotif)} style="${inp(170)};text-align:left;font-family:ui-monospace,monospace"></label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">1re du magasin <input type="number" min="0" step="5" value="${esc(c.prK.magasin)}" ${x.C(c.prK.poserMagasin)} style="${inp(64)}"> €</label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">1re du réseau <input type="number" min="0" step="5" value="${esc(c.prK.reseau)}" ${x.C(c.prK.poserReseau)} style="${inp(64)}"> €</label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Pièces minimum <input type="number" min="0" step="1" value="${esc(c.prK.minPieces)}" ${x.C(c.prK.poserMin)} style="${inp(56)}"></label>
+      <div style="${lbl2}">Les concours — un titre à collectionner par famille de produits</div>
+      <div style="font-size:12px;margin:5px 0 10px;color:var(--color-text-muted)">Queen of Tartes, Queen of Quiches : chaque mois, la première de chaque magasin et la première du réseau au <b>nombre de pièces vendues</b> gagnent la couronne et la prime. La famille est un motif sur la catégorie ou le nom du produit ; la moisson recompte les jours passés au fil du cron. Quatre concours au plus.</div>
+      <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:8px"><input type="checkbox" ${c.prK.actif ? 'checked' : ''} ${x.C(c.prK.poserActif)}> Actifs</label>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--color-text-muted);font-size:11px;text-align:left"><th style="padding:4px 6px">Titre</th><th style="padding:4px 6px">Famille (motif)</th><th style="padding:4px 6px">1re du magasin</th><th style="padding:4px 6px">1re du réseau</th><th style="padding:4px 6px">Pièces min.</th><th></th></tr></thead>
+        <tbody>${c.prK.liste.map((q, i) => `<tr data-pr-concours="${i}">
+          <td style="padding:4px 6px"><input value="${esc(q.lib)}" placeholder="Queen of Tartes" ${x.C(q.poser('lib'))} style="${inp(160)};text-align:left"></td>
+          <td style="padding:4px 6px"><input value="${esc(q.motif)}" placeholder="tarte" ${x.C(q.poser('motif'))} style="${inp(150)};text-align:left;font-family:ui-monospace,monospace"></td>
+          <td style="padding:4px 6px"><input type="number" min="0" step="5" value="${esc(q.magasin)}" ${x.C(q.poser('magasin'))} style="${inp(64)}"> €</td>
+          <td style="padding:4px 6px"><input type="number" min="0" step="5" value="${esc(q.reseau)}" ${x.C(q.poser('reseau'))} style="${inp(64)}"> €</td>
+          <td style="padding:4px 6px"><input type="number" min="0" step="1" value="${esc(q.minPieces)}" ${x.C(q.poser('minPieces'))} style="${inp(56)}"></td>
+          <td style="padding:4px 6px"><button ${x.A(q.retirer)} title="retirer" style="${bt(false)};padding:2px 8px">✕</button></td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+        ${c.prK.peutAjouter ? `<button ${x.A(c.prK.ajouter)} style="${bt(false)}">+ un concours</button>` : ''}
         <span style="flex:1"></span>
         <button ${x.A(c.prK.enregistrer)} style="${bt(true)}${c.prK.modifie ? '' : ';opacity:.55'}" data-pr-enregistrer="concours">Enregistrer</button>
       </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">À égalité de pièces, moins de tickets gagne : la proposition compte plus que le passage. La première du réseau ne cumule pas la prime magasin.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">À égalité de pièces, moins de tickets gagne. Le titre du réseau prime sur celui du magasin ; chaque titre gagné reste dans la collection de la vendeuse, dans l'app. La clé d'un concours vient de son titre et ne change plus : renommer garde l'historique.</div>
     </div>`}
     ${!c.prG ? '' : `
     <div style="${carte2};padding:16px 18px" data-pr="google">
