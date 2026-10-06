@@ -1975,6 +1975,33 @@ function ensureProfilHeure(): void
         . 'maj DATETIME NULL,'
         . 'PRIMARY KEY (shop_id, jour, heure)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Les profils bâtis avant le 06/10/2026 portent les heures décalées de margin-heatmap : ils
+    // s'effacent une fois et se rebâtissent à la lecture suivante, à l'heure de Bruxelles.
+    static $vu = false;
+    if (!$vu) {
+        $vu = true;
+        if (setting('profilHeureV') !== 2) {
+            Db::exec('DELETE FROM ceo_shop_profil_heure');
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['profilHeureV', json_encode(2)]);
+        }
+    }
+}
+
+/**
+ * L'heure de Bruxelles d'une heure lue sur margin-heatmap. La route du panel prend l'heure locale
+ * du ticket pour de l'UTC et la convertit encore : ses heures sont en avance du décalage du jour
+ * (2 h l'été, 1 h l'hiver ; mesuré le 06/10/2026 face à hourly-distribution et aux tickets). Rend
+ * -1 pour une heure qui tomberait avant minuit.
+ */
+function hmHeureLocale(int $h, string $date): int
+{
+    static $dec = [];
+    if (!isset($dec[$date])) {
+        try { $dec[$date] = intdiv((new DateTimeZone('Europe/Brussels'))->getOffset(new DateTimeImmutable($date . ' 12:00:00', new DateTimeZone('UTC'))), 3600); }
+        catch (Throwable $e) { $dec[$date] = 0; }
+    }
+    $l = $h - $dec[$date];
+    return $l >= 0 && $l <= 23 ? $l : -1;
 }
 
 /**
@@ -2020,8 +2047,8 @@ function profilHeureBatir(int $shopId, string $date): int
         if ($tot <= 0) { continue; }          // magasin fermé ce jour-là
         $retenus++;
         foreach ($h as $x) {
-            $hh = (int) ($x['hour'] ?? -1);
-            if ($hh < 0 || $hh > 23) { continue; }
+            $hh = hmHeureLocale((int) ($x['hour'] ?? -1), (string) $d);
+            if ($hh < 0) { continue; }
             $somme[$hh] = ($somme[$hh] ?? 0) + (float) ($x['ca'] ?? 0);
         }
     }
@@ -2689,7 +2716,7 @@ function exJourCalcul(): array
             $heuresJour = is_array($hj) ? ($hj['hours'] ?? null) : null;
             $derniere = -1;
             foreach ((array) $heuresJour as $x) {
-                if ((float) ($x['ca'] ?? 0) > 0) { $derniere = max($derniere, (int) ($x['hour'] ?? -1)); }
+                if ((float) ($x['ca'] ?? 0) > 0) { $derniere = max($derniere, hmHeureLocale((int) ($x['hour'] ?? -1), $date)); }
             }
             if ($ph['parts'] === []) { $projMotif = 'profil horaire indisponible'; }
             elseif ($derniere < 0) { $projMotif = 'aucune vente encore aujourd’hui'; }
@@ -2780,8 +2807,9 @@ function exJourCalcul(): array
         $hjV = $res['hj' . $id] ?? null;
         $heuresCa = [];
         foreach ((array) (is_array($hjV) ? ($hjV['hours'] ?? []) : []) as $x9) {
-            $h9 = (int) ($x9['hour'] ?? -1);
-            if ($h9 >= 0 && $h9 <= 23) { $heuresCa[$h9] = round((float) ($x9['ca'] ?? 0), 2); }
+            // À l'heure de Bruxelles : margin-heatmap avance du décalage du jour (hmHeureLocale).
+            $h9 = hmHeureLocale((int) ($x9['hour'] ?? -1), $date);
+            if ($h9 >= 0) { $heuresCa[$h9] = round(($heuresCa[$h9] ?? 0) + (float) ($x9['ca'] ?? 0), 2); }
         }
         ksort($heuresCa);
         // La nuit ne se dessine pas : la série se coupe à la première et à la

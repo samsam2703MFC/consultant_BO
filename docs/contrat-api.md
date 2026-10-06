@@ -695,16 +695,21 @@ lit que jour par jour.
 ```json
 { "shop": 4, "du": "2026-09-28", "au": "2026-10-04",
   "jours": [ { "date": "2026-10-03", "futur": false, "aujourdhui": false,
-               "controles": { "rendus": 8, "total": 11, "notes": 7, "nc": 0, "aControler": 1,
-                              "manquent": ["Photo du comptoir - Biscuiterie", "…"] },
+               "controles": { "rendus": 8, "total": 11, "notes": 7, "nc": 0, "aControler": 1, "sansPhoto": 1,
+                              "manquent": ["Photo du comptoir - Biscuiterie", "…"],
+                              "sansPhotoNoms": ["Photo du comptoir - Traiteur"] },
                "poubelle": { "pieces": 76, "cout": 36.2 } }, … ] }
 ```
 
 - **Contrôles** : les tâches obligatoires du panel ce jour-là (`/pwa/tasks?date=&shop=`, une tâche
   dont le panel ne dit pas qu'elle est facultative compte), comptées comme l'onglet Contrôle :
-  rendues (tout sauf « non rendue »), notées, non conformes (note sous le seuil, 4), à contrôler,
-  et les noms de celles qui manquent. Gardées cinq minutes pour aujourd'hui, une demi-heure pour un
-  jour passé (`dsCtrl:{shop}:{date}`) : les notes du consultant arrivent après coup.
+  rendues **avec leur photo**, notées, non conformes (note sous le seuil, 4), à contrôler, et les
+  noms de celles qui manquent. Depuis le 06/10/2026, une tâche cochée sans photo n'est plus rendue :
+  elle se compte à part (`sansPhoto`, `sansPhotoNoms`), ni rendue ni manquante. Le dimanche 4/10 à
+  Halle passe ainsi de 9 rendus sur 11 à 0 sur 11, 9 cochés sans photo. Le dashboard applique la
+  même règle (tuile Contrôles du téléphone, lignes « Tâches du jour » et « Contrôles en photo »).
+  Gardées cinq minutes pour aujourd'hui, une demi-heure pour un jour passé
+  (`dsCtrl2:{shop}:{date}`) : les notes du consultant arrivent après coup.
 - **Poubelle** : les pièces jetées déclarées et leur coût net, comme `/exploitation/invendus` sur un
   jour (mêmes caches `inv:{shop}:{d}:{d}`, les jours manquants lus au panel en parallèle).
 - Les jours à venir sont rendus vides (`futur: true`, `null`), sans appel au panel ; un jour dont le
@@ -1571,8 +1576,12 @@ Jour. La journée en cours, centrée sur le terrain, relue toutes les deux minut
 | Commandes clients, non-conformités d'hier, poubelle, promotions | `/ventes/commandes`, `/pwa/tasks/nc`, `/exploitation/invendus`, `/exploitation/promos` |
 | Le stock du magasin, en liste déroulante : les alertes d'abord, puis tout l'inventaire par catégorie | `/ventes/stock` |
 
-Les ventes par heure se lisent sur `/ventes/stats` (tickets) : celles de `/exploitation/jour`
-(margin-heatmap) sont décalées de deux heures. Le tiroir du stock montre désormais toute la liste
+Les ventes par heure se lisent sur `/ventes/stats` (tickets). Celles de `/exploitation/jour`
+viennent de margin-heatmap, qui avance du décalage de Bruxelles du jour (2 h l'été, 1 h l'hiver,
+mesuré face à hourly-distribution) : depuis le 06/10/2026, le serveur les ramène à l'heure locale
+(`hmHeureLocale`) pour la série `heures`, le chiffre attribué à chaque personne en poste et la
+dernière heure de la projection ; les profils horaires bâtis avant sont effacés une fois
+(`profilHeureV` = 2) et se rebâtissent à l'heure locale. Le tiroir du stock montre désormais toute la liste
 dans toutes les vues, pas seulement les références en alerte.
 
 ### `_cache=N` — une lecture gardée à la demande (06/10/2026)

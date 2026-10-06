@@ -14,11 +14,13 @@ const DS_TTL_PASSE = 1800;   // un jour passé : une demi-heure, les notes du co
 /**
  * Les contrôles obligatoires d'un magasin un jour, comptés comme l'onglet Contrôle les compte
  * (une tâche dont le panel ne dit pas qu'elle est facultative est obligatoire) :
- * {rendus, total, notes, nc, aControler, manquent: [noms]} ; null si le panel n'a jamais répondu.
+ * {rendus, total, notes, nc, aControler, sansPhoto, manquent: [noms], sansPhotoNoms: [noms]} ;
+ * null si le panel n'a jamais répondu. Un contrôle n'est rendu qu'avec sa photo (06/10/2026) :
+ * coché sans photo, il se compte à part (`sansPhoto`), ni rendu ni manquant.
  */
 function dsControles(int $sid, string $date): ?array
 {
-    $cle = 'dsCtrl:' . $sid . ':' . $date;
+    $cle = 'dsCtrl2:' . $sid . ':' . $date;
     $c = setting($cle);
     $ttl = $date >= date('Y-m-d') ? DS_TTL_JOUR : DS_TTL_PASSE;
     if (is_array($c) && isset($c['v']) && (int) ($c['ts'] ?? 0) > time() - $ttl) { return $c['v']; }
@@ -27,11 +29,12 @@ function dsControles(int $sid, string $date): ?array
     if (!empty($r['indispo'])) { return is_array($c) ? ($c['v'] ?? null) : null; }
     $sh = null; foreach ((array) ($r['shops'] ?? []) as $s) { if ((int) ($s['shopId'] ?? 0) === $sid) { $sh = $s; } }
     $seuil = (int) ($r['seuil'] ?? 4);
-    $v = ['rendus' => 0, 'total' => 0, 'notes' => 0, 'nc' => 0, 'aControler' => 0, 'manquent' => []];
+    $v = ['rendus' => 0, 'total' => 0, 'notes' => 0, 'nc' => 0, 'aControler' => 0, 'sansPhoto' => 0, 'manquent' => [], 'sansPhotoNoms' => []];
     foreach ($sh !== null ? (array) ($sh['taches'] ?? []) : [] as $t) {
         if (!is_array($t) || ($t['obligatoire'] ?? null) === false) { continue; }
         $v['total']++;
         if (($t['statut'] ?? '') === 'nonRendue') { $v['manquent'][] = (string) ($t['tache'] ?? ''); continue; }
+        if (($t['statut'] ?? '') === 'sansPhoto') { $v['sansPhoto']++; $v['sansPhotoNoms'][] = (string) ($t['tache'] ?? ''); continue; }
         $v['rendus']++;
         if (($t['statut'] ?? '') === 'aControler') { $v['aControler']++; }
         if (isset($t['note']) && is_numeric($t['note'])) { $v['notes']++; if ((int) $t['note'] < $seuil) { $v['nc']++; } }
