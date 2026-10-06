@@ -615,3 +615,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T13:12:40Z vitrine short life prevision de toute la journee
 2026-10-06T13:20:17Z vitrine short life depliant categorie
 2026-10-06T13:27:20Z vitrine depliant categorie medium et long life
+2026-10-06T14:08:05Z dashboard fiche produit magasin actif
