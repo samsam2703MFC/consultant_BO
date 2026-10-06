@@ -1,0 +1,67 @@
+/* Maquettes « Suivi de production : short, medium et long life » — par-dessus global.css et production.css. */
+.mq{position:absolute;left:50%;top:14px;transform:translateX(40px);font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#222;color:#fff;padding:5px 10px;border-radius:999px;opacity:.85}
+#pf{position:relative}
+.pf-titre small{font:600 11px var(--font-ui);color:#777;margin-left:8px;letter-spacing:.04em}
+
+/* Les trois classes : une couleur chacune */
+:root{--sl-s:#C0182B;--sl-m:#D97706;--sl-l:#2F6EA5}
+.sl{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;font:700 9.5px var(--font-ui);color:#fff;letter-spacing:.02em;vertical-align:1px;margin-right:6px}
+.sl.S{background:var(--sl-s)}.sl.M{background:var(--sl-m)}.sl.L{background:var(--sl-l)}
+.sl.exc{box-shadow:0 0 0 2px #fff,0 0 0 3.5px #222}
+
+/* A : trois interrupteurs */
+.sw{display:inline-flex;align-items:center;gap:8px;border:.5px solid var(--pf-trait2);border-radius:999px;padding:4px 12px 4px 5px;background:#fff;font:600 11.5px var(--font-ui);color:#333;white-space:nowrap}
+.sw i{position:relative;width:30px;height:18px;border-radius:999px;background:#cfc8bf;flex:0 0 30px}
+.sw i::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.on i::after{left:14px}
+.sw.S.on i{background:var(--sl-s)}.sw.M.on i{background:var(--sl-m)}.sw.L.on i{background:var(--sl-l)}
+.sw small{font-weight:500;color:#777}
+.sw b{font-weight:700}
+.sw.off{color:#999}
+.sws{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:.5px solid var(--pf-trait);background:#fcfaf7}
+.sws .lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#777;margin-right:4px}
+.sws .regle{margin-left:auto;font-size:10.5px;color:#777}
+.reglage{border:.5px solid var(--pf-trait2);border-radius:8px;padding:5px 10px;font:600 11px var(--font-ui);background:#fff;color:#333}
+.reglage.on{background:#222;color:#fff;border-color:#222}
+
+/* Le panneau des réglages (A) */
+.panneau{position:absolute;right:22px;top:330px;width:470px;background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.22);border:.5px solid var(--pf-trait2);z-index:5;overflow:hidden}
+.panneau .t{padding:12px 16px;border-bottom:.5px solid var(--pf-trait);display:flex;align-items:baseline;gap:8px}
+.panneau .t b{font:400 17px var(--font-display)}
+.panneau .t small{font-size:10.5px;color:#777}
+.panneau .t .x{margin-left:auto;font-size:16px;color:#777}
+.panneau .rg{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 16px;border-top:.5px solid var(--pf-trait);font-size:12px}
+.panneau .rg.gr{background:#f6f1ea;font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#777;padding:4px 16px}
+.panneau .rg .n small{display:block;font-size:10px;color:#888}
+.seg{display:inline-flex;border:.5px solid var(--pf-trait2);border-radius:7px;overflow:hidden}
+.seg span{padding:3px 9px;font:700 10px var(--font-ui);color:#888;background:#fff;border-left:.5px solid var(--pf-trait2)}
+.seg span:first-child{border-left:none}
+.seg span.on.S{background:var(--sl-s);color:#fff}.seg span.on.M{background:var(--sl-m);color:#fff}.seg span.on.L{background:var(--sl-l);color:#fff}
+.panneau .pied{padding:10px 16px;font-size:10.5px;color:#666;background:#fcfaf7;border-top:.5px solid var(--pf-trait);line-height:1.5}
+.voile{position:absolute;inset:0;background:rgba(34,34,34,.18);z-index:4;border-radius:0}
+
+/* B : trois blocs dans le tableau */
+.pf-tab.suivi tr.bloc td{background:#f6f1ea;padding:9px 12px;border-top:2px solid #fff}
+.pf-tab.suivi tr.bloc.S td{box-shadow:inset 4px 0 0 var(--sl-s)}.pf-tab.suivi tr.bloc.M td{box-shadow:inset 4px 0 0 var(--sl-m)}.pf-tab.suivi tr.bloc.L td{box-shadow:inset 4px 0 0 var(--sl-l)}
+.bl{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bl .nm{font:400 16px var(--font-display)}
+.bl .rg{font-size:11px;color:#666}
+.bl .ch{margin-left:auto;display:flex;gap:6px;align-items:center}
+.bl .tot{font-size:10.5px;color:#666;white-space:nowrap}
+
+/* C : trois onglets et le réglage sur la ligne */
+.tabs3{display:flex;gap:0;margin:0;border-bottom:.5px solid var(--pf-trait)}
+.tabs3 .t3{flex:1;padding:11px 16px;font:600 12.5px var(--font-ui);color:#666;border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.tabs3 .t3>b{font:400 20px var(--font-display);color:#222}
+.tabs3 .t3>small{font-weight:500;font-size:10.5px;color:#888}
+.tabs3 .t3.on.S{border-color:var(--sl-s);color:#222;background:#fdf6f7}.tabs3 .t3.on.M{border-color:var(--sl-m);color:#222;background:#fdf8f1}.tabs3 .t3.on.L{border-color:var(--sl-l);color:#222;background:#f3f7fb}
+.tabs3 .al{margin-left:auto;display:flex;gap:4px}
+.regle3{padding:8px 16px;font-size:11px;color:#555;background:#fcfaf7;border-bottom:.5px solid var(--pf-trait)}
+.regle3 b{color:#222}
+.mini-seg{display:inline-flex;gap:2px;margin-top:3px}
+.mini-seg span{width:16px;height:14px;border-radius:3px;font:700 8.5px var(--font-ui);display:inline-flex;align-items:center;justify-content:center;background:#efe9e1;color:#999}
+.mini-seg span.on.S{background:var(--sl-s);color:#fff}.mini-seg span.on.M{background:var(--sl-m);color:#fff}.mini-seg span.on.L{background:var(--sl-l);color:#fff}
+.pf-tab td.nom .mini-seg{display:flex}
+.jauge{position:relative;height:8px;border-radius:4px;background:#eee6da;width:120px;display:inline-block;vertical-align:middle}
+.jauge i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.jauge b{position:absolute;top:-3px;bottom:-3px;width:2px;background:#222}
