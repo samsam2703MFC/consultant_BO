@@ -180,7 +180,7 @@
     {% if liste|length %}
     {% for row in liste %}
     <div class="cl-row {{ row.moi ? 'moi' }} {{ row.rang == 1 ? 'un' }}"><span class="r">{% if row.rang == 1 %}👑{% else %}{{ row.rang }}{% endif %}</span>
-      <span class="nom">{{ row.moi ? (T.you_short ?? 'Toi') : row.nom }}{% if niv == 'reseau' and not row.moi and row.shop != p.magasin.id %}<span class="mag">· {{ T.other_shop ?? 'autre magasin' }}</span>{% endif %}</span>
+      <span class="nom">{{ row.moi ? (T.you_short ?? 'Toi') : row.nom }}{% if niv == 'reseau' %}<span class="mag">· {{ row.lieu ?? (T.other_shop ?? 'autre magasin') }}</span>{% endif %}</span>
       <span class="val">{% if x.unite == 'pieces' %}{{ row.pieces|number_format(0, ',', ' ') }}<small>{{ T.pieces ?? 'pièces' }}</small>{% else %}{{ row.taux|number_format(1, ',', ' ') }}&nbsp;%<small>{{ row.croisees }}/{{ row.tickets }}</small>{% endif %}</span></div>
     {% endfor %}
     <div class="note">{% if x.unite == 'pieces' %}{{ T.lb_note_pieces ?? 'Au nombre de pièces vendues ce mois ; à égalité, moins de tickets gagne. La couronne demande' }} {{ x.minPieces }} {{ T.pieces ?? 'pièces' }}.{% else %}{{ T.lb_note_cross ?? 'Au taux de tickets à 2 articles ou plus, dès' }} {{ x.minTickets }} {{ T.tickets ?? 'tickets' }}.{% endif %} {{ niv == 'magasin' ? (x.nMag ~ ' ' ~ (T.in_the_race ?? 'dans la course')) : (x.nRes ~ ' ' ~ (T.in_the_race ?? 'dans la course')) }}.</div>

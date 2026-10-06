@@ -713,9 +713,16 @@ function primesBriques(int $emp, string $m, ?array $moi, array $lignes, ?array $
  *
  * @return list<array{cle: string, lib: string, unite: string, magasin: list<array>, reseau: list<array>}>
  */
-function primesClassements(int $emp, string $shop, ?array $cr, array $emps, array $cfgK, array $cfgC): array
+function primesClassements(int $emp, string $shop, ?array $cr, array $emps, array $cfgK, array $cfgC, array $nomDe = []): array
 {
     $out = [];
+    // La localité du magasin : ce qui suit le dernier « - » du nom (« Atelier by Berlo - Corbais » → « Corbais »).
+    $lieu = static function (string $sid) use ($nomDe): string {
+        $n = (string) ($nomDe[$sid] ?? '');
+        if ($n === '') { return 'Magasin ' . $sid; }
+        $p = strrpos($n, ' - ');
+        return trim($p !== false ? substr($n, $p + 3) : $n);
+    };
     $dix = static function (array $liste, int $emp): array {
         $top = array_slice($liste, 0, 10);
         $dedans = false;
@@ -729,7 +736,7 @@ function primesClassements(int $emp, string $shop, ?array $cr, array $emps, arra
             $tous = [];
             foreach ($cls[$k['cle']] ?? [] as $id => $x) {
                 if ($x['pieces'] <= 0) { continue; }
-                $tous[] = ['id' => (int) $id, 'nom' => $emps[$id]['nom'] ?? ('#' . $id), 'shop' => (string) $emps[$id]['shop'], 'pieces' => $x['pieces'], 'tickets' => $x['tickets'], 'moi' => (int) $id === $emp];
+                $tous[] = ['id' => (int) $id, 'nom' => $emps[$id]['nom'] ?? ('#' . $id), 'shop' => (string) $emps[$id]['shop'], 'lieu' => $lieu((string) $emps[$id]['shop']), 'pieces' => $x['pieces'], 'tickets' => $x['tickets'], 'moi' => (int) $id === $emp];
             }
             usort($tous, static fn ($a, $b) => [$b['pieces'], $a['tickets']] <=> [$a['pieces'], $b['tickets']]);
             $mag = array_values(array_filter($tous, static fn ($x) => $x['shop'] === $shop));
@@ -743,7 +750,7 @@ function primesClassements(int $emp, string $shop, ?array $cr, array $emps, arra
     foreach ((array) ($cr['e'] ?? []) as $id => $x) {
         $id = (int) $id;
         if (!isset($emps[$id]) || !isset($x['c']) || (int) ($x['t'] ?? 0) < (int) $cfgC['minTickets'] || (int) $x['t'] === 0) { continue; }
-        $tous[] = ['id' => $id, 'nom' => $emps[$id]['nom'], 'shop' => (string) $emps[$id]['shop'], 'taux' => round(100 * (int) $x['c'] / (int) $x['t'], 1), 'croisees' => (int) $x['c'], 'tickets' => (int) $x['t'], 'moi' => $id === $emp];
+        $tous[] = ['id' => $id, 'nom' => $emps[$id]['nom'], 'shop' => (string) $emps[$id]['shop'], 'lieu' => $lieu((string) $emps[$id]['shop']), 'taux' => round(100 * (int) $x['c'] / (int) $x['t'], 1), 'croisees' => (int) $x['c'], 'tickets' => (int) $x['t'], 'moi' => $id === $emp];
     }
     usort($tous, static fn ($a, $b) => [$b['taux'], $b['tickets']] <=> [$a['taux'], $a['tickets']]);
     $mag = array_values(array_filter($tous, static fn ($x) => $x['shop'] === $shop));
@@ -951,7 +958,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     }
 
     $collection = primesCollection($emp, $shop, $nomDe, $b, $pm);
-    $classements = primesClassements($emp, $shop, $cr, venteEmployes(), concoursReglages(), croiseesReglages());
+    $classements = primesClassements($emp, $shop, $cr, venteEmployes(), concoursReglages(), croiseesReglages(), $nomDe);
 
     $out = ['emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'collection' => $collection, 'classements' => $classements,
