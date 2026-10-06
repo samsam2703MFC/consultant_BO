@@ -9,7 +9,7 @@
 {% set p = primes %}
 {% if not p %}
 <div class="pr-card"><div class="pr-h"><h2>{{ translations.my_bonuses ?? 'Mes primes' }}</h2></div>
-  <div class="note">{{ translations.unavailable ?? 'Les primes ne peuvent pas être lues pour le moment. Réessayez dans un instant.' }}</div></div>
+  <div class="note">{{ translations.unavailable ?? 'Les primes ne peuvent pas être lues pour le moment. Réessayez dans un instant.' }}{% if primesErreur %}<br><span class="mu" style="font-size:11px">{{ translations.cockpit_said ?? 'Le cockpit a répondu :' }} {{ primesErreur }}</span>{% endif %}</div></div>
 {% else %}
 {% set b = p.briques %}{% set g = p.prime %}{% set c = b.croisees %}{% set r = b.record %}{% set v = b.meilleure %}
 {% set eur = '€' %}

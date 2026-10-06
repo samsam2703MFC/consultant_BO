@@ -18,7 +18,9 @@ class PrimesController extends Controller
     {
         $mois = $_GET['m'] ?? null;
         if (!is_string($mois) || !preg_match('/^\d{4}-\d{2}$/', $mois)) { $mois = null; }
-        $data['primes'] = $this->primesService->pourMoi($mois);
+        $r = $this->primesService->pourMoi($mois);
+        $data['primes'] = $r['fiche'] ?? null;
+        $data['primesErreur'] = $r['erreur'] ?? null;
         $data['jour'] = (int) date('j');
         $data['heure'] = date('H:i');
         $data['onglet'] = ($_GET['onglet'] ?? '') === 'magasin' ? 'magasin' : 'moi';

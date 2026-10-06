@@ -453,7 +453,45 @@ function venteEmployes(): array
         $out[(int) $r['id']] = ['nom' => $nom !== '' ? $nom : 'Employé ' . $r['id'],
             'shop' => (string) $r['id_shop']];
     }
+    // Les personnes que la table locale ne connaît pas encore (une embauche récente) viennent du
+    // panel, magasin par magasin, une fois par heure : sans cela, leurs ventes resteraient « sans
+    // vendeur » et leurs primes n'existeraient pas (l'app worker, 06/10/2026).
+    foreach (venteEmployesPanel() as $id => $e) { if (!isset($out[$id])) { $out[$id] = $e; } }
     return $out;
+}
+
+/** Le personnel vu par le panel (/shops/{id}/employees), id → identité, gravé une heure. */
+function venteEmployesPanel(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $c = function_exists('setting') ? setting('pvEmployes') : null;
+    if (is_array($c) && isset($c['e']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = (array) $c['e']; }
+    $memo = [];
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return $memo; }
+    try { $shops = Db::rows('SELECT id FROM shops WHERE active = 1'); } catch (PDOException $e) { return $memo; }
+    $chemins = [];
+    foreach ($shops as $s) { $chemins[(string) $s['id']] = '/shops/' . (int) $s['id'] . '/employees'; }
+    if ($chemins === []) { return $memo; }
+    $res = PanelApi::getParallele($chemins, 8);
+    $muet = false;
+    foreach ($chemins as $sid => $ch) {
+        $l = $res[$sid] ?? null;
+        if (!is_array($l)) { $muet = true; continue; }
+        foreach (analyseListe($l) as $em) {
+            $id = (int) ($em['id'] ?? 0);
+            if ($id <= 0) { continue; }
+            $nom = trim((string) ($em['display_name'] ?? ''));
+            if ($nom === '') { $nom = trim(((string) ($em['name'] ?? '')) . ' ' . ((string) ($em['surname'] ?? ''))); }
+            $memo[$id] = ['nom' => $nom !== '' ? $nom : 'Employé ' . $id, 'shop' => (string) ($em['id_shop'] ?? $sid)];
+        }
+    }
+    // Un magasin muet : on garde ce qu'on a lu, sans le graver — la prochaine lecture réessaie.
+    if (!$muet && $memo !== []) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['pvEmployes', json_encode(['quand' => time(), 'e' => $memo], JSON_UNESCAPED_UNICODE)]);
+    }
+    return $memo;
 }
 
 /**

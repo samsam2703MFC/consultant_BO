@@ -33,15 +33,23 @@ $env = static function (string $k, string $d): string {
     return is_string($v) && $v !== '' ? $v : $d;
 };
 
+// Le config/config.php du cockpit, s'il est là : l'API du panel, et le secret partagé des primes.
+$cfgCockpit = [];
+$cfgFichier = __DIR__ . '/../../../config/config.php';
+if (is_file($cfgFichier)) {
+    try { $cfgCockpit = (array) (require $cfgFichier); } catch (Throwable $e) { $cfgCockpit = []; }
+}
 // L'API du panel : celle du cockpit quand elle est réglée, pour ne la tenir qu'à un endroit.
 $apiBase = $env('EMPLOYEE_API_BASE', '');
-if ($apiBase === '') {
-    $cfg = __DIR__ . '/../../../config/config.php';
-    if (is_file($cfg)) {
-        try { $c = require $cfg; $apiBase = (string) ($c['panelApi']['base'] ?? ''); } catch (Throwable $e) { $apiBase = ''; }
-    }
-}
+if ($apiBase === '') { $apiBase = (string) ($cfgCockpit['panelApi']['base'] ?? ''); }
 if ($apiBase === '') { $apiBase = 'https://atelierby.tfbuddy.com/api/v1'; }
+// Le secret partagé avec le cockpit pour « Mes primes » : déduit du même fichier, jamais transmis.
+// Sans config.php (tests), EMPLOYEE_WORKER_SECRET, sinon vide : l'app se présente alors avec son
+// seul jeton, que le cockpit fait confirmer par le panel.
+$dbC = (array) ($cfgCockpit['db'] ?? []);
+define('COCKPIT_WORKER_SECRET', $dbC !== []
+    ? hash('sha256', 'primes|' . ($dbC['host'] ?? '') . '|' . ($dbC['name'] ?? '') . '|' . ($dbC['user'] ?? '') . '|' . ($dbC['password'] ?? ''))
+    : $env('EMPLOYEE_WORKER_SECRET', ''));
 define('API_BASE_URL', rtrim($apiBase, '/'));
 $panelHost = preg_replace('#/api/v1/?$#', '', API_BASE_URL);
 define('SHARED_FILES_URL', $env('EMPLOYEE_SHARED_FILES_URL', $panelHost . '/shared-assets'));

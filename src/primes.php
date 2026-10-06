@@ -590,11 +590,28 @@ function primesMoisDemande(): string
     return $m;
 }
 
-/** GET /ventes/moi?emp=&m= — depuis le cockpit (session), pour voir ce que l'app montre. */
+/**
+ * La personne, dans le référentiel du cockpit : par son identifiant du panel, sinon par son nom
+ * d'affichage (le même que celui des tickets). Null : inconnue.
+ */
+function primesResoudreEmploye(int $id, string $nom): ?int
+{
+    $emps = venteEmployes();
+    if ($id > 0 && isset($emps[$id])) { return $id; }
+    $n = mb_strtolower(trim($nom));
+    if ($n === '') { return null; }
+    foreach ($emps as $eid => $e) { if (mb_strtolower(trim((string) $e['nom'])) === $n) { return (int) $eid; } }
+    return null;
+}
+
+/** GET /ventes/moi?emp=&m= (ou ?nom=) — depuis le cockpit (session), pour voir ce que l'app montre. */
 function ep_ventes_moi(): array
 {
     $emp = (int) ($_GET['emp'] ?? 0);
-    if ($emp <= 0) { http_response_code(400); return ['error' => 'emp attendu']; }
+    $nom = trim((string) ($_GET['nom'] ?? ''));
+    if ($emp <= 0 && $nom === '') { http_response_code(400); return ['error' => 'emp ou nom attendu']; }
+    $emp = primesResoudreEmploye($emp, $nom);
+    if ($emp === null) { http_response_code(404); return ['error' => 'personne inconnue']; }
     $r = primesMoi($emp, primesMoisDemande(), isset($_GET['frais']));
     if (isset($r['error'])) { http_response_code((int) ($r['code'] ?? 500)); return ['error' => $r['error']]; }
     return $r;
@@ -645,12 +662,51 @@ function primesEmployeDuJeton(string $jeton): ?int
     return $id;
 }
 
-/** GET /ventes/moi avec le jeton de l'app worker : la fiche de la personne connectée, personne d'autre. */
+/**
+ * Le secret partagé entre l'app worker et le cockpit : ils lisent le même config/config.php, le
+ * secret s'en déduit et ne circule jamais. L'app signe l'identité de la personne connectée
+ * (son identifiant et son nom, tels que son jeton les porte) avec le jour : le cockpit vérifie
+ * la signature, sans aller-retour chez le panel.
+ */
+function primesSecret(): string
+{
+    $db = method_exists('Db', 'config') ? (array) (Db::config()['db'] ?? []) : [];
+    return hash('sha256', 'primes|' . ($db['host'] ?? '') . '|' . ($db['name'] ?? '') . '|' . ($db['user'] ?? '') . '|' . ($db['password'] ?? ''));
+}
+
+function primesSignature(int $emp, string $nom, string $jour): string
+{
+    return hash_hmac('sha256', $emp . '|' . $nom . '|' . $jour, primesSecret());
+}
+
+/** L'identité signée portée par la requête (X-Worker-Emp, X-Worker-Nom en base64, X-Worker-Jour, X-Worker-Sign). */
+function primesIdentiteSignee(): ?array
+{
+    $sign = trim((string) ($_SERVER['HTTP_X_WORKER_SIGN'] ?? ''));
+    if ($sign === '') { return null; }
+    $emp = (int) ($_SERVER['HTTP_X_WORKER_EMP'] ?? 0);
+    $nom = trim((string) base64_decode((string) ($_SERVER['HTTP_X_WORKER_NOM'] ?? ''), true));
+    $jour = trim((string) ($_SERVER['HTTP_X_WORKER_JOUR'] ?? ''));
+    if (!in_array($jour, [date('Y-m-d'), date('Y-m-d', strtotime('-1 day'))], true)) { return null; }
+    if (!hash_equals(primesSignature($emp, $nom, $jour), $sign)) { return null; }
+    return ['emp' => $emp, 'nom' => $nom];
+}
+
+/** GET /ventes/moi avec l'identité signée ou le jeton de l'app worker : la fiche de la personne connectée, personne d'autre. */
 function ep_ventes_moi_jeton(): array
 {
-    $jeton = primesJetonRecu();
-    $emp = $jeton !== null ? primesEmployeDuJeton($jeton) : null;
-    if ($emp === null) { http_response_code(401); return ['error' => 'jeton d’employé invalide']; }
+    $ident = primesIdentiteSignee();
+    if ($ident === null) {
+        $jeton = primesJetonRecu();
+        $e = $jeton !== null ? primesEmployeDuJeton($jeton) : null;
+        if ($e !== null) { $ident = ['emp' => $e, 'nom' => '']; }
+    }
+    if ($ident === null) { http_response_code(401); return ['error' => 'jeton d’employé invalide']; }
+    $emp = primesResoudreEmploye((int) $ident['emp'], (string) $ident['nom']);
+    if ($emp === null) {
+        http_response_code(404);
+        return ['error' => 'personne inconnue du cockpit' . ($ident['nom'] !== '' ? ' : ' . $ident['nom'] : '') . ' (id ' . (int) $ident['emp'] . ')'];
+    }
     $r = primesMoi($emp, primesMoisDemande(), isset($_GET['frais']));
     if (isset($r['error'])) { http_response_code((int) ($r['code'] ?? 500)); return ['error' => $r['error']]; }
     return $r;
