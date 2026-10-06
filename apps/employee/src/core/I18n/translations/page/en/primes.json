@@ -64,6 +64,8 @@
   "people": "people",
   "per_day_more": "/ day more",
   "planned": "planned",
+  "planned_until": "until",
+  "planning_grows": "The schedule is filled in week by week: hours and amounts follow.",
   "prorata": "Shared pro rata of hours worked:",
   "reached": "reached",
   "reached_at_pace": "reached at the current pace",

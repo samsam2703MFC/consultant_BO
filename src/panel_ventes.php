@@ -217,9 +217,10 @@ function pvLignesCron(): string
     if (!$r['ok']) { return 'échec : ' . ($r['motif'] ?? '?'); }
     $txt = $r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat'];
     // La moisson à jour : les jours moissonnés avant le compte des ventes croisées se refont,
-    // du plus récent au plus ancien, avec ce qui reste de budget.
+    // du plus récent au plus ancien, avec leur propre budget — à la suite de la moisson, ils
+    // attendraient des jours (le mois en cours d'abord, puis les mois d'avant).
     if ($r['joursRestants'] === 0) {
-        $c = pvCroiseesComplement(max(0, 600 - (int) $r['tickets']));
+        $c = pvCroiseesComplement(450);
         if ($c['joursFaits'] > 0 || $c['joursRestants'] > 0) { $txt .= ' · ventes croisées : ' . $c['joursFaits'] . ' jour(s) recomptés, ' . $c['etat']; }
     }
     return $txt;
