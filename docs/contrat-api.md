@@ -540,6 +540,8 @@ vente (`src/primes.php`) :
   projection, atteinteProj, moySem, moyWe, joursRestants, objectifJour, jours: [{date, ca, we, auj}],
   paliers: [{pct, eh, lib, atteint, manque, parJour, vous, equipe}], palier, heures, heuresMin,
   sousMin, heuresEquipe, part, vous, equipe}, semaines: [{lib, du, tickets, croisees, taux}],
+  ventes: [{m, lib, enCours, ca, tickets, heures, caHeure, panier, rang, sur, rangCaH, surCaH, medianeCaH}] (six mois, le
+  CA par heure sur les heures prestées pour le mois en cours, la place au CA par heure parmi les vendeuses classées),
   mois: [{m, lib, total, paye, detail[], croisees, record, meilleure, magasin}]}`. Jamais un autre
   nom que celui du magasin : les collègues sont des heures. `acquis` = ce que le mois donnerait s'il
   finissait comme ça ; `aPortee` = un cran de plus sur chaque règle. La projection du magasin : les

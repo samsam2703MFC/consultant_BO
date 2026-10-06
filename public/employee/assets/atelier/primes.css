@@ -114,3 +114,12 @@
 .pr-onglet.on{display:block}
 .sem i.vide{background:var(--la-beige-doux)}
 .hist .ok{color:#2d7a3e;font-weight:600}
+
+/* Les ventes mois par mois. */
+.pr-tab{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.pr-tab th{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet);text-align:right;padding:5px 4px;border-bottom:.5px solid var(--la-trait2)}
+.pr-tab th:first-child,.pr-tab td:first-child{text-align:left}
+.pr-tab td{padding:6px 4px;text-align:right;border-bottom:.5px solid var(--la-trait);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pr-tab td small{color:var(--la-muet);font-size:10px}
+.pr-tab tr.enc td{background:var(--la-beige-doux)}
+.pr-tab td.mu{text-align:left;color:var(--la-muet)}

@@ -552,6 +552,11 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     // Les semaines : ses ventes croisées semaine par semaine, sur six semaines.
     $semaines = function_exists('pvCroiseesSemaines') ? pvCroiseesSemaines($emp, 6, (int) $shop) : [];
 
+    // Ses ventes, mois par mois : CA, tickets, heures, CA par heure, et sa place au CA par heure
+    // parmi les vendeuses classées du réseau (demande du 06/10/2026). Les mois d'avant viennent de
+    // la fenêtre du record, déjà lue.
+    $ventes = primesVentesMois($emp, $m, $r['lignes'], $parMois, $hFaites, 6);
+
     // Ce qui est acquis au rythme actuel, et ce qui est à portée en un cran de plus.
     $acquis = round($b['croisees']['montant'] + $b['record']['montant'] + $b['meilleure']['montant'] + $pm['vous'], 2);
     $cfgC = croiseesReglages(); $regR = venteRecordReglages();
@@ -575,9 +580,43 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)],
         'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
         'aujourdhui' => $auj, 'acquis' => $acquis, 'aPortee' => $aPortee,
-        'briques' => $b, 'prime' => $pm, 'semaines' => $semaines, 'mois' => $mois,
+        'briques' => $b, 'prime' => $pm, 'semaines' => $semaines, 'ventes' => $ventes, 'mois' => $mois,
         'motif' => $r['motif']];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    return $out;
+}
+
+/**
+ * Les ventes d'une personne sur les n derniers mois, le mois en cours en premier : CA, tickets,
+ * heures, CA par heure, sa place au CA par heure parmi les vendeuses classées du réseau, et la
+ * médiane du réseau. Le mois en cours se lit sur les heures déjà prestées, pas sur le planning du
+ * mois entier.
+ */
+function primesVentesMois(int $emp, string $m, array $lignesM, array $parMois, float $hFaites, int $n): array
+{
+    $out = [];
+    for ($i = 0; $i < $n; $i++) {
+        $mV = date('Y-m', strtotime($m . '-01 -' . $i . ' month'));
+        $lignes = $i === 0 ? $lignesM : ($parMois[$mV] ?? null);
+        if ($lignes === null) { $out[] = ['m' => $mV, 'lib' => primesLibMois($mV), 'enCours' => $i === 0 && $m === date('Y-m'), 'motif' => 'mois indisponible']; continue; }
+        $moi = null;
+        foreach ($lignes as $l) { if ((int) $l['id'] === $emp) { $moi = $l; } }
+        $caH = [];
+        foreach ($lignes as $l) { if (!empty($l['classable']) && ($l['caHeure'] ?? null) !== null) { $caH[] = (float) $l['caHeure']; } }
+        sort($caH);
+        $nb = count($caH);
+        $med = $nb === 0 ? null : ($nb % 2 ? $caH[intdiv($nb, 2)] : ($caH[$nb / 2 - 1] + $caH[$nb / 2]) / 2);
+        $ca = (float) ($moi['ca'] ?? 0); $heures = (float) ($moi['heures'] ?? 0.0); $caHeure = $moi['caHeure'] ?? null;
+        $enCours = $i === 0 && $m === date('Y-m');
+        if ($enCours && $hFaites > 0 && $ca > 0) { $heures = $hFaites; $caHeure = (int) round($ca / $hFaites); }
+        $rangCaH = null;
+        if ($caHeure !== null) { $rangCaH = 1 + count(array_filter($caH, static fn ($v) => $v > $caHeure)); }
+        $out[] = ['m' => $mV, 'lib' => primesLibMois($mV), 'enCours' => $enCours,
+            'ca' => (int) round($ca), 'tickets' => (int) ($moi['tickets'] ?? 0), 'heures' => round($heures, 1),
+            'caHeure' => $caHeure, 'panier' => $moi['panier'] ?? null,
+            'rang' => $moi['rang'] ?? null, 'sur' => count(array_filter($lignes, static fn ($l) => !empty($l['classable']))),
+            'rangCaH' => $rangCaH, 'surCaH' => $nb, 'medianeCaH' => $med !== null ? (int) round($med) : null];
+    }
     return $out;
 }
 

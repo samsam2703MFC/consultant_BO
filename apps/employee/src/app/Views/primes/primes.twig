@@ -73,6 +73,23 @@
     </div>
   </div>
 
+  {% set vx = (p.ventes ?? [])|filter(v => v.caHeure is defined and v.caHeure is not null) %}
+  {% if (p.ventes ?? [])|length %}
+  {% set maxH = max(1, max(vx|map(v => v.caHeure)|merge([0])), max(vx|map(v => v.medianeCaH ?? 0)|merge([0]))) * 1.15 %}
+  {% set derMed = null %}{% for v in p.ventes %}{% if derMed is null and not v.enCours and v.medianeCaH is defined and v.medianeCaH %}{% set derMed = v.medianeCaH %}{% endif %}{% endfor %}
+  <div class="pr-card"><div class="pr-h"><h2>{{ translations.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ translations.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
+    <div class="sem">{% if derMed %}<span class="cible" style="bottom:{{ (100 * derMed / maxH)|round }}%"></span>{% endif %}{% for v in p.ventes|reverse %}{% if v.caHeure is defined and v.caHeure is not null %}<i class="{{ v.enCours ? 'on' }}" style="height:{{ max(4, (100 * v.caHeure / maxH)|round) }}%"><b>{{ v.caHeure }}</b></i>{% else %}<i class="vide" style="height:3px"></i>{% endif %}{% endfor %}</div>
+    <div class="sem-leg">{% for v in p.ventes|reverse %}<span>{{ v.lib|split(' ')|first|slice(0, 4) }}</span>{% endfor %}</div>
+    <table class="pr-tab"><thead><tr><th>{{ translations.month ?? 'Mois' }}</th><th>{{ translations.sales ?? 'CA' }}</th><th>{{ translations.tickets_short ?? 'Tickets' }}</th><th>{{ translations.hours ?? 'Heures' }}</th><th>€/h</th><th>{{ translations.network ?? 'Réseau' }}</th></tr></thead><tbody>
+      {% for v in p.ventes %}<tr class="{{ v.enCours ? 'enc' }}"><td>{{ v.lib|split(' ')|first|capitalize }}{% if v.enCours %} <small>{{ translations.in_progress ?? 'en cours' }}</small>{% endif %}</td>
+        {% if v.motif is defined %}<td colspan="5" class="mu">{{ v.motif }}</td>{% else %}
+        <td>{{ v.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</td><td>{{ v.tickets|number_format(0, ',', ' ') }}</td><td>{{ v.heures|number_format(1, ',', ' ') }}</td>
+        <td><b>{% if v.caHeure is not null %}{{ v.caHeure }}{% else %}—{% endif %}</b></td>
+        <td>{% if v.rangCaH %}{{ v.rangCaH }}e <small>/ {{ v.surCaH }}</small>{% else %}—{% endif %}</td>{% endif %}</tr>{% endfor %}
+    </tbody></table>
+    <div class="note">{{ translations.sales_note ?? '€/h : vos ventes divisées par vos heures du planning, ce mois-ci par les heures déjà prestées. Réseau : votre place au CA par heure parmi les vendeuses classées.' }}{% if derMed %} {{ translations.network_median ?? 'Médiane du réseau le mois dernier :' }} {{ derMed }}&nbsp;{{ eur }}/h, {{ translations.the_line ?? 'le trait' }}.{% endif %}</div></div>
+  {% endif %}
+
   {% set vals = p.semaines|filter(s => s.taux is not null)|map(s => s.taux) %}
   {% if vals|length %}
   {% set lo = max(0, min(min(vals), c.cible) - 5) %}{% set hi = max(max(vals), c.cible) + 5 %}
