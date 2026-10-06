@@ -2372,25 +2372,30 @@ export class Scouting {
 
   // Google pour le dossier : d'abord les notes et adresses des concurrents du
   // rayon qui n'en ont pas encore (jusqu'à 40, par lots de 10), puis la
-  // fiche des huit plus proches — avis et photo — gardée 30 jours au serveur.
-  // Rien sans clé Google ni hors ligne ; une fois par point et par session.
-  async dossierGoogleCharger(){
+  // fiche de chaque concurrent nommé — avis et photo — gardée 30 jours au
+  // serveur. Rien sans clé Google ni hors ligne ; une fois par point et par
+  // session. `frais` (le PDF part) : les avis sont relus chez Google pour ce
+  // point et cette étude, le cache ne sert plus ; ce qui était déjà là reste
+  // dans le dossier si Google refuse en route.
+  dossierGoogleCharger(frais){
     const s = this.state, x = s.sel;
-    if (!x || !this.useApi() || !this.googleOk()) return;
+    if (!x || !this.useApi() || !this.googleOk()) return Promise.resolve();
     const cle = this.etudeCle(x.lat, x.lng);
     this._googleDossiers = this._googleDossiers || {};
-    if (this._googleDossiers[cle]){ this.setState({ dossierGoogle: this._googleDossiers[cle], dossierGoogleBusy: false }); return; }
-    if (this._googleCle === cle) return;
+    if (!frais && this._googleDossiers[cle]){ this.setState({ dossierGoogle: this._googleDossiers[cle], dossierGoogleBusy: false }); return Promise.resolve(); }
+    if (this._googleCle === cle && this._googleP) return frais ? this._googleP.then(() => this.dossierGoogleCharger(true)) : this._googleP;
     this._googleCle = cle;
-    this.setState({ dossierGoogle: null, dossierGoogleBusy: true });
+    const avant = this._googleDossiers[cle] || null;
+    this.setState({ dossierGoogle: frais ? avant : null, dossierGoogleBusy: true, dossierGoogleFrais: !!frais });
     const vivant = () => this._googleCle === cle && this.state.dossier;
+    const run = (async () => {
     try {
       const out = Object.assign({}, this.state.ratings);
       // un commerce sans nom dans OpenStreetMap ne se cherche pas chez Google :
       // la recherche rendrait la fiche du voisin le plus proche
       const nomme = b => b.name && !/sans nom/i.test(b.name);
       const sansNote = x.near.map(o => o.b).filter(b => nomme(b) && !out[b.id]).slice(0, 40);
-      if (sansNote.length && !s.enriching){
+      if (sansNote.length && !this.state.enriching){
         this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: sansNote.length });
         const r = await this.enrichLots(sansNote, out);
         this.setState({ ratings: Object.assign({}, out), enriching: false, stop: false });
@@ -2398,16 +2403,22 @@ export class Scouting {
         if (!vivant()) return;
       }
       // la fiche de chaque concurrent nommé du rayon (trente au plus), par lots
-      // de dix, du plus proche au plus loin ; la liste se remplit lot après lot
+      // de dix, du plus proche au plus loin ; la liste se remplit lot après lot.
+      // Relue pour le PDF, chaque fiche fraîche remplace l'ancienne à sa place.
       const proches = x.near.filter(o => nomme(o.b)).slice(0, 30).map(o => ({ id: o.b.id, name: o.b.name, addr: o.b.addr || '', commune: o.b.commune || '', arr: o.b.arr || '', lat: o.b.lat, lng: o.b.lng }));
-      let g = { cle: cle, rows: [], erreur: null, le: new Date().toISOString().slice(0, 10), attendus: proches.length };
+      const parId = {};
+      if (frais && avant) avant.rows.forEach(f => { parId[f.id] = f; });
+      const g = { cle: cle, rows: [], erreur: null, le: new Date().toISOString().slice(0, 10), attendus: proches.length, faits: 0, frais: !!frais };
+      const rangs = () => proches.map(p => parId[p.id]).filter(Boolean);
       for (let i = 0; i < proches.length && !g.erreur; i += 10){
-        const r = await apiWrite('POST', '/scouting/concurrents/google', { rows: proches.slice(i, i + 10) });
+        const r = await apiWrite('POST', '/scouting/concurrents/google', Object.assign({ rows: proches.slice(i, i + 10) }, frais ? { frais: true } : {}));
         if (!vivant()) return;
-        g.rows = g.rows.concat((r && Array.isArray(r.rows)) ? r.rows : []);
+        ((r && Array.isArray(r.rows)) ? r.rows : []).forEach(f => { parId[f.id] = f; });
+        g.faits = Math.min(proches.length, i + 10);
+        g.rows = rangs();
         g.erreur = (r && r.erreur) || null;
         // les notes, adresses et signes de vie frais des fiches rejoignent la sélection
-        const avant = this.shops().length;
+        const nAvant = this.shops().length;
         g.rows.forEach(f => {
           if (!f.fiche || (out[f.id] && out[f.id].manual)) return;
           const prec = out[f.id] || {};
@@ -2418,14 +2429,19 @@ export class Scouting {
         this.setState({ dossierGoogle: Object.assign({}, g, { partiel: i + 10 < proches.length }), ratings: Object.assign({}, out) });
         // un concurrent vient d'être reconnu fermé ou sans avis depuis un an :
         // la fiche, la pression, le CA et la carte du dossier sont refaits
-        if (this.shops().length !== avant) this.reevaluer();
+        if (this.shops().length !== nAvant) this.reevaluer();
       }
       this._googleDossiers[cle] = g;
-      if (vivant()) this.setState({ dossierGoogle: g, dossierGoogleBusy: false, ratings: Object.assign({}, out) });
+      if (vivant()) this.setState({ dossierGoogle: g, dossierGoogleBusy: false, dossierGoogleFrais: false, ratings: Object.assign({}, out) });
     } catch (e) {
-      this._googleCle = null;
-      if (vivant()) this.setState({ dossierGoogleBusy: false, enriching: false, dossierGoogle: { cle: cle, rows: [], erreur: e.message || String(e) } });
+      if (vivant()) this.setState({ dossierGoogleBusy: false, dossierGoogleFrais: false, enriching: false,
+        dossierGoogle: frais && avant ? Object.assign({}, avant, { erreur: e.message || String(e) }) : { cle: cle, rows: [], erreur: e.message || String(e) } });
+    } finally {
+      if (this._googleCle === cle) { this._googleCle = null; this._googleP = null; }
     }
+    })();
+    this._googleP = run;
+    return run;
   }
 
   /* ---------- l'étude de marché locale ---------- */
@@ -2726,7 +2742,7 @@ export class Scouting {
           dist: o ? o.d.toFixed(1).replace('.', ',') + ' km' : '', url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '',
           avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) };
       }),
-      googleAttente: s.dossierGoogleBusy ? 'Google en cours — notes, adresses, avis et photos des concurrents' + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + s.dossierGoogle.rows.length + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
+      googleAttente: s.dossierGoogleBusy ? (s.dossierGoogleFrais ? 'Relecture des avis Google pour le PDF' : 'Google en cours — notes, adresses, avis et photos des concurrents') + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + (s.dossierGoogle.faits != null ? s.dossierGoogle.faits : s.dossierGoogle.rows.length) + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
       googleNote: s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.rows.some(f => f.fiche)
         ? 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), relevées le ' + new Date(s.dossierGoogle.le).toLocaleDateString('fr-BE') + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.' : '',
       concurrenceNote: concurrenceNote,
@@ -2875,6 +2891,14 @@ export class Scouting {
       // l'étude locale en cours a jusqu'à trois minutes ; le dossier part avec elle
       if (this._etudeP){ await Promise.race([this._etudeP, new Promise(res => setTimeout(res, 190000))]); d = this.dossierDonnees() || d; }
       if (this._gardeP){ await Promise.race([this._gardeP, new Promise(res => setTimeout(res, 21000))]); d = this.dossierDonnees() || d; }
+      // les avis Google de ce point et de cette étude sont relus au moment du
+      // PDF : le dossier part avec les derniers avis, pas ceux du cache
+      if (this.googleOk()){
+        this.setState({ dossierBusyTxt: 'Relecture des avis Google…' });
+        await Promise.race([this.dossierGoogleCharger(true), new Promise(res => setTimeout(res, 150000))]);
+        this.setState({ dossierBusyTxt: '' });
+        d = this.dossierDonnees() || d;
+      }
       d.carte = await this.carteStatique();
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), 60000);
@@ -2894,7 +2918,7 @@ export class Scouting {
       this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
       this.imprimerDossier();
     } finally {
-      this.setState({ dossierBusy: false });
+      this.setState({ dossierBusy: false, dossierBusyTxt: '' });
     }
   }
 
@@ -4354,7 +4378,7 @@ export class Scouting {
         fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
       }) : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
-        img: s.dossierImg, busy: s.dossierBusy,
+        img: s.dossierImg, busy: s.dossierBusy, busyTxt: s.dossierBusyTxt || '',
         fermer: () => self.fermerDossier(),
         pdf: () => self.telechargerPdf(),
         csv: () => self.exporterDossierCsv(),

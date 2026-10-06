@@ -581,7 +581,7 @@ function renderDossier(c, x){
     <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
       <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
-      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
+      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? (d.busyTxt || 'PDF en cours…') : 'Télécharger le PDF'}</button>
       <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter les tableaux (CSV)</button>
       <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>
       <button ${x.A(d.fermer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Fermer</button>

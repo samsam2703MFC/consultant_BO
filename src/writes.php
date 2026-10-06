@@ -3633,8 +3633,13 @@ function wr_scouting_concurrents_google(): array
     $b = body();
     $rows = $b['rows'] ?? [];
     if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
-    @set_time_limit(120);
-    $out = []; $erreur = null; $appels = 0; $caches = 0;
+    // `frais` : le dossier part en PDF — les avis sont relus chez Google, le
+    // cache de trente jours ne sert plus. Une fiche relue il y a moins d'une
+    // heure ne l'est pas deux fois (un second clic sur « PDF » ne coûte rien),
+    // et la photo déjà gardée est reprise : ce sont les avis qui vieillissent.
+    $frais = !empty($b['frais']);
+    @set_time_limit($frais ? 180 : 120);
+    $out = []; $erreur = null; $appels = 0; $caches = 0; $relues = 0;
     foreach (array_slice(array_values($rows), 0, 10) as $r) {
         if (!is_array($r)) { continue; }
         $id = trim((string) ($r['id'] ?? ''));
@@ -3646,7 +3651,9 @@ function wr_scouting_concurrents_google(): array
         // du cache, s'il a moins de 30 jours — et s'il porte déjà le signe de
         // vie (statut, dernier avis) : une fiche relevée avant qu'on le garde
         // est redemandée, sinon le dormant passerait inaperçu un mois de plus
-        if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400
+        $ancien = $cur !== null && $cur['google_json'] !== null ? json_decode((string) $cur['google_json'], true) : null;
+        $age = $cur !== null && $cur['google_at'] !== null ? time() - (int) strtotime((string) $cur['google_at']) : PHP_INT_MAX;
+        if ($cur !== null && $cur['google_json'] !== null && $age < ($frais ? 3600 : 30 * 86400)
             && ($cur['business_status'] !== null || $cur['last_review_at'] !== null)) {
             $g = json_decode((string) $cur['google_json'], true);
             if (is_array($g)) {
@@ -3684,8 +3691,11 @@ function wr_scouting_concurrents_google(): array
             $avis[] = ['auteur' => mb_substr((string) ($a['auteur'] ?? ''), 0, 60), 'note' => (int) $a['note'], 'le' => substr((string) $a['le'], 0, 10),
                 'texte' => $a['texte'] !== null ? mb_substr((string) $a['texte'], 0, 320) : ''];
         }
-        $photo = null;
-        if ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
+        $photo = null; $photoAuteur = $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '';
+        if ($frais && is_array($ancien) && !empty($ancien['photo'])) {
+            $photo = (string) $ancien['photo']; $photoAuteur = (string) ($ancien['photoAuteur'] ?? $photoAuteur);
+        } elseif ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
+        if ($frais) { $relues++; }
         // Le signe de vie : le plus récent des avis que Google rend (cinq au
         // plus) et le statut de l'établissement. Un commerce fermé, ou sans
         // avis depuis plus d'un an, est écarté de l'étude par l'écran.
@@ -3693,7 +3703,7 @@ function wr_scouting_concurrents_google(): array
         foreach ($f['derniers'] as $a) { $q = substr((string) ($a['le'] ?? ''), 0, 10); if ($q !== '' && ($dernier === null || $q > $dernier)) { $dernier = $q; } }
         $statut = mb_substr((string) ($f['statut'] ?? ''), 0, 24);
         $g = ['id' => $id, 'fiche' => true, 'placeId' => $placeId, 'nom' => $f['nom'], 'adresse' => $f['adresse'], 'note' => $f['note'], 'n' => $f['avis'],
-            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '', 'le' => date('Y-m-d'),
+            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $photoAuteur, 'le' => date('Y-m-d'),
             'statut' => $statut, 'dernierAvis' => $dernier];
         Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, updated_at, place_id, address, google_json, google_at, business_status, last_review_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE'
@@ -3708,11 +3718,11 @@ function wr_scouting_concurrents_google(): array
     }
     if ($out === [] && $erreur === null) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)']; }
     if ($appels > 0) {
-        journalAdd('CEO', 'Scouting', 'Avis Google', 'Fiches Google des concurrents pour un dossier — ' . count($out) . ' concurrents, ' . $appels . ' appels, ' . $caches . ' du cache'
+        journalAdd('CEO', 'Scouting', 'Avis Google', 'Fiches Google des concurrents pour un dossier' . ($frais ? ' (avis relus pour le PDF : ' . $relues . ')' : '') . ' — ' . count($out) . ' concurrents, ' . $appels . ' appels, ' . $caches . ' du cache'
             . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
     }
     if ($out === [] && $erreur !== null) { http_response_code(502); return ['error' => $erreur, 'rows' => []]; }
-    return ['ok' => true, 'rows' => $out, 'appels' => $appels, 'caches' => $caches, 'erreur' => $erreur];
+    return ['ok' => true, 'rows' => $out, 'appels' => $appels, 'caches' => $caches, 'relues' => $relues, 'erreur' => $erreur];
 }
 
 /**
