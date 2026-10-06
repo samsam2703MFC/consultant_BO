@@ -632,7 +632,7 @@ function primesBriques(int $emp, string $m, ?array $moi, array $lignes, ?array $
         'premierMag' => $k['premierMag'] ?? null, 'premierRes' => $k['premierRes'] ?? null,
         'montantMag' => (int) $cfgK['magasin'], 'montantRes' => (int) $cfgK['reseau'], 'minPieces' => (int) $cfgK['minPieces'],
         'montant' => concoursPrime($k, $cfgK),
-        'jours' => (int) ($cr['jours'] ?? 0) - (int) ($cr['sansTq'] ?? 0), 'complet' => (bool) ($cr['tqComplet'] ?? false),
+        'jours' => (int) ($cr['joursTqShop'][(int) $shop] ?? 0), 'complet' => (bool) ($cr['tqComplet'] ?? false),
         'motif' => $cr === null ? 'pas encore moissonné' : ($k === null || !isset($cr['e'][$emp]['tq']) ? 'pièces pas encore comptées sur ces jours' : null)];
 
     return ['croisees' => $croisees, 'record' => $record, 'meilleure' => $meilleure, 'concours' => $concours];
