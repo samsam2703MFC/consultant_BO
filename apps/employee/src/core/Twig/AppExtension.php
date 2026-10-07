@@ -25,6 +25,9 @@ class AppExtension extends AbstractExtension implements GlobalsInterface
             new TwigFunction('sin', static fn (float $a): float => sin($a)),
             // Le nom d'un mois « AAAA-MM » dans la langue de la personne : « octobre 2026 », ou « oct. » en court.
             new TwigFunction('mois', [ $this, 'mois' ]),
+            // L'adresse d'un fichier statique avec sa version (la date du fichier) : le navigateur et le
+            // service worker ne gardent plus une vieille feuille de style après un déploiement.
+            new TwigFunction('asset', [ $this, 'asset' ]),
         ];
     }
 
@@ -35,6 +38,14 @@ class AppExtension extends AbstractExtension implements GlobalsInterface
     public function getGlobals(): array
     {
         return ['old' => $this->old, 'langue' => $this->langue()];
+    }
+
+    public function asset(string $chemin): string
+    {
+        $chemin = ltrim($chemin, '/');
+        $fichier = dirname(__DIR__, 5) . '/public/employee/' . $chemin;
+        $v = is_file($fichier) ? (string) filemtime($fichier) : '0';
+        return (defined('ROOT') ? ROOT : '') . '/' . $chemin . '?v=' . $v;
     }
 
     private function langue(): string

@@ -1,6 +1,6 @@
 /* Le service worker de l'app employés : son chemin se déduit de l'adresse du script (l'app vit sous /consulant_bo/employee). */
 const BASE = self.location.pathname.replace(/sw\.js$/, "");
-const VERSION = "v1.1.0";
+const VERSION = "v1.2.0";
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 
@@ -67,7 +67,25 @@ self.addEventListener("fetch", (event) => {
     const isSameOrigin = url.origin === self.location.origin;
     const isGoogleFonts = url.origin.includes("fonts.googleapis.com") || url.origin.includes("fonts.gstatic.com");
 
-    // 1) Cache-first dla statyków
+    // 1) Les feuilles de style et les scripts : le réseau d'abord, le cache en secours (hors ligne).
+    //    Une vieille feuille de style gardée après un déploiement cassait l'écran (07/10/2026).
+    if (isSameOrigin && isStaticAsset(url) && (url.pathname.endsWith(".css") || url.pathname.endsWith(".js"))) {
+        event.respondWith((async () => {
+            const cache = await caches.open(RUNTIME_CACHE);
+            try {
+                const res = await fetch(req);
+                if (res && res.status === 200) cache.put(req, res.clone());
+                return res;
+            } catch (e) {
+                const cached = await cache.match(req);
+                if (cached) return cached;
+                throw e;
+            }
+        })());
+        return;
+    }
+
+    // 1 bis) Cache-first pour les images et les polices
     if (isSameOrigin && isStaticAsset(url)) {
         event.respondWith((async () => {
             const cached = await caches.match(req);
