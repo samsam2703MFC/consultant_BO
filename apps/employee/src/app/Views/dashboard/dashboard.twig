@@ -3,7 +3,7 @@
 {% set active_nav = 'dashboard' %}
 {% set T = translations %}
 {% block title %}{{ T.home ?? 'Accueil' }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ ROOT }}/assets/atelier/primes.css">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">{% endblock %}
 {% block page_title %}{{ T.hello ?? 'Bonjour' }}{% if prenom %} {{ prenom }}{% endif %}{% endblock %}
 {% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {% endif %}{{ dateLib }}{% endblock %}
 

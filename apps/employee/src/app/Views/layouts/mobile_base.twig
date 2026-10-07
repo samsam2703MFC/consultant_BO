@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}{{ translations.employee_panel ?? 'Employee Panel' }}{% endblock %}</title>
-    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/app.css">
-    <link rel="stylesheet" href="{{ ROOT }}/assets/bootstrap-icons/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ ROOT }}/assets/atelier/marque.css">
+    <link rel="stylesheet" href="{{ asset('assets/atelier/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/bootstrap-icons/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/atelier/marque.css') }}">
 
     <link rel="manifest" href="{{ ROOT }}/manifest.webmanifest">
     <meta name="theme-color" content="#8D1D2C">
@@ -30,6 +30,8 @@
         .emp-content{
             padding-bottom: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
         }
+        /* Sur un grand écran, l'app garde sa largeur de téléphone au centre. */
+        .emp-content .container, .emp-topbar .container{ max-width: 600px; }
 
         /* TOP BAR */
         .emp-topbar{

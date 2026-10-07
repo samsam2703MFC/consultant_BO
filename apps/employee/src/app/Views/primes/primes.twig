@@ -3,7 +3,7 @@
 {% set active_nav = 'primes' %}
 {% set T = translations %}
 {% block title %}{{ T.my_bonuses ?? 'Mes primes' }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ ROOT }}/assets/atelier/primes.css">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">{% endblock %}
 {% block page_title %}{{ T.my_bonuses ?? 'Mes primes' }}{% endblock %}
 {% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ mois(primes.m) }}{% if primes.enCours %}, {{ T.as_of ?? 'au' }} {{ jour }}{% endif %}{% endif %}{% endblock %}
 {% block content %}
