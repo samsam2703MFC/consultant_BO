@@ -641,3 +641,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T18:59:03Z classements : la localité du magasin
 2026-10-06T19:04:49Z app worker : mes ventes mois par mois en graphique
 2026-10-06T19:10:57Z classements : la semaine en cours
+2026-10-07T03:37:52Z app worker : feuilles de style versionnées, service worker
