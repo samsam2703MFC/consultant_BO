@@ -656,3 +656,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-08T18:12:24Z recette prix de vente en direct
 2026-10-08T18:21:41Z modale focus garde au redessin
 2026-10-08T19:07:25Z fiche matiere api sonde
+2026-10-08T19:15:01Z fiche matiere listes de prix
