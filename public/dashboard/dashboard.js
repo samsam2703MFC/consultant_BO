@@ -2945,9 +2945,11 @@
    * repère (moyenne, médiane, bornes). Lecture : /analyse/produits/magasin. */
   const cleFiche = () => S.fiche ? 'fiche|' + S.shop + '|' + S.fiche.pid + '|' + S.fiche.mois : null;
   function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois); } }
+  function cleRecette() { return S.fiche ? 'recette|' + S.fiche.pid + '|' + S.shop : null; }
+  function ficheLireRecette() { const k = cleRecette(); if (k) { lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop)); } }
   function ficheOuvrir(b) {
     const n = v => v === '' || v == null ? null : +v;
-    S.fiche = { pid: b.dataset.fprod, nom: b.dataset.fnom, q: n(b.dataset.fq), v: n(b.dataset.fv), taux: n(b.dataset.ft), onglet: 1, mois: 1, retour: document.activeElement };
+    S.fiche = { pid: b.dataset.fprod, nom: b.dataset.fnom, q: n(b.dataset.fq), v: n(b.dataset.fv), taux: n(b.dataset.ft), c: n(b.dataset.fc), cat: b.dataset.fcat || '', onglet: 1, mois: 1, retour: document.activeElement };
     ficheLire(); ficheRendre();
   }
   function ficheFermer() { const r = S.fiche && S.fiche.retour; S.fiche = null; ficheRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
@@ -2996,6 +2998,77 @@
     g += `<text class="ax" x="${(m.l + Wd - m.r) / 2}" y="${Hd - 6}" text-anchor="middle" style="font-weight:600">prix encaissé →</text><text class="ax" transform="translate(13 ${(m.t + Hd - m.b) / 2}) rotate(-90)" text-anchor="middle" style="font-weight:600">pièces pour 10 000 € de chiffre →</text>`;
     return `<svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Prix encaissé face au volume">${g}</svg>`;
   }
+  /* ── Onglet « Recette & marge » (demande du 08/10/2026) ─────────────────────────────────────────
+   * La pièce : prix encaissé, coût de recette et marge viennent de la ligne cliquée (ce que les tickets ont
+   * gravé) ; la recette ligne par ligne vient de /analyse/produits/recette (copie locale du panel) ; la
+   * catégorie et le magasin du jour des stats déjà lues ; le prix réseau de la fiche ; les seuils du P&L. */
+  const FI_ZONES = { ko: 100 / 60, att: 2.5 };   // marge < 40 % ⇔ coef < 1,67 ; < 60 % ⇔ < 2,5 (échelle MARGES)
+  function ficheRecette(F, d, R, errR) {
+    const fX = n => n == null ? '—' : '× ' + nf(n, 2), fPt = n => n == null ? '—' : nf(n, 2) + ' €';
+    const q = F.q || 0, prix = q > 0 && F.v != null ? F.v / q : null, mat = q > 0 && F.c != null ? F.c / q : null;
+    const mb = prix != null && mat != null ? prix - mat : null, taux = mb != null && prix > 0 ? 100 * mb / prix : null, coef = prix != null && mat > 0 ? prix / mat : null;
+    const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 32, labour: 33, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
+    const obj = 100 / (se.food || 32);
+    const niv = c => c == null ? 'mu' : (c < FI_ZONES.ko ? 'ko' : (c < FI_ZONES.att ? 'att' : 'ok'));
+    const NIV = { ko: 'sous le coût acceptable', att: 'à surveiller', ok: 'dans le vert', mu: 'coût matière inconnu' };
+    const ST = S.st[cleSt()], cats = ST && Array.isArray(ST.categories) ? ST.categories : [];
+    const cat = cats.find(c => c.nom === F.cat) || null;
+    const catCoef = cat && cat.c > 0 ? cat.v / cat.c : null, catTaux = cat && cat.taux != null ? cat.taux : null;
+    // Le magasin du jour : la somme des catégories chiffrées (le même total que le pied de l'accordéon).
+    const catsC = cats.filter(c => c.c != null && c.v > 0), caT = catsC.reduce((a, c) => a + c.v, 0), cT = catsC.reduce((a, c) => a + c.c, 0);
+    const T = caT > 0 ? { ca: caT, mat: cT } : null, magCoef = T && T.mat > 0 ? T.ca / T.mat : null, magTaux = T && T.mat != null ? 100 * (T.ca - T.mat) / T.ca : null;
+    const P = d && d.prix ? d.prix : null, med = P && P.reseau && P.reseau.med ? P.reseau.med : null;
+    const G0 = 1, G1 = 4, pct = v => Math.max(0, Math.min(100, 100 * (v - G0) / (G1 - G0)));
+    const reperes = [catCoef != null ? { v: catCoef, lib: 'sa catégorie', sous: fX(catCoef) } : null, magCoef != null ? { v: magCoef, lib: 'le magasin aujourd’hui', sous: fX(magCoef) } : null,
+      { v: obj, lib: 'objectif', sous: fX(obj) + ' · matière ' + fP0(se.food), cls: 'obj' }].filter(Boolean);
+    const lignes = R && Array.isArray(R.lignes) ? R.lignes : [];
+    // Les parts se lisent sur le coût gravé de la pièce (les lignes peuvent être incomplètes), sinon sur le total des lignes.
+    const totalL = R && R.total != null ? R.total : null, baseL = mat > 0 ? mat : (totalL || 0);
+    const top = lignes.filter(l => l.cout != null).sort((a, b) => b.cout - a.cout)[0] || null;
+    const topPart = top && baseL > 0 ? 100 * top.cout / baseL : null;
+    // 1. La jauge.
+    let h = `<section class="fi-rc fi-rjauge"><div class="fi-rct"><span class="fi-rh">Le coefficient</span><span class="fi-note">ce que le prix fait de la matière : prix encaissé ÷ coût de recette</span></div>
+      <div class="fi-rjg"><div class="fi-rjn ${niv(coef)}"><b>${fX(coef)}</b><span>${NIV[niv(coef)]}</span><small>${taux != null ? 'marge brute ' + fP0(taux) + ' · matière ' + fP0(100 - taux) + ' du prix' : 'le coût de recette de cette pièce n’est pas gravé'}</small></div>
+        <div class="fi-rjb"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
+          ${reperes.map(r => `<span class="fi-rrep ${r.cls || ''}" style="left:${pct(r.v).toFixed(1)}%"><i></i><em>${esc(r.lib)}<small>${esc(r.sous)}</small></em></span>`).join('')}
+          ${coef != null ? `<span class="fi-rmoi ${niv(coef)}" style="left:${pct(coef).toFixed(1)}%"><i></i><em>ce produit<small>${fX(coef)}</small></em></span>` : ''}</div>
+          <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div></div></div>`;
+    if (coef != null) {
+      h += `<div class="fi-rverdict ${niv(coef)}"><b>${niv(coef) === 'ok' ? 'Dans le vert.' : 'Sous l’objectif.'}</b> La matière prend ${fP0(100 - taux)} du prix.${niv(coef) !== 'ok' ? ` Pour entrer dans le vert (× 2,5), il faudrait vendre la pièce <b>${fPt(mat * 2.5)}</b> au lieu de ${fPt(prix)}, ou ramener la matière à <b>${fPt(prix / 2.5)}</b> au lieu de ${fPt(mat)}.` : ''}${top && topPart != null ? ` ${esc(top.nom)} pèse <b>${fP0(topPart)}</b> du coût${niv(coef) !== 'ok' ? ' : c’est là que ça se joue' : ''}.` : ''}</div>`;
+    }
+    h += '</section>';
+    // 2. La recette.
+    let rec;
+    if (errR && !R) { rec = `<div class="fi-msg">Lecture impossible : ${esc(errR)}</div>`; }
+    else if (!R) { rec = '<div class="fi-msg"><div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:90%;height:120px;margin:10px 0"></div></div>'; }
+    else if (R.indispo || R.sansRecette) { rec = `<div class="fi-msg">${esc(R.motif || 'recette indisponible')}${mat != null ? ` · le coût de recette de la pièce, ${fPt(mat)}, reste connu par les tickets.` : ''}</div>`; }
+    else if (!lignes.length) { rec = `<div class="fi-msg">La recette « ${esc(R.recette && R.recette.nom ? R.recette.nom : '')} » n’a pas de ligne lisible dans la copie locale.</div>`; }
+    else {
+      const fQ = l => l.qte == null ? '—' : nf(l.qte, Number.isInteger(+l.qte) ? 0 : (l.qte >= 10 ? 1 : 2)) + (l.unite ? ' ' + esc(l.unite) : '');
+      rec = `<table class="fi-rtab"><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Coût</th><th class="p">Part du coût</th></tr></thead><tbody>
+        ${lignes.map(l => `<tr${top && l === top ? ' class="top"' : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>`).join('')}
+        </tbody><tfoot><tr><td>Lignes chiffrées${R.sansPrix ? `<small>${R.sansPrix} sans prix</small>` : ''}</td><td></td><td>${totalL != null ? fPt(totalL) : '—'}</td><td class="p">${totalL != null && mat != null && Math.abs(totalL - mat) > 0.05 ? `<small>coût gravé ${fPt(mat)}</small>` : ''}</td></tr></tfoot></table>
+        <div class="fi-note fi-rnote">${esc(R.source || '')}${R.cout && R.cout.net != null ? ` · coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : ''}${R.recette && R.recette.rendement && R.recette.rendement !== 1 ? ` · rendement ${nf(R.recette.rendement, 2)}` : ''}</div>`;
+    }
+    const titreRec = `<div class="fi-rct"><span class="fi-rh">La recette, pièce par pièce</span><span class="fi-note">${mat != null ? 'coût matière ' + fPt(mat) + ' la pièce, gravé avec les tickets' : 'coût de la pièce inconnu'}</span></div>`;
+    // 3. La marge en cascade.
+    let marge;
+    if (prix == null || mat == null) { marge = `<div class="fi-msg">Sans coût de recette gravé, pas de marge pièce par pièce.</div>`; }
+    else {
+      const lab = prix * se.labour / 100, oh = prix * se.overhead / 100, net = mb - lab - oh;
+      const wf = [{ lib: 'Prix encaissé', v: prix, cls: 'prix', part: 100 }, { lib: '− Matière', v: -mat, cls: 'mat', part: 100 * mat / prix }, { lib: '= Marge brute', v: mb, cls: 'mb', part: taux, fort: true },
+        { lib: `− Main-d’œuvre, au seuil de ${fP0(se.labour)}`, v: -lab, cls: 'ch', part: se.labour }, { lib: `− Frais généraux, au seuil de ${fP(se.overhead)}`, v: -oh, cls: 'ch', part: se.overhead },
+        { lib: '= Résultat par pièce', v: net, cls: net >= 0 ? 'net ok' : 'net ko', part: Math.abs(100 * net / prix), fort: true }];
+      marge = `<div class="fi-rwf">${wf.map(r => `<div class="r ${r.cls}${r.fort ? ' fort' : ''}"><span class="l">${esc(r.lib)}</span><span class="b"><i style="width:${Math.min(100, Math.max(0, r.part)).toFixed(1)}%"></i></span><span class="v">${r.v < 0 ? '− ' : ''}${fPt(Math.abs(r.v))}</span><span class="p">${fP0(100 * r.v / prix)}</span></div>`).join('')}</div>
+        <div class="fi-rface"><div class="k">Face à</div>
+          ${cat ? `<div class="r"><span>${esc(cat.nom)} aujourd’hui${cat.refs != null ? ' · ' + cat.refs + ' réf.' : ''}</span><b>${catTaux != null ? 'marge ' + fP0(catTaux) + ' · ' : ''}${fX(catCoef)}</b></div>` : ''}
+          ${T ? `<div class="r"><span>Le magasin aujourd’hui</span><b>${magTaux != null ? 'marge ' + fP0(magTaux) + ' · ' : ''}${fX(magCoef)}</b></div>` : ''}
+          ${med != null ? `<div class="r"><span>Au prix réseau (${fPt(med)}${P.reseau.magasins ? ', ' + P.reseau.magasins + ' magasins' : ''})</span><b>marge ${fP0(100 * (med - mat) / med)} · ${fX(med / mat)}</b></div>` : ''}
+          <div class="r"><span>Objectif du réseau · matière ${fP0(se.food)}</span><b>marge ${fP0(100 - se.food)} · ${fX(obj)}</b></div></div>`;
+    }
+    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · coût de recette net du panel · seuils du réseau : matière ${fP0(se.food)}, main-d’œuvre ${fP0(se.labour)}, frais généraux ${fP(se.overhead)}</span></div>
+      ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
+  }
   function ficheRendre() {
     let box = document.getElementById('db-fiche');
     if (!S.fiche) { if (box) { box.innerHTML = ''; } document.documentElement.classList.remove('db-fiche-ouverte'); return; }
@@ -3005,9 +3078,11 @@
     const mag = nomShop(), court = mag.replace(/^.* - /, '');
     const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${F.q >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
       d && d.prix ? `<span class="fi-chip">prix encaissé <b>${fPx(d.prix.magasin.p)}</b></span><span class="fi-chip">prix réseau <b>${fPx(d.prix.reseau.med)}</b></span>` : '',
-      F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : ''].join('');
+      F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : '',
+      F.c != null && F.q > 0 && F.c > 0 && F.v != null ? (cf => `<span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`)(F.v / F.c) : ''].join('');
     let corps;
-    if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
+    if (F.onglet === 3) { ficheLireRecette(); corps = ficheRecette(F, d, S.aux[cleRecette()], S.err[cleRecette()]); }
+    else if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
     else if (!d) { corps = '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:6px 0"></div><div class="db-sk" style="width:85%;height:180px;margin:10px 0"></div></div>'; }
     else if (d.indispo) { corps = `<div class="fi-msg">${esc(d.motif || 'indisponible')}</div>`; }
     else if (F.onglet === 1) {
@@ -3039,7 +3114,7 @@
     }
     box.innerHTML = `<div class="fi-voile" data-ffermer="1"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="${esc(F.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(F.nom)}</h2><div class="s">${esc(d && d.cat ? d.cat + ' · ' : '')}${esc(mag)}</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-ffermer="1" aria-label="fermer">✕</button></div>
-      <div class="fi-ong"><button type="button" data-fong="1" class="${F.onglet === 1 ? 'on' : ''}">Ventes · 12 semaines</button><button type="button" data-fong="2" class="${F.onglet === 2 ? 'on' : ''}">Prix face au réseau <small>volume × prix</small></button></div>
+      <div class="fi-ong"><button type="button" data-fong="1" class="${F.onglet === 1 ? 'on' : ''}">Ventes · 12 semaines</button><button type="button" data-fong="2" class="${F.onglet === 2 ? 'on' : ''}">Prix face au réseau <small>volume × prix</small></button><button type="button" data-fong="3" class="${F.onglet === 3 ? 'on' : ''}">Recette & marge <small>coût, marge, coefficient</small></button></div>
       <div class="fi-bd">${corps}</div></div>`;
     box.querySelectorAll('[data-ffermer]').forEach(b => b.addEventListener('click', ficheFermer));
     box.querySelectorAll('[data-fong]').forEach(b => b.addEventListener('click', () => { S.fiche.onglet = +b.dataset.fong; ficheRendre(); }));
@@ -3074,7 +3149,7 @@
     // le coût ; sans coût matière, rien à calculer.
     const coef = (ca, m) => (m == null || ca == null || ca - m <= 0) ? null : ca / (ca - m);
     const coefTxt = v => v == null ? '<span class="mu">—</span>' : '<small>×</small>' + nf(v, 2);
-    const ligne = (niv, cle, x, ref, sub, prod) => `<div class="db-al ${niv}${prod ? ' clic' : ''}" ${cle ? `data-cacc="${esc(cle)}"` : ''}${prod ? ` data-fprod="${esc(prod.id)}" data-fnom="${esc(x.nom)}" data-fq="${prod.q != null ? prod.q : ''}" data-fv="${prod.v != null ? prod.v : ''}" data-ft="${prod.taux != null ? prod.taux : ''}" role="button" tabindex="0" title="les ventes sur 12 semaines et le prix face au réseau"` : ''}>
+    const ligne = (niv, cle, x, ref, sub, prod, cat) => `<div class="db-al ${niv}${prod ? ' clic' : ''}" ${cle ? `data-cacc="${esc(cle)}"` : ''}${prod ? ` data-fprod="${esc(prod.id)}" data-fnom="${esc(x.nom)}" data-fq="${prod.q != null ? prod.q : ''}" data-fv="${prod.v != null ? prod.v : ''}" data-ft="${prod.taux != null ? prod.taux : ''}" data-fc="${prod.c != null ? prod.c : ''}" data-fcat="${esc(cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}>
         <span>${cle ? `<span class="db-tog ${S.cOuv[cle] ? 'on' : ''}">${S.cOuv[cle] ? '▾' : '▸'}</span>` : ''}</span>
         <span class="nom">${esc(x.nom)}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
         <span class="barre"><i style="width:${Math.max(1, Math.min(100, 100 * x.ca / Math.max(ref, 1)))}%;background:${coul(x)}"></i></span>
@@ -3087,7 +3162,7 @@
     const produits = c => {
       const L = c.produits || [];
       if (!L.length) { return `<div class="db-autres">Le détail par produit se lit sur les tickets : pas encore disponible pour cette catégorie.</div>`; }
-      return L.map(p => ligne('p', null, { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux }, c.ca, (p.q != null ? p.q + ' vendu' + (p.q > 1 ? 's' : '') : ''), /^\d+$/.test(String(p.id || '')) ? p : null)).join('');
+      return L.map(p => ligne('p', null, { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux }, c.ca, (p.q != null ? p.q + ' vendu' + (p.q > 1 ? 's' : '') : ''), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
     };
     const rows = fams.map(f => {
       const kg = 'g:' + f.nom;

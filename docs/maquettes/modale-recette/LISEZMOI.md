@@ -1,6 +1,6 @@
 # La modale produit du dashboard : recette, split des coûts, marge et jauge du coefficient
 
-**Statut : maquette à décider (08/10/2026), rien n'est codé.**
+**Statut : codée le 08/10/2026** (`src/recette_produit.php`, `GET /analyse/produits/recette` ; `public/dashboard/dashboard.js`, `ficheRecette` ; styles `fi-r*` dans `dashboard.css`). La maquette reste ici pour mémoire.
 
 Demande du 08/10/2026 : « dans le dashboard day du magasin, on clique sur le produit, on a une modale ; dans
 cette modale rajouter la recette avec le split des coûts, le détail de la marge et la jauge pour voir si on est

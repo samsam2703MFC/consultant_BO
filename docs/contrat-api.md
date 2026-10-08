@@ -1743,6 +1743,41 @@ en fait le duel de l'onglet Opérationnel (jauge à deux pistes, cumul heure par
 chiffre par chiffre) et compare les vignettes de la vue Jour à J−7 à la même heure quand la
 journée regardée est aujourd'hui. Nul si J−7 n'est pas lu.
 
+### `GET /analyse/produits/recette` — la recette d'un produit, pour l'onglet « Recette & marge » (08/10/2026)
+
+`GET /analyse/produits/recette?pid=2300010&shop=4[&rafraichir=1]` rend la recette du produit telle que la copie
+locale du panel la porte (`product` → `product_recipe` → `product_recipe_material_connection` → `material`,
+`recipe_cost`, `shop_material` pour le prix du magasin), sans appel au panel, gardée 24 h par produit et magasin
+(`ceo_app_setting` `recetteProduit:<pid>:<shop>`) :
+
+```json
+{ "pid": 2300010, "nom": "FlipFlap - Thon", "recette": { "id": 573, "nom": "FlipFlap Thon", "rendement": 1 },
+  "cout": { "net": 3.91, "source": "recette du magasin (copie locale)" },
+  "lignes": [ { "nom": "Thon à l’huile", "cat": "Conserves", "qte": 70, "unite": "g", "prixUnite": 26.43, "prixParUnite": "kg",
+                "cout": 1.85, "part": 47.3, "sous": null, "type": "matiere" },
+              { "nom": "Huile", "qte": 20, "unite": "ml", "cout": 0.08, "sous": "Mayonnaise maison", "type": "matiere", "…": "…" } ],
+  "total": 3.71, "complet": false, "sansPrix": 1, "nLignes": 8, "source": "copie locale du panel : …", "colonnes": { "…": "…" } }
+```
+
+- Les sous-recettes sont dépliées (4 niveaux au plus, chacune une fois), leurs lignes au prorata de la quantité
+  demandée divisée par le rendement de la sous-recette (`sous` = son nom) ; une sous-recette sans ligne lisible
+  vaut son coût gravé. Le coût d'une ligne = quantité × prix de la matière, unités converties (g ↔ kg, ml/cl ↔ l) ;
+  une matière sans prix garde sa quantité, `cout` null et `motif`, et `complet` passe à faux. Les lignes sont
+  triées par coût ; `part` se lit sur le total chiffré.
+- `cout.net` : `recipe_cost` du magasin, sinon du réseau (id_shop 0), sinon la moyenne des magasins, divisé par le
+  rendement de la recette. Le dashboard lit de son côté le coût de la pièce gravé avec les tickets (la ligne
+  cliquée) : c'est lui qui fait la marge et le coefficient de la modale.
+- Les colonnes de la copie n'ont jamais été cartographiées en entier : chaque table est lue par
+  `information_schema` et les colonnes retenues sont dites dans `colonnes` (quantité, unité, prix, sous-recette…).
+  `sansRecette: true` quand le produit n'a pas de recette, `indispo: true` avec `motif` quand la copie ne porte pas
+  les lignes.
+- La modale produit du dashboard (vue Jour, clic sur un produit de « Ventes par catégorie ») porte un troisième
+  onglet « Recette & marge » : la jauge du coefficient (prix encaissé ÷ coût de recette, zones de l'échelle des
+  marges : rouge sous × 1,67, orange jusqu'à × 2,5, vert au-delà ; repères de la catégorie, du magasin du jour et
+  de l'objectif = 100 ÷ seuil matière), la recette et son split, la marge en cascade (matière, main-d'œuvre et
+  frais généraux aux seuils du P&L, résultat par pièce) et le produit face à sa catégorie, au magasin, au prix
+  réseau et à l'objectif. La ligne cliquée porte `data-fc` (coût matière du jour) et `data-fcat` (catégorie).
+
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 
 Premier onglet du dashboard, au bureau comme au téléphone, ouvert par défaut quand l'adresse ne
