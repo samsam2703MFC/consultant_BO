@@ -2183,37 +2183,53 @@
     }
     return h + '</div>';
   }
-  /** Le cumul heure par heure d'aujourd'hui face à celui de J−7, jusqu'à l'objectif. */
+  /** Le cumul heure par heure d'aujourd'hui face à celui de J−7 : le CA jusqu'à l'objectif, ou les clients
+   *  face à la référence des mêmes jours (bascule CA / Clients, demande du 08/10/2026). */
   function opDuelHeures(D) {
     const { now, fin, ST, m } = D;
     const B = opDuelBase(D), j7 = B.j7;
     const hA = ST && Array.isArray(ST.heures) && ST.heures.length ? ST.heures : (m && Array.isArray(m.heures) ? m.heures : []);
     const h7 = j7 && Array.isArray(j7.heures) ? j7.heures : [];
     if (!hA.length || !h7.length) { return ''; }
+    // Les clients ne se dessinent que si les deux journées ont leurs tickets heure par heure.
+    const aTk = hA.some(x => x.tickets != null) && h7.some(x => x.tickets != null);
+    const mode = aTk && S.opCrb === 'tk' ? 'tk' : 'ca', champ = mode === 'tk' ? 'tickets' : 'ca';
+    const fmtV = v => mode === 'tk' ? fN(Math.round(v)) + ' clients' : fE(v);
+    const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : B.obj;
+    const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : 'objectif ' + fE(cible));
     const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
-    const cumul = (hs, limite) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += +x.ca || 0; out.push({ h: x.h, ca: c }); }); return out; };
+    const cumul = (hs, limite) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += +x[champ] || 0; out.push({ h: x.h, v: c }); }); return out; };
     const cA = cumul(hA, fin ? null : hNow), c7 = cumul(h7, null);
     if (!cA.length || !c7.length) { return ''; }
     const h0 = Math.min(6, ...cA.map(x => x.h), ...c7.map(x => x.h)), h1 = Math.max(19, ...cA.map(x => x.h + 1), ...c7.map(x => x.h + 1));
-    const mx = Math.max(B.obj || 0, cA[cA.length - 1].ca, c7[c7.length - 1].ca, 1) * (B.obj ? 1 : 1.08);
+    const mx = Math.max(cible || 0, cA[cA.length - 1].v, c7[c7.length - 1].v, 1) * (cible && cible >= Math.max(cA[cA.length - 1].v, c7[c7.length - 1].v) ? 1 : 1.08);
+    const axe = v => mode === 'tk' ? fN(Math.round(v)) : fN(Math.round(v / 10) * 10);
     const dessine = (W, Hh, pas, cls) => {
+      const tel = cls === 'tel';
       const X0 = 44, X1 = W - 16, Y0 = 14, Y1 = Hh - 26;
       const x = hh => X0 + (X1 - X0) * (hh - h0) / (h1 - h0), y = v => Y1 - (Y1 - Y0) * v / mx;
-      const chemin = c => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map(p => 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.ca).toFixed(1)).join(' ');
+      const chemin = c => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map(p => 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
       const lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
       let g = `<svg class="op-crb ${cls}" viewBox="0 0 ${W} ${Hh}">`;
-      [0.25, 0.5, 0.75, 1].forEach(f => { g += `<line x1="${X0}" x2="${X1}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" class="gr"/><text x="${X0 - 6}" y="${(y(mx * f) + 3).toFixed(1)}" text-anchor="end" class="ax">${fN(Math.round(mx * f / 10) * 10)}</text>`; });
-      if (B.obj) { g += `<text x="${X0 + 4}" y="${(y(mx) - 4).toFixed(1)}" class="obj">objectif ${fE(B.obj)}</text>`; }
+      [0.25, 0.5, 0.75, 1].forEach(f => { g += `<line x1="${X0}" x2="${X1}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" class="gr"/><text x="${X0 - 6}" y="${(y(mx * f) + 3).toFixed(1)}" text-anchor="end" class="ax">${axe(mx * f)}</text>`; });
+      if (cible) { g += `<line x1="${X0}" x2="${X1}" y1="${y(cible).toFixed(1)}" y2="${y(cible).toFixed(1)}" class="cib"/><text x="${X0 + 4}" y="${(y(cible) - 4).toFixed(1)}" class="obj">${cibleLib}</text>`; }
       for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
       g += `<path d="${chemin(c7)}" class="l7"/><path d="${chemin(cA)}" class="la"/>`;
-      if (!fin && now != null) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
-      g += `<circle cx="${x(lastA.h + 1).toFixed(1)}" cy="${y(lastA.ca).toFixed(1)}" r="4" class="pa"/><text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.ca) + 18).toFixed(1)}" text-anchor="end" class="ta">${fin ? 'cette journée' : 'aujourd’hui'} ${fE(lastA.ca)}</text>`;
-      g += `<circle cx="${x(last7.h + 1).toFixed(1)}" cy="${y(last7.ca).toFixed(1)}" r="4" class="p7"/><text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.ca) - 10).toFixed(1)}" text-anchor="end" class="t7">${esc(B.jourNom)} dernier ${fE(last7.ca)}</text>`;
+      // L'heure qu'il est : en haut de son trait, sauf quand l'étiquette de fin de J−7 est à côté (fin de journée),
+      // alors en bas ; au téléphone, toujours en bas et les valeurs de fin passent dans la légende.
+      if (!fin && now != null) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
+      g += `<circle cx="${x(lastA.h + 1).toFixed(1)}" cy="${y(lastA.v).toFixed(1)}" r="4" class="pa"/>${tel ? '' : `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${fin ? 'cette journée' : 'aujourd’hui'} ${fmtV(lastA.v)}</text>`}`;
+      g += `<circle cx="${x(last7.h + 1).toFixed(1)}" cy="${y(last7.v).toFixed(1)}" r="4" class="p7"/>${tel ? '' : `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${esc(B.jourNom)} dernier ${fmtV(last7.v)}</text>`}`;
       return g + '</svg>';
     };
-    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span><span class="db-mini">le cumul ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${B.obj ? ', jusqu’à l’objectif' : ''}</span><span class="db-mini" style="margin-left:auto">ventes encaissées, pro compris</span></div>
+    const valA = fmtV(cA[cA.length - 1].v), val7 = fmtV(c7[c7.length - 1].v);
+    const bascule = aTk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${mode === 'ca' ? 'on' : ''}" data-opcrb="ca">CA</button><button type="button" class="${mode === 'tk' ? 'on' : ''}" data-opcrb="tk">Clients</button></span>` : '';
+    const sous = mode === 'tk'
+      ? `le cumul des clients ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', la référence des mêmes jours en pointillé' : ''}`
+      : `le cumul ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', jusqu’à l’objectif' : ''}`;
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}<span class="db-mini">${sous}</span><span class="db-mini" style="margin-left:auto">${mode === 'tk' ? 'tickets encaissés, pro compris' : 'ventes encaissées, pro compris'}</span></div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}</span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})</span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}<b class="tv"> ${valA}</b></span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})<b class="tv"> ${val7}</b></span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
   function opDuelTable(D) {
@@ -4782,6 +4798,7 @@
     $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
     $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
+    $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
     $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
