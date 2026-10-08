@@ -782,7 +782,11 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 @media (max-width:900px){.db-promo-corps{grid-template-columns:1fr}.db-promo-corps>div+div{border-left:none;border-top:.5px solid var(--color-border-tertiary)}}
 /* Les clients pro (B2B) : les tickets aux sociétés du jour, les comptes, la part jour par jour. */
 .db-pro.on{border-left:4px solid #1f5f8b}
-.db-split-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:12px 16px 0;background:var(--color-background-secondary)}
+.db-split-bar{display:flex;height:8px;border-radius:4px;overflow:visible;position:relative;margin:12px 16px 0;background:var(--color-background-secondary)}
+.db-split-bar i.c{border-radius:4px 0 0 4px}.db-split-bar i.p{border-radius:0 4px 4px 0}
+.db-split-bar b.lim{position:absolute;top:-4px;bottom:-4px;width:2px;background:#222;border-radius:1px}
+.db-pro-part{display:inline-block;font-weight:600;padding:0 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.db-pro-part.ok{background:#e3f0e6;color:#1f5a2c}.db-pro-part.att{background:#fbecd8;color:#8a4e05}.db-pro-part.ko{background:#f8e0e3;color:#8c1020}
 .db-split-bar i{display:block;height:100%}.db-split-bar i.c{background:#b8ad9f}.db-split-bar i.p{background:#1f5f8b}
 .db-split-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px 16px 14px}
 .db-split-g>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 13px;border-left:4px solid #b8ad9f}

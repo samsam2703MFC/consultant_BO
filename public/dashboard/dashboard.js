@@ -1736,7 +1736,15 @@
       manque: !lu ? (per && m.proJours ? 'aucun des ' + m.proJours + ' jours ouverts n’est encore lu' : 'tickets pas encore lus chez le panel')
         : (!complet ? 'pro lu sur ' + m.proJoursLus + ' jour' + (m.proJoursLus > 1 ? 's' : '') + ' sur ' + m.proJours + ' — le comptoir s’affiche quand tous les jours sont lus' : ''),
       sC: [partC != null ? fP(partC) + ' du CA' : '', cli(m.ticketsComptoir), m.panierComptoir != null ? 'panier ' + fU(m.panierComptoir) : ''].filter(Boolean).join(' · '),
-      sP: [m.partPro != null ? fP(m.partPro) + ' du CA' : '', cli(m.ticketsPro), m.panierPro != null ? 'panier ' + fU(m.panierPro) : ''].filter(Boolean).join(' · ') };
+      sP: [m.partPro != null ? proPart(m.partPro, per) : '', cli(m.ticketsPro), m.panierPro != null ? 'panier ' + fU(m.panierPro) : ''].filter(Boolean).join(' · ') };
+  }
+  /* La part du CA pro dans le CA total : la règle (08/10/2026) la plafonne à 40 % du CA de la semaine ou du mois.
+   * Vert en deçà de 35 %, orange de 35 à 40 %, rouge au-delà ; sur une journée la pastille reste neutre. */
+  const PRO_MAX = 40, PRO_ALERTE = 35;
+  function proPart(part, periode) {
+    const niv = !periode ? '' : (part > PRO_MAX ? 'ko' : (part > PRO_ALERTE ? 'att' : 'ok'));
+    const regle = 'Règle : le pro ne dépasse pas ' + PRO_MAX + ' % du CA de la semaine ou du mois' + (!periode ? ' — sur une journée, la part est indicative.' : (part > PRO_MAX ? ' — dépassée.' : (part > PRO_ALERTE ? ' — on s’en approche.' : '.')));
+    return `<span class="db-pro-part ${niv}" title="${esc(regle)}">${fP(part)} du CA</span>`;
   }
   /**
    * Comptoir et clients pro, en un seul bloc. Les chiffres de tête viennent de Résultat (le même
@@ -1759,7 +1767,7 @@
     const deplie = ouvert ? `<div class="db-split-det">${proCarte('detail')}</div>` : '';
     const pro = !!(J && J.ticketsPro) || (m.ticketsPro > 0);
     if (!X.lu) { return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span>${bascule}</div>${deplie}</div>`; }
-    const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i></div>` : '';
+    const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}${X.per ? ' · limite : ' + PRO_MAX + ' % de pro' : ''}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i>${X.per ? `<b class="lim" style="left:${100 - PRO_MAX}%" title="limite : ${PRO_MAX} % de pro"></b>` : ''}</div>` : '';
     const plusP = jour && P ? [J && J.aFacturer ? 'à facturer ' + fE(J.aFacturer) : ''].filter(Boolean).join(' · ') : '';
     return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
       <div class="db-split-g"><div class="c"><div class="k">Comptoir</div><div class="v">${m.caComptoir != null ? fK(m.caComptoir) : '—'}</div><div class="s">${X.sC}</div></div>
