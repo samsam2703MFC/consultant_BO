@@ -165,12 +165,16 @@ function rpCoutRecette(int $rid, int $sid, array $ctx): ?array
     $K = $ctx['cout'];
     if ($K['table'] === null || $K['cout'] === null || $K['recette'] === null) { return null; }
     try {
-        $rows = Db::rows('SELECT ' . ($K['shop'] !== null ? '`' . $K['shop'] . '` AS s, ' : '0 AS s, ') . '`' . $K['cout'] . '` AS c FROM `' . $K['table'] . '` WHERE `' . $K['recette'] . '` = ?', [$rid]);
+        // La table peut porter plusieurs calculs par recette et magasin : le plus récent fait foi.
+        $rows = Db::rows('SELECT ' . ($K['shop'] !== null ? '`' . $K['shop'] . '` AS s, ' : '0 AS s, ') . '`' . $K['cout'] . '` AS c FROM `' . $K['table'] . '` WHERE `' . $K['recette'] . '` = ?'
+            . (!empty($K['date']) ? ' ORDER BY `' . $K['date'] . '` DESC' : ''), [$rid]);
     } catch (Throwable $e) { return null; }
-    $mag = null; $res = null; $autres = [];
+    $mag = null; $res = null; $autres = []; $vusShop = [];
     foreach ($rows as $r) {
         if (!is_numeric($r['c']) || (float) $r['c'] <= 0) { continue; }
         $s = (int) $r['s'];
+        if (isset($vusShop[$s])) { continue; }   // le premier de chaque magasin = le plus récent
+        $vusShop[$s] = true;
         if ($s === $sid) { $mag = (float) $r['c']; } elseif ($s === 0) { $res = (float) $r['c']; } else { $autres[] = (float) $r['c']; }
     }
     if ($mag !== null) { return ['net' => $mag, 'source' => 'recette du magasin (copie locale)']; }
@@ -207,7 +211,8 @@ function rpContexte(): array
             'rendement' => rpChoix($rec, ['yield_quantity', 'yield', 'output_quantity', 'portions', 'number_of_portions'])],
         'cout' => ['table' => $cout !== [] ? 'recipe_cost' : null,
             'recette' => rpChoix($cout, ['id_recipe', 'recipe_id', 'id_product_recipe']), 'shop' => rpChoix($cout, ['id_shop', 'shop_id']),
-            'cout' => rpChoix($cout, ['calculated_cost_net', 'cost_net', 'net_cost', 'calculated_cost', 'cost'])],
+            'cout' => rpChoix($cout, ['calculated_cost_net', 'cost_net', 'net_cost', 'calculated_cost', 'cost']),
+            'date' => rpChoix($cout, ['calculated_at', 'calculation_date', 'created_at', 'updated_at', 'date', 'timestamp', 'insert_timestamp', 'id'])],
         'unites' => [],
     ];
     // Les sous-recettes peuvent vivre dans une table de liaison à part : on la cherche par ses colonnes.
@@ -272,6 +277,20 @@ function ep_analyse_produit_recette(): array
     $pid = (int) ($_GET['pid'] ?? 0); $sid = (int) ($_GET['shop'] ?? 0);
     if ($pid <= 0 || $sid <= 0) { http_response_code(400); return ['error' => 'pid et shop requis']; }
     $cle = 'recetteProduit:' . $pid . ':' . $sid;
+    if (!empty($_GET['colonnes'])) {
+        // Diagnostic, lecture seule : les colonnes de chaque table lue et les tables voisines, pour cartographier la copie.
+        $out = rpCalcul($pid, $sid);
+        $listes = [];
+        foreach (['product_recipe_material_connection', 'material', 'product_recipe', 'recipe_cost', 'unit', 'product'] as $t) { $listes[$t] = rpColonnes($t); }
+        $voisines = [];
+        foreach (array_unique(array_merge(rpTables('material'), rpTables('recipe'), rpTables('price'), rpTables('cost'), rpTables('supplier'), rpTables('ingredient'))) as $t) {
+            if (count($voisines) >= 40) { break; }
+            $voisines[$t] = rpColonnes($t);
+        }
+        $out['colonnes']['listes'] = $listes; $out['colonnes']['voisines'] = $voisines;
+        try { $out['colonnes']['echantillon'] = Db::rows('SELECT * FROM `product_recipe_material_connection` LIMIT 3'); } catch (Throwable $e) { $out['colonnes']['echantillon'] = $e->getMessage(); }
+        return $out;
+    }
     if (empty($_GET['rafraichir'])) {
         try { $c = setting($cle); } catch (Throwable $e) { $c = null; }
         if (is_array($c) && isset($c['le'], $c['r']) && is_array($c['r']) && time() - (int) $c['le'] < RP_HEURES * 3600) {
