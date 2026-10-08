@@ -1624,6 +1624,9 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rrep.obj i{background:#222;width:3px;left:-1.5px}
 .fi-rrep em{position:absolute;left:-60px;bottom:30px;width:120px;text-align:center;font:600 10.5px var(--font-ui);font-style:normal;color:#444;line-height:1.2}
 .fi-rrep em small{display:block;font-weight:500;color:#777}
+.fi-rrep.h2 i{top:-34px;height:56px}
+.fi-rrep.h2 em{bottom:58px}
+.fi-rjb.etage{padding-top:74px}
 .fi-rmoi i{position:absolute;left:-9px;top:-5px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:12px solid #C0182B;transform:translateY(-14px)}
 .fi-rmoi.att i{border-top-color:#B26A00}.fi-rmoi.ok i{border-top-color:#2d7a3e}
 .fi-rmoi em{position:absolute;left:-60px;top:24px;width:120px;text-align:center;font:700 11px var(--font-ui);font-style:normal;color:#222}
@@ -1664,9 +1667,11 @@ html.db-fiche-ouverte{overflow:hidden}
   .fi-rdeux{grid-template-columns:1fr}
   .fi-rjg{grid-template-columns:1fr;gap:6px}
   .fi-rjb{padding:48px 6px 4px}
+  .fi-rjb.etage{padding-top:84px}
   .fi-rrep em{width:84px;left:-42px;font-size:9.5px}
   .fi-rmoi em{width:90px;left:-45px}
   .fi-raxe{margin-top:48px;font-size:9.5px}
   .fi-rtab td.p{width:30%}
+  .fi-rtab td:not(:first-child){white-space:nowrap}
   .fi-rwf .r{grid-template-columns:1.2fr .8fr 64px 44px;font-size:11.5px}
 }
