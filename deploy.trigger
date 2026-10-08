@@ -648,3 +648,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-08T15:45:00Z part du CA pro en pastille regle 40 pct
 2026-10-08T15:56:35Z pastille part pro carte canaux
 2026-10-08T17:14:37Z modale produit onglet recette et marge
+2026-10-08T17:18:29Z recette diagnostic colonnes
