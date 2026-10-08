@@ -1,15 +1,19 @@
 <?php
 /**
  * La fiche d'une matière première, pour la modale produit du dashboard magasin (onglet « Recette & marge », clic sur
- * une ligne de la recette) — demande du 08/10/2026 : le prix conseillé par la centrale, les prix des magasins du
- * réseau, le fournisseur, le prix par unité, la date. API du panel seulement (« api only »), jamais la copie locale.
+ * une ligne de la recette) — demande du 08/10/2026 : le prix de la centrale, les prix des magasins du réseau, le
+ * fournisseur, le prix par kg, la date. API du panel seulement (« api only, from swagger »), jamais la copie locale.
  *
- * Routes lues :
- *  - `/shops/{id}/materials`, pour chaque magasin actif : `base_unit_price_net` (le prix du magasin),
- *    `suggested_base_unit_price_net` (le prix conseillé), `reference_unit_price_net`, unité, catégorie, TVA,
- *    `source_type` CENTRAL, fournisseur intégré. Une lecture par magasin, gardée 24 h (`ceo_app_setting`) ;
- *  - `/material-suppliers` et, par fournisseur, `/connected-materials` (référence fournisseur) et `/materials` :
- *    le fournisseur de la matière. Gardés 24 h pour tout le réseau.
+ * Routes lues (swagger du panel, /swagger/openapi.json — mesurées le 08/10/2026) :
+ *  - `/shops/{id}/materials`, pour chaque magasin actif : `base_unit_price_net` (le prix du magasin, par unité de
+ *    base : g, pcs, kg…), `suggested_base_unit_price_net` (prix conseillé, rempli pour 1 matière sur 631),
+ *    `reference_unit_price_net`, unité, catégorie, TVA, `source_type`. Une lecture par magasin, gardée 24 h ;
+ *  - `/material-suppliers` (les fournisseurs matière : la centrale est de type CENTRAL), puis par fournisseur
+ *    `/catalog-mappings` (matière ↔ produit du catalogue fournisseur : référence, colis, unités par colis),
+ *    `/connected-materials` et `/materials` (les matières liées, leur référence). Gardés 24 h pour le réseau ;
+ *  - `/material-suppliers/{fid}/shops/{sid}/price-lists/current` et `/latest` : la liste de prix du fournisseur pour
+ *    le magasin, DATÉE (`valid_from`), par colis (`price_net`, `package_size`, `package_unit`). Gardées 24 h par
+ *    fournisseur et magasin, lues seulement pour les fournisseurs qui portent la matière.
  * Les noms des magasins viennent du référentiel du cockpit (table `shops`).
  *
  * Lecture seule. Rien n'est écrit au panel.
@@ -62,14 +66,28 @@ function mfMagasins(): array
     return $out;
 }
 
+/** L'unité de base → le facteur et l'étiquette de l'unité lisible : g → × 1000 par kg, ml → × 1000 par l, pcs → par pce. */
+function mfUnite(string $u): array
+{
+    $u = strtolower(trim($u));
+    return match ($u) {
+        'g', 'gr', 'gramme', 'grammes' => ['facteur' => 1000.0, 'label' => 'kg'],
+        'ml' => ['facteur' => 1000.0, 'label' => 'l'],
+        'kg', 'kilogramme' => ['facteur' => 1.0, 'label' => 'kg'],
+        'l', 'litre' => ['facteur' => 1.0, 'label' => 'l'],
+        'pcs', 'pce', 'pc', 'piece', 'pièce', 'szt', 'unit' => ['facteur' => 1.0, 'label' => 'pce'],
+        default => ['facteur' => 1.0, 'label' => $u !== '' ? $u : 'unité'],
+    };
+}
+
 /** Une matière de `/shops/{id}/materials`, réduite à ce que la fiche garde. */
 function mfMatiere(array $x): array
 {
-    return ['nom' => (string) ($x['name'] ?? ''), 'prix' => mfNombre($x['base_unit_price_net'] ?? null), 'conseille' => mfNombre($x['suggested_base_unit_price_net'] ?? null),
-        'reference' => mfNombre($x['reference_unit_price_net'] ?? null), 'brut' => mfNombre($x['base_unit_price_gross'] ?? null), 'conseilleBrut' => mfNombre($x['suggested_base_unit_price_gross'] ?? null),
+    return ['nom' => trim((string) ($x['name'] ?? '')), 'prix' => mfNombre($x['base_unit_price_net'] ?? null), 'conseille' => mfNombre($x['suggested_base_unit_price_net'] ?? null),
+        'reference' => mfNombre($x['reference_unit_price_net'] ?? null), 'brut' => mfNombre($x['base_unit_price_gross'] ?? null),
         'tva' => mfNombre($x['vat_rate'] ?? null), 'unite' => (string) ($x['unit_name'] ?? ''), 'cat' => (string) ($x['category_name'] ?? ''),
         'perte' => mfNombre($x['waste_amount_perc'] ?? null), 'source' => strtoupper((string) ($x['source_type'] ?? '')),
-        'integre' => (int) ($x['integrated_supplier'] ?? 0) === 1, 'type' => (string) ($x['material_type'] ?? ''), 'kind' => (string) ($x['kind'] ?? '')];
+        'integre' => (int) ($x['integrated_supplier'] ?? 0) === 1, 'type' => (string) ($x['material_type'] ?? '')];
 }
 
 /**
@@ -96,39 +114,89 @@ function mfMatieresApi(array $sids, bool $frais): array
     return $out;
 }
 
-/** Les fournisseurs matière du panel et leurs matières (référence fournisseur comprise), gardés 24 h pour tout le réseau. */
+/**
+ * Les fournisseurs matière du panel et, par matière, ses liens : la correspondance du catalogue fournisseur (référence,
+ * colis, unités par colis), sinon la matière connectée (référence), sinon la matière simplement listée chez lui.
+ * Gardés 24 h pour tout le réseau.
+ */
 function mfFournisseurs(bool $frais): array
 {
-    $cle = 'fournisseursMatieres';
+    $cle = 'fournisseursMatieres2';
     $c = mfCache($cle, $frais);
     if ($c !== null && isset($c['f'], $c['m'])) { return $c; }
     $out = ['f' => [], 'm' => []];
     if (!PanelApi::configured()) { return $out; }
     foreach (mfListe(PanelApi::get('/material-suppliers')) as $f) {
         if (!is_array($f) || !isset($f['id'])) { continue; }
-        $out['f'][(string) (int) $f['id']] = ['nom' => (string) ($f['name'] ?? ('Fournisseur ' . $f['id'])), 'type' => strtoupper((string) ($f['type'] ?? '')),
+        $out['f'][(string) (int) $f['id']] = ['nom' => trim((string) ($f['name'] ?? ('Fournisseur ' . $f['id']))), 'type' => strtoupper((string) ($f['type'] ?? '')),
             'typeNom' => (string) ($f['type_name'] ?? ''), 'ville' => (string) ($f['city'] ?? ''), 'integre' => (int) ($f['integrated_supplier'] ?? 0) === 1];
     }
     if ($out['f'] === []) { return $out; }
     $chemins = [];
-    foreach (array_keys($out['f']) as $fid) { $chemins['c' . $fid] = '/material-suppliers/' . $fid . '/connected-materials'; $chemins['m' . $fid] = '/material-suppliers/' . $fid . '/materials'; }
+    foreach (array_keys($out['f']) as $fid) {
+        $chemins['k' . $fid] = '/material-suppliers/' . $fid . '/catalog-mappings';
+        $chemins['c' . $fid] = '/material-suppliers/' . $fid . '/connected-materials';
+        $chemins['m' . $fid] = '/material-suppliers/' . $fid . '/materials';
+    }
     $res = PanelApi::getParallele($chemins);
     foreach (array_keys($out['f']) as $fid) {
         $vus = [];
+        foreach (mfListe($res['k' . $fid] ?? null) as $x) {
+            if (!is_array($x) || !isset($x['material_id'])) { continue; }
+            $mid = (string) (int) $x['material_id']; $vus[$mid] = true;
+            $out['m'][$mid][] = ['fid' => (string) $fid, 'via' => 'catalogue', 'sku' => (string) ($x['catalog_product_sku'] ?? ''), 'produit' => (string) ($x['catalog_product_id'] ?? ''),
+                'nomCatalogue' => trim((string) ($x['catalog_product_name'] ?? '')), 'taille' => mfNombre($x['package_size'] ?? null), 'tailleUnite' => (string) ($x['package_unit'] ?? ''),
+                'parColis' => mfNombre($x['units_per_pack'] ?? null), 'depuis' => substr((string) ($x['created_at'] ?? ''), 0, 10)];
+        }
         foreach (mfListe($res['c' . $fid] ?? null) as $x) {
             if (!is_array($x) || !isset($x['id'])) { continue; }
-            $mid = (string) (int) $x['id']; $vus[$mid] = true;
-            $out['m'][$mid][] = ['fid' => (string) $fid, 'sku' => (string) ($x['supplier_sku'] ?? ''), 'pack' => isset($x['id_pack']) ? (string) $x['id_pack'] : ''];
+            $mid = (string) (int) $x['id'];
+            if (isset($vus[$mid])) { continue; }
+            $vus[$mid] = true;
+            $out['m'][$mid][] = ['fid' => (string) $fid, 'via' => 'connexion', 'sku' => (string) ($x['supplier_sku'] ?? ''), 'produit' => '', 'nomCatalogue' => '', 'taille' => null, 'tailleUnite' => '', 'parColis' => null, 'depuis' => ''];
         }
         foreach (mfListe($res['m' . $fid] ?? null) as $x) {
             if (!is_array($x) || !isset($x['id'])) { continue; }
             $mid = (string) (int) $x['id'];
             if (isset($vus[$mid])) { continue; }
-            $out['m'][$mid][] = ['fid' => (string) $fid, 'sku' => '', 'pack' => ''];
+            $vus[$mid] = true;
+            $out['m'][$mid][] = ['fid' => (string) $fid, 'via' => 'liste', 'sku' => '', 'produit' => '', 'nomCatalogue' => '', 'taille' => null, 'tailleUnite' => '', 'parColis' => null, 'depuis' => ''];
         }
     }
     if ($out['m'] !== []) { mfGarder($cle, $out); }
     return $out;
+}
+
+/** La liste de prix d'un fournisseur pour un magasin, en vigueur (`current`) et la plus récente (`latest`), par référence. Gardée 24 h. */
+function mfListePrix(string $fid, int $sid, bool $frais): array
+{
+    $cle = 'listePrix:' . $fid . ':' . $sid;
+    $c = mfCache($cle, $frais);
+    if ($c !== null && isset($c['c'], $c['l'])) { return $c; }
+    $out = ['c' => [], 'l' => [], 'lu' => false];
+    if (!PanelApi::configured()) { return $out; }
+    $res = PanelApi::getParallele(['c' => '/material-suppliers/' . $fid . '/shops/' . $sid . '/price-lists/current', 'l' => '/material-suppliers/' . $fid . '/shops/' . $sid . '/price-lists/latest']);
+    foreach (['c', 'l'] as $k) {
+        if (!is_array($res[$k] ?? null)) { continue; }
+        $out['lu'] = true;
+        foreach (mfListe($res[$k]) as $x) {
+            if (!is_array($x)) { continue; }
+            $sku = trim((string) ($x['sku'] ?? '')); if ($sku === '') { continue; }
+            $out[$k][$sku] = ['nom' => trim((string) ($x['name'] ?? '')), 'prix' => mfNombre($x['price_net'] ?? null), 'taille' => mfNombre($x['package_size'] ?? null), 'tailleUnite' => (string) ($x['package_unit'] ?? ''),
+                'tva' => mfNombre($x['vat_rate'] ?? null), 'depuis' => substr((string) ($x['valid_from'] ?? ''), 0, 10), 'produit' => (string) ($x['id'] ?? ''),
+                'nomMatiere' => trim((string) ($x['franchisee_material_name'] ?? '')), 'actif' => isset($x['is_active']) ? (int) $x['is_active'] === 1 : null, 'mappe' => isset($x['is_mapped']) ? (int) $x['is_mapped'] === 1 : null];
+        }
+    }
+    if ($out['lu']) { mfGarder($cle, $out); }
+    return $out;
+}
+
+/** Le prix par unité de base d'une ligne de liste de prix : prix du colis ÷ (taille du colis × unités par colis). */
+function mfParUnite(?float $prix, ?float $taille, ?float $parColis): ?float
+{
+    if ($prix === null || $prix <= 0) { return null; }
+    $t = $taille !== null && $taille > 0 ? $taille : 1.0; $u = $parColis !== null && $parColis > 0 ? $parColis : 1.0;
+    return $prix / ($t * $u);
 }
 
 /** La médiane d'une liste de nombres. */
@@ -140,9 +208,10 @@ function mfMediane(array $v): ?float
 }
 
 /**
- * GET /analyse/matieres/fiche?mid=63&shop=4[&rafraichir=1][&sonde=1] — la fiche d'une matière pour un magasin,
- * face aux autres magasins du réseau. `&sonde=1` (diagnostic, lecture seule) joint la ligne brute de l'API, le
- * compte des prix conseillés renseignés et l'essai des routes qui pourraient dater les prix.
+ * GET /analyse/matieres/fiche?mid=327&shop=4[&rafraichir=1][&sonde=1] — la fiche d'une matière pour un magasin :
+ * son prix et ceux des autres magasins (par kg quand l'unité est le gramme), ses fournisseurs avec leur liste de prix
+ * datée, le prix conseillé quand le panel le porte. `&sonde=1` (diagnostic, lecture seule) joint la ligne brute de
+ * l'API, les liens bruts et la vérification de la formule « prix du colis ÷ taille » face aux prix des magasins.
  */
 function ep_analyse_matiere_fiche(): array
 {
@@ -155,89 +224,86 @@ function ep_analyse_matiere_fiche(): array
     $sids = array_keys($noms); sort($sids);
     $parMagasin = mfMatieresApi($sids, $frais);
     $a = $parMagasin[$sid][(string) $mid] ?? null;
-    // La matière absente du magasin demandé : son identité vient d'un autre magasin qui la porte.
     $ident = $a;
-    if ($ident === null) { foreach ($parMagasin as $s => $m) { if (isset($m[(string) $mid])) { $ident = $m[(string) $mid]; break; } } }
+    if ($ident === null) { foreach ($parMagasin as $m) { if (isset($m[(string) $mid])) { $ident = $m[(string) $mid]; break; } } }
     if ($ident === null) {
         if (($parMagasin[$sid] ?? []) === []) { http_response_code(502); return ['error' => 'matières du magasin illisibles sur l’API du panel', 'detail' => PanelApi::$lastError, 'mid' => $mid]; }
         http_response_code(404); return ['error' => 'matière inconnue de l’API du panel', 'mid' => $mid];
     }
-    $fourn = mfFournisseurs($frais);
-
+    $U = mfUnite($ident['unite']); $fac = $U['facteur'];
     $conseille = $a['conseille'] ?? $ident['conseille']; $reference = $a['reference'] ?? $ident['reference'];
+
+    // Les magasins du réseau : le prix de base de chacun, exprimé par kg (ou par l, par pièce).
     $valeurs = [];
-    foreach ($parMagasin as $s => $m) { $p = $m[(string) $mid]['prix'] ?? null; if ($p !== null && $p > 0) { $valeurs[] = $p; } }
-    $med = mfMediane($valeurs);
-    // Le repère de comparaison : le prix conseillé, sinon le prix de référence, sinon la médiane du réseau.
+    foreach ($parMagasin as $s => $m) { $p = $m[(string) $mid]['prix'] ?? null; if ($p !== null && $p > 0) { $valeurs[$s] = $p; } }
+    $med = mfMediane(array_values($valeurs));
     $repere = $conseille ?? $reference ?? $med;
-    $repereNom = $conseille !== null ? 'conseillé' : ($reference !== null ? 'référence' : ($med !== null ? 'médiane du réseau' : null));
+    $repereNom = $conseille !== null ? 'prix conseillé' : ($reference !== null ? 'prix de référence' : ($med !== null ? 'médiane du réseau' : null));
     $reseau = [];
     foreach ($noms as $s => $n) {
-        $m = $parMagasin[$s][(string) $mid] ?? null; $p = $m['prix'] ?? null;
-        $reseau[] = ['id' => (string) $s, 'nom' => $n, 'court' => preg_replace('/^.* - /', '', $n), 'ceMagasin' => $s === $sid,
-            'prix' => $p, 'brut' => $m['brut'] ?? null, 'conseille' => $m['conseille'] ?? null, 'lu' => ($parMagasin[$s] ?? []) !== [],
-            'ecart' => $p !== null && $repere > 0 ? round(100 * ($p - $repere) / $repere, 1) : null];
+        $p = $valeurs[$s] ?? null;
+        $reseau[] = ['id' => (string) $s, 'nom' => $n, 'court' => preg_replace('/^.* - /', '', $n), 'ceMagasin' => $s === $sid, 'lu' => ($parMagasin[$s] ?? []) !== [],
+            'prix' => $p !== null ? round($p * $fac, 4) : null, 'ecart' => $p !== null && $repere > 0 ? round(100 * ($p - $repere) / $repere, 1) : null];
     }
     usort($reseau, static fn ($x, $y) => ($x['prix'] === null) <=> ($y['prix'] === null) ?: ($x['prix'] <=> $y['prix']) ?: strcmp($x['nom'], $y['nom']));
+
+    // Les fournisseurs qui portent la matière, et leur liste de prix pour ce magasin (datée).
+    $fourn = mfFournisseurs($frais);
     $fournisseurs = [];
-    foreach ($fourn['m'][(string) $mid] ?? [] as $x) {
-        $f = $fourn['f'][$x['fid']] ?? ['nom' => 'Fournisseur ' . $x['fid'], 'type' => '', 'typeNom' => '', 'ville' => '', 'integre' => false];
-        $fournisseurs[] = ['id' => $x['fid'], 'nom' => $f['nom'], 'type' => $f['type'], 'typeNom' => $f['typeNom'], 'ville' => $f['ville'], 'integre' => $f['integre'],
-            'sku' => $x['sku'], 'pack' => $x['pack'], 'centrale' => $f['type'] === 'CENTRAL'];
+    foreach ($fourn['m'][(string) $mid] ?? [] as $lien) {
+        $f = $fourn['f'][$lien['fid']] ?? ['nom' => 'Fournisseur ' . $lien['fid'], 'type' => '', 'typeNom' => '', 'ville' => '', 'integre' => false];
+        $pl = mfListePrix($lien['fid'], $sid, $frais);
+        $sku = $lien['sku'];
+        $cur = $sku !== '' ? ($pl['c'][$sku] ?? null) : null; $lat = $sku !== '' ? ($pl['l'][$sku] ?? null) : null;
+        if ($cur === null && $lat === null) {
+            // Sans référence : la ligne de la liste qui nomme notre matière.
+            foreach (['c', 'l'] as $k) { foreach ($pl[$k] as $s2 => $x) { if ($x['nomMatiere'] !== '' && mb_strtolower($x['nomMatiere']) === mb_strtolower($ident['nom'])) { if ($k === 'c') { $cur = $x; } else { $lat = $x; } $sku = $s2; break; } } }
+        }
+        $ligne = $cur ?? $lat;
+        $taille = $ligne['taille'] ?? $lien['taille']; $tailleUnite = ($ligne['tailleUnite'] ?? '') !== '' ? $ligne['tailleUnite'] : $lien['tailleUnite'];
+        $parU = $ligne !== null ? mfParUnite($ligne['prix'], $taille, $lien['parColis']) : null;
+        $prochain = null;
+        if ($lat !== null && $cur !== null && $lat['depuis'] !== '' && $lat['depuis'] > $cur['depuis'] && $lat['depuis'] > date('Y-m-d') && $lat['prix'] !== $cur['prix']) {
+            $prochain = ['prix' => $lat['prix'], 'parUnite' => ($pu = mfParUnite($lat['prix'], $lat['taille'] ?? $taille, $lien['parColis'])) !== null ? round($pu * $fac, 4) : null, 'depuis' => $lat['depuis']];
+        }
+        $fournisseurs[] = ['id' => $lien['fid'], 'nom' => $f['nom'], 'type' => $f['type'], 'typeNom' => $f['typeNom'], 'ville' => $f['ville'], 'integre' => $f['integre'], 'centrale' => $f['type'] === 'CENTRAL',
+            'via' => $lien['via'], 'sku' => $sku, 'nomCatalogue' => $ligne['nom'] ?? $lien['nomCatalogue'], 'listeLue' => $pl['lu'] ?? false,
+            'colis' => $ligne !== null ? ['prix' => $ligne['prix'], 'taille' => $taille, 'unite' => $tailleUnite, 'parColis' => $lien['parColis'], 'tva' => $ligne['tva']] : null,
+            'parUnite' => $parU !== null ? round($parU * $fac, 4) : null, 'depuis' => $ligne['depuis'] ?? null, 'enVigueur' => $cur !== null, 'actif' => $ligne['actif'] ?? null,
+            'ecart' => $parU !== null && ($a['prix'] ?? null) > 0 ? round(100 * ($parU - $a['prix']) / $a['prix'], 1) : null, 'prochain' => $prochain];
     }
-    usort($fournisseurs, static fn ($x, $y) => ($y['centrale'] <=> $x['centrale']) ?: strcmp($x['nom'], $y['nom']));
-    $unite = $ident['unite'];
-    $out = ['mid' => $mid, 'nom' => $ident['nom'], 'cat' => $ident['cat'], 'unite' => $unite, 'parKg' => in_array(strtolower($unite), ['kg', 'l'], true), 'perte' => $ident['perte'],
-        'typeMatiere' => $ident['type'], 'sourceCentrale' => $ident['source'] === 'CENTRAL', 'integre' => $ident['integre'], 'tva' => $a['tva'] ?? $ident['tva'],
-        'conseille' => $conseille, 'conseilleBrut' => $a['conseilleBrut'] ?? $ident['conseilleBrut'], 'reference' => $reference, 'repere' => $repere, 'repereNom' => $repereNom,
-        'magasin' => ['id' => (string) $sid, 'nom' => $noms[$sid], 'court' => preg_replace('/^.* - /', '', $noms[$sid]), 'prix' => $a['prix'] ?? null, 'brut' => $a['brut'] ?? null,
-            'ecart' => ($a['prix'] ?? null) !== null && $repere > 0 ? round(100 * ($a['prix'] - $repere) / $repere, 1) : null, 'absente' => $a === null],
-        'reseau' => $reseau, 'stats' => ['n' => count($valeurs), 'min' => $valeurs !== [] ? min($valeurs) : null, 'max' => $valeurs !== [] ? max($valeurs) : null, 'med' => $med],
-        'fournisseurs' => $fournisseurs, 'date' => null,
-        'source' => 'API du panel : /shops/{id}/materials de chaque magasin (prix de base net, prix conseillé, prix de référence, TVA) et /material-suppliers (fournisseur, référence), gardés 24 h · l’API ne date pas ses prix',
-        'fournisseursLus' => $fourn['f'] !== []];
+    usort($fournisseurs, static fn ($x, $y) => ($y['centrale'] <=> $x['centrale']) ?: (($x['parUnite'] === null) <=> ($y['parUnite'] === null)) ?: strcmp($x['nom'], $y['nom']));
+
+    $prixMag = $a['prix'] ?? null;
+    $out = ['mid' => $mid, 'nom' => $ident['nom'], 'cat' => $ident['cat'], 'uniteBase' => $ident['unite'], 'par' => $U['label'], 'facteur' => $fac, 'perte' => $ident['perte'],
+        'typeMatiere' => $ident['type'], 'sourceType' => $ident['source'], 'sourceCentrale' => $ident['source'] === 'CENTRAL', 'integre' => $ident['integre'], 'tva' => $a['tva'] ?? $ident['tva'],
+        'conseille' => $conseille !== null ? round($conseille * $fac, 4) : null, 'reference' => $reference !== null ? round($reference * $fac, 4) : null,
+        'repere' => $repere !== null ? round($repere * $fac, 4) : null, 'repereNom' => $repereNom,
+        'magasin' => ['id' => (string) $sid, 'nom' => $noms[$sid], 'court' => preg_replace('/^.* - /', '', $noms[$sid]), 'prix' => $prixMag !== null && $prixMag > 0 ? round($prixMag * $fac, 4) : null,
+            'sansPrix' => !($prixMag > 0), 'absente' => $a === null, 'ecart' => $prixMag > 0 && $repere > 0 ? round(100 * ($prixMag - $repere) / $repere, 1) : null],
+        'reseau' => $reseau, 'stats' => ['n' => count($valeurs), 'min' => $valeurs !== [] ? round(min($valeurs) * $fac, 4) : null, 'max' => $valeurs !== [] ? round(max($valeurs) * $fac, 4) : null, 'med' => $med !== null ? round($med * $fac, 4) : null],
+        'fournisseurs' => $fournisseurs, 'fournisseursLus' => $fourn['f'] !== [],
+        'source' => 'API du panel : /shops/{id}/materials de chaque magasin (prix de base net, prix conseillé, prix de référence, TVA), /material-suppliers + catalog-mappings (fournisseur, référence, colis), /material-suppliers/{f}/shops/{s}/price-lists/current et latest (prix du colis, valable depuis) ; gardés 24 h'];
     if (!empty($_GET['sonde'])) {
-        $out['sonde'] = ['conseilles' => 0, 'references' => 0, 'matieres' => count($parMagasin[$sid] ?? []), 'apiBrut' => null, 'fournisseursListe' => $fourn['f'], 'liensMatiere' => $fourn['m'][(string) $mid] ?? [], 'routes' => []];
+        $out['sonde'] = ['conseilles' => 0, 'references' => 0, 'matieres' => count($parMagasin[$sid] ?? []), 'liens' => $fourn['m'][(string) $mid] ?? [], 'fournisseursListe' => $fourn['f'], 'formule' => []];
         foreach ($parMagasin[$sid] ?? [] as $x) { if ($x['conseille'] !== null) { $out['sonde']['conseilles']++; } if ($x['reference'] !== null) { $out['sonde']['references']++; } }
-        try {
-            foreach (mfListe(PanelApi::get('/shops/' . $sid . '/materials')) as $x) { if (is_array($x) && (int) ($x['id'] ?? 0) === $mid) { $out['sonde']['apiBrut'] = $x; break; } }
-            // Les routes du swagger du panel (/swagger/openapi.json, 933 routes) qui parlent de prix de matière : essayées
-            // une fois, en lecture, avec leur code HTTP — le swagger ne décrit pas leurs réponses.
-            $centrale = null; foreach ($fourn['f'] as $fid => $f) { if ($f['type'] === 'CENTRAL') { $centrale = $fid; break; } }
-            $fid1 = $fourn['m'][(string) $mid][0]['fid'] ?? $centrale;
-            $essais = ['materiel' => '/materials/' . $mid, 'pricing' => '/shops/' . $sid . '/materials/pricing', 'avgPrice' => '/shops/' . $sid . '/materials/avg-price',
-                'magasinFournisseurs' => '/shops/' . $sid . '/suppliers', 'magasinMaterialSuppliers' => '/shops/' . $sid . '/material-suppliers',
-                'paysFournisseurs' => '/countries/BE/materials/' . $mid . '/material-suppliers', 'packs' => '/shops/' . $sid . '/materials/' . $mid . '/packs',
-                'ouvert' => '/materials/' . $mid . '/open-params', 'packagings' => '/materials/' . $mid . '/packagings'];
-            if ($fid1 !== null) {
-                $essais += ['listePrixFourn' => '/shops/' . $sid . '/suppliers/' . $fid1 . '/price-list', 'prixMatFourn' => '/shops/' . $sid . '/suppliers/' . $fid1 . '/materials/price',
-                    'orderable' => '/shops/' . $sid . '/suppliers/' . $fid1 . '/orderable-items', 'listeLatest' => '/material-suppliers/' . $fid1 . '/shops/' . $sid . '/price-lists/latest',
-                    'listeCurrent' => '/material-suppliers/' . $fid1 . '/shops/' . $sid . '/price-lists/current', 'changements' => '/material-suppliers/' . $fid1 . '/shops/' . $sid . '/price-change-notifications',
-                    'catalogue' => '/material-suppliers/' . $fid1 . '/catalog/products', 'mappings' => '/material-suppliers/' . $fid1 . '/catalog-mappings',
-                    'fournMatiere' => '/material-suppliers/' . $fid1 . '/materials/' . $mid, 'fournPackagings' => '/material-suppliers/' . $fid1 . '/materials/' . $mid . '/packagings',
-                    'rawMaterials' => '/material-suppliers/' . $fid1 . '/raw-materials', 'termes' => '/shops/' . $sid . '/material-suppliers/' . $fid1 . '/delivery-terms'];
+        // La formule vérifiée sur les matières liées au catalogue d'un fournisseur : colis ÷ taille (a) ou ÷ (taille × unités par colis) (b), face au prix du magasin.
+        $parF = [];
+        foreach ($fourn['m'] as $m2 => $liens) { foreach ($liens as $l) { if ($l['via'] === 'catalogue' && $l['sku'] !== '') { $parF[$l['fid']][] = [$m2, $l]; } } }
+        foreach ($parF as $fid => $liste) {
+            $pl = mfListePrix((string) $fid, $sid, $frais);
+            $st = ['fournisseur' => $fid, 'lies' => count($liste), 'avecPrix' => 0, 'a' => 0, 'b' => 0, 'ni' => 0, 'exemples' => []];
+            foreach ($liste as [$m2, $l]) {
+                $x = $pl['c'][$l['sku']] ?? null; $pm = $parMagasin[$sid][$m2]['prix'] ?? null;
+                if ($x === null || $x['prix'] === null || !($pm > 0)) { continue; }
+                $st['avecPrix']++;
+                $fa = mfParUnite($x['prix'], $x['taille'] ?? $l['taille'], null); $fb = mfParUnite($x['prix'], $x['taille'] ?? $l['taille'], $l['parColis']);
+                $okA = $fa !== null && abs($fa - $pm) / $pm < 0.01; $okB = $fb !== null && abs($fb - $pm) / $pm < 0.01;
+                if ($okA) { $st['a']++; } if ($okB) { $st['b']++; } if (!$okA && !$okB) { $st['ni']++; }
+                if (count($st['exemples']) < 6) { $st['exemples'][] = ['mid' => $m2, 'nom' => $parMagasin[$sid][$m2]['nom'] ?? '', 'unite' => $parMagasin[$sid][$m2]['unite'] ?? '', 'magasin' => $pm, 'colis' => $x['prix'], 'taille' => $x['taille'], 'tailleUnite' => $x['tailleUnite'], 'parColis' => $l['parColis'], 'a' => $fa, 'b' => $fb, 'depuis' => $x['depuis']]; }
             }
-            $apercu = static function ($b) {
-                if (!is_array($b)) { return is_string($b) ? mb_substr($b, 0, 200) : $b; }
-                $l = mfListe($b);
-                if ($l !== []) { return ['liste' => count($l), 'cles' => is_array($l[0]) ? array_keys($l[0]) : null, 'premier' => $l[0], 'enveloppe' => array_is_list($b) ? null : array_keys($b)]; }
-                return ['cles' => array_slice(array_keys($b), 0, 60), 'extrait' => array_map(static fn ($v) => is_array($v) ? (array_is_list($v) ? ['liste' => count($v)] : array_slice($v, 0, 20, true)) : $v, array_slice($b, 0, 20, true))];
-            };
-            foreach ($essais as $k => $chemin) {
-                $r = PanelApi::sondeGet($chemin, 12);
-                $out['sonde']['routes'][$k] = ['chemin' => $chemin, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) && $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 160) : null, 'apercu' => $apercu($r['corps'] ?? null)];
-            }
-            // L'historique des prix d'achat de la centrale : ses matières premières à elle, cherchées par le nom de la nôtre.
-            $raw = mfListe(PanelApi::get('/material-suppliers/' . ($centrale ?? $fid1 ?? '0') . '/raw-materials'));
-            $cible = mb_strtolower(trim($ident['nom'])); $trouve = null;
-            foreach ($raw as $x) { if (is_array($x) && mb_strtolower(trim((string) ($x['name'] ?? ''))) === $cible) { $trouve = $x; break; } }
-            if ($trouve === null) { foreach ($raw as $x) { if (is_array($x) && $cible !== '' && str_contains(mb_strtolower((string) ($x['name'] ?? '')), mb_substr($cible, 0, 8))) { $trouve = $x; break; } } }
-            $out['sonde']['rawMaterial'] = ['n' => count($raw), 'cles' => $raw !== [] && is_array($raw[0]) ? array_keys($raw[0]) : null, 'trouve' => $trouve];
-            if ($trouve !== null && isset($trouve['id'])) {
-                $r = PanelApi::sondeGet('/material-suppliers/' . ($centrale ?? $fid1) . '/raw-materials/' . (int) $trouve['id'] . '/price-history', 12);
-                $out['sonde']['rawHistorique'] = ['code' => $r['code'] ?? null, 'apercu' => $apercu($r['corps'] ?? null)];
-            }
-        } catch (Throwable $e) { $out['sonde']['erreur'] = $e->getMessage(); }
+            $out['sonde']['formule'][] = $st;
+        }
     }
     return $out;
 }
