@@ -1663,6 +1663,35 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rface .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#8a8278;margin-bottom:4px}
 .fi-rface .r{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:.5px dashed #e6e0d8}
 .fi-rface .r b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.fi-rwf .l small{display:block;font-size:10.5px;color:#8a8278;font-weight:400}
+/* Le prix pour y arriver et la simulation de prix */
+.fi-rprix{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px;align-items:start}
+.fi-rpal{width:100%;border-collapse:collapse;font-size:12px}
+.fi-rpal th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278;text-align:right;padding:0 6px 6px;border-bottom:.5px solid #e6e0d8}
+.fi-rpal th:first-child{text-align:left}
+.fi-rpal td{padding:6px;text-align:right;border-bottom:.5px dashed #e6e0d8;font-variant-numeric:tabular-nums;vertical-align:middle;white-space:nowrap}
+.fi-rpal td:first-child{text-align:left;white-space:normal}
+.fi-rpal td small{display:block;font-size:10.5px;color:#8a8278;font-weight:400}
+.fi-rpal td small.co{display:none}
+.fi-rpal tr.atteint td,.fi-rpal tr.atteint td b{color:#a39c93}
+.fi-rpal tr.choisi td{background:#eef4fb}
+.fi-rsimb{font:600 11px var(--font-ui);color:#2a78d6;background:#fff;border:1px solid #bcd3ef;border-radius:999px;padding:3px 9px;cursor:pointer}
+.fi-rsimb:hover{background:#eef4fb}
+.fi-rbtn{font:700 12.5px var(--font-ui);background:var(--color-primary,#8D1D2C);color:#fff;border:none;border-radius:999px;padding:9px 16px;cursor:pointer}
+.fi-rbtn:hover{filter:brightness(1.08)}
+.fi-rsim{border:.5px solid var(--color-border-tertiary,#e6e0d8);border-radius:12px;padding:12px 14px;background:#faf7f3}
+.fi-rsim.vide{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.fi-rsimh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fi-rsimc{display:inline-flex;align-items:center;gap:4px}
+.fi-rsimc button{width:30px;height:30px;border-radius:50%;border:1px solid #d8d1c8;background:#fff;font:700 16px/1 var(--font-ui);cursor:pointer;color:#222}
+.fi-rsimc input{width:76px;height:32px;border:1px solid #d8d1c8;border-radius:8px;text-align:right;font:700 15px var(--font-ui);padding:0 8px;font-variant-numeric:tabular-nums;background:#fff}
+.fi-rsimx{margin-left:auto;background:none;border:none;color:#8a8278;font:600 11px var(--font-ui);cursor:pointer;text-decoration:underline}
+.fi-rsimv{margin-top:10px;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+.fi-rsimv.ko{background:#f8e0e3;color:#6e0c1a}.fi-rsimv.att{background:#fbecd8;color:#7a4402}.fi-rsimv.ok{background:#e3f0e6;color:#1f5a2c}
+.fi-rmoi.sim i{border-top-color:#2a78d6}
+.fi-rmoi.sim em{top:58px;color:#2a78d6;width:140px;left:-70px}
+.fi-rjb.sim .fi-raxe{margin-top:82px}
+.fi-rchip.sim{background:#e4eefb;border-color:#b9d0ef}.fi-rchip.sim b{color:#1f4f8f}
 @media (max-width:700px){
   .fi-rdeux{grid-template-columns:1fr}
   .fi-rjg{grid-template-columns:1fr;gap:6px}
@@ -1673,5 +1702,11 @@ html.db-fiche-ouverte{overflow:hidden}
   .fi-raxe{margin-top:48px;font-size:9.5px}
   .fi-rtab td.p{width:30%}
   .fi-rtab td:not(:first-child){white-space:nowrap}
+  .fi-rprix{grid-template-columns:1fr}
+  .fi-rpal th:nth-child(2),.fi-rpal td:nth-child(2){display:none}
+  .fi-rpal td small.co{display:block}
+  .fi-rpal td{padding:6px 4px;font-size:11.5px}
+  .fi-rmoi.sim em{width:110px;left:-55px}
+  .fi-rjb.sim .fi-raxe{margin-top:90px}
   .fi-rwf .r{grid-template-columns:1.2fr .8fr 64px 44px;font-size:11.5px}
 }

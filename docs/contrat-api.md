@@ -1789,6 +1789,15 @@ colonnes, les lignes brutes et les coûts bruts :
   de l'objectif = 100 ÷ seuil matière), la recette et son split, la marge en cascade (matière, main-d'œuvre et
   frais généraux aux seuils du P&L, résultat par pièce) et le produit face à sa catégorie, au magasin, au prix
   réseau et à l'objectif. La ligne cliquée porte `data-fc` (coût matière du jour) et `data-fcat` (catégorie).
+- « Le prix pour y arriver » (08/10/2026) : sous le verdict, chaque palier de la jauge (marge 40 %, sa catégorie,
+  le prix réseau, marge 60 %, le magasin du jour, l'objectif) traduit en prix à pratiquer = coût de recette ×
+  coefficient, arrondi aux 5 centimes supérieurs, avec l'écart face au prix encaissé. Le bouton « Adapter le
+  prix » ouvre une simulation, dans la modale seulement (rien n'est écrit, ni au panel ni au serveur) : un prix
+  choisi dans les paliers, tapé ou ajusté par pas de 5 centimes ; la pièce est recalculée à ce prix (coefficient,
+  marge brute, résultat par pièce aux seuils, écart face au prix réseau, chiffre en plus sur les pièces vendues du
+  jour à volume égal), un second repère « prix simulé » se pose sous la jauge, la cascade de marge passe au prix
+  simulé et une pastille « prix simulé » s'ajoute à l'en-tête. Changer le prix de vente dans le panel reste une
+  action du panel.
 
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 

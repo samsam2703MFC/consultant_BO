@@ -3030,6 +3030,15 @@
     const serre = typeof matchMedia === 'function' && matchMedia('(max-width:700px)').matches ? 27 : 17;
     reperes.forEach((r, i) => { if (i > 0 && pct(r.v) - pct(reperes[i - 1].v) < serre && !/\bh2\b/.test(reperes[i - 1].cls || '')) { r.cls = ((r.cls || '') + ' h2').trim(); } });
     const etage = reperes.some(r => /\bh2\b/.test(r.cls || ''));
+    // Le prix pour y arriver : chaque palier de la jauge traduit en prix à pratiquer, arrondi aux 5 centimes supérieurs.
+    const a5 = p => Math.ceil(p * 20 - 1e-9) / 20;
+    const fD = v => (v >= 0 ? '+ ' : '− ') + nf(Math.abs(v), 2) + ' €', fPs = v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 0) + ' %';
+    const paliers = mat > 0 && prix != null ? [{ lib: 'marge 40 %', coef: FI_ZONES.ko }, catCoef != null ? { lib: 'sa catégorie', coef: catCoef } : null,
+      med != null ? { lib: 'le prix réseau', coef: med / mat, fixe: med } : null, { lib: 'marge 60 %', coef: FI_ZONES.att }, magCoef != null ? { lib: 'le magasin aujourd’hui', coef: magCoef } : null,
+      { lib: 'objectif · matière ' + fP0(se.food), coef: obj }].filter(Boolean).map(p => Object.assign(p, { prix: p.fixe != null ? p.fixe : a5(mat * p.coef) })).sort((a, b) => a.coef - b.coef) : [];
+    // La simulation : un autre prix, choisi dans les paliers ou tapé, et la pièce recalculée à ce prix.
+    const sim = F.simPrix != null && F.simPrix > 0 && mat > 0 && prix != null ? F.simPrix : null;
+    const sCoef = sim != null ? sim / mat : null, sTaux = sim != null ? 100 * (sim - mat) / sim : null;
     const lignes = R && Array.isArray(R.lignes) ? R.lignes : [];
     // Les parts se lisent sur le coût gravé de la pièce (les lignes peuvent être incomplètes), sinon sur le total des lignes.
     const totalL = R && R.total != null ? R.total : null, baseL = mat > 0 ? mat : (totalL || 0);
@@ -3038,12 +3047,28 @@
     // 1. La jauge.
     let h = `<section class="fi-rc fi-rjauge"><div class="fi-rct"><span class="fi-rh">Le coefficient</span><span class="fi-note">ce que le prix fait de la matière : prix encaissé ÷ coût de recette</span></div>
       <div class="fi-rjg"><div class="fi-rjn ${niv(coef)}"><b>${fX(coef)}</b><span>${NIV[niv(coef)]}</span><small>${taux != null ? 'marge brute ' + fP0(taux) + ' · matière ' + fP0(100 - taux) + ' du prix' : 'le coût de recette de cette pièce n’est pas gravé'}</small></div>
-        <div class="fi-rjb${etage ? ' etage' : ''}"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
+        <div class="fi-rjb${etage ? ' etage' : ''}${sim != null ? ' sim' : ''}"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
           ${reperes.map(r => `<span class="fi-rrep ${r.cls || ''}" style="left:${pct(r.v).toFixed(1)}%"><i></i><em>${esc(r.lib)}<small>${esc(r.sous)}</small></em></span>`).join('')}
-          ${coef != null ? `<span class="fi-rmoi ${niv(coef)}" style="left:${pct(coef).toFixed(1)}%"><i></i><em>ce produit<small>${fX(coef)}</small></em></span>` : ''}</div>
+          ${coef != null ? `<span class="fi-rmoi ${niv(coef)}" style="left:${pct(coef).toFixed(1)}%"><i></i><em>ce produit<small>${fX(coef)}</small></em></span>` : ''}
+          ${sim != null ? `<span class="fi-rmoi sim ${niv(sCoef)}" style="left:${pct(sCoef).toFixed(1)}%"><i></i><em>prix simulé ${fPt(sim)}<small>${fX(sCoef)}</small></em></span>` : ''}</div>
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div></div></div>`;
     if (coef != null) {
       h += `<div class="fi-rverdict ${niv(coef)}"><b>${niv(coef) === 'ok' ? 'Dans le vert.' : 'Sous l’objectif.'}</b> La matière prend ${fP0(100 - taux)} du prix.${niv(coef) !== 'ok' ? ` Pour entrer dans le vert (× 2,5), il faudrait vendre la pièce <b>${fPt(mat * 2.5)}</b> au lieu de ${fPt(prix)}, ou ramener la matière à <b>${fPt(prix / 2.5)}</b> au lieu de ${fPt(mat)}.` : ''}${top && topPart != null ? ` ${esc(top.nom)} pèse <b>${fP0(topPart)}</b> du coût${niv(coef) !== 'ok' ? ' : c’est là que ça se joue' : ''}.` : ''}</div>`;
+    }
+    if (paliers.length) {
+      const lig = paliers.map(p => `<tr class="${p.coef <= coef + 1e-9 ? 'atteint' : ''}${sim != null && Math.abs(p.prix - sim) < 0.005 ? ' choisi' : ''}"><td><b>${esc(p.lib)}</b><small class="co">${fX(p.coef)}</small>${p.coef <= coef + 1e-9 ? '<small>déjà atteint</small>' : ''}</td><td>${fX(p.coef)}</td><td><b>${fPt(p.prix)}</b></td><td>${fD(p.prix - prix)}<small>${fPs(100 * (p.prix - prix) / prix)}</small></td><td><button type="button" class="fi-rsimb" data-fsim="${p.prix.toFixed(2)}" title="voir la pièce à ce prix">simuler</button></td></tr>`).join('');
+      let simH;
+      if (sim == null) {
+        simH = `<div class="fi-rsim vide"><button type="button" class="fi-rbtn" data-fsim="${a5(prix).toFixed(2)}">Adapter le prix</button><span class="fi-note">essayer un autre prix et voir où la pièce se place : coefficient, marge brute, résultat par pièce, face au prix réseau.</span></div>`;
+      } else {
+        const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
+        simH = `<div class="fi-rsim"><div class="fi-rsimh"><span class="fi-rh">Adapter le prix</span>
+            <span class="fi-rsimc"><button type="button" data-fsimpas="-0.05" aria-label="moins 5 centimes">−</button><input type="text" inputmode="decimal" data-fsiminput="1" value="${nf(sim, 2)}" aria-label="prix simulé"><b>€</b><button type="button" data-fsimpas="0.05" aria-label="plus 5 centimes">+</button></span>
+            <span class="fi-note">au lieu de ${fPt(prix)} encaissé</span><button type="button" class="fi-rsimx" data-fsimx="1">fermer</button></div>
+          <div class="fi-rsimv ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div></div>`;
+      }
+      h += `<div class="fi-rprix"><div><div class="fi-rct"><span class="fi-rh">Le prix pour y arriver</span><span class="fi-note">coût de recette ${fPt(mat)} · prix arrondis aux 5 centimes supérieurs</span></div>
+        <table class="fi-rpal"><thead><tr><th>Palier</th><th>Coefficient</th><th>Prix à pratiquer</th><th>Face à ${fPt(prix)}</th><th></th></tr></thead><tbody>${lig}</tbody></table></div>${simH}</div>`;
     }
     h += '</section>';
     // 2. La recette.
@@ -3064,11 +3089,12 @@
     let marge;
     if (prix == null || mat == null) { marge = `<div class="fi-msg">Sans coût de recette gravé, pas de marge pièce par pièce.</div>`; }
     else {
-      const lab = prix * se.labour / 100, oh = prix * se.overhead / 100, net = mb - lab - oh;
-      const wf = [{ lib: 'Prix encaissé', v: prix, cls: 'prix', part: 100 }, { lib: '− Matière', v: -mat, cls: 'mat', part: 100 * mat / prix }, { lib: '= Marge brute', v: mb, cls: 'mb', part: taux, fort: true },
+      // Au prix simulé quand la simulation est ouverte, sinon au prix encaissé.
+      const pS = sim != null ? sim : prix, mbS = pS - mat, tauxS = 100 * mbS / pS, lab = pS * se.labour / 100, oh = pS * se.overhead / 100, net = mbS - lab - oh;
+      const wf = [{ lib: sim != null ? 'Prix simulé' : 'Prix encaissé', sous: sim != null ? 'au lieu de ' + fPt(prix) + ' encaissé' : '', v: pS, cls: 'prix', part: 100 }, { lib: '− Matière', v: -mat, cls: 'mat', part: 100 * mat / pS }, { lib: '= Marge brute', v: mbS, cls: 'mb', part: tauxS, fort: true },
         { lib: `− Main-d’œuvre, au seuil de ${fP0(se.labour)}`, v: -lab, cls: 'ch', part: se.labour }, { lib: `− Frais généraux, au seuil de ${fP(se.overhead)}`, v: -oh, cls: 'ch', part: se.overhead },
-        { lib: '= Résultat par pièce', v: net, cls: net >= 0 ? 'net ok' : 'net ko', part: Math.abs(100 * net / prix), fort: true }];
-      marge = `<div class="fi-rwf">${wf.map(r => `<div class="r ${r.cls}${r.fort ? ' fort' : ''}"><span class="l">${esc(r.lib)}</span><span class="b"><i style="width:${Math.min(100, Math.max(0, r.part)).toFixed(1)}%"></i></span><span class="v">${r.v < 0 ? '− ' : ''}${fPt(Math.abs(r.v))}</span><span class="p">${fP0(100 * r.v / prix)}</span></div>`).join('')}</div>
+        { lib: '= Résultat par pièce', v: net, cls: net >= 0 ? 'net ok' : 'net ko', part: Math.abs(100 * net / pS), fort: true }];
+      marge = `<div class="fi-rwf${sim != null ? ' sim' : ''}">${wf.map(r => `<div class="r ${r.cls}${r.fort ? ' fort' : ''}"><span class="l">${esc(r.lib)}${r.sous ? `<small>${esc(r.sous)}</small>` : ''}</span><span class="b"><i style="width:${Math.min(100, Math.max(0, r.part)).toFixed(1)}%"></i></span><span class="v">${r.v < 0 ? '− ' : ''}${fPt(Math.abs(r.v))}</span><span class="p">${fP0(100 * r.v / pS)}</span></div>`).join('')}</div>
         <div class="fi-rface"><div class="k">Face à</div>
           ${cat ? `<div class="r"><span>${esc(cat.nom)} aujourd’hui${cat.refs != null ? ' · ' + cat.refs + ' réf.' : ''}</span><b>${catTaux != null ? 'marge ' + fP0(catTaux) + ' · ' : ''}${fX(catCoef)}</b></div>` : ''}
           ${T ? `<div class="r"><span>Le magasin aujourd’hui</span><b>${magTaux != null ? 'marge ' + fP0(magTaux) + ' · ' : ''}${fX(magCoef)}</b></div>` : ''}
@@ -3076,7 +3102,7 @@
           <div class="r"><span>Objectif du réseau · matière ${fP0(se.food)}</span><b>marge ${fP0(100 - se.food)} · ${fX(obj)}</b></div></div>`;
     }
     return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · coût de recette net du panel · seuils du réseau : matière ${fP0(se.food)}, main-d’œuvre ${fP0(se.labour)}, frais généraux ${fP(se.overhead)}</span></div>
-      ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
+      ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">${sim != null ? 'au prix simulé de ' + fPt(sim) + ' · ' : ''}main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
   }
   function ficheRendre() {
     let box = document.getElementById('db-fiche');
@@ -3088,7 +3114,8 @@
     const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${F.q >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
       d && d.prix ? `<span class="fi-chip">prix encaissé <b>${fPx(d.prix.magasin.p)}</b></span><span class="fi-chip">prix réseau <b>${fPx(d.prix.reseau.med)}</b></span>` : '',
       F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : '',
-      F.c != null && F.q > 0 && F.c > 0 && F.v != null ? (cf => `<span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`)(F.v / F.c) : ''].join('');
+      F.c != null && F.q > 0 && F.c > 0 && F.v != null ? (cf => `<span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`)(F.v / F.c) : '',
+      F.onglet === 3 && F.simPrix != null && F.simPrix > 0 ? `<span class="fi-chip fi-rchip sim">prix simulé <b>${nf(F.simPrix, 2)} €</b></span>` : ''].join('');
     let corps;
     if (F.onglet === 3) { ficheLireRecette(); corps = ficheRecette(F, d, S.aux[cleRecette()], S.err[cleRecette()]); }
     else if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
@@ -3128,6 +3155,16 @@
     box.querySelectorAll('[data-ffermer]').forEach(b => b.addEventListener('click', ficheFermer));
     box.querySelectorAll('[data-fong]').forEach(b => b.addEventListener('click', () => { S.fiche.onglet = +b.dataset.fong; ficheRendre(); }));
     box.querySelectorAll('[data-fmois]').forEach(b => b.addEventListener('click', () => { S.fiche.mois = +b.dataset.fmois; ficheLire(); ficheRendre(); }));
+    // La simulation de prix de l'onglet « Recette & marge » : un palier, un pas de 5 centimes ou un prix tapé.
+    const simA = v => { S.fiche.simPrix = v > 0 ? Math.round(v * 100) / 100 : null; ficheRendre(); };
+    box.querySelectorAll('[data-fsim]').forEach(b => b.addEventListener('click', () => simA(+b.dataset.fsim)));
+    box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
+    box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix || 0) + +b.dataset.fsimpas)); const n = document.querySelector(`#db-fiche [data-fsimpas="${b.dataset.fsimpas}"]`); if (n) { n.focus(); } }));
+    const inp = box.querySelector('[data-fsiminput]');
+    if (inp) {
+      inp.addEventListener('change', () => { const v = parseFloat(String(inp.value).replace(/\s/g, '').replace(',', '.')); if (v > 0) { simA(v); } else { inp.value = nf(S.fiche.simPrix, 2); } });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+    }
     const x = box.querySelector('.fi-x'); if (x && !box.contains(document.activeElement)) { x.focus({ preventScroll: true }); }
   }
 
