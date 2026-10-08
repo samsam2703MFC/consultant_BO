@@ -1,0 +1,484 @@
+{
+ "magasin": "Atelier by - Halle",
+ "shopId": "4",
+ "date": "2026-10-07",
+ "jourNom": "mercredi",
+ "maintenant": "15:12",
+ "reference": {
+  "libelle": "moyenne des 6 derniers mercredis",
+  "jours": [
+   "2026-09-30",
+   "2026-09-23",
+   "2026-09-16",
+   "2026-09-09",
+   "2026-09-02",
+   "2026-08-26"
+  ]
+ },
+ "reseau": {
+  "ca": 9228.6,
+  "tickets": 635,
+  "panier": 14.53,
+  "produitsParClient": 3.58,
+  "margeBrutePct": 62.6,
+  "caDelta": 5.3
+ },
+ "seuils": {
+  "food": 32,
+  "labour": 33,
+  "overhead": 13.5
+ },
+ "m": {
+  "ca": 1198.7,
+  "tickets": 122,
+  "caComptoir": 1193.8,
+  "caPro": 4.9,
+  "ticketsComptoir": 121,
+  "objectifJour": 1815.71,
+  "objectifAtteinte": 0.6602,
+  "objectifJourNom": "mercredi",
+  "objectifSource": "budget",
+  "j7": {
+   "date": "2026-09-30",
+   "moment": "15:12",
+   "tickets": 92,
+   "ca": 1219.36,
+   "ticketsJour": 111,
+   "caJour": 1453.4
+  },
+  "margeBrute": 728.29,
+  "margeBrutePct": 60.8,
+  "coutMatiere": 470.41,
+  "coutMatierePct": 39.2,
+  "refTickets": 124,
+  "ticketsDelta": -1.5,
+  "refCa": 1344.17,
+  "caDelta": -10.8,
+  "produits": 409,
+  "produitsParClient": 3.35,
+  "panier": 9.83,
+  "panierComptoir": 9.87,
+  "projection": 1304.32,
+  "projectionPart": 92.1,
+  "projectionRythme": 1300.93,
+  "projectionAtteinte": 0.7184,
+  "projectionReste": 105.62,
+  "projectionHeure": 15,
+  "net": -8.09,
+  "netPct": -0.7,
+  "labour": 250,
+  "labourPct": 20.9,
+  "overhead": 486.38,
+  "overheadPct": 40.6,
+  "clientsManquants": 63,
+  "ecartComptoir": -621.91,
+  "serie": [
+   {
+    "date": "2026-10-01",
+    "ouvert": true,
+    "ca": 1691.85,
+    "tickets": 119,
+    "net": 412.85,
+    "netPct": 24.4
+   },
+   {
+    "date": "2026-10-02",
+    "ouvert": true,
+    "ca": 1880.6,
+    "tickets": 154,
+    "net": 490.73,
+    "netPct": 26.1
+   },
+   {
+    "date": "2026-10-03",
+    "ouvert": true,
+    "ca": 2683.2,
+    "tickets": 181,
+    "net": 1069.17,
+    "netPct": 39.8
+   },
+   {
+    "date": "2026-10-04",
+    "ouvert": true,
+    "ca": 2708.7,
+    "tickets": 186,
+    "net": 1093.39,
+    "netPct": 40.4
+   },
+   {
+    "date": "2026-10-05",
+    "ouvert": true,
+    "ca": 1305.95,
+    "tickets": 138,
+    "net": 247.37,
+    "netPct": 18.9
+   },
+   {
+    "date": "2026-10-06",
+    "ouvert": true,
+    "ca": 1304.85,
+    "tickets": 132,
+    "net": 241.89,
+    "netPct": 18.5
+   },
+   {
+    "date": "2026-10-07",
+    "ouvert": true,
+    "ca": 1198.7,
+    "tickets": 122,
+    "net": 176.66,
+    "netPct": 14.7
+   }
+  ],
+  "semaine": [
+   {
+    "date": "2026-10-05",
+    "wd": 1,
+    "passe": true,
+    "aujourdhui": false,
+    "ouvert": true,
+    "ca": 1305.95,
+    "tickets": 138,
+    "net": 247.37,
+    "objectif": 1712.62
+   },
+   {
+    "date": "2026-10-06",
+    "wd": 2,
+    "passe": true,
+    "aujourdhui": false,
+    "ouvert": true,
+    "ca": 1304.85,
+    "tickets": 132,
+    "net": 241.89,
+    "objectif": 1814.33
+   },
+   {
+    "date": "2026-10-07",
+    "wd": 3,
+    "passe": true,
+    "aujourdhui": true,
+    "ouvert": true,
+    "ca": 1198.7,
+    "tickets": 122,
+    "net": -8.09,
+    "objectif": 1815.71
+   },
+   {
+    "date": "2026-10-08",
+    "wd": 4,
+    "passe": false,
+    "aujourdhui": false,
+    "ouvert": false,
+    "ca": null,
+    "tickets": null,
+    "net": null,
+    "objectif": 1833.57
+   },
+   {
+    "date": "2026-10-09",
+    "wd": 5,
+    "passe": false,
+    "aujourdhui": false,
+    "ouvert": false,
+    "ca": null,
+    "tickets": null,
+    "net": null,
+    "objectif": 1861.06
+   },
+   {
+    "date": "2026-10-10",
+    "wd": 6,
+    "passe": false,
+    "aujourdhui": false,
+    "ouvert": false,
+    "ca": null,
+    "tickets": null,
+    "net": null,
+    "objectif": 2325.64
+   },
+   {
+    "date": "2026-10-11",
+    "wd": 7,
+    "passe": false,
+    "aujourdhui": false,
+    "ouvert": false,
+    "ca": null,
+    "tickets": null,
+    "net": null,
+    "objectif": 2382
+   }
+  ],
+  "heures": [
+   {
+    "h": 6,
+    "ca": 47.2
+   },
+   {
+    "h": 7,
+    "ca": 80.4
+   },
+   {
+    "h": 8,
+    "ca": 129.2
+   },
+   {
+    "h": 9,
+    "ca": 147.5
+   },
+   {
+    "h": 10,
+    "ca": 176.5
+   },
+   {
+    "h": 11,
+    "ca": 116.1
+   },
+   {
+    "h": 12,
+    "ca": 209.5
+   },
+   {
+    "h": 13,
+    "ca": 172
+   },
+   {
+    "h": 14,
+    "ca": 100
+   },
+   {
+    "h": 15,
+    "ca": 20.3
+   }
+  ]
+ },
+ "statsJour": {
+  "totaux": {
+   "tickets": 123,
+   "ca": 1201.9,
+   "mat": 477.8,
+   "trav": 168.75,
+   "res": 555.35,
+   "mb": 724.1,
+   "panier": 9.77,
+   "mbPct": 60.2,
+   "resPct": 46.2
+  },
+  "heures": [
+   {
+    "h": 6,
+    "tickets": 8,
+    "ca": 47.2,
+    "mat": 18.1,
+    "mb": 29.1,
+    "trav": 25,
+    "res": 4.1
+   },
+   {
+    "h": 7,
+    "tickets": 12,
+    "ca": 80.4,
+    "mat": 32.95,
+    "mb": 47.45,
+    "trav": 25,
+    "res": 22.45
+   },
+   {
+    "h": 8,
+    "tickets": 14,
+    "ca": 129.2,
+    "mat": 54.11,
+    "mb": 75.09,
+    "trav": 25,
+    "res": 50.09
+   },
+   {
+    "h": 9,
+    "tickets": 14,
+    "ca": 142.6,
+    "mat": 61.15,
+    "mb": 81.45,
+    "trav": 25,
+    "res": 56.45
+   },
+   {
+    "h": 10,
+    "tickets": 16,
+    "ca": 153.1,
+    "mat": 59.88,
+    "mb": 93.22,
+    "trav": 25,
+    "res": 68.22
+   },
+   {
+    "h": 11,
+    "tickets": 17,
+    "ca": 121,
+    "mat": 46.34,
+    "mb": 74.66,
+    "trav": 25,
+    "res": 49.66
+   },
+   {
+    "h": 12,
+    "tickets": 19,
+    "ca": 232.9,
+    "mat": 90.61,
+    "mb": 142.29,
+    "trav": 0,
+    "res": 142.29
+   },
+   {
+    "h": 13,
+    "tickets": 13,
+    "ca": 172,
+    "mat": 68.8,
+    "mb": 103.2,
+    "trav": 0,
+    "res": 103.2
+   },
+   {
+    "h": 14,
+    "tickets": 7,
+    "ca": 100,
+    "mat": 38.44,
+    "mb": 61.56,
+    "trav": 6.25,
+    "res": 55.31
+   },
+   {
+    "h": 15,
+    "tickets": 3,
+    "ca": 23.5,
+    "mat": 7.42,
+    "mb": 16.08,
+    "trav": 12.5,
+    "res": 3.58
+   }
+  ]
+ },
+ "statsJ7": {
+  "date": "2026-09-30",
+  "totaux": {
+   "tickets": 111,
+   "ca": 1453.4,
+   "mat": 387.5,
+   "trav": 217,
+   "res": 848.9,
+   "mb": 1065.9,
+   "panier": 13.09,
+   "mbPct": 73.3,
+   "resPct": 58.4
+  },
+  "heures": [
+   {
+    "h": 6,
+    "tickets": 10,
+    "ca": 221.7,
+    "mat": 72.87,
+    "mb": 148.83,
+    "trav": 25,
+    "res": 123.83
+   },
+   {
+    "h": 7,
+    "tickets": 10,
+    "ca": 197.1,
+    "mat": 21.4,
+    "mb": 175.7,
+    "trav": 25,
+    "res": 150.7
+   },
+   {
+    "h": 8,
+    "tickets": 14,
+    "ca": 164.3,
+    "mat": 60.23,
+    "mb": 104.07,
+    "trav": 25,
+    "res": 79.07
+   },
+   {
+    "h": 9,
+    "tickets": 8,
+    "ca": 82.9,
+    "mat": 44.5,
+    "mb": 38.4,
+    "trav": 25,
+    "res": 13.4
+   },
+   {
+    "h": 10,
+    "tickets": 14,
+    "ca": 148.9,
+    "mat": 53.77,
+    "mb": 95.13,
+    "trav": 25,
+    "res": 70.13
+   },
+   {
+    "h": 11,
+    "tickets": 9,
+    "ca": 113.1,
+    "mat": 20.05,
+    "mb": 93.05,
+    "trav": 25,
+    "res": 68.05
+   },
+   {
+    "h": 12,
+    "tickets": 16,
+    "ca": 167.9,
+    "mat": 20.06,
+    "mb": 147.84,
+    "trav": 0,
+    "res": 147.84
+   },
+   {
+    "h": 13,
+    "tickets": 5,
+    "ca": 52.5,
+    "mat": 30.17,
+    "mb": 22.33,
+    "trav": 13.4,
+    "res": 8.93
+   },
+   {
+    "h": 14,
+    "tickets": 5,
+    "ca": 57.9,
+    "mat": 25.06,
+    "mb": 32.84,
+    "trav": 13.4,
+    "res": 19.44
+   },
+   {
+    "h": 15,
+    "tickets": 7,
+    "ca": 65.3,
+    "mat": 39.39,
+    "mb": 25.91,
+    "trav": 13.4,
+    "res": 12.51
+   },
+   {
+    "h": 16,
+    "tickets": 6,
+    "ca": 64,
+    "mat": 0,
+    "mb": 64,
+    "trav": 13.4,
+    "res": 50.6
+   },
+   {
+    "h": 17,
+    "tickets": 7,
+    "ca": 117.8,
+    "mat": 0,
+    "mb": 117.8,
+    "trav": 13.4,
+    "res": 104.4
+   }
+  ]
+ }
+}
