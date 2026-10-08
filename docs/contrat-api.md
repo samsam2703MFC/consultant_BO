@@ -1811,7 +1811,9 @@ locale (demande : « api only, from swagger »). Routes du swagger (`/swagger/op
 - `/shops/{id}/materials`, pour chaque magasin actif du cockpit (table `shops`) : `base_unit_price_net` (le prix du
   magasin par unité de base), `suggested_base_unit_price_net` (prix conseillé : rempli pour 1 matière sur 631),
   `reference_unit_price_net`, `unit_name`, `category_name`, `vat_rate`, `source_type` (CENTRAL, OPEN),
-  `integrated_supplier`. Une lecture par magasin, gardée 24 h (`ceo_app_setting` `matieresApi:<shop>`) ;
+  `integrated_supplier`. Une lecture par magasin, gardée 24 h (`ceo_app_setting` `matieresApi:<shop>`), 10 minutes
+  pour le magasin demandé (un prix changé au panel doit se voir vite) ; `lu.magasin` dit l'heure de cette lecture et
+  « Relire » dans la modale passe `&rafraichir=1`, qui relit tout ;
 - `/material-suppliers` (7 fournisseurs, la centrale de type CENTRAL), puis par fournisseur `/catalog-mappings`
   (`material_id` ↔ `catalog_product_sku`, `package_size`, `package_unit`, `units_per_pack`), `/connected-materials`
   (`supplier_sku`) et `/materials` ; gardés 24 h pour le réseau (`fournisseursMatieres2`) ;
@@ -1838,6 +1840,8 @@ locale (demande : « api only, from swagger »). Routes du swagger (`/swagger/op
 - `magasin.sansPrix` : le magasin porte la matière à 0 (le thon à Halle) ; `absente` : il ne la porte pas.
   `fournisseurs` vide : aucun fournisseur du panel ne porte la matière (le thon, acheté librement).
 - `prochain` : la liste `latest` quand elle vaut plus tard que `current`, dans le futur, à un autre prix.
+- La recette de la modale reste chiffrée par la copie locale (`/analyse/produits/recette`) : quand l'API dit un autre
+  prix que celui que la recette a pris, la fiche le dit en note (la copie se synchronise à son rythme).
 - Le panel ne porte pas le prix d'achat de la centrale chez ses propres fournisseurs : `/material-suppliers/{f}/raw-materials`
   et `/price-history` n'ont que trois matières d'essai. Le « prix centrale » montré est donc le prix de sa liste pour le
   magasin.

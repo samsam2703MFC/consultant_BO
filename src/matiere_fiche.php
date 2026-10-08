@@ -20,7 +20,8 @@
  */
 declare(strict_types=1);
 
-const MF_HEURES = 24;
+const MF_HEURES = 24;            // les lectures du réseau (autres magasins, fournisseurs, listes de prix)
+const MF_MINUTES_MAGASIN = 10;   // les matières du magasin demandé : relues plus souvent, un prix changé au panel doit se voir vite
 
 /** Une liste du panel : la réponse est une liste, ou l'enveloppe la porte sous `data`, `items`, `materials`… */
 function mfListe(mixed $r): array
@@ -39,13 +40,15 @@ function mfNombre(mixed $v): ?float
     return is_numeric($v) ? (float) $v : null;
 }
 
-/** Une valeur gardée 24 h dans `ceo_app_setting` : null si absente, périmée ou illisible. */
-function mfCache(string $cle, bool $frais): ?array
+/** Une valeur gardée dans `ceo_app_setting` (24 h par défaut) : null si absente, périmée ou illisible. `$leLu` reçoit l'heure de lecture. */
+function mfCache(string $cle, bool $frais, ?int $maxSec = null, ?int &$leLu = null): ?array
 {
+    $leLu = null;
     if ($frais) { return null; }
     try { $c = setting($cle); } catch (Throwable $e) { return null; }
     if (!is_array($c) || !isset($c['le'], $c['v']) || !is_array($c['v'])) { return null; }
-    if (time() - (int) $c['le'] >= MF_HEURES * 3600) { return null; }
+    if (time() - (int) $c['le'] >= ($maxSec ?? MF_HEURES * 3600)) { return null; }
+    $leLu = (int) $c['le'];
     return $c['v'];
 }
 
@@ -91,22 +94,24 @@ function mfMatiere(array $x): array
 }
 
 /**
- * Les matières de chaque magasin demandé selon l'API (`/shops/{id}/materials`), gardées 24 h par magasin : les
- * magasins sans cache sont lus en parallèle. Rend [sid => [mid => matière]] ; un magasin illisible vaut [].
+ * Les matières de chaque magasin demandé selon l'API (`/shops/{id}/materials`), gardées 24 h par magasin — 10 min pour
+ * le magasin courant `$sidCourant`, pour qu'un prix changé au panel se voie vite. Les magasins sans cache sont lus en
+ * parallèle. Rend [sid => [mid => matière]] ; un magasin illisible vaut []. `$luLe` reçoit l'heure de lecture par magasin.
  */
-function mfMatieresApi(array $sids, bool $frais): array
+function mfMatieresApi(array $sids, bool $frais, int $sidCourant = 0, array &$luLe = []): array
 {
-    $out = []; $manque = [];
+    $out = []; $manque = []; $luLe = [];
     foreach ($sids as $sid) {
-        $c = mfCache('matieresApi:' . $sid, $frais);
-        if ($c !== null) { $out[$sid] = $c; } else { $manque[$sid] = '/shops/' . $sid . '/materials'; }
+        $le = null;
+        $c = mfCache('matieresApi:' . $sid, $frais, $sid === $sidCourant ? MF_MINUTES_MAGASIN * 60 : null, $le);
+        if ($c !== null) { $out[$sid] = $c; $luLe[$sid] = $le; } else { $manque[$sid] = '/shops/' . $sid . '/materials'; }
     }
     if ($manque !== [] && PanelApi::configured()) {
         $res = count($manque) === 1 ? [array_key_first($manque) => PanelApi::get(reset($manque))] : PanelApi::getParallele($manque);
         foreach ($manque as $sid => $chemin) {
             $m = [];
             foreach (mfListe($res[$sid] ?? null) as $x) { if (is_array($x) && isset($x['id'])) { $m[(string) (int) $x['id']] = mfMatiere($x); } }
-            $out[$sid] = $m;
+            $out[$sid] = $m; $luLe[$sid] = time();
             if ($m !== []) { mfGarder('matieresApi:' . $sid, $m); }
         }
     }
@@ -222,7 +227,8 @@ function ep_analyse_matiere_fiche(): array
     $noms = mfMagasins();
     if (!isset($noms[$sid])) { $noms[$sid] = 'Magasin ' . $sid; }
     $sids = array_keys($noms); sort($sids);
-    $parMagasin = mfMatieresApi($sids, $frais);
+    $luLe = [];
+    $parMagasin = mfMatieresApi($sids, $frais, $sid, $luLe);
     $a = $parMagasin[$sid][(string) $mid] ?? null;
     $ident = $a;
     if ($ident === null) { foreach ($parMagasin as $m) { if (isset($m[(string) $mid])) { $ident = $m[(string) $mid]; break; } } }
@@ -283,6 +289,7 @@ function ep_analyse_matiere_fiche(): array
             'sansPrix' => !($prixMag > 0), 'absente' => $a === null, 'ecart' => $prixMag > 0 && $repere > 0 ? round(100 * ($prixMag - $repere) / $repere, 1) : null],
         'reseau' => $reseau, 'stats' => ['n' => count($valeurs), 'min' => $valeurs !== [] ? round(min($valeurs) * $fac, 4) : null, 'max' => $valeurs !== [] ? round(max($valeurs) * $fac, 4) : null, 'med' => $med !== null ? round($med * $fac, 4) : null],
         'fournisseurs' => $fournisseurs, 'fournisseursLus' => $fourn['f'] !== [],
+        'lu' => ['magasin' => isset($luLe[$sid]) ? date('c', $luLe[$sid]) : null, 'age' => isset($luLe[$sid]) ? time() - $luLe[$sid] : null, 'minutesMagasin' => MF_MINUTES_MAGASIN, 'heuresReseau' => MF_HEURES],
         'source' => 'API du panel : /shops/{id}/materials de chaque magasin (prix de base net, prix conseillé, prix de référence, TVA), /material-suppliers + catalog-mappings (fournisseur, référence, colis), /material-suppliers/{f}/shops/{s}/price-lists/current et latest (prix du colis, valable depuis) ; gardés 24 h'];
     if (!empty($_GET['sonde'])) {
         $out['sonde'] = ['conseilles' => 0, 'references' => 0, 'matieres' => count($parMagasin[$sid] ?? []), 'liens' => $fourn['m'][(string) $mid] ?? [], 'fournisseursListe' => $fourn['f'], 'formule' => []];
