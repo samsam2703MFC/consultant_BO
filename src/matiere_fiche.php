@@ -337,6 +337,13 @@ function mfSondeRecette(int $rid, int $sid, int $pid): array
         'sousRecettes' => '/subrecipes', 'produitsRecettes' => '/shops/' . $sid . '/products/' . $pid . '/recipe'];
     if ($pid > 0) { $essais['produit'] = '/products/' . $pid; $essais['produitMagasin'] = '/shops/' . $sid . '/products/' . $pid; }
     $out = ['rid' => $rid, 'shop' => $sid, 'routes' => []];
+    // `brut=1` : les corps entiers du coût par magasin et de la recette (et d'une sous-recette `sous=`), pour lire leur forme complète.
+    if (!empty($_GET['brut'])) {
+        $out['brut'] = ['coutMagasin' => PanelApi::get('/shops/' . $sid . '/recipes/' . $rid . '/cost'), 'recette' => PanelApi::get('/recipes/' . $rid)];
+        $sous = (int) ($_GET['sous'] ?? 0);
+        if ($sous > 0) { $out['brut']['sousCout'] = PanelApi::get('/shops/' . $sid . '/recipes/' . $sous . '/cost'); $out['brut']['sousRecette'] = PanelApi::get('/recipes/' . $sous); $out['brut']['sousFiche'] = PanelApi::get('/subrecipes/' . $sous); }
+        return $out;
+    }
     foreach ($essais as $k => $chemin) {
         $r = PanelApi::sondeGet($chemin, 15);
         $out['routes'][$k] = ['chemin' => $chemin, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) && $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 160) : null, 'apercu' => $apercu($r['corps'] ?? null)];
