@@ -2071,22 +2071,37 @@ function profilHeureBatir(int $shopId, string $date): int
  * J−7 au même moment : les clients et le CA du même jour de la semaine d'avant, arrêtés à
  * l'heure qu'il est quand la journée regardée est aujourd'hui (l'heure en cours comptée au
  * prorata des minutes), la journée entière sinon. Lu dans les heures gravées (svHeuresJours).
+ * Depuis le 08/10/2026 (dashboard opérationnel, maquette B) : aussi la marge brute à la même
+ * heure et sur la journée (la matière gravée de chaque heure, sans appel au panel), et les heures
+ * de J−7 elles-mêmes, pour la courbe du cumul face à aujourd'hui.
  */
 function exJ7(int $sid, string $date, bool $estAuj): ?array
 {
     $j7 = date('Y-m-d', strtotime($date . ' -7 day'));
     try { $hs = svHeuresJours($sid, [$j7])[$j7] ?? null; } catch (Throwable $e) { $hs = null; }
     if (!is_array($hs) || $hs === []) { return null; }
+    // La matière de chaque heure, si elle est gravée : la marge brute de J−7 à la même heure.
+    try { $hs = svHeuresAvecMatiere($sid, $j7, $hs); } catch (Throwable $e) { /* sans matière, pas de marge */ }
     $hNow = (int) date('G'); $frac = ((int) date('i')) / 60;
-    $tk = 0.0; $ca = 0.0; $tkJour = 0; $caJour = 0.0;
+    $tk = 0.0; $ca = 0.0; $mat = 0.0; $matOk = true; $tkJour = 0; $caJour = 0.0; $matJour = 0.0; $matJourOk = true;
+    $heures = [];
     foreach ($hs as $l) {
-        $h = (int) ($l['h'] ?? -1); $t = (int) ($l['tickets'] ?? 0); $c = (float) ($l['ca'] ?? 0);
+        if (!is_array($l)) { continue; }
+        $h = (int) ($l['h'] ?? -1); $t = (int) ($l['tickets'] ?? 0); $c = (float) ($l['ca'] ?? 0); $mt = $l['mat'] ?? null;
+        if ($h < 0) { continue; }
+        $heures[] = ['h' => $h, 'tickets' => $t, 'ca' => round($c, 2)];
         $tkJour += $t; $caJour += $c;
-        if (!$estAuj || $h < $hNow) { $tk += $t; $ca += $c; }
-        elseif ($h === $hNow) { $tk += $t * $frac; $ca += $c * $frac; }
+        if ($mt === null) { if ($c > 0) { $matJourOk = false; } } else { $matJour += (float) $mt; }
+        $k = (!$estAuj || $h < $hNow) ? 1.0 : ($h === $hNow ? $frac : 0.0);
+        if ($k <= 0) { continue; }
+        $tk += $t * $k; $ca += $c * $k;
+        if ($mt === null) { if ($c > 0) { $matOk = false; } } else { $mat += (float) $mt * $k; }
     }
+    usort($heures, static fn ($a, $b) => $a['h'] <=> $b['h']);
     return ['date' => $j7, 'moment' => $estAuj ? sprintf('%02d:%02d', $hNow, (int) date('i')) : null,
-        'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2)];
+        'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2),
+        'mb' => $matOk && $ca > 0 ? round($ca - $mat, 2) : null, 'mbJour' => $matJourOk && $caJour > 0 ? round($caJour - $matJour, 2) : null,
+        'heures' => $heures];
 }
 
 /* --- Le Résultat gardé quelques minutes (04/10/2026 : « extrêmement lent ») ------------------

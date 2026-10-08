@@ -1,6 +1,9 @@
 # L'objectif en jauge pleine largeur, les vignettes face à la semaine passée
 
-**Statut : maquettes à choisir (07/10/2026), rien n'est codé.**
+**Statut : maquette B retenue et codée le 08/10/2026** (`public/dashboard/dashboard.js`, fonctions
+`opDuel`, `opDuelHeures`, `opDuelTable` ; `public/dashboard/dashboard.css`, bloc « le duel avec J−7 » ;
+serveur `exJ7` dans `src/endpoints.php` qui ajoute `mb`, `mbJour` et `heures` à `j7`). La maquette A
+reste ici pour mémoire.
 
 Demande du 07/10/2026 : « dans le dashboard magasin, mettre l'objectif en jauge sur toute la
 largeur (faire maquette) et retravailler ces vignettes dans Opérationnel : important de savoir

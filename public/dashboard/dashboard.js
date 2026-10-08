@@ -2100,18 +2100,148 @@
   /** Les six tuiles « maintenant » : l'heure, les ventes, l'objectif, la vitrine, l'équipe, la cuisson. */
   function opTuiles(D) {
     const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
-    const j7 = m && m.j7 ? m.j7 : null;
-    const dJ7 = j7 && j7.ca && ca != null ? 100 * (ca - j7.ca) / j7.ca : null;
     const sansPlanning = m && !planning.length;
     return `
       ${opTuile('heure', esc(fDL(S.date).replace(/ \d{4}$/, '')), fin ? 'Journée' : opHM(now), fin ? 'journée terminée · le récit, pas le direct' : 'en direct · relu toutes les 2 min')}
-      ${ca != null ? opTuile(dJ7 != null && dJ7 < -10 ? 'att' : 'ok', 'Ventes', fE(ca) + `<small>${fN(tk)} clients</small>`, j7 && !fin ? `J−7 à la même heure : ${fE(j7.ca)}, ${fN(j7.tickets)} clients${dJ7 != null ? ' · ' + (dJ7 >= 0 ? '+ ' : '− ') + fP0(Math.abs(dJ7)) : ''}` : 'panier ' + fU(tk ? ca / tk : null)) : opTuile('', 'Ventes', '—', opSk())}
-      ${m ? opTuile(m.objectifJour && ca >= m.objectifJour ? 'ok' : '', 'Objectif du jour', m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + `<small>de ${fE(m.objectifJour)}</small>` : '—', m.objectifJour ? (ca >= m.objectifJour ? 'atteint' : 'il reste ' + fE(m.objectifJour - (ca || 0))) + (j7 && j7.caJour && !fin ? ' · J−7 à cette heure : ' + fP0(100 * j7.ca / j7.caJour) + ' de sa journée' : '') : 'pas d’objectif du jour') : opTuile('', 'Objectif du jour', '—', S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : opSk())}
       ${U ? opTuile(vides.length ? 'ko' : (manques.length ? 'att' : 'ok'), 'Vitrine', fN(U.totaux && U.totaux.stock) + '<small>pièces</small>', `${vides.length} vide${vides.length > 1 ? 's' : ''} · ${manques.length} ${manques.length > 1 ? 'vont' : 'va'} manquer · ${trop.length} en trop`) : opTuile('', 'Vitrine', '—', S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…')}
       ${m ? opTuile(sansPlanning ? 'att' : '', 'Équipe en poste', fin ? fN(planning.length) + '<small>au planning</small>' : fN(enPoste.length) + `<small>personne${enPoste.length > 1 ? 's' : ''}</small>`, sansPlanning ? 'pas de planning lu pour ce jour' : (fin ? '' : (enPoste.length ? enPoste.map(p => 'jusqu’à ' + esc(p.fin)).join(' et ') + ' · ' : '') + (releve ? 'relève à ' + esc(releve.debut) + ' · ' : '')) + nf(m.planningHeures || 0, 1) + ' h au planning') : opTuile('', 'Équipe en poste', '—', opSk())}
       ${U ? (prochaine ? opTuile('', 'Prochaine cuisson', esc(prochaine.nom) + `<small>four à ${esc(prochaine.four)}</small>`, `${fN(prochaine.pieces)} pièces pour ${esc(prochaine.de)} à ${esc(prochaine.a)} · ${opDans(opMin(prochaine.four), now)}`) : opTuile('', 'Cuissons', fN(cuissons.length), fin ? cuissons.map(c => esc(c.nom) + ' ' + esc(c.four)).join(' · ') : 'plus de cuisson prévue aujourd’hui')) : opTuile('', 'Prochaine cuisson', '—', opSk())}
 `;
   }
+  /* ── Le duel avec J−7 (maquette B du 08/10/2026) ──────────────────────────────
+   * Chaque chiffre du jour se compare d'abord à J−7 à la même heure (le serveur arrête la
+   * journée d'il y a sept jours à l'heure qu'il est), puis à sa journée entière. */
+  const fSP = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + fP(Math.abs(n));
+  const fPts = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + nf(Math.abs(n), 1) + ' pts';
+  const sensDe = (d, inv) => d == null ? 'eq' : (Math.abs(d) < 1 ? 'eq' : ((d > 0) !== !!inv ? 'ok' : 'ko'));
+  function opDuelBase(D) {
+    const { now, fin, m, ca, tk } = D;
+    const j7 = m && m.j7 ? m.j7 : null;
+    const obj = m && m.objectifJour ? m.objectifJour : null;
+    const proj = m && !fin && m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? m.projection : null;
+    const dCa = j7 && j7.ca && ca != null ? 100 * (ca - j7.ca) / j7.ca : null;
+    const dTk = j7 && j7.tickets && tk != null ? 100 * (tk - j7.tickets) / j7.tickets : null;
+    const panA = tk ? ca / tk : null, pan7 = j7 && j7.tickets ? j7.ca / j7.tickets : null;
+    const dPan = panA != null && pan7 ? 100 * (panA - pan7) / pan7 : null;
+    const dProj = proj != null && j7 && j7.caJour ? 100 * (proj - j7.caJour) / j7.caJour : null;
+    const mb7 = j7 && j7.mb != null && j7.ca ? j7.mb : null, mb7Pct = mb7 != null ? 100 * mb7 / j7.ca : null;
+    const mbPct = m && m.margeBrutePct != null ? m.margeBrutePct : (m && m.ca && m.margeBrute != null ? 100 * m.margeBrute / m.ca : null);
+    const dMb = mbPct != null && mb7Pct != null ? mbPct - mb7Pct : null;
+    const jourNom = JOURS_L ? JOURS_L[new Date(S.date + 'T12:00:00').getDay()] : 'J−7';
+    const lblB = j7 ? (j7.moment ? jourNom + ' dernier à ' + j7.moment : jourNom + ' dernier') : 'J−7';
+    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null };
+  }
+  const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  /** La carte du duel : deux pistes sur la même échelle (l'objectif), le curseur du temps, le verdict. */
+  function opDuel(D) {
+    const { now, fin, JD, m, ca, tk } = D;
+    const estAuj = !!(JD && JD.estAujourdhui);
+    if (!m) { return `<div class="op-duel"><div class="dh"><span class="lab">Objectif du jour</span><span class="dr">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div>${opSk()}</div>`; }
+    const B = opDuelBase(D), j7 = B.j7, obj = B.obj;
+    const echelle = obj || Math.max(ca || 0, j7 ? j7.caJour || 0 : 0, B.proj || 0, 1);
+    const pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle));
+    const atteint = obj && ca != null && ca >= obj;
+    const part = m.projectionPart != null ? Math.max(0, Math.min(100, m.projectionPart)) : null;
+    // Les étiquettes : à droite de leur ancre quand la place le permet, sinon à l'intérieur du segment (à gauche de
+    // l'ancre) ; deux étiquettes qui se chevaucheraient fusionnent. Au téléphone, la seconde passe sous la barre (css).
+    const tel = innerWidth <= 700 || document.documentElement.classList.contains('mob');
+    const barPx = Math.max(240, tel ? innerWidth - 60 : innerWidth - 250);
+    const larg = t => (t.replace(/<[^>]+>/g, '').length * (tel ? 5.8 : 6.6) + 18) * 100 / barPx;
+    const pill = (e, ded) => `<span class="val${e.cls ? ' ' + e.cls : ''}${ded ? ' dedans' : ''}${tel && e.cls && e.p < larg(e.txt) ? ' g' : ''}" style="left:${e.p.toFixed(1)}%"${e.titre ? ` title="${e.titre}"` : ''}>${e.txt}</span>`;
+    const etiquettes = L => {
+      if (!L.length) { return ''; }
+      const a = L[0], wa = larg(a.txt);
+      if (L.length === 1) { return pill(a, a.p + wa > 100 && a.p - wa >= 0); }
+      const b = L[1], wb = larg(b.txt);
+      if (tel) { return pill(a, a.p + wa > 100 && a.p - wa >= 0) + pill(b, false); }
+      const bDed = b.p + wb > 100, limite = bDed ? b.p - wb : b.p;
+      const aDed = a.p + wa > limite - 1 && a.p - wa >= 0;
+      if (aDed && bDed && b.p - wb < a.p) { return pill({ p: b.p, txt: a.txt + ' → ' + b.txt, cls: b.cls, titre: b.titre }, true); }
+      return pill(a, aDed) + pill(b, bDed);
+    };
+    const piste = (lb, sous, segs, L) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${part != null && !fin ? `<i class="temps" style="left:${part.toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
+    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${obj ? `<span class="chip">${m.objectifSource === 'budget' ? 'budget du mois' : 'CA théorique'} · profil des ${esc(B.jourNom)}s</span>` : '<span class="chip">pas d’objectif du jour : l’échelle, c’est le meilleur des deux</span>'}${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
+    const pA = pct(ca), pP = B.proj != null ? pct(B.proj) : null;
+    const LA = [];
+    if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
+    if (pP != null && pP > pA) { LA.push({ p: pP, txt: 'projection ' + fE(B.proj), cls: 'proj', titre: 'au rythme de la journée, ' + fE(B.proj) + ' ce soir' }); }
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now),
+      `<div class="seg ${atteint ? 'or' : 'fait'}" style="width:${pA.toFixed(1)}%"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%" title="projection au rythme de la journée : ${fE(B.proj)}"></div>` : ''}`, LA);
+    if (j7) {
+      const p7 = pct(j7.ca), p7j = j7.moment ? pct(j7.caJour) : p7;
+      const L7 = [{ p: p7, txt: fE(j7.ca) + (j7.moment ? ' à ' + esc(j7.moment) : (obj ? ' · ' + fP0(100 * j7.ca / obj) : '')), cls: '' }];
+      if (j7.moment) { L7.push({ p: p7j, txt: 'journée ' + fE(j7.caJour) + (obj ? ' · ' + fP0(100 * j7.caJour / obj) : ''), cls: 'fin' }); }
+      h += piste(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1) + ' dernier', fD(j7.date),
+        `<div class="seg j7" style="width:${p7.toFixed(1)}%"></div>${j7.moment && p7j > p7 ? `<div class="seg j7j" style="left:${p7.toFixed(1)}%;width:${(p7j - p7).toFixed(1)}%"></div>` : ''}`, L7);
+    } else {
+      h += `<div class="op-piste"><div class="pl"><b>${esc(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1))} dernier</b><small>pas de ventes gravées</small></div><div class="pb"></div></div>`;
+    }
+    h += `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + fE(obj) : fE(echelle)}</span></div>`;
+    if (j7 && ca != null) {
+      const cls = B.dCa == null ? 'mu' : (B.dCa >= 0 ? 'ok' : (B.dCa > -10 ? 'att' : 'ko'));
+      h += `<div class="op-dver ${cls}"><b>${fSP(B.dCa)}</b> face à ${esc(B.lblB)}${B.dTk != null ? ` · <b>${fSP(B.dTk)}</b> clients` : ''}${B.dPan != null ? ` · panier <b>${fSP(B.dPan)}</b>` : ''}${B.proj != null && j7.caJour ? ` · au rythme de la journée, ${fE(B.proj)} contre ${fE(j7.caJour)} la semaine passée (<b>${fSP(B.dProj)}</b>)` : ''}</div>`;
+    }
+    return h + '</div>';
+  }
+  /** Le cumul heure par heure d'aujourd'hui face à celui de J−7, jusqu'à l'objectif. */
+  function opDuelHeures(D) {
+    const { now, fin, ST, m } = D;
+    const B = opDuelBase(D), j7 = B.j7;
+    const hA = ST && Array.isArray(ST.heures) && ST.heures.length ? ST.heures : (m && Array.isArray(m.heures) ? m.heures : []);
+    const h7 = j7 && Array.isArray(j7.heures) ? j7.heures : [];
+    if (!hA.length || !h7.length) { return ''; }
+    const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
+    const cumul = (hs, limite) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += +x.ca || 0; out.push({ h: x.h, ca: c }); }); return out; };
+    const cA = cumul(hA, fin ? null : hNow), c7 = cumul(h7, null);
+    if (!cA.length || !c7.length) { return ''; }
+    const h0 = Math.min(6, ...cA.map(x => x.h), ...c7.map(x => x.h)), h1 = Math.max(19, ...cA.map(x => x.h + 1), ...c7.map(x => x.h + 1));
+    const mx = Math.max(B.obj || 0, cA[cA.length - 1].ca, c7[c7.length - 1].ca, 1) * (B.obj ? 1 : 1.08);
+    const dessine = (W, Hh, pas, cls) => {
+      const X0 = 44, X1 = W - 16, Y0 = 14, Y1 = Hh - 26;
+      const x = hh => X0 + (X1 - X0) * (hh - h0) / (h1 - h0), y = v => Y1 - (Y1 - Y0) * v / mx;
+      const chemin = c => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map(p => 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.ca).toFixed(1)).join(' ');
+      const lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
+      let g = `<svg class="op-crb ${cls}" viewBox="0 0 ${W} ${Hh}">`;
+      [0.25, 0.5, 0.75, 1].forEach(f => { g += `<line x1="${X0}" x2="${X1}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" class="gr"/><text x="${X0 - 6}" y="${(y(mx * f) + 3).toFixed(1)}" text-anchor="end" class="ax">${fN(Math.round(mx * f / 10) * 10)}</text>`; });
+      if (B.obj) { g += `<text x="${X0 + 4}" y="${(y(mx) - 4).toFixed(1)}" class="obj">objectif ${fE(B.obj)}</text>`; }
+      for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
+      g += `<path d="${chemin(c7)}" class="l7"/><path d="${chemin(cA)}" class="la"/>`;
+      if (!fin && now != null) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
+      g += `<circle cx="${x(lastA.h + 1).toFixed(1)}" cy="${y(lastA.ca).toFixed(1)}" r="4" class="pa"/><text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.ca) + 18).toFixed(1)}" text-anchor="end" class="ta">${fin ? 'cette journée' : 'aujourd’hui'} ${fE(lastA.ca)}</text>`;
+      g += `<circle cx="${x(last7.h + 1).toFixed(1)}" cy="${y(last7.ca).toFixed(1)}" r="4" class="p7"/><text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.ca) - 10).toFixed(1)}" text-anchor="end" class="t7">${esc(B.jourNom)} dernier ${fE(last7.ca)}</text>`;
+      return g + '</svg>';
+    };
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span><span class="db-mini">le cumul ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${B.obj ? ', jusqu’à l’objectif' : ''}</span><span class="db-mini" style="margin-left:auto">ventes encaissées, pro compris</span></div>
+      <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
+      <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}</span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})</span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+  }
+  /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
+  function opDuelTable(D) {
+    const { now, fin, JD, m, ca, tk } = D;
+    if (!m) { return ''; }
+    const B = opDuelBase(D), j7 = B.j7;
+    const lblA = fin ? 'cette journée' : 'aujourd’hui · ' + opHM(now);
+    const lblJ = B.jourNom + ' dernier · journée';
+    const eq = '<span class="eq">—</span>';
+    const ecart = (d, inv, suf, fmt) => d == null ? eq : `<span class="${sensDe(d, inv)}">${(fmt || fSP)(d)}${suf || ''}</span>`;
+    const cell = (cls, lab, v, sous) => `<div class="${cls}"><span class="lab">${lab}</span>${v}${sous ? `<small>${sous}</small>` : ''}</div>`;
+    const ligne = (k, note, a, b, d, j, r) => `<div class="op-dl"><div class="k">${k}${note ? `<small>${note}</small>` : ''}</div>${cell('a', lblA, a[0], a[1])}${cell('b', esc(B.lblB), b[0], b[1])}<div class="d">${d}</div>${cell('j', lblJ, j[0], j[1])}${cell('r', 'référence', r[0], r[1])}</div>`;
+    const ref = JD && JD.reference ? JD.reference : {};
+    const se = JD && JD.seuils ? JD.seuils : {};
+    const mbA = m.margeBrute;
+    const sansJ = !j7 || !j7.moment;
+    let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span><span class="db-mini">${sansJ ? 'face à la journée entière de la semaine passée' : 'à la même heure, puis la journée entière de la semaine passée'}</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
+    h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
+    h += ligne('Clients', '', [fN(tk), ''], [j7 ? fN(j7.tickets) : eq, ''], ecart(B.dTk), [j7 && j7.moment ? fN(j7.ticketsJour) : eq, ''], [m.refTickets != null ? fN(m.refTickets) : eq, m.ticketsDelta != null ? fSP(m.ticketsDelta) + ' face à la référence' : '']);
+    h += ligne('Panier moyen', '', [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && j7.ticketsJour ? fU(j7.caJour / j7.ticketsJour) : eq, ''], [JD && JD.reseau && JD.reseau.panier ? fU(JD.reseau.panier) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
+    h += ligne('Marge brute', '', [mbA != null ? fE(mbA) : eq, B.mbPct != null ? fP(B.mbPct) + ' des ventes' : ''], [B.mb7 != null ? fE(B.mb7) : eq, B.mb7Pct != null ? fP(B.mb7Pct) : (j7 ? 'matière pas gravée' : '')], ecart(B.dMb, false, '', fPts), [j7 && j7.moment && j7.mbJour != null ? fE(j7.mbJour) : eq, j7 && j7.moment && j7.mbJour != null && j7.caJour ? fP(100 * j7.mbJour / j7.caJour) : ''], [m.coutMatierePct != null ? 'matière ' + fP(m.coutMatierePct) : eq, se.food != null ? 'seuil ' + fP(se.food) : '']);
+    if (!fin) {
+      h += ligne('Projection fin de journée', m.projectionRythme ? 'au rythme : ' + fE(m.projectionRythme) : '', [m.projection != null ? fE(m.projection) : eq, m.projection != null && m.objectifJour ? fP0(100 * m.projection / m.objectifJour) + ' de l’objectif' : (m.projectionMotif ? esc(m.projectionMotif) : '')], [eq, ''], ecart(B.dProj, false, '<small> vs la journée</small>'), [j7 ? fE(j7.caJour) : eq, j7 && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.objectifJour ? fE(m.objectifJour) : eq, 'objectif du jour']);
+    }
+    h += ligne('Résultat net', 'personnel et frais généraux du jour', [m.net == null ? eq : fS(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes'], [eq, ''], eq, [eq, ''], [m.labour != null ? 'personnel ' + fE(m.labour) : eq, m.overhead != null ? 'frais généraux ' + fE(m.overhead) : '']);
+    return h + '</div></div>';
+  }
+
   /** Les ventes au comptoir de chaque heure face à la moyenne des 6 derniers mêmes jours. */
   function opHeures(D) {
     const { now, U, prods } = D;
@@ -2149,7 +2279,7 @@
   function rendOpsMobile() {
     const D = opDonnees();
     const { now, U, ST, JD, m, prods, cuissons, planning, lienProd } = D;
-    let h = `<div class="op-mnt">${opTuiles(D)}</div>`;
+    let h = opDuel(D) + `<div class="op-mnt quatre">${opTuiles(D)}</div>` + opDuelTable(D) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
@@ -2177,7 +2307,12 @@
     const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
     let h = '';
 
-    h += `<div class="op-mnt">${opTuiles(D)}</div>`;
+    /* 1. Le duel avec J−7 (maquette B du 08/10/2026) : la jauge à deux pistes, les quatre tuiles
+     * du moment, le cumul heure par heure, le tableau chiffre par chiffre. */
+    h += opDuel(D);
+    h += `<div class="op-mnt quatre">${opTuiles(D)}</div>`;
+    h += opDuelHeures(D);
+    h += opDuelTable(D);
 
     /* 2. Les ventes par catégorie (liste ou treemap) et le P&L court de la journée, coût du
      * personnel compris : les cartes de la vue Jour, telles quelles. */
@@ -2306,15 +2441,18 @@
   const fSE = v => v == null ? '—' : (v < 0 ? '− ' + fE(-v) : fE(v));
   function tuile(k, v, s, cls) { return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   /** La tuile avec sa tendance : l'écart avec le dernier même jour de semaine. */
-  function tuileTend(k, v, s, cls, serie, auj, fmt, inverse) {
+  function tuileTend(k, v, s, cls, serie, auj, fmt, inverse, cmp) {
     const pts = serie.filter(x => x != null);
-    if (!pts.length || auj == null) { return tuile(k, v, s, cls); }
+    if ((!pts.length && !cmp) || auj == null) { return tuile(k, v, s, cls); }
     const all = pts.concat([auj]), mn = Math.min(...all), mx = Math.max(...all), n = all.length;
     const xy = all.map((x, i) => [(i * 70 / Math.max(1, n - 1)), 24 - 22 * (x - mn) / ((mx - mn) || 1) + 1]);
-    const dern = pts[pts.length - 1], d = dern ? 100 * (auj - dern) / dern : null;
+    // L'écart : face à J−7 à la même heure quand on le connaît (cmp), sinon face au dernier même jour entier.
+    const dern = cmp ? cmp.val : pts[pts.length - 1], d = dern ? 100 * (auj - dern) / dern : null;
     const sens = d == null ? 'eq' : (Math.abs(d) < 1 ? 'eq' : ((d > 0) !== !!inverse ? 'up' : 'dn'));
-    const last = xy[n - 1];
-    return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="dernier même jour : ${fmt(dern)}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} vs ${esc(fD(S.aux['tend|' + S.shop + '|' + S.date].jours.slice(-1)[0].date))}</span>`}</div>`;
+    const TT = S.aux['tend|' + S.shop + '|' + S.date];
+    const lib = cmp ? cmp.lib : 'vs ' + esc(fD(TT && TT.jours && TT.jours.length ? TT.jours.slice(-1)[0].date : ''));
+    const titre = cmp ? `${cmp.titre} : ${fmt(dern)}` : `dernier même jour : ${fmt(dern)}`;
+    return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="${titre}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} ${lib}</span>`}</div>`;
   }
   function cascade(m, d) {
     const se = (d && d.seuils) || {};
@@ -2355,11 +2493,14 @@
     const TT = S.aux['tend|' + S.shop + '|' + S.date], TJ = TT && Array.isArray(TT.jours) ? TT.jours : [];
     const ref = d.reference || {};
     const att = m.objectifJour ? Math.min(100, 100 * m.ca / m.objectifJour) : 0;
+    // Aujourd'hui, chaque tuile se compare à J−7 à la même heure (08/10/2026) ; un jour passé, au dernier même jour entier.
+    const J7 = d.estAujourdhui && m.j7 && m.j7.moment ? m.j7 : null;
+    const c7 = (val, quoi) => J7 && val ? { val, lib: 'vs J−7 à ' + esc(J7.moment), titre: quoi + ' de J−7 (' + fD(J7.date) + ') à ' + J7.moment } : null;
     let h = `<div class="db-tuiles">
-      ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + ((CJ => !CJ ? '' : (CJ.n > 0 ? ' · <b class="ko">−' + fN(CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> (' + fE(Math.abs(CJ.ecart)) + ' ÷ ' + fU(CJ.panier) + ')' : ' · <b class="ok">+' + fN(-CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> d’avance'))(clientsJour(m))) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK)}
-      ${tuileTend('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere), '', TJ.map(j => j.mb), m.margeBrute, fK)}
-      ${tuileTend('Clients', fN(m.tickets) + j7Delta(m), [j7Texte(m), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : ''), m.produits ? fN(m.produits) + ' produits vendus' : ''].filter(Boolean).join(' · '), '', TJ.map(j => j.tickets), m.tickets, fN)}
-      ${tuileTend('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''), '', TJ.map(j => j.panier), m.panier, fU)}
+      ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + ((CJ => !CJ ? '' : (CJ.n > 0 ? ' · <b class="ko">−' + fN(CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> (' + fE(Math.abs(CJ.ecart)) + ' ÷ ' + fU(CJ.panier) + ')' : ' · <b class="ok">+' + fN(-CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> d’avance'))(clientsJour(m))) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK, false, c7(J7 && J7.ca, 'CA'))}
+      ${tuileTend('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere), '', TJ.map(j => j.mb), m.margeBrute, fK, false, c7(J7 && J7.mb, 'marge brute'))}
+      ${tuileTend('Clients', fN(m.tickets) + j7Delta(m), [j7Texte(m), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : ''), m.produits ? fN(m.produits) + ' produits vendus' : ''].filter(Boolean).join(' · '), '', TJ.map(j => j.tickets), m.tickets, fN, false, c7(J7 && J7.tickets, 'clients'))}
+      ${tuileTend('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''), '', TJ.map(j => j.panier), m.panier, fU, false, c7(J7 && J7.tickets ? J7.ca / J7.tickets : null, 'panier'))}
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
@@ -2544,10 +2685,13 @@
     /* 2. Le chiffre du jour */
     const TT = S.aux['tend|' + S.shop + '|' + S.date], TJ = TT && Array.isArray(TT.jours) ? TT.jours : [];
     ajoute('ventes', 'chiffre', 'Ventes du jour', resume(() => {
-      const der = TJ.length ? TJ[TJ.length - 1] : null, dp = der && der.ca ? 100 * (m.ca - der.ca) / der.ca : null;
+      // Aujourd'hui, l'écart se mesure face à J−7 arrêté à la même heure (08/10/2026) ; un jour passé, face au dernier même jour entier.
+      const J7 = d && d.estAujourdhui && m.j7 && m.j7.moment && m.j7.ca ? m.j7 : null;
+      const der = TJ.length ? TJ[TJ.length - 1] : null, dp = J7 ? 100 * (m.ca - J7.ca) / J7.ca : (der && der.ca ? 100 * (m.ca - der.ca) / der.ca : null);
+      const face = J7 ? `face au ${esc(fD(J7.date))} à ${esc(J7.moment)}` : (der ? `face au ${esc(fD(der.date))}` : '');
       const mx = Math.max(0, ...LH.map(x => x.ca));
       return { v: fK(m.ca),
-        s: [fN(m.tickets) + ' clients' + j7Delta(m), 'panier ' + fU(m.panier), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> face au ${esc(fD(der.date))}` : '',
+        s: [fN(m.tickets) + ' clients' + j7Delta(m), 'panier ' + fU(m.panier), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> ${face}` : '',
           m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? 'projection ' + fK(m.projection) : ''].filter(Boolean).join(' · '),
         vd: 'neutre', mini: LH.length ? a4Barres(LH.map(x => x.ca), v => v === mx ? 'var(--color-primary)' : '#cfa3a9') : '' };
     }), m ? P.tuiles : attente(1));

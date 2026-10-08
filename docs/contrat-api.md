@@ -1731,13 +1731,17 @@ coût reste inconnu, jamais zéro.
 
 ### `GET /exploitation/jour` — les clients de J−7 au même moment
 
-Chaque magasin porte `j7` : `{ date, moment, tickets, ca, ticketsJour, caJour }`,
-le même jour de la semaine d'avant lu dans ses heures gravées. Quand la journée
-regardée est aujourd'hui, `tickets` et `ca` s'arrêtent à l'heure qu'il est
-(`moment`, l'heure en cours comptée au prorata des minutes) ; une journée close
-prend J−7 entière et `moment` est nul. Le dashboard pose le delta à côté du
-nombre de clients (tuile Clients, bureau et téléphone) et dit dessous « n
-clients à J−7 à la même heure (sam. 26/09) · ± x % ». Nul si J−7 n'est pas lu.
+Chaque magasin porte `j7` : `{ date, moment, tickets, ca, ticketsJour, caJour, mb, mbJour,
+heures: [{ h, tickets, ca }] }`, le même jour de la semaine d'avant lu dans ses heures
+gravées. Quand la journée regardée est aujourd'hui, `tickets` et `ca` s'arrêtent à l'heure
+qu'il est (`moment`, l'heure en cours comptée au prorata des minutes) ; une journée close
+prend J−7 entière et `moment` est nul. Depuis le 08/10/2026, `mb` est la marge brute de J−7
+arrêtée au même moment (ventes moins matière des heures gravées, `null` dès qu'une heure
+vendue n'a pas sa matière), `mbJour` celle de la journée entière, et `heures` les ventes de
+J−7 heure par heure (toutes les heures, pas seulement celles d'avant `moment`). Le dashboard
+en fait le duel de l'onglet Opérationnel (jauge à deux pistes, cumul heure par heure, tableau
+chiffre par chiffre) et compare les vignettes de la vue Jour à J−7 à la même heure quand la
+journée regardée est aujourd'hui. Nul si J−7 n'est pas lu.
 
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 

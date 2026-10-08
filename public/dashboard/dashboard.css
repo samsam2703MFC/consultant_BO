@@ -1507,3 +1507,83 @@ html.db-fiche-ouverte{overflow:hidden}
 }
 .fi-leg i.pt{width:10px;height:10px;border-radius:50%;background:#2a78d6;vertical-align:-1px}
 .fi-leg i.zn{width:14px;height:10px;border-radius:3px;background:rgba(235,104,52,.14);vertical-align:-1px}
+
+/* ── Opérationnel : le duel avec J−7 (maquette B du 08/10/2026) : deux pistes, heure par heure, chiffre par chiffre ── */
+.op-mnt.quatre{grid-template-columns:150px repeat(3,minmax(0,1fr))}
+.op-duel{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;padding:14px 18px 12px;margin-bottom:12px}
+.op-duel .dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.op-duel .dh .lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.op-duel .dh .lab b{font:400 15px var(--font-display);letter-spacing:0;text-transform:none;color:var(--color-text);margin-left:6px}
+.op-duel .dh .chip{display:inline-flex;align-items:center;font:600 10.5px var(--font-ui);padding:3px 9px;border-radius:999px;background:var(--color-background-secondary);color:#444;white-space:nowrap}
+.op-duel .dh .dr{margin-left:auto;font-size:11px;color:var(--color-text-muted);white-space:nowrap}
+.op-piste{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:14px;margin-top:12px}
+.op-piste .pl b{display:block;font:400 16px var(--font-display)}
+.op-piste .pl small{font-size:11px;color:var(--color-text-muted)}
+.op-piste .pb{position:relative;height:30px;border-radius:9px;background:#efe9e0}
+.op-piste .seg{position:absolute;top:0;bottom:0;border-radius:9px}
+.op-piste .seg.fait{left:0;background:var(--color-primary);z-index:2}
+.op-piste .seg.proj{background:repeating-linear-gradient(135deg,#d9a3ab 0 6px,#e9c4c9 6px 12px);z-index:1;border-radius:0 9px 9px 0}
+.op-piste .seg.j7{left:0;background:#2F6EA5;z-index:2}
+.op-piste .seg.j7j{background:repeating-linear-gradient(135deg,#9fbbd6 0 6px,#c6d8e8 6px 12px);z-index:1;border-radius:0 9px 9px 0}
+.op-piste .seg.or{background:linear-gradient(90deg,#d9a520,#f2d268 50%,#d9a520);z-index:2}
+.op-piste .temps{position:absolute;top:-6px;bottom:-6px;border-left:2px dashed #222;z-index:3}
+.op-piste .val{position:absolute;top:50%;transform:translate(8px,-50%);font:600 11px var(--font-ui);color:#222;background:rgba(255,255,255,.92);padding:2px 7px;border-radius:999px;white-space:nowrap;z-index:4}
+.op-piste .val.fin{color:#2F5D8A}
+.op-piste .val.proj{color:#8c1020}
+.op-piste .val.dedans{transform:translate(calc(-100% - 8px),-50%);color:#fff;background:rgba(0,0,0,.25)}
+.op-piste .val.fin.dedans{color:#1f3f5e;background:rgba(255,255,255,.85)}
+.op-piste .val.proj.dedans{color:#8c1020;background:rgba(255,255,255,.85)}
+.op-dax{display:flex;justify-content:space-between;font-size:10.5px;color:#888;margin:8px 0 0 164px}
+.op-dver{margin-top:12px;border-radius:12px;padding:10px 14px;font-size:12.5px;line-height:1.45}
+.op-dver b{font:400 17px var(--font-display)}
+.op-dver.ok{background:#e3f0e6;color:#1f5a2c}.op-dver.att{background:#fbecd8;color:#8a4e05}.op-dver.ko{background:#f8e0e3;color:#8c1020}.op-dver.mu{background:var(--color-background-secondary);color:#555}
+.op-crb-w{padding:10px 16px 4px}
+.op-crb{width:100%;height:auto;display:block;font-family:var(--font-ui)}
+.op-crb.tel{display:none}
+.op-crb .gr{stroke:#eee;stroke-width:1}
+.op-crb .ax{font-size:10px;fill:#888}
+.op-crb .obj{font-size:10.5px;fill:#555;font-weight:600}
+.op-crb .l7{fill:none;stroke:#2F6EA5;stroke-width:2;stroke-dasharray:5 4}
+.op-crb .la{fill:none;stroke:var(--color-primary);stroke-width:3}
+.op-crb .now{stroke:#222;stroke-width:1.5;stroke-dasharray:3 3}
+.op-crb .nowt{font-size:10.5px;fill:#222;font-weight:700}
+.op-crb .pa{fill:var(--color-primary)}.op-crb .p7{fill:#2F6EA5}
+.op-crb .ta{font-size:11px;fill:var(--color-primary);font-weight:700}
+.op-crb .t7{font-size:11px;fill:#2F6EA5;font-weight:700}
+.op-dleg{display:flex;gap:16px;flex-wrap:wrap;padding:0 16px 12px;font-size:10.5px;color:var(--color-text-muted)}
+.op-dleg i{display:inline-block;width:18px;height:3px;margin-right:6px;vertical-align:3px}
+.op-dleg i.la{background:var(--color-primary)}.op-dleg i.l7{background:#2F6EA5}.op-dleg i.now{background:none;border-top:2px dashed #222;height:0}
+.op-dt{padding:4px 16px 8px}
+.op-dl{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr);align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--color-border-tertiary);font-variant-numeric:tabular-nums}
+.op-dl:first-child{border-top:none}
+.op-dl .k{font:600 13px var(--font-ui)}
+.op-dl .k small{display:block;font-weight:500;color:var(--color-text-muted);font-size:10.5px;margin-top:2px}
+.op-dl .lab{display:block;font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#999;margin-bottom:2px}
+.op-dl .a,.op-dl .b,.op-dl .j,.op-dl .r{font:400 20px/1.1 var(--font-display)}
+.op-dl .a{color:var(--color-primary)}
+.op-dl .b{color:#2F6EA5}
+.op-dl .j,.op-dl .r{color:#444;font-size:17px}
+.op-dl small{display:block;font:500 10.5px var(--font-ui);color:var(--color-text-muted);margin-top:2px}
+.op-dl .d{font:400 20px var(--font-display);text-align:center}
+.op-dl .d small{display:inline;font-size:10px;color:var(--color-text-muted)}
+.op-dl .d .ok{color:#2d7a3e}.op-dl .d .ko{color:#C0182B}.op-dl .d .eq{color:#999}
+.op-dt.sans-j .op-dl{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr)}
+.op-dt.sans-j .op-dl .j{display:none}
+@media (max-width:1150px){.op-mnt.quatre{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){
+  .op-duel{padding:12px 14px}
+  .op-piste{grid-template-columns:1fr;gap:4px;margin-top:10px}
+  .op-piste .val{font-size:10px}
+  .op-piste .val.fin,.op-piste .val.proj{top:auto;bottom:-22px;transform:translate(-100%,0);color:#2F5D8A;background:none;padding:2px 0}
+  .op-piste .val.proj{color:#8c1020}
+  .op-piste .val.fin.g,.op-piste .val.proj.g{transform:translate(0,0)}
+  .op-piste{margin-top:14px}.op-piste + .op-piste{margin-top:26px}
+  .op-dax{margin:24px 0 0 0}
+  .op-crb{display:none}.op-crb.tel{display:block}
+  .op-crb-w{padding:10px 8px 4px}
+  .op-dl{grid-template-columns:1fr 1fr;gap:8px 12px}
+  .op-dl .k{grid-column:1/-1}
+  .op-dl .d{text-align:left}
+}
+.op-mob .op-duel{margin-bottom:10px}
+.op-mob .op-mnt.quatre{grid-template-columns:1fr 1fr}
