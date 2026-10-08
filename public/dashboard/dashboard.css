@@ -1608,13 +1608,18 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rdeux{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-top:14px}
 .fi-rjg{display:grid;grid-template-columns:230px 1fr;gap:18px;align-items:center}
 .fi-rjn{padding:6px 0 2px}
-.fi-rjn b{display:block;font:400 44px/1 var(--font-display)}
-.fi-rjn span{display:inline-block;margin-top:6px;font:700 11px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
-.fi-rjn small{display:block;margin-top:8px;font-size:11.5px;color:#6c655d}
-.fi-rjn.ko b{color:#C0182B}.fi-rjn.ko span{background:#f8e0e3;color:#8c1020}
-.fi-rjn.att b{color:#B26A00}.fi-rjn.att span{background:#fbecd8;color:#8a4e05}
-.fi-rjn.ok b{color:#2d7a3e}.fi-rjn.ok span{background:#e3f0e6;color:#1f5a2c}
-.fi-rjn.mu b{color:#9a938a}.fi-rjn.mu span{background:var(--color-background-secondary);color:#777}
+.fi-rjn>b{display:block;font:400 44px/1 var(--font-display)}
+.fi-rjn>span{display:inline-block;margin-top:6px;font:700 11px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+.fi-rjn>small{display:block;margin-top:8px;font-size:11.5px;color:#6c655d}
+.fi-rjn.ko>b{color:#C0182B}.fi-rjn.ko>span{background:#f8e0e3;color:#8c1020}
+.fi-rjn.att>b{color:#B26A00}.fi-rjn.att>span{background:#fbecd8;color:#8a4e05}
+.fi-rjn.ok>b{color:#2d7a3e}.fi-rjn.ok>span{background:#e3f0e6;color:#1f5a2c}
+.fi-rjn.mu>b{color:#9a938a}.fi-rjn.mu>span{background:var(--color-background-secondary);color:#777}
+/* Le champ du prix de vente, dans la carte du coefficient */
+.fi-rsc{margin-bottom:12px}
+.fi-rsc .k{display:block;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#8a8278;margin-bottom:5px}
+.fi-rsc small{display:block;margin-top:5px;font-size:10.5px;color:#8a8278;line-height:1.35}
+.fi-rlien{background:none;border:none;padding:0;color:#2a78d6;font:600 10.5px var(--font-ui);cursor:pointer;text-decoration:underline}
 .fi-rjb{padding:44px 10px 8px}
 .fi-rband{position:relative;display:flex;height:16px;border-radius:8px}
 .fi-rband>i{display:block;height:100%}
@@ -1664,32 +1669,21 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rface .r{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:.5px dashed #e6e0d8}
 .fi-rface .r b{white-space:nowrap;font-variant-numeric:tabular-nums}
 .fi-rwf .l small{display:block;font-size:10.5px;color:#8a8278;font-weight:400}
-/* Le prix pour y arriver et la simulation de prix */
-.fi-rprix{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px;align-items:start}
-.fi-rpal{width:100%;border-collapse:collapse;font-size:12px}
-.fi-rpal th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278;text-align:right;padding:0 6px 6px;border-bottom:.5px solid #e6e0d8}
-.fi-rpal th:first-child{text-align:left}
-.fi-rpal td{padding:6px;text-align:right;border-bottom:.5px dashed #e6e0d8;font-variant-numeric:tabular-nums;vertical-align:middle;white-space:nowrap}
-.fi-rpal td:first-child{text-align:left;white-space:normal}
-.fi-rpal td small{display:block;font-size:10.5px;color:#8a8278;font-weight:400}
-.fi-rpal td small.co{display:none}
-.fi-rpal tr.atteint td,.fi-rpal tr.atteint td b{color:#a39c93}
-.fi-rpal tr.choisi td{background:#eef4fb}
-.fi-rsimb{font:600 11px var(--font-ui);color:#2a78d6;background:#fff;border:1px solid #bcd3ef;border-radius:999px;padding:3px 9px;cursor:pointer}
-.fi-rsimb:hover{background:#eef4fb}
-.fi-rbtn{font:700 12.5px var(--font-ui);background:var(--color-primary,#8D1D2C);color:#fff;border:none;border-radius:999px;padding:9px 16px;cursor:pointer}
-.fi-rbtn:hover{filter:brightness(1.08)}
-.fi-rsim{border:.5px solid var(--color-border-tertiary,#e6e0d8);border-radius:12px;padding:12px 14px;background:#faf7f3}
-.fi-rsim.vide{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.fi-rsimh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* Les paliers en raccourcis sous la jauge, le repère du prix encaissé pendant un essai */
 .fi-rsimc{display:inline-flex;align-items:center;gap:4px}
 .fi-rsimc button{width:30px;height:30px;border-radius:50%;border:1px solid #d8d1c8;background:#fff;font:700 16px/1 var(--font-ui);cursor:pointer;color:#222}
 .fi-rsimc input{width:76px;height:32px;border:1px solid #d8d1c8;border-radius:8px;text-align:right;font:700 15px var(--font-ui);padding:0 8px;font-variant-numeric:tabular-nums;background:#fff}
-.fi-rsimx{margin-left:auto;background:none;border:none;color:#8a8278;font:600 11px var(--font-ui);cursor:pointer;text-decoration:underline}
-.fi-rsimv{margin-top:10px;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5}
-.fi-rsimv.ko{background:#f8e0e3;color:#6e0c1a}.fi-rsimv.att{background:#fbecd8;color:#7a4402}.fi-rsimv.ok{background:#e3f0e6;color:#1f5a2c}
-.fi-rmoi.sim i{border-top-color:#2a78d6}
-.fi-rmoi.sim em{top:58px;color:#2a78d6;width:140px;left:-70px}
+.fi-rsimc input:focus{outline:2px solid #bcd3ef;border-color:#2a78d6}
+.fi-rpcs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.fi-rpcs .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#8a8278;margin-right:4px}
+.fi-rpc{font:500 11px var(--font-ui);color:#333;background:#fff;border:1px solid #d8d1c8;border-radius:999px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.fi-rpc b{font-weight:700}
+.fi-rpc:hover{border-color:#2a78d6;color:#1f4f8f}
+.fi-rpc.on{background:#e4eefb;border-color:#b9d0ef;color:#1f4f8f}
+.fi-rpc.atteint{color:#a39c93}
+.fi-rmoi.enc i{border-top-color:#9a938a}
+.fi-rmoi.enc em{top:58px;color:#6c655d;width:140px;left:-70px}
+.fi-rmoi.enc em small{color:#6c655d}
 .fi-rjb.sim .fi-raxe{margin-top:82px}
 .fi-rchip.sim{background:#e4eefb;border-color:#b9d0ef}.fi-rchip.sim b{color:#1f4f8f}
 @media (max-width:700px){
@@ -1702,11 +1696,9 @@ html.db-fiche-ouverte{overflow:hidden}
   .fi-raxe{margin-top:48px;font-size:9.5px}
   .fi-rtab td.p{width:30%}
   .fi-rtab td:not(:first-child){white-space:nowrap}
-  .fi-rprix{grid-template-columns:1fr}
-  .fi-rpal th:nth-child(2),.fi-rpal td:nth-child(2){display:none}
-  .fi-rpal td small.co{display:block}
-  .fi-rpal td{padding:6px 4px;font-size:11.5px}
-  .fi-rmoi.sim em{width:110px;left:-55px}
+  .fi-rmoi.enc em{width:110px;left:-55px}
   .fi-rjb.sim .fi-raxe{margin-top:90px}
+  .fi-rpcs{gap:5px}
+  .fi-rpc{font-size:10.5px;padding:4px 8px}
   .fi-rwf .r{grid-template-columns:1.2fr .8fr 64px 44px;font-size:11.5px}
 }
