@@ -2947,7 +2947,7 @@
   function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois); } }
   function cleRecette() { return S.fiche ? 'recette|' + S.fiche.pid + '|' + S.shop : null; }
   function cleMat(mid) { return 'matiere|' + mid + '|' + S.shop; }
-  function ficheLireMatiere(mid) { lireAux(cleMat(mid), '/analyse/matieres/fiche?mid=' + encodeURIComponent(mid) + '&shop=' + encodeURIComponent(S.shop)); }
+  function ficheLireMatiere(mid, frais) { lireAux(cleMat(mid), '/analyse/matieres/fiche?mid=' + encodeURIComponent(mid) + '&shop=' + encodeURIComponent(S.shop) + (frais ? '&rafraichir=1' : ''), !!frais); }
   function ficheLireRecette() {
     const k = cleRecette(); if (!k) { return; }
     // Le coût de la pièce gravé avec les tickets guide le serveur dans le choix d'unité des quantités.
@@ -3109,7 +3109,14 @@
     else {
       const par = M.par || 'unité', fPu = v => v == null ? '—' : nf(v, v < 1 ? 4 : 2) + ' € / ' + par;
       const mag = M.magasin || {}, st = M.stats || { n: 0 }, F0 = (M.fournisseurs || [])[0] || null;
-      const id = `<div class="fi-rdh"><b>${esc(M.nom)}</b>${M.cat ? ' · ' + esc(M.cat) : ''} · prix nets par ${esc(par)}${M.tva != null ? ' · TVA ' + nf(M.tva, 0) + ' %' : ''}${M.sourceCentrale ? ' · achat à la centrale' : (M.sourceType === 'OPEN' ? ' · achat libre' : '')}</div>`;
+      const enCours = !!S.enCours[cleMat(l.id)], luLe = M.lu && M.lu.magasin ? new Date(M.lu.magasin) : null;
+      const id = `<div class="fi-rdh"><span><b>${esc(M.nom)}</b>${M.cat ? ' · ' + esc(M.cat) : ''} · prix nets par ${esc(par)}${M.tva != null ? ' · TVA ' + nf(M.tva, 0) + ' %' : ''}${M.sourceCentrale ? ' · achat à la centrale' : (M.sourceType === 'OPEN' ? ' · achat libre' : '')}</span>
+        <span class="fi-rdlu">${enCours ? 'relecture du panel…' : (luLe && !isNaN(luLe) ? 'panel lu à ' + String(luLe.getHours()).padStart(2, '0') + ':' + String(luLe.getMinutes()).padStart(2, '0') : '')} <button type="button" class="fi-rlien" data-fmatrelire="${esc(l.id)}"${enCours ? ' disabled' : ''} title="relire l’API du panel maintenant (ce magasin est relu toutes les ${M.lu && M.lu.minutesMagasin ? M.lu.minutesMagasin : 10} minutes, le réseau et les fournisseurs toutes les 24 h)">Relire</button></span></div>`;
+      // La recette ci-dessus a été chiffrée avec la copie locale du panel : quand l'API dit un autre prix, on le dit.
+      const copie = l.prixUnite != null && M.facteur ? l.prixUnite * M.facteur : null;
+      const note = copie != null && mag.prix != null && Math.abs(copie - mag.prix) / mag.prix > 0.01
+        ? `<div class="fi-rdnote">La recette ci-dessus a été chiffrée à <b>${fPu(copie)}</b>${l.prixSource && l.prixSource !== 'magasin' ? ' (prix d’un autre magasin)' : ''} par la copie locale du panel, qui se synchronise à son rythme ; l’API du panel dit aujourd’hui <b>${fPu(mag.prix)}</b> pour ce magasin.</div>`
+        : (copie != null && mag.prix == null && l.prixSource && l.prixSource !== 'magasin' ? `<div class="fi-rdnote">La recette ci-dessus prend ${fPu(copie)}, le prix d’un autre magasin dans la copie locale : ce magasin n’a pas de prix pour cette matière au panel.</div>` : '');
       const cles = `<div class="fi-rdg">
         <div><span class="k">${esc(mag.court || 'ce magasin')} · ce magasin</span><b>${mag.prix != null ? fPu(mag.prix) : 'pas de prix'}</b><small>${mag.prix == null ? (mag.absente ? 'matière absente de ce magasin' : 'la recette prend le prix d’un autre magasin') : (mag.ecart != null && M.repereNom ? fS(mag.ecart) + ' ' + esc(faceA(M.repereNom)) : '')}</small></div>
         <div><span class="k">Prix conseillé</span><b>${M.conseille != null ? fPu(M.conseille) : '—'}</b><small>${M.conseille != null ? 'porté par le panel' : 'le panel n’en porte pas pour cette matière'}</small></div>
@@ -3117,7 +3124,7 @@
         <div><span class="k">Fournisseur</span><b>${F0 ? esc(F0.nom) : 'aucun'}</b><small>${F0 ? (F0.centrale ? 'centrale' : esc(F0.typeNom || F0.type || 'fournisseur')) + (F0.sku ? ' · réf. ' + esc(F0.sku) : '') : 'aucun fournisseur du panel ne porte cette matière'}</small></div></div>`;
       const res = `<table class="fi-rdp"><thead><tr><th>Magasin</th><th>Prix / ${esc(par)}</th><th>${esc(faceA(M.repereNom).replace(/^face/, 'Face'))}</th></tr></thead><tbody>${(M.reseau || []).map(r => `<tr class="${r.ceMagasin ? 'moi' : ''}"><td>${esc(r.court)}${r.ceMagasin ? ' <small>ce magasin</small>' : ''}</td><td>${r.prix != null ? fPu(r.prix) : (r.lu ? '<span class="mu">pas de prix</span>' : '<span class="mu">non lu</span>')}</td><td>${r.ecart != null ? fS(r.ecart) : ''}</td></tr>`).join('')}</tbody></table>`;
       const four = (M.fournisseurs || []).length ? `<table class="fi-rdp four"><thead><tr><th>Fournisseur</th><th>Colis</th><th>Prix / ${esc(par)}</th><th>Valable depuis</th><th>Face au magasin</th></tr></thead><tbody>${M.fournisseurs.map(f => `<tr><td><b>${esc(f.nom)}</b><small>${f.centrale ? 'centrale' : esc(f.typeNom || f.type || 'fournisseur')}${f.sku ? ' · réf. ' + esc(f.sku) : ''}${f.nomCatalogue && f.nomCatalogue !== M.nom ? ' · ' + esc(f.nomCatalogue) : ''}</small></td><td data-l="colis">${f.colis ? nf(f.colis.taille || 1, 0) + ' ' + esc(f.colis.unite || '') + (f.colis.parColis > 1 ? ' × ' + nf(f.colis.parColis, 0) + ' ' + esc(M.uniteBase || '') : '') + ' · ' + nf(f.colis.prix, 2) + ' €' : (f.listeLue ? '<span class="mu">pas dans sa liste de prix</span>' : '<span class="mu">liste de prix non lue</span>')}</td><td data-l="prix / ${esc(par)}">${f.parUnite != null ? fPu(f.parUnite) : '—'}</td><td data-l="valable depuis">${f.depuis ? fDj(f.depuis) : '—'}${f.prochain ? `<small>puis ${fPu(f.prochain.parUnite)} dès le ${fDj(f.prochain.depuis)}</small>` : ''}</td><td data-l="face au magasin">${f.ecart != null ? fS(f.ecart) : '—'}</td></tr>`).join('')}</tbody></table>` : '';
-      corps = id + cles + `<div class="fi-rdd">${res}${four}</div><div class="fi-note">${esc(M.source || '')}</div>`;
+      corps = id + note + cles + `<div class="fi-rdd">${res}${four}</div><div class="fi-note">${esc(M.source || '')}</div>`;
     }
     return `<tr class="fi-rdet"><td colspan="4"><div class="fi-rdf">${corps}</div></td></tr>`;
   }
@@ -3189,6 +3196,7 @@
       tr.addEventListener('click', e => { if (e.target.closest('a, button, input')) { return; } bascule(); });
       tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(); } });
     });
+    box.querySelectorAll('[data-fmatrelire]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ficheLireMatiere(b.dataset.fmatrelire, true); ficheRendre(); }));
     box.querySelectorAll('[data-fsim]').forEach(b => b.addEventListener('click', () => simA(+b.dataset.fsim)));
     box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
     box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix != null ? S.fiche.simPrix : (prixEnc || 0)) + +b.dataset.fsimpas)); refocus(`[data-fsimpas="${b.dataset.fsimpas}"]`); }));
