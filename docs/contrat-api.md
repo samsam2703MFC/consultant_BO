@@ -1745,7 +1745,7 @@ journée regardée est aujourd'hui. Nul si J−7 n'est pas lu.
 
 ### `GET /analyse/produits/recette` — la recette d'un produit, pour l'onglet « Recette & marge » (08/10/2026)
 
-`GET /analyse/produits/recette?pid=2300010&shop=4[&rafraichir=1][&colonnes=1]` rend la recette du produit telle
+`GET /analyse/produits/recette?pid=2300010&shop=4[&cout=3.91][&rafraichir=1][&colonnes=1]` rend la recette du produit telle
 que la copie locale du panel la porte, sans appel au panel, gardée 24 h par produit et magasin (`ceo_app_setting`
 `recetteProduit:<pid>:<shop>`). Tables mesurées le 08/10/2026 : `product.id_recipe` → `product_recipe` (nom,
 `yield_quantity`, `id_unit`, `is_subrecipe`) → `product_recipe_material_connection` (`parent_recipe_id`,
@@ -1769,11 +1769,16 @@ colonnes, les lignes brutes et les coûts bruts :
   vaut son coût gravé. Le coût d'une ligne = quantité × prix de base de la matière (`prixSource` : magasin, réseau,
   autre magasin) ; une matière sans prix garde sa quantité, `cout` null et `motif`, et `complet` passe à faux.
   `hypothese` dit dans quelle unité les quantités ont été lues : `base` (kg, l) ou `petite` (g, ml) quand le total
-  des lignes s'approche davantage du coût gravé ainsi. Les lignes sont triées par coût ; `part` se lit sur le total
-  chiffré.
+  des lignes s'approche davantage de la référence ainsi ; la référence (`reference`) est `&cout=` quand le dashboard
+  passe le coût de la pièce gravé avec les tickets, sinon `cout.net`. Les lignes sont triées par coût ; `part` se
+  lit sur le total chiffré.
 - `cout.net` : `recipe_cost` du magasin, sinon du réseau (id_shop 0), sinon la moyenne des magasins, divisé par le
-  rendement de la recette. Le dashboard lit de son côté le coût de la pièce gravé avec les tickets (la ligne
-  cliquée) : c'est lui qui fait la marge et le coefficient de la modale.
+  rendement de la recette, avec `type` (`price_type` de la copie : `net`, `custom`…). Le dashboard lit de son côté
+  le coût de la pièce gravé avec les tickets (la ligne cliquée) : c'est lui qui fait la marge et le coefficient de
+  la modale, et il ne montre `cout.net` qu'à défaut de coût gravé. Mesuré le 08/10/2026 à Halle : la recette 244
+  (FlipFlap - Thon) porte un `recipe_cost` `custom` de 0,79 € daté du 12/07/2026 quand les autres magasins et les
+  tickets disent 3,73 à 3,91 €, et la recette ligne à ligne donne 3,87 € (13 lignes, prix d'un autre magasin pour
+  les matières sans prix à Halle).
 - Les colonnes de la copie n'ont jamais été cartographiées en entier : chaque table est lue par
   `information_schema` et les colonnes retenues sont dites dans `colonnes` (quantité, unité, prix, sous-recette…).
   `sansRecette: true` quand le produit n'a pas de recette, `indispo: true` avec `motif` quand la copie ne porte pas
