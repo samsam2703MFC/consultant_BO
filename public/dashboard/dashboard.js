@@ -2946,6 +2946,8 @@
   const cleFiche = () => S.fiche ? 'fiche|' + S.shop + '|' + S.fiche.pid + '|' + S.fiche.mois : null;
   function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois); } }
   function cleRecette() { return S.fiche ? 'recette|' + S.fiche.pid + '|' + S.shop : null; }
+  function cleMat(mid) { return 'matiere|' + mid + '|' + S.shop; }
+  function ficheLireMatiere(mid) { lireAux(cleMat(mid), '/analyse/matieres/fiche?mid=' + encodeURIComponent(mid) + '&shop=' + encodeURIComponent(S.shop)); }
   function ficheLireRecette() {
     const k = cleRecette(); if (!k) { return; }
     // Le coût de la pièce gravé avec les tickets guide le serveur dans le choix d'unité des quantités.
@@ -3072,7 +3074,7 @@
     else {
       const fQ = l => l.qte == null ? '—' : nf(l.qte, Number.isInteger(+l.qte) ? 0 : (l.qte >= 10 ? 1 : 2)) + (l.unite ? ' ' + esc(l.unite) : '');
       rec = `<table class="fi-rtab"><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Coût</th><th class="p">Part du coût</th></tr></thead><tbody>
-        ${lignes.map(l => `<tr${top && l === top ? ' class="top"' : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>`).join('')}
+        ${lignes.map((l, i) => { const cl = l.type === 'matiere' && l.id != null, on = cl && F.mat === i; return `<tr class="${top && l === top ? 'top' : ''}${cl ? ' clic' : ''}${on ? ' on' : ''}"${cl ? ` data-fmat="${i}" tabindex="0" role="button" aria-expanded="${on ? 'true' : 'false'}" title="le prix de cette matière : ce magasin, le réseau, le fournisseur"` : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>${on ? ficheMatiere(l, S.aux[cleMat(l.id)], S.err[cleMat(l.id)]) : ''}`; }).join('')}
         </tbody><tfoot><tr><td>Lignes chiffrées${R.sansPrix ? `<small>${R.sansPrix} sans prix</small>` : ''}</td><td></td><td>${totalL != null ? fPt(totalL) : '—'}</td><td class="p">${totalL != null && mat != null && Math.abs(totalL - mat) > 0.05 ? `<small>coût gravé ${fPt(mat)}</small>` : ''}</td></tr></tfoot></table>
         <div class="fi-note fi-rnote">${esc(R.source || '')}${mat == null && R.cout && R.cout.net != null ? ` · coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : ''}${R.recette && R.recette.rendement && R.recette.rendement !== 1 ? ` · rendement ${nf(R.recette.rendement, 2)}` : ''}${lignes.some(l => l.prixSource && l.prixSource !== 'magasin') ? ' · les prix sans valeur pour ce magasin viennent d’un autre magasin' : ''}</div>`;
     }
@@ -3097,6 +3099,28 @@
       ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">${sim != null ? 'au prix de vente testé, ' + fPt(sim) + ' · ' : ''}main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
   }
   let ficheEnRendu = false;   // vrai pendant le redessin : le blur que Chrome lance en retirant le champ n'est pas une sortie du champ
+  /** La fiche d'une matière première, dépliée sous sa ligne de recette : lue sur l'API du panel seulement. */
+  function ficheMatiere(l, M, err) {
+    const fDj = s => s && s.length >= 10 ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : '—';
+    const fS = v => (v > 0 ? '+' : (v < 0 ? '−' : '')) + nf(Math.abs(v), 1) + ' %', faceA = n => !n ? 'face au repère' : (/^médiane/.test(n) ? 'face à la ' + n : 'face au ' + n);
+    let corps;
+    if (err && !M) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
+    else if (!M) { corps = '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:4px 0"></div><div class="db-sk" style="width:95%;height:64px;margin:8px 0"></div></div>'; }
+    else {
+      const par = M.par || 'unité', fPu = v => v == null ? '—' : nf(v, v < 1 ? 4 : 2) + ' € / ' + par;
+      const mag = M.magasin || {}, st = M.stats || { n: 0 }, F0 = (M.fournisseurs || [])[0] || null;
+      const id = `<div class="fi-rdh"><b>${esc(M.nom)}</b>${M.cat ? ' · ' + esc(M.cat) : ''} · prix nets par ${esc(par)}${M.tva != null ? ' · TVA ' + nf(M.tva, 0) + ' %' : ''}${M.sourceCentrale ? ' · achat à la centrale' : (M.sourceType === 'OPEN' ? ' · achat libre' : '')}</div>`;
+      const cles = `<div class="fi-rdg">
+        <div><span class="k">${esc(mag.court || 'ce magasin')} · ce magasin</span><b>${mag.prix != null ? fPu(mag.prix) : 'pas de prix'}</b><small>${mag.prix == null ? (mag.absente ? 'matière absente de ce magasin' : 'la recette prend le prix d’un autre magasin') : (mag.ecart != null && M.repereNom ? fS(mag.ecart) + ' ' + esc(faceA(M.repereNom)) : '')}</small></div>
+        <div><span class="k">Prix conseillé</span><b>${M.conseille != null ? fPu(M.conseille) : '—'}</b><small>${M.conseille != null ? 'porté par le panel' : 'le panel n’en porte pas pour cette matière'}</small></div>
+        <div><span class="k">Réseau</span><b>${st.n ? (st.min === st.max ? fPu(st.med) : nf(st.min, st.min < 1 ? 4 : 2) + ' à ' + nf(st.max, st.max < 1 ? 4 : 2) + ' € / ' + esc(par)) : '—'}</b><small>${st.n} magasin${st.n > 1 ? 's' : ''} avec un prix${st.n > 1 && st.min !== st.max ? ' · médiane ' + nf(st.med, st.med < 1 ? 4 : 2) + ' €' : ''}</small></div>
+        <div><span class="k">Fournisseur</span><b>${F0 ? esc(F0.nom) : 'aucun'}</b><small>${F0 ? (F0.centrale ? 'centrale' : esc(F0.typeNom || F0.type || 'fournisseur')) + (F0.sku ? ' · réf. ' + esc(F0.sku) : '') : 'aucun fournisseur du panel ne porte cette matière'}</small></div></div>`;
+      const res = `<table class="fi-rdp"><thead><tr><th>Magasin</th><th>Prix / ${esc(par)}</th><th>${esc(faceA(M.repereNom).replace(/^face/, 'Face'))}</th></tr></thead><tbody>${(M.reseau || []).map(r => `<tr class="${r.ceMagasin ? 'moi' : ''}"><td>${esc(r.court)}${r.ceMagasin ? ' <small>ce magasin</small>' : ''}</td><td>${r.prix != null ? fPu(r.prix) : (r.lu ? '<span class="mu">pas de prix</span>' : '<span class="mu">non lu</span>')}</td><td>${r.ecart != null ? fS(r.ecart) : ''}</td></tr>`).join('')}</tbody></table>`;
+      const four = (M.fournisseurs || []).length ? `<table class="fi-rdp four"><thead><tr><th>Fournisseur</th><th>Colis</th><th>Prix / ${esc(par)}</th><th>Valable depuis</th><th>Face au magasin</th></tr></thead><tbody>${M.fournisseurs.map(f => `<tr><td><b>${esc(f.nom)}</b><small>${f.centrale ? 'centrale' : esc(f.typeNom || f.type || 'fournisseur')}${f.sku ? ' · réf. ' + esc(f.sku) : ''}${f.nomCatalogue && f.nomCatalogue !== M.nom ? ' · ' + esc(f.nomCatalogue) : ''}</small></td><td data-l="colis">${f.colis ? nf(f.colis.taille || 1, 0) + ' ' + esc(f.colis.unite || '') + (f.colis.parColis > 1 ? ' × ' + nf(f.colis.parColis, 0) + ' ' + esc(M.uniteBase || '') : '') + ' · ' + nf(f.colis.prix, 2) + ' €' : (f.listeLue ? '<span class="mu">pas dans sa liste de prix</span>' : '<span class="mu">liste de prix non lue</span>')}</td><td data-l="prix / ${esc(par)}">${f.parUnite != null ? fPu(f.parUnite) : '—'}</td><td data-l="valable depuis">${f.depuis ? fDj(f.depuis) : '—'}${f.prochain ? `<small>puis ${fPu(f.prochain.parUnite)} dès le ${fDj(f.prochain.depuis)}</small>` : ''}</td><td data-l="face au magasin">${f.ecart != null ? fS(f.ecart) : '—'}</td></tr>`).join('')}</tbody></table>` : '';
+      corps = id + cles + `<div class="fi-rdd">${res}${four}</div><div class="fi-note">${esc(M.source || '')}</div>`;
+    }
+    return `<tr class="fi-rdet"><td colspan="4"><div class="fi-rdf">${corps}</div></td></tr>`;
+  }
   function ficheRendre() {
     let box = document.getElementById('db-fiche');
     if (!S.fiche) { if (box) { box.innerHTML = ''; } document.documentElement.classList.remove('db-fiche-ouverte'); return; }
@@ -3113,11 +3137,11 @@
     // L'élément qui a le focus dans la modale (le champ du prix, un onglet, un bouton) le retrouve après le redessin,
     // que le redessin vienne d'un clic ou du rafraîchissement périodique de la page.
     const act = document.activeElement, focSel = (() => { if (!act || !box.contains(act)) { return null; }
-      for (const k of ['fsiminput', 'fsimpas', 'fong', 'fsim', 'fmois']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
+      for (const k of ['fsiminput', 'fsimpas', 'fong', 'fsim', 'fmois', 'fmat']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
       return act.classList.contains('fi-x') ? '.fi-x' : null; })(), focPos = focSel === '[data-fsiminput="1"]' ? act.selectionStart : null;
     ficheEnRendu = true;
     let corps;
-    if (F.onglet === 3) { ficheLireRecette(); corps = ficheRecette(F, d, S.aux[cleRecette()], S.err[cleRecette()]); }
+    if (F.onglet === 3) { ficheLireRecette(); { const R0 = S.aux[cleRecette()], l0 = F.mat != null && R0 && Array.isArray(R0.lignes) ? R0.lignes[F.mat] : null; if (l0 && l0.id != null) { ficheLireMatiere(l0.id); } } corps = ficheRecette(F, d, S.aux[cleRecette()], S.err[cleRecette()]); }
     else if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
     else if (!d) { corps = '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:6px 0"></div><div class="db-sk" style="width:85%;height:180px;margin:10px 0"></div></div>'; }
     else if (d.indispo) { corps = `<div class="fi-msg">${esc(d.motif || 'indisponible')}</div>`; }
@@ -3160,6 +3184,11 @@
     const prixEnc = F.q > 0 && F.v != null ? F.v / F.q : null;
     const simA = (v, saisie) => { S.fiche.simPrix = v > 0 && (prixEnc == null || Math.abs(v - prixEnc) >= 0.005) ? Math.round(v * 100) / 100 : null; if (saisie != null) { S.fiche.simSaisie = saisie; } else { delete S.fiche.simSaisie; } ficheRendre(); };
     const refocus = (sel, pos) => { const n = document.querySelector('#db-fiche ' + sel); if (n) { n.focus(); if (pos != null) { try { n.setSelectionRange(pos, pos); } catch (e) { /* champ sans sélection */ } } } };
+    box.querySelectorAll('[data-fmat]').forEach(tr => {
+      const bascule = () => { const i = +tr.dataset.fmat; S.fiche.mat = S.fiche.mat === i ? null : i; ficheRendre(); };
+      tr.addEventListener('click', e => { if (e.target.closest('a, button, input')) { return; } bascule(); });
+      tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(); } });
+    });
     box.querySelectorAll('[data-fsim]').forEach(b => b.addEventListener('click', () => simA(+b.dataset.fsim)));
     box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
     box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix != null ? S.fiche.simPrix : (prixEnc || 0)) + +b.dataset.fsimpas)); refocus(`[data-fsimpas="${b.dataset.fsimpas}"]`); }));
