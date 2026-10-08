@@ -3025,7 +3025,11 @@
     const P = d && d.prix ? d.prix : null, med = P && P.reseau && P.reseau.med ? P.reseau.med : null;
     const G0 = 1, G1 = 4, pct = v => Math.max(0, Math.min(100, 100 * (v - G0) / (G1 - G0)));
     const reperes = [catCoef != null ? { v: catCoef, lib: 'sa catégorie', sous: fX(catCoef) } : null, magCoef != null ? { v: magCoef, lib: 'le magasin aujourd’hui', sous: fX(magCoef) } : null,
-      { v: obj, lib: 'objectif', sous: fX(obj) + ' · matière ' + fP0(se.food), cls: 'obj' }].filter(Boolean);
+      { v: obj, lib: 'objectif', sous: fX(obj) + ' · matière ' + fP0(se.food), cls: 'obj' }].filter(Boolean).sort((a, b) => a.v - b.v);
+    // Deux repères trop proches se lisent sur deux étages (le second monte d'un cran), surtout au téléphone.
+    const serre = typeof matchMedia === 'function' && matchMedia('(max-width:700px)').matches ? 27 : 17;
+    reperes.forEach((r, i) => { if (i > 0 && pct(r.v) - pct(reperes[i - 1].v) < serre && !/\bh2\b/.test(reperes[i - 1].cls || '')) { r.cls = ((r.cls || '') + ' h2').trim(); } });
+    const etage = reperes.some(r => /\bh2\b/.test(r.cls || ''));
     const lignes = R && Array.isArray(R.lignes) ? R.lignes : [];
     // Les parts se lisent sur le coût gravé de la pièce (les lignes peuvent être incomplètes), sinon sur le total des lignes.
     const totalL = R && R.total != null ? R.total : null, baseL = mat > 0 ? mat : (totalL || 0);
@@ -3034,7 +3038,7 @@
     // 1. La jauge.
     let h = `<section class="fi-rc fi-rjauge"><div class="fi-rct"><span class="fi-rh">Le coefficient</span><span class="fi-note">ce que le prix fait de la matière : prix encaissé ÷ coût de recette</span></div>
       <div class="fi-rjg"><div class="fi-rjn ${niv(coef)}"><b>${fX(coef)}</b><span>${NIV[niv(coef)]}</span><small>${taux != null ? 'marge brute ' + fP0(taux) + ' · matière ' + fP0(100 - taux) + ' du prix' : 'le coût de recette de cette pièce n’est pas gravé'}</small></div>
-        <div class="fi-rjb"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
+        <div class="fi-rjb${etage ? ' etage' : ''}"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
           ${reperes.map(r => `<span class="fi-rrep ${r.cls || ''}" style="left:${pct(r.v).toFixed(1)}%"><i></i><em>${esc(r.lib)}<small>${esc(r.sous)}</small></em></span>`).join('')}
           ${coef != null ? `<span class="fi-rmoi ${niv(coef)}" style="left:${pct(coef).toFixed(1)}%"><i></i><em>ce produit<small>${fX(coef)}</small></em></span>` : ''}</div>
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div></div></div>`;
