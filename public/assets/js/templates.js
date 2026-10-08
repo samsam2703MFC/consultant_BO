@@ -4533,6 +4533,14 @@ function confettisReseau(){
   return `<div class="rj-confi" aria-hidden="true">${h}</div>`;
 }
 
+/* La part du CA pro dans le CA total, en pastille sous le montant : vert / orange / rouge selon la règle des 40 % de la
+ * semaine ou du mois (`proNiv` ok | att | ko), gris sur une journée (`jour`, part indicative). L'infobulle dit la règle. */
+function tplProPastille(l, esc){
+  if (!l || l.proPart == null || !l.proPartTxt) { return ''; }
+  const coul = { ok: 'background:#e3f0e6;color:#1f5a2c', att: 'background:#fbecd8;color:#8a4e05', ko: 'background:#f8e0e3;color:#8c1020' }[l.proNiv]
+    || 'background:var(--color-background-secondary);color:var(--color-text-muted)';
+  return `<div style="margin-top:3px"><span title="${esc(l.proRegle || '')}" style="display:inline-block;font-size:10px;font-weight:600;line-height:1.5;padding:0 7px;border-radius:999px;white-space:nowrap;${coul}">${esc(l.proPartTxt)}</span></div>`;
+}
 function tplResultat(c, x){
   const { esc } = x;
   // Chaque onglet dit où en est sa lecture : anneau qui tourne, puis coche.
@@ -4738,7 +4746,8 @@ function tplResultatPeriode(c, x){
   const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
   const sep = 'border-left:0.5px solid var(--color-border-secondary)';
   const nbCol = 12 + (c.rpMois ? 1 : 0);
-  const cel2 = (v, coul, s1, s2, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s2)}</div>` : ''}</td>`;
+  const cel2 = (v, coul, s1, s2, titre, pastille) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${pastille || ''}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s2)}</div>` : ''}</td>`;
+  const proPastille = l => tplProPastille(l, esc);
   const rang = l => `
     <tr ${l.ouvrir ? x.A(l.ouvrir) : ''} class="${l.reseau ? '' : 'hv-bg'}" style="${l.st}">
       <td style="padding:9px 7px;${l.reseau ? 'border-top:1px solid var(--color-border-secondary)' : bord}">
@@ -4746,7 +4755,7 @@ function tplResultatPeriode(c, x){
         ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:${l.reseau ? 0 : 14}px">${esc(l.sousTitre)}</div>` : ''}
       </td>
       ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true)
-          + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre)
+          + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre, proPastille(l))
           + cel(l.attendu, 'var(--color-text-muted)')
           + cel(l.ecart, l.ecartCol, '', true) + cel(l.clients, l.clientsCol, l.clientsSous, true, l.clientsTitre)
           + (c.rpMois ? cel(l.mois.ecart, l.mois.ecartCol, l.mois.n1 ? 'N-1 ' + l.mois.n1 : '', false, 'même période un an plus tôt — source API') : '')
@@ -4920,7 +4929,8 @@ function tplResultatJour(c, x){
     'Produits / client', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
   // Une cellule du split comptoir / pro : le CA, puis sa part et ses clients, puis le panier.
-  const cel2 = (v, coul, s1, s2, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s2)}</div>` : ''}</td>`;
+  const cel2 = (v, coul, s1, s2, titre, pastille) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${pastille || ''}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s2)}</div>` : ''}</td>`;
+  const proPastille = l => tplProPastille(l, esc);
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
   const cel = (v, coul, sous, fort, titre, sousCoul) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:${sousCoul || 'var(--color-text-muted)'};font-weight:400">${esc(sous)}</div>` : ''}</td>`;
   // Le (i) d'une notion qui a besoin d'être expliquée : au survol, la phrase
@@ -4986,7 +4996,7 @@ function tplResultatJour(c, x){
               : `<span style="font-size:10px;color:var(--color-text-muted)">—</span>`}</td>
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
-                + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre)
+                + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre, proPastille(l))
                 + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
                 + cel(l.manque, l.manqueCoul, l.manqueSous, true, l.manqueTitre)
                 + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
@@ -4999,7 +5009,7 @@ function tplResultatJour(c, x){
             <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
           <td style="border-top:1px solid var(--color-border-secondary)"></td>
           ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
-          ${cel2(c.rjReseau.caCpt, '', c.rjReseau.caCptSous, c.rjReseau.caCptSous2, c.rjReseau.proTitre)}${cel2(c.rjReseau.caPro, c.rjReseau.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', c.rjReseau.caProSous, c.rjReseau.caProSous2, c.rjReseau.proTitre)}
+          ${cel2(c.rjReseau.caCpt, '', c.rjReseau.caCptSous, c.rjReseau.caCptSous2, c.rjReseau.proTitre)}${cel2(c.rjReseau.caPro, c.rjReseau.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', c.rjReseau.caProSous, c.rjReseau.caProSous2, c.rjReseau.proTitre, proPastille(c.rjReseau))}
           ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
           ${cel(c.rjReseau.manque, c.rjReseau.manqueCoul, '', true, 'somme des clients manquants de chaque magasin')}
           ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}

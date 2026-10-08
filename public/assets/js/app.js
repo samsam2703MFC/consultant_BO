@@ -63,6 +63,8 @@ function fusionneAttributs(v, n){
  * On retire donc les attributs de geste AVANT de rendre la main au navigateur,
  * puis on relâche le focus : l'événement tardif ne trouve plus rien à appeler.
  */
+/* La part du CA pro dans le CA total : la règle (08/10/2026) la plafonne à 40 % sur la semaine ou le mois. */
+const RJ_PRO_MAX = 40, RJ_PRO_ALERTE = 35;
 const GESTES = ['data-h', 'data-c', 'data-i', 'data-sb', 'data-pd', 'data-ds', 'data-dp', 'data-en'];
 
 /**
@@ -7995,8 +7997,10 @@ class App {
     if (m.clientsBase === 'comptoir' && m.clientsManquants != null) { return -m.clientsManquants; }
     return (m.objectifJour != null && m.panier > 0) ? Math.round((m.ca - m.objectifJour) / m.panier) : 0;
   }
-  /** Le split d'une ligne du Résultat (jour, semaine, mois) : comptoir et pro, chacun avec son CA, sa part, ses clients et son panier. */
-  rjSplit(m, manque){
+  /** Le split d'une ligne du Résultat (jour, semaine, mois) : comptoir et pro, chacun avec son CA, sa part, ses clients et son panier.
+   *  La part du pro dans le CA total porte une pastille : la règle (08/10/2026) veut qu'elle ne dépasse pas 40 % du CA de
+   *  la semaine ou du mois — vert en deçà de 35 %, orange de 35 à 40 %, rouge au-delà ; sur une journée, `jour` la laisse neutre. */
+  rjSplit(m, manque, jour){
     const fE = v => this.fE(v), fI = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
     const fU = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
     const pct = v => String(v).replace('.', ',') + ' %';
@@ -8014,8 +8018,13 @@ class App {
       caCptSous: m.caComptoir == null ? lus : [partC == null ? '' : pct(partC), cli(m.ticketsComptoir)].filter(Boolean).join(' · '),
       caCptSous2: m.panierComptoir != null ? 'panier ' + fU(m.panierComptoir) : '',
       caPro: fE(m.caPro),
-      caProSous: [m.partPro != null ? pct(m.partPro) : lus, cli(m.ticketsPro)].filter(Boolean).join(' · '),
+      caProSous: [m.partPro == null ? lus : '', cli(m.ticketsPro)].filter(Boolean).join(' · '),
       caProSous2: m.panierPro != null ? 'panier ' + fU(m.panierPro) : '',
+      proPart: m.partPro,
+      proPartTxt: m.partPro == null ? '' : pct(m.partPro) + ' du CA',
+      proNiv: m.partPro == null ? '' : (jour ? 'jour' : (m.partPro > RJ_PRO_MAX ? 'ko' : (m.partPro > RJ_PRO_ALERTE ? 'att' : 'ok'))),
+      proRegle: m.partPro == null ? '' : 'Part des clients pro dans le CA total : ' + pct(m.partPro) + '. Règle : le pro ne dépasse pas ' + RJ_PRO_MAX + ' % du CA de la semaine ou du mois'
+        + (jour ? ' — sur une journée, la part est indicative : une grosse commande fait un pic.' : (m.partPro > RJ_PRO_MAX ? ' — dépassée.' : (m.partPro > RJ_PRO_ALERTE ? ' — on s’en approche.' : '.'))),
       proTitre: base + (partiel ? ' ' + m.proJoursLus + ' jour(s) lu(s) sur ' + m.proJours + ' : le pro est partiel, le comptoir attend les jours manquants (relevés au cron, chaque heure).' : '') + (manque ? ' ' + manque + '.' : ''),
     };
   }
@@ -10453,7 +10462,7 @@ class App {
     const res = r.reseau || {};
     const nOuv = (r.magasins || []).filter(m2 => m2.ouvert).length;
     common.rjReseau = {
-      ...this.rjSplit(res, res.proMagasins != null && res.proMagasins < nOuv ? res.proMagasins + ' magasin(s) sur ' + nOuv + ' lus — les autres manquent au total pro' : ''),
+      ...this.rjSplit(res, res.proMagasins != null && res.proMagasins < nOuv ? res.proMagasins + ' magasin(s) sur ' + nOuv + ' lus — les autres manquent au total pro' : '', true),
       ca: fE(res.ca), tickets: fInt(res.tickets), panier: fU(res.panier),
       ppc: res.produitsParClient != null ? res.produitsParClient.toFixed(2).replace('.', ',') : '',
       delta: fDelta(res.caDelta), deltaCoul: coulDelta(res.caDelta),
@@ -10543,7 +10552,7 @@ class App {
           : fE(m.refCa) + ' en moyenne sur ' + m.refJours + ' ' + (ref.nom || 'jours'),
         // Le split pro / comptoir : les tickets des clients pro du panel, le
         // reste du CA au comptoir. « — » : la liste des tickets n'a pas répondu.
-        ...this.rjSplit(m),
+        ...this.rjSplit(m, '', true),
         tickets: fInt(m.tickets),
         ticketsDelta: fDelta(m.ticketsDelta), ticketsCoul: coulDelta(m.ticketsDelta),
         panier: fU(m.panier),
