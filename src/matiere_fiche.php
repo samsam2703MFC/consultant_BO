@@ -20,8 +20,9 @@
  */
 declare(strict_types=1);
 
-const MF_HEURES = 24;            // les lectures du réseau (autres magasins, fournisseurs, listes de prix)
-const MF_MINUTES_MAGASIN = 10;   // les matières du magasin demandé : relues plus souvent, un prix changé au panel doit se voir vite
+const MF_HEURES = 24;            // le référentiel des fournisseurs et leurs correspondances (rarement changés ; « Relire » les relit)
+const MF_SEC_PRIX = 60;          // les prix (matières de chaque magasin, listes de prix) : relus à chaque ouverture passée la minute,
+                                 // pour qu'une édition de prix au panel se voie tout de suite (demande du 08/10/2026)
 
 /** Une liste du panel : la réponse est une liste, ou l'enveloppe la porte sous `data`, `items`, `materials`… */
 function mfListe(mixed $r): array
@@ -94,16 +95,16 @@ function mfMatiere(array $x): array
 }
 
 /**
- * Les matières de chaque magasin demandé selon l'API (`/shops/{id}/materials`), gardées 24 h par magasin — 10 min pour
- * le magasin courant `$sidCourant`, pour qu'un prix changé au panel se voie vite. Les magasins sans cache sont lus en
- * parallèle. Rend [sid => [mid => matière]] ; un magasin illisible vaut []. `$luLe` reçoit l'heure de lecture par magasin.
+ * Les matières de chaque magasin demandé selon l'API (`/shops/{id}/materials`) : relues passée la minute (MF_SEC_PRIX),
+ * pour qu'une édition de prix au panel se voie tout de suite ; les magasins à relire sont lus en parallèle.
+ * Rend [sid => [mid => matière]] ; un magasin illisible vaut []. `$luLe` reçoit l'heure de lecture par magasin.
  */
 function mfMatieresApi(array $sids, bool $frais, int $sidCourant = 0, array &$luLe = []): array
 {
     $out = []; $manque = []; $luLe = [];
     foreach ($sids as $sid) {
         $le = null;
-        $c = mfCache('matieresApi:' . $sid, $frais, $sid === $sidCourant ? MF_MINUTES_MAGASIN * 60 : null, $le);
+        $c = mfCache('matieresApi:' . $sid, $frais, MF_SEC_PRIX, $le);
         if ($c !== null) { $out[$sid] = $c; $luLe[$sid] = $le; } else { $manque[$sid] = '/shops/' . $sid . '/materials'; }
     }
     if ($manque !== [] && PanelApi::configured()) {
@@ -172,11 +173,11 @@ function mfFournisseurs(bool $frais): array
     return $out;
 }
 
-/** La liste de prix d'un fournisseur pour un magasin, en vigueur (`current`) et la plus récente (`latest`), par référence. Gardée 24 h. */
+/** La liste de prix d'un fournisseur pour un magasin, en vigueur (`current`) et la plus récente (`latest`), par référence. Relue passée la minute. */
 function mfListePrix(string $fid, int $sid, bool $frais): array
 {
     $cle = 'listePrix:' . $fid . ':' . $sid;
-    $c = mfCache($cle, $frais);
+    $c = mfCache($cle, $frais, MF_SEC_PRIX);
     if ($c !== null && isset($c['c'], $c['l'])) { return $c; }
     $out = ['c' => [], 'l' => [], 'lu' => false];
     if (!PanelApi::configured()) { return $out; }
@@ -221,6 +222,7 @@ function mfMediane(array $v): ?float
 function ep_analyse_matiere_fiche(): array
 {
     $mid = (int) ($_GET['mid'] ?? 0); $sid = (int) ($_GET['shop'] ?? 0);
+    if (!empty($_GET['sondeRecette'])) { return mfSondeRecette((int) $_GET['sondeRecette'], $sid, (int) ($_GET['pid'] ?? 0)); }
     if ($mid <= 0 || $sid <= 0) { http_response_code(400); return ['error' => 'mid et shop requis']; }
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'API panel non configurée (Mon compte)']; }
     $frais = !empty($_GET['rafraichir']);
@@ -289,7 +291,7 @@ function ep_analyse_matiere_fiche(): array
             'sansPrix' => !($prixMag > 0), 'absente' => $a === null, 'ecart' => $prixMag > 0 && $repere > 0 ? round(100 * ($prixMag - $repere) / $repere, 1) : null],
         'reseau' => $reseau, 'stats' => ['n' => count($valeurs), 'min' => $valeurs !== [] ? round(min($valeurs) * $fac, 4) : null, 'max' => $valeurs !== [] ? round(max($valeurs) * $fac, 4) : null, 'med' => $med !== null ? round($med * $fac, 4) : null],
         'fournisseurs' => $fournisseurs, 'fournisseursLus' => $fourn['f'] !== [],
-        'lu' => ['magasin' => isset($luLe[$sid]) ? date('c', $luLe[$sid]) : null, 'age' => isset($luLe[$sid]) ? time() - $luLe[$sid] : null, 'minutesMagasin' => MF_MINUTES_MAGASIN, 'heuresReseau' => MF_HEURES],
+        'lu' => ['magasin' => isset($luLe[$sid]) ? date('c', $luLe[$sid]) : null, 'age' => isset($luLe[$sid]) ? time() - $luLe[$sid] : null, 'secondesPrix' => MF_SEC_PRIX, 'heuresReseau' => MF_HEURES],
         'source' => 'API du panel : /shops/{id}/materials de chaque magasin (prix de base net, prix conseillé, prix de référence, TVA), /material-suppliers + catalog-mappings (fournisseur, référence, colis), /material-suppliers/{f}/shops/{s}/price-lists/current et latest (prix du colis, valable depuis) ; gardés 24 h'];
     if (!empty($_GET['sonde'])) {
         $out['sonde'] = ['conseilles' => 0, 'references' => 0, 'matieres' => count($parMagasin[$sid] ?? []), 'liens' => $fourn['m'][(string) $mid] ?? [], 'fournisseursListe' => $fourn['f'], 'formule' => []];
@@ -311,6 +313,33 @@ function ep_analyse_matiere_fiche(): array
             }
             $out['sonde']['formule'][] = $st;
         }
+    }
+    return $out;
+}
+
+/**
+ * Sonde, lecture seule : ce que les routes de recette du swagger rendent (recette, aplatie, coût par magasin, produit),
+ * pour décider si la recette de la modale peut venir de l'API plutôt que de la copie locale.
+ */
+function mfSondeRecette(int $rid, int $sid, int $pid): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'API panel non configurée']; }
+    $apercu = static function ($b) {
+        if (!is_array($b)) { return is_string($b) ? mb_substr($b, 0, 300) : $b; }
+        $l = mfListe($b);
+        if ($l !== []) { return ['liste' => count($l), 'cles' => is_array($l[0]) ? array_keys($l[0]) : null, 'premier' => $l[0], 'second' => $l[1] ?? null, 'enveloppe' => array_is_list($b) ? null : array_keys($b)]; }
+        $out = ['cles' => array_slice(array_keys($b), 0, 80)];
+        foreach (array_slice($b, 0, 40, true) as $k => $v) { $out['extrait'][$k] = is_array($v) ? (array_is_list($v) ? ['liste' => count($v), 'premier' => $v[0] ?? null, 'second' => $v[1] ?? null] : array_slice($v, 0, 30, true)) : $v; }
+        return $out;
+    };
+    $essais = ['recette' => '/recipes/' . $rid, 'aplatie' => '/recipes/' . $rid . '/flatten', 'cout' => '/recipes/' . $rid . '/cost', 'coutMagasin' => '/shops/' . $sid . '/recipes/' . $rid . '/cost',
+        'texte' => '/recipes/' . $rid . '/text', 'recettesMagasin' => '/shops/' . $sid . '/recipes', 'calcul' => '/franchise/1/product-recipe/' . $rid . '/calculation',
+        'sousRecettes' => '/subrecipes', 'produitsRecettes' => '/shops/' . $sid . '/products/' . $pid . '/recipe'];
+    if ($pid > 0) { $essais['produit'] = '/products/' . $pid; $essais['produitMagasin'] = '/shops/' . $sid . '/products/' . $pid; }
+    $out = ['rid' => $rid, 'shop' => $sid, 'routes' => []];
+    foreach ($essais as $k => $chemin) {
+        $r = PanelApi::sondeGet($chemin, 15);
+        $out['routes'][$k] = ['chemin' => $chemin, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) && $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 160) : null, 'apercu' => $apercu($r['corps'] ?? null)];
     }
     return $out;
 }
