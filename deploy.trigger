@@ -653,3 +653,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-08T17:30:43Z recette indice cout grave
 2026-10-08T17:37:58Z recette jauge etages
 2026-10-08T18:01:25Z recette adapter le prix
+2026-10-08T18:12:24Z recette prix de vente en direct
