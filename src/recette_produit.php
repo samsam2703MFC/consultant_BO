@@ -273,7 +273,8 @@ function ep_analyse_produit_recette(): array
             return $r;
         }
     }
-    $out = rpCalcul($pid, $sid, false);
+    $indice = is_numeric($_GET['cout'] ?? null) && (float) $_GET['cout'] > 0 ? (float) $_GET['cout'] : null;
+    $out = rpCalcul($pid, $sid, false, $indice);
     if (empty($out['error'])) {
         try {
             $j = json_encode(['le' => time(), 'r' => $out], JSON_UNESCAPED_UNICODE);
@@ -284,8 +285,9 @@ function ep_analyse_produit_recette(): array
     return $out;
 }
 
-/** Le calcul lui-même, sans cache. `$brut` : joindre les lignes brutes (diagnostic). */
-function rpCalcul(int $pid, int $sid, bool $brut = false): array
+/** Le calcul lui-même, sans cache. `$brut` : joindre les lignes brutes (diagnostic) ; `$indice` : le coût de la pièce
+ *  gravé avec les tickets, passé par le dashboard, qui guide le choix d'unité avant le coût de la copie. */
+function rpCalcul(int $pid, int $sid, bool $brut = false, ?float $indice = null): array
 {
     $ctx = rpContexte();
     $diag = ['tables' => array_values(array_filter(array_map(static fn ($k) => $ctx[$k]['table'], ['conn', 'mat', 'rec', 'cout', 'prix']))),
@@ -312,7 +314,8 @@ function rpCalcul(int $pid, int $sid, bool $brut = false): array
     $t1 = 0.0; $t2 = 0.0; $n = 0;
     foreach ($lignes as $l) { if ($l['cout'] !== null && $l['type'] === 'matiere') { $t1 += $l['cout']; $t2 += $l['cout'] / max(1.0, (float) ($l['facteur'] ?? 1.0)); $n++; } }
     $hyp = 'base';
-    if ($n > 0 && $cout !== null && $cout['net'] > 0 && abs($t2 - $cout['net']) < abs($t1 - $cout['net']) && $t1 !== $t2) {
+    $ref = $indice ?? ($cout !== null && $cout['net'] > 0 ? $cout['net'] : null);
+    if ($n > 0 && $ref !== null && abs($t2 - $ref) < abs($t1 - $ref) && $t1 !== $t2) {
         $hyp = 'petite';
         foreach ($lignes as &$l) {
             if ($l['type'] === 'matiere' && ($l['facteur'] ?? 1.0) > 1 && $l['cout'] !== null) { $l['cout'] = round($l['cout'] / $l['facteur'], 4); $l['unite'] = $l['petite'] ?: $l['unite']; }
@@ -330,7 +333,7 @@ function rpCalcul(int $pid, int $sid, bool $brut = false): array
     unset($l);
     $out = ['pid' => $pid, 'nom' => $nom, 'recette' => $rec, 'cout' => $cout, 'lignes' => $lignes,
         'total' => $lignes !== [] && $total > 0 ? round($total, 4) : null,
-        'complet' => $lignes !== [] && $sansPrix === 0, 'sansPrix' => $sansPrix, 'nLignes' => count($lignes), 'hypothese' => $hyp,
+        'complet' => $lignes !== [] && $sansPrix === 0, 'sansPrix' => $sansPrix, 'nLignes' => count($lignes), 'hypothese' => $hyp, 'reference' => $ref,
         'source' => 'copie locale du panel : product_recipe_material_connection, material, shop_material_price_list (prix de base, le plus récent), recipe_cost',
         'colonnes' => $diag];
     if ($brut) {
