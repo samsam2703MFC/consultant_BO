@@ -1745,10 +1745,15 @@ journée regardée est aujourd'hui. Nul si J−7 n'est pas lu.
 
 ### `GET /analyse/produits/recette` — la recette d'un produit, pour l'onglet « Recette & marge » (08/10/2026)
 
-`GET /analyse/produits/recette?pid=2300010&shop=4[&rafraichir=1]` rend la recette du produit telle que la copie
-locale du panel la porte (`product` → `product_recipe` → `product_recipe_material_connection` → `material`,
-`recipe_cost`, `shop_material` pour le prix du magasin), sans appel au panel, gardée 24 h par produit et magasin
-(`ceo_app_setting` `recetteProduit:<pid>:<shop>`) :
+`GET /analyse/produits/recette?pid=2300010&shop=4[&rafraichir=1][&colonnes=1]` rend la recette du produit telle
+que la copie locale du panel la porte, sans appel au panel, gardée 24 h par produit et magasin (`ceo_app_setting`
+`recetteProduit:<pid>:<shop>`). Tables mesurées le 08/10/2026 : `product.id_recipe` → `product_recipe` (nom,
+`yield_quantity`, `id_unit`, `is_subrecipe`) → `product_recipe_material_connection` (`parent_recipe_id`,
+`child_ingredient_id` ou `child_recipe_id`, `quantity`) → `material` (`id_category` → `material_category`, `id_unit`
+→ `unit` : `name`, `smaller_unit_name`, `conversion_factor`) → `shop_material_price_list` (`base_unit_price_net`
+par matière et magasin, le plus récent, sinon celui d'un autre magasin) ; `recipe_cost` (`calculated_cost_net` par
+recette et magasin, le plus récent, sinon `id_shop` 0). `&colonnes=1` (diagnostic, sans cache) ajoute les listes de
+colonnes, les lignes brutes et les coûts bruts :
 
 ```json
 { "pid": 2300010, "nom": "FlipFlap - Thon", "recette": { "id": 573, "nom": "FlipFlap Thon", "rendement": 1 },
@@ -1761,9 +1766,11 @@ locale du panel la porte (`product` → `product_recipe` → `product_recipe_mat
 
 - Les sous-recettes sont dépliées (4 niveaux au plus, chacune une fois), leurs lignes au prorata de la quantité
   demandée divisée par le rendement de la sous-recette (`sous` = son nom) ; une sous-recette sans ligne lisible
-  vaut son coût gravé. Le coût d'une ligne = quantité × prix de la matière, unités converties (g ↔ kg, ml/cl ↔ l) ;
-  une matière sans prix garde sa quantité, `cout` null et `motif`, et `complet` passe à faux. Les lignes sont
-  triées par coût ; `part` se lit sur le total chiffré.
+  vaut son coût gravé. Le coût d'une ligne = quantité × prix de base de la matière (`prixSource` : magasin, réseau,
+  autre magasin) ; une matière sans prix garde sa quantité, `cout` null et `motif`, et `complet` passe à faux.
+  `hypothese` dit dans quelle unité les quantités ont été lues : `base` (kg, l) ou `petite` (g, ml) quand le total
+  des lignes s'approche davantage du coût gravé ainsi. Les lignes sont triées par coût ; `part` se lit sur le total
+  chiffré.
 - `cout.net` : `recipe_cost` du magasin, sinon du réseau (id_shop 0), sinon la moyenne des magasins, divisé par le
   rendement de la recette. Le dashboard lit de son côté le coût de la pièce gravé avec les tickets (la ligne
   cliquée) : c'est lui qui fait la marge et le coefficient de la modale.
