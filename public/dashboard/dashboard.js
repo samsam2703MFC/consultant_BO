@@ -3096,6 +3096,7 @@
     return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · coût de recette net du panel · seuils du réseau : matière ${fP0(se.food)}, main-d’œuvre ${fP0(se.labour)}, frais généraux ${fP(se.overhead)}</span></div>
       ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">${sim != null ? 'au prix de vente testé, ' + fPt(sim) + ' · ' : ''}main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
   }
+  let ficheEnRendu = false;   // vrai pendant le redessin : le blur que Chrome lance en retirant le champ n'est pas une sortie du champ
   function ficheRendre() {
     let box = document.getElementById('db-fiche');
     if (!S.fiche) { if (box) { box.innerHTML = ''; } document.documentElement.classList.remove('db-fiche-ouverte'); return; }
@@ -3109,6 +3110,12 @@
       F.c != null && F.q > 0 && F.c > 0 && F.v != null ? (cf => `<span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`)(F.v / F.c) : '',
       F.onglet === 3 && F.simPrix != null && F.simPrix > 0 ? `<span class="fi-chip fi-rchip sim">prix testé <b>${nf(F.simPrix, 2)} €</b></span>` : ''].join('');
     const ancienne = box.querySelector('.fi-modale'), defil = ancienne ? ancienne.scrollTop : 0;
+    // L'élément qui a le focus dans la modale (le champ du prix, un onglet, un bouton) le retrouve après le redessin,
+    // que le redessin vienne d'un clic ou du rafraîchissement périodique de la page.
+    const act = document.activeElement, focSel = (() => { if (!act || !box.contains(act)) { return null; }
+      for (const k of ['fsiminput', 'fsimpas', 'fong', 'fsim', 'fmois']) { if (act.dataset && act.dataset[k] != null) { return `[data-${k}="${act.dataset[k]}"]`; } }
+      return act.classList.contains('fi-x') ? '.fi-x' : null; })(), focPos = focSel === '[data-fsiminput="1"]' ? act.selectionStart : null;
+    ficheEnRendu = true;
     let corps;
     if (F.onglet === 3) { ficheLireRecette(); corps = ficheRecette(F, d, S.aux[cleRecette()], S.err[cleRecette()]); }
     else if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
@@ -3160,13 +3167,16 @@
     if (inp) {
       const lire = () => parseFloat(String(inp.value).replace(/\s/g, '').replace(',', '.'));
       inp.addEventListener('input', () => { const v = lire(), pos = inp.selectionStart; if (!(v > 0)) { return; } simA(v, inp.value); refocus('[data-fsiminput]', pos); });
-      inp.addEventListener('blur', () => { if (!inp.isConnected) { return; } const v = lire(); simA(v > 0 ? v : (S.fiche.simPrix != null ? S.fiche.simPrix : prixEnc)); });
+      inp.addEventListener('blur', () => { if (ficheEnRendu || !inp.isConnected || !S.fiche) { return; } const v = lire(); simA(v > 0 ? v : (S.fiche.simPrix != null ? S.fiche.simPrix : prixEnc)); });
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
         else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const v = lire(); simA(Math.max(0.05, (v > 0 ? v : (prixEnc || 0)) + (e.key === 'ArrowUp' ? 0.05 : -0.05))); refocus('[data-fsiminput]'); const n = document.querySelector('#db-fiche [data-fsiminput]'); if (n) { n.select(); } }
       });
     }
-    const x = box.querySelector('.fi-x'); if (x && !box.contains(document.activeElement)) { x.focus({ preventScroll: true }); }
+    ficheEnRendu = false;
+    const ref = focSel ? box.querySelector(focSel) : null;
+    if (ref) { ref.focus({ preventScroll: true }); if (focPos != null && ref.setSelectionRange) { try { ref.setSelectionRange(focPos, focPos); } catch (e) { /* champ sans sélection */ } } }
+    else { const x = box.querySelector('.fi-x'); if (x && !box.contains(document.activeElement)) { x.focus({ preventScroll: true }); } }
   }
 
   /**
