@@ -645,3 +645,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-07T03:42:37Z app worker : barre du bas centrée
 2026-10-08T13:13:44Z dashboard operationnel duel J-7 maquette B
 2026-10-08T13:46:44Z heure par heure bascule CA clients
+2026-10-08T15:45:00Z part du CA pro en pastille regle 40 pct
