@@ -1,0 +1,120 @@
+{
+ "id": 99,
+ "position": 0,
+ "eyebrow_fr": "🍂 Gamme de saison · du 1er septembre au 1er novembre",
+ "eyebrow_nl": "🍂 Seizoensgamma · van 1 september tot 1 november",
+ "title_fr": "L’automne, <span class=\"script\">en chocolat.</span>",
+ "title_nl": "De herfst, <span class=\"script\">in chocolade.</span>",
+ "lede_fr": "Pommes, poires, noix et potirons : la gamme Automnale réchauffe le comptoir. Melocakes, amandes grillées et chocolat chaud à la cuiller, pour une ambiance cosy et gourmande.",
+ "lede_nl": "Appels, peren, noten en pompoen: het herfstgamma verwarmt de toonbank. Melocakes, gebrande amandelen en warme chocolade aan de lepel.",
+ "cta_fr": "Commander toute la gamme Automnale",
+ "cta_nl": "Het hele herfstgamma bestellen",
+ "annex_title_fr": "Aussi dans la gamme",
+ "annex_title_nl": "Ook in het gamma",
+ "photos": [
+  "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700263/fe9aaefbc006928afbf7ff338950e142.webp",
+  "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700271/2dae67612d3dceb7216670e571331b17.webp",
+  "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700276/abbf3c20f9d7599bdde0982ad6e310bb.webp",
+  "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700273/0cfea3db8ede33868997b17d5bcd8000.webp"
+ ],
+ "main": {
+  "id": 6700263,
+  "name_fr": "Melocake – Boîte de 10",
+  "name_nl": "Melocake – Boîte de 10",
+  "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700263/fe9aaefbc006928afbf7ff338950e142.webp",
+  "price": 11.1,
+  "link": "https://webshop.atelierby.be/?shop=2&product=6700263&open=product",
+  "label_fr": "Édition d’automne",
+  "label_nl": "Herfsteditie",
+  "hook_fr": "Guimauve vanillée, biscuit sablé et chocolat noir. Dix pièces à partager.",
+  "hook_nl": "Vanillemarshmallow, zandkoekje en pure chocolade. Tien stuks om te delen.",
+  "cta_fr": "",
+  "cta_nl": ""
+ },
+ "products": [
+  {
+   "id": 6700264,
+   "name_fr": "Melocake – Boîte de 6",
+   "name_nl": "Melocake – Boîte de 6",
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700264/141518cbf28d9fa589af33a235d48abd.webp",
+   "price": 6.6,
+   "link": "https://webshop.atelierby.be/?shop=2&product=6700264&open=product"
+  },
+  {
+   "id": 6700268,
+   "name_fr": "Melocake Blanc – Boîte de 3",
+   "name_nl": "Melocake Blanc – Boîte de 3",
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700268/ab94aecba61a2d48d9249bb4f35bc452.webp",
+   "price": 3.3,
+   "link": "https://webshop.atelierby.be/?shop=2&product=6700268&open=product"
+  },
+  {
+   "id": 6700271,
+   "name_fr": "Amandes grillées & salées - Lait",
+   "name_nl": "Amandes grillées & salées - Lait",
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700271/2dae67612d3dceb7216670e571331b17.webp",
+   "price": 0,
+   "link": "https://webshop.atelierby.be/?shop=2&product=6700271&open=product"
+  },
+  {
+   "id": 6700276,
+   "name_fr": "Cuiller Chocolat chaud Nature",
+   "name_nl": "Cuiller Chocolat chaud Nature",
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700276/abbf3c20f9d7599bdde0982ad6e310bb.webp",
+   "price": 0,
+   "link": "https://webshop.atelierby.be/?shop=2&product=6700276&open=product"
+  },
+  {
+   "id": 6700273,
+   "name_fr": "Noisettes du Piémont IGP – Lait",
+   "name_nl": "Noisettes du Piémont IGP – Lait",
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700273/0cfea3db8ede33868997b17d5bcd8000.webp",
+   "price": 6.9,
+   "link": "https://webshop.atelierby.be/?shop=2&product=6700273&open=product"
+  },
+  {
+   "id": 6700266,
+   "name_fr": "Melocake Spéculoos – Boîte de 3",
+   "name_nl": "Melocake Spéculoos – Boîte de 3",
+   "image": "https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/6700266/7fdbea19e9239449b161100cca2686f1.webp",
+   "price": 3.3,
+   "link": "https://webshop.atelierby.be/?shop=2&product=6700266&open=product"
+  }
+ ],
+ "points": [
+  {
+   "photo": 0,
+   "x": 0.5,
+   "y": 0.6,
+   "pid": 6700263,
+   "label_fr": "Melocake – Boîte de 10",
+   "label_nl": ""
+  },
+  {
+   "photo": 1,
+   "x": 0.5,
+   "y": 0.55,
+   "pid": 6700271,
+   "label_fr": "Amandes grillées & salées",
+   "label_nl": ""
+  },
+  {
+   "photo": 2,
+   "x": 0.5,
+   "y": 0.5,
+   "pid": 6700276,
+   "label_fr": "Chocolat chaud à la cuiller",
+   "label_nl": ""
+  },
+  {
+   "photo": 3,
+   "x": 0.5,
+   "y": 0.5,
+   "pid": 6700273,
+   "label_fr": "Noisettes du Piémont",
+   "label_nl": ""
+  }
+ ],
+ "href": "https://webshop.atelierby.be/?shop=2",
+ "season_id": null
+}

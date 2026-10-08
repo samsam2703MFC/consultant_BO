@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette — modale produit, recette & marge</title>
+<link rel="stylesheet" href="../../../public/assets/ds/global.css"><link rel="stylesheet" href="../../../public/dashboard/dashboard.css"><link rel="stylesheet" href="mr.css">
+</head><body class="mr-body">
+<div class="mr-fond"><div class="mr-fond-t">Dashboard magasin · Atelier by - Halle · vue Jour · jeudi 8 octobre 2026 — la modale s’ouvre d’un clic sur un produit de « Ventes par catégorie »</div></div>
+<div id="db-fiche"><div class="fi-voile"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="FlipFlap - Thon">
+  <div class="fi-hd"><div class="t"><h2>FlipFlap - Thon</h2><div class="s">Sandwiches garnis · Traiteur · Atelier by - Halle · jeudi 8 octobre 2026</div><div class="fi-chips"><span class="fi-chip">aujourd’hui <b>3 vendus</b> · 16,20 €</span><span class="fi-chip">prix encaissé <b>5,40 €</b></span><span class="fi-chip">prix réseau <b>5,55 €</b></span><span class="fi-chip">marge brute <b>28 %</b></span><span class="fi-chip mr-chip ko">coefficient <b>× 1,38</b></span></div></div><button type="button" class="fi-x" aria-label="fermer">✕</button></div>
+  <div class="fi-ong"><button type="button">Ventes · 12 semaines</button><button type="button">Prix face au réseau <small>volume × prix</small></button><button type="button" class="on">Recette & marge <small>coût, marge, coefficient</small></button></div>
+  <div class="fi-bd">
+    <div class="fi-barre"><span class="fi-note">une pièce vendue aujourd’hui à Halle · coût de recette net du panel · seuils du réseau : matière 32 %, main-d’œuvre 33 %, frais généraux 13,5 %</span></div>
+    
+  <section class="mr-card mr-jauge">
+    <div class="mr-ct"><span class="mr-h">Le coefficient</span><span class="fi-note">ce que le prix fait de la matière : prix encaissé ÷ coût de recette</span></div>
+    <div class="mr-jg">
+      <div class="mr-jn ko"><b>× 1,38</b><span>sous le coût acceptable</span><small>marge brute 28 % · matière 72 % du prix</small></div>
+      <div class="mr-jb">
+        <div class="mr-band"><i class="ko" style="width:22.2%"></i><i class="att" style="width:27.8%"></i><i class="ok" style="width:50.0%"></i>
+          <span class="mr-rep " style="left:34.3%"><i></i><em>sa catégorie<small>× 2,03</small></em></span><span class="mr-rep " style="left:52.7%"><i></i><em>le magasin aujourd’hui<small>× 2,58</small></em></span><span class="mr-rep obj" style="left:70.8%"><i></i><em>objectif<small>× 3,13 · matière 32 %</small></em></span>
+          <span class="mr-moi ko" style="left:12.7%"><i></i><em>ce produit<small>× 1,38</small></em></span>
+        </div>
+        <div class="mr-axe"><span>× 1</span><span>× 1,67 · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div>
+      </div>
+    </div>
+    <div class="mr-verdict ko">
+      <b>Sous l’objectif.</b> La matière prend 72 % du prix.
+      Pour entrer dans le vert (× 2,5), il faudrait vendre la pièce <b>9,78 €</b> au lieu de 5,40 €, ou ramener la matière à <b>2,16 €</b> au lieu de 3,91 €.
+       Thon à l’huile pèse <b>47 %</b> du coût : c’est là que ça se joue.
+    </div>
+  </section>
+    <div class="mr-deux">
+  <section class="mr-card">
+    <div class="mr-ct"><span class="mr-h">La recette, pièce par pièce</span><span class="fi-note">coût matière 3,91 € · coût de recette net du panel (recipe_cost_net), lu avec les tickets</span></div>
+    <table class="mr-tab"><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Coût</th><th class="p">Part du coût</th></tr></thead><tbody>
+      <tr><td><b>Pain FlipFlap</b><small>sous-recette : farine, eau, levain, sel</small></td><td>1 pièce</td><td>0,70 €</td><td class="p"><i style="width:17.9%"></i><span>18 %</span></td></tr><tr class="top"><td><b>Thon à l’huile</b></td><td>70 g</td><td>1,85 €</td><td class="p"><i style="width:47.3%"></i><span>47 %</span></td></tr><tr><td><b>Mayonnaise maison</b><small>sous-recette</small></td><td>25 g</td><td>0,28 €</td><td class="p"><i style="width:7.2%"></i><span>7 %</span></td></tr><tr><td><b>Œuf dur</b></td><td>½ pièce</td><td>0,22 €</td><td class="p"><i style="width:5.6%"></i><span>6 %</span></td></tr><tr><td><b>Salade &amp; tomate</b></td><td>40 g</td><td>0,38 €</td><td class="p"><i style="width:9.7%"></i><span>10 %</span></td></tr><tr><td><b>Câpres &amp; oignon rouge</b></td><td>10 g</td><td>0,18 €</td><td class="p"><i style="width:4.6%"></i><span>5 %</span></td></tr><tr><td><b>Emballage</b><small>étui et étiquette</small></td><td>1</td><td>0,30 €</td><td class="p"><i style="width:7.7%"></i><span>8 %</span></td></tr>
+    </tbody><tfoot><tr><td>Coût de recette</td><td></td><td>3,91 €</td><td class="p">100 %</td></tr></tfoot></table>
+    <div class="fi-note mr-note">la répartition par ingrédient est illustrative : elle se lira dans /recipes/{id} (matières, quantités) et /materials/{id} (prix) du panel.</div>
+  </section>
+  <section class="mr-card">
+    <div class="mr-ct"><span class="mr-h">La marge, pièce par pièce</span><span class="fi-note">main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>
+    <div class="mr-wf"><div class="r prix"><span class="l">Prix encaissé</span><span class="b"><i style="width:100.0%"></i></span><span class="v">5,40 €</span><span class="p">100 %</span></div><div class="r mat"><span class="l">− Matière</span><span class="b"><i style="width:72.4%"></i></span><span class="v">− 3,91 €</span><span class="p">-72 %</span></div><div class="r mb fort"><span class="l">= Marge brute</span><span class="b"><i style="width:27.6%"></i></span><span class="v">1,49 €</span><span class="p">28 %</span></div><div class="r ch"><span class="l">− Main-d’œuvre, au seuil de 33 %</span><span class="b"><i style="width:33.0%"></i></span><span class="v">− 1,78 €</span><span class="p">-33 %</span></div><div class="r ch"><span class="l">− Frais généraux, au seuil de 13,5 %</span><span class="b"><i style="width:13.5%"></i></span><span class="v">− 0,73 €</span><span class="p">-14 %</span></div><div class="r net ko fort"><span class="l">= Résultat par pièce</span><span class="b"><i style="width:18.9%"></i></span><span class="v">− 1,02 €</span><span class="p">-19 %</span></div></div>
+    <div class="mr-face"><div class="k">Face à</div>
+      <div class="r"><span>Sandwiches garnis aujourd’hui · 7 réf.</span><b>marge 51 % · × 2,03</b></div>
+      <div class="r"><span>Le magasin aujourd’hui</span><b>marge 61 % · × 2,58</b></div>
+      <div class="r"><span>Au prix réseau (5,55 €, 4 magasins)</span><b>marge 30 % · × 1,42</b></div>
+      <div class="r"><span>Objectif du réseau · matière 32 %</span><b>marge 68 % · × 3,13</b></div>
+    </div>
+  </section></div>
+    <div class="fi-note mr-pied">Le coefficient et la marge viennent de ce que le dashboard lit déjà : le coût de recette net gravé avec chaque ticket. La recette ligne par ligne demande une lecture de plus au panel, recette puis matières ; elle se gardera 24 h comme les allergènes de la tablette.</div>
+  </div></div></div>
+</body></html>

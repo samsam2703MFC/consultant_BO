@@ -1,0 +1,25 @@
+{
+  "magasin": "Atelier by - Halle",
+  "date": "2026-10-08",
+  "jourTxt": "jeudi 8 octobre 2026",
+  "produit": { "id": 2300010, "nom": "FlipFlap - Thon", "cat": "Sandwiches garnis", "groupe": "Traiteur", "catPanel": "Flip & Flap" },
+  "jour": { "q": 3, "ca": 16.2, "mat": 11.73, "mb": 4.47, "taux": 27.6 },
+  "piece": { "prix": 5.4, "mat": 3.91, "mb": 1.49 },
+  "recette": {
+    "source": "coût de recette net du panel (recipe_cost_net), lu avec les tickets",
+    "illustratif": "la répartition par ingrédient est illustrative : elle se lira dans /recipes/{id} (matières, quantités) et /materials/{id} (prix) du panel",
+    "lignes": [
+      { "nom": "Pain FlipFlap", "sous": "sous-recette : farine, eau, levain, sel", "qte": "1 pièce", "cout": 0.7 },
+      { "nom": "Thon à l’huile", "sous": "", "qte": "70 g", "cout": 1.85 },
+      { "nom": "Mayonnaise maison", "sous": "sous-recette", "qte": "25 g", "cout": 0.28 },
+      { "nom": "Œuf dur", "sous": "", "qte": "½ pièce", "cout": 0.22 },
+      { "nom": "Salade & tomate", "sous": "", "qte": "40 g", "cout": 0.38 },
+      { "nom": "Câpres & oignon rouge", "sous": "", "qte": "10 g", "cout": 0.18 },
+      { "nom": "Emballage", "sous": "étui et étiquette", "qte": "1", "cout": 0.3 }
+    ]
+  },
+  "seuils": { "food": 32, "labour": 33, "overhead": 13.5 },
+  "categorie": { "nom": "Sandwiches garnis", "refs": 7, "pieces": 14, "ca": 83, "mb": 42, "taux": 51, "coef": 2.03 },
+  "magasinJour": { "ca": 1313.95, "mat": 508.69, "taux": 61.3, "coef": 2.58 },
+  "reseau": { "periode": "de juillet 2026 à septembre 2026", "prixMagasin": 5.4, "med": 5.55, "min": 5.2, "max": 5.79, "magasins": 4, "q": 142, "qm": 47.3, "v10k": 9.38, "volMoyen": 14.26, "rel": -40.9 }
+}
