@@ -1546,6 +1546,10 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-crb .l7{fill:none;stroke:#2F6EA5;stroke-width:2;stroke-dasharray:5 4}
 .op-crb .la{fill:none;stroke:var(--color-primary);stroke-width:3}
 .op-crb .now{stroke:#222;stroke-width:1.5;stroke-dasharray:3 3}
+.op-crb .cib{stroke:#777;stroke-width:1;stroke-dasharray:2 4}
+.op-crbtog{display:inline-flex;border:.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin:0 4px}
+.op-crbtog button{border:none;background:transparent;font:600 11px var(--font-ui);padding:3px 11px;color:var(--color-text-muted);cursor:pointer;line-height:1.4}
+.op-crbtog button.on{background:var(--color-primary);color:#fff}
 .op-crb .nowt{font-size:10.5px;fill:#222;font-weight:700}
 .op-crb .pa{fill:var(--color-primary)}.op-crb .p7{fill:#2F6EA5}
 .op-crb .ta{font-size:11px;fill:var(--color-primary);font-weight:700}
@@ -1553,6 +1557,7 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-dleg{display:flex;gap:16px;flex-wrap:wrap;padding:0 16px 12px;font-size:10.5px;color:var(--color-text-muted)}
 .op-dleg i{display:inline-block;width:18px;height:3px;margin-right:6px;vertical-align:3px}
 .op-dleg i.la{background:var(--color-primary)}.op-dleg i.l7{background:#2F6EA5}.op-dleg i.now{background:none;border-top:2px dashed #222;height:0}
+.op-dleg b.tv{display:none;font-weight:700;color:var(--color-text)}
 .op-dt{padding:4px 16px 8px}
 .op-dl{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr);align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--color-border-tertiary);font-variant-numeric:tabular-nums}
 .op-dl:first-child{border-top:none}
@@ -1580,6 +1585,7 @@ html.db-fiche-ouverte{overflow:hidden}
   .op-piste{margin-top:14px}.op-piste + .op-piste{margin-top:26px}
   .op-dax{margin:24px 0 0 0}
   .op-crb{display:none}.op-crb.tel{display:block}
+  .op-dleg b.tv{display:inline}
   .op-crb-w{padding:10px 8px 4px}
   .op-dl{grid-template-columns:1fr 1fr;gap:8px 12px}
   .op-dl .k{grid-column:1/-1}
