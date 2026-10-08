@@ -659,3 +659,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-08T19:15:01Z fiche matiere listes de prix
 2026-10-08T19:23:52Z fiche matiere dans la modale
 2026-10-08T19:38:48Z fiche matiere relire
+2026-10-08T19:51:56Z fiche matiere prix a la minute sonde recette
