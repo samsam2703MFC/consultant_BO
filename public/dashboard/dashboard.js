@@ -2957,7 +2957,7 @@
   function ficheOuvrir(b) {
     const n = v => v === '' || v == null ? null : +v;
     S.fiche = { pid: b.dataset.fprod, nom: b.dataset.fnom, q: n(b.dataset.fq), v: n(b.dataset.fv), taux: n(b.dataset.ft), c: n(b.dataset.fc), cat: b.dataset.fcat || '', onglet: 1, mois: 1, retour: document.activeElement };
-    ficheLire(); ficheRendre();
+    ficheLire(); ficheLireRecette(); ficheRendre();
   }
   function ficheFermer() { const r = S.fiche && S.fiche.retour; S.fiche = null; ficheRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
   const fPx = n => n == null ? '—' : nf(n, 2) + ' €';
@@ -3012,7 +3012,10 @@
   const FI_ZONES = { ko: 100 / 60, att: 2.5 };   // marge < 40 % ⇔ coef < 1,67 ; < 60 % ⇔ < 2,5 (échelle MARGES)
   function ficheRecette(F, d, R, errR) {
     const fX = n => n == null ? '—' : '× ' + nf(n, 2), fPt = n => n == null ? '—' : nf(n, 2) + ' €';
-    const q = F.q || 0, prix = q > 0 && F.v != null ? F.v / q : null, mat = q > 0 && F.c != null ? F.c / q : null;
+    const q = F.q || 0, prix = q > 0 && F.v != null ? F.v / q : null, matT = q > 0 && F.c != null ? F.c / q : null;
+    // Le coût de recette : celui que le panel calcule aujourd'hui pour ce magasin (il bouge à chaque édition de prix) ;
+    // à défaut, celui gravé avec les tickets du jour.
+    const matA = R && R.api && R.total > 0 ? R.total : null, mat = matA != null ? matA : matT;
     const mb = prix != null && mat != null ? prix - mat : null, taux = mb != null && prix > 0 ? 100 * mb / prix : null, coef = prix != null && mat > 0 ? prix / mat : null;
     const JD = S.aux['jourM|' + S.date], se = Object.assign({ food: 32, labour: 33, overhead: 13.5 }, JD && JD.seuils ? JD.seuils : {});
     const obj = 100 / (se.food || 32);
@@ -3043,7 +3046,7 @@
     const sCoef = sim != null ? sim / mat : null, sTaux = sim != null ? 100 * (sim - mat) / sim : null;
     const lignes = R && Array.isArray(R.lignes) ? R.lignes : [];
     // Les parts se lisent sur le coût gravé de la pièce (les lignes peuvent être incomplètes), sinon sur le total des lignes.
-    const totalL = R && R.total != null ? R.total : null, baseL = mat > 0 ? mat : (totalL || 0);
+    const totalL = R && R.total != null ? R.total : null, baseL = totalL > 0 ? totalL : (mat > 0 ? mat : 0);
     const top = lignes.filter(l => l.cout != null).sort((a, b) => b.cout - a.cout)[0] || null;
     const topPart = top && baseL > 0 ? 100 * top.cout / baseL : null;
     // 1. La jauge : le prix de vente se tape, le coefficient se recalcule et le repère se déplace.
@@ -3075,10 +3078,10 @@
       const fQ = l => l.qte == null ? '—' : nf(l.qte, Number.isInteger(+l.qte) ? 0 : (l.qte >= 10 ? 1 : 2)) + (l.unite ? ' ' + esc(l.unite) : '');
       rec = `<table class="fi-rtab"><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Coût</th><th class="p">Part du coût</th></tr></thead><tbody>
         ${lignes.map((l, i) => { const cl = l.type === 'matiere' && l.id != null, on = cl && F.mat === i; return `<tr class="${top && l === top ? 'top' : ''}${cl ? ' clic' : ''}${on ? ' on' : ''}"${cl ? ` data-fmat="${i}" tabindex="0" role="button" aria-expanded="${on ? 'true' : 'false'}" title="le prix de cette matière : ce magasin, le réseau, le fournisseur"` : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>${on ? ficheMatiere(l, S.aux[cleMat(l.id)], S.err[cleMat(l.id)]) : ''}`; }).join('')}
-        </tbody><tfoot><tr><td>Lignes chiffrées${R.sansPrix ? `<small>${R.sansPrix} sans prix</small>` : ''}</td><td></td><td>${totalL != null ? fPt(totalL) : '—'}</td><td class="p">${totalL != null && mat != null && Math.abs(totalL - mat) > 0.05 ? `<small>coût gravé ${fPt(mat)}</small>` : ''}</td></tr></tfoot></table>
+        </tbody><tfoot><tr><td>${R.api ? 'Coût de recette aujourd’hui' : 'Lignes chiffrées'}${R.sansPrix ? `<small>${R.sansPrix} sans prix</small>` : ''}</td><td></td><td>${totalL != null ? fPt(totalL) : '—'}</td><td class="p">${totalL != null && matT != null && Math.abs(totalL - matT) > 0.05 ? `<small>tickets du jour ${fPt(matT)}</small>` : ''}</td></tr></tfoot></table>
         <div class="fi-note fi-rnote">${esc(R.source || '')}${mat == null && R.cout && R.cout.net != null ? ` · coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : ''}${R.recette && R.recette.rendement && R.recette.rendement !== 1 ? ` · rendement ${nf(R.recette.rendement, 2)}` : ''}${lignes.some(l => l.prixSource && l.prixSource !== 'magasin') ? ' · les prix sans valeur pour ce magasin viennent d’un autre magasin' : ''}</div>`;
     }
-    const titreRec = `<div class="fi-rct"><span class="fi-rh">La recette, pièce par pièce</span><span class="fi-note">${mat != null ? 'coût matière ' + fPt(mat) + ' la pièce, gravé avec les tickets' : 'coût de la pièce inconnu'}</span></div>`;
+    const titreRec = `<div class="fi-rct"><span class="fi-rh">La recette, pièce par pièce</span><span class="fi-note">${matA != null ? 'coût de recette ' + fPt(matA) + ' la pièce, aux prix du panel aujourd’hui' + (matT != null ? ' · ' + fPt(matT) + ' gravé avec les tickets du jour' : '') : (mat != null ? 'coût matière ' + fPt(mat) + ' la pièce, gravé avec les tickets' : 'coût de la pièce inconnu')}</span></div>`;
     // 3. La marge en cascade.
     let marge;
     if (prix == null || mat == null) { marge = `<div class="fi-msg">Sans coût de recette gravé, pas de marge pièce par pièce.</div>`; }
@@ -3095,7 +3098,7 @@
           ${med != null ? `<div class="r"><span>Au prix réseau (${fPt(med)}${P.reseau.magasins ? ', ' + P.reseau.magasins + ' magasins' : ''})</span><b>marge ${fP0(100 * (med - mat) / med)} · ${fX(med / mat)}</b></div>` : ''}
           <div class="r"><span>Objectif du réseau · matière ${fP0(se.food)}</span><b>marge ${fP0(100 - se.food)} · ${fX(obj)}</b></div></div>`;
     }
-    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · coût de recette net du panel · seuils du réseau : matière ${fP0(se.food)}, main-d’œuvre ${fP0(se.labour)}, frais généraux ${fP(se.overhead)}</span></div>
+    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · ${matA != null ? 'coût de recette aux prix du panel aujourd’hui, relu à chaque ouverture' : 'coût de recette net gravé avec les tickets'} · seuils du réseau : matière ${fP0(se.food)}, main-d’œuvre ${fP0(se.labour)}, frais généraux ${fP(se.overhead)}</span></div>
       ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">${sim != null ? 'au prix de vente testé, ' + fPt(sim) + ' · ' : ''}main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
   }
   let ficheEnRendu = false;   // vrai pendant le redessin : le blur que Chrome lance en retirant le champ n'est pas une sortie du champ
@@ -3115,8 +3118,8 @@
       // La recette ci-dessus a été chiffrée avec la copie locale du panel : quand l'API dit un autre prix, on le dit.
       const copie = l.prixUnite != null && M.facteur ? l.prixUnite * M.facteur : null;
       const note = copie != null && mag.prix != null && Math.abs(copie - mag.prix) / mag.prix > 0.01
-        ? `<div class="fi-rdnote">La recette ci-dessus a été chiffrée à <b>${fPu(copie)}</b>${l.prixSource && l.prixSource !== 'magasin' ? ' (prix d’un autre magasin)' : ''} par la copie locale du panel, qui se synchronise à son rythme ; l’API du panel dit aujourd’hui <b>${fPu(mag.prix)}</b> pour ce magasin.</div>`
-        : (copie != null && mag.prix == null && l.prixSource && l.prixSource !== 'magasin' ? `<div class="fi-rdnote">La recette ci-dessus prend ${fPu(copie)}, le prix d’un autre magasin dans la copie locale : ce magasin n’a pas de prix pour cette matière au panel.</div>` : '');
+        ? `<div class="fi-rdnote">La recette ci-dessus a été chiffrée à <b>${fPu(copie)}</b>${l.prixSource && l.prixSource !== 'magasin' ? ' (prix d’un autre magasin)' : ''} ; l’API du panel dit maintenant <b>${fPu(mag.prix)}</b> pour ce magasin : rouvrez le produit pour la recalculer.</div>`
+        : (copie != null && mag.prix == null && l.prixSource && l.prixSource !== 'magasin' ? `<div class="fi-rdnote">La recette ci-dessus prend ${fPu(copie)}, le prix médian des autres magasins : ce magasin n’a pas de prix pour cette matière au panel.</div>` : '');
       const cles = `<div class="fi-rdg">
         <div><span class="k">${esc(mag.court || 'ce magasin')} · ce magasin</span><b>${mag.prix != null ? fPu(mag.prix) : 'pas de prix'}</b><small>${mag.prix == null ? (mag.absente ? 'matière absente de ce magasin' : 'la recette prend le prix d’un autre magasin') : (mag.ecart != null && M.repereNom ? fS(mag.ecart) + ' ' + esc(faceA(M.repereNom)) : '')}</small></div>
         <div><span class="k">Prix conseillé</span><b>${M.conseille != null ? fPu(M.conseille) : '—'}</b><small>${M.conseille != null ? 'porté par le panel' : 'le panel n’en porte pas pour cette matière'}</small></div>
@@ -3137,8 +3140,9 @@
     const mag = nomShop(), court = mag.replace(/^.* - /, '');
     const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${F.q >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
       d && d.prix ? `<span class="fi-chip">prix encaissé <b>${fPx(d.prix.magasin.p)}</b></span><span class="fi-chip">prix réseau <b>${fPx(d.prix.reseau.med)}</b></span>` : '',
-      F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : '',
-      F.c != null && F.q > 0 && F.c > 0 && F.v != null ? (cf => `<span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`)(F.v / F.c) : '',
+      (() => { const R0 = S.aux[cleRecette()], pq = F.q > 0 && F.v != null ? F.v / F.q : null, m0 = R0 && R0.api && R0.total > 0 ? R0.total : (F.q > 0 && F.c > 0 ? F.c / F.q : null);
+        if (pq == null || m0 == null || !(pq > 0)) { return F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : ''; }
+        const cf = pq / m0; return `<span class="fi-chip">marge brute <b>${fP0(100 * (pq - m0) / pq)}</b></span><span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`; })(),
       F.onglet === 3 && F.simPrix != null && F.simPrix > 0 ? `<span class="fi-chip fi-rchip sim">prix testé <b>${nf(F.simPrix, 2)} €</b></span>` : ''].join('');
     const ancienne = box.querySelector('.fi-modale'), defil = ancienne ? ancienne.scrollTop : 0;
     // L'élément qui a le focus dans la modale (le champ du prix, un onglet, un bouton) le retrouve après le redessin,
