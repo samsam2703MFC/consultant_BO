@@ -1789,15 +1789,15 @@ colonnes, les lignes brutes et les coûts bruts :
   de l'objectif = 100 ÷ seuil matière), la recette et son split, la marge en cascade (matière, main-d'œuvre et
   frais généraux aux seuils du P&L, résultat par pièce) et le produit face à sa catégorie, au magasin, au prix
   réseau et à l'objectif. La ligne cliquée porte `data-fc` (coût matière du jour) et `data-fcat` (catégorie).
-- « Le prix pour y arriver » (08/10/2026) : sous le verdict, chaque palier de la jauge (marge 40 %, sa catégorie,
-  le prix réseau, marge 60 %, le magasin du jour, l'objectif) traduit en prix à pratiquer = coût de recette ×
-  coefficient, arrondi aux 5 centimes supérieurs, avec l'écart face au prix encaissé. Le bouton « Adapter le
-  prix » ouvre une simulation, dans la modale seulement (rien n'est écrit, ni au panel ni au serveur) : un prix
-  choisi dans les paliers, tapé ou ajusté par pas de 5 centimes ; la pièce est recalculée à ce prix (coefficient,
-  marge brute, résultat par pièce aux seuils, écart face au prix réseau, chiffre en plus sur les pièces vendues du
-  jour à volume égal), un second repère « prix simulé » se pose sous la jauge, la cascade de marge passe au prix
-  simulé et une pastille « prix simulé » s'ajoute à l'en-tête. Changer le prix de vente dans le panel reste une
-  action du panel.
+- Le prix de vente se tape (08/10/2026) : dans la carte du coefficient, un champ « Prix de vente » (prix encaissé
+  par défaut, pas de 5 centimes par les boutons ou les flèches) recalcule la pièce à chaque frappe : le coefficient,
+  son verdict, le repère qui se déplace sur la jauge (un repère gris garde le prix encaissé), la marge brute, le
+  résultat par pièce aux seuils, l'écart face au prix réseau, le chiffre en plus sur les pièces vendues du jour à
+  volume égal, la cascade de marge et une pastille « prix testé » dans l'en-tête. Sous l'axe, « Le prix pour y
+  arriver » : chaque palier de la jauge (le prix réseau, marge 40 %, sa catégorie, marge 60 %, le magasin du jour,
+  l'objectif) en raccourci = coût de recette × coefficient, arrondi aux 5 centimes supérieurs, qui remplit le champ.
+  « Remettre » revient au prix encaissé. Tout se passe dans la modale : rien n'est écrit, ni au panel ni au serveur ;
+  changer le prix de vente reste une action du panel.
 
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 
