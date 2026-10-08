@@ -1669,6 +1669,32 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rface .r{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:.5px dashed #e6e0d8}
 .fi-rface .r b{white-space:nowrap;font-variant-numeric:tabular-nums}
 .fi-rwf .l small{display:block;font-size:10.5px;color:#8a8278;font-weight:400}
+/* La fiche d'une matière, dépliée sous sa ligne de recette */
+.fi-rtab tr.clic td{cursor:pointer}
+.fi-rtab tr.clic:hover td{background:#faf7f3}
+.fi-rtab tr.on td{background:#f3eee8;border-bottom-style:solid}
+.fi-rtab tr.clic td:first-child b::after{content:" ›";color:#b3aca2;font-weight:400}
+.fi-rtab tr.on td:first-child b::after{content:" ⌄"}
+.fi-rtab tr.clic:focus-visible{outline:2px solid #bcd3ef;outline-offset:-2px}
+.fi-rdet td{padding:0 0 10px;border-bottom:.5px dashed #e6e0d8;background:#faf7f3;text-align:left;white-space:normal}
+.fi-rdeux>section{min-width:0}
+.fi-rdf{padding:10px 12px 12px;border-left:3px solid var(--color-primary,#8D1D2C);overflow-x:auto}
+.fi-rdh{font-size:12px;color:#444;margin-bottom:8px;line-height:1.4}
+.fi-rdg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.fi-rdg>div{background:#fff;border:.5px solid #e6e0d8;border-radius:8px;padding:7px 9px;min-width:0}
+.fi-rdg .k{display:block;font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278}
+.fi-rdg b{display:block;font-size:13px;margin-top:2px;font-variant-numeric:tabular-nums}
+.fi-rdg small{display:block;font-size:10.5px;color:#8a8278;margin-top:2px;line-height:1.3}
+.fi-rdd{display:grid;grid-template-columns:1fr;gap:10px;align-items:start;margin-bottom:8px}
+.fi-rdp{width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;background:#fff;border:.5px solid #e6e0d8;border-radius:8px}
+.fi-rdp th{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278;text-align:right;padding:6px 8px 4px;border-bottom:.5px solid #e6e0d8;white-space:normal;line-height:1.2;vertical-align:bottom}
+.fi-rdp th:first-child{text-align:left}
+.fi-rdp td{padding:5px 8px;text-align:right;border-bottom:.5px dashed #e6e0d8;font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:top}
+.fi-rdp td:first-child{text-align:left;white-space:normal}
+.fi-rdp td small{display:block;font-size:10px;color:#8a8278;font-weight:400;white-space:normal}
+.fi-rdp tr:last-child td{border-bottom:none}
+.fi-rdp tr.moi td{font-weight:700}
+.fi-rdp .mu{color:#a39c93;font-weight:400}
 /* Les paliers en raccourcis sous la jauge, le repère du prix encaissé pendant un essai */
 .fi-rsimc{display:inline-flex;align-items:center;gap:4px}
 .fi-rsimc button{width:30px;height:30px;border-radius:50%;border:1px solid #d8d1c8;background:#fff;font:700 16px/1 var(--font-ui);cursor:pointer;color:#222}
@@ -1700,5 +1726,14 @@ html.db-fiche-ouverte{overflow:hidden}
   .fi-rjb.sim .fi-raxe{margin-top:90px}
   .fi-rpcs{gap:5px}
   .fi-rpc{font-size:10.5px;padding:4px 8px}
+  .fi-rdg{gap:6px}
+  .fi-rdf{padding:8px 8px 10px}
+  .fi-rdp td{padding:5px 5px;font-size:11px}
+  .fi-rdp.four thead{display:none}
+  .fi-rdp.four tr{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;padding:6px 8px;border-bottom:.5px dashed #e6e0d8}
+  .fi-rdp.four tr:last-child{border-bottom:none}
+  .fi-rdp.four td{display:block;border:none;padding:0;text-align:left;white-space:normal}
+  .fi-rdp.four td:first-child{grid-column:1 / -1}
+  .fi-rdp.four td[data-l]::before{content:attr(data-l);display:block;font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278}
   .fi-rwf .r{grid-template-columns:1.2fr .8fr 64px 44px;font-size:11.5px}
 }

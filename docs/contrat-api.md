@@ -1798,6 +1798,51 @@ colonnes, les lignes brutes et les coûts bruts :
   l'objectif) en raccourci = coût de recette × coefficient, arrondi aux 5 centimes supérieurs, qui remplit le champ.
   « Remettre » revient au prix encaissé. Tout se passe dans la modale : rien n'est écrit, ni au panel ni au serveur ;
   changer le prix de vente reste une action du panel.
+- Chaque ligne de matière de la recette se déplie d'un clic (08/10/2026, « api only, from swagger ») sur la fiche de
+  la matière lue par `GET /analyse/matieres/fiche` (ci-dessous) : ce magasin, le prix conseillé, le réseau, le
+  fournisseur, puis le tableau des magasins (prix par kg, écart face au repère) et celui des fournisseurs (colis, prix
+  par kg, valable depuis, prochain prix, écart face au prix du magasin).
+
+### `GET /analyse/matieres/fiche` — la fiche d'une matière première, API du panel seulement (08/10/2026)
+
+`GET /analyse/matieres/fiche?mid=327&shop=4[&rafraichir=1][&sonde=1]` ne lit que l'API du panel, jamais la copie
+locale (demande : « api only, from swagger »). Routes du swagger (`/swagger/openapi.json`) mesurées le 08/10/2026 :
+
+- `/shops/{id}/materials`, pour chaque magasin actif du cockpit (table `shops`) : `base_unit_price_net` (le prix du
+  magasin par unité de base), `suggested_base_unit_price_net` (prix conseillé : rempli pour 1 matière sur 631),
+  `reference_unit_price_net`, `unit_name`, `category_name`, `vat_rate`, `source_type` (CENTRAL, OPEN),
+  `integrated_supplier`. Une lecture par magasin, gardée 24 h (`ceo_app_setting` `matieresApi:<shop>`) ;
+- `/material-suppliers` (7 fournisseurs, la centrale de type CENTRAL), puis par fournisseur `/catalog-mappings`
+  (`material_id` ↔ `catalog_product_sku`, `package_size`, `package_unit`, `units_per_pack`), `/connected-materials`
+  (`supplier_sku`) et `/materials` ; gardés 24 h pour le réseau (`fournisseursMatieres2`) ;
+- `/material-suppliers/{f}/shops/{s}/price-lists/current` et `/latest` : la liste de prix du fournisseur pour le
+  magasin, par colis et DATÉE (`price_net`, `package_size`, `package_unit`, `vat_rate`, `valid_from`,
+  `franchisee_material_name`, `is_active`, `is_mapped`). Lues seulement pour les fournisseurs qui portent la matière,
+  gardées 24 h (`listePrix:<f>:<s>`). Le prix par unité de base = `price_net ÷ (package_size × units_per_pack)`,
+  vérifié par `&sonde=1` sur les matières liées de Halle (SLFood 178/264 exacts, les autres étant d'anciennes listes ;
+  centrale 1/1 ; Rawette 16/16 ; CDT 20/20).
+
+```json
+{ "mid": 63, "nom": "Baguette Tradition 500 g.", "cat": "Petite Boulangerie", "uniteBase": "pcs", "par": "pce", "facteur": 1,
+  "tva": 6, "sourceType": "CENTRAL", "conseille": null, "reference": null, "repere": 1.4656, "repereNom": "médiane du réseau",
+  "magasin": { "id": "4", "court": "Halle", "prix": 1.4656, "sansPrix": false, "absente": false, "ecart": 0 },
+  "reseau": [ { "id": "4", "court": "Halle", "ceMagasin": true, "lu": true, "prix": 1.4656, "ecart": 0 }, { "…": "…" } ],
+  "stats": { "n": 4, "min": 1.4656, "max": 1.4656, "med": 1.4656 },
+  "fournisseurs": [ { "id": "1", "nom": "SLFood", "centrale": true, "via": "catalogue", "sku": "1003021", "colis": { "prix": 26.38, "taille": 18, "unite": "pcs", "parColis": 1, "tva": 0 },
+                     "parUnite": 1.4656, "depuis": "2026-09-04", "enVigueur": true, "ecart": 0, "prochain": { "prix": 25.65, "parUnite": 1.425, "depuis": "2026-10-09" } } ],
+  "source": "API du panel : …" }
+```
+
+- Les prix sont exprimés par kg quand l'unité de base est le gramme (`facteur` 1000, `par` « kg »), par l pour le
+  ml, par pièce sinon. `repere` = prix conseillé, sinon prix de référence, sinon médiane du réseau ; `ecart` en %.
+- `magasin.sansPrix` : le magasin porte la matière à 0 (le thon à Halle) ; `absente` : il ne la porte pas.
+  `fournisseurs` vide : aucun fournisseur du panel ne porte la matière (le thon, acheté librement).
+- `prochain` : la liste `latest` quand elle vaut plus tard que `current`, dans le futur, à un autre prix.
+- Le panel ne porte pas le prix d'achat de la centrale chez ses propres fournisseurs : `/material-suppliers/{f}/raw-materials`
+  et `/price-history` n'ont que trois matières d'essai. Le « prix centrale » montré est donc le prix de sa liste pour le
+  magasin.
+- 400 sans `mid` ou `shop`, 503 sans compte panel, 404 matière inconnue de l'API, 502 magasin illisible et matière
+  inconnue partout.
 
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 
