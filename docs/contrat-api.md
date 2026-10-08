@@ -1745,8 +1745,17 @@ journée regardée est aujourd'hui. Nul si J−7 n'est pas lu.
 
 ### `GET /analyse/produits/recette` — la recette d'un produit, pour l'onglet « Recette & marge » (08/10/2026)
 
-`GET /analyse/produits/recette?pid=2300010&shop=4[&cout=3.91][&rafraichir=1][&colonnes=1]` rend la recette du produit telle
-que la copie locale du panel la porte, sans appel au panel, gardée 24 h par produit et magasin (`ceo_app_setting`
+`GET /analyse/produits/recette?pid=2300010&shop=4[&rafraichir=1][&colonnes=1]` rend la recette du produit **par l'API du
+panel d'abord** (le soir du 08/10/2026, « api only », « du changement à chaque édition de prix ») : `/products/{pid}`
+donne la recette (`id_recipe`, gardé 24 h), `/shops/{shop}/recipes/{recette}/cost` le coût que le panel calcule pour ce
+magasin aux prix du jour, sous-recettes dépliées (`elements` emboîtés, type `sub-recipe` puis `ingredient`, quantités
+déjà ramenées à la recette dans `required_quantity`, `price_net` par unité de base, `price_source` LOCAL ou MISSING,
+`calculated_req_price_net`, fournisseur, `cost_net`, `cost_status`, `missing_materials`). Relu passée la minute
+(`recetteCout:<recette>:<shop>`). Une matière MISSING dans ce magasin est prise au prix médian des autres magasins
+(`/shops/{id}/materials`, `prixSource` « autre magasin »), comme le faisait la copie. La réponse porte `api: true`,
+`cout.complet`, `cout.manquants` et `lu`. Le dashboard fait alors le coefficient, la marge et les paliers sur ce coût
+du jour (`total`), le coût gravé avec les tickets restant affiché en repère. Quand l'API ne répond pas, la copie locale
+prend le relais (ci-dessous, `source` le dit), gardée 24 h par produit et magasin (`ceo_app_setting`
 `recetteProduit:<pid>:<shop>`). Tables mesurées le 08/10/2026 : `product.id_recipe` → `product_recipe` (nom,
 `yield_quantity`, `id_unit`, `is_subrecipe`) → `product_recipe_material_connection` (`parent_recipe_id`,
 `child_ingredient_id` ou `child_recipe_id`, `quantity`) → `material` (`id_category` → `material_category`, `id_unit`

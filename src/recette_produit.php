@@ -257,6 +257,12 @@ function ep_analyse_produit_recette(): array
 {
     $pid = (int) ($_GET['pid'] ?? 0); $sid = (int) ($_GET['shop'] ?? 0);
     if ($pid <= 0 || $sid <= 0) { http_response_code(400); return ['error' => 'pid et shop requis']; }
+    // L'API du panel d'abord (08/10/2026, « api only ») : le coût de la recette calculé par le panel pour ce magasin, aux
+    // prix du jour, relu passée la minute. La copie locale ne sert plus que si l'API ne répond pas.
+    if (empty($_GET['colonnes'])) {
+        $api = rpApi($pid, $sid, !empty($_GET['rafraichir']));
+        if ($api !== null) { $api['cache'] = ['le' => date('c'), 'age' => 0]; return $api; }
+    }
     $cle = 'recetteProduit:' . $pid . ':' . $sid;
     if (!empty($_GET['colonnes'])) {
         // Diagnostic, lecture seule : les colonnes de chaque table lue, les lignes brutes du produit, les coûts bruts.
@@ -282,7 +288,88 @@ function ep_analyse_produit_recette(): array
         } catch (Throwable $e) { /* sans cache */ }
     }
     $out['cache'] = ['le' => date('c'), 'age' => 0];
+    $out['source'] = 'copie locale du panel, l’API du panel n’ayant pas répondu : ' . ($out['source'] ?? '');
     return $out;
+}
+
+/**
+ * La recette par l'API du panel : `/products/{pid}` donne la recette (gardé 24 h), `/shops/{sid}/recipes/{rid}/cost` le
+ * coût calculé par le panel pour ce magasin, sous-recettes dépliées et quantités déjà ramenées à la recette (relu passée
+ * la minute, MF_SEC_PRIX). Une matière sans prix dans ce magasin (`price_source` MISSING) est prise au prix médian des
+ * autres magasins (`/shops/{id}/materials`), comme le faisait la copie ; elle est dite « autre magasin ».
+ * Rend null quand l'API ne répond pas (le compte n'est pas configuré, la route échoue) : la copie prend le relais.
+ */
+function rpApi(int $pid, int $sid, bool $frais): ?array
+{
+    if (!PanelApi::configured()) { return null; }
+    $cleP = 'recetteDuProduit:' . $pid;
+    $c = mfCache($cleP, $frais);
+    $rid = isset($c['rid']) ? (int) $c['rid'] : null; $nomP = (string) ($c['nom'] ?? '');
+    if ($rid === null) {
+        $p = PanelApi::get('/products/' . $pid);
+        if (!is_array($p) || !isset($p['id'])) { return null; }
+        $rid = (int) ($p['id_recipe'] ?? 0); $nomP = trim((string) ($p['name'] ?? ''));
+        mfGarder($cleP, ['rid' => $rid, 'nom' => $nomP]);
+    }
+    $src = 'API du panel : /shops/{magasin}/recipes/{recette}/cost (le coût de la recette calculé par le panel pour ce magasin, sous-recettes dépliées, aux prix du jour) ; une matière sans prix dans ce magasin est prise au prix médian des autres magasins (/shops/{id}/materials) ; relu passée la minute';
+    if ($rid <= 0) { return ['pid' => $pid, 'nom' => $nomP, 'sansRecette' => true, 'motif' => 'le produit n’a pas de recette au panel', 'lignes' => [], 'nLignes' => 0, 'source' => $src, 'api' => true]; }
+    $cleC = 'recetteCout:' . $rid . ':' . $sid;
+    $cout = mfCache($cleC, $frais, MF_SEC_PRIX);
+    if ($cout === null) {
+        $cout = PanelApi::get('/shops/' . $sid . '/recipes/' . $rid . '/cost');
+        if (!is_array($cout) || !isset($cout['elements']) || !is_array($cout['elements'])) { return null; }
+        mfGarder($cleC, $cout);
+    }
+    // Les prix des autres magasins, pour les matières sans prix ici ; la catégorie des matières par la même lecture.
+    $noms = mfMagasins(); $sids = array_keys($noms); if (!in_array($sid, $sids, true)) { $sids[] = $sid; } sort($sids);
+    $luLe = []; $parMagasin = mfMatieresApi($sids, $frais, $sid, $luLe);
+    $autre = static function (int $mid) use ($parMagasin, $sid): ?float {
+        $v = [];
+        foreach ($parMagasin as $s => $m) { if ($s === $sid) { continue; } $p = $m[(string) $mid]['prix'] ?? null; if ($p !== null && $p > 0) { $v[] = $p; } }
+        return $v === [] ? null : mfMediane($v);
+    };
+    $rend = mfNombre($cout['yield_quantity'] ?? null); $rend = $rend !== null && $rend > 0 ? $rend : 1.0; $fac = 1.0 / $rend;
+    $lignes = [];
+    $marche = static function (array $els, ?string $sous, int $prof) use (&$marche, &$lignes, $autre, $parMagasin, $sid, $fac): void {
+        foreach ($els as $e) {
+            if (!is_array($e)) { continue; }
+            $type = strtolower((string) ($e['type'] ?? 'ingredient'));
+            if ($type === 'sub-recipe' || $type === 'subrecipe') {
+                if ($prof < RP_PROFONDEUR) { $n = trim((string) ($e['name'] ?? '')); $marche((array) ($e['elements'] ?? []), $n !== '' ? $n : $sous, $prof + 1); }
+                continue;
+            }
+            $mid = (int) ($e['material_id'] ?? $e['ingredient_id'] ?? 0);
+            $q = mfNombre($e['required_quantity'] ?? $e['quantity_cost'] ?? $e['recipe_quantity'] ?? null); $q = $q !== null ? $q * $fac : null;
+            $u = rpUniteCourte((string) ($e['unit_name'] ?? ''));
+            $prix = mfNombre($e['price_net'] ?? null); $ps = strtoupper((string) ($e['price_source'] ?? '')); $c2 = mfNombre($e['calculated_req_price_net'] ?? null); $motif = null; $srcTxt = null;
+            if ($prix !== null && $prix > 0) {
+                $srcTxt = $ps === 'LOCAL' || $ps === '' ? 'magasin' : ($ps === 'REFERENCE' ? 'référence' : ($ps === 'SUPPLIER' ? 'fournisseur' : strtolower($ps)));
+                $c2 = $c2 !== null ? $c2 * $fac : ($q !== null ? $q * $prix : null);
+            } else {
+                $a = $autre($mid);
+                if ($a !== null) { $prix = $a; $srcTxt = 'autre magasin'; $c2 = $q !== null ? $q * $prix : null; }
+                else { $prix = null; $c2 = null; $motif = 'pas de prix pour cette matière, dans aucun magasin'; }
+            }
+            $f = trim((string) ($e['supplier_name'] ?? ''));
+            $lignes[] = ['nom' => trim((string) ($e['name'] ?? ('matière ' . $mid))), 'cat' => (string) ($parMagasin[$sid][(string) $mid]['cat'] ?? ''), 'qte' => $q !== null ? round($q, 4) : null, 'unite' => $u,
+                'prixUnite' => $prix !== null ? round($prix, 6) : null, 'prixSource' => $srcTxt, 'prixParUnite' => $u, 'cout' => $c2 !== null ? round($c2, 4) : null, 'motif' => $motif, 'sous' => $sous,
+                'type' => 'matiere', 'id' => $mid, 'part' => null, 'perte' => mfNombre($e['waste_percent'] ?? $e['waste_amount_perc'] ?? null),
+                'fournisseur' => $f !== '' ? ['nom' => $f, 'colis' => mfNombre($e['supplier_price_net'] ?? null), 'taille' => mfNombre($e['supplier_package_size'] ?? null), 'unite' => (string) ($e['supplier_package_unit'] ?? '')] : null];
+        }
+    };
+    $marche($cout['elements'], null, 0);
+    usort($lignes, static fn ($a, $b) => (($b['cout'] ?? -1) <=> ($a['cout'] ?? -1)) ?: strcmp($a['nom'], $b['nom']));
+    $total = 0.0; $sansPrix = 0;
+    foreach ($lignes as $l) { if ($l['cout'] !== null) { $total += $l['cout']; } else { $sansPrix++; } }
+    foreach ($lignes as &$l) { $l['part'] = $total > 0 && $l['cout'] !== null ? round(100 * $l['cout'] / $total, 1) : null; }
+    unset($l);
+    $net = mfNombre($cout['cost_net'] ?? null);
+    return ['pid' => $pid, 'nom' => $nomP !== '' ? $nomP : trim((string) ($cout['name'] ?? '')),
+        'recette' => ['id' => $rid, 'nom' => trim((string) ($cout['name'] ?? '')), 'rendement' => $rend, 'unite' => rpUniteCourte((string) ($cout['unit_name'] ?? '')), 'sousRecette' => (int) ($cout['is_subrecipe'] ?? 0) === 1],
+        'cout' => ['net' => $net !== null ? round($net * $fac, 4) : null, 'source' => 'calcul du panel pour ce magasin, ' . (($cout['cost_complete'] ?? false) ? 'complet' : 'partiel : des matières sans prix ici'), 'type' => (string) ($cout['cost_status'] ?? ''),
+            'complet' => (bool) ($cout['cost_complete'] ?? false), 'manquants' => array_values(array_map(static fn ($m) => trim((string) (is_array($m) ? ($m['name'] ?? '') : $m)), (array) ($cout['missing_materials'] ?? [])))],
+        'lignes' => $lignes, 'total' => round($total, 4), 'complet' => $lignes !== [] && $sansPrix === 0, 'sansPrix' => $sansPrix, 'nLignes' => count($lignes), 'hypothese' => 'api', 'reference' => null,
+        'source' => $src, 'lu' => ['le' => date('c'), 'secondesPrix' => MF_SEC_PRIX], 'api' => true];
 }
 
 /** Le calcul lui-même, sans cache. `$brut` : joindre les lignes brutes (diagnostic) ; `$indice` : le coût de la pièce
