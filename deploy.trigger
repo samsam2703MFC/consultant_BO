@@ -643,3 +643,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-06T19:10:57Z classements : la semaine en cours
 2026-10-07T03:37:52Z app worker : feuilles de style versionnées, service worker
 2026-10-07T03:42:37Z app worker : barre du bas centrée
+2026-10-08T13:13:44Z dashboard operationnel duel J-7 maquette B
