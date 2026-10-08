@@ -1355,6 +1355,8 @@
     const pct = v => total > 0 ? 100 * v / total : 0;
     const caPro = m && m.caPro != null ? m.caPro : (PJ ? PJ.caPro : null), tkPro = m && m.ticketsPro != null ? m.ticketsPro : (PJ ? PJ.ticketsPro : null);
     const pro = !!(PJ && PJ.ticketsPro) || !!(m && m.ticketsPro > 0);
+    // La part du pro dans le CA total : celle du Résultat quand il l'a comptée, sinon sur le total des canaux.
+    const partPro = m && m.partPro != null ? m.partPro : (caPro != null && total > 0 ? Math.round(1000 * caPro / total) / 10 : null);
     const L = C.liste || [], nSt = (canal, st) => L.filter(c => c.canal === canal && c.statut === st).length;
     const bascule = per ? '' : `<span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'détail des clients pro ▾'}</span>`;
     const deplie = ouvert ? `<div class="db-split-det">${proCarte('detail')}</div>` : '';
@@ -1363,7 +1365,7 @@
       + (per && J.joursEcoules && J.joursLus < J.joursEcoules ? ' · caisse lue sur ' + J.joursLus + ' jour' + (J.joursLus > 1 ? 's' : '') + ' sur ' + J.joursEcoules : '');
     const bar = lue && total > 0 ? `<div class="db-split-bar" title="comptoir ${fP(pct(comptoir))} · click & collect ${fP(pct(cc.ca))} · livraison ${fP(pct(liv.ca))}"><i class="c" style="width:${pct(comptoir).toFixed(1)}%"></i><i class="w" style="width:${pct(cc.ca).toFixed(1)}%"></i><i class="l" style="width:${pct(liv.ca).toFixed(1)}%"></i></div>` : '';
     const sC = lue ? [fP(pct(comptoir)) + ' du CA', fN(J.tickets) + ' ticket' + (J.tickets > 1 ? 's' : ''), J.tickets ? 'panier ' + fU(comptoir / J.tickets) : ''].filter(Boolean).join(' · ')
-      + (caPro != null && tkPro ? `<br>dont clients pro <b>${fE(caPro)}</b> (${fN(tkPro)} ticket${tkPro > 1 ? 's' : ''}${PJ && PJ.aFacturer ? ', à facturer ' + fE(PJ.aFacturer) : ''})` : (X && X.manque ? '<br>' + esc(X.manque) : '')) : 'caisse pas encore lue';
+      + (caPro != null && tkPro ? `<br>dont clients pro <b>${fE(caPro)}</b> (${fN(tkPro)} ticket${tkPro > 1 ? 's' : ''}${PJ && PJ.aFacturer ? ', à facturer ' + fE(PJ.aFacturer) : ''})${partPro != null ? ' · ' + proPart(partPro, per) : ''}` : (X && X.manque ? '<br>' + esc(X.manque) : '')) : 'caisse pas encore lue';
     const sW = cc.n ? [fP(pct(cc.ca)) + ' du CA', cc.n + ' commande' + (cc.n > 1 ? 's' : ''), 'panier ' + fU(cc.ca / cc.n)].join(' · ') + (per ? '' : '<br>' + [nSt('cc', 'remise') ? `<b>${nSt('cc', 'remise')} remise${nSt('cc', 'remise') > 1 ? 's' : ''}</b>` : '', nSt('cc', 'prête') ? nSt('cc', 'prête') + ' prête' + (nSt('cc', 'prête') > 1 ? 's' : '') : '', nSt('cc', 'à préparer') + nSt('cc', 'en préparation') ? (nSt('cc', 'à préparer') + nSt('cc', 'en préparation')) + ' à préparer' : ''].filter(Boolean).join(' · ')) : 'aucune commande ' + (per ? 'sur ' + perLib() : ceJour());
     const sL = liv.n ? [fP(pct(liv.ca)) + ' du CA', liv.n + ' commande' + (liv.n > 1 ? 's' : ''), 'panier ' + fU(liv.ca / liv.n)].join(' · ') + (per ? '' : '<br>' + [nSt('liv', 'livrée') ? `<b>${nSt('liv', 'livrée')} livrée${nSt('liv', 'livrée') > 1 ? 's' : ''}</b>` : '', nSt('liv', 'en route') ? nSt('liv', 'en route') + ' en route' : ''].filter(Boolean).join(' · ')) : 'aucune livraison ' + (per ? 'sur ' + perLib() : ceJour());
     return `<div class="db-card db-split co${pro ? ' on' : ''}"><div class="ct"${per ? '' : ' data-prodrop="1" style="cursor:pointer"'}><span class="db-lab">Commandes et canaux — ${perLib()}</span><span class="db-mini">${esc(mini)}</span>${bascule}</div>${bar}
