@@ -408,3 +408,143 @@ function ep_exploitation_invendus_sonde(): array
     }
     return $out;
 }
+
+/* ---------- le détail des saisies : l'heure et l'opérateur de chaque pièce jetée (09/10/2026) ---------- */
+
+const INV_JOURNAL_TTL = 600;   // jusqu'où va le journal : relu toutes les dix minutes
+
+/** « Prénom N. » depuis une fiche du panel, quelle que soit la forme de ses champs ; jamais plus que ça. */
+function invNomCourt(array $em): string
+{
+    $p = trim((string) ($em['first_name'] ?? $em['firstname'] ?? $em['firstName'] ?? ''));
+    $n = trim((string) ($em['last_name'] ?? $em['lastname'] ?? $em['lastName'] ?? $em['surname'] ?? ''));
+    if ($p === '' && $n === '') {
+        $full = trim((string) ($em['name'] ?? $em['display_name'] ?? $em['full_name'] ?? $em['username'] ?? ''));
+        $parts = $full === '' ? [] : (preg_split('/\s+/', $full) ?: []);
+        $p = (string) ($parts[0] ?? ''); $n = count($parts) > 1 ? (string) end($parts) : '';
+    }
+    if ($p === '') { return $n !== '' ? $n : 'opérateur ' . (int) ($em['id'] ?? 0); }
+    return $p . ($n !== '' ? ' ' . mb_strtoupper(mb_substr($n, 0, 1)) . '.' : '');
+}
+
+/**
+ * Les opérateurs d'un magasin, id → nom court, depuis /shops/{id}/employees du panel (gardé un jour). Rien
+ * d'autre que le nom court n'est retenu : la route porte des données personnelles qui n'ont rien à faire ici.
+ */
+function invOperateurs(int $sid): array
+{
+    $cle = 'inv:ops:' . $sid;
+    $c = setting($cle);
+    $ancien = is_array($c) && isset($c['v']) && is_array($c['v']) ? $c['v'] : [];
+    if ($ancien !== [] && (int) ($c['ts'] ?? 0) > time() - 86400) { return $ancien; }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return $ancien; }
+    $r = PanelApi::get('/shops/' . $sid . '/employees');
+    $liste = is_array($r) ? (function_exists('analyseListe') ? analyseListe($r) : (array_is_list($r) ? $r : [])) : [];
+    $out = [];
+    foreach ($liste as $em) {
+        if (!is_array($em)) { continue; }
+        $id = (int) ($em['id'] ?? 0);
+        if ($id > 0) { $out[(string) $id] = invNomCourt($em); }
+    }
+    if ($out === []) { return $ancien; }
+    svGrave($cle, ['ts' => time(), 'v' => $out]);
+    return $out;
+}
+
+/** Jusqu'où va le journal des mouvements pour ce magasin (dernière pièce jetée écrite) ; null s'il est vide ou illisible. */
+function invJournalDerniere(int $sid): ?string
+{
+    $cle = 'inv:journal:' . $sid;
+    $c = setting($cle);
+    if (is_array($c) && array_key_exists('d', $c) && (int) ($c['ts'] ?? 0) > time() - INV_JOURNAL_TTL) { return $c['d'] === null ? null : (string) $c['d']; }
+    try {
+        $r = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(created_at) d FROM product_movement WHERE id_shop = ? AND movement_type = 'WASTE'", [$sid]);
+    } catch (Throwable $e) { return null; }
+    $d = isset($r['d']) && $r['d'] !== null && $r['d'] !== '' ? (string) $r['d'] : null;
+    svGrave($cle, ['ts' => time(), 'd' => $d]);
+    return $d;
+}
+
+/**
+ * Les saisies de poubelle du journal sur une fenêtre, dans l'ordre du temps : heure, opérateur, produit, pièces,
+ * motif. null quand le journal est illisible (table absente, base en défaut).
+ */
+function invSaisies(int $sid, string $du, string $au): ?array
+{
+    try {
+        $rows = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */ id, id_employee, id_product, quantity, reason, source, created_at FROM product_movement
+                           WHERE id_shop = ? AND movement_type = 'WASTE' AND created_at >= ? AND created_at < ? ORDER BY created_at, id LIMIT 2000",
+            [$sid, $du . ' 00:00:00', date('Y-m-d', strtotime($au . ' +1 day')) . ' 00:00:00']);
+    } catch (Throwable $e) { return null; }
+    $ops = $rows === [] ? [] : invOperateurs($sid);
+    $out = [];
+    foreach ($rows as $r) {
+        $pid = (int) ($r['id_product'] ?? 0); $q = (float) ($r['quantity'] ?? 0);
+        if ($q <= 0) { continue; }
+        $ts = (string) ($r['created_at'] ?? ''); $ide = (int) ($r['id_employee'] ?? 0);
+        $m = strtolower(trim((string) ($r['reason'] ?? '')));
+        $out[] = ['id' => (int) ($r['id'] ?? 0), 'le' => substr($ts, 0, 10), 'heure' => substr($ts, 11, 5),
+            'operateurId' => $ide > 0 ? $ide : null, 'operateur' => $ide > 0 ? ($ops[(string) $ide] ?? ('opérateur ' . $ide)) : null,
+            'pid' => $pid, 'produit' => function_exists('svNomProduit') ? svNomProduit($pid, '') : '', 'categorie' => '',
+            'pieces' => round($q, 1), 'motif' => $m, 'motifLib' => invMotif($m), 'source' => (string) ($r['source'] ?? '')];
+    }
+    return $out;
+}
+
+/**
+ * GET /exploitation/invendus/detail?shop=4&date=YYYY-MM-DD (ou &du=&au=) — le détail des pièces jetées d'un
+ * magasin : le total par produit du panel (comme la carte), et chaque saisie de caisse — heure, opérateur,
+ * produit, quantité, motif — quand le journal des mouvements de la base partagée couvre la fenêtre. Quand il
+ * s'arrête avant, la réponse le dit (`journal`) plutôt que de laisser croire à une journée sans saisie.
+ */
+function ep_exploitation_invendus_detail(): array
+{
+    $auj = date('Y-m-d');
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? '');
+    $periode = preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) && $du <= $au;
+    if ($periode) { if ($au > $auj) { $au = $auj; } if ($du > $au) { $du = $au; } }
+    else { $du = (string) ($_GET['date'] ?? $auj); if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || $du > $auj) { $du = $auj; } $au = $du; }
+    @set_time_limit(60);
+    $mags = function_exists('jcMagasins') ? jcMagasins() : [];
+    $b = invBilan($sid, $du, $au, invLignes($sid, $du, $au));
+    $saisies = invSaisies($sid, $du, $au);
+    $derniere = invJournalDerniere($sid);
+    $dJ = $derniere !== null ? substr($derniere, 0, 10) : null;
+    // Les noms et catégories que le journal ne porte pas : ceux du total par produit du panel.
+    $noms = [];
+    foreach ($b['produits'] ?? [] as $p) { $noms[(int) $p['pid']] = [(string) $p['nom'], (string) $p['categorie']]; }
+    $parOp = []; $parHeure = []; $total = 0.0;
+    foreach ($saisies ?? [] as $i => $s) {
+        if (isset($noms[$s['pid']])) { if ($s['produit'] === '') { $s['produit'] = $noms[$s['pid']][0]; } $s['categorie'] = $noms[$s['pid']][1]; }
+        if ($s['produit'] === '') { $s['produit'] = 'produit ' . $s['pid']; }
+        $saisies[$i] = $s;
+        $k = $s['operateur'] ?? '—';
+        $parOp[$k] = $parOp[$k] ?? ['operateur' => $s['operateur'], 'pieces' => 0.0, 'saisies' => 0];
+        $parOp[$k]['pieces'] += $s['pieces']; $parOp[$k]['saisies']++;
+        $h = substr($s['heure'], 0, 2) . ' h';
+        $parHeure[$h] = ($parHeure[$h] ?? 0.0) + $s['pieces'];
+        $total += $s['pieces'];
+    }
+    $po = array_values($parOp);
+    usort($po, static fn ($x, $y) => $y['pieces'] <=> $x['pieces']);
+    foreach ($po as &$x) { $x['pieces'] = round($x['pieces'], 1); } unset($x);
+    $ph = []; foreach ($parHeure as $h => $q) { $ph[] = ['heure' => $h, 'pieces' => round($q, 1)]; }
+    if ($saisies === null) {
+        $journal = ['dispo' => false, 'derniere' => null, 'couvre' => false,
+            'motif' => 'Le journal des mouvements de la base partagée n’est pas lisible : seul le total par produit du panel est montré, sans l’heure ni l’opérateur.'];
+    } elseif ($dJ === null || $dJ < $du) {
+        $journal = ['dispo' => true, 'derniere' => $derniere, 'couvre' => false,
+            'motif' => ($dJ === null ? 'Le journal des mouvements de la base partagée n’a aucune saisie pour ce magasin' : 'Le journal des mouvements de la base partagée s’arrête au ' . date('d/m/Y', strtotime($dJ)) . ' pour ce magasin')
+                . ' : l’heure et l’opérateur de chaque saisie ne sont pas connus ' . ($periode ? 'sur cette période' : 'ce jour') . ', le panel ne rend qu’un total par produit.'];
+    } else {
+        $journal = ['dispo' => true, 'derniere' => $derniere, 'couvre' => $dJ >= $au,
+            'motif' => $dJ >= $au ? '' : 'Le journal des mouvements s’arrête au ' . date('d/m/Y', strtotime($dJ)) . ' : les saisies des jours suivants ne sont pas connues.'];
+    }
+    return ['shop' => $sid, 'magasin' => $mags[(string) $sid] ?? null] + ($periode ? ['du' => $du, 'au' => $au] : ['date' => $du])
+        + ['lu' => $b !== null, 'declare' => $b['declare'] ?? null, 'pieces' => $b['pieces'] ?? null, 'cout' => $b['cout'] ?? null, 'caPerdu' => $b['caPerdu'] ?? null,
+            'references' => $b['references'] ?? 0, 'produits' => $b['produits'] ?? [], 'parMotif' => $b['parMotif'] ?? [],
+            'saisies' => $saisies ?? [], 'saisiesPieces' => round($total, 1), 'parOperateur' => $po, 'parHeure' => $ph, 'journal' => $journal, 'report' => invReport(),
+            'source' => 'total par produit : /shops/{id}/products/waste du panel · saisies : journal product_movement de la base partagée (heure, opérateur, quantité, motif) · opérateurs : /shops/{id}/employees, nom court seulement'];
+}

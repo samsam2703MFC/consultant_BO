@@ -227,6 +227,7 @@ function route(string $method, string $path): mixed
             $path === '/production/flux/commandes'     => ep_production_flux_commandes(),
             $path === '/production/flux/fours'         => ep_production_flux_fours(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
+            $path === '/exploitation/invendus/detail'  => ep_exploitation_invendus_detail(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),
             $path === '/scoring/rapport'               => ep_scoring_rapport(),

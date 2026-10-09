@@ -1740,3 +1740,19 @@ html.db-fiche-ouverte{overflow:hidden}
   .fi-rdp.four td[data-l]::before{content:attr(data-l);display:block;font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:#8a8278}
   .fi-rwf .r{grid-template-columns:1.2fr .8fr 64px 44px;font-size:11.5px}
 }
+
+/* --- la modale des saisies d'invendus : chaque pièce jetée avec son heure et son opérateur (09/10/2026) --- */
+.db-cl.clic{cursor:pointer}
+.db-cl.clic:hover b,.db-cl.clic:focus-visible b{text-decoration:underline dotted}
+.db-cl.clic .n{color:#8D1D2C;font-weight:600}
+.db-inv-lien{padding:0 16px 12px}
+.db-inv-lien button{border:none;background:none;padding:0;font:600 12px var(--font-ui);color:#8D1D2C;cursor:pointer}
+.db-inv-lien button:hover{text-decoration:underline}
+.db-inv.mob .db-inv-lien{padding:4px 4px 8px}
+#db-invm .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
+#db-invm .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:860px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);font-family:var(--font-ui);color:var(--color-text,#222)}
+.im-tab td.im-h{font-weight:600;font-variant-numeric:tabular-nums}
+.im-tab tr.im-jour td{background:#fcfaf7;font:600 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);padding:7px 8px}
+.im-ops{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-top:12px;font-size:12px}
+.im-ops .db-lab{margin-right:4px}
+@media (max-width:640px){#db-invm .fi-modale{top:12px;max-height:calc(100vh - 24px)}}

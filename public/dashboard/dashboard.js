@@ -97,7 +97,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'nc': 300, 'fiche': 900 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -1638,10 +1638,60 @@
     const table = mobile
       ? `<table class="db-pro-tab db-inv-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th><th class="n">Coût</th></tr></thead><tbody>${P.slice(0, nMax).map(p => `<tr><td class="nom">${esc(p.nom)}<small>${esc([p.categorie, jour ? vd(p) : '', p.caPerdu ? fE(p.caPerdu) + ' de vente perdue' : ''].filter(Boolean).join(' · '))}</small></td><td>${invTag(p)}</td><td class="n">${fN(p.pieces)}</td><td class="n">${fE(p.cout)}</td></tr>`).join('')}${P.length > nMax ? `<tr><td colspan="4" class="mu">… et ${P.length - nMax} ${P.length - nMax > 1 ? 'autres références' : 'autre référence'}</td></tr>` : ''}</tbody></table>`
       : `<table class="db-pro-tab db-inv-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th>${jour ? '<th class="n">Vendues</th>' : ''}<th class="n">Coût</th><th class="n">Valeur perdue</th></tr></thead><tbody>${P.slice(0, nMax).map(p => `<tr><td class="nom">${esc(p.nom)}${p.categorie ? `<small>${esc(p.categorie)}</small>` : ''}</td><td>${invTag(p)}</td><td class="n">${fN(p.pieces)}</td>${jour ? `<td class="n mu">${p.vendus != null ? fN(p.vendus) + (p.taux != null ? ' <small>(' + fP(p.taux) + ' jeté)</small>' : '') : '—'}</td>` : ''}<td class="n">${fE(p.cout)}</td><td class="n mu">${fE(p.caPerdu)}</td></tr>`).join('')}${P.length > nMax ? `<tr><td colspan="${jour ? 6 : 5}" class="mu">… et ${P.length - nMax} ${P.length - nMax > 1 ? 'autres références' : 'autre référence'}</td></tr>` : ''}</tbody></table>`;
-    if (mobile) { return carte(`${kpi}<div class="db-pro-corps un"><div><span class="db-lab">Par produit</span>${table}</div></div>${note}`); }
+    // Le détail des saisies (heure, opérateur, quantité) s'ouvre dans une modale, comme depuis la ligne du P&L.
+    const lien = `<div class="db-inv-lien"><button type="button" data-invmodale="1">Les saisies une par une — heure, opérateur, quantité ▸</button></div>`;
+    if (mobile) { return carte(`${kpi}${lien}<div class="db-pro-corps un"><div><span class="db-lab">Par produit</span>${table}</div></div>${note}`); }
     // Sur ordinateur, le détail par produit se déplie sous les chiffres de tête.
     const ouvert = !!S.invOuvert;
-    return `<div class="db-card db-inv"><div class="ct" data-invdrop="1" style="cursor:pointer"><span class="db-lab">${lib}</span><span class="db-mini">${esc(sous)}</span><span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>${kpi}${ouvert ? `<div class="db-pro-corps un"><div><span class="db-lab">Par produit — du plus coûteux au moins coûteux</span>${table}</div></div>` : ''}${note}</div>`;
+    return `<div class="db-card db-inv"><div class="ct" data-invdrop="1" style="cursor:pointer"><span class="db-lab">${lib}</span><span class="db-mini">${esc(sous)}</span><span class="db-cdr" style="padding:0;margin-left:auto;white-space:nowrap">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>${kpi}${lien}${ouvert ? `<div class="db-pro-corps un"><div><span class="db-lab">Par produit — du plus coûteux au moins coûteux</span>${table}</div></div>` : ''}${note}</div>`;
+  }
+  /* --- la modale des saisies d'invendus : chaque pièce jetée telle qu'encodée en caisse, avec son heure et son
+   * opérateur (journal des mouvements de la base partagée), sous le total par produit du panel. Elle s'ouvre
+   * depuis la ligne « − Invendus et poubelle » du P&L court et depuis la carte. --- */
+  function cleInvD() { return 'invd|' + S.shop + '|' + (coPer() ? bornes().join('|') : S.date); }
+  function cheminInvD() { const b = '/exploitation/invendus/detail?shop=' + encodeURIComponent(S.shop); if (!coPer()) { return b + '&date=' + S.date; } const [du, au] = bornes(); return b + '&du=' + du + '&au=' + au; }
+  function invModaleOuvrir() { S.invModale = { retour: document.activeElement }; lireAux(cleInvD(), cheminInvD(), false); invModaleRendre(); }
+  function invModaleFermer() { const r = S.invModale && S.invModale.retour; S.invModale = null; invModaleRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
+  function invModaleRendre() {
+    let box = document.getElementById('db-invm');
+    if (!S.invModale) { if (box) { box.innerHTML = ''; } if (!S.fiche) { document.documentElement.classList.remove('db-fiche-ouverte'); } return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-invm'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const cle = cleInvD(), D = S.aux[cle], err = S.err[cle], per = coPer();
+    const quand = per ? perLib() : (S.date === AUJ ? 'aujourd’hui' : fDL(S.date));
+    const pl = (n, m) => fN(n) + ' ' + m + (n > 1 ? 's' : '');
+    let chips = '', corps = '';
+    if (!D) { corps = `<div class="db-mini" style="padding:18px 0">${err ? 'Lecture impossible : ' + esc(err) : 'lecture des saisies…'}</div>`; }
+    else {
+      const L = D.saisies || [], P = D.produits || [], J = D.journal || {}, ops = D.parOperateur || [];
+      chips = [L.length ? `<span class="fi-chip"><b>${pl(L.length, 'saisie')}</b> · ${pl(D.saisiesPieces || 0, 'pièce')}</span>` : '',
+        D.pieces != null ? `<span class="fi-chip">au panel <b>${pl(D.pieces, 'pièce')}</b> · ${pl(D.references || 0, 'référence')}</span>` : '',
+        D.cout != null ? `<span class="fi-chip">coût de production <b>${fE(D.cout)}</b></span>` : '',
+        ops.length ? `<span class="fi-chip"><b>${pl(ops.length, 'opérateur')}</b></span>` : ''].join('');
+      if (L.length) {
+        let jourCourant = '';
+        const lignes = L.map(s => {
+          let h = '';
+          if (per && s.le !== jourCourant) { jourCourant = s.le; h += `<tr class="im-jour"><td colspan="5">${esc(fDL(s.le))}</td></tr>`; }
+          return h + `<tr><td class="n im-h">${esc(s.heure || '—')}</td><td>${esc(s.operateur || '—')}</td><td class="nom">${esc(s.produit || ('produit ' + s.pid))}${s.categorie ? `<small>${esc(s.categorie)}</small>` : ''}</td><td class="n">${fN(s.pieces)}</td><td>${invTag({ motif: s.motif, motifLib: s.motifLib })}</td></tr>`;
+        }).join('');
+        corps += `<table class="db-pro-tab db-inv-tab im-tab"><thead><tr><th class="n">Heure</th><th>Opérateur</th><th>Produit</th><th class="n">Quantité</th><th>Motif</th></tr></thead><tbody>${lignes}</tbody></table>`;
+        if (ops.length) { corps += `<div class="im-ops"><span class="db-lab">Par opérateur</span>${ops.map(o => `<span><b>${esc(o.operateur || '—')}</b> ${pl(o.pieces, 'pièce')} · ${pl(o.saisies, 'saisie')}</span>`).join('')}</div>`; }
+        if (D.pieces != null && Math.round(D.saisiesPieces || 0) !== Math.round(D.pieces)) { corps += `<div class="db-mini db-inv-note">Le journal compte ${pl(D.saisiesPieces || 0, 'pièce')} là où le panel en totalise ${fN(D.pieces)} : les deux sources ne se recoupent pas tout à fait (saisies corrigées, reports).</div>`; }
+      }
+      if (J.motif) { corps += `<div class="db-mini db-inv-note">${esc(J.motif)}</div>`; }
+      if (!L.length && P.length) {
+        corps += `<div class="db-lab" style="margin-top:10px">Par produit — ${esc(quand)}</div><table class="db-pro-tab db-inv-tab im-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th><th class="n">Coût</th><th class="n">Valeur perdue</th></tr></thead><tbody>${P.map(p => `<tr><td class="nom">${esc(p.nom)}${p.categorie ? `<small>${esc(p.categorie)}</small>` : ''}</td><td>${invTag(p)}</td><td class="n">${fN(p.pieces)}</td><td class="n">${fE(p.cout)}</td><td class="n">${p.caPerdu ? fE(p.caPerdu) : '—'}</td></tr>`).join('')}</tbody></table>`;
+      }
+      if (!L.length && !P.length) { corps += `<div class="db-mini" style="padding:12px 0">${D.lu === false ? 'Le panel ne répond pas : rien à montrer.' : 'Rien déclaré en caisse ' + esc(quand) + '.'}</div>`; }
+      corps += `<div class="db-mini" style="margin-top:14px">${esc(D.source || '')}</div>`;
+    }
+    const ancienne = box.querySelector('.fi-modale'), defil = ancienne ? ancienne.scrollTop : 0;
+    box.innerHTML = `<div class="fi-voile" data-imfermer="1"></div><div class="fi-modale im-modale" role="dialog" aria-modal="true" aria-label="Invendus et poubelle — le détail des saisies">
+      <div class="fi-hd"><div class="t"><h2>Invendus et poubelle</h2><div class="s">${esc(nomShop())} · ${esc(quand)} · chaque pièce jetée telle qu’encodée en caisse</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-imfermer="1" aria-label="Fermer">✕</button></div>
+      <div class="fi-bd">${corps}</div></div>`;
+    if (defil) { const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = defil; } }
+    box.querySelectorAll('[data-imfermer]').forEach(b => b.addEventListener('click', invModaleFermer));
   }
   function murInv() {
     const I = invData(), cle = cleInv(), per = coPer();
@@ -2487,13 +2537,13 @@
     const feuRes = p => p == null ? 'var(--color-text-muted)' : (p >= 15 ? '#2d7a3e' : (p >= 5 ? '#D97706' : '#C0182B'));
     const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (ca ? 100 * m.margeBrute / ca : null);
     const barre = p => Math.min(Math.abs(p || 0), 100).toFixed(1);
-    const ligne = (lib, sous, v, pct, coul, w, fort, note) => `<div class="db-cl${fort ? ' fort' : ''}"><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
+    const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
     return `<div class="db-cascade">
       ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
       ${ligne('− Coût matière', (se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues') + (m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''), m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
-      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? 'coût de production des pièces jetées' + (m.invendusPieces ? ' · ' + fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false)}
+      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? 'coût de production des pièces jetées' + (m.invendusPieces ? ' · ' + fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
       ${ligne('− Main-d’œuvre', (se.labour != null ? 'seuil ' + fP(se.labour) : '') + (m.labourSource ? ' · ' + esc(m.labourSource) : ''), m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
       ${ligne('− Frais généraux', (se.overhead != null ? 'seuil ' + fP(se.overhead) : '') + (m.overheadSource ? ' · ' + esc(m.overheadSource) : ''), m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
       ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
@@ -4964,6 +5014,7 @@
     $.querySelectorAll('canvas.db-feux').forEach(feux);
     $.querySelectorAll('[data-fprod]').forEach(b => { b.addEventListener('click', () => ficheOuvrir(b)); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ficheOuvrir(b); } }); });
     ficheRendre();
+    invModaleRendre();
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
@@ -5027,6 +5078,10 @@
       S.heure = null; S.jourH = null; urlMaj();
       if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
+    $.querySelectorAll('[data-invmodale]').forEach(b => {
+      b.addEventListener('click', e => { e.stopPropagation(); invModaleOuvrir(); });
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); invModaleOuvrir(); } });
+    });
     ppBrancher();
     $.querySelectorAll('[data-cmdliste]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.cmdListeOuvert = !S.cmdListeOuvert; rendre(); }));
     // Les contrôles en photo : filtres, flèches, loupe.
@@ -5059,7 +5114,7 @@
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
-  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } });
+  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } });
   document.addEventListener('keydown', e => {
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
