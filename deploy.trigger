@@ -678,3 +678,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T18:46:38Z suivi franchisé : tuiles KPI, dépliant, modale
 2026-10-09T18:51:41Z fiche franchisé : intro en une phrase
 2026-10-09T19:11:02Z fiche franchisé : santé, checklists, météo
+2026-10-09T19:36:52Z fiche franchisé tablette, checklists au diagnostic
