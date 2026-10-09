@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — Réseau</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="gc.css">
+<script src="coque.js"></script>
+</head><body><script>
+const cel = (feu, derniere, prochaine, plans, resp) => `<div class="cel"><b><span class="feu ${feu}"></span>${derniere}</b><small>${prochaine}</small><small>${plans}</small>${resp ? '<small><span class="pill ok">responsable</span></small>' : ''}</div>`;
+const vide = '<div class="cel"><small style="color:#bbb">—</small></div>';
+const matrice = `<div class="carte"><h3>Consultants × magasins<small>dernière visite · prochaine · plans d’action ouverts · feu du magasin</small></h3>
+<table class="mat"><thead><tr><th>Consultant</th><th>Corbais<br><small>cadre 1 / mois</small></th><th>Gosselies<br><small>cadre 2 / mois</small></th><th>Halle<br><small>cadre 4 / mois</small></th><th>Sombreffe<br><small>cadre 1 / mois</small></th><th>Charge</th></tr></thead><tbody>
+<tr><td class="cons">Sam V.<small>Stratégie et Développement · Halle, Gosselies · bilans trimestriels partout</small></td><td>${cel('v', '30/06 · bilan Q2', 'prochaine 22/10 · bilan Q3', '1 plan P2')}</td><td>${cel('o', '02/10 · bilan Q3', 'prochaine 15/10 · régulière, confirmée', '2 plans P1, P2', true)}</td><td>${cel('r', '06/10 · régulière 21 / 23', '13/10 suivi P0 · 20/10 régulière · 27/10 bilan Q3', '1 P0 · 1 P1 · échéance lundi', true)}</td><td>${cel('o', '30/06 · bilan Q2', 'bilan Q3 à planifier avant le 31/10', 'aucun plan')}</td><td><div class="cel"><b>7 visites</b><small>+ 1 à planifier · 14 tâches · 2 en retard</small><small>agenda Google : abonné</small></div></td></tr>
+<tr><td class="cons">Nadia K.<small>Opérations et qualité · Corbais · hygiène à Gosselies et Halle</small></td><td>${cel('v', '30/09 · régulière 22 / 23', 'prochaine 14/10 · régulière', '1 plan P2', true)}</td><td>${cel('o', '07/10 · hygiène 11 / 12', 'prochaine 21/10 · hygiène', '2 plans P1, P2')}</td><td>${cel('r', '24/09 · hygiène 10 / 12', 'prochaine 27/10 · hygiène', 'P0 frigo : suivi par Sam V.')}</td><td>${cel('o', '15/09 · client mystère 7 / 8', 'prochain client mystère en décembre', 'aucun plan')}</td><td><div class="cel"><b>4 visites</b><small>9 tâches · 0 en retard</small><small>agenda Google : abonnée</small></div></td></tr>
+<tr><td class="cons">Youssef B.<small>Produit et production · Sombreffe · production à Halle</small></td><td>${vide}</td><td>${vide}</td><td>${cel('r', '29/09 · production 12 / 14', 'prochaine 14/10 · production', 'P1 planogramme viennoiserie')}</td><td>${cel('o', '07/09 · régulière 23 / 23', 'à planifier · due depuis 4 j', 'aucun plan', true)}</td><td><div class="cel"><b>1 visite</b><small>+ 1 à planifier · 8 tâches · 1 en retard</small><small>agenda Google : <span class="pill att">non relié</span></small></div></td></tr>
+<tr><td class="cons" style="color:var(--color-text-muted)">Réseau</td><td><div class="cel"><b>à jour</b><small>2 visites en octobre · cadre 1 + bilan</small></div></td><td><div class="cel"><b>à jour</b><small>4 visites en octobre · cadre 2 + bilan</small></div></td><td><div class="cel"><b><span class="feu r"></span>P0 ouvert</b><small>6 visites en octobre · cadre 4 + bilan + suivi</small></div></td><td><div class="cel"><b><span class="feu o"></span>due</b><small>0 visite planifiée · cadre 1 + bilan</small></div></td><td><div class="cel"><b>12 visites</b><small>+ 2 à planifier · 31 tâches · 3 en retard</small></div></td></tr>
+</tbody></table></div>`;
+const charge = `<div class="carte"><h3>Charge par consultant<small>octobre · visites planifiées, tâches ouvertes, retards</small></h3>
+  <div class="barre"><span class="n">Sam V.</span><div class="b"><i style="width:46%;background:#8D1D2C"></i><i style="width:38%;background:#F2C9A0"></i><i style="width:6%;background:#C0182B"></i></div><span class="v">7 visites · 14 tâches · 2 retards</span></div>
+  <div class="barre"><span class="n">Nadia K.</span><div class="b"><i style="width:27%;background:#8D1D2C"></i><i style="width:24%;background:#F2C9A0"></i></div><span class="v">4 visites · 9 tâches</span></div>
+  <div class="barre"><span class="n">Youssef B.</span><div class="b"><i style="width:7%;background:#8D1D2C"></i><i style="width:21%;background:#F2C9A0"></i><i style="width:3%;background:#C0182B"></i></div><span class="v">1 visite + 1 à planifier · 8 tâches · 1 retard</span></div>
+  <div class="leg"><span><i style="background:#8D1D2C"></i>visites (90 min chacune)</span><span><i style="background:#F2C9A0"></i>tâches ouvertes</span><span><i style="background:#C0182B"></i>en retard</span></div>
+</div>`;
+const couverture = `<div class="carte"><h3>Couverture des magasins<small>le cadre de visite face au réel, sur 12 semaines</small></h3>
+  <div class="barre"><span class="n">Halle</span><div class="b"><i style="width:100%;background:#2d7a3e"></i></div><span class="v">11 / 12 visites au cadre</span></div>
+  <div class="barre"><span class="n">Gosselies</span><div class="b"><i style="width:83%;background:#2d7a3e"></i></div><span class="v">5 / 6 visites attendues</span></div>
+  <div class="barre"><span class="n">Corbais</span><div class="b"><i style="width:100%;background:#2d7a3e"></i></div><span class="v">3 / 3 visites attendues</span></div>
+  <div class="barre"><span class="n">Sombreffe</span><div class="b"><i style="width:66%;background:#D97706"></i></div><span class="v">2 / 3 · due depuis 4 jours</span></div>
+  <div class="mini" style="margin-top:10px">Une visite « due » apparaît dans « À planifier » du consultant responsable, et ici en orange ; passé 7 jours, le magasin passe au rouge et l’admin reçoit un rappel (cron des visites).</div>
+</div>`;
+const regles = `<div class="carte"><h3>Règles<small>réglages de la gestion consultant</small></h3>
+  <div class="regle"><b>Affectation</b><span>Le cadre nomme le consultant de chaque ligne : Sam V. responsable de Halle et Gosselies, Nadia K. de Corbais, Youssef B. de Sombreffe ; les autres lignes vont au spécialiste du profil.</span></div>
+  <div class="regle"><b>Cadre de visite</b><span>Par magasin, le nombre de visites par mois et par type : Halle 4 (2 régulières, 1 production, 1 hygiène et qualité) · Gosselies 2 (1 régulière, 1 hygiène) · Corbais 1 régulière · Sombreffe 1 régulière · partout un bilan trimestriel, et un client mystère par trimestre à Corbais et Sombreffe.</span></div><div class="regle"><b>Profil</b><span>Chaque type de visite demande un profil : Stratégie et Développement, Opérations et qualité, Produit et production. La liste déroulante du planning ne propose que les consultants du profil.</span></div>
+  <div class="regle"><b>Liste de contrôle</b><span>Chaque type porte sa checklist et ses tâches à faire (avant, pendant, après) : la liste standard de 23 points en 6 modules reste celle de la régulière ; production 14 points, hygiène 12, client mystère 8, bilan trimestriel 10, ouverture 31.</span></div>
+  <div class="regle"><b>Tâches récurrentes</b><span>Générées par la fréquence : « préparer la visite » J−2, « noter les tâches photo » chaque jour ouvré, « scoring du trimestre » le mois de clôture, « synthèse du mois » le dernier vendredi.</span></div>
+  <div class="regle"><b>Sources</b><span>Visites et points de contrôle (cockpit) · plans d’action assignés au consultant (cockpit) · tâches photographiées à noter et cas du helpdesk (panel) · tâches propres (cockpit).</span></div>
+  <div class="regle"><b>Agenda Google</b><span>Un flux ICS par consultant (jeton), une invitation .ics à chaque visite planifiée, le lien « Ajouter à Google Agenda » sur chaque visite ; la connexion bidirectionnelle en second lot.</span></div>
+</div>`;
+coque('reseau', `<div class="kpis">
+    <div class="kpi"><div class="k">Visites du mois</div><div class="v">3 / 12</div><div class="s">faites / planifiées · 2 à planifier d’après le cadre</div></div>
+    <div class="kpi"><div class="k">Magasins à jour</div><div class="v att">3 / 4</div><div class="s">Sombreffe due depuis 4 jours</div></div>
+    <div class="kpi"><div class="k">Plans d’action ouverts</div><div class="v ko">9</div><div class="s">1 P0 (Halle) · 4 P1 · 4 P2</div></div>
+    <div class="kpi"><div class="k">Tâches du réseau, aujourd’hui</div><div class="v">9 / 44</div><div class="s">20,5 % faites à 10 h · classement du panel</div></div>
+  </div>
+  ${matrice}
+  <div class="grille g3" style="margin-top:16px">${charge}${couverture}${regles}</div>`,
+  'Réseau', 'tous les consultants, tous les magasins · qui couvre quoi, à quelle fréquence, avec quel retard', null);
+</script></body></html>

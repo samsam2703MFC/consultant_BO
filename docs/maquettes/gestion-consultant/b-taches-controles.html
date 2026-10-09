@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Tâches et contrôles</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="gc.css">
+<script src="coque.js"></script>
+</head><body><script>
+const SRC = { v: 'Visite', p: 'Plan d’action', pn: 'Panel', r: 'Récurrente', me: 'Perso', hd: 'Helpdesk' };
+const t = (cls, src, titre, mag, ech, extra, on) => `<div class="tache ${cls || ''} ${on ? 'on' : ''}"><div class="t">${titre}</div><div class="m"><span class="src ${src}">${SRC[src]}</span><span class="pill">${mag}</span>${ech ? `<span class="echeance ${cls === 'late' ? 'ko' : ''}">${ech}</span>` : ''}${extra || ''}</div></div>`;
+const aFaire = [
+  t('late', 'p', 'P0 — frigo vitrine à 6 °C : vérifier la correction sur place', 'Halle', 'lun 12/10 · en retard de 0 j', ''),
+  t('late', 'pn', 'Noter 6 tâches photographiées (revues du panel)', 'Halle · Gosselies', 'auj. avant 19 h', '<span class="mini">3 / 6 notées</span>'),
+  t('', 'v', 'Suivi plan d’action Halle — le P0 frigo et les 2 points non conformes du 06/10', 'Halle', 'mar 13/10 · 09:00 · 45 min', '<span class="mini">type « Suivi plan d’action »</span>'),
+  t('', 'v', 'Préparer la régulière Gosselies (J−2) — review du 02/10, plans ouverts, tâches sautées', 'Gosselies', 'mar 13/10', '<span class="mini">tâche du type</span>'),
+  t('', 'hd', 'Cas helpdesk #214 — livraison SLFood manquante, réponse au franchisé', 'Gosselies', 'mer 14/10', '<span class="mini">domaine : opérations</span>'),
+  t('', 'v', 'Visite régulière Gosselies — checklist standard 23 points', 'Gosselies', 'jeu 15/10 · 10:00 · 90 min', '<span class="mini">confirmée par le magasin</span>'),
+  t('', 'p', 'P1 — vitrine viennoiserie : valider la photo de correction', 'Gosselies', 'ven 16/10', ''),
+  t('', 'v', 'Préparer la régulière Halle (J−2) — review, plans, chiffres de septembre', 'Halle', 'ven 16/10', '<span class="mini">tâche du type</span>'),
+  t('', 'v', 'Visite régulière Halle — checklist standard 23 points', 'Halle', 'mar 20/10 · 09:00 · 90 min', '<span class="mini">0 / 23</span>', true),
+  t('', 'v', 'Bilan trimestriel Corbais — scoring Q3, P&amp;L, plan de développement', 'Corbais', 'jeu 22/10 · 14:00 · 120 min', '<span class="mini">type « Bilan trimestriel »</span>')
+].join('');
+const enCours = [
+  t('', 'p', 'P2 — affichage des prix complet (3 références sans prix)', 'Corbais', 'attente franchisé', '<span class="pill att">attente</span>'),
+  t('', 'p', 'P1 — zone arrière et réserve : rangement', 'Gosselies', 'reprendre', '<span class="pill ko">renvoyé</span>'),
+  t('', 'r', 'Suivi de production Halle — recuissons de l’après-midi', 'Halle', 'chaque semaine', '<span class="mini">3 semaines sur 4 observées</span>'),
+  t('', 'me', 'Scouting Boussu — relevé terrain et dossier', 'Réseau', 'sans échéance', '')
+].join('');
+const faites = [
+  t('', 'v', 'Visite régulière Halle — 21 / 23 conformes', 'Halle', 'fait le 06/10', '<span class="pill ok">review envoyée</span>'),
+  t('', 'pn', 'Revues : 9 tâches photographiées notées', 'Halle · Gosselies', 'fait le 08/10', ''),
+  t('', 'p', 'P2 — PLV de la promotion d’octobre en place', 'Halle', 'fermé le 07/10', '<span class="pill ok">validé</span>'),
+  t('', 'r', 'Classement des tâches du réseau — lecture du matin', 'Réseau', 'chaque jour', '<span class="mini">5 / 5 jours</span>'),
+  t('', 'me', 'Liste des produits avec coefficients — envoyée', 'Halle', 'fait le 09/10', '')
+].join('');
+const coche = (on, txt, sous) => `<div class="coche"><div class="cb ${on === true ? 'on' : (on === false ? 'ko' : '')}">${on === true ? '✓' : (on === false ? '✕' : '')}</div><div>${txt}${sous ? `<small>${sous}</small>` : ''}</div></div>`;
+const liste = `<div class="carte"><h3>Liste de contrôle<small>visite Halle · mardi 20/10 · 09:00</small></h3>
+  <div class="typesel"><label>Type de visite</label><span class="sel">Régulière ▾</span><span class="mini">90 min · profil Stratégie et Développement · checklist <b>Standard · 23 points · 6 modules</b> · 6 tâches à faire</span></div>
+  <div class="mini" style="margin:8px 0 2px">La liste déroulante prend la checklist et les tâches du type. Les autres types : Production 14 points, Hygiène et qualité 12, Client mystère 8, Bilan trimestriel 10, Ouverture 31, Suivi plan d’action, Revisite — voir l’onglet Cadre de visite.</div>
+  <div class="mod"><b>Tâches à faire</b><span>du type · 1 / 6 · dans vos tâches avec leur échéance</span></div>
+  ${coche(true, 'Avant (J−2) — relire la dernière review et les plans ouverts', 'fait le 09/10')}
+  ${coche(null, 'Avant (J−2) — lire les tâches sautées de la semaine (panel)', 'échéance ven 16/10')}
+  ${coche(null, 'Avant (J−1) — préparer les chiffres : CA, food cost, invendus de septembre', 'échéance lun 19/10')}
+  ${coche(null, 'Pendant — les 23 points, les photos, la review avec le franchisé', 'mar 20/10')}
+  ${coche(null, 'Après (J+1) — envoyer la review, ouvrir les plans d’action', 'échéance mer 21/10')}
+  ${coche(null, 'Après (J+1) — note de visite dans le panel (type VISIT)', 'échéance mer 21/10')}
+  <div class="mod"><b>Checklist du type</b><span>0 / 23 points</span></div>
+  <div class="mini" style="margin-bottom:4px">Ce que le cockpit sait déjà s’affiche au-dessus de chaque module.</div>
+  <div class="prog"><i style="width:0%"></i></div>
+  <div class="mod"><b>Produit</b><span>5 points · 3 photos</span></div>
+  ${coche(null, 'Pain blanc — tête, croûte, cuisson', 'photo')}${coche(null, 'Croissants — feuilletage, température', 'photo')}${coche(null, 'Sablés et biscuits — fraîcheur')}${coche(null, 'Tartes — aspect, fraîcheur', 'photo')}${coche(null, 'Sandwiches — garniture, fraîcheur')}
+  <div class="mod"><b>Hygiène</b><span>5 points · P0 ouvert</span></div>
+  ${coche(null, 'Sol zone production propre')}${coche(null, 'Frigo vitrine ≤ 4 °C (photo du thermomètre)', 'photo · P0 du 06/10 : 6 °C mesurés — à revérifier')}${coche(null, 'Zone arrière et réserve', 'photo')}${coche(null, 'Sanitaires, lave-mains, savon')}${coche(null, 'Tenues, cheveux, gants')}
+  <div class="mod"><b>Visuel</b><span>4 points</span></div>
+  ${coche(null, 'Façade, enseigne, vitrine', 'photo')}${coche(null, 'Intérieur, propreté visible, éclairage', 'photo')}${coche(null, 'Affichage des prix complet')}${coche(null, 'PLV et promotions du moment en place', 'promotion d’octobre : en place depuis le 07/10')}
+  <div class="mod"><b>Planogramme</b><span>3 points · % de conformité</span></div>
+  ${coche(null, 'Comptoir pains', 'photo · % · plan réseau du 29/09')}${coche(null, 'Comptoir viennoiserie', 'photo · % · P1 ouvert : 72 % le 06/10')}${coche(null, 'Comptoir tartes et sablés', 'photo · %')}
+  <div class="mod"><b>Assortiment</b><span>3 points</span></div>
+  ${coche(null, 'Références obligatoires toutes présentes en rayon', 'photo · 2 obligatoires sans place au plan, 1 jamais passée en caisse')}${coche(null, 'Ruptures du jour — cause connue, parade en place')}${coche(null, 'Étiquettes et prix conformes au référentiel', 'photo')}
+  <div class="mod"><b>Client mystère</b><span>3 points · rapport du 15/09</span></div>
+  ${coche(null, 'Hygiène : ce que le rapport a relevé est corrigé')}${coche(null, 'Accueil : conforme au rapport')}${coche(null, 'Ambiance : bruit, musique, propreté visible')}
+  <div style="display:flex;gap:10px;margin-top:14px;align-items:center"><span class="btn">Commencer la visite</span><span class="lien">Ouvrir dans l’app Visites ›</span><span class="lien">Ajouter à Google Agenda ›</span></div>
+</div>`;
+const dernier = `<div class="carte" style="margin-top:16px"><h3>Dernière visite Halle<small>06/10 · régulière · 21 / 23 conformes</small></h3>
+  ${coche(false, 'Frigo vitrine ≤ 4 °C', '6 °C mesurés → P0 ouvert, assigné au consultant, échéance 12/10 → visite de suivi le 13/10')}${coche(false, 'Comptoir viennoiserie', '72 % de conformité au plan → P1 ouvert, échéance 16/10')}${coche(true, 'Review', 'standards appliqués · clients satisfaits · cause : production mal synchronisée · reco : recuisson de 15 h')}
+</div>`;
+coque('taches', `<div class="kpis">
+    <div class="kpi"><div class="k">À faire</div><div class="v">14</div><div class="s">7 cette semaine · sources : visite 6, plan 4, panel 1, récurrente 1, helpdesk 1, perso 1</div></div>
+    <div class="kpi"><div class="k">En retard</div><div class="v ko">2</div><div class="s">un P0 et des revues du jour</div></div>
+    <div class="kpi"><div class="k">Faites cette semaine</div><div class="v ok">9</div><div class="s">dont 1 visite, 2 plans fermés</div></div>
+    <div class="kpi"><div class="k">Corrections à valider</div><div class="v att">2</div><div class="s">photos envoyées par les franchisés</div></div>
+  </div>
+  <div class="filtres"><span class="on">Sam V.</span><span>Tous les magasins</span><span>Halle</span><span>Gosselies</span><span>Corbais</span><span>Sombreffe</span><span style="margin-left:12px">Toutes les sources</span><span>Visites</span><span>Plans d’action</span><span>Panel</span><span>Récurrentes</span><span>Helpdesk</span><span>Perso</span></div>
+  <div class="grille g2"><div class="kanban">
+      <div class="col"><div class="ch"><b>À faire</b><span>10 · 2 en retard</span></div>${aFaire}</div>
+      <div class="col"><div class="ch"><b>En cours</b><span>4</span></div>${enCours}</div>
+      <div class="col"><div class="ch"><b>Fait cette semaine</b><span>5</span></div>${faites}</div>
+    </div><div>${liste}${dernier}</div></div>`,
+  'Tâches et contrôles', 'Sam V. · ses tâches de toutes sources, par état · la liste de contrôle de la visite choisie, avec les tâches de son type', GC.consultants[0]);
+</script></body></html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Mon planning</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="gc.css">
+<script src="coque.js"></script>
+</head><body><script>
+// Octobre 2026 : le 1er est un jeudi ; aujourd'hui, vendredi 9.
+const V = { // jour → chips [classe, texte]
+  2: [['ok', '10:00 Gosselies · bilan Q3'], ['t', '14:00 Dossier Halle']],
+  6: [['ok', '09:00 Halle · régulière'], ['t', 'Revue tâches photos']],
+  7: [['m', 'Gosselies · hygiène · Nadia K.']],
+  9: [['t', 'Scoring Q3 : préparer'], ['t', 'Noter 6 tâches photo']],
+  12: [['ko', 'P0 Halle · frigo vitrine · échéance']],
+  13: [['', '09:00 Halle · suivi P0'], ['t', 'Préparer Gosselies (J−2)']],
+  14: [['m', 'Corbais · régulière · Nadia K.'], ['m', 'Halle · production · Youssef B.']],
+  15: [['conf', '10:00 Gosselies · régulière']],
+  16: [['t', 'Plan d’action Gosselies · P1'], ['t', 'Préparer Halle (J−2)']],
+  20: [['', '09:00 Halle · régulière']],
+  21: [['m', 'Gosselies · hygiène · Nadia K.']],
+  22: [['', '14:00 Corbais · bilan Q3']],
+  23: [['t', 'Revue tâches photos']],
+  27: [['', '09:00 Halle · bilan Q3'], ['m', 'Halle · hygiène · Nadia K.']],
+  29: [['due', 'Sombreffe · bilan Q3 à planifier'], ['t', 'Clôture scoring Q3']],
+  30: [['t', 'Synthèse du mois']]
+};
+const JH = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+let cases = '';
+for (let i = 0; i < 35; i++) {
+  const d = i - 2; // la grille commence le lundi 28/09
+  const hors = d < 1 || d > 31;
+  const num = hors ? (d < 1 ? 28 + d + 2 : d - 31) : d; // 28, 29, 30 sept · 1er, 2 nov
+  const auj = d === 9;
+  const chips = !hors && V[d] ? V[d].map(c => `<span class="chip ${c[0]}">${c[1]}</span>`).join('') : '';
+  cases += `<div class="j ${hors ? 'hors' : ''} ${auj ? 'auj' : ''}"><div class="n">${hors ? (d < 1 ? num + ' sept.' : num + ' nov.') : (auj ? 'aujourd’hui ' + num : num)}</div>${chips}</div>`;
+}
+const gauche = `<div class="carte"><h3>Octobre 2026<small>Sam V. · tous magasins · 7 visites planifiées, 1 à planifier, 10 tâches, 1 échéance P0</small></h3>
+  <div class="mois">${JH.map(j => `<div class="jh">${j}</div>`).join('')}${cases}</div>
+  <div class="leg"><span><i style="background:#E3F0E5"></i>visite faite</span><span><i style="background:#EFE3DE"></i>visite planifiée</span><span><i style="background:#F2C9A0"></i>confirmée par le magasin</span><span><i style="background:#EDE9F7"></i>tâche à échéance</span><span><i style="background:#F7DADA"></i>plan d’action P0</span><span><i style="background:#E8E3DD"></i>un autre consultant</span><span><i style="background:#FFF1D6"></i>à planifier d’après le cadre</span></div>
+</div>`;
+const semaine = `<div class="carte"><h3>Aujourd’hui et la semaine du 12 au 18<small>2 visites · 5 tâches</small></h3>
+  <div class="vis"><div class="h"><b>Ven 9</b>aujourd’hui</div><div class="c"><b>Noter 6 tâches photographiées</b><div class="mu">Halle 4 · Gosselies 2 · revues du panel attendues avant la clôture de journée</div><div class="prog"><i style="width:50%"></i></div></div><span class="st att">3 / 6</span></div>
+  <div class="vis"><div class="h"><b>Lun 12</b>échéance</div><div class="c"><b>P0 — frigo vitrine à 6 °C, Halle</b><div class="mu">plan d’action ouvert le 06/10 · assigné au consultant · correction du franchisé attendue</div></div><span class="st p0">P0</span></div>
+  <div class="vis"><div class="h"><b>Mar 13</b>09:00 · 45 min</div><div class="c"><b>Halle — suivi plan d’action</b><div class="mu">type « Suivi plan d’action » · checklist : le P0 frigo et les 2 points non conformes du 06/10 · <span class="lien">Ajouter à Google Agenda ›</span></div><div class="prog"><i style="width:0%"></i></div></div><span class="st plan">planifiée</span></div>
+  <div class="vis"><div class="h"><b>Jeu 15</b>10:00 · 120 min</div><div class="c"><b>Gosselies — visite régulière</b><div class="mu">type « Régulière » · checklist standard 23 points · confirmée par le magasin · 2 plans ouverts (P1, P2) · <span class="lien">Ajouter à Google Agenda ›</span></div><div class="prog"><i class="att" style="width:35%"></i></div><div class="mu">préparation 35 % : relire la dernière review, les tâches sautées de la semaine</div></div><span class="st conf">confirmée</span></div>
+  <div class="vis"><div class="h"><b>Ven 16</b>tâche</div><div class="c"><b>Plan d’action Gosselies — P1 vitrine viennoiserie</b><div class="mu">valider la correction photographiée par le franchisé</div></div><span class="st att">à valider</span></div>
+</div>`;
+const google = `<div class="carte"><h3>Agenda Google<small>votre agenda suit le cockpit</small></h3>
+  <div class="gcal">
+    <div class="l"><div class="ico">📅</div><div><b>Abonnement — toutes vos visites</b><small>Dans Google Agenda : « Ajouter un agenda à partir d’une URL ». <code>webcal://…/api/cockpit/consultants/sam/visites.ics?jeton=…</code> — Google relit le flux toutes les 12 à 24 h. <span class="pill ok">abonné le 02/10</span></small></div></div>
+    <div class="l"><div class="ico">✉️</div><div><b>Invitation à chaque visite planifiée</b><small>Un courriel avec pièce jointe .ics part à la planification, à chaque changement d’heure, à l’annulation. Acceptée, la visite est dans l’agenda tout de suite. <span class="pill ok">actif</span></small></div></div>
+    <div class="l"><div class="ico">＋</div><div><b>Un clic, une visite</b><small>« Ajouter à Google Agenda » sur chaque visite de la liste : l’événement s’ouvre prérempli (magasin, adresse, heure, durée, lien vers la fiche).</small></div></div>
+    <div class="l"><div class="ico">🔁</div><div><b>Connexion Google (bidirectionnel)</b><small>Déplacer la visite dans Google la déplace dans le cockpit. Demande un projet Google Cloud et un consentement par consultant. <span class="pill">lot 2</span></small></div></div>
+  </div></div>`;
+const planifier = `<div class="carte"><h3>À planifier<small>ce que le cadre de visite attend encore de Sam V. en octobre</small></h3>
+  <div class="vis"><div class="h"><b>Sombreffe</b>bilan Q3</div><div class="c"><b>Bilan trimestriel — avant le 31/10</b><div class="mu">type « Bilan trimestriel » · 120 min · profil Stratégie · checklist Bilan 10 points · scoring Q3 à présenter · <span class="lien">Planifier ›</span></div></div><span class="st att">à planifier</span></div>
+  <div class="vis"><div class="h"><b>Halle</b>2 régulières / mois</div><div class="c"><b>Régulières du 06/10 et du 20/10</b><div class="mu">plus le bilan Q3 le 27/10 · le suivi P0 du 13/10 est hors cadre · production et hygiène : Youssef B., Nadia K.</div></div><span class="st fait">à jour</span></div>
+  <div class="vis"><div class="h"><b>Gosselies</b>1 régulière / mois</div><div class="c"><b>Régulière le 15/10, confirmée</b><div class="mu">bilan Q3 fait le 02/10 · hygiène : Nadia K. le 21/10</div></div><span class="st fait">à jour</span></div>
+  <div class="vis"><div class="h"><b>Corbais</b>bilan Q3</div><div class="c"><b>Bilan trimestriel le 22/10</b><div class="mu">la régulière mensuelle est à Nadia K. (profil Opérations et qualité)</div></div><span class="st fait">à jour</span></div>
+</div>`;
+coque('planning', `<div class="kpis">
+    <div class="kpi"><div class="k">Visites du mois</div><div class="v">2 / 7</div><div class="s">faites / planifiées · 1 à planifier d’après le cadre</div></div>
+    <div class="kpi"><div class="k">Tâches à faire</div><div class="v att">14</div><div class="s">dont 2 en retard · 5 cette semaine</div></div>
+    <div class="kpi"><div class="k">Plans d’action ouverts</div><div class="v ko">6</div><div class="s">1 P0 · 2 P1 · 3 P2 · 2 corrections à valider</div></div>
+    <div class="kpi"><div class="k">Checklists</div><div class="v ok">91 %</div><div class="s">points conformes sur les 2 dernières visites</div></div>
+  </div>
+  ${gauche}<div class="grille g3" style="margin-top:16px;align-items:start">${semaine}${google}${planifier}</div>`,
+  'Mon planning', 'Sam V. · octobre 2026 · visites, échéances et agenda, tous magasins', GC.consultants[0]);
+</script></body></html>
