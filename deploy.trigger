@@ -682,3 +682,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T19:50:01Z checklists de la fiche : API du panel seulement
 2026-10-09T19:53:43Z diagnostic : tâches des consultants
 2026-10-09T19:58:11Z diagnostic : contrat des tâches consultant
+2026-10-09T20:09:21Z fiche franchisé : parcours de visite, checklist du consultant
