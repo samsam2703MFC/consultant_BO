@@ -274,13 +274,13 @@ export function ffCharge(app, shop, force){
   readOne('/franchises/fiche?shop=' + encodeURIComponent(shop) + '&_cache=300' + (force ? '&rafraichir=1' : '')).then(d => { app._ffEnCours = null; app.setState({ ff: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
 }
 export function ffClCharge(app, shop, force){
-  const b = app.state.ffCl;
+  const b = app.state.ffCl; const jours = String(app.state.ffClJours || 7); const cle = shop + '|' + jours;
   if (!shop) { return; }
-  if (!force && b && b.shop === shop && (b.d || b.chargement)) { return; }
-  if (app._ffClEnCours === shop && !force) { return; }
-  app._ffClEnCours = shop;
-  app.setState({ ffCl: { shop, chargement: true, d: null } });
-  readOne('/franchises/checklists?shop=' + encodeURIComponent(shop) + '&_cache=120' + (force ? '&rafraichir=1' : '')).then(d => { app._ffClEnCours = null; app.setState({ ffCl: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
+  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
+  if (app._ffClEnCours === cle && !force) { return; }
+  app._ffClEnCours = cle;
+  app.setState({ ffCl: { cle, shop, chargement: true, d: b && b.cle === cle ? b.d : null } });
+  readOne('/franchises/checklists?shop=' + encodeURIComponent(shop) + '&jours=' + jours + '&_cache=120' + (force ? '&rafraichir=1' : '')).then(d => { app._ffClEnCours = null; app.setState({ ffCl: { cle, shop, chargement: false, d: d || { error: 'injoignable' } } }); });
 }
 export function ffMeteoCharge(app, shop, force){
   const b = app.state.ffMeteo;
@@ -357,20 +357,31 @@ export function valsFF(app, common){
   const nZ = (n, u) => n ? n + ' ' + u + (n > 1 ? 's' : '') : '';
   const FERME = { mois: 'mois', trimestre: 'trimestre' };
   const MARK = e => e === 'ok' ? '<b class="ok">✓</b>' : e === 'ko' ? '<b class="ko">✕</b>' : e === 'na' ? '<span class="mu">n/a</span>' : '<span class="mu">·</span>';
-  // Onglet Checklists : chaque type de visite avec son dernier résultat, puis les checklists du jour du panel.
-  const CL = S.ffCl || {}, cl = CL.shop === shop && CL.d && !CL.d.error ? CL.d : null;
+  // Onglet Checklists : rien que l'API du panel (09/10/2026) — les checklists du jour, leurs tâches, la période, la checklist du consultant.
+  const CL = S.ffCl || {}, clJours = String(S.ffClJours || 7), cl = CL.shop === shop && CL.cle === shop + '|' + clJours && CL.d && !CL.d.error ? CL.d : null;
   f.clChargement = onglet === 'checklists' && !!CL.chargement && !cl;
-  f.clIndispo = CL.shop === shop && !CL.chargement && CL.d && !cl ? 'Les checklists ne se lisent pas.' : '';
-  f.checklists = cl ? cl.types.map(t => { const dv = t.derniere;
-    return TU('cl:' + t.code, t.nom, dv ? dv.ok + ' / ' + (dv.total || t.points) : '—', (dv ? 'dernière ' + fmtD(dv.le) + (dv.ko ? ' · ' + dv.ko + ' non conforme' + (dv.ko > 1 ? 's' : '') : '') : 'jamais faite ici') + (t.cadre ? ' · au cadre ' + t.cadre.nb + ' / ' + (FERME[t.cadre.par] || t.cadre.par) : '') + ' · ' + pl(t.points, 'point'), dv ? (dv.ko ? 'ko' : 'ok') : 'mu',
-      (t.modules.length ? t.modules.map(m => '<div class="ff-clm"><b>' + esc(m.nom) + '</b>' + m.points.map(pt => '<div class="ff-clp">' + MARK(pt.etat) + '<span>' + esc(pt.libelle) + (pt.valeur != null ? ' · ' + pt.valeur + ' %' : '') + (pt.note != null ? ' · ' + pt.note + ' / 5' : '') + (pt.commentaire ? ' — <span class="mu">' + esc(pt.commentaire) + '</span>' : '') + '</span></div>').join('') + '</div>').join('') : mu(t.dynamique ? 'Checklist dynamique : elle se compose à la visite (plans ouverts, points non conformes).' : 'Aucun point défini.')) + (dv ? '<div class="mu" style="margin-top:4px">Résultat de la visite du ' + fmtD(dv.le) + ' par ' + esc(dv.consultant) + '.</div>' : ''),
-      { modal: t.historique.length ? M(t.nom + ' · les visites', tab(['Date', 'Consultant', 'Conformes', 'Non conformes', 'N/A', 'Points'], t.historique.map(h => [fmtDJ(h.le), esc(h.consultant), '<b class="ok">' + h.ok + '</b>', h.ko ? '<b class="ko">' + h.ko + '</b>' : '0', String(h.na), String(h.total)]))) : null, lien: go('gestionConsultant', { gcOnglet: 'cadre' }), lienTxt: 'Cadre de visite' }); }) : [];
-  const PN = cl ? cl.panel || {} : {};
-  f.clPanelTitre = 'Checklists du jour · panel' + (PN.date ? ' · ' + fmtDJ(PN.date) : '');
-  f.clPanelMotif = cl && !PN.lu ? (PN.motif || 'le panel ne répond pas') : (cl && !(PN.checklists || []).length ? 'aucune tâche aujourd’hui' : '');
-  f.clPanel = cl && PN.lu ? (PN.checklists || []).map(c => TU('pn:' + c.nom, c.nom, c.faites + ' / ' + c.total, (c.notees ? c.notees + ' notée' + (c.notees > 1 ? 's' : '') : 'rien de noté') + (c.nc ? ' · ' + c.nc + ' non conforme' + (c.nc > 1 ? 's' : '') : ''), c.nc ? 'ko' : (c.faites < c.total ? 'att' : 'ok'),
-    c.taches.map(x => '<div class="ff-clp">' + (x.note != null ? (x.note >= 4 && x.accepte !== false ? '<b class="ok">✓</b>' : '<b class="ko">✕</b>') : (x.fait ? '<b class="att">○</b>' : '<span class="mu">·</span>')) + '<span>' + esc(x.tache) + (x.obligatoire ? ' <span class="mu">obligatoire</span>' : '') + (x.note != null ? ' · ' + x.note + ' / 5' : (x.fait ? ' · faite, à noter' : ' · non rendue')) + (x.comment ? ' — <span class="mu">' + esc(x.comment) + '</span>' : '') + '</span></div>').join(''),
-    { lien: go('suivi'), lienTxt: 'Tâches et contrôles photo' })) : [];
+  f.clIndispo = CL.shop === shop && !CL.chargement && CL.d && CL.d.error ? 'Les checklists ne se lisent pas.' : (cl && !cl.lu ? 'Panel : ' + (cl.motif || 'sans réponse') : '');
+  f.clPeriodes = [['1', 'Aujourd’hui'], ['7', '7 jours'], ['30', '30 jours']].map(([v, nom]) => ({ nom, on: clJours === v, choisir: () => app.setState({ ffClJours: v }) }));
+  const pctC = p => p == null ? 'mu' : (p >= 90 ? 'ok' : p >= 70 ? 'att' : 'ko');
+  const MARQ = t => t.note != null ? (t.note >= 4 && t.accepte !== false ? '<b class="ok">✓</b>' : '<b class="ko">✕</b>') : (t.fait ? '<b class="att">○</b>' : '<span class="mu">·</span>');
+  const heatCl = c => c.jours.length > 1 ? '<div class="ff-heat" style="grid-template-columns:repeat(' + c.jours.length + ',1fr)">' + c.jours.map(j => '<i class="' + (!j.total ? 'x' : (j.faites >= j.total ? '' : (j.faites ? 'p' : 'm'))) + '" title="' + fmtD(j.date) + ' : ' + j.faites + ' / ' + j.total + '"></i>').join('') + '</div>' : '';
+  const ligneT = t => '<div class="ff-clp">' + MARQ(t) + '<span>' + (t.heure ? '<span class="mu">' + esc(t.heure) + '</span> ' : '') + '<b>' + esc(t.nom) + '</b>' + (t.obligatoire ? ' <span class="mu">obligatoire</span>' : '') + (t.photoRequise ? ' <span class="mu">photo</span>' : '')
+    + (t.fait ? ' · faite' + (t.faitLe ? ' à ' + esc(t.faitLe.slice(11, 16)) : '') + (t.faitPar ? ' par ' + esc(t.faitPar) : '') : ' · <span class="ko">non faite</span>')
+    + (t.note != null ? ' · ' + t.note + ' / 5' + (t.accepte === false ? ' refusée' : '') + (t.notePar ? ' par ' + esc(t.notePar) : '') : (t.fait && t.photo ? ' · <span class="att">à noter</span>' : ''))
+    + (t.commentaire ? ' — <span class="mu">' + esc(t.commentaire) + '</span>' : '') + (t.valideLe ? ' · <span class="ok">validée</span>' : '') + '</span></div>';
+  f.clResume = cl && cl.lu ? (() => { const tt = cl.checklists.reduce((a, c) => ({ t: a.t + c.total, f: a.f + c.faites, n: a.n + c.notees, nc: a.nc + c.nc, pt: a.pt + c.periode.total, pf: a.pf + c.periode.faites, om: a.om + c.obligManquees }), { t: 0, f: 0, n: 0, nc: 0, pt: 0, pf: 0, om: 0 });
+    return [['Aujourd’hui', tt.f + ' / ' + tt.t, 'tâches faites', tt.t ? pctC(100 * tt.f / tt.t) : 'mu'], [clJours === '1' ? 'Taux du jour' : 'Sur ' + clJours + ' jours', tt.pt ? Math.round(100 * tt.pf / tt.pt) + ' %' : '—', tt.pt ? tt.pf + ' / ' + tt.pt + ' tâches' : 'pas de relevé', tt.pt ? pctC(100 * tt.pf / tt.pt) : 'mu'],
+      ['Obligatoires', String(tt.om), tt.om ? 'non faites aujourd’hui' : 'toutes faites', tt.om ? 'ko' : 'ok'], ['Notées', String(tt.n), tt.nc ? tt.nc + ' non conforme' + (tt.nc > 1 ? 's' : '') : 'aucune non conforme', tt.nc ? 'ko' : (tt.n ? 'ok' : 'mu')]]; })() : [];
+  f.checklists = cl && cl.lu ? cl.checklists.map(c => TU('cl:' + c.id, c.nom + (c.heure ? ' · ' + c.heure : ''), c.pasAujourdhui ? '—' : c.faites + ' / ' + c.total,
+    (c.pasAujourdhui ? 'pas aujourd’hui' : (c.obligManquees ? c.obligManquees + ' obligatoire' + (c.obligManquees > 1 ? 's' : '') + ' non faite' + (c.obligManquees > 1 ? 's' : '') : 'faites aujourd’hui')) + (c.periode.pct != null && clJours !== '1' ? ' · ' + c.periode.pct + ' % sur ' + clJours + ' j' : '') + (c.nc ? ' · ' + c.nc + ' non conforme' + (c.nc > 1 ? 's' : '') : ''),
+    c.pasAujourdhui ? pctC(c.periode.pct) : (c.nc || c.obligManquees ? 'ko' : pctC(c.total ? 100 * c.faites / c.total : null)),
+    (c.description ? '<div class="mu" style="margin-bottom:4px">' + esc(c.description) + '</div>' : '') + heatCl(c) + (c.taches.length ? c.taches.map(ligneT).join('') : mu('Pas de tâche aujourd’hui.')),
+    { modal: (c.taches.length || c.jours.length) ? M(c.nom, (c.taches.length ? tab(['Heure', 'Tâche', 'Faite', 'Par', 'Note', 'Commentaire', 'Validée'], c.taches.map(t => [esc(t.heure), '<b>' + esc(t.nom) + '</b>' + (t.obligatoire ? '<br><span class="mu">obligatoire</span>' : '') + (t.produit ? '<br><span class="mu">' + esc(t.produit) + '</span>' : ''), t.fait ? '<b class="ok">' + (t.faitLe ? esc(t.faitLe.slice(11, 16)) : 'oui') + '</b>' : '<b class="ko">non</b>', esc(t.faitPar), t.note != null ? MARQ(t) + ' ' + t.note + ' / 5' + (t.notePar ? '<br><span class="mu">' + esc(t.notePar) + '</span>' : '') : (t.fait && t.photo ? '<span class="att">à noter</span>' : '—'), esc(t.commentaire), t.valideLe ? '<span class="ok">' + esc(t.validePar || 'oui') + '</span>' : '—'])) : '')
+      + (c.jours.length > 1 ? '<h3 style="margin-top:14px">Jour par jour</h3>' + tab(['Jour', 'Faites', 'Total', 'Taux'], c.jours.slice().reverse().map(j => [fmtDJ(j.date), String(j.faites), String(j.total), j.total ? '<b class="' + pctC(100 * j.faites / j.total) + '">' + Math.round(100 * j.faites / j.total) + ' %</b>' : '—'])) : '')) : null, lien: go('suivi'), lienTxt: 'Contrôle des tâches' })) : [];
+  const KC = cl && cl.consultant ? cl.consultant : null;
+  f.clConsultant = KC ? { titre: 'Ma checklist de consultant · panel' + (KC.poste ? ' · ' + KC.poste : ''), vide: !KC.taches.length,
+    html: KC.taches.map(t => '<div class="ff-clp">' + (t.fait ? '<b class="ok">✓</b>' : '<span class="mu">○</span>') + '<span>' + (t.heure ? '<span class="mu">' + esc(t.heure) + '</span> ' : '') + '<b>' + esc(t.nom) + '</b>' + ([t.section, t.categorie].filter(Boolean).length ? ' <span class="mu">· ' + esc([t.section, t.categorie].filter(Boolean).join(' › ')) + '</span>' : '') + (t.obligatoire ? ' · <span class="mu">obligatoire</span>' : '') + (t.photoRequise ? ' · <span class="mu">photo</span>' : '') + '</span></div>').join('') } : null;
+  f.clSource = cl && cl.lu ? 'API du panel · relu ' + (cl.date ? fmtDJ(cl.date) : '') : '';
   // Onglet Météo : le formulaire, puis les météos passées.
   const MT = S.ffMeteo || {}, mt = MT.shop === shop && MT.d && !MT.d.error ? MT.d : null;
   const FM = S.ffMeteoForm && S.ffMeteoForm.shop === shop ? S.ffMeteoForm : { shop, taches: true };

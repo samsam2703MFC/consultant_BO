@@ -140,10 +140,12 @@ export function tplFF(c, x){
   const carte = (h, corps, style) => `<div class="mko-carte"${style ? ` style="${style}"` : ''}><div class="mko-corps"><h2 class="ff-h2">${esc(h)}</h2>${corps}</div></div>`;
   if (f.onglet === 'tableau') { return page(tableau); }
   if (f.onglet === 'checklists') {
-    if (f.clChargement) { return page(titre + attente('Lecture des checklists de ' + f.shopNom + '…')); }
+    const per = `<div class="cx-vues ff-per">${f.clPeriodes.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+    if (f.clChargement) { return page(titre + attente('Lecture des checklists de ' + f.shopNom + ' dans le panel…')); }
     if (f.clIndispo) { return page(titre + attente(f.clIndispo)); }
-    return page(titre + carte('Checklists de visite', `<div class="ff-grille">${f.checklists.map(tuile).join('')}</div>`)
-      + carte(f.clPanelTitre, (f.clPanelMotif ? `<div class="mko-mu">${esc(f.clPanelMotif)}</div>` : '') + `<div class="ff-grille">${f.clPanel.map(tuile).join('')}</div>`, 'margin-top:12px'));
+    const resume = f.clResume.length ? `<div class="ff-res">${f.clResume.map(k => `<div class="${k[3]}"><small>${esc(k[0])}</small><b>${esc(k[1])}</b><span>${esc(k[2])}</span></div>`).join('')}</div>` : '';
+    return page(titre + carte('Checklists du magasin', `<div class="ff-clh">${per}<span class="mko-mu">${esc(f.clSource)}</span></div>${resume}<div class="ff-grille">${f.checklists.map(tuile).join('')}</div>${f.checklists.length ? '' : '<div class="mko-mu">Aucune checklist dans le panel pour ce magasin.</div>'}`)
+      + (f.clConsultant ? carte(f.clConsultant.titre, f.clConsultant.vide ? '<div class="mko-mu">Aucune tâche au cadre opérationnel de votre poste aujourd’hui.</div>' : `<div class="ff-kd" style="border:none;padding:0">${f.clConsultant.html}</div><div class="mko-mu" style="margin-top:6px">Le cadre opérationnel du poste, non rattaché à un magasin.</div>`, 'margin-top:12px') : ''));
   }
   if (f.onglet === 'meteo') {
     const M = f.meteo;

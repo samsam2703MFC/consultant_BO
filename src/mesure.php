@@ -1183,6 +1183,9 @@ function ep_panel_sonde_consultant(): array
     foreach ($suite ? PanelApi::getParallele($suite) : [] as $nom => $r) {
         $out['routes'][$nom] = ['chemin' => $suite[$nom], 'reponse' => $r === null ? 'aucune réponse' : $apercu($r)];
     }
+    // La période : la forme d'une checklist dans un jour.
+    $per = $lus['shop-checklists-periode'] ?? null;
+    if (is_array($per) && is_array($per['days'][0] ?? null)) { $out['routes']['shop-checklists-periode']['jour'] = $apercu($per['days'][0]['checklists'] ?? []); }
     return $out;
 }
 
