@@ -2795,3 +2795,13 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Activation/désactivation d'une règle de contrôle | `PUT /parametres/fbControle` |
 
 Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Journal en dépend).
+
+### `GET /analyse/pnl/mois` — le P&L mois par mois d'un magasin, depuis le P&L quotidien du panel (09/10/2026)
+
+`GET /analyse/pnl/mois?shop=4&du=2026-02&au=2026-10[&tous=1][&jours=1][&rafraichir=1]`. Le panel ne sert le P&L
+mensuel que pour le mois courant, mais son P&L quotidien (`/consultant/shops/{id}/pnl/daily?date_from&date_to`)
+sert le passé : un appel par mois et par magasin (`tous=1` : chaque magasin actif), en parallèle, agrégé en
+`ca`, `matiere`, `labour`, `overhead`, `resultat` avec leurs parts du CA, les jours servis et les jours avec ventes.
+Mesuré le 09/10/2026 : `material` et `result` sont à zéro sur presque tous les jours (le panel ne porte pas la
+matière, cf. ticket T5a) ; `labour` et `overhead` sont ce que le franchisé encode. Les mois clos se gardent 24 h
+(`pnlMois:<shop>:<mois>`), `jours=1` joint le détail par jour. Né pour le dossier investisseur de Halle.
