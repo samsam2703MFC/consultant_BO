@@ -273,14 +273,33 @@ export function ffCharge(app, shop, force){
   app.setState({ ff: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
   readOne('/franchises/fiche?shop=' + encodeURIComponent(shop) + '&_cache=300' + (force ? '&rafraichir=1' : '')).then(d => { app._ffEnCours = null; app.setState({ ff: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
 }
-export function ffClCharge(app, shop, force){
-  const b = app.state.ffCl; const jours = String(app.state.ffClJours || 7); const cle = shop + '|' + jours;
-  if (!shop) { return; }
+export function ffAgCharge(app, force){
+  const m0 = auj().slice(0, 7), m1 = decaleMois(m0, 1), cle = m0, b = app.state.ffAg;
   if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
-  if (app._ffClEnCours === cle && !force) { return; }
-  app._ffClEnCours = cle;
-  app.setState({ ffCl: { cle, shop, chargement: true, d: b && b.cle === cle ? b.d : null } });
-  readOne('/franchises/checklists?shop=' + encodeURIComponent(shop) + '&jours=' + jours + '&_cache=120' + (force ? '&rafraichir=1' : '')).then(d => { app._ffClEnCours = null; app.setState({ ffCl: { cle, shop, chargement: false, d: d || { error: 'injoignable' } } }); });
+  if (app._ffAgEnCours === cle && !force) { return; }
+  app._ffAgEnCours = cle;
+  app.setState({ ffAg: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
+  const lire = m => readOne('/consultants/gestion?consultant=tous&mois=' + m + (force ? '&rafraichir=1' : '')).then(d => d && !d.error ? d : null);
+  Promise.all([lire(m0), +auj().slice(8) >= 15 ? lire(m1) : Promise.resolve(null)]).then(([a, c]) => { app._ffAgEnCours = null; app.setState({ ffAg: { cle, chargement: false, d: a ? { visites: a.visites.concat(c ? c.visites : []), lu: a.lu } : { error: 'injoignable' } } }); });
+}
+export function ffCkCharge(app, cons, shop, force){
+  const cle = (cons || '') + '|' + (shop || ''), b = app.state.ffCk;
+  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
+  if (app._ffCkEnCours === cle && !force) { return; }
+  app._ffCkEnCours = cle;
+  app.setState({ ffCk: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
+  readOne('/consultants/checklists?consultant=' + encodeURIComponent(cons || '') + '&shop=' + encodeURIComponent(shop || '') + '&_t=' + Date.now()).then(d => { app._ffCkEnCours = null; app.setState({ ffCk: { cle, chargement: false, d: d || { error: 'injoignable' } } }); });
+}
+function ffCkSauver(app, shop, ck, sel, F, panel){
+  const taches = sel.taches.filter(t => F.taches[t.id] && F.taches[t.id].etat).map(t => ({ task_id: t.id, nom: t.nom, etat: F.taches[t.id].etat, commentaire: F.taches[t.id].commentaire || '' }));
+  if (!taches.length) { app.setState({ ffCkMsg: { txt: 'Rien à enregistrer : choisissez Fait, Pas fait ou N/A pour au moins une tâche.', ko: true } }); return; }
+  const cons = (ck.consultants || []).find(c => c.id === ck.choisi) || {};
+  app.setState({ ffCkBusy: true, ffCkMsg: null });
+  app.api('POST', '/consultants/checklists', { shop, consultant: ck.choisi, consultant_nom: cons.nom || '', moi: !!ck.moi, checklist_id: sel.id, checklist_nom: sel.nom, panel: !!panel, taches, qui: 'Cockpit' }).then(r => {
+    const ok = !!(r && r.ok !== false && !r.error);
+    app.setState({ ffCkBusy: false, ffCkMsg: { ko: !ok, txt: ok ? 'Checklist enregistrée · ' + pl(r.enregistrees, 'tâche') + (r.panelEnvoyees ? ' · ' + r.panelEnvoyees + ' envoyée' + (r.panelEnvoyees > 1 ? 's' : '') + ' au panel' : '') + (r.panelRefusees ? ' · ' + r.panelRefusees + ' refusée' + (r.panelRefusees > 1 ? 's' : '') + ' par le panel' : '') : 'Enregistrement refusé : ' + ((r && r.error) || 'sans réponse') } });
+    if (ok) { ffCkCharge(app, ck.choisi, shop, true); }
+  });
 }
 export function ffMeteoCharge(app, shop, force){
   const b = app.state.ffMeteo;
@@ -318,14 +337,18 @@ export function valsFF(app, common){
   const TB = S.ffTable || {}, T = TB.d && !TB.d.error ? TB.d : null;
   const mags = T ? T.magasins : app.open().map(s => ({ id: String(s.id), court: s.nom.split(' - ').pop(), nom: s.nom }));
   const shop = String(S.ffShop || (mags[0] || {}).id || '');
-  const onglet = ({ fiche: 'sante', journal: 'sante' })[S.ffOnglet] || S.ffOnglet || 'sante';
-  if (shop) { ffCharge(app, shop, false); if (onglet === 'checklists') { ffClCharge(app, shop, false); } if (onglet === 'sante' || onglet === 'meteo') { ffMeteoCharge(app, shop, false); } }
+  const onglet = ({ fiche: 'sante', journal: 'sante', tableau: 'reseau', checklists: 'checklist' })[S.ffOnglet] || S.ffOnglet || 'agenda';
+  const choisi = !!S.ffShopChoisi;
+  if (onglet === 'agenda') { ffAgCharge(app, false); }
+  if (shop) { ffCharge(app, shop, false); if (onglet === 'checklist') { ffCkCharge(app, S.ffCkCons || '', choisi ? shop : '', false); } if (onglet === 'sante' || onglet === 'meteo') { ffMeteoCharge(app, shop, false); } }
   const B = S.ff || {}, d = B.shop === shop && B.d && !B.d.error ? B.d : null;
   const go = (screen, extra) => () => app.setState(Object.assign({ screen }, extra || {}));
-  const f = { onglet, onglets: [['sante', 'Santé du magasin'], ['checklists', 'Checklists'], ['meteo', 'Météo du franchisé'], ['tableau', 'Les franchisés']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) })),
-    magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value }),
+  const ETAPES = [['agenda', 'Agenda'], ['checklist', 'Checklist'], ['sante', 'Santé du magasin'], ['reseau', 'Benchmark réseau'], ['meteo', 'Fin de visite · météo']].map(([v, nom], i) => ({ v, nom: (i + 1) + ' · ' + nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) }));
+  const f = { onglet, onglets: ETAPES,
+    magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value, ffShopChoisi: true, ffCkSel: null }),
+    choisi, aChoisir: !choisi && ['checklist', 'sante', 'meteo'].includes(onglet), etapes: null,
     menu: () => app.setState({ railOuvert: !S.railOuvert }),
-    rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); if (onglet === 'checklists') { ffClCharge(app, shop, true); } ffMeteoCharge(app, shop, true); },
+    rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); if (onglet === 'agenda') { ffAgCharge(app, true); } if (onglet === 'checklist') { ffCkCharge(app, S.ffCkCons || '', choisi ? shop : '', true); } ffMeteoCharge(app, shop, true); },
     pageFranchise: shop ? racine() + 'dashboard/suivi.html?shop=' + encodeURIComponent(shop) : '',
     shopNom: (mags.find(m => String(m.id) === shop) || {}).court || shop, tableau: null, tableauChargement: !!TB.chargement && !T,
     chargement: !!B.chargement && !d, indispo: !B.chargement && B.d && !d ? 'Lecture impossible — API injoignable.' : '', kpis: [], journalier: [], terrain: [], journal: [], sous: '' };
@@ -357,31 +380,46 @@ export function valsFF(app, common){
   const nZ = (n, u) => n ? n + ' ' + u + (n > 1 ? 's' : '') : '';
   const FERME = { mois: 'mois', trimestre: 'trimestre' };
   const MARK = e => e === 'ok' ? '<b class="ok">✓</b>' : e === 'ko' ? '<b class="ko">✕</b>' : e === 'na' ? '<span class="mu">n/a</span>' : '<span class="mu">·</span>';
-  // Onglet Checklists : rien que l'API du panel (09/10/2026) — les checklists du jour, leurs tâches, la période, la checklist du consultant.
-  const CL = S.ffCl || {}, clJours = String(S.ffClJours || 7), cl = CL.shop === shop && CL.cle === shop + '|' + clJours && CL.d && !CL.d.error ? CL.d : null;
-  f.clChargement = onglet === 'checklists' && !!CL.chargement && !cl;
-  f.clIndispo = CL.shop === shop && !CL.chargement && CL.d && CL.d.error ? 'Les checklists ne se lisent pas.' : (cl && !cl.lu ? 'Panel : ' + (cl.motif || 'sans réponse') : '');
-  f.clPeriodes = [['1', 'Aujourd’hui'], ['7', '7 jours'], ['30', '30 jours']].map(([v, nom]) => ({ nom, on: clJours === v, choisir: () => app.setState({ ffClJours: v }) }));
-  const pctC = p => p == null ? 'mu' : (p >= 90 ? 'ok' : p >= 70 ? 'att' : 'ko');
-  const MARQ = t => t.note != null ? (t.note >= 4 && t.accepte !== false ? '<b class="ok">✓</b>' : '<b class="ko">✕</b>') : (t.fait ? '<b class="att">○</b>' : '<span class="mu">·</span>');
-  const heatCl = c => c.jours.length > 1 ? '<div class="ff-heat" style="grid-template-columns:repeat(' + c.jours.length + ',1fr)">' + c.jours.map(j => '<i class="' + (!j.total ? 'x' : (j.faites >= j.total ? '' : (j.faites ? 'p' : 'm'))) + '" title="' + fmtD(j.date) + ' : ' + j.faites + ' / ' + j.total + '"></i>').join('') + '</div>' : '';
-  const ligneT = t => '<div class="ff-clp">' + MARQ(t) + '<span>' + (t.heure ? '<span class="mu">' + esc(t.heure) + '</span> ' : '') + '<b>' + esc(t.nom) + '</b>' + (t.obligatoire ? ' <span class="mu">obligatoire</span>' : '') + (t.photoRequise ? ' <span class="mu">photo</span>' : '')
-    + (t.fait ? ' · faite' + (t.faitLe ? ' à ' + esc(t.faitLe.slice(11, 16)) : '') + (t.faitPar ? ' par ' + esc(t.faitPar) : '') : ' · <span class="ko">non faite</span>')
-    + (t.note != null ? ' · ' + t.note + ' / 5' + (t.accepte === false ? ' refusée' : '') + (t.notePar ? ' par ' + esc(t.notePar) : '') : (t.fait && t.photo ? ' · <span class="att">à noter</span>' : ''))
-    + (t.commentaire ? ' — <span class="mu">' + esc(t.commentaire) + '</span>' : '') + (t.valideLe ? ' · <span class="ok">validée</span>' : '') + '</span></div>';
-  f.clResume = cl && cl.lu ? (() => { const tt = cl.checklists.reduce((a, c) => ({ t: a.t + c.total, f: a.f + c.faites, n: a.n + c.notees, nc: a.nc + c.nc, pt: a.pt + c.periode.total, pf: a.pf + c.periode.faites, om: a.om + c.obligManquees }), { t: 0, f: 0, n: 0, nc: 0, pt: 0, pf: 0, om: 0 });
-    return [['Aujourd’hui', tt.f + ' / ' + tt.t, 'tâches faites', tt.t ? pctC(100 * tt.f / tt.t) : 'mu'], [clJours === '1' ? 'Taux du jour' : 'Sur ' + clJours + ' jours', tt.pt ? Math.round(100 * tt.pf / tt.pt) + ' %' : '—', tt.pt ? tt.pf + ' / ' + tt.pt + ' tâches' : 'pas de relevé', tt.pt ? pctC(100 * tt.pf / tt.pt) : 'mu'],
-      ['Obligatoires', String(tt.om), tt.om ? 'non faites aujourd’hui' : 'toutes faites', tt.om ? 'ko' : 'ok'], ['Notées', String(tt.n), tt.nc ? tt.nc + ' non conforme' + (tt.nc > 1 ? 's' : '') : 'aucune non conforme', tt.nc ? 'ko' : (tt.n ? 'ok' : 'mu')]]; })() : [];
-  f.checklists = cl && cl.lu ? cl.checklists.map(c => TU('cl:' + c.id, c.nom + (c.heure ? ' · ' + c.heure : ''), c.pasAujourdhui ? '—' : c.faites + ' / ' + c.total,
-    (c.pasAujourdhui ? 'pas aujourd’hui' : (c.obligManquees ? c.obligManquees + ' obligatoire' + (c.obligManquees > 1 ? 's' : '') + ' non faite' + (c.obligManquees > 1 ? 's' : '') : 'faites aujourd’hui')) + (c.periode.pct != null && clJours !== '1' ? ' · ' + c.periode.pct + ' % sur ' + clJours + ' j' : '') + (c.nc ? ' · ' + c.nc + ' non conforme' + (c.nc > 1 ? 's' : '') : ''),
-    c.pasAujourdhui ? pctC(c.periode.pct) : (c.nc || c.obligManquees ? 'ko' : pctC(c.total ? 100 * c.faites / c.total : null)),
-    (c.description ? '<div class="mu" style="margin-bottom:4px">' + esc(c.description) + '</div>' : '') + heatCl(c) + (c.taches.length ? c.taches.map(ligneT).join('') : mu('Pas de tâche aujourd’hui.')),
-    { modal: (c.taches.length || c.jours.length) ? M(c.nom, (c.taches.length ? tab(['Heure', 'Tâche', 'Faite', 'Par', 'Note', 'Commentaire', 'Validée'], c.taches.map(t => [esc(t.heure), '<b>' + esc(t.nom) + '</b>' + (t.obligatoire ? '<br><span class="mu">obligatoire</span>' : '') + (t.produit ? '<br><span class="mu">' + esc(t.produit) + '</span>' : ''), t.fait ? '<b class="ok">' + (t.faitLe ? esc(t.faitLe.slice(11, 16)) : 'oui') + '</b>' : '<b class="ko">non</b>', esc(t.faitPar), t.note != null ? MARQ(t) + ' ' + t.note + ' / 5' + (t.notePar ? '<br><span class="mu">' + esc(t.notePar) + '</span>' : '') : (t.fait && t.photo ? '<span class="att">à noter</span>' : '—'), esc(t.commentaire), t.valideLe ? '<span class="ok">' + esc(t.validePar || 'oui') + '</span>' : '—'])) : '')
-      + (c.jours.length > 1 ? '<h3 style="margin-top:14px">Jour par jour</h3>' + tab(['Jour', 'Faites', 'Total', 'Taux'], c.jours.slice().reverse().map(j => [fmtDJ(j.date), String(j.faites), String(j.total), j.total ? '<b class="' + pctC(100 * j.faites / j.total) + '">' + Math.round(100 * j.faites / j.total) + ' %</b>' : '—'])) : '')) : null, lien: go('suivi'), lienTxt: 'Contrôle des tâches' })) : [];
-  const KC = cl && cl.consultant ? cl.consultant : null;
-  f.clConsultant = KC ? { titre: 'Ma checklist de consultant · panel' + (KC.poste ? ' · ' + KC.poste : ''), vide: !KC.taches.length,
-    html: KC.taches.map(t => '<div class="ff-clp">' + (t.fait ? '<b class="ok">✓</b>' : '<span class="mu">○</span>') + '<span>' + (t.heure ? '<span class="mu">' + esc(t.heure) + '</span> ' : '') + '<b>' + esc(t.nom) + '</b>' + ([t.section, t.categorie].filter(Boolean).length ? ' <span class="mu">· ' + esc([t.section, t.categorie].filter(Boolean).join(' › ')) + '</span>' : '') + (t.obligatoire ? ' · <span class="mu">obligatoire</span>' : '') + (t.photoRequise ? ' · <span class="mu">photo</span>' : '') + '</span></div>').join('') } : null;
-  f.clSource = cl && cl.lu ? 'API du panel · relu ' + (cl.date ? fmtDJ(cl.date) : '') : '';
+  // Étape suivante, étape précédente : la visite se lit dans l'ordre.
+  const iE = ETAPES.findIndex(e => e.on);
+  f.etapes = { prec: iE > 0 ? { nom: ETAPES[iE - 1].nom, aller: ETAPES[iE - 1].choisir } : null, suiv: iE < ETAPES.length - 1 ? { nom: ETAPES[iE + 1].nom, aller: ETAPES[iE + 1].choisir } : null };
+  // 1. Agenda : les visites des 14 prochains jours, et le choix du magasin.
+  const choisirMag = (id, suite) => () => app.setState({ ffShop: String(id), ffShopChoisi: true, ffOnglet: suite || 'checklist', ffCkSel: null, ffCkMsg: null });
+  const AG = S.ffAg || {}, ag = AG.d && !AG.d.error ? AG.d : null;
+  const fin14 = plusJours(auj0, 13);
+  const vis = ag ? ag.visites.filter(v => v.statut !== 'annulee' && v.prevu_le >= auj0 && v.prevu_le <= fin14).sort((x, y) => (x.prevu_le + x.debut_h) < (y.prevu_le + y.debut_h) ? -1 : 1) : [];
+  const parJ = {}; vis.forEach(v => { (parJ[v.prevu_le] = parJ[v.prevu_le] || []).push(v); });
+  f.agenda = { chargement: !!AG.chargement && !ag, indispo: AG.d && AG.d.error ? 'L’agenda ne se lit pas.' : '',
+    jours: Object.keys(parJ).sort().map(dte => ({ lib: dte === auj0 ? 'Aujourd’hui · ' + fmtDJ(dte) : fmtDJ(dte), auj: dte === auj0,
+      visites: parJ[dte].map(v => ({ heure: v.debut_h, magasin: v.magasin || ('Magasin ' + v.shop), type: v.typeNom || '', consultant: v.consultantNom || '', statut: (ST[v.statut] || ['', ''])[0], cls: (ST[v.statut] || ['', ''])[1], mienne: !!v.mienne, choisir: choisirMag(v.shop) })) })),
+    magasins: mags.map(m => { const r = T ? T.magasins.find(x => String(x.id) === String(m.id)) : null; const t = r ? r.terrain : null;
+      return { id: m.id, court: m.court, feu: r ? r.feu : '', on: choisi && String(m.id) === shop, sous: t ? (t.derniereVisite ? 'dernière ' + fmtD(t.derniereVisite.le) : 'jamais visité') + (t.prochaineVisite ? ' · prochaine ' + fmtD(t.prochaineVisite.le) : '') : '', choisir: choisirMag(m.id) }; }),
+    planifier: go('gestionConsultant', { gcOnglet: 'planning' }) };
+  // 2. Checklist : les checklists du consultant (API du panel), puis la liste des tâches et le formulaire.
+  const CK = S.ffCk || {}, ck = CK.d && !CK.d.error && CK.cle === (S.ffCkCons || '') + '|' + (choisi ? shop : '') ? CK.d : null;
+  const SA = ck && ck.saisies ? ck.saisies : {};
+  f.ck = { chargement: !!CK.chargement && !ck, indispo: CK.d && CK.d.error ? 'La checklist ne se lit pas.' : (ck && !ck.lu ? 'Panel : ' + (ck.motif || 'sans réponse') : ''), consultants: [], liste: [], sel: null, busy: !!S.ffCkBusy, msg: S.ffCkMsg || null, source: ck && ck.lu ? 'API du panel · ' + fmtDJ(ck.date) : '' };
+  if (ck && ck.lu) {
+    f.ck.consultants = ck.consultants.map(c => ({ nom: c.nom + (c.moi ? ' · moi' : ''), sous: [c.poste, c.niveau].filter(Boolean).join(' · '), on: c.id === ck.choisi, choisir: () => app.setState({ ffCkCons: String(c.id), ffCkSel: null, ffCkMsg: null }) }));
+    const remplies = cl => cl.taches.filter(t => SA[t.id]).length;
+    f.ck.liste = ck.checklists.map(cl => ({ id: cl.id, nom: cl.nom, sous: [cl.poste, cl.heure].filter(Boolean).join(' · '), n: cl.taches.length, remplies: remplies(cl), oblig: cl.taches.filter(t => t.obligatoire).length, choisir: () => app.setState({ ffCkSel: String(cl.id), ffCkMsg: null }) }));
+    const sel = S.ffCkSel != null ? ck.checklists.find(cl => String(cl.id) === String(S.ffCkSel)) : null;
+    if (sel) {
+      const cleF = ck.choisi + '|' + shop + '|' + sel.id;
+      if (!app.state.ffCkForm || app.state.ffCkForm.cle !== cleF) { const tt = {}; sel.taches.forEach(t => { if (SA[t.id]) { tt[t.id] = { etat: SA[t.id].etat, commentaire: SA[t.id].commentaire || '' }; } }); app.state.ffCkForm = { cle: cleF, taches: tt, panel: true }; }
+      const F = app.state.ffCkForm;
+      const tF = id => (F.taches[id] = F.taches[id] || { etat: '', commentaire: '' });
+      f.ck.sel = { nom: sel.nom, description: sel.description, moi: !!ck.moi, panel: F.panel !== false, setPanel: e => { F.panel = !!e.target.checked; app.setState({}); },
+        retour: () => app.setState({ ffCkSel: null, ffCkMsg: null }), enregistrer: () => ffCkSauver(app, shop, ck, sel, F, F.panel !== false && ck.moi),
+        faites: sel.taches.filter(t => (F.taches[t.id] || {}).etat).length,
+        taches: sel.taches.map(t => { const e = (F.taches[t.id] || {}).etat || ''; const sa = SA[t.id];
+          return { id: t.id, nom: t.nom, description: t.description || t.note || '', groupe: [t.section, t.categorie, t.sousCategorie].filter(Boolean).join(' › '),
+            badges: [t.obligatoire ? 'obligatoire' : '', t.photoRequise ? 'photo requise' : '', t.priorite != null ? 'priorité ' + t.priorite : '', t.heure ? t.heure : '', t.faitPanel ? 'fait dans le panel' : ''].filter(Boolean),
+            choix: [['fait', 'Fait'], ['pas_fait', 'Pas fait'], ['na', 'N/A']].map(([v, nom]) => ({ v, nom, on: e === v, choisir: () => { tF(t.id).etat = e === v ? '' : v; app.setState({ ffCkMsg: null }); } })),
+            commentaire: (F.taches[t.id] || {}).commentaire || '', setCom: ev => { tF(t.id).commentaire = ev.target.value; },
+            deja: sa ? 'enregistrée à ' + sa.le + (sa.panel ? ' · panel ' + sa.panel : '') : '' }; }) };
+    }
+  }
   // Onglet Météo : le formulaire, puis les météos passées.
   const MT = S.ffMeteo || {}, mt = MT.shop === shop && MT.d && !MT.d.error ? MT.d : null;
   const FM = S.ffMeteoForm && S.ffMeteoForm.shop === shop ? S.ffMeteoForm : { shop, taches: true };
