@@ -347,7 +347,7 @@ function ep_exploitation_invendus_sonde(): array
         $cands = [];
         foreach (array_slice(array_filter(array_map('trim', explode(',', $extra))), 0, 30) as $e) {
             // Produits, stock, production, périodes de vente : jamais un client ni un employé.
-            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day|statistics/production-planning|product-availability-periods)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|admin/sales-dayparts[A-Za-z0-9_\-/]*|franchisee-shop/\d+/client-orders/\d{4}-\d{2}-\d{2}/products|client-orders?/\d+(/products)?|shops/production-areas[A-Za-z0-9_\-/]*|production-areas[A-Za-z0-9_\-/]*|(recipe-)?preparation-types[A-Za-z0-9_\-/]*|product-availability-periods[A-Za-z0-9_\-/]*|products/\d+/availability-periods|(\.\./){0,3}(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.]*)?$#', $e)) { $cands[] = $e; }
+            if (preg_match('#^/(shops/\d+/(products|stock|inventory|movements|product-movements|productions?|transfers|closings?|waste|product-waste|reports?|day-end|end-of-day|statistics/production-planning|product-availability-periods)[A-Za-z0-9_\-/.]*|[a-z\-]*waste[a-z\-/]*|admin/sales-dayparts[A-Za-z0-9_\-/]*|franchisee-shop/\d+/client-orders/\d{4}-\d{2}-\d{2}/products|client-orders?/\d+(/products)?|shops/production-areas[A-Za-z0-9_\-/]*|production-areas[A-Za-z0-9_\-/]*|(recipe-)?preparation-types[A-Za-z0-9_\-/]*|product-availability-periods[A-Za-z0-9_\-/]*|products/\d+/availability-periods|(\.\./){0,3}(docs?|api-docs|openapi|swagger|redoc|documentation|schema)[A-Za-z0-9_\-/.]*|consultant/shops(/\d+)?/(products|product-movements|movements|waste|evidences?|pnl|statistics)[A-Za-z0-9_\-/.]*|(product-)?movements[A-Za-z0-9_\-/.]*|evidences?[A-Za-z0-9_\-/.]*|products/(evidences?|movements|waste)[A-Za-z0-9_\-/.]*)(\?[A-Za-z0-9_=&\-%.,]*)?$#', $e)) { $cands[] = $e; }
         }
     }
     // `texte` : une page lue telle quelle (documentation) ; `spec` : un document OpenAPI dont on liste les chemins.
@@ -382,6 +382,29 @@ function ep_exploitation_invendus_sonde(): array
                 'listes' => array_map(static fn ($v) => ['liste' => count($v), 'premier' => $v[0] ?? null], array_filter($b, static fn ($v) => is_array($v) && array_is_list($v)))]; }
         } elseif ($b !== null) { $ap = ['brut' => mb_substr((string) $b, 0, 300)]; }
         $out['candidats'][] = ['chemin' => $p, 'code' => $r['code'], 'erreur' => $r['erreur'] !== null ? mb_substr((string) $r['erreur'], 0, 200) : null, 'apercu' => invScrub($ap)];
+    }
+    // `tables=1` : les tables de la base partagée qui parlent de mouvements, de pertes ou de caisse — leur
+    // nom, leur taille estimée, leurs colonnes, leur dernière date. Rien d'autre qu'information_schema et un MAX().
+    if (!empty($_GET['tables'])) {
+        $out['tables'] = [];
+        try {
+            $ts = Db::rows("SELECT TABLE_NAME n, TABLE_ROWS lignes, UPDATE_TIME maj, CREATE_TIME cree FROM information_schema.TABLES
+                             WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%movement%' OR TABLE_NAME LIKE '%waste%' OR TABLE_NAME LIKE '%evidence%' OR TABLE_NAME LIKE '%transaction%'
+                                OR TABLE_NAME LIKE '%receipt%' OR TABLE_NAME LIKE '%ticket%' OR TABLE_NAME LIKE '%sale%' OR TABLE_NAME LIKE '%pos%' OR TABLE_NAME LIKE '%stock%' OR TABLE_NAME LIKE '%production%')
+                             ORDER BY TABLE_NAME");
+            foreach ($ts as $t) {
+                $n = (string) $t['n'];
+                $e = ['table' => $n, 'lignes' => $t['lignes'] === null ? null : (int) $t['lignes'], 'maj' => $t['maj'], 'cree' => $t['cree'], 'colonnes' => [], 'derniere' => null];
+                try {
+                    $cols = array_map(static fn ($c) => (string) $c['COLUMN_NAME'], Db::rows('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION', [$n]));
+                    $e['colonnes'] = array_slice($cols, 0, 40);
+                    foreach (['created_at', 'insert_timestamp', 'updated_at', 'date', 'created', 'timestamp'] as $c) {
+                        if (in_array($c, $cols, true)) { $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(`' . $c . '`) d FROM `' . $n . '`'); $e['derniere'] = [$c, $r['d'] ?? null]; break; }
+                    }
+                } catch (Throwable $ex) { $e['erreur'] = 'colonnes illisibles'; }
+                $out['tables'][] = $e;
+            }
+        } catch (Throwable $ex) { $out['tablesErreur'] = 'information_schema indisponible'; }
     }
     return $out;
 }
