@@ -431,6 +431,8 @@ function route(string $method, string $path): mixed
             $path === '/consultants/gestion'           => ep_consultants_gestion(),
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
+            $path === '/franchises/checklists'         => ep_franchises_checklists(),
+            $path === '/franchises/meteo'              => ep_franchises_meteo(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/referentiels/facebook-regles'   => ep_fb_regles(),
@@ -655,6 +657,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/visites') { return wr_visites_post(); }
     if ($method === 'PUT' && $path === '/visites/cadre') { return wr_visites_cadre_put(); }
     if ($method === 'POST' && $path === '/consultants/taches') { return wr_consultants_tache(); }
+    if ($method === 'POST' && $path === '/franchises/meteo') { return wr_franchises_meteo(); }
     if ($method === 'PUT' && preg_match('#^/consultants/taches/([\w-]+)$#', $path, $m)) { return wr_consultants_tache_put($m[1]); }
     if ($method === 'PUT' && $path === '/visites/reglages') { return wr_visites_reglages_put(); }
     if ($method === 'POST' && $path === '/visites/tick') { return wr_visites_tick(); }

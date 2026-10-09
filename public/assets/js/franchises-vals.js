@@ -273,25 +273,64 @@ export function ffCharge(app, shop, force){
   app.setState({ ff: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
   readOne('/franchises/fiche?shop=' + encodeURIComponent(shop) + '&_cache=300' + (force ? '&rafraichir=1' : '')).then(d => { app._ffEnCours = null; app.setState({ ff: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
 }
+export function ffClCharge(app, shop, force){
+  const b = app.state.ffCl;
+  if (!shop) { return; }
+  if (!force && b && b.shop === shop && (b.d || b.chargement)) { return; }
+  if (app._ffClEnCours === shop && !force) { return; }
+  app._ffClEnCours = shop;
+  app.setState({ ffCl: { shop, chargement: true, d: null } });
+  readOne('/franchises/checklists?shop=' + encodeURIComponent(shop) + '&_cache=120' + (force ? '&rafraichir=1' : '')).then(d => { app._ffClEnCours = null; app.setState({ ffCl: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
+}
+export function ffMeteoCharge(app, shop, force){
+  const b = app.state.ffMeteo;
+  if (!shop) { return; }
+  if (!force && b && b.shop === shop && (b.d || b.chargement)) { return; }
+  if (app._ffMeteoEnCours === shop && !force) { return; }
+  app._ffMeteoEnCours = shop;
+  app.setState({ ffMeteo: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
+  readOne('/franchises/meteo?shop=' + encodeURIComponent(shop) + '&_t=' + Date.now()).then(d => { app._ffMeteoEnCours = null; app.setState({ ffMeteo: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
+}
+const METEO_I = { 1: '⛈️', 2: '🌧️', 3: '☁️', 4: '🌤️', 5: '☀️' };
+const METEO_L = { 1: 'orage', 2: 'pluie', 3: 'nuageux', 4: 'éclaircies', 5: 'soleil' };
+const METEO_K = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
+const METEO_T = [['envies', 'Ses envies, ses projets', 'ouvrir le dimanche, lancer les plateaux traiteur…'], ['demandes', 'Ses demandes', 'une par ligne : chacune devient une tâche'], ['inquietudes', 'Ses inquiétudes, ce qui bloque', 'personnel, travaux, trésorerie…'], ['note', 'Ce que j’en retiens', 'pour le consultant seulement']];
+const mCls = v => v == null ? 'mu' : (v >= 4 ? 'ok' : v === 3 ? 'att' : 'ko');
+function ffMeteoSauver(app, shop){
+  const F = app.state.ffMeteoForm && app.state.ffMeteoForm.shop === shop ? app.state.ffMeteoForm : { shop };
+  const dem = String(F.demandes || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const rien = !METEO_K.some(([k]) => F[k]) && !dem.length && !['envies', 'inquietudes', 'note'].some(k => String(F[k] || '').trim());
+  if (rien) { app.setState({ ffMeteoMsg: { txt: 'Rien à enregistrer : choisissez une météo ou écrivez une ligne.', ko: true } }); return; }
+  app.setState({ ffMeteoBusy: true, ffMeteoMsg: null });
+  const body = { client_id: 'mt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), shop, demandes: dem, taches: F.taches !== false, qui: 'Cockpit' };
+  METEO_K.forEach(([k]) => { body[k] = F[k] || null; });
+  ['envies', 'inquietudes', 'note'].forEach(k => { body[k] = String(F[k] || ''); });
+  app.api('POST', '/franchises/meteo', body).then(r => {
+    const ok = !!(r && r.ok !== false && !r.error);
+    app.setState({ ffMeteoBusy: false, ffMeteoForm: ok ? { shop, taches: F.taches !== false } : F,
+      ffMeteoMsg: { txt: ok ? 'Météo enregistrée' + (r.taches ? ' · ' + pl(r.taches, 'tâche') + ' dans votre liste' : '') : 'Enregistrement refusé : ' + ((r && r.error) || 'sans réponse'), ko: !ok } });
+    if (ok) { ffMeteoCharge(app, shop, true); }
+  });
+}
 export function valsFF(app, common){
   const S = app.state; const auj0 = auj();
   ffTableCharge(app, false);
   const TB = S.ffTable || {}, T = TB.d && !TB.d.error ? TB.d : null;
   const mags = T ? T.magasins : app.open().map(s => ({ id: String(s.id), court: s.nom.split(' - ').pop(), nom: s.nom }));
   const shop = String(S.ffShop || (mags[0] || {}).id || '');
-  const onglet = S.ffOnglet || 'fiche';
-  if (shop) { ffCharge(app, shop, false); }
+  const onglet = ({ fiche: 'sante', journal: 'sante' })[S.ffOnglet] || S.ffOnglet || 'sante';
+  if (shop) { ffCharge(app, shop, false); if (onglet === 'checklists') { ffClCharge(app, shop, false); } if (onglet === 'sante' || onglet === 'meteo') { ffMeteoCharge(app, shop, false); } }
   const B = S.ff || {}, d = B.shop === shop && B.d && !B.d.error ? B.d : null;
   const go = (screen, extra) => () => app.setState(Object.assign({ screen }, extra || {}));
-  const f = { onglet, onglets: [['fiche', 'Fiche franchisé'], ['tableau', 'Les franchisés'], ['journal', 'Journal']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) })),
+  const f = { onglet, onglets: [['sante', 'Santé du magasin'], ['checklists', 'Checklists'], ['meteo', 'Météo du franchisé'], ['tableau', 'Les franchisés']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) })),
     magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value }),
-    rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); },
+    rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); if (onglet === 'checklists') { ffClCharge(app, shop, true); } ffMeteoCharge(app, shop, true); },
     pageFranchise: shop ? racine() + 'dashboard/suivi.html?shop=' + encodeURIComponent(shop) : '',
     shopNom: (mags.find(m => String(m.id) === shop) || {}).court || shop, tableau: null, tableauChargement: !!TB.chargement && !T,
     chargement: !!B.chargement && !d, indispo: !B.chargement && B.d && !d ? 'Lecture impossible — API injoignable.' : '', kpis: [], journalier: [], terrain: [], journal: [], sous: '' };
   common.ff = f;
   if (T) {
-    f.tableau = { mini: (T.trimestre ? 'scoring ' + T.trimestre.lib + ' · ' : '') + 'tâches, notes de contrôle et réclamations sur 30 jours · invendus en % du CA sur 7 jours · relu ' + (T.lu || ''),
+    f.tableau = { mini: (T.trimestre ? 'scoring ' + T.trimestre.lib + ' · ' : '') + 'CA et B2B du mois · tâches, notes et réclamations sur 30 jours · invendus en % du CA sur 7 jours · relu ' + (T.lu || ''),
       rows: T.magasins.map(m => { const j = m.journalier, t = m.terrain; return { on: String(m.id) === shop, choisir: () => app.setState({ ffShop: m.id, ffOnglet: 'fiche' }), feu: m.feu, court: m.court, sous: (m.responsable ? m.responsable + ' · ' : '') + ((m.motifs || [])[0] || m.due || 'aucune alerte'),
         scoring: j.scoring ? nf(j.scoring.total, 1) + ' / 20' : '—', scoringSous: j.scoring ? (j.scoring.etoiles != null ? nf(j.scoring.etoiles, 1) + ' ★ · ' : '') + j.scoring.rang + 'ᵉ' + (j.scoring.n < 4 ? ' · ' + (4 - j.scoring.n) + ' poste(s) sans donnée' : '') : 'pas de scoring',
         taches: j.taches.pct != null ? j.taches.pct + ' %' : '—', tachesSous: j.taches.pct != null ? (j.taches.joursObligManques ? pl(j.taches.joursObligManques, 'jour') + ' obligatoire manquée' : 'obligatoires tenues') : (j.taches.motif || ''), tachesCls: j.taches.pct == null ? 'mu' : (j.taches.pct < 70 ? 'ko' : j.taches.pct < 85 ? 'att' : 'ok'),
@@ -299,15 +338,12 @@ export function valsFF(app, common){
         revues: j.revues && j.revues.lu && j.revues.moyenne != null ? nf(j.revues.moyenne, 1) + ' / 5' : '—', revuesSous: j.revues && j.revues.lu ? (j.revues.nc ? pl(j.revues.nc, 'infraction') + (j.revues.mineures ? ' · ' + j.revues.mineures + ' mineure' + (j.revues.mineures > 1 ? 's' : '') : '') : (j.revues.notees ? 'aucune infraction' : 'rien de noté')) : ((j.revues && j.revues.motif) || ''), revuesCls: j.revues && j.revues.lu ? ((j.revues.majeures || j.revues.critiques) ? 'ko' : (j.revues.mineures ? 'att' : (j.revues.notees ? 'ok' : 'mu'))) : 'mu',
         reclamations: j.reclamations && j.reclamations.lu ? String(j.reclamations.n) : '—', reclamationsSous: j.reclamations && j.reclamations.lu ? (j.reclamations.ouvertes ? j.reclamations.ouvertes + ' sans réponse' : (j.reclamations.n ? 'toutes traitées' : '')) : '', reclamationsCls: j.reclamations && j.reclamations.ouvertes ? 'att' : '', google: j.google && j.google.note != null ? nf(j.google.note, 1) + ' (' + j.google.avis + ')' + (j.google.faibles ? ' · ' + j.google.faibles + ' ≤ 2' : '') : '—',
         ca: j.ca && j.ca.pct != null ? (j.ca.pct >= 0 ? '+ ' : '− ') + Math.abs(j.ca.pct) + ' %' : (j.ca ? nf(j.ca.ca) + ' €' : '—'), caCls: j.ca && j.ca.pct != null ? (j.ca.pct < -10 ? 'ko' : j.ca.pct < 0 ? 'att' : 'ok') : 'mu',
+        mois: j.mois && j.mois.atteinte != null ? nf(j.mois.atteinte) + ' %' : (j.mois ? nf(j.mois.ca) + ' €' : '—'), moisSous: j.mois ? nf(j.mois.ca) + ' €' + (j.mois.budget != null ? ' / ' + nf(j.mois.budget) + ' €' : '') : '', moisCls: j.mois && j.mois.atteinte != null ? (j.mois.atteinte >= 100 ? 'ok' : j.mois.atteinte >= 90 ? 'att' : 'ko') : 'mu',
+        b2b: j.mois && j.mois.pro != null ? nf(j.mois.pro, 1) + ' %' : '—', b2bSous: j.mois && j.mois.pro == null && j.mois.proJours ? 'lu ' + (j.mois.proLus || 0) + ' / ' + j.mois.proJours + ' j' : '', b2bCls: j.mois && j.mois.pro != null ? (j.mois.pro > 40 ? 'ko' : j.mois.pro > 35 ? 'att' : 'ok') : 'mu',
         derniere: t.derniereVisite ? fmtD(t.derniereVisite.le) : 'jamais', derniereSous: t.derniereVisite ? (t.derniereVisite.consultant || '') + (t.prochaineVisite ? ' · prochaine ' + fmtD(t.prochaineVisite.le) : '') : (t.prochaineVisite ? 'prochaine ' + fmtD(t.prochaineVisite.le) : ''),
         plans: t.plansOuverts + (t.p0 ? ' · ' + t.p0 + ' P0' : ''), plansCls: t.p0 ? 'ko' : (t.plansOuverts ? 'att' : ''), plano: t.plano ? t.plano.pct + ' %' : '—', msp: t.msp ? nf(t.msp.obtenu) + ' / ' + nf(t.msp.maximum) + ' · ' + t.msp.trimestre.replace(/^\d{4}-/, '') : '—' }; }) };
   }
-  if (!d) { return; }
-  const J = d.journalier, R = d.terrain, V = R.visites;
-  const fe = d.feu || {};
-  f.sous = 'fiche franchisé · ' + (d.magasin.ville || '') + (d.consultants.length ? ' · ' + d.consultants.map(c => c.nom + ' (' + c.types.join(', ') + ')').join(' · ') : '') + (fe.feu ? ' · feu ' + fe.feu + (fe.motifs && fe.motifs.length ? ' : ' + fe.motifs[0] : '') : '');
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const sc = R.scoring; const RV = J.revues || {}, RC = J.reclamations || {}, TA = J.taches || {}, IV = J.invendus || {}, tj = J.tachesJour || {};
   // Trois niveaux (demande du 09/10/2026) : la tuile dit le chiffre, simple et précis ; dépliée,
   // elle montre son détail ; « Tout voir » ouvre la modale sur la liste complète.
   const ouverts = S.ffOuverts || {};
@@ -318,6 +354,48 @@ export function valsFF(app, common){
   const tab = (cols, rows) => '<table class="ff-tab"><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
   const mu = s => '<span class="mu">' + esc(s) + '</span>';
   const nZ = (n, u) => n ? n + ' ' + u + (n > 1 ? 's' : '') : '';
+  const FERME = { mois: 'mois', trimestre: 'trimestre' };
+  const MARK = e => e === 'ok' ? '<b class="ok">✓</b>' : e === 'ko' ? '<b class="ko">✕</b>' : e === 'na' ? '<span class="mu">n/a</span>' : '<span class="mu">·</span>';
+  // Onglet Checklists : chaque type de visite avec son dernier résultat, puis les checklists du jour du panel.
+  const CL = S.ffCl || {}, cl = CL.shop === shop && CL.d && !CL.d.error ? CL.d : null;
+  f.clChargement = onglet === 'checklists' && !!CL.chargement && !cl;
+  f.clIndispo = CL.shop === shop && !CL.chargement && CL.d && !cl ? 'Les checklists ne se lisent pas.' : '';
+  f.checklists = cl ? cl.types.map(t => { const dv = t.derniere;
+    return TU('cl:' + t.code, t.nom, dv ? dv.ok + ' / ' + (dv.total || t.points) : '—', (dv ? 'dernière ' + fmtD(dv.le) + (dv.ko ? ' · ' + dv.ko + ' non conforme' + (dv.ko > 1 ? 's' : '') : '') : 'jamais faite ici') + (t.cadre ? ' · au cadre ' + t.cadre.nb + ' / ' + (FERME[t.cadre.par] || t.cadre.par) : '') + ' · ' + pl(t.points, 'point'), dv ? (dv.ko ? 'ko' : 'ok') : 'mu',
+      (t.modules.length ? t.modules.map(m => '<div class="ff-clm"><b>' + esc(m.nom) + '</b>' + m.points.map(pt => '<div class="ff-clp">' + MARK(pt.etat) + '<span>' + esc(pt.libelle) + (pt.valeur != null ? ' · ' + pt.valeur + ' %' : '') + (pt.note != null ? ' · ' + pt.note + ' / 5' : '') + (pt.commentaire ? ' — <span class="mu">' + esc(pt.commentaire) + '</span>' : '') + '</span></div>').join('') + '</div>').join('') : mu(t.dynamique ? 'Checklist dynamique : elle se compose à la visite (plans ouverts, points non conformes).' : 'Aucun point défini.')) + (dv ? '<div class="mu" style="margin-top:4px">Résultat de la visite du ' + fmtD(dv.le) + ' par ' + esc(dv.consultant) + '.</div>' : ''),
+      { modal: t.historique.length ? M(t.nom + ' · les visites', tab(['Date', 'Consultant', 'Conformes', 'Non conformes', 'N/A', 'Points'], t.historique.map(h => [fmtDJ(h.le), esc(h.consultant), '<b class="ok">' + h.ok + '</b>', h.ko ? '<b class="ko">' + h.ko + '</b>' : '0', String(h.na), String(h.total)]))) : null, lien: go('gestionConsultant', { gcOnglet: 'cadre' }), lienTxt: 'Cadre de visite' }); }) : [];
+  const PN = cl ? cl.panel || {} : {};
+  f.clPanelTitre = 'Checklists du jour · panel' + (PN.date ? ' · ' + fmtDJ(PN.date) : '');
+  f.clPanelMotif = cl && !PN.lu ? (PN.motif || 'le panel ne répond pas') : (cl && !(PN.checklists || []).length ? 'aucune tâche aujourd’hui' : '');
+  f.clPanel = cl && PN.lu ? (PN.checklists || []).map(c => TU('pn:' + c.nom, c.nom, c.faites + ' / ' + c.total, (c.notees ? c.notees + ' notée' + (c.notees > 1 ? 's' : '') : 'rien de noté') + (c.nc ? ' · ' + c.nc + ' non conforme' + (c.nc > 1 ? 's' : '') : ''), c.nc ? 'ko' : (c.faites < c.total ? 'att' : 'ok'),
+    c.taches.map(x => '<div class="ff-clp">' + (x.note != null ? (x.note >= 4 && x.accepte !== false ? '<b class="ok">✓</b>' : '<b class="ko">✕</b>') : (x.fait ? '<b class="att">○</b>' : '<span class="mu">·</span>')) + '<span>' + esc(x.tache) + (x.obligatoire ? ' <span class="mu">obligatoire</span>' : '') + (x.note != null ? ' · ' + x.note + ' / 5' : (x.fait ? ' · faite, à noter' : ' · non rendue')) + (x.comment ? ' — <span class="mu">' + esc(x.comment) + '</span>' : '') + '</span></div>').join(''),
+    { lien: go('suivi'), lienTxt: 'Tâches et contrôles photo' })) : [];
+  // Onglet Météo : le formulaire, puis les météos passées.
+  const MT = S.ffMeteo || {}, mt = MT.shop === shop && MT.d && !MT.d.error ? MT.d : null;
+  const FM = S.ffMeteoForm && S.ffMeteoForm.shop === shop ? S.ffMeteoForm : { shop, taches: true };
+  const majF = patch => { app.state.ffMeteoForm = Object.assign({}, FM, app.state.ffMeteoForm && app.state.ffMeteoForm.shop === shop ? app.state.ffMeteoForm : {}, patch); };
+  f.meteo = { chargement: !!MT.chargement && !mt, busy: !!S.ffMeteoBusy, msg: S.ffMeteoMsg || null, taches: FM.taches !== false,
+    setTaches: e => { majF({ taches: !!e.target.checked }); app.setState({}); },
+    echelles: METEO_K.map(([k, nom]) => ({ nom, v: FM[k] || null, choix: [1, 2, 3, 4, 5].map(n => ({ n, icone: METEO_I[n], titre: METEO_L[n], on: FM[k] === n, choisir: () => { majF({ [k]: FM[k] === n ? null : n }); app.setState({ ffMeteoMsg: null }); } })) })),
+    textes: METEO_T.map(([k, nom, aide]) => ({ nom, aide, v: FM[k] || '', set: e => majF({ [k]: e.target.value }) })),
+    enregistrer: () => ffMeteoSauver(app, shop), derniere: null, tendance: [], historique: [], ouvertes: 0 };
+  const echTxt = m => METEO_K.map(([k, nom]) => m[k] != null ? nom.split(',')[0] + ' ' + METEO_I[m[k]] + ' ' + m[k] : '').filter(Boolean).join(' · ');
+  const meteoHtml = m => METEO_K.map(([k, nom]) => '<div class="ff-clp"><span style="width:22px">' + (m[k] != null ? METEO_I[m[k]] : '·') + '</span><span>' + esc(nom) + ' : <b>' + (m[k] != null ? m[k] + ' / 5 · ' + METEO_L[m[k]] : '—') + '</b></span></div>').join('')
+    + (m.envies ? '<div class="ff-clm"><b>Ses envies</b>' + esc(m.envies).replace(/\n/g, '<br>') + '</div>' : '')
+    + (m.demandes.length ? '<div class="ff-clm"><b>Ses demandes</b>' + m.demandes.map(x => '<div class="ff-clp">' + (x.statut === 'fait' ? '<b class="ok">✓</b>' : x.statut === 'annule' ? '<span class="mu">✕</span>' : '<b class="att">○</b>') + '<span>' + esc(x.texte) + (x.tacheId ? ' <span class="mu">· tâche ' + (x.statut === 'fait' ? 'faite' + (x.faitLe ? ' le ' + fmtD(String(x.faitLe).slice(0, 10)) : '') : x.statut === 'annule' ? 'annulée' : 'ouverte') + '</span>' : '') + '</span></div>').join('') + '</div>' : '')
+    + (m.inquietudes ? '<div class="ff-clm"><b>Ses inquiétudes</b>' + esc(m.inquietudes).replace(/\n/g, '<br>') + '</div>' : '')
+    + (m.note ? '<div class="ff-clm"><b>Ce que j’en retiens</b>' + esc(m.note).replace(/\n/g, '<br>') + '</div>' : '');
+  if (mt) {
+    f.meteo.ouvertes = mt.demandesOuvertes || 0;
+    f.meteo.derniere = mt.derniere ? { le: fmtDJ(mt.derniere.le), qui: mt.derniere.consultant || mt.derniere.creePar, cases: METEO_K.map(([k, nom]) => ({ nom, icone: mt.derniere[k] != null ? METEO_I[mt.derniere[k]] : '·', v: mt.derniere[k] != null ? mt.derniere[k] + ' / 5' : '—', cls: mCls(mt.derniere[k]) })) } : null;
+    f.meteo.tendance = METEO_K.map(([k, nom]) => ({ nom, points: (mt.tendance || []).map(x => ({ icone: x[k] != null ? METEO_I[x[k]] : '·', titre: fmtD(x.le) + (x[k] != null ? ' : ' + x[k] + ' / 5' : '') })) }));
+    f.meteo.historique = mt.meteos.map(m => TU('mt:' + m.id, fmtDJ(m.le) + (m.consultant ? ' · ' + m.consultant : ''), m.moral != null ? METEO_I[m.moral] + ' ' + m.moral + ' / 5' : '—', echTxt(m) + (m.demandes.length ? ' · ' + pl(m.demandes.length, 'demande') : ''), mCls(m.moral), meteoHtml(m)));
+  }
+  if (!d) { return; }
+  const J = d.journalier, R = d.terrain, V = R.visites;
+  const fe = d.feu || {};
+  f.sous = 'fiche franchisé · ' + (d.magasin.ville || '') + (d.consultants.length ? ' · ' + d.consultants.map(c => c.nom + ' (' + c.types.join(', ') + ')').join(' · ') : '') + (fe.feu ? ' · feu ' + fe.feu + (fe.motifs && fe.motifs.length ? ' : ' + fe.motifs[0] : '') : '');
+  const sc = R.scoring; const RV = J.revues || {}, RC = J.reclamations || {}, TA = J.taches || {}, IV = J.invendus || {}, tj = J.tachesJour || {};
   const pctCls = p => p == null ? 'mu' : (p < 70 ? 'ko' : p < 85 ? 'att' : 'ok');
   const heat = () => { const parJ = {}; (TA.jours || []).forEach(x => { parJ[x.jour] = x; }); let h = ''; for (let i = 29; i >= 0; i--) { const dte = plusJours(auj0, -i); const x = parJ[dte]; h += '<i class="' + (!x ? 'x' : (x.oblig ? 'm' : (x.f < x.t ? 'p' : ''))) + '" title="' + fmtD(dte) + (x ? ' : ' + x.f + ' / ' + x.t : ' : non relevé') + '"></i>'; } return '<div class="ff-heat">' + h + '</div>'; };
   const NIV = i => '<span class="gc-st ' + (i.niveau === 'critique' ? 'p0' : i.niveau === 'majeure' ? 'att' : 'm') + '">' + esc(i.niveau) + '</span>';
@@ -376,6 +454,32 @@ export function valsFF(app, common){
     TU('scoring', 'Scoring ' + (sc && sc.trimestre ? (sc.trimestre.court || sc.trimestre.lib) : 'du trimestre'), sc ? nf(sc.total, 1) + ' / 20' : '—', sc ? (sc.etoiles != null ? nf(sc.etoiles, 1) + ' ★ · ' : '') + sc.rang + 'ᵉ sur ' + sc.magasins + ' · précédent ' + nf(sc.prec.total, 1) : 'pas de scoring calculé', sc ? (sc.total >= 16 ? 'ok' : sc.total >= 12 ? 'att' : 'ko') : 'mu',
       sc ? '<div class="ff-postes">' + Object.keys(sc.postes).map(k => '<div><small>' + esc((sc.noms && sc.noms[k]) || k) + '</small><b>' + (sc.postes[k].v != null ? nf(sc.postes[k].v, 1) : '—') + '</b></div>').join('') + '</div>' + mu('Chaque poste vaut 5' + (sc.delta != null ? ' · ' + (sc.delta >= 0 ? '+ ' : '− ') + nf(Math.abs(sc.delta), 2) + ' ★ sur le trimestre précédent' : '') + '.') : mu('Pas de scoring calculé pour ce trimestre.'),
       { lien: go('scoringTri'), lienTxt: 'Scoring du trimestre' })];
+  // Santé du magasin : la vue générale en tête (09/10/2026) — le mois face au budget, la part du pro, le scoring,
+  // ses postes Google et Tâches, les infractions mineures, la météo du franchisé.
+  const prend = (arr, k) => { const i = arr.findIndex(t => t.k === k); return i >= 0 ? arr.splice(i, 1)[0] : null; };
+  const tInf = prend(f.journalier, 'infractions'), tGoo = prend(f.journalier, 'google'), tSco = prend(f.terrain, 'scoring');
+  const MO = J.mois || {}, PRO = MO.pro || {};
+  const pv = k => sc && sc.postes && sc.postes[k] && sc.postes[k].v != null ? sc.postes[k].v : null;
+  const c5 = v => v == null ? 'mu' : (v >= 4 ? 'ok' : v >= 3 ? 'att' : 'ko');
+  const joursM = (MO.jours || []).filter(x => x.passe && !x.ferme);
+  const maxJ = Math.max(1, ...joursM.map(x => Math.max(+x.ca || 0, +x.objectif || 0)));
+  const barres = joursM.length ? '<div class="ff-bars">' + joursM.map(x => '<i title="' + esc(x.court) + ' : ' + nf(x.ca) + ' €' + (x.objectif != null ? ' / ' + nf(x.objectif) + ' €' : '') + '"><b class="' + (x.objectif != null && x.ca != null && x.ca < x.objectif ? 'ko' : 'ok') + '" style="height:' + Math.round(100 * (+x.ca || 0) / maxJ) + '%"></b>' + (x.objectif != null ? '<u style="bottom:' + Math.round(100 * x.objectif / maxJ) + '%"></u>' : '') + '</i>').join('') + '</div><div class="gc-leg" style="margin-top:2px"><span><i style="background:#8FBF98"></i>CA du jour</span><span><i style="background:#D98C8C"></i>sous le budget</span><span><i style="background:#333"></i>budget du jour</span></div>' : '';
+  const MT2 = mt && mt.derniere ? mt.derniere : null;
+  f.sante = [
+    TU('mois', 'CA du mois / budget', MO.lu ? (MO.atteinte != null ? nf(MO.atteinte) + ' %' : nf(MO.ca) + ' €') : '—', MO.lu ? nf(MO.ca) + ' €' + (MO.attendu != null ? ' sur ' + nf(MO.attendu) + ' € attendus à date' : ' · pas de budget') : (MO.motif || ''), MO.lu && MO.atteinte != null ? (MO.atteinte >= 100 ? 'ok' : MO.atteinte >= 90 ? 'att' : 'ko') : 'mu',
+      MO.lu ? (MO.budget != null ? 'Budget du mois : <b>' + nf(MO.budget) + ' €</b>' + (MO.ecart != null ? ' · écart à date <b class="' + (MO.ecart < 0 ? 'ko' : 'ok') + '">' + (MO.ecart >= 0 ? '+ ' : '− ') + nf(Math.abs(MO.ecart)) + ' €</b>' : '') : mu('Aucun budget encodé pour ce mois.')) + (MO.tickets ? '<br>' + nf(MO.tickets) + ' tickets · panier ' + nf(MO.panier, 2) + ' €' : '') + barres : mu(MO.motif || 'le résultat du mois ne se lit pas'),
+      { modal: joursM.length ? M('CA du mois jour par jour', tab(['Jour', 'CA', 'Budget', 'Écart', 'Atteinte'], joursM.map(x => [esc(x.court), nf(x.ca) + ' €', x.objectif != null ? nf(x.objectif) + ' €' : '—', x.objectif != null && x.ca != null ? '<b class="' + (x.ca < x.objectif ? 'ko' : 'ok') + '">' + (x.ca >= x.objectif ? '+ ' : '− ') + nf(Math.abs(x.ca - x.objectif)) + ' €</b>' : '—', x.objectif ? nf(100 * x.ca / x.objectif) + ' %' : '—']))) : null, lien: go('resultatJour'), lienTxt: 'Résultat' }),
+    TU('b2b', 'Part B2B · mois', PRO.part != null ? nf(PRO.part, 1) + ' %' : '—', PRO.part != null ? 'du CA · règle ≤ ' + nf(PRO.max || 40) + ' %' : (PRO.jours ? 'tickets lus ' + (PRO.joursLus || 0) + ' / ' + PRO.jours + ' jours' : (MO.motif || 'tickets non lus')), PRO.part != null ? (PRO.part > (PRO.max || 40) ? 'ko' : PRO.part > (PRO.alerte || 35) ? 'att' : 'ok') : 'mu',
+      MO.lu ? 'CA pro : <b>' + nf(PRO.ca) + ' €</b>' + (PRO.tickets != null ? ' · ' + nf(PRO.tickets) + ' tickets pro' : '') + (PRO.panier != null ? ' · panier pro ' + nf(PRO.panier, 2) + ' €' : '') + (PRO.complet === false && PRO.jours ? '<br>' + mu('Part calculée quand tous les jours sont lus : ' + (PRO.joursLus || 0) + ' / ' + PRO.jours + '.') : '') + '<br>' + mu('Règle : le pro ne dépasse pas ' + nf(PRO.max || 40) + ' % du CA du mois.') : mu(MO.motif || 'le résultat du mois ne se lit pas'),
+      { lien: go('resultatJour'), lienTxt: 'Résultat' }),
+    tSco,
+    TU('scGoogle', 'Scoring Google', pv('google') != null ? nf(pv('google'), 1) + ' / 5' : '—', J.google && J.google.note != null ? 'note ' + nf(J.google.note, 1) + ' · ' + nf(J.google.avis) + ' avis' + (J.google.faibles ? ' · ' + J.google.faibles + ' ≤ 2' : '') : 'pas de fiche reliée', c5(pv('google')), tGoo ? tGoo.html : '', { lien: go('reputation'), lienTxt: 'Note Google et avis' }),
+    TU('scTaches', 'Scoring tâches', pv('taches') != null ? nf(pv('taches'), 1) + ' / 5' : '—', (TA.pct != null ? TA.pct + ' % faites' : (TA.motif || 'pas de relevé')) + (RV.lu && RV.moyenne != null ? ' · points moyens ' + nf(RV.moyenne, 1) : ''), c5(pv('taches')),
+      (TA.pct != null ? 'Faites sur 30 jours : <b>' + TA.rendues + ' / ' + TA.attendues + '</b>' + (TA.joursObligManques ? ' · <b class="ko">obligatoire manquée ' + nZ(TA.joursObligManques, 'jour') + '</b>' : ' · obligatoires tenues') : '') + (RV.lu && RV.notees ? '<div class="ff-rep" style="margin-top:6px">' + (RV.parNote || []).map(p => '<div><span>' + p.note + ' ★ ' + esc(p.nom) + '</span><i><b style="width:' + Math.round(100 * p.n / RV.notees) + '%"></b></i><span>' + p.n + '</span></div>').join('') + '</div>' : ''),
+      { lien: go('suivi'), lienTxt: 'Contrôle des tâches' }),
+    tInf && Object.assign(tInf, { lab: 'Infractions mineures · 30 j', v: RV.lu ? String(RV.mineures || 0) : '—', sous: RV.lu ? ([nZ(RV.majeures, 'majeure'), nZ(RV.critiques, 'critique')].filter(Boolean).join(' · ') || (RV.nc ? 'aucune majeure' : 'aucune infraction')) : (RV.motif || ''), cls: RV.lu ? ((RV.majeures || RV.critiques) ? 'ko' : (RV.mineures ? 'att' : 'ok')) : 'mu' }),
+    TU('meteo', 'Météo du franchisé', MT2 && MT2.moral != null ? METEO_I[MT2.moral] + ' ' + MT2.moral + ' / 5' : '—', MT2 ? 'le ' + fmtD(MT2.le) + (mt.demandesOuvertes ? ' · ' + pl(mt.demandesOuvertes, 'demande') + ' ouverte' + (mt.demandesOuvertes > 1 ? 's' : '') : '') : (mt ? 'pas encore relevée' : 'lecture…'), MT2 ? mCls(MT2.moral) : 'mu',
+      MT2 ? meteoHtml(MT2) : mu('Aucune météo relevée pour ce franchisé.'), { lien: () => app.setState({ ffOnglet: 'meteo' }), lienTxt: MT2 ? 'Nouvelle météo' : 'Relever la météo' })].filter(Boolean);
   f.journal = (d.journal || []).map(e => ({ le: fmtD(e.le), volet: e.volet, texte: e.texte }));
 }
 
