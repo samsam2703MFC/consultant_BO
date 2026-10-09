@@ -172,7 +172,7 @@ function frReclamations(string $shop, int $jours = 30): array
     $au = date('Y-m-d'); $du = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
     $r = frReclamationsTous();
     if (!empty($r['indispo'])) { return ['lu' => false, 'du' => $du, 'au' => $au, 'jours' => $jours, 'n' => 0, 'ouvertes' => 0, 'motif' => (string) ($r['motif'] ?? 'le panel n’a pas rendu les réclamations')]; }
-    $n = 0; $ouvertes = 0; $acceptees = 0; $refusees = 0; $montant = 0.0; $parF = []; $dern = [];
+    $n = 0; $ouvertes = 0; $acceptees = 0; $refusees = 0; $montant = 0.0; $parF = []; $dern = []; $lignes = [];
     foreach ((array) ($r['lignes'] ?? []) as $l) {
         if (!is_array($l) || (string) ($l['shopId'] ?? '') !== $shop) { continue; }
         $le = (string) ($l['le'] ?? '');
@@ -183,15 +183,15 @@ function frReclamations(string $shop, int $jours = 30): array
         if ($st === 'ACCEPTED') { $acceptees++; } elseif ($st === 'REJECTED') { $refusees++; }
         if (isset($l['montant']) && $l['montant'] !== null) { $montant += (float) $l['montant']; }
         $f = (string) ($l['fournisseur'] ?? ''); $f = $f !== '' ? $f : 'Fournisseur inconnu'; $parF[$f] = ($parF[$f] ?? 0) + 1;
-        if (count($dern) < 5) {
-            $dern[] = ['id' => $l['id'] ?? null, 'le' => $le, 'fournisseur' => (string) ($l['fournisseur'] ?? ''), 'reference' => (string) ($l['reference'] ?? ''),
-                'qte' => $l['qte'] ?? null, 'unite' => (string) ($l['unite'] ?? ''), 'motif' => (string) ($l['motif'] ?? ''), 'statut' => $st, 'ouverte' => $ouverte,
-                'reponse' => (string) ($l['reponse'] ?? ''), 'montant' => $l['montant'] ?? null];
-        }
+        $ligne = ['id' => $l['id'] ?? null, 'le' => $le, 'fournisseur' => (string) ($l['fournisseur'] ?? ''), 'reference' => (string) ($l['reference'] ?? ''),
+            'qte' => $l['qte'] ?? null, 'unite' => (string) ($l['unite'] ?? ''), 'motif' => (string) ($l['motif'] ?? ''), 'statut' => $st, 'ouverte' => $ouverte,
+            'reponse' => (string) ($l['reponse'] ?? ''), 'reponseLe' => $l['reponseLe'] ?? null, 'montant' => $l['montant'] ?? null];
+        if (count($dern) < 5) { $dern[] = $ligne; }
+        if (count($lignes) < 60) { $lignes[] = $ligne; }   // la modale « Tout voir »
     }
     arsort($parF);
     return ['lu' => true, 'du' => $du, 'au' => $au, 'jours' => $jours, 'n' => $n, 'ouvertes' => $ouvertes, 'acceptees' => $acceptees, 'refusees' => $refusees,
-        'montant' => round($montant, 2), 'parFournisseur' => array_map(fn ($k, $v) => ['nom' => $k, 'n' => $v], array_keys($parF), array_values($parF)), 'dernieres' => $dern, 'motif' => null];
+        'montant' => round($montant, 2), 'parFournisseur' => array_map(fn ($k, $v) => ['nom' => $k, 'n' => $v], array_keys($parF), array_values($parF)), 'dernieres' => $dern, 'lignes' => $lignes, 'motif' => null];
 }
 
 /** Les objectifs du moment : produits (campagne d'objectifs produits) et clients (campagnes marketing en cours). */
