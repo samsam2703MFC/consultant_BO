@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon suivi — L'Atelier by</title>
+<!-- La page du franchisé (09/10/2026) : comment il voit son suivi — ce que les données disent chaque jour,
+     ce que le consultant a constaté sur place, ce qu'il a à faire. Chemins RELATIFS : la page vit sous
+     /dashboard/, l'API sous ../api/cockpit (GET /franchises/fiche?shop=). -->
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<link rel="stylesheet" href="dashboard.css">
+<style>
+  .sv{max-width:1180px;margin:0 auto;padding:16px 16px 40px}
+  .sv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
+  .sv-kpi{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px}
+  .sv-kpi .k{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+  .sv-kpi .v{font:400 26px/1.1 var(--font-display);margin:6px 0 4px}.sv-kpi .v.ko{color:#C0182B}.sv-kpi .v.ok{color:#2d7a3e}.sv-kpi .v.att{color:#B26A00}
+  .sv-kpi .s{font-size:11.5px;color:var(--color-text-muted)}
+  .sv-deux{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .sv-volet h2{font:400 20px/1.1 var(--font-display);margin:0 0 3px}.sv-volet .def{font-size:11.5px;color:var(--color-text-muted);margin-bottom:6px;line-height:1.45}
+  .sv-volet.j h2{color:#1f3f7a}.sv-volet.t h2{color:var(--color-primary)}
+  .sv-bloc{padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}.sv-bloc:last-child{border-bottom:none}
+  .sv-bloc b.t{display:block;font-size:13px;margin-bottom:3px}.sv-bloc .l{font-size:12.5px;line-height:1.55}.sv-bloc .mu{color:var(--color-text-muted)}.sv-bloc .ko{color:#C0182B;font-weight:600}.sv-bloc .ok{color:#2d7a3e;font-weight:600}
+  .sv-faire{background:#FBEFE0;border:1px solid #E8C9A0;border-radius:12px;padding:12px 16px;margin-bottom:12px}
+  .sv-faire h2{font:400 18px/1.1 var(--font-display);margin:0 0 6px}
+  .sv-faire .it{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:.5px dashed #E8C9A0;font-size:12.5px}.sv-faire .it:last-child{border-bottom:none}
+  .sv-faire .it .p{font:700 10px var(--font-ui);letter-spacing:.06em;border-radius:999px;padding:3px 8px;white-space:nowrap;background:#EDE7E0}.sv-faire .it .p.p0{background:#C0182B;color:#fff}.sv-faire .it .p.p1{background:#FFF1D6;color:#8a5a00}
+  .sv-heat{display:grid;grid-template-columns:repeat(30,1fr);gap:3px;margin-top:6px}.sv-heat i{display:block;height:11px;border-radius:2px;background:#C9E3CD}.sv-heat i.m{background:#E8A0A0}.sv-heat i.p{background:#F5D58F}.sv-heat i.x{background:#EDE7E0}
+  .sv-postes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}.sv-postes div{background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:8px;padding:7px 9px}.sv-postes div small{display:block;font:700 9.5px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted)}.sv-postes div b{font:400 18px/1.2 var(--font-display)}
+  .sv-jl{display:flex;gap:12px;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px;align-items:baseline}.sv-jl:last-child{border-bottom:none}.sv-jl .d{width:54px;flex:0 0 auto;font-weight:600;color:var(--color-text-muted)}
+  .sv-src{font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:#E3ECF7;color:#1f3f7a;flex:0 0 auto}.sv-src.t{background:#EFE3DE;color:#5a1320}
+  .sv-liens{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+  .sv-liens a{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:7px 14px;font:600 12px var(--font-ui);color:var(--color-text);text-decoration:none}.sv-liens a.p{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+  .sv-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:4px}.sv-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  @media (max-width:760px){.sv-deux{grid-template-columns:1fr}.sv-postes{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="suivi" class="sv"><div class="db-attente">Lecture de votre suivi…</div></div>
+<script src="suivi.js"></script>
+</body>
+</html>

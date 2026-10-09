@@ -22,6 +22,7 @@
   const ST_VISITE = { planifiee: 'planifiée', confirmee: 'confirmée', en_cours: 'en cours', terminee: 'terminée', annulee: 'annulée' };
   const ASSIGNES = { franchise: 'Franchisé', equipe: 'Équipe', consultant: 'Consultant', admin: 'Admin' };
   const MOTIFS = { reguliere: 'régulière', asap: 'ASAP', due: 'due', revisite: 'revisite' };
+  const QUAND = { avant: 'Avant la visite', pendant: 'Pendant la visite', apres: 'Après la visite' };
   const JOURS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const GENRES_JOUR = [['jour_facade', 'Façade'], ['jour_interieur', 'Intérieur'], ['jour_arriere', 'Arrière']];
@@ -376,6 +377,7 @@
       if (op.apres === 'plans' && j.plans) { j.plans.forEach(p => { const i = D.plans.findIndex(x => x.client_id === p.client_id || x.id === p.id); if (i >= 0) { D.plans[i] = p; } else { D.plans.push(p); } }); }
       if (op.apres === 'plan' && j.plan) { const i = D.plans.findIndex(x => x.id === j.plan.id || (x.client_id && x.client_id === j.plan.client_id)); if (i >= 0) { D.plans[i] = j.plan; } }
       if (op.apres === 'photo' && j.photo) { const i = D.photos.findIndex(x => x.client_id === j.photo.client_id); if (i >= 0) { D.photos[i] = j.photo; } else { D.photos.unshift(j.photo); } }
+      if (op.apres === 'tache' && j.tache) { const i = (D.taches || []).findIndex(x => x.id === j.tache.id); if (i >= 0) { D.taches[i] = j.tache; } }
       if (op.apres === 'controle') { const t = this.cqTache(op.body); if (t) { t.attente = false; delete t._avant; } this.dire('Note ' + (op.body || {}).note + '/5 enregistrée.'); }
     }
     /** Les écritures en file, rejouées sur la lecture fraîche : l'écran ne recule pas. */
@@ -384,7 +386,7 @@
       this.file.forEach(op => {
         const b = op.body || {};
         if (op.apres === 'visite' && op.method === 'POST' && !D.visites.some(v => v.client_id === b.client_id)) {
-          D.visites.push({ id: b.client_id, client_id: b.client_id, shop: b.shop, consultant: b.consultant, consultantNom: b.consultant_nom, prevu_le: b.prevu_le, debut_h: b.debut_h, duree_min: b.duree_min, motif: b.motif, statut: 'planifiee', attente: true });
+          D.visites.push({ id: b.client_id, client_id: b.client_id, shop: b.shop, consultant: b.consultant, consultantNom: b.consultant_nom, prevu_le: b.prevu_le, debut_h: b.debut_h, duree_min: b.duree_min, motif: b.motif, type: b.type || 'reguliere', statut: 'planifiee', attente: true });
         }
         if (op.apres === 'visite' && op.method === 'PUT') { const v = this.visite(op.path.split('/')[2]); if (v) { Object.assign(v, b, { attente: true }); } }
         if (op.apres === 'points') { (b.points || []).forEach(p => { const i = D.points.findIndex(x => String(x.visite_id) === String(op.path.split('/')[2]) && x.ref === p.ref); const l = Object.assign({ visite_id: op.path.split('/')[2] }, p); if (i >= 0) { D.points[i] = Object.assign(D.points[i], l); } else { D.points.push(l); } }); }
@@ -406,11 +408,58 @@
     photoSrc(p) { return p.data ? p.data : (this.o.racine || '') + p.chemin; }
     consultantNom(id) { const c = (this.D.consultants || []).find(x => x.id === id); return c ? c.nom : (id || ''); }
     mesVisites() { return (this.D.visites || []).filter(v => this.role !== 'consultant' || !this.moi || v.consultant === this.moi || !v.consultant); }
+    /* --- le cadre de visite : le type de chaque visite, sa checklist, ses tâches ---------- */
+    typeDe(code) { return (this.D.types || []).find(t => t.code === (code || 'reguliere')) || null; }
+    typeNom(code) { const t = this.typeDe(code); return t ? t.nom : (!code || code === 'reguliere' ? 'Régulière' : code); }
+    /** Le consultant que le type appelle : le premier du profil demandé, sinon personne. */
+    consultantParDefaut(t) { if (!t || !t.profil) { return ''; } const c = (this.D.consultants || []).find(x => x.profil === t.profil); return c ? c.id : ''; }
+    derniereTerminee(shop, saufId) { return (this.D.visites || []).filter(v => String(v.shop) === String(shop) && v.statut === 'terminee' && String(v.id) !== String(saufId)).sort((a, b) => a.prevu_le < b.prevu_le ? 1 : -1)[0] || null; }
+    /**
+     * La checklist d'une visite : celle de son type. Deux types sont dynamiques —
+     * le suivi de plan d'action reprend les plans ouverts de la boutique, la
+     * revisite reprend les points non conformes de la dernière visite terminée.
+     * Sans type (visites d'avant le cadre), la liste standard.
+     */
+    checklistDe(v) {
+      const t = this.typeDe(v.type); const s = this.D.seuils || {};
+      if (t && t.dynamique === 'plans') {
+        const pl = this.plansDe(v.shop, true);
+        return [{ id: 'suivi', nom: 'Plans d’action ouverts', points: pl.map(p => ({ ref: 'plan' + p.id, libelle: p.priorite + ' · ' + p.titre, photo: true, pct: false })) }];
+      }
+      if (t && t.dynamique === 'ko') {
+        const der = this.derniereTerminee(v.shop, v.id); const pts = der ? this.pointsDe(der.id) : {};
+        const base = der && !(this.typeDe(der.type) || {}).dynamique ? this.checklistDe(der) : (this.D.checklist || []);
+        const mods = [];
+        base.forEach(m => {
+          const ko = m.points.filter(pt => { const p = pts[pt.ref]; return p && (p.etat === 'ko' || (p.note != null && p.note <= 2) || (pt.pct && p.valeur != null && p.valeur < (s.planoOrange || 80))); });
+          if (ko.length) { mods.push({ id: m.id, nom: m.nom, points: ko }); }
+        });
+        return mods.length ? mods : [{ id: 'revisite', nom: 'Revisite — rien de non conforme à la dernière visite', points: [] }];
+      }
+      return t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []);
+    }
+    /** Le lien « Ajouter à Google Agenda » d'une visite, bâti ici : pas de serveur à attendre. */
+    gcal(v) {
+      const b = this.boutique(v.shop) || { nom: String(v.shop), court: String(v.shop), ville: '' };
+      const d = String(v.prevu_le || '').replace(/-/g, ''); const h = String(v.debut_h || '09:00').replace(':', '') + '00';
+      const fin = new Date(v.prevu_le + 'T' + (v.debut_h || '09:00') + ':00'); fin.setMinutes(fin.getMinutes() + Number(v.duree_min || 90));
+      const p = n => String(n).padStart(2, '0');
+      const f = fin.getFullYear() + p(fin.getMonth() + 1) + p(fin.getDate()) + 'T' + p(fin.getHours()) + p(fin.getMinutes()) + '00';
+      return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Visite ' + (b.court || b.nom) + ' — ' + this.typeNom(v.type)) + '&dates=' + d + 'T' + h + '/' + f + '&ctz=Europe%2FBrussels&location=' + encodeURIComponent((b.nom || '') + (b.ville ? ', ' + b.ville : ''));
+    }
+    /** Les tâches du type sur la fiche de visite, à cocher ; et le lien vers l'agenda Google. */
+    tachesVisiteHtml(v) {
+      const ts = (this.D.taches || []).filter(t => String(t.visite_id) === String(v.id));
+      const lien = `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc(this.gcal(v))}">📅 Ajouter à Google Agenda</a></div>`;
+      if (!ts.length) { return `<div class="card sm">${lien}</div>`; }
+      const faites = ts.filter(t => t.statut === 'fait').length;
+      return `<div class="cap">Tâches à faire — ${esc(this.typeNom(v.type))} · ${faites} / ${ts.length}</div><div class="card">${ts.map(t => `<div class="row" style="margin-top:4px;align-items:flex-start"><button class="cb ${t.statut === 'fait' ? 'ok' : ''}" data-a="tache" data-v="${esc(t.id)}|${t.statut === 'fait' ? 'a_faire' : 'fait'}">${t.statut === 'fait' ? '✓' : ''}</button><div class="sm" style="flex:1">${esc(t.titre)}<div class="xs mu">${esc(QUAND[t.quand] || '')}${t.echeance ? ' · ' + fmtD(t.echeance) : ''}${t.retard ? ' · <span class="dn">retard ' + t.retard + ' j</span>' : ''}${t.attente ? ' ⏳' : ''}</div></div></div>`).join('')}${lien}</div>`;
+    }
     qui() { return this.role === 'consultant' ? (this.consultantNom(this.moi) || 'Consultant') : this.role === 'admin' ? 'Admin' : ('Franchisé ' + ((this.boutique(this.shop) || {}).court || '')); }
     ecartsDe(v) {
       const pts = this.pointsDe(v.id); const out = [];
       const s = this.D.seuils || {};
-      (this.D.checklist || []).forEach(m => m.points.forEach(pt => {
+      this.checklistDe(v).forEach(m => m.points.forEach(pt => {
         const p = pts[pt.ref]; if (!p) { return; }
         if (pt.pct && p.valeur != null && p.valeur < (s.planoOrange || 80)) { out.push({ ref: pt.ref, module: m.id, titre: pt.libelle, detail: p.valeur + ' % de conformité' + (p.causes && p.causes.length ? ' · ' + p.causes.map(c => (this.D.causes || {})[c] || c).join(', ') : ''), grave: p.valeur < (s.planoRouge || 60) }); }
         else if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { out.push({ ref: pt.ref, module: m.id, titre: pt.libelle, detail: (p.note != null ? p.note + '/5' : 'non conforme') + (p.commentaire ? ' · ' + p.commentaire : ''), grave: m.id === 'hygiene' || (p.note != null && p.note <= 1) }); }
@@ -763,7 +812,7 @@
       return `<div class="vis ${p0 ? 'card alerte' : ''}" style="margin:0 0 6px;padding:9px 11px"><div class="row">${this.feuDot(b)}<b>${esc(b.court)}</b><span class="sp"></span><span class="pill ${p0 ? 'P0' : ''}">${p0 ? 'prioritaire' : esc(ST_VISITE[v.statut] || v.statut)}</span></div>
         ${this.role !== 'consultant' || !this.moi ? `<div class="xs mu">${esc(v.consultantNom || '')}</div>` : ''}
         ${p0 ? `<div class="sm dn" style="margin-top:3px">🚨 P0 ${esc(p0.titre)}${p0.retard ? ' · retard ' + p0.retard + ' j' : ''}</div>` : ''}
-        <div class="sm mu" style="margin-top:2px">${b.ca ? 'CA ' + eur(b.ca.ca) + (b.ca.pct != null ? ' · ' + pct(b.ca.pct) : '') : ''}${b.google && b.google.note != null ? ' · Google ' + note1(b.google.note) : ''}${ouverts.length && !p0 ? ' · ' + ouverts.length + ' action(s)' : ''}</div>
+        <div class="sm mu" style="margin-top:2px">${esc(this.typeNom(v.type))}${b.ca ? ' · CA ' + eur(b.ca.ca) + (b.ca.pct != null ? ' · ' + pct(b.ca.pct) : '') : ''}${b.google && b.google.note != null ? ' · Google ' + note1(b.google.note) : ''}${ouverts.length && !p0 ? ' · ' + ouverts.length + ' action(s)' : ''}</div>
         <div class="act"><button class="btn s p" data-a="go" data-v="${v.statut === 'terminee' ? 'historique/' + esc(v.shop) : v.statut === 'en_cours' ? 'controle/' + esc(v.id) : 'fiche/' + esc(v.id)}">${v.statut === 'terminee' ? 'Historique' : v.statut === 'en_cours' ? 'Reprendre le contrôle' : 'Ouvrir la fiche'}</button></div></div>`;
     }
     v_portfolio() {
@@ -776,13 +825,18 @@
     }
     v_planifier() {
       const D = this.D; const f = this.form; const shop = f.shop || this.p || (D.boutiques[0] || {}).id;
-      const cons = this.role === 'consultant' && this.moi ? this.moi : (f.consultant || '');
+      const t = this.typeDe(f.type); const types = (D.types || []).filter(x => x.actif !== false);
+      // Les consultants du profil que le type demande passent en tête ; les autres restent possibles.
+      const cs = (D.consultants || []).slice().sort((a, b) => (t && t.profil ? ((b.profil === t.profil) - (a.profil === t.profil)) : 0));
+      const cons = this.role === 'consultant' && this.moi ? this.moi : (f.consultant || this.consultantParDefaut(t));
+      const cl = t ? (t.dynamique === 'plans' ? 'checklist : les plans d’action ouverts' : t.dynamique === 'ko' ? 'checklist : les points non conformes de la dernière visite' : 'checklist ' + t.points + ' point' + (t.points > 1 ? 's' : '')) : '';
       return this.hd('Planifier une visite', '', this.role === 'franchise' ? 'plans' : 'agenda')
         + `<div class="card">
           <div class="champ"><label>Boutique</label><select data-c="form|shop">${D.boutiques.map(b => `<option value="${esc(b.id)}" ${String(b.id) === String(shop) ? 'selected' : ''}>${esc(b.court)}</option>`).join('')}</select></div>
-          ${this.role === 'consultant' && this.moi ? '' : `<div class="champ"><label>Consultant</label><select data-c="form|consultant"><option value="">—</option>${(D.consultants || []).map(c => `<option value="${esc(c.id)}" ${c.id === cons ? 'selected' : ''}>${esc(c.nom)}</option>`).join('')}</select></div>`}
+          ${types.length ? `<div class="champ"><label>Type de visite</label><select data-c="form|type">${types.map(x => `<option value="${esc(x.code)}" ${(f.type || 'reguliere') === x.code ? 'selected' : ''}>${esc(x.nom)}</option>`).join('')}</select>${t ? `<div class="xs mu" style="margin-top:4px">${t.duree} min · ${cl} · ${t.nbTaches} tâche${t.nbTaches > 1 ? 's' : ''} à faire${t.profilNom ? ' · profil ' + esc(t.profilNom) : ''}</div>` : ''}</div>` : ''}
+          ${this.role === 'consultant' && this.moi ? '' : `<div class="champ"><label>Consultant</label><select data-c="form|consultant"><option value="">—</option>${cs.map(c => `<option value="${esc(c.id)}" ${c.id === cons ? 'selected' : ''}>${esc(c.nom)}${c.profilNom ? ' · ' + esc(c.profilNom) : ''}</option>`).join('')}</select></div>`}
           <div class="l2"><div class="champ"><label>Date</label><input type="date" data-f="form|prevu_le" value="${esc(f.prevu_le || plusJours(auj(), 1))}"></div><div class="champ"><label>Heure</label><input type="time" data-f="form|debut_h" value="${esc(f.debut_h || '09:00')}"></div></div>
-          <div class="l2"><div class="champ"><label>Durée (min)</label><input type="number" data-f="form|duree_min" value="${esc(f.duree_min || 90)}"></div><div class="champ"><label>Motif</label><select data-c="form|motif">${Object.keys(MOTIFS).map(m => `<option value="${m}" ${(f.motif || 'reguliere') === m ? 'selected' : ''}>${MOTIFS[m]}</option>`).join('')}</select></div></div>
+          <div class="l2"><div class="champ"><label>Durée (min)</label><input type="number" data-f="form|duree_min" value="${esc(f.duree_min || (t ? t.duree : 90))}"></div><div class="champ"><label>Motif</label><select data-c="form|motif">${Object.keys(MOTIFS).map(m => `<option value="${m}" ${(f.motif || 'reguliere') === m ? 'selected' : ''}>${MOTIFS[m]}</option>`).join('')}</select></div></div>
           <div class="btns"><button class="btn p w" data-a="planifier">📅 Planifier</button></div></div>`;
     }
     v_fiche() {
@@ -791,10 +845,11 @@
       const ouverts = this.plansDe(v.shop, true).slice(0, 5);
       const g = b.google; const msp = b.msp; const f = this.form;
       const enCours = v.statut === 'en_cours'; const finie = v.statut === 'terminee';
-      return this.hd('Visite — ' + b.court, fmtDJ(v.prevu_le) + ' · ' + v.debut_h + ' · ' + v.duree_min + ' min · ' + (ST_VISITE[v.statut] || v.statut), 'agenda', ouverts.some(p => p.priorite === 'P0') ? '<span class="pill P0">prioritaire</span>' : this.feuDot(b))
+      return this.hd('Visite — ' + b.court, this.typeNom(v.type) + ' · ' + fmtDJ(v.prevu_le) + ' · ' + v.debut_h + ' · ' + v.duree_min + ' min · ' + (ST_VISITE[v.statut] || v.statut), 'agenda', ouverts.some(p => p.priorite === 'P0') ? '<span class="pill P0">prioritaire</span>' : this.feuDot(b))
         + `<div class="card"><div class="row"><span>📍</span><div><b>${esc(b.nom)}</b><div class="sm mu">${esc(b.ville || '')}${b.fr ? ' · ' + esc(b.fr) : ''}</div></div><span class="sp"></span><a class="btn s" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.nom + ' ' + (b.ville || ''))}">GPS</a></div>
           <div class="row" style="margin-top:8px"><span>🕐</span><div class="sm">${esc(v.consultantNom || 'consultant à choisir')} · ${v.debut_h} · ${v.duree_min} min</div><span class="sp"></span>${finie ? '' : `<button class="btn s" data-a="form" data-v="reprog|1">Reprogrammer</button>`}</div>
           ${f.reprog ? `<div class="l2" style="margin-top:8px"><div class="champ"><label>Date</label><input type="date" data-f="form|prevu_le" value="${esc(f.prevu_le || v.prevu_le)}"></div><div class="champ"><label>Heure</label><input type="time" data-f="form|debut_h" value="${esc(f.debut_h || v.debut_h)}"></div></div><div class="btns"><button class="btn s p" data-a="reprog" data-v="${esc(v.id)}">Enregistrer</button><button class="btn s" data-a="annuler" data-v="${esc(v.id)}">Annuler la visite</button></div>` : ''}</div>`
+        + this.tachesVisiteHtml(v)
         + '<div class="cap">Tableau de bord — aperçu</div>' + this.kpis(b)
         + (ouverts.length ? '<div class="cap">Priorités du jour</div><div class="card">' + ouverts.map(p => `<div class="plan ${p.priorite}b"><div class="row"><span class="pill ${p.priorite}">${p.priorite}</span><b>${esc(p.titre)}</b></div><div class="sm mu">${esc(ASSIGNES[p.assigne] || '')} · ouvert le ${fmtD(p.cree_le)}${p.retard ? ' · délai dépassé de ' + p.retard + ' j' : p.echeance ? ' · délai ' + fmtD(p.echeance) : ''}${p.statut === 'reprendre' ? ' · à reprendre' : ''}${p.photo_id ? '' : ' · pas de photo'}</div></div>`).join('') + '</div>' : '')
         + `<div class="card sm"><b>Avant d’entrer</b><div class="mu">${g && g.faibles ? 'Google : ' + g.faibles + ' avis ≤ 2/5 sur 30 jours. ' : ''}${msp ? 'MSP ' + esc(msp.mois) + ' : ' + note1(msp.total) + '/20' + (Object.keys(msp.rubriques || {}).filter(k => msp.rubriques[k] < (this.D.seuils.mspAlerte || 12)).map(k => ' — ' + k + ' ' + msp.rubriques[k]).join('')) + '. ' : ''}${(b.motifs || []).length ? esc(b.motifs.slice(0, 3).join(' · ')) + '.' : 'Aucune alerte en cours.'}</div></div>`
@@ -864,7 +919,7 @@
     v_checklist() {
       const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
       const b = this.boutique(v.shop) || { court: v.shop }; const pts = this.pointsDe(v.id); const photos = this.photosDe(v.id);
-      const cl = this.D.checklist || []; const causes = this.D.causes || {};
+      const cl = this.checklistDe(v); const causes = this.D.causes || {};
       let cnt = { total: 0, faits: 0 };
       const mods = cl.map(m => this.moduleHtml(v, m, pts, photos, cnt, false)).join('');
       const total = cnt.total, faits = cnt.faits;
@@ -950,7 +1005,7 @@
       etapes.push({ titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
       etapes.push({ titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
-      (this.D.checklist || []).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
+      this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
       etapes.push({ titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
       etapes.push({ titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : ''), fait: false, html: () => this.planFormHtml(v, f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
@@ -1094,6 +1149,7 @@
       if (!f.checklist) { f.checklist = JSON.parse(JSON.stringify(cl)); f.seuils = se; f.frequence = fq; }
       const num = (k, l, aide) => `<div class="champ"><label>${l}</label><input type="number" step="${/google/i.test(k) ? '0.1' : '1'}" data-f="se|${k}" value="${esc(f.seuils[k])}">${aide ? `<div class="xs mu">${aide}</div>` : ''}</div>`;
       return this.hd('Réglages visites', 'checklist, seuils du feu, fréquences, horloge') + moi + push
+        + '<div class="card sm mu">Les types de visite (la liste déroulante du planning), leur checklist et leurs tâches à faire, et le cadre par magasin se règlent dans le cockpit : Gestion consultant › Cadre de visite. La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
           <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
@@ -1119,6 +1175,7 @@
       if (a === 'cq-note') { this.cqNoter(parts[0], parts[1], Number(parts[2])); return; }
       if (a === 'voir-serie') { const ps = this.photosJour(parts[0]).filter(x => x.genre === parts[1]); if (ps.length) { this.voir = { src: this.photoSrc(ps[0]), txt: ps.length + ' photo(s) · la plus récente ' + fmtDJ(ps[0].prise_a) }; this.rendre(); } return; }
       if (a === 'sem') { this.sem = v === '0' ? 0 : this.sem + Number(v); this.rendre(); return; }
+      if (a === 'tache') { const t = (this.D.taches || []).find(x => String(x.id) === parts[0]); if (t) { t.statut = parts[1]; t.attente = true; } this.ecrire({ method: 'PUT', path: '/consultants/taches/' + parts[0], body: { statut: parts[1] }, apres: 'tache' }); return; }
       if (a === 'drop') { this.ouvert[v] = !this.ouvert[v]; this.rendre(); return; }
       if (a === 'sync') { this.rejouer(); return; }
       if (a === 'recharger') { this.recharger(); return; }
@@ -1169,7 +1226,7 @@
     change(e) {
       const el = e.target; const c = el.dataset && el.dataset.c; if (!c) { return; }
       const parts = c.split('|');
-      if (parts[0] === 'form') { this.form[parts[1]] = el.value; this.rendre(); return; }
+      if (parts[0] === 'form') { this.form[parts[1]] = el.value; if (parts[1] === 'type') { this.form.duree_min = ''; this.form.consultant = ''; } this.rendre(); return; }
       if (parts[0] === 'moi') { this.moi = el.value; localStorage.setItem('vi.moi', this.moi); this.recharger(); return; }
       if (parts[0] === 'fichier' && el.files && el.files[0]) { const r = new FileReader(); r.onload = () => { this.form.fichier = r.result; this.dire('PDF prêt à envoyer.'); }; r.readAsDataURL(el.files[0]); }
     }
@@ -1193,10 +1250,11 @@
     planifier(demarrer) {
       const f = this.form; const D = this.D;
       const shop = f.shop || this.p || (D.boutiques[0] || {}).id;
-      const cons = this.role === 'consultant' && this.moi ? this.moi : (f.consultant || '');
+      const t = this.typeDe(f.type);
+      const cons = this.role === 'consultant' && this.moi ? this.moi : (f.consultant || this.consultantParDefaut(t));
       const cid = uuid();
-      const body = { client_id: cid, shop, consultant: cons, consultant_nom: this.consultantNom(cons), prevu_le: f.prevu_le || plusJours(auj(), 1), debut_h: f.debut_h || '09:00', duree_min: Number(f.duree_min || 90), motif: f.motif || 'reguliere', qui: this.qui() };
-      D.visites.push({ id: cid, client_id: cid, shop, consultant: cons, consultantNom: body.consultant_nom, prevu_le: body.prevu_le, debut_h: body.debut_h, duree_min: body.duree_min, motif: body.motif, statut: 'planifiee', attente: true });
+      const body = { client_id: cid, shop, consultant: cons, consultant_nom: this.consultantNom(cons), prevu_le: f.prevu_le || plusJours(auj(), 1), debut_h: f.debut_h || '09:00', duree_min: Number(f.duree_min || (t ? t.duree : 90)), motif: f.motif || 'reguliere', type: f.type || 'reguliere', qui: this.qui() };
+      D.visites.push({ id: cid, client_id: cid, shop, consultant: cons, consultantNom: body.consultant_nom, prevu_le: body.prevu_le, debut_h: body.debut_h, duree_min: body.duree_min, motif: body.motif, type: body.type, statut: 'planifiee', attente: true });
       const b = this.boutique(shop); if (b && !b.prochaineVisite) { b.prochaineVisite = { id: cid, le: body.prevu_le, h: body.debut_h, consultant: body.consultant_nom }; b.due = null; }
       const p = this.ecrire({ method: 'POST', path: '/visites', body, apres: 'visite' });
       if (demarrer) { p.then(() => { const v = this.visite(cid) || this.D.visites.find(x => x.client_id === cid); if (v) { this.majVisite(v.id, { statut: 'en_cours' }); const bb = this.boutique(shop); if (bb) { bb.visiteEnCours = v.id; } this.chargerBoutique(shop); this.go('controle', v.id); } }); this.dire('Visite ouverte.'); return; }

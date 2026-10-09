@@ -2848,6 +2848,54 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 
 Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Journal en dépend).
 
+### Le cadre de visite, la gestion des consultants, l'agenda Google (09/10/2026)
+
+Module `src/visites_cadre.php`. Chaque visite a un **type** (la liste déroulante du planning) : sa durée, le
+profil de consultant qu'il demande, sa checklist (modules et points, même forme que la liste standard) et ses
+tâches à faire avant, pendant et après. Le **cadre** dit, par magasin, combien de visites de chaque type par mois
+ou par trimestre, par quel profil, par quel consultant. Les **tâches du consultant** vivent dans
+`ceo_consultant_tache` : celles que le type génère à la planification (une par tâche du type, `client_id`
+`v{visite}:{n}`, échéance J−n / J / J+n) et celles qu'il se donne. Colonnes ajoutées à `ceo_visite` :
+`type_code` (défaut `reguliere`), `ics_seq`. Réglages : `visitesTypes`, `visitesCadre`, `visitesProfils`,
+`visitesConsultantProfil` ; la checklist du type « Régulière » reste `visitesChecklist`, un seul réglage lu aux
+deux endroits. Les types livrés : reguliere (23 points), production (14), hygiene (12), msp (8), bilan (10),
+ouverture (19), suivi (dynamique : les plans d'action ouverts), revisite (dynamique : les points non conformes de
+la dernière visite).
+
+| Route | Ce qu'elle rend ou fait |
+|---|---|
+| `GET /visites/cadre?mois=` | `types[]` (code, nom, duree, profil, profilNom, actif, dynamique, checklist[], taches[] {quand, delai, libelle}, points, nbTaches), `cadre[]` (id, shop, type, nb, par, profil, consultant, consultantNom, auto), `attendu[]` (le cadre face au réel du mois : attendu, faites, planifiees, aPlanifier, derniere, prochaine), `profils[]`, `consultants[]` (avec profil), `magasins[]`. |
+| `PUT /visites/cadre` | `types[]` (la régulière avec `checklist` écrit `visitesChecklist`), `cadre[]`, `profils[]`, `consultantProfil{id: code}`. Rend la lecture. |
+| `GET /consultants/gestion?consultant=u6&mois=2026-10` | l'écran Gestion consultant : `consultant`, `consultants[]`, `visites[]` du mois ±6 jours (tous consultants, `mienne`, `typeNom`, `magasin`, `points{total,faits,ko}`, `google` le lien « Ajouter à Google Agenda »), `plans[]` ouverts, `taches[]` (ouvertes, du mois, faites ce mois), `cadre[]` (= attendu), `boutiques[]` (feu, dernière et prochaine visite), `reseau[]` (consultant × magasin : dernière, prochaine, responsable ; visites du mois, tâches ouvertes et en retard), `helpdesk` (les cas du panel quand il répond), `agenda` (`ics`, `webcal`, `invitations`, `smtp`, `notePanel`). `consultant=tous` pour le réseau ; sans paramètre, le compte connecté (`consultantIdCompte`). |
+| `POST /consultants/taches` | `titre`, `consultant` (sinon le compte), `shop`, `echeance`, `detail`, `source` (perso…), `visite_id`, `client_id` (rejouable). |
+| `PUT /consultants/taches/{id}` | `statut` (a_faire, en_cours, fait, annule — `fait_le` posé), `titre`, `detail`, `echeance`, `shop`. |
+| `GET /consultants/{id}/visites.ics?jeton=` | le flux iCalendar du consultant (−60 j … +180 j, hors annulées), **sans session** : le jeton de l'adresse (`vcIcsJeton`, HMAC du jeton des visites) est sa clé. Google Agenda s'y abonne (« À partir de l'URL ») et le relit toutes les 12 à 24 h. |
+| `POST /visites` | accepte `type` (code) ; la durée vient du type si elle n'est pas donnée ; la réponse porte `suite` : `taches` créées, `invitation` (`envoye`, `motif`, `a`). |
+| `PUT /visites/{id}` | accepte `type` ; déplacée (date, heure, durée, consultant, type) → les tâches ouvertes du type suivent, `ics_seq` + 1, invitation « Mise à jour » ; annulée → tâches annulées, invitation CANCEL ; terminée → les tâches « pendant » faites, note VISIT déposée au panel si `seuils.notePanel`. |
+| `PUT /visites/{id}/points` | le module est un code court (celui de la checklist du type), plus seulement ceux de la liste standard. |
+| `GET /visites/app` | en plus : `types[]`, `cadre[]`, `taches[]` (celles des visites servies), `consultants[].profil`, `boutiques[].derniereVisite.type` et `prochaineVisite.type`. |
+
+Seuils ajoutés (`visitesSeuils`) : `invitations` (vrai : l'invitation .ics part au consultant à chaque visite
+planifiée, déplacée, annulée — SMTP requis), `notePanel` (faux : à la clôture, une note de type VISIT est
+déposée dans le panel, type « Visite » de `notePanelDeposer`). `viFrequence` lit le cadre quand il est réglé
+(30 / visites par mois), la fréquence en jours reste le repli.
+
+### Les franchisés — évaluation et suivi (09/10/2026)
+
+Module `src/franchises.php`. Rien n'est ressaisi : tout est lu là où il vit, une source qui ne répond pas rend
+son `motif`.
+
+| Route | Ce qu'elle rend |
+|---|---|
+| `GET /franchises` | `magasins[]` : feu, motifs, `responsable` (le consultant du cadre), `journalier` (scoring du trimestre courant, tâches sur 30 jours `pct` et `joursObligManques` d'après `ceo_tache_jour` et les obligatoires du scoring, invendus 7 jours `part` du CA, note Google, CA de la semaine), `terrain` (dernière et prochaine visite, plans ouverts et P0, planogramme de la dernière visite, dernier client mystère encodé, lignes de cadre). `_cache=600` conseillé. |
+| `GET /franchises/fiche?shop=` | la fiche : `feu`, `consultants[]` du cadre, `journalier` (`tachesJour` les revues du jour, `taches` 30 jours avec `jours[]` {jour, f, t, oblig}, `invendus`, `objectifs` {produits[], campagnes[]}, `remarques` {n, parOperateur[], dernieres[]}, `google`, `ca`), `terrain` (`visites` {derniere avec points et ecarts, prochaines, mois, historique}, `plans`, `cadre`, `msp`, `mspVisites`, `conformite` (`vcConformiteMagasin`), `scoring`, `plano`, `equipe`, `app`), `journal[]` (visites terminées, événements des plans d'action, remarques, client mystère, 60 jours, `volet` journalier ou terrain). La page du franchisé `dashboard/suivi.html?shop=` la lit telle quelle. |
+
+Le cockpit : section « Franchisés · évaluation et suivi » du rail — Fiche franchisé, Scoring du trimestre, puis
+deux sous-menus (Suivi journalier et opérations : tâches et contrôles photo, invendus, objectifs, remarques
+opérateurs, note Google, reporting ; Suivi de terrain : gestion consultant, visites, client mystère, conformité
+du comptoir). Écrans nouveaux : `#/gestion-consultant`, `#/fiche-franchise`, `#/remarques-operateurs`
+(`GET /equipe/remarques`). Les anciennes adresses restent valables.
+
 ### `GET /analyse/pnl/mois` — le P&L mois par mois d'un magasin, depuis le P&L quotidien du panel (09/10/2026)
 
 `GET /analyse/pnl/mois?shop=4&du=2026-02&au=2026-10[&tous=1][&jours=1][&rafraichir=1]`. Le panel ne sert le P&L

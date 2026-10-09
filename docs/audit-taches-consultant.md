@@ -135,10 +135,10 @@ magasin (`visitesFrequence`, en jours), un motif par visite (`VI_MOTIFS`) et une
 
 | Objet | Champs | Rôle |
 |---|---|---|
-| Type de visite `ceo_visite_type` | code, libellé, durée, profil demandé, checklist (modules et points, même forme que `visitesChecklist`), tâches à faire (avant J−n, pendant, après J+n), actif | la liste déroulante : choisir le type, c'est prendre sa checklist et ses tâches |
-| Cadre par magasin `ceo_visite_cadre` | magasin, type, nombre par mois (ou par trimestre), profil, consultant responsable, actif | combien de visites de chaque type, par qui ; génère « À planifier », la couverture et les visites dues |
+| Type de visite (réglage `visitesTypes`) | code, libellé, durée, profil demandé, checklist (modules et points, même forme que `visitesChecklist`), tâches à faire (avant J−n, pendant, après J+n), actif, dynamique | la liste déroulante : choisir le type, c'est prendre sa checklist et ses tâches |
+| Cadre par magasin (réglage `visitesCadre`) | magasin, type, nombre par mois (ou par trimestre), profil, consultant responsable | combien de visites de chaque type, par qui ; génère « À planifier », la couverture et les visites dues |
 | Visite `ceo_visite` | + `type_code` (défaut `reguliere`), + `cadre_id` | le motif reste (régulière, asap, due, revisite) : il dit pourquoi, le type dit quoi |
-| Tâche consultant `ceo_consultant_tache` | + `visite_id`, `quand` (avant, pendant, après) | les tâches du type deviennent des tâches du consultant à la planification, avec leur échéance |
+| Tâche consultant `ceo_consultant_tache` | consultant, magasin, visite, source, quand (avant, pendant, après), délai, titre, échéance, statut | les tâches du type deviennent des tâches du consultant à la planification, avec leur échéance |
 
 Types proposés, modifiables dans l'onglet Cadre de visite : Régulière (90 min, 23 points, 6 modules), Production
 (180 min, 14 points : mise en place, cuisson, recuissons, invendus), Hygiène et qualité (60 min, 12 points), Client
@@ -220,7 +220,16 @@ La fiche franchisé ne crée aucune donnée : elle lit `/scoring`, `/taches/suiv
 constats des deux volets. Le scoring du trimestre reste la synthèse : deux de ses postes viennent du volet
 journalier (Note Google, Tâches), un du terrain (Client mystère), un du pilotage (Budget).
 
-## 8. Ce qu'il faudrait construire (estimation)
+## 8. Ce qui a été construit (09/10/2026) et ce qui reste
+
+Réalisé le jour même : les lots 1 à 5 et 8 à 10 ci-dessous — `src/visites_cadre.php`, `src/franchises.php`, l'écran
+« Gestion consultant » à quatre onglets, la section du rail en deux volets, la fiche franchisé et l'écran des remarques,
+la page du franchisé `dashboard/suivi.html?shop=`, l'application Visites qui lit le type (liste déroulante, checklist
+du type, tâches sur la fiche, lien Google Agenda). Le détail des routes est dans `docs/contrat-api.md`. Reste le
+lot 7 (OAuth Google, bidirectionnel) et, côté panel, la lecture des cas du helpdesk qui dépend de la forme de sa
+réponse (lue en meilleur effort).
+
+### Estimation d'origine
 
 | Lot | Contenu | Serveur | Écran |
 |---|---|---|---|

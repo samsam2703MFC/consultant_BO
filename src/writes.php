@@ -2426,7 +2426,7 @@ function notePanelDeposer($shopId, string $type, string $texte, string $contexte
     if ($cid === null) { $out['motif'] = 'identifiant consultant du compte inconnu'; return $out; }
 
     $vers = ['À corriger sur place' => 'ISSUE', 'Rappel de procédure' => 'AUDIT',
-             'Point de formation' => 'COACHING', 'Félicitations' => 'OTHER'];
+             'Point de formation' => 'COACHING', 'Félicitations' => 'OTHER', 'Visite' => 'VISIT'];
     $code = $vers[$type] ?? 'OTHER';
     $tid = 0; $premier = 0;
     foreach (PanelApi::noteTypes() as $t) {
