@@ -898,6 +898,18 @@ matin (`POST /product-movements`, motif `carryover`, lu dans le journal `product
 s'arrête à la mi-juillet) et le document OpenAPI du panel (`/swagger/openapi.json`, 933 routes) n'en expose aucune
 lecture. L'écran le dit (`report.motif`) plutôt que de les inventer.
 
+**Le détail des saisies** (demande du 09/10/2026) : `GET /exploitation/invendus/detail?shop=4&date=` (ou `&du=&au=`) rend,
+pour un magasin, le même total par produit que la carte (`produits`, `pieces`, `cout`, `caPerdu`, `references`,
+`parMotif`) et chaque saisie de caisse — `saisies[]` : `le`, `heure`, `operateur` (nom court « Prénom N. » pris sur
+`/shops/{id}/employees`, gardé un jour sous `inv:ops:{shop}`), `operateurId`, `pid`, `produit`, `categorie`, `pieces`,
+`motif`, `motifLib`, `source` — dans l'ordre du temps, avec `saisiesPieces`, `parOperateur[]` et `parHeure[]`. Les
+saisies viennent du journal `product_movement` de la base partagée (`movement_type = 'WASTE'`), le seul endroit qui
+porte l'heure et l'opérateur : le panel ne rend qu'un total par produit (mesuré le 09/10/2026 : ni `group_by`, ni
+route de mouvements, ni « evidence » sous `/shops/{id}`). `journal` dit jusqu'où il va (`derniere`, gardée dix minutes
+sous `inv:journal:{shop}`), s'il couvre la fenêtre (`couvre`) et, sinon, pourquoi les saisies manquent (`motif`) —
+mesuré : il s'arrête au 14/07/2026 pour chaque magasin. Le dashboard magasin l'ouvre dans une modale depuis la ligne
+« − Invendus et poubelle » du P&L court et depuis la carte « Invendus et poubelle ».
+
 **Dans le P&L.** `GET /exploitation/jour` et `GET /exploitation/periode` portent sur chaque magasin et sur le réseau
 `invendus` (coût net, `null` si le panel est muet), `invendusPct`, `invendusPieces`, `invendusDeclare`,
 `invendusSource`, et le résultat les retranche : `net = CA − coût matière − invendus − main-d'œuvre − frais généraux`
