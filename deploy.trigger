@@ -675,3 +675,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T16:06:23Z sonde : détail OpenAPI élargi
 2026-10-09T17:31:09Z Franchisés · évaluation et suivi : cadre de visite, gestion consultant, agenda Google, fiche et page du franchisé
 2026-10-09T18:27:10Z suivi franchisé : part des invendus, réclamations, points moyens et infractions
+2026-10-09T18:46:38Z suivi franchisé : tuiles KPI, dépliant, modale
