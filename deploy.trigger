@@ -668,3 +668,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T13:10:57Z dossier halle v2 et liste des produits
 2026-10-09T13:27:27Z dossier halle v3
 2026-10-09T14:17:07Z scouting : zones par temps de parcours, routes, qualification des concurrents, relevé terrain
+2026-10-09T15:02:08Z invendus : sonde étendue (chemins racine, tables de mouvements)
