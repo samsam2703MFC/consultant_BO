@@ -42,10 +42,14 @@ function pcMediane(array $v): ?float
     return $n % 2 ? (float) $v[intdiv($n, 2)] : ((float) $v[$n / 2 - 1] + (float) $v[$n / 2]) / 2;
 }
 
-/** La zone d'un coefficient : ko (rouge), att (orange), ok (vert), mu (sans coût). */
+/**
+ * La zone d'un coefficient : ko (rouge), att (orange), ok (vert), mu (sans coût ni prix), ab (recette à vérifier :
+ * un coût au-dessus du prix, ou sous 5 % de celui-ci — la règle de vraisemblance du P&L, `svCoutPlausible`).
+ */
 function pcZone(?float $coef): string
 {
     if ($coef === null) { return 'mu'; }
+    if ($coef <= 1 || $coef > 20) { return 'ab'; }
     return $coef < PC_ZONES['ko'] ? 'ko' : ($coef < PC_ZONES['att'] ? 'att' : 'ok');
 }
 
@@ -135,7 +139,7 @@ function ep_analyse_produits_coefficients(): array
     }
     foreach ($prods as &$p) {
         $c = $cats[$p['catId']] ?? null;
-        $p['groupe'] = (string) ($c['groupe'] ?? '');
+        $p['groupe'] = (string) ($c['groupe'] ?? '') !== '' ? (string) $c['groupe'] : $p['cat'];
         $p['atelier'] = (string) ($c['atelier'] ?? '');
         $p['cible'] = $c['cible'] ?? null;
         $p['ecartCible'] = $p['coef'] !== null && $p['cible'] !== null ? round($p['coef'] - $p['cible'], 2) : null;
@@ -150,8 +154,8 @@ function ep_analyse_produits_coefficients(): array
         foreach ($liste as $p) { $g[$p[$cle]][] = $p; }
         $out = [];
         foreach ($g as $k => $ps) {
-            $coefs = array_column(array_filter($ps, static fn ($p) => $p['coef'] !== null), 'coef');
-            $zones = ['ok' => 0, 'att' => 0, 'ko' => 0, 'mu' => 0];
+            $coefs = array_column(array_filter($ps, static fn ($p) => $p['coef'] !== null && $p['zone'] !== 'ab'), 'coef');
+            $zones = ['ok' => 0, 'att' => 0, 'ko' => 0, 'mu' => 0, 'ab' => 0];
             foreach ($ps as $p) { $zones[$p['zone']]++; }
             $out[] = ['nom' => (string) $k, 'n' => count($ps), 'nChiffres' => count($coefs), 'coefMedian' => pcMediane($coefs) !== null ? round(pcMediane($coefs), 2) : null,
                 'coefMin' => $coefs !== [] ? min($coefs) : null, 'coefMax' => $coefs !== [] ? max($coefs) : null, 'zones' => $zones];
@@ -161,14 +165,14 @@ function ep_analyse_produits_coefficients(): array
     $parCat = [];
     foreach ($agg($prods, 'cat') as $a) {
         $c = null; foreach ($cats as $x) { if ($x['nom'] === $a['nom']) { $c = $x; break; } }
-        $a['id'] = $c['id'] ?? null; $a['groupe'] = (string) ($c['groupe'] ?? ''); $a['cible'] = $c['cible'] ?? null; $a['atelier'] = (string) ($c['atelier'] ?? '');
+        $a['id'] = $c['id'] ?? null; $a['groupe'] = (string) ($c['groupe'] ?? '') !== '' ? (string) $c['groupe'] : $a['nom']; $a['cible'] = $c['cible'] ?? null; $a['atelier'] = (string) ($c['atelier'] ?? '');
         $parCat[] = $a;
     }
     usort($parCat, static fn ($a, $b) => [$a['groupe'], $a['nom']] <=> [$b['groupe'], $b['nom']]);
     $nom = 'Magasin ' . $sid;
     try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$sid]); if ($r !== null) { $nom = (string) $r['name']; } } catch (Throwable $e) { /* sans nom */ }
-    $coefs = array_column(array_filter($prods, static fn ($p) => $p['coef'] !== null), 'coef');
-    $zones = ['ok' => 0, 'att' => 0, 'ko' => 0, 'mu' => 0];
+    $coefs = array_column(array_filter($prods, static fn ($p) => $p['coef'] !== null && $p['zone'] !== 'ab'), 'coef');
+    $zones = ['ok' => 0, 'att' => 0, 'ko' => 0, 'mu' => 0, 'ab' => 0];
     foreach ($prods as $p) { $zones[$p['zone']]++; }
     return ['shop' => (string) $sid, 'magasin' => $nom, 'court' => preg_replace('/^.* - /', '', $nom), 'n' => count($prods), 'nChiffres' => count($coefs),
         'coefMedian' => pcMediane($coefs) !== null ? round(pcMediane($coefs), 2) : null, 'zones' => $zones,

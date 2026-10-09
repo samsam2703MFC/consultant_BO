@@ -2810,8 +2810,8 @@ matière, cf. ticket T5a) ; `labour` et `overhead` sont ce que le franchisé enc
 
 Un dossier déposé est un sous-dossier de `docs/dossiers/` du dépôt (livré sur le serveur avec le reste), nommé en
 slug `a-z0-9-`, avec un `dossier.json` facultatif : `titre`, `objet` (sujet du courriel), `resume` (texte du
-courriel, paragraphes séparés par une ligne vide). Premier dossier : `halle-2026-10`, le dossier investisseur de
-Halle (PDF 7 pages A4 + classeur Excel ; `generer.py` est le générateur, il ne se joint pas).
+courriel, paragraphes séparés par une ligne vide). Premiers dossiers : `halle-2026-10`, le dossier investisseur de
+Halle (PDF 14 pages A4, français puis néerlandais, + classeur Excel ; `generer.py` et `classeur.py` sont les générateurs, ils ne se joignent pas), et `halle-produits-2026-10`, la liste des produits de Halle avec leur coefficient (PDF + Excel).
 
 `GET /dossiers/fichiers[?dossier=halle-2026-10]` → `{dossiers: [{dossier, titre, objet, fichiers: [{nom, type,
 octets, modifie}], octets}], adressesConnues: [...], smtp: bool, source}`. Seuls les `.pdf`, `.xlsx`, `.docx`,
@@ -2835,7 +2835,7 @@ catégorie en objet avec `price_coefficient` et `groups`, `is_divisible` / `port
 cible `price_coefficient`, atelier de production) et `/product-category-groups` (le groupe, la famille : Tartes, Traiteur…).
 Le coefficient est **prix HT de la pièce entière ÷ coût de recette net** (un produit divisible vendu à la portion : prix de la
 portion ÷ `portion_size`). Zones de l'onglet « Recette & marge » : `ko` sous × 1,67 (marge brute < 40 %), `att` sous × 2,5,
-`ok` au-delà, `mu` sans coût ; objectif du réseau × 3,13 (matière 32 %). Réponse : `{shop, magasin, court, n, nChiffres,
+`ok` au-delà, `mu` sans coût ni prix, `ab` recette à vérifier (coût au-dessus du prix ou sous 5 % de celui-ci, la règle de vraisemblance du P&L ; hors des médianes) ; objectif du réseau × 3,13 (matière 32 %). Un produit dont la catégorie n'a pas de groupe prend sa catégorie pour groupe. Réponse : `{shop, magasin, court, n, nChiffres,
 coefMedian, zones{ok,att,ko,mu}, seuils{ko,att,objectif,food}, produits: [{id, nom, catId, cat, groupe, atelier, secteur, vie,
 actif, webshop, divisible, part, tva, prixTtc, prixHt, conseille, cout, coutTtc, coef, coefTtc, margePct, foodPct, margeHt,
 zone, cible, ecartCible, prixCible, prixObjectif, recette, stock}], categories: [{id, nom, groupe, atelier, cible, n, nChiffres,

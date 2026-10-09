@@ -1,0 +1,5 @@
+{
+  "titre": "Halle — les produits et leur coefficient (9 octobre 2026)",
+  "objet": "Halle — la liste des produits avec leur coefficient, par groupe et catégorie (9 octobre 2026)",
+  "resume": "Bonjour,\n\nVoici la liste des produits disponibles à Halle avec leur coefficient : prix de vente HT de la pièce divisé par le coût de recette net du jour, tels que le panel les calcule pour le magasin. Chaque produit porte son groupe (la famille), sa catégorie, son prix TTC, son coût matière, son coefficient en couleur (vert à partir de × 2,5, orange entre × 1,67 et × 2,5, rouge en dessous), la cible de sa catégorie dans le panel et le prix TTC qui l’atteindrait.\n\nDeux fichiers sont joints : le PDF, lisible groupe par groupe, et le classeur Excel avec les feuilles Produits, Par catégorie, Par groupe et À vérifier.\n\nLes recettes dont le coût dépasse le prix, ou n’en fait pas 5 %, sont signalées « à vérifier » et tenues hors des médianes ; les produits sans coût de recette au panel n’ont pas de coefficient.\n\nLecture du 9 octobre 2026 ; la même liste se relit à tout moment par l’API du cockpit (GET /analyse/produits/coefficients?shop=4)."
+}
