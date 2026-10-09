@@ -60,4 +60,16 @@ fm = {}
 for i in range(5, len(rows) + 1):
     fm[f'D{i}'] = '#,##0 €'; fm[f'E{i}'] = '#,##0 €'; fm[f'F{i}'] = '0.0 %'; fm[f'G{i}'] = '0.0 %'; fm[f'H{i}'] = '0.0 %'
 feuille('Food cost P&L', rows, {'A': 24, 'B': 12, 'C': 12, 'D': 12, 'E': 16, 'F': 18, 'G': 18, 'H': 24}, fm, 4)
+# 8. Marges par catégorie (septembre)
+mc = json.load(open(SP + '/halle/marges-cat.json'))
+rows = [['Les marges par catégorie et leur poids dans le chiffre — septembre 2026, Halle', None, None, None, None, None, None, None, None, None],
+        ['Marge brute = chiffre − coût de recette, telle que le panel la chiffre produit par produit ; les recettes invraisemblables (coût au-dessus du prix ou sous 5 % de celui-ci) sont écartées. « Coût connu » : la part du chiffre de la catégorie dont le coût est mesuré.', None, None, None, None, None, None, None, None, None],
+        [None] * 10, ['Catégorie', 'Famille', 'Part du CA', 'CA', 'Pièces', 'Références', 'Food cost', 'Marge brute', 'Coefficient', 'Coût connu (part du CA)']]
+for x in mc['categories']:
+    rows.append([x['nom'], x['groupe'], x['part'] / 100, x['v'], x['q'], x['refs'], (x['food'] / 100) if x['food'] is not None else None, (x['marge'] / 100) if x['marge'] is not None else None, x['coef'], x['couv'] / 100])
+T = mc['total']; rows.append(['Toutes catégories', None, 1, T['v'], sum(x['q'] for x in mc['categories']), sum(x['refs'] for x in mc['categories']), T['food'] / 100, T['marge'] / 100, T['coef'], T['couv'] / 100])
+fm = {}
+for i in range(5, len(rows) + 1):
+    fm[f'C{i}'] = '0.0 %'; fm[f'D{i}'] = '#,##0 €'; fm[f'G{i}'] = '0.0 %'; fm[f'H{i}'] = '0.0 %'; fm[f'I{i}'] = '× 0.00'; fm[f'J{i}'] = '0 %'
+feuille('Marges par catégorie', rows, {'A': 28, 'B': 22, 'C': 11, 'D': 11, 'E': 9, 'F': 11, 'G': 10, 'H': 12, 'I': 11, 'J': 20}, fm, 4)
 wb.save(SP + '/halle/Halle-chiffres-2026.xlsx'); print('xlsx v2 écrit :', [w.title for w in wb.worksheets])
