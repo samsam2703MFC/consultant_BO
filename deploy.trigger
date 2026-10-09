@@ -673,3 +673,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T15:24:59Z dashboard : modale des invendus au téléphone
 2026-10-09T15:52:02Z invendus : réclamation fournisseur et remarque à l'opérateur depuis la modale
 2026-10-09T16:06:23Z sonde : détail OpenAPI élargi
+2026-10-09T17:31:09Z Franchisés · évaluation et suivi : cadre de visite, gestion consultant, agenda Google, fiche et page du franchisé
