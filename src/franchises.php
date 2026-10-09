@@ -430,99 +430,106 @@ function frMois(string $shop): array
         'jours' => $jours, 'motif' => null];
 }
 
-/* --- Les checklists du magasin : chaque type de visite et son dernier résultat ; les checklists du jour du panel -- */
+/* --- Les checklists du magasin, rien que ce que l'API du panel fournit (09/10/2026) ---------------------------
+ * Les checklists du jour (/consultant/shops/{id}/checklists), l'avancement de chacune tâche par tâche (…/progress :
+ * statut, heure, photo, note, commentaire, validation), leur suivi jour par jour sur la période
+ * (…/checklists/progress?from=&to=) et la checklist propre du consultant (/consultant/tasks, cadre opérationnel). */
+const FR_CL_JOURS = [1, 7, 30];
+function frClFait(array $t): bool
+{
+    $st = strtoupper(trim((string) ($t['status'] ?? '')));
+    return in_array($st, ['DONE', 'COMPLETED', 'COMPLETE', 'FINISHED'], true) || !empty($t['completed_at']) || !empty($t['is_done']);
+}
+function frClTache(array $t): array
+{
+    $note = isset($t['review_rating']) && $t['review_rating'] !== null && $t['review_rating'] !== '' && $t['review_rating'] !== 'NULL' ? (int) $t['review_rating'] : null;
+    $acc = $t['review_is_accepted'] ?? null;
+    $acc = $acc === null || $acc === '' || $acc === 'NULL' ? null : (bool) (int) $acc;
+    $txt = static fn ($v) => $v === null || $v === 'NULL' ? '' : trim((string) $v);
+    return ['id' => (int) ($t['task_id'] ?? $t['id'] ?? 0), 'ordre' => (int) ($t['sort_order'] ?? 0), 'nom' => $txt($t['name'] ?? $t['task_name'] ?? ''),
+        'description' => $txt($t['description'] ?? ''), 'heure' => substr($txt($t['execution_time'] ?? $t['scheduled_time'] ?? ''), 0, 5),
+        'obligatoire' => !empty($t['is_mandatory']) && $t['is_mandatory'] !== '0', 'photoRequise' => !empty($t['requires_photo']) && $t['requires_photo'] !== '0',
+        'statut' => strtoupper($txt($t['status'] ?? '')), 'fait' => frClFait($t), 'faitLe' => substr($txt($t['completed_at'] ?? ''), 0, 16), 'faitPar' => $txt($t['completed_by'] ?? ''),
+        'photo' => (int) ($t['attachment_id'] ?? 0) > 0, 'note' => $note, 'accepte' => $acc, 'commentaire' => $txt($t['review_comment'] ?? $t['note'] ?? ''),
+        'notePar' => $txt($t['review_by_name'] ?? ''), 'noteLe' => substr($txt($t['reviewed_at'] ?? ''), 0, 16),
+        'valideLe' => substr($txt($t['admin_validated_at'] ?? ''), 0, 16), 'validePar' => $txt($t['admin_validated_by_name'] ?? ''), 'produit' => $txt($t['product_name'] ?? '')];
+}
 function ep_franchises_checklists(): array
 {
     $shop = trim((string) ($_GET['shop'] ?? ''));
     $mags = viMagasins();
     if ($shop === '' || !isset($mags[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $jours = (int) ($_GET['jours'] ?? 7);
+    $jours = in_array($jours, FR_CL_JOURS, true) ? $jours : 7;
+    $auj = date('Y-m-d'); $du = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $out = ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => false, 'date' => $auj, 'du' => $du, 'au' => $auj, 'jours' => $jours, 'checklists' => [], 'consultant' => null, 'motif' => null, 'source' => 'API du panel'];
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant du panel non configuré'; return $out; }
     @set_time_limit(90);
-    $types = function_exists('vcTypes') ? vcTypes() : [];
-    $cadre = [];
-    foreach (function_exists('vcCadreDe') ? vcCadreDe($shop) : [] as $l) {
-        $cadre[(string) $l['type']] = ['nb' => (int) ($l['nb'] ?? 1), 'par' => (string) ($l['par'] ?? 'mois'), 'consultantNom' => (string) ($l['consultantNom'] ?? '')];
+    $sid = (int) $shop;
+    $r = PanelApi::getParallele(['jour' => '/consultant/shops/' . $sid . '/checklists?date=' . $auj,
+        'periode' => '/consultant/shops/' . $sid . '/checklists/progress?' . http_build_query(['from' => $du, 'to' => $auj]),
+        'consultant' => '/consultant/tasks?date=' . $auj]);
+    $jour = is_array($r['jour'] ?? null) ? PanelApi::liste($r['jour']) : null;
+    if ($jour === null) { $out['motif'] = 'le panel n’a pas rendu les checklists du magasin'; return $out; }
+    $out['lu'] = true;
+    $cls = [];
+    foreach ($jour as $c) {
+        $cid = (int) ($c['id'] ?? $c['checklist_id'] ?? 0);
+        if ($cid <= 0) { continue; }
+        $cls[$cid] = ['id' => $cid, 'nom' => trim((string) ($c['name'] ?? $c['checklist_name'] ?? ('Checklist ' . $cid))), 'description' => trim((string) ($c['description'] ?? '')),
+            'heure' => substr((string) ($c['execution_time'] ?? ''), 0, 5), 'total' => (int) ($c['tasks_total'] ?? 0), 'faites' => (int) ($c['tasks_done'] ?? 0),
+            'taches' => [], 'jours' => [], 'periode' => ['total' => 0, 'faites' => 0, 'pct' => null], 'notees' => 0, 'nc' => 0, 'obligManquees' => 0];
     }
-    // Les visites terminées du magasin et leurs points, une lecture chacune.
-    $visites = []; $points = [];
-    try {
-        $visites = Db::rows("SELECT id, prevu_le, type_code, consultant_nom FROM ceo_visite WHERE shop_id = ? AND statut = 'terminee' ORDER BY prevu_le DESC, id DESC LIMIT 80", [$shop]);
-        $ids = array_map(fn ($v) => (int) $v['id'], $visites);
-        if ($ids !== []) {
-            foreach (Db::rows('SELECT visite_id, module, point_ref, libelle, etat, note, valeur, commentaire FROM ceo_visite_point WHERE visite_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) as $p) {
-                $points[(int) $p['visite_id']][(string) $p['point_ref']] = $p;
+    // L'avancement de chaque checklist du jour : ses tâches une à une.
+    $req = [];
+    foreach (array_keys($cls) as $cid) { $req[$cid] = '/consultant/shops/' . $sid . '/checklists/' . $cid . '/progress?date=' . $auj; }
+    foreach ($req ? PanelApi::getParallele($req) : [] as $cid => $p) {
+        if (!is_array($p)) { continue; }
+        $ts = array_map('frClTache', PanelApi::liste(is_array($p['tasks'] ?? null) ? $p['tasks'] : $p));
+        usort($ts, fn ($a, $b) => [$a['ordre'], $a['heure']] <=> [$b['ordre'], $b['heure']]);
+        $cls[$cid]['taches'] = $ts;
+        if (isset($p['summary']['total'])) { $cls[$cid]['total'] = (int) $p['summary']['total']; $cls[$cid]['faites'] = (int) ($p['summary']['done'] ?? $cls[$cid]['faites']); }
+        foreach ($ts as $t) {
+            if ($t['note'] !== null) { $cls[$cid]['notees']++; if ($t['note'] < 4 || $t['accepte'] === false) { $cls[$cid]['nc']++; } }
+            if ($t['obligatoire'] && !$t['fait']) { $cls[$cid]['obligManquees']++; }
+        }
+    }
+    // La période : chaque jour, chaque checklist, faites sur le total.
+    $per = is_array($r['periode'] ?? null) ? $r['periode'] : [];
+    foreach ((array) ($per['days'] ?? []) as $d) {
+        if (!is_array($d)) { continue; }
+        $dt = substr((string) ($d['date'] ?? $d['day'] ?? ''), 0, 10);
+        foreach (PanelApi::liste(is_array($d['checklists'] ?? null) ? $d['checklists'] : []) as $c) {
+            $cid = (int) ($c['id'] ?? $c['checklist_id'] ?? 0);
+            if ($cid <= 0 || $dt === '') { continue; }
+            $tot = (int) ($c['tasks_total'] ?? $c['total'] ?? ($c['summary']['total'] ?? 0));
+            $fai = (int) ($c['tasks_done'] ?? $c['done'] ?? ($c['summary']['done'] ?? 0));
+            if (!isset($cls[$cid])) {
+                $cls[$cid] = ['id' => $cid, 'nom' => trim((string) ($c['name'] ?? $c['checklist_name'] ?? ('Checklist ' . $cid))), 'description' => trim((string) ($c['description'] ?? '')),
+                    'heure' => substr((string) ($c['execution_time'] ?? ''), 0, 5), 'total' => 0, 'faites' => 0, 'taches' => [], 'jours' => [], 'periode' => ['total' => 0, 'faites' => 0, 'pct' => null], 'notees' => 0, 'nc' => 0, 'obligManquees' => 0, 'pasAujourdhui' => true];
             }
-        }
-    } catch (Throwable $e) { /* module Visites absent : les checklists restent lisibles, sans résultat */ }
-    $compte = static function (array $pts): array {
-        $c = ['ok' => 0, 'ko' => 0, 'na' => 0, 'vide' => 0];
-        foreach ($pts as $p) { $e = (string) ($p['etat'] ?? ''); $c[$e === '' ? 'vide' : (isset($c[$e]) ? $e : 'vide')]++; }
-        return $c;
-    };
-    $parType = [];
-    foreach ($visites as $v) { $parType[(string) (($v['type_code'] ?? '') ?: 'reguliere')][] = $v; }
-    $out = [];
-    foreach ($types as $t) {
-        $code = (string) $t['code']; $vs = $parType[$code] ?? [];
-        if (empty($t['actif']) && $vs === [] && !isset($cadre[$code])) { continue; }
-        $der = $vs[0] ?? null; $res = $der ? ($points[(int) $der['id']] ?? []) : [];
-        $modules = []; $vus = [];
-        foreach ((array) ($t['checklist'] ?? []) as $m) {
-            $pts = [];
-            foreach ((array) ($m['points'] ?? []) as $p) {
-                $ref = (string) ($p['ref'] ?? ''); $r = $res[$ref] ?? null; $vus[$ref] = true;
-                $pts[] = ['ref' => $ref, 'libelle' => (string) ($p['libelle'] ?? $ref), 'photo' => !empty($p['photo']), 'pct' => !empty($p['pct']),
-                    'etat' => $r ? (string) $r['etat'] : null, 'note' => $r && $r['note'] !== null ? (int) $r['note'] : null,
-                    'valeur' => $r && $r['valeur'] !== null ? (int) $r['valeur'] : null, 'commentaire' => $r && $r['commentaire'] !== null && $r['commentaire'] !== '' ? (string) $r['commentaire'] : null];
-            }
-            $modules[] = ['id' => (string) ($m['id'] ?? ''), 'nom' => (string) ($m['nom'] ?? ''), 'points' => $pts];
-        }
-        // Les points tenus à la dernière visite hors définition : ceux d'une checklist dynamique (suivi, revisite).
-        $hors = [];
-        foreach ($res as $ref => $r) {
-            if (isset($vus[$ref])) { continue; }
-            $hors[] = ['ref' => (string) $ref, 'libelle' => (string) ($r['libelle'] ?: $ref), 'photo' => false, 'pct' => false, 'etat' => (string) $r['etat'],
-                'note' => $r['note'] !== null ? (int) $r['note'] : null, 'valeur' => $r['valeur'] !== null ? (int) $r['valeur'] : null,
-                'commentaire' => $r['commentaire'] !== null && $r['commentaire'] !== '' ? (string) $r['commentaire'] : null];
-        }
-        if ($hors !== []) { $modules[] = ['id' => 'visite', 'nom' => 'Points de la dernière visite', 'points' => $hors]; }
-        $nPts = 0; foreach ($modules as $m) { $nPts += count($m['points']); }
-        $hist = [];
-        foreach (array_slice($vs, 0, 12) as $v) {
-            $c = $compte($points[(int) $v['id']] ?? []);
-            $hist[] = ['id' => (int) $v['id'], 'le' => (string) $v['prevu_le'], 'consultant' => (string) $v['consultant_nom'], 'ok' => $c['ok'], 'ko' => $c['ko'], 'na' => $c['na'], 'total' => count($points[(int) $v['id']] ?? [])];
-        }
-        $out[] = ['code' => $code, 'nom' => (string) $t['nom'], 'duree' => (int) ($t['duree'] ?? 0), 'profilNom' => (string) ($t['profilNom'] ?? ''),
-            'dynamique' => $t['dynamique'] ?? null, 'actif' => !empty($t['actif']), 'cadre' => $cadre[$code] ?? null, 'points' => $nPts, 'modules' => $modules,
-            'derniere' => $hist[0] ?? null, 'historique' => $hist, 'visites' => count($vs)];
-    }
-    // Au cadre d'abord, puis ceux qui ont une visite, puis le reste.
-    usort($out, fn ($a, $b) => [($a['cadre'] ? 0 : 1), ($a['derniere'] ? 0 : 1)] <=> [($b['cadre'] ? 0 : 1), ($b['derniere'] ? 0 : 1)]);
-    return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'types' => $out, 'panel' => frChecklistsPanel($shop)];
-}
-/** Les checklists du jour dans le panel : chaque checklist et ses tâches, faites, notées ou non rendues. */
-function frChecklistsPanel(string $shop): array
-{
-    if (!function_exists('ep_pwa_tasks')) { return ['lu' => false, 'motif' => 'module absent', 'checklists' => []]; }
-    try { $t = ep_pwa_tasks(); } catch (Throwable $e) { return ['lu' => false, 'motif' => $e->getMessage(), 'checklists' => []]; }
-    if (!empty($t['indispo'])) { return ['lu' => false, 'motif' => 'les tâches du panel ne se lisent pas', 'checklists' => []]; }
-    $par = [];
-    foreach ($t['shops'] ?? [] as $s) {
-        if ((string) ($s['shopId'] ?? '') !== $shop) { continue; }
-        foreach ($s['taches'] ?? [] as $x) {
-            $nom = trim((string) ($x['checklist'] ?? '')) ?: 'Sans checklist';
-            $st = (string) ($x['statut'] ?? '');
-            $fait = $st !== 'nonRendue';
-            $par[$nom] = $par[$nom] ?? ['nom' => $nom, 'total' => 0, 'faites' => 0, 'notees' => 0, 'nc' => 0, 'taches' => []];
-            $par[$nom]['total']++;
-            if ($fait) { $par[$nom]['faites']++; }
-            if (($x['note'] ?? null) !== null) { $par[$nom]['notees']++; if ((int) $x['note'] < 4 || ($x['accepte'] ?? null) === false) { $par[$nom]['nc']++; } }
-            $par[$nom]['taches'][] = ['taskId' => (string) ($x['taskId'] ?? ''), 'tache' => (string) ($x['tache'] ?? ''), 'statut' => $st, 'fait' => $fait,
-                'note' => $x['note'] ?? null, 'accepte' => $x['accepte'] ?? null, 'comment' => $x['comment'] ?? null, 'obligatoire' => !empty($x['obligatoire']),
-                'faitLe' => $x['faitLe'] ?? null, 'photo' => !empty($x['photo']) || ($x['note'] ?? null) !== null];
+            $cls[$cid]['jours'][$dt] = ['date' => $dt, 'total' => $tot, 'faites' => $fai];
         }
     }
-    ksort($par);
-    return ['lu' => true, 'date' => $t['date'] ?? date('Y-m-d'), 'checklists' => array_values($par), 'motif' => null];
+    foreach ($cls as &$c) {
+        ksort($c['jours']); $c['jours'] = array_values($c['jours']);
+        foreach ($c['jours'] as $j) { $c['periode']['total'] += $j['total']; $c['periode']['faites'] += $j['faites']; }
+        $c['periode']['pct'] = $c['periode']['total'] > 0 ? (int) round(100 * $c['periode']['faites'] / $c['periode']['total']) : null;
+    }
+    unset($c);
+    uasort($cls, fn ($a, $b) => [$a['heure'] === '' ? '99' : $a['heure'], $a['nom']] <=> [$b['heure'] === '' ? '99' : $b['heure'], $b['nom']]);
+    $out['checklists'] = array_values($cls);
+    // La checklist propre du consultant, au cadre opérationnel de son poste : elle n'est rattachée à aucun magasin.
+    $k = is_array($r['consultant'] ?? null) ? $r['consultant'] : null;
+    if ($k !== null) {
+        $pos = is_array($k['position'] ?? null) ? $k['position'] : [];
+        $out['consultant'] = ['poste' => trim((string) ($pos['position_name'] ?? '')), 'niveau' => trim((string) ($pos['level_name'] ?? '')),
+            'taches' => array_map(fn ($t) => ['id' => (int) ($t['id'] ?? 0), 'nom' => trim((string) ($t['name'] ?? $t['base_name'] ?? '')),
+                'section' => trim((string) ($t['section_name'] ?? $t['base_section_name'] ?? '')), 'categorie' => trim((string) ($t['category_name'] ?? $t['base_category_name'] ?? '')),
+                'heure' => substr((string) ($t['execution_time'] ?? ''), 0, 5) === 'NULL' ? '' : substr((string) ($t['execution_time'] ?? ''), 0, 5), 'obligatoire' => !empty($t['is_mandatory']) && $t['is_mandatory'] !== '0',
+                'photoRequise' => !empty($t['requires_photo']) && $t['requires_photo'] !== '0', 'fait' => !empty($t['is_done']) && $t['is_done'] !== '0'], PanelApi::liste(is_array($k['tasks'] ?? null) ? $k['tasks'] : []))];
+    }
+    return $out;
 }
 
 /* --- La météo du franchisé : moral, envie, équipe, relation, ses envies, ses demandes, ses inquiétudes ------------ */
