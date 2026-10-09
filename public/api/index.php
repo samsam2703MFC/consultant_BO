@@ -49,6 +49,7 @@ require __DIR__ . '/../../src/panel_ventes.php';
 require __DIR__ . '/../../src/analyse_produits.php';
 require __DIR__ . '/../../src/recette_produit.php';
 require __DIR__ . '/../../src/matiere_fiche.php';
+require __DIR__ . '/../../src/pnl_mois.php';
 require __DIR__ . '/../../src/dossier.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
@@ -256,6 +257,7 @@ function route(string $method, string $path): mixed
             $path === '/analyse/produits/magasin'      => ep_analyse_produit_magasin(),
             $path === '/analyse/produits/recette'      => ep_analyse_produit_recette(),
             $path === '/analyse/matieres/fiche'        => ep_analyse_matiere_fiche(),
+            $path === '/analyse/pnl/mois'              => ep_analyse_pnl_mois(),
             $path === '/analyse/prix-transfert'        => ep_prix_transfert(),
             $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),
