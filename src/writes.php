@@ -3555,8 +3555,17 @@ function wr_scouting_competitors_put(): array
     foreach (array_slice(array_values($rows), 0, 500) as $r) {
         if (!is_array($r)) { continue; }
         $id = trim((string) ($r['id'] ?? ''));
-        if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
+        if (!preg_match('/^[nwrm]\d{1,15}$/', $id)) { continue; }
         $cur = Db::row('SELECT * FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+        // La qualification terrain (09/10/2026) : le type réel du commerce, une force vue sur place (0 à 100,
+        // elle prime sur la note), le concurrent de référence, la visite et ce qu'on y a vu.
+        $type    = array_key_exists('type', $r) ? (in_array($r['type'], SCOUTING_TYPES, true) ? $r['type'] : null) : ($cur['type'] ?? null);
+        $force   = array_key_exists('force', $r) ? ($r['force'] === null || $r['force'] === '' ? null : max(0, min(100, (int) $r['force']))) : ($cur['force_manuelle'] ?? null);
+        $ref     = array_key_exists('reference', $r) ? (int) !empty($r['reference']) : (int) ($cur['reference'] ?? 0);
+        $visite  = array_key_exists('visiteLe', $r) ? (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $r['visiteLe']) ? (string) $r['visiteLe'] : null) : ($cur['visite_le'] ?? null);
+        $terrain = array_key_exists('terrain', $r) ? ($r['terrain'] === null || $r['terrain'] === '' ? null : mb_substr((string) $r['terrain'], 0, 500)) : ($cur['terrain'] ?? null);
+        $manuel  = $id[0] === 'm';
+        $qualifie = $type !== null || $force !== null || $ref === 1 || $visite !== null || $terrain !== null;
         $rating  = array_key_exists('rating', $r)  ? ($r['rating'] === null ? null : max(0, min(5, round((float) $r['rating'], 1)))) : ($cur['rating'] ?? null);
         $reviews = array_key_exists('reviews', $r) ? ($r['reviews'] === null ? null : max(0, (int) $r['reviews'])) : ($cur['reviews'] ?? null);
         $source  = array_key_exists('source', $r)  ? (in_array($r['source'], ['google', 'manuel'], true) ? $r['source'] : null) : ($cur['rating_source'] ?? null);
@@ -3564,13 +3573,16 @@ function wr_scouting_competitors_put(): array
         $name    = ($r['name'] ?? '') !== ''    ? mb_substr((string) $r['name'], 0, 200)    : ($cur['name'] ?? '');
         $commune = ($r['commune'] ?? '') !== '' ? mb_substr((string) $r['commune'], 0, 120) : ($cur['commune'] ?? '');
         $arr     = ($r['arr'] ?? '') !== ''     ? mb_substr((string) $r['arr'], 0, 60)      : ($cur['arrondissement'] ?? '');
-        if ($rating === null && $comment === null && $source !== 'google') {
+        if ($rating === null && $comment === null && $source !== 'google' && !$qualifie && !$manuel) {
             Db::exec('DELETE FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+        } elseif ($manuel && $cur === null) {
+            continue;   // un commerce ajouté à la main naît par POST /scouting/concurrents, avec sa position
         } else {
-            Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
+            Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, type, force_manuelle, reference, visite_le, terrain) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
                 . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
-                . ' rating = VALUES(rating), reviews = VALUES(reviews), rating_source = VALUES(rating_source), comment = VALUES(comment), updated_at = VALUES(updated_at)',
-                [$id, $name, $commune, $arr, $rating, $reviews, $source, $comment, date('Y-m-d H:i:s')]);
+                . ' rating = VALUES(rating), reviews = VALUES(reviews), rating_source = VALUES(rating_source), comment = VALUES(comment), updated_at = VALUES(updated_at),'
+                . ' type = VALUES(type), force_manuelle = VALUES(force_manuelle), reference = VALUES(reference), visite_le = VALUES(visite_le), terrain = VALUES(terrain)',
+                [$id, $name, $commune, $arr, $rating, $reviews, $source, $comment, date('Y-m-d H:i:s'), $type, $force, $ref, $visite, $terrain]);
         }
         $n++;
         if ($rating !== null) { $rated++; }
@@ -3585,6 +3597,14 @@ function wr_scouting_competitors_put(): array
     } elseif (count($rows) === 1 && array_key_exists('comment', $first)) {
         journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id,
             ($comment === null ? 'Commentaire terrain retiré' : 'Commentaire terrain : « ' . $comment . ' »') . ' — ' . $who);
+    } elseif (count($rows) === 1 && (array_key_exists('type', $first) || array_key_exists('force', $first) || array_key_exists('reference', $first) || array_key_exists('visiteLe', $first) || array_key_exists('terrain', $first))) {
+        $q = [];
+        if (array_key_exists('type', $first)) { $q[] = 'type ' . ($first['type'] ?: '—'); }
+        if (array_key_exists('force', $first)) { $q[] = 'force terrain ' . ($first['force'] === null || $first['force'] === '' ? 'retirée' : (int) $first['force'] . ' %'); }
+        if (array_key_exists('reference', $first)) { $q[] = !empty($first['reference']) ? 'concurrent de référence' : 'plus de référence'; }
+        if (array_key_exists('visiteLe', $first)) { $q[] = 'visité le ' . $first['visiteLe']; }
+        if (array_key_exists('terrain', $first)) { $q[] = 'relevé : « ' . mb_substr((string) $first['terrain'], 0, 80) . ' »'; }
+        journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id, 'Concurrent qualifié — ' . implode(', ', $q) . ' — ' . $who);
     } else {
         journalAdd('CEO', 'Scouting', 'Notes Google', 'Enrichissement Google Places — ' . $n . ' commerces traités, ' . $rated . ' notés');
     }
@@ -4088,4 +4108,81 @@ function wr_plano_montage(): array
         . ' ON DUPLICATE KEY UPDATE photo = VALUES(photo), auteur = VALUES(auteur), quand = VALUES(quand)',
         [$sid, $zid, $jour, $chemin, $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'photo' => $chemin, 'auteur' => $auteur, 'quand' => date('Y-m-d H:i:s')];
+}
+
+/** Les types de concurrent que le scouting distingue (retour de l'étude de potentiel du 09/10/2026). */
+const SCOUTING_TYPES = ['boulangerie', 'patisserie', 'sandwicherie', 'friterie', 'snack', 'supermarche', 'superette', 'autre'];
+
+/**
+ * POST /scouting/concurrents — un commerce absent d'OpenStreetMap, vu sur place : nom, position, commune, type,
+ * et la même qualification qu'un concurrent relevé. Identifiant « m » + horodatage ; il vit dans
+ * ceo_scouting_competitor avec sa position, et l'écran le mêle aux commerces relevés.
+ */
+function wr_scouting_concurrent_post(): array
+{
+    $b = body();
+    $name = mb_substr(trim((string) ($b['name'] ?? '')), 0, 200);
+    $lat = (float) ($b['lat'] ?? 0); $lng = (float) ($b['lng'] ?? 0);
+    if ($name === '' || $lat < 49.4 || $lat > 51.6 || $lng < 2.3 || $lng > 6.5) { http_response_code(400); return ['error' => 'nom et position en Belgique attendus']; }
+    $id = 'm' . (string) (int) round(microtime(true) * 1000);
+    $type = in_array($b['type'] ?? '', SCOUTING_TYPES, true) ? $b['type'] : 'boulangerie';
+    $rating = isset($b['rating']) && is_numeric($b['rating']) ? max(0, min(5, round((float) $b['rating'], 1))) : null;
+    $force = isset($b['force']) && is_numeric($b['force']) ? max(0, min(100, (int) $b['force'])) : null;
+    $commune = mb_substr(trim((string) ($b['commune'] ?? '')), 0, 120); $arr = mb_substr(trim((string) ($b['arr'] ?? '')), 0, 60);
+    $comment = ($b['comment'] ?? '') === '' ? null : mb_substr((string) $b['comment'], 0, 200);
+    $terrain = ($b['terrain'] ?? '') === '' ? null : mb_substr((string) $b['terrain'], 0, 500);
+    $visite = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['visiteLe'] ?? '')) ? (string) $b['visiteLe'] : null;
+    Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, type, force_manuelle, reference, visite_le, terrain, lat, lng) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$id, $name, $commune, $arr, $rating, $rating !== null ? 0 : null, $rating !== null ? 'manuel' : null, $comment, date('Y-m-d H:i:s'), $type, $force, (int) !empty($b['reference']), $visite, $terrain, round($lat, 6), round($lng, 6)]);
+    journalAdd('CEO', 'Scouting', $commune !== '' ? $commune : $name, 'Concurrent ajouté à la main — ' . $name . ' (' . $type . ')' . ($commune !== '' ? ' · ' . $commune : '') . ' · ' . number_format($lat, 4, '.', '') . ', ' . number_format($lng, 4, '.', ''));
+    return ['ok' => true, 'id' => $id, 'concurrent' => ['id' => $id, 'name' => $name, 'commune' => $commune, 'arr' => $arr, 'lat' => round($lat, 6), 'lng' => round($lng, 6), 'type' => $type,
+        'rating' => $rating, 'reviews' => $rating !== null ? 0 : null, 'source' => $rating !== null ? 'manuel' : null, 'comment' => $comment, 'force' => $force,
+        'reference' => !empty($b['reference']), 'visiteLe' => $visite, 'terrain' => $terrain, 'adresse' => null, 'statut' => null, 'dernierAvis' => null]];
+}
+
+/** DELETE /scouting/concurrents/{m…} — retire un commerce ajouté à la main (jamais un relevé OpenStreetMap). */
+function wr_scouting_concurrent_delete(string $id): array
+{
+    if (!preg_match('/^m\d{1,15}$/', $id)) { http_response_code(400); return ['error' => 'identifiant « m… » attendu']; }
+    $cur = Db::row('SELECT name, commune FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+    if ($cur === null) { http_response_code(404); return ['error' => 'concurrent inconnu']; }
+    Db::exec('DELETE FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+    journalAdd('CEO', 'Scouting', $cur['commune'] !== '' ? $cur['commune'] : $cur['name'], 'Concurrent ajouté à la main retiré — ' . $cur['name']);
+    return ['ok' => true];
+}
+
+/**
+ * Le relevé terrain d'une zone candidate, tel qu'il entre en base : la visite, ce que le terrain montre
+ * (visibilité, accès, façade, parking), les flux mesurés par axe, et des remarques. Chaînes bornées, rien
+ * d'autre. Null si rien n'est rempli.
+ */
+function scoutingTerrainJson($t): ?string
+{
+    if (!is_array($t)) { return null; }
+    $s = static fn ($v, int $max) => mb_substr(trim((string) (is_scalar($v) ? $v : '')), 0, $max);
+    $date = static fn ($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $v) ? (string) $v : '';
+    $out = ['visiteLe' => $date($t['visiteLe'] ?? ''), 'visibilite' => $s($t['visibilite'] ?? '', 300), 'acces' => $s($t['acces'] ?? '', 300),
+        'facade' => $s($t['facade'] ?? '', 300), 'parking' => $s($t['parking'] ?? '', 200), 'remarques' => $s($t['remarques'] ?? '', 800), 'flux' => []];
+    foreach ((array) ($t['flux'] ?? []) as $f) {
+        if (!is_array($f)) { continue; }
+        $axe = $s($f['axe'] ?? '', 80);
+        if ($axe === '') { continue; }
+        $out['flux'][] = ['axe' => $axe, 'vehJour' => max(0, (int) ($f['vehJour'] ?? 0)), 'sens' => $s($f['sens'] ?? '', 60), 'source' => $s($f['source'] ?? '', 80), 'le' => $date($f['le'] ?? '')];
+        if (count($out['flux']) >= 6) { break; }
+    }
+    $vide = $out['visiteLe'] === '' && $out['visibilite'] === '' && $out['acces'] === '' && $out['facade'] === '' && $out['parking'] === '' && $out['remarques'] === '' && $out['flux'] === [];
+    return $vide ? null : json_encode($out, JSON_UNESCAPED_UNICODE);
+}
+
+/** PUT /scouting/candidates/{id}/terrain — le relevé terrain d'une zone retenue ; un relevé vide l'efface. */
+function wr_scouting_candidate_terrain(int $id): array
+{
+    $cur = Db::row('SELECT id, name, commune FROM ceo_scouting_candidate WHERE id = ?', [$id]);
+    if ($cur === null) { http_response_code(404); return ['error' => 'zone candidate inconnue']; }
+    $json = scoutingTerrainJson(body());
+    Db::exec('UPDATE ceo_scouting_candidate SET terrain_json = ? WHERE id = ?', [$json, $id]);
+    $t = $json !== null ? json_decode($json, true) : null;
+    journalAdd('CEO', 'Scouting', (string) $cur['commune'], $t === null ? 'Relevé terrain effacé — ' . $cur['name']
+        : 'Relevé terrain — ' . $cur['name'] . ($t['visiteLe'] !== '' ? ' · visite du ' . $t['visiteLe'] : '') . ($t['flux'] !== [] ? ' · ' . count($t['flux']) . ' axe(s) mesuré(s)' : ''));
+    return ['ok' => true, 'id' => $id, 'terrain' => $t];
 }

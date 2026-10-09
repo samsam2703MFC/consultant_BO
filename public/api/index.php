@@ -612,6 +612,9 @@ function route(string $method, string $path): mixed
     // --- scouting commercial
     if ($method === 'PUT' && preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m)) { return wr_scouting_tile_put((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/competitors') { return wr_scouting_competitors_put(); }
+    if ($method === 'POST' && $path === '/scouting/concurrents') { return wr_scouting_concurrent_post(); }
+    if ($method === 'DELETE' && preg_match('#^/scouting/concurrents/(m\d{1,15})$#', $path, $m)) { return wr_scouting_concurrent_delete($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/scouting/candidates/(\d{1,15})/terrain$#', $path, $m)) { return wr_scouting_candidate_terrain((int) $m[1]); }
     if ($method === 'POST' && $path === '/scouting/notes') { return wr_scouting_notes(); }
     if ($method === 'POST' && $path === '/scouting/concurrents/google') { return wr_scouting_concurrents_google(); }
     if ($method === 'POST' && $path === '/scouting/concurrents/vie') { return wr_scouting_concurrents_vie(); }

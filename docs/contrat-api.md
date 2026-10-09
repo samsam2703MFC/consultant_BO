@@ -2355,7 +2355,28 @@ repli, sans API ou si le serveur n'atteint pas Overpass.
 | Scouting — signe de vie Google de toute la carte (statut, date du dernier avis), par lots | `POST /scouting/concurrents/vie` (`{ n }`, 25 par défaut, 40 au plus ; rend `faits`, `fermes`, `dormants`, `reste`, `ecartes` ; colonnes `business_status`, `last_review_at`) |
 - `competitors[].source` ∈ `google` | `manuel` ; une note `manuel` prime sur Google. `rating: null` avec
   `source: "google"` = commerce déjà interrogé sans note (pas réinterrogé).
-- `id` d'un concurrent = type + id OSM (`n`, `w`, `r`). `id` d'une zone candidate = horodatage client (ms).
+- `id` d'un concurrent = type + id OSM (`n`, `w`, `r`), ou `m` + horodatage pour un commerce ajouté à la main
+  (`POST /scouting/concurrents`), qui porte alors `lat` et `lng`. `id` d'une zone candidate = horodatage client (ms).
+- `competitors[]` porte aussi la **qualification terrain** (retour de l'étude de potentiel du 09/10/2026) :
+  `type` (boulangerie, patisserie, sandwicherie, friterie, snack, supermarche, superette, autre ; null = relevé OSM),
+  `force` (0–100, vue sur place, prime sur la note ; null = calculée), `reference` (le concurrent de référence de la
+  zone : fort quoi qu'en dise la note), `visiteLe`, `terrain` (≤ 500 car.). L'écran pondère la force par le type
+  (sandwicherie 0,3, friterie 0,15, snack 0,3, supermarché 0,35, supérette 0,15, autre 0) ; un type pondéré sous 1
+  n'est jamais « fort » sauf référence.
+- `candidates[].terrain` : le relevé terrain de la zone retenue (`PUT /scouting/candidates/{id}/terrain`) :
+  `{ visiteLe, visibilite, acces, facade, parking, remarques, flux: [{ axe, vehJour, sens, source, le }] }`, chaînes bornées,
+  six axes au plus ; null tant que rien n'est saisi. Imprimé dans le dossier (« Le relevé terrain »).
+- `params` porte aussi les hypothèses du **modèle à deux zones** : `empriseP` (emprise de la zone primaire, 5 minutes en
+  voiture, 30 par défaut), `empriseS` (zone secondaire, 5 à 10 minutes, 6,5), `indirecte` (poids d'un supermarché dans
+  la pression, en % d'une boulangerie, 35 ; les six commerces indirects les plus proches comptent, pas davantage), `poles` (1 : la zone secondaire s'arrête là où un concurrent fort est plus
+  près que le point), `routeDist` (1 : pression sur la distance par la route, Valhalla, face à 1,3 × rayon). Le calcul
+  reste à l'écran : les isochrones de 5 et 10 minutes (Valhalla) sur la grille du recensement, la zone construite
+  `(ménages primaires × empriseP + secondaires × empriseS) × dépense ÷ (1 − passage)`, les deux emprises abaissées par
+  la pression comme celle du rayon ; le dossier montre les deux estimations côte à côte.
+- `POST /scouting/dossier.pdf` accepte en plus `estimations` (≤ 10 lignes × 4 : mesure, rayon, zone construite, lecture),
+  `estimationsCols`, `estimationsNote`, `terrain` (≤ 12 × 2), `fluxMesures` (≤ 6 × 4 : axe, véhicules/jour, sens, source · date),
+  `terrainNote` et `motOutil` (« l'outil repère, l'étude confirme ») ; les distances des concurrents portent la distance par
+  la route quand l'écran l'a (`0,4 km · 1,3 km par la route`).
 - `tiles` : inventaire seulement ; `GET /scouting/tiles/{secteur}` renvoie le JSON `{ t, c, b, p }` déposé
   par le navigateur (communes, commerces, nœuds `place`). 404 si le secteur n'est pas en cache.
 
@@ -2784,6 +2805,10 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Scouting — dépôt d'un secteur OSM dans le cache partagé (repli navigateur) | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
 | Scouting — relecture d'un secteur OpenStreetMap par le serveur | `POST /scouting/refresh/{secteur}` (0 à 8 ; une à trois minutes ; rend le secteur `{ t, c, b, p }` et le dépose dans le cache ; 502 si Overpass ne répond pas, le cache est alors conservé) |
 | Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
+| Scouting — qualification terrain d'un concurrent (type, force 0–100, référence, visite, relevé) | même `PUT /scouting/competitors`, champs `type`, `force`, `reference`, `visiteLe`, `terrain` par ligne ; identifiants `n`, `w`, `r` ou `m` ; une ligne vidée de tout est effacée, sauf un commerce ajouté à la main |
+| Scouting — un commerce vu sur place, absent d'OpenStreetMap | `POST /scouting/concurrents` (`{ name, lat, lng, commune?, arr?, type?, rating?, comment?, force?, reference?, visiteLe?, terrain? }` → `{ ok, id: "m…", concurrent }`) ; 400 sans nom ou hors de Belgique |
+| Scouting — retirer un commerce ajouté à la main | `DELETE /scouting/concurrents/{m…}` (404 inconnu ; jamais un relevé OSM) |
+| Scouting — relevé terrain d'une zone retenue | `PUT /scouting/candidates/{id}/terrain` (corps = le relevé ; vide = effacé ; 404 zone inconnue) → `{ ok, id, terrain }` |
 | Scouting — notes Google d'un lot de commerces (≤ 40 ; clé de Paramètres, côté serveur) | `POST /scouting/notes` (`{ "rows": [{ id, name, addr?, commune?, arr?, lat, lng }] }` → `{ rows: [{ id, rating, reviews }], erreur? }` ; 422 sans clé) |
 | Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |
 | Scouting — position d'un magasin du réseau pointée sur la carte | `PUT /scouting/reseau/{id}` (`{ lat, lng }`, Belgique seulement ; prime sur la fiche Google ; ligne `ceo_app_setting.scoutingReseau`) |

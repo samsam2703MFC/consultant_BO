@@ -9139,6 +9139,12 @@ function ep_scouting(): array
         'adresse' => $r['address'] ?? null,
         // le signe de vie : statut Google et date du dernier avis connu
         'statut' => $r['business_status'] ?? null, 'dernierAvis' => $r['last_review_at'] ?? null,
+        // la qualification terrain (type réel, force vue sur place, concurrent de référence, visite) et,
+        // pour un commerce ajouté à la main (id « m… »), sa position
+        'type' => ($r['type'] ?? null) !== null && $r['type'] !== '' ? $r['type'] : null,
+        'force' => isset($r['force_manuelle']) && $r['force_manuelle'] !== null ? (int) $r['force_manuelle'] : null,
+        'reference' => !empty($r['reference']), 'visiteLe' => $r['visite_le'] ?? null, 'terrain' => $r['terrain'] ?? null,
+        'lat' => isset($r['lat']) && $r['lat'] !== null ? (float) $r['lat'] : null, 'lng' => isset($r['lng']) && $r['lng'] !== null ? (float) $r['lng'] : null,
     ], Db::rows('SELECT * FROM ceo_scouting_competitor'));
     $candidates = array_map(fn ($r) => [
         'id' => (int) $r['id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'], 'prov' => $r['province'],
@@ -9147,6 +9153,7 @@ function ep_scouting(): array
         'strong' => (int) $r['strong'], 'm2' => (int) $r['revenue_m2'],
         'zone' => isset($r['zone_json']) && $r['zone_json'] !== null ? json_decode((string) $r['zone_json'], true) : null,
         'hyp' => isset($r['hyp_json']) && $r['hyp_json'] !== null ? json_decode((string) $r['hyp_json'], true) : null,
+        'terrain' => isset($r['terrain_json']) && $r['terrain_json'] !== null ? json_decode((string) $r['terrain_json'], true) : null,
         'date' => $r['created_at'],
     ], Db::rows('SELECT * FROM ceo_scouting_candidate ORDER BY created_at, id'));
     $pops = [];

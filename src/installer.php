@@ -129,8 +129,15 @@ function ensureScouting(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Les zones retenues avant le dessin de zone : deux colonnes de plus, la
     // zone dessinée et les hypothèses du moment (null pour les anciennes).
-    foreach (['zone_json', 'hyp_json'] as $col) {
+    foreach (['zone_json', 'hyp_json', 'terrain_json'] as $col) {
         try { Db::exec('ALTER TABLE ceo_scouting_candidate ADD COLUMN ' . $col . ' TEXT NULL'); } catch (Throwable $e) { /* déjà là */ }
+    }
+    // La qualification terrain d'un concurrent (09/10/2026, retour de l'étude de potentiel) : son type réel
+    // (boulangerie, sandwicherie, friterie, supermarché…), une force vue sur place, le concurrent de
+    // référence, la visite ; et la position des commerces ajoutés à la main, absents d'OpenStreetMap.
+    foreach (['type VARCHAR(16) NULL', 'force_manuelle TINYINT UNSIGNED NULL', 'reference TINYINT(1) NOT NULL DEFAULT 0', 'visite_le DATE NULL',
+              'terrain VARCHAR(500) NULL', 'lat DECIMAL(9,6) NULL', 'lng DECIMAL(9,6) NULL'] as $col) {
+        try { Db::exec('ALTER TABLE ceo_scouting_competitor ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
     }
     // La fiche Google d'un concurrent : son identifiant, son adresse, et ce
     // que le dossier d'implantation en montre (avis, photo), gardé 30 jours.

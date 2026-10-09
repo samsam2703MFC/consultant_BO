@@ -221,6 +221,7 @@ const ICONE = {
   isochrone: '<path d="M12 3.5c4 2 6.5 4.6 6.5 8.5S16 18.5 12 20.5 5.5 15.9 5.5 12 8 5.5 12 3.5z"/><circle cx="12" cy="12" r="2"/>',
   gomme: '<path d="M8 20h11"/><path d="M15.5 4.5l4 4-9 9-4-4z"/>'
 };
+ICONE.concurrent = '<path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z"/><path d="M12 7v6M9 10h6"/>';
 const ico = k => `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONE[k] || ''}</svg>`;
 
 export function renderMapUi(c, x){
@@ -235,6 +236,20 @@ export function renderMapUi(c, x){
   <div class="sc-dessin">
     ${esc(c.dessinHint)}
     ${c.tool === 'isochrone' ? `<select ${x.C(c.setIso)} style="${selCss}">${opts(c.isoChoix, c.iso)}</select>` : ''}
+  </div>` : ''}
+  ${c.concForm ? `
+  <div class="sc-dessin" style="width:300px">
+    <div style="font-size:12px;font-weight:600;margin-bottom:6px">Nouveau concurrent${c.concForm.commune ? ' · ' + esc(c.concForm.commune) : ''}</div>
+    <input id="sc-cf-nom" type="text" maxlength="200" placeholder="Nom du commerce" value="${esc(c.concForm.name)}" ${x.C(c.concForm.set('name'))} style="width:100%;${txtCss}">
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <select id="sc-cf-type" ${x.C(c.concForm.set('type'))} style="${selCss};flex:1">${c.concForm.types.map(t => `<option value="${esc(t[0])}"${t[0] === c.concForm.type ? ' selected' : ''}>${esc(t[1])}</option>`).join('')}</select>
+      <input id="sc-cf-note" type="number" min="0" max="5" step="0.1" placeholder="note /5" value="${esc(c.concForm.rating)}" ${x.C(c.concForm.set('rating'))} style="width:66px;${numCss}">
+    </div>
+    <input id="sc-cf-com" type="text" maxlength="200" placeholder="Vu sur place : surface, parking, horaires, offre…" value="${esc(c.concForm.comment)}" ${x.C(c.concForm.set('comment'))} style="width:100%;margin-top:6px;${txtCss}">
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <button ${x.A(c.concForm.save)} type="button" class="btn-primary" style="flex:1;padding:7px;font-size:12px">Ajouter à l'étude</button>
+      <button ${x.A(c.concForm.annuler)} type="button" class="btn-secondary" style="padding:7px 10px;font-size:12px">Annuler</button>
+    </div>
   </div>` : ''}
   ${c.trio ? c.trioPans.map(pn => `
   <div class="sc-cap p${pn.i}">
@@ -314,8 +329,13 @@ export function renderRight(c, x){
       <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${k.color}"></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.name)}</div>
-        <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)} · ${esc(k.dist)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)} · ${esc(k.dist)}${k.manual ? ` · ajouté à la main · <button ${x.A(k.retirer)} type="button" title="Retirer ce commerce ajouté à la main" style="border:none;background:transparent;color:var(--color-primary);cursor:pointer;font-size:11px;padding:0;font-family:inherit">retirer</button>` : ''}</div>
         <input id="sc-sm-${esc(k.id)}" type="text" maxlength="200" placeholder="Commentaire terrain (200 car.)" value="${esc(k.comment)}" ${x.C(k.setComment)} style="width:100%;margin-top:4px;${txtCss}">
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <select id="sc-st-${esc(k.id)}" ${x.C(k.setType)} title="Le type réel du commerce, vu sur place : une sandwicherie pèse 0,3 boulangerie, une friterie 0,15, un supermarché 0,35" style="${selCss};flex:1 1 0;min-width:0;padding:4px 6px;font-size:11px">${k.types.map(t => `<option value="${esc(t[0])}"${t[0] === k.type ? ' selected' : ''}>${esc(t[1])}</option>`).join('')}</select>
+          <input id="sc-sf-${esc(k.id)}" type="number" min="0" max="100" step="5" placeholder="force" title="Force vue sur place, 0 à 100 % : elle prime sur la note" value="${esc(k.force)}" ${x.C(k.setForce)} style="width:60px;flex:0 0 auto;${numCss};font-size:11px">
+          <label style="display:flex;align-items:center;gap:4px;font-size:10.5px;white-space:nowrap;cursor:pointer" title="Le concurrent de référence de la zone : fort, quoi qu'en dise la note"><input type="checkbox"${k.ref ? ' checked' : ''} ${x.C(k.setRef)} style="accent-color:var(--color-primary);margin:0">réf.</label>
+        </div>
       </div>
       <input id="sc-sn-${esc(k.id)}" type="number" min="0" max="5" step="0.1" placeholder="–" value="${esc(k.note)}" ${x.C(k.setNote)} style="width:52px;flex:0 0 auto;${numCss}">
     </div>`).join('')}
@@ -538,6 +558,10 @@ export function dossierPage(d, esc, logo){
     <table><tr><th class="l">Mesure</th><th>Valeur</th><th class="l" style="padding-left:18px">Source · calcul</th></tr>
       ${d.marche.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
     </table>
+    ${d.estimations && d.estimations.length ? `<h3>Deux estimations</h3>
+    <table><tr><th class="l">Mesure</th><th>${esc(d.estimationsCols[0])}</th><th class="v5">${esc(d.estimationsCols[1])}</th><th class="l" style="padding-left:18px">${esc(d.estimationsCols[2])}</th></tr>
+      ${d.estimations.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n">${esc(r[1])}</td><td class="n v5"><b>${esc(r[2])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[3])}</td></tr>`).join('')}
+    </table>${d.estimationsNote ? `<div class="note">${esc(d.estimationsNote)}</div>` : ''}` : d.estimationsNote ? `<div class="attente ligne">${esc(d.estimationsNote)}</div>` : ''}
 
     <h3>La concurrence, en détail${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
     ${d.concurrenceNote ? `<div class="note" style="color:inherit">${esc(d.concurrenceNote)}</div>` : ''}
@@ -550,6 +574,12 @@ export function dossierPage(d, esc, logo){
         <div class="gtxt">${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px">Aucun avis rendu par Google.</div>'}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px">fiche Google ↗</a>` : ''}</div>
       </div>` : ''}
     </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
+    ${(d.terrain && d.terrain.length) || (d.fluxMesures && d.fluxMesures.length) ? `<h3>Le relevé terrain</h3>
+    ${d.terrain.length ? `<table>${d.terrain.map(r => `<tr><td class="l" style="width:120px"><b>${esc(r[0])}</b></td><td class="l">${esc(r[1])}</td></tr>`).join('')}</table>` : ''}
+    ${d.fluxMesures.length ? `<table><tr><th class="l">Axe</th><th>Véhicules / jour</th><th class="l" style="padding-left:12px">Sens</th><th class="l" style="padding-left:12px">Source · date</th></tr>
+      ${d.fluxMesures.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n">${esc(r[1])}</td><td class="l mut" style="padding-left:12px">${esc(r[2])}</td><td class="l mut" style="padding-left:12px">${esc(r[3])}</td></tr>`).join('')}
+    </table>` : ''}
+    ${d.terrainNote ? `<div class="note">${esc(d.terrainNote)}</div>` : ''}` : ''}
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>
@@ -569,7 +599,44 @@ export function dossierPage(d, esc, logo){
     <h3>Les hypothèses au moment de l'édition</h3>
     <div class="hyp">${d.hypotheses.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
     <div class="note"><b>Sources.</b> ${esc(d.sources)}</div>
+    ${d.motOutil ? `<div class="note" style="color:inherit"><b>L’outil repère, l’étude confirme.</b> ${esc(d.motOutil)}</div>` : ''}
     ${d.motFin ? `<div class="motfin"><div class="k">À lire avant de signer</div>${esc(d.motFin)}</div>` : ''}
+  </div>`;
+}
+
+// Le relevé terrain d'une zone retenue, à saisir sous la barre du dossier : la visite, ce que le terrain
+// montre, les flux comptés par axe. Enregistré au serveur (PUT /scouting/candidates/{id}/terrain), imprimé
+// dans le dossier.
+function terrainForm(f, esc, x){
+  const v = f.v;
+  const champ = (k, label, ph) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--color-text-muted)">${label}<input id="sc-tf-${k}" type="${k === 'visiteLe' ? 'date' : 'text'}" maxlength="300" placeholder="${esc(ph || '')}" value="${esc(v[k] || '')}" ${x.C(f.set(k))} style="${txtCss}"></label>`;
+  return `
+  <div class="sc-doss" style="margin-bottom:14px;padding:14px 18px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px">
+      <div class="t-section-title" style="font-size:14px">Relevé terrain de la zone retenue</div>
+      <div style="font-size:11px;color:var(--color-text-muted)">${esc(f.msg || 'Ce que l’outil ne voit pas : visite, visibilité, accès, flux comptés.')}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:140px 1fr 1fr;gap:8px 10px">
+      ${champ('visiteLe', 'Visite le')}${champ('visibilite', 'Visibilité', 'en contrebas du rond-point, façade masquée par les arbres…')}${champ('acces', 'Accès et stationnement', 'entrée depuis la N552, parking 12 places…')}
+      ${champ('facade', 'Façade et bâtiment', 'vitrine, enseigne, travaux à prévoir…')}${champ('parking', 'Parking', 'nombre de places, partagé…')}
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--color-text-muted)">Remarques<input id="sc-tf-remarques" type="text" maxlength="800" value="${esc(v.remarques || '')}" ${x.C(f.set('remarques'))} style="${txtCss}"></label>
+    </div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin:10px 0 4px">
+      <div class="t-admin-label">Flux mesurés par axe</div>
+      <button ${x.A(f.addFlux)} type="button" style="border:none;background:transparent;padding:0;font-family:var(--font-ui);font-size:11px;color:var(--color-primary);cursor:pointer">+ un axe</button>
+    </div>
+    ${v.flux.map((r, i) => `
+    <div style="display:grid;grid-template-columns:1.4fr 100px 1fr 1fr 110px 24px;gap:6px;margin-bottom:5px">
+      <input id="sc-tfa-${i}" type="text" maxlength="80" placeholder="Axe (N552 vers Dour)" value="${esc(r.axe || '')}" ${x.C(f.setFlux(i, 'axe'))} style="${txtCss}">
+      <input id="sc-tfv-${i}" type="number" min="0" step="1" placeholder="véh./jour" value="${esc(r.vehJour || '')}" ${x.C(f.setFlux(i, 'vehJour'))} style="${numCss}">
+      <input id="sc-tfs-${i}" type="text" maxlength="60" placeholder="sens" value="${esc(r.sens || '')}" ${x.C(f.setFlux(i, 'sens'))} style="${txtCss}">
+      <input id="sc-tfo-${i}" type="text" maxlength="80" placeholder="source (comptage SPW, relevé…)" value="${esc(r.source || '')}" ${x.C(f.setFlux(i, 'source'))} style="${txtCss}">
+      <input id="sc-tfl-${i}" type="date" value="${esc(r.le || '')}" ${x.C(f.setFlux(i, 'le'))} style="${txtCss}">
+      <button ${x.A(() => f.delFlux(i))} type="button" title="Retirer cet axe" style="border:none;background:transparent;color:var(--color-text-muted);cursor:pointer">×</button>
+    </div>`).join('')}
+    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+      <button ${x.A(f.save)} type="button" class="btn-primary" style="padding:7px 14px;font-size:12px${f.busy ? ';opacity:.6' : ''}">${f.busy ? 'Enregistrement…' : 'Enregistrer le relevé'}</button>
+    </div>
   </div>`;
 }
 
@@ -588,6 +655,7 @@ function renderDossier(c, x){
     </div>
     <div id="sc-dossier" class="sc-scroll" style="flex:1;overflow:auto;padding:18px 16px 28px">
       <style>${DOSS_CSS}</style>
+      ${d.terrainForm ? terrainForm(d.terrainForm, esc, x) : ''}
       ${dossierPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png')}
     </div>
   </div>`;

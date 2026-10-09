@@ -149,9 +149,19 @@ function scoutingDossierValide(array $b): ?array
         })($b['avisGoogle'] ?? []),
         'googleNote' => $s($b['googleNote'] ?? '', 500),
         'motFin' => $s($b['motFin'] ?? '', 900),
-        'hypotheses' => $lignes($b['hypotheses'] ?? [], 2, 20, 120),
+        'hypotheses' => $lignes($b['hypotheses'] ?? [], 2, 24, 120),
         'notes' => $notes,
-        'sources' => $s($b['sources'] ?? '', 700),
+        'sources' => $s($b['sources'] ?? '', 900),
+        // Retour de l'étude de potentiel (09/10/2026) : les deux estimations côte à côte (rayon et zone
+        // construite par temps de parcours), le relevé terrain de la zone, les flux mesurés, et le mot sur
+        // ce que l'outil fait et ne fait pas.
+        'estimations' => $lignes($b['estimations'] ?? [], 4, 10, 120),
+        'estimationsCols' => $lignes([$b['estimationsCols'] ?? []], 3, 1, 50)[0] ?? ['Rayon', 'Zone construite', 'Lecture'],
+        'estimationsNote' => $s($b['estimationsNote'] ?? '', 900),
+        'terrain' => $lignes($b['terrain'] ?? [], 2, 12, 320),
+        'fluxMesures' => $lignes($b['fluxMesures'] ?? [], 4, 6, 90),
+        'terrainNote' => $s($b['terrainNote'] ?? '', 600),
+        'motOutil' => $s($b['motOutil'] ?? '', 700),
     ];
 }
 
@@ -297,6 +307,17 @@ function scoutingDossierHtml(array $d): string
         $h .= '</table>';
     }
 
+    if ($d['estimations'] !== []) {
+        $c = $d['estimationsCols'] + ['Rayon', 'Zone construite', 'Lecture'];
+        $h .= '<div class="sec">Deux estimations</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Mesure</th><th>' . $e($c[0]) . '</th><th class="v5">' . $e($c[1]) . '</th><th class="l" style="padding-left:6mm">' . $e($c[2]) . '</th></tr>';
+        foreach ($d['estimations'] as $r) {
+            $h .= '<tr><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap">' . $e($r[1]) . '</td><td class="v5" style="white-space:nowrap"><b>' . $e($r[2]) . '</b></td>'
+                . '<td class="l mut" style="padding-left:6mm">' . $e($r[3]) . '</td></tr>';
+        }
+        $h .= '</table>' . ($d['estimationsNote'] !== '' ? '<div class="methode">' . $e($d['estimationsNote']) . '</div>' : '');
+    }
+
     $h .= '<div class="sec">La concurrence, en détail</div>';
     if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#221E1A">' . $e($d['concurrenceNote']) . '</div>'; }
     if ($d['ecartesNote'] !== '') { $h .= '<div class="methode">' . $e($d['ecartesNote']) . '</div>'; }
@@ -334,6 +355,23 @@ function scoutingDossierHtml(array $d): string
                 . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:3mm">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . ($ch !== '' ? ' · chaîne ' . $e($ch) : '') . '</td></tr>';
         }
         $h .= '</table>';
+    }
+
+    // Le relevé terrain de la zone : ce qu'aucun outil ne voit — la visite, la
+    // visibilité, l'accès, les flux comptés sur les axes.
+    if ($d['terrain'] !== [] || $d['fluxMesures'] !== []) {
+        $h .= '<div class="sec">Le relevé terrain</div>';
+        if ($d['terrain'] !== []) {
+            $h .= '<table class="t" cellpadding="0" cellspacing="0">';
+            foreach ($d['terrain'] as $r) { $h .= '<tr class="kv"><td class="l" style="width:34mm;white-space:nowrap"><b>' . $e($r[0]) . '</b></td><td class="l">' . $e($r[1]) . '</td></tr>'; }
+            $h .= '</table>';
+        }
+        if ($d['fluxMesures'] !== []) {
+            $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Axe</th><th>Véhicules / jour</th><th class="l" style="padding-left:4mm">Sens</th><th class="l" style="padding-left:4mm">Source · date</th></tr>';
+            foreach ($d['fluxMesures'] as $r) { $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td style="white-space:nowrap">' . $e($r[1]) . '</td><td class="l mut" style="padding-left:4mm">' . $e($r[2]) . '</td><td class="l mut" style="padding-left:4mm">' . $e($r[3]) . '</td></tr>'; }
+            $h .= '</table>';
+        }
+        if ($d['terrainNote'] !== '') { $h .= '<div class="methode">' . $e($d['terrainNote']) . '</div>'; }
     }
 
     // (Les fiches Google vivent désormais dans la liste des concurrents ; ceci ne
@@ -455,6 +493,7 @@ function scoutingDossierHtml(array $d): string
     if ($d['sources'] !== '') {
         $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>';
     }
+    if ($d['motOutil'] !== '') { $h .= '<div class="methode" style="color:#221E1A"><b>L’outil repère, l’étude confirme.</b> ' . $e($d['motOutil']) . '</div>'; }
     if ($d['motFin'] !== '') {
         $h .= '<div class="motfin"><div class="k" style="color:#8D1D2C;margin-bottom:1.5mm">À lire avant de signer</div>' . $e($d['motFin']) . '</div>';
     }
