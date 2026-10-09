@@ -1197,6 +1197,15 @@ function ep_panel_sonde_consultant(): array
     if ($lvl > 0) { $tc2['level-tasks'] = '/levels/' . $lvl . '/tasks'; $tc2['position-level-tasks'] = '/position-levels/' . $lvl . '/tasks'; }
     if ($pid > 0) { $tc2['position-levels-of'] = '/positions/' . $pid . '/levels'; }
     foreach ($tc2 ? PanelApi::getParallele($tc2) : [] as $nom => $r) { $out['tachesConsultants'][$nom] = ['chemin' => $tc2[$nom], 'cles' => is_array($r) ? array_keys($r) : null, 'contenu' => $r === null ? 'aucune réponse' : $plein($r)]; }
+    // Le contrat Swagger des routes qui remplissent une tâche de consultant : corps attendu, réponses (lecture du document).
+    $doc = PanelApi::sondeGet('/../swagger/openapi.json', 20);
+    $paths = is_array($doc['corps']['paths'] ?? null) ? $doc['corps']['paths'] : [];
+    $out['swaggerTaches'] = [];
+    foreach ($paths as $ch => $ops) {
+        if (!preg_match('#consultant/tasks|tasks/completions|operational-framework/checklists/\{[^}]+\}/tasks$#', (string) $ch) || !is_array($ops)) { continue; }
+        foreach ($ops as $m => $op) { if (is_array($op)) { $out['swaggerTaches'][strtoupper((string) $m) . ' ' . $ch] = ['parametres' => $op['parameters'] ?? null, 'corps' => $op['requestBody'] ?? null, 'reponses' => $op['responses'] ?? null]; } }
+    }
+    $out['swaggerComposants'] = array_slice(array_keys(is_array($doc['corps']['components']['schemas'] ?? null) ? $doc['corps']['components']['schemas'] : []), 0, 400);
     // La période : la forme d'une checklist dans un jour.
     $per = $lus['shop-checklists-periode'] ?? null;
     if (is_array($per) && is_array($per['days'][0] ?? null)) { $out['routes']['shop-checklists-periode']['jour'] = $apercu($per['days'][0]['checklists'] ?? []); }
