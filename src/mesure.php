@@ -1183,6 +1183,20 @@ function ep_panel_sonde_consultant(): array
     foreach ($suite ? PanelApi::getParallele($suite) : [] as $nom => $r) {
         $out['routes'][$nom] = ['chemin' => $suite[$nom], 'reponse' => $r === null ? 'aucune réponse' : $apercu($r)];
     }
+    // Les tâches des consultants (09/10/2026) : la liste des consultants et leur poste, les postes et leurs niveaux,
+    // les tâches d'un niveau, et les tâches du jour du compte, chacune en entier (premier élément détaillé).
+    $plein = static function ($r) { $l = PanelApi::liste(is_array($r) ? $r : []); return ['n' => count($l), 'premiers' => array_slice($l, 0, 3)]; };
+    $tc = ['consultant-tasks' => '/consultant/tasks?date=' . date('Y-m-d'), 'admin-memberships' => '/admin/consultant-memberships', 'panel-consultants' => '/panel/consultants',
+        'positions' => '/positions', 'position-levels' => '/position-levels', 'workstations' => '/operational-framework/workstations'];
+    $lusT = PanelApi::getParallele($tc);
+    $out['tachesConsultants'] = [];
+    foreach ($lusT as $nom => $r) { $out['tachesConsultants'][$nom] = ['chemin' => $tc[$nom], 'cles' => is_array($r) ? array_keys($r) : null, 'contenu' => $r === null ? 'aucune réponse' : $plein($r)]; }
+    $pos = is_array($lusT['consultant-tasks']['position'] ?? null) ? $lusT['consultant-tasks']['position'] : [];
+    $lvl = (int) ($pos['level_id'] ?? 0); $pid = (int) ($pos['position_id'] ?? 0);
+    $tc2 = [];
+    if ($lvl > 0) { $tc2['level-tasks'] = '/levels/' . $lvl . '/tasks'; $tc2['position-level-tasks'] = '/position-levels/' . $lvl . '/tasks'; }
+    if ($pid > 0) { $tc2['position-levels-of'] = '/positions/' . $pid . '/levels'; }
+    foreach ($tc2 ? PanelApi::getParallele($tc2) : [] as $nom => $r) { $out['tachesConsultants'][$nom] = ['chemin' => $tc2[$nom], 'cles' => is_array($r) ? array_keys($r) : null, 'contenu' => $r === null ? 'aucune réponse' : $plein($r)]; }
     // La période : la forme d'une checklist dans un jour.
     $per = $lus['shop-checklists-periode'] ?? null;
     if (is_array($per) && is_array($per['days'][0] ?? null)) { $out['routes']['shop-checklists-periode']['jour'] = $apercu($per['days'][0]['checklists'] ?? []); }
