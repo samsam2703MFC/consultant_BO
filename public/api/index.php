@@ -26,6 +26,8 @@ require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites.php';
 require __DIR__ . '/../../src/visites_conformite.php';
+require __DIR__ . '/../../src/visites_cadre.php';
+require __DIR__ . '/../../src/franchises.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -106,6 +108,10 @@ try {
         nlSuivi($m[1], $m[2]);   // sort en gif, redirection ou HTML, puis exit
     }
 
+    // Le flux ICS d'un consultant : Google Agenda le relit sans session — le jeton de l'adresse est sa clé.
+    if ($method === 'GET' && preg_match('#^/consultants/([\w-]+)/visites\.ics$#', $path, $m)) {
+        vcIcsSortie($m[1]);      // sort en text/calendar, puis exit
+    }
     // Le webhook Meta est PUBLIC par construction : Meta n'a pas de session.
     // Sa sécurité est sa signature (POST) et son verify token (GET) — rien
     // d'autre n'est lu avant qu'elle soit vérifiée.
@@ -421,6 +427,10 @@ function route(string $method, string $path): mixed
             $path === '/visites/reglages'              => ep_visites_reglages(),
             $path === '/visites/conformite'            => ep_visites_conformite(),
             $path === '/visites/campagnes'             => ep_visites_campagnes(),
+            $path === '/visites/cadre'                 => ep_visites_cadre(),
+            $path === '/consultants/gestion'           => ep_consultants_gestion(),
+            $path === '/franchises'                    => ep_franchises(),
+            $path === '/franchises/fiche'              => ep_franchises_fiche(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/referentiels/facebook-regles'   => ep_fb_regles(),
@@ -643,6 +653,9 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)
     if ($method === 'POST' && $path === '/visites') { return wr_visites_post(); }
+    if ($method === 'PUT' && $path === '/visites/cadre') { return wr_visites_cadre_put(); }
+    if ($method === 'POST' && $path === '/consultants/taches') { return wr_consultants_tache(); }
+    if ($method === 'PUT' && preg_match('#^/consultants/taches/([\w-]+)$#', $path, $m)) { return wr_consultants_tache_put($m[1]); }
     if ($method === 'PUT' && $path === '/visites/reglages') { return wr_visites_reglages_put(); }
     if ($method === 'POST' && $path === '/visites/tick') { return wr_visites_tick(); }
     if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }

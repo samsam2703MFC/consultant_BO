@@ -149,7 +149,12 @@ function ep_visites_conformite(): array
 {
     $sid = (int) ($_GET['shop'] ?? 0);
     if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
-    $jours = max(7, min(180, (int) ($_GET['jours'] ?? 30)));
+    return vcConformiteMagasin($sid, max(7, min(180, (int) ($_GET['jours'] ?? 30))));
+}
+
+/** La conformité du comptoir d'un magasin sur une fenêtre de jours — lue aussi par la fiche franchisé. */
+function vcConformiteMagasin(int $sid, int $jours = 30): array
+{
     $auj = date('Y-m-d');
     // La fenêtre se cale sur la dernière vente connue du magasin, et non sur
     // aujourd'hui : une base en retard rendrait sinon un rayon entièrement vide.

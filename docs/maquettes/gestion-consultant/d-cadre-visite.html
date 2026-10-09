@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D — Cadre de visite</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="gc.css">
+<script src="coque.js"></script>
+</head><body><script>
+const P = GC.profils;
+// 1. le plan de visites par magasin : nombre, type, profil, checklist attribuée, consultant, réalisé
+let lignes = '';
+GC.cadre.forEach(m => {
+  m.lignes.forEach((l, i) => {
+    const ok = /fait|\d \/ \d/.test(l[5]) && !/due|0 \//.test(l[5]);
+    const due = /due|à planifier/.test(l[5]);
+    lignes += `<tr>${i === 0 ? `<td class="mag gr" rowspan="${m.lignes.length}">${m.magasin}<small>${m.parMois} visite${m.parMois > 1 ? 's' : ''} / mois${m.note ? ' · ' + m.note : ''}</small></td>` : ''}
+      <td class="${i === 0 ? 'gr' : ''}"><b>${l[0]}</b></td><td class="${i === 0 ? 'gr' : ''}">${l[1]}</td><td class="${i === 0 ? 'gr' : ''}">${P[l[2]]}</td>
+      <td class="${i === 0 ? 'gr' : ''}">${l[3]}</td><td class="${i === 0 ? 'gr' : ''}">${l[4]}</td>
+      <td class="${i === 0 ? 'gr' : ''}"><span class="pill ${due ? 'att' : (ok ? 'ok' : '')}">${l[5]}</span></td></tr>`;
+  });
+});
+const plan = `<div class="carte"><h3>Plan de visites par magasin<small>combien de visites, de quel type, par quel profil, avec quelle checklist, par qui · réalisé en septembre et au trimestre</small></h3>
+<table class="mat"><thead><tr><th>Magasin</th><th>Type de visite</th><th>Nombre</th><th>Profil de consultant</th><th>Checklist attribuée</th><th>Consultant</th><th>Réalisé</th></tr></thead><tbody>${lignes}</tbody></table>
+<div class="mini" style="margin-top:10px">8 visites par mois au cadre, plus 4 bilans et 2 clients mystère par trimestre. Les visites de <b>suivi de plan d’action</b> et les <b>revisites</b> sont hors cadre : un P0 ouvert ou un point non conforme les déclenche, pour le consultant de la visite d’origine. Le cadre alimente « À planifier », la couverture et les visites dues.</div>
+<div style="display:flex;gap:10px;margin-top:12px"><span class="btn s">+ Ajouter une ligne</span><span class="btn s">Copier le cadre de Halle vers un nouveau magasin</span></div>
+</div>`;
+// 2. les types : la liste déroulante
+const types = `<div class="carte"><h3>Types de visite<small>la liste déroulante · chaque type porte sa durée, son profil, sa checklist et ses tâches à faire</small></h3>
+  ${GC.types.map(x => `<div class="typ ${x.code === 'production' ? 'on' : ''}"><div><b>${x.nom}</b><small>${x.duree} min · profil : ${x.profil} · ${x.checklist}</small></div><span class="n">${x.taches} tâches</span></div>`).join('')}
+  <div style="display:flex;gap:10px;margin-top:10px"><span class="btn s">+ Nouveau type</span><span class="btn s">Dupliquer « Production »</span></div>
+</div>`;
+const coche = (txt, sous) => `<div class="coche"><div class="cb"></div><div>${txt}${sous ? `<small>${sous}</small>` : ''}</div></div>`;
+const def = `<div class="carte"><h3>Production<small>définition du type · ce que la liste déroulante charge</small></h3>
+  <div class="form" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <div class="f"><label>Durée</label><span class="sel">180 min</span></div>
+    <div class="f"><label>Profil demandé</label><span class="sel">Produit et production ▾</span><small>consultants du profil : Youssef B.</small></div>
+    <div class="f"><label>Checklist attribuée</label><span class="sel">Production ▾</span><small>14 points · 4 modules · 6 photos</small></div>
+  </div>
+  <div class="mod"><b>Tâches à faire</b><span>5 · deviennent des tâches du consultant à la planification</span></div>
+  ${coche('Avant (J−2) — lire la production et les invendus de la semaine dans le cockpit')}
+  ${coche('Avant (J−1) — prévenir le franchisé : visite à 07:00, en production')}
+  ${coche('Pendant — les 14 points, les photos, 30 min avec le responsable de production')}
+  ${coche('Après (J+1) — review et plan d’action production')}
+  ${coche('Après (J+7) — vérifier l’écart production / ventes de la semaine suivante')}
+  <div class="mod"><b>Checklist Production</b><span>14 points</span></div>
+  <div class="mod" style="margin-top:6px"><b style="font-size:11px">Mise en place</b><span>4 points</span></div>
+  ${coche('Plan de production du jour affiché et suivi')}${coche('Pesées et recettes respectées', 'photo')}${coche('Levée et façonnage : temps et température')}${coche('Stock matières : rotation, DLC', 'photo')}
+  <div class="mod"><b style="font-size:11px">Cuisson</b><span>4 points</span></div>
+  ${coche('Pain : couleur, croûte, cuisson à cœur', 'photo')}${coche('Viennoiserie : feuilletage, dorure', 'photo')}${coche('Fours : températures et programmes')}${coche('Sortie de four : refroidissement, grilles')}
+  <div class="mod"><b style="font-size:11px">Recuissons</b><span>3 points</span></div>
+  ${coche('Recuisson de 15 h faite, quantités notées', 'photo')}${coche('Vitrine pleine à 16 h', 'photo')}${coche('Écart production / ventes de la semaine commenté', 'le cockpit affiche l’écart au-dessus du module')}
+  <div class="mod"><b style="font-size:11px">Invendus</b><span>3 points</span></div>
+  ${coche('Comptage du soir fait, avec motif')}${coche('Invendus ≤ 4 % du CA de la semaine', 'le cockpit affiche le taux au-dessus du module')}${coche('Causes des pertes nommées, parade en place')}
+  <div style="display:flex;gap:10px;margin-top:12px"><span class="btn">Enregistrer le type</span><span class="btn s">+ Ajouter un point</span></div>
+</div>`;
+// 3. planifier : la liste déroulante prend la checklist et les tâches
+const planifier = `<div class="carte" style="margin-top:16px"><h3>Planifier une visite<small>choisir le type charge sa checklist, ses tâches, sa durée, et ne propose que les consultants du profil</small></h3>
+  <div class="form">
+    <div class="f"><label>Magasin</label><span class="sel">Halle ▾</span><small>cadre : 4 visites / mois · production 1 / mois · octobre : 0 / 1</small></div>
+    <div class="f"><label>Type de visite</label><span class="sel">Production ▾</span><small>Régulière · Production · Hygiène et qualité · Client mystère · Bilan trimestriel · Ouverture · Suivi plan d’action · Revisite</small></div>
+    <div class="f"><label>Consultant</label><span class="sel">Youssef B. ▾</span><small>profil Produit et production : 1 consultant · agenda Google non relié</small></div>
+    <div class="f"><label>Motif</label><span class="sel">Régulière (cadre) ▾</span><small>régulière · asap · due · revisite</small></div>
+    <div class="f"><label>Date</label><span class="sel">mer 14/10/2026</span></div>
+    <div class="f"><label>Heure</label><span class="sel">07:00</span><small>en production</small></div>
+    <div class="f"><label>Durée</label><span class="sel">180 min</span><small>du type, modifiable</small></div>
+    <div class="f"><label>Prévenir</label><span class="sel">☑ invitation .ics · ☑ courriel au franchisé</span></div>
+  </div>
+  <div class="apercu"><b>Ce que la liste déroulante charge</b>Checklist <b style="display:inline">Production · 14 points · 4 modules · 6 photos</b> — et 5 tâches dans la liste de Youssef B. : lire la production et les invendus (lun 12/10) · prévenir le franchisé (mar 13/10) · la visite (mer 14/10, 07:00) · review et plan d’action (jeu 15/10) · écart production / ventes (mer 21/10). L’invitation .ics part à Youssef B. ; la visite entre dans la couverture de Halle (production : 1 / 1 en octobre).</div>
+  <div style="display:flex;gap:10px;margin-top:12px"><span class="btn">Planifier la visite</span><span class="btn s">Planifier et ouvrir la checklist</span></div>
+</div>`;
+coque('cadre', `<div class="kpis">
+    <div class="kpi"><div class="k">Types de visite</div><div class="v">8</div><div class="s">dans la liste déroulante · 6 checklists · 36 tâches à faire</div></div>
+    <div class="kpi"><div class="k">Visites au cadre</div><div class="v">8 / mois</div><div class="s">+ 4 bilans et 2 clients mystère par trimestre</div></div>
+    <div class="kpi"><div class="k">Profils</div><div class="v">3</div><div class="s">Stratégie et Développement · Opérations et qualité · Produit et production</div></div>
+    <div class="kpi"><div class="k">Réalisé en septembre</div><div class="v att">7 / 8</div><div class="s">Sombreffe : la régulière manque, due depuis 4 jours</div></div>
+  </div>
+  ${plan}
+  <div class="grille g2" style="margin-top:16px;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)">${types}${def}</div>
+  ${planifier}`,
+  'Cadre de visite', 'par magasin : combien de visites, de quel type, par quel profil, avec quelle checklist · chaque type porte sa checklist et ses tâches à faire', null);
+</script></body></html>
