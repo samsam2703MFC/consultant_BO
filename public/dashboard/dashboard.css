@@ -1755,4 +1755,11 @@ html.db-fiche-ouverte{overflow:hidden}
 .im-tab tr.im-jour td{background:#fcfaf7;font:600 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);padding:7px 8px}
 .im-ops{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-top:12px;font-size:12px}
 .im-ops .db-lab{margin-right:4px}
-@media (max-width:640px){#db-invm .fi-modale{top:12px;max-height:calc(100vh - 24px)}}
+@media (max-width:640px){
+  #db-invm .fi-modale{top:12px;max-height:calc(100vh - 24px)}
+  #db-invm .fi-bd{padding:12px 14px 16px}
+  .im-tab th,.im-tab td{padding:6px 4px}
+  .im-tab td.nom{white-space:normal;max-width:none;overflow:visible;text-overflow:clip;line-height:1.25}
+  .im-tab td.nom small{display:none}
+  .im-tab .db-inv-tag{font-size:10px;padding:2px 5px;white-space:nowrap}
+}
