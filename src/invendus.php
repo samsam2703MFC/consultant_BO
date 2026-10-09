@@ -369,7 +369,7 @@ function ep_exploitation_invendus_sonde(): array
             // Un document OpenAPI : la liste des chemins, et le détail de ceux qui parlent de produits, de pertes, de stock.
             $det = [];
             foreach ($b['paths'] as $ch => $ops) {
-                if (!preg_match('/waste|product|stock|movement|carry|unsold|production|inventor|loss|leftover|closing|report/i', (string) $ch) || !is_array($ops)) { continue; }
+                if (!preg_match('/waste|product|stock|movement|carry|unsold|production|inventor|loss|leftover|closing|report|consultant|task|visit|checklist|review|attachment|note|calendar|schedule|planning|audit|employee|shop/i', (string) $ch) || !is_array($ops)) { continue; }
                 foreach ($ops as $meth => $op) {
                     if (!is_array($op)) { continue; }
                     $det[$ch . ' ' . strtoupper((string) $meth)] = ['resume' => $op['summary'] ?? ($op['description'] ?? null), 'params' => array_map(static fn ($x) => is_array($x) ? ($x['name'] ?? '') . (isset($x['in']) ? ' (' . $x['in'] . ')' : '') : $x, (array) ($op['parameters'] ?? []))];
