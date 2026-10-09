@@ -83,6 +83,29 @@ final class GoogleApi
     }
 
     /**
+     * La même fiche que lieu(), lue par la recherche textuelle. Google refuse
+     * parfois (403) la lecture directe d'une fiche précise alors que la
+     * recherche la rend, avis compris : la synchronisation repasse alors par
+     * là. Seule la fiche au même identifiant est retenue — jamais une voisine.
+     */
+    public static function lieuParRecherche(string $texte, string $placeId): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '' || $placeId === '') { self::$lastError = 'recherche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        $champs = implode(',', array_map(fn($x) => 'places.' . $x, explode(',', self::CHAMPS_LIEU)));
+        [$code, $json] = self::http('POST', self::BASE . '/places:searchText', $champs, $c['cle'],
+            ['textQuery' => $texte, 'languageCode' => $c['langue'], 'maxResultCount' => 10]);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        foreach ((array) ($json['places'] ?? []) as $p) {
+            if (is_array($p) && (string) ($p['id'] ?? '') === $placeId) { return googleLieuNormalise($p); }
+        }
+        self::$lastError = 'fiche absente de la recherche';
+        return null;
+    }
+
+    /**
      * La position d'une fiche, et rien d'autre — le champ le moins cher de
      * l'API. Le scouting place ainsi les magasins du réseau à partir de la
      * fiche Google raccordée par la réputation, une fois, puis garde le point.
@@ -154,6 +177,35 @@ final class GoogleApi
         [$code, $json] = self::http('GET', self::BASE . '/places/' . rawurlencode($placeId)
             . '?languageCode=' . rawurlencode($c['langue']), self::CHAMPS_FICHE, $c['cle'], null);
         if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        return self::ficheDepuis($json);
+    }
+
+    /**
+     * La fiche d'un concurrent lue par la recherche textuelle — même forme que
+     * fiche(). Pour la fiche dont Google refuse la lecture directe (403) mais
+     * que la recherche rend ; seule la fiche au même identifiant est retenue.
+     */
+    public static function ficheParRecherche(string $texte, string $placeId, float $lat, float $lng): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '' || $placeId === '') { self::$lastError = 'recherche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        $champs = implode(',', array_map(fn($x) => 'places.' . $x, explode(',', self::CHAMPS_FICHE)));
+        [$code, $json] = self::http('POST', self::BASE . '/places:searchText', $champs, $c['cle'], [
+            'textQuery' => $texte, 'languageCode' => $c['langue'], 'regionCode' => 'BE', 'maxResultCount' => 5,
+            'locationBias' => ['circle' => ['center' => ['latitude' => $lat, 'longitude' => $lng], 'radius' => 600.0]],
+        ]);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        foreach ((array) ($json['places'] ?? []) as $p) {
+            if (is_array($p) && (string) ($p['id'] ?? '') === $placeId) { return self::ficheDepuis($p); }
+        }
+        self::$lastError = 'fiche absente de la recherche';
+        return null;
+    }
+
+    private static function ficheDepuis(array $json): array
+    {
         $d = googleLieuNormalise($json);
         $d['statut'] = (string) ($json['businessStatus'] ?? '');
         $d['photos'] = [];
@@ -236,11 +288,21 @@ final class GoogleApi
         return [$code, json_decode((string) $raw, true)];
     }
 
-    /** Le message de Google plutôt qu'un « HTTP 403 » muet. */
+    /**
+     * Le message de Google plutôt qu'un « HTTP 403 » muet — et sa raison
+     * (SERVICE_DISABLED, API_KEY_SERVICE_BLOCKED, BILLING_DISABLED…) : un 403
+     * se dit souvent « The caller does not have permission », et seule la
+     * raison dit quoi régler dans Google Cloud.
+     */
     private static function erreur(int $code, mixed $json): string
     {
         $m = is_array($json) ? ($json['error']['message'] ?? null) : null;
-        return 'HTTP ' . $code . ($m ? ' — ' . $m : '');
+        $raison = null;
+        foreach ((array) (is_array($json) ? ($json['error']['details'] ?? []) : []) as $d) {
+            if (is_array($d) && !empty($d['reason'])) { $raison = (string) $d['reason']; break; }
+        }
+        if ($raison === null && is_array($json) && !empty($json['error']['status'])) { $raison = (string) $json['error']['status']; }
+        return 'HTTP ' . $code . ($m ? ' — ' . $m : '') . ($raison ? ' (' . $raison . ')' : '');
     }
 }
 

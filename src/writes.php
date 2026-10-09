@@ -3208,6 +3208,14 @@ function reputationSynchroniser(?string $shopId): array
     foreach ($cibles as $c) {
         GoogleApi::$lastError = null;
         $lieu = GoogleApi::lieu((string) $c['place_id']);
+        // lecture directe refusée pour cette seule fiche : la recherche par le
+        // nom du magasin la rend, avec ses avis (même identifiant exigé)
+        if ($lieu === null && preg_match('/HTTP (403|404)\b/', (string) GoogleApi::$lastError)) {
+            $refus = GoogleApi::$lastError;
+            GoogleApi::$lastError = null;
+            $lieu = GoogleApi::lieuParRecherche((string) $c['name'], (string) $c['place_id']);
+            if ($lieu === null) { GoogleApi::$lastError = $refus . ' · recherche : ' . (GoogleApi::$lastError ?? 'réponse vide'); }
+        }
         if ($lieu === null) {
             $erreurs[] = $c['name'] . ' : ' . (GoogleApi::$lastError ?? 'réponse vide');
             continue;
@@ -3653,8 +3661,13 @@ function wr_scouting_concurrents_google(): array
     $b = body();
     $rows = $b['rows'] ?? [];
     if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
-    @set_time_limit(120);
-    $out = []; $erreur = null; $appels = 0; $caches = 0;
+    // `frais` : le dossier part en PDF — les avis sont relus chez Google, le
+    // cache de trente jours ne sert plus. Une fiche relue il y a moins d'une
+    // heure ne l'est pas deux fois (un second clic sur « PDF » ne coûte rien),
+    // et la photo déjà gardée est reprise : ce sont les avis qui vieillissent.
+    $frais = !empty($b['frais']);
+    @set_time_limit($frais ? 180 : 120);
+    $out = []; $erreur = null; $appels = 0; $caches = 0; $relues = 0;
     foreach (array_slice(array_values($rows), 0, 10) as $r) {
         if (!is_array($r)) { continue; }
         $id = trim((string) ($r['id'] ?? ''));
@@ -3666,7 +3679,9 @@ function wr_scouting_concurrents_google(): array
         // du cache, s'il a moins de 30 jours — et s'il porte déjà le signe de
         // vie (statut, dernier avis) : une fiche relevée avant qu'on le garde
         // est redemandée, sinon le dormant passerait inaperçu un mois de plus
-        if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400
+        $ancien = $cur !== null && $cur['google_json'] !== null ? json_decode((string) $cur['google_json'], true) : null;
+        $age = $cur !== null && $cur['google_at'] !== null ? time() - (int) strtotime((string) $cur['google_at']) : PHP_INT_MAX;
+        if ($cur !== null && $cur['google_json'] !== null && $age < ($frais ? 3600 : 30 * 86400)
             && ($cur['business_status'] !== null || $cur['last_review_at'] !== null)) {
             $g = json_decode((string) $cur['google_json'], true);
             if (is_array($g)) {
@@ -3693,6 +3708,39 @@ function wr_scouting_concurrents_google(): array
         GoogleApi::$lastError = null;
         $f = GoogleApi::fiche($placeId);
         $appels++;
+        // Une fiche gardée peut être refusée seule (403) quand Google a changé
+        // son identifiant : la recherche par le nom en redonne un, et un refus
+        // qui ne touche qu'une fiche n'arrête pas les autres. La clé, elle, est
+        // en cause quand la recherche est refusée aussi.
+        if ($f === null && $cur !== null && trim((string) ($cur['place_id'] ?? '')) === $placeId
+            && preg_match('/HTTP (403|404)\b/', (string) GoogleApi::$lastError) && $lat !== 0.0 && $lng !== 0.0) {
+            $ou = trim((string) ($r['addr'] ?? ''));
+            GoogleApi::$lastError = null;
+            $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $lat, $lng);
+            $appels++;
+            if ($res === null) {
+                $msg = GoogleApi::$lastError ?? 'réponse vide';
+                if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
+            }
+            $neuf = $res !== null ? (string) ($res['placeId'] ?? '') : '';
+            if ($neuf === $placeId) {
+                // même identifiant : la fiche est bonne, c'est sa lecture directe
+                // que Google refuse — la recherche la rend, avis et photos compris
+                GoogleApi::$lastError = null;
+                $f = GoogleApi::ficheParRecherche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $placeId, $lat, $lng);
+                $appels++;
+                if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+                $neuf = '';
+            }
+            if ($f === null && $neuf === '') { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+            if ($f === null) {
+                $placeId = $neuf;
+                GoogleApi::$lastError = null;
+                $f = GoogleApi::fiche($placeId);
+                $appels++;
+                if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+            }
+        }
         if ($f === null) {
             $msg = GoogleApi::$lastError ?? 'réponse vide';
             if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
@@ -3704,8 +3752,11 @@ function wr_scouting_concurrents_google(): array
             $avis[] = ['auteur' => mb_substr((string) ($a['auteur'] ?? ''), 0, 60), 'note' => (int) $a['note'], 'le' => substr((string) $a['le'], 0, 10),
                 'texte' => $a['texte'] !== null ? mb_substr((string) $a['texte'], 0, 320) : ''];
         }
-        $photo = null;
-        if ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
+        $photo = null; $photoAuteur = $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '';
+        if ($frais && is_array($ancien) && !empty($ancien['photo'])) {
+            $photo = (string) $ancien['photo']; $photoAuteur = (string) ($ancien['photoAuteur'] ?? $photoAuteur);
+        } elseif ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
+        if ($frais) { $relues++; }
         // Le signe de vie : le plus récent des avis que Google rend (cinq au
         // plus) et le statut de l'établissement. Un commerce fermé, ou sans
         // avis depuis plus d'un an, est écarté de l'étude par l'écran.
@@ -3713,7 +3764,7 @@ function wr_scouting_concurrents_google(): array
         foreach ($f['derniers'] as $a) { $q = substr((string) ($a['le'] ?? ''), 0, 10); if ($q !== '' && ($dernier === null || $q > $dernier)) { $dernier = $q; } }
         $statut = mb_substr((string) ($f['statut'] ?? ''), 0, 24);
         $g = ['id' => $id, 'fiche' => true, 'placeId' => $placeId, 'nom' => $f['nom'], 'adresse' => $f['adresse'], 'note' => $f['note'], 'n' => $f['avis'],
-            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '', 'le' => date('Y-m-d'),
+            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $photoAuteur, 'le' => date('Y-m-d'),
             'statut' => $statut, 'dernierAvis' => $dernier];
         Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, updated_at, place_id, address, google_json, google_at, business_status, last_review_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE'
@@ -3728,11 +3779,11 @@ function wr_scouting_concurrents_google(): array
     }
     if ($out === [] && $erreur === null) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)']; }
     if ($appels > 0) {
-        journalAdd('CEO', 'Scouting', 'Avis Google', 'Fiches Google des concurrents pour un dossier — ' . count($out) . ' concurrents, ' . $appels . ' appels, ' . $caches . ' du cache'
+        journalAdd('CEO', 'Scouting', 'Avis Google', 'Fiches Google des concurrents pour un dossier' . ($frais ? ' (avis relus pour le PDF : ' . $relues . ')' : '') . ' — ' . count($out) . ' concurrents, ' . $appels . ' appels, ' . $caches . ' du cache'
             . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
     }
     if ($out === [] && $erreur !== null) { http_response_code(502); return ['error' => $erreur, 'rows' => []]; }
-    return ['ok' => true, 'rows' => $out, 'appels' => $appels, 'caches' => $caches, 'erreur' => $erreur];
+    return ['ok' => true, 'rows' => $out, 'appels' => $appels, 'caches' => $caches, 'relues' => $relues, 'erreur' => $erreur];
 }
 
 /**

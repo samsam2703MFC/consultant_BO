@@ -324,11 +324,12 @@ export function renderRight(c, x){
       <div class="t-admin-label" style="letter-spacing:0">Note / 5</div>
     </div>
     <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px;line-height:1.5">Saisis une note pour requalifier un concurrent : elle prime sur Google et recalcule zone rouge, emprise et CA.</div>
+    ${c.googleRayon.ok ? `<button ${x.A(c.googleRayon.charger)} class="btn-secondary" ${c.googleRayon.busy ? 'disabled' : ''} style="width:100%;padding:8px;margin-bottom:8px;font-size:12px">${c.googleRayon.busy ? esc(c.googleRayon.txt) : 'Charger notes et photos Google'}</button>` : ''}
     ${c.selCompetitors.map(k => `
     <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${k.color}"></div>
+      ${k.photo ? `<img src="${k.photo}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto">` : `<div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${k.color}"></div>`}
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.name)}</div>
+        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.photo ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px;background:${k.color}"></span>` : ''}${esc(k.name)}${k.url ? ` <a href="${esc(k.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</div>
         <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)} · ${esc(k.dist)}${k.manual ? ` · ajouté à la main · <button ${x.A(k.retirer)} type="button" title="Retirer ce commerce ajouté à la main" style="border:none;background:transparent;color:var(--color-primary);cursor:pointer;font-size:11px;padding:0;font-family:inherit">retirer</button>` : ''}</div>
         <input id="sc-sm-${esc(k.id)}" type="text" maxlength="200" placeholder="Commentaire terrain (200 car.)" value="${esc(k.comment)}" ${x.C(k.setComment)} style="width:100%;margin-top:4px;${txtCss}">
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
@@ -573,7 +574,7 @@ export function dossierPage(d, esc, logo){
       ${f ? `<div class="cbody">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
         <div class="gtxt">${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px">Aucun avis rendu par Google.</div>'}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px">fiche Google ↗</a>` : ''}</div>
       </div>` : ''}
-    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
+    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : '') + (d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
     ${(d.terrain && d.terrain.length) || (d.fluxMesures && d.fluxMesures.length) ? `<h3>Le relevé terrain</h3>
     ${d.terrain.length ? `<table>${d.terrain.map(r => `<tr><td class="l" style="width:120px"><b>${esc(r[0])}</b></td><td class="l">${esc(r[1])}</td></tr>`).join('')}</table>` : ''}
     ${d.fluxMesures.length ? `<table><tr><th class="l">Axe</th><th>Véhicules / jour</th><th class="l" style="padding-left:12px">Sens</th><th class="l" style="padding-left:12px">Source · date</th></tr>
@@ -648,7 +649,7 @@ function renderDossier(c, x){
     <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
       <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
-      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
+      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? (d.busyTxt || 'PDF en cours…') : 'Télécharger le PDF'}</button>
       <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter les tableaux (CSV)</button>
       <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>
       <button ${x.A(d.fermer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Fermer</button>
@@ -739,7 +740,7 @@ const boxCss = 'background:var(--color-surface);border:0.5px solid var(--color-b
 const headCss = 'background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-secondary);min-width:max-content';
 const lineCss = 'align-items:center;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;min-width:max-content';
 const ZONES_GRID = '48px 180px 160px 62px 90px 112px 64px 220px 80px 130px 90px';
-const CONC_GRID = '16px 230px 150px 170px 76px 64px 74px 64px 280px 64px';
+const CONC_GRID = '44px 230px 150px 170px 76px 64px 74px 64px 280px 64px';
 const ARR_GRID = '190px 84px 104px 104px 150px 92px 76px 96px 84px 110px';
 
 export function renderOverlays(c, x){
@@ -751,6 +752,7 @@ export function renderOverlays(c, x){
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
       <div class="t-section-title" style="font-size:16px">Zones candidates</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${c.wiz.fait ? 'Balayage des arrondissements retenus par l’assistant — indépendant du cadrage de la carte' : 'Balayage de la vue carte courante'} · score minimum ${c.minScore} · clic sur une ligne pour ouvrir la fiche</div>
+      ${c.googleListe.ok ? `<button ${x.A(c.googleListe.chargerZones)} class="btn-secondary" title="Les concurrents du rayon de chaque zone, dans l’ordre du tableau (100 commerces au plus) : note, nombre d’avis, avis et photo relus chez Google ; les zones se recalculent" style="padding:7px 12px;font-size:12px">${esc(c.googleListe.label)}</button>` : ''}
       <button ${x.A(c.exportZones)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
@@ -764,7 +766,7 @@ export function renderOverlays(c, x){
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <span style="padding:8px;font-weight:600;color:#1b5e20">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
-        <span style="padding:8px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}</span>
+        <span style="padding:5px 8px;display:flex;align-items:center;gap:4px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}${r.photos.map(f => `<img src="${f.photo}" alt="" title="${esc(f.nom)}" style="width:24px;height:24px;object-fit:cover;border-radius:4px">`).join('')}</span>
         <span style="padding:8px;color:${r.forts ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${r.forts}</span>
         <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chainesN ? 'font-weight:500' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
         <span style="padding:8px">${esc(r.emprise)}</span>
@@ -818,6 +820,7 @@ export function renderOverlays(c, x){
       <input id="sc-q" type="text" placeholder="Filtrer par nom, commune, arrondissement" value="${esc(c.q)}" ${x.I(c.setQ)} style="flex:1;max-width:300px;padding:7px 9px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-surface);font-size:12px;font-family:var(--font-ui);color:var(--color-text)">
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(c.concCount)} · 400 lignes max</div>
       <button ${x.A(c.enrichAll)} class="btn-secondary" style="padding:7px 12px;font-size:12px">${esc(c.enrichAllLabel)}</button>
+      ${c.googleListe.ok ? `<button ${x.A(c.googleListe.charger)} class="btn-secondary" title="La liste filtrée (100 commerces au plus) : note, nombre d’avis, avis et photo relus chez Google" style="padding:7px 12px;font-size:12px">${esc(c.googleListe.label)}</button>` : ''}
       <button ${x.A(c.exportConc)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
@@ -827,8 +830,8 @@ export function renderOverlays(c, x){
       </div>
       ${c.concRows.map(r => `
       <div style="display:grid;grid-template-columns:${CONC_GRID};${lineCss}">
-        <span style="width:8px;height:8px;border-radius:50%;background:${r.color}"></span>
-        <span style="padding:6px 8px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span>
+        ${r.photo ? `<img src="${r.photo}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;margin:3px 0;box-shadow:0 0 0 2px ${r.color}">` : `<span style="width:8px;height:8px;border-radius:50%;background:${r.color};margin-left:4px"></span>`}
+        <span style="padding:6px 8px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}${r.url ? ` <a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</span>
         <span style="padding:6px 8px;color:var(--color-text-muted)">${esc(r.commune)}</span>
         <span style="padding:6px 8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <input id="sc-cn-${esc(r.id)}" type="number" min="0" max="5" step="0.1" placeholder="–" value="${esc(r.note)}" ${x.C(r.setNote)} style="width:58px;margin:4px 8px;${numCss}">

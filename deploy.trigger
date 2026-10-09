@@ -457,3 +457,213 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-27T06:52:29Z résultat : analyse réseau
 2026-09-27T06:55:50Z analyse réseau : mini-courbes et mois
 2026-09-27T06:59:08Z analyse réseau : dates des mois
+2026-09-28T08:30:00Z calendrier du mois : echelle orange vers vert fonce
+2026-09-28T09:15:00Z dashboard magasin : la note du jour et la semaine n-1
+2026-09-28T09:50:00Z ventes par heure : un releve pris en journee ne fige plus le jour
+2026-09-28T11:20:00Z objectifs produits des campagnes : multiselect, objectif par magasin, jauge dashboard
+2026-09-28T11:40:00Z objectifs produits : tous les magasins actifs
+2026-09-28T11:55:00Z objectifs produits : identifiants magasin en chaines
+2026-09-28T19:44:01Z jours creux : carte, assistant, catalogue de mecaniques, promotions, dashboard
+2026-09-29T04:35:36Z scoring du trimestre : quatre postes, client mystere, rapport A4, envoi
+2026-09-29T04:37:57Z scoring : le poste budget lit ep_perf
+2026-09-29T05:01:20Z scoring : identifiants magasin en chaines, historique dans sa carte
+2026-09-29T05:06:50Z scoring : note sur 20 d office, echelle du budget par paliers
+2026-09-29T05:15:52Z scoring : les obligatoires jour par jour dans le rapport magasin
+2026-09-29T05:58:16Z scoring : obligatoires = checklist CQ-02, photos des comptoirs
+2026-09-29T06:15:11Z scoring : obligatoire = le drapeau du panel, garde par le releve
+2026-09-29T14:43:57Z sonde clients des tickets : societe, facture, mode de service
+2026-09-29T14:50:01Z sonde clients : table client is_b2b, tickets b2b, commandes, webshop
+2026-09-29T16:12:08Z sonde clients : detail b2b par heure, par jour, comptes pro
+2026-09-29T16:59:48Z clients pro : carte B2B du dashboard, lue dans les tickets du panel
+2026-09-29T17:11:11Z clients pro : en-tete mobile, singulier
+2026-09-29T17:51:19Z resultat : split comptoir / pro b2b (jour, semaine, mois) ; carte clients pro repliable
+2026-09-29T18:11:52Z dashboard : split comptoir / clients pro en jour, semaine, mois
+2026-09-29T18:21:52Z dashboard : selecteur du calendrier (ca, atteinte, clients)
+2026-09-29T18:39:52Z resultat : clients manquants au comptoir ; releve : part pro par produit
+2026-09-29T19:20:31Z planogramme standard : un seul plan, moments de la journee, rotations comptoir, tablette
+2026-09-29T20:49:15Z assortiment obligatoire : liste de recherche et obligatoires de saison
+2026-09-30T05:00:28Z planogramme : proposition du plan d'apres les ventes moyennes par moment
+2026-09-30T05:17:52Z dashboard : comptoir et clients pro fusionnes
+2026-09-30T20:37:14Z controles qualite en photo : carrousel dashboard + lecture groupee /pwa/tasks/photos
+2026-10-01T06:33:48Z ou ca se vend : onglet prix x volume (grille + nuage) et lecture /analyse/prix-volume
+2026-10-01T06:43:37Z analyse magasin : etape prix lue chez le panel
+2026-10-01T06:46:17Z periodes : elision devant voyelle
+2026-10-01T07:01:17Z analyse magasin : motif en majuscule
+2026-10-01T09:40:42Z dashboard telephone : reclamations fournisseur avec photos
+2026-10-01T09:51:16Z dashboard telephone : onglet Reclamation
+2026-10-01T10:57:39Z sonde : champs code des matieres
+2026-10-01T11:08:57Z reclamation telephone : scan du code-barres
+2026-10-01T11:13:18Z reclamation telephone : bascule scanner ou saisir
+2026-10-01T11:40:53Z scan en direct, site en https, taches obligatoires seules
+2026-10-01T11:50:26Z https deja present sur l'IP : retrait de l'essai sslip
+2026-10-01T12:07:11Z dashboard telephone : classement reseau
+2026-10-01T13:23:18Z plan d action : objectif de campagne, clients face au N-1, campagne_id sur les actions
+2026-10-01T13:26:08Z plan d action : etiquette du cumul
+2026-10-01T13:32:15Z plan d action du franchise : la campagne seulement
+2026-10-01T13:42:52Z dashboard telephone : onglets Campagne et Plan d action
+2026-10-01T13:51:54Z onglet campagne : sans la boutique de la semaine
+2026-10-02T05:35:42Z controle des taches : photos en carrousel, CSS partage
+2026-10-02T09:18:54Z tablette vendeuses : vue test en ligne, book et photos du bo
+2026-10-02T09:29:32Z tablette vendeuses : demarrage immediat sur le dernier book
+2026-10-02T09:48:02Z controle des taches : note rapide 4 et 5
+2026-10-02T10:01:51Z controle guide : contrôles en photo et note rapide au telephone
+2026-10-02T19:05:38Z tablette vendeuses : menu en bas, objectifs, remarques, allergenes du panel, les bases
+2026-10-02T19:43:51Z tablette vendeuses : faq, familles de produits sous produits
+2026-10-02T19:58:36Z tablette vendeuses : photos carrees et pictogrammes des allergenes
+2026-10-02T20:20:11Z tablette vendeuses : accueil gamme actuelle et bundles de la semaine
+2026-10-03T05:59:11Z tablette vendeuses : accueil en vignettes et cartes de bundles
+2026-10-03T06:30:44Z tablette vendeuses : fiche produit, vente additionnelle, arguments et bundles
+2026-10-03T06:45:00Z ventes par categorie : pourcentages entiers et coefficient
+2026-10-03T07:34:57Z canaux et offres : commandes par canal, promotions et bundles (dashboard + cockpit)
+2026-10-03T07:39:16Z canaux : commande encaissée = remise, liste du jour avec le comptoir
+2026-10-03T07:42:41Z offres : bundle sans vente retiré, delta dans les cases du cockpit
+2026-10-03T09:16:58Z canaux et offres en semaine et mois, clients à J-7 au même moment
+2026-10-03T11:02:57Z sonde des ventes : un produit precis
+2026-10-03T11:05:42Z sonde des ventes : ligne de ticket brute
+2026-10-03T11:08:02Z sonde des ventes : tous les tickets
+2026-10-03T11:14:07Z detail des ventes : noms, categories et portions depuis le panel
+2026-10-03T11:30:42Z cout matiere en direct API, par magasin
+2026-10-03T11:43:08Z catalogue, categories et prix en direct API
+2026-10-03T11:47:56Z catalogue complet du panel
+2026-10-03T11:58:15Z dashboard vue jour : rien que le jour
+2026-10-03T12:00:50Z vue jour : carte des offres vide
+2026-10-03T12:10:35Z P&L : cout matiere recompose depuis les tickets
+2026-10-03T12:17:10Z matiere : periode, rentabilite, performance
+2026-10-03T12:20:00Z matiere : couts invraisemblables ecartes
+2026-10-03T12:42:46Z clients pro : heure et montant seulement
+2026-10-03T12:50:05Z invendus : sonde
+2026-10-03T12:52:44Z sonde invendus : sans donnees sensibles
+2026-10-03T12:55:18Z sonde invendus : documentation
+2026-10-03T12:59:51Z sonde invendus : documentation du panel
+2026-10-03T13:03:24Z sonde invendus : prefixe
+2026-10-03T13:19:51Z invendus et poubelle : carte et P&L
+2026-10-03T13:25:31Z invendus : valeur perdue et compteurs
+2026-10-03T13:40:43Z cockpit : invendus et poubelle
+2026-10-03T13:44:20Z sonde : routes de production
+2026-10-03T14:11:57Z gestion de production
+2026-10-03T14:21:13Z production : correctif chargement
+2026-10-03T14:26:36Z production : articles de commande
+2026-10-03T14:28:26Z sonde : articles des commandes
+2026-10-03T14:31:26Z production : articles des commandes
+2026-10-03T14:33:25Z production : diagnostic articles
+2026-10-03T14:35:46Z sonde : une commande
+2026-10-03T14:37:38Z sonde : cles completes
+2026-10-03T14:40:37Z production : commandes sans articles
+2026-10-03T14:44:09Z production : lignes negligeables
+2026-10-03T15:02:20Z production dans le rail, sous-totaux
+2026-10-03T15:06:20Z production : sections
+2026-10-03T15:37:50Z dashboard : vue jour en lignes
+2026-10-03T15:57:55Z production : application /production
+2026-10-03T16:00:30Z production : heures du suivi
+2026-10-03T16:11:17Z production : plage du suivi
+2026-10-03T16:13:51Z production : conseil du suivi
+2026-10-03T16:27:37Z production : barre des jours
+2026-10-03T17:15:13Z production : categories hors catalogue
+2026-10-03T17:36:17Z production J-7 trop ou trop peu, step, stock minimum
+2026-10-03T17:38:50Z production J-7 manque arrondi
+2026-10-03T17:42:26Z production J-7 besoin vendu plus manque
+2026-10-03T17:44:40Z production J-7 tuile
+2026-10-03T18:43:18Z production plan lisible
+2026-10-03T18:47:31Z production plan nombres entiers
+2026-10-03T18:50:15Z production plan plaques au survol
+2026-10-03T18:56:13Z production sonde commandes
+2026-10-03T18:57:58Z production sonde commandes 2
+2026-10-03T19:01:17Z production sonde commandes 3
+2026-10-03T19:07:43Z production comptoir seul plus commandes
+2026-10-03T19:10:50Z production aucune commande liste vide
+2026-10-03T19:16:42Z production parts de cuisson par categorie
+2026-10-03T19:23:46Z production page fours gantt
+2026-10-03T19:25:44Z production fours heure au four
+2026-10-03T19:31:32Z production fours rafraichir utilisation
+2026-10-03T19:42:18Z production equipe operateurs etapes
+2026-10-03T19:44:26Z production tout repartir
+2026-10-03T19:48:13Z production fours fournees partagees
+2026-10-03T19:58:41Z production temperature impression postes feuilles de cuisson
+2026-10-03T20:01:00Z production temperature par four
+2026-10-03T20:21:42Z production chauffe par four
+2026-10-04T05:15:08Z production : poids de J−7 dans la prévision (40 %, réglable)
+2026-10-04T05:28:41Z production : commandes d'un produit au clic (client, heure de retrait)
+2026-10-04T05:31:14Z production : nom du client réduit aussi quand il est entier dans le prénom
+2026-10-04T05:36:31Z production : commandes d'un produit, heure de retrait, client et quantité seulement
+2026-10-04T05:50:55Z production : nom du client particulier même avec une société remplie
+2026-10-04T06:00:47Z production : heure maximum de vente par produit
+2026-10-04T06:07:05Z production : heure maximum de vente posée à part
+2026-10-04T06:55:14Z dashboard téléphone en trois onglets : exploitation, contrôle, semaine
+2026-10-04T07:00:49Z dashboard téléphone : résultat de la semaine, main-d'œuvre répartie
+2026-10-04T07:06:52Z dashboard : pastilles des photos lisibles
+2026-10-04T18:09:19Z production : comptage réel à la clôture
+2026-10-04T18:19:49Z cloture-derniere-vente
+2026-10-04T18:34:17Z suivi-moyenne-6-semaines
+2026-10-04T18:45:37Z suivi-valeurs-vendu-moyenne
+2026-10-04T18:50:08Z suivi-moyenne-entiers
+2026-10-04T19:16:14Z resultat-cache-et-file-panel
+2026-10-04T19:26:50Z resultat-relance-arriere-plan
+2026-10-04T19:33:29Z dashboard-resultat-en-premier
+2026-10-05T17:39:47Z fiche-reference-magasin-tableau-jour
+2026-10-05T17:57:29Z fiche-reference-jour-par-jour-promotions
+2026-10-05T19:32:48Z tickets-relecture-incrementale
+2026-10-05T20:04:28Z tickets-relecture-incrementale-relance
+2026-10-05T21:55:22Z tickets-relecture-incrementale-apres-incident
+2026-10-06T05:18:09Z cache à la demande des lectures lentes du dashboard
+2026-10-06T05:26:30Z schéma vérifié une fois par version, Server-Timing
+2026-10-06T06:31:45Z dashboard onglet Opérationnel
+2026-10-06T06:47:30Z heures locales et contrôles sans photo
+2026-10-06T07:01:57Z onglet Opérationnel au téléphone
+2026-10-06T11:27:04Z suivi de production par duree de vie (short, medium, long life)
+2026-10-06T12:31:41Z dashboard vitrine par duree de vie
+2026-10-06T12:55:31Z vitrine short life vente heure par heure
+2026-10-06T13:12:40Z vitrine short life prevision de toute la journee
+2026-10-06T13:20:17Z vitrine short life depliant categorie
+2026-10-06T13:27:20Z vitrine depliant categorie medium et long life
+2026-10-06T14:08:05Z dashboard fiche produit magasin actif
+2026-10-06T14:53:15Z app worker employes sous employee
+2026-10-06T15:53:56Z primes app worker B, prime magasin euros par heure, ventes croisees, parametres cockpit
+2026-10-06T15:59:14Z primes : planning jusqu'au, budget du recomptage
+2026-10-06T16:43:18Z primes app : identite signee, personnel du panel, appel local
+2026-10-06T16:47:40Z primes : prenom unique, voie de l'app
+2026-10-06T16:50:41Z primes : heures du planning sans jointure
+2026-10-06T17:05:08Z primes : tout le monde sur le mois, carte Resultats, enregistrement
+2026-10-06T17:16:37Z app worker : ventes mois par mois, CA par heure, place reseau
+2026-10-06T17:31:07Z scouting : avis Google relus au PDF
+2026-10-06T17:38:18Z google : la raison des refus
+2026-10-06T17:41:52Z scouting : date reelle des fiches Google au PDF
+2026-10-06T17:51:01Z primes : refonte visuelle, concours tartes et quiches, note Google, PDF
+2026-10-06T17:56:11Z primes : jours du concours par magasin
+2026-10-06T18:07:09Z scouting : fiche Google refusee, recherche par le nom
+2026-10-06T18:09:49Z reputation : fiche refusee lue par la recherche
+2026-10-06T18:11:54Z scouting : etude creee, notes et fiches Google relues
+2026-10-06T18:14:01Z app worker : accueil centré sur la personne
+2026-10-06T18:28:18Z app worker : bilan de service, nl it pl, mois localisés
+2026-10-06T18:42:16Z scouting : notes et photos Google dans le rayon
+2026-10-06T18:53:05Z scouting : onglet concurrents, notes et photos Google
+2026-10-06T18:53:39Z app worker : collection des titres, deux concours, classements
+2026-10-06T18:57:50Z scouting : zones candidates, notes et photos Google
+2026-10-06T18:59:03Z classements : la localité du magasin
+2026-10-06T19:04:49Z app worker : mes ventes mois par mois en graphique
+2026-10-06T19:10:57Z classements : la semaine en cours
+2026-10-07T03:37:52Z app worker : feuilles de style versionnées, service worker
+2026-10-07T03:42:37Z app worker : barre du bas centrée
+2026-10-08T13:13:44Z dashboard operationnel duel J-7 maquette B
+2026-10-08T13:46:44Z heure par heure bascule CA clients
+2026-10-08T15:45:00Z part du CA pro en pastille regle 40 pct
+2026-10-08T15:56:35Z pastille part pro carte canaux
+2026-10-08T17:14:37Z modale produit onglet recette et marge
+2026-10-08T17:18:29Z recette diagnostic colonnes
+2026-10-08T17:26:35Z recette tables mesurees
+2026-10-08T17:30:43Z recette indice cout grave
+2026-10-08T17:37:58Z recette jauge etages
+2026-10-08T18:01:25Z recette adapter le prix
+2026-10-08T18:12:24Z recette prix de vente en direct
+2026-10-08T18:21:41Z modale focus garde au redessin
+2026-10-08T19:07:25Z fiche matiere api sonde
+2026-10-08T19:15:01Z fiche matiere listes de prix
+2026-10-08T19:23:52Z fiche matiere dans la modale
+2026-10-08T19:38:48Z fiche matiere relire
+2026-10-08T19:51:56Z fiche matiere prix a la minute sonde recette
+2026-10-08T19:56:01Z sonde recette brut
+2026-10-08T20:03:27Z recette par l api du panel
+2026-10-09T11:57:07Z pnl mensuel panel
+2026-10-09T12:35:33Z envoi dossier halle
+2026-10-09T12:52:55Z coefficients produits
+2026-10-09T13:10:57Z dossier halle v2 et liste des produits
+2026-10-09T13:27:27Z dossier halle v3
