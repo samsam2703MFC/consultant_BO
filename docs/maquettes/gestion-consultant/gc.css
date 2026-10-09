@@ -9,7 +9,7 @@ body{margin:0;background:var(--color-bg,#EAE4DC);font-family:var(--font-ui,'Goth
 .rail .sec{font:700 11px var(--font-ui);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 8px}
 .rail .it{padding:8px 12px;border-radius:10px;font-size:14px;color:var(--color-text)}
 .rail .it.on{background:#EFE3DE;color:var(--color-primary);font-weight:600}
-.rail .it.neuf{position:relative}
+.rail .it.neuf{position:relative;padding-right:74px}
 .rail .it.neuf::after{content:'nouveau';position:absolute;right:10px;top:9px;font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--color-primary);border-radius:999px;padding:3px 7px}
 main{flex:1;min-width:0;padding:22px 26px 40px}
 .bar{display:flex;align-items:center;gap:10px;background:var(--color-surface);border-radius:14px;padding:10px 16px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
@@ -148,3 +148,35 @@ table.mat{width:100%;border-collapse:collapse}
 .mat td.gr{border-top:1.5px solid var(--color-border-secondary)}
 .btn{display:inline-block;background:var(--color-primary);color:#fff;border-radius:999px;padding:8px 14px;font-weight:600;font-size:12.5px}
 .btn.s{background:#fff;color:var(--color-text);border:.5px solid var(--color-border-secondary)}
+/* rail : la section Franchisés en deux volets */
+.rail .it.sub{padding:5px 12px 5px 24px;font-size:13px}
+.rail .ssec{font:600 10px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-primary);margin:8px 0 3px 12px;opacity:.9}
+.rail .it.neuf.sub::after{top:6px;font-size:8.5px}
+/* fiche franchisé */
+.mat th.grp{text-align:center;border-bottom:none;padding-bottom:2px;letter-spacing:.14em}
+.mat th.grp.j{color:#1f3f7a;background:#E3ECF7;border-radius:8px 8px 0 0}
+.mat th.grp.t{color:#5a1320;background:#EFE3DE;border-radius:8px 8px 0 0}
+.mat tr.on td{background:#FBF4F0}
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.volet h2{font:400 21px/1.1 var(--font-display);margin:0 0 3px}
+.volet .def{font-size:11.5px;color:var(--color-text-muted);margin-bottom:8px;line-height:1.45}
+.volet.j h2{color:#1f3f7a}.volet.t h2{color:var(--color-primary)}
+.bloc{padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.bloc:last-child{border-bottom:none}
+.bloc .bt{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.bloc .bt b{font-size:13.5px}
+.bloc .bt .lien{white-space:nowrap;font-size:11.5px}
+.bloc .l{font-size:12.5px;line-height:1.55;margin-top:3px}
+.bloc .l .mu{color:var(--color-text-muted)}
+.heat{display:grid;grid-template-columns:repeat(30,1fr);gap:3px;margin-top:6px}
+.heat i{display:block;height:11px;border-radius:2px;background:#C9E3CD}
+.heat i.m{background:#E8A0A0}.heat i.p{background:#F5D58F}.heat i.x{background:#EDE7E0}
+.postes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.postes div{background:#FBF8F4;border:.5px solid var(--color-border-tertiary);border-radius:8px;padding:7px 9px}
+.postes div small{display:block;font:700 9.5px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted)}
+.postes div b{font:400 18px/1.2 var(--font-display)}
+.jl{display:flex;gap:12px;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px;align-items:baseline}
+.jl:last-child{border-bottom:none}
+.jl .d{width:54px;flex:0 0 auto;font-weight:600;color:var(--color-text-muted)}
+.jl .src{flex:0 0 auto}
+.src.j{background:#E3ECF7;color:#1f3f7a}.src.t{background:#EFE3DE;color:#5a1320}

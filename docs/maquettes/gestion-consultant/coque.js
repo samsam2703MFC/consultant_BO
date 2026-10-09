@@ -40,19 +40,29 @@ const GC = {
       ['Bilan trimestriel', '1 / trim.', 'strat', 'Bilan · 10 pts', 'Sam V.', 'Q3 : à planifier']] }
   ]
 };
-function coque(onglet, corps, titre, sous, consultant) {
-  const ongs = [['planning', 'Mon planning'], ['taches', 'Tâches et contrôles', '14'], ['reseau', 'Réseau'], ['cadre', 'Cadre de visite']];
+function coque(onglet, corps, titre, sous, consultant, opts) {
+  opts = opts || {};
+  const actif = opts.actif || 'gestion';
+  const ongs = opts.tabs || [['planning', 'Mon planning'], ['taches', 'Tâches et contrôles', '14'], ['reseau', 'Réseau'], ['cadre', 'Cadre de visite']];
+  const it = (k, lib, sub, neuf) => `<div class="it ${sub ? 'sub' : ''} ${actif === k ? 'on' : ''} ${neuf ? 'neuf' : ''}">${lib}</div>`;
+  // Le rail : une section « Franchisés · évaluation et suivi » réunit le scoring, les visites et tout ce qui
+  // évalue ou suit le franchisé, en deux volets — journalier et opérations (ce que les données disent chaque
+  // jour) et terrain (ce que le consultant constate sur place). Les autres sections gardent le reste.
   const rail = `<aside class="rail"><div class="logo">L'ATELIER<small>SUCRÉ · SALÉ · À EMPORTER</small></div><div class="pr">PILOTAGE RÉSEAU</div>
     <div class="cherche">Rechercher partout…</div>
-    <div class="sec">Pilotage</div><div class="it">Résultat</div><div class="it">Performance</div><div class="it">Dashboard magasin ↗</div><div class="it on neuf">Gestion consultant</div>
-    <div class="sec">Magasins</div><div class="it">Analyse magasin</div><div class="it">Scoring du trimestre</div><div class="it">Budget</div><div class="it">Jours creux</div><div class="it">Invendus et poubelle</div><div class="it">Plan de développement</div><div class="it">Scouting — où ouvrir</div>
-    <div class="sec">Produits</div><div class="it">Catalogue</div><div class="it">Gamme · scoring</div><div class="it">Où ça se vend</div><div class="it">Dans le temps</div>
-    <div class="sec">Centrale d'achat</div><div class="it">Achats</div><div class="it">Facturation magasins</div>
-    <div class="sec">Marque &amp; marketing</div><div class="it">Campagnes</div><div class="it">Offres et canaux</div></aside>`;
+    <div class="sec">Pilotage</div>${it('resultat', 'Résultat')}${it('performance', 'Performance')}${it('dash', 'Dashboard magasin ↗')}
+    <div class="sec">Franchisés · évaluation et suivi</div>${it('fiche', 'Fiche franchisé', false, true)}${it('scoring', 'Scoring du trimestre')}
+    <div class="ssec">Suivi journalier et opérations</div>${it('taches', 'Tâches et contrôles photo', true)}${it('prod', 'Production et invendus', true)}${it('objectifs', 'Objectifs', true)}${it('remarques', 'Remarques opérateurs', true, true)}${it('google', 'Note Google et avis', true)}${it('reporting', 'Reporting automatisé', true)}
+    <div class="ssec">Suivi de terrain</div>${it('gestion', 'Gestion consultant', true, true)}${it('visites', 'Visites ↗', true)}${it('plans', 'Plans d’action', true)}${it('msp', 'Client mystère', true)}${it('conformite', 'Conformité du comptoir', true)}
+    <div class="sec">Magasins</div>${it('analyse', 'Analyse magasin')}${it('budget', 'Budget')}${it('creux', 'Jours creux')}${it('plan', 'Plan de développement')}${it('scouting', 'Scouting — où ouvrir')}
+    <div class="sec">Produits</div>${it('catalogue', 'Catalogue')}${it('gamme', 'Gamme · scoring')}${it('ou', 'Où ça se vend')}${it('temps', 'Dans le temps')}
+    <div class="sec">Centrale d'achat</div>${it('achats', 'Achats')}${it('factu', 'Facturation magasins')}
+    <div class="sec">Marque &amp; marketing</div>${it('camp', 'Campagnes')}${it('offres', 'Offres et canaux')}</aside>`;
+  const boutons = opts.boutons || ['Nouvelle tâche', 'Planifier une visite', 'Exporter'];
   const bar = `<div class="bar"><div class="et"><i></i>4 magasins · 3 consultants · visites et plans d'action relus à l'instant</div><span class="sp"></span>
-    <select><option>${consultant ? consultant.nom : 'Tous les consultants'}</option></select>
-    <span class="b">Nouvelle tâche</span><span class="b p">Planifier une visite</span><span class="b">Exporter</span></div>`;
-  const tabs = `<div class="tabs">${ongs.map(o => `<span class="${o[0] === onglet ? 'on' : ''}">${o[1]}${o[2] ? '<em>' + o[2] + '</em>' : ''}</span>`).join('')}</div>`;
+    <select><option>${opts.select || (consultant ? consultant.nom : 'Tous les consultants')}</option></select>
+    ${boutons.map((b, i) => `<span class="b ${i === 1 ? 'p' : ''}">${b}</span>`).join('')}</div>`;
+  const tabs = onglet ? `<div class="tabs">${ongs.map(o => `<span class="${o[0] === onglet ? 'on' : ''}">${o[1]}${o[2] ? '<em>' + o[2] + '</em>' : ''}</span>`).join('')}</div>` : '<div style="height:14px"></div>';
   document.body.innerHTML = `<div class="app">${rail}<main>${bar}${tabs}<div class="titre"><h1>${titre}</h1><span class="ss">${sous}</span></div>${corps}
-    <div class="pied">Maquette · consultants fictifs, magasins réels · les visites, points de contrôle et plans d'action sont ceux du module Visites (ceo_visite, ceo_visite_point, ceo_visite_action) ; le cadre de visite (types, nombre par magasin, profils, checklists) est un réglage du cockpit ; les tâches du panel viennent de /consultant/shops/{id}/tasks et du helpdesk ; l'agenda Google par flux ICS et invitations.</div></main></div>`;
+    <div class="pied">Maquette · consultants fictifs, magasins réels · les visites, points de contrôle et plans d'action sont ceux du module Visites (ceo_visite, ceo_visite_point, ceo_visite_action) ; le cadre de visite (types, nombre par magasin, profils, checklists) est un réglage du cockpit ; les tâches du panel viennent de /consultant/shops/{id}/tasks et du helpdesk ; l'agenda Google par flux ICS et invitations · le rail réunit l'évaluation et le suivi des franchisés en deux volets : journalier et opérations, terrain.</div></main></div>`;
 }

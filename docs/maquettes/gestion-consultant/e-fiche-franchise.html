@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E — Fiche franchisé</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="gc.css">
+<script src="coque.js"></script>
+</head><body><script>
+// 1. les franchisés : tout ce qui les évalue et les suit, en deux volets
+const F = [
+  ['Halle', 'r', 'ouverture mars 2026 · Sam V.', '15,8', '78 %', '3,8 %', '4,3', '06/10 · 21 / 23', '2 · 1 P0', 'plano 86 % · 2 oblig.', '68 / 80', true],
+  ['Gosselies', 'o', 'Sam V.', '16,4', '84 %', '2,9 %', '4,5', '07/10 · hygiène 11 / 12', '2 · P1, P2', 'plano 91 % · 0 oblig.', '71 / 80'],
+  ['Corbais', 'v', 'Nadia K.', '17,2', '91 %', '2,4 %', '4,6', '30/09 · 22 / 23', '1 · P2', 'plano 94 % · 1 oblig.', '74 / 80'],
+  ['Sombreffe', 'o', 'Youssef B. · visite due', '13,5', '69 %', '4,6 %', '4,1', '07/09 · 23 / 23', '0', 'plano 80 % · 3 oblig.', '62 / 80']
+];
+const tableau = `<div class="carte"><h3>Les franchisés<small>ce que les données disent chaque jour · ce que le consultant constate sur place · trimestre Q3 et octobre</small></h3>
+<table class="mat"><thead><tr><th></th><th colspan="4" class="grp j">Suivi journalier et opérations</th><th colspan="4" class="grp t">Suivi de terrain</th></tr>
+<tr><th>Franchisé</th><th>Scoring Q3 / 20</th><th>Tâches du mois</th><th>Invendus / CA</th><th>Note Google</th><th>Dernière visite</th><th>Plans ouverts</th><th>Conformité</th><th>Client mystère</th></tr></thead><tbody>
+${F.map(f => `<tr class="${f[11] ? 'on' : ''}"><td class="cons"><span class="feu ${f[1]}"></span>${f[0]}<small>${f[2]}</small></td><td><b>${f[3]}</b></td><td>${f[4]}</td><td>${f[5]}</td><td>${f[6]}</td><td>${f[7]}</td><td>${f[8]}</td><td>${f[9]}</td><td>${f[10]}</td></tr>`).join('')}
+</tbody></table>
+<div class="mini" style="margin-top:8px">Le feu est celui du module Visites : P0 ouvert, note Google, planogramme, visite due. Le scoring du trimestre reste la synthèse : deux postes viennent du volet journalier (Note Google, Tâches), un du terrain (Client mystère), un du pilotage (Budget).</div></div>`;
+// 2. la fiche d'un franchisé
+let heat = '';
+const H = 'ooooxxoomoooxxooooxxopoomooxxo'.split('');
+H.forEach(c => { heat += `<i class="${c === 'o' ? '' : c}"></i>`; });
+const bloc = (t, lien, l) => `<div class="bloc"><div class="bt"><b>${t}</b><span class="lien">${lien} ›</span></div><div class="l">${l}</div></div>`;
+const journalier = `<div class="carte volet j"><h2>Suivi journalier et opérations</h2><div class="def">Ce que les données disent chaque jour, sans aller sur place : le panel, la caisse, la production, les avis.</div>
+  ${bloc('Tâches et contrôles photo', 'Tâches et contrôles photo', 'Aujourd’hui à 10 h : <b>7 / 11</b> faites · 2 photos à noter · 1 obligatoire en retard (comptoir pains). Ce mois : 78 % rendues, obligatoires manquées 3 jours. <span class="mu">30 derniers jours, un carré par jour :</span><div class="heat">' + heat + '</div><div class="leg" style="margin-top:4px"><span><i style="background:#C9E3CD"></i>faite</span><span><i style="background:#F5D58F"></i>partielle</span><span><i style="background:#E8A0A0"></i>obligatoire manquée</span><span><i style="background:#EDE7E0"></i>fermé</span></div>')}
+  ${bloc('Production et invendus', 'Production et invendus', 'Semaine : invendus <b>3,8 % du CA</b> (cible ≤ 4 %) · écart production / ventes −6 % · recuisson de 15 h faite 4 / 5 jours · dernière vente pain 17:40 en moyenne. <span class="mu">Clôture du soir faite 5 / 5 jours.</span>')}
+  ${bloc('Objectifs', 'Objectifs', 'Objectif produits tartes : <b>112 %</b> (28 / 25 par jour) · campagne d’octobre : clients à 94 % de l’objectif, J−7 à 91 % · objectif du jour atteint 3 / 5 jours cette semaine.')}
+  ${bloc('Remarques aux opérateurs', 'Remarques aux opérateurs', '<b>2 ce mois</b> : tartes jetées pour qualité (03/10, 4 pièces), cuisson pain trop claire (08/10) · 1 réclamation fournisseur envoyée (crème, 03/10). <span class="mu">Une remarque par opérateur, avec la pièce, l’heure et le motif, pour l’entretien d’évaluation.</span>')}
+  ${bloc('Note Google et avis', 'Note Google et avis', '<b>4,3</b> (+0,1 sur le mois) · 12 avis en octobre · 1 avis sous 3 étoiles sans réponse depuis 3 jours.')}
+  ${bloc('Résultat et budget', 'Résultat', 'Octobre à ce jour : CA à <b>96 %</b> du budget · food cost 40,3 % · part du CA pro 31 %. <span class="mu">Le poste Budget du scoring se lit ici.</span>')}
+</div>`;
+const terrain = `<div class="carte volet t"><h2>Suivi de terrain</h2><div class="def">Ce que le consultant constate sur place : les visites et leur checklist, les plans d’action, le client mystère, le comptoir.</div>
+  ${bloc('Dernière visite · 06/10 · régulière', 'Visites', '<b>21 / 23</b> points conformes · review envoyée · 2 non conformes : frigo vitrine 6 °C (→ P0), comptoir viennoiserie 72 % (→ P1). <span class="mu">Cause nommée : production mal synchronisée · reco : recuisson de 15 h.</span>')}
+  ${bloc('Plans d’action · 2 ouverts', 'Plans d’action', '<span class="st p0">P0</span> frigo vitrine — échéance 12/10, correction du franchisé attendue, suivi sur place le 13/10<br><span class="st att">P1</span> comptoir viennoiserie — échéance 16/10, photo de correction à valider<br><span class="st fait">P2</span> PLV d’octobre — fermé le 07/10, validé')}
+  ${bloc('Prochaines visites au cadre · 4 / mois', 'Gestion consultant', '13/10 suivi P0 (Sam V.) · 14/10 production (Youssef B.) · 20/10 régulière (Sam V.) · 27/10 bilan Q3 (Sam V.) et hygiène (Nadia K.). <span class="mu">Octobre : 1 faite, 4 planifiées, cadre tenu.</span>')}
+  ${bloc('Client mystère · Q3', 'Client mystère', '<b>68 / 80</b> (4,3 / 5) le 15/09 · points relevés : accueil, ambiance sonore · corrigés à la visite du 06/10 : 2 / 3. <span class="mu">Prochain passage en décembre.</span>')}
+  ${bloc('Conformité du comptoir', 'Conformité du comptoir', 'Planogramme : <b>86 %</b> des emplacements tenus (viennoiserie 72 %, pains 94 %, tartes 92 %) · comptoirs photographiés montés aujourd’hui 2 / 3 · assortiment obligatoire : 2 références sans place au plan, 1 jamais passée en caisse sur 30 jours.')}
+  ${bloc('Scoring du trimestre · Q3', 'Scoring du trimestre', '<div class="postes"><div><small>Note Google</small><b>4,3</b></div><div><small>Tâches</small><b>3,4</b></div><div><small>Client mystère</small><b>4,3</b></div><div><small>Budget</small><b>3,8</b></div></div><span class="mu">15,8 / 20 · ★ 4,0 · Q2 : 14,1 · rapport A4 envoyé le 01/10 · à présenter au bilan du 27/10.</span>')}
+</div>`;
+const journal = `<div class="carte" style="margin-top:16px"><h3>Journal de l’évaluation<small>tout ce qui a été constaté, noté ou décidé pour ce franchisé, les deux volets mêlés</small></h3>
+  <div class="jl"><span class="d">09/10</span><span class="src j">journalier</span>Remarque à un opérateur : cuisson pain trop claire, 6 pièces jetées (modale des invendus).</div>
+  <div class="jl"><span class="d">08/10</span><span class="src j">journalier</span>Revues : 4 tâches photographiées notées, dont comptoir pains 3 / 5.</div>
+  <div class="jl"><span class="d">07/10</span><span class="src t">terrain</span>P2 PLV d’octobre fermé, correction validée sur photo.</div>
+  <div class="jl"><span class="d">06/10</span><span class="src t">terrain</span>Visite régulière, 21 / 23 · P0 frigo vitrine et P1 comptoir viennoiserie ouverts · review envoyée au franchisé.</div>
+  <div class="jl"><span class="d">03/10</span><span class="src j">journalier</span>Remarque à un opérateur : tartes jetées pour qualité · réclamation fournisseur (crème) envoyée.</div>
+  <div class="jl"><span class="d">01/10</span><span class="src j">journalier</span>Scoring Q3 calculé : 15,8 / 20 · rapport A4 envoyé au franchisé.</div>
+  <div class="jl"><span class="d">24/09</span><span class="src t">terrain</span>Visite hygiène et qualité (Nadia K.) : 10 / 12.</div>
+  <div class="jl"><span class="d">15/09</span><span class="src t">terrain</span>Client mystère : 68 / 80, rapport PDF encodé.</div>
+</div>`;
+coque('fiche', `${tableau}
+  <div class="titre" style="margin-top:18px"><h1>Halle</h1><span class="ss">fiche franchisé · ouverture mars 2026 · consultant responsable Sam V. · production Youssef B. · hygiène Nadia K. · <span class="feu r"></span>P0 ouvert</span></div>
+  <div class="kpis">
+    <div class="kpi"><div class="k">Scoring Q3</div><div class="v">15,8 / 20</div><div class="s">★ 4,0 · Q2 : 14,1 · 2ᵉ du réseau</div></div>
+    <div class="kpi"><div class="k">Tâches du mois</div><div class="v att">78 %</div><div class="s">obligatoires manquées 3 jours · 2 photos à noter</div></div>
+    <div class="kpi"><div class="k">Dernière visite</div><div class="v ko">21 / 23</div><div class="s">06/10 · régulière · P0 et P1 ouverts</div></div>
+    <div class="kpi"><div class="k">Prochaine visite</div><div class="v">13/10</div><div class="s">suivi P0 · cadre 4 / mois : 1 faite, 4 planifiées</div></div>
+  </div>
+  <div class="deux">${journalier}${terrain}</div>${journal}`,
+  'Franchisés · évaluation et suivi', 'tout ce qui évalue et suit les franchisés, réuni · deux volets : journalier et opérations, terrain', null,
+  { actif: 'fiche', tabs: [['fiche', 'Fiche franchisé'], ['journalier', 'Suivi journalier et opérations'], ['terrain', 'Suivi de terrain'], ['journal', 'Journal']], select: 'Halle', boutons: ['Nouvelle remarque', 'Planifier une visite', 'Rapport PDF'] });
+</script></body></html>

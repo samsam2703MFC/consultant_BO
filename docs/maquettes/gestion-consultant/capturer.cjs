@@ -4,7 +4,7 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/gestion-consultant/';
 (async () => {
   const b = await chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost'] });
   const ctx = await b.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.25 });
-  for (const f of ['a-mon-planning', 'b-taches-controles', 'c-reseau', 'd-cadre-visite']) {
+  for (const f of ['a-mon-planning', 'b-taches-controles', 'c-reseau', 'd-cadre-visite', 'e-fiche-franchise']) {
     const p = await ctx.newPage();
     const err = [];
     p.on('pageerror', e => err.push(e.message));
