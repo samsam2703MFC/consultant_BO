@@ -324,6 +324,7 @@ export function valsFF(app, common){
   const go = (screen, extra) => () => app.setState(Object.assign({ screen }, extra || {}));
   const f = { onglet, onglets: [['sante', 'Santé du magasin'], ['checklists', 'Checklists'], ['meteo', 'Météo du franchisé'], ['tableau', 'Les franchisés']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) })),
     magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value }),
+    menu: () => app.setState({ railOuvert: !S.railOuvert }),
     rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); if (onglet === 'checklists') { ffClCharge(app, shop, true); } ffMeteoCharge(app, shop, true); },
     pageFranchise: shop ? racine() + 'dashboard/suivi.html?shop=' + encodeURIComponent(shop) : '',
     shopNom: (mags.find(m => String(m.id) === shop) || {}).court || shop, tableau: null, tableauChargement: !!TB.chargement && !T,

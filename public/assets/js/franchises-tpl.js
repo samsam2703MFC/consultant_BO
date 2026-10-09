@@ -123,7 +123,7 @@ function tplGCCadre(g, x){
 /* --- Fiche franchisé ----------------------------------------------------------------- */
 export function tplFF(c, x){
   const { esc } = x, f = c.ff;
-  const entete = `<div class="mko-hd" style="margin-bottom:14px"><div class="cx-vues">${f.onglets.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
+  const entete = `<div class="mko-hd" style="margin-bottom:14px"><button type="button" class="ff-menu" ${x.A(f.menu)} aria-label="Menu" title="Menu">☰</button><div class="cx-vues">${f.onglets.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
     <span class="mko-mu" style="margin-left:auto">Franchisé</span>${sel(x, esc, f.setShop, f.magasins)}<button ${x.A(f.rafraichir)} class="mko-pied-btn">Relire</button>${f.pageFranchise ? `<a class="mko-pied-btn" href="${esc(f.pageFranchise)}" target="_blank" rel="noopener">La page du franchisé ↗</a>` : ''}</div>`;
   const tableau = f.tableau ? `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Les franchisés — ce que les données disent chaque jour · ce que le consultant constate sur place</span><span class="mko-mini">${esc(f.tableau.mini)}</span></div>
     <div style="overflow-x:auto"><table class="mko-tab"><thead><tr><th></th><th colspan="8" class="ff-grp j">Suivi journalier et opérations</th><th colspan="4" class="ff-grp t">Suivi de terrain</th></tr>

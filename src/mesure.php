@@ -1123,6 +1123,10 @@ function ep_panel_sonde_consultant(): array
         'shop-materials' => '/shops/' . $sid . '/materials',
         'supplier-materials' => '/material-suppliers/1/materials',
         'supplier-connected' => '/material-suppliers/1/connected-materials',
+        // Les checklists (09/10/2026) : celles du jour du magasin, leur avancement sur une période, leur définition au cadre opérationnel.
+        'shop-checklists' => '/consultant/shops/' . $sid . '/checklists?date=' . date('Y-m-d'),
+        'shop-checklists-periode' => '/consultant/shops/' . $sid . '/checklists/progress?' . http_build_query(['from' => date('Y-m-d', strtotime('-6 days')), 'to' => date('Y-m-d')]),
+        'framework-checklists' => '/operational-framework/checklists',
     ];
 
     $apercu = static function ($v, int $prof = 0) use (&$apercu) {
@@ -1144,7 +1148,9 @@ function ep_panel_sonde_consultant(): array
     };
 
     $out = ['magasin' => $sid, 'fenetre' => $du . ' → ' . $au, 'routes' => [], 'codes' => []];
+    $lus = [];
     foreach (PanelApi::getParallele($chemins) as $nom => $r) {
+        $lus[$nom] = $r;
         $out['routes'][$nom] = ['chemin' => $chemins[$nom],
             'reponse' => $r === null ? 'aucune réponse' : $apercu($r)];
         // Les champs qui ressemblent à un code (EAN, GTIN, code-barres, SKU) :
@@ -1165,6 +1171,17 @@ function ep_panel_sonde_consultant(): array
             }
             $out['codes'][$nom] = ['matieres' => count($liste), 'champs' => $c];
         }
+    }
+    // Second niveau : l'avancement d'une checklist du jour, la définition d'une checklist du cadre et ses tâches.
+    $premier = static function ($r): int { foreach (PanelApi::liste(is_array($r) ? $r : []) as $c) { $id = (int) ($c['id'] ?? $c['checklist_id'] ?? 0); if ($id > 0) { return $id; } } return 0; };
+    $suite = [];
+    if (($id1 = $premier($lus['shop-checklists'] ?? null)) > 0) { $suite['shop-checklist-progress'] = '/consultant/shops/' . $sid . '/checklists/' . $id1 . '/progress?date=' . date('Y-m-d'); }
+    if (($id2 = $premier($lus['framework-checklists'] ?? null)) > 0) {
+        $suite['framework-checklist'] = '/operational-framework/checklists/' . $id2;
+        $suite['framework-checklist-tasks'] = '/operational-framework/checklists/' . $id2 . '/tasks';
+    }
+    foreach ($suite ? PanelApi::getParallele($suite) : [] as $nom => $r) {
+        $out['routes'][$nom] = ['chemin' => $suite[$nom], 'reponse' => $r === null ? 'aucune réponse' : $apercu($r)];
     }
     return $out;
 }

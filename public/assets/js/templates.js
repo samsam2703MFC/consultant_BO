@@ -41,9 +41,9 @@ export function render(c, x){
   const { esc } = x;
   if (c.gate) return tplGate(c.gate, x);
   return `
-<div style="display:flex;height:100vh;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
+<div class="shell${c.railOuvert ? ' rail-ouvert' : ''}" data-ecran="${esc(c.ecran || '')}" style="display:flex;height:100vh;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
 
-  <aside style="width:236px;flex:0 0 236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto">
+  <aside class="shell-rail" style="width:236px;flex:0 0 236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto">
     <div style="padding:22px 20px 14px">
       <img src="${c.brandLogo}" alt="${esc(c.brandNom) || 'L’Atelier'}" style="width:176px;max-width:100%;height:auto;display:block">
       <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">${esc(c.brandSub)}</div>
@@ -94,13 +94,14 @@ export function render(c, x){
       ${c.canLogout ? `<button ${x.A(c.logout)} title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>` : ''}
     </div>
   </aside>
+  ${c.railOuvert ? `<div class="shell-voile" ${x.A(c.railBascule)}></div>` : ''}
 
   <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
-    <div style="${c.isScouting ? 'padding:14px 18px 14px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
-      ${c.isScouting ? '' : `<header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
+    <div class="shell-page" style="${c.isScouting ? 'padding:14px 18px 14px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
+      ${c.isScouting ? '' : `<header class="shell-head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
         <div>
           <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">${esc(c.screenTitle)}</h1>
-          <p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>
+          <p class="shell-sub" style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>
         </div>
         <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.metaDate)}</span>
