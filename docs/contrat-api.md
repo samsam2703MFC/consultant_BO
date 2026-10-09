@@ -2826,3 +2826,20 @@ octets}], octets, via: 'smtp', envoye}`. Refus : 404 dossier inconnu ou aucun fi
 invalide, 403 adresse inconnue du cockpit, 413 pièces cumulées au-delà de 20 Mo, 503 SMTP non configuré, 502 le
 serveur SMTP refuse (`error` porte `Smtp::$lastError`). Chaque envoi, réussi ou refusé par le serveur, laisse une
 ligne `ceo_journal_entry` (kind `dossier`, project = le slug).
+
+### `GET /analyse/produits/coefficients` — chaque produit d'un magasin avec son coefficient, sa catégorie et son groupe (09/10/2026)
+
+`GET /analyse/produits/coefficients?shop=4[&inactifs=1][&sonde=1]`. API du panel seulement : `/shops/{id}/products/available`
+(prix pratiqué `portion_price` / `portion_price_net`, TVA, coût de recette du jour `recipe_cost_net` / `recipe_cost_gross`,
+catégorie en objet avec `price_coefficient` et `groups`, `is_divisible` / `portion_size`), `/product-categories` (coefficient
+cible `price_coefficient`, atelier de production) et `/product-category-groups` (le groupe, la famille : Tartes, Traiteur…).
+Le coefficient est **prix HT de la pièce entière ÷ coût de recette net** (un produit divisible vendu à la portion : prix de la
+portion ÷ `portion_size`). Zones de l'onglet « Recette & marge » : `ko` sous × 1,67 (marge brute < 40 %), `att` sous × 2,5,
+`ok` au-delà, `mu` sans coût ; objectif du réseau × 3,13 (matière 32 %). Réponse : `{shop, magasin, court, n, nChiffres,
+coefMedian, zones{ok,att,ko,mu}, seuils{ko,att,objectif,food}, produits: [{id, nom, catId, cat, groupe, atelier, secteur, vie,
+actif, webshop, divisible, part, tva, prixTtc, prixHt, conseille, cout, coutTtc, coef, coefTtc, margePct, foodPct, margeHt,
+zone, cible, ecartCible, prixCible, prixObjectif, recette, stock}], categories: [{id, nom, groupe, atelier, cible, n, nChiffres,
+coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian, coefMin, coefMax, zones}], lu, source}`, produits
+triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
+TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
+appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
