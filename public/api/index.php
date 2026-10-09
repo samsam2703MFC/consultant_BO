@@ -228,6 +228,8 @@ function route(string $method, string $path): mixed
             $path === '/production/flux/fours'         => ep_production_flux_fours(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
             $path === '/exploitation/invendus/detail'  => ep_exploitation_invendus_detail(),
+            $path === '/exploitation/invendus/actions' => ep_exploitation_invendus_actions(),
+            $path === '/equipe/remarques'              => ep_equipe_remarques(),
             $path === '/scoring'                       => ep_scoring(),
             $path === '/scoring/msp'                   => ep_scoring_msp(),
             $path === '/scoring/rapport'               => ep_scoring_rapport(),
@@ -533,6 +535,7 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     if ($method === 'POST' && $path === '/fournisseurs/reclamation') { return wr_reclamation_creer(); }
+    if ($method === 'POST' && $path === '/equipe/remarques') { return wr_equipe_remarque_creer(); }
     if ($method === 'POST' && $path === '/fournisseurs/matiere-code') { return wr_matiere_code(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)
     if ($method === 'POST' && $path === '/marketing/campagne') { return wr_mkt_campagne(null); }

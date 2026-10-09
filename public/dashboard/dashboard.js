@@ -1651,7 +1651,7 @@
   function cleInvD() { return 'invd|' + S.shop + '|' + (coPer() ? bornes().join('|') : S.date); }
   function cheminInvD() { const b = '/exploitation/invendus/detail?shop=' + encodeURIComponent(S.shop); if (!coPer()) { return b + '&date=' + S.date; } const [du, au] = bornes(); return b + '&du=' + du + '&au=' + au; }
   function invModaleOuvrir() { S.invModale = { retour: document.activeElement }; lireAux(cleInvD(), cheminInvD(), false); invModaleRendre(); }
-  function invModaleFermer() { const r = S.invModale && S.invModale.retour; S.invModale = null; invModaleRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
+  function invModaleFermer() { const r = S.invModale && S.invModale.retour; S.invModale = null; S.invAct = null; invModaleRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
   function invModaleRendre() {
     let box = document.getElementById('db-invm');
     if (!S.invModale) { if (box) { box.innerHTML = ''; } if (!S.fiche) { document.documentElement.classList.remove('db-fiche-ouverte'); } return; }
@@ -1668,12 +1668,29 @@
         D.pieces != null ? `<span class="fi-chip">au panel <b>${pl(D.pieces, 'pièce')}</b> · ${pl(D.references || 0, 'référence')}</span>` : '',
         D.cout != null ? `<span class="fi-chip">coût de production <b>${fE(D.cout)}</b></span>` : '',
         ops.length ? `<span class="fi-chip"><b>${pl(ops.length, 'opérateur')}</b></span>` : ''].join('');
+      // Un problème de qualité (qualité, casse) se traite depuis la ligne : réclamation au fournisseur ou
+      // remarque à l'opérateur. Les lignes se retrouvent par leur clé, le formulaire s'ouvre sous la ligne.
+      S.invRows = {};
+      const QM = D.motifsQualite || ['quality', 'damage'], rem = D.remarques || [];
+      const actions = (k, row) => {
+        if (!QM.includes(row.motif)) { return ''; }
+        S.invRows[k] = row;
+        const r = rem.find(x => row.saisieId ? x.saisieId === row.saisieId : (x.pid === row.pid && (!per || x.le === row.le)));
+        const fait = S.invFaits && S.invFaits[k];
+        const rm = r || (fait && fait.rem ? { employe: fait.rem.nom } : null), rc = fait && fait.recl;
+        const badges = [rm ? `<span class="im-badge">remarque faite · ${esc(rm.employe)}</span>` : '', rc ? `<span class="im-badge">réclamation${rc.id ? ' n° ' + rc.id : ''} envoyée</span>` : ''].filter(Boolean).join('');
+        const on = S.invAct && S.invAct.k === k ? S.invAct.type : '';
+        const court = estMobile();
+        return `<div class="im-rowact">${badges}<button type="button" data-imact="recl" data-imk="${esc(k)}" class="${on === 'recl' ? 'on' : ''}" title="Réclamer au fournisseur">${court ? 'Réclamer' : 'Réclamer au fournisseur'}</button><button type="button" data-imact="rem" data-imk="${esc(k)}" class="${on === 'rem' ? 'on' : ''}" title="Remarque à l’opérateur">${court ? 'Remarque' : 'Remarque à l’opérateur'}</button></div>`;
+      };
+      const actRow = k => S.invAct && S.invAct.k === k ? `<tr class="im-act"><td colspan="5">${invActForm(S.invAct)}</td></tr>` : '';
       if (L.length) {
         let jourCourant = '';
         const lignes = L.map(s => {
           let h = '';
           if (per && s.le !== jourCourant) { jourCourant = s.le; h += `<tr class="im-jour"><td colspan="5">${esc(fDL(s.le))}</td></tr>`; }
-          return h + `<tr><td class="n im-h">${esc(s.heure || '—')}</td><td>${esc(s.operateur || '—')}</td><td class="nom">${esc(s.produit || ('produit ' + s.pid))}${s.categorie ? `<small>${esc(s.categorie)}</small>` : ''}</td><td class="n">${fN(s.pieces)}</td><td>${invTag({ motif: s.motif, motifLib: s.motifLib })}</td></tr>`;
+          const k = 's' + s.id, row = { k, pid: s.pid, produit: s.produit || ('produit ' + s.pid), pieces: s.pieces, motif: s.motif, motifLib: s.motifLib, le: s.le, heure: s.heure, operateur: s.operateur, operateurId: s.operateurId, saisieId: s.id };
+          return h + `<tr><td class="n im-h">${esc(s.heure || '—')}</td><td>${esc(s.operateur || '—')}</td><td class="nom">${esc(s.produit || ('produit ' + s.pid))}${s.categorie ? `<small>${esc(s.categorie)}</small>` : ''}</td><td class="n">${fN(s.pieces)}</td><td>${invTag({ motif: s.motif, motifLib: s.motifLib })}${actions(k, row)}</td></tr>` + actRow(k);
         }).join('');
         corps += `<table class="db-pro-tab db-inv-tab im-tab"><thead><tr><th class="n">Heure</th><th>Opérateur</th><th>Produit</th><th class="n">Quantité</th><th>Motif</th></tr></thead><tbody>${lignes}</tbody></table>`;
         if (ops.length) { corps += `<div class="im-ops"><span class="db-lab">Par opérateur</span>${ops.map(o => `<span><b>${esc(o.operateur || '—')}</b> ${pl(o.pieces, 'pièce')} · ${pl(o.saisies, 'saisie')}</span>`).join('')}</div>`; }
@@ -1681,17 +1698,121 @@
       }
       if (J.motif) { corps += `<div class="db-mini db-inv-note">${esc(J.motif)}</div>`; }
       if (!L.length && P.length) {
-        corps += `<div class="db-lab" style="margin-top:10px">Par produit — ${esc(quand)}</div><table class="db-pro-tab db-inv-tab im-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th><th class="n">Coût</th><th class="n">Valeur perdue</th></tr></thead><tbody>${P.map(p => `<tr><td class="nom">${esc(p.nom)}${p.categorie ? `<small>${esc(p.categorie)}</small>` : ''}</td><td>${invTag(p)}</td><td class="n">${fN(p.pieces)}</td><td class="n">${fE(p.cout)}</td><td class="n">${p.caPerdu ? fE(p.caPerdu) : '—'}</td></tr>`).join('')}</tbody></table>`;
+        corps += `<div class="db-lab" style="margin-top:10px">Par produit — ${esc(quand)}</div><table class="db-pro-tab db-inv-tab im-tab"><thead><tr><th>Produit</th><th>Motif</th><th class="n">Jetées</th><th class="n">Coût</th><th class="n">Valeur perdue</th></tr></thead><tbody>${P.map(p => { const k = 'p' + p.pid, row = { k, pid: p.pid, produit: p.nom, pieces: p.pieces, motif: p.motif, motifLib: p.motifLib, le: per ? null : S.date, heure: null, operateur: null, operateurId: null, saisieId: null }; return `<tr><td class="nom">${esc(p.nom)}${p.categorie ? `<small>${esc(p.categorie)}</small>` : ''}</td><td>${invTag(p)}${actions(k, row)}</td><td class="n">${fN(p.pieces)}</td><td class="n">${fE(p.cout)}</td><td class="n">${p.caPerdu ? fE(p.caPerdu) : '—'}</td></tr>` + actRow(k); }).join('')}</tbody></table>`;
       }
       if (!L.length && !P.length) { corps += `<div class="db-mini" style="padding:12px 0">${D.lu === false ? 'Le panel ne répond pas : rien à montrer.' : 'Rien déclaré en caisse ' + esc(quand) + '.'}</div>`; }
       corps += `<div class="db-mini" style="margin-top:14px">${esc(D.source || '')}</div>`;
     }
     const ancienne = box.querySelector('.fi-modale'), defil = ancienne ? ancienne.scrollTop : 0;
+    // Le champ du formulaire d'action qui a le focus le retrouve après le redessin (relecture périodique).
+    const act = document.activeElement, focIa = act && box.contains(act) && act.dataset && act.dataset.ia ? act.dataset.ia : null, selPos = focIa && act.selectionStart != null ? act.selectionStart : null;
     box.innerHTML = `<div class="fi-voile" data-imfermer="1"></div><div class="fi-modale im-modale" role="dialog" aria-modal="true" aria-label="Invendus et poubelle — le détail des saisies">
       <div class="fi-hd"><div class="t"><h2>Invendus et poubelle</h2><div class="s">${esc(nomShop())} · ${esc(quand)} · chaque pièce jetée telle qu’encodée en caisse</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-imfermer="1" aria-label="Fermer">✕</button></div>
       <div class="fi-bd">${corps}</div></div>`;
     if (defil) { const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = defil; } }
+    if (focIa) { const el = box.querySelector('[data-ia="' + focIa + '"]'); if (el) { el.focus(); if (selPos != null && el.setSelectionRange) { try { el.setSelectionRange(selPos, selPos); } catch (e) { /* type sans sélection */ } } } }
     box.querySelectorAll('[data-imfermer]').forEach(b => b.addEventListener('click', invModaleFermer));
+    // Les actions d'une ligne : ouvrir ou replier le formulaire, saisir, envoyer.
+    box.querySelectorAll('[data-imact]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.imk;
+      if (S.invAct && S.invAct.k === k && S.invAct.type === b.dataset.imact) { return invActFermer(); }
+      if (S.invRows && S.invRows[k]) { invActOuvrir(b.dataset.imact, S.invRows[k]); }
+    }));
+    box.querySelectorAll('[data-iafermer]').forEach(b => b.addEventListener('click', invActFermer));
+    box.querySelectorAll('[data-ia]').forEach(el => {
+      const maj = () => { if (S.invAct && S.invAct.f) { S.invAct.f[el.dataset.ia] = el.value; } };
+      el.addEventListener('input', maj);
+      el.addEventListener('change', () => {
+        maj();
+        if (el.dataset.ia === 'matiere' && S.invAct) {
+          const X = S.aux[cleInvA(S.invAct.pid)], R = (X && X.reclamation) || {}, m = (R.matieres || []).find(x => String(x.id) === String(el.value)), L = m ? rcLivraisons(R, m) : [];
+          S.invAct.f.livraison = L[0] ? String(L[0].id) : ''; invModaleRendre();
+        }
+      });
+    });
+    box.querySelectorAll('[data-iamotif]').forEach(b => b.addEventListener('click', () => { if (S.invAct && S.invAct.f) { S.invAct.f.motif = b.dataset.iamotif; invModaleRendre(); } }));
+    box.querySelectorAll('[data-iaenvoyer]').forEach(b => b.addEventListener('click', invActEnvoyer));
+    box.querySelectorAll('[data-iaphoto]').forEach(b => b.addEventListener('click', invActPhoto));
+  }
+  /* --- agir sur une pièce jetée pour un problème de qualité : la réclamation au fournisseur (la matière du
+   * produit dans sa recette, une livraison, un motif ; envoyée au panel par la même route que le téléphone),
+   * ou la remarque à l'opérateur qui a produit la référence (gardée dans ses évaluations). --- */
+  function cleInvA(pid) { return 'inva|' + S.shop + '|' + S.date + '|' + pid; }
+  function invActOuvrir(type, row) {
+    S.invFaits = S.invFaits || {};
+    S.invAct = Object.assign({ type: type, f: null, envoi: false, err: null, fait: null }, row);
+    lireAux(cleInvA(row.pid), '/exploitation/invendus/actions?shop=' + encodeURIComponent(S.shop) + '&date=' + encodeURIComponent(row.le || S.date) + '&pid=' + encodeURIComponent(row.pid), false);
+    invModaleRendre();
+  }
+  function invActFermer() { S.invAct = null; invModaleRendre(); }
+  function invActNote(A) { return 'Pièce' + (A.pieces > 1 ? 's' : '') + ' jetée' + (A.pieces > 1 ? 's' : '') + ' en caisse le ' + fD(A.le || S.date) + (A.heure ? ' à ' + A.heure : '') + ' : ' + fN(A.pieces) + ' × ' + A.produit + ', motif « ' + (A.motifLib || A.motif) + ' ».'; }
+  function invActTexte(A) { return 'Problème de qualité en production : ' + A.produit + ' jeté le ' + fD(A.le || S.date) + (A.heure ? ' à ' + A.heure : '') + ' (' + fN(A.pieces) + ' pièce' + (A.pieces > 1 ? 's' : '') + ', motif « ' + (A.motifLib || A.motif) + ' »). '; }
+  function invActForm(A) {
+    const cle = cleInvA(A.pid), X = S.aux[cle], err = S.err[cle];
+    const titre = A.type === 'recl' ? 'Réclamation au fournisseur' : 'Remarque à l’opérateur';
+    const entete = `<div class="im-acth"><b>${titre}</b><span>${esc(A.produit)} · ${fN(A.pieces)} pièce${A.pieces > 1 ? 's' : ''} · ${esc(A.motifLib || A.motif)}${A.heure ? ' · ' + esc(A.heure) : ''}${A.operateur ? ' · jeté par ' + esc(A.operateur) : ''}</span><button type="button" class="im-x" data-iafermer="1" aria-label="Fermer">✕</button></div>`;
+    if (A.fait) { return entete + (A.fait.type === 'recl' ? `<div class="im-fait">✓ Réclamation${A.fait.id ? ' n° ' + A.fait.id : ''} envoyée à ${esc(A.fait.fournisseur)} — ${esc(A.fait.nom)}</div>` : `<div class="im-fait">✓ Remarque enregistrée dans les évaluations de ${esc(A.fait.nom)}</div>`); }
+    if (!X) { return entete + `<div class="db-mini">${err ? 'Lecture impossible : ' + esc(err) : 'lecture de la recette, des références réclamables et de l’équipe…'}</div>`; }
+    if (A.type === 'recl') {
+      const R = X.reclamation || {};
+      if (R.indispo) { return entete + `<div class="db-mini">${esc(R.motif || 'Les références réclamables ne sont pas disponibles.')}</div>`; }
+      const cands = R.candidates || [], candIds = cands.map(c => String(c.id));
+      if (!A.f) { const m0 = cands[0] || null, L0 = m0 ? rcLivraisons(R, m0) : []; A.f = { matiere: m0 ? String(m0.id) : '', livraison: L0[0] ? String(L0[0].id) : '', qte: String(A.pieces || 1), motif: R.motifSuggere || 'product_quality', note: invActNote(A) }; }
+      const f = A.f, M = R.matieres || [], m = M.find(x => String(x.id) === String(f.matiere)) || null, L = m ? rcLivraisons(R, m) : [];
+      const motifs = R.motifs && R.motifs.length ? R.motifs : Object.keys(RC_MOTIFS).map(k => ({ code: k, nom: RC_MOTIFS[k] }));
+      const rec = X.recette || {};
+      const recetteTxt = !rec.lue ? 'recette non lue' : (rec.sansRecette ? 'le produit n’a pas de recette au panel' : (cands.length ? (R.acheteFini ? 'produit acheté fini : la réclamation porte sur lui' : cands.length + ' matière' + (cands.length > 1 ? 's' : '') + ' de la recette chez un fournisseur réclamable') : 'aucune matière de la recette chez un fournisseur réclamable : choisissez la référence'));
+      return entete + `<div class="im-actf">
+        <label class="large">La référence réclamée <small>${esc(recetteTxt)}</small><select data-ia="matiere">${!m ? '<option value="">— choisir —</option>' : ''}${cands.length ? `<optgroup label="Dans la recette du produit">${cands.map(c => `<option value="${esc(c.id)}"${String(c.id) === String(f.matiere) ? ' selected' : ''}>${esc(c.nom)} · ${esc(rcFournNom(R, c.fournisseur))}${c.sku ? ' · SKU ' + esc(c.sku) : ''}</option>`).join('')}</optgroup>` : ''}<optgroup label="Toutes les références">${M.filter(x => !candIds.includes(String(x.id))).map(x => `<option value="${esc(x.id)}"${String(x.id) === String(f.matiere) ? ' selected' : ''}>${esc(x.nom)} · ${esc(rcFournNom(R, x.fournisseur))}</option>`).join('')}</optgroup></select></label>
+        <label>La livraison${m && !L.length ? ' <small>aucune livraison de ' + esc(rcFournNom(R, m.fournisseur)) + ' connue pour ce magasin</small>' : ''}<select data-ia="livraison"${L.length ? '' : ' disabled'}>${L.map(l => `<option value="${esc(l.id)}"${String(l.id) === String(f.livraison) ? ' selected' : ''}>${esc(rcLivLib(l))}</option>`).join('')}</select></label>
+        <label>Combien${m && m.unite ? ' · en ' + esc(m.unite) : ''}<input data-ia="qte" inputmode="decimal" autocomplete="off" value="${esc(f.qte)}"></label>
+        <div class="large"><div class="im-lab">Le problème</div><div class="im-puces">${motifs.map(x => `<button type="button" data-iamotif="${esc(x.code)}" class="${f.motif === x.code ? 'on' : ''}">${esc(RC_MOTIFS[x.code] || x.nom)}</button>`).join('')}</div></div>
+        <label class="large">Un mot pour le fournisseur<textarea data-ia="note" rows="3" maxlength="1500">${esc(f.note)}</textarea></label>
+      </div>${A.err ? `<div class="rc-err">${esc(A.err)}</div>` : ''}<div class="im-actbtn"><button type="button" class="im-btn" data-iaenvoyer="1"${A.envoi ? ' disabled' : ''}>${A.envoi ? 'Envoi…' : 'Envoyer la réclamation'}</button>${estMobile() ? '<button type="button" class="im-lien" data-iaphoto="1">Avec une photo : ouvrir la réclamation ›</button>' : ''}<span class="db-mini">part au panel comme une réclamation matière, sans photo</span></div>`;
+    }
+    const prod = X.producteur || null, ops = X.operateurs || [];
+    if (!A.f) { A.f = { employe: prod ? String(prod.id) : '', employeNom: '', texte: invActTexte(A) }; }
+    const f = A.f;
+    return entete + `<div class="im-actf">
+      <label>L’opérateur <small>${prod ? 'a produit la référence ce jour (' + esc(prod.source) + ') : ' + esc(prod.nom) : 'le journal ne dit pas qui a produit la référence ce jour : choisissez'}</small><select data-ia="employe"><option value="">— choisir —</option>${ops.map(o => `<option value="${esc(o.id)}"${String(o.id) === String(f.employe) ? ' selected' : ''}>${esc(o.nom)}${prod && String(o.id) === String(prod.id) ? ' · a produit' : ''}${A.operateurId && String(o.id) === String(A.operateurId) ? ' · a jeté' : ''}</option>`).join('')}</select></label>
+      <label>Ou un nom, si la personne n’est pas dans la liste<input data-ia="employeNom" autocomplete="off" maxlength="80" value="${esc(f.employeNom)}"></label>
+      <label class="large">La remarque<textarea data-ia="texte" rows="3" maxlength="1000">${esc(f.texte)}</textarea></label>
+    </div>${A.err ? `<div class="rc-err">${esc(A.err)}</div>` : ''}<div class="im-actbtn"><button type="button" class="im-btn" data-iaenvoyer="1"${A.envoi ? ' disabled' : ''}>${A.envoi ? 'Enregistrement…' : 'Enregistrer la remarque'}</button><span class="db-mini">gardée dans les évaluations de l’opérateur, avec la date, le produit et la quantité</span></div>`;
+  }
+  function invActEnvoyer() {
+    const A = S.invAct; if (!A || A.envoi) { return; }
+    const X = S.aux[cleInvA(A.pid)]; if (!X || !A.f) { return; }
+    A.err = null;
+    if (A.type === 'recl') {
+      const R = X.reclamation || {}, f = A.f, m = (R.matieres || []).find(x => String(x.id) === String(f.matiere)) || null;
+      const liv = m ? rcLivraisons(R, m).find(l => String(l.id) === String(f.livraison)) : null, q = parseFloat(String(f.qte).replace(',', '.'));
+      if (!m) { A.err = 'Choisissez la référence à réclamer.'; return invModaleRendre(); }
+      if (!liv) { A.err = 'Choisissez la livraison : sans livraison connue, la réclamation ne peut pas partir d’ici.'; return invModaleRendre(); }
+      if (!(q > 0)) { A.err = 'La quantité doit être supérieure à zéro.'; return invModaleRendre(); }
+      if (!f.motif) { A.err = 'Dites le problème.'; return invModaleRendre(); }
+      if (!m.idUnite) { A.err = 'L’unité de « ' + m.nom + ' » est inconnue du panel : la réclamation ne peut pas partir d’ici.'; return invModaleRendre(); }
+      A.envoi = true; invModaleRendre();
+      ecrire('/fournisseurs/reclamation', { shopId: S.shop, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom, idFournisseur: m.fournisseur, idUnite: m.idUnite, quantite: Math.round(q * 100) / 100, idLivraison: liv.id, motif: f.motif, action: 'REPLACEMENT', texte: String(f.note || '').trim(), auteur: notePar(), photos: [] })
+        .then(r => { A.envoi = false; A.fait = { type: 'recl', id: r && r.id, fournisseur: rcFournNom(R, m.fournisseur), nom: m.nom }; S.invFaits[A.k] = Object.assign({}, S.invFaits[A.k] || {}, { recl: A.fait }); if (S.aux[cleRC()]) { lireAux(cleRC(), cheminRC(), true); } invModaleRendre(); })
+        .catch(e => { A.envoi = false; A.err = e.message; invModaleRendre(); });
+      return;
+    }
+    const f = A.f, op = (X.operateurs || []).find(o => String(o.id) === String(f.employe)) || null, nomLibre = String(f.employeNom || '').trim(), texte = String(f.texte || '').trim();
+    if (!op && !nomLibre) { A.err = 'À qui ? Choisissez l’opérateur, ou écrivez son nom.'; return invModaleRendre(); }
+    if (!texte) { A.err = 'Un mot, au moins.'; return invModaleRendre(); }
+    A.envoi = true; invModaleRendre();
+    ecrire('/equipe/remarques', { shop: S.shop, employeId: op ? op.id : null, employeNom: op ? op.nom : nomLibre, texte: texte, le: A.le || S.date, heure: A.heure || null, pid: A.pid, produit: A.produit, pieces: A.pieces, motif: A.motif, saisieId: A.saisieId || null, auteur: notePar() })
+      .then(r => { A.envoi = false; A.fait = { type: 'rem', id: r && r.id, nom: op ? op.nom : nomLibre }; const D = S.aux[cleInvD()]; if (D && r && r.remarque) { D.remarques = (D.remarques || []).concat([r.remarque]); } S.invFaits[A.k] = Object.assign({}, S.invFaits[A.k] || {}, { rem: A.fait }); invModaleRendre(); })
+      .catch(e => { A.envoi = false; A.err = e.message; invModaleRendre(); });
+  }
+  /** Au téléphone : la même réclamation, mais avec la photo — le formulaire complet, déjà rempli. */
+  function invActPhoto() {
+    const A = S.invAct, X = A ? S.aux[cleInvA(A.pid)] : null; if (!A || !X || !A.f) { return; }
+    const f = A.f;
+    S.rc = Object.assign(rcNeuf(), { matiere: f.matiere || null, q: A.produit || '', livraison: f.livraison || null, qte: String(f.qte || A.pieces || 1), motif: f.motif || null, note: f.note || '' });
+    S.rcMode = 'saisie'; try { localStorage.setItem('db.rcMode', 'saisie'); } catch (e) { /* stockage indisponible */ }
+    S.invAct = null; S.invModale = null; invModaleRendre();
+    S.vue = 'reclamation'; urlMaj(); charger(false);
   }
   function murInv() {
     const I = invData(), cle = cleInv(), per = coPer();
