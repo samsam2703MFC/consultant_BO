@@ -1463,8 +1463,13 @@ function ep_fournisseurs_reclamations(): array
  */
 function ep_reclamation_refs(): array
 {
+    return rcRefsMagasin((int) ($_GET['shop'] ?? 0));
+}
+
+/** Les références réclamables d'un magasin : motifs, matières par fournisseur avec leur SKU, livraisons. */
+function rcRefsMagasin(int $shop): array
+{
     if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte consultant non configuré']; }
-    $shop = (int) ($_GET['shop'] ?? 0);
     $out = ['shopId' => (string) $shop, 'motifs' => [], 'matieres' => [], 'livraisons' => [], 'fournisseurs' => []];
 
     foreach ((array) PanelApi::get('/material-complaint-reasons') as $m) {
@@ -1523,6 +1528,20 @@ function ep_reclamation_refs(): array
     $out['note'] = 'Les livraisons listées sont celles en cours chez le fournisseur et celles déjà citées par une '
         . 'réclamation : aucune route ne rend l’historique complet des commandes d’un magasin.';
     return $out;
+}
+
+/**
+ * Les mêmes références, gardées dix minutes (`rc:refs:{shop}`) : pour agir depuis la modale des invendus sans
+ * relire tout le panel à chaque clic. Le formulaire du téléphone, lui, relit toujours.
+ */
+function rcRefsCache(int $shop): array
+{
+    $cle = 'rc:refs:' . $shop;
+    $c = setting($cle);
+    if (is_array($c) && isset($c['v']) && is_array($c['v']) && (int) ($c['ts'] ?? 0) > time() - 600) { return $c['v']; }
+    $v = rcRefsMagasin($shop);
+    if (empty($v['indispo']) && function_exists('svGrave')) { svGrave($cle, ['ts' => time(), 'v' => $v]); }
+    return $v;
 }
 
 /**

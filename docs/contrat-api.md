@@ -908,7 +908,22 @@ porte l'heure et l'opérateur : le panel ne rend qu'un total par produit (mesur�
 route de mouvements, ni « evidence » sous `/shops/{id}`). `journal` dit jusqu'où il va (`derniere`, gardée dix minutes
 sous `inv:journal:{shop}`), s'il couvre la fenêtre (`couvre`) et, sinon, pourquoi les saisies manquent (`motif`) —
 mesuré : il s'arrête au 14/07/2026 pour chaque magasin. Le dashboard magasin l'ouvre dans une modale depuis la ligne
-« − Invendus et poubelle » du P&L court et depuis la carte « Invendus et poubelle ».
+« − Invendus et poubelle » du P&L court et depuis la carte « Invendus et poubelle ». La réponse porte aussi
+`remarques[]` (ci-dessous) et `motifsQualite` (`quality`, `damage`).
+
+**Agir sur un problème de qualité** (demande du 09/10/2026). Sur une ligne au motif `quality` ou `damage`, la modale
+propose deux actions. `GET /exploitation/invendus/actions?shop=4&date=&pid=` rend de quoi les préparer :
+`recette.lignes[]` (les matières du produit, par `rpApi`), `reclamation` (`candidates[]` : les matières de la recette
+qui sont chez un fournisseur réclamable, `acheteFini` quand la recette n'a qu'une matière — un produit acheté fini —,
+`matieres[]`, `fournisseurs[]`, `livraisons[]`, `motifs[]` et `motifSuggere`, pris sur les références réclamables
+gardées dix minutes sous `rc:refs:{shop}` ; `indispo` quand le compte consultant manque), `producteur` (qui a déclaré
+la production de la référence ce jour-là dans le journal, `null` sinon), `operateurs[]` (id, nom court) et
+`remarques[]` déjà faites sur ce produit ce jour. La réclamation part par `POST /fournisseurs/reclamation`, la même
+route que le téléphone (sans photo ; au téléphone, un lien ouvre le formulaire complet déjà rempli). La remarque va à
+`POST /equipe/remarques` `{shop, employeId | employeNom, texte, le, heure, pid, produit, pieces, motif, saisieId,
+auteur}` → `{ok, id, remarque}` (422 sans texte ou sans personne), gardée dans `ceo_operateur_remarque` — les
+évaluations des opérateurs — et journalisée (« Équipe »). `GET /equipe/remarques?shop=4[&employe=][&du=&au=]` les
+relit (`remarques[]`, `parOperateur[]`).
 
 **Dans le P&L.** `GET /exploitation/jour` et `GET /exploitation/periode` portent sur chaque magasin et sur le réseau
 `invendus` (coût net, `null` si le panel est muet), `invendusPct`, `invendusPieces`, `invendusDeclare`,

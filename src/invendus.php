@@ -546,5 +546,182 @@ function ep_exploitation_invendus_detail(): array
         + ['lu' => $b !== null, 'declare' => $b['declare'] ?? null, 'pieces' => $b['pieces'] ?? null, 'cout' => $b['cout'] ?? null, 'caPerdu' => $b['caPerdu'] ?? null,
             'references' => $b['references'] ?? 0, 'produits' => $b['produits'] ?? [], 'parMotif' => $b['parMotif'] ?? [],
             'saisies' => $saisies ?? [], 'saisiesPieces' => round($total, 1), 'parOperateur' => $po, 'parHeure' => $ph, 'journal' => $journal, 'report' => invReport(),
+            'remarques' => invRemarques($sid, $du, $au), 'motifsQualite' => INV_MOTIFS_QUALITE,
             'source' => 'total par produit : /shops/{id}/products/waste du panel · saisies : journal product_movement de la base partagée (heure, opérateur, quantité, motif) · opérateurs : /shops/{id}/employees, nom court seulement'];
+}
+
+/* ---------- agir sur une pièce jetée pour un problème de qualité (09/10/2026) ---------- */
+
+// Les motifs du panel qui disent un problème de qualité, et non un invendu de fin de journée.
+const INV_MOTIFS_QUALITE = ['quality', 'damage'];
+
+/** La table des remarques faites aux opérateurs : leurs évaluations, ligne par ligne. */
+function ensureOperateurRemarques(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_operateur_remarque (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        shop_id INT NOT NULL,
+        employe_id INT NULL,
+        employe_nom VARCHAR(80) NOT NULL DEFAULT \'\',
+        le DATE NOT NULL,
+        heure VARCHAR(5) NULL,
+        produit_id INT NULL,
+        produit_nom VARCHAR(200) NOT NULL DEFAULT \'\',
+        pieces DECIMAL(10,1) NULL,
+        motif VARCHAR(40) NOT NULL DEFAULT \'\',
+        texte VARCHAR(1000) NOT NULL,
+        source VARCHAR(40) NOT NULL DEFAULT \'invendus\',
+        saisie_id BIGINT NULL,
+        auteur VARCHAR(60) NOT NULL DEFAULT \'\',
+        cree_le DATETIME NOT NULL,
+        KEY idx_shop_le (shop_id, le), KEY idx_emp (employe_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Une ligne de la table → ce que l'écran en montre. */
+function invRemarqueDe(array $r): array
+{
+    return ['id' => (int) $r['id'], 'employeId' => $r['employe_id'] !== null ? (int) $r['employe_id'] : null, 'employe' => (string) $r['employe_nom'],
+        'le' => substr((string) $r['le'], 0, 10), 'heure' => $r['heure'] !== null ? (string) $r['heure'] : null,
+        'pid' => $r['produit_id'] !== null ? (int) $r['produit_id'] : null, 'produit' => (string) $r['produit_nom'],
+        'pieces' => $r['pieces'] !== null ? (float) $r['pieces'] : null, 'motif' => (string) $r['motif'], 'motifLib' => invMotif((string) $r['motif']),
+        'texte' => (string) $r['texte'], 'source' => (string) $r['source'], 'saisieId' => $r['saisie_id'] !== null ? (int) $r['saisie_id'] : null,
+        'auteur' => (string) $r['auteur'], 'creeLe' => (string) $r['cree_le']];
+}
+
+/** Les remarques d'un magasin sur une fenêtre, ou d'une personne ; [] si la table manque ou si la base est en défaut. */
+function invRemarques(int $sid, ?string $du = null, ?string $au = null, ?int $employe = null, int $max = 500): array
+{
+    try {
+        ensureOperateurRemarques();
+        $w = ['shop_id = ?']; $p = [$sid];
+        if ($du !== null) { $w[] = 'le >= ?'; $p[] = $du; }
+        if ($au !== null) { $w[] = 'le <= ?'; $p[] = $au; }
+        if ($employe !== null) { $w[] = 'employe_id = ?'; $p[] = $employe; }
+        $rows = Db::rows('SELECT * FROM ceo_operateur_remarque WHERE ' . implode(' AND ', $w) . ' ORDER BY le DESC, id DESC LIMIT ' . max(1, min(2000, $max)), $p);
+    } catch (Throwable $e) { return []; }
+    return array_map('invRemarqueDe', $rows);
+}
+
+/** Qui a produit la référence ce jour-là, d'après le journal (la production déclarée en caisse) ; null quand il ne le dit pas. */
+function invProducteur(int $sid, int $pid, string $date): ?array
+{
+    try {
+        $r = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ id_employee, created_at FROM product_movement WHERE id_shop = ? AND id_product = ? AND movement_type = 'PRODUCTION' AND created_at >= ? AND created_at < ? ORDER BY created_at DESC LIMIT 1",
+            [$sid, $pid, $date . ' 00:00:00', date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00']);
+    } catch (Throwable $e) { return null; }
+    $ide = (int) ($r['id_employee'] ?? 0);
+    if ($ide <= 0) { return null; }
+    return ['id' => $ide, 'nom' => invOperateurs($sid)[(string) $ide] ?? ('opérateur ' . $ide), 'le' => substr((string) ($r['created_at'] ?? ''), 0, 16), 'source' => 'production déclarée en caisse ce jour'];
+}
+
+/**
+ * GET /exploitation/invendus/actions?shop=4&date=YYYY-MM-DD&pid=… — de quoi agir sur une pièce jetée pour un
+ * problème de qualité. La réclamation au fournisseur : les matières de la recette du produit (une seule pour un
+ * produit acheté fini), rapprochées des références réclamables du panel, les livraisons et les motifs. La remarque
+ * à l'opérateur : qui a produit la référence ce jour-là d'après le journal, les opérateurs du magasin, et les
+ * remarques déjà faites sur ce produit ce jour.
+ */
+function ep_exploitation_invendus_actions(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0); $pid = (int) ($_GET['pid'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d'); }
+    if ($sid <= 0 || $pid <= 0) { http_response_code(400); return ['error' => 'shop et pid requis']; }
+    @set_time_limit(60);
+    $nom = function_exists('svNomProduit') ? svNomProduit($pid, '') : '';
+    // 1. La recette : les matières du produit. Un produit acheté fini n'en a qu'une — lui-même.
+    $recette = null; $lignes = [];
+    if (function_exists('rpApi')) { try { $recette = rpApi($pid, $sid, false); } catch (Throwable $e) { $recette = null; } }
+    if (is_array($recette)) {
+        if ($nom === '') { $nom = (string) ($recette['nom'] ?? ''); }
+        foreach ((array) ($recette['lignes'] ?? []) as $l) {
+            if (!is_array($l) || (int) ($l['id'] ?? 0) <= 0) { continue; }
+            $lignes[] = ['id' => (int) $l['id'], 'nom' => (string) ($l['nom'] ?? ''), 'part' => $l['part'] ?? null, 'fournisseur' => is_array($l['fournisseur'] ?? null) ? (string) ($l['fournisseur']['nom'] ?? '') : null];
+        }
+    }
+    // 2. Les références réclamables, et parmi elles celles de la recette.
+    $refs = function_exists('rcRefsCache') ? rcRefsCache($sid) : ['indispo' => true, 'motif' => 'module des réclamations absent'];
+    $recl = ['indispo' => !empty($refs['indispo']), 'motif' => $refs['motif'] ?? null, 'motifs' => [], 'candidates' => [], 'acheteFini' => false,
+        'matieres' => [], 'livraisons' => [], 'fournisseurs' => [], 'motifSuggere' => 'product_quality'];
+    if (empty($refs['indispo'])) {
+        $recl['motifs'] = array_values((array) ($refs['motifs'] ?? []));
+        $parId = [];
+        foreach ((array) ($refs['matieres'] ?? []) as $m) { if (is_array($m) && isset($m['id'])) { $parId[(string) $m['id']] = $m; } }
+        foreach ($lignes as $l) { if (isset($parId[(string) $l['id']])) { $recl['candidates'][] = $parId[(string) $l['id']] + ['part' => $l['part']]; } }
+        $recl['acheteFini'] = count($lignes) === 1 && $recl['candidates'] !== [];
+        $recl['matieres'] = array_values((array) ($refs['matieres'] ?? []));
+        $recl['fournisseurs'] = array_values((array) ($refs['fournisseurs'] ?? []));
+        $recl['livraisons'] = array_values((array) ($refs['livraisons'] ?? []));
+        $codes = array_map(static fn ($m) => (string) ($m['code'] ?? ''), $recl['motifs']);
+        if (!in_array('product_quality', $codes, true) && $codes !== []) { $recl['motifSuggere'] = $codes[0]; }
+    }
+    // 3. La remarque : qui a produit, les opérateurs du magasin, ce qui a déjà été dit sur ce produit ce jour.
+    $liste = [];
+    foreach (invOperateurs($sid) as $id => $n) { $liste[] = ['id' => (int) $id, 'nom' => $n]; }
+    usort($liste, static fn ($a, $b) => strcmp($a['nom'], $b['nom']));
+    return ['shop' => $sid, 'date' => $date, 'pid' => $pid, 'produit' => $nom,
+        'recette' => ['lue' => $recette !== null, 'sansRecette' => $recette === null ? null : !empty($recette['sansRecette']), 'lignes' => $lignes],
+        'reclamation' => $recl, 'producteur' => invProducteur($sid, $pid, $date), 'operateurs' => $liste,
+        'remarques' => array_values(array_filter(invRemarques($sid, $date, $date), static fn ($r) => $r['pid'] === $pid)),
+        'source' => 'recette : /products/{pid} puis /shops/{id}/recipes/{rid}/cost · références réclamables : fournisseurs matière du panel, gardées dix minutes · producteur : journal product_movement (PRODUCTION) · opérateurs : /shops/{id}/employees'];
+}
+
+/**
+ * POST /equipe/remarques {shop, employeId|employeNom, texte, le, heure, pid, produit, pieces, motif, saisieId, auteur}
+ * — une remarque à un opérateur (un problème de qualité en production), gardée dans ses évaluations.
+ */
+function wr_equipe_remarque_creer(): array
+{
+    $b = body();
+    $sid = (int) ($b['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    $texte = trim((string) ($b['texte'] ?? ''));
+    if ($texte === '') { http_response_code(422); return ['error' => 'un mot, au moins : la remarque est vide']; }
+    $ide = isset($b['employeId']) && is_numeric($b['employeId']) && (int) $b['employeId'] > 0 ? (int) $b['employeId'] : null;
+    $nomE = mb_substr(trim((string) ($b['employeNom'] ?? '')), 0, 80);
+    if ($ide === null && $nomE === '') { http_response_code(422); return ['error' => 'à qui ? choisissez l’opérateur']; }
+    if ($ide !== null && $nomE === '') { $nomE = invOperateurs($sid)[(string) $ide] ?? ('opérateur ' . $ide); }
+    $le = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['le'] ?? '')) ? (string) $b['le'] : date('Y-m-d');
+    $heure = preg_match('/^\d{2}:\d{2}$/', (string) ($b['heure'] ?? '')) ? (string) $b['heure'] : null;
+    $pid = isset($b['pid']) && is_numeric($b['pid']) && (int) $b['pid'] > 0 ? (int) $b['pid'] : null;
+    $pieces = isset($b['pieces']) && is_numeric($b['pieces']) ? round((float) $b['pieces'], 1) : null;
+    $motif = mb_substr(strtolower(trim((string) ($b['motif'] ?? ''))), 0, 40);
+    $saisie = isset($b['saisieId']) && is_numeric($b['saisieId']) && (int) $b['saisieId'] > 0 ? (int) $b['saisieId'] : null;
+    $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 60);
+    $prod = mb_substr(trim((string) ($b['produit'] ?? '')), 0, 200);
+    $texte = mb_substr($texte, 0, 1000);
+    try {
+        ensureOperateurRemarques();
+        Db::exec('INSERT INTO ceo_operateur_remarque (shop_id, employe_id, employe_nom, le, heure, produit_id, produit_nom, pieces, motif, texte, source, saisie_id, auteur, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [$sid, $ide, $nomE, $le, $heure, $pid, $prod, $pieces, $motif, $texte, 'invendus', $saisie, $auteur, date('Y-m-d H:i:s')]);
+        $id = (int) Db::pdo()->lastInsertId();
+    } catch (Throwable $e) { http_response_code(503); return ['error' => 'la remarque n’a pas pu être gardée : base indisponible']; }
+    journalAdd('CEO', 'Équipe', function_exists('magasinNom') ? magasinNom((string) $sid) : (string) $sid,
+        'Remarque à l’opérateur — ' . $nomE . ($prod !== '' ? ' · ' . $prod : '') . ($pieces !== null ? ' · ' . $pieces . ' pièce(s)' : '') . ' · ' . invMotif($motif) . ' · « ' . mb_substr($texte, 0, 120) . ' »');
+    $r = ['id' => $id, 'employeId' => $ide, 'employe' => $nomE, 'le' => $le, 'heure' => $heure, 'pid' => $pid, 'produit' => $prod, 'pieces' => $pieces,
+        'motif' => $motif, 'motifLib' => invMotif($motif), 'texte' => $texte, 'source' => 'invendus', 'saisieId' => $saisie, 'auteur' => $auteur, 'creeLe' => date('Y-m-d H:i:s')];
+    return ['ok' => true, 'id' => $id, 'remarque' => $r];
+}
+
+/** GET /equipe/remarques?shop=4[&employe=90][&du=&au=] — les remarques faites aux opérateurs d'un magasin : leurs évaluations. */
+function ep_equipe_remarques(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    $du = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['du'] ?? '')) ? (string) $_GET['du'] : null;
+    $au = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['au'] ?? '')) ? (string) $_GET['au'] : null;
+    $emp = isset($_GET['employe']) && is_numeric($_GET['employe']) ? (int) $_GET['employe'] : null;
+    $r = invRemarques($sid, $du, $au, $emp);
+    $par = [];
+    foreach ($r as $x) {
+        $k = $x['employeId'] !== null ? 'e' . $x['employeId'] : 'n' . $x['employe'];
+        $par[$k] = $par[$k] ?? ['employeId' => $x['employeId'], 'employe' => $x['employe'], 'n' => 0, 'derniere' => $x['le']];
+        $par[$k]['n']++;
+    }
+    return ['shop' => $sid, 'du' => $du, 'au' => $au, 'employe' => $emp, 'remarques' => $r, 'parOperateur' => array_values($par),
+        'source' => 'ceo_operateur_remarque : les remarques faites depuis la modale des invendus du dashboard magasin'];
 }

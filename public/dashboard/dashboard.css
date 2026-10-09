@@ -1763,3 +1763,36 @@ html.db-fiche-ouverte{overflow:hidden}
   .im-tab td.nom small{display:none}
   .im-tab .db-inv-tag{font-size:10px;padding:2px 5px;white-space:nowrap}
 }
+
+/* --- agir depuis une ligne de la modale des invendus : réclamation au fournisseur, remarque à l'opérateur --- */
+.im-rowact{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px}
+.im-rowact button{border:.5px solid var(--color-border-secondary);background:#fff;border-radius:999px;padding:2px 9px;font:600 10.5px var(--font-ui);color:#8D1D2C;cursor:pointer;white-space:nowrap}
+.im-rowact button:hover,.im-rowact button.on{background:#8D1D2C;color:#fff;border-color:#8D1D2C}
+.im-badge{font:600 10.5px var(--font-ui);color:#2d7a3e;white-space:nowrap}
+.im-tab tr.im-act td{background:#fcfaf7;padding:12px 14px 14px;white-space:normal}
+.im-acth{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.im-acth b{font:600 13px var(--font-ui)}
+.im-acth span{flex:1;min-width:0;font-size:11.5px;color:var(--color-text-muted)}
+.im-x{width:26px;height:26px;border-radius:50%;border:.5px solid var(--color-border-secondary);background:#fff;font-size:12px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
+.im-actf{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.im-actf label,.im-actf .im-lab{display:flex;flex-direction:column;gap:4px;font:600 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.im-actf label small{font:500 11px var(--font-ui);letter-spacing:0;text-transform:none;color:var(--color-text-muted)}
+.im-actf select,.im-actf input,.im-actf textarea{font:12.5px var(--font-ui);padding:7px 8px;border:.5px solid var(--color-border-secondary);border-radius:8px;background:#fff;color:var(--color-text,#222);text-transform:none;letter-spacing:0;width:100%;box-sizing:border-box}
+.im-actf textarea{resize:vertical;min-height:58px}
+.im-actf .large{grid-column:1 / -1}
+.im-puces{display:flex;flex-wrap:wrap;gap:6px;text-transform:none;letter-spacing:0}
+.im-puces button{border:.5px solid var(--color-border-secondary);background:#fff;border-radius:999px;padding:5px 10px;font:600 11.5px var(--font-ui);color:var(--color-text,#222);cursor:pointer}
+.im-puces button.on{background:#8D1D2C;color:#fff;border-color:#8D1D2C}
+.im-actbtn{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.im-btn{border:none;background:#8D1D2C;color:#fff;border-radius:999px;padding:8px 16px;font:600 12.5px var(--font-ui);cursor:pointer}
+.im-btn[disabled]{opacity:.6;cursor:default}
+.im-lien{border:none;background:none;padding:0;font:600 12px var(--font-ui);color:#8D1D2C;cursor:pointer}
+.im-fait{font:600 12.5px var(--font-ui);color:#2d7a3e;padding:4px 0}
+@media (max-width:640px){
+  .im-actf{grid-template-columns:1fr}
+  .im-tab tr.im-act td{padding:10px 8px 12px}
+  .im-rowact{flex-direction:column;align-items:flex-start;gap:4px}
+  .im-rowact button{white-space:normal;text-align:left;padding:2px 7px;font-size:10px}
+  .im-badge{white-space:normal}
+  .im-acth{flex-wrap:wrap}
+}
