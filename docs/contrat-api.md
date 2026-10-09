@@ -2805,3 +2805,24 @@ sert le passé : un appel par mois et par magasin (`tous=1` : chaque magasin act
 Mesuré le 09/10/2026 : `material` et `result` sont à zéro sur presque tous les jours (le panel ne porte pas la
 matière, cf. ticket T5a) ; `labour` et `overhead` sont ce que le franchisé encode. Les mois clos se gardent 24 h
 (`pnlMois:<shop>:<mois>`), `jours=1` joint le détail par jour. Né pour le dossier investisseur de Halle.
+
+### `GET /dossiers/fichiers` et `POST /dossiers/fichiers/envoyer` — les dossiers déposés dans `docs/dossiers/` et leur envoi en pièces jointes (09/10/2026)
+
+Un dossier déposé est un sous-dossier de `docs/dossiers/` du dépôt (livré sur le serveur avec le reste), nommé en
+slug `a-z0-9-`, avec un `dossier.json` facultatif : `titre`, `objet` (sujet du courriel), `resume` (texte du
+courriel, paragraphes séparés par une ligne vide). Premier dossier : `halle-2026-10`, le dossier investisseur de
+Halle (PDF 7 pages A4 + classeur Excel ; `generer.py` est le générateur, il ne se joint pas).
+
+`GET /dossiers/fichiers[?dossier=halle-2026-10]` → `{dossiers: [{dossier, titre, objet, fichiers: [{nom, type,
+octets, modifie}], octets}], adressesConnues: [...], smtp: bool, source}`. Seuls les `.pdf`, `.xlsx`, `.docx`,
+`.csv`, `.png`, `.jpg` sont joignables. 404 sur un `dossier=` inconnu.
+
+`POST /dossiers/fichiers/envoyer` `{dossier, a[, copies: [...], fichiers: [noms], objet, message]}` envoie les
+fichiers du dossier (tous, ou ceux de `fichiers`) en pièces jointes par la machine SMTP du cockpit (`Smtp::envoyer`),
+avec une page de garde HTML (titre, message, liste des pièces). Le destinataire `a` et les `copies` doivent être
+des adresses que le cockpit connaît déjà (`adressesConnues` : destinataires des rapports de `ceo_rapport`, compte
+et expéditeur SMTP) — pas de relais ouvert. Réponse `{ok: true, dossier, titre, a, copies, objet, pieces: [{nom,
+octets}], octets, via: 'smtp', envoye}`. Refus : 404 dossier inconnu ou aucun fichier joignable, 400 adresse
+invalide, 403 adresse inconnue du cockpit, 413 pièces cumulées au-delà de 20 Mo, 503 SMTP non configuré, 502 le
+serveur SMTP refuse (`error` porte `Smtp::$lastError`). Chaque envoi, réussi ou refusé par le serveur, laisse une
+ligne `ceo_journal_entry` (kind `dossier`, project = le slug).

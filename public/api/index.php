@@ -50,6 +50,7 @@ require __DIR__ . '/../../src/analyse_produits.php';
 require __DIR__ . '/../../src/recette_produit.php';
 require __DIR__ . '/../../src/matiere_fiche.php';
 require __DIR__ . '/../../src/pnl_mois.php';
+require __DIR__ . '/../../src/dossiers_fichiers.php';
 require __DIR__ . '/../../src/dossier.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
@@ -258,6 +259,7 @@ function route(string $method, string $path): mixed
             $path === '/analyse/produits/recette'      => ep_analyse_produit_recette(),
             $path === '/analyse/matieres/fiche'        => ep_analyse_matiere_fiche(),
             $path === '/analyse/pnl/mois'              => ep_analyse_pnl_mois(),
+            $path === '/dossiers/fichiers'             => ep_dossiers_fichiers(),
             $path === '/analyse/prix-transfert'        => ep_prix_transfert(),
             $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),
@@ -557,6 +559,8 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_suppr((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/generer$#', $path, $m)) { return wr_rapport_generer((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/envoyer$#', $path, $m)) { return wr_rapport_envoyer((int) $m[1]); }
+    // --- dossiers déposés dans docs/dossiers/ : envoi en pièces jointes (SMTP du cockpit)
+    if ($method === 'POST' && $path === '/dossiers/fichiers/envoyer') { return wr_dossiers_envoyer(); }
     if ($method === 'POST' && $path === '/reputation/sync') { return wr_reputation_sync(); }
     if ($method === 'PUT' && preg_match('#^/reputation/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
