@@ -358,7 +358,7 @@ function ep_franchises_fiche(): array
     foreach ($cadre as $l) { if ($l['consultant'] !== '' && !isset($cons[$l['consultant']])) { $cons[$l['consultant']] = ['id' => $l['consultant'], 'nom' => $l['consultantNom'], 'types' => []]; } if ($l['consultant'] !== '') { $cons[$l['consultant']]['types'][] = $l['typeNom']; } }
     return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'aujourdhui' => date('Y-m-d'),
         'feu' => $b ? ['feu' => $b['feu'], 'motifs' => $b['motifs'], 'due' => $b['due']] : null, 'consultants' => array_values($cons),
-        'journalier' => ['tachesJour' => frTachesJour($shop), 'taches' => frTachesJours($shop), 'invendus' => frInvendus($shop), 'revues' => frRevues($shop), 'reclamations' => frReclamations($shop), 'objectifs' => frObjectifs($shop),
+        'journalier' => ['mois' => frMois($shop), 'tachesJour' => frTachesJour($shop), 'taches' => frTachesJours($shop), 'invendus' => frInvendus($shop), 'revues' => frRevues($shop), 'reclamations' => frReclamations($shop), 'objectifs' => frObjectifs($shop),
             'remarques' => frRemarques($shop), 'google' => $etat['google'][$shop] ?? null, 'ca' => $etat['ca'][$shop] ?? null],
         'terrain' => ['visites' => frVisites($shop), 'plans' => $etat['plans'], 'cadre' => $cadre, 'msp' => frMsp($shop), 'mspVisites' => $etat['msp'][$shop] ?? [],
             'conformite' => frConformite($shop), 'scoring' => frScoring($shop), 'plano' => $b['plano'] ?? null, 'equipe' => $etat['equipe'][$shop] ?? null,
@@ -385,10 +385,253 @@ function ep_franchises(): array
                 'invendus' => ['lu' => $inv['lu'], 'part' => $inv['part'], 'cible' => $inv['cible']],
                 'revues' => ['lu' => $rv['lu'], 'moyenne' => $rv['moyenne'], 'notees' => $rv['notees'], 'nc' => $rv['nc'], 'mineures' => $rv['mineures'], 'majeures' => $rv['majeures'], 'critiques' => $rv['critiques'], 'motif' => $rv['motif']],
                 'reclamations' => ['lu' => $rc['lu'], 'n' => $rc['n'], 'ouvertes' => $rc['ouvertes'], 'motif' => $rc['motif']],
+                'mois' => ($mo = frMois($sid))['lu'] ? ['atteinte' => $mo['atteinte'], 'ca' => $mo['ca'], 'budget' => $mo['budget'], 'pro' => $mo['pro']['part'], 'proLus' => $mo['pro']['joursLus'], 'proJours' => $mo['pro']['jours']] : null,
                 'google' => $b['google'] ? ['note' => $b['google']['note'], 'avis' => $b['google']['avis'], 'faibles' => $b['google']['faibles']] : null,
                 'ca' => $b['ca'] ? ['ca' => $b['ca']['ca'], 'pct' => $b['ca']['pct']] : null],
             'terrain' => ['derniereVisite' => $b['derniereVisite'], 'prochaineVisite' => $b['prochaineVisite'], 'plansOuverts' => $b['plansOuverts'], 'p0' => $b['p0'], 'plano' => $b['plano'],
                 'msp' => $msp ? ['trimestre' => $msp['trimestre'], 'obtenu' => $msp['obtenu'], 'maximum' => $msp['maximum'], 'v' => $msp['v']] : null, 'cadre' => count($cadre)]];
     }
     return ['magasins' => $out, 'trimestre' => $sc['trimestre'] ?? null, 'lu' => date('Y-m-d H:i')];
+}
+
+/* --- Santé du mois : le CA face au budget, la part du CA pro (09/10/2026) ---------------- */
+const FR_PRO_MAX = 40.0;
+const FR_PRO_ALERTE = 35.0;
+/** Le résultat du mois en cours, magasin par magasin : une lecture (/exploitation/periode, servie en cache). */
+function frMoisTous(): array
+{
+    static $c = null;
+    if ($c !== null) { return $c; }
+    $c = [];
+    if (!function_exists('ep_exploitation_periode')) { return $c; }
+    $get = $_GET; $_GET = ['vue' => 'mois', 'date' => date('Y-m-d')];
+    try { $r = ep_exploitation_periode(); } catch (Throwable $e) { $r = []; }
+    $_GET = $get;
+    foreach ((array) ($r['magasins'] ?? []) as $l) { if (is_array($l) && isset($l['shopId'])) { $c[(string) $l['shopId']] = $l; } }
+    return $c;
+}
+function frMois(string $shop): array
+{
+    $l = frMoisTous()[$shop] ?? null;
+    $mois = date('Y-m');
+    if ($l === null || empty($l['ouvert'])) { return ['lu' => false, 'mois' => $mois, 'motif' => $l === null ? 'le résultat du mois ne se lit pas' : 'magasin fermé ce mois']; }
+    $jours = [];
+    foreach ((array) ($l['jours'] ?? []) as $j) {
+        if (!is_array($j)) { continue; }
+        $jours[] = ['date' => (string) ($j['date'] ?? ''), 'court' => (string) ($j['court'] ?? ''), 'ca' => $j['ca'] ?? null, 'objectif' => $j['objectif'] ?? null,
+            'ferme' => !empty($j['ferme']), 'passe' => !empty($j['passe']) || !empty($j['aujourdhui'])];
+    }
+    $att = $l['atteinte'] ?? null;
+    return ['lu' => true, 'mois' => $mois, 'ca' => $l['realise'] ?? null, 'budget' => $l['objectif'] ?? null, 'budgetSource' => $l['objectifSource'] ?? null,
+        'attendu' => $l['attendu'] ?? null, 'atteinte' => $att !== null ? round(100 * (float) $att, 1) : null, 'ecart' => $l['ecart'] ?? null,
+        'tickets' => $l['tickets'] ?? null, 'panier' => $l['panier'] ?? null,
+        'pro' => ['part' => $l['partPro'] ?? null, 'ca' => $l['caPro'] ?? null, 'tickets' => $l['ticketsPro'] ?? null, 'panier' => $l['panierPro'] ?? null,
+            'joursLus' => $l['proJoursLus'] ?? null, 'jours' => $l['proJours'] ?? null, 'complet' => $l['proComplet'] ?? null, 'max' => FR_PRO_MAX, 'alerte' => FR_PRO_ALERTE],
+        'jours' => $jours, 'motif' => null];
+}
+
+/* --- Les checklists du magasin : chaque type de visite et son dernier résultat ; les checklists du jour du panel -- */
+function ep_franchises_checklists(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    $mags = viMagasins();
+    if ($shop === '' || !isset($mags[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    @set_time_limit(90);
+    $types = function_exists('vcTypes') ? vcTypes() : [];
+    $cadre = [];
+    foreach (function_exists('vcCadreDe') ? vcCadreDe($shop) : [] as $l) {
+        $cadre[(string) $l['type']] = ['nb' => (int) ($l['nb'] ?? 1), 'par' => (string) ($l['par'] ?? 'mois'), 'consultantNom' => (string) ($l['consultantNom'] ?? '')];
+    }
+    // Les visites terminées du magasin et leurs points, une lecture chacune.
+    $visites = []; $points = [];
+    try {
+        $visites = Db::rows("SELECT id, prevu_le, type_code, consultant_nom FROM ceo_visite WHERE shop_id = ? AND statut = 'terminee' ORDER BY prevu_le DESC, id DESC LIMIT 80", [$shop]);
+        $ids = array_map(fn ($v) => (int) $v['id'], $visites);
+        if ($ids !== []) {
+            foreach (Db::rows('SELECT visite_id, module, point_ref, libelle, etat, note, valeur, commentaire FROM ceo_visite_point WHERE visite_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) as $p) {
+                $points[(int) $p['visite_id']][(string) $p['point_ref']] = $p;
+            }
+        }
+    } catch (Throwable $e) { /* module Visites absent : les checklists restent lisibles, sans résultat */ }
+    $compte = static function (array $pts): array {
+        $c = ['ok' => 0, 'ko' => 0, 'na' => 0, 'vide' => 0];
+        foreach ($pts as $p) { $e = (string) ($p['etat'] ?? ''); $c[$e === '' ? 'vide' : (isset($c[$e]) ? $e : 'vide')]++; }
+        return $c;
+    };
+    $parType = [];
+    foreach ($visites as $v) { $parType[(string) (($v['type_code'] ?? '') ?: 'reguliere')][] = $v; }
+    $out = [];
+    foreach ($types as $t) {
+        $code = (string) $t['code']; $vs = $parType[$code] ?? [];
+        if (empty($t['actif']) && $vs === [] && !isset($cadre[$code])) { continue; }
+        $der = $vs[0] ?? null; $res = $der ? ($points[(int) $der['id']] ?? []) : [];
+        $modules = []; $vus = [];
+        foreach ((array) ($t['checklist'] ?? []) as $m) {
+            $pts = [];
+            foreach ((array) ($m['points'] ?? []) as $p) {
+                $ref = (string) ($p['ref'] ?? ''); $r = $res[$ref] ?? null; $vus[$ref] = true;
+                $pts[] = ['ref' => $ref, 'libelle' => (string) ($p['libelle'] ?? $ref), 'photo' => !empty($p['photo']), 'pct' => !empty($p['pct']),
+                    'etat' => $r ? (string) $r['etat'] : null, 'note' => $r && $r['note'] !== null ? (int) $r['note'] : null,
+                    'valeur' => $r && $r['valeur'] !== null ? (int) $r['valeur'] : null, 'commentaire' => $r && $r['commentaire'] !== null && $r['commentaire'] !== '' ? (string) $r['commentaire'] : null];
+            }
+            $modules[] = ['id' => (string) ($m['id'] ?? ''), 'nom' => (string) ($m['nom'] ?? ''), 'points' => $pts];
+        }
+        // Les points tenus à la dernière visite hors définition : ceux d'une checklist dynamique (suivi, revisite).
+        $hors = [];
+        foreach ($res as $ref => $r) {
+            if (isset($vus[$ref])) { continue; }
+            $hors[] = ['ref' => (string) $ref, 'libelle' => (string) ($r['libelle'] ?: $ref), 'photo' => false, 'pct' => false, 'etat' => (string) $r['etat'],
+                'note' => $r['note'] !== null ? (int) $r['note'] : null, 'valeur' => $r['valeur'] !== null ? (int) $r['valeur'] : null,
+                'commentaire' => $r['commentaire'] !== null && $r['commentaire'] !== '' ? (string) $r['commentaire'] : null];
+        }
+        if ($hors !== []) { $modules[] = ['id' => 'visite', 'nom' => 'Points de la dernière visite', 'points' => $hors]; }
+        $nPts = 0; foreach ($modules as $m) { $nPts += count($m['points']); }
+        $hist = [];
+        foreach (array_slice($vs, 0, 12) as $v) {
+            $c = $compte($points[(int) $v['id']] ?? []);
+            $hist[] = ['id' => (int) $v['id'], 'le' => (string) $v['prevu_le'], 'consultant' => (string) $v['consultant_nom'], 'ok' => $c['ok'], 'ko' => $c['ko'], 'na' => $c['na'], 'total' => count($points[(int) $v['id']] ?? [])];
+        }
+        $out[] = ['code' => $code, 'nom' => (string) $t['nom'], 'duree' => (int) ($t['duree'] ?? 0), 'profilNom' => (string) ($t['profilNom'] ?? ''),
+            'dynamique' => $t['dynamique'] ?? null, 'actif' => !empty($t['actif']), 'cadre' => $cadre[$code] ?? null, 'points' => $nPts, 'modules' => $modules,
+            'derniere' => $hist[0] ?? null, 'historique' => $hist, 'visites' => count($vs)];
+    }
+    // Au cadre d'abord, puis ceux qui ont une visite, puis le reste.
+    usort($out, fn ($a, $b) => [($a['cadre'] ? 0 : 1), ($a['derniere'] ? 0 : 1)] <=> [($b['cadre'] ? 0 : 1), ($b['derniere'] ? 0 : 1)]);
+    return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'types' => $out, 'panel' => frChecklistsPanel($shop)];
+}
+/** Les checklists du jour dans le panel : chaque checklist et ses tâches, faites, notées ou non rendues. */
+function frChecklistsPanel(string $shop): array
+{
+    if (!function_exists('ep_pwa_tasks')) { return ['lu' => false, 'motif' => 'module absent', 'checklists' => []]; }
+    try { $t = ep_pwa_tasks(); } catch (Throwable $e) { return ['lu' => false, 'motif' => $e->getMessage(), 'checklists' => []]; }
+    if (!empty($t['indispo'])) { return ['lu' => false, 'motif' => 'les tâches du panel ne se lisent pas', 'checklists' => []]; }
+    $par = [];
+    foreach ($t['shops'] ?? [] as $s) {
+        if ((string) ($s['shopId'] ?? '') !== $shop) { continue; }
+        foreach ($s['taches'] ?? [] as $x) {
+            $nom = trim((string) ($x['checklist'] ?? '')) ?: 'Sans checklist';
+            $st = (string) ($x['statut'] ?? '');
+            $fait = $st !== 'nonRendue';
+            $par[$nom] = $par[$nom] ?? ['nom' => $nom, 'total' => 0, 'faites' => 0, 'notees' => 0, 'nc' => 0, 'taches' => []];
+            $par[$nom]['total']++;
+            if ($fait) { $par[$nom]['faites']++; }
+            if (($x['note'] ?? null) !== null) { $par[$nom]['notees']++; if ((int) $x['note'] < 4 || ($x['accepte'] ?? null) === false) { $par[$nom]['nc']++; } }
+            $par[$nom]['taches'][] = ['taskId' => (string) ($x['taskId'] ?? ''), 'tache' => (string) ($x['tache'] ?? ''), 'statut' => $st, 'fait' => $fait,
+                'note' => $x['note'] ?? null, 'accepte' => $x['accepte'] ?? null, 'comment' => $x['comment'] ?? null, 'obligatoire' => !empty($x['obligatoire']),
+                'faitLe' => $x['faitLe'] ?? null, 'photo' => !empty($x['photo']) || ($x['note'] ?? null) !== null];
+        }
+    }
+    ksort($par);
+    return ['lu' => true, 'date' => $t['date'] ?? date('Y-m-d'), 'checklists' => array_values($par), 'motif' => null];
+}
+
+/* --- La météo du franchisé : moral, envie, équipe, relation, ses envies, ses demandes, ses inquiétudes ------------ */
+const FR_METEO_ECHELLES = ['moral' => 'Moral', 'envie' => 'Envie, motivation', 'equipe' => 'Climat de l’équipe', 'relation' => 'Relation avec le réseau'];
+function ensureFrMeteo(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_franchise_meteo (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id VARCHAR(40) NULL,
+        shop_id VARCHAR(12) NOT NULL,
+        le DATE NOT NULL,
+        consultant_id VARCHAR(32) NOT NULL DEFAULT \'\',
+        consultant_nom VARCHAR(120) NOT NULL DEFAULT \'\',
+        moral TINYINT NULL,
+        envie TINYINT NULL,
+        equipe TINYINT NULL,
+        relation TINYINT NULL,
+        envies TEXT NULL,
+        demandes TEXT NULL,
+        inquietudes TEXT NULL,
+        note TEXT NULL,
+        cree_par VARCHAR(120) NOT NULL DEFAULT \'\',
+        cree_le DATETIME NOT NULL,
+        UNIQUE KEY u_client (client_id),
+        KEY k_shop (shop_id, le)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+function frMeteoLigne(array $r, array $taches): array
+{
+    $dem = json_decode((string) ($r['demandes'] ?? ''), true);
+    $dem = is_array($dem) ? $dem : [];
+    $out = ['id' => (int) $r['id'], 'le' => (string) $r['le'], 'consultant' => (string) $r['consultant_nom'], 'creePar' => (string) $r['cree_par']];
+    foreach (array_keys(FR_METEO_ECHELLES) as $k) { $out[$k] = $r[$k] !== null ? (int) $r[$k] : null; }
+    $out['envies'] = (string) ($r['envies'] ?? ''); $out['inquietudes'] = (string) ($r['inquietudes'] ?? ''); $out['note'] = (string) ($r['note'] ?? '');
+    $out['demandes'] = array_map(function ($d) use ($taches) {
+        $tid = isset($d['tache']) ? (int) $d['tache'] : null; $t = $tid ? ($taches[$tid] ?? null) : null;
+        return ['texte' => (string) ($d['texte'] ?? ''), 'tacheId' => $tid, 'statut' => $t ? (string) $t['statut'] : null, 'faitLe' => $t ? $t['fait_le'] : null];
+    }, $dem);
+    return $out;
+}
+/** GET /franchises/meteo?shop= — les météos du magasin, la plus récente d'abord, et la tendance du moral. */
+function ep_franchises_meteo(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    $mags = viMagasins();
+    if ($shop === '' || !isset($mags[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    ensureFrMeteo();
+    $rows = Db::rows('SELECT * FROM ceo_franchise_meteo WHERE shop_id = ? ORDER BY le DESC, id DESC LIMIT 36', [$shop]);
+    $ids = [];
+    foreach ($rows as $r) { foreach ((array) json_decode((string) ($r['demandes'] ?? ''), true) as $d) { if (is_array($d) && !empty($d['tache'])) { $ids[] = (int) $d['tache']; } } }
+    $taches = [];
+    if ($ids !== [] && function_exists('ensureVisitesCadre')) {
+        try {
+            ensureVisitesCadre();
+            foreach (Db::rows('SELECT id, statut, fait_le FROM ceo_consultant_tache WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) as $t) { $taches[(int) $t['id']] = $t; }
+        } catch (Throwable $e) { /* les demandes restent, sans leur suite */ }
+    }
+    $meteos = array_map(fn ($r) => frMeteoLigne($r, $taches), $rows);
+    $ouvertes = 0;
+    foreach ($meteos as $m) { foreach ($m['demandes'] as $d) { if ($d['statut'] === 'a_faire' || $d['statut'] === 'en_cours') { $ouvertes++; } } }
+    $tendance = [];
+    foreach (array_reverse(array_slice($meteos, 0, 12)) as $m) { $tendance[] = ['le' => $m['le'], 'moral' => $m['moral'], 'envie' => $m['envie'], 'equipe' => $m['equipe'], 'relation' => $m['relation']]; }
+    return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'echelles' => FR_METEO_ECHELLES,
+        'derniere' => $meteos[0] ?? null, 'meteos' => $meteos, 'tendance' => $tendance, 'demandesOuvertes' => $ouvertes];
+}
+/** POST /franchises/meteo — une météo ; chaque demande peut devenir une tâche du consultant (échéance J+7). */
+function wr_franchises_meteo(): array
+{
+    ensureFrMeteo();
+    $b = body();
+    $shop = trim((string) ($b['shop'] ?? ''));
+    if ($shop === '' || !isset(viMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin requis']; }
+    $cid = mb_substr(trim((string) ($b['client_id'] ?? '')), 0, 40) ?: null;
+    if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_franchise_meteo WHERE client_id = ?', [$cid])) !== null) { return ['ok' => true, 'deja' => true, 'meteo' => frMeteoLigne($ex, [])]; }
+    $ech = []; $rien = true;
+    foreach (array_keys(FR_METEO_ECHELLES) as $k) {
+        $v = isset($b[$k]) && is_numeric($b[$k]) ? (int) $b[$k] : null;
+        $ech[$k] = $v !== null && $v >= 1 && $v <= 5 ? $v : null;
+        if ($ech[$k] !== null) { $rien = false; }
+    }
+    $txt = static fn ($k) => mb_substr(trim((string) ($b[$k] ?? '')), 0, 4000);
+    $demandes = is_array($b['demandes'] ?? null) ? $b['demandes'] : preg_split('/\R/u', (string) ($b['demandes'] ?? ''));
+    $demandes = array_values(array_filter(array_map(fn ($d) => mb_substr(trim((string) (is_array($d) ? ($d['texte'] ?? '') : $d)), 0, 300), $demandes), fn ($d) => $d !== ''));
+    if ($rien && $demandes === [] && $txt('envies') === '' && $txt('inquietudes') === '' && $txt('note') === '') { http_response_code(422); return ['error' => 'météo vide']; }
+    $le = viDate($b['le'] ?? null) ?? date('Y-m-d');
+    $cons = mb_substr(trim((string) ($b['consultant'] ?? '')), 0, 32);
+    if ($cons === '') { $cons = (string) (consultantIdCompte() ?? ''); }
+    $consNom = $cons !== '' ? viConsultantNom($cons) : '';
+    $now = date('Y-m-d H:i:s');
+    Db::exec('INSERT INTO ceo_franchise_meteo (client_id, shop_id, le, consultant_id, consultant_nom, moral, envie, equipe, relation, envies, demandes, inquietudes, note, cree_par, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$cid, $shop, $le, $cons, $consNom, $ech['moral'], $ech['envie'], $ech['equipe'], $ech['relation'], $txt('envies') ?: null, '[]', $txt('inquietudes') ?: null, $txt('note') ?: null, viQui($b), $now]);
+    $id = (int) Db::pdo()->lastInsertId();
+    $dem = []; $creees = 0;
+    $enTaches = !array_key_exists('taches', $b) || !empty($b['taches']);
+    foreach ($demandes as $n => $d) {
+        $tid = null;
+        if ($enTaches && $cons !== '' && function_exists('ensureVisitesCadre')) {
+            ensureVisitesCadre();
+            Db::exec('INSERT INTO ceo_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                ['m' . $id . ':' . $n, $cons, $consNom, $shop, null, 'perso', null, null, mb_substr('Demande du franchisé : ' . $d, 0, 190), 'Météo du ' . $le, date('Y-m-d', strtotime($le . ' +7 days')), 'a_faire', viQui($b), $now, $now]);
+            $tid = (int) Db::pdo()->lastInsertId(); $creees++;
+        }
+        $dem[] = ['texte' => $d, 'tache' => $tid];
+    }
+    Db::exec('UPDATE ceo_franchise_meteo SET demandes = ? WHERE id = ?', [json_encode($dem, JSON_UNESCAPED_UNICODE), $id]);
+    if (function_exists('journalAdd')) { try { journalAdd(viQui($b), 'franchise', null, 'Météo du franchisé ' . (viMagasins()[$shop]['court'] ?? $shop) . ' : moral ' . ($ech['moral'] ?? '—') . ' / 5, ' . count($dem) . ' demande(s)'); } catch (Throwable $e) { /* le journal ne bloque pas */ } }
+    $r = Db::row('SELECT * FROM ceo_franchise_meteo WHERE id = ?', [$id]);
+    return ['ok' => true, 'meteo' => frMeteoLigne($r, []), 'taches' => $creees];
 }

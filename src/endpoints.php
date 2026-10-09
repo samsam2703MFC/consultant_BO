@@ -625,6 +625,8 @@ function ep_pwa_tasks(): array
                     ? substr((string) $apiTaches[$sid . '|' . $tid]['completed_at'], 0, 16) : null,
                 'faitePar'    => trim((string) ($apiTaches[$sid . '|' . $tid]['completed_by'] ?? '')) ?: null,
                 'statut'      => $valide ? 'notee' : 'aControler',
+                // La checklist aussi pour une tâche notée : la fiche franchisé range les tâches du jour par checklist.
+                'checklist'   => trim((string) ($apiTaches[$sid . '|' . $tid]['checklist_name'] ?? '')) ?: null,
             ];
             $tot['taches']++;
             if ($valide) { $tot['valides']++; } else { $tot['aValider']++; }
