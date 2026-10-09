@@ -69,6 +69,24 @@ cats = sorted(stats.get('categories') or [], key=lambda c: -(c.get('v') or 0)); 
 fam = {}
 for c in cats: fam[c.get('groupe') or 'Autres'] = fam.get(c.get('groupe') or 'Autres', 0) + (c.get('v') or 0)
 fam = sorted(fam.items(), key=lambda t: -t[1])
+# --- Marges par catégorie : septembre, coût de recette du panel produit par produit ; une recette invraisemblable (coût au-dessus du
+# prix ou sous 5 % de celui-ci) est écartée, la couverture dit sur quelle part du chiffre de la catégorie la marge est mesurée.
+def plausible(c, v): return c is not None and v and v > 0 and 0.05 * v <= c < v
+MCall = []; VK = 0.0; CK = 0.0
+for c in cats:
+    v = c.get('v') or 0
+    if v <= 0: continue
+    vk = sum((x.get('v') or 0) for x in c['produits'] if plausible(x.get('c'), x.get('v'))); ck = sum((x.get('c') or 0) for x in c['produits'] if plausible(x.get('c'), x.get('v')))
+    VK += vk; CK += ck
+    MCall.append(dict(nom=c['nom'], groupe=c.get('groupe') or '—', v=v, q=c.get('q') or 0, refs=c.get('refs') or 0, part=100 * v / tv, couv=100 * vk / v, vk=vk, ck=ck,
+                      food=100 * ck / vk if vk else None, marge=100 * (1 - ck / vk) if vk else None, coef=vk / ck if ck else None))
+MC = MCall[:20]; reste = MCall[20:]
+autresV = sum(x['v'] for x in reste); autresQ = sum(x['q'] for x in reste); autresVK = sum(x['vk'] for x in reste); autresCK = sum(x['ck'] for x in reste)
+autresM = 100 * (1 - autresCK / autresVK) if autresVK else None
+margeT = 100 * (1 - CK / VK); foodT = 100 * CK / VK; coefT = VK / CK; couvT = 100 * VK / tv
+def zoneM(m): return 'mu' if m is None else ('ok' if m >= 60 else ('att' if m >= 40 else 'ko'))
+ZCOL = {'ok': '#2d7a3e', 'att': '#C96A1B', 'ko': '#C0182B', 'mu': '#b8b1a6'}
+json.dump(dict(categories=MCall, autres=dict(v=autresV, q=autresQ, part=100 * autresV / tv, marge=autresM, n=len(reste)), total=dict(v=tv, marge=margeT, food=foodT, coef=coefT, couv=couvT)), open(SP + '/halle/marges-cat.json', 'w'), ensure_ascii=False, indent=1)
 choix = ['2026-10-05-1207', '2026-10-05-1211', '2026-10-05-1209', '2026-09-30-1206', '2026-10-08-1206', '2026-10-05-1213', '2026-10-01-1216', '2026-10-05-1267', '2026-09-21-1211']
 meta = {m['fichier'][:-4]: m for m in photos}
 LIB = {'fr': {'CO-01': 'Ouverture du magasin', 'CQ-02': 'Contrôle qualité d’ouverture', 'CO-10': 'Contrôle opérationnel boulangerie'},
@@ -125,10 +143,22 @@ T = {'fr': dict(
     k1='Le comptoir fait tout : en septembre, 99 % du chiffre passe en caisse ; le click &amp; collect et la livraison sont marginaux.',
     k2='Clients professionnels : 755 € en septembre, 1,5 % du CA, 5 sociétés. Le réseau tolère jusqu’à 40 % de CA pro ; ce levier est presque vierge à Halle.',
     k3='Heure la plus forte : 11 h, avec {v} de ventes cumulées sur le mois ; après 19 h, presque rien.',
+    p8='les marges par catégorie', h8='Les marges par catégorie et leur poids dans le chiffre',
+    s8='Septembre 2026, ventes de Halle. Marge brute = chiffre − coût de recette, telle que le panel la chiffre produit par produit. Les recettes invraisemblables (coût au-dessus du prix ou sous 5 % de celui-ci) sont écartées ; « coût connu » dit sur quelle part du chiffre de la catégorie la marge est mesurée.',
+    th8=['Catégorie', 'Famille', 'Part du CA', 'CA', 'Pièces', 'Marge brute', 'Coefficient', 'Coût connu'], tot8='Toutes catégories', aut8='Autres catégories',
+    g8='Le poids de chaque catégorie, coloré par sa marge', lg8=['marge ≥ 60 %', '40 à 60 %', 'sous 40 %', 'sans coût connu'],
+    x1='Trois familles font {p} du chiffre : {l}.',
+    x2='Sur les ventes dont la recette est chiffrée ({c} du chiffre), la marge brute de septembre est de {m}, soit un food cost de {f} et un coefficient moyen de × {k}.',
+    x3='Les catégories à 60 % de marge ou plus pèsent {a} du chiffre ; celles sous 50 % en pèsent {b} : {l}.',
+    x4='Le levier le plus lourd : {n}, {p} du chiffre à {m} de marge. À 60 % de marge, ce serait {e} de marge en plus par mois, par le prix ou par la recette.',
     h6='La qualité au quotidien', q1='Note Google', q1s='{avis} avis au {d}', q2='Client mystère', q2s='3<sup>e</sup> trimestre 2026', q3='Contrôles rendus', q3s='{f} tâches rendues sur {a} attendues au 3<sup>e</sup> trimestre', q4='Scoring du trimestre', q4s='{r}<sup>e</sup> magasin sur 4 · réseau {v} / 20',
     q5='Chaque matin, l’équipe photographie les vitrines, les pains et la salle à l’ouverture (« contrôle qualité d’ouverture ») et le consultant du réseau note ce qu’il voit. Les photos ci-dessous sont celles des contrôles des trois dernières semaines, telles qu’elles ont été rendues.',
     note='noté {n} / 5 par le consultant',
     q6='Le poste « contrôles rendus » compte les tâches rendues sur toutes celles attendues par le panel, photos comprises ; une tâche obligatoire manquée met la journée à zéro. Halle rend ses contrôles d’ouverture avec régularité mais pas l’ensemble des tâches attendues : c’est le point d’amélioration du scoring.',
+    p9='les outils de gestion', h9='Les outils de gestion du magasin',
+    o9='Le franchisé et le réseau pilotent le magasin avec trois outils reliés à la caisse : le panel (caisse, recettes, matières, tâches), le dashboard du magasin, sur ordinateur et sur téléphone, et le cockpit du réseau, celui du consultant. Les écrans ci-dessous sont ceux de Halle, pris le 9 octobre 2026.',
+    oc=['Le dashboard du jour, sur ordinateur : chiffre, clients et panier face à l’objectif, résultat du jour, vitrine, invendus et contrôles.', 'Au téléphone : quatre onglets, Opérationnel, Exploitation, Contrôle et Semaine ; la réclamation fournisseur se fait avec une photo et le code-barres.', 'L’opérationnel : le chiffre heure par heure face à la même journée de la semaine passée, jauge double piste.', 'La fiche d’un produit : recette, coût matière, coefficient et prix à pratiquer pour atteindre l’objectif.'],
+    ob=['Vue du jour : chiffre, clients et panier face à l’objectif et à la même journée de la semaine passée, heure par heure.', 'La vitrine : ce qui reste à vendre, catégorie par catégorie, avec la projection des ventes de la journée.', 'Le P&amp;L du jour : matière mesurée sur les recettes vendues, main-d’œuvre, frais généraux, invendus.', 'La fiche produit : recette ligne par ligne, coût matière du jour, coefficient, prix à pratiquer, prix des matières chez les fournisseurs.', 'Les contrôles en photo : ouverture, vitrines, pains, notés par le consultant ; le scoring du trimestre.'],
     h7='Sources, méthode et limites', srck='D’où vient chaque chiffre',
     s71='Chiffre d’affaires, clients, panier : la caisse du magasin, lue par l’API du panel (statistiques de ventes par mois et P&amp;L quotidien). Hors TVA.',
     s72='Food cost : la marge que le panel mesure sur les ventes de chaque jour (recettes et prix des matières du panel), agrégée par mois ; les anomalies de recette sont filtrées. Depuis août, le cockpit recompose aussi le coût matière ticket par ticket. Le modèle du réseau prévoit 36 % de matière et 2 % d’emballage.',
@@ -193,10 +223,22 @@ T = {'fr': dict(
     k1='De toonbank doet alles: in september gaat 99 % van de omzet via de kassa; click &amp; collect en levering zijn marginaal.',
     k2='Professionele klanten: 755 € in september, 1,5 % van de omzet, 5 bedrijven. Het netwerk laat tot 40 % B2B-omzet toe; deze hefboom is in Halle nog bijna onaangeroerd.',
     k3='Sterkste uur: 11 u, met {v} gecumuleerde verkoop over de maand; na 19 u bijna niets.',
+    p8='de marges per categorie', h8='De marges per categorie en hun gewicht in de omzet',
+    s8='September 2026, verkoop van Halle. Brutomarge = omzet − receptkost, zoals het panel die product per product becijfert. Onwaarschijnlijke recepten (kost boven de prijs of onder 5 % ervan) blijven buiten beschouwing; “kost gekend” zegt op welk deel van de omzet van de categorie de marge gemeten is.',
+    th8=['Categorie', 'Familie', 'Aandeel omzet', 'Omzet', 'Stuks', 'Brutomarge', 'Coëfficiënt', 'Kost gekend'], tot8='Alle categorieën', aut8='Andere categorieën',
+    g8='Het gewicht van elke categorie, gekleurd volgens haar marge', lg8=['marge ≥ 60 %', '40 tot 60 %', 'onder 40 %', 'kost niet gekend'],
+    x1='Drie families maken {p} van de omzet: {l}.',
+    x2='Op de verkoop met een becijferd recept ({c} van de omzet) bedraagt de brutomarge van september {m}, een foodcost van {f} en een gemiddelde coëfficiënt van × {k}.',
+    x3='De categorieën met 60 % marge of meer wegen {a} van de omzet; die onder 50 % wegen {b}: {l}.',
+    x4='De zwaarste hefboom: {n}, {p} van de omzet aan {m} marge. Aan 60 % marge zou dat {e} extra marge per maand zijn, via de prijs of via het recept.',
     h6='Kwaliteit, elke dag', q1='Google-score', q1s='{avis} beoordelingen op {d}', q2='Mysterieklant', q2s='3<sup>e</sup> kwartaal 2026', q3='Uitgevoerde controles', q3s='{f} uitgevoerde taken op {a} verwachte in het 3<sup>e</sup> kwartaal', q4='Kwartaalscoring', q4s='{r}<sup>e</sup> winkel van 4 · netwerk {v} / 20',
     q5='Elke ochtend fotografeert het team bij de opening de vitrines, de broden en de zaal (“kwaliteitscontrole bij opening”) en beoordeelt de consultant van het netwerk wat hij ziet. De foto’s hieronder zijn die van de controles van de laatste drie weken, zoals ze werden ingediend.',
     note='door de consultant beoordeeld met {n} / 5',
     q6='De post “uitgevoerde controles” telt de uitgevoerde taken op alle door het panel verwachte taken, foto’s inbegrepen; een gemiste verplichte taak zet de dag op nul. Halle voert zijn openingscontroles regelmatig uit, maar niet alle verwachte taken: dat is het verbeterpunt van de scoring.',
+    p9='de beheertools', h9='De beheertools van de winkel',
+    o9='De franchisenemer en het netwerk sturen de winkel met drie tools die aan de kassa gekoppeld zijn: het panel (kassa, recepten, grondstoffen, taken), het dashboard van de winkel, op computer en op telefoon, en de cockpit van het netwerk, die van de consultant. De schermen hieronder zijn die van Halle, genomen op 9 oktober 2026.',
+    oc=['Het dagdashboard op computer: omzet, klanten en ticket tegenover het doel, resultaat van de dag, vitrine, onverkochte producten en controles.', 'Op telefoon: vier tabbladen, Operationeel, Uitbating, Controle en Week; een klacht aan de leverancier gaat met een foto en de barcode.', 'Het operationele scherm: de omzet uur per uur tegenover dezelfde dag van vorige week, dubbele meter.', 'De productfiche: recept, grondstoffenkost, coëfficiënt en de prijs om het doel te halen.'],
+    ob=['Dagoverzicht: omzet, klanten en ticket tegenover het doel en dezelfde dag van vorige week, uur per uur.', 'De vitrine: wat er nog te verkopen is, categorie per categorie, met de projectie van de verkoop van de dag.', 'De P&amp;L van de dag: grondstoffen gemeten op de verkochte recepten, personeel, algemene kosten, onverkochte producten.', 'De productfiche: recept lijn per lijn, grondstoffenkost van de dag, coëfficiënt, te hanteren prijs, grondstofprijzen bij de leveranciers.', 'De controles op foto: opening, vitrines, broden, beoordeeld door de consultant; de kwartaalscoring.'],
     h7='Bronnen, methode en beperkingen', srck='Waar elk cijfer vandaan komt',
     s71='Omzet, klanten, ticket: de kassa van de winkel, gelezen via de API van het panel (verkoopstatistieken per maand en dagelijkse P&amp;L). Exclusief btw.',
     s72='Foodcost: de marge die het panel op de verkoop van elke dag meet (recepten en grondstofprijzen van het panel), per maand samengeteld; receptanomalieën worden gefilterd. Sinds augustus stelt de cockpit de grondstoffenkost ook ticket per ticket samen. Het netwerkmodel voorziet 36 % grondstoffen en 2 % verpakking.',
@@ -263,7 +305,7 @@ def rendre(L):
         out.append('</svg>'); return ''.join(out)
     def tuile(k, v, s=''): return f'<div class="tile"><div class="k">{k}</div><div class="v">{v}</div><div class="s">{s}</div></div>'
     entete = lambda titre: f'<div class="hd"><span class="marque"><img class="logo" src="{LOGO}" alt="">Atelier by – Halle</span><span class="dr">{t["dr"].format(t=titre)}</span></div>'
-    pied = lambda n: f'<div class="ft"><span>{t["pied"]}</span><span>{t["lang"]} {n} / 7</span></div>'
+    pied = lambda n: f'<div class="ft"><span>{t["pied"]}</span><span>{t["lang"]} {n} / 9</span></div>'
     th = lambda liste: '<thead><tr>' + ''.join(f'<th class="l">{x}</th>' if i == 0 or x == '' else f'<th>{x}</th>' for i, x in enumerate(liste)) + '</tr></thead>'
     pages = []
     res7 = cum['res']; first = [x for x in mois if x['m'] == 2][0]
@@ -363,7 +405,39 @@ def rendre(L):
 <li>{t['k1']}</li><li>{t['k2']}</li><li>{t['k3'].format(v=fE(stats['meilleure']['res']))}</li>
 </ul></div></div>
 {pied(5)}</section>''')
-    # 6. La qualité et les photos
+    # 6. Les marges par catégorie et leur poids dans le chiffre (demande du 09/10/2026)
+    def barres_cat():
+        xs = MC[:12]; W, rh, ml = 340, 16, 128; Hh = rh * (len(xs) + 1) + 8; maxp = max(x['part'] for x in xs)
+        out = [f'<svg viewBox="0 0 {W} {Hh}" class="graph">']
+        for i, x in enumerate(xs):
+            y = 4 + i * rh; w = (W - ml - 58) * x['part'] / maxp; col = ZCOL[zoneM(x['marge'])]
+            out.append(f'<text x="{ml-5}" y="{y+10.5:.1f}" text-anchor="end" class="ax">{H(x["nom"][:26])}</text><rect x="{ml}" y="{y+2}" width="{w:.1f}" height="{rh-5}" rx="2" fill="{col}"/>'
+                       f'<text x="{ml+w+4:.1f}" y="{y+10.5:.1f}" class="axs">{nf(x["part"],1)} % · {(nf(x["marge"],0) + " %") if x["marge"] is not None else "—"}</text>')
+        pr = 100 * autresV / tv + sum(x['part'] for x in MC[12:]); y = 4 + len(xs) * rh; w = (W - ml - 58) * pr / maxp
+        out.append(f'<text x="{ml-5}" y="{y+10.5:.1f}" text-anchor="end" class="ax">{t["aut8"]}</text><rect x="{ml}" y="{y+2}" width="{w:.1f}" height="{rh-5}" rx="2" fill="#d9d2c6"/><text x="{ml+w+4:.1f}" y="{y+10.5:.1f}" class="axs">{nf(pr,1)} %</text>')
+        out.append('</svg>'); return ''.join(out)
+    lm = ''.join(f'<tr><td class="l">{H(x["nom"])}</td><td class="l"><small style="display:inline">{H(x["groupe"])}</small></td><td>{fP(x["part"])}</td><td>{fE(x["v"])}</td><td>{nf(x["q"])}</td>'
+                 f'<td style="color:{ZCOL[zoneM(x["marge"])]}">{fP(x["marge"],0) if x["marge"] is not None else "—"}</td><td>{("× " + nf(x["coef"],2)) if x["coef"] else "—"}</td><td>{fP(x["couv"],0)}</td></tr>' for x in MC)
+    lm += f'<tr class="part"><td class="l">{t["aut8"]} ({len(reste)})</td><td></td><td>{fP(100*autresV/tv)}</td><td>{fE(autresV)}</td><td>{nf(autresQ)}</td><td>{fP(autresM,0) if autresM is not None else "—"}</td><td>{("× " + nf(autresVK/autresCK,2)) if autresCK else "—"}</td><td>{fP(100*autresVK/autresV,0) if autresV else "—"}</td></tr>'
+    famT = fam[:3]; pF = 100 * sum(v for k, v in famT) / tv
+    lF = ', '.join(f'{H(k)} ({fP(100*v/tv,0)})' for k, v in famT)
+    hauts = [x for x in MC if x['marge'] is not None and x['marge'] >= 60]; bas = [x for x in MC if x['marge'] is not None and x['marge'] < 50]
+    lB = ', '.join(f'{H(x["nom"])} ({fP(x["marge"],0)})' for x in sorted(bas, key=lambda x: -x['v'])[:4])
+    lev = max((x for x in MC if x['marge'] is not None and x['marge'] < 60), key=lambda x: (60 - x['marge']) * x['part'], default=None)
+    pages.append(f'''<section class="page {L}">{entete(t['p8'])}
+<h2>{t['h8']}</h2><div class="s">{t['s8']}</div>
+<div class="deux" style="margin-bottom:3mm">
+<div><div class="sec">{t['g8']}</div>{barres_cat()}
+<div class="legende"><span class="sw" style="background:{ZCOL['ok']}"></span> {t['lg8'][0]} <span class="sw" style="background:{ZCOL['att']};margin-left:8px"></span> {t['lg8'][1]} <span class="sw" style="background:{ZCOL['ko']};margin-left:8px"></span> {t['lg8'][2]} <span class="sw" style="background:{ZCOL['mu']};margin-left:8px"></span> {t['lg8'][3]}</div></div>
+<div><div class="sec">{t['dit']}</div><ul class="pts">
+<li>{t['x1'].format(p=fP(pF,0), l=lF)}</li>
+<li>{t['x2'].format(c=fP(couvT,0), m=fP(margeT,1), f=fP(foodT,1), k=nf(coefT,2))}</li>
+<li>{t['x3'].format(a=fP(sum(x['part'] for x in hauts),0), b=fP(sum(x['part'] for x in bas),0), l=lB or '—')}</li>
+{('<li>' + t['x4'].format(n=H(lev['nom']), p=fP(lev['part'],0), m=fP(lev['marge'],0), e=fE(lev['v'] * (60 - lev['marge']) / 100)) + '</li>') if lev else ''}
+</ul></div></div>
+<table class="t serre">{th(t['th8'])}<tbody>{lm}</tbody><tfoot><tr class="tot"><td class="l">{t['tot8']}</td><td></td><td>100 %</td><td>{fE(tv)}</td><td>{nf(sum(x['q'] for x in MCall))}</td><td>{fP(margeT,0)}</td><td>× {nf(coefT,2)}</td><td>{fP(couvT,0)}</td></tr></tfoot></table>
+{pied(6)}</section>''')
+    # 7. La qualité et les photos
     grid = ''
     for c in choix:
         m = meta.get(c)
@@ -383,8 +457,16 @@ def rendre(L):
 <div class="s">{t['q5']}</div>
 <div class="photos">{grid}</div>
 <div class="note">{t['q6']}</div>
-{pied(6)}</section>''')
-    # 7. Sources
+{pied(7)}</section>''')
+    # 8. Les outils de gestion : les écrans du dashboard de Halle (demande du 09/10/2026)
+    ecr = [('outils/bureau-jour.png', '', t['oc'][0]), ('outils/tel-exploitation.png', 'tel', t['oc'][1]), ('outils/bureau-ops.png', '', t['oc'][2]), ('outils/modale-bureau.png', 'tel', t['oc'][3])]
+    pages.append(f'''<section class="page {L}">{entete(t['p9'])}
+<h2>{t['h9']}</h2><div class="s">{t['o9']}</div>
+<div class="outils">{''.join(f'<figure class="{cl}"><img src="{src}" alt=""><figcaption>{cap}</figcaption></figure>' for src, cl, cap in ecr)}</div>
+<div class="sec" style="margin-top:3mm">{t['dit']}</div>
+<ul class="pts deuxcol">{''.join(f'<li>{x}</li>' for x in t['ob'])}</ul>
+{pied(8)}</section>''')
+    # 9. Sources
     pages.append(f'''<section class="page {L}">{entete(t['p7'])}
 <h2>{t['h7']}</h2>
 <div class="cadre"><div class="k">{t['srck']}</div>
@@ -393,7 +475,7 @@ def rendre(L):
 <ul class="pts"><li>{t['l1']}</li><li>{t['l2']}</li><li>{t['l3']}</li><li>{t['l4']}</li><li>{t['l5']}</li></ul>
 <div class="sec" style="margin-top:5mm">{t['plust']}</div>
 <ul class="pts"><li>{t['pl1']}</li><li>{t['pl2']}</li></ul>
-{pied(7)}</section>''')
+{pied(9)}</section>''')
     return pages
 
 css = '''
@@ -445,6 +527,11 @@ table.t{width:100%;border-collapse:collapse;margin-bottom:4mm}
 .photos figure{margin:0}.photos img{width:100%;height:46mm;object-fit:cover;border-radius:6px;display:block}
 .photos figcaption{font-size:7pt;color:#7a736a;margin-top:1mm;line-height:1.3}
 .couv .deux{margin-top:2mm}
+.outils{display:grid;grid-template-columns:2fr 1fr;gap:3mm 4mm;margin-top:1mm}
+.outils figure{margin:0}.outils img{width:100%;height:68mm;object-fit:cover;object-position:top;border:1px solid #e6e0d8;border-radius:6px;display:block;background:#fbf9f5}
+.outils figure.tel img{object-fit:contain}.outils figcaption{font-size:7pt;color:#7a736a;margin-top:1mm;line-height:1.3}
+.pts.deuxcol{columns:2;column-gap:7mm}.pts.deuxcol li{break-inside:avoid}
+.nl table.t.serre td{padding:.7mm 1.8mm}
 .nl .pts{font-size:8.3pt}.nl .cadre{font-size:7.9pt}.nl .s{font-size:7.6pt}.nl .note{font-size:7.8pt}
 '''
 pages = rendre('fr') + rendre('nl')
