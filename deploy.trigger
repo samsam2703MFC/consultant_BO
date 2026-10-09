@@ -664,3 +664,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-08T20:03:27Z recette par l api du panel
 2026-10-09T11:57:07Z pnl mensuel panel
 2026-10-09T12:35:33Z envoi dossier halle
+2026-10-09T12:52:55Z coefficients produits
