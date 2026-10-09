@@ -64,20 +64,134 @@ function frTachesJour(string $shop): array
 }
 
 /** Les invendus des n derniers jours : pièces, coût, part du CA, motifs, produits. Une lecture du panel, gardée par le module invendus. */
+const FR_INVENDUS_CIBLE = 4.0;
 function frInvendus(string $shop, int $jours = 7): array
 {
+    // Le franchisé est suivi sur UNE mesure (demande du 09/10/2026) : la part des invendus dans le
+    // CA. Les pièces, les motifs et les produits restent sur l'écran Invendus et poubelle.
     static $caM = null; static $fen = null;
     $au = date('Y-m-d'); $du = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
-    if (!function_exists('invBilan')) { return ['lu' => false, 'du' => $du, 'au' => $au, 'motif' => 'module absent']; }
+    $base = ['lu' => false, 'du' => $du, 'au' => $au, 'jours' => $jours, 'part' => null, 'cible' => FR_INVENDUS_CIBLE, 'motif' => null];
+    if (!function_exists('invBilan')) { $base['motif'] = 'module absent'; return $base; }
     try {
         $b = invBilan((int) $shop, $du, $au, invLignes((int) $shop, $du, $au));
         if ($caM === null || $fen !== $du . $au) { $caM = invCaMagasins($du, $au); $fen = $du . $au; }
-    } catch (Throwable $e) { return ['lu' => false, 'du' => $du, 'au' => $au, 'motif' => $e->getMessage()]; }
-    if ($b === null) { return ['lu' => false, 'du' => $du, 'au' => $au, 'motif' => 'la poubelle du panel ne se lit pas']; }
+    } catch (Throwable $e) { $base['motif'] = $e->getMessage(); return $base; }
+    if ($b === null) { $base['motif'] = 'la poubelle du panel ne se lit pas'; return $base; }
     $ca = $caM[(int) $shop] ?? $caM[$shop] ?? null;
-    return ['lu' => true, 'du' => $du, 'au' => $au, 'pieces' => $b['pieces'] ?? null, 'cout' => $b['cout'] ?? null, 'caPerdu' => $b['caPerdu'] ?? null, 'references' => $b['references'] ?? 0,
-        'ca' => $ca, 'part' => $ca !== null && (float) $ca > 0 ? round(100 * (float) ($b['cout'] ?? 0) / (float) $ca, 1) : null,
-        'parMotif' => array_slice($b['parMotif'] ?? [], 0, 4), 'produits' => array_slice($b['produits'] ?? [], 0, 5)];
+    $cout = (float) ($b['cout'] ?? 0);
+    $caOk = $ca !== null && (float) $ca > 0;
+    return ['lu' => true, 'du' => $du, 'au' => $au, 'jours' => $jours, 'cout' => round($cout, 2), 'ca' => $ca,
+        'part' => $caOk ? round(100 * $cout / (float) $ca, 1) : null, 'cible' => FR_INVENDUS_CIBLE, 'motif' => $caOk ? null : 'CA de la période inconnu'];
+}
+function frRevues(string $shop, int $jours = 30): array
+{
+    // Les notes que le consultant pose sur les tâches photographiées (mac_task_review, miroir local
+    // des revues du panel) : les points moyens, et TOUTES les infractions — chaque tâche notée sous
+    // le seuil du barème (3 mineur, 2 majeur, 1 critique), avec sa récidive et sa suite.
+    $au = date('Y-m-d'); $du = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $sig = function_exists('setting') ? setting('signalement', []) : [];
+    $seuil = is_array($sig) && isset($sig['seuil']) ? (int) $sig['seuil'] : 4;
+    $noms = [];
+    foreach ((is_array($sig) && !empty($sig['niveaux'])) ? (array) $sig['niveaux'] : [] as $n) { if (is_array($n) && isset($n['n'])) { $noms[(int) $n['n']] = (string) ($n['nom'] ?? ''); } }
+    $defaut = [5 => 'Exemplaire', 4 => 'Conforme', 3 => 'Non conforme — mineur', 2 => 'Non conforme — majeur', 1 => 'Non conforme — critique'];
+    $out = ['lu' => false, 'du' => $du, 'au' => $au, 'jours' => $jours, 'seuil' => $seuil, 'notees' => 0, 'moyenne' => null, 'parNote' => [],
+        'nc' => 0, 'mineures' => 0, 'majeures' => 0, 'critiques' => 0, 'infractions' => [], 'motif' => null];
+    foreach ([5, 4, 3, 2, 1] as $n) { $out['parNote'][] = ['note' => $n, 'nom' => $noms[$n] ?? $defaut[$n], 'n' => 0]; }
+    $fenDu = date('Y-m-d', strtotime($du . ' -6 days'));
+    try {
+        $rows = Db::rows('SELECT id_task, review_date, rating, is_accepted, comment, consultant_name FROM mac_task_review'
+            . ' WHERE id_shop = ? AND review_date BETWEEN ? AND ? ORDER BY review_date', [(int) $shop, $fenDu, $au]);
+    } catch (Throwable $e) { $out['motif'] = 'les revues des tâches ne se lisent pas'; return $out; }
+    $out['lu'] = true;
+    $estNC = static fn (array $r): bool => ($r['rating'] !== null && (int) $r['rating'] < $seuil) || ($r['is_accepted'] !== null && (int) $r['is_accepted'] === 0);
+    $parTache = []; $somme = 0.0; $vus = [];
+    foreach ($rows as $r) {
+        $t = (int) $r['id_task']; $j = (string) $r['review_date']; $note = $r['rating'] !== null ? (int) $r['rating'] : null;
+        $parTache[$t][] = ['jour' => $j, 'note' => $note, 'nc' => $estNC($r)];
+        if ($j < $du) { continue; }
+        $vus[$t] = true;
+        if ($note === null) { continue; }
+        $out['notees']++; $somme += $note;
+        foreach ($out['parNote'] as $k => $p) { if ($p['note'] === $note) { $out['parNote'][$k]['n']++; } }
+    }
+    $out['moyenne'] = $out['notees'] > 0 ? round($somme / $out['notees'], 1) : null;
+    // Le nom de la tâche : le relevé quotidien (le plus récent), le référentiel, sinon l'identifiant.
+    $nomsT = []; $vu = [];
+    try {
+        foreach (Db::rows("SELECT id_task, nom FROM ceo_tache_jour WHERE id_shop = ? AND jour >= ? AND nom <> '' ORDER BY jour DESC", [(int) $shop, $fenDu]) as $r) {
+            $t = (int) $r['id_task']; if (isset($vu[$t])) { continue; } $vu[$t] = true; $nomsT[$t] = trim((string) $r['nom']);
+        }
+    } catch (Throwable $e) { /* sans relevé : le référentiel */ }
+    foreach (function_exists('todoTaskNames') ? (array) todoTaskNames() : [] as $t => $n) { $nomsT[(int) $t] = $nomsT[(int) $t] ?? (string) $n; }
+    $reste = array_keys(array_diff_key($vus, $nomsT));
+    if ($reste !== []) {
+        try {
+            foreach (Db::rows('SELECT id_task, nom FROM ceo_tache_jour WHERE id_task IN (' . implode(',', array_fill(0, count($reste), '?')) . ") AND nom <> '' ORDER BY jour DESC", $reste) as $r) {
+                $t = (int) $r['id_task']; $nomsT[$t] = $nomsT[$t] ?? trim((string) $r['nom']);
+            }
+        } catch (Throwable $e) { /* l'identifiant, jamais un nom inventé */ }
+    }
+    foreach ($rows as $r) {
+        $j = (string) $r['review_date'];
+        if ($j < $du || !$estNC($r)) { continue; }
+        $t = (int) $r['id_task']; $note = $r['rating'] !== null ? (int) $r['rating'] : null;
+        $niveau = $note === null ? 'mineure' : ($note <= 1 ? 'critique' : ($note === 2 ? 'majeure' : 'mineure'));
+        $out['nc']++; $out[$niveau . 's']++;
+        // Récidive : les jours non conformes de la même tâche sur les sept jours qui finissent là ;
+        // suite : la première note posée après, conforme ou non.
+        $debRec = date('Y-m-d', strtotime($j . ' -6 days')); $jRec = []; $suite = null;
+        foreach ($parTache[$t] as $h) {
+            if ($h['nc'] && $h['jour'] >= $debRec && $h['jour'] <= $j) { $jRec[$h['jour']] = true; }
+            if ($suite === null && $h['jour'] > $j && $h['note'] !== null) { $suite = ['jour' => $h['jour'], 'note' => $h['note'], 'conforme' => !$h['nc']]; }
+        }
+        $com = $r['comment'] !== null ? trim((string) $r['comment']) : '';
+        $out['infractions'][] = ['jour' => $j, 'taskId' => (string) $t, 'tache' => $nomsT[$t] ?? ('Tâche #' . $t), 'note' => $note, 'niveau' => $niveau,
+            'niveauNom' => $note !== null ? ($noms[$note] ?? $defaut[$note] ?? ('note ' . $note)) : 'refusée sans note',
+            'comment' => $com !== '' ? $com : null, 'consultant' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+            'recidive' => count($jRec) > 1 ? count($jRec) : null, 'suite' => $suite];
+    }
+    usort($out['infractions'], fn ($a, $b) => strcmp($b['jour'], $a['jour']));
+    return $out;
+}
+function frReclamationsTous(): array
+{
+    // Une seule lecture du panel pour tous les magasins (la fiche comme le tableau).
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    if (!function_exists('ep_fournisseurs_reclamations')) { return $cache = ['indispo' => true, 'motif' => 'module absent']; }
+    $get = $_GET; $_GET = ['mois' => '2'];
+    try { $r = ep_fournisseurs_reclamations(); } catch (Throwable $e) { $r = ['indispo' => true, 'motif' => $e->getMessage()]; }
+    $_GET = $get;
+    return $cache = is_array($r) ? $r : ['indispo' => true, 'motif' => 'sans réponse'];
+}
+function frReclamations(string $shop, int $jours = 30): array
+{
+    // Les réclamations fournisseur du magasin (panel, material-complaints) : combien, lesquelles
+    // restent sans réponse, ce qui est réclamé.
+    $au = date('Y-m-d'); $du = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $r = frReclamationsTous();
+    if (!empty($r['indispo'])) { return ['lu' => false, 'du' => $du, 'au' => $au, 'jours' => $jours, 'n' => 0, 'ouvertes' => 0, 'motif' => (string) ($r['motif'] ?? 'le panel n’a pas rendu les réclamations')]; }
+    $n = 0; $ouvertes = 0; $acceptees = 0; $refusees = 0; $montant = 0.0; $parF = []; $dern = [];
+    foreach ((array) ($r['lignes'] ?? []) as $l) {
+        if (!is_array($l) || (string) ($l['shopId'] ?? '') !== $shop) { continue; }
+        $le = (string) ($l['le'] ?? '');
+        if ($le !== '' && $le < $du) { continue; }
+        $n++;
+        $ouverte = !empty($l['ouverte']); if ($ouverte) { $ouvertes++; }
+        $st = (string) ($l['statut'] ?? '');
+        if ($st === 'ACCEPTED') { $acceptees++; } elseif ($st === 'REJECTED') { $refusees++; }
+        if (isset($l['montant']) && $l['montant'] !== null) { $montant += (float) $l['montant']; }
+        $f = (string) ($l['fournisseur'] ?? ''); $f = $f !== '' ? $f : 'Fournisseur inconnu'; $parF[$f] = ($parF[$f] ?? 0) + 1;
+        if (count($dern) < 5) {
+            $dern[] = ['id' => $l['id'] ?? null, 'le' => $le, 'fournisseur' => (string) ($l['fournisseur'] ?? ''), 'reference' => (string) ($l['reference'] ?? ''),
+                'qte' => $l['qte'] ?? null, 'unite' => (string) ($l['unite'] ?? ''), 'motif' => (string) ($l['motif'] ?? ''), 'statut' => $st, 'ouverte' => $ouverte,
+                'reponse' => (string) ($l['reponse'] ?? ''), 'montant' => $l['montant'] ?? null];
+        }
+    }
+    arsort($parF);
+    return ['lu' => true, 'du' => $du, 'au' => $au, 'jours' => $jours, 'n' => $n, 'ouvertes' => $ouvertes, 'acceptees' => $acceptees, 'refusees' => $refusees,
+        'montant' => round($montant, 2), 'parFournisseur' => array_map(fn ($k, $v) => ['nom' => $k, 'n' => $v], array_keys($parF), array_values($parF)), 'dernieres' => $dern, 'motif' => null];
 }
 
 /** Les objectifs du moment : produits (campagne d'objectifs produits) et clients (campagnes marketing en cours). */
@@ -244,7 +358,7 @@ function ep_franchises_fiche(): array
     foreach ($cadre as $l) { if ($l['consultant'] !== '' && !isset($cons[$l['consultant']])) { $cons[$l['consultant']] = ['id' => $l['consultant'], 'nom' => $l['consultantNom'], 'types' => []]; } if ($l['consultant'] !== '') { $cons[$l['consultant']]['types'][] = $l['typeNom']; } }
     return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'aujourdhui' => date('Y-m-d'),
         'feu' => $b ? ['feu' => $b['feu'], 'motifs' => $b['motifs'], 'due' => $b['due']] : null, 'consultants' => array_values($cons),
-        'journalier' => ['tachesJour' => frTachesJour($shop), 'taches' => frTachesJours($shop), 'invendus' => frInvendus($shop), 'objectifs' => frObjectifs($shop),
+        'journalier' => ['tachesJour' => frTachesJour($shop), 'taches' => frTachesJours($shop), 'invendus' => frInvendus($shop), 'revues' => frRevues($shop), 'reclamations' => frReclamations($shop), 'objectifs' => frObjectifs($shop),
             'remarques' => frRemarques($shop), 'google' => $etat['google'][$shop] ?? null, 'ca' => $etat['ca'][$shop] ?? null],
         'terrain' => ['visites' => frVisites($shop), 'plans' => $etat['plans'], 'cadre' => $cadre, 'msp' => frMsp($shop), 'mspVisites' => $etat['msp'][$shop] ?? [],
             'conformite' => frConformite($shop), 'scoring' => frScoring($shop), 'plano' => $b['plano'] ?? null, 'equipe' => $etat['equipe'][$shop] ?? null,
@@ -262,13 +376,15 @@ function ep_franchises(): array
     $out = [];
     foreach ($etat['boutiques'] as $b) {
         $sid = (string) $b['id'];
-        $t = frTachesJours($sid); $inv = frInvendus($sid); $msp = frMsp($sid); $s = $scPar[$sid] ?? null;
+        $t = frTachesJours($sid); $inv = frInvendus($sid); $rv = frRevues($sid); $rc = frReclamations($sid); $msp = frMsp($sid); $s = $scPar[$sid] ?? null;
         $cadre = function_exists('vcCadreDe') ? vcCadreDe($sid) : [];
         $resp = ''; foreach ($cadre as $l) { if ($l['consultant'] !== '' && $resp === '') { $resp = $l['consultantNom']; } }
         $out[] = ['id' => $sid, 'nom' => $b['nom'], 'court' => $b['court'], 'fr' => $b['fr'], 'feu' => $b['feu'], 'motifs' => $b['motifs'], 'due' => $b['due'], 'responsable' => $resp,
             'journalier' => ['scoring' => $s ? ['total' => $s['total'], 'etoiles' => $s['etoiles'], 'rang' => $s['rang'], 'n' => $s['n'], 'sur' => $s['sur']] : null,
                 'taches' => ['pct' => $t['pct'], 'joursObligManques' => $t['joursObligManques'], 'motif' => $t['motif']],
-                'invendus' => ['lu' => $inv['lu'], 'part' => $inv['part'] ?? null, 'pieces' => $inv['pieces'] ?? null],
+                'invendus' => ['lu' => $inv['lu'], 'part' => $inv['part'], 'cible' => $inv['cible']],
+                'revues' => ['lu' => $rv['lu'], 'moyenne' => $rv['moyenne'], 'notees' => $rv['notees'], 'nc' => $rv['nc'], 'mineures' => $rv['mineures'], 'majeures' => $rv['majeures'], 'critiques' => $rv['critiques'], 'motif' => $rv['motif']],
+                'reclamations' => ['lu' => $rc['lu'], 'n' => $rc['n'], 'ouvertes' => $rc['ouvertes'], 'motif' => $rc['motif']],
                 'google' => $b['google'] ? ['note' => $b['google']['note'], 'avis' => $b['google']['avis'], 'faibles' => $b['google']['faibles']] : null,
                 'ca' => $b['ca'] ? ['ca' => $b['ca']['ca'], 'pct' => $b['ca']['pct']] : null],
             'terrain' => ['derniereVisite' => $b['derniereVisite'], 'prochaineVisite' => $b['prochaineVisite'], 'plansOuverts' => $b['plansOuverts'], 'p0' => $b['p0'], 'plano' => $b['plano'],

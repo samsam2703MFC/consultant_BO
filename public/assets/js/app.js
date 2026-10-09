@@ -1336,7 +1336,6 @@ class App {
         ['scoringTri', 'Scoring du trimestre', 0],
         { sub: 'Suivi journalier et opérations', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
-          ['invendus', 'Invendus et poubelle', 0],
           ['mktObjectifs', 'Objectifs', 0],
           ['remarquesOperateurs', 'Remarques opérateurs', 0],
           ['reputation', 'Note Google et avis', 0],
@@ -1354,6 +1353,9 @@ class App {
         ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements']],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
         ['creux', 'Jours creux', 0],
+        // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
+        // le détail — pièces, motifs, produits — reste ici, sous Magasins.
+        ['invendus', 'Invendus et poubelle', 0],
         ['plan', 'Plan de développement', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
