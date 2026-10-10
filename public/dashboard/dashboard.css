@@ -1362,17 +1362,13 @@ body.pp-emb{background:var(--color-bg)}
 /* La vitrine, maquette E (10/10/2026) : badges de filtre, une liste par durée de vie, la journée en cases */
 .vt-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 16px 6px}
 .vt-res{display:flex;align-items:baseline;gap:8px;margin-right:auto}.vt-res b{font:400 30px var(--font-display);color:#9b1324}.vt-res b.ok{color:#2d7a3e}.vt-res span{font:600 12.5px var(--font-ui);color:var(--color-text-muted)}
-.vt-fs{display:flex;gap:8px;flex-wrap:wrap}
-.vt-f{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 12px 6px 10px;font:700 12.5px var(--font-ui);border:1.5px solid transparent;background:#f3efe9;color:var(--color-text-muted)}
-.vt-f i{width:10px;height:10px;border-radius:50%}.vt-f b{font:400 16px var(--font-display);margin-left:2px}
-.vt-f.ko i{background:#C0182B}.vt-f.att i{background:#E08A1E}.vt-f.ok i{background:#2d7a3e}
-.vt-f.on.ko{background:#fbe3e6;border-color:#C0182B;color:#9b1324}.vt-f.on.att{background:#fdecd6;border-color:#E08A1E;color:#8a4e05}.vt-f.on.ok{background:#e3f0e6;border-color:#2d7a3e;color:#1f5a2c}
-.vt-f:not(.on){opacity:.75}.vt-f:focus-visible{outline:2px solid #1d1d1b;outline-offset:2px}
 .vt-b{padding:8px 16px 4px;border-top:.5px solid var(--color-border-tertiary)}
-.vt-h{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0}.vt-h:focus-visible{outline:2px solid #1d1d1b;outline-offset:2px;border-radius:6px}
+.vt-h{display:flex;align-items:center;gap:8px;padding:6px 0}.vt-ht{all:unset;box-sizing:border-box;flex:1;min-width:0;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.vt-ht:focus-visible{outline:2px solid #1d1d1b;outline-offset:2px;border-radius:6px}
+.vt-q{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:700 10.5px var(--font-ui);color:var(--color-text-muted);padding:2px 3px;border-radius:4px}.vt-q i{width:10px;height:10px;border-radius:2px;border:1.5px solid;box-sizing:border-box}
+.vt-q.ko i{border-color:#C0182B}.vt-q.att i{border-color:#E08A1E}.vt-q.ok i{border-color:#2d7a3e}.vt-q.on.ko i{background:#C0182B}.vt-q.on.att i{background:#E08A1E}.vt-q.on.ok i{background:#2d7a3e}.vt-q:not(.on){opacity:.6}.vt-q:hover{background:#f3efe9}.vt-q:focus-visible{outline:2px solid #1d1d1b}
 .vt-h .fl{font:700 12px var(--font-ui);color:var(--color-primary);width:12px}.vt-h .rs{font:700 12.5px var(--font-ui);color:#9b1324;margin-left:6px}.vt-h .rs b{font:400 16px var(--font-display)}.vt-h .rs.ok{color:#1f5a2c}
 .vt-b.on{background:linear-gradient(#fff,#fff)}.vt-b:not(.on):hover{background:#fcfaf7}.vt-h b{font:400 20px var(--font-display)}.vt-h .r{font:600 11.5px var(--font-ui);color:var(--color-text-muted)}
-.vt-h .cpt{margin-left:auto;display:flex;gap:10px}.vt-h .c{display:inline-flex;align-items:center;gap:4px;font:700 12px var(--font-ui)}.vt-h .c i{width:8px;height:8px;border-radius:50%}.vt-h .c.ko i{background:#C0182B}.vt-h .c.att i{background:#E08A1E}.vt-h .c.ok i{background:#2d7a3e}
+.vt-h .cpt{margin-left:auto;display:flex;gap:4px;flex:0 0 auto}
 .vt-t,.vt-l{display:grid;grid-template-columns:minmax(220px,1.1fr) 2.2fr 130px 150px;gap:14px;align-items:center}
 .vt-ax{display:flex;justify-content:space-between;font:700 9.5px var(--font-ui);color:var(--color-text-muted);letter-spacing:.03em}.vt-ax.l{justify-content:flex-start}
 .vt-l{background:#faf7f3;border-radius:12px;padding:8px 12px;margin:5px 0;cursor:pointer;border-left:4px solid transparent}.vt-l:hover{background:#f4efe8}
