@@ -2101,7 +2101,7 @@
   function opTuile(cls, k, v, s) { return `<div class="op-tl ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
   /* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie : quantité, nom, prix moyen
-   * encaissé, CA, marge et heures de vente, lus dans les mêmes tickets (catégorie « Bundle »). */
+   * encaissé, CA, marge, première et dernière vente, lus dans les mêmes tickets (catégorie « Bundle »). */
   const BUNDLE_RE = /bundle|promotion/i;
   function bundlesDe(st) {
     if (st.bundles && Array.isArray(st.bundles.lignes)) { return st.bundles; }
@@ -2118,9 +2118,6 @@
     if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
     const B = bundlesDe(st);
     if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('la journée · catégorie Bundle')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div></div>`; }
-    const hs = (st.heures || []).map(l => l.h).concat(...B.lignes.map(x => Object.keys(x.heures || {}).map(Number)));
-    const h0 = hs.length ? Math.min(...hs) : 7, h1 = hs.length ? Math.max(...hs) : 19;
-    const spark = x => { if (!x.heures) { return ''; } const mx = Math.max(1, ...Object.values(x.heures)); let t = ''; for (let h = h0; h <= h1; h++) { const n = x.heures[h] || 0; t += `<i class="${n ? 'on' : ''}" style="height:${n ? Math.max(18, Math.round(100 * n / mx)) : 6}%" title="${h} h · ${nf(n, 0)} vendu${n > 1 ? 's' : ''}"></i>`; } return `<span class="op-bun-sp" title="de ${h0} h à ${h1} h">${t}</span>`; };
     const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
     const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
     // La composition : la recette du bundle au panel (la même lecture que la fiche produit), lue une fois.
@@ -2130,10 +2127,10 @@
       const t = L.slice(0, 4).map(l => (l.qte == null ? '' : (!l.unite || /^pc/i.test(l.unite) ? nf(l.qte, l.qte % 1 ? 1 : 0) + ' × ' : nf(l.qte, l.qte % 1 ? 2 : 0) + ' ' + l.unite + ' ')) + l.nom).join(' + ') + (L.length > 4 ? ' + ' + (L.length - 4) + ' autre' + (L.length > 5 ? 's' : '') : '');
       return `<small class="op-bun-co">${esc(t)}</small>`; };
     const lignes = B.lignes.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, la recette et la marge">
-      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td><td class="op-bun-h">${spark(x)}</td></tr>`).join('');
+      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td></tr>`).join('');
     return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
       <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
-      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th><th class="op-bun-h">Heures</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
   }
 
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de

@@ -1806,9 +1806,7 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-bun-tab tr.clic{cursor:pointer}.op-bun-tab tr.clic:hover td{background:var(--color-background-secondary)}
 .op-bun-tab td.op-bun-q{font-family:var(--font-display);font-size:18px;color:var(--color-primary);width:1%}
 .op-bun-tab .ok,.op-bun-k .ok{color:#2d7a3e}.op-bun-tab .att,.op-bun-k .att{color:#B26A00}.op-bun-tab .ko,.op-bun-k .ko{color:#C0182B}.op-bun-tab .mu{color:var(--color-text-muted)}
-.op-bun-sp{display:inline-flex;align-items:flex-end;gap:2px;height:22px;min-width:70px}
-.op-bun-sp i{flex:1;min-width:3px;max-width:7px;background:#E2DCD3;border-radius:2px 2px 0 0}.op-bun-sp i.on{background:var(--color-primary)}
 .op-bun-vide{padding:4px 16px 16px;color:var(--color-text-muted);font-size:13px}
 .op-bun-tab td small{white-space:nowrap}
 .op-bun-tab td small.op-bun-co{white-space:normal;color:var(--color-text);font-weight:600}
-@media (max-width:560px){.op-bun-k{grid-template-columns:repeat(2,minmax(0,1fr))}.op-bun-tab .op-bun-h{display:none}}
+@media (max-width:560px){.op-bun-k{grid-template-columns:repeat(2,minmax(0,1fr))}}
