@@ -2267,8 +2267,97 @@
       <div class="op-hleg"><span><b>12</b> le prévu de l’heure, la prévision des ${U.base && U.base.lus ? U.base.lus : 6} derniers ${esc(U.jourNom || '')}${/s$/.test(U.jourNom || '') ? '' : 's'}</span><span><small>9</small> en petit, le vendu (<b class="plus">vert</b> : bien au-dessus du prévu, <b class="moins">orange</b> : bien en dessous)</span><span><i class="r"></i>heure passée</span><span><i class="now"></i>l’heure en cours</span><span><i class="p"></i>à venir</span><span><i class="att"></i>la vitrine sera basse</span><span><i class="ko"></i>la vitrine sera vide : vente perdue</span>${aide}</div>`;
   }
 
+  /* La vitrine au bureau (10/10/2026, maquette E retravaillée) : ce qui va manquer, une liste par durée de vie,
+   * filtrée par trois badges — rouge : vide maintenant, orange : va manquer d'ici la fermeture, vert : en ordre
+   * (replié au départ, pour consultation). Short et medium life se recuisent au rythme des 6 derniers mêmes jours,
+   * heure par heure : la journée du produit en cases, et la prochaine cuisson où l'ajouter. Long life est un stock
+   * en magasin : face à trois jours de vente. Un clic sur un produit ouvre sa fiche. */
+  const VIT_REGLE = { S: 'vendu le jour même · recuit plusieurs fois par jour, au rythme des ventes heure par heure', M: 'se garde 2 à 3 jours · recuit au rythme des ventes heure par heure', L: 'stock en magasin · non périssable ou longue DLC' };
+  const VIT_F = [['ko', 'Vide maintenant'], ['att', 'Va manquer'], ['ok', 'En ordre']];
+  function vitLire(D, p) {
+    const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], nowH = now == null ? 99 : Math.floor(now / 60);
+    const prevH = h => +((p.prevH || {})[h]) || 0, caseH = h => (Array.isArray(p.cases) ? p.cases : []).find(c => c.h === h);
+    if (opVieDe(p) === 'L') {
+      const pj = opParJour(p), st = Math.max(0, +p.stock || 0), n = Math.max((p.conseil && +p.conseil.pieces) || 0, Math.ceil(pj * OP_VIE_JOURS - st - 1e-6));
+      if (pj <= 0.3) { return { c: 'ok', st, pj }; }
+      if (Math.round(+p.stock || 0) <= 0) { return { c: 'ko', st, pj, n, txt: 'plus en stock' }; }
+      if (st < pj * OP_VIE_JOURS || opSous(p)) { return { c: 'att', st, pj, n, txt: 'stock pour ' + nf(st / pj, 1) + ' jour' + (st / pj >= 2 ? 's' : '') }; }
+      return { c: 'ok', st, pj };
+    }
+    // La première heure au bout de laquelle il n'y en a plus alors que des clients le demandent encore ensuite
+    // (la prévision de l'heure suivante, et au moins une demi-pièce d'ici la fermeture) : la dernière pièce vendue
+    // en fin de journée n'est pas un manque.
+    let hv = null;
+    for (const h of H) { const c = caseH(h); if (!c || +c.q > 0.05) { continue; } const apres = H.filter(k => k > h).reduce((a, k) => a + prevH(k), 0); if (prevH(h + 1) >= 0.3 && apres >= 0.5) { hv = h; break; } }
+    if (hv == null && (p.verdict === 'rupture' || p.verdict === 'manque') && p.manque && p.manque.h != null) { hv = +p.manque.h; }
+    if (hv == null) { return { c: 'ok' }; }
+    const q = p.manque && +p.manque.q >= 0.5 ? +p.manque.q : ((p.conseil && +p.conseil.pieces) || Math.max(1, Math.ceil(H.filter(h => h >= hv).reduce((a, h) => a + prevH(h), 0))));
+    const n = (p.conseil && +p.conseil.pieces) || Math.ceil(q);
+    return hv <= nowH ? { c: 'ko', h: hv, q, n, txt: (now == null ? 'vide à ' : 'vide depuis ') + hv + ' h' } : { c: 'att', h: hv, q, n, txt: 'vide vers ' + hv + ' h' };
+  }
+  /** La journée d'un produit, une case par heure : vert s'il y en a, orange si la vitrine sera basse, rouge si elle est vide alors que des clients le demandent. */
+  function vitBande(D, p) {
+    const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], nowH = now == null ? 99 : Math.floor(now / 60);
+    const prevH = h => +((p.prevH || {})[h]) || 0;
+    return `<span class="vt-bd">${H.map(h => { const c = (Array.isArray(p.cases) ? p.cases : []).find(x => x.h === h);
+      if (!c) { return '<i class="vd"></i>'; }
+      const st = +c.q, fut = h > nowH, d = h < nowH ? (+c.v || 0) : prevH(h) + prevH(h + 1);
+      const cls = st <= 0.05 ? (prevH(h + 1) >= 0.3 || (h === H[H.length - 1] && d >= 0.3) ? 'ko' : 'vd') : (fut && st < prevH(h + 1) ? 'att' : 'ok');
+      return `<i class="${cls}${fut ? ' fut' : ''}${h === nowH ? ' now' : ''}" title="${h} h · ${fN(Math.max(0, st))} en vitrine${fut ? ' (prévu)' : ''} · ${h < nowH ? 'vendu ' + fN(+c.v || 0) : 'prévu ' + nf(prevH(h), 1)}"></i>`; }).join('')}</span>`;
+  }
+  function opVitrineE(D) {
+    const { now, U, prods } = D;
+    const H = Array.isArray(U.heures) ? U.heures : [], fin = now == null;
+    const jour = esc(U.jourNom || '') + (/s$/.test(U.jourNom || '') ? '' : 's');
+    const suite = fin ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
+    const F = S.vitF || (S.vitF = { ko: true, att: true, ok: false });
+    const L = prods.map(p => Object.assign({ p, e: vitLire(D, p) }));
+    const nb = c => L.filter(x => x.e.c === c).length;
+    const manque = L.filter(x => x.e.c !== 'ok'), eur = manque.filter(x => opVieDe(x.p) !== 'L').reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
+    const puces = VIT_F.map(([c, nom]) => `<button type="button" class="vt-f ${c}${F[c] ? ' on' : ''}" data-vitf="${c}" aria-pressed="${F[c] ? 'true' : 'false'}"><i></i>${fin && c === 'ko' ? 'A manqué' : nom}<b>${fN(nb(c))}</b></button>`).join('');
+    const ordre = { ko: 0, att: 1, ok: 2 };
+    const geste = (x, k) => {
+      if (x.e.c === 'ok') { const fj = Math.max(0, +x.p.finJour || 0); return k === 'L' ? `<span class="g ok">en stock<small>${x.e.pj ? nf(x.e.st / x.e.pj, 1) + ' jours de vente' : ''}</small></span>` : `<span class="g ok">${fj >= 0.5 ? fN(fj) : '—'}<small>${fj >= 0.5 ? 'restera ce soir' : 'juste assez'}</small></span>`; }
+      if (k === 'L') { const pr = opProchaine(U, x.p, now); return pr ? `<span class="g">${fN(pr.q)}<small>cuisson de ${esc(pr.de)}</small></span>` : `<span class="g">+${fN(x.e.n)}<small>pour tenir ${OP_VIE_JOURS} jours</small></span>`; }
+      if (fin) { return `<span class="g">${fN(x.e.q)}<small>ventes perdues</small></span>`; }
+      return `<span class="g">+${fN(x.e.n)}<small>${suite ? 'dans la cuisson de ' + esc(suite.de) : 'à recuire'}</small></span>`;
+    };
+    const attrs = p => `data-fprod="${esc(p.pid)}" data-fnom="${esc(p.nom)}" data-fq="${p.vendu != null ? p.vendu : ''}" data-fv="${p.vendu != null && p.prix ? (+p.vendu * +p.prix).toFixed(2) : ''}" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}" role="button" tabindex="0"`;
+    const ligne = (x, k) => {
+      const p = x.p, e = x.e;
+      const w = k === 'L' ? `stock <b>${fN(e.st || 0)}</b> · ${e.pj ? nf(e.pj, 1) + ' vendus par jour' : 'pas de vente lue'}${e.txt ? ' · <b>' + esc(e.txt) + '</b>' : ''}`
+        : (e.c === 'ok' ? `sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · en vitrine ${fN(Math.max(0, +p.stock || 0))}` : `<b>${esc(e.txt)}</b> · sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)}`);
+      const vis = k === 'L' ? `<span class="vt-jl"><i class="${e.c}" style="width:${e.pj > 0 ? Math.min(100, 100 * (e.st || 0) / (e.pj * OP_VIE_JOURS)).toFixed(0) : 0}%"></i></span>` : vitBande(D, p);
+      const mq = e.c === 'ok' ? '' : (k === 'L' ? `<b>${fN(e.n)}</b>pour ${OP_VIE_JOURS} jours de vente` : `<b>${fN(e.q)} pièce${e.q >= 2 ? 's' : ''}</b>${fE((e.q || 0) * (+p.prix || 0))} de ventes`);
+      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="la fiche du produit"><span class="n"><i class="pt ${e.c}"></i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small><span class="w">${w}</span></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
+    };
+    const blocs = OP_VIES.map(k => {
+      const B = L.filter(x => opVieDe(x.p) === k);
+      if (!B.length) { return ''; }
+      const V = B.filter(x => F[x.e.c]).sort((a, b) => (ordre[a.e.c] - ordre[b.e.c]) || ((a.e.h ?? 99) - (b.e.h ?? 99)) || ((b.e.q || 0) - (a.e.q || 0)) || a.p.nom.localeCompare(b.p.nom));
+      const tout = !!(S.vitTout || {})[k], MAX = 12, vus = tout ? V : V.slice(0, MAX);
+      const cpt = ['ko', 'att', 'ok'].map(c => { const n = B.filter(x => x.e.c === c).length; return n ? `<span class="c ${c}"><i></i>${fN(n)}</span>` : ''; }).join('');
+      // Chaque durée de vie est une liste déroulante (10/10/2026) : l'en-tête résume, le détail s'ouvre au clic.
+      const ouvert = !!(S.vitOuv || {})[k];
+      const M = B.filter(x => x.e.c !== 'ok'), aCuire = M.reduce((a, x) => a + (x.e.n || 0), 0), eurB = k === 'L' ? 0 : M.reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
+      const resB = !M.length ? '<span class="rs ok">✓ rien ne va manquer</span>'
+        : `<span class="rs">${fN(M.length)} ${fin ? 'ont manqué' : 'vont manquer'}${aCuire && !fin ? ' · <b>+' + fN(aCuire) + '</b> ' + (k === 'L' ? 'à refaire' : 'à cuire') : ''}${eurB >= 1 ? ' · ' + fE(eurB) + (fin ? ' perdus' : ' à sauver') : ''}</span>`;
+      const axe = k === 'L' ? '<div class="vt-ax l"><span>stock face à ' + OP_VIE_JOURS + ' jours de vente</span></div>' : `<div class="vt-ax">${H.map(h => `<span>${h} h</span>`).join('')}</div>`;
+      const vide = !V.length ? `<div class="vt-vide">${F.ko || F.att ? (B.some(x => x.e.c !== 'ok') ? 'rien dans les filtres choisis' : '✓ rien ne va manquer d’ici la fermeture') : 'aucun produit dans les filtres choisis'}</div>` : '';
+      return `<div class="vt-b${ouvert ? ' on' : ''}"><button type="button" class="vt-h" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf. · ${esc(VIT_REGLE[k])}</span>${resB}<span class="cpt">${cpt}</span></button>
+        ${ouvert ? `${V.length ? `<div class="vt-t"><span></span>${axe}<span></span><span></span></div>` : ''}${vus.map(x => ligne(x, k)).join('')}${vide}
+        ${V.length > MAX ? `<button type="button" class="vt-plus" data-vitall="${k}">${tout ? '▴ replier' : (V.length - MAX === 1 ? '▸ voir le dernier' : '▸ voir les ' + fN(V.length - MAX) + ' autres')}</button>` : ''}` : ''}</div>`;
+    }).join('');
+    const tete = `<span class="db-mini">${fin ? 'journée terminée' : 'à ' + esc(U.maintenant || opHM(now))} · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${jour}</span><span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
+    const resume = manque.length ? `<b>${fN(manque.length)}</b><span>produit${manque.length > 1 ? 's' : ''} ${fin ? 'ont manqué' : 'vont manquer d’ici la fermeture'}${eur >= 1 ? ' · ' + fE(eur) + ' de ventes ' + (fin ? 'perdues' : 'à sauver') : ''}</span>` : `<b class="ok">✓</b><span>rien ne va manquer d’ici la fermeture</span>`;
+    return `<div class="db-card op-bloc vt"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>
+      <div class="vt-top"><span class="vt-res">${resume}</span><span class="vt-fs">${puces}</span></div>${blocs}
+      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span><span>une case par heure · cadre noir : maintenant · pâle : à venir · un clic ouvre la fiche du produit</span></div></div>`;
+  }
+
   /** La carte « La vitrine » : trois onglets de durée de vie, le niveau de chacun, puis ses références en dépliant. */
   function opVitrine(D, mob) {
+    if (!mob) { return opVitrineE(D); }
     const { now, U, prods, lienProd } = D;
     const k = S.opVie;
     const N = {}; OP_VIES.forEach(x => { N[x] = opNiveau(prods.filter(p => opVieDe(p) === x)); });
@@ -5345,6 +5434,9 @@
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
     $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
+    $.querySelectorAll('[data-vitf]').forEach(b => b.addEventListener('click', () => { const F = S.vitF || (S.vitF = { ko: true, att: true, ok: false }); F[b.dataset.vitf] = !F[b.dataset.vitf]; rendre(); }));
+    $.querySelectorAll('[data-vitall]').forEach(b => b.addEventListener('click', () => { const T = S.vitTout || (S.vitTout = {}); T[b.dataset.vitall] = !T[b.dataset.vitall]; rendre(); }));
+    $.querySelectorAll('[data-vitb]').forEach(b => b.addEventListener('click', () => { const O = S.vitOuv || (S.vitOuv = {}); O[b.dataset.vitb] = !O[b.dataset.vitb]; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
     $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
