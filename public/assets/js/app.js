@@ -13488,26 +13488,29 @@ class App {
     const S = this.state;
     const P = this.ctrlPhotosLire(s.shopId, pt.date);
     const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
-    const RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
+    const RANG = { nc: 0, ctl: 1, ok: 2, mai: 3, ko: 4, mu: 5 };
     const hh = v => v ? String(v).slice(11, 16) : '';
     const etat = t => {
       if (t.note != null) {
         if (t.note >= seuil && t.accepte !== false) { return { c: 'ok', bd: t.note + '/5' }; }
         return { c: 'nc', bd: t.note + '/5 · ' + String(nomNiveau(t.note)).split(/[—–-]/).pop().trim().toLowerCase() };
       }
+      // Maîtrisée (contrôle par exception) : sa photo reste dans le rail (10/10/2026), marquée, sans être à noter.
+      if (t.maitrise && t.maitrise.masquee && t.statut !== 'nonRendue') { return { c: 'mai', bd: 'maîtrisée' }; }
       if (t.statut === 'aControler' || t.statut === 'aValider') { return { c: 'ctl', bd: 'à contrôler' }; }
       if (t.statut === 'sansPhoto') { return { c: 'mu', bd: 'sans photo' }; }
       return { c: 'ko', bd: 'non rendue' };
     };
     const nom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
     const cl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
-    const L = (s.taches || []).filter(garde).filter(t => !(t.maitrise && t.maitrise.masquee))
+    // Toutes les photos du jour, celles des tâches maîtrisées comprises (10/10/2026) : la liste « à noter » les écarte, le rail non.
+    const L = (s.taches || []).filter(garde).filter(t => !(t.maitrise && t.maitrise.masquee) || t.statut !== 'nonRendue')
       .map(t => Object.assign({ e: etat(t), p: ph[String(t.taskId)] || null }, t))
       .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || nom(a).localeCompare(nom(b)));
     const nb = c => L.filter(t => t.e.c === c).length;
     const choix = (S.ctrlPuce || {})[String(s.shopId)] || 'tout';
     const puceSel = choix !== 'tout' && !nb(choix) ? 'tout' : choix;
-    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
+    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['mai', 'Maîtrisées', '#5b6b78', nb('mai')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
       .filter(f => f[3]).map(f => ({ nom: f[1], coul: f[2], nb: f[3], on: puceSel === f[0],
         pick: () => this.setState(s2 => ({ ctrlPuce: Object.assign({}, s2.ctrlPuce, { [String(s.shopId)]: f[0] }) })) }));
     const F = puceSel === 'tout' ? L : L.filter(t => t.e.c === puceSel);
@@ -13530,6 +13533,7 @@ class App {
       const constat = t.e.c === 'nc' ? (reps.map(r => r.txt).filter(Boolean).join(', ') || t.comment || 'écart relevé') + note
         : t.e.c === 'ok' ? 'conforme' + note
         : t.e.c === 'ctl' ? 'photo déposée, pas encore notée'
+        : t.e.c === 'mai' ? 'maîtrisée' + (t.maitrise && t.maitrise.moyenne != null ? ' · ' + String(t.maitrise.moyenne).replace('.', ',') + ' / 5' : '') + (t.maitrise && t.maitrise.recontrole ? ' · re-contrôle le ' + this.fD(t.maitrise.recontrole) : '')
         : t.e.c === 'mu' ? 'rendue sans photo' : (cl(t) || 'non rendue');
       return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe),
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
