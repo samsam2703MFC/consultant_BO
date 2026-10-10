@@ -712,3 +712,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T11:51:16Z La vitrine : ce qui va manquer
 2026-10-10T12:15:45Z La vitrine : filtres en petits carrés
 2026-10-10T12:26:58Z La vitrine : fiche de stock
+2026-10-10T12:56:25Z La vitrine : micro-vignette
