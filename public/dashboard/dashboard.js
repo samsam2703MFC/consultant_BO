@@ -19,7 +19,7 @@
   const EMBED = q.get('embed') === '1';
   const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return v === 'treemap' || v === 'promo' ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
@@ -3020,8 +3020,8 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (S.cVue === 'promo' && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button>` : ''}</span><span class="db-mini">${S.cVue === 'promo' && parMarge ? 'groupe › catégorie › produit › promotion · barre et pastille : part du CA vendue en promotion' : (S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA') + ' · couleur : ' + (parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence')}</span></div>
-      ${S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span><span class="db-mini">${S.cVue === 'portion' && parMarge ? 'les catégories qui vendent en portions · barre : en pièces entières, par taille · reste : la dernière pièce coupée' : S.cVue === 'promo' && parMarge ? 'groupe › catégorie › produit › promotion · barre et pastille : part du CA vendue en promotion' : (S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA') + ' · couleur : ' + (parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence')}</span></div>
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -3977,6 +3977,90 @@
     rows += `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${Object.keys(G).length} groupe${Object.keys(G).length > 1 ? 's' : ''} · ${touches.length} touché${touches.length > 1 ? 's' : ''} par une promotion</span></span>${cols(tot, P.v, P.r, P.q, qT)}</div>`;
     const ent = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Part vendue en promotion</span><span class="n">CA</span><span class="n">En promo</span><span class="n">Part</span><span class="n">Remise</span><span class="n">Pièces promo</span></div>`;
     return bande + sans + err + `<div class="db-acc pro">${ent}${rows}</div>`;
+  }
+  /* Les portions (10/10/2026, maquette A + la colonne « reste » de B) : les catégories qui vendent en parts. Par produit,
+   * combien en entière, en ½, en ¼… ; ce que ça fait en pièces entières ; ce qui reste en parts dans la dernière pièce
+   * coupée (estimation : rien de la veille, rien de recoupé) ; le CA et le CA par pièce entière. */
+  const PORT_COUL = ['#1f4e8c', '#2a78d6', '#5c9be3', '#9cc3f0', '#c5dcf6'];
+  const PORT_LIB = { 1: 'Entière', 0.5: '½', 0.3333: '⅓', 0.25: '¼', 0.1667: '⅙', 0.125: '⅛', 0.75: '¾' };
+  const portLib = (f, lib) => PORT_LIB[f] || lib || nf(f, 2);
+  /** Un nombre de pièces en quarts lisibles : 3 ¾, ½ ; sinon deux décimales. */
+  const portFrac = v => { if (v < 0.001) { return '0'; } const e = Math.floor(v + 1e-9), r = v - e, q = Math.round(r * 4); if (Math.abs(r - q / 4) > 0.01) { return nf(v, 2); } const s = ['', '¼', '½', '¾', ''][q]; const n = q === 4 ? e + 1 : e; return (n ? String(n) : '') + (n && s ? ' ' : '') + s; };
+  function portionsDe(st, catsM) {
+    const prixCat = (st && st.portions && st.portions.prix) || {};
+    const cats = [];
+    catsM.forEach(c => {
+      const P = c.produits || [];
+      if (!P.some(p => p.portion)) { return; }
+      const B = {};
+      P.forEach(p => {
+        const pid = String(p.id).split(':')[0], f = p.portion ? p.portion.f : 1;
+        const x = B[pid] || (B[pid] = { pid, nom: p.portion ? String(p.nom).replace(/\s+—\s+[^—]*$/, '') : p.nom, t: {}, q: 0, v: 0, c: 0, cInconnu: false });
+        const k = f == null ? 'x:' + (p.portion.lib || '?') : String(f);
+        const o = x.t[k] || (x.t[k] = { f, lib: p.portion ? p.portion.lib : '', q: 0, v: 0 });
+        o.q += p.q || 0; o.v += p.v || 0; x.q += p.q || 0; x.v += p.v || 0;
+      });
+      const prods = Object.values(B).map(x => {
+        const ent = x.t['1'];
+        const pe = Object.values(x.t).reduce((a, o) => a + (o.f != null && o.f < 1 ? o.f * o.q : 0), 0);
+        const coupees = Math.ceil(pe - 1e-9);
+        return Object.assign(x, { eq: Object.values(x.t).reduce((a, o) => a + (o.f != null ? o.f * o.q : 0), 0), parts: Object.values(x.t).some(o => o.f !== 1),
+          prixE: ent && ent.q > 0 ? ent.v / ent.q : null, prixCat: prixCat[x.pid] != null ? +prixCat[x.pid] : null, reste: coupees - pe });
+      }).sort((a, b) => b.eq - a.eq);
+      cats.push({ nom: c.categorie, ca: c.ca, refs: c.refs, prods, eq: prods.reduce((a, x) => a + x.eq, 0), reste: prods.reduce((a, x) => a + x.reste, 0),
+        caParts: prods.reduce((a, x) => a + Object.values(x.t).reduce((b, o) => b + (o.f !== 1 ? o.v : 0), 0), 0) });
+    });
+    return cats;
+  }
+  function portionOnglet(st, catsM) {
+    const C = portionsDe(st, catsM);
+    if (!C.length) { return `<div class="db-note" style="padding:12px 16px">Aucune catégorie vendue en portions sur cette période.</div>`; }
+    // Les tailles présentes, de l'entière à la plus petite part : une colonne chacune.
+    const F = {}; C.forEach(c => c.prods.forEach(x => Object.entries(x.t).forEach(([k, o]) => { F[k] = o; })));
+    const tailles = Object.keys(F).sort((a, b) => (F[b].f == null ? -1 : F[b].f) - (F[a].f == null ? -1 : F[a].f));
+    const coul = {}; tailles.forEach((k, i) => { coul[k] = PORT_COUL[Math.min(i, PORT_COUL.length - 1)]; });
+    const grille = `grid-template-columns:22px minmax(120px,1.25fr) minmax(56px,1.4fr) ${tailles.map(() => '44px').join(' ')} 66px 66px 78px 72px`;
+    const caT = C.reduce((a, c) => a + c.ca, 0), caParts = C.reduce((a, c) => a + c.caParts, 0), eqT = C.reduce((a, c) => a + c.eq, 0), resteT = C.reduce((a, c) => a + c.reste, 0);
+    const noms = C.map(c => c.nom.split(' ')[0].toLowerCase()).join(' et ');
+    const leg = `<span class="pt-leg">${tailles.map(k => `<span><i style="background:${coul[k]}"></i>${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span><i class="rs"></i>reste en parts</span></span>`;
+    const bande = `<div class="pr-bd"><div class="k"><b>${fP0(caT > 0 ? 100 * caParts / caT : 0)}</b><span>du CA ${esc(noms)}<br>vendu en portions</span></div>
+      <div class="k"><b>${portFrac(eqT)}</b><span>pièces entières<br>vendues</span></div><div class="k"><b>${fU(eqT > 0 ? caT / eqT : 0)}</b><span>par pièce entière<br>en moyenne</span></div>
+      <div class="k"><b class="ko">${portFrac(resteT)}</b><span>pièces encore en parts<br>si rien ne restait d’hier</span></div>${leg}</div>`;
+    const barre = (x, ref) => { let g = 0; const segs = tailles.map(k => { const o = x.t[k]; if (!o || o.f == null || !o.q) { return ''; } const w = 100 * o.f * o.q / Math.max(ref, 1e-9); const s = `<i style="left:${g.toFixed(2)}%;width:${w.toFixed(2)}%;background:${coul[k]}"></i>`; g += w; return s; }).join('');
+      return `<span class="barre pt-b">${segs}</span>`; };
+    const reste = r => r > 1e-6 ? `<span class="pt-r">reste ${portFrac(r)}</span>` : '<span class="mu">—</span>';
+    const cols = (x, ref) => barre(x, ref) + tailles.map(k => `<span class="n">${x.t[k] && x.t[k].q ? fN(x.t[k].q) : '<span class="mu">—</span>'}</span>`).join('')
+      + `<span class="n b">${portFrac(x.eq)}</span><span class="n">${reste(x.reste)}</span><span class="n">${fU(x.v != null ? x.v : x.ca)}</span><span class="n mu">${x.eq > 0 ? fU((x.v != null ? x.v : x.ca) / x.eq) : '—'}</span>`;
+    const ouvert = (k, defaut) => defaut ? !S.cOuv[k + '!'] : !!S.cOuv[k];
+    const cle = (k, defaut) => defaut ? k + '!' : k;
+    const tog = on => `<span class="db-tog ${on ? 'on' : ''}">${on ? '▾' : '▸'}</span>`;
+    const maxEq = Math.max(...C.map(c => c.eq));
+    let rows = '';
+    C.forEach((c, ci) => {
+      const k = 'po:' + c.nom, o = ouvert(k, ci === 0);
+      const cx = { t: {}, eq: c.eq, reste: c.reste, v: c.ca };
+      c.prods.forEach(x => Object.entries(x.t).forEach(([kk, t]) => { const a = cx.t[kk] || (cx.t[kk] = { f: t.f, q: 0 }); a.q += t.q; }));
+      rows += `<div class="db-al c" data-cacc="${esc(cle(k, ci === 0))}" style="${grille}"><span>${tog(o)}</span><span class="nom">${esc(c.nom)}<span class="sub">${c.refs != null ? c.refs + ' réf. · ' : ''}${fP0(c.ca > 0 ? 100 * c.caParts / c.ca : 0)} du CA en portions</span></span>${cols(cx, maxEq)}</div>`;
+      if (!o) { return; }
+      const ref = Math.max(...c.prods.map(x => x.eq));
+      c.prods.filter(x => x.parts).forEach(x => {
+        const pE = x.prixE != null ? 'entière à ' + fU(x.prixE) : (x.prixCat != null ? 'entière à ' + fU(x.prixCat) + ' au catalogue' : 'pas vendue entière');
+        const clic = /^\d+$/.test(x.pid);
+        rows += `<div class="db-al p${clic ? ' clic' : ''}" style="${grille}"${clic ? ` data-fprod="${esc(x.pid)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(c.nom)}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}><span></span><span class="nom">${esc(x.nom)}<span class="sub">${pE}</span></span>${cols(x, ref)}</div>`;
+      });
+      const ent = c.prods.filter(x => !x.parts);
+      if (ent.length) {
+        const ex = { t: { 1: { f: 1, q: ent.reduce((a, x) => a + x.q, 0) } }, eq: ent.reduce((a, x) => a + x.eq, 0), reste: 0, v: ent.reduce((a, x) => a + x.v, 0) };
+        rows += `<div class="db-al p eteint" style="${grille}"><span></span><span class="nom">${ent.length} autre${ent.length > 1 ? 's' : ''} vendue${ent.length > 1 ? 's' : ''} entière${ent.length > 1 ? 's' : ''} seulement<span class="sub">${esc(ent.slice(0, 3).map(x => x.nom).join(', '))}${ent.length > 3 ? '…' : ''}</span></span>${cols(ex, ref)}</div>`;
+      }
+    });
+    if (C.length > 1) {
+      const tx = { t: {}, eq: eqT, reste: resteT, v: caT };
+      C.forEach(c => c.prods.forEach(x => Object.entries(x.t).forEach(([kk, t]) => { const a = tx.t[kk] || (tx.t[kk] = { f: t.f, q: 0 }); a.q += t.q; })));
+      rows += `<div class="db-al tot" style="${grille}"><span></span><span class="nom">Total<span class="sub">${C.length} catégories vendues en portions</span></span>${cols(tx, Math.max(eqT, 1e-9))}</div>`;
+    }
+    const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span>En pièces entières, par taille</span>${tailles.map(k => `<span class="n">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n">En entières</span><span class="n" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n">CA</span><span class="n">€ par entière</span></div>`;
+    return bande + `<div class="db-acc pt">${ent}${rows}</div>`;
   }
   /** Bundles vendus : les promotions de la journée, leur poids dans le CA complet et dans chaque catégorie qu'elles touchent. */
   function promoBundles(st) {
@@ -5784,7 +5868,7 @@
     $.querySelectorAll('[data-vitb]').forEach(b => b.addEventListener('click', () => { const O = S.vitOuv || (S.vitOuv = {}); O[b.dataset.vitb] = !O[b.dataset.vitb]; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
-    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
+    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo', 'portion'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
     $.querySelectorAll('details[data-acpo]').forEach(d => d.addEventListener('toggle', () => { S.cOuv['acp:' + d.dataset.acpo] = d.open; }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
