@@ -36,6 +36,7 @@ require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
+require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';

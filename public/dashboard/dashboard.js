@@ -19,7 +19,7 @@
   const EMBED = q.get('embed') === '1';
   const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return v === 'treemap' || v === 'promo' ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
@@ -2121,7 +2121,7 @@
     const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span><span class="db-mini">${mini}</span></div>`;
     if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
     const B = bundlesDe(st);
-    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('la journée · catégorie Bundle')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div></div>`; }
+    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('la journée · catégorie Bundle')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div>${promoBundles(st)}</div>`; }
     const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
     const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
     // La composition : la recette du bundle au panel (la même lecture que la fiche produit), lue une fois.
@@ -2134,7 +2134,7 @@
       <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td></tr>`).join('');
     return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
       <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
-      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead><tbody>${lignes}</tbody></table></div>${promoBundles(st)}</div>`;
   }
 
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
@@ -3020,8 +3020,8 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence'}</span></div>
-      ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (S.cVue === 'promo' && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button>` : ''}</span><span class="db-mini">${S.cVue === 'promo' && parMarge ? 'groupe › catégorie › produit › promotion · barre et pastille : part du CA vendue en promotion' : (S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA') + ' · couleur : ' + (parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence')}</span></div>
+      ${S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -3894,6 +3894,108 @@
       return nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' + (Math.abs(ecCa) >= 0.5 ? ' · lignes sans produit, remises' : '') : 'lignes de caisse sans produit, remises, arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
     const pied = ecart + `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? (R ? fP(100 * totM / tot) : fP0(100 * totM / tot)) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
     return `<div class="db-acc">${entete}${rows}${pied}</div>`;
+  }
+
+  /* Les promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes
+   * par catégorie, et la liste des promotions dans Bundles vendus. Une couleur par promotion, dans l'ordre de leurs
+   * ventes ; la remise qu'aucune promotion n'explique en gris. Le poids d'une promotion : ses ventes ÷ le CA complet,
+   * et dans chaque catégorie qu'elle touche, ses ventes ÷ le CA de la catégorie. */
+  const PROMO_COUL = ['#2a78d6', '#eb6834', '#2d7a3e', '#8e44ad', '#c2185b', '#00838f', '#b8860b'];
+  function promosDe(st) {
+    const P = st && st.promos;
+    if (!P || !Array.isArray(P.regles)) { return null; }
+    const coul = {}, regle = {}; let i = 0;
+    P.regles.forEach(r => { coul[r.id] = r.id === 'x' ? '#9a9187' : PROMO_COUL[i++ % PROMO_COUL.length]; regle[r.id] = r; });
+    const PP = P.produits || {}, parCat = {}, caCat = {};
+    (st.categories || []).forEach(c => { caCat[c.nom] = (caCat[c.nom] || 0) + (c.v || 0); (c.produits || []).forEach(p => { const x = PP[String(p.id)]; if (!x) { return; }
+      Object.keys(x).forEach(id => { const o = parCat[id] || (parCat[id] = {}); o[c.nom] = (o[c.nom] || 0) + x[id][1]; }); }); });
+    return { P, coul, regle, PP, parCat, caCat, ca: (st.totaux && st.totaux.ca) || 0, tickets: st.totaux && st.totaux.tickets };
+  }
+  const promoPastille = p => { const a = 0.12 + 0.88 * Math.min(1, p / 80); return `<span class="pr-pl" style="background:rgba(42,120,214,${a.toFixed(2)});color:${a > 0.55 ? '#fff' : '#1f4e8c'}">${p > 0 && p < 10 ? fP(p) : fP0(p)}</span>`; };
+  const promoPct = p => p > 0 && p < 10 ? fP(p) : fP0(p);
+  /** L'onglet Promotions : le bandeau (part du CA, remises, tickets, les promotions), puis groupe › catégorie › produit › promotion. */
+  function promoOnglet(st, catsM) {
+    const D = promosDe(st), jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
+    if (!D) { return `<div class="db-note" style="padding:12px 16px">Les promotions se lisent dans les tickets : pas encore disponibles pour cette période.</div>`; }
+    const { P, coul, regle, PP } = D, tot = D.ca || catsM.reduce((a, c) => a + c.ca, 0);
+    const reglesV = P.regles.filter(r => r.v > 0 || r.r > 0);
+    const chips = reglesV.map(r => `<span class="pr-tg" style="--c:${coul[r.id]}" title="${esc(r.texte || '')}">${esc(r.nom)} <b>×${fN(r.fois)}</b></span>`).join('');
+    const bande = `<div class="pr-bd"><div class="k"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span>du CA en promotion<br>${fU(P.v)} sur ${fU(tot)}</span></div>
+      <div class="k"><b>${fU(P.r)}</b><span>de remises<br>${tot > 0 ? promoPct(100 * P.r / tot) : '—'} du CA</span></div>
+      <div class="k"><b>${fN(P.tickets || 0)}${D.tickets ? ' / ' + fN(D.tickets) : ''}</b><span>tickets avec<br>une promotion</span></div>
+      <div class="pr-chips">${chips || `<span class="db-mini">aucune promotion déclenchée ${jour}</span>`}</div></div>`;
+    const sans = (P.joursSans || []).length ? `<div class="db-mini pr-sans">${P.joursSans.length} jour${P.joursSans.length > 1 ? 's' : ''} lu${P.joursSans.length > 1 ? 's' : ''} avant le relevé des remises : sans promotions.</div>` : '';
+    const err = P.erreur ? `<div class="db-mini pr-sans">${esc(P.erreur)}</div>` : '';
+    // Chaque produit : ses ventes en promotion, toutes promotions confondues.
+    const somme = id => { const x = PP[String(id)]; if (!x) { return null; } let q = 0, v = 0, r = 0; Object.values(x).forEach(a => { q += a[0]; v += a[1]; r += a[2]; }); return { q, v, r }; };
+    const G = {};
+    catsM.forEach(c => {
+      const g = (c.groupe || 'Autres').split(' · ')[0];
+      const f = G[g] || (G[g] = { nom: g, ca: 0, q: 0, cats: [], nCats: 0, pv: 0, pq: 0, pr: 0 });
+      f.ca += c.ca; f.q += c.q || 0; f.nCats++;
+      const prods = (c.produits || []).map(p => Object.assign({ pr: somme(p.id) }, p)).filter(p => p.pr);
+      if (!prods.length) { return; }
+      const cx = { nom: c.categorie, ca: c.ca, q: c.q || 0, refs: c.refs, prods, pv: 0, pq: 0, pr: 0 };
+      prods.forEach(p => { cx.pv += p.pr.v; cx.pq += p.pr.q; cx.pr += p.pr.r; });
+      f.cats.push(cx); f.pv += cx.pv; f.pq += cx.pq; f.pr += cx.pr;
+    });
+    const touches = Object.values(G).filter(f => f.cats.length).sort((a, b) => b.pv / b.ca - a.pv / a.ca);
+    const autres = Object.values(G).filter(f => !f.cats.length).sort((a, b) => b.ca - a.ca);
+    const part = (v, ca) => ca > 0 ? 100 * v / ca : 0;
+    const barre = (w, c) => `<span class="barre"><i style="width:${Math.max(w > 0 ? 1 : 0, Math.min(100, w)).toFixed(1)}%;background:${c || '#2a78d6'}"></i></span>`;
+    const cols = (ca, pv, pr, pq, qt) => `${barre(part(pv, ca))}<span class="n">${fU(ca)}</span><span class="n pr-pv">${fU(pv)}</span><span class="n">${promoPastille(part(pv, ca))}</span><span class="n pr-rm">${pr > 0.004 ? '−' + fU(pr) : '<span class="mu">—</span>'}</span><span class="n">${fN(pq)}<small> / ${fN(qt)}</small></span>`;
+    // Le premier groupe et sa première catégorie s'ouvrent d'eux-mêmes ; un clic les referme (clé « ! »).
+    const ouvert = (k, defaut) => defaut ? !S.cOuv[k + '!'] : !!S.cOuv[k];
+    const cle = (k, defaut) => defaut ? k + '!' : k;
+    const tog = on => `<span class="db-tog ${on ? 'on' : ''}">${on ? '▾' : '▸'}</span>`;
+    let rows = '';
+    touches.forEach((f, gi) => {
+      f.cats.sort((a, b) => b.pv / b.ca - a.pv / a.ca);
+      const kg = 'pg:' + f.nom, og = ouvert(kg, gi === 0);
+      rows += `<div class="db-al g" data-cacc="${esc(cle(kg, gi === 0))}"><span>${tog(og)}</span><span class="nom">${esc(f.nom)}<span class="sub">${f.nCats} catégorie${f.nCats > 1 ? 's' : ''}${f.cats.length < f.nCats ? ' · ' + f.cats.length + ' avec promotion' : ''}</span></span>${cols(f.ca, f.pv, f.pr, f.pq, f.q)}</div>`;
+      if (!og) { return; }
+      f.cats.forEach((c, ci) => {
+        const kc = 'pc:' + c.nom, oc = ouvert(kc, gi === 0 && ci === 0);
+        rows += `<div class="db-al c" data-cacc="${esc(cle(kc, gi === 0 && ci === 0))}"><span>${tog(oc)}</span><span class="nom">${esc(c.nom)}<span class="sub">${c.refs != null ? c.refs + ' réf. · ' : ''}${fN(c.q)} pièces${c.prods.length < (c.refs || 0) ? ' · ' + c.prods.length + ' en promotion' : ''}</span></span>${cols(c.ca, c.pv, c.pr, c.pq, c.q)}</div>`;
+        if (!oc) { return; }
+        c.prods.sort((a, b) => part(b.pr.v, b.v) - part(a.pr.v, a.v) || b.v - a.v).forEach(p => {
+          const clic = /^\d+$/.test(String(p.id || ''));
+          rows += `<div class="db-al p${clic ? ' clic' : ''}"${clic ? ` data-fprod="${esc(p.id)}" data-fnom="${esc(p.nom)}" data-fq="${p.q != null ? p.q : ''}" data-fv="${p.v != null ? p.v : ''}" data-ft="${p.taux != null ? p.taux : ''}" data-fc="${p.c != null ? p.c : ''}" data-fcat="${esc(c.nom)}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}><span></span><span class="nom">${esc(p.nom)}<span class="sub">${fN(p.q)} vendu${p.q > 1 ? 's' : ''}</span></span>${cols(p.v, p.pr.v, p.pr.r, p.pr.q, p.q)}</div>`;
+          // Une ligne par promotion, ses propres chiffres dans les colonnes.
+          Object.entries(PP[String(p.id)] || {}).sort((a, b) => b[1][1] - a[1][1]).forEach(([id, x]) => {
+            const R = regle[id] || { nom: 'Promotion ' + id };
+            rows += `<div class="db-al u3" title="${esc(R.texte || '')}"><span></span><span class="nom"><i class="pr-pd" style="background:${coul[id] || '#9a9187'}"></i>${esc(R.nom)}<span class="sub">${fN(x[3])} fois</span></span>${barre(part(x[1], p.v), coul[id])}<span class="n"></span><span class="n pr-pv">${fU(x[1])}</span><span class="n mu">${promoPct(part(x[1], p.v))}</span><span class="n pr-rm">${x[2] > 0.004 ? '−' + fU(x[2]) : '<span class="mu">—</span>'}</span><span class="n">${fN(x[0])}</span></div>`;
+          });
+        });
+      });
+    });
+    if (autres.length) {
+      const caA = autres.reduce((a, f) => a + f.ca, 0);
+      rows += `<div class="db-al g eteint"><span></span><span class="nom">Sans promotion ${jour}<span class="sub">${autres.map(f => esc(f.nom)).join(' · ')}</span></span>${barre(0)}<span class="n">${fU(caA)}</span><span class="n"><span class="mu">—</span></span><span class="n"></span><span class="n"></span><span class="n"></span></div>`;
+    }
+    const qT = catsM.reduce((a, c) => a + (c.q || 0), 0);
+    rows += `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${Object.keys(G).length} groupe${Object.keys(G).length > 1 ? 's' : ''} · ${touches.length} touché${touches.length > 1 ? 's' : ''} par une promotion</span></span>${cols(tot, P.v, P.r, P.q, qT)}</div>`;
+    const ent = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Part vendue en promotion</span><span class="n">CA</span><span class="n">En promo</span><span class="n">Part</span><span class="n">Remise</span><span class="n">Pièces promo</span></div>`;
+    return bande + sans + err + `<div class="db-acc pro">${ent}${rows}</div>`;
+  }
+  /** Bundles vendus : les promotions de la journée, leur poids dans le CA complet et dans chaque catégorie qu'elles touchent. */
+  function promoBundles(st) {
+    const D = promosDe(st);
+    if (!D) { return ''; }
+    const { P, coul, parCat, caCat } = D, tot = D.ca;
+    const L = P.regles.filter(r => r.v > 0 || r.r > 0);
+    const jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
+    const titre = `<div class="op-bun-h"><span>Les promotions</span><span class="db-mini">${L.length ? fU(P.v) + ' · ' + promoPct(tot > 0 ? 100 * P.v / tot : 0) + ' du CA complet' : 'aucune déclenchée ' + jour}</span></div>`;
+    const nonD = (P.autres || []).filter(r => r.statut === 'ACTIVE');
+    const pied = nonD.length ? `<div class="op-bun-nd">Pas déclenchée${nonD.length > 1 ? 's' : ''} : ${nonD.map(r => esc(r.nom)).join(' · ')}</div>` : '';
+    if (!L.length) { return `<div class="op-bun-pr">${titre}${pied}</div>`; }
+    const lignes = L.map(r => {
+      const cats = Object.entries(parCat[r.id] || {}).sort((a, b) => b[1] - a[1]);
+      return `<tr><td><b><i class="pr-pd" style="background:${coul[r.id]}"></i>${esc(r.nom)}</b><small>${esc(r.texte || '')}</small></td><td class="n">${fN(r.fois)}<span class="u">×</span></td><td class="n">${fU(r.v)}</td>
+        <td class="n"><b>${promoPct(tot > 0 ? 100 * r.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats">${cats.map(([c, v]) => `<span>${esc(c)} <b>${promoPct(caCat[c] > 0 ? 100 * v / caCat[c] : 0)}</b></span>`).join('')}</td></tr>`;
+    }).join('');
+    return `<div class="op-bun-pr">${titre}<div class="op-large"><table class="db-pro-tab op-bun-tab op-bun-ptab"><thead><tr><th>Promotion</th><th class="n">Fois</th><th class="n">Ventes</th><th class="n" title="ventes de la promotion ÷ CA complet de la journée">Poids CA</th><th title="ventes de la promotion dans la catégorie ÷ CA de la catégorie">Poids par catégorie</th></tr></thead><tbody>${lignes}</tbody>
+      <tfoot><tr><td><b>Toutes les promotions</b><small>${fN(P.tickets || 0)} ticket${P.tickets > 1 ? 's' : ''} · remises −${fU(P.r)}</small></td><td class="n">${fN(L.reduce((a, r) => a + r.fois, 0))}<span class="u">×</span></td><td class="n">${fU(P.v)}</td><td class="n"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats"></td></tr></tfoot></table></div>${pied}</div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
   function planningSecteurs(plan, hMin, hMax) {
@@ -5682,7 +5784,7 @@
     $.querySelectorAll('[data-vitb]').forEach(b => b.addEventListener('click', () => { const O = S.vitOuv || (S.vitOuv = {}); O[b.dataset.vitb] = !O[b.dataset.vitb]; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
-    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
+    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
     $.querySelectorAll('details[data-acpo]').forEach(d => d.addEventListener('toggle', () => { S.cOuv['acp:' + d.dataset.acpo] = d.open; }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));

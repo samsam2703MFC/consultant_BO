@@ -537,7 +537,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     $c = setting($cle);
     // `sp` (10/10/2026) : les lignes de caisse sans produit et les écarts de ticket. Un relevé qui ne les
     // porte pas encore se relit une fois en entier : aujourd'hui, ou un jour passé ouvert seul (`$detail`).
-    $sansSp = is_array($c) && !array_key_exists('sp', $c) && ($j === date('Y-m-d') || $detail);
+    // `r` (10/10/2026) : les tickets qui portent une remise de ligne, pour reconnaître les promotions du panel. Même règle.
+    $sansSp = is_array($c) && (!array_key_exists('sp', $c) || !array_key_exists('r', $c)) && ($j === date('Y-m-d') || $detail);
     if (!$sansSp && svGraveValide($c, 'p', $j)) { return $c['p']; }
     if ($cout >= $budget) { return null; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
@@ -568,6 +569,9 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     // Ce que les produits ne ventilent pas : les lignes sans produit (libellé de caisse, montant) et l'écart
     // entre le total du ticket et la somme de ses lignes (remise sur le ticket entier, arrondi).
     $sp = $base !== null ? (array) ($base['sp'] ?? []) : [];
+    // Les tickets à remise de ligne, entiers : [t, mn, lignes [clé, pid, q, prix unitaire, remise, total]]. Le ticket
+    // entier, parce qu'une promotion « 2 achetés, le 3e remisé » se déclenche sur des lignes sans remise.
+    $rm = $base !== null ? (array) ($base['r'] ?? []) : [];
     foreach (array_chunk($nouveaux, 40) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -578,7 +582,7 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
             $h = (string) (int) substr((string) ($t['insert_timestamp'] ?? '00'), 11, 2);
             $mn = substr((string) ($t['insert_timestamp'] ?? ''), 11, 5);
             if (!preg_match('/^\d{2}:\d{2}$/', $mn)) { $mn = null; }
-            $sommeL = 0.0;
+            $sommeL = 0.0; $lR = []; $aRemise = false;
             foreach ((array) ($t['products'] ?? []) as $l) {
                 $sommeL += (float) ($l['total_gross_value_after_discount'] ?? 0);
                 $pid = (int) ($l['id_product'] ?? 0);
@@ -595,6 +599,9 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
                 // Pommes à 4,42 € quand la pièce vaut 8,85 €.
                 $portion = svPortion($l);
                 $k = $portion['id'] > 0 ? $pid . ':' . $portion['id'] : $pid;   // la clé de la ligne, pas celle du gravé
+                $remL = round((float) ($l['item_discount_value'] ?? 0), 2);
+                if ($remL > 0.004) { $aRemise = true; }
+                $lR[] = [(string) $k, $pid, round($q, 3), round((float) ($l['unit_gross_price'] ?? ($q > 0 ? ($v + $remL) / $q : 0)), 2), $remL, round($v, 2)];
                 $piece = isset($coutsM[$pid]) ? (float) $coutsM[$pid] : (isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] : null);
                 $cu = $piece !== null ? $piece * $portion['fraction'] : $portion['cout'];
                 if (!isset($p[$h][$k])) {
@@ -611,6 +618,7 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
                 if (isset($pro[$id])) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q; }
                 if ($mn !== null && $q > 0 && $mn > ($der[(string) $pid] ?? '')) { $der[(string) $pid] = $mn; }
             }
+            if ($aRemise) { $rm[] = ['t' => $id, 'mn' => $mn, 'l' => $lR]; }
             $totT = isset($t['total_gross_amount_after_discount']) && is_numeric($t['total_gross_amount_after_discount']) ? (float) $t['total_gross_amount_after_discount'] : null;
             if ($totT !== null && abs($totT - $sommeL) >= 0.01) {
                 $sp[] = ['t' => $id, 'mn' => $mn, 'nom' => $totT < $sommeL ? 'remise sur le ticket entier' : 'écart sur le ticket', 'q' => 0, 'v' => round($totT - $sommeL, 2), 'type' => 'ticket'];
@@ -624,7 +632,7 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     // `pb` = les unités vendues aux clients pro, par produit ({} si aucune).
     // `d` = la minute du dernier ticket par produit ({pid: "HH:MM"}) ; absente des jours gravés avant le 04/10/2026.
     // `ids` = les tickets déjà lus : la relecture suivante ne lit que les nouveaux.
-    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der, 'ids' => $ids, 'sp' => $sp];
+    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der, 'ids' => $ids, 'sp' => $sp, 'r' => $rm];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
     return $p;
@@ -1124,7 +1132,10 @@ function ep_stats_ventes(): array
         'produits' => ['jours' => $joursProd, 'total' => count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
-        'heures' => $lignes, 'categories' => $catsT, 'bundles' => $bundles + ['part' => $tot['ca'] > 0 ? round(100 * $bundles['ca'] / $tot['ca'], 1) : null], 'aCompleter' => $aCompleter, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'heures' => $lignes, 'categories' => $catsT,
+        // Les promotions du panel reconnues dans les tickets des jours lus (10/10/2026) : l'onglet Promotions des catégories.
+        'promos' => function_exists('pvPromotions') ? pvPromotions($sid, $joursProd) : null,
+        'bundles' => $bundles + ['part' => $tot['ca'] > 0 ? round(100 * $bundles['ca'] / $tot['ca'], 1) : null], 'aCompleter' => $aCompleter, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
         'matiere' => ['heuresEstimees' => $matEstimee, 'heuresInconnues' => $matInconnue,
             'source' => $matInconnue > 0 ? 'coût matière inconnu sur ' . $matInconnue . ' heure' . ($matInconnue > 1 ? 's' : '') . ' (tickets non lus)' : ($matEstimee > 0 ? 'recettes vendues sur ' . $matEstimee . ' heure' . ($matEstimee > 1 ? 's' : '') . ' que le panel ne chiffre pas' : 'panel')],
         'periodes' => svPeriodes($heures),

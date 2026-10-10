@@ -2997,3 +2997,51 @@ appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. 
 **Fiche produit, onglet Prix et Recette & marge (10/10/2026).** L'onglet « Prix face au réseau » montre le prix de vente en caisse du magasin (`portion_price_gross` de products/available, le prix pratiqué) à côté du prix encaissé, et les autres magasins : en gris et nommés dans le nuage (un clic sur un point : prix de vente, prix encaissé, pièces pour 10 000 €, pièces vendues), et en liste sous le côté (magasin, vente, encaissé, pièces pour 10 000 €). `GET /analyse/produits/magasin` porte `prix.magasins` : `[{nom, moi, p, v10k, q, brut}]` et `prix.magasin.brut`. Les lignes d'explication sont retirées (onglet 1 : « en pièces ; un grand magasin vend plus… » ; Prix : « prix encaissé = chiffre ÷ pièces… » ; Recette & marge : « une pièce vendue aujourd'hui · coût de recette… »). Une recette d'une seule ligne (le produit acheté tel quel, 100 % du coût) n'a plus de liste déroulante. L'axe des pièces de la courbe des 12 semaines prend un pas rond au-delà de 60 (une catégorie compte des milliers de pièces).
 
 **`GET /ventes/tickets?shop=&date=&cat=` (ou `&q=`) (10/10/2026).** Les tickets d'un jour qui portent une catégorie (ou un mot du nom d'un produit), ligne par ligne, pour lire une promotion ou une remise : `{ticketsDuJour, ticketsLus, tickets: [{id, heure, total, remiseTicket, bon, pro, lignes: [{pid, nom, cat, vise, q, pu, remise, total, portion}]}]}`. Lecture seule, rien n'est gardé ; ni client, ni vendeur, ni remarque.
+
+**Promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3).** `GET /ventes/stats` renvoie `promos` :
+
+- `regles[]` : chaque promotion déclenchée sur les jours lus. Champs : `{id, nom, type (buyxgety | bundle | remise), texte, statut, fois, tickets, q, v, r}`. Elles sont triées par ventes. L'id `x` regroupe les remises de ligne qu'aucune promotion n'explique.
+- `autres[]` : les promotions qui valent pour le magasin mais n'ont rien donné.
+- `produits` : `{clé produit : {id promotion : [pièces, ventes, remise, fois]}}`. La clé est celle de `categories[].produits[].id` (« pid » ou « pid:portion »).
+- `tickets`, `v`, `q`, `r` : les totaux.
+- `joursLus`, `joursSans` : les jours lus avant le relevé des remises sont sans promotions.
+- `erreur` : le compte admin du panel est absent ou muet.
+
+Les règles se lisent avec le compte ADMIN du panel (`ErpApi`). La source est `/admin/promotions/buy-x-get-y?limit=100`, puis le détail de chaque règle. Ce détail donne les produits et catégories qui déclenchent et qui reçoivent, plus le type et la valeur de la récompense. Pour un bundle, il donne les articles et leur prix remisé. Les règles sont gardées 10 minutes dans `pvRegles`. Le code est dans `src/promos_ventes.php`.
+
+La lecture des tickets (`svP{shop}:{jour}`) garde `r`, la liste des tickets à remise de ligne, en entier : `[{t, mn, l: [[clé, pid, q, prix unitaire, remise, total]]}]`. Un relevé sans `r` se relit une fois pour aujourd'hui, ou pour un jour passé ouvert seul.
+
+Une ligne remisée se rattache à la règle dont la récompense explique la remise au centime :
+
+| Type de récompense | Remise par pièce |
+|---|---|
+| FIXED_PRICE | prix − valeur |
+| FIXED_AMOUNT_DISCOUNT | valeur |
+| FREE | prix |
+| PERCENTAGE_DISCOUNT | prix × valeur ÷ 100 |
+
+Quand deux règles expliquent la même remise, une règle ACTIVE passe avant une inactive, puis la priorité du panel départage. Les pièces qui déclenchent se prennent dans le même ticket : d'abord le reste de la ligne remisée, puis les lignes sans remise des produits ou catégories qui déclenchent.
+
+À Halle le 10/10, sur 10 tickets :
+
+| Promotion | Fois | Pièces | Ventes | Remise |
+|---|---|---|---|---|
+| 2 Cookies ! | 6 | 12 | 35,40 € | 1,80 € |
+| 3 Cookie's ! | 3 | 9 | 23,70 € | 4,20 € |
+| Brood | 1 | 2 | 23,40 € | 1,40 € |
+| **Total** | **10** | | **82,50 €** | |
+
+C'est 2,8 % du CA. Lecture seule.
+
+Le dashboard affiche ces promotions à deux endroits :
+
+- **Ventes par catégorie.** Un onglet « Promotions » à côté de Liste et Treemap, gardé dans `localStorage` (`db.cVue`). Il montre :
+  - un bandeau : part du CA en promotion, remises, tickets avec une promotion, une pastille par promotion avec ses fois ;
+  - l'arbre groupe › catégorie › produit, avec une ligne par promotion sous chaque produit. Seuls les groupes touchés y sont, du plus promu au moins promu. Le premier groupe et sa première catégorie sont ouverts. Les autres groupes tiennent sur une ligne « Sans promotion ».
+- **Bundles vendus.** Le bloc « Les promotions » donne pour chaque promotion :
+  - son poids dans le CA complet : ventes ÷ CA de la journée ;
+  - son poids dans chaque catégorie touchée : ventes dans la catégorie ÷ CA de la catégorie.
+
+  Les promotions actives pas déclenchées sont listées en bas. Sous 600 px, les lignes s'empilent.
+
+La sonde `GET /exploitation/bundles/sonde?admin=1&detail=11-18` lit ce détail.
