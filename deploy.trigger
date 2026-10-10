@@ -691,3 +691,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T07:14:57Z dashboard sans onglet jour sur ordinateur
 2026-10-10T07:23:35Z main d oeuvre jour par jour et duel allege
 2026-10-10T07:27:38Z semaine sans barre du stock
+2026-10-10T07:33:15Z classement b2b et mois sans stock
