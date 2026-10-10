@@ -3529,7 +3529,7 @@
     const coefTxt = v => v == null ? '<span class="mu">—</span>' : '<small>×</small>' + nf(v, 2);
     const ligne = (niv, cle, x, ref, sub, prod, cat) => `<div class="db-al ${niv}${prod ? ' clic' : ''}" ${cle ? `data-cacc="${esc(cle)}"` : ''}${prod ? ` data-fprod="${esc(prod.id)}" data-fnom="${esc(x.nom)}" data-fq="${prod.q != null ? prod.q : ''}" data-fv="${prod.v != null ? prod.v : ''}" data-ft="${prod.taux != null ? prod.taux : ''}" data-fc="${prod.c != null ? prod.c : ''}" data-fcat="${esc(cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}>
         <span>${cle ? `<span class="db-tog ${S.cOuv[cle] ? 'on' : ''}">${S.cOuv[cle] ? '▾' : '▸'}</span>` : ''}</span>
-        <span class="nom">${esc(x.nom)}${(niv === 'g' && x.nom !== 'Catégories') || niv === 'c' ? `<button type="button" class="db-c12" data-c12n="${niv === 'g' ? 'groupe' : 'categorie'}" data-c12="${esc(x.nom)}" title="les ventes des 12 dernières semaines face au réseau">12 sem.</button>` : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+        <span class="nom">${esc(x.nom)}${(niv === 'g' && x.nom !== 'Catégories') || niv === 'c' ? `<button type="button" class="db-c12" data-c12n="${niv === 'g' ? 'groupe' : 'categorie'}" data-c12="${esc(x.nom)}" title="les ventes des 12 dernières semaines face au réseau" aria-label="les ventes des 12 dernières semaines">i</button>` : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
         <span class="barre"><i style="width:${Math.max(1, Math.min(100, 100 * x.ca / Math.max(ref, 1)))}%;background:${coul(x)}"></i></span>
         <span class="n">${fE(x.ca)}</span>
         <span class="n mu">${x.part != null ? fP0(x.part) : ''}</span>
