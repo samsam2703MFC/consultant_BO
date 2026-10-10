@@ -2728,13 +2728,16 @@
     const lignes = (A.lignes || []).filter(x => x.type === 'ligne'), tickets = (A.lignes || []).filter(x => x.type === 'ticket');
     const reste = ecart != null ? ecart - (A.caLignes || 0) - (A.caTickets || 0) : null;
     const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5);
-    if (rien) { return `<div class="db-card acp ok"><div class="ct"><span class="db-lab">À compléter</span><span class="db-mini">✓ tout est ventilé et chiffré ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}</span></div></div>`; }
+    // L'écart de marge qui reste quand tout est chiffré : le coût du panel et celui des tickets, arrondis.
+    const ecM = m && m.margeBrute != null ? m.margeBrute - (st.categories || []).reduce((t, c) => t + (c.m || 0), 0) : 0;
+    if (rien) { return `<div class="db-card acp ok"><div class="ct"><span class="db-lab">À compléter</span><span class="db-mini">✓ tout est ventilé et chiffré ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}${Math.abs(ecM) >= 0.5 ? ' · marge : ' + fU(ecM) + ' d’arrondis de coût' : ''}</span></div></div>`; }
     const hm = x => (x.mn || '') + (x.j && x.j !== S.date ? ' · ' + fD(x.j) : '');
-    const ouvre = n => n <= 8 ? ' open' : '';
+    // Ouverte ou fermée, la liste le reste quand la page se relit (S.cOuv).
+    const ouvre = (k, n) => (S.cOuv['acp:' + k] != null ? S.cOuv['acp:' + k] : n <= 8) ? ' open' : '';
     let v1 = '';
     if (ecart != null && Math.abs(ecart) >= 0.5 || lignes.length || tickets.length) {
       const det = !A.detail ? '<div class="acp-n">Le détail de ce jour se lit à la prochaine ouverture de la page.</div>'
-        : `<details${ouvre(lignes.length + tickets.length)}><summary>${lignes.length} ligne${lignes.length > 1 ? 's' : ''} sans produit${tickets.length ? ' · ' + tickets.length + ' remise' + (tickets.length > 1 ? 's' : '') + ' sur ticket' : ''}</summary>
+        : `<details data-acpo="l"${ouvre('l', lignes.length + tickets.length)}><summary>${lignes.length} ligne${lignes.length > 1 ? 's' : ''} sans produit${tickets.length ? ' · ' + tickets.length + ' remise' + (tickets.length > 1 ? 's' : '') + ' sur ticket' : ''}</summary>
           <table class="db-pro-tab acp-t"><thead><tr><th>Heure</th><th>Libellé de caisse</th><th class="n">Qté</th><th class="n">Montant</th></tr></thead><tbody>
           ${lignes.concat(tickets).map(x => `<tr class="${x.type === 'ticket' ? 'tk' : ''}"><td>${esc(hm(x))}</td><td>${esc(x.nom)}</td><td class="n">${x.q ? nf(x.q, x.q % 1 ? 1 : 0) : ''}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
           </tbody></table></details>`;
@@ -2742,10 +2745,11 @@
         <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${reste != null && A.detail && Math.abs(reste) >= 0.5 ? ' · ' + fU(reste) + ' d’arrondis ou de tickets pas encore lus' : ''}</div>${det}</div>`;
     }
     let v2 = '';
+    const nGris = (st.categories || []).filter(c => c.m == null && c.v > 0).length;
     if ((A.sansCout || []).length) {
       v2 = `<div class="acp-v"><div class="k">Produits sans coût</div><div class="b">${A.nSansCout} <small>produit${A.nSansCout > 1 ? 's' : ''} · ${fU(A.caSansCout)} de ventes</small></div>
-        <div class="s">à chiffrer dans le panel : recette ou coût de revient</div>
-        <details${ouvre(A.sansCout.length)}><summary>la liste</summary><table class="db-pro-tab acp-t"><thead><tr><th>Produit</th><th>Catégorie</th><th class="n">Qté</th><th class="n">CA</th></tr></thead><tbody>
+        <div class="s">à chiffrer dans le panel : recette ou coût de revient${nGris ? ' · ' + nGris + ' catégorie' + (nGris > 1 ? 's' : '') + ' en gris : leur marge reste dans « Non ventilé » tant qu’un de leurs produits n’a pas de coût' : ''}</div>
+        <details data-acpo="p"${ouvre('p', A.sansCout.length)}><summary>les ${A.sansCout.length} produit${A.sansCout.length > 1 ? 's' : ''}</summary><table class="db-pro-tab acp-t"><thead><tr><th>Produit</th><th>Catégorie</th><th class="n">Qté</th><th class="n">CA</th></tr></thead><tbody>
         ${A.sansCout.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0"><td>${esc(x.nom)}</td><td class="mu">${esc(x.cat || '')}</td><td class="n">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
         </tbody></table>${A.nSansCout > A.sansCout.length ? `<div class="acp-n">et ${A.nSansCout - A.sansCout.length} autres</div>` : ''}</details></div>`;
     }
@@ -5300,6 +5304,7 @@
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
     $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
+    $.querySelectorAll('details[data-acpo]').forEach(d => d.addEventListener('toggle', () => { S.cOuv['acp:' + d.dataset.acpo] = d.open; }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
     $.querySelectorAll('[data-perdrop]').forEach(b => b.addEventListener('click', () => { S.perOuvert = !S.perOuvert; rendre(); }));
     $.querySelectorAll('[data-percol]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.perCol = b.dataset.percol; rendre(); }));
