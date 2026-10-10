@@ -717,3 +717,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T15:47:38Z Catégories : sans sous-catégories
 2026-10-10T15:59:49Z Fiche produit sans tableau ; benchmark dans l'Opérationnel
 2026-10-10T16:46:50Z Fiche produit : prix de vente et magasins
+2026-10-10T16:51:21Z Fiche produit : cache
