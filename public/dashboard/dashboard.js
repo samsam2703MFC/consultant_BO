@@ -2717,6 +2717,41 @@
   /* Résultat › Jour, déplié pour le magasin : chaque carte de la journée,
    * rendue à part. La vue Jour en une page (rendJourA4) les range chacune
    * dans la liste déroulante de sa ligne. */
+  /* « À compléter pour des chiffres justes » (10/10/2026) : sous les ventes par catégorie, ce qui manque dans
+   * la caisse et le panel pour que la ventilation tombe juste — les lignes de caisse sans produit (à rattacher
+   * à un produit), les remises sur ticket entier, et les produits vendus sans coût de recette (à chiffrer). */
+  function aCompleterCarte(st, m) {
+    const A = st && st.aCompleter;
+    if (!A) { return ''; }
+    const somme = (st.categories || []).reduce((t, c) => t + (c.v || 0), 0);
+    const ecart = m && m.ca != null ? m.ca - somme : null;
+    const lignes = (A.lignes || []).filter(x => x.type === 'ligne'), tickets = (A.lignes || []).filter(x => x.type === 'ticket');
+    const reste = ecart != null ? ecart - (A.caLignes || 0) - (A.caTickets || 0) : null;
+    const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5);
+    if (rien) { return `<div class="db-card acp ok"><div class="ct"><span class="db-lab">À compléter</span><span class="db-mini">✓ tout est ventilé et chiffré ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}</span></div></div>`; }
+    const hm = x => (x.mn || '') + (x.j && x.j !== S.date ? ' · ' + fD(x.j) : '');
+    const ouvre = n => n <= 8 ? ' open' : '';
+    let v1 = '';
+    if (ecart != null && Math.abs(ecart) >= 0.5 || lignes.length || tickets.length) {
+      const det = !A.detail ? '<div class="acp-n">Le détail de ce jour se lit à la prochaine ouverture de la page.</div>'
+        : `<details${ouvre(lignes.length + tickets.length)}><summary>${lignes.length} ligne${lignes.length > 1 ? 's' : ''} sans produit${tickets.length ? ' · ' + tickets.length + ' remise' + (tickets.length > 1 ? 's' : '') + ' sur ticket' : ''}</summary>
+          <table class="db-pro-tab acp-t"><thead><tr><th>Heure</th><th>Libellé de caisse</th><th class="n">Qté</th><th class="n">Montant</th></tr></thead><tbody>
+          ${lignes.concat(tickets).map(x => `<tr class="${x.type === 'ticket' ? 'tk' : ''}"><td>${esc(hm(x))}</td><td>${esc(x.nom)}</td><td class="n">${x.q ? nf(x.q, x.q % 1 ? 1 : 0) : ''}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
+          </tbody></table></details>`;
+      v1 = `<div class="acp-v"><div class="k">Ventes sans produit</div><div class="b">${ecart != null ? fE(ecart) : fE((A.caLignes || 0) + (A.caTickets || 0))}</div>
+        <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${reste != null && A.detail && Math.abs(reste) >= 0.5 ? ' · ' + fU(reste) + ' d’arrondis ou de tickets pas encore lus' : ''}</div>${det}</div>`;
+    }
+    let v2 = '';
+    if ((A.sansCout || []).length) {
+      v2 = `<div class="acp-v"><div class="k">Produits sans coût</div><div class="b">${A.nSansCout} <small>produit${A.nSansCout > 1 ? 's' : ''} · ${fU(A.caSansCout)} de ventes</small></div>
+        <div class="s">à chiffrer dans le panel : recette ou coût de revient</div>
+        <details${ouvre(A.sansCout.length)}><summary>la liste</summary><table class="db-pro-tab acp-t"><thead><tr><th>Produit</th><th>Catégorie</th><th class="n">Qté</th><th class="n">CA</th></tr></thead><tbody>
+        ${A.sansCout.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0"><td>${esc(x.nom)}</td><td class="mu">${esc(x.cat || '')}</td><td class="n">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
+        </tbody></table>${A.nSansCout > A.sansCout.length ? `<div class="acp-n">et ${A.nSansCout - A.sansCout.length} autres</div>` : ''}</details></div>`;
+    }
+    return `<div class="db-card acp"><div class="ct"><span class="db-lab">À compléter pour des chiffres justes</span><span class="db-mini">ce qui manque dans la caisse et le panel · la ligne « Non ventilé » ci-dessus</span></div><div class="acp-g">${v1}${v2}</div></div>`;
+  }
+
   function jourPieces(m, d, st) {
     const P = {};
     const TT = S.aux['tend|' + S.shop + '|' + S.date], TJ = TT && Array.isArray(TT.jours) ? TT.jours : [];
@@ -2774,7 +2809,7 @@
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
       : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence'}</span></div>
       ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
-    P.categories = h; h = '';
+    P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
     const seuilLab = (d.seuils && d.seuils.labour) || 33;
