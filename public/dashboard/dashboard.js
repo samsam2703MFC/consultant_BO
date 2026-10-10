@@ -2310,11 +2310,11 @@
     const H = Array.isArray(U.heures) ? U.heures : [], fin = now == null;
     const jour = esc(U.jourNom || '') + (/s$/.test(U.jourNom || '') ? '' : 's');
     const suite = fin ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
-    const F = S.vitF || (S.vitF = { ko: true, att: true, ok: false });
+    // Les filtres, par durée de vie (10/10/2026) : trois petits carrés discrets en bout de ligne.
+    const FB = S.vitFb || (S.vitFb = {}), filtre = k => FB[k] || (FB[k] = { ko: true, att: true, ok: false });
     const L = prods.map(p => Object.assign({ p, e: vitLire(D, p) }));
     const nb = c => L.filter(x => x.e.c === c).length;
     const manque = L.filter(x => x.e.c !== 'ok'), eur = manque.filter(x => opVieDe(x.p) !== 'L').reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
-    const puces = VIT_F.map(([c, nom]) => `<button type="button" class="vt-f ${c}${F[c] ? ' on' : ''}" data-vitf="${c}" aria-pressed="${F[c] ? 'true' : 'false'}"><i></i>${fin && c === 'ko' ? 'A manqué' : nom}<b>${fN(nb(c))}</b></button>`).join('');
     const ordre = { ko: 0, att: 1, ok: 2 };
     const geste = (x, k) => {
       if (x.e.c === 'ok') { const fj = Math.max(0, +x.p.finJour || 0); return k === 'L' ? `<span class="g ok">en stock<small>${x.e.pj ? nf(x.e.st / x.e.pj, 1) + ' jours de vente' : ''}</small></span>` : `<span class="g ok">${fj >= 0.5 ? fN(fj) : '—'}<small>${fj >= 0.5 ? 'restera ce soir' : 'juste assez'}</small></span>`; }
@@ -2334,9 +2334,11 @@
     const blocs = OP_VIES.map(k => {
       const B = L.filter(x => opVieDe(x.p) === k);
       if (!B.length) { return ''; }
+      const F = filtre(k);
       const V = B.filter(x => F[x.e.c]).sort((a, b) => (ordre[a.e.c] - ordre[b.e.c]) || ((a.e.h ?? 99) - (b.e.h ?? 99)) || ((b.e.q || 0) - (a.e.q || 0)) || a.p.nom.localeCompare(b.p.nom));
       const tout = !!(S.vitTout || {})[k], MAX = 12, vus = tout ? V : V.slice(0, MAX);
-      const cpt = ['ko', 'att', 'ok'].map(c => { const n = B.filter(x => x.e.c === c).length; return n ? `<span class="c ${c}"><i></i>${fN(n)}</span>` : ''; }).join('');
+      const cpt = VIT_F.map(([c, nom]) => { const n = B.filter(x => x.e.c === c).length;
+        return `<button type="button" class="vt-q ${c}${F[c] ? ' on' : ''}" data-vitq="${k}:${c}" aria-pressed="${F[c] ? 'true' : 'false'}" title="${fin && c === 'ko' ? 'A manqué' : nom} : ${fN(n)} · un clic filtre la liste"><i></i>${fN(n)}</button>`; }).join('');
       // Chaque durée de vie est une liste déroulante (10/10/2026) : l'en-tête résume, le détail s'ouvre au clic.
       const ouvert = !!(S.vitOuv || {})[k];
       const M = B.filter(x => x.e.c !== 'ok'), aCuire = M.reduce((a, x) => a + (x.e.n || 0), 0), eurB = k === 'L' ? 0 : M.reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
@@ -2344,14 +2346,14 @@
         : `<span class="rs">${fN(M.length)} ${fin ? 'ont manqué' : 'vont manquer'}${aCuire && !fin ? ' · <b>+' + fN(aCuire) + '</b> ' + (k === 'L' ? 'à refaire' : 'à cuire') : ''}${eurB >= 1 ? ' · ' + fE(eurB) + (fin ? ' perdus' : ' à sauver') : ''}</span>`;
       const axe = k === 'L' ? '<div class="vt-ax l"><span>stock face à ' + OP_VIE_JOURS + ' jours de vente</span></div>' : `<div class="vt-ax">${H.map(h => `<span>${h} h</span>`).join('')}</div>`;
       const vide = !V.length ? `<div class="vt-vide">${F.ko || F.att ? (B.some(x => x.e.c !== 'ok') ? 'rien dans les filtres choisis' : '✓ rien ne va manquer d’ici la fermeture') : 'aucun produit dans les filtres choisis'}</div>` : '';
-      return `<div class="vt-b${ouvert ? ' on' : ''}"><button type="button" class="vt-h" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf. · ${esc(VIT_REGLE[k])}</span>${resB}<span class="cpt">${cpt}</span></button>
+      return `<div class="vt-b${ouvert ? ' on' : ''}"><div class="vt-h"><button type="button" class="vt-ht" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf. · ${esc(VIT_REGLE[k])}</span>${resB}</button><span class="cpt">${cpt}</span></div>
         ${ouvert ? `${V.length ? `<div class="vt-t"><span></span>${axe}<span></span><span></span></div>` : ''}${vus.map(x => ligne(x, k)).join('')}${vide}
         ${V.length > MAX ? `<button type="button" class="vt-plus" data-vitall="${k}">${tout ? '▴ replier' : (V.length - MAX === 1 ? '▸ voir le dernier' : '▸ voir les ' + fN(V.length - MAX) + ' autres')}</button>` : ''}` : ''}</div>`;
     }).join('');
     const tete = `<span class="db-mini">${fin ? 'journée terminée' : 'à ' + esc(U.maintenant || opHM(now))} · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${jour}</span><span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
     const resume = manque.length ? `<b>${fN(manque.length)}</b><span>produit${manque.length > 1 ? 's' : ''} ${fin ? 'ont manqué' : 'vont manquer d’ici la fermeture'}${eur >= 1 ? ' · ' + fE(eur) + ' de ventes ' + (fin ? 'perdues' : 'à sauver') : ''}</span>` : `<b class="ok">✓</b><span>rien ne va manquer d’ici la fermeture</span>`;
     return `<div class="db-card op-bloc vt"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>
-      <div class="vt-top"><span class="vt-res">${resume}</span><span class="vt-fs">${puces}</span></div>${blocs}
+      <div class="vt-top"><span class="vt-res">${resume}</span></div>${blocs}
       <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span><span>une case par heure · cadre noir : maintenant · pâle : à venir · un clic ouvre la fiche du produit</span></div></div>`;
   }
 
@@ -5434,7 +5436,8 @@
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
     $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
-    $.querySelectorAll('[data-vitf]').forEach(b => b.addEventListener('click', () => { const F = S.vitF || (S.vitF = { ko: true, att: true, ok: false }); F[b.dataset.vitf] = !F[b.dataset.vitf]; rendre(); }));
+    $.querySelectorAll('[data-vitq]').forEach(b => b.addEventListener('click', () => { const [k, c] = b.dataset.vitq.split(':'), FB = S.vitFb || (S.vitFb = {}), F = FB[k] || (FB[k] = { ko: true, att: true, ok: false });
+      F[c] = !F[c]; const O = S.vitOuv || (S.vitOuv = {}); O[k] = true; rendre(); }));
     $.querySelectorAll('[data-vitall]').forEach(b => b.addEventListener('click', () => { const T = S.vitTout || (S.vitTout = {}); T[b.dataset.vitall] = !T[b.dataset.vitall]; rendre(); }));
     $.querySelectorAll('[data-vitb]').forEach(b => b.addEventListener('click', () => { const O = S.vitOuv || (S.vitOuv = {}); O[b.dataset.vitb] = !O[b.dataset.vitb]; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
