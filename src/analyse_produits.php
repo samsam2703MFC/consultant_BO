@@ -423,6 +423,8 @@ function ep_analyse_categorie_magasin(): array
     foreach (array_keys($shops) as $s) { foreach ($tranches as [$du, $au]) { $couples[] = [$s, $du, $au]; } }
     $lu = apTranches2($couples);
     $moi = []; $moiQ = []; $res = []; $resQ = []; $muet = []; $vues = [];
+    // Le détail du magasin (10/10/2026) : chaque sous-catégorie d'un groupe, chaque produit d'une catégorie, semaine par semaine.
+    $sousCa = []; $sousQ = []; $sousNom = [];
     foreach ($tranches as $i => [$du, $au]) {
         $ca = 0.0; $q = 0.0; $servis = 0;
         foreach (array_keys($shops) as $s) {
@@ -434,6 +436,11 @@ function ep_analyse_categorie_magasin(): array
                 if (($niveau === 'categorie' ? $c : $groupe($c)) !== $nom) { continue; }
                 $caS += (float) $x[3]; $qS += (float) $x[2];
                 if ($niveau === 'groupe' && $c !== '' && $s === $sid) { $vues[$c] = true; }
+                if ($s === $sid) {
+                    $kS = $niveau === 'groupe' ? ($c !== '' ? $c : 'Sans catégorie') : (string) (int) $pid;
+                    $sousCa[$kS][$i] = ($sousCa[$kS][$i] ?? 0.0) + (float) $x[3]; $sousQ[$kS][$i] = ($sousQ[$kS][$i] ?? 0.0) + (float) $x[2];
+                    if ($niveau !== 'groupe') { $sousNom[$kS] = (function_exists('svCatalogue') ? (svCatalogue()[(int) $pid]['nom'] ?? null) : null) ?? (string) $x[0]; }
+                }
             }
             $ca += $caS; $q += $qS;
             if ($s === $sid) { $moi[$i] = round($caS, 2); $moiQ[$i] = round($qS, 1); }
@@ -444,11 +451,78 @@ function ep_analyse_categorie_magasin(): array
     }
     ksort($moi); ksort($moiQ);
     $cats = array_keys($vues); sort($cats);
+    $nT = count($tranches); $sous = [];
+    foreach ($sousCa as $kS => $v) {
+        $ca = []; $q = []; for ($i = 0; $i < $nT; $i++) { $ca[] = round((float) ($v[$i] ?? 0), 2); $q[] = round((float) ($sousQ[$kS][$i] ?? 0), 1); }
+        if (array_sum($ca) <= 0 && array_sum($q) <= 0) { continue; }
+        $sous[] = ['nom' => $niveau === 'groupe' ? (string) $kS : ($sousNom[$kS] ?? ('Produit ' . $kS)), 'magasin' => $ca, 'magasinQ' => $q];
+    }
+    // Les plus grosses d'abord ; une catégorie garde ses 15 premiers produits.
+    usort($sous, static fn ($a, $b) => array_sum(array_slice($b['magasin'], -9, 8)) <=> array_sum(array_slice($a['magasin'], -9, 8)));
+    if ($niveau !== 'groupe') { $sous = array_slice($sous, 0, 15); }
     return ['shop' => $sid, 'niveau' => $niveau, 'nom' => $nom, 'groupe' => $niveau === 'categorie' && isset($grpDe[$nom]) ? $groupe($nom) : null, 'categories' => $cats,
+        'sous' => $sous,
         'semaines' => ['tranches' => array_map(fn ($t) => $t[2], $tranches), 'bornes' => array_map(fn ($t) => [$t[0], $t[1]], $tranches),
             'jours' => array_map(fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches),
             'magasin' => array_values($moi), 'reseau' => array_values($res), 'magasinQ' => array_values($moiQ), 'reseauQ' => array_values($resQ),
             'muettes' => $muet, 'magasins' => count($shops)]];
+}
+
+/**
+ * GET /analyse/categories/journee?shop=4&niveau=groupe&nom=Tartes&date=2026-10-10
+ *
+ * La journée de vente d'une catégorie ou d'un groupe (10/10/2026) : de 6 h à 18 h, heure par heure, le
+ * chiffre d'affaires et les pièces du jour face à la moyenne des 6 derniers mêmes jours (un jour sans
+ * aucune vente au magasin, fermé, ne compte pas). Lecture : les relevés de tickets (svProduitsJour), le
+ * jour en cours relu par ses nouveaux tickets seulement, les jours passés déjà gravés.
+ */
+function ep_analyse_categorie_journee(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $niveau = ($_GET['niveau'] ?? '') === 'groupe' ? 'groupe' : 'categorie';
+    $nom = trim((string) ($_GET['nom'] ?? ''));
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || $nom === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop, nom et date requis']; }
+    if (!function_exists('svProduitsJour')) { return ['indispo' => true, 'motif' => 'lecture des tickets indisponible']; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $grpDe = function_exists('svGroupes') ? svGroupes() : [];
+    $groupe = static fn (string $c): string => explode(' · ', (string) ($grpDe[$c] ?? 'Autres'))[0];
+    $H = range(6, 17);
+    // Un relevé de tickets [heure][produit ou produit:portion] = [nom, pièces, CA, coût] : la catégorie, heure par heure.
+    $plier = static function (array $p) use ($H, $catDe, $groupe, $niveau, $nom): array {
+        $ca = array_fill_keys($H, 0.0); $q = array_fill_keys($H, 0.0); $tout = 0.0;
+        foreach ($p as $h => $lst) {
+            foreach ((array) $lst as $k => $x) {
+                $tout += (float) ($x[2] ?? 0);
+                if (!isset($ca[(int) $h])) { continue; }
+                $c = (string) ($catDe[(int) explode(':', (string) $k)[0]] ?? '');
+                if (($niveau === 'categorie' ? $c : $groupe($c)) !== $nom) { continue; }
+                $ca[(int) $h] += (float) ($x[2] ?? 0); $q[(int) $h] += (float) ($x[1] ?? 0);
+            }
+        }
+        return [$ca, $q, $tout];
+    };
+    $cout = 0; $budget = defined('SV_BUDGET_DEMANDE') ? SV_BUDGET_DEMANDE : 500;
+    $p0 = svProduitsJour($sid, $date, $cout, $budget);
+    [$ca0, $q0] = $p0 !== null ? $plier($p0) : [array_fill_keys($H, 0.0), array_fill_keys($H, 0.0)];
+    $jours = [];
+    for ($i = 1; $i <= 6; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
+    $lus = []; $manq = []; $sCa = array_fill_keys($H, 0.0); $sQ = array_fill_keys($H, 0.0);
+    foreach ($jours as $j) {
+        $p = svProduitsJour($sid, $j, $cout, $budget);
+        if ($p === null) { $manq[] = $j; continue; }
+        [$ca, $q, $tout] = $plier($p);
+        if ($tout <= 0) { continue; }
+        $lus[] = $j;
+        foreach ($H as $h) { $sCa[$h] += $ca[$h]; $sQ[$h] += $q[$h]; }
+    }
+    $n = count($lus);
+    $noms = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    return ['shop' => $sid, 'niveau' => $niveau, 'nom' => $nom, 'date' => $date, 'jourNom' => $noms[(int) date('w', strtotime($date . ' 12:00:00'))],
+        'maintenant' => $date === date('Y-m-d') ? date('H:i') : null, 'lu' => $p0 !== null, 'jours' => $lus, 'manquants' => $manq,
+        'heures' => array_map(static fn ($h) => ['h' => $h, 'ca' => round($ca0[$h], 2), 'q' => round($q0[$h], 1),
+            'moyCa' => $n ? round($sCa[$h] / $n, 2) : null, 'moyQ' => $n ? round($sQ[$h] / $n, 2) : null], $H)];
 }
 
 /**
