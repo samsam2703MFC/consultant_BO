@@ -430,6 +430,18 @@ function ep_bundles_sonde(): array
 {
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
     $out = ['routes' => []];
+    // ?admin=1 (10/10/2026) : les mêmes routes avec le compte ADMIN du panel (ErpApi, même serveur, réalm admin) :
+    // le compte consultant reçoit 403 sur /admin/promotions. Lecture seule ; les noms, règles et produits seulement.
+    if (!empty($_GET['admin'])) {
+        if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['admin' => 'compte admin non configuré']; }
+        $propre = static function ($x) use (&$propre) { if (!is_array($x)) { return $x; } $o = []; foreach ($x as $k => $v) { if (is_string($k) && preg_match('/password|token|secret|phone|email|mail/i', $k)) { continue; } $o[$k] = $propre($v); } return $o; };
+        foreach (['bundles' => '/admin/promotions/bundles?limit=100', 'buy-x-get-y' => '/admin/promotions/buy-x-get-y?limit=100', 'quantity' => '/admin/promotions/quantity?limit=100', 'remises-programmees' => '/admin/promotions/scheduled-product-discount?limit=100'] as $nom => $ch) {
+            ErpApi::$lastError = null; $r = ErpApi::get($ch);
+            $l = is_array($r) ? (array_is_list($r) ? $r : ($r['items'] ?? $r['data'] ?? $r['results'] ?? $r)) : [];
+            $out['admin'][$nom] = ['chemin' => $ch, 'erreur' => ErpApi::$lastError, 'n' => is_array($l) ? count($l) : 0, 'liste' => $propre(is_array($l) ? array_slice($l, 0, 40) : $l)];
+        }
+        return $out;
+    }
     // ?ids=1-12 (10/10/2026) : le détail par identifiant (GET …/{id}), quand la liste est refusée.
     if (preg_match('/^(\d{1,4})-(\d{1,4})$/', (string) ($_GET['ids'] ?? ''), $m)) {
         $de = (int) $m[1]; $a = min((int) $m[2], $de + 30);
