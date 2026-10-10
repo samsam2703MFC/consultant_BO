@@ -2456,18 +2456,12 @@
     const cell = (cls, lab, v, sous) => `<div class="${cls}"><span class="lab">${lab}</span>${v}${sous ? `<small>${sous}</small>` : ''}</div>`;
     const ligne = (k, note, a, b, d, j, r) => `<div class="op-dl"><div class="k">${k}${note ? `<small>${note}</small>` : ''}</div>${cell('a', lblA, a[0], a[1])}${cell('b', esc(B.lblB), b[0], b[1])}<div class="d">${d}</div>${cell('j', lblJ, j[0], j[1])}${cell('r', 'référence', r[0], r[1])}</div>`;
     const ref = JD && JD.reference ? JD.reference : {};
-    const se = JD && JD.seuils ? JD.seuils : {};
-    const mbA = m.margeBrute;
     const sansJ = !j7 || !j7.moment;
     let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span><span class="db-mini">${sansJ ? 'face à la journée entière de la semaine passée' : 'à la même heure, puis la journée entière de la semaine passée'}</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
     h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
     h += ligne('Clients', '', [fN(tk), ''], [j7 ? fN(j7.tickets) : eq, ''], ecart(B.dTk), [j7 && j7.moment ? fN(j7.ticketsJour) : eq, ''], [m.refTickets != null ? fN(m.refTickets) : eq, m.ticketsDelta != null ? fSP(m.ticketsDelta) + ' face à la référence' : '']);
     h += ligne('Panier moyen', '', [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && j7.ticketsJour ? fU(j7.caJour / j7.ticketsJour) : eq, ''], [JD && JD.reseau && JD.reseau.panier ? fU(JD.reseau.panier) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
-    h += ligne('Marge brute', '', [mbA != null ? fE(mbA) : eq, B.mbPct != null ? fP(B.mbPct) + ' des ventes' : ''], [B.mb7 != null ? fE(B.mb7) : eq, B.mb7Pct != null ? fP(B.mb7Pct) : (j7 ? 'matière pas gravée' : '')], ecart(B.dMb, false, '', fPts), [j7 && j7.moment && j7.mbJour != null ? fE(j7.mbJour) : eq, j7 && j7.moment && j7.mbJour != null && j7.caJour ? fP(100 * j7.mbJour / j7.caJour) : ''], [m.coutMatierePct != null ? 'matière ' + fP(m.coutMatierePct) : eq, se.food != null ? 'seuil ' + fP(se.food) : '']);
-    if (!fin) {
-      h += ligne('Projection fin de journée', m.projectionRythme ? 'au rythme : ' + fE(m.projectionRythme) : '', [m.projection != null ? fE(m.projection) : eq, m.projection != null && m.objectifJour ? fP0(100 * m.projection / m.objectifJour) + ' de l’objectif' : (m.projectionMotif ? esc(m.projectionMotif) : '')], [eq, ''], ecart(B.dProj, false, '<small> vs la journée</small>'), [j7 ? fE(j7.caJour) : eq, j7 && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.objectifJour ? fE(m.objectifJour) : eq, 'objectif du jour']);
-    }
-    h += ligne('Résultat net', 'personnel et frais généraux du jour', [m.net == null ? eq : fS(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes'], [eq, ''], eq, [eq, ''], [m.labour != null ? 'personnel ' + fE(m.labour) : eq, m.overhead != null ? 'frais généraux ' + fE(m.overhead) : '']);
+    // Marge brute, projection et résultat net retirés du duel (10/10/2026) : ils restent dans le P&L court.
     return h + '</div></div>';
   }
 
