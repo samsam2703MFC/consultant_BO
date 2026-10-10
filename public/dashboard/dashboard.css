@@ -1985,3 +1985,12 @@ html.db-fiche-ouverte{overflow:hidden}
   .op-bun-ptab .u{display:inline;font-size:10.5px;color:var(--color-text-muted)}.op-bun-ptab td b .u{font-weight:500}
   .op-bun-ptab td.n b{display:inline}
 }
+
+/* Portions (10/10/2026, maquette A + la colonne reste de B) : l'onglet Portions des ventes par catégorie. La grille suit le nombre de tailles. */
+.pt-leg{margin-left:auto;display:flex;flex-wrap:wrap;gap:12px;font:600 11.5px var(--font-ui)}.pt-leg i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}.pt-leg i.rs{background:#fff;border:1.2px dashed #C0182B;box-sizing:border-box}
+.pr-bd .k b.ko{color:#C0182B}
+.db-acc.pt .db-al .barre.pt-b i{position:absolute;top:0;bottom:0;border-radius:0}.db-acc.pt .db-al .barre.pt-b i:first-child{border-radius:999px 0 0 999px}
+.db-acc.pt .db-al .b{font-weight:700}
+.pt-r{display:inline-block;font:700 10.5px var(--font-ui);color:#C0182B;border:1px solid #C0182B;border-radius:4px;padding:1px 6px;white-space:nowrap}
+@media (max-width:900px){.db-acc.pt .db-ent,.db-acc.pt .db-al{gap:6px}.pt-leg{margin-left:0}}
+.db-acc.pt .db-ent,.db-acc.pt .db-al{column-gap:8px}.db-acc.pt .db-al.c{padding-left:12px}.db-acc.pt .db-al.p{padding-left:30px}

@@ -638,6 +638,24 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     return $p;
 }
 
+/**
+ * La portion d'une ligne gravée, lue sur son nom (« Brownies — 1/4 ») : le libellé et la fraction de la pièce entière.
+ * Fraction nulle quand le libellé ne la dit pas.
+ */
+function svPortionDuNom(string $nom): array
+{
+    $pos = mb_strrpos($nom, ' — ');
+    $lib = $pos !== false ? trim(mb_substr($nom, $pos + 3)) : '';
+    $f = null;
+    if (preg_match('#^(\d+)\s*/\s*(\d+)$#', $lib, $m) && (int) $m[2] > 0) { $f = (int) $m[1] / (int) $m[2]; }
+    else {
+        foreach (['half' => 0.5, 'demi' => 0.5, 'quarter' => 0.25, 'quart' => 0.25, 'third' => 1 / 3, 'tiers' => 1 / 3, 'sixth' => 1 / 6, 'eighth' => 0.125] as $k => $v) {
+            if (stripos($lib, $k) !== false) { $f = stripos($lib, 'three') !== false || stripos($lib, 'trois') !== false ? 3 * $v : $v; break; }
+        }
+    }
+    return ['lib' => $lib, 'f' => $f !== null ? round($f, 4) : null];
+}
+
 /** La minute du dernier ticket de chaque produit un jour : [pid => "HH:MM"] ; vide si le relevé ne la porte pas. */
 function svDernieresVentes(int $sid, string $j): array
 {
@@ -1072,12 +1090,15 @@ function ep_stats_ventes(): array
         elseif ($x['v'] > 0) { $ccT[$cn]['nSans']++; $ccT[$cn]['vSans'] += $x['v']; }
     }
     // Les produits de chaque catégorie, du plus vendu au moins vendu, avec leur part dans la catégorie.
-    $prodDe = [];
+    $prodDe = []; $pidsPortion = [];
     foreach ($ppT as $x) {
         if ($x['v'] <= 0 && $x['q'] <= 0) { continue; }
         $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
         $prodDe[$x['cat']][] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
-            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : []);
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : [])
+            // Une portion (10/10/2026, onglet Portions) : son libellé et la fraction de la pièce entière.
+            + (is_string($x['id']) && str_contains($x['id'], ':') ? ['portion' => svPortionDuNom((string) $x['nom'])] : []);
+        if (is_string($x['id']) && str_contains($x['id'], ':')) { $pidsPortion[(int) explode(':', $x['id'])[0]] = true; }
     }
     foreach ($ccT as $x) {
         $chiffre = $x['vC'] > 0 || $x['nSans'] === 0;
@@ -1135,6 +1156,8 @@ function ep_stats_ventes(): array
         'heures' => $lignes, 'categories' => $catsT,
         // Les promotions du panel reconnues dans les tickets des jours lus (10/10/2026) : l'onglet Promotions des catégories.
         'promos' => function_exists('pvPromotions') ? pvPromotions($sid, $joursProd) : null,
+        // Le prix de la pièce entière au catalogue du magasin, pour les produits vendus en portions.
+        'portions' => ['prix' => (object) array_intersect_key(function_exists('cataloguePrixMagasin') ? cataloguePrixMagasin($sid) : [], $pidsPortion)],
         'bundles' => $bundles + ['part' => $tot['ca'] > 0 ? round(100 * $bundles['ca'] / $tot['ca'], 1) : null], 'aCompleter' => $aCompleter, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
         'matiere' => ['heuresEstimees' => $matEstimee, 'heuresInconnues' => $matInconnue,
             'source' => $matInconnue > 0 ? 'coût matière inconnu sur ' . $matInconnue . ' heure' . ($matInconnue > 1 ? 's' : '') . ' (tickets non lus)' : ($matEstimee > 0 ? 'recettes vendues sur ' . $matEstimee . ' heure' . ($matEstimee > 1 ? 's' : '') . ' que le panel ne chiffre pas' : 'panel')],

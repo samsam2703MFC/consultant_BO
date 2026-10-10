@@ -3045,3 +3045,34 @@ Le dashboard affiche ces promotions à deux endroits :
   Les promotions actives pas déclenchées sont listées en bas. Sous 600 px, les lignes s'empilent.
 
 La sonde `GET /exploitation/bundles/sonde?admin=1&detail=11-18` lit ce détail.
+
+**Portions (10/10/2026, maquette A + la colonne « reste » de B).** `GET /ventes/stats` ajoute deux choses :
+
+- sur chaque produit des catégories vendu en part (id « pid:portion ») : `portion: {lib, f}`. C'est le libellé lu dans le nom (« 1/4 ») et la fraction de la pièce entière (0,25), via `svPortionDuNom`. `f` vaut null quand le libellé ne dit pas la fraction ;
+- `portions.prix` : `{pid : prix de la pièce entière}` au catalogue du magasin, pour les produits vendus en parts (`cataloguePrixMagasin`).
+
+Le dashboard ajoute un onglet « Portions » à côté de Promotions dans Ventes par catégorie. On y voit seulement les catégories qui vendent en parts.
+
+Le bandeau donne quatre chiffres :
+- la part du CA vendue en portions ;
+- le nombre de pièces entières vendues ;
+- le CA par pièce entière ;
+- les pièces encore en parts.
+
+Le tableau va de la catégorie au produit, avec ces colonnes :
+- une barre en pièces entières, une couleur par taille ;
+- une colonne par taille présente : Entière, ½, ¼… ;
+- « En entières » : Σ fraction × pièces ;
+- « Reste » : la dernière pièce coupée moins les parts vendues. C'est une estimation : rien ne restait de la veille et rien n'a été recoupé ;
+- le CA et le CA par pièce entière.
+
+Le prix entier d'un produit vient des entières vendues, sinon du catalogue. Les produits vendus seulement entiers tiennent sur une ligne.
+
+À Halle le 10/10 :
+
+| Mesure | Valeur |
+|---|---|
+| CA tartes et quiches vendu en portions | 59 % |
+| Pièces entières vendues | 30 ¼ |
+| CA par pièce entière | 24,46 € |
+| Pièces encore en parts | 7 ¾ |
