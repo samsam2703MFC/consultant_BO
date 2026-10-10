@@ -1854,6 +1854,8 @@ html.db-fiche-ouverte{overflow:hidden}
 .fr-c.on{background:var(--color-surface);border-color:var(--color-primary);box-shadow:0 3px 10px rgba(141,29,44,.18)}.fr-c.on .n{color:var(--color-primary)}
 .fr-c.fut{cursor:default;background:var(--color-surface);border:1px dashed var(--color-border-secondary)}.fr-c.fut b{color:#c9c0b4}.fr-c.fut:hover{border-color:var(--color-border-secondary)}
 .fr-c.sk{cursor:default;gap:6px}
+.db-frise.sept .fr-c{padding:8px 12px}.db-frise.sept .fr-c b{font-size:20px}.db-frise.sept .fr-c .n{font-size:12px}.db-frise.sept .fr-c small{font-size:11px}
+.fr-fl[disabled]{opacity:.3;cursor:default}
 .db-frise.quatre .fr-c{padding:9px 12px}.db-frise.quatre .fr-c b{font-size:22px}.db-frise.quatre .fr-c .n{font-size:12px}.db-frise.quatre .fr-c small{font-size:11px}.db-frise.quatre .fr-c .jg{height:6px}
 /* Modale produit, Recette & marge (10/10/2026) : la marge brute en %, seule, à côté de la recette. */
 .fi-rdeux.mb{grid-template-columns:minmax(0,1fr) 220px}
