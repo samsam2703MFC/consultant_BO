@@ -724,3 +724,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T18:00:58Z Sonde promotions compte admin
 2026-10-10T18:05:51Z Tickets à remise
 2026-10-10T18:24:40Z sonde promotions detail
+2026-10-10T18:38:39Z promotions du panel dans les categories et bundles
