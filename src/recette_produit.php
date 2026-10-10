@@ -26,6 +26,9 @@ declare(strict_types=1);
 
 const RP_HEURES = 24;
 const RP_PROFONDEUR = 4;
+// La recette d'un produit et son coût au panel : relus passées 10 secondes (10/10/2026), pour qu'une recette
+// créée ou complétée au panel se voie tout de suite (la fiche, les ventes sans coût, les bundles).
+const RP_SEC_RECETTE = 10;
 
 /** Les colonnes d'une table de la copie, en minuscules ; [] si la table manque. Mémorisé le temps de la requête. */
 function rpColonnes(string $table): array
@@ -303,7 +306,7 @@ function rpApi(int $pid, int $sid, bool $frais): ?array
 {
     if (!PanelApi::configured()) { return null; }
     $cleP = 'recetteDuProduit:' . $pid;
-    $c = mfCache($cleP, $frais);
+    $c = mfCache($cleP, $frais, RP_SEC_RECETTE);
     $rid = isset($c['rid']) ? (int) $c['rid'] : null; $nomP = (string) ($c['nom'] ?? '');
     if ($rid === null) {
         $p = PanelApi::get('/products/' . $pid);
@@ -311,10 +314,10 @@ function rpApi(int $pid, int $sid, bool $frais): ?array
         $rid = (int) ($p['id_recipe'] ?? 0); $nomP = trim((string) ($p['name'] ?? ''));
         mfGarder($cleP, ['rid' => $rid, 'nom' => $nomP]);
     }
-    $src = 'API du panel : /shops/{magasin}/recipes/{recette}/cost (le coût de la recette calculé par le panel pour ce magasin, sous-recettes dépliées, aux prix du jour) ; une matière sans prix dans ce magasin est prise au prix médian des autres magasins (/shops/{id}/materials) ; relu passée la minute';
+    $src = 'API du panel : /shops/{magasin}/recipes/{recette}/cost (le coût de la recette calculé par le panel pour ce magasin, sous-recettes dépliées, aux prix du jour) ; une matière sans prix dans ce magasin est prise au prix médian des autres magasins (/shops/{id}/materials) ; relu passées 10 secondes';
     if ($rid <= 0) { return ['pid' => $pid, 'nom' => $nomP, 'sansRecette' => true, 'motif' => 'le produit n’a pas de recette au panel', 'lignes' => [], 'nLignes' => 0, 'source' => $src, 'api' => true]; }
     $cleC = 'recetteCout:' . $rid . ':' . $sid;
-    $cout = mfCache($cleC, $frais, MF_SEC_PRIX);
+    $cout = mfCache($cleC, $frais, RP_SEC_RECETTE);
     if ($cout === null) {
         $cout = PanelApi::get('/shops/' . $sid . '/recipes/' . $rid . '/cost');
         if (!is_array($cout) || !isset($cout['elements']) || !is_array($cout['elements'])) { return null; }
