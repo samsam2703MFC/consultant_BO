@@ -5860,13 +5860,28 @@ function ep_perf(): array
             $yMax = max($annees);
             $from = sprintf('%04d-01-01 00:00:00', $yMax);
             $to   = sprintf('%04d-01-01 00:00:00', $yMax + 1);
-            foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
+            // La caisse locale ne bouge plus (elle s'arrête au 14/07/2026) : sa lecture se garde six heures,
+            // et sert encore quand la requête dépasse ses 6 secondes (10/10/2026). Sans ce relais, une page
+            // chargée en même temps que d'autres perdait février à juin (« pas de vente »).
+            $cleTx = 'perfTx:' . $yMax;
+            $txC = setting($cleTx);
+            $txL = is_array($txC) && is_array($txC['l'] ?? null) ? $txC['l'] : null;
+            if ($txL === null || (int) ($txC['quand'] ?? 0) < time() - 6 * 3600) {
+                try {
+                    $txL = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
                                       id_shop, MONTH(insert_timestamp) m,
                                       COUNT(DISTINCT ticket_key) tickets,
                                       SUM(total_gross_amount_after_discount) ca
                                FROM transaction
                                WHERE insert_timestamp >= ? AND insert_timestamp < ?
-                               GROUP BY id_shop, m", [$from, $to]) as $r) {
+                               GROUP BY id_shop, m", [$from, $to]);
+                    try {
+                        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                            [$cleTx, json_encode(['quand' => time(), 'l' => $txL])]);
+                    } catch (PDOException $eTxC) { /* cache facultatif */ }
+                } catch (PDOException $eTxQ) { if ($txL === null) { throw $eTxQ; } }
+            }
+            foreach ($txL as $r) {
                 $tickets = (int) $r['tickets'];
                 $caPos   = $r['ca'] !== null ? (float) $r['ca'] : null;
                 $panier  = ($tickets > 0 && $caPos !== null) ? round($caPos / $tickets, 2) : null;
