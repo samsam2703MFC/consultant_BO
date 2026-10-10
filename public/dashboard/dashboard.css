@@ -1989,8 +1989,28 @@ html.db-fiche-ouverte{overflow:hidden}
 /* Portions (10/10/2026, maquette A + la colonne reste de B) : l'onglet Portions des ventes par catégorie. La grille suit le nombre de tailles. */
 .pt-leg{margin-left:auto;display:flex;flex-wrap:wrap;gap:12px;font:600 11.5px var(--font-ui)}.pt-leg i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}.pt-leg i.rs{background:#fff;border:1.2px dashed #C0182B;box-sizing:border-box}
 .pr-bd .k b.ko{color:#C0182B}
-.db-acc.pt .db-al .barre.pt-b i{position:absolute;top:0;bottom:0;border-radius:0}.db-acc.pt .db-al .barre.pt-b i:first-child{border-radius:999px 0 0 999px}
-.db-acc.pt .db-al .b{font-weight:700}
+.db-acc.pot .db-al .barre.pt-b i{position:absolute;top:0;bottom:0;border-radius:0}.db-acc.pot .db-al .barre.pt-b i:first-child{border-radius:999px 0 0 999px}
+.db-acc.pot .db-al .b{font-weight:700}
 .pt-r{display:inline-block;font:700 10.5px var(--font-ui);color:#C0182B;border:1px solid #C0182B;border-radius:4px;padding:1px 6px;white-space:nowrap}
-@media (max-width:900px){.db-acc.pt .db-ent,.db-acc.pt .db-al{gap:6px}.pt-leg{margin-left:0}}
-.db-acc.pt .db-ent,.db-acc.pt .db-al{column-gap:8px}.db-acc.pt .db-al.c{padding-left:12px}.db-acc.pt .db-al.p{padding-left:30px}
+@media (max-width:900px){.db-acc.pot .db-ent,.db-acc.pot .db-al{gap:6px}.pt-leg{margin-left:0}}
+.db-acc.pot .db-ent,.db-acc.pot .db-al{column-gap:8px}.db-acc.pot .db-al.c{padding-left:12px}.db-acc.pot .db-al.p{padding-left:30px}
+
+/* Le téléphone (10/10/2026) : les chiffres de la journée passent dans Exploitation ; les tableaux des catégories
+ * tiennent dans l'écran sans défiler de côté, les colonnes secondaires se retirent. */
+.ma-large{margin:12px 0}.ma-large>.db-card{margin:0}
+@media (max-width:560px){
+  .mb-sc .db-acc{padding:4px 8px 8px}
+  .mb-sc .db-acc:not(.pro):not(.pot) .db-ent,.mb-sc .db-acc:not(.pro):not(.pot) .db-al{grid-template-columns:20px minmax(0,1fr) 72px 48px;gap:6px}
+  .mb-sc .db-acc:not(.pro):not(.pot) .db-ent>:nth-child(3),.mb-sc .db-acc:not(.pro):not(.pot) .db-al>:nth-child(3),
+  .mb-sc .db-acc:not(.pro):not(.pot) .db-ent>:nth-child(5),.mb-sc .db-acc:not(.pro):not(.pot) .db-al>:nth-child(5),
+  .mb-sc .db-acc:not(.pro):not(.pot) .db-ent>:nth-child(6),.mb-sc .db-acc:not(.pro):not(.pot) .db-al>:nth-child(6),
+  .mb-sc .db-acc:not(.pro):not(.pot) .db-ent>:nth-child(8),.mb-sc .db-acc:not(.pro):not(.pot) .db-al>:nth-child(8){display:none}
+  .mb-sc .db-acc.pro .db-ent,.mb-sc .db-acc.pro .db-al{grid-template-columns:20px minmax(0,1fr) 74px 58px;gap:6px}
+  .mb-sc .db-acc.pro .db-ent>:nth-child(3),.mb-sc .db-acc.pro .db-al>:nth-child(3),.mb-sc .db-acc.pro .db-ent>:nth-child(4),.mb-sc .db-acc.pro .db-al>:nth-child(4),
+  .mb-sc .db-acc.pro .db-ent>:nth-child(7),.mb-sc .db-acc.pro .db-al>:nth-child(7),.mb-sc .db-acc.pro .db-ent>:nth-child(8),.mb-sc .db-acc.pro .db-al>:nth-child(8){display:none}
+  .mb-sc .db-acc.pot .db-ent,.mb-sc .db-acc.pot .db-al{grid-template-columns:20px minmax(0,1fr) 48px 68px 70px!important;column-gap:6px}
+  .mb-sc .db-acc.pot .ts,.mb-sc .db-acc.pot .pe,.mb-sc .db-acc.pot .pt-b,.mb-sc .db-acc.pot .pt-bh{display:none}
+  .mb-sc .db-al.c,.mb-sc .db-acc.pot .db-al.c{padding-left:12px}.mb-sc .db-al.p,.mb-sc .db-acc.pot .db-al.p{padding-left:22px}.mb-sc .db-al.u3{padding-left:30px}
+  .mb-sc .pr-bd{padding:10px 12px;gap:8px 14px}.mb-sc .pr-bd .k b{font-size:22px}.mb-sc .pr-chips,.mb-sc .pt-leg{margin-left:0}
+  .op-mob .op-hb .c{overflow:visible;gap:1px}.op-mob .op-hb .c span{flex:1 1 0;min-width:0;font-size:10px;padding:2px 0 3px}.op-mob .op-hb .c span.j{margin-left:2px}
+}
