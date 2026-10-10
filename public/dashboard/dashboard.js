@@ -161,7 +161,6 @@
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
     lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
-    lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
     // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
     if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
     // Le stock est vivant : il se relit avec la page, et la page se relit
@@ -2641,8 +2640,7 @@
     if (m) { h += rendBench(m, d); }
     h += rendTaches();
     h += rendCQ(false);
-    // La barre du stock ne s'affiche plus en vue Semaine (10/10/2026).
-    if (S.vue !== 'semaine') { h += rendStock(); }
+    // La barre du stock ne s'affiche plus en vues Semaine et Mois (10/10/2026) : elle reste dans Opérationnel.
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
@@ -3665,12 +3663,11 @@
     const defs = jour
       ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Marge brute', 'margeBrutePct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
       : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
+    // Le B2B (10/10/2026), à la place des messages du panel : le CA des clients pro, sa part du CA dessous.
+    defs.splice(4, defs.length - 4, ['B2B · clients pro', 'caPro', fK, v => fSK(v), x => x.partPro != null ? fP(x.partPro) + ' du CA' : '']);
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
-    const N = S.aux['notif|' + S.shop];
-    const msgs = N && Array.isArray(N.messages) ? N.messages : [];
-    if (N) { defs.pop(); }
-    const tuiles = defs.map(([lib, k, f, fd]) => {
+    const tuiles = defs.map(([lib, k, f, fd, extra]) => {
       const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
       const v = m[k];
       if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><span class="rg mu">—</span><div class="v mu">—</div><div class="s">pas de valeur</div></div>`; }
@@ -3685,25 +3682,9 @@
       return `<div class="db-bt"><div class="k">${lib}</div><span class="rg${top ? ' top' : (bas ? ' bas' : '')}">${top ? '🏆 ' : ''}${ord(rang)} <small>/ ${n}</small></span>
         <div class="jg"><i class="l"></i>${autres}<span class="md" style="left:${pos(med).toFixed(1)}%"></span><span class="mo${top ? ' top' : ''}" style="left:${pos(v).toFixed(1)}%"></span></div>
         <div class="v">${f(v)}<small>médiane ${f(med)}</small></div>
-        <div class="s">${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
+        <div class="s">${extra && extra(m) ? extra(m) + ' · ' : ''}${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    let msgT = '', msgD = '';
-    if (N && !msgs.length) {
-      msgT = `<div class="db-bt msg vide"><div class="k">Messages du panel</div><div class="n"><span class="bell">🔔</span>0</div><div class="last">Pas de message pour l’instant</div></div>`;
-    } else if (msgs.length) {
-      const nb = p => msgs.filter(x => x.priorite === p).length;
-      const nU = nb('urgent'), nA = nb('attention'), nI = nb('info');
-      const hh = q => q ? q.slice(11, 16) : '';
-      const dj = q => q ? fD(q.slice(0, 10)) + ' à ' + hh(q) : '';
-      const dern = msgs[0];
-      msgT = `<div class="db-bt msg${nU ? ' urg' : ''}" data-ndrop="1"><span class="dr">${S.nOuvert ? 'replier ▴' : 'détail ▾'}</span><div class="k">Messages du panel</div><div class="n"><span class="bell">🔔</span>${msgs.length}</div><div class="pri">${nU ? `<i class="urg">${nU} urgent</i>` : ''}${nA ? `<i class="warn">${nA} attention</i>` : ''}${nI ? `<i class="info">${nI} info</i>` : ''}</div><div class="last">${esc(dern.titre)}${dern.quand ? ' · ' + hh(dern.quand) : ''}</div></div>`;
-      if (S.nOuvert) {
-        const lib = { urgent: 'urgent', attention: 'attention', info: 'info' };
-        msgD = `<div class="db-ndrop">${msgs.map(x => `<div class="m"><i class="${x.priorite === 'urgent' ? 'urg' : (x.priorite === 'attention' ? 'warn' : 'info')}"></i><div><b>${esc(x.titre || '(sans titre)')}</b>${x.message ? `<p>${esc(x.message)}</p>` : ''}<div class="meta">${lib[x.priorite]} · ${x.type === 'once' ? 'une fois' : 'récurrent'}${x.quand ? ' · publié le ' + dj(x.quand) : ''}${x.au ? ' · visible jusqu’au ' + fD(x.au) : ''}${x.global ? ' · tout le réseau' : ''}</div></div><div class="act"><span>${x.quand ? fD(x.quand.slice(0, 10)) + ' · ' + hh(x.quand) : ''}</span>${x.actionLib ? (N.panel ? `<a href="${esc(N.panel)}" target="_blank" rel="noopener">${esc(x.actionLib)} ›</a>` : `<em>${esc(x.actionLib)}</em>`) : ''}</div></div>`).join('')}
-          <div class="db-note" style="padding:4px 0 0">Les messages viennent du panel${N.panel ? ' ; l’action ouvre le panel dans un nouvel onglet' : ''}. Relus avec la page.</div></div>`;
-      }
-    }
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}${msgT}</div>${msgD}`;
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
   }
 
   /* --- Les non-conformités de la veille -----------------------------------
@@ -5178,7 +5159,6 @@
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
-    $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
     $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
