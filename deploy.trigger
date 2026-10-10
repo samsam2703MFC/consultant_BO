@@ -708,3 +708,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T11:09:22Z Catégories : A et B ; en-tête allégé
 2026-10-10T11:18:05Z Recettes : 10 secondes
 2026-10-10T11:32:26Z À compléter : masquée quand tout va bien
+2026-10-10T11:41:10Z Contrôle des tâches : photos maîtrisées
