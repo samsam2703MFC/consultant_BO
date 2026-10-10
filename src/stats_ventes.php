@@ -115,6 +115,52 @@ function ep_stats_ventes_sonde(): array
 }
 
 /**
+ * GET /ventes/tickets?shop=4&date=2026-10-10&cat=Cookies (ou &q=cookie) — les tickets d'un jour qui portent
+ * une catégorie (ou un mot du nom d'un produit), ligne par ligne (10/10/2026) : l'heure, le total du ticket et
+ * sa remise, et chaque ligne avec sa quantité, son prix unitaire, sa remise et son total. Pour lire une
+ * promotion, un « 2 achetés » ou une remise à la main. Lecture seule ; rien n'est gardé : ni client, ni
+ * vendeur, ni remarque — seulement des produits, des montants et des heures.
+ */
+function ep_ventes_tickets(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    $cat = trim((string) ($_GET['cat'] ?? '')); $mot = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '')) { http_response_code(400); return ['error' => 'shop, date et cat ou q requis']; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+    if (!is_array($liste)) { return ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
+    $ids = []; $pro = [];
+    foreach (analyseListe($liste) as $t) { if ((int) ($t['id'] ?? 0) > 0) { $ids[] = (int) $t['id']; if (!empty($t['is_client_b2b'])) { $pro[(int) $t['id']] = true; } } }
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $n = static fn ($v) => is_numeric($v) ? round((float) $v, 2) : null;
+    $tickets = []; $lus = 0;
+    foreach (array_chunk($ids, 40) as $lot) {
+        $chemins = []; foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        $res = PanelApi::getParallele($chemins, 8);
+        foreach ($lot as $id) {
+            $t = $res[$id] ?? null; if (!is_array($t)) { continue; }
+            $lus++;
+            $lignes = []; $vise = false;
+            foreach ((array) ($t['products'] ?? []) as $l) {
+                $pid = (int) ($l['id_product'] ?? 0);
+                $nom = trim((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')) ?: 'ligne sans produit';
+                $c = $pid > 0 ? (string) ($catDe[$pid] ?? '') : '';
+                $ok = ($cat !== '' && $c === $cat) || ($mot !== '' && mb_strpos(mb_strtolower($nom), $mot) !== false);
+                $vise = $vise || $ok;
+                $lignes[] = ['pid' => $pid ?: null, 'nom' => $nom, 'cat' => $c, 'vise' => $ok, 'q' => $n($l['quantity'] ?? null), 'pu' => $n($l['unit_gross_price'] ?? null),
+                    'remise' => $n($l['item_discount_value'] ?? null), 'total' => $n($l['total_gross_value_after_discount'] ?? null), 'portion' => $l['product_portion_label'] ?? null];
+            }
+            if (!$vise) { continue; }
+            $tickets[] = ['id' => $id, 'heure' => substr((string) ($t['insert_timestamp'] ?? ''), 11, 5), 'total' => $n($t['total_gross_amount_after_discount'] ?? null),
+                'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'lignes' => $lignes];
+        }
+    }
+    usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'ticketsDuJour' => count($ids), 'ticketsLus' => $lus, 'tickets' => $tickets];
+}
+
+/**
  * GET /ventes/notifications?shop=4 — les messages du panel pour un magasin,
  * tels que la route /shops/{id}/notifications les rend (titre, message,
  * priorité, type, statut, visibilité, date, action). Les messages publiés et
