@@ -423,8 +423,6 @@ function ep_analyse_categorie_magasin(): array
     foreach (array_keys($shops) as $s) { foreach ($tranches as [$du, $au]) { $couples[] = [$s, $du, $au]; } }
     $lu = apTranches2($couples);
     $moi = []; $moiQ = []; $res = []; $resQ = []; $muet = []; $vues = [];
-    // Le détail du magasin (10/10/2026) : chaque sous-catégorie d'un groupe, chaque produit d'une catégorie, semaine par semaine.
-    $sousCa = []; $sousQ = []; $sousNom = [];
     foreach ($tranches as $i => [$du, $au]) {
         $ca = 0.0; $q = 0.0; $servis = 0;
         foreach (array_keys($shops) as $s) {
@@ -436,11 +434,6 @@ function ep_analyse_categorie_magasin(): array
                 if (($niveau === 'categorie' ? $c : $groupe($c)) !== $nom) { continue; }
                 $caS += (float) $x[3]; $qS += (float) $x[2];
                 if ($niveau === 'groupe' && $c !== '' && $s === $sid) { $vues[$c] = true; }
-                if ($s === $sid) {
-                    $kS = $niveau === 'groupe' ? ($c !== '' ? $c : 'Sans catégorie') : (string) (int) $pid;
-                    $sousCa[$kS][$i] = ($sousCa[$kS][$i] ?? 0.0) + (float) $x[3]; $sousQ[$kS][$i] = ($sousQ[$kS][$i] ?? 0.0) + (float) $x[2];
-                    if ($niveau !== 'groupe') { $sousNom[$kS] = (function_exists('svCatalogue') ? (svCatalogue()[(int) $pid]['nom'] ?? null) : null) ?? (string) $x[0]; }
-                }
             }
             $ca += $caS; $q += $qS;
             if ($s === $sid) { $moi[$i] = round($caS, 2); $moiQ[$i] = round($qS, 1); }
@@ -451,17 +444,7 @@ function ep_analyse_categorie_magasin(): array
     }
     ksort($moi); ksort($moiQ);
     $cats = array_keys($vues); sort($cats);
-    $nT = count($tranches); $sous = [];
-    foreach ($sousCa as $kS => $v) {
-        $ca = []; $q = []; for ($i = 0; $i < $nT; $i++) { $ca[] = round((float) ($v[$i] ?? 0), 2); $q[] = round((float) ($sousQ[$kS][$i] ?? 0), 1); }
-        if (array_sum($ca) <= 0 && array_sum($q) <= 0) { continue; }
-        $sous[] = ['nom' => $niveau === 'groupe' ? (string) $kS : ($sousNom[$kS] ?? ('Produit ' . $kS)), 'magasin' => $ca, 'magasinQ' => $q];
-    }
-    // Les plus grosses d'abord ; une catégorie garde ses 15 premiers produits.
-    usort($sous, static fn ($a, $b) => array_sum(array_slice($b['magasin'], -9, 8)) <=> array_sum(array_slice($a['magasin'], -9, 8)));
-    if ($niveau !== 'groupe') { $sous = array_slice($sous, 0, 15); }
     return ['shop' => $sid, 'niveau' => $niveau, 'nom' => $nom, 'groupe' => $niveau === 'categorie' && isset($grpDe[$nom]) ? $groupe($nom) : null, 'categories' => $cats,
-        'sous' => $sous,
         'semaines' => ['tranches' => array_map(fn ($t) => $t[2], $tranches), 'bornes' => array_map(fn ($t) => [$t[0], $t[1]], $tranches),
             'jours' => array_map(fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches),
             'magasin' => array_values($moi), 'reseau' => array_values($res), 'magasinQ' => array_values($moiQ), 'reseauQ' => array_values($resQ),

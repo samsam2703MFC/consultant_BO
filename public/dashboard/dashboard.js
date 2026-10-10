@@ -3419,8 +3419,8 @@
   }
   /* La modale d'une catégorie (10/10/2026, maquette A) : deux onglets. « 12 dernières semaines » : la courbe
    * face au réseau avec la tendance du magasin (droite des moindres carrés sur les semaines closes) et l'écart
-   * de chaque semaine à la précédente, la tendance des 4 dernières semaines closes face aux 4 d'avant, puis les
-   * sous-catégories (un groupe) ou les produits (une catégorie) en tableau. « La journée · 6 h – 18 h » : les
+   * de chaque semaine à la précédente, la tendance des 4 dernières semaines closes face aux 4 d'avant (le tableau
+   * des sous-catégories est retiré le 10/10/2026). « La journée · 6 h – 18 h » : les
    * ventes de chaque heure du jour choisi face à la moyenne des 6 derniers mêmes jours. */
   const cleC12J = () => S.fiche && S.fiche.c12 ? 'c12j|' + S.shop + '|' + S.fiche.c12 + '|' + S.fiche.nom + '|' + S.date : null;
   function c12LireJ(force) {
@@ -3436,9 +3436,6 @@
     const mx = (n - 1) / 2, my = c12Moy(ys); let num = 0, den = 0; ys.forEach((y, x) => { num += (x - mx) * (y - my); den += (x - mx) * (x - mx); });
     const p = den ? num / den : 0; return { p, b: my - p * mx };
   }
-  const c12Sparkline = (s, w = 110, h = 24) => { const mx = Math.max(1, ...s.map(v => v || 0)), X = i => 2 + i * (w - 4) / Math.max(1, s.length - 1), Y = v => h - 2 - (h - 4) * (v || 0) / mx;
-    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${s.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ')}" fill="none" stroke="#2a78d6" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${X(s.length - 1).toFixed(1)}" cy="${Y(s[s.length - 1]).toFixed(1)}" r="2.2" fill="#2a78d6"/></svg>`; };
-  const c12Pc = (t, a, b) => t == null ? (b > 0 ? '▲ nouveau' : '—') : (t > 200 ? '▲ ×' + nf(1 + t / 100, 0) : (t >= 0 ? '▲ ' : '▼ ') + fSg(t, 1));
   function c12Semaines(F, d, court) {
     const eu = F.u !== 'q', W0 = d.semaines, W = Object.assign({}, W0, { magasin: eu ? W0.magasin : W0.magasinQ, reseau: eu ? W0.reseau : W0.reseauQ });
     const M = W.magasin || [], R = W.reseau || [], n = M.length, T = W.tranches || [], clos = M.slice(0, -1), clR = R.slice(0, -1);
@@ -3455,14 +3452,8 @@
       <div class="r"><span>Meilleure semaine</span><b>${esc(T[iB] || '')} · ${f(clos[iB])}</b></div><div class="r"><span>Plus faible</span><b>${esc(T[iF] || '')} · ${f(clos[iF])}</b></div>
       <div class="r"><span>En cours, ${esc(T[n - 1] || '')}${W.jours ? ' (' + W.jours[n - 1] + ' j)' : ''}</span><b>${f(M[n - 1])}</b></div>
       <div class="r"><span>Face au réseau, ${clos.length} semaines</span><b class="${cls(face)}">${fSg(face)}</b></div></div>`;
-    // Le détail : les sous-catégories d'un groupe, les produits d'une catégorie ; les plus gros écarts d'abord.
-    const L = (d.sous || []).map(x => { const s = eu ? x.magasin : x.magasinQ, t = c12T44(s); return { nom: x.nom, s, a: t.a, b: t.b, t: t.t, e: t.b - t.a }; }).sort((x, y) => Math.abs(y.e) - Math.abs(x.e));
-    const grp = F.c12 === 'groupe';
-    const det = L.length ? `<div class="db-lab" style="margin:14px 0 4px">${grp ? 'Les sous-catégories' : 'Les produits'}</div>
-      <table class="fi-st"><thead><tr><th>${grp ? 'Sous-catégorie' : 'Produit'}</th><th>${clos.length} semaines</th><th class="n">Par semaine, 4 dernières</th><th class="n">Face aux 4 d’avant</th><th class="n">Écart par semaine</th></tr></thead><tbody>
-      ${L.map(x => `<tr${grp ? ` class="clic" data-c12n="categorie" data-c12="${esc(x.nom)}" title="les 12 semaines de ${esc(x.nom)}"` : ''}><td class="nm">${esc(x.nom)}</td><td>${c12Sparkline(x.s.slice(0, -1))}</td><td class="n">${f(x.b)}</td><td class="n ${x.e >= 0 ? 'up' : 'dn'}"><b>${c12Pc(x.t, x.a, x.b)}</b></td><td class="n ${x.e >= 0 ? 'up' : 'dn'}">${fs(x.e)}</td></tr>`).join('')}</tbody></table>` : '';
     return `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([v, l]) => `<button type="button" data-c12u="${v}" class="${F.u === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours${W.jours ? ' (' + W.jours[n - 1] + ' j)' : ''} · le réseau : la moyenne par magasin</span></div>
-      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span><i class="ln tdc"></i>la tendance de ${esc(court)}</span><span>▲▼ : face à la semaine d’avant · un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W, eu, P)}</div>${cote}</div>${det}
+      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span><i class="ln tdc"></i>la tendance de ${esc(court)}</span><span>▲▼ : face à la semaine d’avant · un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W, eu, P)}</div>${cote}</div>
       <div class="fi-note">${eu ? 'Ventes encaissées, remises comprises.' : 'En pièces.'}</div>`;
   }
   function c12Journee(F, court) {
@@ -3527,7 +3518,6 @@
     box.querySelectorAll('[data-ffermer]').forEach(b => b.addEventListener('click', ficheFermer));
     box.querySelectorAll('[data-c12u]').forEach(b => b.addEventListener('click', () => { S.fiche.u = b.dataset.c12u; S.fiche.tip = null; ficheRendre(); }));
     box.querySelectorAll('[data-c12o]').forEach(b => b.addEventListener('click', () => { S.fiche.o = +b.dataset.c12o; S.fiche.tip = null; ficheRendre(); }));
-    box.querySelectorAll('.fi-bd [data-c12]').forEach(b => b.addEventListener('click', () => { const r = S.fiche && S.fiche.retour; c12Ouvrir(b); if (S.fiche) { S.fiche.retour = r; } }));
     ficheTips(box);
   }
   /** La mini-vignette d'un point (10/10/2026) : un clic sur une colonne du graphique montre ses valeurs, un second clic la retire. */
