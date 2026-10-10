@@ -1945,6 +1945,8 @@ revérifie tout).
 
 **Dashboard magasin, Semaine et Mois (10/10/2026).** Plus de barre du stock (elle reste dans Opérationnel). « Ta place dans le réseau » classe le B2B (`caPro`, la part `partPro` dessous) à la place des messages du panel, qui ne sont plus lus.
 
+**Calendrier et sélecteur de période (10/10/2026).** Le calendrier de la semaine et du mois suit le bouton CA / Atteinte / Clients : chiffre, couleur, jauge vers l'objectif (trait à 100 %), titre et légende. Les clients se jugent face à l'objectif clients (objectif CA du jour ÷ panier moyen de la période). La journée en cours est hachurée, non jugée. Au bureau, une frise remplace le champ date : 14 jours en Opérationnel (`/exploitation/periode?vue=mois` du ou des mois touchés), 8 semaines en Semaine (`/ventes/semaines?n=8`), 12 mois en Mois (`/stores/perf?granularite=mois`). Chaque période est un bouton avec son chiffre.
+
 Mesuré le 04/10/2026 : `/exploitation/jour` faisait ~45 appels au panel (tous les magasins, le
 classement réseau du dashboard en a besoin), 15 à 60 s à chaque affichage ; `/exploitation/periode`
 10 s. Le calcul se garde désormais dans `ceo_app_setting` (`exJour:{date}`,

@@ -163,6 +163,12 @@
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
     if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
+    // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
+    if (!EMBED && !estMobile()) {
+      if (S.vue === 'ops') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
+      if (S.vue === 'semaine') { lireAux(cleFrS(), '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + finFrS() + '&n=8', force); }
+      if (S.vue === 'mois') { lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force); }
+    }
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
@@ -2613,9 +2619,9 @@
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       <span class="db-lab">${S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
-      ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
-      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
+      ${['ops', 'semaine', 'mois'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${(S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : S.date !== AUJ)) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : 'Aujourd’hui')}</button>` : ''}
+      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
@@ -3523,38 +3529,54 @@
     h += splitCarte(m);
     h += offresCarte();
     h += invCarte(false);
-    // Le calendrier : une case par jour, colorée par l'atteinte de SON objectif.
+    // Le calendrier (maquette A du 10/10/2026) : le bouton choisit TOUT — le chiffre en grand, la
+    // couleur, la jauge vers l'objectif, le titre et la légende. Le CA se juge face à l'objectif CA
+    // du jour, les clients face à l'objectif clients (objectif CA ÷ panier moyen de la période).
+    // La journée en cours n'est pas jugée (hachurée) ; un jour futur montre son objectif.
     if (jours.length) {
-      const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#2d7a3e', false] : a >= 100 ? ['#6aa84f', false] : a >= 90 ? ['#e8c9a0', true] : a >= 75 ? ['#F5B26B', true] : ['#F08A2C', false]; };
+      const cv = ['ca', 'att', 'cli'].includes(S.calVal) ? S.calVal : 'ca';
+      const pan = m.panier || null;
+      const objCli = j => j.objectif && pan ? Math.round(j.objectif / pan) : null;
+      const fini = j => j.passe && !j.aujourdhui && j.ca != null && !j.ferme;
+      const enCours = j => !!j.aujourdhui && j.ca != null;
+      const pCa = j => j.objectif ? 100 * (j.ca || 0) / j.objectif : null;
+      const pCli = j => objCli(j) ? 100 * (j.tickets || 0) / objCli(j) : null;
+      const sg = (v, u) => (v >= 0 ? '+' : '−') + fN(Math.abs(v)) + (u || '');
+      const lus = jours.filter(j => fini(j) || enCours(j));
+      const totCli = lus.reduce((a, j) => a + (j.tickets || 0), 0), totObjCli = lus.reduce((a, j) => a + (objCli(j) || 0), 0);
+      const MODE = {
+        ca: { t: sem ? 'Le CA de chaque jour' : 'Le CA de chaque jour du mois', s: 'En grand : le chiffre d’affaires du jour. Couleur et jauge : face à l’objectif CA du jour.', p: pCa,
+          v: j => [fN(j.ca), '€'], l: j => j.objectif ? 'objectif ' + fE(j.objectif) + ' · ' + sg(j.ca - j.objectif, ' €') : 'pas d’objectif', f: j => j.objectif ? 'objectif ' + fE(j.objectif) : '', leg: 'le CA face à l’objectif du jour' },
+        att: { t: sem ? 'L’atteinte de chaque jour' : 'L’atteinte de chaque jour du mois', s: 'En grand : le CA en % de l’objectif du jour.', p: pCa,
+          v: j => j.objectif ? [fN(pCa(j)), '%'] : ['—', ''], l: j => j.objectif ? fE(j.ca) + ' sur ' + fE(j.objectif) : fE(j.ca) + ' · pas d’objectif', f: j => j.objectif ? 'objectif ' + fE(j.objectif) : '', leg: 'l’atteinte de l’objectif du jour' },
+        cli: { t: sem ? 'Les clients de chaque jour' : 'Les clients de chaque jour du mois', s: 'En grand : les clients du jour. Couleur et jauge : face à l’objectif clients (objectif CA ÷ panier moyen ' + (pan ? fU(pan) : '—') + ').', p: pCli,
+          v: j => [fN(j.tickets), 'clients'], l: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' · ' + sg(j.tickets - objCli(j)) : 'pas d’objectif', f: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' clients' : '', leg: 'les clients face à l’objectif clients du jour' }
+      };
+      const X = MODE[cv];
+      const PAL = [[110, '#2d7a3e', false], [100, '#6aa84f', false], [90, '#e8c9a0', true], [75, '#F5B26B', true], [-Infinity, '#F08A2C', false]];
+      const tein = p => PAL.find(x => p >= x[0]);
+      // La jauge : de 0 à 120 % de l'objectif, le trait à 100 %.
+      const jauge = p => `<span class="cal-jg"><i style="width:${Math.max(2, Math.min(100, p / 1.2)).toFixed(1)}%"></i><s></s></span>`;
       let cases = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('');
       const t0 = new Date(jours[0].date + 'T12:00:00');
       for (let i = 0; i < (t0.getDay() + 6) % 7; i++) { cases += '<div class="d vide"></div>'; }
-      // Le sélecteur décide du chiffre en grand dans chaque case : le CA,
-      // l'atteinte de l'objectif du jour ou les clients. Les deux autres
-      // restent dessous, en petit ; la couleur dit toujours l'atteinte.
-      const cv = S.calVal;
       jours.forEach(j => {
+        const rec = record && j.date === record.date ? ' · record' : '';
         if (j.ferme) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>fermé</b></div>`; return; }
-        if (!j.passe && !j.ca) {
-          const objCli = j.objectif && m.panier ? Math.round(j.objectif / m.panier) : null;
-          const futur = cv === 'cli' ? (objCli != null ? `<small>objectif ≈ ${fN(objCli)} clients</small>` : '') : (j.objectif ? `<small>objectif ${fE(j.objectif)}</small>` : '');
-          cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>—</b>${futur}</div>`; return;
-        }
-        const [fond, clair] = teinte(j); const dc = j.objectif && m.panier ? j.tickets - Math.round(j.objectif / m.panier) : null;
-        const att = j.objectif ? Math.round(pc(j.ca, j.objectif)) : null;
-        const lCa = `<small>${j.objectif ? att + ' % de ' + fE(j.objectif) : 'pas d’objectif'}</small>`;
-        const lCli = `<small>${fN(j.tickets)} clients${dc == null ? '' : ' · ' + (dc >= 0 ? '+' : '−') + Math.abs(dc)}</small>`;
-        const grand = cv === 'att' ? (att == null ? '—' : att + ' %') : (cv === 'cli' ? fN(j.tickets) : fE(j.ca));
-        const petits = cv === 'att' ? `<small>${fE(j.ca)}${j.objectif ? ' sur ' + fE(j.objectif) : ' · pas d’objectif'}</small>${lCli}`
-          : (cv === 'cli' ? `<small>clients${dc == null ? '' : ' · ' + (dc >= 0 ? '+' : '−') + Math.abs(dc) + ' vs objectif'}</small><small>${fE(j.ca)}${att == null ? '' : ' · ' + att + ' %'}</small>`
-            : lCa + lCli);
-        cases += `<div class="d${clair ? ' clair' : ''}${j.aujourdhui ? ' auj' : ''}" style="background:${fond}"><span class="n">${esc(j.court)}${record && j.date === record.date ? ' · record' : ''}</span><b>${grand}</b>${petits}</div>`;
+        if (enCours(j)) { const v = X.v(j), p = X.p(j); cases += `<div class="d enc"><span class="n">${esc(j.court)}<em>en cours</em></span><b>${v[0]}<u>${v[1]}</u></b>${p != null ? jauge(p) : ''}<small>${X.l(j)}</small></div>`; return; }
+        if (!fini(j)) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>—</b><small>${X.f(j)}</small></div>`; return; }
+        const p = X.p(j), v = X.v(j);
+        if (p == null) { cases += `<div class="d nul"><span class="n">${esc(j.court)}${rec}</span><b>${v[0]}<u>${v[1]}</u></b><small>${X.l(j)}</small></div>`; return; }
+        const t = tein(p);
+        cases += `<div class="d${t[2] ? ' clair' : ''}" style="background:${t[1]}"><span class="n">${esc(j.court)}${rec}</span><b>${v[0]}<u>${v[1]}</u></b>${jauge(p)}<small>${X.l(j)}</small></div>`;
       });
-      const CALV = [['ca', 'CA'], ['att', 'Atteinte'], ['cli', 'Clients']];
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">${sem ? 'La semaine' : 'Le calendrier du mois'} — CA, atteinte de l’objectif du jour, clients</span>
-        <div class="db-ong" style="margin-left:auto" title="le chiffre en grand dans chaque case">${CALV.map(o => `<button data-calval="${o[0]}" class="${cv === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>
-        <div class="db-cal">${cases}</div>
-        <div class="db-perleg"><span><i style="background:#2d7a3e"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#6aa84f"></i>100 – 110 %</span><span><i style="background:#e8c9a0"></i>90 – 100 %</span><span><i style="background:#F5B26B"></i>75 – 90 %</span><span><i style="background:#F08A2C"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div></div>`;
+      const totA = m.attendu ? 100 * m.realise / m.attendu : null;
+      const SEG = [['ca', 'CA', fE(m.realise), m.attendu ? 'sur ' + fE(m.attendu) + ' attendus' : 'pas d’objectif'], ['att', 'Atteinte', totA != null ? fN(totA) + ' %' : '—', 'de l’objectif à date'], ['cli', 'Clients', fN(m.tickets), totObjCli ? 'sur ' + fN(totObjCli) + ' attendus' : '']];
+      const leg = PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + PAL[i - 1][0] + ' %')}</span>`).join('');
+      h += `<div class="db-card cal-a"><div class="cal-hd"><div class="cal-t">${X.t}<small>${X.s}</small></div>
+        <div class="cal-seg" title="ce que montre le calendrier">${SEG.map(o => `<button data-calval="${o[0]}" class="${cv === o[0] ? 'on' : ''}"><span>${o[1]}</span><b>${o[2]}</b><small>${o[3]}</small></button>`).join('')}</div></div>
+        <div class="db-cal cal-a-g">${cases}</div>
+        <div class="db-perleg"><span class="cal-q">Couleur et jauge = ${X.leg}</span>${leg}<span><i class="cal-tr"></i>le trait : 100 % de l’objectif</span><span>hachuré : la journée en cours, pas encore jugée</span></div></div>`;
     }
     // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
     const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
@@ -3657,6 +3679,60 @@
   /* La place du magasin dans le réseau — le badge de rang sur la jauge : du
    * dernier (à gauche) au premier (à droite), toi en rouge, les autres en
    * points gris, la médiane un trait. Un trophée au premier. Jamais un nom. */
+  /* --- La frise des périodes (sélecteur 2 du 10/10/2026) ----------------------
+   * Au bureau, sous les onglets : en Opérationnel les 14 jours autour du jour regardé, en Semaine les
+   * 8 semaines, en Mois les 12 mois de l'année. Chaque période est un bouton qui montre déjà son chiffre. */
+  const JOURS_FR = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
+  function finMois(ym) { const f = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0, 12); const d = iso(f); return d > AUJ ? AUJ : d; }
+  function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; for (let i = -10; i <= 3; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
+  function finFrS() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 21); const d = iso(t); return d > AUJ ? AUJ : d; }
+  function cleFrS() { return 'frS|' + S.shop + '|' + finFrS(); }
+  function friseHtml() {
+    if (EMBED || !['ops', 'semaine', 'mois'].includes(S.vue)) { return ''; }
+    const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
+    const col = p => p == null ? '#cfc6ba' : (p >= 100 ? '#2d7a3e' : (p >= 90 ? '#e8c9a0' : (p >= 75 ? '#F5B26B' : '#F08A2C')));
+    const fl = n => `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
+    const sk = n => Array.from({ length: n }, () => '<div class="fr-c sk"><span class="db-sk" style="width:60%"></span><span class="db-sk" style="width:80%;height:14px"></span></div>').join('');
+    let chips = '', tete = '';
+    if (S.vue === 'ops') {
+      const J = friseJours(), lus = {};
+      let attente = false;
+      [...new Set(J.map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => {
+        const P = S.aux['frJ|' + ym]; if (!P) { attente = true; return; }
+        const mg = (P.magasins || []).find(x => String(x.shopId) === String(S.shop));
+        ((mg && mg.jours) || []).forEach(j => { lus[j.date] = j; });
+      });
+      tete = 'les 14 jours';
+      chips = attente && !Object.keys(lus).length ? sk(14) : J.map(d => {
+        const j = lus[d] || {}, t = new Date(d + 'T12:00:00'), lib = JOURS_FR[t.getDay()] + ' ' + t.getDate(), on = d === S.date;
+        if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? 'obj. ' + fE(j.objectif) : 'à venir'}</small></div>`; }
+        if (j.ferme) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>fermé</small></div>`; }
+        const p = j.objectif && j.ca != null ? 100 * j.ca / j.objectif : null, auj = d === AUJ;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${d}" title="${esc(fDL(d))}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fE(j.ca) : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' % obj.' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
+      }).join('');
+    } else if (S.vue === 'semaine') {
+      const W = S.aux[cleFrS()], L = W && Array.isArray(W.semaines) ? W.semaines : null;
+      const mx = L ? Math.max(1, ...L.map(w => w.ca || 0)) : 1;
+      tete = '8 semaines';
+      chips = !L ? sk(8) : L.map(w => {
+        const on = S.date >= w.du && S.date <= w.au;
+        if (w.futur) { return `<div class="fr-c fut"><span class="n">${esc(w.lab)}</span><b>—</b><small>${fdC(w.du)} – ${fdC(w.au)}</small></div>`; }
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${w.au > AUJ ? AUJ : w.au}"><span class="n">${esc(w.lab)}${w.enCours ? '<em>en cours</em>' : ''}</span><b>${w.ca != null ? fE(w.ca) : '—'}</b><i class="jg"><em style="width:${(100 * (w.ca || 0) / mx).toFixed(0)}%;background:${on ? 'var(--color-primary)' : '#b9ad9f'}"></em></i><small>${fdC(w.du)} – ${fdC(w.au)}</small></button>`;
+      }).join('');
+    } else {
+      const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
+      tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
+      chips = !L ? sk(12) : Array.from({ length: 12 }, (_, i) => {
+        const x = L.find(r => +r.mois === i + 1) || {}, ym = Y + '-' + String(i + 1).padStart(2, '0'), on = S.date.slice(0, 7) === ym, cours = ym === AUJ.slice(0, 7);
+        const ca = x.ca != null ? +x.ca : null, bud = x.caBudget != null ? +x.caBudget : null, p = ca != null && bud ? 100 * ca / bud : null;
+        if (ym > AUJ.slice(0, 7)) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>${bud ? 'budget ' + fK(bud) : 'à venir'}</small></div>`; }
+        if (ca == null) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>pas de vente</small></div>`; }
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % du budget' : 'sans budget'}</small></button>`;
+      }).join('');
+    }
+    return `<div class="db-frise"><div class="fr-t">${tete}</div><div class="fr-r">${S.vue === 'mois' ? '' : fl(-1)}${chips}${S.vue === 'mois' ? '' : fl(1)}</div></div>`;
+  }
+
   function rendBench(m, d) {
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     const jour = S.vue === 'jour';
@@ -5155,6 +5231,8 @@
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trim]').forEach(b => b.addEventListener('click', () => { const q = +b.dataset.trim; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (d.slice(0, 7) === AUJ.slice(0, 7) || (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4))) { d = AUJ; } S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
