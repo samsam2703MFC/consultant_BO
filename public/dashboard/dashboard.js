@@ -2100,6 +2100,35 @@
   const OP_RANG = { rupture: 0, manque: 1, trop: 2, ok: 3 };
   function opTuile(cls, k, v, s) { return `<div class="op-tl ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
+  /* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie : quantité, nom, prix moyen
+   * encaissé, CA, marge et heures de vente, lus dans les mêmes tickets (catégorie « Bundle »). */
+  const BUNDLE_RE = /bundle|promotion/i;
+  function bundlesDe(st) {
+    if (st.bundles && Array.isArray(st.bundles.lignes)) { return st.bundles; }
+    // Une réponse d'avant le 10/10/2026 : les bundles se retrouvent dans les catégories.
+    const L = [];
+    (st.categories || []).filter(c => BUNDLE_RE.test((c.nom || '') + ' ' + (c.groupe || ''))).forEach(c => (c.produits || []).forEach(p => L.push(Object.assign({}, p, { cat: c.nom, prix: p.q ? p.v / p.q : null, heures: null }))));
+    L.sort((a, b) => (b.q - a.q) || (b.v - a.v));
+    const ca = L.reduce((a, x) => a + (x.v || 0), 0), avec = L.filter(x => x.m != null), mV = avec.reduce((a, x) => a + x.v, 0), tot = st.totaux && st.totaux.ca;
+    return { lignes: L, n: L.length, pieces: L.reduce((a, x) => a + (x.q || 0), 0), ca, taux: mV > 0 ? 100 * avec.reduce((a, x) => a + x.m, 0) / mV : null, part: tot ? 100 * ca / tot : null };
+  }
+  function bundlesCarte() {
+    const ks = cleSt(), st = S.st[ks], err = S.err[ks], jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
+    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span><span class="db-mini">${mini}</span></div>`;
+    if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
+    const B = bundlesDe(st);
+    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('la journée · catégorie Bundle')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div></div>`; }
+    const hs = (st.heures || []).map(l => l.h).concat(...B.lignes.map(x => Object.keys(x.heures || {}).map(Number)));
+    const h0 = hs.length ? Math.min(...hs) : 7, h1 = hs.length ? Math.max(...hs) : 19;
+    const spark = x => { if (!x.heures) { return ''; } const mx = Math.max(1, ...Object.values(x.heures)); let t = ''; for (let h = h0; h <= h1; h++) { const n = x.heures[h] || 0; t += `<i class="${n ? 'on' : ''}" style="height:${n ? Math.max(18, Math.round(100 * n / mx)) : 6}%" title="${h} h · ${nf(n, 0)} vendu${n > 1 ? 's' : ''}"></i>`; } return `<span class="op-bun-sp" title="de ${h0} h à ${h1} h">${t}</span>`; };
+    const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
+    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
+    const lignes = B.lignes.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, la recette et la marge">
+      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td><td class="op-bun-h">${spark(x)}</td></tr>`).join('');
+    return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
+      <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
+      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th><th class="op-bun-h">Heures</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+  }
 
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
    * production — short life (vendu le jour même), medium life (se garde 2 à 3 jours), long life
@@ -2494,6 +2523,7 @@
     // Le P&L court et les ventes par catégorie, comme au bureau.
     const PJ = m ? jourPieces(m, JD, ST) : null;
     if (PJ) { h += `<div class="op-large">${PJ.pnl}</div><div class="op-large">${PJ.categories}</div>`; }
+    h += bundlesCarte();
     h += `<div class="op-mini4">${opMinis(D)}</div>`;
     h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : ''}</div>`;
     h += `<div class="op-renvoi">Le chiffre, la marge et le résultat de la journée : l’onglet <button type="button" class="db-lien" data-mo="exp">Exploitation ›</button></div>`;
@@ -2515,7 +2545,7 @@
      * personnel compris : les cartes de la vue Jour, telles quelles. */
     const PJ = m ? jourPieces(m, JD, ST) : null;
     const attente = t => `<div class="db-card"><div class="ct"><span class="db-lab">${t}</span><span class="db-mini">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div><div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`;
-    h += `<div class="op-deux"><div>${PJ ? PJ.categories : attente('Ventes par catégorie')}</div><div>${PJ ? PJ.pnl : attente('Le P&amp;L court de la journée')}</div></div>`;
+    h += `<div class="op-deux"><div>${PJ ? PJ.categories : attente('Ventes par catégorie')}</div><div>${bundlesCarte()}${PJ ? PJ.pnl : attente('Le P&amp;L court de la journée')}</div></div>`;
 
     /* La journée : la frise de 04:00 à 20:00 et les ventes de chaque heure face à la moyenne */
     const H0 = 4 * 60, H1 = 20 * 60, x = mm => (100 * (Math.max(H0, Math.min(H1, mm)) - H0) / (H1 - H0)).toFixed(2) + '%', w = (a, b) => (100 * (Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0)).toFixed(2) + '%';
