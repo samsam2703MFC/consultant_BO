@@ -3396,7 +3396,7 @@
    * nuage prix × volume. Aucun autre magasin n'y est nommé ni montré : le réseau n'y est qu'un
    * repère (moyenne, médiane, bornes). Lecture : /analyse/produits/magasin. */
   const cleFiche = () => S.fiche ? 'fiche|' + S.shop + '|' + S.fiche.pid + '|' + S.fiche.mois : null;
-  function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois); } }
+  function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois + '&v=2'); } }   // v=2 : les magasins et le prix de vente (10/10/2026), hors du cache d'avant
   function cleRecette() { return S.fiche ? 'recette|' + S.fiche.pid + '|' + S.shop : null; }
   function cleMat(mid) { return 'matiere|' + mid + '|' + S.shop; }
   function ficheLireMatiere(mid, frais) { lireAux(cleMat(mid), '/analyse/matieres/fiche?mid=' + encodeURIComponent(mid) + '&shop=' + encodeURIComponent(S.shop) + (frais ? '&rafraichir=1' : ''), !!frais); }
