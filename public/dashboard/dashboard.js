@@ -3285,24 +3285,16 @@
         <div class="fi-note fi-rnote">${esc(R.source || '')}${mat == null && R.cout && R.cout.net != null ? ` · coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : ''}${R.recette && R.recette.rendement && R.recette.rendement !== 1 ? ` · rendement ${nf(R.recette.rendement, 2)}` : ''}${lignes.some(l => l.prixSource && l.prixSource !== 'magasin') ? ' · les prix sans valeur pour ce magasin viennent d’un autre magasin' : ''}</div>`;
     }
     const titreRec = `<div class="fi-rct"><span class="fi-rh">La recette, pièce par pièce</span><span class="fi-note">${matA != null ? 'coût de recette ' + fPt(matA) + ' la pièce, aux prix du panel aujourd’hui' + (matT != null ? ' · ' + fPt(matT) + ' gravé avec les tickets du jour' : '') : (mat != null ? 'coût matière ' + fPt(mat) + ' la pièce, gravé avec les tickets' : 'coût de la pièce inconnu')}</span></div>`;
-    // 3. La marge en cascade.
+    // 3. La marge brute en %, seule (10/10/2026) : la cascade pièce par pièce et le « Face à » sont retirés.
     let marge;
-    if (prix == null || mat == null) { marge = `<div class="fi-msg">Sans coût de recette gravé, pas de marge pièce par pièce.</div>`; }
+    if (prix == null || mat == null) { marge = `<div class="fi-msg">Sans coût de recette gravé, pas de marge brute.</div>`; }
     else {
       // Au prix simulé quand la simulation est ouverte, sinon au prix encaissé.
-      const pS = sim != null ? sim : prix, mbS = pS - mat, tauxS = 100 * mbS / pS, lab = pS * se.labour / 100, oh = pS * se.overhead / 100, net = mbS - lab - oh;
-      const wf = [{ lib: sim != null ? 'Prix de vente testé' : 'Prix encaissé', sous: sim != null ? 'au lieu de ' + fPt(prix) + ' encaissé' : '', v: pS, cls: 'prix', part: 100 }, { lib: '− Matière', v: -mat, cls: 'mat', part: 100 * mat / pS }, { lib: '= Marge brute', v: mbS, cls: 'mb', part: tauxS, fort: true },
-        { lib: `− Main-d’œuvre, au seuil de ${fP0(se.labour)}`, v: -lab, cls: 'ch', part: se.labour }, { lib: `− Frais généraux, au seuil de ${fP(se.overhead)}`, v: -oh, cls: 'ch', part: se.overhead },
-        { lib: '= Résultat par pièce', v: net, cls: net >= 0 ? 'net ok' : 'net ko', part: Math.abs(100 * net / pS), fort: true }];
-      marge = `<div class="fi-rwf${sim != null ? ' sim' : ''}">${wf.map(r => `<div class="r ${r.cls}${r.fort ? ' fort' : ''}"><span class="l">${esc(r.lib)}${r.sous ? `<small>${esc(r.sous)}</small>` : ''}</span><span class="b"><i style="width:${Math.min(100, Math.max(0, r.part)).toFixed(1)}%"></i></span><span class="v">${r.v < 0 ? '− ' : ''}${fPt(Math.abs(r.v))}</span><span class="p">${fP0(100 * r.v / pS)}</span></div>`).join('')}</div>
-        <div class="fi-rface"><div class="k">Face à</div>
-          ${cat ? `<div class="r"><span>${esc(cat.nom)} aujourd’hui${cat.refs != null ? ' · ' + cat.refs + ' réf.' : ''}</span><b>${catTaux != null ? 'marge ' + fP0(catTaux) + ' · ' : ''}${fX(catCoef)}</b></div>` : ''}
-          ${T ? `<div class="r"><span>Le magasin aujourd’hui</span><b>${magTaux != null ? 'marge ' + fP0(magTaux) + ' · ' : ''}${fX(magCoef)}</b></div>` : ''}
-          ${med != null ? `<div class="r"><span>Au prix réseau (${fPt(med)}${P.reseau.magasins ? ', ' + P.reseau.magasins + ' magasins' : ''})</span><b>marge ${fP0(100 * (med - mat) / med)} · ${fX(med / mat)}</b></div>` : ''}
-          <div class="r"><span>Objectif du réseau · matière ${fP0(se.food)}</span><b>marge ${fP0(100 - se.food)} · ${fX(obj)}</b></div></div>`;
+      const pS = sim != null ? sim : prix, tauxS = 100 * (pS - mat) / pS;
+      marge = `<div class="fi-rmb${sim != null ? ' sim' : ''}"><b class="${tauxS >= 100 - se.food ? 'ok' : (tauxS >= 100 - se.food - 8 ? 'att' : 'ko')}">${fP0(tauxS)}</b><small>${sim != null ? 'au prix testé ' + fPt(sim) : 'au prix encaissé ' + fPt(prix)}</small></div>`;
     }
-    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · ${matA != null ? 'coût de recette aux prix du panel aujourd’hui, relu à chaque ouverture' : 'coût de recette net gravé avec les tickets'} · seuils du réseau : matière ${fP0(se.food)}, main-d’œuvre ${fP0(se.labour)}, frais généraux ${fP(se.overhead)}</span></div>
-      ${h}<div class="fi-rdeux"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">La marge, pièce par pièce</span><span class="fi-note">${sim != null ? 'au prix de vente testé, ' + fPt(sim) + ' · ' : ''}main-d’œuvre et frais aux seuils du réseau, pas au réel du jour</span></div>${marge}</section></div>`;
+    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · ${matA != null ? 'coût de recette aux prix du panel aujourd’hui, relu à chaque ouverture' : 'coût de recette net gravé avec les tickets'}</span></div>
+      ${h}<div class="fi-rdeux mb"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">Marge brute</span></div>${marge}</section></div>`;
   }
   let ficheEnRendu = false;   // vrai pendant le redessin : le blur que Chrome lance en retirant le champ n'est pas une sortie du champ
   /** La fiche d'une matière première, dépliée sous sa ligne de recette : lue sur l'API du panel seulement. */
