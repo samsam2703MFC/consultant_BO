@@ -3722,14 +3722,17 @@
    * 8 semaines, en Mois les 12 mois de l'année. Chaque période est un bouton qui montre déjà son chiffre. */
   const JOURS_FR = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
   function finMois(ym) { const f = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0, 12); const d = iso(f); return d > AUJ ? AUJ : d; }
-  function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; for (let i = -10; i <= 3; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
+  // La semaine active seulement, du lundi au dimanche (10/10/2026) : quatorze cases ne se lisaient pas sur tablette.
+  function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; t.setDate(t.getDate() - (t.getDay() + 6) % 7); for (let i = 0; i < 7; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
   function finFrS() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 21); const d = iso(t); return d > AUJ ? AUJ : d; }
   function cleFrS() { return 'frS|' + S.shop + '|' + finFrS(); }
   function friseHtml() {
     if (EMBED || !['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue)) { return ''; }
     const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
     const col = p => p == null ? '#cfc6ba' : (p >= 100 ? '#2d7a3e' : (p >= 90 ? '#e8c9a0' : (p >= 75 ? '#F5B26B' : '#F08A2C')));
-    const fl = n => `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
+    const fl = n => S.vue === 'ops'
+      ? `<button type="button" class="fr-fl" data-frsem="${n}" aria-label="${n < 0 ? 'semaine précédente' : 'semaine suivante'}"${n > 0 && friseJours()[6] >= AUJ ? ' disabled' : ''}>${n < 0 ? '‹' : '›'}</button>`
+      : `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
     const sk = n => Array.from({ length: n }, () => '<div class="fr-c sk"><span class="db-sk" style="width:60%"></span><span class="db-sk" style="width:80%;height:14px"></span></div>').join('');
     let chips = '', tete = '';
     if (S.vue === 'ops') {
@@ -3746,10 +3749,10 @@
       const vif = magasin(S.aux['jourM|' + S.date]), STv = S.st[cleSt()];
       const caVif = STv && STv.totaux && STv.totaux.ca != null ? STv.totaux.ca : (vif ? vif.ca : null);
       if (caVif != null) { lus[S.date] = Object.assign({}, lus[S.date] || {}, { ca: caVif, objectif: vif && vif.objectifJour != null ? vif.objectifJour : (lus[S.date] || {}).objectif }); }
-      tete = 'les 14 jours';
-      chips = attente && !Object.keys(lus).length ? sk(14) : J.map(d => {
+      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]);
+      chips = attente && !Object.keys(lus).length ? sk(7) : J.map(d => {
         const j = lus[d] || {}, t = new Date(d + 'T12:00:00'), lib = JOURS_FR[t.getDay()] + ' ' + t.getDate(), on = d === S.date;
-        if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? 'obj. ' + fE(j.objectif) : 'à venir'}</small></div>`; }
+        if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? 'obj. ' + nf(j.objectif / 1000, 1) + ' k€' : 'à venir'}</small></div>`; }
         if (j.ferme) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>fermé</small></div>`; }
         const p = j.objectif && j.ca != null ? 100 * j.ca / j.objectif : null, auj = d === AUJ;
         return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${d}" title="${esc(fDL(d))}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fE(j.ca) : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' % obj.' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
@@ -3791,7 +3794,7 @@
       }).join('');
     }
     const annuel = S.vue === 'mois' || S.vue === 'trimestre';
-    return `<div class="db-frise${S.vue === 'trimestre' ? ' quatre' : ''}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
+    return `<div class="db-frise${S.vue === 'trimestre' ? ' quatre' : (S.vue === 'ops' ? ' sept' : '')}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
   }
 
   function rendBench(m, d) {
@@ -5292,6 +5295,10 @@
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trim]').forEach(b => b.addEventListener('click', () => { const q = +b.dataset.trim; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (d.slice(0, 7) === AUJ.slice(0, 7) || (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4))) { d = AUJ; } S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-frsem]').forEach(b => b.addEventListener('click', () => {
+      const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 7 * +b.dataset.frsem);
+      let d = iso(t); if (d > AUJ) { d = AUJ; } if (d === S.date) { return; }
+      S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
