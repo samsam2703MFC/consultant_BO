@@ -37,6 +37,38 @@ function ep_exploitation_periode(): array
     return rcServi('exPer:' . $vue . ':' . $date, 'exPeriodeCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']), '/exploitation/periode');
 }
 
+/**
+ * Le personnel et les frais généraux de chaque jour tels que le panel les alloue lui-même
+ * (/shops/{id}/statistics/daily-summary : employee_cost = le coût du planning du jour, shop_cost =
+ * les frais du mois répartis) — la même source que Résultat du jour. Un jour lu deux jours plus tard
+ * se grave (le planning n'y bouge plus) ; les jours récents et aujourd'hui se relisent.
+ * @return array<int, array<string, array{lab: ?float, oh: ?float}>>
+ */
+function resJoursPanel(array $ids, array $jours, string $auj): array
+{
+    $out = []; $paths = [];
+    $clos = date('Y-m-d', strtotime($auj . ' -2 day'));
+    foreach ($ids as $id) {
+        foreach ($jours as $j) {
+            if ($j > $auj) { continue; }
+            $g = $j <= $clos ? setting('dsJ:' . $id . ':' . $j) : null;
+            if (is_array($g) && array_key_exists('lab', $g)) { $out[$id][$j] = ['lab' => $g['lab'], 'oh' => $g['oh'] ?? null]; continue; }
+            $paths[$id . '|' . $j] = '/shops/' . $id . '/statistics/daily-summary?date=' . $j;
+        }
+    }
+    foreach ($paths === [] ? [] : PanelApi::getParallele($paths, 6) as $k => $r) {
+        if (!is_array($r)) { continue; }
+        [$id, $j] = explode('|', (string) $k); $id = (int) $id;
+        $lab = nombreOuNull($r, ['employee_cost']); $oh = nombreOuNull($r, ['shop_cost']);
+        $out[$id][$j] = ['lab' => $lab, 'oh' => $oh];
+        if ($j <= $clos && $lab !== null) {
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['dsJ:' . $id . ':' . $j, json_encode(['lab' => $lab, 'oh' => $oh, 'le' => $auj])]); }
+            catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
+        }
+    }
+    return $out;
+}
+
 function exPeriodeCalcul(): array
 {
     $auj  = date('Y-m-d');
@@ -128,6 +160,13 @@ function exPeriodeCalcul(): array
         }
     }
     $res = PanelApi::getParallele($paths, 6);
+    // Le personnel et les frais de CHAQUE jour, tels que le panel les alloue (10/10/2026) : le mois
+    // courant et toute semaine. Un mois passé garde la règle d'avant (pas de P&L hors mois courant).
+    $joursDs = [];
+    if ($vue === 'semaine' || substr($du, 0, 7) === $moisCourant) {
+        for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursDs[] = $d; }
+    }
+    $dsJ = resJoursPanel(array_map(static fn ($s) => (int) $s['id'], $shops), $joursDs, $auj);
     // Les clients pro de l'étendue : le relevé de chaque jour (gravé par la
     // moisson ou le dashboard), complété par une trentaine de listes lues en
     // parallèle. Un jour non lu se dit — le comptoir ne s'en déduit pas.
@@ -195,7 +234,13 @@ function exPeriodeCalcul(): array
             $v = nombreOuNull((array) ($pnlM['overhead'] ?? []), ['value', 'amount']);
             if ($v !== null && $v > 0) { $ohMois = $v; }
         }
-        $labJ = ($labourMois !== null && $joursOuvertsC > 0) ? $labourMois / $joursOuvertsC : null;
+        // Le personnel de /pnl?period=month est le CUMUL du 1er à aujourd'hui (mesuré le 10/10/2026) :
+        // en repli, il se répartit sur les jours ouverts ÉCOULÉS, pas sur tout le mois.
+        $joursOuvertsAuj = 0;
+        for ($i = 0; $i < (int) date('j', strtotime($auj)); $i++) {
+            if (isset($wdOuverts[(int) $premierC->modify('+' . $i . ' days')->format('N')])) { $joursOuvertsAuj++; }
+        }
+        $labJ = ($labourMois !== null && $joursOuvertsAuj > 0) ? $labourMois / $joursOuvertsAuj : null;
         $ohJ  = ($ohMois !== null && $ohMois > 0 && $joursOuvertsC > 0) ? $ohMois / $joursOuvertsC : null;
         $ds = $res['ds' . $id] ?? null;
         $dsOh = is_array($ds) ? nombreOuNull($ds, ['shop_cost']) : null;
@@ -210,6 +255,7 @@ function exPeriodeCalcul(): array
         $jours = []; $objectif = 0.0; $attendu = 0.0; $prevu = 0.0; $realise = 0.0; $tickets = 0; $mb = 0.0;
         $caMb = 0.0; $matEstimes = 0; $matInconnus = 0;   // la matière : le CA des jours qui la portent, les jours recomposés, les jours sans tickets
         $labour = 0.0; $oh = 0.0; $joursOuvertsPasses = 0; $joursHorsMoisC = 0; $sansBudget = [];
+        $labMesures = 0; $joursSansCout = 0;
         $objAucun = true; $src = null; $ouvertUnJour = false;
         $pro = ['ca' => 0.0, 'tk' => 0, 'lus' => 0, 'jours' => 0];
         for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
@@ -242,11 +288,19 @@ function exPeriodeCalcul(): array
                 $pro['jours']++;
                 $bP = $proJ[$id][$d] ?? null;
                 if ($bP !== null) { $pro['lus']++; $pro['tk'] += count($bP['t']); foreach ($bP['t'] as $tP) { $pro['ca'] += (float) $tP[2]; } }
+                // Le personnel du jour : le coût du planning que le panel alloue à CE jour
+                // (daily-summary.employee_cost). Mesuré le 10/10/2026 : /pnl?period=month rend le
+                // personnel CUMULÉ du 1er à aujourd'hui (3 898,84 € au 10 octobre pour Halle) ;
+                // le répartir sur les 31 jours d'octobre donnait 1 257,69 € au lieu de ~3 900 €.
+                // La répartition du mois ne sert plus qu'en repli, au mois courant.
+                $dj = $dsJ[$id][$d] ?? null;
+                $labD = $dj['lab'] ?? null; $ohD = $dj['oh'] ?? null;
+                if ($labD !== null) { $labMesures++; }
                 if ($ym === $moisCourant) {
                     $joursOuvertsPasses++;
-                    if ($labJ !== null) { $labour += $labJ; }
-                    if ($ohJ !== null) { $oh += $ohJ; }
+                    $labD ??= $labJ; $ohD ??= $ohJ;
                 } else { $joursHorsMoisC++; }
+                if ($labD !== null && $ohD !== null) { $labour += $labD; $oh += $ohD; } else { $joursSansCout++; }
             }
             $jours[] = $ligne;
         }
@@ -264,7 +318,7 @@ function exPeriodeCalcul(): array
         else { $fc = null; $mb = null; }
         // Le résultat n'est complet que si chaque jour vendu a sa main-d'œuvre
         // et ses frais : hors du mois courant, le panel ne les rend pas.
-        $netOk = $mb !== null && $labJ !== null && $ohJ !== null && $joursHorsMoisC === 0 && $joursOuvertsPasses > 0;
+        $netOk = $mb !== null && $joursSansCout === 0 && ($joursOuvertsPasses + $joursHorsMoisC) > 0;
         $inv = $invM[$id] ?? ['cout' => null, 'pieces' => null, 'declare' => null, 'source' => 'panel muet'];
         $net = $netOk ? $mb - ($inv['cout'] ?? 0.0) - $labour - $oh : null;
         $panier = $tickets > 0 ? $realise / $tickets : null;
@@ -289,6 +343,7 @@ function exPeriodeCalcul(): array
             'invendus' => $inv['cout'] !== null ? round((float) $inv['cout'], 2) : null, 'invendusPct' => $inv['cout'] !== null ? $pct((float) $inv['cout']) : null,
             'invendusPieces' => $inv['pieces'], 'invendusDeclare' => $inv['declare'], 'invendusSource' => $inv['source'],
             'labour' => $netOk ? round($labour, 2) : null, 'labourPct' => $netOk ? $pct($labour) : null,
+            'labourSource' => $netOk ? ($labMesures === $pro['jours'] ? 'planning du panel, jour par jour' : ($labMesures > 0 ? 'planning du panel sur ' . $labMesures . ' jour' . ($labMesures > 1 ? 's' : '') . ', le reste réparti' : 'mois du panel réparti par jour d’ouverture')) : null,
             'overhead' => $netOk ? round($oh, 2) : null, 'overheadPct' => $netOk ? $pct($oh) : null,
             'net' => $net !== null ? round($net, 2) : null, 'netPct' => $pct($net),
             'motifNet' => $netOk ? ($ohManque ? 'frais généraux absents du panel pour ce magasin — résultat avant frais généraux' : null) : ($mb === null ? 'coût matière inconnu — le panel ne le chiffre pas et les tickets ne sont pas lus' : ($joursHorsMoisC > 0
