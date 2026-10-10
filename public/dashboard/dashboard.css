@@ -1796,3 +1796,18 @@ html.db-fiche-ouverte{overflow:hidden}
   .im-badge{white-space:normal}
   .im-acth{flex-wrap:wrap}
 }
+/* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie. */
+.op-bun-k{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:2px 16px 4px}
+.op-bun-k>div{background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;min-width:0}
+.op-bun-k .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-bun-k .v{font-family:var(--font-display);font-size:20px;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
+.op-bun .op-large{padding:0 8px 10px}
+.op-bun-tab td b{display:block;font-size:12.5px}.op-bun-tab td small{display:block;color:var(--color-text-muted);font-size:11px;margin-top:1px}
+.op-bun-tab tr.clic{cursor:pointer}.op-bun-tab tr.clic:hover td{background:var(--color-background-secondary)}
+.op-bun-tab td.op-bun-q{font-family:var(--font-display);font-size:18px;color:var(--color-primary);width:1%}
+.op-bun-tab .ok,.op-bun-k .ok{color:#2d7a3e}.op-bun-tab .att,.op-bun-k .att{color:#B26A00}.op-bun-tab .ko,.op-bun-k .ko{color:#C0182B}.op-bun-tab .mu{color:var(--color-text-muted)}
+.op-bun-sp{display:inline-flex;align-items:flex-end;gap:2px;height:22px;min-width:70px}
+.op-bun-sp i{flex:1;min-width:3px;max-width:7px;background:#E2DCD3;border-radius:2px 2px 0 0}.op-bun-sp i.on{background:var(--color-primary)}
+.op-bun-vide{padding:4px 16px 16px;color:var(--color-text-muted);font-size:13px}
+.op-bun-tab td small{white-space:nowrap}
+@media (max-width:560px){.op-bun-k{grid-template-columns:repeat(2,minmax(0,1fr))}.op-bun-tab .op-bun-h{display:none}}

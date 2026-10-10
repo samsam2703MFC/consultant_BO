@@ -702,6 +702,42 @@ function svGroupes(): array
     return $cache;
 }
 
+/**
+ * Les bundles vendus (10/10/2026) : les produits de la catégorie « Bundle » (groupe « Bundle & Promotion »)
+ * lus dans les tickets de la période, avec la quantité, le prix moyen encaissé, le CA, la marge et les heures de vente.
+ * $prod : {jour: {heure: {pid: [nom, q, v, c|null]}}}.
+ */
+function svBundles(array $prod, array $catDe, array $grpDe): array
+{
+    $B = [];
+    foreach ($prod as $ph) {
+        foreach ((array) $ph as $h => $lst) {
+            foreach ((array) $lst as $pid => $x) {
+                $cat = $catDe[(int) $pid] ?? '';
+                if ($cat === '' || preg_match('/bundle|promotion/iu', $cat . ' ' . ($grpDe[$cat] ?? '')) !== 1) { continue; }
+                if (!isset($B[$pid])) { $B[$pid] = ['id' => is_numeric($pid) ? (int) $pid : (string) $pid, 'nom' => svNomProduit($pid, (string) $x[0]), 'cat' => $cat, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'heures' => []]; }
+                $B[$pid]['q'] += $x[1]; $B[$pid]['v'] += $x[2];
+                if ($x[3] === null) { $B[$pid]['cInconnu'] = true; } else { $B[$pid]['c'] += $x[3]; }
+                if ($x[1] > 0) { $B[$pid]['heures'][(int) $h] = ($B[$pid]['heures'][(int) $h] ?? 0) + $x[1]; }
+            }
+        }
+    }
+    $L = []; $q = 0.0; $v = 0.0; $mV = 0.0; $mM = 0.0;
+    foreach ($B as $b) {
+        if ($b['q'] <= 0 && $b['v'] <= 0) { continue; }
+        ksort($b['heures']);
+        $m = $b['cInconnu'] ? null : round($b['v'] - $b['c'], 2);
+        $hs = array_keys($b['heures']);
+        $L[] = ['id' => $b['id'], 'nom' => $b['nom'], 'cat' => $b['cat'], 'q' => round($b['q'], 1), 'v' => round($b['v'], 2), 'prix' => $b['q'] > 0 ? round($b['v'] / $b['q'], 2) : null,
+            'c' => $b['cInconnu'] ? null : round($b['c'], 2), 'm' => $m, 'taux' => ($m !== null && $b['v'] > 0) ? round(100 * $m / $b['v'], 1) : null,
+            'heures' => array_map(static fn ($n) => round($n, 1), $b['heures']), 'premiere' => $hs[0] ?? null, 'derniere' => $hs !== [] ? $hs[count($hs) - 1] : null];
+        $q += $b['q']; $v += $b['v'];
+        if ($m !== null) { $mV += $b['v']; $mM += $m; }
+    }
+    usort($L, static fn ($a, $b) => ($b['q'] <=> $a['q']) ?: ($b['v'] <=> $a['v']));
+    return ['lignes' => $L, 'n' => count($L), 'pieces' => round($q, 1), 'ca' => round($v, 2), 'taux' => $mV > 0 ? round(100 * $mM / $mV, 1) : null];
+}
+
 /** Les jours d'une vue : jour, semaine (lundi → aujourd'hui), mois (1er → aujourd'hui). */
 function svJours(string $vue, string $date): array
 {
@@ -856,6 +892,7 @@ function ep_stats_ventes(): array
             'produits' => $prods];
     }
     usort($catsT, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
+    $bundles = svBundles($prod, $catDe, $grpDe);
     $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
     foreach ($lignes as $l) { $tot['tickets'] += $l['tickets']; $tot['ca'] += $l['ca']; $tot['mat'] += $l['mat']; $tot['trav'] += $l['trav']; $tot['res'] += $l['res']; }
     $tot['mb'] = round($tot['ca'] - $tot['mat'], 2);
@@ -874,7 +911,7 @@ function ep_stats_ventes(): array
         'produits' => ['jours' => $joursProd, 'total' => count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
-        'heures' => $lignes, 'categories' => $catsT, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'heures' => $lignes, 'categories' => $catsT, 'bundles' => $bundles + ['part' => $tot['ca'] > 0 ? round(100 * $bundles['ca'] / $tot['ca'], 1) : null], 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
         'matiere' => ['heuresEstimees' => $matEstimee, 'heuresInconnues' => $matInconnue,
             'source' => $matInconnue > 0 ? 'coût matière inconnu sur ' . $matInconnue . ' heure' . ($matInconnue > 1 ? 's' : '') . ' (tickets non lus)' : ($matEstimee > 0 ? 'recettes vendues sur ' . $matEstimee . ' heure' . ($matEstimee > 1 ? 's' : '') . ' que le panel ne chiffre pas' : 'panel')],
         'periodes' => svPeriodes($heures),
