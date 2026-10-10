@@ -382,6 +382,12 @@ export function valsFF(app, common){
   const MARK = e => e === 'ok' ? '<b class="ok">✓</b>' : e === 'ko' ? '<b class="ko">✕</b>' : e === 'na' ? '<span class="mu">n/a</span>' : '<span class="mu">·</span>';
   // Étape suivante, étape précédente : la visite se lit dans l'ordre.
   const iE = ETAPES.findIndex(e => e.on);
+  // L'habillage de l'application tablette (10/10/2026), comme la PWA Visites : en-tête, étape, barre du bas.
+  const NAV = { agenda: ['📅', 'Agenda', 'Vos visites des 14 jours · choisissez le magasin'], checklist: ['✅', 'Checklist', 'La checklist du consultant, tâche par tâche'], sante: ['📊', 'Santé', 'CA, B2B, scoring, infractions, météo'], reseau: ['🏆', 'Réseau', 'Le magasin face au réseau'], meteo: ['☀️', 'Météo', 'Fin de visite · comment se sent le franchisé'] };
+  const JL = new Date(auj0 + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+  f.app = { titre: choisi ? 'Visite · ' + f.shopNom : 'Visites terrain', sous: JL + (common.userNom ? ' · ' + common.userNom : ''), init: common.userInit || (common.userNom || '·').split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase(),
+    etape: { num: iE + 1, total: ETAPES.length, nom: ETAPES[iE] ? ETAPES[iE].nom.replace(/^\d+ · /, '') : '', aide: (NAV[onglet] || [])[2] || '' },
+    nav: ETAPES.map(e => ({ icone: (NAV[e.v] || ['•'])[0], nom: (NAV[e.v] || ['', e.nom])[1], on: e.on, choisir: e.choisir })) };
   f.etapes = { prec: iE > 0 ? { nom: ETAPES[iE - 1].nom, aller: ETAPES[iE - 1].choisir } : null, suiv: iE < ETAPES.length - 1 ? { nom: ETAPES[iE + 1].nom, aller: ETAPES[iE + 1].choisir } : null };
   // 1. Agenda : les visites des 14 prochains jours, et le choix du magasin.
   const choisirMag = (id, suite) => () => app.setState({ ffShop: String(id), ffShopChoisi: true, ffOnglet: suite || 'checklist', ffCkSel: null, ffCkMsg: null });

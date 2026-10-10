@@ -1037,3 +1037,25 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-t-c button{flex:1;te
 html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-t-com{font-size:16px;min-height:48px}
 html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes button{min-height:50px;font-size:15px;padding:0 20px;box-sizing:border-box}
 html[data-tablette] .shell[data-ecran="ficheFranchise"] [data-screen="fiche-franchise"] .mko-pied-btn{min-height:46px;display:inline-flex;align-items:center;padding:0 16px;font-size:14px;box-sizing:border-box}
+/* La fiche franchisé en application tablette (10/10/2026), comme la PWA Visites : en-tête d'app, en-tête d'étape,
+   barre d'étapes fixe en bas. Sur ordinateur, ces éléments sont masqués et rien ne change. */
+.ffa-hd,.ffa-vhd,.ffa-bas{display:none}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .shell-head{display:none!important}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] [data-screen="fiche-franchise"]>.mko-hd,html[data-tablette] .shell[data-ecran="ficheFranchise"] .gc-titre{display:none!important}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .shell-page{padding:0 16px 120px!important}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .ffa-hd{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:60;background:var(--color-bg);padding:max(10px,env(safe-area-inset-top)) 0 10px;margin:0 0 4px;border-bottom:.5px solid var(--color-border-tertiary)}
+.ffa-hd img{height:24px}.ffa-t b{display:block;font:400 21px/1.1 var(--font-display)}.ffa-t small{display:block;font-size:12px;color:var(--color-text-muted)}.ffa-sp{flex:1}
+.ffa-menu,.ffa-ic{all:unset;cursor:pointer;width:46px;height:46px;border-radius:12px;border:.5px solid var(--color-border-tertiary);background:var(--color-surface);display:inline-flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 auto}
+.ffa-hd select{min-height:46px;font-size:16px;border-radius:12px;padding:0 12px;max-width:180px}
+.ffa-av{width:40px;height:40px;border-radius:50%;background:var(--color-primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .ffa-vhd{display:flex;align-items:center;gap:12px;margin:12px 0 12px}
+.ffa-vhd h2{font:400 26px/1.1 var(--font-display);margin:0}.ffa-vhd small{display:block;font-size:13px;color:var(--color-text-muted);margin-top:2px}
+.ffa-ret{all:unset;cursor:pointer;width:46px;height:46px;border-radius:50%;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);display:inline-flex;align-items:center;justify-content:center;font-size:26px;line-height:1;flex:0 0 auto}
+.ffa-n{font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:999px;padding:5px 10px}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .ffa-bas{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:900;background:var(--color-surface);border-top:.5px solid var(--color-border-tertiary);padding:6px 0 max(12px,env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.05)}
+.ffa-bas button{all:unset;cursor:pointer;text-align:center;font:600 12px var(--font-ui);color:var(--color-text-muted);min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;-webkit-tap-highlight-color:transparent}
+.ffa-bas button i{font-style:normal;font-size:24px;opacity:.5;line-height:1}
+.ffa-bas button.on{color:var(--color-primary)}.ffa-bas button.on i{opacity:1}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] [data-screen="fiche-franchise"] .mko-carte{border-radius:16px}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes{margin-top:18px}
+html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{flex:1;justify-content:center;max-width:none}

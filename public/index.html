@@ -2,7 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3efe9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="assets/img/logo.png">
 <title>Cockpit CEO — L'Atelier by</title>
 <!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
      comme sous un sous-répertoire (ex. /consulant_bo/). -->
@@ -10,6 +15,18 @@
 <link rel="stylesheet" href="assets/ds/global.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/controles-photo.css">
+<script>
+// L'application tablette du consultant (10/10/2026) : ?app=consultant ouvre la fiche franchisé en plein écran,
+// installable sur l'écran d'accueil (manifeste dédié). Le cockpit reste le même ailleurs.
+(function () {
+  try {
+    if (new URLSearchParams(location.search).get('app') !== 'consultant') { return; }
+    document.documentElement.setAttribute('data-app', 'consultant');
+    var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'consultant.webmanifest'; document.head.appendChild(l);
+    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche-franchise'; }
+  } catch (e) { /* sans app : le cockpit */ }
+})();
+</script>
 </head>
 <body>
 <div id="app"><div style="padding:60px;color:#666;font-size:13px;font-family:sans-serif">Chargement des données du réseau…</div></div>
