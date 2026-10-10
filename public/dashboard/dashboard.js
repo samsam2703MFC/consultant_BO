@@ -2641,7 +2641,8 @@
     if (m) { h += rendBench(m, d); }
     h += rendTaches();
     h += rendCQ(false);
-    h += rendStock();
+    // La barre du stock ne s'affiche plus en vue Semaine (10/10/2026).
+    if (S.vue !== 'semaine') { h += rendStock(); }
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
