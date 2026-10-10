@@ -2773,7 +2773,7 @@
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
       : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence'}</span></div>
-      ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h; h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -3424,11 +3424,15 @@
    * reste ouvert d'une relecture à l'autre. Sans tickets lus, la liste retombe
    * sur les catégories du panel et leur écart à la référence.
    */
-  function accordeon(cats, parMarge) {
+  function accordeon(cats, parMarge, ref) {
     const coulE = (v, ech) => { if (v == null) { return '#B9B2A8'; } let r = ech[0]; for (const e of ech) { if (v >= e.s) { r = e; } } return r.c === 'or' ? '#E2B93B' : r.c; };
     const coul = x => parMarge ? coulE(x.taux, MARGES) : coulE(x.delta, ECARTS);
     const clM = t => !parMarge || t == null ? 'mu' : t < 40 ? 'ko' : t < 60 ? 'att' : 'ok';
-    const tot = cats.reduce((t, c) => t + (c.ca || 0), 0);
+    // Le total : celui du P&L de la journée quand on l'a (10/10/2026), pour que les deux cartes disent le même
+    // chiffre ; l'écart avec la somme des produits (lignes de caisse sans produit, arrondis) se montre à part.
+    const somme = cats.reduce((t, c) => t + (c.ca || 0), 0);
+    const R = parMarge && ref && ref.ca != null && ref.m != null ? ref : null;
+    const tot = R ? R.ca : somme;
     const G = {};
     cats.forEach(c => {
       const g = (c.groupe || (parMarge ? 'Autres' : 'Catégories')).split(' · ')[0];
@@ -3471,8 +3475,11 @@
       }
       return h;
     }).join('');
-    const totM = parMarge ? cats.reduce((t, c) => t + (c.m == null ? 0 : c.m), 0) : null;
-    const pied = `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? fP0(100 * totM / tot) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
+    const sommeM = parMarge ? cats.reduce((t, c) => t + (c.m == null ? 0 : c.m), 0) : null;
+    const totM = R ? R.m : sommeM;
+    const ecCa = R ? R.ca - somme : 0, ecM = R ? R.m - sommeM : 0;
+    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${cats.some(c => c.m == null && (c.ca || 0) > 0) ? 'lignes sans produit, remises · et la marge des catégories en gris, sans coût dans les tickets' : 'lignes de caisse sans produit, remises, arrondis'}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
+    const pied = ecart + `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? (R ? fP(100 * totM / tot) : fP0(100 * totM / tot)) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
     return `<div class="db-acc">${entete}${rows}${pied}</div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */

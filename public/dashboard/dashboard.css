@@ -1861,3 +1861,5 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rmb b{font:400 46px/1 var(--font-display)}.fi-rmb b.ok{color:#2d7a3e}.fi-rmb b.att{color:#B26A00}.fi-rmb b.ko{color:#C0182B}
 .fi-rmb small{font:600 11.5px var(--font-ui);color:var(--color-text-muted)}.fi-rmb.sim small{color:var(--color-primary)}
 @media (max-width:760px){.fi-rdeux.mb{grid-template-columns:1fr}}
+/* La ligne « Non ventilé » des ventes par catégorie (10/10/2026) : l'écart entre le P&L du jour et la somme des produits. */
+.db-al.ec{color:var(--color-text-muted);font-style:italic}.db-al.ec .n{font-weight:500}
