@@ -126,7 +126,8 @@ function ep_ventes_tickets(): array
     $sid = (int) ($_GET['shop'] ?? 0);
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     $cat = trim((string) ($_GET['cat'] ?? '')); $mot = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
-    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '')) { http_response_code(400); return ['error' => 'shop, date et cat ou q requis']; }
+    $remise = !empty($_GET['remise']);   // ?remise=1 : les tickets qui portent une remise (une promotion déclenchée), toutes catégories
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '' && !$remise)) { http_response_code(400); return ['error' => 'shop, date et cat, q ou remise requis']; }
     if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
@@ -146,12 +147,12 @@ function ep_ventes_tickets(): array
                 $pid = (int) ($l['id_product'] ?? 0);
                 $nom = trim((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')) ?: 'ligne sans produit';
                 $c = $pid > 0 ? (string) ($catDe[$pid] ?? '') : '';
-                $ok = ($cat !== '' && $c === $cat) || ($mot !== '' && mb_strpos(mb_strtolower($nom), $mot) !== false);
+                $ok = ($cat !== '' && $c === $cat) || ($mot !== '' && mb_strpos(mb_strtolower($nom), $mot) !== false) || ($remise && (float) ($l['item_discount_value'] ?? 0) > 0.004);
                 $vise = $vise || $ok;
                 $lignes[] = ['pid' => $pid ?: null, 'nom' => $nom, 'cat' => $c, 'vise' => $ok, 'q' => $n($l['quantity'] ?? null), 'pu' => $n($l['unit_gross_price'] ?? null),
                     'remise' => $n($l['item_discount_value'] ?? null), 'total' => $n($l['total_gross_value_after_discount'] ?? null), 'portion' => $l['product_portion_label'] ?? null];
             }
-            if (!$vise) { continue; }
+            if (!$vise && !($remise && (float) ($t['discount_total_value'] ?? 0) > 0.004)) { continue; }
             $tickets[] = ['id' => $id, 'heure' => substr((string) ($t['insert_timestamp'] ?? ''), 11, 5), 'total' => $n($t['total_gross_amount_after_discount'] ?? null),
                 'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'lignes' => $lignes];
         }
