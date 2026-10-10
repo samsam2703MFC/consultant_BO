@@ -435,6 +435,16 @@ function ep_bundles_sonde(): array
     if (!empty($_GET['admin'])) {
         if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['admin' => 'compte admin non configuré']; }
         $propre = static function ($x) use (&$propre) { if (!is_array($x)) { return $x; } $o = []; foreach ($x as $k => $v) { if (is_string($k) && preg_match('/password|token|secret|phone|email|mail/i', $k)) { continue; } $o[$k] = $propre($v); } return $o; };
+        // &detail=11-18 : le détail de chaque promotion (produits et catégories qui déclenchent, qui reçoivent).
+        if (preg_match('/^(\d{1,4})-(\d{1,4})$/', (string) ($_GET['detail'] ?? ''), $m)) {
+            for ($id = (int) $m[1]; $id <= min((int) $m[2], (int) $m[1] + 30); $id++) {
+                foreach (['buy-x-get-y', 'bundles'] as $type) {
+                    ErpApi::$lastError = null; $r = ErpApi::get('/admin/promotions/' . $type . '/' . $id);
+                    $out['detail'][$type][$id] = ['erreur' => ErpApi::$lastError, 'corps' => $propre($r)];
+                }
+            }
+            return $out;
+        }
         foreach (['bundles' => '/admin/promotions/bundles?limit=100', 'buy-x-get-y' => '/admin/promotions/buy-x-get-y?limit=100', 'quantity' => '/admin/promotions/quantity?limit=100', 'remises-programmees' => '/admin/promotions/scheduled-product-discount?limit=100'] as $nom => $ch) {
             ErpApi::$lastError = null; $r = ErpApi::get($ch);
             $l = is_array($r) ? (array_is_list($r) ? $r : ($r['items'] ?? $r['data'] ?? $r['results'] ?? $r)) : [];
