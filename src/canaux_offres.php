@@ -430,6 +430,19 @@ function ep_bundles_sonde(): array
 {
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
     $out = ['routes' => []];
+    // ?ids=1-12 (10/10/2026) : le détail par identifiant (GET …/{id}), quand la liste est refusée.
+    if (preg_match('/^(\d{1,4})-(\d{1,4})$/', (string) ($_GET['ids'] ?? ''), $m)) {
+        $de = (int) $m[1]; $a = min((int) $m[2], $de + 30);
+        foreach (['buy-x-get-y', 'bundles', 'quantity'] as $type) {
+            for ($id = $de; $id <= $a; $id++) {
+                $r = PanelApi::sondeGet('/admin/promotions/' . $type . '/' . $id, 10); $c = is_array($r['corps'] ?? null) ? $r['corps'] : [];
+                $x = isset($c['data']) && is_array($c['data']) ? $c['data'] : $c;
+                $out['parId'][$type][$id] = ['code' => $r['code'] ?? null, 'nom' => $x['name'] ?? null, 'statut' => $x['status'] ?? null, 'type' => $x['promotion_type'] ?? null,
+                    'erreur' => $x['description'] ?? null, 'cles' => array_slice(array_keys($x), 0, 30)];
+            }
+        }
+        return $out;
+    }
     $lus = [];
     foreach (['bundles' => '/admin/promotions/bundles', 'bundles-actifs' => '/admin/promotions/bundles?active=1', 'buy-x-get-y' => '/admin/promotions/buy-x-get-y', 'promotions' => '/admin/promotions',
         // 10/10/2026 : les promotions par quantité (« 2 pour 5,90 € ») et les remises programmées, filtrées sur un magasin aussi.
