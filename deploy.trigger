@@ -696,3 +696,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T08:06:10Z frise objectif au lieu de budget
 2026-10-10T08:25:23Z frise trimestres et case du jour en direct
 2026-10-10T08:40:04Z modale produit marge brute seule
+2026-10-10T08:59:14Z total categories egal au pnl
