@@ -720,3 +720,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T16:51:21Z Fiche produit : cache
 2026-10-10T17:29:30Z Ventes : tickets par catégorie
 2026-10-10T17:34:05Z Sonde promotions par quantité
+2026-10-10T17:35:43Z Sonde promotions par identifiant
