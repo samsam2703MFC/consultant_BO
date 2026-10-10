@@ -1947,6 +1947,8 @@ revérifie tout).
 
 **Calendrier et sélecteur de période (10/10/2026).** Le calendrier de la semaine et du mois suit le bouton CA / Atteinte / Clients : chiffre, couleur, jauge vers l'objectif (trait à 100 %), titre et légende. Les clients se jugent face à l'objectif clients (objectif CA du jour ÷ panier moyen de la période). La journée en cours est hachurée, non jugée. Au bureau, une frise remplace le champ date : 14 jours en Opérationnel (`/exploitation/periode?vue=mois` du ou des mois touchés), 8 semaines en Semaine (`/ventes/semaines?n=8`), 12 mois en Mois et 4 trimestres en Trimestre (`/stores/perf?granularite=mois`). Chaque période est un bouton avec son chiffre ; la case du jour regardé prend le CA en direct de la page.
 
+**Ventes par catégorie = P&L court (10/10/2026).** Le Total de la carte reprend le CA et la marge brute du P&L de la journée. La somme des produits lus dans les tickets peut être un peu plus basse (lignes de caisse sans produit, remises sur ticket, arrondis) : l'écart s'affiche sur une ligne « Non ventilé ». Quand des catégories n'ont pas de coût dans les tickets (en gris), leur marge tombe aussi dans cette ligne.
+
 Mesuré le 04/10/2026 : `/exploitation/jour` faisait ~45 appels au panel (tous les magasins, le
 classement réseau du dashboard en a besoin), 15 à 60 s à chaque affichage ; `/exploitation/periode`
 10 s. Le calcul se garde désormais dans `ceo_app_setting` (`exJour:{date}`,
