@@ -384,8 +384,19 @@ function ep_analyse_produit_magasin(): array
         else {
             $m = $ref['mag'][(string) $sid]; $v = array_column($ref['mag'], 'v10k');
             $nom = $nom ?? (string) $ref['nom']; $cat = $cat ?? (string) $ref['cat'];
-            $prix = ['mois' => $mp, 'periode' => $PV['periode'], 'du' => $PV['du'], 'au' => $PV['au'],
-                'magasin' => ['q' => $m['q'], 'qm' => $m['qm'], 'ca' => $m['ca'], 'p' => $m['p'], 'ec' => $m['ec'], 'v10k' => $m['v10k'], 'rel' => $m['rel'], 'auMed' => $m['auMed'], 'peu' => $m['peu']],
+            // Le prix de vente en caisse de chaque magasin (10/10/2026) : le prix pratiqué que le panel donne pour lui
+            // (products/available), à côté du prix encaissé (remises comprises) ; les autres magasins nommés.
+            $brut = static function (int $s) use ($pid): ?float {
+                if (!function_exists('cataloguePrixMagasin')) { return null; }
+                $v = cataloguePrixMagasin($s)[$pid] ?? null; return $v !== null ? round((float) $v, 2) : null;
+            };
+            $mags = [];
+            foreach ($ref['mag'] as $s => $x) {
+                $mags[] = ['nom' => preg_replace('/^.* - /', '', (string) ($shops[(int) $s] ?? ('Magasin ' . $s))), 'moi' => (int) $s === $sid,
+                    'p' => $x['p'], 'v10k' => $x['v10k'], 'q' => $x['q'], 'brut' => $brut((int) $s)];
+            }
+            $prix = ['mois' => $mp, 'periode' => $PV['periode'], 'du' => $PV['du'], 'au' => $PV['au'], 'magasins' => $mags,
+                'magasin' => ['q' => $m['q'], 'qm' => $m['qm'], 'ca' => $m['ca'], 'p' => $m['p'], 'ec' => $m['ec'], 'v10k' => $m['v10k'], 'rel' => $m['rel'], 'auMed' => $m['auMed'], 'peu' => $m['peu'], 'brut' => $brut($sid)],
                 'reseau' => ['med' => $ref['med'], 'min' => $ref['min'], 'max' => $ref['max'], 'volMoyen' => round(array_sum($v) / max(1, count($v)), 2),
                     'volMin' => round(min($v), 2), 'volMax' => round(max($v), 2), 'magasins' => count($ref['mag'])]];
         }

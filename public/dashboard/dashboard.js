@@ -3549,15 +3549,16 @@
   function ficheCourbe(W, eu, tend) {
     const M = W.magasin || [], R = W.reseau || [], n = M.length, lib = W.tranches || [];
     // `tend` (une catégorie, 10/10/2026) : la tendance du magasin en pointillé, et l'écart de chaque semaine à la précédente sous l'axe.
-    const iEnC = n - 1, Wd = 700, Hd = tend ? 292 : 270, m = { l: eu ? 46 : 34, r: eu ? 104 : 92, t: 14, b: tend ? 54 : 34 };
     const max = Math.max(1, ...M.map(v => v || 0), ...R.map(v => v || 0));
+    const iEnC = n - 1, Wd = 700, Hd = tend ? 292 : 270, m = { l: eu || max >= 1000 ? 46 : 34, r: eu ? 104 : 92, t: 14, b: tend ? 54 : 34 };
     // En euros (une catégorie, 10/10/2026), un pas rond pour six à dix lignes : 1, 2 ou 5 × 10ⁿ.
     const pasRond = v => { const r = v / 6, e = Math.pow(10, Math.floor(Math.log10(r))), q = r / e; return (q <= 1 ? 1 : q <= 2 ? 2 : q <= 5 ? 5 : 10) * e; };
-    const pas = eu ? pasRond(max) : (max > 60 ? 20 : (max > 30 ? 10 : (max > 12 ? 5 : 2))), haut = Math.ceil(max / pas) * pas;
+    // Les pièces aussi (10/10/2026) : au-delà de 60, le même pas rond (une catégorie compte des milliers de pièces).
+    const pas = eu || max > 60 ? pasRond(max) : (max > 30 ? 10 : (max > 12 ? 5 : 2)), haut = Math.ceil(max / pas) * pas;
     const vU = v => eu ? fN(v) + ' €' : fN(v);
     const y = v => m.t + (Hd - m.t - m.b) * (1 - v / haut), cx = k => m.l + (Wd - m.l - m.r) * k / Math.max(1, n - 1);
     let g = '';
-    for (let v = 0; v <= haut; v += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${eu ? fN(v) : v}</text>`; }
+    for (let v = 0; v <= haut; v += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${fN(v)}</text>`; }
     const date = k => { const b = (W.bornes || [])[k]; return b ? b[0].slice(8, 10) + '/' + b[0].slice(5, 7) : ''; };
     const yL = Hd - (tend ? 38 : 18), yD = Hd - (tend ? 25 : 5);
     g += lib.map((l, k) => (k % 2 === 0 || k === n - 1) ? `<text class="ax" x="${cx(k).toFixed(1)}" y="${yL}" text-anchor="middle">${esc(l)}</text><text class="ax" x="${cx(k).toFixed(1)}" y="${yD}" text-anchor="middle" style="font-size:9.5px">${k === iEnC ? (W.jours ? W.jours[k] + ' j' : 'en cours') : date(k)}</text>` : '').join('');
@@ -3603,7 +3604,13 @@
     const nomM = esc(nomShop().replace(/^.* - /, '')), t = `${nomM} · ${fPx(me.p)}`, lg = t.length * 6.4, xd = X(me.p) + 15, gauche = xd + lg > Wd - m.r;
     g += `<circle cx="${X(me.p).toFixed(1)}" cy="${Y(me.v10k).toFixed(1)}" r="9" fill="#2a78d6" stroke="#fff" stroke-width="2"><title>${nomM} · ${fPx(me.p)} (${fSg(me.ec, 1)} face au prix réseau) · ${nf(me.v10k, 1)} pièces pour 10 000 € de chiffre (${fSg(me.rel)} face aux autres) · ${fN(me.q)} pièces</title></circle><text class="lab" x="${(gauche ? X(me.p) - 15 : xd).toFixed(1)}" y="${(Y(me.v10k) + 4).toFixed(1)}" text-anchor="${gauche ? 'end' : 'start'}">${t}</text>`;
     g += `<text class="ax" x="${(m.l + Wd - m.r) / 2}" y="${Hd - 6}" text-anchor="middle" style="font-weight:600">prix encaissé →</text><text class="ax" transform="translate(13 ${(m.t + Hd - m.b) / 2}) rotate(-90)" text-anchor="middle" style="font-weight:600">pièces pour 10 000 € de chiffre →</text>`;
-    return `<svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Prix encaissé face au volume">${g}</svg>`;
+    // Les autres magasins (10/10/2026), en gris et nommés ; chaque point s'ouvre au clic.
+    (P.magasins || []).filter(x => !x.moi && x.p != null && x.v10k != null).forEach(x => { const cx = X(x.p), cy = Y(x.v10k), d = cx + 70 > Wd - m.r;
+      g += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6.5" fill="#9a9187" stroke="#fff" stroke-width="2"/><text class="ax" x="${(d ? cx - 10 : cx + 10).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}" text-anchor="${d ? 'end' : 'start'}" style="font-weight:600">${esc(x.nom)}</text>`; });
+    const tip = x => `<b>${esc(x.nom)}</b>${x.brut != null ? 'prix de vente ' + fPx(x.brut) + '<br>' : ''}prix encaissé ${fPx(x.p)}<br>${nf(x.v10k, 1)} pièces pour 10 000 €<br>${fN(x.q)} pièces vendues`;
+    const pts = (P.magasins && P.magasins.length ? P.magasins : [Object.assign({ nom: nomShop().replace(/^.* - /, ''), moi: true }, me)]).filter(x => x.p != null && x.v10k != null);
+    g += pts.map(x => `<circle class="hit" cx="${X(x.p).toFixed(1)}" cy="${Y(x.v10k).toFixed(1)}" r="15" data-tip="${esc(tip(x))}" data-tx="${(100 * X(x.p) / Wd).toFixed(1)}" data-ty="${(100 * (Y(x.v10k) - 8) / Hd).toFixed(1)}"/>`).join('');
+    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Prix encaissé face au volume">${g}</svg></div>`;
   }
   /* ── Onglet « Recette & marge » (demande du 08/10/2026) ─────────────────────────────────────────
    * La pièce : prix encaissé, coût de recette et marge viennent de la ligne cliquée (ce que les tickets ont
@@ -3677,7 +3684,7 @@
     else {
       const fQ = l => l.qte == null ? '—' : nf(l.qte, Number.isInteger(+l.qte) ? 0 : (l.qte >= 10 ? 1 : 2)) + (l.unite ? ' ' + esc(l.unite) : '');
       rec = `<table class="fi-rtab"><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Coût</th><th class="p">Part du coût</th></tr></thead><tbody>
-        ${lignes.map((l, i) => { const cl = l.type === 'matiere' && l.id != null, on = cl && F.mat === i; return `<tr class="${top && l === top ? 'top' : ''}${cl ? ' clic' : ''}${on ? ' on' : ''}"${cl ? ` data-fmat="${i}" tabindex="0" role="button" aria-expanded="${on ? 'true' : 'false'}" title="le prix de cette matière : ce magasin, le réseau, le fournisseur"` : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>${on ? ficheMatiere(l, S.aux[cleMat(l.id)], S.err[cleMat(l.id)]) : ''}`; }).join('')}
+        ${lignes.map((l, i) => { const cl = l.type === 'matiere' && l.id != null && lignes.length > 1, on = cl && F.mat === i; return `<tr class="${top && l === top ? 'top' : ''}${cl ? ' clic' : ''}${on ? ' on' : ''}"${cl ? ` data-fmat="${i}" tabindex="0" role="button" aria-expanded="${on ? 'true' : 'false'}" title="le prix de cette matière : ce magasin, le réseau, le fournisseur"` : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>${on ? ficheMatiere(l, S.aux[cleMat(l.id)], S.err[cleMat(l.id)]) : ''}`; }).join('')}
         </tbody><tfoot><tr><td>${R.api ? 'Coût de recette aujourd’hui' : 'Lignes chiffrées'}${R.sansPrix ? `<small>${R.sansPrix} sans prix</small>` : ''}</td><td></td><td>${totalL != null ? fPt(totalL) : '—'}</td><td class="p">${totalL != null && matT != null && Math.abs(totalL - matT) > 0.05 ? `<small>tickets du jour ${fPt(matT)}</small>` : ''}</td></tr></tfoot></table>
         <div class="fi-note fi-rnote">${esc(R.source || '')}${mat == null && R.cout && R.cout.net != null ? ` · coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : ''}${R.recette && R.recette.rendement && R.recette.rendement !== 1 ? ` · rendement ${nf(R.recette.rendement, 2)}` : ''}${lignes.some(l => l.prixSource && l.prixSource !== 'magasin') ? ' · les prix sans valeur pour ce magasin viennent d’un autre magasin' : ''}</div>`;
     }
@@ -3690,8 +3697,7 @@
       const pS = sim != null ? sim : prix, tauxS = 100 * (pS - mat) / pS;
       marge = `<div class="fi-rmb${sim != null ? ' sim' : ''}"><b class="${tauxS >= 100 - se.food ? 'ok' : (tauxS >= 100 - se.food - 8 ? 'att' : 'ko')}">${fP0(tauxS)}</b><small>${sim != null ? 'au prix testé ' + fPt(sim) : 'au prix encaissé ' + fPt(prix)}</small></div>`;
     }
-    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · ${matA != null ? 'coût de recette aux prix du panel aujourd’hui, relu à chaque ouverture' : 'coût de recette net gravé avec les tickets'}</span></div>
-      ${h}<div class="fi-rdeux mb"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">Marge brute</span></div>${marge}</section></div>`;
+    return `${h}<div class="fi-rdeux mb"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">Marge brute</span></div>${marge}</section></div>`;
   }
   let ficheEnRendu = false;   // vrai pendant le redessin : le blur que Chrome lance en retirant le champ n'est pas une sortie du champ
   /** La fiche d'une matière première, dépliée sous sa ligne de recette : lue sur l'API du panel seulement. */
@@ -3760,19 +3766,23 @@
             <div class="r"><span>Pièces</span><b>${fN(tot)}</b></div><div class="r"><span>Par semaine</span><b>${nf(moy, 1)}</b></div>
             <div class="r"><span>6 dernières face aux 6 d’avant</span><b class="${tend == null ? '' : (tend >= 0 ? 'up' : 'dn')}">${fSg(tend)}</b></div>
             <div class="sep"></div><div class="r"><span>Moyenne par magasin du réseau</span><b>${fN(totR)}</b></div><div class="r"><span>Face au réseau</span><b class="${face == null ? '' : (face >= 0 ? 'up' : 'dn')}">${fSg(face)}</b></div>
-            <div class="fi-note">en pièces ; un grand magasin vend plus : la taille compte (onglet Prix, volume à taille égale)</div></div></div>`;
+            </div></div>`;
       // Plus de tableau des semaines (10/10/2026) : un clic sur un point du graphique montre sa valeur.
     } else {
       const P = d.prix, seg = `<span class="fi-seg">${[[1, 'Dernier mois'], [3, '3 derniers mois'], [12, '12 mois']].map(([v, l]) => `<button type="button" data-fmois="${v}" class="${F.mois === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
       if (!P) { corps = `<div class="fi-barre">${seg}</div><div class="fi-msg">${esc(d.prixMotif || 'pas de prix comparable sur la période')}</div>`; }
       else { const me = P.magasin, re = P.reseau;
-        corps = `<div class="fi-barre">${seg}<span class="fi-note">${esc(P.periode)} · prix encaissé = chiffre ÷ pièces, remises comprises · volume à taille égale = pièces pour 10 000 € de chiffre du magasin</span></div>
-          <div class="fi-deux"><div><div class="fi-leg"><span><i class="pt"></i>${esc(court)}</span><span><i class="zn"></i>la plage du réseau : du plus bas au plus haut, en prix et en volume</span><span><i class="ln" style="background:#5f5a54;height:1px"></i>prix réseau et volume moyen</span></div>${ficheNuage(P)}</div>
+        // Les autres magasins (10/10/2026) : leur prix de vente en caisse, leur prix encaissé et leur volume.
+        const MG = (P.magasins || []).slice().sort((a, b) => (b.moi ? 1 : 0) - (a.moi ? 1 : 0) || a.p - b.p);
+        const mgL = MG.length ? `<div class="sep"></div><div class="fi-mg"><span class="t">Magasin</span><span class="t">Vente</span><span class="t">Encaissé</span><span class="t">/ 10 k€</span>${MG.map(x => `<span class="${x.moi ? 'moi' : ''}">${esc(x.nom)}</span><span>${x.brut != null ? fPx(x.brut) : '—'}</span><span>${fPx(x.p)}</span><span>${nf(x.v10k, 0)}</span>`).join('')}</div>` : '';
+        corps = `<div class="fi-barre">${seg}</div>
+          <div class="fi-deux"><div><div class="fi-leg"><span><i class="pt"></i>${esc(court)}</span><span><i class="pt" style="background:#9a9187"></i>les autres magasins</span><span><i class="ln" style="background:#5f5a54;height:1px"></i>prix réseau et volume moyen</span><span>un clic sur un point : ses valeurs</span></div>${ficheNuage(P)}</div>
             <div class="fi-cote"><div class="k">${esc(court)}, ${esc(P.periode)}</div>
+              <div class="r"><span>Prix de vente en caisse</span><b>${me.brut != null ? fPx(me.brut) : '—'}</b></div>
               <div class="r"><span>Prix encaissé</span><b>${fPx(me.p)}</b></div><div class="r"><span>Prix réseau (médiane)</span><b>${fPx(re.med)}</b></div><div class="r"><span>Écart</span><b>${fSg(me.ec, 1)}</b></div>
               <div class="sep"></div><div class="r"><span>Pièces vendues</span><b>${fN(me.q)}</b></div><div class="r"><span>Pour 10 000 € de chiffre</span><b>${nf(me.v10k, 1)}</b></div><div class="r"><span>Face aux autres magasins</span><b class="${me.rel == null ? '' : (me.rel >= 0 ? 'up' : 'dn')}">${fSg(me.rel)}</b></div>
               <div class="sep"></div><div class="r"><span>Au prix réseau, par mois</span><b class="${me.auMed > 0 ? 'up' : ''}">${me.auMed > 0 ? '+' : (me.auMed < 0 ? '−' : '')}${fE(Math.abs(me.auMed))}</b></div>
-              <div class="fi-note">à volume égal ; un prix plus haut peut faire vendre moins${me.peu ? ' · moins de 5 pièces sur la période : à lire avec prudence' : ''} · le réseau : ${re.magasins} magasins, prix de ${fPx(re.min)} à ${fPx(re.max)}</div></div></div>`; }
+              ${me.peu ? '<div class="fi-note">moins de 5 pièces sur la période : à lire avec prudence</div>' : ''}${mgL}</div></div>`; }
     }
     box.innerHTML = `<div class="fi-voile" data-ffermer="1"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="${esc(F.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(F.nom)}</h2><div class="s">${esc(d && d.cat ? d.cat + ' · ' : '')}${esc(mag)}</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-ffermer="1" aria-label="fermer">✕</button></div>

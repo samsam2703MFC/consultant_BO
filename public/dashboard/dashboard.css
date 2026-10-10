@@ -1950,3 +1950,8 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-tip b{display:block;font:700 10px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;color:#cfc6ba;margin-bottom:1px}
 .fi-tip.g{transform:translate(-12px,calc(-100% - 10px))}.fi-tip.d{transform:translate(calc(-100% + 12px),calc(-100% - 10px))}
 .fi-tip i{font-style:normal;display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+/* Fiche produit, onglet Prix (10/10/2026) : les magasins, prix de vente en caisse, prix encaissé, volume. */
+.fi-mg{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto auto;gap:4px 10px;font-size:12px;align-items:baseline}
+.fi-mg span{white-space:nowrap;font-variant-numeric:tabular-nums}.fi-mg span:not(:nth-child(4n+1)){text-align:right}
+.fi-mg .t{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.fi-mg .moi{font-weight:700;color:#2a78d6}.fi-mg span:nth-child(4n+1){overflow:hidden;text-overflow:ellipsis}
