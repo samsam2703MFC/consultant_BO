@@ -165,8 +165,7 @@
     if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
-      if (S.vue === 'ops') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
-      if (S.vue === 'semaine') { lireAux(cleFrS(), '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + finFrS() + '&n=8', force); }
+      if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
       if (S.vue === 'mois') { lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force); }
     }
     // Le stock est vivant : il se relit avec la page, et la page se relit
@@ -3724,19 +3723,18 @@
   function finMois(ym) { const f = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0, 12); const d = iso(f); return d > AUJ ? AUJ : d; }
   // La semaine active seulement, du lundi au dimanche (10/10/2026) : quatorze cases ne se lisaient pas sur tablette.
   function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; t.setDate(t.getDate() - (t.getDay() + 6) % 7); for (let i = 0; i < 7; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
-  function finFrS() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 21); const d = iso(t); return d > AUJ ? AUJ : d; }
-  function cleFrS() { return 'frS|' + S.shop + '|' + finFrS(); }
   function friseHtml() {
     if (EMBED || !['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue)) { return ''; }
     const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
     const col = p => p == null ? '#cfc6ba' : (p >= 100 ? '#2d7a3e' : (p >= 90 ? '#e8c9a0' : (p >= 75 ? '#F5B26B' : '#F08A2C')));
-    const fl = n => S.vue === 'ops'
+    const fl = n => S.vue === 'ops' || S.vue === 'semaine'
       ? `<button type="button" class="fr-fl" data-frsem="${n}" aria-label="${n < 0 ? 'semaine précédente' : 'semaine suivante'}"${n > 0 && friseJours()[6] >= AUJ ? ' disabled' : ''}>${n < 0 ? '‹' : '›'}</button>`
       : `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
     const sk = n => Array.from({ length: n }, () => '<div class="fr-c sk"><span class="db-sk" style="width:60%"></span><span class="db-sk" style="width:80%;height:14px"></span></div>').join('');
     let chips = '', tete = '';
-    if (S.vue === 'ops') {
-      const J = friseJours(), lus = {};
+    if (S.vue === 'ops' || S.vue === 'semaine') {
+      // En Semaine aussi (10/10/2026) : les sept jours de la semaine choisie ; un clic ouvre le jour en Opérationnel.
+      const ops = S.vue === 'ops', J = friseJours(), lus = {};
       let attente = false;
       [...new Set(J.map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => {
         const P = S.aux['frJ|' + ym]; if (!P) { attente = true; return; }
@@ -3746,25 +3744,17 @@
       // Le jour regardé prend le chiffre en direct de la page (/exploitation/jour, relu toutes les 2 min) :
       // la période du mois, gardée 5 min par le serveur, retarderait la case d'aujourd'hui.
       // Le même chiffre que la page : les tickets lus (/ventes/stats), sinon /exploitation/jour.
-      const vif = magasin(S.aux['jourM|' + S.date]), STv = S.st[cleSt()];
+      const vif = ops ? magasin(S.aux['jourM|' + S.date]) : null, STv = ops ? S.st[cleSt()] : null;
       const caVif = STv && STv.totaux && STv.totaux.ca != null ? STv.totaux.ca : (vif ? vif.ca : null);
       if (caVif != null) { lus[S.date] = Object.assign({}, lus[S.date] || {}, { ca: caVif, objectif: vif && vif.objectifJour != null ? vif.objectifJour : (lus[S.date] || {}).objectif }); }
-      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]);
+      const totS = J.reduce((t, d) => t + (lus[d] && lus[d].ca != null && d <= AUJ ? +lus[d].ca : 0), 0);
+      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]) + (!ops && totS ? ' · ' + fE(totS) : '');
       chips = attente && !Object.keys(lus).length ? sk(7) : J.map(d => {
-        const j = lus[d] || {}, t = new Date(d + 'T12:00:00'), lib = JOURS_FR[t.getDay()] + ' ' + t.getDate(), on = d === S.date;
+        const j = lus[d] || {}, t = new Date(d + 'T12:00:00'), lib = JOURS_FR[t.getDay()] + ' ' + t.getDate(), on = ops && d === S.date;
         if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? 'obj. ' + nf(j.objectif / 1000, 1) + ' k€' : 'à venir'}</small></div>`; }
         if (j.ferme) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>fermé</small></div>`; }
         const p = j.objectif && j.ca != null ? 100 * j.ca / j.objectif : null, auj = d === AUJ;
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${d}" title="${esc(fDL(d))}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fE(j.ca) : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' % obj.' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
-      }).join('');
-    } else if (S.vue === 'semaine') {
-      const W = S.aux[cleFrS()], L = W && Array.isArray(W.semaines) ? W.semaines : null;
-      const mx = L ? Math.max(1, ...L.map(w => w.ca || 0)) : 1;
-      tete = '8 semaines';
-      chips = !L ? sk(8) : L.map(w => {
-        const on = S.date >= w.du && S.date <= w.au;
-        if (w.futur) { return `<div class="fr-c fut"><span class="n">${esc(w.lab)}</span><b>—</b><small>${fdC(w.du)} – ${fdC(w.au)}</small></div>`; }
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${w.au > AUJ ? AUJ : w.au}"><span class="n">${esc(w.lab)}${w.enCours ? '<em>en cours</em>' : ''}</span><b>${w.ca != null ? fE(w.ca) : '—'}</b><i class="jg"><em style="width:${(100 * (w.ca || 0) / mx).toFixed(0)}%;background:${on ? 'var(--color-primary)' : '#b9ad9f'}"></em></i><small>${fdC(w.du)} – ${fdC(w.au)}</small></button>`;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" ${ops ? 'data-fdate' : 'data-fops'}="${d}" title="${esc(fDL(d))}${ops ? '' : ' · ouvrir en Opérationnel'}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fE(j.ca) : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' % obj.' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
       }).join('');
     } else if (S.vue === 'trimestre') {
       // Les 4 trimestres de l'année (10/10/2026) : le CA des mois lus, face à l'objectif des trois mois.
@@ -3794,7 +3784,7 @@
       }).join('');
     }
     const annuel = S.vue === 'mois' || S.vue === 'trimestre';
-    return `<div class="db-frise${S.vue === 'trimestre' ? ' quatre' : (S.vue === 'ops' ? ' sept' : '')}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
+    return `<div class="db-frise${S.vue === 'trimestre' ? ' quatre' : (S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : '')}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
   }
 
   function rendBench(m, d) {
@@ -5295,6 +5285,7 @@
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trim]').forEach(b => b.addEventListener('click', () => { const q = +b.dataset.trim; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (d.slice(0, 7) === AUJ.slice(0, 7) || (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4))) { d = AUJ; } S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-fops]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fops; if (!d || d > AUJ) { return; } S.vue = 'ops'; S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-frsem]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 7 * +b.dataset.frsem);
       let d = iso(t); if (d > AUJ) { d = AUJ; } if (d === S.date) { return; }
