@@ -3725,9 +3725,9 @@
       chips = !L ? sk(12) : Array.from({ length: 12 }, (_, i) => {
         const x = L.find(r => +r.mois === i + 1) || {}, ym = Y + '-' + String(i + 1).padStart(2, '0'), on = S.date.slice(0, 7) === ym, cours = ym === AUJ.slice(0, 7);
         const ca = x.ca != null ? +x.ca : null, bud = x.caBudget != null ? +x.caBudget : null, p = ca != null && bud ? 100 * ca / bud : null;
-        if (ym > AUJ.slice(0, 7)) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>${bud ? 'budget ' + fK(bud) : 'à venir'}</small></div>`; }
+        if (ym > AUJ.slice(0, 7)) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>${bud ? 'objectif ' + fK(bud) : 'à venir'}</small></div>`; }
         if (ca == null) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>pas de vente</small></div>`; }
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % du budget' : 'sans budget'}</small></button>`;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' : 'sans objectif'}</small></button>`;
       }).join('');
     }
     return `<div class="db-frise"><div class="fr-t">${tete}</div><div class="fr-r">${S.vue === 'mois' ? '' : fl(-1)}${chips}${S.vue === 'mois' ? '' : fl(1)}</div></div>`;
