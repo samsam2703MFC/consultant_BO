@@ -1886,6 +1886,8 @@ locale (demande : « api only, from swagger »). Routes du swagger (`/swagger/op
 
 ### Dashboard magasin : l'onglet « Opérationnel » (06/10/2026)
 
+Depuis le 10/10/2026, l'ordinateur n'a plus d'onglet « Jour » : Opérationnel montre toute la journée. Une adresse `?vue=jour` ouvre Opérationnel. Le téléphone garde ses onglets Exploitation et Contrôle.
+
 Premier onglet du dashboard, au bureau comme au téléphone, ouvert par défaut quand l'adresse ne
 donne pas de vue (`/dashboard/?shop=4`, ou `vue=ops`). Au téléphone, il est le premier des quatre
 onglets du bas (Opérationnel, Exploitation, Contrôle, Semaine), en une colonne : les mêmes tuiles,

@@ -2576,7 +2576,6 @@
     h += `<div class="op-mini4">${opMinis(D)}</div>`;
     // Le stock du magasin : la barre de la vue Semaine, sa liste en liste déroulante.
     h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
-    h += `<div class="op-renvoi">Le chiffre, la marge, le résultat et le réseau restent dans l’onglet <button type="button" class="db-lien" data-vue="jour">Jour ›</button></div>`;
     return h;
   }
 
@@ -2611,14 +2610,15 @@
       return;
     }
     // La réclamation fournisseur n'existe qu'au téléphone.
-    if (S.vue === 'reclamation') { S.vue = 'jour'; urlMaj(); charger(false); return; }
+    // Sur ordinateur, plus d'onglet Jour (10/10/2026) : Opérationnel montre toute la journée, en plus complet.
+    if (S.vue === 'reclamation' || S.vue === 'jour') { S.vue = 'ops'; urlMaj(); charger(false); return; }
     if (EMBED) { const g = ppGarder(); $.classList.remove('mob'); document.body.classList.add('pp-emb'); $.innerHTML = rendProduction(); brancher(); ppRestaurer(g); return; }
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}${S.vue === 'ops' && S.date === AUJ ? ' · en direct, relu toutes les 2 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       <span class="db-lab">${S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
@@ -5281,6 +5281,8 @@
   }, true);
 
   /* --- départ ------------------------------------------------------------- */
+  // Sur ordinateur, une adresse ?vue=jour ouvre Opérationnel (10/10/2026) : la lecture part tout de suite sur la bonne vue.
+  if (S.vue === 'jour' && !estMobile()) { S.vue = 'ops'; }
   pushEtatLire().then(() => rendre()).catch(() => {});
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
