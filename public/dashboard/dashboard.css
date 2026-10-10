@@ -1810,3 +1810,47 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-bun-tab td small{white-space:nowrap}
 .op-bun-tab td small.op-bun-co{white-space:normal;color:var(--color-text);font-weight:600}
 @media (max-width:560px){.op-bun-k{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Le calendrier de la semaine et du mois (maquette A du 10/10/2026) : le bouton choisit le chiffre,
+   la couleur, la jauge, le titre et la légende. */
+.cal-hd{display:flex;align-items:flex-start;gap:18px;padding:14px 16px 10px;border-bottom:.5px solid var(--color-border-tertiary)}
+.cal-t{font:400 22px/1.1 var(--font-display)}.cal-t small{display:block;font:600 11.5px var(--font-ui);color:var(--color-text-muted);margin-top:4px;max-width:560px;line-height:1.4}
+.cal-seg{margin-left:auto;display:flex;background:var(--color-background-secondary);border-radius:14px;padding:4px;gap:4px;flex:0 0 auto}
+.cal-seg button{all:unset;cursor:pointer;padding:7px 14px;border-radius:10px;min-width:112px}
+.cal-seg button span{display:block;font:700 9.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+.cal-seg button b{display:block;font:400 20px/1.1 var(--font-display);margin-top:2px}
+.cal-seg button small{display:block;font:600 10.5px var(--font-ui);color:var(--color-text-muted)}
+.cal-seg button.on{background:var(--color-primary);color:#fff;box-shadow:0 2px 8px rgba(141,29,44,.3)}.cal-seg button.on span,.cal-seg button.on small{color:rgba(255,255,255,.82)}
+.cal-a .db-cal{gap:6px;padding:12px 16px 6px}
+.cal-a .db-cal .d{min-height:74px;padding:7px 9px;gap:3px;border-radius:9px}
+.cal-a .db-cal .d b{font:400 22px/1 var(--font-display);white-space:nowrap}.cal-a .db-cal .d b u{text-decoration:none;font:700 10.5px var(--font-ui);margin-left:4px;opacity:.85}
+.cal-a .db-cal .d small{font:600 10.5px var(--font-ui)}
+.cal-a .db-cal .d .n{display:flex;justify-content:space-between;gap:4px}
+.cal-a .db-cal .d .n em{font-style:normal;font:700 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#1d1d1b;color:#fff;border-radius:999px;padding:1px 6px}
+.cal-jg{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.38);position:relative;margin:2px 0 1px}
+.cal-jg i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#fff}
+.cal-jg s{position:absolute;top:-3px;bottom:-3px;width:2px;left:calc(100% / 1.2);background:#1d1d1b;border-radius:1px}
+.cal-a .db-cal .d.clair .cal-jg{background:rgba(0,0,0,.1)}.cal-a .db-cal .d.clair .cal-jg i{background:#1d1d1b}
+.cal-a .db-cal .d.enc{background:repeating-linear-gradient(135deg,#fff,#fff 6px,#f3efe9 6px,#f3efe9 12px);color:var(--color-text);outline:2px solid #1d1d1b;outline-offset:1px}
+.cal-a .db-cal .d.enc .cal-jg{background:rgba(0,0,0,.08)}.cal-a .db-cal .d.enc .cal-jg i{background:repeating-linear-gradient(135deg,#1d1d1b,#1d1d1b 4px,#6b6b6b 4px,#6b6b6b 8px)}
+.cal-a .db-cal .d.nul{background:var(--color-background-secondary);color:var(--color-text)}
+.cal-a .db-cal .d.fut b{font-size:15px}
+.cal-q{font-weight:700;color:var(--color-primary)}
+.cal-tr{width:2px!important;height:12px!important;background:#1d1d1b;border-radius:1px!important}
+@media (max-width:1150px){.cal-hd{flex-direction:column}.cal-seg{margin-left:0}}
+/* La frise des périodes (sélecteur 2 du 10/10/2026) : sous les onglets, chaque période est un bouton avec son chiffre. */
+.db-frise{margin:-4px 0 14px}
+.fr-t{display:flex;align-items:center;justify-content:flex-end;gap:6px;font:700 12px var(--font-ui);color:var(--color-text-muted);margin:0 2px 6px}
+.fr-an{all:unset;cursor:pointer;font:700 15px var(--font-ui);color:var(--color-primary);padding:0 6px}.fr-an[disabled]{opacity:.3;cursor:default}
+.fr-r{display:flex;gap:6px;align-items:stretch}
+.fr-fl{all:unset;cursor:pointer;border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:10px;width:32px;display:flex;align-items:center;justify-content:center;font:700 16px var(--font-ui);color:var(--color-primary);flex:0 0 auto}
+.fr-c{all:unset;box-sizing:border-box;cursor:pointer;flex:1 1 0;min-width:0;border-radius:10px;padding:6px 8px;background:var(--color-background-secondary);border:2px solid transparent;display:flex;flex-direction:column;gap:3px}
+.fr-c:hover{border-color:var(--color-border-secondary)}
+.fr-c .n{font:700 10.5px var(--font-ui);color:var(--color-text-muted);display:flex;justify-content:space-between;align-items:center;gap:4px;white-space:nowrap}
+.fr-c .n em{font-style:normal;font:700 8.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;background:#1d1d1b;color:#fff;border-radius:999px;padding:1px 5px}
+.fr-c .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.fr-c b{font:400 16px/1 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-c .jg{height:4px;border-radius:2px;background:#e6ded3;position:relative;display:block}.fr-c .jg em{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.fr-c small{font:600 10px var(--font-ui);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-c.on{background:var(--color-surface);border-color:var(--color-primary);box-shadow:0 3px 10px rgba(141,29,44,.18)}.fr-c.on .n{color:var(--color-primary)}
+.fr-c.fut{cursor:default;background:var(--color-surface);border:1px dashed var(--color-border-secondary)}.fr-c.fut b{color:#c9c0b4}.fr-c.fut:hover{border-color:var(--color-border-secondary)}
+.fr-c.sk{cursor:default;gap:6px}
