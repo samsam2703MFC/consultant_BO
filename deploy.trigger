@@ -683,3 +683,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T19:53:43Z diagnostic : tâches des consultants
 2026-10-09T19:58:11Z diagnostic : contrat des tâches consultant
 2026-10-09T20:09:21Z fiche franchisé : parcours de visite, checklist du consultant
+2026-10-10T04:50:32Z fiche franchise en app tablette consultant
