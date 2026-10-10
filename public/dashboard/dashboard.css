@@ -1863,3 +1863,13 @@ html.db-fiche-ouverte{overflow:hidden}
 @media (max-width:760px){.fi-rdeux.mb{grid-template-columns:1fr}}
 /* La ligne « Non ventilé » des ventes par catégorie (10/10/2026) : l'écart entre le P&L du jour et la somme des produits. */
 .db-al.ec{color:var(--color-text-muted);font-style:italic}.db-al.ec .n{font-weight:500}
+/* « À compléter pour des chiffres justes » (10/10/2026) : les ventes sans produit et les produits sans coût. */
+.acp-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;padding:4px 16px 14px}
+.acp-v{background:var(--color-background-secondary);border-radius:10px;padding:10px 12px;min-width:0}
+.acp-v .k{font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#B26A00}
+.acp-v .b{font:400 24px/1.1 var(--font-display);margin:3px 0}.acp-v .b small{font:600 11.5px var(--font-ui);color:var(--color-text-muted)}
+.acp-v .s{font:600 11.5px var(--font-ui);color:var(--color-text-muted)}
+.acp-v details{margin-top:8px}.acp-v summary{cursor:pointer;font:700 12px var(--font-ui);color:var(--color-primary)}
+.acp-t td{font-size:11.5px}.acp-t tr.tk td{color:#B26A00}.acp-t tr.clic{cursor:pointer}.acp-t tr.clic:hover td{background:#fff}
+.acp-n{font:600 11px var(--font-ui);color:var(--color-text-muted);margin-top:6px}
+.db-card.acp.ok .db-mini{color:#2d7a3e;font-weight:700}

@@ -1949,6 +1949,12 @@ revérifie tout).
 
 **Ventes par catégorie = P&L court (10/10/2026).** Le Total de la carte reprend le CA et la marge brute du P&L de la journée. La somme des produits lus dans les tickets peut être un peu plus basse (lignes de caisse sans produit, remises sur ticket, arrondis) : l'écart s'affiche sur une ligne « Non ventilé ». Quand des catégories n'ont pas de coût dans les tickets (en gris), leur marge tombe aussi dans cette ligne.
 
+**À compléter (10/10/2026).** `GET /ventes/stats` renvoie `aCompleter` : ce qu'il faut remplir pour que les catégories collent au P&L.
+- `lignes` : chaque ligne de caisse sans produit (`type: "ligne"`, heure `mn`, libellé de caisse `nom`, `q`, `v`) et chaque écart entre le total d'un ticket et la somme de ses lignes (`type: "ticket"`, une remise sur le ticket entier quand `v` est négatif). Le relevé des tickets `svP{shop}:{date}` les garde dans `sp`. Un relevé qui ne les porte pas encore se relit une fois en entier : aujourd'hui, ou un jour passé ouvert en vue jour.
+- `nLignes`, `caLignes`, `caTickets` : le compte et les montants. `detail` vaut `false` si un jour de la période n'a pas encore son `sp`.
+- `sansCout`, `nSansCout`, `caSansCout` : les produits vendus sans coût de recette, à chiffrer dans le panel.
+Sous « Ventes par catégorie », la carte « À compléter pour des chiffres justes » montre deux vignettes avec leur liste déroulante : « Ventes sans produit » (à rattacher à un produit dans la caisse ; le reste de l'écart = arrondis ou tickets pas encore lus) et « Produits sans coût » (un clic ouvre la fiche du produit).
+
 Mesuré le 04/10/2026 : `/exploitation/jour` faisait ~45 appels au panel (tous les magasins, le
 classement réseau du dashboard en a besoin), 15 à 60 s à chaque affichage ; `/exploitation/periode`
 10 s. Le calcul se garde désormais dans `ceo_app_setting` (`exJour:{date}`,
