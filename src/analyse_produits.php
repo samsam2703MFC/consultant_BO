@@ -398,6 +398,60 @@ function ep_analyse_produit_magasin(): array
 }
 
 /**
+ * GET /analyse/categories/magasin?shop=4&niveau=categorie|groupe&nom=Tartes — les ventes d'une catégorie
+ * (ou d'un groupe de catégories) pour le dashboard d'UN magasin (10/10/2026) : le chiffre d'affaires et
+ * les pièces semaine par semaine (12 semaines closes + l'en cours), face à la moyenne par magasin du
+ * réseau. La même lecture que la fiche d'un produit (tranches gravées une fois closes) ; la catégorie
+ * d'un produit est celle du catalogue, comme dans « Ventes par catégorie ». Aucun magasin nommé.
+ */
+function ep_analyse_categorie_magasin(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $niveau = ($_GET['niveau'] ?? '') === 'groupe' ? 'groupe' : 'categorie';
+    $nom = trim((string) ($_GET['nom'] ?? ''));
+    if ($sid <= 0 || $nom === '') { http_response_code(400); return ['error' => 'shop et nom requis']; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $shops = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) { $shops[(int) $s['id']] = (string) $s['name']; }
+    if (!isset($shops[$sid])) { http_response_code(404); return ['error' => 'magasin inconnu ou fermé']; }
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $grpDe = function_exists('svGroupes') ? svGroupes() : [];
+    // Le groupe se lit comme dans la liste du dashboard : la première partie du groupe du catalogue, « Autres » sans groupe.
+    $groupe = static fn (string $c): string => explode(' · ', (string) ($grpDe[$c] ?? 'Autres'))[0];
+    $tranches = array_slice(apTranches(3), -13);
+    $couples = [];
+    foreach (array_keys($shops) as $s) { foreach ($tranches as [$du, $au]) { $couples[] = [$s, $du, $au]; } }
+    $lu = apTranches2($couples);
+    $moi = []; $moiQ = []; $res = []; $resQ = []; $muet = []; $vues = [];
+    foreach ($tranches as $i => [$du, $au]) {
+        $ca = 0.0; $q = 0.0; $servis = 0;
+        foreach (array_keys($shops) as $s) {
+            $p = $lu[$s . ':' . $du] ?? null;
+            if (!is_array($p)) { if ($s === $sid) { $muet[] = $i; } continue; }
+            $servis++; $caS = 0.0; $qS = 0.0;
+            foreach ($p as $pid => $x) {
+                $c = (string) ($catDe[(int) $pid] ?? $x[1]);
+                if (($niveau === 'categorie' ? $c : $groupe($c)) !== $nom) { continue; }
+                $caS += (float) $x[3]; $qS += (float) $x[2];
+                if ($niveau === 'groupe' && $c !== '') { $vues[$c] = true; }
+            }
+            $ca += $caS; $q += $qS;
+            if ($s === $sid) { $moi[$i] = round($caS, 2); $moiQ[$i] = round($qS, 1); }
+        }
+        $res[$i] = $servis > 0 ? round($ca / $servis, 2) : null;
+        $resQ[$i] = $servis > 0 ? round($q / $servis, 1) : null;
+        $moi[$i] = $moi[$i] ?? null; $moiQ[$i] = $moiQ[$i] ?? null;
+    }
+    ksort($moi); ksort($moiQ);
+    $cats = array_keys($vues); sort($cats);
+    return ['shop' => $sid, 'niveau' => $niveau, 'nom' => $nom, 'groupe' => $niveau === 'categorie' && isset($grpDe[$nom]) ? $groupe($nom) : null, 'categories' => $cats,
+        'semaines' => ['tranches' => array_map(fn ($t) => $t[2], $tranches), 'bornes' => array_map(fn ($t) => [$t[0], $t[1]], $tranches),
+            'jours' => array_map(fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches),
+            'magasin' => array_values($moi), 'reseau' => array_values($res), 'magasinQ' => array_values($moiQ), 'reseauQ' => array_values($resQ),
+            'muettes' => $muet, 'magasins' => count($shops)]];
+}
+
+/**
  * GET /analyse/prix-transfert?source=2&cible=4&m=2026-08
  *
  * « Si j'appliquais les prix de tel magasin à tel autre, qu'est-ce que ça
