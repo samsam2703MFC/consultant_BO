@@ -3076,3 +3076,28 @@ Le prix entier d'un produit vient des entières vendues, sinon du catalogue. Les
 | Pièces entières vendues | 30 ¼ |
 | CA par pièce entière | 24,46 € |
 | Pièces encore en parts | 7 ¾ |
+
+**Téléphone : les vues réparties entre les onglets (10/10/2026).** Chaque onglet a son rôle, sans doublon :
+
+| Onglet | Ce qu'il porte |
+|---|---|
+| Opérationnel | Le direct : l'objectif face à J−7, les quatre tuiles, le duel, l'heure par heure, la vitrine, la journée (équipe et cuissons), et deux renvois en bas. |
+| Exploitation | Les chiffres de la journée : les tuiles, le P&L court, les ventes par catégorie (Liste, Treemap, Promotions, Portions), les bundles et les promotions. |
+| Contrôle | Inchangé : les photos, les contrôles, les commandes, le stock, la poubelle, la réclamation et la note. |
+| Semaine | Inchangé. |
+
+Le P&L, les catégories et les bundles ont quitté Opérationnel. Les photos, les mini-cartes commandes et poubelle et le stock aussi : Contrôle les portait déjà.
+
+Sous 560 px, rien ne défile de côté, sauf le carrousel des photos. Les tableaux gardent ces colonnes :
+
+| Tableau | Colonnes |
+|---|---|
+| Liste | catégorie, CA, taux de marge |
+| Promotions | produit, ventes en promo, part |
+| Portions | produit, pièces entières, reste, CA |
+
+Les autres réglages du téléphone :
+- la grille horaire de la vitrine tient dans la ligne ;
+- la date de l'en-tête est courte : « aujourd’hui · sam. 10 oct. ».
+
+Vérifié à 390 et 360 px : aucune page ne défile de côté.

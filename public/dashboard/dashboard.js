@@ -1041,6 +1041,10 @@
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
     if (S.objOuvert) { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
+    // Le P&L court, les ventes par catégorie (liste, treemap, promotions, portions) et les bundles,
+    // venus d'Opérationnel (10/10/2026) : les chiffres de la journée au même endroit.
+    const PJ = jourPieces(m, d, S.st[cleSt()]);
+    h += `<div class="ma-large">${PJ.pnl}</div><div class="ma-large">${PJ.categories}</div><div class="ma-large">${bundlesCarte()}</div>`;
     return h;
   }
 
@@ -1165,7 +1169,8 @@
   function maDate() {
     if (S.vue === 'semaine') { const [du, au] = bornesSemaine(); return 'du ' + fD(du) + ' au ' + fD(au); }
     const t = new Date(S.date + 'T12:00:00');
-    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+    // Au téléphone, la forme courte : « aujourd’hui · sam. 10 oct. » tient sur une ligne.
+    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', estMobile() ? { weekday: 'short', day: 'numeric', month: 'short' } : { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   function rendMobile(m, d) {
@@ -2728,15 +2733,10 @@
       ${planning.length ? planning.map(p => { const ici = now != null && opMin(p.debut) <= now && now < opMin(p.fin); return lg(ici ? 'ici' : (now != null && opMin(p.fin) <= now ? 'fini' : ''), esc(p.debut) + '–' + esc(p.fin), esc(p.nom || (p.postes || []).join(', ')), ici ? 'en poste' : (now != null && opMin(p.debut) > now ? 'arrive' : '')); }).join('') : `<div class="op-jl"><span class="b mu">${m ? 'pas de planning lu' : 'lecture…'}</span></div>`}
       ${cuissons.map(c => lg(now != null && opMin(c.four) > now ? 'av' : '', 'four ' + esc(c.four), esc(c.nom) + ' · ' + fN(c.pieces) + ' pièces, ' + esc(c.de) + ' à ' + esc(c.a), c.valide ? 'validée' : (now != null && opMin(c.four) > now ? opDans(opMin(c.four), now) : 'à valider'))).join('')}
     </div></div>`;
-    // Les photos du jour : le carrousel du téléphone.
-    h += `<div id="op-cq">${rendCQ(true)}</div>`;
-    // Le P&L court et les ventes par catégorie, comme au bureau.
-    const PJ = m ? jourPieces(m, JD, ST) : null;
-    if (PJ) { h += `<div class="op-large">${PJ.pnl}</div><div class="op-large">${PJ.categories}</div>`; }
-    h += bundlesCarte();
-    h += `<div class="op-mini4">${opMinis(D)}</div>`;
-    h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : ''}</div>`;
-    h += `<div class="op-renvoi">Le chiffre, la marge et le résultat de la journée : l’onglet <button type="button" class="db-lien" data-mo="exp">Exploitation ›</button></div>`;
+    // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons).
+    // Le P&L, les ventes par catégorie et les bundles vont dans Exploitation ; les photos, les commandes,
+    // le stock et la poubelle dans Contrôle, qui les avait déjà.
+    h += `<div class="op-renvoi">Le P&amp;L, les ventes par catégorie, les promotions et les portions : <button type="button" class="db-lien" data-mo="exp">Exploitation ›</button><br>Les photos, les commandes, le stock et la poubelle : <button type="button" class="db-lien" data-mo="ctrl">Contrôle ›</button></div>`;
     return h;
   }
   function rendOps() {
@@ -4029,8 +4029,8 @@
     const barre = (x, ref) => { let g = 0; const segs = tailles.map(k => { const o = x.t[k]; if (!o || o.f == null || !o.q) { return ''; } const w = 100 * o.f * o.q / Math.max(ref, 1e-9); const s = `<i style="left:${g.toFixed(2)}%;width:${w.toFixed(2)}%;background:${coul[k]}"></i>`; g += w; return s; }).join('');
       return `<span class="barre pt-b">${segs}</span>`; };
     const reste = r => r > 1e-6 ? `<span class="pt-r">reste ${portFrac(r)}</span>` : '<span class="mu">—</span>';
-    const cols = (x, ref) => barre(x, ref) + tailles.map(k => `<span class="n">${x.t[k] && x.t[k].q ? fN(x.t[k].q) : '<span class="mu">—</span>'}</span>`).join('')
-      + `<span class="n b">${portFrac(x.eq)}</span><span class="n">${reste(x.reste)}</span><span class="n">${fU(x.v != null ? x.v : x.ca)}</span><span class="n mu">${x.eq > 0 ? fU((x.v != null ? x.v : x.ca) / x.eq) : '—'}</span>`;
+    const cols = (x, ref) => barre(x, ref) + tailles.map(k => `<span class="n ts">${x.t[k] && x.t[k].q ? fN(x.t[k].q) : '<span class="mu">—</span>'}</span>`).join('')
+      + `<span class="n b eq">${portFrac(x.eq)}</span><span class="n rs">${reste(x.reste)}</span><span class="n ca">${fU(x.v != null ? x.v : x.ca)}</span><span class="n mu pe">${x.eq > 0 ? fU((x.v != null ? x.v : x.ca) / x.eq) : '—'}</span>`;
     const ouvert = (k, defaut) => defaut ? !S.cOuv[k + '!'] : !!S.cOuv[k];
     const cle = (k, defaut) => defaut ? k + '!' : k;
     const tog = on => `<span class="db-tog ${on ? 'on' : ''}">${on ? '▾' : '▸'}</span>`;
@@ -4059,8 +4059,8 @@
       C.forEach(c => c.prods.forEach(x => Object.entries(x.t).forEach(([kk, t]) => { const a = tx.t[kk] || (tx.t[kk] = { f: t.f, q: 0 }); a.q += t.q; })));
       rows += `<div class="db-al tot" style="${grille}"><span></span><span class="nom">Total<span class="sub">${C.length} catégories vendues en portions</span></span>${cols(tx, Math.max(eqT, 1e-9))}</div>`;
     }
-    const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span>En pièces entières, par taille</span>${tailles.map(k => `<span class="n">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n">En entières</span><span class="n" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n">CA</span><span class="n">€ par entière</span></div>`;
-    return bande + `<div class="db-acc pt">${ent}${rows}</div>`;
+    const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span class="pt-bh">En pièces entières, par taille</span>${tailles.map(k => `<span class="n ts">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n eq">En entières</span><span class="n rs" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n ca">CA</span><span class="n pe">€ par entière</span></div>`;
+    return bande + `<div class="db-acc pot">${ent}${rows}</div>`;
   }
   /** Bundles vendus : les promotions de la journée, leur poids dans le CA complet et dans chaque catégorie qu'elles touchent. */
   function promoBundles(st) {
