@@ -80,7 +80,7 @@ function pvNormaliser(array $d): array
     $rw = is_array($d['reward'] ?? null) ? $d['reward'] : [];
     $shops = array_values(array_map('intval', (array) ($d['shop_ids'] ?? [])));
     return [
-        'id' => (int) $d['id'], 'nom' => (string) ($d['name'] ?? ('Promotion ' . $d['id'])), 'type' => $bundle ? 'bundle' : 'buyxgety',
+        'id' => (int) $d['id'], 'nom' => trim((string) preg_replace('/\s+/u', ' ', (string) ($d['name'] ?? ('Promotion ' . $d['id'])))), 'type' => $bundle ? 'bundle' : 'buyxgety',
         'statut' => (string) ($d['status'] ?? ''), 'prio' => (int) ($d['priority'] ?? 0),
         'shops' => ($d['shop_scope_type'] ?? '') === 'ALL_SHOPS' ? null : $shops,
         'du' => isset($d['valid_from']) ? substr((string) $d['valid_from'], 0, 10) : null, 'au' => isset($d['valid_to']) ? substr((string) $d['valid_to'], 0, 10) : null,
