@@ -722,3 +722,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T17:34:05Z Sonde promotions par quantité
 2026-10-10T17:35:43Z Sonde promotions par identifiant
 2026-10-10T18:00:58Z Sonde promotions compte admin
+2026-10-10T18:05:51Z Tickets à remise
