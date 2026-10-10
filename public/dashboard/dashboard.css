@@ -669,6 +669,8 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-al .ok{color:#2d7a3e}.db-al .ko{color:#C0182B}.db-al .att{color:#B26A00}.db-al .mu{color:var(--color-text-muted)}
 .db-al.tot{border-top:1px solid var(--color-border-secondary);font-weight:600}
 .fi-cote .r b{white-space:nowrap}
+em.bdl{font-style:normal;font:700 8px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#1d1d1b;color:#fff;border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.db-al.p.bun{background:#fff7e6}.db-al .sub b.sans{color:#B26A00;font-weight:700}
 .db-c12{all:unset;cursor:pointer;margin-left:6px;width:13px;height:13px;border-radius:50%;border:1px solid #c9c0b4;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px/1 Georgia,serif;color:#a49b8f;vertical-align:1px;opacity:.75}.db-c12:hover,.db-c12:focus-visible{opacity:1;border-color:var(--color-primary);color:var(--color-primary)}
 .db-tog{width:18px;height:18px;border-radius:5px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--color-text-muted)}
 .db-tog.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
@@ -1540,9 +1542,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-piste .val.fin.dedans{color:#1f3f5e;background:rgba(255,255,255,.85)}
 .op-piste .val.proj.dedans{color:#8c1020;background:rgba(255,255,255,.85)}
 .op-dax{display:flex;justify-content:space-between;font-size:10.5px;color:#888;margin:8px 0 0 164px}
-.op-dver{margin-top:12px;border-radius:12px;padding:10px 14px;font-size:12.5px;line-height:1.45}
-.op-dver b{font:400 17px var(--font-display)}
-.op-dver.ok{background:#e3f0e6;color:#1f5a2c}.op-dver.att{background:#fbecd8;color:#8a4e05}.op-dver.ko{background:#f8e0e3;color:#8c1020}.op-dver.mu{background:var(--color-background-secondary);color:#555}
 .op-crb-w{padding:10px 16px 4px}
 .op-crb{width:100%;height:auto;display:block;font-family:var(--font-ui)}
 .op-crb.tel{display:none}
