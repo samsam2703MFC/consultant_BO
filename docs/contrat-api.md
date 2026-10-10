@@ -2899,7 +2899,7 @@ Le cockpit : section « Franchisés · évaluation et suivi » du rail — Fiche
 La fiche suit la visite en cinq étapes : 1 Agenda (les visites des 14 jours, le choix du magasin), 2 Checklist (les
 checklists du consultant, puis la liste des tâches et le formulaire), 3 Santé du magasin (CA du mois face au budget,
 part B2B, scoring, ses postes Google et Tâches, infractions mineures, météo, puis les deux volets et le journal),
-4 Benchmark réseau, 5 Fin de visite (la météo : comment se sent le franchisé). Sur tablette, le menu passe en tiroir. Le rail :
+4 Benchmark réseau, 5 Fin de visite (la météo : comment se sent le franchisé). Sur tablette, la fiche devient l'application du consultant, comme la PWA Visites : en-tête d'app (☰, logo, magasin, relire, page du franchisé, initiales), en-tête d'étape avec ‹ et « étape n / 5 », barre des 5 étapes fixe en bas. `?app=consultant` force ce mode à toute largeur, ouvre la fiche et pose le manifeste `consultant.webmanifest` (installable sur l'écran d'accueil, sans service worker). Sur ordinateur, rien ne change. Le rail :
 deux sous-menus (Suivi journalier et opérations : tâches et contrôles photo, objectifs, remarques
 opérateurs, note Google, reporting — l'entrée Invendus et poubelle est revenue sous Magasins, le suivi du
 franchisé ne gardant que la part des invendus dans le CA et les réclamations fournisseur ; la fiche et la page

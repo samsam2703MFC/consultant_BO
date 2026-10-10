@@ -14,7 +14,8 @@ import { Scouting } from './scouting.js';
 function modeTablette(){
   try {
     const tactile = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
-    document.documentElement.toggleAttribute('data-tablette', (tactile && innerWidth <= 1366) || innerWidth <= 1100);
+    const app = document.documentElement.getAttribute('data-app') === 'consultant';
+    document.documentElement.toggleAttribute('data-tablette', app || (tactile && innerWidth <= 1366) || innerWidth <= 1100);
   } catch (e) { /* sans mode tablette, l'écran reste celui du bureau */ }
 }
 modeTablette();

@@ -1,0 +1,15 @@
+{
+  "name": "Visite consultant — L'Atelier by",
+  "short_name": "Visite",
+  "description": "L'agenda, la checklist, la santé du magasin, le benchmark réseau et la météo du franchisé, en visite.",
+  "start_url": "./?app=consultant#/fiche-franchise",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3efe9",
+  "theme_color": "#f3efe9",
+  "lang": "fr",
+  "icons": [
+    { "src": "assets/img/logo.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}
