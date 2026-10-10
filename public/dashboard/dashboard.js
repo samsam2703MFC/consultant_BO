@@ -2724,9 +2724,8 @@
     const lignes = (A.lignes || []).filter(x => x.type === 'ligne'), tickets = (A.lignes || []).filter(x => x.type === 'ticket');
     const reste = ecart != null ? ecart - (A.caLignes || 0) - (A.caTickets || 0) : null;
     const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5);
-    // L'écart de marge qui reste quand tout est chiffré : le coût du panel et celui des tickets, arrondis.
-    const ecM = m && m.margeBrute != null ? m.margeBrute - (st.categories || []).reduce((t, c) => t + (c.m || 0), 0) : 0;
-    if (rien) { return `<div class="db-card acp ok"><div class="ct"><span class="db-lab">À compléter</span><span class="db-mini">✓ tout est ventilé et chiffré ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}${Math.abs(ecM) >= 0.5 ? ' · marge : ' + fU(ecM) + ' d’arrondis de coût' : ''}</span></div></div>`; }
+    // Rien à compléter : pas de carte (10/10/2026), elle ne se montre que quand quelque chose ne va pas.
+    if (rien) { return ''; }
     const hm = x => (x.mn || '') + (x.j && x.j !== S.date ? ' · ' + fD(x.j) : '');
     // Ouverte ou fermée, la liste le reste quand la page se relit (S.cOuv).
     const ouvre = (k, n) => (S.cOuv['acp:' + k] != null ? S.cOuv['acp:' + k] : n <= 8) ? ' open' : '';
