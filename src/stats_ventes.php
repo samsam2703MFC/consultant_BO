@@ -719,9 +719,75 @@ function svGroupes(): array
 }
 
 /**
+ * Les lignes sans coût du relevé ($prod : {jour: {heure: {clé: [nom, q, v, c|null]}}}) chiffrées au coût de la recette du
+ * panel : coût de la pièce × quantité. Les recettes et leurs coûts se lisent EN PARALLÈLE, gardés 10 s comme dans la fiche
+ * (mêmes clés : recetteDuProduit, recetteCout) ; une recette complète au panel donne cost_net ÷ rendement, une recette
+ * partielle passe par le calcul de la fiche (matière sans prix ici prise au prix des autres magasins) dans le temps qui
+ * reste. Rien n'est gravé : la recette du moment fait foi.
+ */
+function svRechiffrer(array $prod, int $sid): array
+{
+    if (!function_exists('rpApi') || !function_exists('mfCache') || !PanelApi::configured()) { return $prod; }
+    $aChiffrer = [];
+    foreach ($prod as $ph) { foreach ((array) $ph as $lst) { foreach ((array) $lst as $k => $x) { if ((is_array($x) && array_key_exists(3, $x) && $x[3] === null) && is_numeric($k)) { $aChiffrer[(int) $k] = true; } } } }
+    $pids = array_slice(array_keys($aChiffrer), 0, 30);
+    if ($pids === []) { return $prod; }
+    $ttl = defined('RP_SEC_RECETTE') ? RP_SEC_RECETTE : 10;
+    // 1. La recette de chaque produit.
+    $rid = []; $manque = [];
+    foreach ($pids as $pid) {
+        $c = mfCache('recetteDuProduit:' . $pid, false, $ttl);
+        if ($c !== null && isset($c['rid'])) { $rid[$pid] = (int) $c['rid']; } else { $manque[$pid] = '/products/' . $pid; }
+    }
+    if ($manque !== []) {
+        $r = PanelApi::getParallele($manque, 8, 12);
+        foreach (array_keys($manque) as $pid) {
+            $p = $r[$pid] ?? null;
+            if (!is_array($p) || !isset($p['id'])) { continue; }
+            $rid[$pid] = (int) ($p['id_recipe'] ?? 0);
+            mfGarder('recetteDuProduit:' . $pid, ['rid' => $rid[$pid], 'nom' => trim((string) ($p['name'] ?? ''))]);
+        }
+    }
+    // 2. Le coût de chaque recette pour ce magasin.
+    $cout = []; $manque = [];
+    foreach ($rid as $pid => $r0) {
+        if ($r0 <= 0) { continue; }
+        $c = mfCache('recetteCout:' . $r0 . ':' . $sid, false, $ttl);
+        if ($c !== null) { $cout[$pid] = $c; } else { $manque[$pid] = '/shops/' . $sid . '/recipes/' . $r0 . '/cost'; }
+    }
+    if ($manque !== []) {
+        $r = PanelApi::getParallele($manque, 8, 12);
+        foreach (array_keys($manque) as $pid) {
+            $c = $r[$pid] ?? null;
+            if (!is_array($c) || !isset($c['elements']) || !is_array($c['elements'])) { continue; }
+            $cout[$pid] = $c; mfGarder('recetteCout:' . $rid[$pid] . ':' . $sid, $c);
+        }
+    }
+    // 3. Le coût de la pièce.
+    $piece = []; $t0 = microtime(true);
+    foreach ($cout as $pid => $c) {
+        $rend = mfNombre($c['yield_quantity'] ?? null); $rend = $rend !== null && $rend > 0 ? $rend : 1.0;
+        $net = mfNombre($c['cost_net'] ?? null);
+        if (!empty($c['cost_complete']) && $net !== null && $net > 0) { $piece[$pid] = $net / $rend; continue; }
+        if (microtime(true) - $t0 > 6) { continue; }
+        try { $f = rpApi($pid, $sid, false); } catch (Throwable $e) { $f = null; }
+        if (is_array($f) && !empty($f['complet']) && is_numeric($f['total'] ?? null) && (float) $f['total'] > 0) { $piece[$pid] = (float) $f['total']; }
+    }
+    if ($piece === []) { return $prod; }
+    foreach ($prod as $j => $ph) {
+        foreach ((array) $ph as $h => $lst) {
+            foreach ((array) $lst as $k => $x) {
+                if ((is_array($x) && array_key_exists(3, $x) && $x[3] === null) && is_numeric($k) && isset($piece[(int) $k])) { $prod[$j][$h][$k][3] = round($piece[(int) $k] * (float) $x[1], 4); }
+            }
+        }
+    }
+    return $prod;
+}
+
+/**
  * La catégorie d'un bundle (10/10/2026) : celle des produits que nomme sa recette (« 2 Cookies » → 2 × Cookie Chocolat
  * Blanc → « Cookies »), au prorata du coût de chaque ligne ; un bundle mixte se partage. Recette lue à l'API du panel
- * (rpApi), le partage gardé 24 h. Vide quand la recette ne nomme aucun produit du catalogue : le bundle reste où il est.
+ * (rpApi), le partage relu passées 10 secondes comme la recette. Vide quand la recette ne nomme aucun produit du catalogue : le bundle reste où il est.
  *
  * @return array<string,float> catégorie → part (somme 1)
  */
@@ -732,7 +798,7 @@ function svBundleCats(int $pid, int $sid): array
     if (isset($memo[$k])) { return $memo[$k]; }
     $cle = 'bdlCat:' . $k;
     $c = setting($cle);
-    if (is_array($c) && (int) ($c['quand'] ?? 0) > time() - 86400) { return $memo[$k] = (array) ($c['parts'] ?? []); }
+    if (is_array($c) && (int) ($c['quand'] ?? 0) > time() - (defined('RP_SEC_RECETTE') ? RP_SEC_RECETTE : 10)) { return $memo[$k] = (array) ($c['parts'] ?? []); }
     $r = function_exists('rpApi') ? rpApi($pid, $sid, false) : null;
     if (!is_array($r) || !is_array($r['lignes'] ?? null)) { return $memo[$k] = is_array($c) ? (array) ($c['parts'] ?? []) : []; }
     $norm = static fn (string $t): string => mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $t)));
@@ -843,6 +909,11 @@ function ep_stats_ventes(): array
         if ($p !== null) { $prod[$j] = $p; $joursProd[] = $j; }
     }
 
+    // Les ventes sans coût dans les tickets se rechiffrent à la recette du panel (10/10/2026) : une recette créée ou
+    // complétée au panel se voit à la relecture suivante (recette relue passées 10 s), sans attendre l'heure du cache
+    // des coûts ni relire les tickets. Les pièces entières seulement (une portion n'a pas sa fraction dans le relevé) ;
+    // 30 produits au plus par requête, lus en parallèle.
+    $prod = svRechiffrer($prod, $sid);
     // Agrégat par heure : somme sur les jours ouverts (CA > 0 dans l'heure ou le jour).
     $agg = []; $joursOuverts = []; $matEstimee = 0; $matInconnue = 0;
     foreach ($heures as $j => $hs) {

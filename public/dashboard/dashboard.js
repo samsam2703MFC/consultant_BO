@@ -3190,7 +3190,8 @@
     const k = cleRecette(); if (!k) { return; }
     // Le coût de la pièce gravé avec les tickets guide le serveur dans le choix d'unité des quantités.
     const F = S.fiche, c = F.q > 0 && F.c != null && F.c > 0 ? (F.c / F.q).toFixed(4) : '';
-    lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(F.pid) + '&shop=' + encodeURIComponent(S.shop) + (c ? '&cout=' + c : ''));
+    // Relue passées 10 secondes (10/10/2026) : une recette changée au panel se voit à la réouverture de la fiche.
+    lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(F.pid) + '&shop=' + encodeURIComponent(S.shop) + (c ? '&cout=' + c : ''), !!(S.auxLu[k] && Date.now() - S.auxLu[k] > 10000));
   }
   function ficheOuvrir(b) {
     const n = v => v === '' || v == null ? null : +v;
