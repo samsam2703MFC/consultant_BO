@@ -268,6 +268,7 @@ function route(string $method, string $path): mixed
             $path === '/analyse/produits/jours'        => ep_analyse_produits_jours(),
             $path === '/analyse/produits/magasin'      => ep_analyse_produit_magasin(),
             $path === '/analyse/categories/magasin'    => ep_analyse_categorie_magasin(),
+            $path === '/analyse/categories/journee'    => ep_analyse_categorie_journee(),
             $path === '/analyse/produits/recette'      => ep_analyse_produit_recette(),
             $path === '/analyse/matieres/fiche'        => ep_analyse_matiere_fiche(),
             $path === '/analyse/pnl/mois'              => ep_analyse_pnl_mois(),
