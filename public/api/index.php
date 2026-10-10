@@ -353,6 +353,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/ventes/clients/sonde'         => ep_ventes_clients_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
+            $path === '/ventes/tickets'               => ep_ventes_tickets(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
             $path === '/ventes/commandes'            => ep_ventes_commandes(),
