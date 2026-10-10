@@ -1955,3 +1955,33 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-mg span{white-space:nowrap;font-variant-numeric:tabular-nums}.fi-mg span:not(:nth-child(4n+1)){text-align:right}
 .fi-mg .t{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
 .fi-mg .moi{font-weight:700;color:#2a78d6}.fi-mg span:nth-child(4n+1){overflow:hidden;text-overflow:ellipsis}
+
+/* Promotions du panel (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes par catégorie et la liste dans Bundles vendus. */
+.pr-bd{display:flex;align-items:center;flex-wrap:wrap;gap:10px 22px;padding:12px 22px;border-bottom:.5px solid var(--color-border-tertiary);background:#faf7f2}
+.pr-bd .k{display:flex;align-items:center;gap:8px}.pr-bd .k b{font:400 26px var(--font-display);color:#1f4e8c;white-space:nowrap}.pr-bd .k span{font:600 10.5px/1.3 var(--font-ui);color:var(--color-text-muted)}
+.pr-chips{margin-left:auto;display:flex;flex-wrap:wrap;gap:4px}
+.pr-tg{display:inline-block;font:700 11.5px var(--font-ui);line-height:20px;color:var(--c);border:1px solid var(--c);border-radius:999px;padding:0 10px;background:#fff;white-space:nowrap}
+.pr-sans{padding:6px 22px 0}
+.db-acc.pro .db-ent,.db-acc.pro .db-al{grid-template-columns:22px minmax(170px,1.25fr) 2fr 82px 78px 66px 70px 72px}
+.db-acc.pro .db-al .barre i{border-radius:999px}
+.db-al .pr-pv{font-weight:700;color:#1f4e8c}.db-al .pr-rm{color:#B26A00;font-weight:600}.db-al .n small{font-weight:400;color:var(--color-text-muted)}
+.pr-pl{display:inline-block;min-width:44px;text-align:center;border-radius:999px;padding:2px 8px;font-weight:700}
+.db-al.u3{padding:4px 6px 4px 78px;font-size:11px;background:#faf7f2;border-top:.5px dashed #e6ded3}.db-al.u3 .nom{font-weight:600;color:#3b3631}.db-al.u3 .sub{display:inline;margin-left:6px}.db-al.u3 .barre{height:5px}
+.pr-pd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.db-al.eteint{color:var(--color-text-muted);font-weight:500;cursor:default}.db-al.eteint .nom{font-weight:500}
+@media (max-width:900px){.db-acc.pro .db-ent,.db-acc.pro .db-al{grid-template-columns:20px minmax(110px,1fr) 1.4fr 70px 68px 58px 62px 62px;gap:6px}.db-al.u3{padding-left:40px}.pr-chips{margin-left:0}}
+.op-bun-pr{border-top:.5px solid var(--color-border-tertiary);margin-top:4px}
+.op-bun-h{display:flex;align-items:baseline;gap:10px;padding:10px 16px 2px;font:700 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}.op-bun-h .db-mini{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600}
+.op-bun-ptab td b .pr-pd{vertical-align:1px}.op-bun-ptab tfoot td{border-top:1px solid var(--color-border-secondary);font-weight:600}
+.op-bun-cats span{display:inline-block;margin:1px 8px 1px 0;font-size:11.5px;white-space:nowrap}.op-bun-cats b{color:#1f4e8c}
+.op-bun-nd{padding:2px 16px 12px;font-size:11px;color:var(--color-text-muted)}
+.op-bun-tab .op-bun-cats b{display:inline}
+.op-bun-ptab .u{display:none}
+@media (max-width:600px){
+  .op-bun-ptab thead{display:none}
+  .op-bun-ptab tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;column-gap:10px;padding:7px 0;border-top:.5px solid var(--color-border-tertiary)}
+  .op-bun-ptab td{border:none!important;padding:1px 0!important}
+  .op-bun-ptab td.op-bun-cats{grid-column:1/-1}.op-bun-ptab td.op-bun-cats:empty{display:none}
+  .op-bun-ptab .u{display:inline;font-size:10.5px;color:var(--color-text-muted)}.op-bun-ptab td b .u{font-weight:500}
+  .op-bun-ptab td.n b{display:inline}
+}
