@@ -433,7 +433,7 @@ function ep_analyse_categorie_magasin(): array
                 $c = (string) ($catDe[(int) $pid] ?? $x[1]);
                 if (($niveau === 'categorie' ? $c : $groupe($c)) !== $nom) { continue; }
                 $caS += (float) $x[3]; $qS += (float) $x[2];
-                if ($niveau === 'groupe' && $c !== '') { $vues[$c] = true; }
+                if ($niveau === 'groupe' && $c !== '' && $s === $sid) { $vues[$c] = true; }
             }
             $ca += $caS; $q += $qS;
             if ($s === $sid) { $moi[$i] = round($caS, 2); $moiQ[$i] = round($qS, 1); }
