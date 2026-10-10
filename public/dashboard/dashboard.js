@@ -2271,7 +2271,7 @@
    * filtrée par trois badges — rouge : vide maintenant, orange : va manquer d'ici la fermeture, vert : en ordre
    * (replié au départ, pour consultation). Short et medium life se recuisent au rythme des 6 derniers mêmes jours,
    * heure par heure : la journée du produit en cases, et la prochaine cuisson où l'ajouter. Long life est un stock
-   * en magasin : face à trois jours de vente. Un clic sur un produit ouvre sa fiche. */
+   * en magasin : face à trois jours de vente. Un clic sur un produit ouvre sa fiche de stock. */
   const VIT_REGLE = { S: 'vendu le jour même · recuit plusieurs fois par jour, au rythme des ventes heure par heure', M: 'se garde 2 à 3 jours · recuit au rythme des ventes heure par heure', L: 'stock en magasin · non périssable ou longue DLC' };
   const VIT_F = [['ko', 'Vide maintenant'], ['att', 'Va manquer'], ['ok', 'En ordre']];
   function vitLire(D, p) {
@@ -2284,16 +2284,26 @@
       if (st < pj * OP_VIE_JOURS || opSous(p)) { return { c: 'att', st, pj, n, txt: 'stock pour ' + nf(st / pj, 1) + ' jour' + (st / pj >= 2 ? 's' : '') }; }
       return { c: 'ok', st, pj };
     }
-    // La première heure au bout de laquelle il n'y en a plus alors que des clients le demandent encore ensuite
-    // (la prévision de l'heure suivante, et au moins une demi-pièce d'ici la fermeture) : la dernière pièce vendue
-    // en fin de journée n'est pas un manque.
-    let hv = null;
-    for (const h of H) { const c = caseH(h); if (!c || +c.q > 0.05) { continue; } const apres = H.filter(k => k > h).reduce((a, k) => a + prevH(k), 0); if (prevH(h + 1) >= 0.3 && apres >= 0.5) { hv = h; break; } }
-    if (hv == null && (p.verdict === 'rupture' || p.verdict === 'manque') && p.manque && p.manque.h != null) { hv = +p.manque.h; }
-    if (hv == null) { return { c: 'ok' }; }
-    const q = p.manque && +p.manque.q >= 0.5 ? +p.manque.q : ((p.conseil && +p.conseil.pieces) || Math.max(1, Math.ceil(H.filter(h => h >= hv).reduce((a, h) => a + prevH(h), 0))));
-    const n = (p.conseil && +p.conseil.pieces) || Math.ceil(q);
-    return hv <= nowH ? { c: 'ko', h: hv, q, n, txt: (now == null ? 'vide à ' : 'vide depuis ') + hv + ' h' } : { c: 'att', h: hv, q, n, txt: 'vide vers ' + hv + ' h' };
+    // Une heure vide compte quand des clients le demandent encore ensuite (la prévision de l'heure suivante, et au
+    // moins une demi-pièce d'ici la fermeture) : la dernière pièce vendue en fin de journée n'est pas un manque.
+    const vide = h => { const c = caseH(h); return !!c && +c.q <= 0.05; };
+    const demande = h => prevH(h + 1) >= 0.3 && H.filter(k => k > h).reduce((a, k) => a + prevH(k), 0) >= 0.5;
+    if (now == null) {
+      // Journée terminée : la première heure vide alors que des clients le demandaient.
+      const hv = H.find(h => vide(h) && demande(h));
+      if (hv == null) { return { c: 'ok' }; }
+      const q = p.manque && +p.manque.q >= 0.5 ? +p.manque.q : Math.max(1, Math.ceil(H.filter(h => h >= hv).reduce((a, h) => a + prevH(h), 0)));
+      return { c: 'ko', h: hv, q, n: Math.ceil(q), txt: 'vide à ' + hv + ' h' };
+    }
+    // En cours de journée, d'après la fiche de stock : vide maintenant (la vitrine à zéro, et encore à vendre),
+    // sinon la première heure à venir où elle sera vide. Une rupture du matin réapprovisionnée depuis ne compte plus.
+    const K = vitStock(D, p), pv = !K.rec && K.futur.length ? K.futur[0] : null;
+    let c = null, hv = null;
+    if (K.st <= 0.05 && K.reste >= 0.5) { c = 'ko'; hv = nowH; while (H.includes(hv - 1) && vide(hv - 1)) { hv--; } }
+    else { hv = H.find(h => h >= nowH && vide(h) && demande(h)); if (hv != null) { c = 'att'; } }
+    if (c == null) { return { c: 'ok' }; }
+    const perte = K.reste - K.st - K.prevu, q = perte >= 0.5 ? perte : (p.manque && +p.manque.q >= 0.5 ? +p.manque.q : 1);
+    return { c, h: hv, q, n: K.rec, pv, txt: (c === 'ko' ? 'vide depuis ' : 'vide vers ') + hv + ' h' };
   }
   /** La journée d'un produit, une case par heure : vert s'il y en a, orange si la vitrine sera basse, rouge si elle est vide alors que des clients le demandent. */
   function vitBande(D, p) {
@@ -2320,16 +2330,17 @@
       if (x.e.c === 'ok') { const fj = Math.max(0, +x.p.finJour || 0); return k === 'L' ? `<span class="g ok">en stock<small>${x.e.pj ? nf(x.e.st / x.e.pj, 1) + ' jours de vente' : ''}</small></span>` : `<span class="g ok">${fj >= 0.5 ? fN(fj) : '—'}<small>${fj >= 0.5 ? 'restera ce soir' : 'juste assez'}</small></span>`; }
       if (k === 'L') { const pr = opProchaine(U, x.p, now); return pr ? `<span class="g">${fN(pr.q)}<small>cuisson de ${esc(pr.de)}</small></span>` : `<span class="g">+${fN(x.e.n)}<small>pour tenir ${OP_VIE_JOURS} jours</small></span>`; }
       if (fin) { return `<span class="g">${fN(x.e.q)}<small>ventes perdues</small></span>`; }
+      if (!x.e.n) { return x.e.pv ? `<span class="g">${fN(x.e.pv.q)}<small>déjà prévu à ${esc(x.e.pv.de)}</small></span>` : '<span class="g ok">—<small>juste assez</small></span>'; }
       return `<span class="g">+${fN(x.e.n)}<small>${suite ? 'dans la cuisson de ' + esc(suite.de) : 'à recuire'}</small></span>`;
     };
-    const attrs = p => `data-fprod="${esc(p.pid)}" data-fnom="${esc(p.nom)}" data-fq="${p.vendu != null ? p.vendu : ''}" data-fv="${p.vendu != null && p.prix ? (+p.vendu * +p.prix).toFixed(2) : ''}" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}" role="button" tabindex="0"`;
+    const attrs = p => `data-vstk="${esc(p.pid)}" role="button" tabindex="0"`;
     const ligne = (x, k) => {
       const p = x.p, e = x.e;
       const w = k === 'L' ? `stock <b>${fN(e.st || 0)}</b> · ${e.pj ? nf(e.pj, 1) + ' vendus par jour' : 'pas de vente lue'}${e.txt ? ' · <b>' + esc(e.txt) + '</b>' : ''}`
         : (e.c === 'ok' ? `sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · en vitrine ${fN(Math.max(0, +p.stock || 0))}` : `<b>${esc(e.txt)}</b> · sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)}`);
       const vis = k === 'L' ? `<span class="vt-jl"><i class="${e.c}" style="width:${e.pj > 0 ? Math.min(100, 100 * (e.st || 0) / (e.pj * OP_VIE_JOURS)).toFixed(0) : 0}%"></i></span>` : vitBande(D, p);
       const mq = e.c === 'ok' ? '' : (k === 'L' ? `<b>${fN(e.n)}</b>pour ${OP_VIE_JOURS} jours de vente` : `<b>${fN(e.q)} pièce${e.q >= 2 ? 's' : ''}</b>${fE((e.q || 0) * (+p.prix || 0))} de ventes`);
-      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="la fiche du produit"><span class="n"><i class="pt ${e.c}"></i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small><span class="w">${w}</span></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
+      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="le stock du produit"><span class="n"><i class="pt ${e.c}"></i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small><span class="w">${w}</span></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
     };
     const blocs = OP_VIES.map(k => {
       const B = L.filter(x => opVieDe(x.p) === k);
@@ -2354,7 +2365,109 @@
     const resume = manque.length ? `<b>${fN(manque.length)}</b><span>produit${manque.length > 1 ? 's' : ''} ${fin ? 'ont manqué' : 'vont manquer d’ici la fermeture'}${eur >= 1 ? ' · ' + fE(eur) + ' de ventes ' + (fin ? 'perdues' : 'à sauver') : ''}</span>` : `<b class="ok">✓</b><span>rien ne va manquer d’ici la fermeture</span>`;
     return `<div class="db-card op-bloc vt"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>
       <div class="vt-top"><span class="vt-res">${resume}</span></div>${blocs}
-      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span><span>une case par heure · cadre noir : maintenant · pâle : à venir · un clic ouvre la fiche du produit</span></div></div>`;
+      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span><span>une case par heure · cadre noir : maintenant · pâle : à venir · un clic ouvre le stock du produit</span></div></div>`;
+  }
+
+  /* La fiche de stock d'un produit de La vitrine (10/10/2026, maquette 2 « la réponse d'abord ») : faut-il
+   * recuire, et combien, pour finir la journée au plus juste. Le calcul part de la vitrine (jamais sous zéro :
+   * un stock négatif au panel veut dire des ventes au-delà des sorties déclarées), retire ce qui se vendra
+   * encore d'ici la fermeture (la prévision des derniers mêmes jours, l'heure entamée au prorata) et ce qui
+   * est déjà prévu dans les cuissons à venir. Le graphique : la moyenne vendue par heure, le vendu
+   * d'aujourd'hui, la vitrine heure par heure, et la vitrine avec la recuisson proposée. */
+  function vitStock(D, p) {
+    const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], t = now == null ? null : now / 60;
+    const prevH = h => +((p.prevH || {})[h]) || 0;
+    const reste = t == null ? 0 : H.reduce((a, h) => a + prevH(h) * Math.max(0, Math.min(1, h + 1 - t)), 0);
+    const st = Math.max(0, +p.stock || 0);
+    const futur = t == null ? [] : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now)
+      .map(c => ({ nom: c.nom, de: c.de, q: +(((c.lignes || []).find(l => l.pid === p.pid) || {}).sortie) || 0 })).filter(c => c.q > 0);
+    const prevu = futur.reduce((a, c) => a + c.q, 0);
+    const suite = t == null ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
+    const long = opVieDe(p) === 'L';
+    const rec = t == null ? 0 : (long ? opRecuireLong(U, p, now) : Math.max(0, Math.ceil(reste - st - prevu - 0.25)));
+    return { reste, st, futur, prevu, suite, rec, long, sans: st + prevu - reste, avec: st + prevu + rec - reste, plaque: p.conseil && p.conseil.plaque ? +p.conseil.plaque : null };
+  }
+  function stkCourbe(D, p, K) {
+    const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], n = H.length;
+    if (!n) { return ''; }
+    const W = 580, HH = 240, m = { l: 30, r: 14, t: 30, b: 26 }, bw = (W - m.l - m.r) / n, t = now == null ? null : now / 60;
+    const g = (o, h) => +((o || {})[h]) || 0, cas = h => (Array.isArray(p.cases) ? p.cases : []).find(c => c.h === h);
+    const moy = H.map(h => g(p.moy, h)), vc = H.map(h => (p.vc || {})[h] == null ? null : +p.vc[h]);
+    const c0 = cas(H[0]), dep = c0 ? Math.max(0, +c0.q + (+c0.v || 0)) : 0;
+    const passe = [[H[0], dep]].concat(H.filter(h => { const c = cas(h); return c && c.reel && (t == null || h + 1 <= t); }).map(h => [h + 1, Math.max(0, +cas(h).q)]));
+    if (t != null) { passe.push([t, K.st]); }
+    // La vitrine à venir : les cuissons prévues, la recuisson proposée (à la prochaine cuisson, sinon tout de suite), la prévision au prorata.
+    const proj = [];
+    if (t != null && t < H[n - 1] + 1) {
+      let cur = K.st + (K.suite ? 0 : K.rec); proj.push([t, cur]);
+      const tS = K.suite ? opMin(K.suite.de) / 60 : null;
+      H.forEach(h => { if (h + 1 <= t) { return; }
+        K.futur.forEach(f => { const x = opMin(f.de) / 60; if (x >= h && x < h + 1) { cur += f.q; } });
+        if (K.rec && tS != null && tS >= h && tS < h + 1) { cur += K.rec; }
+        cur -= g(p.prevH, h) * (h + 1 - Math.max(h, t)); proj.push([h + 1, Math.max(0, cur)]); });
+    }
+    const mx = Math.max(1, dep, ...moy, ...vc.map(v => v || 0), ...passe.map(x => x[1]), ...proj.map(x => x[1]));
+    const pas = mx <= 6 ? 1 : mx <= 12 ? 2 : mx <= 30 ? 5 : mx <= 60 ? 10 : mx <= 150 ? 25 : 50, top = Math.ceil(mx / pas) * pas;
+    const X = x => m.l + bw * (x - H[0]), Y = v => m.t + (HH - m.t - m.b) * (1 - v / top), y0 = Y(0);
+    let s = '';
+    for (let v = 0; v <= top + 1e-9; v += pas) { s += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="gl"/><text class="ax" x="${m.l - 6}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${v}</text>`; }
+    if (t != null) { s += `<rect x="${X(t).toFixed(1)}" y="${m.t}" width="${Math.max(0, X(H[n - 1] + 1) - X(t)).toFixed(1)}" height="${(y0 - m.t).toFixed(1)}" class="fu"/>`; }
+    H.forEach((h, i) => { const x0 = X(h) + bw * 0.18, w = bw * 0.3;
+      if (moy[i] > 0) { s += `<rect x="${x0.toFixed(1)}" y="${Y(moy[i]).toFixed(1)}" width="${w.toFixed(1)}" height="${(y0 - Y(moy[i])).toFixed(1)}" rx="3" class="my"><title>${h} h · moyenne ${nf(moy[i], 1)}</title></rect>`; }
+      if (vc[i] != null && (t == null || h <= t)) { s += `<rect x="${(x0 + w + 2).toFixed(1)}" y="${Y(vc[i]).toFixed(1)}" width="${w.toFixed(1)}" height="${(y0 - Y(vc[i])).toFixed(1)}" rx="3" class="vc"><title>${h} h · vendu aujourd’hui ${fN(vc[i])}</title></rect>`; }
+      const c = cas(h);
+      if (c && c.reel && +c.q <= 0.05 && (g(p.prevH, h + 1) >= 0.3 || (i === n - 1 && g(p.prevH, h) >= 0.3))) { s += `<rect x="${(X(h) + 2).toFixed(1)}" y="${(y0 + 2).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="4" rx="2" class="vd"><title>${h} h · vide</title></rect>`; }
+      s += `<text class="ax" x="${(X(h) + bw / 2).toFixed(1)}" y="${HH - 9}" text-anchor="middle">${h} h</text>`; });
+    const repere = (x, lb, cls) => { const xx = X(x); return `<line x1="${xx.toFixed(1)}" x2="${xx.toFixed(1)}" y1="${m.t - 4}" y2="${y0.toFixed(1)}" class="cu ${cls}"/><text class="lb ${cls}" x="${xx.toFixed(1)}" y="${m.t - 9}" text-anchor="${xx < m.l + 50 ? 'start' : (xx > W - 60 ? 'end' : 'middle')}">${lb}</text>`; };
+    (Array.isArray(U.cuissons) ? U.cuissons : []).forEach(c => { const l = (c.lignes || []).find(x => x.pid === p.pid); if (l && +l.sortie > 0 && opMin(c.de) / 60 >= H[0]) { s += repere(opMin(c.de) / 60, '+' + fN(l.sortie) + ' · ' + esc(c.de), t != null && opMin(c.de) > now ? 'av' : ''); } });
+    if (K.rec && t != null) { s += repere(K.suite ? opMin(K.suite.de) / 60 : t, '+' + fN(K.rec) + ' proposé', 'pr'); }
+    const pts = L => L.map(([x, v]) => X(x).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ');
+    s += `<polyline points="${pts(passe)}" class="vi"/>` + passe.slice(1).map(([x, v]) => `<circle cx="${X(x).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" class="vi"/>`).join('');
+    if (proj.length > 1) { const z = proj[proj.length - 1]; s += `<polyline points="${pts(proj)}" class="pj${K.rec ? ' pr' : ''}"/><text class="lb${K.rec ? ' pr' : ' gr'}" x="${(X(z[0]) - 2).toFixed(1)}" y="${(Y(z[1]) - 6).toFixed(1)}" text-anchor="end">ce soir ${fN(z[1])}</text>`; }
+    if (t != null) { s += `<line x1="${X(t).toFixed(1)}" x2="${X(t).toFixed(1)}" y1="${m.t - 2}" y2="${y0.toFixed(1)}" class="nw"/>`; }
+    return `<svg viewBox="0 0 ${W} ${HH}" class="sk-gr" role="img" aria-label="La journée de ${esc(p.nom)} heure par heure">${s}</svg>`;
+  }
+  function stkOuvrir(pid) { S.stk = { pid, retour: document.activeElement }; stkRendre(); }
+  function stkFermer() { const r = S.stk && S.stk.retour; S.stk = null; stkRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
+  function stkRendre() {
+    let box = document.getElementById('db-stk');
+    if (!S.stk) { if (box) { box.innerHTML = ''; } if (!S.fiche && !S.invModale) { document.documentElement.classList.remove('db-fiche-ouverte'); } return; }
+    const D = opDonnees(), U = D.U, p = U && (D.prods || []).find(x => String(x.pid) === String(S.stk.pid));
+    if (!p) { S.stk = null; if (box) { box.innerHTML = ''; } return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-stk'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const K = vitStock(D, p), fin = D.now == null, k = opVieDe(p), pl = (n, m) => fN(n) + ' ' + m + (Math.round(n) >= 2 ? 's' : '');
+    const jour = esc(U.jourNom || '') + (/s$/.test(U.jourNom || '') ? '' : 's'), sem = U.base && U.base.semaines ? U.base.semaines : 6;
+    const q = (v, lb) => `<div><b>${v}</b>${lb}</div>`;
+    let rep;
+    if (fin) {
+      const lu = Math.max(0, +p.stock || 0);
+      const e = vitLire(D, p);
+      rep = `<div class="sk-rep no"><span class="big">${fN(lu)}</span><span class="t"><b>Journée terminée</b><span>sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · ${pl(lu, 'pièce')} en vitrine à la fermeture${e.c !== 'ok' && !K.long ? ' · ' + esc(e.txt) + ', ' + pl(Math.round(e.q), 'vente') + ' perdue' + (Math.round(e.q) >= 2 ? 's' : '') : ''}</span></span></div>`;
+    } else if (K.long) {
+      const pj = opParJour(p), pr = opProchaine(U, p, D.now);
+      rep = K.rec ? `<div class="sk-rep go"><span class="big">+${fN(K.rec)}</span><span class="t"><b>Refaire ${pl(K.rec, 'pièce')}</b><span>de quoi tenir ${OP_VIE_JOURS} jours de vente</span></span><span class="eq">${q(nf(pj * OP_VIE_JOURS, 1), 'vente de ' + OP_VIE_JOURS + ' jours')}<em>−</em>${q(fN(K.st), 'en stock')}<em>=</em>${q(fN(K.rec), 'à refaire')}</span></div>`
+        : `<div class="sk-rep no"><span class="big">${pj > 0 ? nf(K.st / pj, 1) : '—'}</span><span class="t"><b>${pr ? 'Cuisson prévue à ' + esc(pr.de) + ' : ' + fN(pr.q) : 'Stock suffisant'}</b><span>${fN(K.st)} en stock · ${pj > 0 ? nf(pj, 1) + ' vendus par jour, soit ' + nf(K.st / pj, 1) + ' jours de vente' : 'pas de vente lue'}</span></span></div>`;
+    } else if (K.rec) {
+      const ou = K.suite ? ' dans la cuisson de ' + esc(K.suite.de) : ' maintenant';
+      rep = `<div class="sk-rep go"><span class="big">+${fN(K.rec)}</span><span class="t"><b>Recuire ${pl(K.rec, 'pièce')}${ou}</b><span>pour finir la journée au plus juste : ${pl(Math.max(0, Math.round(K.avec)), 'pièce')} ce soir${K.plaque ? ' · plaque de ' + fN(K.plaque) : ''}</span></span>
+        <span class="eq">${q(nf(K.reste, 1), 'à vendre d’ici la fermeture')}<em>−</em>${q(fN(K.st), 'en vitrine')}${K.prevu ? '<em>−</em>' + q(fN(K.prevu), 'déjà prévu') : ''}<em>=</em>${q(fN(K.rec), 'à recuire')}</span></div>`;
+    } else {
+      const reste = Math.max(0, Math.round(K.sans));
+      rep = `<div class="sk-rep no"><span class="big">0</span><span class="t"><b>Pas de recuisson</b><span>${fN(K.st)} en vitrine${K.prevu ? ' et ' + fN(K.prevu) + ' prévu' + (K.prevu >= 2 ? 's' : '') : ''} pour ${nf(K.reste, 1)} à vendre : ${reste ? pl(reste, 'pièce') + ' en trop ce soir' : 'juste assez'}</span></span>
+        <span class="eq">${q(fN(K.st + K.prevu), K.prevu ? 'en vitrine et prévu' : 'en vitrine')}<em>−</em>${q(nf(K.reste, 1), 'à vendre d’ici la fermeture')}<em>=</em>${q(fN(reste), 'en trop ce soir')}</span></div>`;
+    }
+    const cu = (Array.isArray(U.cuissons) ? U.cuissons : []).map(c => { const l = (c.lignes || []).find(x => x.pid === p.pid); return l && +l.sortie > 0 ? `<div><span>${esc(c.nom)} · ${esc(c.de)}${!fin && opMin(c.de) > D.now ? ' <small>à venir</small>' : ''}</span><b>+${fN(l.sortie)}</b></div>` : ''; }).join('')
+      + (K.rec && !fin && !K.long ? `<div class="pr"><span>proposé · ${K.suite ? esc(K.suite.nom) + ' ' + esc(K.suite.de) : 'maintenant'}</span><b>+${fN(K.rec)}</b></div>` : '');
+    const sc = K.rec && !fin && !K.long ? `<div class="sk-sc"><div class="a">Sans recuisson<b>${K.sans < -0.5 ? 'vide, ' + pl(Math.round(-K.sans), 'vente') + ' perdue' + (Math.round(-K.sans) >= 2 ? 's' : '') : fN(Math.max(0, K.sans)) + ' ce soir'}</b></div><div class="b">Avec +${fN(K.rec)}<b>${fN(Math.max(0, Math.round(K.avec)))} ce soir</b></div></div>` : '';
+    const neg = +p.stock < -0.5 ? `<div class="sk-nt">Le panel compte ${fN(+p.stock)} : ${pl(-Math.round(+p.stock), 'vente')} au-delà des sorties déclarées. Le calcul part d’une vitrine vide.</div>` : '';
+    const lg = `<div class="sk-lg"><span><i class="my"></i>moyenne des ${sem} derniers ${jour}</span><span><i class="vc"></i>vendu aujourd’hui</span><span><i class="l vi"></i>en vitrine</span>${!fin ? `<span><i class="l pj${K.rec ? ' pr' : ''}"></i>${K.rec ? 'avec la recuisson' : 'prévu'}</span>` : ''}</div>`;
+    const lien = `<button type="button" class="sk-fi" data-fprod="${esc(p.pid)}" data-fnom="${esc(p.nom)}" data-fq="${p.vendu != null ? p.vendu : ''}" data-fv="${p.vendu != null && p.prix ? (+p.vendu * +p.prix).toFixed(2) : ''}" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}">la fiche du produit ›</button>`;
+    box.innerHTML = `<div class="fi-voile" data-skfermer="1"></div><div class="fi-modale sk-modale" role="dialog" aria-modal="true" aria-label="Le stock de ${esc(p.nom)}">
+      <div class="fi-hd"><span class="op-vie ${k}">${k}</span><div class="t"><h2>${esc(p.nom)}</h2><div class="s">${esc(p.cat || '')}${p.cat ? ' · ' : ''}${esc(nomShop())} · ${fin ? 'journée terminée' : 'à ' + esc(U.maintenant || opHM(D.now))}${p.prix ? ' · prix ' + fU(+p.prix) : ''} · ${lien}</div></div><button type="button" class="fi-x" data-skfermer="1" aria-label="Fermer">✕</button></div>
+      <div class="fi-bd">${rep}<div class="sk-duo"><div>${lg}${stkCourbe(D, p, K)}${neg}</div><div class="sk-cu"><h4>Les cuissons du jour</h4>${cu || '<div><span>aucune cuisson prévue</span><b>—</b></div>'}${sc}</div></div></div></div>`;
+    box.querySelectorAll('[data-skfermer]').forEach(b => b.addEventListener('click', stkFermer));
+    box.querySelectorAll('[data-fprod]').forEach(b => b.addEventListener('click', () => { S.stk = null; stkRendre(); ficheOuvrir(b); }));
   }
 
   /** La carte « La vitrine » : trois onglets de durée de vie, le niveau de chacun, puis ses références en dépliant. */
@@ -5411,8 +5524,10 @@
     $.querySelectorAll('canvas.db-feux').forEach(feux);
     $.querySelectorAll('[data-c12]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); c12Ouvrir(b); }));
     $.querySelectorAll('[data-fprod]').forEach(b => { b.addEventListener('click', () => ficheOuvrir(b)); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ficheOuvrir(b); } }); });
+    $.querySelectorAll('[data-vstk]').forEach(b => { b.addEventListener('click', () => stkOuvrir(b.dataset.vstk)); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stkOuvrir(b.dataset.vstk); } }); });
     ficheRendre();
     invModaleRendre();
+    stkRendre();
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
@@ -5523,7 +5638,7 @@
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
-  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } });
+  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } });
   document.addEventListener('keydown', e => {
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
