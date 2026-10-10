@@ -719,6 +719,44 @@ function svGroupes(): array
 }
 
 /**
+ * La catégorie d'un bundle (10/10/2026) : celle des produits que nomme sa recette (« 2 Cookies » → 2 × Cookie Chocolat
+ * Blanc → « Cookies »), au prorata du coût de chaque ligne ; un bundle mixte se partage. Recette lue à l'API du panel
+ * (rpApi), le partage gardé 24 h. Vide quand la recette ne nomme aucun produit du catalogue : le bundle reste où il est.
+ *
+ * @return array<string,float> catégorie → part (somme 1)
+ */
+function svBundleCats(int $pid, int $sid): array
+{
+    static $memo = [];
+    $k = $pid . ':' . $sid;
+    if (isset($memo[$k])) { return $memo[$k]; }
+    $cle = 'bdlCat:' . $k;
+    $c = setting($cle);
+    if (is_array($c) && (int) ($c['quand'] ?? 0) > time() - 86400) { return $memo[$k] = (array) ($c['parts'] ?? []); }
+    $r = function_exists('rpApi') ? rpApi($pid, $sid, false) : null;
+    if (!is_array($r) || !is_array($r['lignes'] ?? null)) { return $memo[$k] = is_array($c) ? (array) ($c['parts'] ?? []) : []; }
+    $norm = static fn (string $t): string => mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $t)));
+    $grp = svGroupes(); $parNom = [];
+    foreach (svCatalogue() as $x) {
+        if ($x['cat'] === '' || preg_match('/bundle|promotion/iu', $x['cat'] . ' ' . ($grp[$x['cat']] ?? '')) === 1) { continue; }
+        $parNom[$norm($x['nom'])] = $x['cat'];
+    }
+    $poids = [];
+    foreach ($r['lignes'] as $l) {
+        $cat = $parNom[$norm((string) ($l['nom'] ?? ''))] ?? null;
+        if ($cat === null) { continue; }
+        $poids[$cat] = ($poids[$cat] ?? 0.0) + (is_numeric($l['cout'] ?? null) && (float) $l['cout'] > 0 ? (float) $l['cout'] : 1.0);
+    }
+    $t = array_sum($poids); $parts = [];
+    foreach ($poids as $cat => $w) { $parts[(string) $cat] = round($w / $t, 4); }
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            [$cle, json_encode(['quand' => time(), 'parts' => (object) $parts], JSON_UNESCAPED_UNICODE)]);
+    } catch (Throwable $e) { /* sans cache */ }
+    return $memo[$k] = $parts;
+}
+
+/**
  * Les bundles vendus (10/10/2026) : les produits de la catégorie « Bundle » (groupe « Bundle & Promotion »)
  * lus dans les tickets de la période, avec la quantité, le prix moyen encaissé, le CA, la marge et les heures de vente.
  * $prod : {jour: {heure: {pid: [nom, q, v, c|null]}}}.
@@ -828,7 +866,7 @@ function ep_stats_ventes(): array
     $hMin = $actives === [] ? 0 : min($actives); $hMax = $actives === [] ? 23 : max($actives);
     $nJ = max(1, count($joursOuverts));
     $catDe = svCategories();
-    $lignes = []; $ccT = [];
+    $lignes = [];
     // Chaque produit sur toute la période, rangé sous sa catégorie : le troisième niveau de la liste groupe › catégorie › produit.
     $ppT = [];
     foreach ($agg as $h => $a) {
@@ -853,10 +891,6 @@ function ep_stats_ventes(): array
             if (!isset($cc[$cn])) { $cc[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => 0]; }
             $cc[$cn]['q'] += $x['q']; $cc[$cn]['v'] += $x['v']; $cc[$cn]['refs']++;
             if ($x['cInconnu']) { $cc[$cn]['cInconnu'] = true; } else { $cc[$cn]['c'] += $x['c']; }
-            // Et la même somme sur toute la période : la marge de chaque catégorie, CA − coût matière.
-            if (!isset($ccT[$cn])) { $ccT[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => []]; }
-            $ccT[$cn]['q'] += $x['q']; $ccT[$cn]['v'] += $x['v']; $ccT[$cn]['refs'][$x['id']] = true;
-            if ($x['cInconnu']) { $ccT[$cn]['cInconnu'] = true; } else { $ccT[$cn]['c'] += $x['c']; }
             if (!isset($ppT[$x['id']])) { $ppT[$x['id']] = ['id' => $x['id'], 'nom' => $x['nom'], 'cat' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false]; }
             $ppT[$x['id']]['q'] += $x['q']; $ppT[$x['id']]['v'] += $x['v'];
             if ($x['cInconnu']) { $ppT[$x['id']]['cInconnu'] = true; } else { $ppT[$x['id']]['c'] += $x['c']; }
@@ -887,25 +921,48 @@ function ep_stats_ventes(): array
     }
     // Les catégories sur la période : CA, coût matière, marge brute et son taux — pour colorer le treemap par la marge.
     // Chaque catégorie porte sa famille (le groupe de catégories du catalogue) pour la liste famille › catégorie.
-    $catsT = []; $vT = array_sum(array_map(static fn ($x) => $x['v'], $ccT));
+    $catsT = []; $vT = array_sum(array_map(static fn ($x) => $x['v'], $ppT));
     $grpDe = svGroupes();
+    // A (10/10/2026) : un bundle se range dans la catégorie du produit de sa recette, au prix du bundle et avec sa marge ;
+    // un bundle mixte se partage au prorata du coût. Sans produit reconnu dans sa recette, il reste dans « Bundle ».
+    foreach ($ppT as $id => $x) {
+        if (!is_int($x['id']) || preg_match('/bundle|promotion/iu', $x['cat'] . ' ' . ($grpDe[$x['cat']] ?? '')) !== 1) { continue; }
+        $parts = svBundleCats($x['id'], $sid);
+        if ($parts === []) { continue; }
+        unset($ppT[$id]);
+        foreach ($parts as $cn => $sh) {
+            $ppT[$id . '@' . $cn] = ['id' => $x['id'], 'nom' => $x['nom'], 'cat' => (string) $cn, 'q' => $x['q'] * $sh, 'v' => $x['v'] * $sh, 'c' => $x['c'] * $sh, 'cInconnu' => $x['cInconnu'],
+                'bundle' => ['de' => $x['cat'], 'n' => round($x['q'], 1), 'prix' => $x['q'] > 0 ? round($x['v'] / $x['q'], 2) : null, 'part' => round(100 * $sh)]];
+        }
+    }
+    // Les catégories se recomptent sur les produits rangés. B (10/10/2026) : chacune garde la marge de ses produits
+    // chiffrés ; les produits sans coût se comptent à part (nSans, vSans) au lieu de mettre toute la catégorie en gris.
+    $ccT = [];
+    foreach ($ppT as $x) {
+        $cn = $x['cat'];
+        if (!isset($ccT[$cn])) { $ccT[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'nSans' => 0, 'vSans' => 0.0, 'refs' => []]; }
+        $ccT[$cn]['q'] += $x['q']; $ccT[$cn]['v'] += $x['v']; $ccT[$cn]['refs'][$x['id']] = true;
+        if (!$x['cInconnu']) { $ccT[$cn]['vC'] += $x['v']; $ccT[$cn]['cC'] += $x['c']; }
+        elseif ($x['v'] > 0) { $ccT[$cn]['nSans']++; $ccT[$cn]['vSans'] += $x['v']; }
+    }
     // Les produits de chaque catégorie, du plus vendu au moins vendu, avec leur part dans la catégorie.
     $prodDe = [];
     foreach ($ppT as $x) {
         if ($x['v'] <= 0 && $x['q'] <= 0) { continue; }
         $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
         $prodDe[$x['cat']][] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
-            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null];
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : []);
     }
     foreach ($ccT as $x) {
-        $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+        $chiffre = $x['vC'] > 0 || $x['nSans'] === 0;
+        $m = $chiffre ? round($x['vC'] - $x['cC'], 2) : null;
         $prods = $prodDe[$x['nom']] ?? [];
         usort($prods, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
         foreach ($prods as &$pr) { $pr['part'] = $x['v'] > 0 ? round(100 * $pr['v'] / $x['v'], 1) : null; }
         unset($pr);
-        $catsT[] = ['nom' => $x['nom'], 'groupe' => $grpDe[$x['nom']] ?? null, 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
-            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs']),
-            'produits' => $prods];
+        $catsT[] = ['nom' => $x['nom'], 'groupe' => $grpDe[$x['nom']] ?? null, 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $chiffre ? round($x['cC'], 2) : null, 'm' => $m,
+            'taux' => ($m !== null && $x['vC'] > 0) ? round(100 * $m / $x['vC'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs']),
+            'vChiffre' => round($x['vC'], 2), 'nSans' => $x['nSans'], 'vSans' => round($x['vSans'], 2), 'produits' => $prods];
     }
     usort($catsT, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
     $bundles = svBundles($prod, $catDe, $grpDe);
@@ -921,8 +978,11 @@ function ep_stats_ventes(): array
     $sansCout = [];
     foreach ($ppT as $x) {
         if (!$x['cInconnu'] || $x['v'] <= 0) { continue; }
-        $sansCout[] = ['id' => $x['id'], 'nom' => $x['nom'], 'cat' => $x['cat'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2)];
+        $kS = (string) $x['id'];
+        if (isset($sansCout[$kS])) { $sansCout[$kS]['q'] = round($sansCout[$kS]['q'] + $x['q'], 1); $sansCout[$kS]['v'] = round($sansCout[$kS]['v'] + $x['v'], 2); continue; }
+        $sansCout[$kS] = ['id' => $x['id'], 'nom' => $x['nom'], 'cat' => $x['cat'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2)];
     }
+    $sansCout = array_values($sansCout);
     usort($sansCout, static fn ($a, $b) => $b['v'] <=> $a['v']);
     $aCompleter = ['detail' => $nvDetail, 'lignes' => array_slice($nvL, 0, 80), 'nLignes' => count($nvL),
         'caLignes' => round(array_sum(array_map(static fn ($x) => ($x['type'] ?? '') === 'ligne' ? (float) $x['v'] : 0.0, $nvL)), 2),

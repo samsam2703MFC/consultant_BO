@@ -2394,10 +2394,7 @@
       h += `<div class="op-piste"><div class="pl"><b>${esc(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1))} dernier</b><small>pas de ventes gravées</small></div><div class="pb"></div></div>`;
     }
     h += `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + fE(obj) : fE(echelle)}</span></div>`;
-    if (j7 && ca != null) {
-      const cls = B.dCa == null ? 'mu' : (B.dCa >= 0 ? 'ok' : (B.dCa > -10 ? 'att' : 'ko'));
-      h += `<div class="op-dver ${cls}"><b>${fSP(B.dCa)}</b> face à ${esc(B.lblB)}${B.dTk != null ? ` · <b>${fSP(B.dTk)}</b> clients` : ''}${B.dPan != null ? ` · panier <b>${fSP(B.dPan)}</b>` : ''}${B.proj != null && j7.caJour ? ` · au rythme de la journée, ${fE(B.proj)} contre ${fE(j7.caJour)} la semaine passée (<b>${fSP(B.dProj)}</b>)` : ''}</div>`;
-    }
+    // La ligne « face à samedi dernier · clients · panier · au rythme de la journée » est retirée (10/10/2026).
     return h + '</div>';
   }
   /** Le cumul heure par heure d'aujourd'hui face à celui de J−7 : le CA jusqu'à l'objectif, ou les clients
@@ -2613,7 +2610,7 @@
     if (EMBED) { const g = ppGarder(); $.classList.remove('mob'); document.body.classList.add('pp-emb'); $.innerHTML = rendProduction(); brancher(); ppRestaurer(g); return; }
     $.classList.remove('mob');
     let h = '';
-    h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}${S.vue === 'ops' && S.date === AUJ ? ' · en direct, relu toutes les 2 min' : ''}</div></div>
+    h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
@@ -2744,10 +2741,9 @@
         <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${reste != null && A.detail && Math.abs(reste) >= 0.5 ? ' · ' + fU(reste) + ' d’arrondis ou de tickets pas encore lus' : ''}</div>${det}</div>`;
     }
     let v2 = '';
-    const nGris = (st.categories || []).filter(c => c.m == null && c.v > 0).length;
     if ((A.sansCout || []).length) {
       v2 = `<div class="acp-v"><div class="k">Produits sans coût</div><div class="b">${A.nSansCout} <small>produit${A.nSansCout > 1 ? 's' : ''} · ${fU(A.caSansCout)} de ventes</small></div>
-        <div class="s">à chiffrer dans le panel : recette ou coût de revient${nGris ? ' · ' + nGris + ' catégorie' + (nGris > 1 ? 's' : '') + ' en gris : leur marge reste dans « Non ventilé » tant qu’un de leurs produits n’a pas de coût' : ''}</div>
+        <div class="s">à chiffrer dans le panel : recette ou coût de revient · leur marge, estimée par le P&L, reste dans « Non ventilé » le temps de les chiffrer</div>
         <details data-acpo="p"${ouvre('p', A.sansCout.length)}><summary>les ${A.sansCout.length} produit${A.sansCout.length > 1 ? 's' : ''}</summary><table class="db-pro-tab acp-t"><thead><tr><th>Produit</th><th>Catégorie</th><th class="n">Qté</th><th class="n">CA</th></tr></thead><tbody>
         ${A.sansCout.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0"><td>${esc(x.nom)}</td><td class="mu">${esc(x.cat || '')}</td><td class="n">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
         </tbody></table>${A.nSansCout > A.sansCout.length ? `<div class="acp-n">et ${A.nSansCout - A.sansCout.length} autres</div>` : ''}</details></div>`;
@@ -2801,7 +2797,7 @@
     const plan = Array.isArray(m.planning) ? m.planning : [];
     // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
     // c'est elle qui colore le treemap. Sans tickets lus, repli sur l'écart à la référence du panel.
-    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs, q: c.q, produits: Array.isArray(c.produits) ? c.produits : [] })) : [];
+    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs, q: c.q, vC: c.vChiffre, nSans: c.nSans || 0, vSans: c.vSans || 0, produits: Array.isArray(c.produits) ? c.produits : [] })) : [];
     const parMarge = catsM.length > 0;
     const lc = parMarge ? MARGES : ECARTS;
     // Les tickets ne sont pas encore lus : le squelette, plutôt qu'un premier
@@ -3017,16 +3013,17 @@
       const G = {};
       (st.categories || []).filter(c => c.v > 0).forEach(c => {
         const g = String(c.groupe || c.nom || 'Autres').split(' · ')[0];
-        const x = G[g] || (G[g] = { nom: g, v: 0, m: 0, c: 0, inc: false });
-        x.v += c.v; if (c.c == null || c.m == null) { x.inc = true; } else { x.m += c.m; x.c += c.c; }
+        const x = G[g] || (G[g] = { nom: g, v: 0, vc: 0, m: 0, c: 0, inc: true });
+        // La marge sur la part chiffrée de chaque catégorie (10/10/2026) ; « inc » quand aucune ne l'est.
+        x.v += c.v; if (c.c != null && c.m != null) { x.inc = false; x.m += c.m; x.c += c.c; x.vc += c.vChiffre != null ? c.vChiffre : c.v; }
       });
       const Gs = Object.values(G).sort((a, b) => b.v - a.v), tot = Gs.reduce((a, x) => a + x.v, 0);
       if (!Gs.length || !tot) { return { v: '—', s: 'pas de ventilation par catégorie pour ce jour', vd: 'neutre', mini: '' }; }
-      const C = Gs.filter(x => !x.inc && x.c), mb = C.reduce((a, x) => a + x.m, 0), caC = C.reduce((a, x) => a + x.v, 0);
+      const C = Gs.filter(x => !x.inc && x.c), mb = C.reduce((a, x) => a + x.m, 0), caC = C.reduce((a, x) => a + x.vc, 0);
       const pc = x => nf(100 * x.v / tot, 0) + ' %';
       return { v: esc(Gs[0].nom),
         s: pc(Gs[0]) + ' du CA' + (Gs[1] ? ' · puis ' + esc(Gs[1].nom.toLowerCase()) + ' ' + pc(Gs[1]) : '') + (Gs[2] ? ' et ' + esc(Gs[2].nom.toLowerCase()) + ' ' + pc(Gs[2]) : '') + (caC ? ' · marge brute ' + nf(100 * mb / caC, 0) + ' %' : ''),
-        vd: 'neutre', mini: a4Pile(Gs.map(x => [100 * x.v / tot, x.inc || !x.c ? '#B9B2A8' : a4Marge(100 * x.m / x.v), x.nom])) };
+        vd: 'neutre', mini: a4Pile(Gs.map(x => [100 * x.v / tot, x.inc || !x.c || !x.vc ? '#B9B2A8' : a4Marge(100 * x.m / x.vc), x.nom])) };
     })(), m ? P.categories : attente(3));
 
     ajoute('offres', 'detail', 'Promotions et bundles', (() => {
@@ -3517,9 +3514,10 @@
     const G = {};
     cats.forEach(c => {
       const g = (c.groupe || (parMarge ? 'Autres' : 'Catégories')).split(' · ')[0];
-      const f = G[g] || (G[g] = { nom: g, ca: 0, mat: 0, m: 0, inconnu: false, cats: [] });
+      const f = G[g] || (G[g] = { nom: g, ca: 0, caC: 0, mat: 0, m: 0, connu: false, cats: [] });
       f.ca += c.ca; f.cats.push(c);
-      if (parMarge) { if (c.mat == null) { f.inconnu = true; } else { f.mat += c.mat; f.m += c.m; } }
+      // B (10/10/2026) : le groupe garde la marge de ses catégories chiffrées ; « ? » seulement si aucune ne l'est.
+      if (parMarge && c.mat != null) { f.connu = true; f.mat += c.mat; f.m += c.m; f.caC += c.vC != null ? c.vC : c.ca; }
     });
     const fams = Object.values(G).sort((a, b) => b.ca - a.ca); fams.forEach(f => f.cats.sort((a, b) => b.ca - a.ca));
     const max = Math.max(1, ...fams.map(f => f.ca));
@@ -3527,9 +3525,9 @@
     // le coût ; sans coût matière, rien à calculer.
     const coef = (ca, m) => (m == null || ca == null || ca - m <= 0) ? null : ca / (ca - m);
     const coefTxt = v => v == null ? '<span class="mu">—</span>' : '<small>×</small>' + nf(v, 2);
-    const ligne = (niv, cle, x, ref, sub, prod, cat) => `<div class="db-al ${niv}${prod ? ' clic' : ''}" ${cle ? `data-cacc="${esc(cle)}"` : ''}${prod ? ` data-fprod="${esc(prod.id)}" data-fnom="${esc(x.nom)}" data-fq="${prod.q != null ? prod.q : ''}" data-fv="${prod.v != null ? prod.v : ''}" data-ft="${prod.taux != null ? prod.taux : ''}" data-fc="${prod.c != null ? prod.c : ''}" data-fcat="${esc(cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}>
+    const ligne = (niv, cle, x, ref, sub, prod, cat) => `<div class="db-al ${niv}${prod ? ' clic' : ''}${x.bundle ? ' bun' : ''}" ${cle ? `data-cacc="${esc(cle)}"` : ''}${prod ? ` data-fprod="${esc(prod.id)}" data-fnom="${esc(x.nom)}" data-fq="${prod.q != null ? prod.q : ''}" data-fv="${prod.v != null ? prod.v : ''}" data-ft="${prod.taux != null ? prod.taux : ''}" data-fc="${prod.c != null ? prod.c : ''}" data-fcat="${esc(cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}>
         <span>${cle ? `<span class="db-tog ${S.cOuv[cle] ? 'on' : ''}">${S.cOuv[cle] ? '▾' : '▸'}</span>` : ''}</span>
-        <span class="nom">${esc(x.nom)}${(niv === 'g' && x.nom !== 'Catégories') || niv === 'c' ? `<button type="button" class="db-c12" data-c12n="${niv === 'g' ? 'groupe' : 'categorie'}" data-c12="${esc(x.nom)}" title="les ventes des 12 dernières semaines face au réseau" aria-label="les ventes des 12 dernières semaines">i</button>` : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+        <span class="nom">${esc(x.nom)}${x.bundle ? '<em class="bdl">bundle</em>' : ''}${(niv === 'g' && x.nom !== 'Catégories') || niv === 'c' ? `<button type="button" class="db-c12" data-c12n="${niv === 'g' ? 'groupe' : 'categorie'}" data-c12="${esc(x.nom)}" title="les ventes des 12 dernières semaines face au réseau" aria-label="les ventes des 12 dernières semaines">i</button>` : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
         <span class="barre"><i style="width:${Math.max(1, Math.min(100, 100 * x.ca / Math.max(ref, 1)))}%;background:${coul(x)}"></i></span>
         <span class="n">${fE(x.ca)}</span>
         <span class="n mu">${x.part != null ? fP0(x.part) : ''}</span>
@@ -3540,17 +3538,21 @@
     const produits = c => {
       const L = c.produits || [];
       if (!L.length) { return `<div class="db-autres">Le détail par produit se lit sur les tickets : pas encore disponible pour cette catégorie.</div>`; }
-      return L.map(p => ligne('p', null, { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux }, c.ca, (p.q != null ? p.q + ' vendu' + (p.q > 1 ? 's' : '') : ''), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
+      // A (10/10/2026) : un bundle rangé dans la catégorie de son produit porte son étiquette, son prix et sa part.
+      const subP = p => p.bundle ? fN(p.bundle.n) + ' bundle' + (p.bundle.n > 1 ? 's' : '') + (p.bundle.prix != null ? ' à ' + fU(p.bundle.prix) : '') + (p.bundle.part < 100 ? ' · ' + p.bundle.part + ' % du bundle dans cette catégorie' : '')
+        : (p.q != null ? p.q + ' vendu' + (p.q > 1 ? 's' : '') : '');
+      return L.map(p => ligne('p', null, { nom: p.nom, ca: p.v, part: p.part, m: p.m, taux: p.taux, bundle: !!p.bundle }, c.ca, subP(p), /^\d+$/.test(String(p.id || '')) ? p : null, c.categorie)).join('');
     };
     const rows = fams.map(f => {
       const kg = 'g:' + f.nom;
-      const fx = { nom: f.nom, ca: f.ca, part: tot > 0 ? 100 * f.ca / tot : null, m: f.inconnu ? null : f.m, taux: !f.inconnu && f.ca > 0 ? 100 * f.m / f.ca : null, delta: null };
+      const fx = { nom: f.nom, ca: f.ca, part: tot > 0 ? 100 * f.ca / tot : null, m: f.connu ? f.m : null, taux: f.connu && f.caC > 0 ? 100 * f.m / f.caC : null, delta: null };
       let h = ligne('g', kg, fx, max, f.cats.length + ' catégorie' + (f.cats.length > 1 ? 's' : ''));
       if (S.cOuv[kg]) {
         h += f.cats.map(c => {
           const kc = 'c:' + c.categorie;
           const cx = { nom: c.categorie, ca: c.ca, part: c.part != null ? 100 * c.part : null, m: c.m, taux: c.taux, delta: c.delta };
-          const sub = parMarge ? (c.refs != null ? c.refs + ' réf.' : '') + (c.q != null ? ' · ' + fN(c.q) + ' pièces' : '') : (c.ref != null ? 'référence ' + fE(c.ref) : '');
+          const sans = parMarge && c.nSans ? `<b class="sans">${c.nSans} produit${c.nSans > 1 ? 's' : ''} sans coût · ${fU(c.vSans)}</b>` + (c.mat != null && c.vC != null && c.ca > 0 ? ' · taux sur ' + fP0(100 * c.vC / c.ca) + ' du CA' : '') : '';
+          const sub = parMarge ? (sans ? (c.refs != null ? c.refs + ' réf. · ' : '') + sans : (c.refs != null ? c.refs + ' réf.' : '') + (c.q != null ? ' · ' + fN(c.q) + ' pièces' : '')) : (c.ref != null ? 'référence ' + fE(c.ref) : '');
           return ligne('c', parMarge ? kc : null, cx, f.ca, sub) + (parMarge && S.cOuv[kc] ? produits(c) : '');
         }).join('');
       }
@@ -3559,7 +3561,8 @@
     const sommeM = parMarge ? cats.reduce((t, c) => t + (c.m == null ? 0 : c.m), 0) : null;
     const totM = R ? R.m : sommeM;
     const ecCa = R ? R.ca - somme : 0, ecM = R ? R.m - sommeM : 0;
-    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${cats.some(c => c.m == null && (c.ca || 0) > 0) ? 'lignes sans produit, remises · et la marge des catégories en gris, sans coût dans les tickets' : 'lignes de caisse sans produit, remises, arrondis'}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
+    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${(() => { const nS = cats.reduce((t, c) => t + (c.nSans || 0), 0), vS = cats.reduce((t, c) => t + (c.vSans || 0), 0);
+      return nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' + (Math.abs(ecCa) >= 0.5 ? ' · lignes sans produit, remises' : '') : 'lignes de caisse sans produit, remises, arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
     const pied = ecart + `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? (R ? fP(100 * totM / tot) : fP0(100 * totM / tot)) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
     return `<div class="db-acc">${entete}${rows}${pied}</div>`;
   }
