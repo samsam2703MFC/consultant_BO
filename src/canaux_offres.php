@@ -421,3 +421,38 @@ function ep_exploitation_offres(): array
         'kpi' => ['ca' => round($kpi['ca'], 2), 'caJour' => round($kpi['caJour'], 2), 'part' => $kpi['caPeriode'] > 0 ? round(100 * $kpi['ca'] / $kpi['caPeriode'], 1) : null,
             'bundles' => count(array_filter($L, static fn ($o) => $o['type'] === 'bundle')), 'promos' => count(array_filter($L, static fn ($o) => $o['type'] === 'promo')), 'aAjuster' => $kpi['aAjuster']]];
 }
+
+/**
+ * GET /exploitation/bundles/sonde — la forme des promotions « bundle » et « buy X get Y » du panel (10/10/2026),
+ * lecture seule : la liste, le détail des deux premiers bundles, et le contrat Swagger des routes de promotions.
+ */
+function ep_bundles_sonde(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $out = ['routes' => []];
+    $lus = [];
+    foreach (['bundles' => '/admin/promotions/bundles', 'bundles-actifs' => '/admin/promotions/bundles?active=1', 'buy-x-get-y' => '/admin/promotions/buy-x-get-y', 'promotions' => '/admin/promotions'] as $nom => $ch) {
+        $r = PanelApi::sondeGet($ch, 20);
+        $lus[$nom] = $r['corps'];
+        $l = PanelApi::liste(is_array($r['corps']) ? $r['corps'] : []);
+        $out['routes'][$nom] = ['chemin' => $ch, 'code' => $r['code'], 'erreur' => $r['erreur'] ?? null, 'cles' => is_array($r['corps']) ? array_keys($r['corps']) : null,
+            'n' => count($l), 'premiers' => array_slice($l, 0, 3), 'meta' => is_array($r['corps']) ? array_diff_key($r['corps'], array_flip(['data', 'items'])) : null];
+    }
+    foreach (array_slice(PanelApi::liste(is_array($lus['bundles']) ? $lus['bundles'] : []), 0, 2) as $b) {
+        $id = $b['id'] ?? null;
+        if ($id === null) { continue; }
+        $r = PanelApi::sondeGet('/admin/promotions/bundles/' . rawurlencode((string) $id), 20);
+        $out['routes']['bundle-' . $id] = ['code' => $r['code'], 'corps' => $r['corps']];
+    }
+    $doc = PanelApi::sondeGet('/../swagger/openapi.json', 20);
+    $paths = is_array($doc['corps']['paths'] ?? null) ? $doc['corps']['paths'] : [];
+    $out['swagger'] = [];
+    foreach ($paths as $ch => $ops) {
+        if (!preg_match('#promotions#', (string) $ch) || !is_array($ops)) { continue; }
+        foreach ($ops as $m => $op) { if (is_array($op) && strtolower((string) $m) === 'get') { $out['swagger']['GET ' . $ch] = ['parametres' => $op['parameters'] ?? null, 'reponses' => $op['responses'] ?? null]; } }
+    }
+    $sch = is_array($doc['corps']['components']['schemas'] ?? null) ? $doc['corps']['components']['schemas'] : [];
+    $out['schemas'] = array_filter($sch, static fn ($k) => preg_match('/bundle|buyxgety|promotion/i', (string) $k) === 1, ARRAY_FILTER_USE_KEY);
+    return $out;
+}
+
