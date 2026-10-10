@@ -3200,29 +3200,71 @@
     S.fiche = { pid: b.dataset.fprod, nom: b.dataset.fnom, q: n(b.dataset.fq), v: n(b.dataset.fv), taux: n(b.dataset.ft), c: n(b.dataset.fc), cat: b.dataset.fcat || '', onglet: 1, mois: 1, retour: document.activeElement };
     ficheLire(); ficheLireRecette(); ficheRendre();
   }
+  /* Les 12 semaines d'une catégorie ou d'un groupe (10/10/2026) : seulement la courbe, en euros ou en pièces,
+   * face à la moyenne par magasin du réseau. Lecture : /analyse/categories/magasin. */
+  const cleC12 = () => S.fiche && S.fiche.c12 ? 'c12|' + S.shop + '|' + S.fiche.c12 + '|' + S.fiche.nom : null;
+  function c12Ouvrir(b) {
+    S.fiche = { c12: b.dataset.c12n, nom: b.dataset.c12, u: 'ca', retour: document.activeElement };
+    lireAux(cleC12(), '/analyse/categories/magasin?shop=' + encodeURIComponent(S.shop) + '&niveau=' + encodeURIComponent(S.fiche.c12) + '&nom=' + encodeURIComponent(S.fiche.nom));
+    ficheRendre();
+  }
+  function c12Rendre(box) {
+    const F = S.fiche, k = cleC12(), d = S.aux[k], err = S.err[k], court = nomShop().replace(/^.* - /, ''), eu = F.u !== 'q';
+    let corps;
+    if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
+    else if (!d) { corps = '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:6px 0"></div><div class="db-sk" style="width:85%;height:180px;margin:10px 0"></div></div>'; }
+    else if (d.indispo) { corps = `<div class="fi-msg">${esc(d.motif || 'indisponible')}</div>`; }
+    else {
+      const W0 = d.semaines, W = Object.assign({}, W0, { magasin: eu ? W0.magasin : W0.magasinQ, reseau: eu ? W0.reseau : W0.reseauQ });
+      const M = W.magasin || [], R = W.reseau || [], clos = M.slice(0, -1), clR = R.slice(0, -1);
+      const tot = clos.reduce((a, v) => a + (v || 0), 0), totR = clR.reduce((a, v) => a + (v || 0), 0), moy = tot / Math.max(1, clos.length);
+      const av = clos.slice(0, 6).reduce((a, v) => a + (v || 0), 0), ap = clos.slice(6).reduce((a, v) => a + (v || 0), 0), tend = av > 0 ? 100 * (ap - av) / av : null;
+      const face = totR > 0 ? 100 * (tot - totR) / totR : null, f = v => v == null ? '—' : (eu ? fE(v) : fN(v));
+      corps = `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([v, l]) => `<button type="button" data-c12u="${v}" class="${F.u === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours (${W.jours ? W.jours[W.jours.length - 1] : '?'} j) · le réseau : la moyenne par magasin, sans magasin nommé</span></div>
+        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span></div>${ficheCourbe(W, eu)}</div>
+          <div class="fi-cote"><div class="k">${esc(court)}, 12 semaines</div>
+            <div class="r"><span>${eu ? 'Chiffre d’affaires' : 'Pièces'}</span><b>${f(tot)}</b></div><div class="r"><span>Par semaine</span><b>${eu ? fE(moy) : nf(moy, 1)}</b></div>
+            <div class="r"><span>6 dernières face aux 6 d’avant</span><b class="${tend == null ? '' : (tend >= 0 ? 'up' : 'dn')}">${fSg(tend)}</b></div>
+            <div class="sep"></div><div class="r"><span>Moyenne par magasin du réseau</span><b>${f(totR)}</b></div><div class="r"><span>Face au réseau</span><b class="${face == null ? '' : (face >= 0 ? 'up' : 'dn')}">${fSg(face)}</b></div>
+            <div class="fi-note">${eu ? 'ventes encaissées, remises comprises' : 'en pièces'} ; un grand magasin vend plus : la taille compte</div></div></div>
+        <table class="fi-tab"><thead><tr><th>Semaine</th>${(W.tranches || []).map((l, i) => `<th>${esc(l)}${i === M.length - 1 ? '*' : ''}</th>`).join('')}</tr></thead><tbody>
+          <tr class="moi"><td>${esc(court)}</td>${M.map(v => `<td>${v == null ? '—' : fN(v)}</td>`).join('')}</tr><tr><td>Réseau, moyenne</td>${R.map(v => `<td>${v == null ? '—' : fN(v)}</td>`).join('')}</tr></tbody></table>
+        <div class="fi-note">* en cours.${eu ? ' Montants en euros.' : ''}</div>`;
+    }
+    const sous = F.c12 === 'groupe' ? 'groupe de catégories' + (d && d.categories && d.categories.length ? ' · ' + d.categories.map(esc).join(', ') : '') : 'catégorie' + (d && d.groupe ? ' · groupe ' + esc(d.groupe) : '');
+    box.innerHTML = `<div class="fi-voile" data-ffermer="1"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="${esc(F.nom)}">
+      <div class="fi-hd"><div class="t"><h2>${esc(F.nom)}</h2><div class="s">${sous} · ${esc(nomShop())}</div></div><button type="button" class="fi-x" data-ffermer="1" aria-label="fermer">✕</button></div>
+      <div class="fi-ong"><button type="button" class="on">Ventes · 12 semaines</button></div>
+      <div class="fi-bd">${corps}</div></div>`;
+    box.querySelectorAll('[data-ffermer]').forEach(b => b.addEventListener('click', ficheFermer));
+    box.querySelectorAll('[data-c12u]').forEach(b => b.addEventListener('click', () => { S.fiche.u = b.dataset.c12u; ficheRendre(); }));
+  }
   function ficheFermer() { const r = S.fiche && S.fiche.retour; S.fiche = null; ficheRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
   const fPx = n => n == null ? '—' : nf(n, 2) + ' €';
   const fSg = (n, d) => n == null ? '—' : (n > 0 ? '+' : (n < 0 ? '−' : '')) + nf(Math.abs(n), d || 0) + ' %';
   /** Onglet 1 : la courbe du magasin face à la moyenne par magasin du réseau, semaine par semaine. */
-  function ficheCourbe(W) {
+  function ficheCourbe(W, eu) {
     const M = W.magasin || [], R = W.reseau || [], n = M.length, lib = W.tranches || [];
-    const iEnC = n - 1, Wd = 700, Hd = 270, m = { l: 34, r: 92, t: 14, b: 34 };
+    const iEnC = n - 1, Wd = 700, Hd = 270, m = { l: eu ? 46 : 34, r: eu ? 104 : 92, t: 14, b: 34 };
     const max = Math.max(1, ...M.map(v => v || 0), ...R.map(v => v || 0));
-    const pas = max > 60 ? 20 : (max > 30 ? 10 : (max > 12 ? 5 : 2)), haut = Math.ceil(max / pas) * pas;
+    // En euros (une catégorie, 10/10/2026), un pas rond pour six à dix lignes : 1, 2 ou 5 × 10ⁿ.
+    const pasRond = v => { const r = v / 6, e = Math.pow(10, Math.floor(Math.log10(r))), q = r / e; return (q <= 1 ? 1 : q <= 2 ? 2 : q <= 5 ? 5 : 10) * e; };
+    const pas = eu ? pasRond(max) : (max > 60 ? 20 : (max > 30 ? 10 : (max > 12 ? 5 : 2))), haut = Math.ceil(max / pas) * pas;
+    const vU = v => eu ? fN(v) + ' €' : fN(v);
     const y = v => m.t + (Hd - m.t - m.b) * (1 - v / haut), cx = k => m.l + (Wd - m.l - m.r) * k / Math.max(1, n - 1);
     let g = '';
-    for (let v = 0; v <= haut; v += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${v}</text>`; }
+    for (let v = 0; v <= haut; v += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${eu ? fN(v) : v}</text>`; }
     const date = k => { const b = (W.bornes || [])[k]; return b ? b[0].slice(8, 10) + '/' + b[0].slice(5, 7) : ''; };
     g += lib.map((l, k) => (k % 2 === 0 || k === n - 1) ? `<text class="ax" x="${cx(k).toFixed(1)}" y="${Hd - 18}" text-anchor="middle">${esc(l)}</text><text class="ax" x="${cx(k).toFixed(1)}" y="${Hd - 5}" text-anchor="middle" style="font-size:9.5px">${k === iEnC ? (W.jours ? W.jours[k] + ' j' : 'en cours') : date(k)}</text>` : '').join('');
     const ligne = (S2, coul, nom, pts) => { const P = S2.map((v, k) => v == null ? null : [cx(k), y(v)]); const ok = P.map((p, k) => [p, k]).filter(x => x[0]);
       const plein = ok.filter(x => x[1] < iEnC).map(x => x[0]), fin = ok.filter(x => x[1] >= iEnC - 1).map(x => x[0]);
       return `<polyline points="${plein.map(p => p.map(z => z.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
         + (fin.length === 2 ? `<polyline points="${fin.map(p => p.map(z => z.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${coul}" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/>` : '')
-        + (pts ? P.map((p, k) => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="${coul}" stroke="#fff" stroke-width="2"><title>${esc(lib[k])} (${k === iEnC ? 'en cours' : date(k)}) · ${nom} ${nf(S2[k], 1)}</title></circle>` : '').join('') : ''); };
+        + (pts ? P.map((p, k) => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="${coul}" stroke="#fff" stroke-width="2"><title>${esc(lib[k])} (${k === iEnC ? 'en cours' : date(k)}) · ${nom} ${eu ? vU(S2[k]) : nf(S2[k], 1)}</title></circle>` : '').join('') : ''); };
     // Les étiquettes de la dernière semaine close, à droite, écartées si elles se touchent.
     const k1 = Math.max(0, n - 2); let yM = y(M[k1] || 0) + 4, yR = y(R[k1] || 0) + 4;
     if (Math.abs(yM - yR) < 14) { const mid = (yM + yR) / 2, sgn = yM <= yR ? -1 : 1; yM = mid + 7 * sgn; yR = mid - 7 * sgn; }
-    const fin = `<text class="lab" x="${Wd - m.r + 10}" y="${yM.toFixed(1)}">${esc(nomShop().replace(/^.* - /, ''))} ${fN(M[k1])}</text><text class="ax" x="${Wd - m.r + 10}" y="${yR.toFixed(1)}" style="font-weight:600">réseau ${nf(R[k1] || 0, 0)}</text><text class="ax" x="${Wd - m.r + 10}" y="${(Math.max(yM, yR) + 13).toFixed(1)}" style="font-size:9.5px">en ${esc(lib[k1] || '')}</text>`;
+    const fin = `<text class="lab" x="${Wd - m.r + 10}" y="${yM.toFixed(1)}">${esc(nomShop().replace(/^.* - /, ''))} ${vU(M[k1])}</text><text class="ax" x="${Wd - m.r + 10}" y="${yR.toFixed(1)}" style="font-weight:600">réseau ${eu ? vU(R[k1] || 0) : nf(R[k1] || 0, 0)}</text><text class="ax" x="${Wd - m.r + 10}" y="${(Math.max(yM, yR) + 13).toFixed(1)}" style="font-size:9.5px">en ${esc(lib[k1] || '')}</text>`;
     return `<svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${ligne(R, '#eb6834', 'moyenne par magasin du réseau', true)}${ligne(M, '#2a78d6', 'le magasin', true)}${fin}</svg>`;
   }
   /** Onglet 2 : le nuage prix × volume, le seul point du magasin, le prix réseau et le volume moyen en repères. */
@@ -3369,6 +3411,7 @@
     if (!S.fiche) { if (box) { box.innerHTML = ''; } document.documentElement.classList.remove('db-fiche-ouverte'); return; }
     if (!box) { box = document.createElement('div'); box.id = 'db-fiche'; document.body.appendChild(box); }
     document.documentElement.classList.add('db-fiche-ouverte');
+    if (S.fiche.c12) { c12Rendre(box); return; }
     const F = S.fiche, k = cleFiche(), d = S.aux[k], err = S.err[k];
     const mag = nomShop(), court = mag.replace(/^.* - /, '');
     const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${F.q >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
@@ -3486,7 +3529,7 @@
     const coefTxt = v => v == null ? '<span class="mu">—</span>' : '<small>×</small>' + nf(v, 2);
     const ligne = (niv, cle, x, ref, sub, prod, cat) => `<div class="db-al ${niv}${prod ? ' clic' : ''}" ${cle ? `data-cacc="${esc(cle)}"` : ''}${prod ? ` data-fprod="${esc(prod.id)}" data-fnom="${esc(x.nom)}" data-fq="${prod.q != null ? prod.q : ''}" data-fv="${prod.v != null ? prod.v : ''}" data-ft="${prod.taux != null ? prod.taux : ''}" data-fc="${prod.c != null ? prod.c : ''}" data-fcat="${esc(cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}>
         <span>${cle ? `<span class="db-tog ${S.cOuv[cle] ? 'on' : ''}">${S.cOuv[cle] ? '▾' : '▸'}</span>` : ''}</span>
-        <span class="nom">${esc(x.nom)}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+        <span class="nom">${esc(x.nom)}${(niv === 'g' && x.nom !== 'Catégories') || niv === 'c' ? `<button type="button" class="db-c12" data-c12n="${niv === 'g' ? 'groupe' : 'categorie'}" data-c12="${esc(x.nom)}" title="les ventes des 12 dernières semaines face au réseau">12 sem.</button>` : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
         <span class="barre"><i style="width:${Math.max(1, Math.min(100, 100 * x.ca / Math.max(ref, 1)))}%;background:${coul(x)}"></i></span>
         <span class="n">${fE(x.ca)}</span>
         <span class="n mu">${x.part != null ? fP0(x.part) : ''}</span>
@@ -5272,6 +5315,7 @@
 
   function brancher() {
     $.querySelectorAll('canvas.db-feux').forEach(feux);
+    $.querySelectorAll('[data-c12]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); c12Ouvrir(b); }));
     $.querySelectorAll('[data-fprod]').forEach(b => { b.addEventListener('click', () => ficheOuvrir(b)); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ficheOuvrir(b); } }); });
     ficheRendre();
     invModaleRendre();
