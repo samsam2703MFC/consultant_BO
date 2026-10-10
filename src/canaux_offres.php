@@ -431,7 +431,10 @@ function ep_bundles_sonde(): array
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
     $out = ['routes' => []];
     $lus = [];
-    foreach (['bundles' => '/admin/promotions/bundles', 'bundles-actifs' => '/admin/promotions/bundles?active=1', 'buy-x-get-y' => '/admin/promotions/buy-x-get-y', 'promotions' => '/admin/promotions'] as $nom => $ch) {
+    foreach (['bundles' => '/admin/promotions/bundles', 'bundles-actifs' => '/admin/promotions/bundles?active=1', 'buy-x-get-y' => '/admin/promotions/buy-x-get-y', 'promotions' => '/admin/promotions',
+        // 10/10/2026 : les promotions par quantité (« 2 pour 5,90 € ») et les remises programmées, filtrées sur un magasin aussi.
+        'quantity' => '/admin/promotions/quantity', 'quantity-halle' => '/admin/promotions/quantity?id_shop=4', 'remises-programmees' => '/admin/promotions/scheduled-product-discount',
+        'buy-x-get-y-halle' => '/admin/promotions/buy-x-get-y?id_shop=4', 'bundles-halle' => '/admin/promotions/bundles?id_shop=4'] as $nom => $ch) {
         $r = PanelApi::sondeGet($ch, 20);
         $lus[$nom] = $r['corps'];
         $l = PanelApi::liste(is_array($r['corps']) ? $r['corps'] : []);
