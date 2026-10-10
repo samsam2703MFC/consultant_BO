@@ -2744,6 +2744,9 @@
     const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
     let h = '';
 
+    /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
+    if (m && JD) { h += rendBench(m, JD); }
+
     /* 1. Le duel avec J−7 (maquette B du 08/10/2026) : la jauge à deux pistes, les quatre tuiles
      * du moment, le cumul heure par heure, le tableau chiffre par chiffre. */
     h += opDuel(D);
@@ -3577,9 +3580,9 @@
     const pasX = (Wd - m.l - m.r) / Math.max(1, n - 1), court = esc(nomShop().replace(/^.* - /, ''));
     const hits = lib.map((l, k) => { if (M[k] == null && R[k] == null) { return ''; }
       const dl = tend && k > 0 && k < n - 1 && M[k - 1] && M[k] != null ? 100 * (M[k] - M[k - 1]) / M[k - 1] : null;
-      const tip = `<b>${esc(l)} · ${k === iEnC ? (W.jours ? W.jours[k] + ' j, en cours' : 'en cours') : 'du ' + date(k)}</b>${M[k] != null ? `<i style="background:#2a78d6"></i>${court} ${eu ? vU(M[k]) : nf(M[k], 1)}<br>` : ''}${R[k] != null ? `<i style="background:#eb6834"></i>réseau ${eu ? vU(R[k]) : nf(R[k], 1)}` : ''}${dl != null ? `<br>${dl >= 0 ? '▲ +' : '▼ −'}${nf(Math.abs(dl), 1)} % face à ${esc(lib[k - 1])}` : ''}`;
+      const tip = `<b>${esc(l)} · ${k === iEnC ? (W.jours ? W.jours[k] + ' j, en cours' : 'en cours') : 'du ' + date(k)}</b>${M[k] != null ? `<i style="background:#2a78d6"></i>${court} ${eu ? vU(M[k]) : nf(M[k], M[k] % 1 ? 1 : 0) + ' pièces'}<br>` : ''}${R[k] != null ? `<i style="background:#eb6834"></i>réseau ${eu ? vU(R[k]) : nf(R[k], R[k] % 1 ? 1 : 0) + ' pièces'}` : ''}${dl != null ? `<br>${dl >= 0 ? '▲ +' : '▼ −'}${nf(Math.abs(dl), 1)} % face à ${esc(lib[k - 1])}` : ''}`;
       return `<rect class="hit" x="${(cx(k) - pasX / 2).toFixed(1)}" y="${m.t}" width="${pasX.toFixed(1)}" height="${(Hd - m.t - m.b).toFixed(1)}" data-tip="${esc(tip)}" data-tx="${(100 * cx(k) / Wd).toFixed(1)}" data-ty="${(100 * y(Math.max(M[k] || 0, R[k] || 0)) / Hd).toFixed(1)}"/>`; }).join('');
-    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${hits}${ligne(R, '#eb6834', 'moyenne par magasin du réseau', true)}${ligne(M, '#2a78d6', 'le magasin', true)}${fin}</svg></div>`;
+    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${ligne(R, '#eb6834', 'moyenne par magasin du réseau', true)}${ligne(M, '#2a78d6', 'le magasin', true)}${fin}${hits}</svg></div>`;
   }
   /** Onglet 2 : le nuage prix × volume, le seul point du magasin, le prix réseau et le volume moyen en repères. */
   function ficheNuage(P) {
@@ -3752,15 +3755,13 @@
       const av = clos.slice(0, 6).reduce((a, v) => a + (v || 0), 0), ap = clos.slice(6).reduce((a, v) => a + (v || 0), 0), tend = av > 0 ? 100 * (ap - av) / av : null;
       const face = totR > 0 ? 100 * (tot - totR) / totR : null;
       corps = `<div class="fi-barre"><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours (${W.jours ? W.jours[W.jours.length - 1] : '?'} j) · le réseau : la moyenne par magasin, sans magasin nommé</span></div>
-        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span></div>${ficheCourbe(W)}</div>
+        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span>un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W)}</div>
           <div class="fi-cote"><div class="k">${esc(court)}, 12 semaines</div>
             <div class="r"><span>Pièces</span><b>${fN(tot)}</b></div><div class="r"><span>Par semaine</span><b>${nf(moy, 1)}</b></div>
             <div class="r"><span>6 dernières face aux 6 d’avant</span><b class="${tend == null ? '' : (tend >= 0 ? 'up' : 'dn')}">${fSg(tend)}</b></div>
             <div class="sep"></div><div class="r"><span>Moyenne par magasin du réseau</span><b>${fN(totR)}</b></div><div class="r"><span>Face au réseau</span><b class="${face == null ? '' : (face >= 0 ? 'up' : 'dn')}">${fSg(face)}</b></div>
-            <div class="fi-note">en pièces ; un grand magasin vend plus : la taille compte (onglet Prix, volume à taille égale)</div></div></div>
-        <table class="fi-tab"><thead><tr><th>Semaine</th>${(W.tranches || []).map((l, i) => `<th>${esc(l)}${i === M.length - 1 ? '*' : ''}</th>`).join('')}</tr></thead><tbody>
-          <tr class="moi"><td>${esc(court)}</td>${M.map(v => `<td>${v == null ? '—' : fN(v)}</td>`).join('')}</tr><tr><td>Réseau, moyenne</td>${R.map(v => `<td>${v == null ? '—' : nf(v, 0)}</td>`).join('')}</tr></tbody></table>
-        <div class="fi-note">* en cours.</div>`;
+            <div class="fi-note">en pièces ; un grand magasin vend plus : la taille compte (onglet Prix, volume à taille égale)</div></div></div>`;
+      // Plus de tableau des semaines (10/10/2026) : un clic sur un point du graphique montre sa valeur.
     } else {
       const P = d.prix, seg = `<span class="fi-seg">${[[1, 'Dernier mois'], [3, '3 derniers mois'], [12, '12 mois']].map(([v, l]) => `<button type="button" data-fmois="${v}" class="${F.mois === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
       if (!P) { corps = `<div class="fi-barre">${seg}</div><div class="fi-msg">${esc(d.prixMotif || 'pas de prix comparable sur la période')}</div>`; }
@@ -4153,7 +4154,7 @@
 
   function rendBench(m, d) {
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
-    const jour = S.vue === 'jour';
+    const jour = S.vue === 'jour' || S.vue === 'ops';   // l'Opérationnel lit la journée, comme la vue Jour
     const defs = jour
       ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Marge brute', 'margeBrutePct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
       : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
