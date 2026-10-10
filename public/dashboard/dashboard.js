@@ -2618,9 +2618,9 @@
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      <span class="db-lab">${S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${(S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : S.date !== AUJ)) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : 'Aujourd’hui')}</button>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${(S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
@@ -3688,7 +3688,7 @@
   function finFrS() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 21); const d = iso(t); return d > AUJ ? AUJ : d; }
   function cleFrS() { return 'frS|' + S.shop + '|' + finFrS(); }
   function friseHtml() {
-    if (EMBED || !['ops', 'semaine', 'mois'].includes(S.vue)) { return ''; }
+    if (EMBED || !['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue)) { return ''; }
     const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
     const col = p => p == null ? '#cfc6ba' : (p >= 100 ? '#2d7a3e' : (p >= 90 ? '#e8c9a0' : (p >= 75 ? '#F5B26B' : '#F08A2C')));
     const fl = n => `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
@@ -3702,6 +3702,12 @@
         const mg = (P.magasins || []).find(x => String(x.shopId) === String(S.shop));
         ((mg && mg.jours) || []).forEach(j => { lus[j.date] = j; });
       });
+      // Le jour regardé prend le chiffre en direct de la page (/exploitation/jour, relu toutes les 2 min) :
+      // la période du mois, gardée 5 min par le serveur, retarderait la case d'aujourd'hui.
+      // Le même chiffre que la page : les tickets lus (/ventes/stats), sinon /exploitation/jour.
+      const vif = magasin(S.aux['jourM|' + S.date]), STv = S.st[cleSt()];
+      const caVif = STv && STv.totaux && STv.totaux.ca != null ? STv.totaux.ca : (vif ? vif.ca : null);
+      if (caVif != null) { lus[S.date] = Object.assign({}, lus[S.date] || {}, { ca: caVif, objectif: vif && vif.objectifJour != null ? vif.objectifJour : (lus[S.date] || {}).objectif }); }
       tete = 'les 14 jours';
       chips = attente && !Object.keys(lus).length ? sk(14) : J.map(d => {
         const j = lus[d] || {}, t = new Date(d + 'T12:00:00'), lib = JOURS_FR[t.getDay()] + ' ' + t.getDate(), on = d === S.date;
@@ -3719,6 +3725,22 @@
         if (w.futur) { return `<div class="fr-c fut"><span class="n">${esc(w.lab)}</span><b>—</b><small>${fdC(w.du)} – ${fdC(w.au)}</small></div>`; }
         return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${w.au > AUJ ? AUJ : w.au}"><span class="n">${esc(w.lab)}${w.enCours ? '<em>en cours</em>' : ''}</span><b>${w.ca != null ? fE(w.ca) : '—'}</b><i class="jg"><em style="width:${(100 * (w.ca || 0) / mx).toFixed(0)}%;background:${on ? 'var(--color-primary)' : '#b9ad9f'}"></em></i><small>${fdC(w.du)} – ${fdC(w.au)}</small></button>`;
       }).join('');
+    } else if (S.vue === 'trimestre') {
+      // Les 4 trimestres de l'année (10/10/2026) : le CA des mois lus, face à l'objectif des trois mois.
+      const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
+      const qAuj = +AUJ.slice(0, 4) === Y ? Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 : (+AUJ.slice(0, 4) > Y ? 5 : 0);
+      tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
+      chips = !L ? sk(4) : [1, 2, 3, 4].map(q => {
+        const ms = L.filter(r => Math.ceil(+r.mois / 3) === q);
+        const lus = ms.filter(r => r.ca != null), ca = lus.reduce((a, r) => a + (+r.ca), 0), obj = ms.reduce((a, r) => a + (r.caBudget != null ? +r.caBudget : 0), 0);
+        // La part : le CA des mois qui ont un objectif, face à cet objectif (un mois sans objectif ne compte pas).
+        const caO = lus.filter(r => r.caBudget != null).reduce((a, r) => a + (+r.ca), 0);
+        const p = lus.length && obj ? 100 * caO / obj : null, on = trimestre() === q, cours = q === qAuj;
+        const lib = 'T' + q + ' · ' + MOIS_C[(q - 1) * 3] + ' – ' + MOIS_C[(q - 1) * 3 + 2];
+        if (q > qAuj) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${obj ? 'objectif ' + fK(obj) : 'à venir'}</small></div>`; }
+        if (!lus.length) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>pas de vente</small></div>`; }
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-trim="${q}"><span class="n">${lib}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' + (obj ? ' ' + fK(obj) : '') : 'sans objectif'}</small></button>`;
+      }).join('');
     } else {
       const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
       tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
@@ -3730,7 +3752,8 @@
         return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' : 'sans objectif'}</small></button>`;
       }).join('');
     }
-    return `<div class="db-frise"><div class="fr-t">${tete}</div><div class="fr-r">${S.vue === 'mois' ? '' : fl(-1)}${chips}${S.vue === 'mois' ? '' : fl(1)}</div></div>`;
+    const annuel = S.vue === 'mois' || S.vue === 'trimestre';
+    return `<div class="db-frise${S.vue === 'trimestre' ? ' quatre' : ''}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
   }
 
   function rendBench(m, d) {
