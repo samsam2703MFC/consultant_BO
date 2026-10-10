@@ -702,3 +702,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T09:24:03Z Frise Opérationnel : semaine active
 2026-10-10T10:35:54Z Frise Semaine : sept jours
 2026-10-10T10:44:17Z Catégories : 12 semaines
+2026-10-10T10:47:55Z Catégories : 12 semaines, retouches
