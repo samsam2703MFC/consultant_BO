@@ -686,3 +686,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T04:50:32Z fiche franchise en app tablette consultant
 2026-10-10T05:06:29Z bundles vendus dans le dashboard operationnel
 2026-10-10T05:12:58Z sonde des promotions bundle du panel
+2026-10-10T05:20:16Z composition des bundles vendus
