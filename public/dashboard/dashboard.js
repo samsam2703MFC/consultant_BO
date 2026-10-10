@@ -2340,7 +2340,11 @@
         : (e.c === 'ok' ? `sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · en vitrine ${fN(Math.max(0, +p.stock || 0))}` : `<b>${esc(e.txt)}</b> · sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)}`);
       const vis = k === 'L' ? `<span class="vt-jl"><i class="${e.c}" style="width:${e.pj > 0 ? Math.min(100, 100 * (e.st || 0) / (e.pj * OP_VIE_JOURS)).toFixed(0) : 0}%"></i></span>` : vitBande(D, p);
       const mq = e.c === 'ok' ? '' : (k === 'L' ? `<b>${fN(e.n)}</b>pour ${OP_VIE_JOURS} jours de vente` : `<b>${fN(e.q)} pièce${e.q >= 2 ? 's' : ''}</b>${fE((e.q || 0) * (+p.prix || 0))} de ventes`);
-      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="le stock du produit"><span class="n"><i class="pt ${e.c}"></i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small><span class="w">${w}</span></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
+      // La micro-vignette (10/10/2026, D2) : l'heure de la rupture, rouge pâle si vide, cadre orange si ça va manquer ;
+      // long life : le stock. Le reste du texte passe dans l'infobulle.
+      const tl = e.c === 'ok' ? '' : (k === 'L' ? fN(e.st || 0) : (e.h != null ? e.h + 'h' : ''));
+      const info = w.replace(/<[^>]+>/g, '');
+      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="${esc(info)} · un clic : le stock du produit"><span class="n"><i class="tl">${tl}</i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
     };
     const blocs = OP_VIES.map(k => {
       const B = L.filter(x => opVieDe(x.p) === k);
