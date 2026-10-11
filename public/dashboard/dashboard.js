@@ -541,7 +541,7 @@
   /** Le libellé du bouton, qui dit toujours où on en est. */
   function pushBouton() {
     if (S.pushEtat === 'impossible' || S.pushEtat === 'refuse') {
-      return `<span class="db-stnote" title="${esc(S.pushMotif)}">🔕 ${esc(S.pushMotif || 'notifications indisponibles')}</span>`;
+      return `<span class="db-stnote" title="${esc(S.pushMotif || 'notifications indisponibles')}">🔕</span>`;
     }
     const occ = S.pushOccupe ? ' disabled' : '';
     if (S.pushEtat === 'abonne') {
@@ -2129,10 +2129,10 @@
   }
   function bundlesCarte() {
     const ks = cleSt(), st = S.st[ks], err = S.err[ks], jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span><span class="db-mini">${mini}</span></div>`;
+    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div>`;
     if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
     const B = bundlesDe(st);
-    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('la journée · catégorie Bundle')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div>${promoBundles(st)}</div>`; }
+    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div>${promoBundles(st)}</div>`; }
     const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
     const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
     // La composition : la recette du bundle au panel (la même lecture que la fiche produit), lue une fois.
@@ -2264,7 +2264,7 @@
       return `<div class="op-vl op-arbre">${descend(ligneN, ligneP)}</div>`;
     }
     const sousTitre = (x, nv) => `${fN(x.n)} réf.${nv === 1 ? ' · ' + fN(x.sc.length) + ' sous-catégorie' + (x.sc.length > 1 ? 's' : '') : ''}`;
-    const aide = '<span>▸ un clic ouvre la sous-catégorie, puis les produits</span>';
+    const aide = '';
     if (long) {
       const ligneN = (x, nv) => `<tr class="nv${nv}${ouv(x.cle) ? ' on' : ''}" data-opouv="${esc(x.cle)}"><td><span class="fl">▸</span><b>${esc(x.nom)}</b><small>${sousTitre(x, nv)}</small></td><td class="n">${fN(x.sorti)}</td><td class="n">${fN(x.vendu)}</td><td class="n">${fN(x.st)}</td><td class="n">${x.pj ? nf(x.pj, 1) : '—'}</td><td>${jg(x.st, x.pj)}</td><td class="n">${x.pj ? nf(jours(x.st, x.pj), 1) : '—'}</td><td>${etatN(x)}</td><td class="n"><b>${esc(faireN(x))}</b></td></tr>`;
       const ligneP = p => { const pj = opParJour(p);
@@ -2285,7 +2285,6 @@
    * (replié au départ, pour consultation). Short et medium life se recuisent au rythme des 6 derniers mêmes jours,
    * heure par heure : la journée du produit en cases, et la prochaine cuisson où l'ajouter. Long life est un stock
    * en magasin : face à trois jours de vente. Un clic sur un produit ouvre sa fiche de stock. */
-  const VIT_REGLE = { S: 'vendu le jour même · recuit plusieurs fois par jour, au rythme des ventes heure par heure', M: 'se garde 2 à 3 jours · recuit au rythme des ventes heure par heure', L: 'stock en magasin · non périssable ou longue DLC' };
   const VIT_F = [['ko', 'Vide maintenant'], ['att', 'Va manquer'], ['ok', 'En ordre']];
   function vitLire(D, p) {
     const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], nowH = now == null ? 99 : Math.floor(now / 60);
@@ -2331,7 +2330,6 @@
   function opVitrineE(D) {
     const { now, U, prods } = D;
     const H = Array.isArray(U.heures) ? U.heures : [], fin = now == null;
-    const jour = esc(U.jourNom || '') + (/s$/.test(U.jourNom || '') ? '' : 's');
     const suite = fin ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
     // Les filtres, par durée de vie (10/10/2026) : trois petits carrés discrets en bout de ligne.
     const FB = S.vitFb || (S.vitFb = {}), filtre = k => FB[k] || (FB[k] = { ko: true, att: true, ok: false });
@@ -2374,15 +2372,15 @@
         : `<span class="rs">${fN(M.length)} ${fin ? 'ont manqué' : 'vont manquer'}${aCuire && !fin ? ' · <b>+' + fN(aCuire) + '</b> ' + (k === 'L' ? 'à refaire' : 'à cuire') : ''}${eurB >= 1 ? ' · ' + fE(eurB) + (fin ? ' perdus' : ' à sauver') : ''}</span>`;
       const axe = k === 'L' ? '<div class="vt-ax l"><span>stock face à ' + OP_VIE_JOURS + ' jours de vente</span></div>' : `<div class="vt-ax">${H.map(h => `<span>${h} h</span>`).join('')}</div>`;
       const vide = !V.length ? `<div class="vt-vide">${F.ko || F.att ? (B.some(x => x.e.c !== 'ok') ? 'rien dans les filtres choisis' : '✓ rien ne va manquer d’ici la fermeture') : 'aucun produit dans les filtres choisis'}</div>` : '';
-      return `<div class="vt-b${ouvert ? ' on' : ''}"><div class="vt-h"><button type="button" class="vt-ht" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf. · ${esc(VIT_REGLE[k])}</span>${resB}</button><span class="cpt">${cpt}</span></div>
+      return `<div class="vt-b${ouvert ? ' on' : ''}"><div class="vt-h"><button type="button" class="vt-ht" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf.</span>${resB}</button><span class="cpt">${cpt}</span></div>
         ${ouvert ? `${V.length ? `<div class="vt-t"><span></span>${axe}<span></span><span></span></div>` : ''}${vus.map(x => ligne(x, k)).join('')}${vide}
         ${V.length > MAX ? `<button type="button" class="vt-plus" data-vitall="${k}">${tout ? '▴ replier' : (V.length - MAX === 1 ? '▸ voir le dernier' : '▸ voir les ' + fN(V.length - MAX) + ' autres')}</button>` : ''}` : ''}</div>`;
     }).join('');
-    const tete = `<span class="db-mini">${fin ? 'journée terminée' : 'à ' + esc(U.maintenant || opHM(now))} · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${jour}</span><span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
+    const tete = `<span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
     const resume = manque.length ? `<b>${fN(manque.length)}</b><span>produit${manque.length > 1 ? 's' : ''} ${fin ? 'ont manqué' : 'vont manquer d’ici la fermeture'}${eur >= 1 ? ' · ' + fE(eur) + ' de ventes ' + (fin ? 'perdues' : 'à sauver') : ''}</span>` : `<b class="ok">✓</b><span>rien ne va manquer d’ici la fermeture</span>`;
     return `<div class="db-card op-bloc vt"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>
       <div class="vt-top"><span class="vt-res">${resume}</span></div>${blocs}
-      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span><span>une case par heure · cadre noir : maintenant · pâle : à venir · un clic ouvre le stock du produit</span></div></div>`;
+      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span></div></div>`;
   }
 
   /* La fiche de stock d'un produit de La vitrine (10/10/2026, maquette 2 « la réponse d'abord ») : faut-il
@@ -2507,7 +2505,7 @@
     const L = prods.filter(p => opVieDe(p) === k);
     const corps = L.length ? opArbre(D, L, mob, k) : `<div class="op-vvide">Aucune référence en ${OP_VIE_NOM[k].toLowerCase()} ce jour.</div>`;
     const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi ›</a></span>`
-      : `<span class="db-mini">ce qui est sorti du four face à ce qui est vendu · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${esc(U.jourNom || '')}${/s$/.test(U.jourNom || '') ? '' : 's'}</span><span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span>`;
+      : `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span>`;
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div><div class="op-v3s">${OP_VIES.map(onglet).join('')}</div>${corps}</div>`;
   }
 
@@ -2543,7 +2541,7 @@
     const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
     const sansPlanning = m && !planning.length;
     return `
-      ${opTuile('heure', esc(fDL(S.date).replace(/ \d{4}$/, '')), fin ? 'Journée' : opHM(now), fin ? 'journée terminée · le récit, pas le direct' : 'en direct · relu toutes les 2 min')}
+      ${opTuile('heure', esc(fDL(S.date).replace(/ \d{4}$/, '')), fin ? 'Journée' : opHM(now), '')}
       ${U ? opTuile(vides.length ? 'ko' : (manques.length ? 'att' : 'ok'), 'Vitrine', fN(U.totaux && U.totaux.stock) + '<small>pièces</small>', `${vides.length} vide${vides.length > 1 ? 's' : ''} · ${manques.length} ${manques.length > 1 ? 'vont' : 'va'} manquer · ${trop.length} en trop`) : opTuile('', 'Vitrine', '—', S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…')}
       ${m ? opTuile(sansPlanning ? 'att' : '', 'Équipe en poste', fin ? fN(planning.length) + '<small>au planning</small>' : fN(enPoste.length) + `<small>personne${enPoste.length > 1 ? 's' : ''}</small>`, sansPlanning ? 'pas de planning lu pour ce jour' : (fin ? '' : (enPoste.length ? enPoste.map(p => 'jusqu’à ' + esc(p.fin)).join(' et ') + ' · ' : '') + (releve ? 'relève à ' + esc(releve.debut) + ' · ' : '')) + nf(m.planningHeures || 0, 1) + ' h au planning') : opTuile('', 'Équipe en poste', '—', opSk())}
       ${U ? (prochaine ? opTuile('', 'Prochaine cuisson', esc(prochaine.nom) + `<small>four à ${esc(prochaine.four)}</small>`, `${fN(prochaine.pieces)} pièces pour ${esc(prochaine.de)} à ${esc(prochaine.a)} · ${opDans(opMin(prochaine.four), now)}`) : opTuile('', 'Cuissons', fN(cuissons.length), fin ? cuissons.map(c => esc(c.nom) + ' ' + esc(c.four)).join(' · ') : 'plus de cuisson prévue aujourd’hui')) : opTuile('', 'Prochaine cuisson', '—', opSk())}
@@ -2604,7 +2602,7 @@
       return pill(a, aDed) + pill(b, bDed);
     };
     const piste = (lb, sous, segs, L) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${depasse ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="objectif ${fE(obj)}"></i>` : ''}${part != null && !fin ? `<i class="temps" style="left:${(obj ? pct(obj * part / 100) : part).toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
-    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${obj ? `<span class="chip">${m.objectifSource === 'budget' ? 'budget du mois' : 'CA théorique'} · profil des ${esc(B.jourNom)}s</span>` : '<span class="chip">pas d’objectif du jour : l’échelle, c’est le meilleur des deux</span>'}${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
+    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
     const pA = pct(ca), pP = B.proj != null ? pct(B.proj) : null;
     const LA = [];
     if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
@@ -2666,10 +2664,7 @@
     };
     const valA = fmtV(cA[cA.length - 1].v), val7 = fmtV(c7[c7.length - 1].v);
     const bascule = aTk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${mode === 'ca' ? 'on' : ''}" data-opcrb="ca">CA</button><button type="button" class="${mode === 'tk' ? 'on' : ''}" data-opcrb="tk">Clients</button></span>` : '';
-    const sous = mode === 'tk'
-      ? `le cumul des clients ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', la référence des mêmes jours en pointillé' : ''}`
-      : `le cumul ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', jusqu’à l’objectif' : ''}`;
-    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}<span class="db-mini">${sous}</span></div>
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
       <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}<b class="tv"> ${valA}</b></span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})<b class="tv"> ${val7}</b></span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
@@ -2687,7 +2682,7 @@
     const ligne = (k, note, a, b, d, j, r) => `<div class="op-dl"><div class="k">${k}${note ? `<small>${note}</small>` : ''}</div>${cell('a', lblA, a[0], a[1])}${cell('b', esc(B.lblB), b[0], b[1])}<div class="d">${d}</div>${cell('j', lblJ, j[0], j[1])}${cell('r', 'référence', r[0], r[1])}</div>`;
     const ref = JD && JD.reference ? JD.reference : {};
     const sansJ = !j7 || !j7.moment;
-    let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span><span class="db-mini">${sansJ ? 'face à la journée entière de la semaine passée' : 'à la même heure, puis la journée entière de la semaine passée'}</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
+    let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
     if (!sansCa) h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
     h += ligne('Clients', '', [fN(tk), ''], [j7 ? fN(j7.tickets) : eq, ''], ecart(B.dTk), [j7 && j7.moment ? fN(j7.ticketsJour) : eq, ''], [m.refTickets != null ? fN(m.refTickets) : eq, m.ticketsDelta != null ? fSP(m.ticketsDelta) + ' face à la référence' : '']);
     h += ligne('Panier moyen', '', [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && j7.ticketsJour ? fU(j7.caJour / j7.ticketsJour) : eq, ''], [JD && JD.reseau && JD.reseau.panier ? fU(JD.reseau.panier) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
@@ -2705,13 +2700,13 @@
     let heures = '';
     if (HS.length) {
       const W = 520, Ht = 110, bw = W / HS.length, mx = Math.max(1, ...HS.map(hh => Math.max(moy[hh] || 0, vend[hh] || 0))) * 1.15, y = v => Ht - Ht * v / mx;
-      heures = `<div class="op-h4">Ventes au comptoir, heure par heure · face aux ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${esc(U.jourNom || 'mêmes jours')}${/s$/.test(U.jourNom || '') ? '' : 's'}</div><svg width="100%" viewBox="0 0 ${W} ${Ht + 18}" class="op-svg">${HS.map((hh, i) => {
+      heures = `<div class="op-h4">Ventes au comptoir, heure par heure</div><svg width="100%" viewBox="0 0 ${W} ${Ht + 18}" class="op-svg">${HS.map((hh, i) => {
         const mo = moy[hh] || 0, v = vend[hh], X = i * bw, enCours = now != null && hh * 60 <= now && now < hh * 60 + 60;
         const c = enCours ? '#8D1D2C' : (v != null && v >= mo ? '#2D7A3E' : '#D97706');
         return `<rect x="${(X + bw * .12).toFixed(1)}" y="${y(mo).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(mo)).toFixed(1)}" rx="2" fill="#e3dbcf"/><text x="${(X + bw * .3).toFixed(1)}" y="${(y(mo) - 3).toFixed(1)}" font-size="9" text-anchor="middle" fill="#888">${fN(mo)}</text>`
           + (v != null && (now == null || hh * 60 <= now) ? `<rect x="${(X + bw * .52).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(v)).toFixed(1)}" rx="2" fill="${c}"/><text x="${(X + bw * .7).toFixed(1)}" y="${(y(v) - 3).toFixed(1)}" font-size="9.5" font-weight="700" text-anchor="middle" fill="${c}">${fN(v)}</text>` : '')
           + `<text x="${(X + bw / 2).toFixed(1)}" y="${Ht + 13}" font-size="10" text-anchor="middle" fill="#666">${hh} h</text>`;
-      }).join('')}</svg><div class="op-leg"><span><i style="background:#e3dbcf"></i>moyenne</span><span><i style="background:#D97706"></i>vendu, sous la moyenne</span><span><i style="background:#2D7A3E"></i>au-dessus</span>${now != null ? '<span><i style="background:#8D1D2C"></i>heure en cours</span>' : ''}<span class="mu">en euros, au prix de vente, hors commandes</span></div>`;
+      }).join('')}</svg><div class="op-leg"><span><i style="background:#e3dbcf"></i>moyenne</span><span><i style="background:#D97706"></i>vendu, sous la moyenne</span><span><i style="background:#2D7A3E"></i>au-dessus</span>${now != null ? '<span><i style="background:#8D1D2C"></i>heure en cours</span>' : ''}</div>`;
     } else { heures = U ? '' : `<div style="padding:8px 0">${opSk()}</div>`; }
     return heures;
   }
@@ -2722,8 +2717,8 @@
     return `
       ${cmd ? mini(retardN ? 'att' : 'ok', 'Commandes clients', retardN ? fN(retardN) + ' en retard' : 'À jour', `${fN(cmd.aVenir || 0)} à venir · aujourd’hui : ${fN(listeC.length)}${CA && CA.demain ? ' · demain : ' + fN(CA.demain.n) + (CA.demain.n ? ', ' + fU(CA.demain.ca) : '') : ''}`) : mini('', 'Commandes clients', '—', opSk())}
       ${NC && !NC.indispo ? mini(ncL.length ? 'ko' : 'ok', 'Hier', ncL.length ? fN(ncL.length) + ' non-conformité' + (ncL.length > 1 ? 's' : '') : 'Aucune non-conformité', `${fN(NC.notees || 0)} photo${(NC.notees || 0) > 1 ? 's' : ''} notée${(NC.notees || 0) > 1 ? 's' : ''} le ${esc(fDL(veille()).replace(/ \d{4}$/, ''))}`) : mini('', 'Hier', '—', NC ? 'panel muet' : opSk())}
-      ${INV ? mini(INV.declare ? (INV.cout > 0 ? 'att' : 'ok') : '', 'Poubelle', INV.declare ? fE(INV.cout) : 'Pas encore déclarée', INV.declare ? fN(INV.pieces) + ' pièces · ' + fU(INV.caPerdu) + ' de vente perdue' : 'à encoder à la fermeture') : mini('', 'Poubelle', '—', opSk())}
-      ${PR ? mini('', 'Promotions', (PR.promos || []).length ? fN(PR.promos.length) + ' en cours' : 'Aucune', (PR.promos || []).length ? PR.promos.map(p => esc(p.nom || p.titre || '')).filter(Boolean).slice(0, 2).join(' · ') : 'pas de promotion posée pour aujourd’hui') : mini('', 'Promotions', '—', opSk())}
+      ${INV ? mini(INV.declare ? (INV.cout > 0 ? 'att' : 'ok') : '', 'Poubelle', INV.declare ? fE(INV.cout) : 'Pas encore déclarée', INV.declare ? fN(INV.pieces) + ' pièces · ' + fU(INV.caPerdu) + ' de vente perdue' : '') : mini('', 'Poubelle', '—', opSk())}
+      ${PR ? mini('', 'Promotions', (PR.promos || []).length ? fN(PR.promos.length) + ' en cours' : 'Aucune', (PR.promos || []).length ? PR.promos.map(p => esc(p.nom || p.titre || '')).filter(Boolean).slice(0, 2).join(' · ') : '') : mini('', 'Promotions', '—', opSk())}
 `;
   }
   /** L'onglet Opérationnel au téléphone (06/10/2026) : les mêmes chiffres que le bureau, en une
@@ -2818,7 +2813,7 @@
     frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:#777">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
-    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span><span class="db-mini">de 04:00 à 20:00${now != null ? ' · le trait rouge : maintenant' : ''}</span></div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
+    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span></div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
 
     /* 3. La vitrine, selon la durée de vie */
     if (U) {
@@ -3071,7 +3066,7 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span><span class="db-mini">${S.cVue === 'portion' && parMarge ? 'les catégories qui vendent en portions · barre : en pièces entières, par taille · reste : la dernière pièce coupée' : S.cVue === 'promo' && parMarge ? 'groupe › catégorie › produit › promotion · barre et pastille : part du CA vendue en promotion' : (S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA') + ' · couleur : ' + (parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence')}</span></div>
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
       ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
@@ -4847,7 +4842,7 @@
       <div class="db-cqrail"><button type="button" class="db-cqfl g" data-cqpas="-1" aria-label="précédentes">‹</button>
         <div class="db-cqpiste" id="db-cqpiste">${F.map(x => cqCarte(x, false)).join('')}</div>
         <button type="button" class="db-cqfl d" data-cqpas="1" aria-label="suivantes">›</button></div>
-      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}${S.cqFiltre === 'tout' ? ' · les écarts d’abord' : ''} · un clic ouvre la photo en grand</div></div>`;
+      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}</div></div>`;
   }
   /** La photo en grand : repères, constat, tenue de la tâche ; ‹ › et Échap. */
   function cqLoupe(mobile) {
@@ -4914,7 +4909,7 @@
     if (pied && c) {
       const w = c.getBoundingClientRect().width + 12, n = p.children.length;
       const a = Math.min(n, Math.round(p.scrollLeft / w) + 1), b = Math.min(n, Math.round((p.scrollLeft + p.clientWidth) / w));
-      if (b < n || a > 1) { pied.textContent = a + ' – ' + b + ' sur ' + n + (S.cqFiltre === 'tout' ? ' · les écarts d’abord' : '') + ' · un clic ouvre la photo en grand'; }
+      if (b < n || a > 1) { pied.textContent = a + ' – ' + b + ' sur ' + n; }
     }
   }
 
