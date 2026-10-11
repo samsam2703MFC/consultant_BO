@@ -958,7 +958,7 @@ class App {
       prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
       prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
-      resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
+      resultatJour: ['Résultat', ''],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
@@ -9753,11 +9753,6 @@ class App {
     common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['reseau', 'Analyse réseau']].map(o => ({
       cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
-    common.rjOngletTxt = {
-      jour: 'La journée, magasin par magasin, face à l’objectif du jour et au compte de résultat.',
-      semaine: 'La semaine : l’objectif, ce qui est fait, ce qui reste — et en combien de clients.',
-      mois: 'Le mois : le budget, le compte de résultat, et douze mois d’histoire.',
-      reseau: 'Le réseau : les clients, période après période, face au N-1 — et qui fait l’écart.' }[on];
     // Le fil de progression : une lecture = un tiers. Le chrono tourne tant
     // qu'une lecture est en cours — une attente muette paraît deux fois plus
     // longue qu'une attente qui compte.
