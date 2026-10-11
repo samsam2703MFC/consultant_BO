@@ -738,3 +738,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-11T12:02:22Z fiche client en blocs
 2026-10-11T12:04:50Z fiche client societe et rang
 2026-10-11T12:13:26Z pro seulement si TVA valide
+2026-10-11T12:19:58Z retirer trois lignes du dashboard
