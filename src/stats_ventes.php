@@ -185,7 +185,9 @@ function ep_ventes_tickets(): array
         $res = PanelApi::getParallele($chemins, 6);
         $fiche = [];
         foreach ($chemins as $c => $p) { $fiche[$c] = vtFicheClient($res[$c] ?? null); $clesFiche += array_flip($fiche[$c]['cles'] ?? []); }
-        foreach ($tickets as &$tk) { if (isset($cid[$tk['id']])) { $f = $fiche[$cid[$tk['id']]]; unset($f['cles']); $tk['fiche'] = $f; } }
+        // `compte` : le rang du client dans la réponse (1, 2, 3…), pour compter les clients sans montrer qui ils sont.
+        $rang = array_flip(array_keys($chemins));
+        foreach ($tickets as &$tk) { if (isset($cid[$tk['id']])) { $f = $fiche[$cid[$tk['id']]]; unset($f['cles']); $tk['fiche'] = $f + ['compte' => $rang[$cid[$tk['id']]] + 1]; } }
         unset($tk);
     }
     return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'client' => $client] + ($clesFiche !== [] ? ['champsFiche' => array_keys($clesFiche)] : []) + ['ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
@@ -208,7 +210,9 @@ function vtFicheClient(mixed $r): array
         if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (!is_array($v2)) { $f[$k . '.' . $k2] = $v2; } } }
         elseif (!is_array($v)) { $f[(string) $k] = $v; }
     }
-    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'cles' => array_keys($f)];
+    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'societe' => false, 'cles' => array_keys($f)];
+    // Un nom de société sur la fiche : oui ou non, jamais le nom.
+    foreach ($f as $k => $v) { if (preg_match('/(^|\.)company_name$/', (string) $k) && is_string($v) && trim($v) !== '') { $out['societe'] = true; break; } }
     foreach ($f as $k => $v) {
         if (!is_scalar($v) || is_bool($v) || $v === '') { continue; }
         if (preg_match('/vat|tva|btw|tax_?(number|id|no|code)|company_?number|enterprise_?number|\bkbo\b|\bbce\b/i', (string) $k) && !preg_match('/rate|taux|regime|exempt|valid|verified|checked|_at$/i', (string) $k)) {
