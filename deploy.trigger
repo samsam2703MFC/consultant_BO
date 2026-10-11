@@ -728,3 +728,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-10T18:41:37Z promotions badges rectangulaires
 2026-10-10T18:59:07Z onglet portions
 2026-10-10T20:23:40Z telephone vues reparties
+2026-10-11T05:14:57Z telephone une donnee un onglet
