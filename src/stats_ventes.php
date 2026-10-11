@@ -133,11 +133,15 @@ function ep_ventes_tickets(): array
     // ?client=1 (11/10/2026) : les tickets rattachés à un client du panel, pro ou particulier, toutes leurs lignes, avec
     // facturé et différé. Jamais le nom ni l'identifiant du client.
     $client = !empty($_GET['client']);
+    // ?commandes=1 (11/10/2026) : chaque ticket dit s'il encaisse une commande client du panel (précommande au comptoir,
+    // click & collect, livraison), lue dans /shops/{id}/client-orders des quatorze jours d'avant (l'encaissement porte
+    // `id_transaction`). Sans le drapeau, la réponse garde seulement la référence de commande et la source de la liste.
+    $avecCmd = !empty($_GET['commandes']);
     if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '' && !$remise && $service === null && !$client)) { http_response_code(400); return ['error' => 'shop, date et cat, q, remise, service ou client requis']; }
     if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
-    $ids = []; $pro = []; $svc = []; $cpt = []; $cid = []; $nJour = 0;
+    $ids = []; $pro = []; $svc = []; $cpt = []; $cid = []; $orig = []; $nJour = 0;
     foreach (analyseListe($liste) as $t) {
         $id = (int) ($t['id'] ?? 0);
         if ($id <= 0) { continue; }
@@ -148,6 +152,7 @@ function ep_ventes_tickets(): array
         if ($client && !$aClient) { continue; }
         if ($aClient) { $cid[$id] = (string) $t['id_client']; }
         $cpt[$id] = ['client' => $aClient, 'facture' => !empty($t['will_be_invoiced']), 'differe' => !empty($t['deferral_payment'])];
+        $orig[$id] = ['refCommande' => trim((string) ($t['order_ref'] ?? '')) !== '' && trim((string) ($t['order_ref'] ?? '')) !== '0', 'source' => (string) ($t['source'] ?? '')];
         $ids[] = $id; if (!empty($t['is_client_b2b'])) { $pro[$id] = true; }
     }
     // Pro = client pro du panel ET TVA valide sur sa fiche (11/10/2026).
@@ -177,10 +182,28 @@ function ep_ventes_tickets(): array
             }
             if (!$vise && !($remise && (float) ($t['discount_total_value'] ?? 0) > 0.004)) { continue; }
             $tickets[] = ['id' => $id, 'heure' => substr((string) ($t['insert_timestamp'] ?? ''), 11, 5), 'total' => $n($t['total_gross_amount_after_discount'] ?? null),
-                'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'service' => $svc[$id] ?? null] + ($cpt[$id] ?? []) + ['lignes' => $lignes];
+                'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'service' => $svc[$id] ?? null] + ($cpt[$id] ?? []) + ($orig[$id] ?? []) + ['lignes' => $lignes];
         }
     }
     usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    $nCmd = null;
+    if ($avecCmd) {
+        $cmd = []; $nCmd = 0;
+        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . date('Y-m-d', strtotime($date . ' -14 days')), 25);
+        if ((int) ($r['code'] ?? 0) === 200 && is_array($r['corps'] ?? null)) {
+            foreach (analyseListe($r['corps']) as $o) {
+                if (!is_array($o)) { continue; }
+                $nCmd++;
+                $tk = (int) ($o['id_transaction'] ?? 0);
+                if ($tk <= 0) { continue; }
+                $canal = function_exists('coCanal') ? coCanal($o) : (!empty($o['is_webshop']) ? 'cc' : 'compt');
+                $cmd[$tk] = ['canal' => $canal, 'retrait' => substr((string) ($o['pick_up_datetime'] ?? ''), 0, 16) ?: null,
+                    'passee' => substr((string) ($o['insert_timestamp'] ?? $o['created_at'] ?? $o['order_date'] ?? ''), 0, 16) ?: null];
+            }
+        }
+        foreach ($tickets as &$tk) { $tk['commande'] = $cmd[$tk['id']] ?? null; }
+        unset($tk);
+    }
     // La fiche du client (11/10/2026), avec ?client=1 : un numéro de TVA y est-il, est-il valide, la fiche est-elle
     // marquée pro. Une lecture par client, en parallèle. Rien d'autre ne sort de la fiche : ni nom, ni numéro.
     $clesFiche = [];
@@ -195,7 +218,7 @@ function ep_ventes_tickets(): array
         foreach ($tickets as &$tk) { if (isset($cid[$tk['id']])) { $f = $fiche[$cid[$tk['id']]]; unset($f['cles']); $tk['fiche'] = $f + ['compte' => $rang[$cid[$tk['id']]] + 1]; } }
         unset($tk);
     }
-    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'client' => $client] + ($clesFiche !== [] ? ['champsFiche' => array_keys($clesFiche)] : []) + ['ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
+    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'client' => $client] + ($nCmd !== null ? ['commandesLues' => $nCmd] : []) + ($clesFiche !== [] ? ['champsFiche' => array_keys($clesFiche)] : []) + ['ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
 }
 
 /**
