@@ -52,17 +52,19 @@ function resJoursPanel(array $ids, array $jours, string $auj): array
         foreach ($jours as $j) {
             if ($j > $auj) { continue; }
             $g = $j <= $clos ? setting('dsJ:' . $id . ':' . $j) : null;
-            if (is_array($g) && array_key_exists('lab', $g)) { $out[$id][$j] = ['lab' => $g['lab'], 'oh' => $g['oh'] ?? null]; continue; }
+            if (is_array($g) && array_key_exists('lab', $g)) { $out[$id][$j] = ['lab' => $g['lab'], 'oh' => $g['oh'] ?? null, 'ca' => $g['ca'] ?? null]; continue; }
             $paths[$id . '|' . $j] = '/shops/' . $id . '/statistics/daily-summary?date=' . $j;
         }
     }
     foreach ($paths === [] ? [] : PanelApi::getParallele($paths, 6) as $k => $r) {
         if (!is_array($r)) { continue; }
         [$id, $j] = explode('|', (string) $k); $id = (int) $id;
-        $lab = nombreOuNull($r, ['employee_cost']); $oh = nombreOuNull($r, ['shop_cost']);
-        $out[$id][$j] = ['lab' => $lab, 'oh' => $oh];
-        if ($j <= $clos && $lab !== null) {
-            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['dsJ:' . $id . ':' . $j, json_encode(['lab' => $lab, 'oh' => $oh, 'le' => $auj])]); }
+        $lab = nombreOuNull($r, ['employee_cost']); $oh = nombreOuNull($r, ['shop_cost']); $caJ = nombreOuNull($r, ['income']);
+        $out[$id][$j] = ['lab' => $lab, 'oh' => $oh, 'ca' => $caJ];
+        // Un jour clos se grave dès que le panel a répondu, même sans planning (11/10/2026) : un jour sans
+        // planning (avant l'ouverture, ou jamais encodé) ne se relit pas à chaque appel.
+        if ($j <= $clos && ($lab !== null || $caJ !== null)) {
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['dsJ:' . $id . ':' . $j, json_encode(['lab' => $lab, 'oh' => $oh, 'ca' => $caJ, 'le' => $auj])]); }
             catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
         }
     }
@@ -75,7 +77,7 @@ function resJoursPanel(array $ids, array $jours, string $auj): array
  * Mesuré le 11/10/2026 : le résumé quotidien les rend pour tout jour passé (14/03, 15/06, 15/09 à
  * Halle). $budget borne les lectures au panel (un jour non gravé = une lecture) ; ce qui manque
  * se lit au battement suivant du cron (resCoutsMoisson). `manque` = les jours encore sans chiffre.
- * @return array{lab: float, oh: float, jours: int, manque: int}
+ * @return array{lab: float, oh: float, jours: int, manque: int, sansPlanning: int}
  */
 function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $auj): array
 {
@@ -84,7 +86,7 @@ function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $
     // Un mois entier et clos, complet : sa somme se garde (dsM), le tableau des mois ne relit plus ses trente jours.
     $moisEntier = substr($du, 8) === '01' && $au === date('Y-m-t', strtotime($du)) && $au <= $clos;
     $cleM = 'dsM:' . $id . ':' . substr($du, 0, 7);
-    if ($moisEntier) { $gM = setting($cleM); if (is_array($gM) && isset($gM['lab'], $gM['jours'])) { return ['lab' => (float) $gM['lab'], 'oh' => (float) ($gM['oh'] ?? 0), 'jours' => (int) $gM['jours'], 'manque' => 0]; } }
+    if ($moisEntier) { $gM = setting($cleM); if (is_array($gM) && isset($gM['lab'], $gM['jours'])) { return ['lab' => (float) $gM['lab'], 'oh' => (float) ($gM['oh'] ?? 0), 'jours' => (int) $gM['jours'], 'manque' => 0, 'sansPlanning' => (int) ($gM['sansPlanning'] ?? 0)]; } }
     $jours = []; $manque = 0;
     for ($d = $du; $d <= $fin; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
         $g = $d <= $clos ? setting('dsJ:' . $id . ':' . $d) : null;
@@ -92,17 +94,20 @@ function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $
         if ($budget > 0) { $jours[] = $d; $budget--; } else { $manque++; }
     }
     $r = $jours === [] ? [] : (resJoursPanel([$id], $jours, $auj)[$id] ?? []);
-    $lab = 0.0; $oh = 0.0; $n = 0;
+    $lab = 0.0; $oh = 0.0; $n = 0; $sansPl = 0;
     foreach ($jours as $d) {
         $x = $r[$d] ?? null;
-        if ($x === null || $x['lab'] === null) { $manque++; continue; }
-        $lab += (float) $x['lab']; $oh += (float) ($x['oh'] ?? 0); $n++;
+        if ($x === null || ($x['lab'] === null && ($x['ca'] ?? null) === null)) { $manque++; continue; }
+        // Sans planning au panel : un jour sans vente (fermé, avant l'ouverture) compte 0 € ; un jour qui a
+        // vendu laisse la main-d'œuvre du mois inconnue (`sansPlanning`).
+        if ($x['lab'] === null && (float) ($x['ca'] ?? 0) > 0) { $sansPl++; }
+        $lab += (float) ($x['lab'] ?? 0); $oh += (float) ($x['oh'] ?? 0); $n++;
     }
     if ($moisEntier && $manque === 0 && $n > 0) {
-        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cleM, json_encode(['lab' => round($lab, 2), 'oh' => round($oh, 2), 'jours' => $n, 'le' => $auj])]); }
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cleM, json_encode(['lab' => round($lab, 2), 'oh' => round($oh, 2), 'jours' => $n, 'sansPlanning' => $sansPl, 'le' => $auj])]); }
         catch (Throwable $e) { /* sans gravure : la somme se refait */ }
     }
-    return ['lab' => $lab, 'oh' => $oh, 'jours' => $n, 'manque' => $manque];
+    return ['lab' => $lab, 'oh' => $oh, 'jours' => $n, 'manque' => $manque, 'sansPlanning' => $sansPl];
 }
 
 /**

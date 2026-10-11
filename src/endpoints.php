@@ -5970,6 +5970,8 @@ function ep_perf(): array
                 if ($duDs > $aujDs) { continue; }
                 $co = resCoutsPeriode((int) $cDs['storeId'], $duDs, date('Y-m-t', strtotime($duDs)), $budgetDs, $aujDs);
                 if ($co['manque'] > 0 || $co['jours'] === 0) { $cells[$kDs]['coutsManque'] = $co['manque']; continue; }
+                // Des jours vendus sans planning au panel : la main-d'œuvre du mois n'est pas connue, ni la marge nette.
+                if (($co['sansPlanning'] ?? 0) > 0) { $cells[$kDs]['sansPlanning'] = $co['sansPlanning']; $cells[$kDs]['overheadPct'] = round(100 * $co['oh'] / (float) $cDs['ca'], 1); continue; }
                 $caDs = (float) $cDs['ca'];
                 $cells[$kDs]['labourCostPct'] = round(100 * $co['lab'] / $caDs, 1);
                 $cells[$kDs]['overheadPct'] = round(100 * $co['oh'] / $caDs, 1);
