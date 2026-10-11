@@ -5970,6 +5970,13 @@ function ep_perf(): array
                 $pnlP[$sidP] ??= resPnlMensuel($sidP, $deP, $aP);
                 $ym = sprintf('%04d-%02d', (int) $cDs['annee'], (int) $cDs['mois']);
                 $p = $pnlP[$sidP][$ym] ?? null;
+                // Le mois en cours : le P&L mensuel compte les frais (et le planning) du mois entier face au CA à date —
+                // mesuré à Halle le 11/10 : 68,9 % de frais. Le cumul jour par jour à date le remplace.
+                if ($ym === date('Y-m') && function_exists('resCoutsPeriode')) {
+                    $budCur = 12;
+                    $co = resCoutsPeriode($sidP, $ym . '-01', date('Y-m-t'), $budCur, $aujDs);
+                    $p = $co['manque'] === 0 && $co['jours'] > 0 ? ['lab' => $co['lab'], 'oh' => $co['oh']] : null;
+                }
                 if ($p === null || $p['lab'] === null || $p['oh'] === null) { $cells[$kDs]['coutsManque'] = 1; continue; }
                 $cells[$kDs]['labourCostPct'] = round(100 * $p['lab'] / $caDs, 1);
                 $cells[$kDs]['overheadPct'] = round(100 * $p['oh'] / $caDs, 1);
