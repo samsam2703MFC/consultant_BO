@@ -3116,3 +3116,10 @@ Vérifié à 390 et 360 px : aucune page ne défile de côté.
 | CA jour par jour de la semaine | Semaine, les barres | la ligne « Chiffre / obj. » du damier |
 
 Le verdict d'Exploitation se juge toujours sur toutes les mesures. Le bureau ne change pas : `opDuelTable(D, {sansCa})` n'est appelé sans le CA qu'au téléphone.
+
+**Téléphone : La vitrine compacte (11/10/2026).** Dans l'onglet Opérationnel, la carte passe de 672 à 386 px à Halle :
+- les onglets S, M et L tiennent en deux lignes, le niveau puis les alertes. La phrase et la valeur en euros passent dans l'infobulle, la jauge reste au bureau ;
+- chaque section tient sur une ligne : nom, pièces en vitrine, à recuire, état ;
+- la grille des heures ne s'affiche qu'à l'ouverture de la section.
+
+Bureau et tablette inchangés : seuls la branche téléphone d'`opVitrine` et `opArbre` changent, avec du CSS sous 560 px.
