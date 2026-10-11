@@ -180,11 +180,22 @@ function ep_couts_sonde(): array
     $routes = ['costs' => '/costs', 'shop-costs' => '/shops/' . $sid . '/costs', 'shop-costs-mois' => '/shops/' . $sid . '/costs?month=' . $mois,
         'costs-shop' => '/shops/costs/' . $sid, 'owner-costs' => '/shops/' . $sid . '/owner/costs',
         'pnl-mensuel' => '/consultant/shops/' . $sid . '/pnl/monthly?month=' . $mois, 'pnl-mensuel-date' => '/consultant/shops/' . $sid . '/pnl/monthly?date=' . $mois . '-15',
-        'pnl-mensuel-reseau' => '/consultant/shops/pnl/monthly?month=' . $mois, 'pnl-resume' => '/consultant/shops/pnl-summary'];
+        'pnl-mensuel-reseau' => '/consultant/shops/pnl/monthly?month=' . $mois, 'pnl-resume' => '/consultant/shops/pnl-summary',
+        // Les variantes de période (11/10/2026) : le mois demandé, et le P&L mensuel sur une plage.
+        'owner-period' => '/shops/' . $sid . '/owner/costs?period=' . $mois, 'owner-month' => '/shops/' . $sid . '/owner/costs?month=' . $mois,
+        'owner-date' => '/shops/' . $sid . '/owner/costs?date=' . $mois . '-15', 'owner-from' => '/shops/' . $sid . '/owner/costs?from=' . $mois . '-01&to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'shop-costs-period' => '/shops/' . $sid . '/costs?period=' . $mois, 'shop-costs-from' => '/shops/' . $sid . '/costs?date_from=' . $mois . '-01&date_to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'pnl-mensuel-ym' => '/consultant/shops/' . $sid . '/pnl/monthly?from=' . substr($mois, 0, 4) . '-01&to=' . $mois,
+        'pnl-mensuel-dates' => '/consultant/shops/' . $sid . '/pnl/monthly?from=' . substr($mois, 0, 4) . '-01-01&to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'pnl-mensuel-dfdt' => '/consultant/shops/' . $sid . '/pnl/monthly?date_from=' . substr($mois, 0, 4) . '-01-01&date_to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'pnl-mensuel-start' => '/consultant/shops/' . $sid . '/pnl/monthly?start=' . substr($mois, 0, 4) . '-01&end=' . $mois];
     $out['routes'] = [];
     foreach ($routes as $nom => $ch) {
         $r = PanelApi::sondeGet($ch, 20);
-        $out['routes'][$nom] = ['chemin' => $ch, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) ? mb_substr((string) $r['erreur'], 0, 200) : null, 'corps' => $propre($r['corps'] ?? null)];
+        $lst = analyseListe($r['corps'] ?? null); if ($lst === [] && is_array($r['corps']['items'] ?? null)) { $lst = $r['corps']['items']; }
+        $dates = array_values(array_filter(array_map(static fn ($x) => is_array($x) ? substr((string) ($x['date'] ?? ''), 0, 7) : '', $lst)));
+        $out['routes'][$nom] = ['chemin' => $ch, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) ? mb_substr((string) $r['erreur'], 0, 200) : null,
+            'n' => $lst !== [] ? count($lst) : null, 'moisVus' => $dates !== [] ? array_count_values($dates) : null, 'corps' => $propre($r['corps'] ?? null)];
     }
     // 3. Une ligne de coût par identifiant, la première de la liste.
     $l = analyseListe($out['routes']['costs']['corps'] ?? null);
