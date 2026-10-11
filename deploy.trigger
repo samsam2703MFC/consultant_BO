@@ -741,3 +741,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-11T12:19:58Z retirer trois lignes du dashboard
 2026-10-11T12:51:19Z tickets et commandes
 2026-10-11T13:21:09Z fiche produit sans source ni note du coefficient
+2026-10-11T13:23:46Z fiche produit sans paliers, pastilles rectangulaires
