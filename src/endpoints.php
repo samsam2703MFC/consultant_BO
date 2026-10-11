@@ -6027,6 +6027,31 @@ function ep_perf(): array
             }
         }
 
+        // 2quater) MAIN-D'ŒUVRE, FRAIS GÉNÉRAUX ET MARGE NETTE de chaque mois (11/10/2026) : le résumé
+        //       quotidien du panel jour par jour (resCoutsPeriode : employee_cost, shop_cost), la même
+        //       source que le P&L du jour, de la semaine et du mois. Le P&L mensuel partagé ne portait que
+        //       juillet et août (août : frais généraux à 111,9 % du CA). Marge nette = CA − food cost −
+        //       main-d'œuvre − frais généraux. 120 lectures au plus par requête ; un mois dont des jours
+        //       manquent encore reste vide (`coutsManque`) et se complète au cron (resCoutsMoisson).
+        if (PanelApi::configured() && function_exists('resCoutsPeriode')) {
+            $budgetDs = 120; $aujDs = date('Y-m-d'); $yDs = max($annees);
+            foreach ($cells as $kDs => $cDs) {
+                if ((int) $cDs['annee'] !== $yDs || !(((float) ($cDs['ca'] ?? 0)) > 0)) { continue; }
+                $duDs = sprintf('%04d-%02d-01', $yDs, (int) $cDs['mois']);
+                if ($duDs > $aujDs) { continue; }
+                $co = resCoutsPeriode((int) $cDs['storeId'], $duDs, date('Y-m-t', strtotime($duDs)), $budgetDs, $aujDs);
+                if ($co['manque'] > 0 || $co['jours'] === 0) { $cells[$kDs]['coutsManque'] = $co['manque']; continue; }
+                $caDs = (float) $cDs['ca'];
+                $cells[$kDs]['labourCostPct'] = round(100 * $co['lab'] / $caDs, 1);
+                $cells[$kDs]['overheadPct'] = round(100 * $co['oh'] / $caDs, 1);
+                $fcDs = $cells[$kDs]['foodCostPct'] ?? null;
+                $netDs = $fcDs !== null ? $caDs * (1 - (float) $fcDs / 100) - $co['lab'] - $co['oh'] : null;
+                $cells[$kDs]['margeNette'] = $netDs !== null ? round($netDs, 2) : null;
+                $cells[$kDs]['margePct'] = $netDs !== null ? round($netDs / $caDs, 4) : null;
+                $cells[$kDs]['coutsSource'] = 'panel, jour par jour';
+            }
+        }
+
         // 3) Le BUDGET encodé (`ceo_shop_month_perf`) — table du cockpit, la
         //    seule qui le porte. Ni `mac_shop_monthly_pnl` ni `transaction` ne
         //    connaissent le budget : sans cette passe, l'encodage était écrit
