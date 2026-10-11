@@ -1315,8 +1315,6 @@ body.pp-emb{background:var(--color-bg)}
 .op-mini .k .vd.ok{background:#2d7a3e}.op-mini .k .vd.att{background:#D97706}.op-mini .k .vd.ko{background:#C0182B}
 .op-mini .v{font-family:var(--font-display);font-size:22px;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .op-mini .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.4}
-.op-renvoi{margin:14px 0 0;font-size:11px;color:var(--color-text-muted);text-align:center}
-.op-renvoi .db-lien{border:none;background:none;cursor:pointer;font:600 11px var(--font-ui);padding:0}
 @media (max-width:1150px){.op-mnt{grid-template-columns:repeat(3,minmax(0,1fr))}.op-deux,.op-jr{grid-template-columns:1fr}.op-mini4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .op-tb th:nth-child(2),.op-tb td:nth-child(2),.op-tb th:nth-child(7),.op-tb td:nth-child(7){text-align:left}
 .op-tb td:nth-child(2){font-weight:500;color:var(--color-text-muted)}
@@ -1356,7 +1354,6 @@ body.pp-emb{background:var(--color-bg)}
 .op-large{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .op-mob .op-mini4{grid-template-columns:1fr 1fr;gap:8px;margin-top:0}
 .op-mob .op-mini .v{font-size:18px;white-space:normal}
-.op-mob .op-renvoi .db-lien{font-size:11px}
 
 /* La vitrine selon la durée de vie (demande du 06/10/2026) : trois onglets, le niveau de chacun. */
 /* La vitrine, maquette E (10/10/2026) : badges de filtre, une liste par durée de vie, la journée en cases */

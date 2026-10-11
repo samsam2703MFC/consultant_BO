@@ -2669,7 +2669,7 @@
     const sous = mode === 'tk'
       ? `le cumul des clients ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', la référence des mêmes jours en pointillé' : ''}`
       : `le cumul ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', jusqu’à l’objectif' : ''}`;
-    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}<span class="db-mini">${sous}</span><span class="db-mini" style="margin-left:auto">${mode === 'tk' ? 'tickets encaissés, pro compris' : 'ventes encaissées, pro compris'}</span></div>
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}<span class="db-mini">${sous}</span></div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
       <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}<b class="tv"> ${valA}</b></span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})<b class="tv"> ${val7}</b></span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
@@ -2743,10 +2743,9 @@
     // La journée (11/10/2026, compacte) : l'équipe et les cuissons sur une même frise. Les ventes au comptoir heure par heure,
     // un second graphique des heures, restent au bureau.
     h += opJourneeMob(D);
-    // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons).
-    // Le P&L, les ventes par catégorie et les bundles vont dans Exploitation ; les photos, les commandes,
-    // le stock et la poubelle dans Contrôle, qui les avait déjà.
-    h += `<div class="op-renvoi">Le P&amp;L, les ventes par catégorie, les promotions et les portions : <button type="button" class="db-lien" data-mo="exp">Exploitation ›</button><br>Les photos, les commandes, le stock et la poubelle : <button type="button" class="db-lien" data-mo="ctrl">Contrôle ›</button></div>`;
+    // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons). Le P&L, les
+    // ventes par catégorie, les promotions et les portions sont dans Exploitation ; les photos, les commandes, le stock et
+    // la poubelle dans Contrôle. Les onglets du bas y mènent ; plus de ligne de renvoi (11/10/2026).
     return h;
   }
   /**
