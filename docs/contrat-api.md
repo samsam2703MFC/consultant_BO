@@ -3101,3 +3101,18 @@ Les autres réglages du téléphone :
 - la date de l'en-tête est courte : « aujourd’hui · sam. 10 oct. ».
 
 Vérifié à 390 et 360 px : aucune page ne défile de côté.
+
+**Téléphone : une donnée, un seul onglet (11/10/2026).** Le passage du 10/10 laissait des KPI en double d'un onglet à l'autre. Chaque chiffre du jour ne se lit plus qu'à un endroit :
+
+| Donnée | Où | Retiré de |
+|---|---|---|
+| CA face à l'objectif et à J−7 | Opérationnel, la jauge | duel d'Opérationnel, tuile CA d'Exploitation |
+| Clients, panier face à J−7 | Opérationnel, le duel | tuile Clients d'Exploitation |
+| Les heures | Opérationnel, la courbe | ventes au comptoir heure par heure d'Opérationnel, tuile Heure par heure d'Exploitation |
+| Vitrine, équipe, cuissons | Opérationnel, leurs cartes | les quatre tuiles d'Opérationnel |
+| Résultat, matière, main-d'œuvre, coût de la poubelle | Exploitation, le P&L court | tuiles Résultat, Matière, Main-d'œuvre, Invendus |
+| Rang dans le réseau, canaux | Exploitation, deux tuiles | — |
+| Déclaration de la poubelle, photos, contrôles, commandes, stock | Contrôle | — |
+| CA jour par jour de la semaine | Semaine, les barres | la ligne « Chiffre / obj. » du damier |
+
+Le verdict d'Exploitation se juge toujours sur toutes les mesures. Le bureau ne change pas : `opDuelTable(D, {sansCa})` n'est appelé sans le CA qu'au téléphone.

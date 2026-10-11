@@ -1035,7 +1035,11 @@
   function maPageExp(m, d) {
     const T = maTuilesExp(m, d);
     if (!T) { return `<div class="ma-v"><span class="n mu">…</span><span class="t">lecture de la journée<em>le chiffre, les marges, les clients</em></span></div>${squeletteMa(6)}`; }
-    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + maGrille(T);
+    // Une donnée, un seul endroit (11/10/2026) : le verdict se juge sur tout, mais le chiffre, le résultat, la matière, la
+    // main-d'œuvre et la poubelle se lisent dans le P&L court ; les clients et les heures dans Opérationnel. Restent en
+    // tuiles le rang dans le réseau et les canaux, que le P&L ne dit pas.
+    const PJ = jourPieces(m, d, S.st[cleSt()]);
+    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + `<div class="ma-large">${PJ.pnl}</div>` + maGrille(T.filter(t => /^(Réseau|Canaux)/.test(t.k)).map(t => Object.assign({}, t, { w: false })));
     // Les campagnes et les promotions du jour, quand il y en a : leurs cellules et leurs tiroirs.
     const ext = []; murObjectifs().forEach(t => ext.push(murR([t], true))); murPromos().forEach(t => ext.push(murR([t], true)));
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
@@ -1043,8 +1047,7 @@
     if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
     // Le P&L court, les ventes par catégorie (liste, treemap, promotions, portions) et les bundles,
     // venus d'Opérationnel (10/10/2026) : les chiffres de la journée au même endroit.
-    const PJ = jourPieces(m, d, S.st[cleSt()]);
-    h += `<div class="ma-large">${PJ.pnl}</div><div class="ma-large">${PJ.categories}</div><div class="ma-large">${bundlesCarte()}</div>`;
+    h += `<div class="ma-large">${PJ.categories}</div><div class="ma-large">${bundlesCarte()}</div>`;
     return h;
   }
 
@@ -1128,7 +1131,7 @@
     const ligne = (lib, f) => `<tr><td class="l">${lib}</td>${J.map(j => (!j.passe || j.ferme) ? cell('f', j.ferme ? '×' : '·') : f(j)).join('')}</tr>`;
     const auj = j => j.date === AUJ;
     let h = `<div class="ma-dam"><table><tr><th class="l">la semaine</th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date))}</th>`).join('')}</tr>`;
-    h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
+    if (!R.sansChiffre) h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
     const jmLu = !!S.aux['jourM|' + S.date];
     h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net(x.ca ? 100 * x.net / x.ca : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
     h += ligne('Contrôles', j => { const c = X[j.date] && X[j.date].controles; return c ? cell(c.total ? (auj(j) && c.rendus < c.total ? 'o' : MA.ctrl(c.rendus, c.total)) : 'n', c.total ? c.rendus + '/' + c.total : '—') : cell('n', SJ ? '—' : '…'); });
@@ -1149,7 +1152,7 @@
     const em = [R.dessous.length ? 'en dessous : ' + R.dessous.join(', ') : '', R.dessus.length ? 'au-dessus : ' + R.dessus.join(', ') : ''].filter(Boolean).join(' · ') || 'la semaine commence';
     let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’attendu' : 'sur l’attendu à ce jour')}<em>${em}</em></span>`
       + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
-    h += maGrille([ca]) + maDamier(R) + maGrille(reste);
+    h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
     h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
@@ -2663,8 +2666,9 @@
       <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}<b class="tv"> ${valA}</b></span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})<b class="tv"> ${val7}</b></span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
-  function opDuelTable(D) {
+  function opDuelTable(D, opt) {
     const { now, fin, JD, m, ca, tk } = D;
+    const sansCa = !!(opt && opt.sansCa);
     if (!m) { return ''; }
     const B = opDuelBase(D), j7 = B.j7;
     const lblA = fin ? 'cette journée' : 'aujourd’hui · ' + opHM(now);
@@ -2676,7 +2680,7 @@
     const ref = JD && JD.reference ? JD.reference : {};
     const sansJ = !j7 || !j7.moment;
     let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span><span class="db-mini">${sansJ ? 'face à la journée entière de la semaine passée' : 'à la même heure, puis la journée entière de la semaine passée'}</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
-    h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
+    if (!sansCa) h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
     h += ligne('Clients', '', [fN(tk), ''], [j7 ? fN(j7.tickets) : eq, ''], ecart(B.dTk), [j7 && j7.moment ? fN(j7.ticketsJour) : eq, ''], [m.refTickets != null ? fN(m.refTickets) : eq, m.ticketsDelta != null ? fSP(m.ticketsDelta) + ' face à la référence' : '']);
     h += ligne('Panier moyen', '', [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && j7.ticketsJour ? fU(j7.caJour / j7.ticketsJour) : eq, ''], [JD && JD.reseau && JD.reseau.panier ? fU(JD.reseau.panier) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
     // Marge brute, projection et résultat net retirés du duel (10/10/2026) : ils restent dans le P&L court.
@@ -2720,14 +2724,15 @@
   function rendOpsMobile() {
     const D = opDonnees();
     const { now, U, ST, JD, m, prods, cuissons, planning, lienProd } = D;
-    let h = opDuel(D) + `<div class="op-mnt quatre">${opTuiles(D)}</div>` + opDuelTable(D) + opDuelHeures(D);
+    // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
+    // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
+    // cartes du dessous : retirées au téléphone.
+    let h = opDuel(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
     } else { h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini">${S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…'}</span></div><div style="padding:10px 14px">${opSk()}</div></div>`; }
-    // Les heures, puis l'équipe et les cuissons en lignes.
-    const heures = opHeures(D);
-    if (heures) { h += `<div class="db-card op-bloc"><div style="padding:10px 12px">${heures}</div></div>`; }
+    // L'équipe et les cuissons en lignes. Les ventes au comptoir heure par heure, un second graphique des heures, restent au bureau.
     const lg = (cls, a, b, c) => `<div class="op-jl${cls ? ' ' + cls : ''}"><span class="a">${a}</span><span class="b">${b}</span><span class="c">${c}</span></div>`;
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${m && m.planningHeures ? `<span class="db-mini" style="margin-left:auto">${nf(m.planningHeures, 1)} h au planning</span>` : ''}</div><div class="op-jour">
       ${planning.length ? planning.map(p => { const ici = now != null && opMin(p.debut) <= now && now < opMin(p.fin); return lg(ici ? 'ici' : (now != null && opMin(p.fin) <= now ? 'fini' : ''), esc(p.debut) + '–' + esc(p.fin), esc(p.nom || (p.postes || []).join(', ')), ici ? 'en poste' : (now != null && opMin(p.debut) > now ? 'arrive' : '')); }).join('') : `<div class="op-jl"><span class="b mu">${m ? 'pas de planning lu' : 'lecture…'}</span></div>`}
