@@ -5834,6 +5834,7 @@ function ep_perf(): array
     // (la caisse copiée, arrêtée au 14/07). Le budget reste celui du cockpit (`ceo_shop_month_perf`, saisi
     // dans le cockpit, que le panel ne porte pas).
     if (!PanelApi::configured() || $annees === []) { return []; }
+    $in = implode(',', array_fill(0, count($annees), '?'));   // la requête du budget du cockpit
     $ids = [];
     foreach (analyseListe(PanelApi::consultantShops() ?? []) as $sh) { if ((int) ($sh['id'] ?? 0) > 0) { $ids[] = (int) $sh['id']; } }
     if ($ids === []) { return []; }
