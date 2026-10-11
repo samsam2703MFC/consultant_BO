@@ -4900,7 +4900,7 @@ function tplResultatPeriode(c, x){
         ${c.rpReseau ? rang(c.rpReseau) : ''}
       </table>
       </div>
-      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>
+      ${c.rpNote || c.rpInvite ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>` : ''}
     </div>
 
     ${c.rpRentab && c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}
