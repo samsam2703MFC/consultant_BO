@@ -3014,7 +3014,7 @@
         ${A.sansCout.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0"><td>${esc(x.nom)}</td><td class="mu">${esc(x.cat || '')}</td><td class="n">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
         </tbody></table>${A.nSansCout > A.sansCout.length ? `<div class="acp-n">et ${A.nSansCout - A.sansCout.length} autres</div>` : ''}</details></div>`;
     }
-    return `<div class="db-card acp"><div class="ct"><span class="db-lab">À compléter pour des chiffres justes</span><span class="db-mini">ce qui manque dans la caisse et le panel · la ligne « Non ventilé » ci-dessus</span></div><div class="acp-g">${v1}${v2}</div></div>`;
+    return `<div class="db-card acp"><div class="ct"><span class="db-lab">À compléter pour des chiffres justes</span></div><div class="acp-g">${v1}${v2}</div></div>`;
   }
 
   function jourPieces(m, d, st) {
@@ -3057,7 +3057,7 @@
       }
     }
     P.objectif = h; h = '';
-    h = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
+    h = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span></div>${cascade(m, d)}</div>`;
     P.pnl = h; h = '';
     const cats = Array.isArray(m.categories) ? m.categories : [];
     const plan = Array.isArray(m.planning) ? m.planning : [];
@@ -4127,16 +4127,15 @@
     const L = P.regles.filter(r => r.v > 0 || r.r > 0);
     const jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
     const titre = `<div class="op-bun-h"><span>Les promotions</span><span class="db-mini">${L.length ? fU(P.v) + ' · ' + promoPct(tot > 0 ? 100 * P.v / tot : 0) + ' du CA complet' : 'aucune déclenchée ' + jour}</span></div>`;
-    const nonD = (P.autres || []).filter(r => r.statut === 'ACTIVE');
-    const pied = nonD.length ? `<div class="op-bun-nd">Pas déclenchée${nonD.length > 1 ? 's' : ''} : ${nonD.map(r => esc(r.nom)).join(' · ')}</div>` : '';
-    if (!L.length) { return `<div class="op-bun-pr">${titre}${pied}</div>`; }
+    // La ligne « Pas déclenchées : … » est retirée (11/10/2026, demande de Sam).
+    if (!L.length) { return `<div class="op-bun-pr">${titre}</div>`; }
     const lignes = L.map(r => {
       const cats = Object.entries(parCat[r.id] || {}).sort((a, b) => b[1] - a[1]);
       return `<tr><td><b><i class="pr-pd" style="background:${coul[r.id]}"></i>${esc(r.nom)}</b><small>${esc(r.texte || '')}</small></td><td class="n">${fN(r.fois)}<span class="u">×</span></td><td class="n">${fU(r.v)}</td>
         <td class="n"><b>${promoPct(tot > 0 ? 100 * r.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats">${cats.map(([c, v]) => `<span>${esc(c)} <b>${promoPct(caCat[c] > 0 ? 100 * v / caCat[c] : 0)}</b></span>`).join('')}</td></tr>`;
     }).join('');
     return `<div class="op-bun-pr">${titre}<div class="op-large"><table class="db-pro-tab op-bun-tab op-bun-ptab"><thead><tr><th>Promotion</th><th class="n">Fois</th><th class="n">Ventes</th><th class="n" title="ventes de la promotion ÷ CA complet de la journée">Poids CA</th><th title="ventes de la promotion dans la catégorie ÷ CA de la catégorie">Poids par catégorie</th></tr></thead><tbody>${lignes}</tbody>
-      <tfoot><tr><td><b>Toutes les promotions</b><small>${fN(P.tickets || 0)} ticket${P.tickets > 1 ? 's' : ''} · remises −${fU(P.r)}</small></td><td class="n">${fN(L.reduce((a, r) => a + r.fois, 0))}<span class="u">×</span></td><td class="n">${fU(P.v)}</td><td class="n"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats"></td></tr></tfoot></table></div>${pied}</div>`;
+      <tfoot><tr><td><b>Toutes les promotions</b><small>${fN(P.tickets || 0)} ticket${P.tickets > 1 ? 's' : ''} · remises −${fU(P.r)}</small></td><td class="n">${fN(L.reduce((a, r) => a + r.fois, 0))}<span class="u">×</span></td><td class="n">${fU(P.v)}</td><td class="n"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats"></td></tr></tfoot></table></div></div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
   function planningSecteurs(plan, hMin, hMax) {
@@ -4234,7 +4233,7 @@
         <div class="db-perleg"><span class="cal-q">Couleur et jauge = ${X.leg}</span>${leg}<span><i class="cal-tr"></i>le trait : 100 % de l’objectif</span><span>hachuré : la journée en cours, pas encore jugée</span></div></div>`;
     }
     // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
-    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
+    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span></div>${cascade(m, d)}</div>`;
     let prof = '';
     if (!sem && passes.length) {
       const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
