@@ -201,7 +201,13 @@ function ep_ventes_tickets(): array
 function vtFicheClient(mixed $r): array
 {
     if (!is_array($r)) { return ['lue' => false]; }
-    $f = isset($r['data']) && is_array($r['data']) && !array_is_list($r['data']) ? $r['data'] : $r;
+    $f0 = isset($r['data']) && is_array($r['data']) && !array_is_list($r['data']) ? $r['data'] : $r;
+    // La fiche du panel se range en blocs (`client`, `profile`, mesuré à Halle le 11/10) : un niveau se déplie, « bloc.champ ».
+    $f = [];
+    foreach ($f0 as $k => $v) {
+        if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (!is_array($v2)) { $f[$k . '.' . $k2] = $v2; } } }
+        elseif (!is_array($v)) { $f[(string) $k] = $v; }
+    }
     $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'cles' => array_keys($f)];
     foreach ($f as $k => $v) {
         if (!is_scalar($v) || is_bool($v) || $v === '') { continue; }
