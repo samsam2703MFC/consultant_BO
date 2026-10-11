@@ -5955,32 +5955,34 @@ function ep_perf(): array
             }
         }
 
-        // 2quater) MAIN-D'ŒUVRE, FRAIS GÉNÉRAUX ET MARGE NETTE de chaque mois (11/10/2026) : le résumé
-        //       quotidien du panel jour par jour (resCoutsPeriode : employee_cost, shop_cost), la même
-        //       source que le P&L du jour, de la semaine et du mois. Le P&L mensuel partagé ne portait que
-        //       juillet et août (août : frais généraux à 111,9 % du CA). Marge nette = CA − food cost −
-        //       main-d'œuvre − frais généraux. 120 lectures au plus par requête ; un mois dont des jours
-        //       manquent encore reste vide (`coutsManque`) et se complète au cron (resCoutsMoisson).
-        if (PanelApi::configured() && function_exists('resCoutsPeriode')) {
-            $budgetDs = 120; $aujDs = date('Y-m-d');
-            // L'année la plus récente d'abord : c'est elle que le tableau « mois par mois » montre.
-            uasort($cells, static fn ($a2, $b2) => [$b2['annee'], $b2['mois']] <=> [$a2['annee'], $a2['mois']]);
+        // 2quater) MAIN-D'ŒUVRE, FRAIS GÉNÉRAUX ET MARGE NETTE de chaque mois (11/10/2026) : le P&L mensuel du panel
+        //       (resPnlMensuel : /consultant/shops/{id}/pnl/monthly?from=&to=, un appel par magasin, 24 mois au plus).
+        //       Marge nette = CA − food cost − main-d'œuvre − frais généraux. Les jours vendus sans planning au panel
+        //       (relevé jour par jour déjà gravé par le cron, sans appel ici) se signalent : `sansPlanning`, la
+        //       main-d'œuvre du panel y est incomplète.
+        if (PanelApi::configured() && function_exists('resPnlMensuel')) {
+            $deP = min($annees) . '-01'; $aP = min(max($annees) . '-12', date('Y-m'));
+            $aujDs = date('Y-m-d'); $zeroDs = 0; $pnlP = [];
             foreach ($cells as $kDs => $cDs) {
-                if (!in_array((int) $cDs['annee'], $annees, true) || !(((float) ($cDs['ca'] ?? 0)) > 0)) { continue; }
-                $duDs = sprintf('%04d-%02d-01', (int) $cDs['annee'], (int) $cDs['mois']);
-                if ($duDs > $aujDs) { continue; }
-                $co = resCoutsPeriode((int) $cDs['storeId'], $duDs, date('Y-m-t', strtotime($duDs)), $budgetDs, $aujDs);
-                if ($co['manque'] > 0 || $co['jours'] === 0) { $cells[$kDs]['coutsManque'] = $co['manque']; continue; }
-                // Des jours vendus sans planning au panel : la main-d'œuvre du mois n'est pas connue, ni la marge nette.
-                if (($co['sansPlanning'] ?? 0) > 0) { $cells[$kDs]['sansPlanning'] = $co['sansPlanning']; $cells[$kDs]['overheadPct'] = round(100 * $co['oh'] / (float) $cDs['ca'], 1); continue; }
-                $caDs = (float) $cDs['ca'];
-                $cells[$kDs]['labourCostPct'] = round(100 * $co['lab'] / $caDs, 1);
-                $cells[$kDs]['overheadPct'] = round(100 * $co['oh'] / $caDs, 1);
+                $caDs = (float) ($cDs['ca'] ?? 0);
+                if (!in_array((int) $cDs['annee'], $annees, true) || $caDs <= 0) { continue; }
+                $sidP = (int) $cDs['storeId'];
+                $pnlP[$sidP] ??= resPnlMensuel($sidP, $deP, $aP);
+                $ym = sprintf('%04d-%02d', (int) $cDs['annee'], (int) $cDs['mois']);
+                $p = $pnlP[$sidP][$ym] ?? null;
+                if ($p === null || $p['lab'] === null || $p['oh'] === null) { $cells[$kDs]['coutsManque'] = 1; continue; }
+                $cells[$kDs]['labourCostPct'] = round(100 * $p['lab'] / $caDs, 1);
+                $cells[$kDs]['overheadPct'] = round(100 * $p['oh'] / $caDs, 1);
                 $fcDs = $cells[$kDs]['foodCostPct'] ?? null;
-                $netDs = $fcDs !== null ? $caDs * (1 - (float) $fcDs / 100) - $co['lab'] - $co['oh'] : null;
+                $netDs = $fcDs !== null ? $caDs * (1 - (float) $fcDs / 100) - $p['lab'] - $p['oh'] : null;
                 $cells[$kDs]['margeNette'] = $netDs !== null ? round($netDs, 2) : null;
                 $cells[$kDs]['margePct'] = $netDs !== null ? round($netDs / $caDs, 4) : null;
-                $cells[$kDs]['coutsSource'] = 'panel, jour par jour';
+                $cells[$kDs]['coutsSource'] = 'P&L mensuel du panel';
+                if (function_exists('resCoutsPeriode')) {
+                    $duDs = $ym . '-01';
+                    $co = resCoutsPeriode($sidP, $duDs, date('Y-m-t', strtotime($duDs)), $zeroDs, $aujDs);
+                    if (($co['sansPlanning'] ?? 0) > 0) { $cells[$kDs]['sansPlanning'] = $co['sansPlanning']; }
+                }
             }
         }
 
