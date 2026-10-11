@@ -3123,3 +3123,22 @@ Le verdict d'Exploitation se juge toujours sur toutes les mesures. Le bureau ne 
 - la grille des heures ne s'affiche qu'à l'ouverture de la section.
 
 Bureau et tablette inchangés : seuls la branche téléphone d'`opVitrine` et `opArbre` changent, avec du CSS sous 560 px.
+
+**Téléphone : La journée compacte (11/10/2026).** Dans l'onglet Opérationnel, `opJourneeMob` remplace les lignes une à une par une frise de la journée. La carte passe de 302 à 195–210 px à Halle.
+
+- **L'équipe :** une barre fine par personne au planning, le nom dedans :
+  - vert : en poste ;
+  - gris : a fini ;
+  - cadre : arrive plus tard ;
+  - bleu gris : un jour passé.
+- **Le trait rouge :** l'heure actuelle.
+- **Les cuissons :** un repère à l'heure du four sous la frise, puis une ligne de pastilles « 05:15 Matin 897 ». La couleur dit l'état :
+  - vert : validée ;
+  - orange : à valider ;
+  - cadre : à venir.
+
+  Seule la prochaine cuisson dit dans combien de temps elle part.
+- **L'en-tête :** les heures au planning et le nombre de personnes en poste.
+- **Le détail :** les heures exactes, les pièces et la plage de cuisson sont dans l'infobulle.
+
+Le bureau et la tablette gardent leurs cartes.
