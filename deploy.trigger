@@ -744,3 +744,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-11T13:23:46Z fiche produit sans paliers, pastilles rectangulaires
 2026-10-11T13:29:11Z couts du panel jour par jour
 2026-10-11T13:32:39Z perf API seule
+2026-10-11T13:44:07Z jours sans planning
