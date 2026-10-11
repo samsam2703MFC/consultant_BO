@@ -137,7 +137,7 @@ function ep_ventes_tickets(): array
     if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
-    $ids = []; $pro = []; $svc = []; $cpt = []; $nJour = 0;
+    $ids = []; $pro = []; $svc = []; $cpt = []; $cid = []; $nJour = 0;
     foreach (analyseListe($liste) as $t) {
         $id = (int) ($t['id'] ?? 0);
         if ($id <= 0) { continue; }
@@ -146,6 +146,7 @@ function ep_ventes_tickets(): array
         if ($service !== null && $svc[$id] !== $service) { continue; }
         $aClient = !empty($t['id_client']) && (string) $t['id_client'] !== '0';
         if ($client && !$aClient) { continue; }
+        if ($aClient) { $cid[$id] = (string) $t['id_client']; }
         $cpt[$id] = ['client' => $aClient, 'facture' => !empty($t['will_be_invoiced']), 'differe' => !empty($t['deferral_payment'])];
         $ids[] = $id; if (!empty($t['is_client_b2b'])) { $pro[$id] = true; }
     }
@@ -175,7 +176,54 @@ function ep_ventes_tickets(): array
         }
     }
     usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
-    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'client' => $client, 'ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
+    // La fiche du client (11/10/2026), avec ?client=1 : un numéro de TVA y est-il, est-il valide, la fiche est-elle
+    // marquée pro. Une lecture par client, en parallèle. Rien d'autre ne sort de la fiche : ni nom, ni numéro.
+    $clesFiche = [];
+    if ($client && $cid !== []) {
+        $chemins = [];
+        foreach (array_unique(array_values($cid)) as $c) { $chemins[$c] = '/shops/' . $sid . '/clients/' . rawurlencode($c); }
+        $res = PanelApi::getParallele($chemins, 6);
+        $fiche = [];
+        foreach ($chemins as $c => $p) { $fiche[$c] = vtFicheClient($res[$c] ?? null); $clesFiche += array_flip($fiche[$c]['cles'] ?? []); }
+        foreach ($tickets as &$tk) { if (isset($cid[$tk['id']])) { $f = $fiche[$cid[$tk['id']]]; unset($f['cles']); $tk['fiche'] = $f; } }
+        unset($tk);
+    }
+    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'client' => $client] + ($clesFiche !== [] ? ['champsFiche' => array_keys($clesFiche)] : []) + ['ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
+}
+
+/**
+ * Ce qu'on garde d'une fiche client du panel (11/10/2026) : la TVA présente ou non, valide ou non, le pays de son
+ * préfixe, et le drapeau pro de la fiche. Jamais le nom, l'adresse ni le numéro. `cles` = les noms des champs de la
+ * fiche (pour savoir où le panel range la TVA), retirés avant de sortir ticket par ticket.
+ * Validité : un numéro belge (BE + 10 chiffres, 0 ou 1 en tête) se vérifie par sa clé modulo 97 ; un autre pays de
+ * l'UE n'est vérifié que sur sa forme (`valide` null).
+ */
+function vtFicheClient(mixed $r): array
+{
+    if (!is_array($r)) { return ['lue' => false]; }
+    $f = isset($r['data']) && is_array($r['data']) && !array_is_list($r['data']) ? $r['data'] : $r;
+    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'cles' => array_keys($f)];
+    foreach ($f as $k => $v) {
+        if (!is_scalar($v) || is_bool($v) || $v === '') { continue; }
+        if (preg_match('/vat|tva|btw|tax_?(number|id|no|code)|company_?number|enterprise_?number|\bkbo\b|\bbce\b/i', (string) $k) && !preg_match('/rate|taux|regime|exempt|valid|verified|checked|_at$/i', (string) $k)) {
+            $n = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $v));
+            if (strlen($n) < 8) { continue; }   // un drapeau (0, 1) ou un code de régime, pas un numéro
+            $out['tva'] = true;
+            if (preg_match('/^\d{9,10}$/', $n)) { $n = 'BE' . str_pad($n, 10, '0', STR_PAD_LEFT); }
+            $out['pays'] = preg_match('/^[A-Z]{2}/', $n) ? substr($n, 0, 2) : null;
+            if ($out['pays'] === 'BE') {
+                $d = substr($n, 2);
+                $out['valide'] = preg_match('/^[01]\d{9}$/', $d) === 1 && 97 - ((int) substr($d, 0, 8) % 97) === (int) substr($d, 8, 2);
+            } elseif ($out['pays'] !== null) {
+                $out['valide'] = preg_match('/^[A-Z]{2}[A-Z0-9]{8,12}$/', $n) === 1 ? null : false;
+            } else { $out['valide'] = false; }
+            break;
+        }
+    }
+    foreach ($f as $k => $v) {
+        if (preg_match('/b2b|is_?pro|professional|is_?company|is_?business/i', (string) $k) && (is_bool($v) || $v === 0 || $v === 1 || $v === '0' || $v === '1')) { $out['pro'] = (bool) $v; break; }
+    }
+    return $out;
 }
 
 /**
