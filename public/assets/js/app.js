@@ -10288,11 +10288,11 @@ class App {
     // l'ont passé, et il y en a au moins deux — un seul magasin n'est pas un
     // réseau, et la fête serait celle de sa propre ligne.
     common.rpTous = tousAtteints(common.rpLignes);
-    common.rpNote = r.source || '';
+    common.rpNote = '';
     common.rpEntetes = vue === 'semaine'
       ? ['Magasin', 'Objectif', 'Réalisé', 'Comptoir', 'Pro B2B', 'Attendu à ce jour', 'Écart', 'Clients manquants']
       : ['Magasin', 'Budget', 'Ventes', 'Comptoir', 'Pro B2B', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
-    common.rpInvite = !sel ? 'Ouvrez une ligne : ce qu’il manque et en combien de clients, ce qu’il faut pour tenir l’objectif, le compte de résultat, et le mois du magasin.' : '';
+    common.rpInvite = '';
     // Le résultat net jour par jour (le panel ne le sert que pour le mois en
     // cours) se lit ici, mais ne s'affiche que dans le drop du magasin : la
     // page reste une table, le détail vit dans la ligne qu'on ouvre. Et le
@@ -10661,9 +10661,7 @@ class App {
 
     // Aucune ventilation sur la page elle-même : les treemaps ne vivent que
     // dans le détail qu'on ouvre. La page reste une table, lisible d'un trait.
-    common.rjInvite = (!magSel && ouverts.length)
-      ? 'Ouvrez une ligne du tableau pour le compte de résultat du magasin, sa ventilation par catégorie et la place du jour dans son mois.'
-      : '';
+    common.rjInvite = '';
 
     common.rjEchelle = [['#C0182B', '≤ -15 %'], ['#D97706', '-15 à -3 %'], ['#C9A227', 'stable'],
       ['#5f9e5f', '+3 à +15 %'], ['#2d7a3e', '≥ +15 %'], ['#B9B2A8', 'sans référence']]
