@@ -2983,21 +2983,25 @@
     const ecart = m && m.ca != null ? m.ca - somme : null;
     const lignes = (A.lignes || []).filter(x => x.type === 'ligne'), tickets = (A.lignes || []).filter(x => x.type === 'ticket');
     const reste = ecart != null ? ecart - (A.caLignes || 0) - (A.caTickets || 0) : null;
-    const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5);
+    // Ce qui reste une fois les lignes sans produit et les remises sur ticket comptées, ce sont des tickets passés depuis
+    // la dernière lecture (11/10/2026) : rien à rattacher dans la caisse. Ils ne montrent pas la carte à eux seuls.
+    const nonLus = A.detail && m && m.tickets != null && A.ticketsLus != null ? Math.max(0, m.tickets - A.ticketsLus) : null;
+    const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5 || A.detail);
     // Rien à compléter : pas de carte (10/10/2026), elle ne se montre que quand quelque chose ne va pas.
     if (rien) { return ''; }
     const hm = x => (x.mn || '') + (x.j && x.j !== S.date ? ' · ' + fD(x.j) : '');
     // Ouverte ou fermée, la liste le reste quand la page se relit (S.cOuv).
     const ouvre = (k, n) => (S.cOuv['acp:' + k] != null ? S.cOuv['acp:' + k] : n <= 8) ? ' open' : '';
     let v1 = '';
-    if (ecart != null && Math.abs(ecart) >= 0.5 || lignes.length || tickets.length) {
+    if (ecart != null && Math.abs(ecart) >= 0.5 && !A.detail || lignes.length || tickets.length) {
       const det = !A.detail ? '<div class="acp-n">Le détail de ce jour se lit à la prochaine ouverture de la page.</div>'
         : `<details data-acpo="l"${ouvre('l', lignes.length + tickets.length)}><summary>${lignes.length} ligne${lignes.length > 1 ? 's' : ''} sans produit${tickets.length ? ' · ' + tickets.length + ' remise' + (tickets.length > 1 ? 's' : '') + ' sur ticket' : ''}</summary>
           <table class="db-pro-tab acp-t"><thead><tr><th>Heure</th><th>Libellé de caisse</th><th class="n">Qté</th><th class="n">Montant</th></tr></thead><tbody>
           ${lignes.concat(tickets).map(x => `<tr class="${x.type === 'ticket' ? 'tk' : ''}"><td>${esc(hm(x))}</td><td>${esc(x.nom)}</td><td class="n">${x.q ? nf(x.q, x.q % 1 ? 1 : 0) : ''}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
           </tbody></table></details>`;
-      v1 = `<div class="acp-v"><div class="k">Ventes sans produit</div><div class="b">${ecart != null ? fE(ecart) : fE((A.caLignes || 0) + (A.caTickets || 0))}</div>
-        <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${reste != null && A.detail && Math.abs(reste) >= 0.5 ? ' · ' + fU(reste) + ' d’arrondis ou de tickets pas encore lus' : ''}</div>${det}</div>`;
+      const lu = reste != null && A.detail && reste >= 0.5 ? ' · ' + fU(reste) + ' de ' + (nonLus ? nonLus + ' ticket' + (nonLus > 1 ? 's' : '') : 'tickets') + ' pas encore lu' + (nonLus > 1 || !nonLus ? 's' : '') + (A.luA ? ', dernière lecture à ' + A.luA : '') : '';
+      v1 = `<div class="acp-v"><div class="k">Ventes sans produit</div><div class="b">${fU(A.detail || ecart == null ? (A.caLignes || 0) + (A.caTickets || 0) : ecart)}</div>
+        <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${lu}</div>${det}</div>`;
     }
     let v2 = '';
     if ((A.sansCout || []).length) {
@@ -3066,7 +3070,7 @@
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
       : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span><span class="db-mini">${S.cVue === 'portion' && parMarge ? 'les catégories qui vendent en portions · barre : en pièces entières, par taille · reste : la dernière pièce coupée' : S.cVue === 'promo' && parMarge ? 'groupe › catégorie › produit › promotion · barre et pastille : part du CA vendue en promotion' : (S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA') + ' · couleur : ' + (parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence')}</span></div>
-      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -3935,8 +3939,13 @@
     const sommeM = parMarge ? cats.reduce((t, c) => t + (c.m == null ? 0 : c.m), 0) : null;
     const totM = R ? R.m : sommeM;
     const ecCa = R ? R.ca - somme : 0, ecM = R ? R.m - sommeM : 0;
-    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${(() => { const nS = cats.reduce((t, c) => t + (c.nSans || 0), 0), vS = cats.reduce((t, c) => t + (c.vSans || 0), 0);
-      return nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' + (Math.abs(ecCa) >= 0.5 ? ' · lignes sans produit, remises' : '') : 'lignes de caisse sans produit, remises, arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
+    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, tickets pas encore lus, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${(() => { const nS = cats.reduce((t, c) => t + (c.nSans || 0), 0), vS = cats.reduce((t, c) => t + (c.vSans || 0), 0);
+      // Ce que l'écart de CA contient (11/10/2026) : les lignes sans produit et les remises sur ticket des relevés, le reste
+      // ce sont des tickets passés depuis la dernière lecture.
+      const A = R.A, cL = A && A.detail ? (A.caLignes || 0) + (A.caTickets || 0) : null;
+      const quoi = Math.abs(ecCa) < 0.5 ? '' : cL == null ? 'lignes sans produit, remises, tickets pas encore lus'
+        : [Math.abs(cL) >= 0.5 ? 'lignes sans produit, remises' : '', ecCa - cL >= 0.5 ? 'tickets pas encore lus' + (A.luA ? ' (lecture de ' + A.luA + ')' : '') : ''].filter(Boolean).join(', ');
+      return [nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' : '', quoi].filter(Boolean).join(' · ') || 'arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
     const pied = ecart + `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? (R ? fP(100 * totM / tot) : fP0(100 * totM / tot)) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
     return `<div class="db-acc">${entete}${rows}${pied}</div>`;
   }
