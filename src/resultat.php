@@ -130,6 +130,69 @@ function resCoutsMoisson(int $budget = 400): array
     return ['ok' => true, 'lectures' => $lus - $budget, 'joursRestants' => $restants];
 }
 
+/**
+ * GET /exploitation/couts/sonde?shop=4[&mois=2026-09] (11/10/2026) — les routes de coûts du panel, en lecture seule :
+ * leur contrat Swagger (résumé, paramètres, champs de la réponse) et ce qu'elles rendent pour un magasin
+ * (/costs, /costs/{id}, /shops/{id}/costs, /shops/costs/{id}, /shops/{id}/owner/costs, /consultant/shops/{id}/pnl/monthly,
+ * /consultant/shops/pnl/monthly, /consultant/shops/pnl-summary). Ni mot de passe, ni jeton, ni coordonnées.
+ */
+function ep_couts_sonde(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 4);
+    $mois = preg_match('/^\d{4}-\d{2}$/', (string) ($_GET['mois'] ?? '')) ? (string) $_GET['mois'] : date('Y-m', strtotime('first day of last month'));
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    @set_time_limit(90);
+    $propre = static function ($v, int $n = 0) use (&$propre) {
+        if (!is_array($v)) { return $v; }
+        $o = []; $i = 0;
+        foreach ($v as $k => $x) {
+            if (is_string($k) && preg_match('/pass|secret|token|mail|phone|iban|bic|bank|street|address|zip|first_?name|last_?name|surname|login|contact|birth|national/i', $k)) { continue; }
+            if (array_is_list($v) && ++$i > 15) { $o[] = '… ' . (count($v) - 15) . ' de plus'; break; }
+            $o[$k] = is_array($x) ? ($n > 5 ? '[…]' : $propre($x, $n + 1)) : $x;
+        }
+        return $o;
+    };
+    // 1. Le contrat Swagger des routes de coûts.
+    $doc = PanelApi::sondeGet('/../swagger/openapi.json', 25);
+    $spec = is_array($doc['corps'] ?? null) ? $doc['corps'] : [];
+    $schemas = is_array($spec['components']['schemas'] ?? null) ? $spec['components']['schemas'] : [];
+    $champs = static function ($sch, int $n = 0) use (&$champs, $schemas) {
+        if (!is_array($sch) || $n > 3) { return null; }
+        if (isset($sch['$ref']) && preg_match('#/([^/]+)$#', (string) $sch['$ref'], $m)) { return [$m[1] => $champs($schemas[$m[1]] ?? null, $n + 1)]; }
+        if (($sch['type'] ?? '') === 'array') { return ['[]' => $champs($sch['items'] ?? null, $n + 1)]; }
+        if (isset($sch['properties']) && is_array($sch['properties'])) { $o = []; foreach ($sch['properties'] as $k => $p) { $o[$k] = is_array($p) && (isset($p['properties']) || isset($p['$ref']) || ($p['type'] ?? '') === 'array') ? $champs($p, $n + 1) : ($p['type'] ?? '?'); } return $o; }
+        foreach (['allOf', 'oneOf', 'anyOf'] as $c) { if (isset($sch[$c]) && is_array($sch[$c])) { return array_map(static fn ($x) => $champs($x, $n + 1), $sch[$c]); } }
+        return $sch['type'] ?? null;
+    };
+    $out = ['shop' => $sid, 'mois' => $mois, 'swagger' => []];
+    foreach ((array) ($spec['paths'] ?? []) as $ch => $ops) {
+        if (!preg_match('#/costs|pnl/monthly|pnl-summary|owner/costs#', (string) $ch) || !is_array($ops)) { continue; }
+        foreach ($ops as $m => $op) {
+            if (!is_array($op)) { continue; }
+            $rep = $op['responses']['200']['content']['application/json']['schema'] ?? null;
+            $out['swagger'][strtoupper((string) $m) . ' ' . $ch] = ['resume' => $op['summary'] ?? ($op['description'] ?? null),
+                'parametres' => array_map(static fn ($p) => is_array($p) ? ($p['name'] ?? '?') . ' (' . ($p['in'] ?? '?') . (!empty($p['required']) ? ', requis' : '') . ')' : $p, (array) ($op['parameters'] ?? [])),
+                'corps' => isset($op['requestBody']) ? $champs($op['requestBody']['content']['application/json']['schema'] ?? null) : null,
+                'reponse' => $champs($rep)];
+        }
+    }
+    // 2. Ce que les routes de lecture rendent pour ce magasin (GET seulement).
+    $routes = ['costs' => '/costs', 'shop-costs' => '/shops/' . $sid . '/costs', 'shop-costs-mois' => '/shops/' . $sid . '/costs?month=' . $mois,
+        'costs-shop' => '/shops/costs/' . $sid, 'owner-costs' => '/shops/' . $sid . '/owner/costs',
+        'pnl-mensuel' => '/consultant/shops/' . $sid . '/pnl/monthly?month=' . $mois, 'pnl-mensuel-date' => '/consultant/shops/' . $sid . '/pnl/monthly?date=' . $mois . '-15',
+        'pnl-mensuel-reseau' => '/consultant/shops/pnl/monthly?month=' . $mois, 'pnl-resume' => '/consultant/shops/pnl-summary'];
+    $out['routes'] = [];
+    foreach ($routes as $nom => $ch) {
+        $r = PanelApi::sondeGet($ch, 20);
+        $out['routes'][$nom] = ['chemin' => $ch, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) ? mb_substr((string) $r['erreur'], 0, 200) : null, 'corps' => $propre($r['corps'] ?? null)];
+    }
+    // 3. Une ligne de coût par identifiant, la première de la liste.
+    $l = analyseListe($out['routes']['costs']['corps'] ?? null);
+    $id = is_array($l[0] ?? null) ? ($l[0]['id'] ?? null) : null;
+    if ($id !== null) { $r = PanelApi::sondeGet('/costs/' . rawurlencode((string) $id), 20); $out['routes']['cost-' . $id] = ['chemin' => '/costs/' . $id, 'code' => $r['code'] ?? null, 'corps' => $propre($r['corps'] ?? null)]; }
+    return $out;
+}
+
 function exPeriodeCalcul(): array
 {
     $auj  = date('Y-m-d');
