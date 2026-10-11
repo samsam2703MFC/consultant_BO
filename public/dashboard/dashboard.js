@@ -3694,13 +3694,8 @@
     const serre = typeof matchMedia === 'function' && matchMedia('(max-width:700px)').matches ? 27 : 17;
     reperes.forEach((r, i) => { if (i > 0 && pct(r.v) - pct(reperes[i - 1].v) < serre && !/\bh2\b/.test(reperes[i - 1].cls || '')) { r.cls = ((r.cls || '') + ' h2').trim(); } });
     const etage = reperes.some(r => /\bh2\b/.test(r.cls || ''));
-    // Le prix pour y arriver : chaque palier de la jauge traduit en prix à pratiquer, arrondi aux 5 centimes supérieurs.
-    const a5 = p => Math.ceil(p * 20 - 1e-9) / 20;
     const fD = v => (v >= 0 ? '+ ' : '− ') + nf(Math.abs(v), 2) + ' €', fPs = v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 0) + ' %';
-    const paliers = mat > 0 && prix != null ? [{ lib: 'marge 40 %', coef: FI_ZONES.ko }, catCoef != null ? { lib: 'sa catégorie', coef: catCoef } : null,
-      med != null ? { lib: 'le prix réseau', coef: med / mat, fixe: med } : null, { lib: 'marge 60 %', coef: FI_ZONES.att }, magCoef != null ? { lib: 'le magasin aujourd’hui', coef: magCoef } : null,
-      { lib: 'objectif · matière ' + fP0(se.food), coef: obj }].filter(Boolean).map(p => Object.assign(p, { prix: p.fixe != null ? p.fixe : a5(mat * p.coef) })).sort((a, b) => a.coef - b.coef) : [];
-    // La simulation : un autre prix, choisi dans les paliers ou tapé, et la pièce recalculée à ce prix.
+    // La simulation : un autre prix, tapé, et la pièce recalculée à ce prix.
     const sim = F.simPrix != null && F.simPrix > 0 && mat > 0 && prix != null ? F.simPrix : null;
     const sCoef = sim != null ? sim / mat : null, sTaux = sim != null ? 100 * (sim - mat) / sim : null;
     const lignes = R && Array.isArray(R.lignes) ? R.lignes : [];
@@ -3719,7 +3714,7 @@
           ${cV != null ? `<span class="fi-rmoi ${niv(cV)}" style="left:${pct(cV).toFixed(1)}%"><i></i><em>${simOn ? 'à ' + fPt(sim) : 'ce produit'}<small>${fX(cV)}</small></em></span>` : ''}
           ${simOn ? `<span class="fi-rmoi enc" style="left:${pct(coef).toFixed(1)}%"><i></i><em>encaissé ${fPt(prix)}<small>${fX(coef)}</small></em></span>` : ''}</div>
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div>
-          ${paliers.length ? `<div class="fi-rpcs"><span class="k">Le prix pour y arriver</span>${paliers.map(p => `<button type="button" class="fi-rpc${Math.abs(p.prix - pV) < 0.005 ? ' on' : ''}${p.coef <= coef + 1e-9 ? ' atteint' : ''}" data-fsim="${p.prix.toFixed(2)}" title="${esc(p.lib)} : ${fX(p.coef)} · ${fD(p.prix - prix)} face au prix encaissé${p.coef <= coef + 1e-9 ? ' · déjà atteint' : ''}">${esc(p.lib)} <b>${fPt(p.prix)}</b></button>`).join('')}</div>` : ''}</div></div>`;
+          </div></div>`;
     if (simOn) {
       const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
       h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
@@ -3845,7 +3840,7 @@
     ficheTips(box);
     box.querySelectorAll('[data-fong]').forEach(b => b.addEventListener('click', () => { S.fiche.onglet = +b.dataset.fong; S.fiche.tip = null; ficheRendre(); }));
     box.querySelectorAll('[data-fmois]').forEach(b => b.addEventListener('click', () => { S.fiche.mois = +b.dataset.fmois; ficheLire(); ficheRendre(); }));
-    // Le prix de vente de l'onglet « Recette & marge » : tapé, par pas de 5 centimes ou choisi dans les paliers ; il recalcule la pièce.
+    // Le prix de vente de l'onglet « Recette & marge » : tapé ou par pas de 5 centimes ; il recalcule la pièce.
     const prixEnc = F.q > 0 && F.v != null ? F.v / F.q : null;
     const simA = (v, saisie) => { S.fiche.simPrix = v > 0 && (prixEnc == null || Math.abs(v - prixEnc) >= 0.005) ? Math.round(v * 100) / 100 : null; if (saisie != null) { S.fiche.simSaisie = saisie; } else { delete S.fiche.simSaisie; } ficheRendre(); };
     const refocus = (sel, pos) => { const n = document.querySelector('#db-fiche ' + sel); if (n) { n.focus(); if (pos != null) { try { n.setSelectionRange(pos, pos); } catch (e) { /* champ sans sélection */ } } } };
@@ -3855,7 +3850,6 @@
       tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(); } });
     });
     box.querySelectorAll('[data-fmatrelire]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ficheLireMatiere(b.dataset.fmatrelire, true); ficheRendre(); }));
-    box.querySelectorAll('[data-fsim]').forEach(b => b.addEventListener('click', () => simA(+b.dataset.fsim)));
     box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
     box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix != null ? S.fiche.simPrix : (prixEnc || 0)) + +b.dataset.fsimpas)); refocus(`[data-fsimpas="${b.dataset.fsimpas}"]`); }));
     const inp = box.querySelector('[data-fsiminput]');
