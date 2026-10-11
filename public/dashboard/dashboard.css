@@ -1494,7 +1494,7 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-hd .s{font-size:12px;color:var(--color-text-muted);margin-top:4px}
 .fi-x{width:32px;height:32px;border-radius:50%;border:.5px solid var(--color-border-secondary,rgba(34,34,34,.18));background:#fff;font-size:15px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
 .fi-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.fi-chip{font:600 11px var(--font-ui);padding:4px 9px;border-radius:999px;background:#fcfaf7;border:.5px solid var(--color-border-tertiary);color:var(--color-text-muted)}
+.fi-chip{font:600 11px var(--font-ui);padding:4px 9px;border-radius:4px;background:#fcfaf7;border:.5px solid var(--color-border-tertiary);color:var(--color-text-muted)}
 .fi-chip b{color:var(--color-text,#222)}
 .fi-ong{display:flex;gap:4px;padding:0 22px;border-bottom:.5px solid var(--color-border-tertiary)}
 .fi-ong button{padding:10px 14px;font:600 12.5px var(--font-ui);color:var(--color-text-muted);background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-.5px;cursor:pointer}
@@ -1728,13 +1728,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rsimc button{width:30px;height:30px;border-radius:50%;border:1px solid #d8d1c8;background:#fff;font:700 16px/1 var(--font-ui);cursor:pointer;color:#222}
 .fi-rsimc input{width:76px;height:32px;border:1px solid #d8d1c8;border-radius:8px;text-align:right;font:700 15px var(--font-ui);padding:0 8px;font-variant-numeric:tabular-nums;background:#fff}
 .fi-rsimc input:focus{outline:2px solid #bcd3ef;border-color:#2a78d6}
-.fi-rpcs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
-.fi-rpcs .k{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#8a8278;margin-right:4px}
-.fi-rpc{font:500 11px var(--font-ui);color:#333;background:#fff;border:1px solid #d8d1c8;border-radius:999px;padding:4px 10px;cursor:pointer;white-space:nowrap}
-.fi-rpc b{font-weight:700}
-.fi-rpc:hover{border-color:#2a78d6;color:#1f4f8f}
-.fi-rpc.on{background:#e4eefb;border-color:#b9d0ef;color:#1f4f8f}
-.fi-rpc.atteint{color:#a39c93}
 .fi-rmoi.enc i{border-top-color:#9a938a}
 .fi-rmoi.enc em{top:58px;color:#6c655d;width:140px;left:-70px}
 .fi-rmoi.enc em small{color:#6c655d}
@@ -1752,8 +1745,6 @@ html.db-fiche-ouverte{overflow:hidden}
   .fi-rtab td:not(:first-child){white-space:nowrap}
   .fi-rmoi.enc em{width:110px;left:-55px}
   .fi-rjb.sim .fi-raxe{margin-top:90px}
-  .fi-rpcs{gap:5px}
-  .fi-rpc{font-size:10.5px;padding:4px 8px}
   .fi-rdg{gap:6px}
   .fi-rdf{padding:8px 8px 10px}
   .fi-rdp td{padding:5px 5px;font-size:11px}
