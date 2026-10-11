@@ -738,7 +738,7 @@
         <div class="jg"><i class="l"></i>${autres}<span class="md" style="left:${pos(med).toFixed(1)}%"></span><span class="mo${top ? ' top' : ''}" style="left:${pos(v).toFixed(1)}%"></span></div>
         <div class="v">${f(v)}</div><div class="s"><span class="${v - med >= 0 ? 'ok' : 'ko'}">${fd(v - med)}</span> vs médiane ${f(med)}</div></div>`;
     }).join('');
-    return `<div class="mb-r un mb-cls"><div><div class="k">Ta place dans le réseau <em>· ${L.length} magasins · ${jour ? 'la journée' : 'la semaine'} · anonyme${premiers ? ' · ' + premiers + ' × 🏆' : ''}</em></div><div class="mb-clg">${cols}</div></div></div>`;
+    return `<div class="mb-r un mb-cls"><div><div class="k">Ta place dans le réseau <em>· ${L.length} magasins${premiers ? ' · ' + premiers + ' × 🏆' : ''}</em></div><div class="mb-clg">${cols}</div></div></div>`;
   }
 
   /** La semaine vue depuis le jour : le retard, et les sept barres. */
@@ -2947,11 +2947,11 @@
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
     return `<div class="db-cascade">
       ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
-      ${ligne('− Coût matière', (se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues') + (m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''), m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
+      ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
-      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? 'coût de production des pièces jetées' + (m.invendusPieces ? ' · ' + fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
-      ${ligne('− Main-d’œuvre', (se.labour != null ? 'seuil ' + fP(se.labour) : '') + (m.labourSource ? ' · ' + esc(m.labourSource) : ''), m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
-      ${ligne('− Frais généraux', (se.overhead != null ? 'seuil ' + fP(se.overhead) : '') + (m.overheadSource ? ' · ' + esc(m.overheadSource) : ''), m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
+      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
+      ${ligne('− Main-d’œuvre', se.labour != null ? 'seuil ' + fP(se.labour) : '', m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
+      ${ligne('− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
       ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
     </div>`;
   }
@@ -2998,12 +2998,11 @@
           </tbody></table></details>`;
       const lu = reste != null && A.detail && reste >= 0.5 ? ' · ' + fU(reste) + ' de ' + (nonLus ? nonLus + ' ticket' + (nonLus > 1 ? 's' : '') : 'tickets') + ' pas encore lu' + (nonLus > 1 || !nonLus ? 's' : '') + (A.luA ? ', dernière lecture à ' + A.luA : '') : '';
       v1 = `<div class="acp-v"><div class="k">Ventes sans produit</div><div class="b">${fU(A.detail || ecart == null ? (A.caLignes || 0) + (A.caTickets || 0) : ecart)}</div>
-        <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${lu}</div>${det}</div>`;
+        ${A.caTickets || lu ? `<div class="s">${[A.caTickets ? 'dont ' + fU(A.caTickets) + ' de remises sur ticket' : '', lu.replace(/^ · /, '')].filter(Boolean).join(' · ')}</div>` : ''}${det}</div>`;
     }
     let v2 = '';
     if ((A.sansCout || []).length) {
       v2 = `<div class="acp-v"><div class="k">Produits sans coût</div><div class="b">${A.nSansCout} <small>produit${A.nSansCout > 1 ? 's' : ''} · ${fU(A.caSansCout)} de ventes</small></div>
-        <div class="s">à chiffrer dans le panel : recette ou coût de revient · leur marge, estimée par le P&L, reste dans « Non ventilé » le temps de les chiffrer</div>
         <details data-acpo="p"${ouvre('p', A.sansCout.length)}><summary>les ${A.sansCout.length} produit${A.sansCout.length > 1 ? 's' : ''}</summary><table class="db-pro-tab acp-t"><thead><tr><th>Produit</th><th>Catégorie</th><th class="n">Qté</th><th class="n">CA</th></tr></thead><tbody>
         ${A.sansCout.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0"><td>${esc(x.nom)}</td><td class="mu">${esc(x.cat || '')}</td><td class="n">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
         </tbody></table>${A.nSansCout > A.sansCout.length ? `<div class="acp-n">et ${A.nSansCout - A.sansCout.length} autres</div>` : ''}</details></div>`;
@@ -4419,7 +4418,7 @@
         <div class="v">${f(v)}<small>médiane ${f(med)}</small></div>
         <div class="s">${extra && extra(m) ? extra(m) + ' · ' : ''}${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
   }
 
   /* --- Les non-conformités de la veille -----------------------------------
