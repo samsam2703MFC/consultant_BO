@@ -749,3 +749,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-11T13:51:27Z sonde des couts
 2026-10-11T13:53:28Z sonde des couts variantes
 2026-10-11T13:57:03Z pnl mensuel du panel
+2026-10-11T14:01:46Z pnl mensuel par annee
