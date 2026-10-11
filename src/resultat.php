@@ -131,6 +131,41 @@ function resCoutsMoisson(int $budget = 400): array
 }
 
 /**
+ * Le P&L mensuel du panel (11/10/2026) : /consultant/shops/{id}/pnl/monthly?from=AAAA-MM&to=AAAA-MM (24 mois au plus,
+ * mesuré : sans `from`/`to` la route répond 422). Personnel (`labour`) et frais généraux (`overhead`, la somme des
+ * frais du magasin au panel, /shops/{id}/owner/costs) de chaque mois, en un appel par magasin. Le poste matière y
+ * vaut 0 (le panel ne le chiffre pas au mois) : le food cost vient de la heatmap. Recoupé à Halle avec le résumé
+ * quotidien additionné jour par jour : septembre 9 477,50 € contre 9 458 € de personnel, 13 042,65 € de frais des deux
+ * côtés. Gardé dans `pnlM:{shop}` ; le mois en cours se relit passée l'heure.
+ * @return array<string, array{ca: ?float, lab: ?float, oh: ?float}> ['AAAA-MM' => …]
+ */
+function resPnlMensuel(int $sid, string $de, string $a): array
+{
+    $cle = 'pnlM:' . $sid;
+    $g = setting($cle);
+    $g = is_array($g) && is_array($g['m'] ?? null) ? $g : ['m' => [], 'quand' => 0];
+    $moisC = date('Y-m');
+    $relire = false;
+    for ($m = $de; $m <= $a; $m = date('Y-m', strtotime($m . '-01 +1 month'))) {
+        if (!isset($g['m'][$m]) || ($m >= $moisC && (int) ($g['quand'] ?? 0) < time() - 3600)) { $relire = true; break; }
+    }
+    if ($relire && class_exists('PanelApi') && PanelApi::configured()) {
+        $r = PanelApi::get('/consultant/shops/' . $sid . '/pnl/monthly?' . http_build_query(['from' => $de, 'to' => $a]));
+        if (is_array($r) && is_array($r['months'] ?? null)) {
+            foreach ($r['months'] as $x) {
+                $m = substr((string) ($x['month'] ?? ''), 0, 7);
+                if (!preg_match('/^\d{4}-\d{2}$/', $m) || !is_array($x)) { continue; }
+                $g['m'][$m] = ['ca' => nombreOuNull($x, ['turnover']), 'lab' => nombreOuNull($x, ['labour']), 'oh' => nombreOuNull($x, ['overhead'])];
+            }
+            $g['quand'] = time();
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($g)]); }
+            catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
+        }
+    }
+    return $g['m'];
+}
+
+/**
  * GET /exploitation/couts/sonde?shop=4[&mois=2026-09] (11/10/2026) — les routes de coûts du panel, en lecture seule :
  * leur contrat Swagger (résumé, paramètres, champs de la réponse) et ce qu'elles rendent pour un magasin
  * (/costs, /costs/{id}, /shops/{id}/costs, /shops/costs/{id}, /shops/{id}/owner/costs, /consultant/shops/{id}/pnl/monthly,
