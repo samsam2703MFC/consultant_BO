@@ -2252,7 +2252,9 @@
     const descend = (ligneN, ligneP) => arbre.map(g => ligneN(g, 1) + (ouv(g.cle) ? g.sc.map(c => ligneN(c, 2) + (ouv(c.cle) ? c.P.map(ligneP).join('') : '')).join('') : '')).join('');
     if (mob) {
       const resume = x => long ? `${fN(x.n)} réf. · ${fN(x.st)} en stock · ${x.pj ? nf(x.pj, 1) + ' par jour · ' + nf(jours(x.st, x.pj), 1) + ' j' : 'pas de vente lue'}` : `${fN(x.n)} réf. · ${fN(x.st)} en vitrine`;
-      const ligneN = (x, nv) => `<div class="r nv${nv}${long ? '' : ' hs'}${ouv(x.cle) ? ' on' : ''}" data-opouv="${esc(x.cle)}"><span class="n"><b><span class="fl">▸</span>${esc(x.nom)}</b><small>${resume(x)}</small></span><span class="e">${etatN(x)}<b>${esc(faireN(x))}</b></span>${long ? '' : opBandeDe(x.V, H, nowH)}</div>`;
+      // Compacte (11/10/2026) : une ligne par section ou catégorie ; ses heures ne s'ouvrent qu'avec elle.
+      const bande = x => long || !ouv(x.cle) ? '' : opBandeDe(x.V, H, nowH);
+      const ligneN = (x, nv) => `<div class="r nv${nv}${bande(x) ? ' hs' : ''}${ouv(x.cle) ? ' on' : ''}" data-opouv="${esc(x.cle)}"><span class="n"><b><span class="fl">▸</span>${esc(x.nom)}</b><small>${resume(x)}</small></span><span class="e">${faireN(x) ? `<b>${esc(faireN(x))}</b>` : ''}${etatN(x)}</span>${bande(x)}</div>`;
       const ligneP = long
         ? p => `<div class="r nv3"><span class="n"><b>${esc(p.nom)}</b><small><b class="${opSous(p) ? 'ko' : ''}">${fN(p.stock)}</b> en stock · ${opParJour(p) ? nf(opParJour(p), 1) + ' par jour · ' + nf(jours(pos(p), opParJour(p)), 1) + ' j' : 'pas de vente lue'}</small></span><span class="e">${etatL(p)}<b>${esc(opFaireLong(U, p, now))}</b></span></div>`
         : p => `<div class="r nv3 hs"><span class="n"><b>${esc(p.nom)}</b><small>${fN(p.sorti)} sortie${Math.round(p.sorti) >= 2 ? 's' : ''} · ${fN(p.vendu)} vendue${Math.round(p.vendu) >= 2 ? 's' : ''} · <b class="${p.stock <= 0 ? 'ko' : ''}">${fN(p.stock)}</b> en vitrine</small></span><span class="e"><span class="op-vd ${esc(p.verdict)}">${esc(opEtat(p))}</span><b>${esc(opFaire(p))}</b></span>${opBande(p, U, now)}</div>`;
@@ -2493,6 +2495,9 @@
       const lib = x === 'L' ? (n.parJ > 0 ? `${nf(n.st / n.parJ, 1)} jour${n.st / n.parJ >= 2 ? 's' : ''} de vente` : 'pas de vente lue')
         : (now == null ? (x === 'S' ? `${fN(n.fin)} jeté${n.fin >= 2 ? 's' : ''} ce soir` : `${fN(n.fin)} pour demain`) : (n.reste > 0.5 ? `pour ${fN(n.reste)} à vendre d’ici la fermeture` : 'plus rien à vendre aujourd’hui'));
       const al = x === 'L' ? (n.sous ? `<span class="op-vd rupture">${n.sous} sous le stock</span>` : '') : (n.rupt ? `<span class="op-vd rupture">${n.rupt} vide${n.rupt > 1 ? 's' : ''}</span>` : '') + (n.manq ? `<span class="op-vd manque">${n.manq} va manquer</span>` : '');
+      // Au téléphone (11/10/2026), l'onglet tient en deux lignes : le niveau, puis les alertes ; la jauge et la phrase restent au bureau.
+      if (mob) { return `<button type="button" class="op-v3 ${x}${x === k ? ' on' : ''}" data-opvie="${x}" title="${esc(lib)}${n.val > 0 ? ' · ' + fE(n.val) : ''}"><span class="hd"><span class="op-vie ${x}">${x}</span><b>${OP_VIE_NOM[x]}</b></span>
+        <span class="niv"><b>${fN(n.st)}</b> ${x === 'L' ? 'en stock' : 'en vitrine'}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; }
       return `<button type="button" class="op-v3 ${x}${x === k ? ' on' : ''}" data-opvie="${x}"><span class="hd"><span class="op-vie ${x}">${x}</span><b>${OP_VIE_NOM[x]}</b><small>${fN(n.n)} réf.${mob ? '' : ' · ' + OP_VIE_SOUS[x]}</small></span>
         <span class="niv"><b>${fN(n.st)}</b> pièce${n.st >= 2 ? 's' : ''} ${x === 'L' ? 'en stock' : 'en vitrine'}${n.val > 0 ? ` · ${fE(n.val)}` : ''}</span>
         ${jauge != null ? `<span class="jg"><i style="width:${jauge.toFixed(0)}%"></i></span>` : ''}<span class="lib">${lib}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; };
