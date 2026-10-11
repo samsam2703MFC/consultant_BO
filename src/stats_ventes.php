@@ -531,15 +531,20 @@ function svHeuresJours(int $sid, array $jours): array
  * toutes les dix minutes, 298 tickets à Corbais, 8 s. Un ticket déjà lu qui a disparu
  * de la liste (annulé) fait tout relire.
  */
-function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $detail = false): ?array
+function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $detail = false, int $attendu = 0): ?array
 {
     $cle = 'svP' . $sid . ':' . $j;
     $c = setting($cle);
+    // `$attendu` (11/10/2026) : les tickets que l'heure par heure du panel compte déjà. Un relevé du jour qui en a lu
+    // moins se complète tout de suite (les nouveaux seulement), sans attendre ses dix minutes, une fois par minute au plus.
+    // Mesuré à Halle le 11/10 : le ticket de 11:17 (45,40 €) manquait aux catégories et la carte « À compléter » le
+    // donnait pour une vente sans produit.
+    $retard = $attendu > 0 && $j === date('Y-m-d') && is_array($c) && (int) ($c['n'] ?? 0) < $attendu && (int) ($c['quand'] ?? 0) < time() - 60;
     // `sp` (10/10/2026) : les lignes de caisse sans produit et les écarts de ticket. Un relevé qui ne les
     // porte pas encore se relit une fois en entier : aujourd'hui, ou un jour passé ouvert seul (`$detail`).
     // `r` (10/10/2026) : les tickets qui portent une remise de ligne, pour reconnaître les promotions du panel. Même règle.
     $sansSp = is_array($c) && (!array_key_exists('sp', $c) || !array_key_exists('r', $c)) && ($j === date('Y-m-d') || $detail);
-    if (!$sansSp && svGraveValide($c, 'p', $j)) { return $c['p']; }
+    if (!$sansSp && !$retard && svGraveValide($c, 'p', $j)) { return $c['p']; }
     if ($cout >= $budget) { return null; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     if (!is_array($liste)) { return null; }
@@ -978,7 +983,8 @@ function ep_stats_ventes(): array
         if ($j < SV_DEBUT) { continue; }
         $dejaLu = svGraveValide(setting('svP' . $sid . ':' . $j), 'p', $j);
         if (!$dejaLu && microtime(true) - $t0 > SV_TEMPS_DEMANDE) { $tempsEpuise = true; continue; }
-        $p = svProduitsJour($sid, $j, $cout, $budget, $vue === 'jour');
+        $attendu = $j === $auj ? (int) array_sum(array_column($heures[$j] ?? [], 'tickets')) : 0;
+        $p = svProduitsJour($sid, $j, $cout, $budget, $vue === 'jour', $attendu);
         if ($p !== null) { $prod[$j] = $p; $joursProd[] = $j; }
     }
 
@@ -1115,9 +1121,10 @@ function ep_stats_ventes(): array
     $bundles = svBundles($prod, $catDe, $grpDe);
     // À compléter pour des chiffres justes (10/10/2026) : les lignes de caisse que les produits ne ventilent
     // pas (relevé `sp` des jours lus, quand il le porte) et les produits vendus sans coût de recette.
-    $nvL = []; $nvDetail = $joursProd !== [];
+    $nvL = []; $nvDetail = $joursProd !== []; $nLus = 0; $luA = null;
     foreach ($joursProd as $jP) {
         $gP = setting('svP' . $sid . ':' . $jP);
+        if (is_array($gP)) { $nLus += (int) ($gP['n'] ?? 0); if ($jP === $auj && (int) ($gP['quand'] ?? 0) > 0) { $luA = date('H:i', (int) $gP['quand']); } }
         if (!is_array($gP) || !array_key_exists('sp', $gP)) { $nvDetail = false; continue; }
         foreach ((array) $gP['sp'] as $x) { if (is_array($x)) { $nvL[] = $x + ['j' => $jP]; } }
     }
@@ -1134,7 +1141,10 @@ function ep_stats_ventes(): array
     $aCompleter = ['detail' => $nvDetail, 'lignes' => array_slice($nvL, 0, 80), 'nLignes' => count($nvL),
         'caLignes' => round(array_sum(array_map(static fn ($x) => ($x['type'] ?? '') === 'ligne' ? (float) $x['v'] : 0.0, $nvL)), 2),
         'caTickets' => round(array_sum(array_map(static fn ($x) => ($x['type'] ?? '') === 'ticket' ? (float) $x['v'] : 0.0, $nvL)), 2),
-        'sansCout' => array_slice($sansCout, 0, 60), 'nSansCout' => count($sansCout), 'caSansCout' => round(array_sum(array_column($sansCout, 'v')), 2)];
+        'sansCout' => array_slice($sansCout, 0, 60), 'nSansCout' => count($sansCout), 'caSansCout' => round(array_sum(array_column($sansCout, 'v')), 2)]
+        // Les tickets lus dans les relevés et, aujourd'hui, l'heure de la dernière lecture (11/10/2026) : ce que le CA
+        // compte en plus, ce sont des tickets passés depuis, pas des ventes sans produit.
+        + ['ticketsLus' => $nLus, 'luA' => $luA];
     $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
     foreach ($lignes as $l) { $tot['tickets'] += $l['tickets']; $tot['ca'] += $l['ca']; $tot['mat'] += $l['mat']; $tot['trav'] += $l['trav']; $tot['res'] += $l['res']; }
     $tot['mb'] = round($tot['ca'] - $tot['mat'], 2);
