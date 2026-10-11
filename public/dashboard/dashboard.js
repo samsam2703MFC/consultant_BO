@@ -2737,17 +2737,52 @@
     if (U) {
       h += opVitrine(D, true);
     } else { h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini">${S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…'}</span></div><div style="padding:10px 14px">${opSk()}</div></div>`; }
-    // L'équipe et les cuissons en lignes. Les ventes au comptoir heure par heure, un second graphique des heures, restent au bureau.
-    const lg = (cls, a, b, c) => `<div class="op-jl${cls ? ' ' + cls : ''}"><span class="a">${a}</span><span class="b">${b}</span><span class="c">${c}</span></div>`;
-    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${m && m.planningHeures ? `<span class="db-mini" style="margin-left:auto">${nf(m.planningHeures, 1)} h au planning</span>` : ''}</div><div class="op-jour">
-      ${planning.length ? planning.map(p => { const ici = now != null && opMin(p.debut) <= now && now < opMin(p.fin); return lg(ici ? 'ici' : (now != null && opMin(p.fin) <= now ? 'fini' : ''), esc(p.debut) + '–' + esc(p.fin), esc(p.nom || (p.postes || []).join(', ')), ici ? 'en poste' : (now != null && opMin(p.debut) > now ? 'arrive' : '')); }).join('') : `<div class="op-jl"><span class="b mu">${m ? 'pas de planning lu' : 'lecture…'}</span></div>`}
-      ${cuissons.map(c => lg(now != null && opMin(c.four) > now ? 'av' : '', 'four ' + esc(c.four), esc(c.nom) + ' · ' + fN(c.pieces) + ' pièces, ' + esc(c.de) + ' à ' + esc(c.a), c.valide ? 'validée' : (now != null && opMin(c.four) > now ? opDans(opMin(c.four), now) : 'à valider'))).join('')}
-    </div></div>`;
+    // La journée (11/10/2026, compacte) : l'équipe et les cuissons sur une même frise. Les ventes au comptoir heure par heure,
+    // un second graphique des heures, restent au bureau.
+    h += opJourneeMob(D);
     // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons).
     // Le P&L, les ventes par catégorie et les bundles vont dans Exploitation ; les photos, les commandes,
     // le stock et la poubelle dans Contrôle, qui les avait déjà.
     h += `<div class="op-renvoi">Le P&amp;L, les ventes par catégorie, les promotions et les portions : <button type="button" class="db-lien" data-mo="exp">Exploitation ›</button><br>Les photos, les commandes, le stock et la poubelle : <button type="button" class="db-lien" data-mo="ctrl">Contrôle ›</button></div>`;
     return h;
+  }
+  /**
+   * La journée au téléphone (11/10/2026) : une frise de la journée. Une barre fine par personne au planning, le nom dedans
+   * (vert en poste, gris fini, cadre à venir), le trait de maintenant, et les cuissons en repères dessous, à l'heure du four
+   * (vert validée, orange à valider, cadre à venir). Le détail de chaque barre ou repère dans son infobulle.
+   */
+  function opJourneeMob(D) {
+    const { now, m, planning, cuissons } = D;
+    const tete = `<div class="ct"><span class="op-h2">La journée</span><span class="db-mini" style="margin-left:auto">${m && m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : ''}${now != null && planning.length ? ' · ' + fN(planning.filter(p => opMin(p.debut) <= now && now < opMin(p.fin)).length) + ' en poste' : ''}</span></div>`;
+    const pts = [];
+    planning.forEach(p => { pts.push(opMin(p.debut), opMin(p.fin)); });
+    cuissons.forEach(c => { pts.push(opMin(c.four)); });
+    if (!pts.length) { return `<div class="db-card op-bloc">${tete}<div class="db-mini" style="padding:10px 14px">${m ? 'pas de planning ni de cuisson lus' : 'lecture…'}</div></div>`; }
+    const h0 = Math.floor(Math.min(...pts) / 60), h1 = Math.max(h0 + 1, Math.ceil(Math.max(...pts) / 60));
+    const x = mn => Math.max(0, Math.min(100, 100 * (mn / 60 - h0) / (h1 - h0)));
+    const pas = h1 - h0 > 12 ? 3 : 2, axe = [];
+    for (let hh = h0; hh <= h1; hh += pas) { axe.push(`<span style="left:${x(hh * 60).toFixed(2)}%">${hh} h</span>`); }
+    const barres = planning.slice().sort((a, b) => opMin(a.debut) - opMin(b.debut)).map(p => {
+      const d = opMin(p.debut), f = opMin(p.fin), nom = p.nom || (p.postes || []).join(', ');
+      const cls = now == null ? 'jr' : (d <= now && now < f ? 'ici' : (f <= now ? 'fini' : 'av'));
+      const etat = { ici: 'en poste', fini: 'fini', av: 'arrive à ' + p.debut, jr: 'au planning' }[cls];
+      return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}"><b>${esc(nom)}</b></i></div>`;
+    }).join('');
+    const CS = cuissons.slice().sort((a, b) => opMin(a.four) - opMin(b.four)).map(c => {
+      const t = opMin(c.four), cls = c.valide ? 'ok' : (now != null && t > now ? 'av' : 'kv');
+      return { c, t, cls, etat: c.valide ? 'validée' : (now != null && t > now ? opDans(t, now) : 'à valider') };
+    });
+    // Les cuissons : un repère à l'heure du four sur la frise, et leurs libellés en une ligne dessous (sans chevauchement).
+    const reperes = CS.map(k => `<span class="${k.cls}" style="left:${x(k.t).toFixed(2)}%" title="four ${esc(k.c.four)} · ${esc(k.c.nom)}"></span>`).join('');
+    // Court : l'heure, la cuisson, les pièces ; la couleur dit l'état, et la prochaine cuisson dit dans combien de temps.
+    const prochaine = CS.find(k => k.cls === 'av');
+    const fours = CS.map(k => `<span class="${k.cls}" title="${esc(k.c.nom)} · ${fN(k.c.pieces)} pièces, ${esc(k.c.de)} à ${esc(k.c.a)} · four ${esc(k.c.four)} · ${esc(k.etat)}"><i></i><b>${esc(k.c.four)}</b> ${esc(k.c.nom)} ${fN(k.c.pieces)}${k === prochaine ? ' · <em>' + esc(k.etat) + '</em>' : ''}</span>`).join('');
+    const tn = now != null && now >= h0 * 60 && now <= h1 * 60 ? `<span class="jm-now" style="left:${x(now).toFixed(2)}%"></span>` : '';
+    return `<div class="db-card op-bloc">${tete}<div class="jm">
+      <div class="jm-ax">${axe.join('')}</div>
+      <div class="jm-z">${tn}${barres || '<div class="db-mini">pas de planning lu</div>'}</div>
+      ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
+      </div></div>`;
   }
   function rendOps() {
     const D = opDonnees();

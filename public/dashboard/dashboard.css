@@ -2024,3 +2024,28 @@ html.db-fiche-ouverte{overflow:hidden}
   .op-mob .op-vl .e{flex-direction:row;align-items:center;gap:6px}
   .op-mob .op-vl.op-arbre .r.nv2{padding-left:18px}.op-mob .op-vl.op-arbre .r.nv3{padding-left:26px}
 }
+
+/* La journée au téléphone (11/10/2026) : la frise de l'équipe et des cuissons. */
+.jm{padding:6px 12px 10px}
+.jm-ax{position:relative;height:14px;margin:0 14px 2px 0;font:600 9.5px var(--font-ui);color:var(--color-text-muted)}.jm-ax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.jm-z{position:relative;margin-right:14px;padding:2px 0;background:repeating-linear-gradient(90deg,transparent 0 calc(100% / 6 - 1px),#f1ece5 calc(100% / 6 - 1px) calc(100% / 6))}
+.jm-l{position:relative;height:18px;margin:3px 0}
+.jm-l i{position:absolute;top:0;bottom:0;border-radius:4px;overflow:hidden;display:flex;align-items:center;padding:0 6px;box-sizing:border-box;font-style:normal;min-width:6px}
+.jm-l i b{font:700 10.5px var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jm-l i.ici{background:#2d7a3e;color:#fff}.jm-l i.fini{background:#ddd5ca;color:#6f675e}.jm-l i.av{background:#fff;box-shadow:inset 0 0 0 1.5px #3b3631;color:#3b3631}.jm-l i.jr{background:#5f6f86;color:#fff}
+.jm-now{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:#C0182B;z-index:2;border-radius:1px}
+.jm-c{position:relative;height:40px;margin:4px 14px 0 0}
+.jm-c span{position:absolute;top:0;transform:translateX(-6px);display:flex;align-items:center;gap:4px;font:600 10px var(--font-ui);white-space:nowrap;color:#3b3631}
+.jm-c span.bas{top:20px}
+.jm-c span i{width:10px;height:10px;border-radius:3px;flex:none}
+.jm-c span.ok i{background:#2d7a3e}.jm-c span.kv i{background:#D97706}.jm-c span.av i{background:#fff;box-shadow:inset 0 0 0 1.5px #D97706}
+.jm-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font:600 9.5px var(--font-ui);color:var(--color-text-muted)}
+.jm-leg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
+.jm-leg i.ici{background:#2d7a3e}.jm-leg i.fini{background:#ddd5ca}.jm-leg i.av{background:#fff;box-shadow:inset 0 0 0 1.5px #3b3631}.jm-leg i.four{background:#D97706;width:8px;border-radius:2px}
+.jm-c span.dr{transform:translateX(calc(-100% + 6px));flex-direction:row-reverse}.jm-leg i.jr{background:#5f6f86}
+.jm-r{position:relative;height:12px;margin:2px 14px 0 0}.jm-r span{position:absolute;top:1px;width:10px;height:10px;margin-left:-5px;border-radius:3px}
+.jm-r span.ok,.jm-cl span.ok i{background:#2d7a3e}.jm-r span.kv,.jm-cl span.kv i{background:#D97706}.jm-r span.av,.jm-cl span.av i{background:#fff;box-shadow:inset 0 0 0 1.5px #D97706}
+.jm-cl{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px}.jm-cl span{display:flex;align-items:center;gap:5px;font:500 10.5px var(--font-ui);color:#3b3631;white-space:nowrap}.jm-cl span b{font-weight:700}.jm-cl span i{width:10px;height:10px;border-radius:3px;flex:none}
+.jm{padding:4px 12px 8px}.jm-l{height:15px;margin:2px 0}.jm-l i b{font-size:10px}
+.jm-cl{gap:3px 10px;margin-top:4px}.jm-cl span em{font-style:normal;font-weight:700;color:#B26A00}
+.jm-now{width:1.5px;opacity:.85}
