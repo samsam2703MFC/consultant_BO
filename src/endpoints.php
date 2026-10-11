@@ -5828,110 +5828,39 @@ function annotationLacune(): array
 
 function ep_perf(): array
 {
-    $annees = array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026'));
-    $in = implode(',', array_fill(0, count($annees), '?'));
-    // Vrai P&L mensuel du panel (table partagée `mac_shop_monthly_pnl`, la même
-    // que le ValuationService du panel). Le snapshot porte ca / marge nette /
-    // labour / overhead ; il ne porte NI « material » (food, cf. ticket T5a du
-    // panel) NI tickets/panier — laissés à null. Repli sur ceo_shop_month_perf.
+    $annees = array_values(array_unique(array_filter(array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026')))));
+    // L'API du panel seule (11/10/2026, demande de Sam : « pas de table locale, API only »). Plus de copie
+    // locale du panel : ni `mac_shop_monthly_pnl` (le P&L mensuel figé à juillet-août), ni `transaction`
+    // (la caisse copiée, arrêtée au 14/07). Le budget reste celui du cockpit (`ceo_shop_month_perf`, saisi
+    // dans le cockpit, que le panel ne porte pas).
+    if (!PanelApi::configured() || $annees === []) { return []; }
+    $ids = [];
+    foreach (analyseListe(PanelApi::consultantShops() ?? []) as $sh) { if ((int) ($sh['id'] ?? 0) > 0) { $ids[] = (int) $sh['id']; } }
+    if ($ids === []) { return []; }
     try {
         $key = fn ($s, $y, $m) => $s . '-' . $y . '-' . $m;
+        $vide = static fn (int $s, int $y, int $m): array => ['storeId' => (string) $s, 'annee' => $y, 'mois' => $m,
+            'ca' => null, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
+            'tickets' => null, 'panierMoyen' => null, 'foodCostPct' => null, 'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null];
         $cells = [];
-        // 1) P&L mensuel (mac_shop_monthly_pnl) : CA, marge nette, labour, overhead.
-        foreach (Db::rows("SELECT id_shop, year, month, ca, net_margin_pct, net_result, labour, overhead
-                          FROM mac_shop_monthly_pnl WHERE year IN ($in)", $annees) as $r) {
-            $ca  = $r['ca'] !== null ? (float) $r['ca'] : null;
-            $pos = $ca !== null && $ca > 0;
-            $cells[$key($r['id_shop'], $r['year'], $r['month'])] = [
-                'storeId'       => (string) $r['id_shop'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
-                'ca'            => $ca, 'caBudget' => null, 'caTheorique' => null,
-                'margeNette'    => $r['net_result'] !== null ? (float) $r['net_result'] : null,
-                'margePct'      => $r['net_margin_pct'] !== null ? round((float) $r['net_margin_pct'] / 100, 4) : null,
-                'tickets'       => null, 'panierMoyen' => null, 'foodCostPct' => null,
-                'labourCostPct' => ($pos && $r['labour'] !== null) ? round((float) $r['labour'] / $ca * 100, 1) : null,
-                'overheadPct'   => ($pos && $r['overhead'] !== null) ? round((float) $r['overhead'] / $ca * 100, 1) : null,
-                'valorisation'  => null,
-            ];
+        // 1) CA, tickets et panier de chaque mois : /shops/{id}/statistics/sales/kpis (pvKpisMois, gardé une fois
+        //    le mois clos, une heure pour le mois en cours), les mois manquants lus en parallèle.
+        $moisC = date('Y-m');
+        $paires = [];
+        foreach ($annees as $y) {
+            for ($m = 1; $m <= 12; $m++) {
+                $ym = sprintf('%04d-%02d', $y, $m);
+                if ($ym > $moisC) { break; }
+                foreach ($ids as $sid) { $paires[] = [$sid, $ym]; }
+            }
         }
-        // 2) Ventes caisse (`transaction`) : tickets + panier moyen RÉELS, et CA de
-        //    repli pour les mois sans P&L. Borné à l'exercice courant (perf récente)
-        //    et plafonné côté MySQL ; en cas de lenteur/absence on garde le P&L seul.
-        try {
-            $yMax = max($annees);
-            $from = sprintf('%04d-01-01 00:00:00', $yMax);
-            $to   = sprintf('%04d-01-01 00:00:00', $yMax + 1);
-            // La caisse locale ne bouge plus (elle s'arrête au 14/07/2026) : sa lecture se garde six heures,
-            // et sert encore quand la requête dépasse ses 6 secondes (10/10/2026). Sans ce relais, une page
-            // chargée en même temps que d'autres perdait février à juin (« pas de vente »).
-            $cleTx = 'perfTx:' . $yMax;
-            $txC = setting($cleTx);
-            $txL = is_array($txC) && is_array($txC['l'] ?? null) ? $txC['l'] : null;
-            if ($txL === null || (int) ($txC['quand'] ?? 0) < time() - 6 * 3600) {
-                try {
-                    $txL = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
-                                      id_shop, MONTH(insert_timestamp) m,
-                                      COUNT(DISTINCT ticket_key) tickets,
-                                      SUM(total_gross_amount_after_discount) ca
-                               FROM transaction
-                               WHERE insert_timestamp >= ? AND insert_timestamp < ?
-                               GROUP BY id_shop, m", [$from, $to]);
-                    try {
-                        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                            [$cleTx, json_encode(['quand' => time(), 'l' => $txL])]);
-                    } catch (PDOException $eTxC) { /* cache facultatif */ }
-                } catch (PDOException $eTxQ) { if ($txL === null) { throw $eTxQ; } }
-            }
-            foreach ($txL as $r) {
-                $tickets = (int) $r['tickets'];
-                $caPos   = $r['ca'] !== null ? (float) $r['ca'] : null;
-                $panier  = ($tickets > 0 && $caPos !== null) ? round($caPos / $tickets, 2) : null;
-                $k = $key($r['id_shop'], $yMax, (int) $r['m']);
-                if (isset($cells[$k])) {
-                    $cells[$k]['tickets'] = $tickets;
-                    $cells[$k]['panierMoyen'] = $panier;
-                    if ($cells[$k]['ca'] === null) { $cells[$k]['ca'] = $caPos; }
-                } else {
-                    $cells[$k] = [
-                        'storeId' => (string) $r['id_shop'], 'annee' => (int) $yMax, 'mois' => (int) $r['m'],
-                        'ca' => $caPos, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
-                        'tickets' => $tickets, 'panierMoyen' => $panier, 'foodCostPct' => null,
-                        'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null,
-                    ];
-                }
-            }
-        } catch (PDOException $eTx) { /* transaction lente/absente : P&L seul */ }
-
-        // 2ante) Les MOIS DEPUIS JUILLET 2026 se corrigent aux ENDPOINTS : la
-        //        caisse locale meurt au 14/07 (tickets de juillet à moitié) et
-        //        le P&L partagé garde un début d'août figé — l'endpoint des
-        //        KPIs donne CA, tickets et panier exacts, gravés une fois le
-        //        mois clos. L'historique d'avant reste aux sources d'époque.
-        if (PanelApi::configured() && function_exists('pvKpisMois') && in_array(2026, $annees, true)) {
-            try { $idsFix = array_map(fn ($r2) => (int) $r2['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
-            catch (PDOException $eF) { $idsFix = []; }
-            for ($mFix = '2026-07'; $mFix <= date('Y-m'); $mFix = date('Y-m', strtotime($mFix . '-01 +1 month'))) {
-                $numF = (int) substr($mFix, 5, 2);
-                foreach ($idsFix as $idF) {
-                    $kF = pvKpisMois($idF, $mFix);
-                    if ($kF === null) { continue; }
-                    $k2 = $key($idF, 2026, $numF);
-                    if (!isset($cells[$k2])) {
-                        $cells[$k2] = ['storeId' => (string) $idF, 'annee' => 2026, 'mois' => $numF,
-                            'ca' => null, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
-                            'tickets' => null, 'panierMoyen' => null, 'foodCostPct' => null,
-                            'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null];
-                    }
-                    $cells[$k2]['ca'] = round($kF['ca'], 2);
-                    $cells[$k2]['tickets'] = $kF['tickets'];
-                    $cells[$k2]['panierMoyen'] = $kF['panier'] !== null ? round($kF['panier'], 2)
-                        : ($kF['tickets'] > 0 ? round($kF['ca'] / $kF['tickets'], 2) : null);
-                    // Une marge calculée sur un CA partiel ment : elle s'efface
-                    // dès que le CA du P&L diverge nettement du CA réel.
-                    if ($cells[$k2]['margePct'] !== null && $cells[$k2]['margePct'] > 0.5) {
-                        $cells[$k2]['margePct'] = null; $cells[$k2]['margeNette'] = null;
-                    }
-                }
-            }
+        if (function_exists('pvKpisMoisLot')) { pvKpisMoisLot($paires); }
+        foreach ($paires as [$sid, $ym]) {
+            $kp = function_exists('pvKpisMois') ? pvKpisMois($sid, $ym) : null;
+            if ($kp === null || !($kp['ca'] > 0)) { continue; }
+            $y = (int) substr($ym, 0, 4); $m = (int) substr($ym, 5, 2);
+            $cells[$key($sid, $y, $m)] = ['ca' => round($kp['ca'], 2), 'tickets' => $kp['tickets'],
+                'panierMoyen' => $kp['panier'] !== null ? round($kp['panier'], 2) : ($kp['tickets'] > 0 ? round($kp['ca'] / $kp['tickets'], 2) : null)] + $vide($sid, $y, $m);
         }
 
         // 2bis) Le MOIS COURANT vient de l'API du panel : la caisse en base
@@ -5971,9 +5900,7 @@ function ep_perf(): array
         //       Un mois CLOS ne change plus : son ratio est mis en cache
         //       (ceo_app_setting), seul le mois courant se recalcule.
         if (PanelApi::configured()) {
-            try {
-                $shopIds = array_map(fn ($r2) => (int) $r2['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
-            } catch (PDOException $eS) { $shopIds = []; }
+            $shopIds = $ids;   // les magasins de l'API (11/10/2026)
             $yF = max($annees);
             $cache = setting('foodCostApi', []);
             if (!is_array($cache)) { $cache = []; }
@@ -6034,10 +5961,12 @@ function ep_perf(): array
         //       main-d'œuvre − frais généraux. 120 lectures au plus par requête ; un mois dont des jours
         //       manquent encore reste vide (`coutsManque`) et se complète au cron (resCoutsMoisson).
         if (PanelApi::configured() && function_exists('resCoutsPeriode')) {
-            $budgetDs = 120; $aujDs = date('Y-m-d'); $yDs = max($annees);
+            $budgetDs = 120; $aujDs = date('Y-m-d');
+            // L'année la plus récente d'abord : c'est elle que le tableau « mois par mois » montre.
+            uasort($cells, static fn ($a2, $b2) => [$b2['annee'], $b2['mois']] <=> [$a2['annee'], $a2['mois']]);
             foreach ($cells as $kDs => $cDs) {
-                if ((int) $cDs['annee'] !== $yDs || !(((float) ($cDs['ca'] ?? 0)) > 0)) { continue; }
-                $duDs = sprintf('%04d-%02d-01', $yDs, (int) $cDs['mois']);
+                if (!in_array((int) $cDs['annee'], $annees, true) || !(((float) ($cDs['ca'] ?? 0)) > 0)) { continue; }
+                $duDs = sprintf('%04d-%02d-01', (int) $cDs['annee'], (int) $cDs['mois']);
                 if ($duDs > $aujDs) { continue; }
                 $co = resCoutsPeriode((int) $cDs['storeId'], $duDs, date('Y-m-t', strtotime($duDs)), $budgetDs, $aujDs);
                 if ($co['manque'] > 0 || $co['jours'] === 0) { $cells[$kDs]['coutsManque'] = $co['manque']; continue; }
@@ -6082,22 +6011,11 @@ function ep_perf(): array
             }
         } catch (PDOException $eBud) { /* table du cockpit absente : réel seul */ }
 
+        uasort($cells, static fn ($a2, $b2) => [(int) $a2['storeId'], $a2['annee'], $a2['mois']] <=> [(int) $b2['storeId'], $b2['annee'], $b2['mois']]);
         return array_values($cells);
     } catch (PDOException $e) {
-        return array_map(fn ($r) => [
-            'storeId' => $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
-            'ca' => $r['revenue'] !== null ? (float) $r['revenue'] : null,
-            'caBudget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
-            'caTheorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null,
-            'margeNette' => $r['net_margin'] !== null ? (float) $r['net_margin'] : null,
-            'margePct' => ($r['net_margin'] !== null && $r['revenue'] > 0) ? round($r['net_margin'] / $r['revenue'], 4) : null,
-            'tickets' => $r['tickets'] !== null ? (int) $r['tickets'] : null,
-            'panierMoyen' => $r['basket_avg'] !== null ? (float) $r['basket_avg'] : null,
-            'foodCostPct' => $r['food_pct'] !== null ? (float) $r['food_pct'] : null,
-            'labourCostPct' => $r['labour_pct'] !== null ? (float) $r['labour_pct'] : null,
-            'overheadPct' => $r['overhead_pct'] !== null ? (float) $r['overhead_pct'] : null,
-            'valorisation' => $r['valuation'] !== null ? (float) $r['valuation'] : null,
-        ], Db::rows("SELECT * FROM ceo_shop_month_perf WHERE year IN ($in) ORDER BY shop_id, year, month", $annees));
+        // Plus de repli sur une table locale (11/10/2026) : l'API seule, sans réponse rien.
+        return [];
     }
 }
 
