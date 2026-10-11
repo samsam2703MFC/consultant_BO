@@ -25,6 +25,8 @@ declare(strict_types=1);
 const VP_JOURS = 30;        // la fenêtre des comptes : 30 jours glissants
 const VP_BUDGET_CRON = 40;  // listes relues par battement du cron pour compléter les jours d'avant
 const VP_TTL = 600;         // un jour en cours : dix minutes, comme le reste du dashboard
+const VP_TTL_TVA_OK = 21600; // une fiche pro avec TVA valide : relue toutes les six heures
+const VP_TTL_TVA_KO = 3600;  // une fiche sans TVA valide : relue toutes les heures (une fiche complétée au panel compte dans l'heure)
 
 /** La clé de compte d'un ticket pro, jamais le nom : l'identifiant du client, sinon une empreinte du nom ; '' sans l'un ni l'autre. */
 function vpCleCompte(array $x): string
@@ -34,6 +36,73 @@ function vpCleCompte(array $x): string
     }
     $nom = trim((string) ($x['client_name'] ?? $x['company_name'] ?? ''));
     return $nom === '' ? '' : 'h' . hash('crc32b', mb_strtolower($nom));
+}
+
+/**
+ * Pro = TVA valide (11/10/2026, demande de Sam) : un ticket ne compte pro que si le panel le marque client pro
+ * (`is_client_b2b`) ET que la fiche du client porte un numéro de TVA valide. Mesuré à Halle le 11/10 : 6 tickets
+ * marqués pro pour 469,20 €, une seule fiche avec une TVA (114,50 €) ; les cinq autres, sans TVA ni nom de société.
+ *
+ * vpTvaValides : [clé de compte => true | false | null] pour les clés « c{id_client} » d'un magasin. La fiche se lit au
+ * panel (`/shops/{id}/clients/{id}`, vtFicheClient), le verdict se garde dans `vpTva:{shop}` (six heures s'il est bon,
+ * une heure sinon). Une clé sans identifiant de client (empreinte du nom, ou vide) : false, pas de fiche, pas de TVA.
+ * Une fiche illisible : null, le ticket garde l'avis du panel (un trou de l'API ne bascule pas le pro au comptoir).
+ * Une TVA d'un autre pays de l'UE dont la forme est bonne compte pour valide.
+ */
+function vpTvaValides(int $sid, array $cles): array
+{
+    static $memo = [], $lu = [];
+    $out = []; $manque = [];
+    // Le verdict gardé, lu une fois par magasin et par requête (le Résultat le demande jour par jour).
+    if (!array_key_exists($sid, $lu)) {
+        $c = function_exists('setting') ? setting('vpTva:' . $sid) : null;
+        if (is_string($c)) { $c = json_decode($c, true); }
+        $lu[$sid] = is_array($c) ? $c : [];
+    }
+    $c = $lu[$sid];
+    foreach (array_unique(array_map('strval', $cles)) as $k) {
+        if (!preg_match('/^c(\d+)$/', $k, $m)) { $out[$k] = false; continue; }
+        if (array_key_exists($sid . $k, $memo)) { $out[$k] = $memo[$sid . $k]; continue; }
+        $x = $c[$k] ?? null;
+        if (is_array($x) && (int) ($x[1] ?? 0) > time() - ((int) $x[0] === 1 ? VP_TTL_TVA_OK : VP_TTL_TVA_KO)) { $out[$k] = $memo[$sid . $k] = (int) $x[0] === 1; continue; }
+        $manque[$k] = $m[1];
+    }
+    if ($manque === []) { return $out; }
+    if (!function_exists('vtFicheClient') || !class_exists('PanelApi') || !PanelApi::configured()) { foreach ($manque as $k => $id) { $out[$k] = null; } return $out; }
+    $chemins = [];
+    foreach ($manque as $k => $id) { $chemins[$k] = '/shops/' . $sid . '/clients/' . rawurlencode((string) $id); }
+    $res = PanelApi::getParallele($chemins, 6);
+    $neuf = false;
+    foreach ($manque as $k => $id) {
+        $f = vtFicheClient($res[$k] ?? null);
+        if (empty($f['lue'])) { $out[$k] = null; continue; }
+        $ok = !empty($f['tva']) && ($f['valide'] ?? null) !== false;
+        $out[$k] = $memo[$sid . $k] = $ok;
+        $c[$k] = [$ok ? 1 : 0, time()]; $neuf = true;
+    }
+    if ($neuf && function_exists('svGrave')) { $lu[$sid] = $c; svGrave('vpTva:' . $sid, $c); }
+    return $out;
+}
+
+/**
+ * Le pro d'un jour gravé (`b`), réduit aux tickets dont le client a une TVA valide : `t` et `h` recomptés, `sansTva`
+ * dit ce qui est parti au comptoir (tickets, CA). Le gravé garde l'avis brut du panel : une fiche complétée plus tard
+ * fait revenir ses tickets au pro, jours passés compris.
+ */
+function vpFiltreTva(int $sid, ?array $b): ?array
+{
+    if ($b === null || empty($b['t']) || !is_array($b['t'])) { return $b === null ? null : $b + ['sansTva' => ['tickets' => 0, 'ca' => 0.0]]; }
+    $ok = vpTvaValides($sid, array_map(static fn ($t) => (string) ($t[1] ?? ''), $b['t']));
+    $t2 = []; $h = []; $nEx = 0; $caEx = 0.0;
+    foreach ($b['t'] as $t) {
+        if (($ok[(string) ($t[1] ?? '')] ?? null) === false) { $nEx++; $caEx += (float) $t[2]; continue; }
+        $t2[] = $t;
+        $hh = (string) (int) substr((string) $t[0], 0, 2);
+        $h[$hh] = $h[$hh] ?? [0.0, 0];
+        $h[$hh][0] += (float) $t[2]; $h[$hh][1]++;
+    }
+    foreach ($h as $k => $v) { $h[$k] = [round($v[0], 2), $v[1]]; }
+    return ['t' => $t2, 'h' => $h, 'sansTva' => ['tickets' => $nEx, 'ca' => round($caEx, 2)]] + $b;
 }
 
 /** Le pro d'une liste de tickets du panel : total du jour, tickets pro (heure, clé de compte, montant, facturé, différé), par heure. */
@@ -73,12 +142,12 @@ function vpValide(mixed $c, string $j): bool
 function vpJour(int $sid, string $j, bool $lire, int &$appels, int $budget): ?array
 {
     $c = setting('svP' . $sid . ':' . $j);
-    if (vpValide($c, $j)) { return $c['b']; }
+    if (vpValide($c, $j)) { return vpFiltreTva($sid, $c['b']); }
     $ancien = is_array($c) && isset($c['b']) && is_array($c['b']) ? $c['b'] : null;
-    if (!$lire || $appels >= $budget || !class_exists('PanelApi') || !PanelApi::configured()) { return $ancien; }
+    if (!$lire || $appels >= $budget || !class_exists('PanelApi') || !PanelApi::configured()) { return vpFiltreTva($sid, $ancien); }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     $appels++;
-    if (!is_array($liste)) { return $ancien; }
+    if (!is_array($liste)) { return vpFiltreTva($sid, $ancien); }
     return vpGraveListe($sid, $j, $liste);
 }
 
@@ -86,7 +155,7 @@ function vpJour(int $sid, string $j, bool $lire, int &$appels, int $budget): ?ar
 function vpLu(int $sid, string $j): ?array
 {
     $c = setting('svP' . $sid . ':' . $j);
-    return vpValide($c, $j) ? $c['b'] : null;
+    return vpValide($c, $j) ? vpFiltreTva($sid, $c['b']) : null;
 }
 
 /** Grave sous `b` le pro d'une liste de tickets déjà lue, sans toucher au relevé des produits. */
@@ -98,7 +167,7 @@ function vpGraveListe(int $sid, string $j, array $liste): array
     $c = is_array($c) ? $c : ['quand' => time()];
     $c['b'] = $b;
     svGrave($cle, $c);
-    return $b;
+    return vpFiltreTva($sid, $b);
 }
 
 /** Le split d'une journée pour un tableau : CA et tickets pro, le reste au comptoir (sur le CA de la ligne). */
@@ -190,8 +259,8 @@ function ep_exploitation_pro(): array
     @set_time_limit(60);
     $appels = 0;
     $bJ = vpJour($sid, $date, true, $appels, 2);
-    $jour = $bJ === null ? null : vpBilanJour($bJ) + ['heures' => (object) $bJ['h'], 'liste' => vpTickets($bJ)];
-    $serie = []; $comptes = []; $caPro = 0.0; $ca = 0.0; $tkPro = 0; $tk = 0; $lus = 0; $manquants = 0; $sansCle = 0;
+    $jour = $bJ === null ? null : vpBilanJour($bJ) + ['heures' => (object) $bJ['h'], 'liste' => vpTickets($bJ), 'sansTva' => $bJ['sansTva'] ?? null];
+    $serie = []; $comptes = []; $caPro = 0.0; $ca = 0.0; $tkPro = 0; $tk = 0; $lus = 0; $manquants = 0; $sansCle = 0; $nSansTva = 0; $caSansTva = 0.0;
     for ($i = VP_JOURS - 1; $i >= 0; $i--) {
         $j = date('Y-m-d', strtotime($date . ' -' . $i . ' days'));
         if (defined('SV_DEBUT') && $j < SV_DEBUT) { continue; }
@@ -199,6 +268,7 @@ function ep_exploitation_pro(): array
         if ($b === null) { $manquants++; $serie[] = ['j' => $j, 'ca' => null, 'caPro' => null]; continue; }
         if ((int) $b['n'] === 0) { $serie[] = ['j' => $j, 'ca' => 0, 'caPro' => 0, 'ferme' => true]; continue; }
         $lus++;
+        $nSansTva += (int) ($b['sansTva']['tickets'] ?? 0); $caSansTva += (float) ($b['sansTva']['ca'] ?? 0);
         $cp = 0.0;
         foreach ($b['t'] as $t) {
             $cp += (float) $t[2];
@@ -212,7 +282,8 @@ function ep_exploitation_pro(): array
             'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'ticketsPro' => $tkPro, 'tickets' => $tk, 'panierPro' => $tkPro > 0 ? round($caPro / $tkPro, 2) : null,
             'societes' => count($comptes), 'ticketsSansCompte' => $sansCle],
         'serie' => $serie, 'appels' => $appels,
-        'source' => 'tickets du panel : is_client_b2b, will_be_invoiced, deferral_payment — un ticket sans client pro est une vente comptoir ; aucun nom de compte ne sort'];
+        'sansTva' => ['tickets' => $nSansTva, 'ca' => round($caSansTva, 2)],
+        'source' => 'tickets du panel : is_client_b2b, will_be_invoiced, deferral_payment ; pro seulement si la fiche du client porte une TVA valide — un ticket sans client pro est une vente comptoir ; aucun nom de compte ne sort'];
 }
 
 /**

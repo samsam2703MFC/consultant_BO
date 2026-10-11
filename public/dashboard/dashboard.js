@@ -1874,9 +1874,12 @@
     const detail = mobile === 'detail';
     const rienJour = !J || !J.ticketsPro, rienMois = !(M.ticketsPro > 0);
     // La vue Jour ne parle que du jour choisi : ni les 30 jours, ni les comptes, ni la série (demande du 03/10/2026).
-    const sous = 'tickets portés par un client dont la fiche est professionnelle';
+    const sous = 'tickets portés par un client dont la fiche est professionnelle, avec un numéro de TVA valide';
+    // Les tickets marqués pro au panel dont la fiche n'a pas de TVA valide (11/10/2026) : comptés au comptoir, à compléter.
+    const ST = J && J.sansTva && J.sansTva.tickets > 0 ? J.sansTva : null;
+    const nonTva = ST ? `<div class="db-mini db-pro-st">${fN(ST.tickets)} ticket${ST.tickets > 1 ? 's' : ''} marqué${ST.tickets > 1 ? 's' : ''} pro sans TVA valide sur la fiche du client (${fU(ST.ca)}), compté${ST.tickets > 1 ? 's' : ''} au comptoir · à compléter dans le panel</div>` : '';
     if (rienJour) {
-      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
+      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>${nonTva}`;
       if (detail) { return t; }
       return mobile ? `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${t}</div>` : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${t}</div>`;
     }
@@ -1897,8 +1900,8 @@
     const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
       ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
     // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
-    if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>`; }
-    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div></div>`; }
+    if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}`; }
+    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}</div>`; }
     // Sur ordinateur, la carte se replie : l'en-tête garde le jour en une
     // ligne (CA pro, sa part, clients, à facturer) ; le clic déplie les
     // chiffres et les tickets du jour.
@@ -1909,7 +1912,7 @@
     const mois = '';
     return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
       <span class="db-cdr" style="padding:0;margin-left:auto">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>
-      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps un">${gauche}</div>` : ''}</div>`;
+      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}` : ''}</div>`;
   }
   /** Le split comptoir / pro de la vue (jour, semaine, mois) : lu dans la réponse de Résultat, pas un appel de plus. */
   function splitDe(m) {
@@ -1954,7 +1957,7 @@
     if (!X.lu) { return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span>${bascule}</div>${deplie}</div>`; }
     const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}${X.per ? ' · limite : ' + PRO_MAX + ' % de pro' : ''}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i>${X.per ? `<b class="lim" style="left:${100 - PRO_MAX}%" title="limite : ${PRO_MAX} % de pro"></b>` : ''}</div>` : '';
     const plusP = jour && P ? [J && J.aFacturer ? 'à facturer ' + fE(J.aFacturer) : ''].filter(Boolean).join(' · ') : '';
-    return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
+    return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle, avec une TVA valide · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
       <div class="db-split-g"><div class="c"><div class="k">Comptoir</div><div class="v">${m.caComptoir != null ? fK(m.caComptoir) : '—'}</div><div class="s">${X.sC}</div></div>
       <div class="p"><div class="k">Clients pro B2B</div><div class="v">${fK(m.caPro)}</div><div class="s">${X.sP}${plusP ? '<br>' + esc(plusP) : ''}</div></div></div>${deplie}</div>`;
   }

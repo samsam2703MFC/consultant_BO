@@ -8050,7 +8050,7 @@ class App {
     const fU = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
     const pct = v => String(v).replace('.', ',') + ' %';
     const cli = n => fI(n) + ' client' + (n > 1 ? 's' : '');
-    const base = 'Pro = tickets portés par un client dont la fiche panel est professionnelle (is_client_b2b) ; comptoir = le reste du CA.';
+    const base = 'Pro = tickets portés par un client dont la fiche panel est professionnelle (is_client_b2b) avec un numéro de TVA valide ; comptoir = le reste du CA.';
     if (m.caPro == null) {
       return { caCpt: '—', caCptSous: '', caCptSous2: '', caPro: '—', caProSous: '', caProSous2: '',
         proTitre: m.proJours ? 'Aucun des ' + m.proJours + ' jours ouverts n’est encore lu : les tickets se relèvent au cron, chaque heure.' : 'Tickets du jour non lus chez le panel : le split attend la prochaine lecture.' };
