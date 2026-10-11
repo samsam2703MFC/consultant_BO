@@ -150,13 +150,25 @@ function resPnlMensuel(int $sid, string $de, string $a): array
         if (!isset($g['m'][$m]) || ($m >= $moisC && (int) ($g['quand'] ?? 0) < time() - 3600)) { $relire = true; break; }
     }
     if ($relire && class_exists('PanelApi') && PanelApi::configured()) {
-        $r = PanelApi::get('/consultant/shops/' . $sid . '/pnl/monthly?' . http_build_query(['from' => $de, 'to' => $a]));
-        if (is_array($r) && is_array($r['months'] ?? null)) {
+        // Une année par appel : mesuré le 11/10/2026, janvier 2025 → octobre 2026 d'un coup ne répond pas pour trois
+        // magasins sur quatre, une année à la fois répond pour tous.
+        $chemins = [];
+        for ($y = (int) substr($de, 0, 4); $y <= (int) substr($a, 0, 4); $y++) {
+            $chemins[$y] = '/consultant/shops/' . $sid . '/pnl/monthly?' . http_build_query(['from' => max($de, $y . '-01'), 'to' => min($a, $y . '-12')]);
+        }
+        $lu = false;
+        foreach (PanelApi::getParallele($chemins, 4) as $yR => $r) {
+            if (!is_array($r) || !is_array($r['months'] ?? null)) { continue; }
+            $lu = true;
+            // Les mois de l'année que le panel ne rend pas (avant l'ouverture) se notent vides : ils ne se redemandent pas.
+            for ($m = max($de, $yR . '-01'); $m <= min($a, $yR . '-12'); $m = date('Y-m', strtotime($m . '-01 +1 month'))) { $g['m'][$m] ??= ['ca' => null, 'lab' => null, 'oh' => null]; }
             foreach ($r['months'] as $x) {
-                $m = substr((string) ($x['month'] ?? ''), 0, 7);
-                if (!preg_match('/^\d{4}-\d{2}$/', $m) || !is_array($x)) { continue; }
+                $m = is_array($x) ? substr((string) ($x['month'] ?? ''), 0, 7) : '';
+                if (!preg_match('/^\d{4}-\d{2}$/', $m)) { continue; }
                 $g['m'][$m] = ['ca' => nombreOuNull($x, ['turnover']), 'lab' => nombreOuNull($x, ['labour']), 'oh' => nombreOuNull($x, ['overhead'])];
             }
+        }
+        if ($lu) {
             $g['quand'] = time();
             try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($g)]); }
             catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
