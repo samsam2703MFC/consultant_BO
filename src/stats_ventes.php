@@ -1414,6 +1414,8 @@ function svCron(): string
     if (function_exists('vpMoisson')) { try { $vp = vpMoisson(); $pro = $vp['ok'] ? ' · pro : ' . $vp['joursFaits'] . ' jour(s) complétés, ' . $vp['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro = ' · pro : échec'; } }
     // Et la part pro produit par produit, que les rotations du comptoir retirent.
     try { $pb = svB2bMoisson(); $pro .= $pb['ok'] ? ' · produits pro : ' . $pb['joursFaits'] . ' jour(s) complétés, ' . $pb['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · produits pro : échec'; }
+    // Le personnel et les frais de chaque jour de l'année (11/10/2026) : le tableau « mois par mois » et le P&L des mois passés.
+    if (function_exists('resCoutsMoisson')) { try { $rc = resCoutsMoisson(); $pro .= $rc['ok'] ? ' · coûts du panel : ' . $rc['lectures'] . ' jour(s) lus, ' . $rc['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · coûts du panel : échec'; } }
     return ($r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'))) . $pro;
 }
 

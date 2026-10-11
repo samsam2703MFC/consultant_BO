@@ -69,6 +69,52 @@ function resJoursPanel(array $ids, array $jours, string $auj): array
     return $out;
 }
 
+/**
+ * Le personnel et les frais généraux d'une période, jour par jour, tels que le panel les alloue
+ * (daily-summary : employee_cost, shop_cost ; gravés par resJoursPanel) — les mois passés compris.
+ * Mesuré le 11/10/2026 : le résumé quotidien les rend pour tout jour passé (14/03, 15/06, 15/09 à
+ * Halle). $budget borne les lectures au panel (un jour non gravé = une lecture) ; ce qui manque
+ * se lit au battement suivant du cron (resCoutsMoisson). `manque` = les jours encore sans chiffre.
+ * @return array{lab: float, oh: float, jours: int, manque: int}
+ */
+function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $auj): array
+{
+    $clos = date('Y-m-d', strtotime($auj . ' -2 day'));
+    $fin = min($au, $auj);
+    $jours = []; $manque = 0;
+    for ($d = $du; $d <= $fin; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $g = $d <= $clos ? setting('dsJ:' . $id . ':' . $d) : null;
+        if (is_array($g) && array_key_exists('lab', $g)) { $jours[] = $d; continue; }
+        if ($budget > 0) { $jours[] = $d; $budget--; } else { $manque++; }
+    }
+    $r = $jours === [] ? [] : (resJoursPanel([$id], $jours, $auj)[$id] ?? []);
+    $lab = 0.0; $oh = 0.0; $n = 0;
+    foreach ($jours as $d) {
+        $x = $r[$d] ?? null;
+        if ($x === null || $x['lab'] === null) { $manque++; continue; }
+        $lab += (float) $x['lab']; $oh += (float) ($x['oh'] ?? 0); $n++;
+    }
+    return ['lab' => $lab, 'oh' => $oh, 'jours' => $n, 'manque' => $manque];
+}
+
+/**
+ * Au cron : graver le personnel et les frais de chaque jour de l'année en cours, magasin par magasin,
+ * du plus récent au plus ancien, $budget lectures au plus — le tableau « mois par mois » et le P&L
+ * d'un mois passé les lisent ensuite sans appel.
+ */
+function resCoutsMoisson(int $budget = 400): array
+{
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
+    try { $ids = array_map(static fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (Throwable $e) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
+    $auj = date('Y-m-d'); $restants = 0; $lus = $budget;
+    for ($m = (int) date('n'); $m >= 1; $m--) {
+        $du = sprintf('%s-%02d-01', date('Y'), $m);
+        foreach ($ids as $id) { $r = resCoutsPeriode($id, $du, date('Y-m-t', strtotime($du)), $budget, $auj); $restants += $r['manque']; }
+    }
+    return ['ok' => true, 'lectures' => $lus - $budget, 'joursRestants' => $restants];
+}
+
 function exPeriodeCalcul(): array
 {
     $auj  = date('Y-m-d');
@@ -160,12 +206,11 @@ function exPeriodeCalcul(): array
         }
     }
     $res = PanelApi::getParallele($paths, 6);
-    // Le personnel et les frais de CHAQUE jour, tels que le panel les alloue (10/10/2026) : le mois
-    // courant et toute semaine. Un mois passé garde la règle d'avant (pas de P&L hors mois courant).
+    // Le personnel et les frais de CHAQUE jour, tels que le panel les alloue (10/10/2026) : toute semaine,
+    // tout mois. 11/10/2026 : les mois passés aussi — le résumé quotidien les rend pour tout jour passé,
+    // un jour clos se grave (resJoursPanel) et le cron les remplit d'avance (resCoutsMoisson).
     $joursDs = [];
-    if ($vue === 'semaine' || substr($du, 0, 7) === $moisCourant) {
-        for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursDs[] = $d; }
-    }
+    for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursDs[] = $d; }
     $dsJ = resJoursPanel(array_map(static fn ($s) => (int) $s['id'], $shops), $joursDs, $auj);
     // Les clients pro de l'étendue : le relevé de chaque jour (gravé par la
     // moisson ou le dashboard), complété par une trentaine de listes lues en
