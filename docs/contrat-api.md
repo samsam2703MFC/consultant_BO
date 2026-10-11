@@ -3006,6 +3006,8 @@ appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. 
 
 **Mode de service (11/10/2026).** `&service=0` garde les tickets d'un mode de service, toutes leurs lignes (`vise: true`). Seuls ces tickets se lisent. Chaque ticket porte `service` (l'`id_serving_method` de la liste du panel), la réponse aussi. Mesuré à Halle du 1er au 11/10 : 0 = sur place (le compte colle heure par heure à `eat_in_qty` de l'heure par heure), 2 = à emporter ; 21 tickets sur place sur 1 659. Avec `cat` ou `q`, le filtre s'ajoute : les tickets du mode, la ligne visée seulement.
 
+**Tickets avec client (11/10/2026).** `&client=1` garde les tickets rattachés à un client du panel (`id_client` dans la liste), pro ou particulier, toutes leurs lignes. Chaque ticket porte `client`, `facture` (`will_be_invoiced`), `differe` (`deferral_payment`) et `pro` (`is_client_b2b`). Jamais le nom ni l'identifiant du client. Le drapeau pro suit la fiche du client au panel : mesuré le 10/10 sur 400 tickets, 6 tickets pro tous facturés, et 3 tickets facturés à un client particulier, comptés au comptoir.
+
 **Promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3).** `GET /ventes/stats` renvoie `promos` :
 
 - `regles[]` : chaque promotion déclenchée sur les jours lus. Champs : `{id, nom, type (buyxgety | bundle | remise), texte, statut, fois, tickets, q, v, r}`. Elles sont triées par ventes. L'id `x` regroupe les remises de ligne qu'aucune promotion n'explique.
