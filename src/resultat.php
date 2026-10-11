@@ -81,6 +81,10 @@ function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $
 {
     $clos = date('Y-m-d', strtotime($auj . ' -2 day'));
     $fin = min($au, $auj);
+    // Un mois entier et clos, complet : sa somme se garde (dsM), le tableau des mois ne relit plus ses trente jours.
+    $moisEntier = substr($du, 8) === '01' && $au === date('Y-m-t', strtotime($du)) && $au <= $clos;
+    $cleM = 'dsM:' . $id . ':' . substr($du, 0, 7);
+    if ($moisEntier) { $gM = setting($cleM); if (is_array($gM) && isset($gM['lab'], $gM['jours'])) { return ['lab' => (float) $gM['lab'], 'oh' => (float) ($gM['oh'] ?? 0), 'jours' => (int) $gM['jours'], 'manque' => 0]; } }
     $jours = []; $manque = 0;
     for ($d = $du; $d <= $fin; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
         $g = $d <= $clos ? setting('dsJ:' . $id . ':' . $d) : null;
@@ -94,6 +98,10 @@ function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $
         if ($x === null || $x['lab'] === null) { $manque++; continue; }
         $lab += (float) $x['lab']; $oh += (float) ($x['oh'] ?? 0); $n++;
     }
+    if ($moisEntier && $manque === 0 && $n > 0) {
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cleM, json_encode(['lab' => round($lab, 2), 'oh' => round($oh, 2), 'jours' => $n, 'le' => $auj])]); }
+        catch (Throwable $e) { /* sans gravure : la somme se refait */ }
+    }
     return ['lab' => $lab, 'oh' => $oh, 'jours' => $n, 'manque' => $manque];
 }
 
@@ -105,12 +113,14 @@ function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $
 function resCoutsMoisson(int $budget = 400): array
 {
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
-    try { $ids = array_map(static fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
-    catch (Throwable $e) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
+    $ids = [];
+    foreach (analyseListe(PanelApi::consultantShops() ?? []) as $sh) { if ((int) ($sh['id'] ?? 0) > 0) { $ids[] = (int) $sh['id']; } }
+    if ($ids === []) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
     $auj = date('Y-m-d'); $restants = 0; $lus = $budget;
-    for ($m = (int) date('n'); $m >= 1; $m--) {
-        $du = sprintf('%s-%02d-01', date('Y'), $m);
-        foreach ($ids as $id) { $r = resCoutsPeriode($id, $du, date('Y-m-t', strtotime($du)), $budget, $auj); $restants += $r['manque']; }
+    // L'année en cours puis la précédente : /stores/perf les montre toutes les deux.
+    for ($t = strtotime(date('Y-m-01')); $t >= strtotime((date('Y') - 1) . '-01-01'); $t = strtotime('-1 month', $t)) {
+        $du = date('Y-m-01', $t);
+        foreach ($ids as $id) { $r = resCoutsPeriode($id, $du, date('Y-m-t', $t), $budget, $auj); $restants += $r['manque']; }
     }
     return ['ok' => true, 'lectures' => $lus - $budget, 'joursRestants' => $restants];
 }
