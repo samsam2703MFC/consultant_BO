@@ -736,3 +736,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-11T11:04:50Z tickets avec client
 2026-10-11T12:00:34Z fiche client TVA
 2026-10-11T12:02:22Z fiche client en blocs
+2026-10-11T12:04:50Z fiche client societe et rang
