@@ -127,12 +127,23 @@ function ep_ventes_tickets(): array
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     $cat = trim((string) ($_GET['cat'] ?? '')); $mot = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
     $remise = !empty($_GET['remise']);   // ?remise=1 : les tickets qui portent une remise (une promotion déclenchée), toutes catégories
-    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '' && !$remise)) { http_response_code(400); return ['error' => 'shop, date et cat, q ou remise requis']; }
+    // ?service=0 (11/10/2026) : les tickets d'un mode de service, toutes leurs lignes. Mesuré à Halle : 0 = sur place
+    // (le compte colle heure par heure à eat_in_qty de l'heure par heure), 2 = à emporter. Seuls ces tickets se lisent.
+    $service = isset($_GET['service']) && is_numeric($_GET['service']) ? (int) $_GET['service'] : null;
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '' && !$remise && $service === null)) { http_response_code(400); return ['error' => 'shop, date et cat, q, remise ou service requis']; }
     if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
-    $ids = []; $pro = [];
-    foreach (analyseListe($liste) as $t) { if ((int) ($t['id'] ?? 0) > 0) { $ids[] = (int) $t['id']; if (!empty($t['is_client_b2b'])) { $pro[(int) $t['id']] = true; } } }
+    $ids = []; $pro = []; $svc = []; $nJour = 0;
+    foreach (analyseListe($liste) as $t) {
+        $id = (int) ($t['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $nJour++;
+        $svc[$id] = isset($t['id_serving_method']) && is_numeric($t['id_serving_method']) ? (int) $t['id_serving_method'] : null;
+        if ($service !== null && $svc[$id] !== $service) { continue; }
+        $ids[] = $id; if (!empty($t['is_client_b2b'])) { $pro[$id] = true; }
+    }
+    $tous = $service !== null && $cat === '' && $mot === '' && !$remise;   // le mode de service seul : toutes les lignes
     $catDe = function_exists('svCategories') ? svCategories() : [];
     $n = static fn ($v) => is_numeric($v) ? round((float) $v, 2) : null;
     $tickets = []; $lus = 0;
@@ -147,18 +158,18 @@ function ep_ventes_tickets(): array
                 $pid = (int) ($l['id_product'] ?? 0);
                 $nom = trim((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')) ?: 'ligne sans produit';
                 $c = $pid > 0 ? (string) ($catDe[$pid] ?? '') : '';
-                $ok = ($cat !== '' && $c === $cat) || ($mot !== '' && mb_strpos(mb_strtolower($nom), $mot) !== false) || ($remise && (float) ($l['item_discount_value'] ?? 0) > 0.004);
+                $ok = $tous || ($cat !== '' && $c === $cat) || ($mot !== '' && mb_strpos(mb_strtolower($nom), $mot) !== false) || ($remise && (float) ($l['item_discount_value'] ?? 0) > 0.004);
                 $vise = $vise || $ok;
                 $lignes[] = ['pid' => $pid ?: null, 'nom' => $nom, 'cat' => $c, 'vise' => $ok, 'q' => $n($l['quantity'] ?? null), 'pu' => $n($l['unit_gross_price'] ?? null),
                     'remise' => $n($l['item_discount_value'] ?? null), 'total' => $n($l['total_gross_value_after_discount'] ?? null), 'portion' => $l['product_portion_label'] ?? null];
             }
             if (!$vise && !($remise && (float) ($t['discount_total_value'] ?? 0) > 0.004)) { continue; }
             $tickets[] = ['id' => $id, 'heure' => substr((string) ($t['insert_timestamp'] ?? ''), 11, 5), 'total' => $n($t['total_gross_amount_after_discount'] ?? null),
-                'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'lignes' => $lignes];
+                'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'service' => $svc[$id] ?? null, 'lignes' => $lignes];
         }
     }
     usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
-    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'ticketsDuJour' => count($ids), 'ticketsLus' => $lus, 'tickets' => $tickets];
+    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
 }
 
 /**
