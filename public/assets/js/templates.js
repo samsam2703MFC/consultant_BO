@@ -6183,7 +6183,7 @@ function tplInventaires(c, x){
   }
   function histo(){
     if (!o.histo.length) { return ''; }
-    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse, inventaire par inventaire <span>chaque barre : ce que la caisse et la poubelle expliquent de ce qui est sorti du stock entre deux inventaires · la ligne marque 100 % · cliquer une barre pour l’ouvrir</span></div>
+    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse sur quatre semaines glissantes <span>une barre par inventaire : ce que la caisse et la poubelle expliquent de ce qui est sorti du stock pendant les quatre semaines qui le précèdent · la ligne marque 100 % · cliquer une barre pour l’ouvrir</span></div>
       <div class="in-histo">${o.histo.map(h => `<button ${x.A(h.choisir)} class="in-hb ${h.cls}${h.on ? ' on' : ''}" title="${esc(h.titre)}"><span class="v">${esc(h.val)}</span><i style="height:${h.h}%"></i><span class="d">${esc(h.lib)}</span></button>`).join('')}<div class="in-cent"></div></div></div>`;
   }
   const J = o.justesse;
