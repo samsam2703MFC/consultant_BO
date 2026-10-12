@@ -70,6 +70,22 @@ function ep_stock_inventaires_sonde(): array
               FROM material_order_item_delivery_log d JOIN material_order o ON o.id = d.id_order WHERE o.id_shop = ? AND d.created_at >= ? GROUP BY DATE(d.created_at) ORDER BY jour', [$sid, '2026-06-01 00:00:00']);
         $q('ventesMouvements', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ movement_type, reason, COUNT(*) n, ROUND(SUM(quantity), 1) q FROM product_movement WHERE id_shop = ? AND created_at >= ? GROUP BY movement_type, reason', [$sid, '2026-06-01 00:00:00']);
     }
+    // `recettes=pid,pid` : le produit, sa recette, son rendement et ses matières aplaties
+    if (!empty($_GET['recettes'])) {
+        $pids = array_slice(array_values(array_filter(array_map('intval', explode(',', (string) $_GET['recettes'])))), 0, 12);
+        if ($pids !== []) {
+            $in = implode(',', array_fill(0, count($pids), '?'));
+            $q('recettesProduits', 'SELECT p.id pid, p.id_recipe, r.name recette, r.yield_quantity rendement, r.id_unit unite, r.is_subrecipe
+                  FROM product p LEFT JOIN product_recipe r ON r.id = p.id_recipe WHERE p.id IN (' . $in . ')', $pids);
+            $q('recettesMatieres', 'SELECT p.id pid, f.id_material, m.name matiere, m.id_unit, f.quantity
+                  FROM product p JOIN flattened_recipe_ingredient f ON f.id_recipe = p.id_recipe LEFT JOIN material m ON m.id = f.id_material
+                  WHERE p.id IN (' . $in . ') ORDER BY p.id, f.id_material', $pids);
+            $q('recettesDirectes', 'SELECT p.id pid, c.child_ingredient_id id_material, c.child_recipe_id sous, c.quantity
+                  FROM product p JOIN product_recipe_material_connection c ON c.parent_recipe_id = p.id_recipe WHERE p.id IN (' . $in . ')', $pids);
+        }
+        $q('portions', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ product_portion_type, COUNT(*) n, ROUND(SUM(quantity), 1) q FROM transaction_product WHERE id_transaction > (SELECT MAX(id) - 40000 FROM `transaction`) GROUP BY product_portion_type');
+        $q('unites', 'SELECT * FROM unit LIMIT 20');
+    }
     $dernier = is_array($out['inventaires'] ?? null) && isset($out['inventaires'][0]['id']) ? (int) $out['inventaires'][0]['id'] : 0;
     if ($dernier > 0) {
         $q('resumeExemple', 'SELECT m.id_material, mt.name matiere, m.previous_balance_in_base_unit avant, m.counted_quantity_in_base_unit compte, m.difference, m.avg_base_unit_price_net prix
