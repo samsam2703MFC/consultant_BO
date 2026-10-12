@@ -764,3 +764,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-12T05:15:52Z stock : ecart entre deux inventaires
 2026-10-12T05:17:32Z stock : sonde, fuseaux
 2026-10-12T05:19:27Z stock : inventaires a l heure locale
+2026-10-12T05:24:08Z stock : ecart sur plusieurs semaines

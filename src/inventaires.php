@@ -183,6 +183,26 @@ function invUnites(): array
     return $memo;
 }
 
+/**
+ * L'unité de chaque matière telle que le panel la montre aujourd'hui (/shops/{id}/material-inventory) :
+ * mid => g, ml ou pce. La copie a des matières mal unitées (des inserts de tarte en grammes) ; gardé une heure.
+ */
+function invUnitesLive(int $sid): array
+{
+    $c = setting('invUnites:' . $sid);
+    if (is_array($c) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['u']; }
+    $u = [];
+    if (class_exists('PanelApi') && PanelApi::configured()) {
+        foreach (analyseListe(PanelApi::get('/shops/' . $sid . '/material-inventory') ?? []) as $m) {
+            $n = trim((string) ($m['unit_name'] ?? ''));
+            if ((int) ($m['id_material'] ?? 0) > 0 && $n !== '') { $u[(int) $m['id_material']] = function_exists('rpUniteCourte') ? rpUniteCourte($n) : strtolower($n); }
+        }
+        if ($u !== []) { svGrave('invUnites:' . $sid, ['quand' => time(), 'u' => $u]); }
+    }
+    if ($u === [] && is_array($c)) { return (array) $c['u']; }
+    return $u;
+}
+
 /** Les matières : id => [nom, categorie, unite (de base : g, ml, pce)]. */
 function invMatieres(array $mids): array
 {
@@ -271,10 +291,10 @@ function invFraction(?string $type, int $idPortion): float
 }
 
 /**
- * Ce que la copie sait entre deux inventaires A et B (identifiants de stocktaking) :
- * comptages, grand livre, ventes et poubelle, jour par jour. null si un inventaire manque.
+ * Ce que la copie sait du stock entre deux inventaires CONSÉCUTIFS A et B (identifiants de stocktaking) :
+ * comptages, grand livre, solde attendu et sorties réelles par matière. null si un inventaire manque.
  */
-function invBaseCopie(int $sid, int $idA, int $idB): ?array
+function invStockCopie(int $sid, int $idA, int $idB): ?array
 {
     try {
         $sA = Db::row('SELECT id, created_at FROM stocktaking WHERE id = ? AND id_shop = ?', [$idA, $sid]);
@@ -285,7 +305,7 @@ function invBaseCopie(int $sid, int $idA, int $idB): ?array
     if ($tA >= $tB) { [$idA, $idB, $tA, $tB] = [$idB, $idA, $tB, $tA]; }
     $m = []; $prix = []; $prixA = [];
     $mat = static function (int $mid) use (&$m): void {
-        if (!isset($m[$mid])) { $m[$mid] = ['cA' => null, 'cB' => null, 'entrees' => 0.0, 'sortiesDecl' => 0.0, 'corrections' => 0.0, 'efface' => null, 'mouv' => []]; }
+        if (!isset($m[$mid])) { $m[$mid] = ['cA' => null, 'cB' => null, 'entrees' => 0.0, 'sortiesDecl' => 0.0, 'corrections' => 0.0, 'efface' => null, 'apres' => 0.0, 'mouv' => []]; }
     };
     foreach (Db::rows('SELECT id_stockatking st, id_material mid, counted_quantity_in_base_unit c, avg_base_unit_price_net p FROM stocktaking_summary WHERE id_stockatking IN (?, ?)', [$idA, $idB]) as $r) {
         $mid = (int) $r['mid']; $mat($mid);
@@ -295,26 +315,52 @@ function invBaseCopie(int $sid, int $idA, int $idB): ?array
     }
     $jours = [];
     // Le grand livre entre A et B : livraisons (IN), pertes matière déclarées (OUT hors effacement), corrections,
-    // et l'effacement qui ouvre l'inventaire B — le solde que le panel attendait.
+    // et l'effacement qui ouvre l'inventaire B — le solde que le panel attendait. Ce qui est livré ou corrigé
+    // APRÈS l'effacement (pendant le comptage) s'y ajoute : `apres` le garde à part.
     foreach (Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ id_material mid, change_type t, reason r, change_quantity_in_base_unit q, previous_balance pb, new_balance nb, id_stocktaking st, created_at at
           FROM material_inventory_log WHERE id_shop = ? AND created_at > ? AND created_at <= ? ORDER BY created_at, id', [$sid, $tA, $tB]) as $r) {
         $mid = (int) $r['mid']; $t = strtoupper((string) $r['t']); $re = strtoupper((string) $r['r']); $q = abs((float) $r['q']);
         $at = substr((string) $r['at'], 0, 16); $j = substr($at, 0, 10);
         if ($re === 'STOCKTAKING') { continue; }                     // le comptage lui-même : lu dans le résumé
         $mat($mid);
-        if ($t === 'OUT' && $re === 'ERASE') { $m[$mid]['efface'] = ($m[$mid]['efface'] ?? 0.0) + $q; $m[$mid]['mouv'][] = [$at, 'attendu', round($q, 3)]; continue; }
-        if ($t === 'IN') {
-            $m[$mid]['entrees'] += $q; $m[$mid]['mouv'][] = [$at, $re === 'ORDER' ? 'livraison' : strtolower($re ?: 'entree'), round($q, 3)];
-            $jours[$j]['entrees'][$mid] = ($jours[$j]['entrees'][$mid] ?? 0.0) + $q;
+        if ($t === 'OUT' && $re === 'ERASE') {
+            $m[$mid]['efface'] = ($m[$mid]['efface'] ?? 0.0) + $q; $m[$mid]['apres'] = 0.0;
+            $m[$mid]['mouv'][] = [$at, 'attendu', round($q, 3)];
             continue;
         }
-        if ($t === 'OUT') { $m[$mid]['sortiesDecl'] += $q; $m[$mid]['mouv'][] = [$at, 'perte ' . strtolower($re ?: 'matière'), -round($q, 3)]; continue; }
-        // ADJUST hors inventaire : une correction à la main, dans le sens que dit le solde
-        $d = is_numeric($r['nb']) && is_numeric($r['pb']) ? (float) $r['nb'] - (float) $r['pb'] : (float) $r['q'];
-        $m[$mid]['corrections'] += $d; $m[$mid]['mouv'][] = [$at, 'correction', round($d, 3)];
+        $d = 0.0;
+        if ($t === 'IN') {
+            $d = $q; $m[$mid]['entrees'] += $q; $m[$mid]['mouv'][] = [$at, $re === 'ORDER' ? 'livraison' : strtolower($re ?: 'entree'), round($q, 3)];
+            $jours[$j]['entrees'][$mid] = ($jours[$j]['entrees'][$mid] ?? 0.0) + $q;
+        } elseif ($t === 'OUT') {
+            $d = -$q; $m[$mid]['sortiesDecl'] += $q; $m[$mid]['mouv'][] = [$at, 'perte ' . strtolower($re ?: 'matière'), -round($q, 3)];
+        } else {
+            // ADJUST hors inventaire : une correction à la main, dans le sens que dit le solde
+            $d = is_numeric($r['nb']) && is_numeric($r['pb']) ? (float) $r['nb'] - (float) $r['pb'] : (float) $r['q'];
+            $m[$mid]['corrections'] += $d; $m[$mid]['mouv'][] = [$at, 'correction', round($d, 3)];
+        }
+        if ($m[$mid]['efface'] !== null) { $m[$mid]['apres'] += $d; }
     }
+    // Par matière : le solde attendu avant le comptage de B, et les sorties réelles. Une matière ni comptée ni
+    // effacée en B n'était pas de l'inventaire : son stock court toujours, ses sorties ne se mesurent pas.
+    foreach ($m as $mid => &$x) {
+        $flux = $x['entrees'] - $x['sortiesDecl'] + $x['corrections'];
+        if ($x['cB'] === null && $x['efface'] === null) { $x['sorties'] = null; $x['attendu'] = null; $x['debut'] = (float) ($x['cA'] ?? 0); continue; }
+        $x['attendu'] = $x['efface'] !== null ? $x['efface'] + $x['apres'] : max(0.0, (float) ($x['cA'] ?? 0) + $flux);
+        $x['sorties'] = $x['attendu'] - (float) ($x['cB'] ?? 0);
+        // pas compté en A : le début se lit dans le solde du panel (ce qu'il attendait, moins ce qui est entré depuis)
+        $x['debut'] = $x['cA'] !== null ? (float) $x['cA'] : max(0.0, $x['attendu'] - $flux);
+    }
+    unset($x);
     foreach ($prixA as $mid => $p) { if (!isset($prix[$mid])) { $prix[$mid] = $p; } }
-    // Les ventes de caisse, jour par jour et produit par produit (portions ramenées à la pièce)
+    return ['de' => ['id' => 'c' . $idA, 'at' => substr($tA, 0, 19)], 'a' => ['id' => 'c' . $idB, 'at' => substr($tB, 0, 19)], 'source' => 'copie',
+        'matieres' => $m, 'prix' => $prix, 'jours' => $jours];
+}
+
+/** Les ventes de caisse, la poubelle et les reports de la copie entre deux instants (heure locale). */
+function invVentesCopie(int $sid, string $tA, string $tB): array
+{
+    // jour par jour et produit par produit (portions ramenées à la pièce)
     $ventes = []; $ca = []; $pidsV = [];
     foreach (Db::rows('SELECT /*+ MAX_EXECUTION_TIME(20000) */ DATE(t.insert_timestamp) j, l.id_product pid, l.product_portion_type pt, l.id_product_portion pp,
               SUM(l.quantity) q, SUM(l.total_gross_value_after_discount) v
@@ -345,9 +391,34 @@ function invBaseCopie(int $sid, int $idA, int $idB): ?array
             $reports[(string) $r['j']] = round((float) $r['q'], 1);
         }
     } catch (Throwable $e) { /* sans reports */ }
-    return ['de' => ['id' => 'c' . $idA, 'at' => substr($tA, 0, 19)], 'a' => ['id' => 'c' . $idB, 'at' => substr($tB, 0, 19)], 'source' => 'copie',
-        'matieres' => $m, 'prix' => $prix, 'ventes' => $ventes, 'ca' => $ca, 'pertes' => $pertes, 'jours' => $jours, 'reports' => $reports,
-        'ventesCompletes' => true, 'notes' => []];
+    return ['ventes' => $ventes, 'ca' => $ca, 'pertes' => $pertes, 'reports' => $reports, 'ventesCompletes' => true, 'notes' => []];
+}
+
+/**
+ * Plusieurs semaines bout à bout : chaque inventaire remet le solde du panel au compté, les sorties se
+ * mesurent donc semaine par semaine et s'additionnent. Le début est le premier compté, la fin le dernier.
+ */
+function invFusionStock(array $bases): array
+{
+    $f = array_shift($bases);
+    foreach ($bases as $b) {
+        foreach ($b['matieres'] as $mid => $x) {
+            if (!isset($f['matieres'][$mid])) { $f['matieres'][$mid] = $x; continue; }
+            $y = &$f['matieres'][$mid];
+            foreach (['entrees', 'sortiesDecl', 'corrections'] as $k) { $y[$k] += $x[$k]; }
+            if ($x['sorties'] !== null) { $y['sorties'] = ($y['sorties'] ?? 0.0) + $x['sorties']; }
+            if ($x['cB'] !== null || $x['efface'] !== null) { $y['cB'] = $x['cB']; $y['efface'] = $x['efface']; }
+            if ($y['sorties'] !== null) { $y['attendu'] = (float) ($y['cB'] ?? 0) + $y['sorties']; }
+            $y['mouv'] = array_merge($y['mouv'], $x['mouv']);
+            unset($y);
+        }
+        foreach ($b['prix'] as $mid => $p) { $f['prix'][$mid] = $p; }
+        foreach ($b['jours'] as $j => $e) {
+            foreach ($e['entrees'] ?? [] as $mid => $q) { $f['jours'][$j]['entrees'][$mid] = ($f['jours'][$j]['entrees'][$mid] ?? 0.0) + $q; }
+        }
+        $f['a'] = $b['a'];
+    }
+    return $f;
 }
 
 /**
@@ -385,16 +456,20 @@ function invCalcul(int $sid, array $b): array
         }
     }
     $infos = invMatieres(array_merge(array_keys($m), array_keys($vM)));
+    // l'unité du panel d'aujourd'hui prime : g et kg ramenés au gramme, l et cl au millilitre, le reste en pièces
+    foreach (invUnitesLive($sid) as $mid => $u) {
+        if (!isset($infos[$mid])) { continue; }
+        $infos[$mid]['unite'] = in_array($u, ['g', 'kg'], true) ? 'g' : (in_array($u, ['ml', 'cl', 'l'], true) ? 'ml' : 'pce');
+    }
     $prix = $b['prix'] + invPrixListe($sid, array_merge(array_keys($m), array_keys($vM)));
     $noms = invNomsProduits(array_merge(array_keys($pids)));
     $lignes = [];
     $T = ['debut' => 0.0, 'entrees' => 0.0, 'pertesMatiere' => 0.0, 'fin' => 0.0, 'sorties' => 0.0, 'ventes' => 0.0, 'poubelle' => 0.0, 'explique' => 0.0, 'manquant' => 0.0, 'excedent' => 0.0, 'sansPrix' => 0];
     foreach ($m as $mid => $x) {
-        $counted = $x['cA'] !== null || $x['cB'] !== null || $x['efface'] !== null;
-        if (!$counted) { continue; }                                       // jamais comptée : hors inventaire
-        $cA = (float) ($x['cA'] ?? 0); $cB = (float) ($x['cB'] ?? 0);
-        $attendu = $x['efface'] ?? max(0.0, $cA + $x['entrees'] - $x['sortiesDecl'] + $x['corrections']);
-        $sorties = $attendu - $cB;
+        if ($x['sorties'] === null) { continue; }                          // pas de l'inventaire B : ne se mesure pas
+        $cA = (float) $x['debut']; $cB = (float) ($x['cB'] ?? 0);
+        $attendu = (float) $x['attendu'];
+        $sorties = (float) $x['sorties'];
         $v = $vM[$mid] ?? 0.0; $w = $wM[$mid] ?? 0.0; $e = $v + $w;
         if (abs($sorties) < 1e-9 && $e < 1e-9 && $cA < 1e-9 && $cB < 1e-9 && $x['entrees'] < 1e-9) { continue; }   // rien ne bouge
         $p = $prix[$mid] ?? null;
@@ -419,7 +494,7 @@ function invCalcul(int $sid, array $b): array
     usort($lignes, static fn ($a, $b) => (abs($b['valeur']['ecart'] ?? 0) <=> abs($a['valeur']['ecart'] ?? 0)) ?: strcmp($a['nom'], $b['nom']));
     // Ce que la caisse a vendu sur des matières jamais comptées (emballages, boissons hors inventaire…)
     $horsInv = 0.0;
-    foreach ($vM as $mid => $q) { if (!isset($m[$mid]) || ($m[$mid]['cA'] === null && $m[$mid]['cB'] === null && $m[$mid]['efface'] === null)) { $horsInv += $q * ($prix[$mid] ?? 0); } }
+    foreach ($vM as $mid => $q) { if (!isset($m[$mid]) || $m[$mid]['sorties'] === null) { $horsInv += $q * ($prix[$mid] ?? 0); } }
     // La suite des jours : livré, sorti par les ventes, jeté — valorisés
     $jours = [];
     $tousJours = array_unique(array_merge(array_keys($b['jours']), array_keys($vJour), array_keys($wJour), array_keys($b['reports'] ?? [])));
@@ -443,7 +518,7 @@ function invCalcul(int $sid, array $b): array
     $tot['ca'] = round($caTot, 2);
     $tot['caSansRecette'] = round($caSans, 2);
     $tot['horsInventaire'] = round($horsInv, 2);
-    return ['shop' => $sid, 'de' => $b['de'], 'a' => $b['a'], 'source' => $b['source'], 'jours' => round($heures / 24, 1),
+    return ['shop' => $sid, 'de' => $b['de'], 'a' => $b['a'], 'source' => $b['source'], 'jours' => round($heures / 24, 1), 'semaines' => (int) ($b['semaines'] ?? 1),
         'totaux' => $tot, 'matieres' => $lignes, 'suite' => $jours, 'sansRecette' => $sr, 'ventesCompletes' => $b['ventesCompletes'], 'notes' => $b['notes'],
         'methode' => 'Sorties réelles = compté au premier inventaire + livré − pertes matière déclarées − compté au second (le solde que le panel efface en ouvrant l’inventaire, moins le compté). Sorties expliquées = ventes de caisse × recette aplatie (portions ramenées à la pièce) + poubelle déclarée × recette. Valeurs au prix d’achat moyen HTVA de la matière (celui de l’inventaire).'];
 }
@@ -460,9 +535,22 @@ function invResume(array $r): array
 /** L'écart entre deux inventaires, quelle que soit leur source ; null si la paire ne se calcule pas. */
 function invEcart(int $sid, string $de, string $a): ?array
 {
-    if (preg_match('/^c(\d+)$/', $de, $mA) && preg_match('/^c(\d+)$/', $a, $mB)) {
-        $b = invBaseCopie($sid, (int) $mA[1], (int) $mB[1]);
-        return $b === null ? null : invCalcul($sid, $b);
+    if (preg_match('/^c\d+$/', $de) && preg_match('/^c\d+$/', $a)) {
+        $l = array_reverse(invCopieListe($sid));                       // du plus ancien au plus récent
+        $ids = array_column($l, 'id');
+        $iA = array_search($de, $ids, true); $iB = array_search($a, $ids, true);
+        if ($iA === false || $iB === false || $iA === $iB) { return null; }
+        if ($iA > $iB) { [$iA, $iB] = [$iB, $iA]; }
+        if ($iB - $iA > 26) { $iA = $iB - 26; }                        // six mois au plus
+        $bases = [];
+        for ($i = $iA; $i < $iB; $i++) {
+            $x = invStockCopie($sid, (int) substr($ids[$i], 1), (int) substr($ids[$i + 1], 1));
+            if ($x !== null) { $bases[] = $x; }
+        }
+        if ($bases === []) { return null; }
+        $st = invFusionStock($bases);
+        $v = invVentesCopie($sid, $st['de']['at'], $st['a']['at']);
+        return invCalcul($sid, $st + $v + ['source' => 'copie', 'semaines' => count($bases)]);
     }
     if (function_exists('invBaseReleve')) {
         $b = invBaseReleve($sid, $de, $a);
