@@ -181,6 +181,14 @@
 .vi .cq-l .fi .t{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;margin:6px 0 2px}
 .vi .cq-l .fi .q{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
 .vi .cq-l .fi .cq-acts{margin-top:10px;padding-top:0}.vi .cq-l .fi .act{margin-top:10px}.vi .cq-l .fi .act .btn{flex:1}
+.vi .meteo{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.vi .meteo button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:12px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);cursor:pointer;font:600 12px var(--font-ui);color:var(--color-text);text-align:center;line-height:1.2}
+.vi .meteo button .i{font-size:28px;line-height:1.1}
+.vi .meteo button small{font:500 10.5px var(--font-ui);color:var(--color-text-muted)}
+.vi .meteo button.on{border:1.5px solid var(--color-primary);background:#F7E4E6;color:var(--color-primary)}
+.vi.mob .meteo button small{display:none}
+.vi.tab .meteo button{min-height:104px;padding:14px 6px}
+.vi.tab .meteo button .i{font-size:36px}
 /* ── Tablette (12/10/2026) : la liste des boutiques ou l'agenda, puis le contrôle étape par étape,
    les étapes en barre de menu en bas. Écran plein, cibles tactiles de 44 px au moins. */
 .vi.tab{min-height:100vh;font-size:15px}
@@ -369,6 +377,9 @@
     suivi: '<path d="M5 21V4h12l-2.5 4L17 12H5"/>',
     liste: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
   };
+  // La météo du franchisé, notée en fin de contrôle (12/10/2026).
+  const METEO = [[5, '☀️', 'Grand soleil', 'motivé, moteur'], [4, '🌤️', 'Éclaircies', 'plutôt confiant'], [3, '⛅', 'Nuageux', 'mitigé'], [2, '🌧️', 'Pluie', 'découragé'], [1, '⛈️', 'Orage', 'tendu, en conflit']];
+  const meteoDe = n => METEO.find(m => m[0] === Number(n)) || null;
   const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
@@ -1069,7 +1080,11 @@
       const f = this.form;
       if (f.pa) { return; }
       f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
-      f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+      f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+    }
+    /** La météo du franchisé, en fin de contrôle : cinq temps, un toucher. */
+    meteoHtml(f) {
+      return `<div class="cap">Météo du franchisé</div><div class="card"><div class="meteo">${METEO.map(([n, ic, l, aide]) => `<button data-a="form" data-v="meteo|${n}" class="${f.meteo === n ? 'on' : ''}"><span class="i">${ic}</span><b>${esc(l)}</b><small>${esc(aide)}</small></button>`).join('')}</div></div>`;
     }
     /** Le plan d'action en cours de rédaction. */
     planFormHtml(v, f) {
@@ -1131,7 +1146,7 @@
       this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
       etapes.push({ ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
-      etapes.push({ ic: 'plan', court: 'Plan d’action', titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : ''), fait: false, html: () => this.planFormHtml(v, f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
+      etapes.push({ ic: 'plan', court: 'Plan d’action', titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : '') + (meteoDe(f.meteo) ? ' · ' + meteoDe(f.meteo)[1] : ''), fait: false, html: () => this.planFormHtml(v, f) + this.meteoHtml(f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
@@ -1196,7 +1211,8 @@
         const derLe = der ? der.prevu_le : (b.derniereVisite && b.derniereVisite.le);
         const meta = [derLe ? `<span>dernier contrôle ${esc(fmtD(derLe))}</span>` : '',
           b.plansOuverts ? `<span class="${b.p0 ? 'ko' : ''}">${b.plansOuverts} action${b.plansOuverts > 1 ? 's' : ''} ouverte${b.plansOuverts > 1 ? 's' : ''}${b.p0 ? ' · P0' : ''}</span>` : '',
-          b.google && b.google.note != null ? `<span>Google ${note1(b.google.note)}</span>` : ''].join('');
+          b.google && b.google.note != null ? `<span>Google ${note1(b.google.note)}</span>` : '',
+          der && meteoDe(der.meteo) ? `<span>météo ${meteoDe(der.meteo)[1]} ${esc(meteoDe(der.meteo)[2].toLowerCase())}</span>` : ''].join('');
         const act = cours ? `<button class="tb-b p" data-a="go" data-v="controle/${esc(cours.id)}">Reprendre le contrôle ›</button>`
           : proch ? `<button class="tb-b" data-a="go" data-v="fiche/${esc(proch.id)}">Fiche</button><button class="tb-b p" data-a="demarrer" data-v="${esc(proch.id)}">Démarrer le contrôle ›</button>`
           : `<button class="tb-b" data-a="go" data-v="planifier/${esc(b.id)}">Planifier</button><button class="tb-b p" data-a="demarrer-ici" data-v="${esc(b.id)}">Démarrer maintenant ›</button>`;
@@ -1331,10 +1347,10 @@
     }
     /** Ce que le consultant a vu, diagnostiqué et recommandé — lu par le franchisé, l'admin, l'historique. */
     vuSurPlace(v, titre) {
-      if (!v || !(v.reco || v.diagnostic || (v.causes || []).length || v.execution || v.clients || v.sentiment || v.positif)) { return ''; }
+      if (!v || !(v.reco || v.diagnostic || (v.causes || []).length || v.execution || v.clients || v.sentiment || v.positif || v.meteo)) { return ''; }
       const CD = this.D.causesDiag || {};
       return `<div class="cap">${titre || 'Vu sur place'}</div><div class="card sm">
-        ${v.sentiment || v.execution || v.clients ? `<div class="row" style="flex-wrap:wrap;gap:6px">${v.sentiment ? `<span class="pill">équipe ${'★'.repeat(v.sentiment)}</span>` : ''}${v.execution ? `<span class="pill ${v.execution === 'standards' ? 'api' : v.execution === 'ecarts' ? 'loc' : 'mix'}">${EXECUTION[v.execution] || v.execution}</span>` : ''}${v.clients ? `<span class="pill ${v.clients === 'satisfaits' ? 'api' : v.clients === 'insatisfaits' ? 'loc' : 'mix'}">clients ${(CLIENTS[v.clients] || v.clients).toLowerCase()}</span>` : ''}</div>` : ''}
+        ${v.sentiment || v.execution || v.clients || v.meteo ? `<div class="row" style="flex-wrap:wrap;gap:6px">${meteoDe(v.meteo) ? `<span class="pill">météo du franchisé ${meteoDe(v.meteo)[1]} ${esc(meteoDe(v.meteo)[2])}</span>` : ''}${v.sentiment ? `<span class="pill">équipe ${'★'.repeat(v.sentiment)}</span>` : ''}${v.execution ? `<span class="pill ${v.execution === 'standards' ? 'api' : v.execution === 'ecarts' ? 'loc' : 'mix'}">${EXECUTION[v.execution] || v.execution}</span>` : ''}${v.clients ? `<span class="pill ${v.clients === 'satisfaits' ? 'api' : v.clients === 'insatisfaits' ? 'loc' : 'mix'}">clients ${(CLIENTS[v.clients] || v.clients).toLowerCase()}</span>` : ''}</div>` : ''}
         ${(v.causes || []).length ? `<div style="margin-top:6px"><b>Le vrai problème :</b> ${esc(v.causes.map(c => CD[c] || c).join(', '))}</div>` : ''}
         ${v.diagnostic ? `<div class="mu" style="margin-top:2px">${esc(v.diagnostic)}</div>` : ''}
         ${v.reco ? `<div style="margin-top:6px"><b>Recommandation :</b> ${esc(v.reco)}</div>` : ''}
@@ -1513,7 +1529,7 @@
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       this.form = {};
       this.go(this.o.tablette ? 'shops' : 'historique', v.shop);

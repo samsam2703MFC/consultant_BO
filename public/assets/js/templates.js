@@ -4,7 +4,7 @@
  * x = { A: onClick, C: onChange, I: onInput, DS: dragstart, DP: drop, EN: mouseenter, esc }.
  */
 
-import { tplGC, tplFF, tplRO } from './franchises-tpl.js';
+import { tplGC, tplFF, tplRO, tplCQM } from './franchises-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
@@ -170,7 +170,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isOffres ? tplOffres(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
-      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}
+      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isGP ? tplGP(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
