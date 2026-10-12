@@ -106,6 +106,14 @@ function ep_stock_inventaires_sonde(): array
         $q('portions', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ product_portion_type, COUNT(*) n, ROUND(SUM(quantity), 1) q FROM transaction_product WHERE id_transaction > (SELECT MAX(id) - 40000 FROM `transaction`) GROUP BY product_portion_type');
         $q('unites', 'SELECT * FROM unit LIMIT 20');
     }
+    // `heures=1` : à quelle heure tombent tickets, poubelle et grand livre — leur fuseau (UTC ou heure de Bruxelles)
+    if (!empty($_GET['heures'])) {
+        $q('heuresTickets', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ HOUR(insert_timestamp) h, COUNT(*) n FROM `transaction` WHERE id_shop = ? AND insert_timestamp >= ? AND insert_timestamp < ? GROUP BY h ORDER BY h', [$sid, '2026-07-07 00:00:00', '2026-07-12 00:00:00']);
+        $q('heuresPoubelle', "SELECT /*+ MAX_EXECUTION_TIME(8000) */ HOUR(created_at) h, COUNT(*) n FROM product_movement WHERE id_shop = ? AND created_at >= ? AND created_at < ? GROUP BY h ORDER BY h", [$sid, '2026-06-01 00:00:00', '2026-07-14 00:00:00']);
+        $q('heuresLivre', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ HOUR(created_at) h, COUNT(*) n FROM material_inventory_log WHERE id_shop = ? AND created_at >= ? GROUP BY h ORDER BY h', [$sid, '2026-06-01 00:00:00']);
+        $q('heuresInventaires', 'SELECT HOUR(created_at) h, COUNT(*) n FROM stocktaking WHERE id_shop = ? GROUP BY h ORDER BY h', [$sid]);
+        $q('maintenant', 'SELECT NOW() maintenant, UTC_TIMESTAMP() utc, @@session.time_zone tz');
+    }
     $dernier = is_array($out['inventaires'] ?? null) && isset($out['inventaires'][0]['id']) ? (int) $out['inventaires'][0]['id'] : 0;
     if ($dernier > 0) {
         $q('resumeExemple', 'SELECT m.id_material, mt.name matiere, m.previous_balance_in_base_unit avant, m.counted_quantity_in_base_unit compte, m.difference, m.avg_base_unit_price_net prix
