@@ -129,7 +129,7 @@ function ep_stock_inventaires_sonde(): array
 
 /* ---------- les inventaires et l'écart entre deux ---------- */
 
-const INV_CACHE_V = 3;          // version du calcul : une paire gardée sous une autre version se recalcule
+const INV_CACHE_V = 4;          // version du calcul : une paire gardée sous une autre version se recalcule
 const INV_PAIRES_MAX = 16;      // l'historique : les seize dernières semaines au plus
 const INV_RAPPORT_MAX = 6.0;    // vendu et sorti à plus de six fois l'un de l'autre : une unité ou une recette à vérifier, pas une perte
 
@@ -563,7 +563,9 @@ function invResume(array $r): array
     $t = $r['totaux'];
     return ['v' => INV_CACHE_V, 'de' => $r['de']['id'], 'a' => $r['a']['id'], 'deAt' => $r['de']['at'], 'aAt' => $r['a']['at'], 'jours' => $r['jours'],
         'justesse' => $t['justesse'], 'ventesSeules' => $t['ventesSeules'], 'sorties' => $t['sorties'], 'explique' => $t['explique'], 'ecart' => $t['ecart'],
-        'manquant' => $t['manquant'], 'excedent' => $t['excedent'], 'complet' => (bool) $r['ventesCompletes'], 'le' => date('c')];
+        'manquant' => $t['manquant'], 'excedent' => $t['excedent'], 'complet' => (bool) $r['ventesCompletes'], 'le' => date('c'),
+        // une semaine sans aucune livraison enregistrée (Corbais) ne se lit pas : l'écran la grise
+        'livraisons' => array_sum(array_map(static fn ($q) => (int) ($q['livraisons'] ?? 0), $r['qualite'] ?? [])), 'nQualite' => count($r['qualite'] ?? [])];
 }
 
 /** L'écart entre deux inventaires, quelle que soit leur source ; null si la paire ne se calcule pas. */

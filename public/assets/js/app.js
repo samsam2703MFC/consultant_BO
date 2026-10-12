@@ -2960,10 +2960,13 @@ class App {
       setShop: e => this.setState({ inShop: e.target.value, inDe: null, inA: null, inOuvert: null }),
       chargement: !!Lb.chargement && !Lb.d, indispo: Lb.d && Lb.d.error ? 'Lecture impossible : ' + Lb.d.error : '',
       de, a, options: l.map(x => ({ id: x.id, lib: jh(x.at) + ' · ' + x.n + ' matières' + (x.source === 'releve' ? ' · relevé' : ''), source: x.source })),
+      optionsDe: [],
       setDe: e => this.setState({ inDe: e.target.value, inOuvert: null }), setA: e => this.setState({ inA: e.target.value, inDe: null, inOuvert: null }),
       raccourcis: [], filtres: [], lignes: [], kpi: [], suite: null, histo: [], qualite: [], alertes: [], sansRecette: [], releve: '' };
     // les raccourcis de période : une, quatre ou douze semaines avant l'inventaire de fin
     const B = l.find(x => x.id === a);
+    // le début se choisit parmi les inventaires de même source, plus anciens que la fin
+    inv.optionsDe = B ? inv.options.filter(o => o.source === B.source && (l.find(x => x.id === o.id) || {}).at < B.at) : [];
     if (B) {
       const t = s => new Date(s.replace(' ', 'T')).getTime();
       const cand = l.filter(x => x.source === B.source && x.at < B.at);
@@ -2981,9 +2984,9 @@ class App {
       if (nReleve < 2) { inv.alertes.push(['info', 'Les inventaires d’octobre se calculent dès le prochain : le panel ne rend pas ses inventaires passés, le cockpit relève le stock toutes les cinq minutes depuis le ' + jf(R.depuis || '') + '. La copie du panel s’arrête au ' + inv.finCopie + ' : ce sont ces semaines-là qu’on lit pour l’instant.']); }
       // l'historique : une barre par semaine
       const H = (L.paires || []).slice().reverse();
-      inv.histo = H.map(p => { const r = p.resume; const j = r ? r.justesse : null;
-        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
-          h: j == null ? 0 : Math.max(2, Math.min(100, j / 1.5)), val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
+      inv.histo = H.map(p => { const r = p.resume; const sansL = !!(r && r.nQualite > 0 && r.livraisons === 0); const j = r && !sansL ? r.justesse : null;
+        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
+          h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j / 1.5)), val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
           cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
           choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
     }
@@ -2997,9 +3000,12 @@ class App {
       if (E) {
         const T = E.totaux;
         inv.periode = 'du ' + jh(E.de.at) + ' au ' + jh(E.a.at) + ' · ' + nf(E.jours, 1) + ' jours' + (E.semaines > 1 ? ' · ' + E.semaines + ' inventaires' : '') + (E.source === 'releve' ? ' · relevé en direct' : ' · copie du panel');
-        const j = T.justesse;
-        inv.justesse = { val: fP(j), cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
-          sous: j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, ' + fE(T.fiableExplique) + ' expliqués par la caisse et la poubelle' };
+        const Q0 = E.qualite || [];
+        const sansLivr0 = E.source === 'copie' && Q0.length > 0 && Q0.every(q => !q.livraisons);
+        const j = sansLivr0 ? null : T.justesse;
+        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+          sous: sansLivr0 ? 'aucune livraison enregistrée dans le panel sur la période : le stock n’a pas d’entrées, ses sorties ne se mesurent pas'
+            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, ' + fE(T.fiableExplique) + ' expliqués par la caisse et la poubelle' };
         inv.kpi = [
           ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
           ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],

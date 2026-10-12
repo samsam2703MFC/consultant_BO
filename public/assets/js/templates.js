@@ -6168,7 +6168,7 @@ function tplInventaires(c, x){
   const sel = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 10px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:260px';
   const barre = `<div style="${card};padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
     <label class="in-lab">Magasin <select ${x.C(o.setShop)} style="${sel}">${o.magasins.map(m => `<option value="${esc(m.id)}" ${m.on ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
-    ${o.options.length ? `<label class="in-lab">Du <select ${x.C(o.setDe)} style="${sel}">${o.options.map(p => `<option value="${esc(p.id)}" ${p.id === o.de ? 'selected' : ''}>${esc(p.lib)}</option>`).join('')}</select></label>
+    ${o.options.length ? `<label class="in-lab">Du <select ${x.C(o.setDe)} style="${sel}">${o.optionsDe.map(p => `<option value="${esc(p.id)}" ${p.id === o.de ? 'selected' : ''}>${esc(p.lib)}</option>`).join('') || '<option value="">—</option>'}</select></label>
     <label class="in-lab">au <select ${x.C(o.setA)} style="${sel}">${o.options.map(p => `<option value="${esc(p.id)}" ${p.id === o.a ? 'selected' : ''}>${esc(p.lib)}</option>`).join('')}</select></label>
     <div class="in-seg">${o.raccourcis.map(r => `<button ${x.A(r.choisir)} class="${r.on ? 'on' : ''}">${esc(r.lib)}</button>`).join('')}</div>` : ''}
     ${o.recalculer ? `<button ${x.A(o.recalculer)} class="in-btn" style="margin-left:auto">Recalculer</button>` : ''}
