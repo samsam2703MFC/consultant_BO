@@ -126,8 +126,9 @@ function ep_stock_inventaires_sonde(): array
 
 /* ---------- les inventaires et l'écart entre deux ---------- */
 
-const INV_CACHE_V = 1;          // version du calcul : une paire gardée sous une autre version se recalcule
+const INV_CACHE_V = 2;          // version du calcul : une paire gardée sous une autre version se recalcule
 const INV_PAIRES_MAX = 16;      // l'historique : les seize dernières semaines au plus
+const INV_RAPPORT_MAX = 6.0;    // vendu et sorti à plus de six fois l'un de l'autre : une unité ou une recette à vérifier, pas une perte
 
 /**
  * L'heure de Bruxelles d'un horodatage UTC. Mesuré le 12/10/2026 : `stocktaking.created_at` est en UTC
@@ -464,7 +465,10 @@ function invCalcul(int $sid, array $b): array
     $prix = $b['prix'] + invPrixListe($sid, array_merge(array_keys($m), array_keys($vM)));
     $noms = invNomsProduits(array_merge(array_keys($pids)));
     $lignes = [];
-    $T = ['debut' => 0.0, 'entrees' => 0.0, 'pertesMatiere' => 0.0, 'fin' => 0.0, 'sorties' => 0.0, 'ventes' => 0.0, 'poubelle' => 0.0, 'explique' => 0.0, 'manquant' => 0.0, 'excedent' => 0.0, 'sansPrix' => 0];
+    $T = ['debut' => 0.0, 'entrees' => 0.0, 'pertesMatiere' => 0.0, 'fin' => 0.0, 'sorties' => 0.0, 'ventes' => 0.0, 'poubelle' => 0.0, 'explique' => 0.0, 'manquant' => 0.0, 'excedent' => 0.0, 'sansPrix' => 0,
+        // la justesse ne se lit que sur les matières FIABLES : une matière qu'aucune vente ne consomme (recette
+        // manquante), ou dont le vendu et le sorti ne sont pas du même ordre (unité, recette), se montre à part
+        'fiableSorties' => 0.0, 'fiableExplique' => 0.0, 'sansRecetteSorties' => 0.0, 'aVerifier' => 0.0, 'nFiables' => 0, 'nSansRecette' => 0, 'nAVerifier' => 0, 'nSurplus' => 0];
     foreach ($m as $mid => $x) {
         if ($x['sorties'] === null) { continue; }                          // pas de l'inventaire B : ne se mesure pas
         $cA = (float) $x['debut']; $cB = (float) ($x['cB'] ?? 0);
@@ -482,6 +486,10 @@ function invCalcul(int $sid, array $b): array
             'attendu' => round($attendu, 3), 'fin' => round($cB, 3), 'compteFin' => $x['cB'] !== null, 'sorties' => round($sorties, 3),
             'ventes' => round($v, 3), 'poubelle' => round($w, 3), 'explique' => round($e, 3), 'ecart' => round($ecart, 3),
             'justesse' => $sorties > 0 ? round(100 * $e / $sorties, 1) : null,
+            // fiable : sorti et vendu du même ordre ; sansRecette : sorti, aucune vente ne la consomme ; surplus : vendu sans
+            // être sorti (livraison hors panel ?) ; aVerifier : un ordre de grandeur d'écart (unité, recette) ; calme : rien ne bouge
+            'statut' => $sorties > 0 && $e > 0 ? (max($sorties / $e, $e / $sorties) >= INV_RAPPORT_MAX ? 'aVerifier' : 'fiable')
+                : ($sorties > 0 ? 'sansRecette' : ($e > 0 ? 'surplus' : 'calme')),
             'valeur' => $p !== null ? ['sorties' => round($sorties * $p, 2), 'explique' => round($e * $p, 2), 'ecart' => round($ecart * $p, 2)] : null,
             'produits' => array_map(static fn ($pid, $q) => ['id' => (int) $pid, 'nom' => $noms[(int) $pid] ?? ('Produit ' . $pid), 'q' => round($q, 3)], array_keys(array_slice($prods, 0, 6, true)), array_slice($prods, 0, 6, true)),
             'mouvements' => $x['mouv']];
@@ -489,7 +497,13 @@ function invCalcul(int $sid, array $b): array
         if ($p === null) { $T['sansPrix']++; continue; }
         $T['debut'] += $cA * $p; $T['entrees'] += $x['entrees'] * $p; $T['pertesMatiere'] += $x['sortiesDecl'] * $p; $T['fin'] += $cB * $p;
         $T['sorties'] += $sorties * $p; $T['ventes'] += $v * $p; $T['poubelle'] += $w * $p; $T['explique'] += $e * $p;
-        if ($ecart > 0) { $T['manquant'] += $ecart * $p; } else { $T['excedent'] += -$ecart * $p; }
+        $st = $l['statut'];
+        if ($st === 'fiable') {
+            $T['fiableSorties'] += $sorties * $p; $T['fiableExplique'] += $e * $p; $T['nFiables']++;
+            if ($ecart > 0) { $T['manquant'] += $ecart * $p; } else { $T['excedent'] += -$ecart * $p; }
+        } elseif ($st === 'sansRecette') { $T['sansRecetteSorties'] += $sorties * $p; $T['nSansRecette']++; }
+        elseif ($st === 'surplus') { $T['excedent'] += $e * $p - max(0.0, $sorties) * $p; $T['nSurplus']++; }
+        elseif ($st === 'aVerifier') { $T['aVerifier'] += abs($ecart) * $p; $T['nAVerifier']++; }
     }
     usort($lignes, static fn ($a, $b) => (abs($b['valeur']['ecart'] ?? 0) <=> abs($a['valeur']['ecart'] ?? 0)) ?: strcmp($a['nom'], $b['nom']));
     // Ce que la caisse a vendu sur des matières jamais comptées (emballages, boissons hors inventaire…)
@@ -513,7 +527,8 @@ function invCalcul(int $sid, array $b): array
     $tot = [];
     foreach ($T as $k => $v) { $tot[$k] = is_float($v) ? round($v, 2) : $v; }
     $tot['ecart'] = round($T['sorties'] - $T['explique'], 2);
-    $tot['justesse'] = $T['sorties'] > 0 ? round(100 * $T['explique'] / $T['sorties'], 1) : null;
+    $tot['justesse'] = $T['fiableSorties'] > 0 ? round(100 * $T['fiableExplique'] / $T['fiableSorties'], 1) : null;
+    $tot['justesseBrute'] = $T['sorties'] > 0 ? round(100 * $T['explique'] / $T['sorties'], 1) : null;
     $tot['ventesSeules'] = $T['sorties'] > 0 ? round(100 * $T['ventes'] / $T['sorties'], 1) : null;
     $tot['ca'] = round($caTot, 2);
     $tot['caSansRecette'] = round($caSans, 2);
