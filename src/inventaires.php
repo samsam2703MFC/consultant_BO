@@ -129,7 +129,19 @@ function ep_stock_inventaires_sonde(): array
 const INV_CACHE_V = 1;          // version du calcul : une paire gardée sous une autre version se recalcule
 const INV_PAIRES_MAX = 16;      // l'historique : les seize dernières semaines au plus
 
-/** Les inventaires de la copie pour un magasin, du plus récent au plus ancien : [{id: 'c165', at, n, source, type}]. */
+/**
+ * L'heure de Bruxelles d'un horodatage UTC. Mesuré le 12/10/2026 : `stocktaking.created_at` est en UTC
+ * (l'inventaire 165 de Halle, 09:13:46, est passé à 11:13:46 dans le grand livre), alors que le grand livre,
+ * les tickets et la poubelle de la copie sont à l'heure locale (premiers tickets à 6 h, poubelle à 17-18 h).
+ */
+function invLocal(string $utc): string
+{
+    try {
+        return (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Brussels'))->format('Y-m-d H:i:s');
+    } catch (Throwable $e) { return substr($utc, 0, 19); }
+}
+
+/** Les inventaires de la copie pour un magasin, du plus récent au plus ancien : [{id: 'c165', at (heure locale), n, source, type}]. */
 function invCopieListe(int $sid): array
 {
     try {
@@ -140,7 +152,7 @@ function invCopieListe(int $sid): array
     $out = [];
     foreach ($rows as $r) {
         if ((int) $r['n'] <= 0) { continue; }
-        $out[] = ['id' => 'c' . (int) $r['id'], 'at' => substr((string) $r['created_at'], 0, 19), 'n' => (int) $r['n'],
+        $out[] = ['id' => 'c' . (int) $r['id'], 'at' => invLocal((string) $r['created_at']), 'n' => (int) $r['n'],
             'source' => 'copie', 'type' => (string) $r['type']];
     }
     return $out;
@@ -269,7 +281,7 @@ function invBaseCopie(int $sid, int $idA, int $idB): ?array
         $sB = Db::row('SELECT id, created_at FROM stocktaking WHERE id = ? AND id_shop = ?', [$idB, $sid]);
     } catch (Throwable $e) { return null; }
     if ($sA === null || $sB === null) { return null; }
-    $tA = (string) $sA['created_at']; $tB = (string) $sB['created_at'];
+    $tA = invLocal((string) $sA['created_at']); $tB = invLocal((string) $sB['created_at']);
     if ($tA >= $tB) { [$idA, $idB, $tA, $tB] = [$idB, $idA, $tB, $tA]; }
     $m = []; $prix = []; $prixA = [];
     $mat = static function (int $mid) use (&$m): void {
