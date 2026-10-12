@@ -38,6 +38,7 @@ require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
+require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
@@ -365,6 +366,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
+            $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
