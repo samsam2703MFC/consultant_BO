@@ -20,16 +20,24 @@ declare(strict_types=1);
 
 const CQM_BUDGET = 48;
 
-/** Les magasins du consultant, par l'API : [id => nom court]. */
+/**
+ * Les magasins du consultant, par l'API : [id => nom court]. Le nom vient du référentiel des
+ * magasins du cockpit (« Halle », comme partout ailleurs) : le `name` de l'API est la société
+ * exploitante, parfois un nom de personne, et ne sort pas.
+ */
 function cqmMagasins(): array
 {
+    $courts = [];
+    try {
+        foreach (function_exists('ep_stores') ? ep_stores() : [] as $st) {
+            $nom = (string) ($st['nom'] ?? '');
+            if ($nom !== '') { $courts[(int) ($st['id'] ?? 0)] = str_contains($nom, ' - ') ? trim(substr($nom, strrpos($nom, ' - ') + 3)) : $nom; }
+        }
+    } catch (Throwable $e) { /* référentiel muet : numéros */ }
     $out = [];
     foreach (analyseListe(PanelApi::consultantShops() ?? []) as $sh) {
         $id = (int) ($sh['id'] ?? 0);
-        if ($id <= 0) { continue; }
-        $nom = trim((string) ($sh['name'] ?? $sh['nom'] ?? ''));
-        $court = trim((string) preg_replace('/^.*?\s-\s/u', '', $nom));
-        $out[$id] = $court !== '' ? $court : ($nom !== '' ? $nom : 'Magasin ' . $id);
+        if ($id > 0) { $out[$id] = $courts[$id] ?? ('Magasin ' . $id); }
     }
     ksort($out);
     return $out;
