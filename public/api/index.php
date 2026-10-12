@@ -368,6 +368,8 @@ function route(string $method, string $path): mixed
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
+            $path === '/stock/inventaires'            => ep_stock_inventaires(),
+            $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),

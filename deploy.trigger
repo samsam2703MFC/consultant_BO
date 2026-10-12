@@ -761,3 +761,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-12T05:08:09Z stock : sonde, recettes
 2026-10-12T05:08:55Z controles qualite du mois et meteo du franchise
 2026-10-12T05:12:34Z controles qualite noms des magasins
+2026-10-12T05:15:52Z stock : ecart entre deux inventaires
