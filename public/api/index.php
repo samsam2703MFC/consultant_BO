@@ -77,6 +77,7 @@ require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
+require __DIR__ . '/../../src/controles_qualite.php';
 require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
@@ -413,6 +414,7 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/heatmap/detail'      => ep_taches_heatmap_detail(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/tasks/photos'              => ep_pwa_tasks_photos(),
+            $path === '/controles/qualite'             => ep_controles_qualite(),
             $path === '/pwa/tasks/nc'                  => ep_pwa_tasks_nc(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),

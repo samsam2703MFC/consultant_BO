@@ -2,7 +2,7 @@
  * Gestion consultant (/consultants/gestion, /visites/cadre, /visites, /consultants/taches),
  * Fiche franchisé (/franchises, /franchises/fiche), Remarques aux opérateurs (/equipe/remarques).
  * Chaque fonction reçoit l'application (état, setState, api) et remplit `common`. */
-import { readOne, API_BASE } from './api.js';
+import { readOne, write, API_BASE } from './api.js';
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -575,4 +575,115 @@ export function valsRO(app, common){
   r.lignes = liste.map(x => ({ le: fmtD(x.le), heure: x.heure || '', employe: x.employe, produit: x.produit, pieces: x.pieces != null ? nf(x.pieces, x.pieces % 1 ? 1 : 0) : '—', motif: x.motifLib || x.motif || '', texte: x.texte || '', auteur: x.auteur || '' }));
   const max = Math.max(1, ...(d.parOperateur || []).map(o => o.n));
   r.parOperateur = (d.parOperateur || []).map(o => ({ nom: o.employe, pct: Math.round(100 * o.n / max), txt: pl(o.n, 'remarque') + ' · dernière ' + fmtD(o.derniere) }));
+}
+
+/* --- Contrôles qualité du mois (12/10/2026) ------------------------------------------------
+ * Tous les contrôles photo du mois, magasin par magasin, une ligne chacun, avec le badge de sa note
+ * au barème (Exemplaire, Conforme, mineur, majeur, critique) ou son état (à noter, en attente, non
+ * rendue). Lu par /controles/qualite, relu tant que des journées manquent ; la photo s'ouvre en
+ * modale (/pwa/tasks/detail, URL fraîche) et s'y note (POST /pwa/tasks/review). */
+const CQM_ETATS = { a_noter: ['À noter', '#5b3d9e', '#EEE6FA'], en_attente: ['En attente', '#7a6a55', '#F4EFE8'], non_rendue: ['Non rendue', '#555', '#E9E6E1'] };
+export function cqmBadge(d, etat){
+  if (typeof etat === 'number') {
+    const nv = ((d && d.niveaux) || []).find(n => n.n === etat) || {};
+    const nom = String(nv.nom || etat);
+    const court = nom.includes('—') ? nom.split('—').pop().trim() : nom;
+    return { txt: court.charAt(0).toUpperCase() + court.slice(1), long: nom, fg: '#fff', bg: nv.couleur || '#666', n: etat };
+  }
+  const e = CQM_ETATS[etat] || [etat, '#555', '#eee'];
+  return { txt: e[0], long: e[0], fg: e[1], bg: e[2], n: null };
+}
+export function cqmCharge(app, mois, force, tours){
+  const b = app.state.cqm; const cle = mois;
+  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
+  if (app._cqmEnCours === cle) { return; }
+  app._cqmEnCours = cle;
+  const t = tours || 0;
+  app.setState({ cqm: { cle, chargement: true, d: b && b.cle === cle ? b.d : null, tours: t } });
+  readOne('/controles/qualite?m=' + encodeURIComponent(mois)).then(d => {
+    app._cqmEnCours = null;
+    app.setState({ cqm: { cle, chargement: false, d: d || { error: 'injoignable' }, tours: t + 1 } });
+    // Des journées restent à lire : on relit, tant que chaque tour en apporte (douze tours au plus).
+    if (d && !d.error && d.manque > 0 && d.lus > 0 && t + 1 < 12) { setTimeout(() => { if ((app.state.cqm || {}).cle === cle) { cqmCharge(app, mois, true, t + 1); } }, 150); }
+  });
+}
+function cqmOuvrir(app, l){
+  app.setState({ cqmModal: { l, chargement: true, d: null, note: typeof l.etat === 'number' ? l.etat : null, comment: l.commentaire || '', msg: null, envoi: false } });
+  readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(l.shopId) + '&task=' + encodeURIComponent(l.taskId) + '&date=' + encodeURIComponent(l.date)).then(d => {
+    const M = app.state.cqmModal; if (!M || M.l !== l) { return; }
+    app.setState({ cqmModal: Object.assign({}, M, { chargement: false, d: d || { error: 'injoignable' } }) });
+  });
+}
+function cqmNoter(app){
+  const M = app.state.cqmModal; if (!M || M.envoi || !M.note) { return; }
+  const seuil = ((app.state.cqm || {}).d || {}).seuil || 4;
+  if (M.note < seuil && !String(M.comment || '').trim()) { app.setState({ cqmModal: Object.assign({}, M, { msg: { ko: true, txt: 'Sous « Conforme », le motif est obligatoire.' } }) }); return; }
+  const l = M.l, dt = M.d || {};
+  app.setState({ cqmModal: Object.assign({}, M, { envoi: true, msg: null }) });
+  write(app.source || 'api', 'POST', '/pwa/tasks/review', { shopId: l.shopId, taskId: l.taskId, date: l.date, note: M.note, comment: String(M.comment || '').trim(),
+    checklistId: dt.checklistId || l.checklistId || null, completionId: dt.completionId || l.completionId || null }).then(r => {
+    const M2 = app.state.cqmModal; if (!M2 || M2.l !== l) { return; }
+    if (!r || !r.ok) { app.setState({ cqmModal: Object.assign({}, M2, { envoi: false, msg: { ko: true, txt: 'Note refusée : ' + ((r && r.error) || 'serveur injoignable') } }) }); return; }
+    // La ligne prend la note tout de suite ; la journée se relira au prochain passage (garde effacée).
+    l.etat = M2.note; l.note = M2.note; l.commentaire = String(M2.comment || '').trim() || null;
+    app.setState({ cqmModal: Object.assign({}, M2, { envoi: false, msg: { ko: false, txt: 'Note enregistrée au panel.' } }) });
+  });
+}
+export function valsCQM(app, common){
+  const S = app.state;
+  const mois = S.cqmMois || auj().slice(0, 7);
+  cqmCharge(app, mois, false);
+  const b = S.cqm || {}, d = b.d && !b.d.error ? b.d : null;
+  const shop = S.cqmShop || '', filtre = S.cqmFiltre || '', cl = S.cqmCl || '';
+  const r = { moisLib: MOIS[+mois.slice(5, 7) - 1] + ' ' + mois.slice(0, 4), moisPrec: () => app.setState({ cqmMois: decaleMois(mois, -1), cqmN: 0 }),
+    moisSuiv: mois < auj().slice(0, 7) ? () => app.setState({ cqmMois: decaleMois(mois, 1), cqmN: 0 }) : null,
+    rafraichir: () => cqmCharge(app, mois, true, 0), chargement: !d && !!b.chargement, indispo: !b.chargement && b.d && !d ? 'Lecture impossible — API injoignable.' : '',
+    lecture: d && d.manque > 0 ? (b.chargement ? 'lecture des journées restantes… ' : '') + d.manque + ' journée' + (d.manque > 1 ? 's' : '') + ' encore à lire' : '',
+    erreur: d && d.api && d.api.erreur ? d.api.erreur : '', magasins: [], checklists: [], puces: [], kpis: [], parShop: [], lignes: [], reste: 0, plus: null, modal: null };
+  common.cqm = r;
+  if (d) {
+    r.magasins = [{ v: '', nom: 'Tous les magasins', on: !shop }].concat((d.magasins || []).map(m => ({ v: m.id, nom: m.nom, on: m.id === shop })));
+    r.setShop = e => app.setState({ cqmShop: e.target.value, cqmN: 0 });
+    const base = (d.lignes || []).filter(l => !shop || l.shopId === shop);
+    const cls = [...new Set(base.map(l => l.checklist).filter(Boolean))].sort();
+    r.checklists = [{ v: '', nom: 'Toutes les checklists', on: !cl }].concat(cls.map(c => ({ v: c, nom: c, on: c === cl })));
+    r.setCl = e => app.setState({ cqmCl: e.target.value, cqmN: 0 });
+    const L0 = base.filter(l => !cl || l.checklist === cl);
+    const nb = f => L0.filter(f).length;
+    const nc = l => typeof l.etat === 'number' && l.etat < (d.seuil || 4);
+    const defs = [['', 'Tous', () => true], ['nc', 'Non conformes', nc], ['1', null, l => l.etat === 1], ['2', null, l => l.etat === 2], ['3', null, l => l.etat === 3],
+      ['ok', 'Conformes', l => typeof l.etat === 'number' && l.etat >= (d.seuil || 4)], ['a_noter', null, l => l.etat === 'a_noter'], ['non_rendue', null, l => l.etat === 'non_rendue'], ['en_attente', null, l => l.etat === 'en_attente']];
+    r.puces = defs.map(([k, nom, f]) => { const bd = k && !nom ? cqmBadge(d, /^\d$/.test(k) ? +k : k) : null; return { nom: nom || bd.txt, n: nb(f), on: filtre === k, badge: bd, choisir: () => app.setState({ cqmFiltre: k, cqmN: 0 }) }; }).filter(p => p.n > 0 || p.on || p.nom === 'Tous');
+    const fx = (defs.find(x => x[0] === filtre) || defs[0])[2];
+    const L = L0.filter(fx);
+    const notes = L0.filter(l => typeof l.etat === 'number');
+    const rendus = L0.filter(l => l.photo).length;
+    const passes = L0.filter(l => l.etat !== 'en_attente').length;
+    const ncs = notes.filter(nc);
+    r.kpis = [['Contrôles photo', nf(L0.length), (d.du ? 'du ' + fmtD(d.du) + ' au ' + fmtD(d.au) : '') + (shop ? '' : ' · ' + (d.magasins || []).length + ' magasins')],
+      ['Rendus', passes ? Math.round(100 * rendus / passes) + ' %' : '—', nf(rendus) + ' photo' + (rendus > 1 ? 's' : '') + ' · ' + nf(nb(l => l.etat === 'non_rendue')) + ' non rendue' + (nb(l => l.etat === 'non_rendue') > 1 ? 's' : '')],
+      ['Notés', nf(notes.length), nf(nb(l => l.etat === 'a_noter')) + ' photo' + (nb(l => l.etat === 'a_noter') > 1 ? 's' : '') + ' à noter'],
+      ['Non conformes', nf(ncs.length), [1, 2, 3].map(n => nf(ncs.filter(l => l.etat === n).length) + ' ' + cqmBadge(d, n).txt.toLowerCase()).join(' · '), ncs.length ? 'ko' : 'ok']];
+    r.parShop = (d.magasins || []).filter(m => !shop || m.id === shop).map(m => {
+      const X = L0.filter(l => l.shopId === m.id); const pX = X.filter(l => l.etat !== 'en_attente').length; const nX = X.filter(l => typeof l.etat === 'number');
+      return { nom: m.nom, total: nf(X.length), rendus: pX ? Math.round(100 * X.filter(l => l.photo).length / pX) + ' %' : '—',
+        niveaux: [5, 4, 3, 2, 1].map(n => ({ b: cqmBadge(d, n), n: nX.filter(l => l.etat === n).length })), aNoter: X.filter(l => l.etat === 'a_noter').length, nonRendues: X.filter(l => l.etat === 'non_rendue').length };
+    });
+    const N = Math.max(150, +S.cqmN || 0);
+    r.lignes = L.slice(0, N).map(l => ({ date: fmtDJ(l.date), shop: l.shop, checklist: l.checklist || '', tache: l.tache, heure: l.heure || '', fait: l.fait || '', photo: l.photo,
+      badge: cqmBadge(d, l.etat), commentaire: l.commentaire || '', ouvrir: () => cqmOuvrir(app, l) }));
+    r.reste = Math.max(0, L.length - N);
+    r.plus = r.reste ? () => app.setState({ cqmN: N + 150 }) : null;
+    r.titre = (filtre ? (r.puces.find(p => p.on) || {}).nom + ' · ' : '') + nf(L.length) + ' contrôle' + (L.length > 1 ? 's' : '');
+  }
+  const M = S.cqmModal;
+  if (M) {
+    const dt = M.d && !M.d.error ? M.d : null;
+    r.modal = { titre: M.l.tache, sous: M.l.shop + ' · ' + fmtDJ(M.l.date) + (M.l.checklist ? ' · ' + M.l.checklist : ''), chargement: M.chargement, indispo: M.d && !dt ? 'Photo illisible — API injoignable.' : '',
+      photo: dt && dt.photo ? dt.photo : null, faitLe: dt && dt.faitLe ? 'faite à ' + String(dt.faitLe).slice(11, 16) : (M.l.fait ? 'faite à ' + M.l.fait : ''),
+      badge: cqmBadge(d || {}, M.l.etat), commentaire: M.l.commentaire || '',
+      choix: (d ? d.niveaux || [] : []).slice().sort((a, c) => c.n - a.n).map(n => ({ b: cqmBadge(d, n.n), on: M.note === n.n, choisir: () => app.setState({ cqmModal: Object.assign({}, app.state.cqmModal, { note: n.n, msg: null }) }) })),
+      motifRequis: !!M.note && M.note < ((d || {}).seuil || 4), comment: M.comment || '', setComment: e => { const X = app.state.cqmModal; if (X) { X.comment = e.target.value; } },
+      peutNoter: !!dt && !!M.l.photo, envoi: M.envoi, msg: M.msg, enregistrer: () => cqmNoter(app), fermer: () => app.setState({ cqmModal: null }) };
+  }
 }

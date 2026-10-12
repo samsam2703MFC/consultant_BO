@@ -382,6 +382,8 @@ function wr_pwa_task_review(): array
         http_response_code(502);
         return ['error' => 'l’API du panel a refusé la note : ' . (PanelApi::$lastError ?? 'erreur inconnue')];
     }
+    // Le tableau des contrôles qualité du mois relira cette journée (sa garde est effacée).
+    if (function_exists('cqmOublier')) { cqmOublier($shopId, $date); }
 
     // Journal local (miroir). Deux auteurs possibles : la DIRECTION (le
     // cockpit), consignée dans les colonnes owner_* sans toucher à
