@@ -58,6 +58,18 @@ function ep_stock_inventaires_sonde(): array
             (SELECT ROUND(SUM(m.difference * m.avg_base_unit_price_net), 2) FROM stocktaking_summary m WHERE m.id_stockatking = s.id) ecartValeur
           FROM stocktaking s WHERE s.id_shop = ? ORDER BY s.created_at DESC LIMIT 14', [$sid]);
     $q('raisonsMouvementMatiere', 'SELECT * FROM material_movement_reason LIMIT 20');
+    // `journal=1` : le grand livre matière — les types de mouvement, et la suite d'une matière d'un inventaire au suivant
+    if (!empty($_GET['journal'])) {
+        $q('journalTypes', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ change_type, reason, COUNT(*) n, ROUND(SUM(change_quantity_in_base_unit), 1) somme,
+                SUM(id_order IS NOT NULL) avecCommande, SUM(id_stocktaking IS NOT NULL) avecInventaire, MIN(created_at) premier, MAX(created_at) dernier
+              FROM material_inventory_log WHERE id_shop = ? AND created_at >= ? GROUP BY change_type, reason ORDER BY n DESC', [$sid, '2026-06-01 00:00:00']);
+        $mat = (int) ($_GET['matiere'] ?? 150);
+        $q('journalMatiere', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ created_at, change_type, reason, change_quantity_in_base_unit q, previous_balance avant, new_balance apres, id_order, id_stocktaking
+              FROM material_inventory_log WHERE id_shop = ? AND id_material = ? AND created_at >= ? ORDER BY created_at, id LIMIT 80', [$sid, $mat, '2026-06-20 00:00:00']);
+        $q('livraisons', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ DATE(d.created_at) jour, COUNT(*) lignes, ROUND(SUM(d.delivered_pack_qty * d.pack_size_in_base_unit), 0) unites, ROUND(SUM(d.delivered_pack_qty * d.pack_price), 2) valeur
+              FROM material_order_item_delivery_log d JOIN material_order o ON o.id = d.id_order WHERE o.id_shop = ? AND d.created_at >= ? GROUP BY DATE(d.created_at) ORDER BY jour', [$sid, '2026-06-01 00:00:00']);
+        $q('ventesMouvements', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ movement_type, reason, COUNT(*) n, ROUND(SUM(quantity), 1) q FROM product_movement WHERE id_shop = ? AND created_at >= ? GROUP BY movement_type, reason', [$sid, '2026-06-01 00:00:00']);
+    }
     $dernier = is_array($out['inventaires'] ?? null) && isset($out['inventaires'][0]['id']) ? (int) $out['inventaires'][0]['id'] : 0;
     if ($dernier > 0) {
         $q('resumeExemple', 'SELECT m.id_material, mt.name matiere, m.previous_balance_in_base_unit avant, m.counted_quantity_in_base_unit compte, m.difference, m.avg_base_unit_price_net prix
