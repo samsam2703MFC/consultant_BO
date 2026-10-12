@@ -1127,7 +1127,7 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 [data-screen="inventaires"] .in-j .pile i.v{border-radius:3px 3px 0 0}
 [data-screen="inventaires"] .in-j .d{font-size:10px;color:var(--color-text-muted);white-space:nowrap}
 [data-screen="inventaires"] .in-histo{position:relative;display:flex;gap:6px;align-items:flex-end;height:150px;padding-top:14px}
-[data-screen="inventaires"] .in-cent{position:absolute;left:0;right:0;bottom:calc(18px + (100% - 32px) * 0.6667);border-top:1px dashed var(--color-border-secondary);pointer-events:none}
+[data-screen="inventaires"] .in-cent{position:absolute;left:0;right:0;bottom:calc(17px + (100% - 14px) * 0.76);border-top:1px dashed var(--color-border-secondary);pointer-events:none}
 [data-screen="inventaires"] .in-hb{flex:1 0 30px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;border:none;background:transparent;cursor:pointer;padding:0;border-radius:6px}
 [data-screen="inventaires"] .in-hb i{display:block;width:70%;border-radius:4px 4px 0 0;background:#c9c2b8}
 [data-screen="inventaires"] .in-hb.ok i{background:#6aa84f}[data-screen="inventaires"] .in-hb.moy i{background:#e0a33a}[data-screen="inventaires"] .in-hb.ko i{background:#C0182B}[data-screen="inventaires"] .in-hb.sur i{background:#7fa7c9}

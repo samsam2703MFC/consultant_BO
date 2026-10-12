@@ -129,7 +129,7 @@ function ep_stock_inventaires_sonde(): array
 
 /* ---------- les inventaires et l'écart entre deux ---------- */
 
-const INV_CACHE_V = 4;          // version du calcul : une paire gardée sous une autre version se recalcule
+const INV_CACHE_V = 5;          // version du calcul : une paire gardée sous une autre version se recalcule
 const INV_PAIRES_MAX = 16;      // l'historique : les seize dernières semaines au plus
 const INV_RAPPORT_MAX = 6.0;    // vendu et sorti à plus de six fois l'un de l'autre : une unité ou une recette à vérifier, pas une perte
 
@@ -486,7 +486,7 @@ function invCalcul(int $sid, array $b): array
     $T = ['debut' => 0.0, 'entrees' => 0.0, 'pertesMatiere' => 0.0, 'fin' => 0.0, 'sorties' => 0.0, 'ventes' => 0.0, 'poubelle' => 0.0, 'explique' => 0.0, 'manquant' => 0.0, 'excedent' => 0.0, 'sansPrix' => 0,
         // la justesse ne se lit que sur les matières FIABLES : une matière qu'aucune vente ne consomme (recette
         // manquante), ou dont le vendu et le sorti ne sont pas du même ordre (unité, recette), se montre à part
-        'fiableSorties' => 0.0, 'fiableExplique' => 0.0, 'sansRecetteSorties' => 0.0, 'aVerifier' => 0.0, 'nFiables' => 0, 'nSansRecette' => 0, 'nAVerifier' => 0, 'nSurplus' => 0];
+        'fiableSorties' => 0.0, 'fiableExplique' => 0.0, 'fiableCouvert' => 0.0, 'sansRecetteSorties' => 0.0, 'aVerifier' => 0.0, 'nFiables' => 0, 'nSansRecette' => 0, 'nAVerifier' => 0, 'nSurplus' => 0];
     foreach ($m as $mid => $x) {
         if ($x['sorties'] === null) { continue; }                          // pas de l'inventaire B : ne se mesure pas
         $cA = (float) $x['debut']; $cB = (float) ($x['cB'] ?? 0);
@@ -518,6 +518,9 @@ function invCalcul(int $sid, array $b): array
         $st = $l['statut'];
         if ($st === 'fiable') {
             $T['fiableSorties'] += $sorties * $p; $T['fiableExplique'] += $e * $p; $T['nFiables']++;
+            // la part couverte : ce que la caisse et la poubelle expliquent, au plus ce qui est sorti — une matière
+            // vendue au-delà de son stock (livraison hors panel) ne rachète pas le manquant d'une autre
+            $T['fiableCouvert'] += min($e, $sorties) * $p;
             if ($ecart > 0) { $T['manquant'] += $ecart * $p; } else { $T['excedent'] += -$ecart * $p; }
         } elseif ($st === 'sansRecette') { $T['sansRecetteSorties'] += $sorties * $p; $T['nSansRecette']++; }
         elseif ($st === 'surplus') { $T['excedent'] += $e * $p - max(0.0, $sorties) * $p; $T['nSurplus']++; }
@@ -545,7 +548,8 @@ function invCalcul(int $sid, array $b): array
     $tot = [];
     foreach ($T as $k => $v) { $tot[$k] = is_float($v) ? round($v, 2) : $v; }
     $tot['ecart'] = round($T['sorties'] - $T['explique'], 2);
-    $tot['justesse'] = $T['fiableSorties'] > 0 ? round(100 * $T['fiableExplique'] / $T['fiableSorties'], 1) : null;
+    $tot['justesse'] = $T['fiableSorties'] > 0 ? round(100 * $T['fiableCouvert'] / $T['fiableSorties'], 1) : null;
+    $tot['rapportVenduSorti'] = $T['fiableSorties'] > 0 ? round(100 * $T['fiableExplique'] / $T['fiableSorties'], 1) : null;
     $tot['justesseBrute'] = $T['sorties'] > 0 ? round(100 * $T['explique'] / $T['sorties'], 1) : null;
     $tot['ventesSeules'] = $T['sorties'] > 0 ? round(100 * $T['ventes'] / $T['sorties'], 1) : null;
     $tot['ca'] = round($caTot, 2);
@@ -554,7 +558,7 @@ function invCalcul(int $sid, array $b): array
     return ['shop' => $sid, 'de' => $b['de'], 'a' => $b['a'], 'source' => $b['source'], 'jours' => round($heures / 24, 1), 'semaines' => (int) ($b['semaines'] ?? 1),
         'totaux' => $tot, 'matieres' => $lignes, 'suite' => $jours, 'sansRecette' => $sr, 'ventesCompletes' => $b['ventesCompletes'], 'notes' => $b['notes'],
         'qualite' => $b['qualite'] ?? [],
-        'methode' => 'Sorties réelles = compté au premier inventaire + livré − pertes matière déclarées − compté au second (le solde que le panel efface en ouvrant l’inventaire, moins le compté). Sorties expliquées = ventes de caisse × recette aplatie (portions ramenées à la pièce) + poubelle déclarée × recette. Valeurs au prix d’achat moyen HTVA de la matière (celui de l’inventaire).'];
+        'methode' => 'Sorties réelles = compté au premier inventaire + livré − pertes matière déclarées − compté au second (le solde que le panel attendait au comptage, moins le compté). Sorties expliquées = ventes de caisse × recette aplatie (portions ramenées à la pièce) + poubelle déclarée × recette. Justesse des ventes = part des sorties réelles que la caisse et la poubelle expliquent, matière par matière (au plus ce qui est sorti : une matière vendue au-delà de son stock ne rachète pas le manquant d’une autre), sur les matières fiables. Valeurs au prix d’achat moyen HTVA de la matière (celui de l’inventaire).'];
 }
 
 /** Le résumé d'une paire, gardé pour l'historique : la copie ne bouge plus, une paire relevée se garde une fois ses ventes complètes. */
@@ -564,6 +568,7 @@ function invResume(array $r): array
     return ['v' => INV_CACHE_V, 'de' => $r['de']['id'], 'a' => $r['a']['id'], 'deAt' => $r['de']['at'], 'aAt' => $r['a']['at'], 'jours' => $r['jours'],
         'justesse' => $t['justesse'], 'ventesSeules' => $t['ventesSeules'], 'sorties' => $t['sorties'], 'explique' => $t['explique'], 'ecart' => $t['ecart'],
         'manquant' => $t['manquant'], 'excedent' => $t['excedent'], 'complet' => (bool) $r['ventesCompletes'], 'le' => date('c'),
+        'fiableSorties' => $t['fiableSorties'], 'fiableCouvert' => $t['fiableCouvert'],
         // une semaine sans aucune livraison enregistrée (Corbais) ne se lit pas : l'écran la grise
         'livraisons' => array_sum(array_map(static fn ($q) => (int) ($q['livraisons'] ?? 0), $r['qualite'] ?? [])), 'nQualite' => count($r['qualite'] ?? [])];
 }

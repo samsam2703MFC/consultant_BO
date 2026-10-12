@@ -2986,8 +2986,8 @@ class App {
       const H = (L.paires || []).slice().reverse();
       inv.histo = H.map(p => { const r = p.resume; const sansL = !!(r && r.nQualite > 0 && r.livraisons === 0); const j = r && !sansL ? r.justesse : null;
         return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
-          h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j / 1.5)), val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
-          cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
+          h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j)) * 0.8, val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
+          cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
           choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
     }
     // l'écart de la paire choisie
@@ -3003,9 +3003,9 @@ class App {
         const Q0 = E.qualite || [];
         const sansLivr0 = E.source === 'copie' && Q0.length > 0 && Q0.every(q => !q.livraisons);
         const j = sansLivr0 ? null : T.justesse;
-        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
           sous: sansLivr0 ? 'aucune livraison enregistrée dans le panel sur la période : le stock n’a pas d’entrées, ses sorties ne se mesurent pas'
-            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, ' + fE(T.fiableExplique) + ' expliqués par la caisse et la poubelle' };
+            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, dont ' + fE(T.fiableCouvert) + ' expliqués par la caisse et la poubelle et ' + fE(T.manquant) + ' sans explication' };
         inv.kpi = [
           ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
           ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],
