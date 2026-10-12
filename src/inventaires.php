@@ -598,7 +598,7 @@ function invEcart(int $sid, string $de, string $a): ?array
 /**
  * L'historique : une fenêtre de quatre semaines glissantes par inventaire (une semaine seule est bruitée, les
  * livraisons tombent autour du comptage et passent d'une semaine à l'autre). Pour chaque inventaire B, le début A
- * est le dernier inventaire de même source passé trois semaines au moins avant lui. Les inventaires partiels
+ * est le dernier inventaire de même source passé 25 jours au moins avant lui. Les inventaires partiels
  * (moins de la moitié des matières d'un comptage habituel, Sombreffe) ne bornent pas de fenêtre.
  */
 function invFenetres(array $l): array
@@ -610,7 +610,7 @@ function invFenetres(array $l): array
     $out = [];
     foreach ($pleins as $i => $B) {
         if (count($out) >= INV_PAIRES_MAX) { break; }
-        $lim = date('Y-m-d H:i:s', strtotime($B['at']) - 20 * 86400);
+        $lim = date('Y-m-d H:i:s', strtotime($B['at']) - 25 * 86400);   // quatre intervalles hebdomadaires
         $A = null;
         for ($k = $i + 1; $k < count($pleins); $k++) {
             if ($pleins[$k]['source'] === $B['source'] && $pleins[$k]['at'] <= $lim) { $A = $pleins[$k]; break; }
@@ -642,19 +642,20 @@ function ep_stock_inventaires(): array
  * Le calcul d'avance : à chaque passage du relevé, une fenêtre de quatre semaines qui n'est pas encore gardée se
  * calcule (une seule, et seulement s'il reste du temps) — l'historique de chaque magasin est prêt quand on l'ouvre.
  */
-function invPrecalcul(array $shops, float $t0, float $budget = 25.0): ?array
+function invPrecalcul(array $shops, float $t0, float $budget = 50.0): array
 {
+    $faits = [];
     foreach ($shops as $sid) {
         foreach (invFenetres(invListe((int) $sid)) as [$A, $B]) {
             $c = setting('invPaire:' . $sid . ':' . $A['id'] . ':' . $B['id']);
             if (is_array($c) && (int) ($c['v'] ?? 0) === INV_CACHE_V) { continue; }
-            if (microtime(true) - $t0 > $budget) { return null; }
+            if (microtime(true) - $t0 > $budget) { return $faits; }
             $r = invEcart((int) $sid, $A['id'], $B['id']);
             if ($r !== null && $r['ventesCompletes']) { svGrave('invPaire:' . $sid . ':' . $r['de']['id'] . ':' . $r['a']['id'], invResume($r)); }
-            return ['shop' => (int) $sid, 'de' => $A['id'], 'a' => $B['id'], 'justesse' => $r['totaux']['justesse'] ?? null];
+            $faits[] = ['shop' => (int) $sid, 'de' => $A['id'], 'a' => $B['id'], 'justesse' => $r['totaux']['justesse'] ?? null];
         }
     }
-    return null;
+    return $faits;
 }
 
 /** GET /stock/inventaires/ecart?shop=&de=&a=[&resume=1] — le détail entre deux inventaires. */
@@ -802,7 +803,7 @@ function ep_stock_inventaires_releve(): array
     $c = setting('stockReleveQuand');
     if (is_numeric($c) && (int) $c > time() - INV_RELEVE_PAS && empty($_GET['force'])) { return ['ok' => true, 'attente' => INV_RELEVE_PAS - (time() - (int) $c)]; }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['stockReleveQuand', json_encode(time())]);
-    @set_time_limit(100);
+    @set_time_limit(110);
     $t0 = microtime(true);
     try { $shops = array_map(static fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); } catch (Throwable $e) { $shops = []; }
     $chemins = [];

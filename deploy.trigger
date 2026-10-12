@@ -771,3 +771,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-12T05:44:11Z magasins : page Inventaires
 2026-10-12T05:47:21Z inventaires : semaines sans livraison non calculables
 2026-10-12T05:51:31Z inventaires : historique sur quatre semaines glissantes
+2026-10-12T05:53:14Z inventaires : fenetres de quatre semaines, precalcul par lots

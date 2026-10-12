@@ -8,4 +8,4 @@
 # plus d'une fois toutes les quatre minutes.
 set -euo pipefail
 ALIAS_PATH="${ALIAS_PATH:-/consulant_bo}"
-curl -fsS -m 120 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/stock/inventaires/releve" >/dev/null
+curl -fsS -m 170 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/stock/inventaires/releve" >/dev/null

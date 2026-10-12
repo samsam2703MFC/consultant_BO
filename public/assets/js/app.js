@@ -2929,7 +2929,7 @@ class App {
     if (B && (!de || de === a)) {
       const t = s => new Date(s.replace(' ', 'T')).getTime();
       const cand = l.filter(x => x.source === B.source && x.at < B.at);
-      const pick = cand.find(x => t(x.at) <= t(B.at) - 21 * 86400000) || cand[cand.length - 1];
+      const pick = cand.find(x => t(x.at) <= t(B.at) - 25 * 86400000) || cand[cand.length - 1];
       de = pick ? pick.id : null;
     }
     return [de, a];
