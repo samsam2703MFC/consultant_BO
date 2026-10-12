@@ -113,6 +113,9 @@ function ep_stock_inventaires_sonde(): array
         $q('heuresLivre', 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ HOUR(created_at) h, COUNT(*) n FROM material_inventory_log WHERE id_shop = ? AND created_at >= ? GROUP BY h ORDER BY h', [$sid, '2026-06-01 00:00:00']);
         $q('heuresInventaires', 'SELECT HOUR(created_at) h, COUNT(*) n FROM stocktaking WHERE id_shop = ? GROUP BY h ORDER BY h', [$sid]);
         $q('maintenant', 'SELECT NOW() maintenant, UTC_TIMESTAMP() utc, @@session.time_zone tz');
+        // l'horodatage du stock courant (material_inventory.last_modified) face au grand livre : le même fuseau ?
+        $q('modifStock', 'SELECT i.id_material, i.last_modified, (SELECT MAX(l.created_at) FROM material_inventory_log l WHERE l.id_shop = i.id_shop AND l.id_material = i.id_material) dernierLivre
+              FROM material_inventory i WHERE i.id_shop = ? AND i.id_material IN (150, 148, 63, 48) ', [$sid]);
     }
     $dernier = is_array($out['inventaires'] ?? null) && isset($out['inventaires'][0]['id']) ? (int) $out['inventaires'][0]['id'] : 0;
     if ($dernier > 0) {
@@ -622,4 +625,271 @@ function ep_stock_inventaires_ecart(): array
     if ($r['ventesCompletes']) { svGrave('invPaire:' . $sid . ':' . $r['de']['id'] . ':' . $r['a']['id'], invResume($r)); }
     if (!empty($_GET['resume'])) { return ['shop' => (string) $sid, 'resume' => invResume($r)]; }
     return $r;
+}
+
+/* ---------- le relevé en direct : chaque inventaire du panel gardé dès qu'il passe ---------- */
+/*
+ * L'API du panel ne rend ni les inventaires passés, ni le grand livre, ni les livraisons : seulement le stock
+ * courant de chaque matière et l'heure de sa dernière modification (/shops/{id}/material-inventory). Le cockpit
+ * le relit toutes les cinq minutes (bin/stock_cron.sh) et garde ce qui a changé. Un inventaire, comme une
+ * livraison, modifie d'un coup des dizaines de matières à la même seconde : une RAFALE. Une rafale où des
+ * quantités baissent est un inventaire (le compté remplace le solde) ; une rafale qui ne fait que monter est
+ * une livraison ; une rafale qui met tout à zéro ouvre un inventaire (l'effacement de Halle) et la rafale
+ * suivante, qui pose le compté, est l'inventaire.
+ *
+ * Entre deux inventaires relevés, pour chaque matière comptée au second : sorties réelles = le solde juste
+ * avant le comptage (avant l'effacement s'il y en a eu un) − le compté. Les ventes viennent des tickets du
+ * panel heure par heure, la poubelle de /products/waste jour par jour.
+ */
+
+const INV_RAFALE = 15;          // un même horodatage sur quinze matières au moins : un inventaire ou une livraison
+const INV_RELEVE_PAS = 240;     // un relevé toutes les quatre minutes au plus, qui que soit l'appelant
+const INV_LECTURE_TICKETS = 1500;   // tickets lus au plus par calcul d'une paire relevée ; le reste au suivant
+
+/** Les deux tables du relevé, créées au premier besoin. */
+function invReleveTables(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_stock_releve (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        shop_id INT NOT NULL, material_id INT NOT NULL,
+        avant DECIMAL(14,3) NULL, qty DECIMAL(14,3) NOT NULL,
+        modif DATETIME NULL, vu DATETIME NOT NULL, evenement_id BIGINT NULL,
+        KEY k_shop_mat (shop_id, material_id, vu), KEY k_shop_vu (shop_id, vu), KEY k_ev (evenement_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_stock_evenement (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        shop_id INT NOT NULL, type VARCHAR(16) NOT NULL, at DATETIME NOT NULL,
+        n INT NOT NULL DEFAULT 0, hausses INT NOT NULL DEFAULT 0, baisses INT NOT NULL DEFAULT 0, zeros INT NOT NULL DEFAULT 0,
+        vu DATETIME NOT NULL,
+        UNIQUE KEY u_shop_at_type (shop_id, at, type), KEY k_shop_at (shop_id, at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $fait = true;
+}
+
+/** Une matière du stock du panel : [mid, quantité, horodatage] ; null si elle n'est pas de l'inventaire. */
+function invLigneStock(array $m): ?array
+{
+    if ((int) ($m['exist_in_inventory'] ?? 0) !== 1 || (int) ($m['id_material'] ?? 0) <= 0) { return null; }
+    $mod = substr((string) ($m['last_modified'] ?? ''), 0, 19);
+    return [(int) $m['id_material'], round((float) ($m['current_quantity'] ?? 0), 3), preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $mod) ? $mod : null];
+}
+
+/** Enregistre un événement (une rafale ou un mouvement isolé) et rend son id. */
+function invEvenement(int $sid, string $type, string $at, int $n, int $h, int $b, int $z, string $vu): int
+{
+    Db::exec('INSERT INTO ceo_stock_evenement (shop_id, type, at, n, hausses, baisses, zeros, vu) VALUES (?,?,?,?,?,?,?,?)
+              ON DUPLICATE KEY UPDATE n = n + VALUES(n), hausses = hausses + VALUES(hausses), baisses = baisses + VALUES(baisses), zeros = zeros + VALUES(zeros)',
+        [$sid, $type, $at, $n, $h, $b, $z, $vu]);
+    $r = Db::row('SELECT id FROM ceo_stock_evenement WHERE shop_id = ? AND at = ? AND type = ?', [$sid, $at, $type]);
+    return (int) ($r['id'] ?? 0);
+}
+
+/**
+ * Un relevé d'un magasin : compare le stock du panel à l'état gardé, écrit ce qui a changé et reconnaît les
+ * rafales. Le premier relevé pose l'état de départ et prend la dernière rafale pour un inventaire.
+ */
+function invReleverMagasin(int $sid, array $stock, string $vu): array
+{
+    invReleveTables();
+    $cur = [];
+    foreach (analyseListe($stock) as $m) { $l = invLigneStock((array) $m); if ($l !== null) { $cur[$l[0]] = [$l[1], $l[2]]; } }
+    if ($cur === []) { return ['shop' => $sid, 'lu' => 0]; }
+    $etat = setting('stockEtat:' . $sid);
+    $prev = is_array($etat) && is_array($etat['m'] ?? null) ? $etat['m'] : null;
+    $out = ['shop' => $sid, 'lu' => count($cur), 'changes' => 0, 'evenements' => []];
+    if ($prev === null) {
+        // départ : l'état entier, et comme premier inventaire la plus grosse rafale des huit derniers jours
+        // (un inventaire touche plus de matières qu'une livraison : 60 à 80 contre une quarantaine)
+        $parModif = [];
+        foreach ($cur as $mid => [$q, $mod]) { if ($mod !== null) { $parModif[$mod][] = $mid; } }
+        $base = null; $nMax = 0;
+        foreach ($parModif as $mod => $ids) {
+            if (count($ids) >= INV_RAFALE && count($ids) > $nMax && $mod >= date('Y-m-d H:i:s', strtotime($vu) - 8 * 86400)) { $base = (string) $mod; $nMax = count($ids); }
+        }
+        $ev = $base !== null ? invEvenement($sid, 'inventaire', $base, count($parModif[$base]), 0, 0, 0, $vu) : 0;
+        foreach ($cur as $mid => [$q, $mod]) {
+            Db::exec('INSERT INTO ceo_stock_releve (shop_id, material_id, avant, qty, modif, vu, evenement_id) VALUES (?,?,?,?,?,?,?)',
+                [$sid, $mid, null, $q, $mod, $vu, ($base !== null && $mod === $base) ? $ev : null]);
+        }
+        svGrave('stockEtat:' . $sid, ['quand' => time(), 'depuis' => $vu, 'm' => $cur]);
+        $out['depart'] = true; $out['inventaire'] = $base;
+        return $out;
+    }
+    // ce qui a changé, groupé par horodatage du panel
+    $grp = [];
+    foreach ($cur as $mid => [$q, $mod]) {
+        $p = $prev[$mid] ?? null;
+        if ($p !== null && abs((float) $p[0] - $q) < 1e-6 && (string) ($p[1] ?? '') === (string) ($mod ?? '')) { continue; }
+        $grp[(string) ($mod ?? $vu)][$mid] = [$p !== null ? (float) $p[0] : null, $q, $mod];
+    }
+    ksort($grp);
+    foreach ($grp as $mod => $lst) {
+        $n = count($lst); $h = 0; $b = 0; $z = 0;
+        foreach ($lst as [$av, $q]) {
+            if ($av === null || $q > $av + 1e-9) { $h++; } elseif ($q < $av - 1e-9) { $b++; }
+            if ($q == 0.0 && ($av ?? 0) > 0) { $z++; }
+        }
+        if ($n >= INV_RAFALE) {
+            if ($z >= 0.8 * $n) { $type = 'effacement'; }
+            elseif ($b === 0 && $z === 0) {
+                // que des hausses : une livraison — sauf si l'inventaire vient d'être ouvert par un effacement
+                $eff = Db::row("SELECT id FROM ceo_stock_evenement WHERE shop_id = ? AND type = 'effacement' AND at >= ? AND at <= ? ORDER BY at DESC LIMIT 1",
+                    [$sid, date('Y-m-d H:i:s', strtotime($mod) - 6 * 3600), $mod]);
+                $type = $eff !== null ? 'inventaire' : 'livraison';
+            } else { $type = 'inventaire'; }
+        } else { $type = 'mouvement'; }
+        $ev = invEvenement($sid, $type, $mod, $n, $h, $b, $z, $vu);
+        foreach ($lst as $mid => [$av, $q, $md]) {
+            Db::exec('INSERT INTO ceo_stock_releve (shop_id, material_id, avant, qty, modif, vu, evenement_id) VALUES (?,?,?,?,?,?,?)', [$sid, $mid, $av, $q, $md, $vu, $ev]);
+        }
+        $out['changes'] += $n;
+        $out['evenements'][] = ['type' => $type, 'at' => $mod, 'n' => $n];
+    }
+    svGrave('stockEtat:' . $sid, ['quand' => time(), 'depuis' => $etat['depuis'] ?? $vu, 'm' => $cur]);
+    return $out;
+}
+
+/** GET /stock/inventaires/releve — un relevé de tous les magasins ; quatre minutes au moins entre deux (le cron passe toutes les cinq). */
+function ep_stock_inventaires_releve(): array
+{
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
+    $c = setting('stockReleveQuand');
+    if (is_numeric($c) && (int) $c > time() - INV_RELEVE_PAS && empty($_GET['force'])) { return ['ok' => true, 'attente' => INV_RELEVE_PAS - (time() - (int) $c)]; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['stockReleveQuand', json_encode(time())]);
+    @set_time_limit(100);
+    try { $shops = array_map(static fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); } catch (Throwable $e) { $shops = []; }
+    $chemins = [];
+    foreach ($shops as $sid) { $chemins[$sid] = '/shops/' . $sid . '/material-inventory'; }
+    $vu = date('Y-m-d H:i:s');
+    $out = [];
+    foreach (PanelApi::getParallele($chemins) as $sid => $r) {
+        if (!is_array($r)) { $out[] = ['shop' => $sid, 'erreur' => 'le panel n’a pas répondu']; continue; }
+        try { $out[] = invReleverMagasin((int) $sid, $r, $vu); }
+        catch (Throwable $e) { $out[] = ['shop' => $sid, 'erreur' => mb_substr($e->getMessage(), 0, 160)]; }
+    }
+    return ['ok' => true, 'vu' => $vu, 'magasins' => $out];
+}
+
+/** Les inventaires relevés en direct pour un magasin : [{id: 'r12', at, n, source: 'releve'}], du plus récent au plus ancien. */
+function invReleveListe(int $sid): array
+{
+    try {
+        invReleveTables();
+        $rows = Db::rows("SELECT id, at, n FROM ceo_stock_evenement WHERE shop_id = ? AND type = 'inventaire' ORDER BY at DESC", [$sid]);
+    } catch (Throwable $e) { return []; }
+    return array_map(static fn ($r) => ['id' => 'r' . (int) $r['id'], 'at' => (string) $r['at'], 'n' => (int) $r['n'], 'source' => 'releve', 'type' => 'relevé'], $rows);
+}
+
+/** L'état du relevé d'un magasin : depuis quand, le dernier passage, les derniers événements. */
+function invReleveEtat(int $sid): array
+{
+    $e = setting('stockEtat:' . $sid);
+    $evs = [];
+    try {
+        invReleveTables();
+        foreach (Db::rows('SELECT type, at, n FROM ceo_stock_evenement WHERE shop_id = ? AND type <> ? ORDER BY at DESC LIMIT 8', [$sid, 'mouvement']) as $r) {
+            $evs[] = ['type' => (string) $r['type'], 'at' => (string) $r['at'], 'n' => (int) $r['n']];
+        }
+    } catch (Throwable $e2) { /* pas encore de relevé */ }
+    $q = setting('stockReleveQuand');
+    return ['actif' => is_array($e), 'depuis' => is_array($e) ? ($e['depuis'] ?? null) : null,
+        'dernier' => is_numeric($q) ? date('Y-m-d H:i:s', (int) $q) : null, 'evenements' => $evs];
+}
+
+/**
+ * La base d'une paire d'inventaires relevés (même forme que la copie) : par matière comptée au second, le solde
+ * juste avant le comptage et le compté ; les hausses entre les deux sont les livraisons. Les ventes et la poubelle
+ * viennent du panel ; `ventesCompletes` dit si tous les tickets ont pu être lus.
+ */
+function invBaseReleve(int $sid, string $de, string $a): ?array
+{
+    if (!preg_match('/^r(\d+)$/', $de, $mA) || !preg_match('/^r(\d+)$/', $a, $mB)) { return null; }
+    try {
+        invReleveTables();
+        $eA = Db::row("SELECT id, at FROM ceo_stock_evenement WHERE id = ? AND shop_id = ? AND type = 'inventaire'", [(int) $mA[1], $sid]);
+        $eB = Db::row("SELECT id, at FROM ceo_stock_evenement WHERE id = ? AND shop_id = ? AND type = 'inventaire'", [(int) $mB[1], $sid]);
+    } catch (Throwable $e) { return null; }
+    if ($eA === null || $eB === null) { return null; }
+    if ((string) $eA['at'] > (string) $eB['at']) { [$eA, $eB] = [$eB, $eA]; }
+    $tA = (string) $eA['at']; $tB = (string) $eB['at'];
+    $m = []; $jours = [];
+    $mat = static function (int $mid) use (&$m): void {
+        if (!isset($m[$mid])) { $m[$mid] = ['cA' => null, 'cB' => null, 'entrees' => 0.0, 'sortiesDecl' => 0.0, 'corrections' => 0.0, 'efface' => null, 'apres' => 0.0, 'mouv' => [], 'avantB' => null]; }
+    };
+    // le compté en A
+    foreach (Db::rows('SELECT material_id mid, qty FROM ceo_stock_releve WHERE shop_id = ? AND evenement_id = ?', [$sid, (int) $eA['id']]) as $r) {
+        $mat((int) $r['mid']); $m[(int) $r['mid']]['cA'] = (float) $r['qty'];
+    }
+    // entre A et B : livraisons (hausses), effacements, mouvements isolés ; puis le comptage de B
+    foreach (Db::rows("SELECT r.material_id mid, r.avant, r.qty, r.modif, r.vu, e.type, e.id ev FROM ceo_stock_releve r JOIN ceo_stock_evenement e ON e.id = r.evenement_id
+          WHERE r.shop_id = ? AND e.at > ? AND e.at <= ? ORDER BY e.at, r.id", [$sid, $tA, $tB]) as $r) {
+        $mid = (int) $r['mid']; $mat($mid);
+        $av = $r['avant'] !== null ? (float) $r['avant'] : null; $q = (float) $r['qty'];
+        $at = substr((string) ($r['modif'] ?? $r['vu']), 0, 16); $j = substr($at, 0, 10);
+        if ((int) $r['ev'] === (int) $eB['id']) {
+            $m[$mid]['cB'] = $q;
+            if ($m[$mid]['efface'] === null) { $m[$mid]['avantB'] = $av; }
+            continue;
+        }
+        if ($r['type'] === 'effacement') { $m[$mid]['efface'] = ($m[$mid]['efface'] ?? 0.0) + (float) ($av ?? 0); $m[$mid]['apres'] = 0.0; $m[$mid]['mouv'][] = [$at, 'attendu', round((float) ($av ?? 0), 3)]; continue; }
+        $d = $q - (float) ($av ?? 0);
+        if ($d > 0) { $m[$mid]['entrees'] += $d; $m[$mid]['mouv'][] = [$at, 'livraison', round($d, 3)]; $jours[$j]['entrees'][$mid] = ($jours[$j]['entrees'][$mid] ?? 0.0) + $d; }
+        elseif ($d < 0) { $m[$mid]['corrections'] += $d; $m[$mid]['mouv'][] = [$at, 'correction', round($d, 3)]; }
+        if ($m[$mid]['efface'] !== null) { $m[$mid]['apres'] += $d; }
+    }
+    foreach ($m as $mid => &$x) {
+        $flux = $x['entrees'] - $x['sortiesDecl'] + $x['corrections'];
+        if ($x['cB'] === null) { $x['sorties'] = null; $x['attendu'] = null; $x['debut'] = (float) ($x['cA'] ?? 0); continue; }
+        $x['attendu'] = $x['efface'] !== null ? $x['efface'] + $x['apres'] : ($x['avantB'] !== null ? (float) $x['avantB'] : max(0.0, (float) ($x['cA'] ?? 0) + $flux));
+        $x['sorties'] = $x['attendu'] - (float) $x['cB'];
+        $x['debut'] = $x['cA'] !== null ? (float) $x['cA'] : max(0.0, $x['attendu'] - $flux);
+    }
+    unset($x);
+    // les prix d'aujourd'hui : la liste des besoins du panel porte le prix net par unité de base
+    $prix = [];
+    foreach (analyseListe(PanelApi::get('/shops/' . $sid . '/material-requisitions/list') ?? []) as $r) {
+        if ((int) ($r['id_material'] ?? 0) > 0 && is_numeric($r['base_unit_price_net'] ?? null) && (float) $r['base_unit_price_net'] > 0) { $prix[(int) $r['id_material']] = (float) $r['base_unit_price_net']; }
+    }
+    // les ventes : tickets du panel, heure par heure, de l'heure de A à l'heure de B
+    $ventes = []; $ca = []; $cout = 0; $lus = 0; $manque = [];
+    $dA = substr($tA, 0, 10); $dB = substr($tB, 0, 10); $hA = (int) substr($tA, 11, 2); $hB = (int) substr($tB, 11, 2);
+    for ($d = $dA; $d <= $dB; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $p = function_exists('svProduitsJour') ? svProduitsJour($sid, $d, $cout, INV_LECTURE_TICKETS) : null;
+        if ($p === null) { $manque[] = $d; continue; }
+        $lus++;
+        foreach ($p as $h => $lst) {
+            $h = (int) $h;
+            if (($d === $dA && $h < $hA) || ($d === $dB && $h >= $hB)) { continue; }
+            foreach ($lst as $k => $x) {
+                $pid = (int) explode(':', (string) $k)[0];
+                $f = 1.0;
+                if (str_contains((string) $k, ':') && function_exists('svPortionDuNom')) { $pp = svPortionDuNom((string) $x[0]); $f = isset($pp['f']) && (float) $pp['f'] > 0 ? (float) $pp['f'] : 1.0; }
+                $ventes[$d][$pid] = ($ventes[$d][$pid] ?? 0.0) + (float) $x[1] * $f;
+                $ca[$pid] = ($ca[$pid] ?? 0.0) + (float) $x[2];
+            }
+        }
+    }
+    // la poubelle : jour par jour (la poubelle se déclare le soir — le jour de A compte si A est passé avant 17 h,
+    // le jour de B si B est passé après 18 h 30)
+    $pertes = [];
+    $ch = [];
+    for ($d = $dA; $d <= $dB; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        if ($d === $dA && $tA >= $dA . ' 17:00:00') { continue; }
+        if ($d === $dB && $tB < $dB . ' 18:30:00') { continue; }
+        $ch[$d] = '/shops/' . $sid . '/products/waste?' . http_build_query(['from' => $d, 'date_from' => $d, 'to' => $d, 'date_to' => $d]);
+    }
+    foreach (PanelApi::getParallele($ch) as $d => $r) {
+        $lst = is_array($r) && isset($r['products']) && is_array($r['products']) ? $r['products'] : analyseListe($r);
+        foreach ($lst as $w) {
+            $pid = (int) ($w['id_product'] ?? 0); $q = (float) ($w['waste_qty'] ?? 0);
+            if ($pid > 0 && $q > 0) { $pertes[(string) $d][$pid] = ($pertes[(string) $d][$pid] ?? 0.0) + $q; }
+        }
+    }
+    $notes = [];
+    if ($manque !== []) { $notes[] = 'Tickets pas encore lus pour ' . count($manque) . ' jour(s) (' . implode(', ', $manque) . ') : relancer le calcul les lira.'; }
+    return ['de' => ['id' => 'r' . (int) $eA['id'], 'at' => $tA], 'a' => ['id' => 'r' . (int) $eB['id'], 'at' => $tB], 'source' => 'releve',
+        'matieres' => $m, 'prix' => $prix, 'jours' => $jours, 'ventes' => $ventes, 'ca' => $ca, 'pertes' => $pertes, 'reports' => [],
+        'ventesCompletes' => $manque === [], 'notes' => $notes, 'qualite' => []];
 }

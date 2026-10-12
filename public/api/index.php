@@ -370,6 +370,7 @@ function route(string $method, string $path): mixed
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/stock/inventaires'            => ep_stock_inventaires(),
             $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
+            $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
