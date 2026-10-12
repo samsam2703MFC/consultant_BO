@@ -768,3 +768,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-12T05:29:26Z stock : matieres fiables, sans recette, a verifier
 2026-10-12T05:32:57Z stock : solde attendu du resume, qualite des semaines
 2026-10-12T05:38:10Z stock : releve en direct des inventaires
+2026-10-12T05:44:11Z magasins : page Inventaires

@@ -296,7 +296,7 @@ class App {
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
       tablette: 'tablette-vendeuses',
-      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle',
+      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle', inventaires: 'inventaires',
       productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
       // Franchisés · évaluation et suivi (09/10/2026)
       gestionConsultant: 'gestion-consultant', ficheFranchise: 'fiche-franchise', remarquesOperateurs: 'remarques-operateurs', controlesQualite: 'controles-qualite',
@@ -967,6 +967,7 @@ class App {
       controlesQualite: ['Contrôles qualité du mois', ''],
       remarquesOperateurs: ['Remarques aux opérateurs', 'Les remarques faites depuis la modale des invendus sur une pièce jetée pour un problème de qualité : l’opérateur qui a produit, la pièce, l’heure, le motif. Par magasin et par opérateur, pour l’entretien d’évaluation.'],
       offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
+      inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
       productionParams: ['Production — 1. Paramètres', 'Par jour de la semaine, le nombre de cuissons et la production minimum de la 1re cuisson ; les cuissons et leur part de la journée ; les catégories (cuissons, plaques, préparées la veille, se gardent au lendemain) ; les produits obligatoires et leurs jours.'],
       productionPlan: ['Production — 2. Plan de production', 'Section › catégorie › produit : vendu à J\u22127 (en magasin, webshop, commandes magasin), à produire pour la 1re période, à préparer pour la 2e cuisson et les suivantes, à préparer pour la 1re cuisson du lendemain — en pièces, en plaques et en chiffre d\u2019affaires.'],
@@ -1372,6 +1373,8 @@ class App {
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
         ['invendus', 'Invendus et poubelle', 0],
+        // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
+        ['inventaires', 'Inventaires', 0],
         ['plan', 'Plan de développement', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
@@ -1450,8 +1453,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
@@ -1876,6 +1879,7 @@ class App {
     if (common.isBrandGuard) this.valsBrandGuard(common);
     if (common.isOffres) this.valsOffres(common);
     if (common.isInvendus) this.valsInvendus(common);
+    if (common.isInventaires) this.valsInventaires(common);
     if (common.isGC) valsGC(this, common);
     if (common.isFF) valsFF(this, common);
     if (common.isRO) valsRO(this, common);
@@ -2876,6 +2880,176 @@ class App {
       if (!iv.prods.length) { iv.prodsVide = iv.vide || 'Aucun produit jeté ' + libPer + '.'; }
     }
     common.iv = iv;
+  }
+  /* --- entre deux inventaires : ce qui est sorti du stock face à la caisse et à la poubelle (12/10/2026) --- */
+  inShop(){ const ms = this.open(), s = String(this.state.inShop || ''); return ms.some(m => String(m.id) === s) ? s : String(ms[0] ? ms[0].id : '4'); }
+  inListe(force){
+    const sid = this.inShop(), L = this.state.inL || {};
+    if (!force && L[sid]) { return; }
+    this.setState({ inL: Object.assign({}, L, { [sid]: { chargement: true, d: L[sid] ? L[sid].d : null } }) });
+    readOne('/stock/inventaires?shop=' + sid).then(d => {
+      this.setState({ inL: Object.assign({}, this.state.inL || {}, { [sid]: { d: d || { error: 'injoignable' } } }) });
+      if (d && d.paires) { this.inHistorique(sid); }
+    });
+  }
+  inEcart(sid, de, a, force){
+    const k = sid + ':' + de + ':' + a, E = this.state.inE || {};
+    if (!force && E[k]) { return; }
+    this.setState({ inE: Object.assign({}, E, { [k]: { chargement: true } }) });
+    readOne('/stock/inventaires/ecart?shop=' + sid + '&de=' + de + '&a=' + a).then(d => {
+      this.setState({ inE: Object.assign({}, this.state.inE || {}, { [k]: { d: d || { error: 'calcul impossible' } } }) });
+    });
+  }
+  // L'historique : les semaines que le serveur n'a pas encore calculées se calculent une à une, la plus récente d'abord.
+  inHistorique(sid){
+    if (this._inHist === sid) { return; }
+    this._inHist = sid;
+    const suite = () => {
+      const L = ((this.state.inL || {})[sid] || {}).d;
+      const p = L && L.paires ? L.paires.find(x => !x.resume && !x.echec) : null;
+      if (!p || this.inShop() !== sid || this.state.screen !== 'inventaires') { this._inHist = null; return; }
+      readOne('/stock/inventaires/ecart?shop=' + sid + '&de=' + p.de + '&a=' + p.a + '&resume=1').then(r => {
+        const L2 = ((this.state.inL || {})[sid] || {}).d;
+        if (!L2) { this._inHist = null; return; }
+        const paires = L2.paires.map(x => x.de === p.de && x.a === p.a ? Object.assign({}, x, r && r.resume ? { resume: r.resume } : { echec: true }) : x);
+        this.setState({ inL: Object.assign({}, this.state.inL || {}, { [sid]: { d: Object.assign({}, L2, { paires }) } }) });
+        suite();
+      });
+    };
+    suite();
+  }
+  // La paire affichée : celle choisie, sinon le dernier inventaire qui a un prédécesseur de même source, et
+  // celui d'environ quatre semaines plus tôt (une semaine seule est bruitée : les livraisons tombent autour du comptage).
+  inChoix(l){
+    const S = this.state, ids = l.map(x => x.id);
+    let a = S.inA && ids.includes(S.inA) ? S.inA : null;
+    let de = S.inDe && ids.includes(S.inDe) ? S.inDe : null;
+    if (!a) { for (let i = 0; i + 1 < l.length; i++) { if (l.slice(i + 1).some(y => y.source === l[i].source)) { a = l[i].id; break; } } }
+    const B = l.find(x => x.id === a);
+    if (B && (!de || de === a)) {
+      const t = s => new Date(s.replace(' ', 'T')).getTime();
+      const cand = l.filter(x => x.source === B.source && x.at < B.at);
+      const pick = cand.find(x => t(x.at) <= t(B.at) - 21 * 86400000) || cand[cand.length - 1];
+      de = pick ? pick.id : null;
+    }
+    return [de, a];
+  }
+  valsInventaires(common){
+    const S = this.state, sid = this.inShop();
+    this.inListe(false);
+    const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+    const fE = n => n == null ? '—' : (n < 0 ? '−' : '') + nf(Math.abs(Math.round(n))) + ' €';
+    const fEs = n => n == null ? '—' : (n > 0 ? '+' : n < 0 ? '−' : '') + nf(Math.abs(Math.round(n))) + ' €';
+    const fP = n => n == null ? '—' : nf(n, 1) + ' %';
+    // les quantités dans l'unité de base du panel : grammes et millilitres passent en kg et en litres
+    const fQ = (n, u, signe) => {
+      if (n == null) { return '—'; }
+      const s = signe ? (n > 0 ? '+' : n < 0 ? '−' : '') : (n < 0 ? '−' : ''), a = Math.abs(n);
+      if (u === 'g') { return a >= 1000 ? s + nf(a / 1000, 1) + ' kg' : s + nf(a) + ' g'; }
+      if (u === 'ml') { return a >= 1000 ? s + nf(a / 1000, 1) + ' l' : s + nf(a) + ' ml'; }
+      return s + nf(a, a < 10 && a % 1 ? 1 : 0);
+    };
+    const jf = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : '';
+    const jh = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + ' ' + s.slice(11, 16) : '';
+    const JS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+    const jour = s => { const d = new Date(s.slice(0, 10) + 'T12:00:00'); return JS[d.getDay()] + ' ' + s.slice(8, 10) + '/' + s.slice(5, 7); };
+    const Lb = (S.inL || {})[sid] || {}, L = Lb.d && !Lb.d.error ? Lb.d : null;
+    const l = L ? (L.inventaires || []) : [];
+    const [de, a] = this.inChoix(l);
+    const inv = { sid, magasins: this.open().map(m => ({ id: String(m.id), nom: m.nom || m.name || String(m.id), on: String(m.id) === sid })),
+      setShop: e => this.setState({ inShop: e.target.value, inDe: null, inA: null, inOuvert: null }),
+      chargement: !!Lb.chargement && !Lb.d, indispo: Lb.d && Lb.d.error ? 'Lecture impossible : ' + Lb.d.error : '',
+      de, a, options: l.map(x => ({ id: x.id, lib: jh(x.at) + ' · ' + x.n + ' matières' + (x.source === 'releve' ? ' · relevé' : ''), source: x.source })),
+      setDe: e => this.setState({ inDe: e.target.value, inOuvert: null }), setA: e => this.setState({ inA: e.target.value, inDe: null, inOuvert: null }),
+      raccourcis: [], filtres: [], lignes: [], kpi: [], suite: null, histo: [], qualite: [], alertes: [], sansRecette: [], releve: '' };
+    // les raccourcis de période : une, quatre ou douze semaines avant l'inventaire de fin
+    const B = l.find(x => x.id === a);
+    if (B) {
+      const t = s => new Date(s.replace(' ', 'T')).getTime();
+      const cand = l.filter(x => x.source === B.source && x.at < B.at);
+      [[1, '1 semaine'], [4, '4 semaines'], [12, '12 semaines']].forEach(([n, lib]) => {
+        const pick = n === 1 ? cand[0] : (cand.find(x => t(x.at) <= t(B.at) - (7 * n - 3) * 86400000) || cand[cand.length - 1]);
+        if (pick) { inv.raccourcis.push({ lib, on: pick.id === de, choisir: () => this.setState({ inDe: pick.id, inA: a, inOuvert: null }) }); }
+      });
+    }
+    if (L) {
+      const R = L.releve || {};
+      const evs = (R.evenements || []).filter(e => e.type === 'inventaire');
+      inv.releve = R.actif ? 'Relevé en direct depuis le ' + jh(R.depuis) + (R.dernier ? ' · dernier passage ' + jh(R.dernier) : '') + ' · ' + (evs.length ? evs.length + ' inventaire' + (evs.length > 1 ? 's' : '') + ' relevé' + (evs.length > 1 ? 's' : '') + ' (le dernier : ' + jh(evs[0].at) + ')' : 'aucun inventaire relevé encore') : 'Relevé en direct pas encore démarré';
+      inv.finCopie = L.finCopie ? jf(L.finCopie) : '';
+      const nReleve = l.filter(x => x.source === 'releve').length;
+      if (nReleve < 2) { inv.alertes.push(['info', 'Les inventaires d’octobre se calculent dès le prochain : le panel ne rend pas ses inventaires passés, le cockpit relève le stock toutes les cinq minutes depuis le ' + jf(R.depuis || '') + '. La copie du panel s’arrête au ' + inv.finCopie + ' : ce sont ces semaines-là qu’on lit pour l’instant.']); }
+      // l'historique : une barre par semaine
+      const H = (L.paires || []).slice().reverse();
+      inv.histo = H.map(p => { const r = p.resume; const j = r ? r.justesse : null;
+        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
+          h: j == null ? 0 : Math.max(2, Math.min(100, j / 1.5)), val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
+          cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
+          choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
+    }
+    // l'écart de la paire choisie
+    if (de && a) {
+      this.inEcart(sid, de, a, false);
+      const Eb = (S.inE || {})[sid + ':' + de + ':' + a] || {}, E = Eb.d && !Eb.d.error ? Eb.d : null;
+      inv.calcul = !!Eb.chargement && !Eb.d;
+      inv.erreur = Eb.d && Eb.d.error ? Eb.d.error : '';
+      inv.recalculer = () => this.inEcart(sid, de, a, true);
+      if (E) {
+        const T = E.totaux;
+        inv.periode = 'du ' + jh(E.de.at) + ' au ' + jh(E.a.at) + ' · ' + nf(E.jours, 1) + ' jours' + (E.semaines > 1 ? ' · ' + E.semaines + ' inventaires' : '') + (E.source === 'releve' ? ' · relevé en direct' : ' · copie du panel');
+        const j = T.justesse;
+        inv.justesse = { val: fP(j), cls: j == null ? 'na' : j > 103 ? 'sur' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+          sous: j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, ' + fE(T.fiableExplique) + ' expliqués par la caisse et la poubelle' };
+        inv.kpi = [
+          ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
+          ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],
+          ['Sorties qu’aucune vente n’explique', fE(T.sansRecetteSorties), 'moy', T.nSansRecette + ' matière' + (T.nSansRecette > 1 ? 's' : '') + ' sortie' + (T.nSansRecette > 1 ? 's' : '') + ' qu’aucune recette vendue ne consomme'],
+          ['Ventes sans recette', fE(T.caSansRecette), 'moy', fP(T.ca ? 100 * T.caSansRecette / T.ca : null) + ' du CA de la période (' + fE(T.ca) + ') : ces produits ne consomment rien au panel']];
+        inv.bilan = [['Stock au début', fE(T.debut)], ['+ Livré', fE(T.entrees)], ['− Stock à la fin', fE(T.fin)], ['= Sorti du stock', fE(T.sorties)], ['Vendu (recettes)', fE(T.ventes)], ['Jeté (poubelle)', fE(T.poubelle)]];
+        // la qualité des semaines : livraisons enregistrées, comptage
+        const Q = E.qualite || [];
+        const sansLivr = Q.length && Q.every(q => !q.livraisons);
+        if (sansLivr && E.source === 'copie') { inv.alertes.push(['ko', 'Aucune livraison n’est enregistrée dans le panel pour ce magasin sur la période : ce qui entre en stock n’y est pas encodé, les sorties ne se calculent pas. Tant que les livraisons ne passent pas par les commandes du panel, ces chiffres ne disent rien.']); }
+        inv.qualite = Q.map(q => ({ periode: jh(q.de) + ' → ' + jh(q.a), livraisons: q.livraisons, comptees: q.compteesB, inchangees: q.inchangeesB,
+          note: [q.livraisons ? q.livraisons + ' livraison' + (q.livraisons > 1 ? 's' : '') + ' enregistrée' + (q.livraisons > 1 ? 's' : '') : 'aucune livraison enregistrée', q.compteesB + ' matières comptées', q.effacement ? 'solde effacé avant comptage' : (q.inchangeesB ? q.inchangeesB + ' inchangées au comptage' : ''), q.inventaireRecopie ? 'inventaire recopié ?' : ''].filter(Boolean).join(' · '),
+          cls: !q.livraisons ? 'ko' : q.inventaireRecopie ? 'moy' : 'ok' }));
+        (E.notes || []).forEach(n => inv.alertes.push(['info', n]));
+        inv.sansRecette = (E.sansRecette || []).map(p => ({ nom: p.nom, q: nf(p.q), ca: fE(p.ca) }));
+        // la suite des jours : livré, sorti par les ventes, jeté
+        const jours = E.suite || [];
+        const mx = Math.max(1, ...jours.map(d => Math.max(d.livre, d.vendu + d.jete)));
+        inv.suite = { jours: jours.map(d => ({ lib: jour(d.date), livre: fE(d.livre), vendu: fE(d.vendu), jete: fE(d.jete), hL: (100 * d.livre / mx).toFixed(1), hV: (100 * d.vendu / mx).toFixed(1), hJ: (100 * d.jete / mx).toFixed(1),
+          titre: jour(d.date) + ' · livré ' + fE(d.livre) + ' · vendu ' + fE(d.vendu) + ' · jeté ' + fE(d.jete) + (d.reports ? ' · reporté ' + nf(d.reports) + ' pièces' : '') })), max: fE(mx) };
+        // les matières, par statut
+        const STAT = { fiable: 'fiable', sansRecette: 'aucune vente', surplus: 'au-delà du stock', aVerifier: 'à vérifier', calme: 'sans mouvement' };
+        const filtre = S.inFiltre || 'manquant';
+        const garde = m => filtre === 'tout' ? true : filtre === 'manquant' ? (m.statut === 'fiable' && m.ecart > 0) : filtre === 'surplus' ? (m.statut === 'surplus' || (m.statut === 'fiable' && m.ecart < 0)) : m.statut === filtre;
+        const M = E.matieres || [];
+        const compte = f => M.filter(m => f === 'tout' ? true : f === 'manquant' ? (m.statut === 'fiable' && m.ecart > 0) : f === 'surplus' ? (m.statut === 'surplus' || (m.statut === 'fiable' && m.ecart < 0)) : m.statut === f).length;
+        inv.filtres = [['manquant', 'Sorti sans explication'], ['surplus', 'Au-delà du stock'], ['sansRecette', 'Aucune vente'], ['aVerifier', 'À vérifier'], ['tout', 'Toutes']]
+          .map(([v, lib]) => ({ lib, n: compte(v), on: filtre === v, choisir: () => this.setState({ inFiltre: v, inOuvert: null }) }));
+        const ouvert = S.inOuvert;
+        const tri = filtre === 'surplus' ? (x, y) => ((x.valeur || {}).ecart || 0) - ((y.valeur || {}).ecart || 0) : (x, y) => Math.abs((y.valeur || {}).ecart || 0) - Math.abs((x.valeur || {}).ecart || 0);
+        inv.lignes = M.filter(garde).sort(tri).map(m => {
+          const v = m.valeur || {}, u = m.unite;
+          const typeMv = { livraison: 'livré', attendu: 'solde attendu au comptage', correction: 'correction', retour: 'retour' };
+          return { id: m.id, nom: m.nom, categorie: m.categorie, statut: STAT[m.statut] || m.statut, stCls: m.statut,
+            debut: fQ(m.debut, u) + (m.compteDebut ? '' : '*'), entrees: m.entrees ? fQ(m.entrees, u, true) : '—', fin: fQ(m.fin, u), sorties: fQ(m.sorties, u),
+            ventes: fQ(m.ventes, u), poubelle: m.poubelle ? fQ(m.poubelle, u) : '—', ecart: fQ(m.ecart, u, true), ecartE: v.ecart != null ? fEs(v.ecart) : '—',
+            ecCls: m.ecart > 0 ? 'ko' : m.ecart < 0 ? 'sur' : '', justesse: fP(m.justesse), prix: m.prix != null ? nf(m.prix * (u === 'g' || u === 'ml' ? 1000 : 1), 2) + ' € / ' + (u === 'g' ? 'kg' : u === 'ml' ? 'l' : 'pce') : 'prix inconnu',
+            ouvert: ouvert === m.id, basculer: () => this.setState({ inOuvert: ouvert === m.id ? null : m.id }),
+            mouvements: (m.mouvements || []).map(x => ({ quand: jh(x[0]), quoi: typeMv[x[1]] || x[1], q: fQ(x[2], u, x[1] !== 'attendu') })),
+            produits: (m.produits || []).map(p => ({ nom: p.nom, q: fQ(p.q, u) })),
+            lecture: m.statut === 'fiable' ? (m.ecart > 0 ? fQ(m.ecart, u) + ' sortis sans vente ni poubelle (' + fEs(v.ecart) + ')' : fQ(-m.ecart, u) + ' vendus ou jetés de plus que ce qui est sorti du stock') :
+              m.statut === 'sansRecette' ? 'Aucune vente de la période ne consomme cette matière : une recette manque (portion, bundle) ou tout a été jeté sans être déclaré.' :
+              m.statut === 'surplus' ? 'Vendue sans être sortie du stock : livraison hors panel, ou recette qui en compte trop.' :
+              m.statut === 'aVerifier' ? 'Vendu et sorti ne sont pas du même ordre (rapport de plus de 6) : unité de comptage ou recette à vérifier.' : '' };
+        });
+        inv.nLignes = M.length;
+        inv.methode = E.methode;
+      }
+    }
+    common.inv = inv;
   }
   /* --- gestion de production : la page du dashboard en mode intégré, un magasin, un jour --- */
   valsGP(common){

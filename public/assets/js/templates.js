@@ -170,6 +170,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isOffres ? tplOffres(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
+      ${c.isInventaires ? tplInventaires(c, x) : ''}
       ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isGP ? tplGP(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
@@ -6160,6 +6161,55 @@ function tplInvendus(c, x){
     </tbody></table></div>`}
     <div class="iv-leg"><span>${esc(o.report)}</span></div></div>`;
   return `<div data-screen="invendus-poubelle">${onglets}${kpis}${mags}${prods}</div>`;
+}
+function tplInventaires(c, x){
+  const { esc } = x, o = c.inv;
+  const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const sel = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 10px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:260px';
+  const barre = `<div style="${card};padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <label class="in-lab">Magasin <select ${x.C(o.setShop)} style="${sel}">${o.magasins.map(m => `<option value="${esc(m.id)}" ${m.on ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
+    ${o.options.length ? `<label class="in-lab">Du <select ${x.C(o.setDe)} style="${sel}">${o.options.map(p => `<option value="${esc(p.id)}" ${p.id === o.de ? 'selected' : ''}>${esc(p.lib)}</option>`).join('')}</select></label>
+    <label class="in-lab">au <select ${x.C(o.setA)} style="${sel}">${o.options.map(p => `<option value="${esc(p.id)}" ${p.id === o.a ? 'selected' : ''}>${esc(p.lib)}</option>`).join('')}</select></label>
+    <div class="in-seg">${o.raccourcis.map(r => `<button ${x.A(r.choisir)} class="${r.on ? 'on' : ''}">${esc(r.lib)}</button>`).join('')}</div>` : ''}
+    ${o.recalculer ? `<button ${x.A(o.recalculer)} class="in-btn" style="margin-left:auto">Recalculer</button>` : ''}
+  </div>
+  <div class="in-src">${esc(o.releve)}${o.finCopie ? ' · copie du panel jusqu’au ' + esc(o.finCopie) : ''}</div>`;
+  const alertes = o.alertes.map(([k, t]) => `<div class="in-alerte ${k}">${esc(t)}</div>`).join('');
+  if (o.chargement) { return `<div data-screen="inventaires">${barre}<div style="${card};padding:24px;font-size:12.5px;color:var(--color-text-muted)">Lecture des inventaires du magasin…</div></div>`; }
+  if (o.indispo) { return `<div data-screen="inventaires">${barre}<div style="${card};padding:24px;font-size:12.5px;color:#8D1D2C">${esc(o.indispo)}</div></div>`; }
+  if (!o.de || !o.a) { return `<div data-screen="inventaires">${barre}${alertes}<div style="${card};padding:24px;font-size:12.5px;color:var(--color-text-muted)">Il faut deux inventaires pour comparer : ce magasin n’en a pas encore deux de la même source.</div></div>`; }
+  if (o.calcul || o.erreur || !o.justesse) {
+    return `<div data-screen="inventaires">${barre}${alertes}<div style="${card};padding:24px;font-size:12.5px;color:${o.erreur ? '#8D1D2C' : 'var(--color-text-muted)'}">${o.erreur ? esc('Calcul impossible : ' + o.erreur) : 'Calcul de l’écart : comptages, livraisons, tickets et poubelle de la période, ramenés aux matières par les recettes… (jusqu’à une minute sur douze semaines)'}</div>${histo()}</div>`;
+  }
+  function histo(){
+    if (!o.histo.length) { return ''; }
+    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse, inventaire par inventaire <span>chaque barre : ce que la caisse et la poubelle expliquent de ce qui est sorti du stock entre deux inventaires · la ligne marque 100 % · cliquer une barre pour l’ouvrir</span></div>
+      <div class="in-histo">${o.histo.map(h => `<button ${x.A(h.choisir)} class="in-hb ${h.cls}${h.on ? ' on' : ''}" title="${esc(h.titre)}"><span class="v">${esc(h.val)}</span><i style="height:${h.h}%"></i><span class="d">${esc(h.lib)}</span></button>`).join('')}<div class="in-cent"></div></div></div>`;
+  }
+  const J = o.justesse;
+  const tete = `<div class="in-tete">
+    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Justesse des ventes</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
+    <div class="in-kpis">${o.kpi.map(k => `<div style="${card};padding:14px 16px"><div class="k">${esc(k[0])}</div><div class="v ${k[2]}">${esc(k[1])}</div><div class="s">${esc(k[3])}</div></div>`).join('')}</div></div>
+    <div class="in-bilan" style="${card}">${o.bilan.map((b, i) => `<div class="${i === 3 ? 'eq' : ''}"><span>${esc(b[0])}</span><b>${esc(b[1])}</b></div>`).join('')}</div>`;
+  const S = o.suite;
+  const mouvements = S && S.jours.length ? `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">Les mouvements, jour par jour <span>valeur d’achat des matières · <i class="lg l"></i>livré <i class="lg v"></i>vendu (recettes) <i class="lg j"></i>jeté · échelle ${esc(S.max)}</span></div>
+    <div class="in-jours">${S.jours.map(d => `<div class="in-j" title="${esc(d.titre)}"><div class="b"><i class="l" style="height:${d.hL}%"></i><span class="pile"><i class="j" style="height:${d.hJ}%"></i><i class="v" style="height:${d.hV}%"></i></span></div><div class="d">${esc(d.lib)}</div></div>`).join('')}</div></div>` : '';
+  const TH = 'text-align:right;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:10px 10px;border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap';
+  const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap';
+  const table = `<div style="${card};overflow:hidden;margin-top:12px"><div style="padding:12px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:13.5px;font-weight:600">Matière par matière</div><div class="in-chips">${o.filtres.map(f => `<button ${x.A(f.choisir)} class="${f.on ? 'on' : ''}">${esc(f.lib)} <b>${f.n}</b></button>`).join('')}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-left:auto">début + livré − fin = sorti · sorti − vendu − jeté = écart · cliquer une ligne pour ses mouvements</div></div>
+    ${o.lignes.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:980px"><thead><tr><th style="${TH};text-align:left">Matière</th><th style="${TH}">Début</th><th style="${TH}">Livré</th><th style="${TH}">Fin</th><th style="${TH}">Sorti</th><th style="${TH}">Vendu</th><th style="${TH}">Jeté</th><th style="${TH}">Écart</th><th style="${TH}">Écart €</th><th style="${TH}">Justesse</th></tr></thead><tbody>
+    ${o.lignes.map(m => `<tr ${x.A(m.basculer)} class="in-row${m.ouvert ? ' on' : ''}"><td style="${td};text-align:left;white-space:normal"><b>${esc(m.nom)}</b> <span class="in-st ${m.stCls}">${esc(m.statut)}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(m.categorie)} · ${esc(m.prix)}</div></td><td style="${td}">${esc(m.debut)}</td><td style="${td};color:#1f5f8b">${esc(m.entrees)}</td><td style="${td}">${esc(m.fin)}</td><td style="${td};font-weight:600">${esc(m.sorties)}</td><td style="${td};color:#2d7a3e">${esc(m.ventes)}</td><td style="${td};color:#9a5a00">${esc(m.poubelle)}</td><td style="${td};font-weight:600" class="${m.ecCls}">${esc(m.ecart)}</td><td style="${td};font-weight:600" class="${m.ecCls}">${esc(m.ecartE)}</td><td style="${td}">${esc(m.justesse)}</td></tr>
+      ${m.ouvert ? `<tr class="in-det"><td colspan="10"><div class="in-det-g"><div><div class="in-dt">Lecture</div><div style="font-size:12.5px;line-height:1.5">${esc(m.lecture)}</div></div>
+        <div><div class="in-dt">Mouvements du stock</div>${m.mouvements.length ? m.mouvements.map(v => `<div class="in-mv"><span>${esc(v.quand)}</span><span>${esc(v.quoi)}</span><b>${esc(v.q)}</b></div>`).join('') : '<div class="in-vide">aucun mouvement enregistré entre les deux comptages</div>'}</div>
+        <div><div class="in-dt">Vendu par produit (recettes)</div>${m.produits.length ? m.produits.map(p => `<div class="in-mv"><span>${esc(p.nom)}</span><b>${esc(p.q)}</b></div>`).join('') : '<div class="in-vide">aucune vente ne consomme cette matière</div>'}</div></div></td></tr>` : ''}`).join('')}
+    </tbody></table></div>` : `<div style="padding:18px;font-size:12.5px;color:var(--color-text-muted)">Aucune matière dans ce filtre.</div>`}
+    <div class="in-leg"><span>* début lu dans le solde du panel : la matière n’était pas comptée au premier inventaire</span><span style="margin-left:auto">${o.nLignes} matières suivies</span></div></div>`;
+  const qual = `<div class="in-pied"><div style="${card};padding:14px 18px"><div class="in-t">Ce que valent les inventaires de la période</div>${o.qualite.map(q => `<div class="in-q ${q.cls}"><b>${esc(q.periode)}</b><span>${esc(q.note)}</span></div>`).join('') || '<div class="in-vide">—</div>'}</div>
+    <div style="${card};padding:14px 18px"><div class="in-t">Vendus sans recette <span>ils ne consomment aucune matière au panel</span></div>${o.sansRecette.length ? o.sansRecette.map(p => `<div class="in-mv"><span>${esc(p.nom)}</span><span>${esc(p.q)} pièces</span><b>${esc(p.ca)}</b></div>`).join('') : '<div class="in-vide">tous les produits vendus ont une recette</div>'}</div></div>
+    <div class="in-methode">${esc(o.methode || '')}</div>`;
+  return `<div data-screen="inventaires">${barre}${alertes}${tete}${mouvements}${histo()}${table}${qual}</div>`;
 }
 function tplBrandGuard(c, x){
   const { esc } = x;
