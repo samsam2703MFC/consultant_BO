@@ -1,0 +1,223 @@
+{
+ "lu": "2026-10-13",
+ "mois": [
+  {
+   "m": 3,
+   "jours": 31,
+   "ca": 48767.34,
+   "budget": 62000,
+   "tickets": 4341,
+   "food": 0.398,
+   "labour": 6334,
+   "overhead": 9359.52,
+   "heures": 801.5,
+   "etp": 4.77
+  },
+  {
+   "m": 4,
+   "jours": 30,
+   "ca": 55831.57,
+   "budget": 62000,
+   "tickets": 4486,
+   "food": 0.391,
+   "labour": 5814.5,
+   "overhead": 9608.7,
+   "heures": 758,
+   "etp": 4.51
+  },
+  {
+   "m": 5,
+   "jours": 31,
+   "ca": 60239.57,
+   "budget": 62000,
+   "tickets": 4756,
+   "food": 0.372,
+   "labour": 10080.5,
+   "overhead": 19533.72,
+   "heures": 628,
+   "etp": 3.74
+  },
+  {
+   "m": 6,
+   "jours": 30,
+   "ca": 46947.83,
+   "budget": 62000,
+   "tickets": 3811,
+   "food": 0.363,
+   "labour": 8714,
+   "overhead": 10658.7,
+   "heures": 617.5,
+   "etp": 3.68
+  },
+  {
+   "m": 7,
+   "jours": 30,
+   "ca": 46236.55,
+   "budget": 62000,
+   "tickets": 3776,
+   "food": 0.368,
+   "labour": 8110.75,
+   "overhead": 13042.63,
+   "heures": 675.5,
+   "etp": 4.02
+  },
+  {
+   "m": 8,
+   "jours": 31,
+   "ca": 52350.95,
+   "budget": 61000,
+   "tickets": 4323,
+   "food": 0.364,
+   "labour": 8167.75,
+   "overhead": 13042.63,
+   "heures": 792,
+   "etp": 4.71
+  },
+  {
+   "m": 9,
+   "jours": 30,
+   "ca": 50849.75,
+   "budget": 61000,
+   "tickets": 4156,
+   "food": 0.362,
+   "labour": 9477.5,
+   "overhead": 13042.8,
+   "heures": 782,
+   "etp": 4.65
+  }
+ ],
+ "fevrier": {
+  "jours": 7,
+  "ca": 6506.85
+ },
+ "octobre": {
+  "jusqua": "2026-10-12",
+  "jours": 12,
+  "ca": 23401.75,
+  "tickets": 1835,
+  "objectifADate": 23834.15,
+  "objectifMois": 61000,
+  "overheadJour": 486.38,
+  "joursMois": 31
+ },
+ "foodTickets": {
+  "aout": {
+   "ca": 52350.95,
+   "matiere": 23219.97,
+   "reseauPct": null
+  },
+  "sept": {
+   "ca": 50849.75,
+   "matiere": 22044.31,
+   "reseauPct": null
+  }
+ },
+ "panierAutres": {
+  "moyenne": 14.26,
+  "magasins": {
+   "2": 17.76,
+   "3": 13.38,
+   "5": 11.63
+  }
+ },
+ "budgetCourant": 61000,
+ "etude": {
+  "caTheoriqueAn": 840000,
+  "potentielMaturite": 1200000,
+  "montee": {
+   "a1": 70,
+   "a2": 80,
+   "a3": 90
+  }
+ },
+ "charges": [
+  {
+   "categorie": "Matière,première & Emballage",
+   "poste": "Matière première",
+   "pctBudget": 0.0,
+   "pctTheorique": 0.36,
+   "gestion": "",
+   "description": ""
+  },
+  {
+   "categorie": "Matière,première & Emballage",
+   "poste": "Emballage",
+   "pctBudget": 0.0,
+   "pctTheorique": 0.02,
+   "gestion": "",
+   "description": ""
+  },
+  {
+   "categorie": "Occupation",
+   "poste": "Loyer + charges locatives",
+   "pctBudget": 0.07,
+   "pctTheorique": 0.07,
+   "gestion": "Fixe",
+   "description": "Selon emplacement"
+  },
+  {
+   "categorie": "Occupation",
+   "poste": "Énergie (eau, gaz, électricité)",
+   "pctBudget": 0.05,
+   "pctTheorique": 0.05,
+   "gestion": "Groupement d’achat, appel d’offres",
+   "description": "Variable selon la saison"
+  },
+  {
+   "categorie": "Occupation",
+   "poste": "Maintenance & nettoyage",
+   "pctBudget": 0.01,
+   "pctTheorique": 0.005,
+   "gestion": "Préventif et régulier",
+   "description": "Entretien du matériel"
+  },
+  {
+   "categorie": "Occupation",
+   "poste": "Assurances, licences, etc.",
+   "pctBudget": 0.01,
+   "pctTheorique": 0.01,
+   "gestion": "Suivi des échéances",
+   "description": ""
+  },
+  {
+   "categorie": "Redevances de marque",
+   "poste": "Royalties franchise",
+   "pctBudget": 0.02,
+   "pctTheorique": 0.02,
+   "gestion": "Fixe",
+   "description": "Redevance marque"
+  },
+  {
+   "categorie": "Redevances de marque",
+   "poste": "Redevance assistance",
+   "pctBudget": 0.015,
+   "pctTheorique": 0.015,
+   "gestion": "Fixe",
+   "description": "Accompagnement franchiseur"
+  },
+  {
+   "categorie": "Redevances de marque",
+   "poste": "Marketing national / local",
+   "pctBudget": 0.015,
+   "pctTheorique": 0.015,
+   "gestion": "Fixe",
+   "description": "Communication"
+  },
+  {
+   "categorie": "Investissement",
+   "poste": "Amortissements / leasing matériel",
+   "pctBudget": 0.05,
+   "pctTheorique": 0.07,
+   "gestion": "Fixe",
+   "description": "Machines, mobilier"
+  },
+  {
+   "categorie": "Frais généraux",
+   "poste": "Autres (comptabilité, banque, divers)",
+   "pctBudget": 0.015,
+   "pctTheorique": 0.015,
+   "gestion": "Optimisation des prestataires",
+   "description": ""
+  }
+ ]
+}
