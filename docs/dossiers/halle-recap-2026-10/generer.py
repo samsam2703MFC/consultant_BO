@@ -3,6 +3,8 @@
 #
 #   python3 generer.py --relire   relit les chiffres sur le cockpit en ligne et les fige dans donnees.json
 #   python3 generer.py            refait le PDF et l'Excel depuis donnees.json
+#   --food 45 | --food mesure     food cost retenu pour la matière, le résultat et le point mort (défaut : 45 %, demande du
+#                                 13/10/2026 ; « mesure » = le food cost mesuré par le panel, mois par mois)
 #   puis : python3 <skill xlsx>/scripts/recalc.py Halle-tableau-recap.xlsx   (les formules n'ont de valeur en cache qu'après recalcul)
 #
 # Mois pleins : mars → septembre 2026 (février : 9 jours d'ouverture ; octobre : en cours, jusqu'à la veille de la lecture).
@@ -72,9 +74,15 @@ if '--relire' in sys.argv:
 D = json.load(open(os.path.join(ICI, 'donnees.json')))
 
 
+nfP = lambda v: f'{100 * v:.1f}'.replace('.', ',').replace(',0', '') + '\u00a0%'
+
 # --- 2. Les chiffres ------------------------------------------------------------------------------------------------------
+a_ = sys.argv[sys.argv.index('--food') + 1] if '--food' in sys.argv else '45'
+FOOD_RETENU = None if a_ == 'mesure' else float(a_.replace(',', '.')) / 100
 M = D['mois']
 for x in M:
+    x['foodMes'] = x['food']
+    if FOOD_RETENU is not None: x['food'] = FOOD_RETENU
     x['mat'] = x['ca'] * x['food']; x['res'] = x['ca'] - x['mat'] - x['labour'] - x['overhead']
 n = len(M)
 S = lambda k, L=M: sum(x[k] for x in L)
@@ -86,7 +94,7 @@ heuresMois, etpMois = S('heures') / n, S('etp') / n
 tauxH = [x['labour'] / x['heures'] for x in M]
 # La structure récente, juillet → septembre : celle qui sert au point mort
 R = [x for x in M if x['m'] >= 7]
-caR = S('ca', R) / len(R); foodR = S('mat', R) / S('ca', R); labR = S('labour', R) / len(R); ohR = S('overhead', R) / len(R)
+caR = S('ca', R) / len(R); foodR = S('mat', R) / S('ca', R); foodMesR = sum(x['ca'] * x['foodMes'] for x in R) / S('ca', R); foodMes = sum(x['ca'] * x['foodMes'] for x in M) / S('ca'); labR = S('labour', R) / len(R); ohR = S('overhead', R) / len(R)
 fixes = labR + ohR; tmb = 1 - foodR
 pm = fixes / tmb
 JM = 365 / 12                                   # jours par mois (ouvert 7 jours sur 7)
@@ -102,10 +110,17 @@ O = D['octobre']; oCaJ = O['ca'] / O['jours']; oTkJ = O['tickets'] / O['jours'];
 ohOct = O['overheadJour'] * O['joursMois']
 # Le food cost ticket par ticket (août + septembre)
 FT = D['foodTickets']; foodT = (FT['aout']['matiere'] + FT['sept']['matiere']) / (FT['aout']['ca'] + FT['sept']['ca'])
-SCEN = [('Coûts encodés au panel, juillet → septembre', labR, ohR, foodR),
-        ('Frais généraux d’octobre, {oh} par mois', labR, ohOct, foodR),
-        ('Food cost recomposé ticket par ticket', labR, ohR, foodT),
-        ('Les deux à la fois', labR, ohOct, foodT)]
+if FOOD_RETENU is None:
+    SCEN = [('Coûts encodés au panel, juillet → septembre', labR, ohR, foodR),
+            ('Frais généraux d’octobre, {oh} par mois', labR, ohOct, foodR),
+            ('Food cost recomposé ticket par ticket', labR, ohR, foodT),
+            ('Les deux à la fois', labR, ohOct, foodT)]
+else:
+    SCEN = [(f'Food cost retenu {nfP(FOOD_RETENU)}, charges juillet → septembre', labR, ohR, FOOD_RETENU),
+            ('Le même, avec les frais généraux d’octobre ({oh} par mois)', labR, ohOct, FOOD_RETENU),
+            ('Food cost recomposé ticket par ticket (août-septembre)', labR, ohR, foodT),
+            ('Food cost mesuré par le panel (juillet → septembre)', labR, ohR, foodMesR)]
+pmPire = max((l + o) / (1 - f) for _, l, o, f in SCEN)
 modele = sum(c['pctBudget'] for c in D['charges'])
 
 
@@ -151,7 +166,7 @@ ventes = f'''
 couts = f'''
 <table class="t">
 <tr><th class="l">Poste</th><th>€ par mois<br><small>moy. mars → sept.</small></th><th>% du CA</th></tr>
-<tr><td class="l">Matière (food cost)<small>seuil réseau 32&nbsp;% · modèle du franchiseur 36&nbsp;% + 2&nbsp;% d’emballage</small></td><td>{fE(matMois)}</td><td>{fP(food)}</td></tr>
+<tr><td class="l">Matière (food cost)<small>{'seuil réseau 32&nbsp;% · modèle du franchiseur 36&nbsp;% + 2&nbsp;% d’emballage' if FOOD_RETENU is None else 'hypothèse retenue ' + nfP(FOOD_RETENU) + ' · mesuré ' + fP(foodMes) + ' au panel · seuil réseau 32&nbsp;%'}</small></td><td>{fE(matMois)}</td><td>{fP(food)}</td></tr>
 <tr><td class="l">Main-d’œuvre encodée<small>seuil réseau 33&nbsp;% · {nf(heuresMois)} heures par mois, {nf(etpMois, 1)} ETP</small></td><td>{fE(labMois)}</td><td>{fP(labMois / caMois)}</td></tr>
 <tr><td class="l">Frais généraux encodés<small>{fE(ohR)} par mois depuis juillet</small></td><td>{fE(ohMois)}</td><td>{fP(ohMois / caMois)}</td></tr>
 <tr class="sous"><td class="l">Total des coûts</td><td>{fE(matMois + labMois + ohMois)}</td><td>{fP((matMois + labMois + ohMois) / caMois)}</td></tr>
@@ -171,7 +186,7 @@ pointmort = f'''
   <div class="ligne fort"><span>Charges fixes par mois</span><span>{fE(fixes)}</span></div>
   <div class="ligne"><span>÷ marge brute (1 − food cost {fP(foodR)})</span><span>{fP(tmb)}</span></div>
   <div class="ligne pm"><span>= Point mort</span><span>{fE(arr(pm, 100))} / mois</span></div>
-  <div class="s">soit {fE(arr(pmJour))} par jour, ou {nf(pmClientsJour)} clients par jour au panier actuel. Moyennes de juillet à septembre, la structure de coûts actuelle. Le CA moyen ({fE(caMois)}) peut baisser de {fP(securite, 0)} avant de passer sous le point mort.</div>
+  <div class="s">soit {fE(arr(pmJour))} par jour, ou {nf(pmClientsJour)} clients par jour au panier actuel. Charges : moyennes de juillet à septembre, la structure de coûts actuelle{'' if FOOD_RETENU is None else ' ; food cost : ' + nfP(FOOD_RETENU) + ', l’hypothèse retenue'}. Le CA moyen ({fE(caMois)}) peut baisser de {fP(securite, 0)} avant de passer sous le point mort.</div>
 </div>
 <div>
 <table class="t serre">
@@ -189,28 +204,28 @@ for x in M:
     note = '<sup>*</sup>' if x['m'] in (6, 7) else ''
     lignesM += (f'<tr><td class="l">{NOMS[x["m"]]}{note}</td><td>{fE(x["ca"])}</td><td>{fE(x["budget"])}</td>'
                 f'<td class="bar"><span class="barre"><i style="width:{min(100, 100 * a):.1f}%"></i></span><em>{fP(a, 0)}</em></td>'
-                f'<td>{nf(x["tickets"])}</td><td>{nf(x["tickets"] / x["jours"])}</td><td>{fE(x["ca"] / x["tickets"], 2)}</td><td>{fP(x["food"])}</td>'
+                f'<td>{nf(x["tickets"])}</td><td>{nf(x["tickets"] / x["jours"])}</td><td>{fE(x["ca"] / x["tickets"], 2)}</td><td>{fP(x["foodMes"])}</td>'
                 f'<td>{fE(x["labour"])}</td><td>{fE(x["overhead"])}</td><td>{fE(x["res"])}</td><td>{fP(x["res"] / x["ca"], 0)}</td></tr>')
 lignesM += (f'<tr class="tot"><td class="l">Mars → septembre</td><td>{fE(ca)}</td><td>{fE(bud)}</td>'
             f'<td class="bar"><span class="barre"><i style="width:{100 * ca / bud:.1f}%"></i></span><em>{fP(ca / bud, 0)}</em></td>'
-            f'<td>{nf(tk)}</td><td>{nf(tkJour)}</td><td>{fE(panier, 2)}</td><td>{fP(food)}</td><td>{fE(S("labour"))}</td><td>{fE(S("overhead"))}</td><td>{fE(S("res"))}</td><td>{fP(S("res") / ca, 0)}</td></tr>')
+            f'<td>{nf(tk)}</td><td>{nf(tkJour)}</td><td>{fE(panier, 2)}</td><td>{fP(foodMes)}</td><td>{fE(S("labour"))}</td><td>{fE(S("overhead"))}</td><td>{fE(S("res"))}</td><td>{fP(S("res") / ca, 0)}</td></tr>')
 lignesM += (f'<tr class="part"><td class="l">Octobre 1 → {jusqua.day}<sup>**</sup></td><td>{fE(O["ca"])}</td><td>{fE(O["objectifADate"])}</td>'
             f'<td class="bar"><span class="barre"><i style="width:{min(100, 100 * oAtt):.1f}%"></i></span><em>{fP(oAtt, 0)}</em></td>'
             f'<td>{nf(O["tickets"])}</td><td>{nf(oTkJ)}</td><td>{fE(oPan, 2)}</td><td class="mu" colspan="5">mois en cours</td></tr>')
 moisTab = f'''
 <table class="t mois">
-<tr><th class="l">Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th>Clients / jour</th><th>Panier</th><th>Food cost</th><th>Main-d’œuvre</th><th>Frais généraux</th><th>Résultat encodé</th><th>%</th></tr>
+<tr><th class="l">Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th>Clients / jour</th><th>Panier</th><th>Food cost{'' if FOOD_RETENU is None else ' mesuré'}</th><th>Main-d’œuvre</th><th>Frais généraux</th><th>Résultat encodé{'' if FOOD_RETENU is None else '<small>food cost ' + nfP(FOOD_RETENU) + '</small>'}</th><th>%</th></tr>
 {lignesM}
 </table>
 '''
 
 notes = f'''
 <ul class="notes">
-<li>Sources : ventes, clients, main-d’œuvre et frais généraux viennent du P&amp;L du panel (ce que le franchisé y encode) ; le food cost est la marge mesurée par le panel sur les recettes vendues ; le budget est celui du cockpit. Hors TVA, lu le {luTxt}. Février (ouverture le 20, {D["fevrier"]["jours"]} jours, {fE(D["fevrier"]["ca"])}) et octobre, partiels, restent hors des moyennes.</li>
+<li>Sources : ventes, clients, main-d’œuvre et frais généraux viennent du P&amp;L du panel (ce que le franchisé y encode) ; le food cost mesuré est la marge du panel sur les recettes vendues ; le budget est celui du cockpit. Hors TVA, lu le {luTxt}. Février (ouverture le 20, {D["fevrier"]["jours"]} jours, {fE(D["fevrier"]["ca"])}) et octobre, partiels, restent hors des moyennes.</li>
 <li><sup>*</sup> Juin et juillet : travaux sur le viaduc de Halle, effet estimé à − 20&nbsp;% sur le chiffre. <sup>**</sup> Octobre : jusqu’au {jusqua.day} inclus, face à l’objectif à date (le budget du mois réparti par jour de semaine).</li>
 <li>Main-d’œuvre encodée = heures planifiées × taux horaire du panel, {nf(min(tauxH))} à {nf(max(tauxH))}&nbsp;€ de l’heure selon les mois : le franchisé y compte pour 0&nbsp;€/h et les charges sociales n’y sont vraisemblablement pas toutes. Résultat et point mort sont donc avant la rémunération du gérant.</li>
 <li>Frais généraux encodés : un montant mensuel saisi au panel, sans détail. Le modèle de charges du franchiseur en donne le contenu attendu — loyer 7&nbsp;%, énergie 5&nbsp;%, amortissements 5&nbsp;%, redevances 5&nbsp;%, entretien et assurances 2&nbsp;%, divers 1,5&nbsp;% : {fP(modele)} du CA, {fE(arr(modele * caMois))} par mois au rythme actuel. En octobre, le panel en alloue {fE(O["overheadJour"], 2)} par jour, {fE(arr(ohOct))} sur le mois : à confirmer avec le franchisé.</li>
-<li>Deux mesures du food cost : {fP(foodR)} par le panel (juillet → septembre), {fP(foodT)} quand le cockpit recompose chaque ticket au coût de recette du jour (août-septembre). L’écart se joue sur les fiches recettes ; le tableau des hypothèses en montre l’effet sur le point mort.</li>
+<li>{'' if FOOD_RETENU is None else 'Food cost retenu : ' + nfP(FOOD_RETENU) + ' du CA, une hypothèse de travail appliquée à tous les mois (matière, résultat, point mort). '}Deux mesures existent : {fP(foodMesR)} par le panel (juillet → septembre), {fP(foodT)} quand le cockpit recompose chaque ticket au coût de recette du jour (août-septembre). L’écart se joue sur les fiches recettes ; le tableau des hypothèses en montre l’effet sur le point mort.</li>
 </ul>
 '''
 
@@ -269,10 +284,10 @@ sup{{font-size:5.5pt;line-height:0}}
 attM = sorted(M, key=lambda x: x['ca'] / x['budget'])
 retenir = f"""
 <div class="cadre"><div class="k">À retenir</div><ul>
-<li>Le magasin couvre ses charges encodées : {fE(arr(caMois, 100))} de CA moyen par mois pour un point mort d’environ {fE(arr(pm, 100))}. Le chiffre peut baisser de {fP(securite, 0)} avant d’y passer ; le résultat opérationnel encodé est de {fE(arr(resMois, 100))} par mois ({fP(resMois / caMois, 0)} du CA).</li>
+<li>{'' if FOOD_RETENU is None else 'Avec un food cost de ' + nfP(FOOD_RETENU) + ', l'}{'L' if FOOD_RETENU is None else ''}e magasin couvre ses charges encodées : {fE(arr(caMois, 100))} de CA moyen par mois pour un point mort d’environ {fE(arr(pm, 100))}. Le chiffre peut baisser de {fP(securite, 0)} avant d’y passer ; le résultat opérationnel encodé est de {fE(arr(resMois, 100))} par mois ({fP(resMois / caMois, 0)} du CA).</li>
 <li>Le budget n’est atteint aucun mois : {fP(ca / bud, 0)} en cumul, de {fP(attM[0]['ca'] / attM[0]['budget'], 0)} ({NOMS[attM[0]['m']].lower()}, travaux du viaduc) à {fP(attM[-1]['ca'] / attM[-1]['budget'], 0)} ({NOMS[attM[-1]['m']].lower()}). Il manque {fE(arr(obj - caMois, 100))} par mois : {nf(cliObjJour - tkJour)} clients de plus par jour au panier actuel, ou {fE(panObj - panier, 2)} de plus par ticket.</li>
 <li>Octobre démarre mieux : {fP(oAtt, 0)} de l’objectif au {jusqua.day}, {nf(oTkJ)} clients et {fE(arr(oCaJ))} par jour, un panier de {fE(oPan, 2)}.</li>
-<li>À vérifier avec le franchisé : la rémunération du gérant (hors de la main-d’œuvre encodée), le contenu des frais généraux (en hausse en octobre) et le food cost — {fP(foodR)} au panel, {fP(foodT)} ticket par ticket. Dans le cas le moins favorable, le point mort monte à {fE(arr((labR + ohOct) / (1 - foodT), 100))}.</li>
+<li>{'À vérifier avec le franchisé : la rémunération du gérant (hors de la main-d’œuvre encodée), le contenu des frais généraux (en hausse en octobre) et le food cost — ' + fP(foodR) + ' au panel, ' + fP(foodT) + ' ticket par ticket.' if FOOD_RETENU is None else 'Le food cost est pris à ' + nfP(FOOD_RETENU) + ', au-dessus des deux mesures (' + fP(foodMesR) + ' au panel, ' + fP(foodT) + ' ticket par ticket). Restent à vérifier avec le franchisé la rémunération du gérant (hors de la main-d’œuvre encodée) et les frais généraux, en hausse en octobre.'} Dans le cas le moins favorable du tableau, le point mort monte à {fE(arr(pmPire, 100))}.</li>
 </ul></div>
 """
 
@@ -317,7 +332,7 @@ ft = lambda n: f'<div class="ft"><span>Atelier by – Halle · tableau récap ·
 page = f"""<div class="page">
 {hd}
 <h1>Halle — tableau récap</h1>
-<div class="sous">Les sept mois pleins depuis l’ouverture du 20 février : mars → septembre 2026, et octobre en cours. Montants hors TVA.</div>
+<div class="sous">Les sept mois pleins depuis l’ouverture du 20 février : mars → septembre 2026, et octobre en cours. Montants hors TVA.{'' if FOOD_RETENU is None else ' Food cost retenu : ' + nfP(FOOD_RETENU) + ' du CA.'}</div>
 <div class="tiles">{tuiles}</div>
 {retenir}
 <div class="deux bloc">
@@ -374,9 +389,10 @@ mm = wb.create_sheet('Mois par mois')
 cell(mm, 'A1', 'Atelier by – Halle · les mois pleins, mars → septembre 2026', F_T)
 cell(mm, 'A2', f'Lu le {luTxt} sur le panel (P&L quotidien agrégé par mois : CA, main-d’œuvre, frais généraux) et le cockpit (tickets, food cost mesuré par le panel, budget, heures planifiées). '
      'En bleu : les chiffres lus ; en noir : les calculs. Hors TVA. Juin et juillet : travaux du viaduc de Halle (effet estimé − 20 %).', F_S)
-hd = ['Mois', 'Jours de vente', 'CA (€)', 'Budget CA (€)', 'Atteinte', 'Clients (tickets)', 'Panier moyen (€)', 'CA par jour (€)', 'Clients par jour', 'Food cost (% CA)',
+hd = ['Mois', 'Jours de vente', 'CA (€)', 'Budget CA (€)', 'Atteinte', 'Clients (tickets)', 'Panier moyen (€)', 'CA par jour (€)', 'Clients par jour', 'Food cost (% CA)' if FOOD_RETENU is None else 'Food cost retenu (% CA)',
       'Matière (€)', 'Main-d’œuvre encodée (€)', 'Main-d’œuvre (% CA)', 'Heures planifiées', 'Coût horaire encodé (€/h)', 'Frais généraux encodés (€)', 'Frais généraux (% CA)',
-      'Résultat opérationnel encodé (€)', 'Résultat (% CA)']
+      'Résultat opérationnel encodé (€)', 'Résultat (% CA)', 'Food cost mesuré par le panel (% CA)']
+FOOD_CELL = "'Récap'!$B$31"   # l'hypothèse de food cost, une seule case (feuille Récap)
 for i, h in enumerate(hd):
     cell(mm, f'{chr(65 + i)}4', h, F_H, al=Alignment(wrap_text=True, vertical='bottom', horizontal='left' if i == 0 else 'right'), border=B_H)
 r0 = 5
@@ -386,7 +402,9 @@ for i, x in enumerate(M):
     cell(mm, f'B{r}', x['jours'], F_IN, NB); cell(mm, f'C{r}', x['ca'], F_IN, EUR); cell(mm, f'D{r}', x['budget'], F_IN, EUR)
     cell(mm, f'E{r}', f'=IF(D{r}>0,C{r}/D{r},0)', fmt=PCT0); cell(mm, f'F{r}', x['tickets'], F_IN, NB)
     cell(mm, f'G{r}', f'=IF(F{r}>0,C{r}/F{r},0)', fmt=EUR2); cell(mm, f'H{r}', f'=IF(B{r}>0,C{r}/B{r},0)', fmt=EUR); cell(mm, f'I{r}', f'=IF(B{r}>0,F{r}/B{r},0)', fmt=NB)
-    cell(mm, f'J{r}', x['food'], F_IN, PCT); cell(mm, f'K{r}', f'=C{r}*J{r}', fmt=EUR)
+    if FOOD_RETENU is None: cell(mm, f'J{r}', x['food'], F_IN, PCT)
+    else: cell(mm, f'J{r}', '=' + FOOD_CELL, F_LK, PCT)
+    cell(mm, f'K{r}', f'=C{r}*J{r}', fmt=EUR); cell(mm, f'T{r}', x['foodMes'], F_IN, PCT)
     cell(mm, f'L{r}', x['labour'], F_IN, EUR); cell(mm, f'M{r}', f'=IF(C{r}>0,L{r}/C{r},0)', fmt=PCT)
     cell(mm, f'N{r}', x['heures'], F_IN, NB1); cell(mm, f'O{r}', f'=IF(N{r}>0,L{r}/N{r},0)', fmt=EUR2)
     cell(mm, f'P{r}', x['overhead'], F_IN, EUR); cell(mm, f'Q{r}', f'=IF(C{r}>0,P{r}/C{r},0)', fmt=PCT)
@@ -402,6 +420,8 @@ def ligneTot(r, lib, plage, moy):
     for c, f_, fmt in (('E', f'=IF(D{r}>0,C{r}/D{r},0)', PCT0), ('G', f'=IF(F{r}>0,C{r}/F{r},0)', EUR2), ('H', f'=IF(B{r}>0,C{r}/B{r},0)', EUR), ('I', f'=IF(B{r}>0,F{r}/B{r},0)', NB),
                        ('J', f'=IF(C{r}>0,K{r}/C{r},0)', PCT), ('M', f'=IF(C{r}>0,L{r}/C{r},0)', PCT), ('O', f'=IF(N{r}>0,L{r}/N{r},0)', EUR2), ('Q', f'=IF(C{r}>0,P{r}/C{r},0)', PCT), ('S', f'=IF(C{r}>0,R{r}/C{r},0)', PCT)):
         cell(mm, f'{c}{r}', f_, F_TOT, fmt, GRIS, border=B_T)
+    pl = f'{plage[0]}:C{plage[1]}'
+    cell(mm, f'T{r}', f'=IF(SUM(C{pl})>0,SUMPRODUCT(C{pl},T{plage[0]}:T{plage[1]})/SUM(C{pl}),0)', F_TOT, PCT, GRIS, border=B_T)
 
 
 ligneTot(rT, 'Total mars → septembre', (r0, rN), False)
@@ -423,7 +443,7 @@ mm.row_dimensions[4].height = 40; mm.freeze_panes = 'B5'
 rc = wb.create_sheet('Récap', 0)
 MP = "'Mois par mois'!"
 cell(rc, 'A1', 'Atelier by – Halle · tableau récap', F_T)
-cell(rc, 'A2', f'Mars → septembre 2026 (7 mois pleins), lu le {luTxt}. Hors TVA. En vert : liens vers « Mois par mois » ; en bleu : chiffres lus ; fond jaune : hypothèses à modifier ; '
+cell(rc, 'A2', f'Mars → septembre 2026 (7 mois pleins), lu le {luTxt}. Hors TVA.{"" if FOOD_RETENU is None else " Food cost retenu : " + nfP(FOOD_RETENU) + " (case B31, appliquée à tous les mois)."} En vert : liens vers « Mois par mois » ; en bleu : chiffres lus ; fond jaune : hypothèses à modifier ; '
      'en noir : calculs.', F_S)
 for col, w in zip('ABCDEF', (54, 16, 16, 16, 16, 62)): rc.column_dimensions[col].width = w
 
@@ -463,7 +483,7 @@ cell(rc, f'A{rJM + 4}', 'Potentiel année 1 de l’étude de marché (CA annuel)
 
 # Les coûts : lignes 21 à 25
 r = 20; sec(r, 'Les coûts du magasin (par mois)', ('Moy. mars → sept.', '% du CA', 'Moy. juil. → sept.', '% du CA', 'Repère'))
-for i, (lib, col, nt) in enumerate([('Matière (food cost)', 'K', 'seuil réseau 32 % ; modèle du franchiseur 36 % + 2 % d’emballage'),
+for i, (lib, col, nt) in enumerate([('Matière (food cost)', 'K', 'seuil réseau 32 % ; modèle du franchiseur 36 % + 2 % d’emballage' if FOOD_RETENU is None else f'food cost retenu {nfP(FOOD_RETENU)} (case B31) ; mesuré {fP(foodMes)} au panel ; seuil réseau 32 %'),
                                     ('Main-d’œuvre encodée', 'L', 'seuil réseau 33 % ; le franchisé est à 0 €/h au panel'),
                                     ('Frais généraux encodés', 'P', 'montant mensuel saisi au panel, sans détail (voir « Modèle de charges »)')]):
     rr = r + 1 + i
@@ -481,11 +501,13 @@ cell(rc, f'F{rt + 1}', 'avant rémunération du gérant, charges financières et
 # Le point mort : lignes 28 à 41
 r = rt + 3; sec(r, 'Le point mort (structure de coûts juillet → septembre)', ('Valeur', '', '', '', 'Comment'))
 p0 = r + 1
+assert FOOD_CELL == f"'Récap'!$B${p0 + 3}", 'la case du food cost a bougé'
 pm_lignes = [
     ('Main-d’œuvre par mois', f'={MP}L{rR}', F_LK, EUR, JAUNE, 'hypothèse : remplacer pour tester'),
     ('Frais généraux par mois', f'={MP}P{rR}', F_LK, EUR, JAUNE, f'octobre : {fE(O["overheadJour"], 2)} par jour au panel, soit ≈ {fE(arr(ohOct))} par mois'),
     ('Autres charges fixes à ajouter (rémunération du gérant…)', 0, F_IN, EUR, JAUNE, 'absentes du panel : à renseigner avec le franchisé'),
-    ('Food cost', f'={MP}J{rR}', F_LK, PCT, JAUNE, f'mesure du panel ; recomposé ticket par ticket par le cockpit : {fP(foodT)} (août-septembre)'),
+    ('Food cost', f'={MP}J{rR}', F_LK, PCT, JAUNE, f'mesure du panel ; recomposé ticket par ticket par le cockpit : {fP(foodT)} (août-septembre)') if FOOD_RETENU is None else
+    ('Food cost (hypothèse, s’applique à tous les mois)', FOOD_RETENU, F_IN, PCT, JAUNE, f'hypothèse demandée ; mesuré {fP(foodMesR)} par le panel (juillet → septembre), {fP(foodT)} ticket par ticket (août-septembre)'),
     ('Charges fixes par mois', f'=SUM(B{p0}:B{p0 + 2})', F_TOT, EUR, None, ''),
     ('Taux de marge brute (1 − food cost)', f'=1-B{p0 + 3}', F_FX, PCT, None, ''),
     ('Point mort, CA par mois', f'=IF(B{p0 + 5}>0,B{p0 + 4}/B{p0 + 5},0)', F(bold=True, color=BORD), EUR, CREME, 'charges fixes ÷ taux de marge brute'),
@@ -504,11 +526,14 @@ for i, (lib, v, fo, fmt, fi, nt) in enumerate(pm_lignes):
 
 # Les hypothèses du point mort
 r = p0 + len(pm_lignes) + 1; sec(r, 'Le point mort selon les hypothèses', ('Charges fixes', 'Food cost', 'Point mort / mois', 'Point mort / jour', 'Marge de sécurité'))
-cell(rc, f'A{r + 1}', 'Coûts encodés au panel (juillet → septembre)'); cell(rc, f'B{r + 1}', f'={MP}L{rR}+{MP}P{rR}', fmt=EUR); cell(rc, f'C{r + 1}', f'={MP}J{rR}', F_LK, PCT)
-cell(rc, f'A{r + 2}', 'Frais généraux encodés en octobre (par jour × 31)'); cell(rc, f'B{r + 2}', f'={MP}L{rR}+{MP}P{rO}*31', fmt=EUR); cell(rc, f'C{r + 2}', f'={MP}J{rR}', F_LK, PCT)
+cell(rc, f'A{r + 1}', 'Coûts encodés au panel (juillet → septembre)' if FOOD_RETENU is None else 'Food cost retenu, charges juillet → septembre'); cell(rc, f'B{r + 1}', f'={MP}L{rR}+{MP}P{rR}', fmt=EUR); cell(rc, f'C{r + 1}', f'={MP}J{rR}', F_LK, PCT)
+cell(rc, f'A{r + 2}', 'Frais généraux encodés en octobre (par jour × 31)' if FOOD_RETENU is None else 'Le même, avec les frais généraux d’octobre (par jour × 31)'); cell(rc, f'B{r + 2}', f'={MP}L{rR}+{MP}P{rO}*31', fmt=EUR); cell(rc, f'C{r + 2}', f'={MP}J{rR}', F_LK, PCT)
 cell(rc, f'A{r + 3}', 'Food cost recomposé ticket par ticket (août-septembre)'); cell(rc, f'B{r + 3}', f'=B{r + 1}', fmt=EUR); cell(rc, f'C{r + 3}', round(foodT, 4), F_IN, PCT,
      note=f'P&L du cockpit, tickets relus au coût de recette du jour : matière {fE(FT["aout"]["matiere"])} en août et {fE(FT["sept"]["matiere"])} en septembre, pour {fE(FT["aout"]["ca"] + FT["sept"]["ca"])} de CA.')
-cell(rc, f'A{r + 4}', 'Les deux à la fois'); cell(rc, f'B{r + 4}', f'=B{r + 2}', fmt=EUR); cell(rc, f'C{r + 4}', f'=C{r + 3}', fmt=PCT)
+if FOOD_RETENU is None:
+    cell(rc, f'A{r + 4}', 'Les deux à la fois'); cell(rc, f'B{r + 4}', f'=B{r + 2}', fmt=EUR); cell(rc, f'C{r + 4}', f'=C{r + 3}', fmt=PCT)
+else:
+    cell(rc, f'A{r + 4}', 'Food cost mesuré par le panel (juillet → septembre)'); cell(rc, f'B{r + 4}', f'=B{r + 1}', fmt=EUR); cell(rc, f'C{r + 4}', f'={MP}T{rR}', F_LK, PCT)
 for rr in range(r + 1, r + 5):
     cell(rc, f'D{rr}', f'=IF(C{rr}<1,B{rr}/(1-C{rr}),0)', F(bold=True, color=BORD), EUR)
     cell(rc, f'E{rr}', f'=D{rr}/$B${rJM}', fmt=EUR)
