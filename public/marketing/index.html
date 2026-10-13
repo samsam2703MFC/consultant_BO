@@ -13,11 +13,18 @@
 </head>
 <body>
 <div id="mk">
-  <div id="mk-app"><div class="mk-attente">Lecture du marketing…</div></div>
-  <!-- La newsletter est un module à part (../assets/js/newsletter.js) qui tient
-       son DOM : son hôte reste hors de la zone redessinée, il est seulement
-       montré ou caché selon l'onglet. -->
-  <div id="mk-nl" hidden></div>
+  <!-- Le rail : le menu du portail, comme celui du cockpit — redessiné avec la
+       page (ses compteurs bougent), hors de la colonne de contenu. Au téléphone
+       il sort de la gauche (bouton ☰ de l'en-tête). -->
+  <aside id="mk-rail" class="mk-rail" aria-label="Menu du marketing"></aside>
+  <div id="mk-voile" class="mk-voile" hidden></div>
+  <main class="mk-col">
+    <div id="mk-app"><div class="mk-attente">Lecture du marketing…</div></div>
+    <!-- La newsletter est un module à part (../assets/js/newsletter.js) qui tient
+         son DOM : son hôte reste hors de la zone redessinée, il est seulement
+         montré ou caché selon l'étape. -->
+    <div id="mk-nl" hidden></div>
+  </main>
 </div>
 <script src="../assets/js/newsletter.js"></script>
 <script src="marketing.js"></script>

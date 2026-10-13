@@ -84,7 +84,7 @@ public/
   dashboard/            dashboard magasin — page à part, hors SPA
   marketing/            module Marketing — campagnes, réseaux sociaux, emailing
     index.html          coquille (monte aussi assets/js/newsletter.js)
-    marketing.js        état S, rendre(), le flux en cinq étapes, gestes d'écriture
+    marketing.js        état S, rendre(), le rail et le flux en cinq étapes, gestes d'écriture
     marketing.css       styles de la page
     index.html          coquille
     dashboard.js        état S, rendre()/brancher(), lectures lireAux()
@@ -188,6 +188,12 @@ magasin. Les réseaux sociaux, l'emailing, les avis et les campagnes vivaient da
 sections du rail et ne se lisaient jamais ensemble. Le portail les réunit autour d'un
 **flux de travail** : la campagne est le pivot, chaque contenu s'y rattache, et chaque
 étape dit ce qui l'attend.
+
+**Le rail** (à gauche, comme celui du cockpit) porte le menu : la vue — tout le réseau ou un
+magasin —, le tableau de bord, les cinq étapes avec leurs compteurs (rouges quand il y a
+urgence) et, dépliées sous l'étape ouverte, ses sous-vues ; les paramètres ; les liens vers
+l'assistant de campagne et le cockpit. Sous 900 px de large, il devient un tiroir qu'ouvre
+le bouton ☰ de l'en-tête.
 
 | Étape | Ce qu'on y fait |
 |---|---|

@@ -9,7 +9,9 @@
 /* Gotham Light pour le texte courant, comme le cockpit : en Regular, tout l'écran paraissait en gras. */
 html,body{margin:0;background:var(--mk-fond);font-family:var(--font-ui);font-weight:300;color:var(--color-text,#222);-webkit-font-smoothing:antialiased}
 b,strong{font-weight:500}
-#mk{max-width:1440px;margin:0 auto;padding:16px 22px 60px}
+/* La page : le rail à gauche, comme le cockpit ; le contenu à droite. */
+#mk{display:flex;align-items:flex-start;min-height:100vh}
+.mk-col{flex:1;min-width:0;max-width:1460px;padding:22px 28px 60px}
 .mk-attente,.mk-texte{font-size:12px;color:#666;margin:6px 0 12px;line-height:1.5}
 .mk-err{background:#fbe9eb;color:var(--mk-ko);border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
 .mk-err a{color:inherit;font-weight:600}
@@ -19,11 +21,35 @@ b,strong{font-weight:500}
 .ok{color:var(--mk-ok)}.ko{color:var(--mk-ko)}.wa{color:var(--mk-att)}.mu{color:var(--mk-mu)}
 
 /* En-tête */
-.mk-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-.mk-hd img{height:32px}
-.mk-hd .sp{flex:1}
-.mk-titre{font:400 26px var(--font-display);line-height:1}
-.mk-sous{font-size:11.5px;color:#666;margin-top:3px}
+.mk-hd{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+.mk-titre{font:400 30px var(--font-display);line-height:1.15}
+.mk-titre .n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#222;color:#fff;font:600 14px var(--font-ui);vertical-align:4px;margin-right:2px}
+.mk-sous{font-size:13px;color:#666;margin-top:5px;max-width:720px}
+.mk-burger{display:none;border:.5px solid var(--mk-trait2);background:#fff;border-radius:8px;width:36px;height:36px;font-size:17px;cursor:pointer;flex:0 0 auto;color:#222}
+
+/* Le rail — mêmes mesures et mêmes états que celui du cockpit */
+.mk-rail{width:236px;flex:0 0 236px;align-self:stretch;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--mk-carte);border-right:.5px solid var(--mk-trait);display:flex;flex-direction:column}
+.mk-rail-tete{padding:22px 20px 12px}
+.mk-rail-tete img{width:176px;max-width:100%;height:auto;display:block}
+.mk-rail-sub{font:500 11px var(--font-ui);text-transform:uppercase;letter-spacing:.08em;color:#777;margin-top:8px}
+.mk-rail-vue{padding:0 12px 14px;display:flex;flex-direction:column;gap:5px}
+.mk-rail-vue .mk-lab{padding:0 2px}
+.mk-rail-vue select{width:100%;height:32px}
+.mk-rail-nav{flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px}
+.mk-rail-g{display:flex;flex-direction:column;gap:2px}
+.mk-rail-t{font:700 11px var(--font-ui);text-transform:uppercase;letter-spacing:.09em;color:#222;padding:0 10px 7px}
+.mk-rail-i{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font:300 13px var(--font-ui);padding:8px 10px;border-radius:8px;background:transparent;color:#222;text-decoration:none}
+.mk-rail-i:hover{background:rgba(34,34,34,.04)}
+.mk-rail-i.on{background:rgba(141,29,44,.08);color:var(--color-primary,#8D1D2C);font-weight:500}
+.mk-rail-i.sous{font-size:12.5px;padding:7px 10px 7px 30px;color:#777}
+.mk-rail-i.sous.on{background:transparent;color:var(--color-primary,#8D1D2C);font-weight:500}
+.mk-rail-i i{font-style:normal;font:600 11px var(--font-ui);color:#9a9088;margin-right:7px}
+.mk-rail-i.on i{color:var(--color-primary,#8D1D2C)}
+.mk-rail-i b{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--mk-doux);color:#555;font:500 10px var(--font-ui);display:inline-flex;align-items:center;justify-content:center}
+.mk-rail-i b.urg{background:var(--mk-ko);color:#fff}
+.mk-rail-i small{color:#999;font-size:11px}
+.mk-rail-pied{padding:12px 20px;border-top:.5px solid var(--mk-trait);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#777}
+.mk-voile{position:fixed;inset:0;background:rgba(34,34,34,.32);z-index:950}
 .mk-lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#666;display:flex;align-items:center;gap:6px}
 select,.mk-in{font:400 12px var(--font-ui);padding:6px 10px;border:.5px solid var(--mk-trait2);border-radius:8px;background:#fff;color:#222}
 .mk-btn{font:600 11.5px var(--font-ui);padding:6px 12px;border-radius:8px;border:.5px solid var(--mk-trait2);background:#fff;color:#222;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
@@ -33,15 +59,6 @@ select,.mk-in{font:400 12px var(--font-ui);padding:6px 10px;border:.5px solid va
 .mk-btn.ko{background:#fff;color:var(--mk-ko);border-color:var(--mk-ko)}
 .mk-btn.petit{font-size:10.5px;padding:4px 9px}
 
-/* Onglets */
-.mk-ong{display:flex;gap:6px;margin:0 0 14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-.mk-ong::-webkit-scrollbar{display:none}
-.mk-ong button{font:600 12px var(--font-ui);padding:8px 14px;border-radius:999px;border:.5px solid var(--mk-trait2);background:#fff;color:#333;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;flex:0 0 auto}
-.mk-ong button i{width:8px;height:8px;border-radius:50%;display:inline-block}
-.mk-ong button b{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--mk-doux);font-size:10.5px}
-.mk-ong button b.urg{background:var(--mk-ko);color:#fff}
-.mk-ong button.on{background:#222;color:#fff;border-color:#222}
-.mk-ong button.on b{background:rgba(255,255,255,.22);color:#fff}
 
 /* Cartes */
 .mk-card{background:var(--mk-carte);border:.5px solid var(--mk-trait);border-radius:12px;margin-bottom:14px;overflow:hidden}
@@ -207,10 +224,10 @@ textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120
 }
 /* Au téléphone — le franchisé publie depuis son magasin : le calendrier devient une liste. */
 @media (max-width:700px){
-  #mk{padding:10px 12px 40px}
-  .mk-titre{font-size:21px}
-  .mk-hd img{height:26px}
-  .mk-hd select{max-width:46vw}
+  .mk-col{padding:12px 12px 40px}
+  .mk-titre{font-size:23px}
+  .mk-titre .n{width:24px;height:24px;font-size:12px;vertical-align:3px}
+  .mk-sous{font-size:12px}
   .mk-g4,.mk-gk{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
   .mk-avis-tete{gap:14px}
   .mk-kpi .v{font-size:21px}
@@ -253,10 +270,6 @@ textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120
 .mk-tbl.creation{background:#fbe9eb;color:#8D1D2C}
 
 /* Le flux : des étapes numérotées, une flèche de l'une à l'autre */
-.mk-ong{align-items:center}
-.mk-ong button i{width:auto;height:auto;border-radius:0;background:none;color:#9a9088;font:600 11px var(--font-ui);font-style:normal;padding:0;margin-right:-2px}
-.mk-ong button i::after{content:' ·'}
-.mk-ong button.on i{background:none;color:rgba(255,255,255,.65)}
 .mk-fleche{color:#b3aba0;font-size:16px;flex:0 0 auto;margin:0 -2px}
 .mk-chaine{display:flex;align-items:stretch;gap:6px}
 .mk-chaine .mk-fleche{align-self:center;font-size:22px}
@@ -310,9 +323,16 @@ textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120
 }
 @media (max-width:700px){
   .mk-chaine .mk-etape{flex:1 1 45%}
-  .mk-ong .mk-fleche{display:none}
   .mk-sous-ligne td{padding-left:0}
 }
 .mk-compose label.mk-btn{display:inline-flex;width:auto;margin:0;font:600 11.5px var(--font-ui);text-transform:none;letter-spacing:0;color:#222}
 .mk-in::placeholder,.mk-compose textarea::placeholder{color:#a9a29a;font-weight:300}
 .mk-liste .dd a{text-decoration:none;margin-right:8px;color:var(--mk-soc)}
+
+/* Au-dessous de 900 px, le rail devient un tiroir : ☰ l'ouvre, le voile ou Échap le ferme. */
+@media (max-width:900px){
+  #mk{display:block}
+  .mk-rail{position:fixed;left:0;top:0;bottom:0;height:auto;z-index:960;width:280px;transform:translateX(-104%);transition:transform .22s ease;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  #mk.rail-ouvert .mk-rail{transform:none}
+  .mk-burger{display:inline-flex;align-items:center;justify-content:center}
+}
