@@ -70,8 +70,13 @@
     par: { publication: null, sources: null, agent: null, charte: null, pages: null, err: {}, enCours: {} },   // lu à la première ouverture de chaque sous-page
     agentDraft: null, charteDraft: null, chFam: 'toutes', pagesDraft: {}, mailDraft: null, cibleDraft: null, srcF: 'toutes',
     rech: null,   // la recherche de fiche Google ouverte : { magasinId, q, candidats, busy, err }
+    railOuvert: false,   // au téléphone seulement : le rail sort de la gauche
   };
   const $app = document.getElementById('mk-app');
+  const $rail = document.getElementById('mk-rail');
+  const $voile = document.getElementById('mk-voile');
+  /** Un geste vient-il du portail ? (la newsletter montée à côté a ses propres data-a) */
+  const chezNous = el => $app.contains(el) || $rail.contains(el);
 
   /* --- formats ---------------------------------------------------------------- */
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -183,32 +188,79 @@
 
   /* --- le cadre ----------------------------------------------------------------------- */
   function rendre() {
-    const y = window.scrollY;
-    $app.innerHTML = entete() + onglets() + message() + corps();
+    const y = window.scrollY, yr = $rail.scrollTop;
+    $rail.innerHTML = rail();
+    $rail.scrollTop = yr;
+    document.getElementById('mk').classList.toggle('rail-ouvert', S.railOuvert);
+    $voile.hidden = !S.railOuvert;
+    $app.innerHTML = entete() + message() + corps();
     if (window.scrollY !== y) { window.scrollTo(0, y); }
     nlMonter();
   }
+  /* Ce que dit l'en-tête de chaque étape. */
+  const ETAPE_SOUS = {
+    vue: 'Où en est chaque étape, ce qui demande un geste, les 14 prochains jours.',
+    plan: 'Les campagnes et leurs contenus — chaque post et chaque newsletter s’y rattachent.',
+    creer: 'Rédiger un post ou une newsletter, rattachés à leur campagne.',
+    valider: 'Le contrôle de l’agent, puis la décision de la marque.',
+    publier: 'Chaque post validé, réseau par réseau, et tout ce qui est programmé.',
+    mesurer: 'Ce que chaque canal et chaque campagne ont donné.',
+    parametres: 'Publication, sources, agent de contrôle, charte, pages Facebook, avis Google.',
+  };
   function entete() {
     const d = D();
+    const nom = S.shop ? (d.magasin || magasinNom(S.shop) || 'Magasin ' + S.shop) : 'Tout le réseau';
+    const o = ONGLETS.find(x => x[0] === S.onglet) || ONGLETS[0];
+    document.title = (o[0] === 'vue' ? 'Marketing' : o[1] + ' · Marketing') + ' — ' + (S.shop ? nom : "L'Atelier by");
+    return `<div class="mk-hd"><button class="mk-burger" data-a="rail" aria-label="Ouvrir le menu">☰</button>
+      <div><div class="mk-titre">${o[2] ? `<span class="n">${o[2]}</span> ` : ''}${esc(o[1])}</div>
+      <div class="mk-sous">${esc(ETAPE_SOUS[o[0]] || '')} <span class="mu">· ${esc(nom)}</span></div></div></div>`;
+  }
+  /** Les compteurs des étapes — le rail et le tableau de bord lisent les mêmes. */
+  function badgesEtapes() {
+    const d = D();
+    const urg = (d.aFaire || []).filter(a => a.niveau === 'urgent').length;
+    const e = etapes();
+    const sauv = (canal('charte').sauvages || []).length;
+    const b = (n, alerte) => n ? `<b class="${alerte ? 'urg' : ''}">${n}</b>` : '';
+    return { vue: b(urg, true), plan: b(e.plan.n), creer: b(e.creer.n), valider: b(e.valider.n, e.valider.aValider && marque()),
+      publier: e.publier.erreurs ? b(e.publier.erreurs, true) : b(e.publier.n), mesurer: b(sauv, true), parametres: '' };
+  }
+  /** Le rail : le menu du portail. Les sous-vues de l'étape ouverte se déplient dessous. */
+  function rail() {
+    const d = D(), e = S.data ? etapes() : null, badge = S.data ? badgesEtapes() : {};
     const mags = d.magasins || [];
     const nom = S.shop ? (d.magasin || magasinNom(S.shop) || 'Magasin ' + S.shop) : 'Tout le réseau';
     const opts = [`<option value="">Tout le réseau (marque)</option>`].concat(mags.map(m => `<option value="${esc(m.id)}"${String(m.id) === S.shop ? ' selected' : ''}>${esc(m.nom)}</option>`));
     if (S.shop && !mags.some(m => String(m.id) === S.shop)) { opts.push(`<option value="${esc(S.shop)}" selected>${esc(nom)}</option>`); }
-    document.title = 'Marketing — ' + (S.shop ? nom : "L'Atelier by");
-    return `<div class="mk-hd"><img src="../assets/img/logo.png" alt=""><div><div class="mk-titre">Marketing</div>
-      <div class="mk-sous">${esc(nom)} · campagnes, réseaux sociaux, emailing${d.genere ? ' · lu à ' + esc(d.genere.slice(11, 16)) : ''}</div></div><span class="sp"></span>
-      <label class="mk-lab">Vue <select data-f="shop" title="La marque voit tout le réseau ; un magasin voit ses posts, ses newsletters et les campagnes qui le couvrent">${opts.join('')}</select></label>
-      <button class="mk-btn" data-a="recharger"${S.enCours ? ' disabled' : ''}>${S.enCours ? 'Lecture…' : '↻ Actualiser'}</button>
-      ${marque() ? '<a class="mk-btn" href="../#/campagnes" target="_blank" rel="noopener">Cockpit ↗</a>' : ''}</div>`;
-  }
-  function onglets() {
-    const d = D();
-    const urg = (d.aFaire || []).filter(a => a.niveau === 'urgent').length;
-    const e = etapes();
-    const b = n => n ? `<b>${n}</b>` : '';
-    const badge = { vue: urg ? `<b class="urg">${urg}</b>` : '', plan: b(e.plan.n), creer: b(e.creer.n), valider: b(e.valider.n),
-      publier: e.publier.erreurs ? `<b class="urg">${e.publier.erreurs}</b>` : b(e.publier.n), mesurer: (canal('charte').sauvages || []).length ? `<b class="urg">${canal('charte').sauvages.length}</b>` : '' };
-    return `<div class="mk-ong">${ONGLETS.map((o, i) => `${o[2] && i > 1 ? '<span class="mk-fleche">›</span>' : ''}<button data-a="onglet" data-v="${o[0]}" class="${S.onglet === o[0] ? 'on' : ''}${o[2] ? ' etape' : ''}">${o[2] ? `<i>${o[2]}</i>` : ''}${o[1]}${badge[o[0]] || ''}</button>`).join('')}</div>`;
+    const n = v => v ? `<b>${v}</b>` : '';
+    const sous = {
+      plan: [['campagnes', 'Campagnes et contenus'], ['calendrier', 'Calendrier']],
+      creer: [['post', 'Post réseaux sociaux', e && n(e.creer.posts)], ['newsletter', 'Newsletter', e && n(e.creer.nls)]],
+      valider: [['a_valider', 'À valider', e && n(e.valider.aValider)], ['a_controler', 'À contrôler', e && n(e.valider.aControler)], ['refuse', 'Refusés', e && n(e.valider.refuses)]],
+      mesurer: [['resultats', 'Résultats'], ['avis', 'Avis Google'], ['sauvages', 'Posts sauvages', badge.mesurer]],
+      parametres: PARAM_VUES.filter(v => marque() || v[2]).map(v => [v[0], v[1]]),
+    };
+    const sousActive = { plan: S.planVue, creer: S.creerVue, valider: S.valVue, mesurer: S.mesVue, parametres: S.paramVue };
+    const entree = o => {
+      const on = S.onglet === o[0];
+      const enfants = on && sous[o[0]] ? sous[o[0]].map(x => `<button class="mk-rail-i sous${sousActive[o[0]] === x[0] ? ' on' : ''}" data-a="nav" data-v="${o[0]}" data-s="${x[0]}"><span>${esc(x[1])}</span>${x[2] || ''}</button>`).join('') : '';
+      return `<button class="mk-rail-i${on ? ' on' : ''}" data-a="nav" data-v="${o[0]}"${on ? ' aria-current="page"' : ''}><span>${o[2] ? `<i>${o[2]}</i>` : ''}${esc(o[1])}</span>${badge[o[0]] || ''}</button>${enfants}`;
+    };
+    const groupe = (titre, ids) => `<div class="mk-rail-g"><div class="mk-rail-t">${titre}</div>${ONGLETS.filter(o => ids.includes(o[0])).map(entree).join('')}</div>`;
+    return `<div class="mk-rail-tete"><img src="../assets/img/logo.png" alt="L’Atelier by"><div class="mk-rail-sub">Marketing</div></div>
+      <div class="mk-rail-vue"><label class="mk-lab" for="mk-vue">Vue</label>
+        <select id="mk-vue" data-f="shop" title="La marque voit tout le réseau ; un magasin voit ses posts, ses newsletters et les campagnes qui le couvrent">${opts.join('')}</select></div>
+      <nav class="mk-rail-nav">
+        ${groupe('Pilotage', ['vue'])}
+        ${groupe('Le flux', ['plan', 'creer', 'valider', 'publier', 'mesurer'])}
+        ${groupe('Réglages', ['parametres'])}
+        <div class="mk-rail-g"><div class="mk-rail-t">Liens</div>
+          ${marque() ? '<a class="mk-rail-i" href="../assistant/" target="_blank" rel="noopener"><span>Assistant de campagne</span><small>↗</small></a>' : ''}
+          <a class="mk-rail-i" href="../#/campagnes" target="_blank" rel="noopener"><span>Cockpit</span><small>↗</small></a></div>
+      </nav>
+      <div class="mk-rail-pied"><span>${d.genere ? 'lu à ' + esc(d.genere.slice(11, 16)) : 'lecture…'}</span>
+        <button class="mk-btn petit" data-a="recharger"${S.enCours ? ' disabled' : ''}>${S.enCours ? 'Lecture…' : '↻ Actualiser'}</button></div>`;
   }
   function message() {
     if (!S.msg) { return ''; }
@@ -1063,9 +1115,24 @@
   /* --- événements --------------------------------------------------------------------------- */
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-a]');
-    if (!el || !$app.contains(el)) { return; }
+    if (!el || !chezNous(el)) { return; }
     const a = el.dataset.a, v = el.dataset.v, id = el.dataset.id;
     if (a === 'onglet') { aller(v); }
+    else if (a === 'rail') { S.railOuvert = !S.railOuvert; rendre(); }
+    else if (a === 'nav') {
+      // Une entrée du rail : l'étape, et la sous-vue quand on la nomme.
+      const sv = el.dataset.s;
+      if (sv) {
+        if (v === 'plan') { S.planVue = sv; S.calSel = null; }
+        else if (v === 'creer') { S.creerVue = sv; }
+        else if (v === 'valider') { S.valVue = sv; S.postSel = null; }
+        else if (v === 'mesurer') { S.mesVue = sv; }
+        else if (v === 'parametres') { S.paramVue = sv; }
+      }
+      S.railOuvert = false;
+      if (S.onglet === v) { urlMaj(); rendre(); } else { aller(v); }
+      window.scrollTo(0, 0);
+    }
     else if (a === 'recharger') { S.msg = null; charger(false); }
     else if (a === 'msg-x') { S.msg = null; rendre(); }
     else if (a === 'faire') {
@@ -1253,7 +1320,7 @@
   // seuls l'aperçu et le compteur du post suivent la frappe.
   document.addEventListener('input', e => {
     const el = e.target, f = el.dataset && el.dataset.f;
-    if (!f || !$app.contains(el)) { return; }
+    if (!f || !chezNous(el)) { return; }
     if (f === 'campQ') { S.campQ = el.value; const p = el.selectionStart; rendre(); const n = document.querySelector('[data-f="campQ"]'); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
     if (f === 'pub') { S.pub[el.dataset.id] = el.value; return; }
     if (f === 'rech-q' && S.rech) { S.rech.q = el.value; return; }
@@ -1275,7 +1342,7 @@
   }
   document.addEventListener('change', e => {
     const el = e.target, f = el.dataset && el.dataset.f;
-    if (!f || !$app.contains(el)) { return; }
+    if (!f || !chezNous(el)) { return; }
     if (f === 'shop') {
       S.shop = el.value; S.data = null; S.compose = null; S.dec = {}; S.postSel = null; S.campSel = null; S.calSel = null; S.msg = null;
       if (!S.shop && S.campF === 'brouillon') { S.campF = 'actives'; }
@@ -1292,6 +1359,9 @@
       if (f === 'c-magasinId') { rendre(); } else { majRedacteur(); }
     }
   });
+
+  $voile.addEventListener('click', () => { S.railOuvert = false; rendre(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.railOuvert) { S.railOuvert = false; rendre(); } });
 
   urlMaj();
   rendre();

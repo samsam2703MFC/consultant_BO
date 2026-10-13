@@ -3238,7 +3238,9 @@ ou non, jamais un secret) ; chaque newsletter porte `campagneId`. `POST /marketi
 accepte `{soumettre: true}`**, qui fait sortir un brouillon (statut `a_controler`, `submitted_at` à maintenant, ligne de
 journal) avant le contrôle — sans elle, un post enregistré en brouillon ne pouvait plus jamais être soumis.
 
-**La page `marketing/`** — état au 13/10/2026 : un tableau de bord (la chaîne des étapes, « À faire », les 14 prochains
+**La page `marketing/`** — état au 13/10/2026 : un rail à gauche, comme celui du cockpit (la vue réseau ou magasin, les
+étapes et leurs compteurs, les sous-vues de l'étape ouverte, les paramètres, les liens ; un tiroir sous 900 px), un
+tableau de bord (la chaîne des étapes, « À faire », les 14 prochains
 jours) puis cinq étapes, **1 · Planifier** (campagnes et leurs contenus, calendrier), **2 · Créer** (post : campagne,
 réseaux, visuel téléversé, aperçu, prêt ? par réseau ; newsletter), **3 · Valider** (contrôle, décision, refusés),
 **4 · Publier** (réseau par réseau, programmé, publiés maintenant, annulés ; tout ce qui est programmé) et
