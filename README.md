@@ -82,6 +82,10 @@ public/
     js/scouting-tpl.js  gabarits HTML de l'écran Scouting
     vendor/leaflet/     Leaflet 1.9.4 (carte), embarqué
   dashboard/            dashboard magasin — page à part, hors SPA
+  marketing/            module Marketing — campagnes, réseaux sociaux, emailing
+    index.html          coquille (monte aussi assets/js/newsletter.js)
+    marketing.js        état S, rendre(), cinq onglets, gestes d'écriture
+    marketing.css       styles de la page
     index.html          coquille
     dashboard.js        état S, rendre()/brancher(), lectures lireAux()
     dashboard.css       styles de la page
@@ -92,6 +96,7 @@ src/
   endpoints.php         lectures (GET) — un endpoint par écran
   writes.php            écritures (POST/PATCH/PUT) + journalisation
   fbcontrole.php        agent de contrôle des posts Facebook (moteur de règles)
+  marketing_hub.php     GET /marketing/hub — tous les canaux marketing en une lecture
   installer.php         auto-installation du schéma au premier appel
   auth.php              authentification intégrée (optionnelle)
 sql/
@@ -113,7 +118,8 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 `/referentiels/project-templates`, `/stores`, `/stores/perf`,
 `/stores/budgets`, `/targets`, `/consultants`, `/fournisseurs`, `/projects`,
 `/projects/crm`, `/people`, `/reporting`, `/journal`, `/products/scoring`,
-`/pwa/reports`, `/pwa/tasks/nc`, `/referentiels/facebook-regles`, `/facebook/posts`.
+`/pwa/reports`, `/pwa/tasks/nc`, `/referentiels/facebook-regles`, `/facebook/posts`,
+`/marketing/hub`.
 
 Écritures : `POST /projects`, `PATCH /projects/{id}`,
 `POST /projects/{id}/tasks`, `PATCH /projects/{id}/tasks/{taskId}`,
@@ -166,6 +172,42 @@ périmètre actuel.
 
 Tables : `ceo_fb_post`, `ceo_fb_finding` (DDL dans `sql/schema.sql`, créées
 aussi au démarrage par `ensureFacebook()` pour les bases déjà en service).
+
+## Module Marketing
+
+**`public/marketing/`** — `…/marketing/` pour la marque, `…/marketing/?shop=4` pour un
+magasin. Les réseaux sociaux, l'emailing et les campagnes vivaient dans quatre sections
+du rail (Marque & marketing, ERP franchisé, Contrôle, Paramètres) et ne se lisaient
+jamais ensemble : rien ne disait qu'une campagne en cours n'avait ni post ni newsletter.
+Le module les réunit, page à part comme le dashboard et la production.
+
+- **Une lecture** : `GET /marketing/hub` (`src/marketing_hub.php`) compile les campagnes
+  (`mar_campaign`), les newsletters (`ceo_nl_campagne`), les posts (`ceo_fb_post`) et la
+  charte (`brand_guard_checks`, 30 jours), avec les mêmes calculs que leurs écrans. Un
+  canal dont la table manque est déclaré indisponible, les autres restent lisibles.
+- **Cinq onglets** : vue d'ensemble (un chiffre par canal, ce qui demande un geste, les
+  14 prochains jours) ; calendrier (campagnes en bandes, newsletters et posts au jour) ;
+  campagnes, chacune avec ses **prises de parole** — posts et newsletters datés dans sa
+  période — et « Préparer un post » pré-rempli avec la marque, la période et le hashtag ;
+  réseaux sociaux (rédaction avec aperçu, contrôle de l'agent, décision, publication) ;
+  emailing (le module newsletter du cockpit, monté tel quel).
+- **Ce qu'aucun écran ne faisait** : la liste des posts **sauvages** repérés par Brand
+  Guard ; la soumission d'un post **par le magasin lui-même** ; l'**id Facebook** saisi au
+  moment de marquer un post publié — sans lui, Brand Guard compte le post comme sauvage
+  en relisant la page ; un brouillon qui se soumet (`POST /facebook/posts/{id}/controle`
+  avec `{soumettre: true}`).
+- **Le rail** : « Marque & marketing » s'ouvre sur « Module Marketing ↗ » et reçoit un
+  sous-menu « Canaux » — posts Facebook (venus de Contrôle) et newsletters (venues d'ERP
+  franchisé). Les écrans gardent leurs adresses.
+- **Écritures** : celles de chaque canal, inchangées. Comme la newsletter, la vue magasin
+  n'est pas un droit : l'API ne vérifie pas qui parle (auth intégrée ou ERP en amont).
+- **Nom** : l'ancien module marketing autonome était servi à `/marketing/` à la **racine
+  du domaine** ; celui-ci vit sous le cockpit (`/consulant_bo/marketing/`). Le seul code
+  qui visait l'ancien, `marketingAppel()` (`PUT /fonds/royalties`), n'a plus de route en
+  face — rien n'appelle ce chemin.
+
+Tests : `php bin/tests.php` (section « Module Marketing » : phase d'une campagne, vue
+magasin, liste à faire).
 
 ## Intégration panel consultant (pwa_consultant)
 

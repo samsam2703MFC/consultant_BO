@@ -3,14 +3,15 @@
 declare(strict_types=1);
 
 /**
- * Tests Brand Guard — sans base, sans réseau, sans token.
+ * Tests Brand Guard et module Marketing — sans base, sans réseau, sans token.
  *
  *   php bin/tests.php
  *
  * Ce qui se vérifie ici est ce qui doit rester vrai quoi qu'il arrive à
  * l'extérieur : la règle de décision du verdict, la signature des webhooks,
  * la résolution URL → page_id contre un Graph simulé, la détection d'un post
- * sauvage, la lecture d'un événement `feed`, la version de charte.
+ * sauvage, la lecture d'un événement `feed`, la version de charte ; pour le
+ * module Marketing, la phase d'une campagne et la liste « à faire ».
  *
  * Le code métier lit la base par `Db` et les réglages par `setting()` : ils
  * sont remplacés par des doublures minimales, le temps du test.
@@ -31,6 +32,7 @@ function body(): array { return []; }
 
 require __DIR__ . '/../src/meta_graph.php';
 require __DIR__ . '/../src/brand_guard.php';
+require __DIR__ . '/../src/marketing_hub.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -165,6 +167,37 @@ $pl = bgCronPlan(new DateTime('2026-09-21 13:00', $tz));
 verifie('lundi 13 h : rien', !$pl['audit'] && !$pl['quotidien'] && !$pl['hebdo'], json_encode($pl));
 $pl = bgCronPlan(new DateTime('2026-09-23 15:00', $tz), true);
 verifie('forcé : tout, quelle que soit l’heure', $pl['audit'] && $pl['quotidien'] && $pl['hebdo']);
+
+// --- 8. le module Marketing : phase d'une campagne, vue magasin, à faire ---------------------
+echo "Module Marketing\n";
+$auj = '2026-10-13';
+verifie('brouillon aux dates futures ⇒ brouillon', mhPhase('draft', '2026-10-20', '2026-10-30', $auj) === 'brouillon');
+verifie('annulée en cours ⇒ brouillon', mhPhase('cancelled', '2026-10-01', '2026-10-30', $auj) === 'brouillon');
+verifie('active qui démarre demain ⇒ à venir', mhPhase('active', '2026-10-14', '2026-10-30', $auj) === 'a_venir');
+verifie('active finie hier ⇒ terminée', mhPhase('active', '2026-10-01', '2026-10-12', $auj) === 'terminee');
+verifie('active qui finit aujourd’hui ⇒ en cours', mhPhase('active', '2026-10-01', '2026-10-13', $auj) === 'en_cours');
+verifie('sans dates ⇒ sans_date', mhPhase('active', null, null, $auj) === 'sans_date');
+$_GET = ['shop' => '4']; verifie('?shop=4 ⇒ vue magasin', mhShop() === '4');
+$_GET = ['shop' => 'brand']; verifie('?shop=brand ⇒ vue réseau', mhShop() === null);
+$_GET = ['shop' => "4' OR 1=1"]; verifie('?shop= douteux ⇒ vue réseau', mhShop() === null);
+$_GET = [];
+$camp = ['dispo' => true, 'liste' => [['id' => 1, 'nom' => 'Halloween', 'phase' => 'en_cours', 'debut' => '2026-10-10', 'fin' => '2026-10-31']]];
+$post = static fn (string $statut, string $quand) => ['id' => 'p', 'statut' => $statut, 'message' => 'x', 'magasin' => 'Halle', 'publierLe' => $quand,
+    'agent' => ['note' => null], 'decision' => ['le' => null], 'publie' => ['le' => null]];
+$soc = static fn (array $l) => ['dispo' => true, 'liste' => $l];
+$mail = ['dispo' => true, 'test' => false, 'liste' => []];
+$off = ['dispo' => false];
+$muette = static fn (array $af) => (bool) array_filter($af, static fn ($a) => str_starts_with($a['titre'], 'Aucune prise de parole'));
+verifie('campagne en cours sans post ni mail ⇒ signalée', $muette(mhAFaire($camp, $mail, $soc([]), $off, null, $auj)));
+verifie('un post prévu dans la période ⇒ plus signalée', !$muette(mhAFaire($camp, $mail, $soc([$post('a_valider', '2026-10-20 10:00')]), $off, null, $auj)));
+verifie('un post refusé ne compte pas', $muette(mhAFaire($camp, $mail, $soc([$post('refuse', '2026-10-20 10:00')]), $off, null, $auj)));
+verifie('un post hors période ne compte pas', $muette(mhAFaire($camp, $mail, $soc([$post('valide', '2026-11-05 10:00')]), $off, null, $auj)));
+$mailP = ['dispo' => true, 'test' => false, 'liste' => [['nom' => 'L', 'exemple' => false, 'statut' => 'sched', 'mode' => 'manual', 'envoiLe' => '2026-10-15 09:00', 'testEnvoye' => true]]];
+verifie('une newsletter dans la période ⇒ plus signalée', !$muette(mhAFaire($camp, $mailP, $soc([]), $off, null, $auj)));
+$af = mhAFaire($camp, $mail, $soc([$post('valide', '2026-10-12 10:00')]), $off, null, $auj);
+verifie('validé, date passée, pas marqué publié ⇒ urgent', ($af[0]['niveau'] ?? '') === 'urgent' && str_starts_with($af[0]['titre'], 'Post validé'), json_encode($af[0] ?? null));
+$af = mhAFaire(['dispo' => false], $mail, $soc([$post('a_valider', '2026-10-14 10:00')]), $off, '4', $auj);
+verifie('vue magasin : la décision n’est pas à faire chez lui', !array_filter($af, static fn ($a) => str_starts_with($a['titre'], 'Post à valider')));
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

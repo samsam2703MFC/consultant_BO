@@ -2985,3 +2985,54 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+### `GET /marketing/hub` — le module Marketing, tous les canaux en une lecture (13/10/2026)
+
+`GET /marketing/hub[?shop={id}]` (`src/marketing_hub.php`), lu par la page `marketing/`. Réseaux sociaux, emailing et
+campagnes vivaient dans quatre sections du rail ; la lecture les pose côte à côte **sans rien recalculer à sa façon** :
+campagnes = les lignes de `GET /marketing` (`mar_campaign`), emailing = `ceo_nl_campagne` avec les statistiques de
+`GET /newsletter` (`nlStatsReelles` d'abord), réseaux sociaux = `GET /facebook/posts`, charte = `bgStatsPeriode(30)` de
+`/marketing/brand-guard/stats` plus les posts **sauvages** des 30 derniers jours (`brand_guard_checks.sauvage = 1`), qu'aucun
+écran ne listait. Sans `shop` : la vue de la marque. Avec `shop` : les posts du magasin, ses newsletters (créées par lui ou
+parties de son adresse), les campagnes RÉSEAU et celles qui le couvrent (`mar_campaign_shop`) — jamais un brouillon de la
+marque —, sa ligne de la charte. `shop` vaut un id de boutique (`[\w-]{1,16}`) ; `brand` ou `reseau` reviennent à la marque.
+
+Réponse : `{genere, aujourdhui, shop, magasin, magasins: [{id, nom, franchise}], campagnes, emailing, social, charte, aFaire}`.
+Chaque canal porte `dispo` : **une table absente rend `{dispo: false, raison}` pour ce canal seul**, jamais un 500 qui
+emporterait les autres.
+
+- `campagnes` : `{liste: [{id, nom, typeId, type, typeCouleur, reseau, nBoutiques, statut, statutNom, statutTexte,
+  statutFond, debut, fin, budget, depense, image, phase}], chiffres: {total, enCours, aVenir, terminees, brouillons, budget,
+  depense}}`. `phase` se lit aux dates, pas au libellé du statut : `brouillon` (statut draft, cancelled, canceled ou archived,
+  quelles que soient les dates), `a_venir`, `en_cours`, `terminee`, `sans_date`. Budget et dépense ne comptent pas les brouillons.
+- `emailing` : `{liste: [{id, nom, objet, statut, canal, mode, declencheur, envoiLe, expediteur, testEnvoye, exemple, envoyes,
+  ouvertures, clics, vouchers, reel}], role, test, smtp, chiffres: {total, exemples, programmees, automatisations, envoyeesMois,
+  envoyes, ouvertures, clics, tauxOuverture, tauxClic, optin}}`. Les campagnes d'exemple (`exemple = 1`) restent dans la liste
+  mais **sortent des chiffres** ; `exemples` dit combien. `optin` = contacts `ceo_nl_contact` opt-in non désinscrits, `null`
+  tant qu'aucun contact n'est importé.
+- `social` : `{liste: [posts de GET /facebook/posts], parStatut, chiffres: {total, aTraiter, aPublier, publiesMois, refuses,
+  noteMoyenne}, regles: {seuil, familles, niveaux, formats, marque, hashtag}}` — de quoi décider sans second appel (familles
+  d'écart obligatoires sous le seuil ou en cas de refus) et pré-remplir un post avec la marque et le hashtag de la charte.
+- `charte` : `{stats: {jours, controles, tauxConformite, scoreMoyen, sauvages, topRegles, boutiques}, sauvages: [{id,
+  magasinId, boutique, statut, score, texte, message, lien, publieLe, quand, ecarts: [{libelle, gravite, correction}]}],
+  charteVersion, meta}`.
+- `aFaire` : `[{canal: campagne|email|social|charte, niveau: urgent|normal, titre, detail, cible: {onglet, post?, campagne?,
+  vue?}}]`, l'urgent d'abord, 40 au plus. Post à valider (marque seulement ; urgent s'il sort sous 48 h), post à contrôler,
+  post validé dont la date est passée sans être marqué publié (urgent : sans son id Facebook, Brand Guard le prendra pour un
+  sauvage), post refusé depuis moins de 14 jours (vue magasin), posts sauvages, newsletter programmée sous 7 jours sans envoi
+  test, newsletters programmées en mode test, campagne encore en brouillon qui démarre sous 14 jours. Et la seule règle qui lit
+  les trois canaux : **une campagne en cours, ou qui démarre sous 7 jours, sans aucun post (hors refusés) ni aucune newsletter
+  datés dans sa période**. Les tables ne relient pas un post à sa campagne : le rapprochement se fait par les dates.
+
+Écritures : la page appelle les routes de chaque canal, inchangées (`POST /facebook/posts`, `PATCH /facebook/posts/{id}`,
+`PATCH …/ecarts/{id}`, et la newsletter qui écrit elle-même). Une seule extension : **`POST /facebook/posts/{id}/controle`
+accepte `{soumettre: true}`**, qui fait sortir un brouillon (statut `a_controler`, `submitted_at` à maintenant, ligne de
+journal) avant le contrôle — sans elle, un post enregistré en brouillon ne pouvait plus jamais être soumis.
+
+**La page `marketing/`** (`public/marketing/`, hors SPA comme `production/`) : cinq onglets — vue d'ensemble (un chiffre par
+canal, à faire, les 14 prochains jours), calendrier (campagnes en bandes, newsletters et posts au jour, filtre par canal ;
+une liste au téléphone), campagnes (avec leurs prises de parole, « Préparer un post », l'assistant de campagne), réseaux sociaux
+(rédaction avec aperçu, contrôle, décision, publication avec l'id Facebook, sauvages, la charte sur 30 jours), emailing (le
+module `newsletter.js` monté tel quel, rôle `brand` ou le magasin). Adresse : `marketing/?shop=&onglet=vue|calendrier|
+campagnes|social|email&mois=AAAA-MM&vue=a_traiter|a_publier|publies|refuses|brouillons|sauvages|tous`. Comme la newsletter,
+le rôle n'est pas vérifié côté serveur : la vue magasin est une vue, pas un droit.

@@ -974,6 +974,15 @@ function wr_fb_controle(string $id): array
     $row = fbPostRow($id);
     if ($row === null) { http_response_code(404); return ['error' => 'post inconnu']; }
     if ($row['status'] === 'publie') { http_response_code(409); return ['error' => 'post déjà publié']; }
+    // { soumettre: true } fait sortir un brouillon du magasin (module Marketing,
+    // 13/10/2026) : sans cela, un post enregistré en brouillon ne pouvait plus
+    // jamais être soumis — il fallait le réécrire en entier.
+    if ($row['status'] === 'brouillon' && !empty(body()['soumettre'])) {
+        Db::exec("UPDATE ceo_fb_post SET status = 'a_controler', submitted_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $id]);
+        journalAdd((string) ($row['author'] ?? 'Franchisé'), 'Post Facebook', $row['shop_name'] ?? '—',
+            'Post « ' . fbTitre($row['message']) . ' » sorti du brouillon et soumis au contrôle');
+        $row = fbPostRow($id);
+    }
     return ['ok' => true, 'controle' => fbEnregistrerControle($row)];
 }
 

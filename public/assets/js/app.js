@@ -1389,13 +1389,23 @@ class App {
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
+      // Le marketing réuni (demande du 13/10/2026) : les posts Facebook (venus de
+      // « Contrôle ») et les newsletters (venues d'« ERP franchisé ») rejoignent les
+      // campagnes, et le module Marketing (marketing/) les lit tous ensemble —
+      // calendrier commun, ce qui demande un geste, la vue d'un magasin.
       ['Marque & marketing', [
+        ['ext:marketing/', 'Module Marketing ↗', 0],
         ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
         ['offres', 'Offres et canaux', 0],
+        { sub: 'Canaux · réseaux sociaux et emailing', children: [
+          ['posts', 'Posts Facebook', this.fbAttente().length],
+          ['newsletter', 'Newsletter', 0],
+          ['newsletterShop', 'Newsletter magasin', 0]] },
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa lettre.
+      // en attendant — la prospection autour du magasin, sa tablette, sa production.
+      // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
         ['demarchage', 'Développement commercial', 0],
         ['prospection', 'Prospection', 0],
@@ -1407,13 +1417,9 @@ class App {
         // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
         // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
         ['ext:employee/auth', 'App worker ↗', 0],
-        ['newsletter', 'Newsletter', 0],
-        ['newsletterShop', 'Newsletter magasin', 0],
         // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,
         // par magasin et par jour — le plan, le suivi avant chaque cuisson, les paramètres.
         { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0], ['productionFours', '5 · Fours', 0]] }]],
-      ['Contrôle', [
-        ['posts', 'Contrôle posts Facebook', this.fbAttente().length]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
