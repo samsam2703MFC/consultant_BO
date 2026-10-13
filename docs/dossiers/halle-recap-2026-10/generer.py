@@ -592,15 +592,6 @@ if C:
 <div class="sec" style="margin-top:5mm">Du résultat de l’application à l’EBITDA du bilan</div>
 <p class="s">Chaque barre : ce que le bilan ajoute ou retire au résultat que montre l’application, en € par mois.</p>
 {cascade}
-<div class="sec" style="margin-top:3mm">Ce que ça dit</div>
-<ul class="pts">
-<li>L’application montre un résultat de {fE(arr(ap['res'], 100))} par mois, le bilan un EBITDA de {fE(arr(bi['res'], 100))} : {nf(ap['res'] / bi['res'], 1)} fois moins. L’écart vient d’abord de la matière, {fE(arr(bi['mat'] - ap['mat'], 100))} par mois : l’application compte ce que coûtent les recettes vendues ({fP(ap['mat'] / ap['ca'])}), le bilan ce qui est acheté ({fP(cVar)}). Entre les deux : la perte, les invendus, les sorties non tracées (Couq, Saint-Géry, GBXATL), les fiches recettes à revoir et un stock mal compté (− 6 173 € au bilan).</li>
-{constatCA}
-
-{constatPF}
-
-<li>Pour piloter : l’application pour les ventes, les clients et le panier, jour par jour ; le bilan pour les coûts. L’indicateur du lundi (achats de la semaine ÷ CA de la semaine, page 4) fait entrer la matière du bilan dans le suivi de chaque semaine.</li>
-</ul>
 {ft(5 if PL else 4)}
 </div>"""
 doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Atelier by – Halle · tableau récap</title><style>{css}</style></head><body>{page}{p3}{p4}{p5}</body></html>'
