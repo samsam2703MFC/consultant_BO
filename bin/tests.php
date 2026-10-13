@@ -25,6 +25,7 @@ final class Db
     public static function row(string $sql, array $a = []): ?array { return null; }
     public static function exec(string $sql, array $a = []): void {}
     public static function pdo(): never { throw new RuntimeException('pas de base en test'); }
+    public static function config(): array { return []; }
 }
 // Un réglage se pose dans $GLOBALS['reglages'] le temps d'un test ; sinon, la valeur par défaut.
 function setting(string $k, mixed $d = null): mixed { return $GLOBALS['reglages'][$k] ?? $d; }
@@ -35,6 +36,9 @@ require __DIR__ . '/../src/meta_graph.php';
 require __DIR__ . '/../src/brand_guard.php';
 require __DIR__ . '/../src/marketing_hub.php';
 require __DIR__ . '/../src/marketing_sources.php';
+require __DIR__ . '/../src/marketing_tables.php';
+require __DIR__ . '/../src/linkedin_api.php';
+require __DIR__ . '/../src/social_publication.php';
 require __DIR__ . '/../src/fbcontrole.php';
 
 $ok = 0; $ko = 0;
@@ -218,8 +222,8 @@ $GLOBALS['reglages'] = [];
 
 // --- 10. l'inventaire des sources : lu dans le code ---------------------------------------
 echo "Inventaire des sources\n";
-$t = msTablesDe("SELECT * FROM ceo_fb_post p JOIN ceo_shop s ON 1; INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
-verifie('FROM et JOIN ⇒ lue', ($t['ceo_fb_post'] ?? '') === 'lecture' && ($t['ceo_shop'] ?? '') === 'lecture', json_encode($t));
+$t = msTablesDe("SELECT * FROM mar_social_post p JOIN ceo_shop s ON 1; INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
+verifie('FROM et JOIN ⇒ lue', ($t['mar_social_post'] ?? '') === 'lecture' && ($t['ceo_shop'] ?? '') === 'lecture', json_encode($t));
 verifie('INSERT INTO ⇒ écrite', ($t['ceo_app_setting'] ?? '') === 'ecriture');
 verifie('« ON DUPLICATE KEY UPDATE value » n’est pas une table', !isset($t['value']), json_encode($t));
 $t = msTablesDe("CREATE TABLE IF NOT EXISTS ceo_x (id INT); SELECT * FROM ceo_x");
@@ -233,11 +237,95 @@ verifie('chaque fonction est appelée par le routeur', $nonRoutees === [], json_
 verifie('chercher une fiche Google ⇒ Google Places', in_array('google', msSuivre('ep_reputation_recherche', $idx)['apis'], true));
 verifie('un envoi test ⇒ serveur SMTP', in_array('smtp', msSuivre('wr_newsletter_test_post', $idx)['apis'], true));
 $dec = msSuivre('wr_fb_decision', $idx);
-verifie('décider d’un post ⇒ ceo_fb_post écrite', ($dec['tables']['ceo_fb_post'] ?? '') === 'ecriture', json_encode($dec['tables']));
+verifie('décider d’un post ⇒ mar_social_post écrite', ($dec['tables']['mar_social_post'] ?? '') === 'ecriture', json_encode($dec['tables']));
 verifie('wr_param_put ⇒ seulement ceo_app_setting', array_keys(msSuivre('wr_param_put', $idx)['tables']) === ['ceo_app_setting']);
 $cr = msTablesCreees(dirname(__DIR__));
-verifie('origine : shops vient de TFBuddy, mar_* du module, ceo_* du cockpit',
-    msOrigine('shops', $cr)['origine'] === 'tfbuddy' && msOrigine('mar_campaign', $cr)['origine'] === 'module' && msOrigine('ceo_fb_post', $cr)['origine'] === 'cockpit');
+verifie('origine : shops TFBuddy, mar_campaign module autonome, mar_social_post portail, ceo_shop cockpit',
+    msOrigine('shops', $cr)['origine'] === 'tfbuddy' && msOrigine('mar_campaign', $cr)['origine'] === 'module'
+    && msOrigine('mar_social_post', $cr)['origine'] === 'portail' && msOrigine('ceo_shop', $cr)['origine'] === 'cockpit');
+
+// --- 11. la migration des tables sous mar_ -------------------------------------------------
+echo "Migration mar_\n";
+$p = marPlanMigration(['ceo_fb_post' => null, 'ceo_nl_campagne' => null]);
+verifie('anciennes seules ⇒ renommées', $p['renommer'] === ['ceo_fb_post' => 'mar_social_post', 'ceo_nl_campagne' => 'mar_nl_campagne'] && !$p['effacer'], json_encode($p));
+$p = marPlanMigration(['ceo_fb_post' => 12, 'mar_social_post' => 0]);
+verifie('nouvelle vide, ancienne pleine ⇒ la vide s’efface, l’ancienne est renommée', $p['effacer'] === ['mar_social_post'] && $p['renommer'] === ['ceo_fb_post' => 'mar_social_post'], json_encode($p));
+$p = marPlanMigration(['ceo_fb_post' => 12, 'mar_social_post' => 3]);
+verifie('deux tables pleines ⇒ conflit, rien ne bouge', !$p['renommer'] && !$p['effacer'] && count($p['conflits']) === 1, json_encode($p));
+$p = marPlanMigration(['ceo_fb_post' => 0, 'mar_social_post' => 5]);
+verifie('ancienne vide, nouvelle pleine ⇒ rien', !$p['renommer'] && !$p['effacer'] && !$p['conflits'], json_encode($p));
+verifie('déjà migrée ⇒ rien', marPlanMigration(['mar_social_post' => null]) === ['renommer' => [], 'effacer' => [], 'conflits' => []]);
+$noms = array_keys(MAR_TABLES);
+verifie('toutes les tables du portail commencent par mar_', !array_filter($noms, static fn ($n) => !str_starts_with($n, 'mar_')));
+$pris = ['mar_review', 'mar_voucher', 'mar_shop', 'mar_campaign', 'mar_kit', 'mar_promotion'];
+verifie('aucune ne reprend un nom du module autonome', !array_intersect($noms, $pris));
+$creees = msTablesCreees(dirname(__DIR__));
+$sansCreation = array_filter($noms, static fn ($n) => !isset($creees[$n]));
+verifie('chaque table du registre est créée par le code (CREATE TABLE)', $sansCreation === [], json_encode(array_values($sansCreation)));
+$restes = [];
+foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql']) as $f) {
+    if (str_ends_with($f, 'marketing_tables.php')) { continue; }
+    $t = (string) file_get_contents($f);
+    foreach (array_filter(array_column(MAR_TABLES, 'ancien')) as $a) { if (preg_match('/\b' . $a . '\b/', $t)) { $restes[] = basename($f) . ':' . $a; } }
+}
+verifie('aucun ancien nom ne reste dans le code', $restes === [], implode(', ', $restes));
+
+// --- 12. la publication : ce que chaque réseau exige, et ce qu'on lui envoie ---------------
+echo "Publication\n";
+$img = static fn (int $n) => array_map(static fn ($i) => ['nom' => "v$i.jpg", 'url' => "https://cockpit.example.be/uploads/social/v$i.jpg", 'alt' => null], range(1, $n));
+$post = ['message' => "L'Atelier by Halle — speculoos #latelierby", 'lien' => null, 'medias' => [], 'magasinId' => '4'];
+verifie('Facebook : un texte suffit', spPreparer($post, 'facebook')['ok']);
+verifie('Instagram : sans visuel ⇒ refusé', !spPreparer($post, 'instagram')['ok']);
+verifie('Instagram : un visuel sans adresse ne compte pas', !spPreparer($post + ['medias' => [['nom' => 'a.jpg']]], 'instagram')['ok']);
+verifie('Instagram : un visuel téléversé ⇒ prêt', spPreparer(array_merge($post, ['medias' => $img(1)]), 'instagram')['ok']);
+verifie('Instagram : 11 visuels ⇒ refusé', !spPreparer(array_merge($post, ['medias' => $img(11)]), 'instagram')['ok']);
+verifie('Instagram : 31 hashtags ⇒ refusé', !spPreparer(array_merge($post, ['medias' => $img(1), 'message' => str_repeat('#a ', 31)]), 'instagram')['ok']);
+verifie('Instagram : un lien ⇒ averti, pas refusé', ($x = spPreparer(array_merge($post, ['medias' => $img(1), 'lien' => 'https://atelierby.be']), 'instagram'))['ok'] && $x['avertissements']);
+verifie('LinkedIn : un post de magasin ⇒ refusé (page de la marque)', !spPreparer($post, 'linkedin')['ok']);
+verifie('LinkedIn : un post réseau ⇒ prêt', spPreparer(array_merge($post, ['magasinId' => null]), 'linkedin')['ok']);
+verifie('réseaux d’un post : inconnus écartés, Facebook par défaut', spReseauxDe(['reseaux' => 'instagram,myspace,linkedin']) === ['instagram', 'linkedin'] && spReseauxDe(['reseaux' => '']) === ['facebook']);
+
+$envois = [];
+MetaGraph::$attendre = static function (int $s): void {};
+MetaGraph::$transport = static function (string $m, string $url, array $p) use (&$envois): array {
+    $c = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
+    $envois[] = [$m, $c, $p];
+    if ($m === 'POST' && $c === '444/photos') { return [200, ['id' => 'ph' . count($envois)]]; }
+    if ($m === 'POST' && $c === '444/feed') { return [200, ['id' => '444_1']]; }
+    if ($m === 'POST' && $c === 'ig/media') { return [200, ['id' => 'c' . count($envois)]]; }
+    if ($m === 'POST' && $c === 'ig/media_publish') { return [200, ['id' => 'm1']]; }
+    return [200, []];
+};
+$r = MetaGraph::publierPage('444', 'tok', 'Bonjour', null, ['https://x/1.jpg', 'https://x/2.jpg']);
+$feed = array_values(array_filter($envois, static fn ($e) => $e[1] === '444/feed'))[0] ?? [null, null, []];
+verifie('Facebook, deux photos : déposées non publiées, puis un seul post qui les réunit',
+    $r['id'] === '444_1' && $envois[0][2]['published'] === 'false' && $feed[1] === '444/feed' && isset($feed[2]['attached_media[0]'], $feed[2]['attached_media[1]']), json_encode($envois));
+$envois = [];
+MetaGraph::publierInstagram('ig', 'tok', 'Légende', ['https://x/1.jpg', 'https://x/2.jpg']);
+$car = array_values(array_filter($envois, static fn ($e) => $e[0] === 'POST' && $e[1] === 'ig/media' && ($e[2]['media_type'] ?? '') === 'CAROUSEL'));
+verifie('Instagram, deux visuels : un carrousel de deux enfants, publié', count($car) === 1 && count(explode(',', $car[0][2]['children'])) === 2 && end($envois)[1] !== '' , json_encode($envois));
+MetaGraph::$transport = null;
+
+$GLOBALS['reglages'] = ['socialPublication' => ['linkedinOrganisation' => '999']];
+putenv('LINKEDIN_ACCESS_TOKEN=jeton-test');
+$li = [];
+LinkedInApi::$transport = static function (string $m, string $url, array $h, ?string $corps) use (&$li): array {
+    $li[] = [$m, $url, $h, $corps];
+    if (str_contains($url, 'initializeUpload')) { return [200, [], json_encode(['value' => ['uploadUrl' => 'https://up.test/' . count($li), 'image' => 'urn:li:image:' . count($li)]])]; }
+    if (str_starts_with($url, 'https://up.test/')) { return [201, [], '']; }
+    if (str_ends_with($url, '/rest/posts')) { return [201, ['x-restli-id' => 'urn:li:share:1'], '']; }
+    return [500, [], ''];
+};
+$r = LinkedInApi::publier('Texte', [['octets' => 'A', 'alt' => 'un'], ['octets' => 'B', 'alt' => null]], null);
+$corps = json_decode((string) end($li)[3], true);
+verifie('LinkedIn, deux visuels : déposés puis cités en multiImage, au nom de l’organisation',
+    $r['id'] === 'urn:li:share:1' && count($corps['content']['multiImage']['images'] ?? []) === 2 && $corps['author'] === 'urn:li:organization:999', json_encode($corps));
+verifie('LinkedIn : en-têtes de version et Rest.li sur l’API, pas sur le dépôt binaire',
+    in_array('X-Restli-Protocol-Version: 2.0.0', $li[0][2], true) && !preg_grep('/^LinkedIn-Version/', $li[1][2]));
+LinkedInApi::$transport = static fn () => [401, [], json_encode(['message' => 'Expired'])];
+try { LinkedInApi::publier('x', [], null); $exp = false; } catch (LinkedInTokenExpire $e) { $exp = true; }
+verifie('LinkedIn : 401 ⇒ jeton expiré, dit comme tel', $exp);
+LinkedInApi::$transport = null; putenv('LINKEDIN_ACCESS_TOKEN'); $GLOBALS['reglages'] = [];
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

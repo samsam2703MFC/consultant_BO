@@ -39,14 +39,14 @@ function annexeTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_mkt_annexe_type (
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_annexe_type (
         id INT AUTO_INCREMENT PRIMARY KEY,
         label VARCHAR(120) NOT NULL,
         sort_order INT NOT NULL DEFAULT 0,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         UNIQUE KEY u_label (label)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_mkt_annexe (
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_annexe (
         id INT AUTO_INCREMENT PRIMARY KEY,
         campaign_id INT NOT NULL,
         type_id INT NULL,
@@ -60,11 +60,11 @@ function annexeTables(): void
 
     // Le référentiel de départ : ce que la maison joint déjà à ses campagnes.
     // Ajouté une seule fois — la table vide est le signal, pas un drapeau.
-    $n = Db::row('SELECT COUNT(*) n FROM ceo_mkt_annexe_type');
+    $n = Db::row('SELECT COUNT(*) n FROM mar_campagne_annexe_type');
     if ((int) ($n['n'] ?? 0) === 0) {
         foreach (['Plan de publication', 'Liste des produits', 'Visuels & PLV',
                   'Bon de commande', 'Argumentaire vendeur'] as $i => $label) {
-            Db::exec('INSERT INTO ceo_mkt_annexe_type (label, sort_order) VALUES (?, ?)',
+            Db::exec('INSERT INTO mar_campagne_annexe_type (label, sort_order) VALUES (?, ?)',
                 [$label, $i + 1]);
         }
     }
@@ -78,8 +78,8 @@ function annexeTypes(): array
         'id' => (int) $t['id'], 'nom' => (string) $t['label'],
         'utilise' => (int) $t['utilise'],
     ], Db::rows('SELECT t.id, t.label, t.sort_order,
-                        (SELECT COUNT(*) FROM ceo_mkt_annexe a WHERE a.type_id = t.id) AS utilise
-                   FROM ceo_mkt_annexe_type t
+                        (SELECT COUNT(*) FROM mar_campagne_annexe a WHERE a.type_id = t.id) AS utilise
+                   FROM mar_campagne_annexe_type t
                   WHERE t.is_active = 1
                   ORDER BY t.sort_order, t.label'));
 }
@@ -100,8 +100,8 @@ function annexeListe(int $campagne): array
         'depuis' => substr((string) $a['created_at'], 0, 10),
         'existe' => is_file(annexeDossier() . '/' . basename((string) $a['file_name'])),
     ], Db::rows('SELECT a.*, t.label AS type_label
-                   FROM ceo_mkt_annexe a
-                   LEFT JOIN ceo_mkt_annexe_type t ON t.id = a.type_id
+                   FROM mar_campagne_annexe a
+                   LEFT JOIN mar_campagne_annexe_type t ON t.id = a.type_id
                   WHERE a.campaign_id = ?
                   ORDER BY a.id', [$campagne]));
 }
@@ -170,7 +170,7 @@ function wr_mkt_annexe(int $id): array
         return ['error' => 'le dossier des annexes n’est pas accessible en écriture sur le serveur'];
     }
 
-    Db::exec('INSERT INTO ceo_mkt_annexe (campaign_id, type_id, label, file_name, size_bytes, in_mail, created_at)
+    Db::exec('INSERT INTO mar_campagne_annexe (campaign_id, type_id, label, file_name, size_bytes, in_mail, created_at)
               VALUES (?,?,?,?,?,?,?)',
         [$id, $typeId, $nom, $fichier, strlen($octets),
          array_key_exists('enMail', $b) ? (int) (bool) $b['enMail'] : 1, date('Y-m-d H:i:s')]);
@@ -189,21 +189,21 @@ function wr_mkt_annexe(int $id): array
 function annexeTypeResolu(array $b): ?int
 {
     $id = (int) ($b['typeId'] ?? 0);
-    if ($id > 0 && Db::row('SELECT 1 FROM ceo_mkt_annexe_type WHERE id = ?', [$id]) !== null) {
+    if ($id > 0 && Db::row('SELECT 1 FROM mar_campagne_annexe_type WHERE id = ?', [$id]) !== null) {
         return $id;
     }
     $nom = mb_substr(trim((string) ($b['typeNom'] ?? '')), 0, 120);
     if ($nom === '') { return null; }
 
-    $dej = Db::row('SELECT id FROM ceo_mkt_annexe_type WHERE LOWER(label) = LOWER(?)', [$nom]);
+    $dej = Db::row('SELECT id FROM mar_campagne_annexe_type WHERE LOWER(label) = LOWER(?)', [$nom]);
     if ($dej !== null) {
         // Un type désactivé qu'on redemande revient : le retirer n'est pas le
         // détruire, et le retaper doit le ramener plutôt que d'échouer.
-        Db::exec('UPDATE ceo_mkt_annexe_type SET is_active = 1 WHERE id = ?', [(int) $dej['id']]);
+        Db::exec('UPDATE mar_campagne_annexe_type SET is_active = 1 WHERE id = ?', [(int) $dej['id']]);
         return (int) $dej['id'];
     }
-    $rang = (int) (Db::row('SELECT COALESCE(MAX(sort_order), 0) + 1 r FROM ceo_mkt_annexe_type')['r'] ?? 1);
-    Db::exec('INSERT INTO ceo_mkt_annexe_type (label, sort_order) VALUES (?, ?)', [$nom, $rang]);
+    $rang = (int) (Db::row('SELECT COALESCE(MAX(sort_order), 0) + 1 r FROM mar_campagne_annexe_type')['r'] ?? 1);
+    Db::exec('INSERT INTO mar_campagne_annexe_type (label, sort_order) VALUES (?, ?)', [$nom, $rang]);
     return (int) Db::pdo()->lastInsertId();
 }
 
@@ -211,19 +211,19 @@ function annexeTypeResolu(array $b): ?int
 function wr_mkt_annexe_maj(int $annexe): array
 {
     annexeTables();
-    $a = Db::row('SELECT * FROM ceo_mkt_annexe WHERE id = ?', [$annexe]);
+    $a = Db::row('SELECT * FROM mar_campagne_annexe WHERE id = ?', [$annexe]);
     if ($a === null) { http_response_code(404); return ['error' => 'annexe inconnue']; }
     $b = body();
 
     if (array_key_exists('enMail', $b)) {
-        Db::exec('UPDATE ceo_mkt_annexe SET in_mail = ? WHERE id = ?', [(int) (bool) $b['enMail'], $annexe]);
+        Db::exec('UPDATE mar_campagne_annexe SET in_mail = ? WHERE id = ?', [(int) (bool) $b['enMail'], $annexe]);
     }
     if (array_key_exists('nom', $b)) {
         $nom = mb_substr(trim((string) $b['nom']), 0, 190);
-        if ($nom !== '') { Db::exec('UPDATE ceo_mkt_annexe SET label = ? WHERE id = ?', [$nom, $annexe]); }
+        if ($nom !== '') { Db::exec('UPDATE mar_campagne_annexe SET label = ? WHERE id = ?', [$nom, $annexe]); }
     }
     if (array_key_exists('typeId', $b) || array_key_exists('typeNom', $b)) {
-        Db::exec('UPDATE ceo_mkt_annexe SET type_id = ? WHERE id = ?', [annexeTypeResolu($b), $annexe]);
+        Db::exec('UPDATE mar_campagne_annexe SET type_id = ? WHERE id = ?', [annexeTypeResolu($b), $annexe]);
     }
     return ['ok' => true, 'annexes' => annexeListe((int) $a['campaign_id']), 'types' => annexeTypes()];
 }
@@ -232,10 +232,10 @@ function wr_mkt_annexe_maj(int $annexe): array
 function wr_mkt_annexe_suppr(int $annexe): array
 {
     annexeTables();
-    $a = Db::row('SELECT * FROM ceo_mkt_annexe WHERE id = ?', [$annexe]);
+    $a = Db::row('SELECT * FROM mar_campagne_annexe WHERE id = ?', [$annexe]);
     if ($a === null) { http_response_code(404); return ['error' => 'annexe inconnue']; }
     @unlink(annexeDossier() . '/' . basename((string) $a['file_name']));
-    Db::exec('DELETE FROM ceo_mkt_annexe WHERE id = ?', [$annexe]);
+    Db::exec('DELETE FROM mar_campagne_annexe WHERE id = ?', [$annexe]);
     journalAdd('CEO', 'Campagne', (string) $a['label'], 'Annexe retirée de la campagne #' . (int) $a['campaign_id']);
     return ['ok' => true, 'annexes' => annexeListe((int) $a['campaign_id']), 'types' => annexeTypes()];
 }
@@ -249,10 +249,10 @@ function wr_mkt_annexe_suppr(int $annexe): array
 function wr_mkt_annexe_type_suppr(int $type): array
 {
     annexeTables();
-    if (Db::row('SELECT 1 FROM ceo_mkt_annexe_type WHERE id = ?', [$type]) === null) {
+    if (Db::row('SELECT 1 FROM mar_campagne_annexe_type WHERE id = ?', [$type]) === null) {
         http_response_code(404); return ['error' => 'type inconnu'];
     }
-    Db::exec('UPDATE ceo_mkt_annexe_type SET is_active = 0 WHERE id = ?', [$type]);
+    Db::exec('UPDATE mar_campagne_annexe_type SET is_active = 0 WHERE id = ?', [$type]);
     return ['ok' => true, 'types' => annexeTypes()];
 }
 
@@ -260,7 +260,7 @@ function wr_mkt_annexe_type_suppr(int $type): array
 function ep_mkt_annexe_fichier(int $annexe): array
 {
     annexeTables();
-    $a = Db::row('SELECT * FROM ceo_mkt_annexe WHERE id = ?', [$annexe]);
+    $a = Db::row('SELECT * FROM mar_campagne_annexe WHERE id = ?', [$annexe]);
     if ($a === null) { http_response_code(404); return ['error' => 'annexe inconnue']; }
     $chemin = annexeDossier() . '/' . basename((string) $a['file_name']);
     if (!is_file($chemin)) {

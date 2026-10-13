@@ -251,3 +251,68 @@ textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120
 .mk-tbl{display:inline-block;font:500 10px ui-monospace,Menlo,monospace;padding:1px 5px;border-radius:4px;margin:1px 0;background:#eef3ee;color:#2d5a36}
 .mk-tbl.ecriture{background:#fdf1e2;color:#8a4b08}
 .mk-tbl.creation{background:#fbe9eb;color:#8D1D2C}
+
+/* Le flux : des étapes numérotées, une flèche de l'une à l'autre */
+.mk-ong{align-items:center}
+.mk-ong button i{width:auto;height:auto;border-radius:0;background:none;color:#9a9088;font:600 11px var(--font-ui);font-style:normal;padding:0;margin-right:-2px}
+.mk-ong button i::after{content:' ·'}
+.mk-ong button.on i{background:none;color:rgba(255,255,255,.65)}
+.mk-fleche{color:#b3aba0;font-size:16px;flex:0 0 auto;margin:0 -2px}
+.mk-chaine{display:flex;align-items:stretch;gap:6px}
+.mk-chaine .mk-fleche{align-self:center;font-size:22px}
+.mk-etape{flex:1;min-width:0;background:var(--mk-carte);border:.5px solid var(--mk-trait);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;font-family:var(--font-ui);font-weight:300;color:#222;display:flex;flex-direction:column;gap:4px}
+.mk-etape:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.mk-etape .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#222;color:#fff;font:600 11px var(--font-ui)}
+.mk-etape .t{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:#555}
+.mk-etape .v{font:500 22px var(--font-ui);line-height:1.1}
+.mk-etape .v small{font-size:11.5px;font-weight:300;color:#777}
+.mk-etape .d{font-size:11.5px;color:#666;line-height:1.4}
+.mk-etape.alerte{border-color:rgba(192,24,43,.35);box-shadow:inset 0 3px 0 var(--mk-ko)}
+
+/* Les réseaux : une pastille par réseau, partout la même */
+.mk-rs{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 4px;border-radius:5px;font:700 9.5px var(--font-ui);color:#fff;letter-spacing:.02em;vertical-align:middle}
+.mk-rs-facebook{background:#1f5f8b}.mk-rs-instagram{background:#b03a6f}.mk-rs-linkedin{background:#0a5a8a}
+.mk-reseaux{display:flex;gap:8px;flex-wrap:wrap}
+.mk-case{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:.5px solid var(--mk-trait2);border-radius:8px;background:#fff;font:500 12px var(--font-ui);text-transform:none;letter-spacing:0;color:#222;cursor:pointer}
+.mk-case.off{opacity:.45;cursor:not-allowed}
+.mk-compose label.mk-case{display:inline-flex;width:auto;margin:0;font:500 12px var(--font-ui);text-transform:none;letter-spacing:0;color:#222}
+.mk-pret{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px}
+.mk-pret span{display:inline-flex;align-items:center;gap:5px}
+
+/* Une campagne et ses contenus */
+.mk-lien-nom{border:none;background:none;padding:0;font:500 12px var(--font-ui);color:#222;cursor:pointer;text-align:left}
+.mk-lien-nom:hover{color:var(--color-primary,#8D1D2C)}
+.mk-sous-ligne td{background:#fbf9f6;padding:0 0 4px 46px}
+.mk-contenus .mk-liste li{padding:8px 12px}
+.mk-camp-l{display:flex;align-items:center;gap:6px;padding:6px 14px 0;font-size:11px;color:#555}
+
+/* La publication, réseau par réseau */
+.mk-pub-l{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:.5px dashed var(--mk-trait2);font-size:12px}
+.mk-pub-l:first-of-type{border-top:none}
+.mk-pub-l .tx{flex:1;min-width:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mk-pub-l .tx small{display:block;width:100%}
+.mk-pub-l a{color:var(--mk-soc)}
+.mk-main{font-size:11.5px}
+.mk-main summary{cursor:pointer;color:#666;margin:2px 0 6px}
+.mk-main .ligne{margin-bottom:4px}
+
+/* Les réglages : une bascule par décision */
+.mk-bascule{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.mk-bascule input{margin-top:3px;width:16px;height:16px;accent-color:var(--color-primary,#8D1D2C)}
+.mk-bascule b{display:block;font-size:12.5px}
+.mk-bascule small{display:block;font-size:11px;color:#666;line-height:1.4}
+.mk-tab .nom .mk-rs{margin-right:4px}
+
+@media (max-width:1100px){
+  .mk-chaine{flex-wrap:wrap}
+  .mk-chaine .mk-etape{flex:1 1 30%}
+  .mk-chaine .mk-fleche{display:none}
+}
+@media (max-width:700px){
+  .mk-chaine .mk-etape{flex:1 1 45%}
+  .mk-ong .mk-fleche{display:none}
+  .mk-sous-ligne td{padding-left:0}
+}
+.mk-compose label.mk-btn{display:inline-flex;width:auto;margin:0;font:600 11.5px var(--font-ui);text-transform:none;letter-spacing:0;color:#222}
+.mk-in::placeholder,.mk-compose textarea::placeholder{color:#a9a29a;font-weight:300}
+.mk-liste .dd a{text-decoration:none;margin-right:8px;color:var(--mk-soc)}

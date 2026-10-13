@@ -6538,11 +6538,11 @@ function ep_taches_suivi(string $periode = 'mois'): array
 
 
 /**
- * GET /referentiels/facebook-regles — le pack de règles de l'agent de contrôle.
+ * GET /marketing/social/regles (ancienne adresse /referentiels/facebook-regles) — le pack de règles de l'agent de contrôle.
  *
  * Le front n'a aucune règle en dur : il affiche ce que renvoie cet endpoint
  * (libellés, gravités, aide, actif/inactif) et repasse le pack entier par
- * `PUT /parametres/fbControle` quand le CEO désactive une règle. Les cinq
+ * `PUT /marketing/social/regles` (ou `PUT /parametres/fbControle`) quand le CEO désactive une règle. Les cinq
  * niveaux de notes ne sont PAS recopiés ici : ils viennent de
  * `meta.signalement`, une seule échelle pour tout le réseau.
  */
@@ -6564,12 +6564,15 @@ function ep_fb_posts(): array
 {
     $out = [];
     $rows = Db::rows(
-        'SELECT p.*, s.name AS shop_name FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
+        'SELECT p.*, s.name AS shop_name FROM mar_social_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
           ORDER BY COALESCE(p.planned_at, p.submitted_at) DESC, p.id DESC LIMIT 300');
     foreach ($rows as $p) {
         $out[] = [
             'id' => $p['id'], 'magasinId' => $p['shop_id'], 'magasin' => $p['shop_name'],
             'auteur' => $p['author'], 'format' => $p['format'],
+            // Les réseaux visés et la campagne d'appartenance (portail Marketing, 13/10/2026).
+            'reseaux' => function_exists('spReseauxDe') ? spReseauxDe($p) : ['facebook'],
+            'campagneId' => isset($p['campagne_id']) && $p['campagne_id'] !== null ? (int) $p['campagne_id'] : null,
             'message' => $p['message'], 'lien' => $p['link'],
             'medias' => $p['medias_json'] !== null ? json_decode($p['medias_json'], true) : [],
             'publierLe' => $p['planned_at'] !== null ? substr($p['planned_at'], 0, 16) : null,
@@ -6606,7 +6609,7 @@ function fbEcartsDuPost(string $postId): array
         'id' => (int) $e['id'], 'code' => $e['rule_code'], 'regle' => $e['rule_name'],
         'famille' => $e['famille'], 'type' => $e['type'], 'gravite' => (int) $e['gravite'],
         'message' => $e['message'], 'extrait' => $e['extrait'], 'statut' => $e['status'],
-    ], Db::rows('SELECT * FROM ceo_fb_finding WHERE post_id = ? ORDER BY gravite DESC, id', [$postId]));
+    ], Db::rows('SELECT * FROM mar_social_ecart WHERE post_id = ? ORDER BY gravite DESC, id', [$postId]));
 }
 
 function ep_crm(): array
@@ -8564,7 +8567,7 @@ function ep_mkt(): array
  *
  * Trois chiffres, et un seul calcul qui compte :
  *
- *  - la note et le nombre d'avis viennent de `ceo_shop_reputation`, c'est-à-dire
+ *  - la note et le nombre d'avis viennent de `mar_avis_fiche`, c'est-à-dire
  *    de ce que Google affiche. Les cinq avis rapatriés sont un échantillon de
  *    lecture : les moyennes ne s'en déduisent pas ;
  *  - la moyenne réseau est PONDÉRÉE par le nombre d'avis. Une moyenne de
@@ -8584,7 +8587,7 @@ function ep_reputation(): array
 
     try {
         $agr = [];
-        foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) { $agr[$r['shop_id']] = $r; }
+        foreach (Db::rows('SELECT * FROM mar_avis_fiche') as $r) { $agr[$r['shop_id']] = $r; }
     } catch (PDOException $e) {
         return ['indispo' => true, 'cible' => $cible,
             'raison' => 'Les tables de réputation sont absentes de cette base.'];
@@ -8626,7 +8629,7 @@ function ep_reputation(): array
             // afficher « Sans réponse » sur chaque avis serait une affirmation
             // fausse, pas une information manquante.
             'repondu' => $v['replied_at'] !== null ? true : null,
-        ], Db::rows('SELECT * FROM ceo_shop_review WHERE shop_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 5', [$s['id']]));
+        ], Db::rows('SELECT * FROM mar_avis WHERE shop_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 5', [$s['id']]));
 
         $magasins[] = [
             'id' => $s['id'], 'nom' => $s['name'], 'ville' => $s['ville'],
@@ -8709,7 +8712,7 @@ function reputationRepartitions(array $shopIds): array
 
     $in = implode(',', array_fill(0, count($shopIds), '?'));
     try {
-        $rows = Db::rows("SELECT shop_id, rating, COUNT(*) n FROM ceo_shop_review
+        $rows = Db::rows("SELECT shop_id, rating, COUNT(*) n FROM mar_avis
                            WHERE shop_id IN ($in) GROUP BY shop_id, rating", $shopIds);
     } catch (PDOException $e) {
         return $out;
@@ -8756,7 +8759,7 @@ function reputationAvis5(?float $note, int $avis, float $cible): ?int
 /** La table des objectifs par campagne ET par magasin — créée à la demande. */
 function ensureCampagneObjectifs(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_objectif ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_objectif ('
         . 'campagne_id INT NOT NULL,'
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'objectif DECIMAL(12,2) NULL,'
@@ -8943,7 +8946,7 @@ function ep_budget_campagnes(): array
         if ($perim === []) { $perim = array_keys($nomDe); }
 
         $obj = [];
-        foreach (Db::rows('SELECT shop_id, objectif FROM ceo_campagne_objectif WHERE campagne_id = ?', [$camp['id']]) as $r) {
+        foreach (Db::rows('SELECT shop_id, objectif FROM mar_campagne_objectif WHERE campagne_id = ?', [$camp['id']]) as $r) {
             $obj[(string) $r['shop_id']] = $r['objectif'] !== null ? (float) $r['objectif'] : null;
         }
         // Le réalisé : le panel, sur les jours ÉCOULÉS de la campagne. Une
@@ -9334,7 +9337,7 @@ function ep_scouting_reseau(): array
     if (!is_array($pos)) { $pos = []; }
     $fiches = [];
     try {
-        foreach (Db::rows('SELECT shop_id, place_id FROM ceo_shop_reputation') as $r) { $fiches[(string) $r['shop_id']] = (string) $r['place_id']; }
+        foreach (Db::rows('SELECT shop_id, place_id FROM mar_avis_fiche') as $r) { $fiches[(string) $r['shop_id']] = (string) $r['place_id']; }
     } catch (PDOException $e) { /* réputation absente : positions à la main */ }
     $modifie = false;
     $courant = (int) date('Y') * 12 + (int) date('n') - 1;   // le mois en cours est incomplet : exclu

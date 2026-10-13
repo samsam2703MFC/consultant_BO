@@ -28,31 +28,38 @@ declare(strict_types=1);
 const MS_ROUTES = [
     ['GET', '/marketing/hub', 'ep_marketing_hub', 'Tous les canaux en une lecture'],
     ['GET', '/marketing/sources', 'ep_marketing_sources', 'Cet inventaire'],
-    ['POST', '/facebook/posts', 'wr_fb_post_create', 'Soumettre un post (ou l’enregistrer en brouillon)'],
-    ['POST', '/facebook/posts/{id}/controle', 'wr_fb_controle', 'Contrôler un post, soumettre un brouillon'],
-    ['PATCH', '/facebook/posts/{id}', 'wr_fb_decision', 'Valider, refuser, marquer publié'],
-    ['PATCH', '/facebook/posts/{id}/ecarts/{ecart}', 'wr_fb_ecart_patch', 'Écarter ou rouvrir un écart'],
-    ['GET', '/referentiels/facebook-regles', 'ep_fb_regles', 'Les règles de l’agent de contrôle'],
-    ['PUT', '/parametres/fbControle', 'wr_param_put', 'Activer une règle de l’agent, changer le seuil'],
+    ['POST', '/marketing/social/posts', 'wr_fb_post_create', 'Soumettre un post (ou l’enregistrer en brouillon)'],
+    ['POST', '/marketing/social/posts/{id}/controle', 'wr_fb_controle', 'Contrôler un post, soumettre un brouillon'],
+    ['PATCH', '/marketing/social/posts/{id}', 'wr_fb_decision', 'Valider, refuser, marquer publié'],
+    ['PATCH', '/marketing/social/posts/{id}/ecarts/{ecart}', 'wr_fb_ecart_patch', 'Écarter ou rouvrir un écart'],
+    ['GET', '/marketing/social/regles', 'ep_fb_regles', 'Les règles de l’agent de contrôle'],
+    ['PUT', '/marketing/social/regles', 'wr_param_put', 'Activer une règle de l’agent, changer le seuil'],
     ['GET', '/marketing/brand-guard/rules', 'ep_bg_rules', 'La charte Brand Guard'],
     ['PUT', '/marketing/brand-guard/rules', 'wr_bg_rules_put', 'Enregistrer la charte'],
     ['GET', '/marketing/brand-guard/pages', 'ep_bg_pages', 'Les pages Facebook des magasins'],
     ['PUT', '/marketing/brand-guard/pages', 'wr_bg_pages_put', 'Enregistrer ou résoudre les pages'],
-    ['GET', '/reputation/recherche', 'ep_reputation_recherche', 'Chercher la fiche Google d’un magasin'],
-    ['PUT', '/reputation/{magasin}/fiche', 'wr_reputation_fiche', 'Raccorder ou détacher une fiche Google'],
-    ['POST', '/reputation/sync', 'wr_reputation_sync', 'Relire les notes et les avis Google'],
-    ['PUT', '/parametres/reputationCible', 'wr_param_put', 'La note Google visée'],
-    ['GET', '/newsletter', 'ep_newsletter', 'Emailing : campagnes, segments, bases, réglages'],
-    ['POST', '/newsletter/campagnes', 'wr_newsletter_campagne_post', 'Créer une newsletter'],
-    ['DELETE', '/newsletter/campagnes/{id}', 'wr_newsletter_campagne_delete', 'Supprimer une newsletter'],
-    ['POST', '/newsletter/campagnes/{id}/envoyer', 'wr_newsletter_campagne_envoyer', 'Envoyer maintenant'],
-    ['POST', '/newsletter/segments', 'wr_newsletter_segment_post', 'Créer un segment'],
-    ['PUT', '/newsletter/magasins/{id}', 'wr_newsletter_magasin_put', 'Adresse d’envoi d’un magasin'],
-    ['POST', '/newsletter/test', 'wr_newsletter_test_post', 'Envoi test'],
-    ['PUT', '/newsletter/reglages', 'wr_newsletter_reglages', 'Activer l’envoi réel, adresses test'],
-    ['POST', '/newsletter/tick', 'wr_newsletter_tick', 'Passer l’horloge d’envoi à la main'],
-    ['POST', '/newsletter/contacts/import', 'wr_newsletter_contacts_import', 'Importer des contacts (CSV)'],
-    ['DELETE', '/newsletter/contacts/lots/{lot}', 'wr_newsletter_lot_delete', 'Supprimer un lot de contacts'],
+    ['GET', '/marketing/avis/recherche', 'ep_reputation_recherche', 'Chercher la fiche Google d’un magasin'],
+    ['PUT', '/marketing/avis/{magasin}/fiche', 'wr_reputation_fiche', 'Raccorder ou détacher une fiche Google'],
+    ['POST', '/marketing/avis/sync', 'wr_reputation_sync', 'Relire les notes et les avis Google'],
+    ['PUT', '/marketing/avis/cible', 'wr_param_put', 'La note Google visée'],
+    ['GET', '/marketing/newsletter', 'ep_newsletter', 'Emailing : campagnes, segments, bases, réglages'],
+    ['POST', '/marketing/newsletter/campagnes', 'wr_newsletter_campagne_post', 'Créer une newsletter'],
+    ['DELETE', '/marketing/newsletter/campagnes/{id}', 'wr_newsletter_campagne_delete', 'Supprimer une newsletter'],
+    ['POST', '/marketing/newsletter/campagnes/{id}/envoyer', 'wr_newsletter_campagne_envoyer', 'Envoyer maintenant'],
+    ['POST', '/marketing/newsletter/segments', 'wr_newsletter_segment_post', 'Créer un segment'],
+    ['PUT', '/marketing/newsletter/magasins/{id}', 'wr_newsletter_magasin_put', 'Adresse d’envoi d’un magasin'],
+    ['POST', '/marketing/newsletter/test', 'wr_newsletter_test_post', 'Envoi test'],
+    ['PUT', '/marketing/newsletter/reglages', 'wr_newsletter_reglages', 'Activer l’envoi réel, adresses test'],
+    ['POST', '/marketing/newsletter/tick', 'wr_newsletter_tick', 'Passer l’horloge d’envoi à la main'],
+    ['POST', '/marketing/newsletter/contacts/import', 'wr_newsletter_contacts_import', 'Importer des contacts (CSV)'],
+    ['DELETE', '/marketing/newsletter/contacts/lots/{lot}', 'wr_newsletter_lot_delete', 'Supprimer un lot de contacts'],
+    ['POST', '/marketing/social/posts/{id}/publier', 'wr_social_publier', 'Publier maintenant ou programmer sur les réseaux'],
+    ['DELETE', '/marketing/social/posts/{id}/publier', 'wr_social_annuler', 'Annuler une publication programmée'],
+    ['GET', '/marketing/publication/etat', 'ep_social_etat', 'Réglages et accès de la publication'],
+    ['PUT', '/marketing/publication/reglages', 'wr_social_reglages', 'Publication réelle, automatique, page de la marque, LinkedIn'],
+    ['POST', '/marketing/publication/tester', 'wr_social_tester', 'Tester l’accès à Facebook, Instagram, LinkedIn'],
+    ['POST', '/marketing/publication/media', 'wr_social_media', 'Téléverser un visuel'],
+    ['GET', '/marketing/publication/cron', 'ep_social_cron', 'L’horloge de publication (bin/social_cron.sh, toutes les 5 min)'],
 ];
 
 /**
@@ -83,11 +90,13 @@ function msApis(): array
         'erp' => ['nom' => 'ERP TFBuddy (réalm admin)', 'famille' => 'tfbuddy', 'hote' => $hote($erp['base'] ?? null),
             'quoi' => 'Redevances, gammes saisonnières, facturation — et la reprise du catalogue de l’assistant de campagne.', 'configure' => !empty($erp['configure'])],
         'meta' => ['nom' => 'Meta Graph (Facebook)', 'famille' => 'externe', 'hote' => 'graph.facebook.com',
-            'quoi' => 'Lecture des pages et des posts publiés (Brand Guard). Rien n’est publié.', 'configure' => !empty($meta['configure'])],
+            'quoi' => 'Pages Facebook et comptes Instagram : lecture (Brand Guard) et publication des posts validés.', 'configure' => !empty($meta['configure'])],
         'google' => ['nom' => 'Google Places', 'famille' => 'externe', 'hote' => 'places.googleapis.com',
             'quoi' => 'Note, nombre d’avis et derniers avis des fiches des magasins.', 'configure' => class_exists('GoogleApi') && GoogleApi::configured()],
         'anthropic' => ['nom' => 'Anthropic (assistance IA)', 'famille' => 'externe', 'hote' => 'api.anthropic.com',
             'quoi' => 'Relecture de la charte par le modèle (texte et visuels des posts).', 'configure' => class_exists('Anthropic') && Anthropic::configured()],
+        'linkedin' => ['nom' => 'LinkedIn (page entreprise)', 'famille' => 'externe', 'hote' => 'api.linkedin.com',
+            'quoi' => 'Publication au nom de la page de la marque (API Posts).', 'configure' => class_exists('LinkedInApi') && LinkedInApi::configured()],
         'smtp' => ['nom' => 'Serveur SMTP', 'famille' => 'externe', 'hote' => (string) ($smtp['hote'] ?? ''),
             'quoi' => 'Newsletters, envois test, alertes de posts sauvages.', 'configure' => !empty($smtp['configure'])],
     ];
@@ -97,7 +106,8 @@ function msApis(): array
 const MS_MOTIFS_API = [
     'panel' => '/\bPanelApi::(?!configured\b|statut\b|config\b|oublierJeton\b|liste\b)\w+\s*\(/',
     'erp' => '/\bErpApi::(?!configured\b|statut\b|config\b|oublierJeton\b|disponible\b)\w+\s*\(/',
-    'meta' => '/\bMetaGraph::(?:http|resoudrePage|resoudrePagePublique|tokensPages|posts)\s*\(/',
+    'meta' => '/\bMetaGraph::(?:http|resoudrePage|resoudrePagePublique|tokensPages|posts|publierPage|publierInstagram|instagramDePage)\s*\(/',
+    'linkedin' => '/\bLinkedInApi::(?!configured\b|statut\b|config\b|auteur\b)\w+\s*\(/',
     'google' => '/\bGoogleApi::(?!configured\b|statut\b|config\b)\w+\s*\(/',
     'anthropic' => '/\bAnthropic::(?!configured\b|statut\b|config\b)\w+\s*\(/',
     'smtp' => '/\bSmtp::envoyer\s*\(/',
@@ -190,12 +200,19 @@ function msTablesCreees(string $racine): array
 }
 
 /**
- * D'où vient une table : créée par le cockpit, héritée du module marketing autonome
- * (mar_*), ou appartenant à la base TFBuddy partagée (shops, crm_settings, of_tag…).
+ * D'où vient une table :
+ *  - `portail` : une table mar_ que ce dépôt crée — le portail Marketing (MAR_TABLES) ;
+ *  - `module` : une table mar_ qu'il ne crée pas — le module marketing autonome, base partagée ;
+ *  - `cockpit` : une autre table créée ici (ceo_shop, ceo_app_setting, le journal…) ;
+ *  - `tfbuddy` : le reste, la base TFBuddy partagée (shops, crm_settings, of_tag…).
  */
 function msOrigine(string $t, array $creees): array
 {
-    if (str_starts_with($t, 'mar_')) { return ['origine' => 'module', 'origineNom' => 'Module marketing (base partagée)']; }
+    if (str_starts_with($t, 'mar_')) {
+        return isset($creees[$t]) || (defined('MAR_TABLES') && isset(MAR_TABLES[$t]))
+            ? ['origine' => 'portail', 'origineNom' => 'Portail marketing (mar_, créée ici)']
+            : ['origine' => 'module', 'origineNom' => 'Module marketing autonome (base partagée)'];
+    }
     if (isset($creees[$t])) { return ['origine' => 'cockpit', 'origineNom' => 'Cockpit (créée ici)']; }
     return ['origine' => 'tfbuddy', 'origineNom' => 'TFBuddy (base partagée)'];
 }
@@ -244,7 +261,7 @@ function ep_marketing_sources(): array
             'lignes' => $enBase[$t] ?? null,
         ];
     }
-    $ordre = ['tfbuddy' => 0, 'module' => 1, 'cockpit' => 2];
+    $ordre = ['portail' => 0, 'module' => 1, 'cockpit' => 2, 'tfbuddy' => 3];
     usort($listeTables, static fn ($a, $b) => ($ordre[$a['origine']] <=> $ordre[$b['origine']]) ?: strcmp($a['nom'], $b['nom']));
     foreach ($apis as $id => &$a) { $a['id'] = $id; $a['routes'] = array_values(array_unique($parApi[$id] ?? [])); }
     unset($a);
@@ -256,6 +273,11 @@ function ep_marketing_sources(): array
         'apis' => array_values($apis),
         'routes' => $routes,
         'tables' => $listeTables,
+        // Le registre du portail : toutes ses tables mar_, celles que ces routes touchent et
+        // les autres (mesure, objectifs, annexes de campagne : les écrans du cockpit).
+        'registre' => array_map(static fn ($nom, $d) => ['nom' => $nom, 'famille' => $d['famille'], 'quoi' => $d['quoi'], 'ancien' => $d['ancien'],
+            'existe' => $enBase === null ? null : array_key_exists($nom, $enBase), 'lignes' => $enBase[$nom] ?? null,
+            'parLeModule' => isset($tables[$nom])], array_keys(defined('MAR_TABLES') ? MAR_TABLES : []), defined('MAR_TABLES') ? MAR_TABLES : []),
         // Les applications liées : ouvertes depuis le module, mais avec leur propre API.
         'liees' => [
             ['nom' => 'Assistant de campagne', 'adresse' => 'assistant/', 'api' => '/api/v1/marketing',

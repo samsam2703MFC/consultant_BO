@@ -53,8 +53,8 @@ export const ENDPOINTS = {
   prodGroupes:    '/production/groupes',
   prodCategories: '/production/categories',
   prodPeriodes:   '/production/periodes',
-  fbRegles:       '/referentiels/facebook-regles',
-  fbPosts:        '/facebook/posts',
+  fbRegles:       '/marketing/social/regles',
+  fbPosts:        '/marketing/social/posts',
   bgStats:        '/marketing/brand-guard/stats',
   bgPages:        '/marketing/brand-guard/pages'
 };

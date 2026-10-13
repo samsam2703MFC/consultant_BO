@@ -858,7 +858,7 @@ function fbPostPourAgent(array $row): array
 
 function fbPostRow(string $id): ?array
 {
-    return Db::row('SELECT p.*, s.name AS shop_name FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id WHERE p.id = ?', [$id]);
+    return Db::row('SELECT p.*, s.name AS shop_name FROM mar_social_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id WHERE p.id = ?', [$id]);
 }
 
 /**
@@ -871,18 +871,18 @@ function fbPostRow(string $id): ?array
 function fbEnregistrerControle(array $row): array
 {
     $ignores = array_map(fn ($r) => (string) $r['rule_code'],
-        Db::rows("SELECT rule_code FROM ceo_fb_finding WHERE post_id = ? AND status = 'ignore'", [$row['id']]));
+        Db::rows("SELECT rule_code FROM mar_social_ecart WHERE post_id = ? AND status = 'ignore'", [$row['id']]));
     $res = fbControler(fbPostPourAgent($row), $ignores);
 
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        Db::exec('DELETE FROM ceo_fb_finding WHERE post_id = ?', [$row['id']]);
+        Db::exec('DELETE FROM mar_social_ecart WHERE post_id = ?', [$row['id']]);
         foreach ($res['ecarts'] as $e) {
-            Db::exec('INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO mar_social_ecart (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
                 [$row['id'], $e['code'], $e['regle'], $e['famille'], $e['type'], $e['gravite'], $e['message'], $e['extrait'], $e['statut'], date('Y-m-d H:i:s')]);
         }
-        Db::exec("UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ?, agent_ran_at = ?, agent_runs = agent_runs + 1,
+        Db::exec("UPDATE mar_social_post SET agent_note = ?, agent_summary = ?, agent_ran_at = ?, agent_runs = agent_runs + 1,
                     status = CASE WHEN status = 'brouillon' THEN status ELSE 'a_valider' END WHERE id = ?",
             [$res['note'], $res['resume'], date('Y-m-d H:i:s'), $row['id']]);
         $pdo->commit();
@@ -904,23 +904,23 @@ function fbEnregistrerControle(array $row): array
             $ajout = 0;
             foreach ($bg['ecarts'] as $e) {
                 if (($e['moteur'] ?? '') !== 'claude') { continue; }
-                Db::exec('INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                Db::exec('INSERT INTO mar_social_ecart (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
                     [$row['id'], 'bg:' . $e['regle'], $e['libelle'], $e['famille'], $e['libelle'],
                         BG_GRAVITES[$e['gravite']] ?? 1, mb_substr($e['constat'] . ($e['correction'] !== '' ? ' → ' . $e['correction'] : ''), 0, 400),
                         null, in_array('bg:' . $e['regle'], $ignores, true) ? 'ignore' : 'ouvert', date('Y-m-d H:i:s')]);
                 $ajout++;
             }
             if ($ajout > 0) {
-                $tous = Db::rows('SELECT gravite, status AS statut FROM ceo_fb_finding WHERE post_id = ?', [$row['id']]);
+                $tous = Db::rows('SELECT gravite, status AS statut FROM mar_social_ecart WHERE post_id = ?', [$row['id']]);
                 $note = fbNote(array_map(static fn ($f) => ['gravite' => (int) $f['gravite'], 'statut' => $f['statut']], $tous));
                 $res['note'] = $note;
                 $res['resume'] = fbResume($note, array_map(static fn ($f) => ['gravite' => (int) $f['gravite'], 'statut' => $f['statut'], 'famille' => 'charte'], $tous));
-                Db::exec('UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $bg['message'] ?? $res['resume'], $row['id']]);
+                Db::exec('UPDATE mar_social_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $bg['message'] ?? $res['resume'], $row['id']]);
             }
             if ($bg['statut'] === 'bloque' && $row['status'] !== 'brouillon') {
                 $pire = null;
                 foreach ($bg['ecarts'] as $e) { if ($e['gravite'] === 'bloquant') { $pire = $e; break; } }
-                Db::exec("UPDATE ceo_fb_post SET status = 'refuse', note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = 'Brand Guard' WHERE id = ?",
+                Db::exec("UPDATE mar_social_post SET status = 'refuse', note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = 'Brand Guard' WHERE id = ?",
                     [$res['note'], $pire['famille'] ?? 'Charte de marque', $pire['libelle'] ?? 'Écart bloquant', $bg['message'], date('Y-m-d H:i:s'), $row['id']]);
                 journalAdd('Brand Guard', 'Refus', $row['shop_name'] ?? '—',
                     'Post « ' . fbTitre($row['message']) . ' » bloqué — ' . $bg['score'] . '/100 · ' . ($pire['libelle'] ?? 'écart bloquant') . ' (charte ' . $bg['charteVersion'] . ')');
@@ -955,12 +955,18 @@ function wr_fb_post_create(): array
     // Un brouillon reste au magasin : l'agent ne relit que ce qui est soumis.
     $statut = ($b['statut'] ?? 'a_controler') === 'brouillon' ? 'brouillon' : 'a_controler';
     $id = $b['id'] ?? ('fb' . substr((string) round(microtime(true) * 1000), -8));
-    Db::exec('INSERT INTO ceo_fb_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status) VALUES (?,?,?,?,?,?,?,?,?,?)', [
+    Db::exec('INSERT INTO mar_social_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status) VALUES (?,?,?,?,?,?,?,?,?,?)', [
         $id, $shopId, (string) ($b['auteur'] ?? 'Franchisé'), (string) ($b['format'] ?? 'Photo'),
         $message, ($b['lien'] ?? '') !== '' ? (string) $b['lien'] : null,
         isset($b['medias']) ? json_encode($b['medias'], JSON_UNESCAPED_UNICODE) : null,
         $b['publierLe'] ?? null, date('Y-m-d H:i:s'), $statut,
     ]);
+    // Ses réseaux et sa campagne (portail Marketing, 13/10/2026) : posés à part — une base que
+    // l'installateur n'a pas encore relue n'a pas les colonnes, et le post doit partir quand même.
+    $reseaux = function_exists('spReseauxDe') ? spReseauxDe(['reseaux' => $b['reseaux'] ?? 'facebook']) : ['facebook'];
+    $campagne = (int) ($b['campagneId'] ?? 0);
+    try { Db::exec('UPDATE mar_social_post SET reseaux = ?, campagne_id = ? WHERE id = ?', [implode(',', $reseaux), $campagne > 0 ? $campagne : null, $id]); }
+    catch (PDOException $e) { /* colonnes pas encore posées */ }
     $row = fbPostRow($id);
     journalAdd((string) ($b['auteur'] ?? 'Franchisé'), 'Post Facebook', $row['shop_name'] ?? '—',
         'Post « ' . fbTitre($message) . ' » ' . ($statut === 'brouillon' ? 'enregistré en brouillon' : 'soumis au contrôle'));
@@ -978,7 +984,7 @@ function wr_fb_controle(string $id): array
     // 13/10/2026) : sans cela, un post enregistré en brouillon ne pouvait plus
     // jamais être soumis — il fallait le réécrire en entier.
     if ($row['status'] === 'brouillon' && !empty(body()['soumettre'])) {
-        Db::exec("UPDATE ceo_fb_post SET status = 'a_controler', submitted_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $id]);
+        Db::exec("UPDATE mar_social_post SET status = 'a_controler', submitted_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $id]);
         journalAdd((string) ($row['author'] ?? 'Franchisé'), 'Post Facebook', $row['shop_name'] ?? '—',
             'Post « ' . fbTitre($row['message']) . ' » sorti du brouillon et soumis au contrôle');
         $row = fbPostRow($id);
@@ -1006,8 +1012,11 @@ function wr_fb_decision(string $id): array
             http_response_code(409);
             return ['error' => 'seul un post validé peut être marqué publié'];
         }
-        Db::exec("UPDATE ceo_fb_post SET status = 'publie', published_at = ?, fb_post_id = ? WHERE id = ?",
+        Db::exec("UPDATE mar_social_post SET status = 'publie', published_at = ?, fb_post_id = ? WHERE id = ?",
             [date('Y-m-d H:i:s'), ($b['fbId'] ?? '') !== '' ? (string) $b['fbId'] : null, $id]);
+        // Publié à la main : ce que le portail avait programmé ne doit plus partir — deux fois le même post.
+        try { Db::exec("UPDATE mar_social_publication SET statut = 'annule', erreur = 'publié à la main', maj_le = ? WHERE post_id = ? AND statut IN ('programme', 'erreur')", [date('Y-m-d H:i:s'), $id]); }
+        catch (PDOException $e) { /* table pas encore posée */ }
         journalAdd((string) ($b['par'] ?? 'CEO'), 'Publication', $mag, 'Post « ' . $titre . ' » marqué publié');
         return ['ok' => true];
     }
@@ -1033,13 +1042,15 @@ function wr_fb_decision(string $id): array
     }
 
     $par = (string) ($b['par'] ?? 'CEO');
-    Db::exec('UPDATE ceo_fb_post SET status = ?, note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = ? WHERE id = ?', [
+    Db::exec('UPDATE mar_social_post SET status = ?, note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = ? WHERE id = ?', [
         $decision === 'valide' ? 'valide' : 'refuse', $note,
         $fam !== '' ? $fam : null, $typ !== '' ? $typ : null,
         ($b['commentaire'] ?? '') !== '' ? (string) $b['commentaire'] : null,
         date('Y-m-d H:i:s'), $par, $id,
     ]);
     $ecart = $fam !== '' ? ' — ' . $fam . ' · ' . $typ : '';
+    // Validé : le portail le programme sur ses réseaux, si la publication automatique est réglée.
+    if ($decision === 'valide' && function_exists('spAutoProgrammer')) { spAutoProgrammer($id); }
     journalAdd($par, $decision === 'valide' ? 'Validation' : 'Refus', $mag,
         'Post « ' . $titre . ' » ' . ($decision === 'valide' ? 'validé' : 'refusé') . ' ' . $note . '/5'
         . $ecart . ($row['agent_note'] !== null && (int) $row['agent_note'] !== $note
@@ -1057,19 +1068,19 @@ function wr_fb_decision(string $id): array
 function wr_fb_ecart_patch(string $postId, int $ecartId): array
 {
     $b = body();
-    $e = Db::row('SELECT * FROM ceo_fb_finding WHERE id = ? AND post_id = ?', [$ecartId, $postId]);
+    $e = Db::row('SELECT * FROM mar_social_ecart WHERE id = ? AND post_id = ?', [$ecartId, $postId]);
     if ($e === null) { http_response_code(404); return ['error' => 'écart inconnu']; }
     $statut = (string) ($b['statut'] ?? '');
     if (!in_array($statut, ['ouvert', 'ignore', 'corrige'], true)) {
         http_response_code(422); return ['error' => 'statut attendu : ouvert, ignore ou corrige'];
     }
-    Db::exec('UPDATE ceo_fb_finding SET status = ? WHERE id = ?', [$statut, $ecartId]);
+    Db::exec('UPDATE mar_social_ecart SET status = ? WHERE id = ?', [$statut, $ecartId]);
 
     $row = fbPostRow($postId);
     $ecarts = fbEcartsDuPost($postId);
     $note = fbNote($ecarts);
     $resume = fbResume($note, $ecarts);
-    Db::exec('UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $resume, $postId]);
+    Db::exec('UPDATE mar_social_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $resume, $postId]);
     journalAdd((string) ($b['par'] ?? 'CEO'), 'Contrôle', $row['shop_name'] ?? '—',
         'Écart « ' . $e['type'] . ' » ' . ($statut === 'ignore' ? 'écarté' : ($statut === 'corrige' ? 'marqué corrigé' : 'rouvert'))
         . ' sur « ' . fbTitre($row['message']) . ' » — note de l\'agent ' . $note . '/5');
@@ -3164,18 +3175,18 @@ function wr_reputation_fiche(string $shopId): array
     if ($placeId === '') {
         // Détacher : la fiche s'en va, les avis déjà rapatriés restent. Ils
         // décrivent ce qui a été dit ; les effacer réécrirait l'histoire.
-        Db::exec('DELETE FROM ceo_shop_reputation WHERE shop_id = ?', [$shopId]);
+        Db::exec('DELETE FROM mar_avis_fiche WHERE shop_id = ?', [$shopId]);
         journalAdd('CEO', 'Paramètre', $nomShop, 'Fiche Google détachée');
         return ['ok' => true, 'detache' => true];
     }
 
-    $dejaPris = Db::row('SELECT shop_id FROM ceo_shop_reputation WHERE place_id = ? AND shop_id <> ?', [$placeId, $shopId]);
+    $dejaPris = Db::row('SELECT shop_id FROM mar_avis_fiche WHERE place_id = ? AND shop_id <> ?', [$placeId, $shopId]);
     if ($dejaPris !== null) {
         http_response_code(409);
         return ['error' => 'Cette fiche Google est déjà raccordée à un autre magasin.'];
     }
 
-    Db::exec('INSERT INTO ceo_shop_reputation (shop_id, place_id) VALUES (?, ?)
+    Db::exec('INSERT INTO mar_avis_fiche (shop_id, place_id) VALUES (?, ?)
               ON DUPLICATE KEY UPDATE place_id = VALUES(place_id)', [$shopId, $placeId]);
     journalAdd('CEO', 'Paramètre', $nomShop, 'Fiche Google raccordée (' . $placeId . ')');
     // Synchroniser dans la foulée : raccorder sans lire laisserait une carte
@@ -3207,7 +3218,7 @@ function wr_reputation_sync(): array
 function reputationSynchroniser(?string $shopId): array
 {
     $sql = "SELECT s.id, s.name, r.place_id FROM ceo_shop s
-              JOIN ceo_shop_reputation r ON r.shop_id = s.id
+              JOIN mar_avis_fiche r ON r.shop_id = s.id
              WHERE r.place_id IS NOT NULL AND r.place_id <> ''";
     $args = [];
     if ($shopId !== null) { $sql .= ' AND s.id = ?'; $args[] = $shopId; }
@@ -3229,15 +3240,15 @@ function reputationSynchroniser(?string $shopId): array
             $erreurs[] = $c['name'] . ' : ' . (GoogleApi::$lastError ?? 'réponse vide');
             continue;
         }
-        Db::exec('UPDATE ceo_shop_reputation SET rating_avg = ?, rating_count = ?, profile_url = ?, synced_at = ? WHERE shop_id = ?',
+        Db::exec('UPDATE mar_avis_fiche SET rating_avg = ?, rating_count = ?, profile_url = ?, synced_at = ? WHERE shop_id = ?',
             [$lieu['note'], $lieu['avis'], $lieu['url'], date('Y-m-d H:i:s'), $c['id']]);
         foreach ($lieu['derniers'] as $a) {
             // INSERT IGNORE sur (source, external_id) : un avis déjà connu ne
             // se réécrit pas — son texte peut avoir été traduit d'un appel à
             // l'autre, et le premier reçu fait foi.
-            $avant = Db::row("SELECT id FROM ceo_shop_review WHERE source = 'google' AND external_id = ?", [$a['externalId']]);
+            $avant = Db::row("SELECT id FROM mar_avis WHERE source = 'google' AND external_id = ?", [$a['externalId']]);
             if ($avant !== null) { continue; }
-            Db::exec('INSERT INTO ceo_shop_review (shop_id, source, external_id, author, rating, comment, reviewed_at)
+            Db::exec('INSERT INTO mar_avis (shop_id, source, external_id, author, rating, comment, reviewed_at)
                       VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [$c['id'], 'google', $a['externalId'], $a['auteur'], $a['note'], $a['texte'], $a['le']]);
             $nouveaux++;
@@ -3384,11 +3395,11 @@ function wr_campagne_objectifs(int $id): array
         $sid = (string) $shopId;
         if ($sid === '' || magasinConnu($sid) === null) { continue; }
         if ($montant === '' || $montant === null || (float) $montant <= 0) {
-            Db::exec('DELETE FROM ceo_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
+            Db::exec('DELETE FROM mar_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
             $effaces++;
             continue;
         }
-        Db::exec('INSERT INTO ceo_campagne_objectif (campagne_id, shop_id, objectif, maj) VALUES (?,?,?,?)
+        Db::exec('INSERT INTO mar_campagne_objectif (campagne_id, shop_id, objectif, maj) VALUES (?,?,?,?)
                   ON DUPLICATE KEY UPDATE objectif = VALUES(objectif), maj = VALUES(maj)',
             [$id, $sid, (float) $montant, date('Y-m-d H:i:s')]);
         $ecrits++;

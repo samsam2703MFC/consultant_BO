@@ -7,16 +7,16 @@ declare(strict_types=1);
  * Réseaux sociaux, emailing et campagnes vivaient dans quatre sections du rail
  * (Marque & marketing, ERP franchisé, Contrôle, Paramètres) et dans quatre
  * familles de tables qui ne se parlaient pas. Une campagne Saint-Nicolas se
- * lisait dans mar_campaign, sa newsletter dans ceo_nl_campagne, ses posts dans
- * ceo_fb_post : rien ne disait qu'une campagne en cours n'avait ni post ni
+ * lisait dans mar_campaign, sa newsletter dans mar_nl_campagne, ses posts dans
+ * mar_social_post : rien ne disait qu'une campagne en cours n'avait ni post ni
  * mail. Le module les pose côte à côte, sans rien recalculer à sa façon :
  *
  *  - campagnes : mar_campaign, mêmes lignes que GET /marketing ;
- *  - emailing : ceo_nl_campagne, mêmes statistiques que GET /newsletter
+ *  - emailing : mar_nl_campagne, mêmes statistiques que GET /newsletter
  *    (nlStatsReelles d'abord, stats_json en repli) ;
- *  - réseaux sociaux : ceo_fb_post, le cycle brouillon → contrôle → décision → publication ;
- *  - charte : brand_guard_checks sur 30 jours, mêmes chiffres que /marketing/brand-guard/stats ;
- *  - avis Google : GET /reputation tel quel (ceo_shop_reputation, ceo_shop_review).
+ *  - réseaux sociaux : mar_social_post, le cycle brouillon → contrôle → décision → publication ;
+ *  - charte : mar_bg_controle sur 30 jours, mêmes chiffres que /marketing/brand-guard/stats ;
+ *  - avis Google : GET /reputation tel quel (mar_avis_fiche, mar_avis).
  *
  * Chaque canal se lit À PART : une table absente rend { dispo:false, raison }
  * pour ce canal seul, l'écran garde les autres. Les écritures ne passent pas
@@ -173,13 +173,13 @@ function mhPhase(string $statut, ?string $debut, ?string $fin, string $auj): str
     return 'en_cours';
 }
 
-/* --- emailing (ceo_nl_campagne) --------------------------------------------------- */
+/* --- emailing (mar_nl_campagne) --------------------------------------------------- */
 
 function mhEmailing(?string $shop, string $auj): array
 {
     $role = $shop ?? 'brand';
     $liste = [];
-    foreach (Db::rows('SELECT * FROM ceo_nl_campagne ORDER BY COALESCE(send_at, created_at) DESC, id DESC') as $r) {
+    foreach (Db::rows('SELECT * FROM mar_nl_campagne ORDER BY COALESCE(send_at, created_at) DESC, id DESC') as $r) {
         if ($shop !== null && (string) $r['created_by'] !== $shop && (string) $r['sender_shop_id'] !== $shop) { continue; }
         $c = function_exists('nlCampagneRow') ? nlCampagneRow($r) : ['stats' => json_decode((string) ($r['stats_json'] ?? ''), true) ?: []];
         $st = is_array($c['stats'] ?? null) ? $c['stats'] : [];
@@ -196,6 +196,7 @@ function mhEmailing(?string $shop, string $auj): array
             'envoyes' => (int) ($st['sent'] ?? 0), 'ouvertures' => (int) ($st['open'] ?? 0),
             'clics' => (int) ($st['click'] ?? 0), 'vouchers' => (int) ($st['vouchers'] ?? 0),
             'reel' => !empty($st['reel']),
+            'campagneId' => isset($r['campagne_id']) && $r['campagne_id'] !== null ? (int) $r['campagne_id'] : null,
         ];
     }
     // Les chiffres ne comptent pas le jeu d'essai : il fait vivre l'écran, il ne
@@ -208,7 +209,7 @@ function mhEmailing(?string $shop, string $auj): array
     $optin = null;
     try {
         $optin = 0;
-        foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM ceo_nl_contact WHERE optin = 1 AND desinscrit_le IS NULL GROUP BY shop_id') as $r) {
+        foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM mar_nl_contact WHERE optin = 1 AND desinscrit_le IS NULL GROUP BY shop_id') as $r) {
             if ($shop === null || (string) $r['shop_id'] === $shop) { $optin += (int) $r['n']; }
         }
     } catch (PDOException $e) { $optin = null; /* aucun contact importé : le module newsletter garde ses chiffres d'essai */ }
@@ -232,7 +233,7 @@ function mhEmailing(?string $shop, string $auj): array
     ];
 }
 
-/* --- réseaux sociaux (ceo_fb_post) ------------------------------------------------- */
+/* --- réseaux sociaux (mar_social_post) ------------------------------------------------- */
 
 function mhSocial(?string $shop, string $auj): array
 {
@@ -240,6 +241,13 @@ function mhSocial(?string $shop, string $auj): array
     if ($shop !== null) {
         $posts = array_values(array_filter($posts, static fn ($p) => (string) ($p['magasinId'] ?? '') === $shop));
     }
+    // L'étape 4 du flux : où en est chaque post sur chacun de ses réseaux.
+    $pubs = [];
+    if (function_exists('spPublications')) {
+        try { $pubs = spPublications(array_column($posts, 'id')); } catch (PDOException $e) { $pubs = []; }
+    }
+    foreach ($posts as &$p) { $p['publications'] = $pubs[$p['id']] ?? []; }
+    unset($p);
     $par = array_fill_keys(['brouillon', 'a_controler', 'a_valider', 'valide', 'refuse', 'publie'], 0);
     foreach ($posts as $p) { if (isset($par[$p['statut']])) { $par[$p['statut']]++; } }
     $mois = substr($auj, 0, 7);
@@ -258,6 +266,10 @@ function mhSocial(?string $shop, string $auj): array
     return [
         'liste' => $posts,
         'parStatut' => $par,
+        'publication' => function_exists('spReglages') ? [
+            'reelle' => spReglages()['reelle'], 'auto' => spReglages()['auto'],
+            'reseaux' => ['facebook' => MetaGraph::configured(), 'instagram' => MetaGraph::configured(), 'linkedin' => class_exists('LinkedInApi') && LinkedInApi::configured()],
+        ] : ['reelle' => false, 'auto' => false, 'reseaux' => []],
         'chiffres' => [
             'total' => count($posts),
             'aTraiter' => $par['a_controler'] + $par['a_valider'],
@@ -280,7 +292,7 @@ function mhSocial(?string $shop, string $auj): array
     ];
 }
 
-/* --- charte de marque (brand_guard_checks) ------------------------------------------ */
+/* --- charte de marque (mar_bg_controle) ------------------------------------------ */
 
 function mhCharte(?string $shop): array
 {
@@ -304,7 +316,7 @@ function mhCharte(?string $shop): array
         'quand' => substr((string) $r['created_at'], 0, 16),
         'ecarts' => array_map(static fn ($e) => ['libelle' => $e['libelle'] ?? ($e['regle'] ?? ''), 'gravite' => $e['gravite'] ?? 'mineur', 'correction' => $e['correction'] ?? ''],
             json_decode((string) ($r['ecarts_json'] ?? '[]'), true) ?: []),
-    ], Db::rows('SELECT * FROM brand_guard_checks WHERE ' . $w . ' ORDER BY created_at DESC, id DESC LIMIT 60', $a));
+    ], Db::rows('SELECT * FROM mar_bg_controle WHERE ' . $w . ' ORDER BY created_at DESC, id DESC LIMIT 60', $a));
     return [
         'stats' => $stats,
         'sauvages' => $sauvages,
@@ -313,7 +325,7 @@ function mhCharte(?string $shop): array
     ];
 }
 
-/* --- avis Google (ceo_shop_reputation) ---------------------------------------------- */
+/* --- avis Google (mar_avis_fiche) ---------------------------------------------- */
 
 /**
  * La réputation, telle que GET /reputation la sert : la note et le nombre d'avis
@@ -349,18 +361,18 @@ function mhAFaireAvis(array $avis, string $auj): array
     foreach ($avis['magasins'] as $m) {
         if (($m['placeId'] ?? null) === null) {
             $out[] = ['canal' => 'avis', 'niveau' => 'normal', 'titre' => 'Fiche Google à raccorder — ' . $m['nom'],
-                'detail' => 'Sans fiche raccordée, la note du magasin ne se suit pas.', 'cible' => ['onglet' => 'social', 'vue' => 'avis']];
+                'detail' => 'Sans fiche raccordée, la note du magasin ne se suit pas.', 'cible' => ['onglet' => 'mesurer', 'vue' => 'avis']];
         } elseif ($m['note'] !== null && $m['note'] < $cible) {
             $out[] = ['canal' => 'avis', 'niveau' => 'normal', 'titre' => 'Note Google sous la cible — ' . $m['nom'],
                 'detail' => number_format((float) $m['note'], 2, ',', '') . ' pour ' . number_format($cible, 1, ',', '')
                     . ($m['avis5Requis'] !== null ? ' · ' . $m['avis5Requis'] . ' avis 5★ pour l’atteindre' : ''),
-                'cible' => ['onglet' => 'social', 'vue' => 'avis']];
+                'cible' => ['onglet' => 'mesurer', 'vue' => 'avis']];
         }
     }
     $s = $avis['connecteur']['derniereSynchro'] ?? null;
     if ($avis['connecteur']['configure'] && $avis['connecteur']['raccordes'] > 0 && ($s === null || substr($s, 0, 10) < date('Y-m-d', strtotime($auj . ' -7 days')))) {
         $out[] = ['canal' => 'avis', 'niveau' => 'normal', 'titre' => 'Avis Google non relus depuis ' . ($s === null ? 'toujours' : 'le ' . mhJour($s)),
-            'detail' => 'La synchronisation est un geste (chaque fiche relue est facturée par Google).', 'cible' => ['onglet' => 'social', 'vue' => 'avis']];
+            'detail' => 'La synchronisation est un geste (chaque fiche relue est facturée par Google).', 'cible' => ['onglet' => 'mesurer', 'vue' => 'avis']];
     }
     return $out;
 }
@@ -384,6 +396,7 @@ function mhAFaire(array $camp, array $mail, array $soc, array $charte, ?string $
         $out[] = ['canal' => $canal, 'niveau' => $niveau, 'titre' => $titre, 'detail' => $detail, 'cible' => $cible];
     };
 
+    $reelle = !empty($soc['publication']['reelle']);
     if ($soc['dispo'] ?? false) {
         foreach ($soc['liste'] as $p) {
             $quand = $p['publierLe'] ?? null;
@@ -392,33 +405,40 @@ function mhAFaire(array $camp, array $mail, array $soc, array $charte, ?string $
             if ($p['statut'] === 'a_valider' && $shop === null) {
                 $item('social', $dans($quand, 2) ? 'urgent' : 'normal', 'Post à valider — ' . $mag,
                     '« ' . $titre . ' »' . ($p['agent']['note'] !== null ? ' · agent ' . $p['agent']['note'] . '/5' : '') . ($quand ? ' · prévu le ' . mhJour($quand) : ''),
-                    ['onglet' => 'social', 'post' => $p['id']]);
+                    ['onglet' => 'valider', 'post' => $p['id']]);
             } elseif ($p['statut'] === 'a_controler') {
-                $item('social', 'normal', 'Post en attente du contrôle — ' . $mag, '« ' . $titre . ' » : relancer l’agent', ['onglet' => 'social', 'post' => $p['id']]);
-            } elseif ($p['statut'] === 'valide' && $quand !== null && substr($quand, 0, 10) <= $auj) {
-                $item('social', 'urgent', 'Post validé, pas encore marqué publié — ' . $mag,
-                    '« ' . $titre . ' » devait sortir le ' . mhJour($quand) . '. Marqué publié avec son id Facebook, Brand Guard ne le comptera pas comme sauvage.',
-                    ['onglet' => 'social', 'post' => $p['id']]);
+                $item('social', 'normal', 'Post en attente du contrôle — ' . $mag, '« ' . $titre . ' » : relancer l’agent', ['onglet' => 'valider', 'post' => $p['id']]);
+            } elseif ($p['statut'] === 'valide') {
+                $pubs = $p['publications'] ?? [];
+                $enErreur = array_values(array_filter($pubs, static fn ($x) => $x['statut'] === 'erreur'));
+                if ($enErreur) {
+                    $item('social', 'urgent', 'Publication en échec — ' . $mag, '« ' . $titre . ' » · ' . implode(' ; ', array_map(static fn ($x) => (SP_RESEAUX[$x['reseau']] ?? $x['reseau']) . ' : ' . $x['erreur'], $enErreur)),
+                        ['onglet' => 'publier', 'post' => $p['id']]);
+                } elseif (!$pubs && $quand !== null && substr($quand, 0, 10) <= $auj) {
+                    $item('social', 'urgent', 'Post validé, pas encore publié — ' . $mag,
+                        '« ' . $titre . ' » devait sortir le ' . mhJour($quand) . ($reelle ? '. Publiez-le ou programmez-le.' : '. Publié à la main, marquez-le avec son id Facebook : Brand Guard ne le comptera pas comme sauvage.'),
+                        ['onglet' => 'publier', 'post' => $p['id']]);
+                }
             } elseif ($p['statut'] === 'refuse' && $shop !== null && ($p['decision']['le'] ?? '') >= date('Y-m-d', strtotime($auj . ' -14 days'))) {
                 $item('social', 'normal', 'Post refusé — à corriger', '« ' . $titre . ' » · ' . trim(($p['decision']['famille'] ?? '') . ' · ' . ($p['decision']['type'] ?? ''), ' ·'),
-                    ['onglet' => 'social', 'post' => $p['id']]);
+                    ['onglet' => 'valider', 'post' => $p['id']]);
             }
         }
     }
     if (($charte['dispo'] ?? false) && $charte['sauvages']) {
         $n = count($charte['sauvages']);
         $item('charte', 'urgent', $n . ' post' . ($n > 1 ? 's' : '') . ' sauvage' . ($n > 1 ? 's' : '') . ' sur 30 jours',
-            'Publiés sur la page sans passer par la demande de publication.', ['onglet' => 'social', 'vue' => 'sauvages']);
+            'Publiés sur la page sans passer par la demande de publication.', ['onglet' => 'mesurer', 'vue' => 'sauvages']);
     }
     if ($mail['dispo'] ?? false) {
         $prog = array_values(array_filter($mail['liste'], static fn ($c) => !$c['exemple'] && $c['statut'] === 'sched' && $c['mode'] !== 'auto'));
         foreach ($prog as $c) {
             if (!$c['testEnvoye'] && $dans($c['envoiLe'], 7)) {
-                $item('email', 'urgent', 'Newsletter sans envoi test — ' . $c['nom'], 'Programmée le ' . mhJour($c['envoiLe']) . ' : personne ne l’a encore reçue en test.', ['onglet' => 'email']);
+                $item('email', 'urgent', 'Newsletter sans envoi test — ' . $c['nom'], 'Programmée le ' . mhJour($c['envoiLe']) . ' : personne ne l’a encore reçue en test.', ['onglet' => 'creer', 'vue' => 'newsletter']);
             }
         }
         if ($prog && $mail['test']) {
-            $item('email', 'normal', 'Mode test : aucune newsletter ne partira', count($prog) . ' programmée' . (count($prog) > 1 ? 's' : '') . ', mais l’envoi réel est coupé (Envois et bases).', ['onglet' => 'email']);
+            $item('email', 'normal', 'Mode test : aucune newsletter ne partira', count($prog) . ' programmée' . (count($prog) > 1 ? 's' : '') . ', mais l’envoi réel est coupé (Envois et bases).', ['onglet' => 'creer', 'vue' => 'newsletter']);
         }
     }
     if ($camp['dispo'] ?? false) {
@@ -426,17 +446,19 @@ function mhAFaire(array $camp, array $mail, array $soc, array $charte, ?string $
         $mails = ($mail['dispo'] ?? false) ? array_filter($mail['liste'], static fn ($c) => !$c['exemple']) : [];
         foreach ($camp['liste'] as $c) {
             if ($c['phase'] === 'brouillon' && $c['debut'] !== null && $c['debut'] >= $auj && $dans($c['debut'], 14)) {
-                $item('campagne', 'urgent', 'Campagne encore en brouillon — ' . $c['nom'], 'Elle démarre le ' . mhJour($c['debut']) . '.', ['onglet' => 'campagnes', 'campagne' => $c['id']]);
+                $item('campagne', 'urgent', 'Campagne encore en brouillon — ' . $c['nom'], 'Elle démarre le ' . mhJour($c['debut']) . '.', ['onglet' => 'plan', 'campagne' => $c['id']]);
             }
             $proche = $c['phase'] === 'en_cours' || ($c['phase'] === 'a_venir' && $dans($c['debut'], 7));
             if (!$proche || $c['debut'] === null) { continue; }
             $fin = $c['fin'] ?? $c['debut'];
             $danz = static fn (?string $d): bool => $d !== null && substr($d, 0, 10) >= $c['debut'] && substr($d, 0, 10) <= $fin;
-            $nPosts = count(array_filter($posts, static fn ($p) => $p['statut'] !== 'refuse' && $danz($p['publie']['le'] ?? $p['publierLe'] ?? null)));
-            $nMails = count(array_filter($mails, static fn ($m) => $danz($m['envoiLe'])));
+            // Rattaché à la campagne, ou daté dans sa période pour un contenu qui n'est rattaché à rien.
+            $nPosts = count(array_filter($posts, static fn ($p) => $p['statut'] !== 'refuse'
+                && (($p['campagneId'] ?? null) === $c['id'] || (($p['campagneId'] ?? null) === null && $danz($p['publie']['le'] ?? $p['publierLe'] ?? null)))));
+            $nMails = count(array_filter($mails, static fn ($m) => ($m['campagneId'] ?? null) === $c['id'] || (($m['campagneId'] ?? null) === null && $danz($m['envoiLe']))));
             if ($nPosts === 0 && $nMails === 0) {
                 $item('campagne', 'normal', 'Aucune prise de parole pour « ' . $c['nom'] . ' »',
-                    'Ni post ni newsletter entre le ' . mhJour($c['debut']) . ' et le ' . mhJour($fin) . '.', ['onglet' => 'campagnes', 'campagne' => $c['id']]);
+                    'Ni post ni newsletter entre le ' . mhJour($c['debut']) . ' et le ' . mhJour($fin) . '.', ['onglet' => 'plan', 'campagne' => $c['id']]);
             }
         }
     }

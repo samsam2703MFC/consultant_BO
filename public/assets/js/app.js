@@ -10869,7 +10869,7 @@ class App {
     if (this._repEnCours) { return; }
     if (this.D.reput && !force) { return; }
     this._repEnCours = true;
-    readOne('/reputation').then(d => { this._repEnCours = false;
+    readOne('/marketing/avis').then(d => { this._repEnCours = false;
       this.D.reput = d || { erreur: true }; this.setState({}); });
   }
   /** L'or des étoiles pour 5, puis vert, orange et les deux rouges. Une seule
@@ -10910,7 +10910,7 @@ class App {
     common.repSync = () => {
       if (S.repBusy) { return; }
       this.setState({ repBusy: true });
-      this.api('POST', '/reputation/sync', {}).then(async r2 => {
+      this.api('POST', '/marketing/avis/sync', {}).then(async r2 => {
         const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
         this.setState({ repBusy: false });
         // « Synchronisation impossible » tout court ne dit rien : montrer ce
@@ -11030,7 +11030,7 @@ class App {
           q: (m.nom || '').replace(/\s+—\s+/g, ' ') + (m.ville ? ' ' + m.ville : ''), candidats: null, busy: false } }),
         detacher: () => {
           if (!window.confirm('Détacher la fiche Google de « ' + m.nom + ' » ? Les avis déjà rapatriés sont conservés.')) { return; }
-          this.api('PUT', '/reputation/' + m.id + '/fiche', { placeId: '' }).then(() => {
+          this.api('PUT', '/marketing/avis/' + m.id + '/fiche', { placeId: '' }).then(() => {
             this.D.reput = null; this.repCharge(true); this.notify('Fiche détachée'); });
         },
         jauges: jauges(m.repartition, m.avis),
@@ -11060,7 +11060,7 @@ class App {
         const q = (this.state.repRech || {}).q || '';
         if (!q.trim()) { return; }
         this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: true, err: '' }) }));
-        readOne('/reputation/recherche?q=' + encodeURIComponent(q)).then(d => {
+        readOne('/marketing/avis/recherche?q=' + encodeURIComponent(q)).then(d => {
           this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: false,
             candidats: (d && d.candidats) || [],
             err: d ? '' : 'Recherche impossible — vérifiez la clé Google dans Paramètres.' }) }));
@@ -11073,7 +11073,7 @@ class App {
         note: c.note == null ? 'sans note' : c.note.toFixed(1).replace('.', ',') + '★ · ' + (c.avis || 0) + ' avis',
         choisir: () => {
           this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: true }) }));
-          this.api('PUT', '/reputation/' + rr.magasinId + '/fiche', { placeId: c.placeId }).then(async r2 => {
+          this.api('PUT', '/marketing/avis/' + rr.magasinId + '/fiche', { placeId: c.placeId }).then(async r2 => {
             const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
             if (!j || j.error) {
               this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: false, err: (j && j.error) || 'Raccordement refusé.' }) }));
@@ -15243,7 +15243,7 @@ class App {
         p.statut = decision === 'valide' ? 'valide' : 'refuse';
         p.decision = { note: dn, famille: motif ? famCour : null, type: motif ? typCour : null,
           commentaire: d.commentaire || null, le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), par: 'CEO' };
-        this.api('PATCH', '/facebook/posts/' + p.id, { decision, note: dn,
+        this.api('PATCH', '/marketing/social/posts/' + p.id, { decision, note: dn,
           famille: motif ? famCour : null, type: motif ? typCour : null, commentaire: d.commentaire || null, par: 'CEO' });
         this.log(decision === 'valide' ? 'Validation' : 'Refus', p.magasin || '—',
           'Post « ' + this.fbTitre(p.message) + ' » ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5'
@@ -15295,7 +15295,7 @@ class App {
             toggle: () => { const nv = off ? 'ouvert' : 'ignore';
               e.statut = nv;
               p.agent.note = this.fbNoteLocale(p.ecarts);
-              this.api('PATCH', '/facebook/posts/' + p.id + '/ecarts/' + e.id, { statut: nv, par: 'CEO' });
+              this.api('PATCH', '/marketing/social/posts/' + p.id + '/ecarts/' + e.id, { statut: nv, par: 'CEO' });
               this.log('Contrôle', p.magasin || '—', 'Écart « ' + e.type + ' » ' + (off ? 'rouvert' : 'écarté')
                 + ' sur « ' + this.fbTitre(p.message) + ' » — note de l’agent ' + p.agent.note + '/5');
               this.notify('Écart ' + (off ? 'rouvert' : 'écarté') + ' — note de l’agent ' + p.agent.note + '/5');
@@ -15326,7 +15326,7 @@ class App {
         peutControler: p.statut !== 'publie',
         controler: async e => { e.stopPropagation();
           if (this.source !== 'api'){ this.notify('L’agent de contrôle tourne côté serveur — indisponible en mode démonstration.'); return; }
-          const r = await this.api('POST', '/facebook/posts/' + p.id + '/controle', {});
+          const r = await this.api('POST', '/marketing/social/posts/' + p.id + '/controle', {});
           if (!r || !r.ok){ this.notify('Contrôle impossible — API injoignable.'); return; }
           const j = await r.json();
           await this.loadData();
@@ -15335,7 +15335,7 @@ class App {
         estValide: p.statut === 'valide',
         publier: e => { e.stopPropagation();
           p.statut = 'publie'; p.publie = { le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), fbId: null };
-          this.api('PATCH', '/facebook/posts/' + p.id, { statut: 'publie', par: 'CEO' });
+          this.api('PATCH', '/marketing/social/posts/' + p.id, { statut: 'publie', par: 'CEO' });
           this.log('Publication', p.magasin || '—', 'Post « ' + this.fbTitre(p.message) + ' » marqué publié');
           this.notify('Post marqué publié'); this.forceUpdate(); }
       };
@@ -15366,7 +15366,7 @@ class App {
             + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
           // Le pack entier repart : le serveur stocke un réglage, pas un delta.
           toggle: () => { r.actif = !r.actif;
-            this.api('PUT', '/parametres/fbControle', { valeur: FB });
+            this.api('PUT', '/marketing/social/regles', { valeur: FB });
             this.log('Paramètre', '—', 'Règle de contrôle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée'));
             this.notify('Règle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée')); this.forceUpdate(); } }; })
     }));
@@ -15438,7 +15438,7 @@ class App {
           message: nw.message.trim(), lien: nw.lien.trim() || null, medias, publierLe: nw.publierLe + ' ' + nw.heure + ':00', statut: 'a_controler' };
         this.setState({ fbNew: null });
         this.log('Post Facebook', mag ? mag.nom : '—', 'Post « ' + this.fbTitre(payload.message) + ' » soumis au contrôle');
-        const r = await this.api('POST', '/facebook/posts', payload);
+        const r = await this.api('POST', '/marketing/social/posts', payload);
         if (!r || !r.ok){
           // Mode démonstration : le post entre « à contrôler », sans écart —
           // l'agent, lui, vit côté serveur.
@@ -16452,7 +16452,7 @@ class App {
     common.setRepCible = e => {
       const v = Math.min(5, Math.max(1, parseFloat(String(e.target.value).replace(',', '.')) || 4.5));
       this.setState({ repCible: v });
-      this.api('PUT', '/parametres/reputationCible', { valeur: v })
+      this.api('PUT', '/marketing/avis/cible', { valeur: v })
         .then(() => { this.D.reput = null; this.repCharge(true); });
       this.log('Paramètre', '', 'Cible de note Google portée à ' + String(v).replace('.', ','));
     };

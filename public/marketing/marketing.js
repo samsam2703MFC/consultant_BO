@@ -1,52 +1,44 @@
 /*
- * Le module Marketing — /marketing (demande du 13/10/2026).
+ * Le portail Marketing — /marketing (demande du 13/10/2026).
  *
- * Réseaux sociaux, emailing et campagnes réunis en un seul module : ils vivaient
- * dans quatre sections du rail du cockpit et ne se lisaient jamais ensemble. Cinq
- * onglets :
- *   1. Vue d'ensemble — un chiffre par canal, ce qui demande un geste (tous canaux
- *      confondus), les quatorze prochains jours ;
- *   2. Calendrier — les campagnes en bandes, les newsletters et les posts au jour ;
- *   3. Campagnes — avec, pour chacune, ses prises de parole : posts et newsletters
- *      sur sa période (une campagne en cours sans post ni mail se voit) ;
- *   4. Réseaux sociaux — le cycle d'un post : rédaction, contrôle de l'agent,
- *      décision, publication ; les posts « sauvages » de Brand Guard ; la charte ;
- *   5. Emailing — le module newsletter du cockpit, monté tel quel ;
- *   6. Paramètres — les règles de l'agent, la charte Brand Guard, les pages Facebook,
- *      la cible des avis Google, et l'inventaire des API (TFBuddy, locales,
- *      extérieures) et des tables que le module touche.
- * Les avis Google vivent dans Réseaux sociaux, à côté des posts.
+ * Un outil de marketing, pas une suite d'écrans par canal : le travail suit un FLUX,
+ * et la campagne en est le fil. Chaque contenu (post, newsletter) lui est rattaché
+ * et avance d'étape en étape :
+ *
+ *   Tableau de bord — où en est chaque étape, ce qui demande un geste, les 14 jours ;
+ *   1 · Planifier    — les campagnes et leurs contenus, le calendrier ;
+ *   2 · Créer        — le rédacteur de post (Facebook, Instagram, LinkedIn, visuel
+ *                      téléversé) et la newsletter, rattachés à une campagne ; les brouillons ;
+ *   3 · Valider      — l'agent contrôle, la charte relit, la marque décide ;
+ *   4 · Publier      — publier maintenant ou à l'heure prévue, réseau par réseau ;
+ *   5 · Mesurer      — publiés, newsletters (ouvertures, clics), avis Google, posts sauvages ;
+ *   Paramètres       — publication, agent, charte, pages, avis ; API et tables du portail.
  *
  * Deux vues : la MARQUE (sans ?shop=, tout le réseau, décisions comprises) et le
  * MAGASIN (?shop={id} : ses posts, ses newsletters, les campagnes qui le couvrent).
  *
- * Lecture : ../api/cockpit/marketing/hub?shop= (src/marketing_hub.php), une seule
- * lecture pour tous les canaux. Écritures : les routes de chaque canal, inchangées —
- * POST /facebook/posts, POST /facebook/posts/{id}/controle, PATCH /facebook/posts/{id},
- * PATCH /facebook/posts/{id}/ecarts/{eid} ; la newsletter écrit elle-même.
- * Adresse : ?shop=&onglet=vue|calendrier|campagnes|social|email|parametres&mois=AAAA-MM&vue=…&p=…
+ * Lecture : ../api/cockpit/marketing/hub?shop= (src/marketing_hub.php). Écritures : les
+ * routes du portail, sous /api/cockpit/marketing/… (social, newsletter, avis, publication,
+ * brand-guard). Adresse : ?shop=&onglet=vue|plan|creer|valider|publier|mesurer|parametres
+ * &vue=…&p=…&mois=AAAA-MM — les anciennes (campagnes, calendrier, social, email) y mènent.
  */
 (function () {
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const ONGLETS = [['vue', 'Vue d’ensemble', ''], ['calendrier', 'Calendrier', ''], ['campagnes', 'Campagnes', 'campagne'], ['social', 'Réseaux sociaux', 'social'], ['email', 'Emailing', 'email'], ['parametres', 'Paramètres', '']];
+  // Le flux, dans l'ordre du travail. [id, libellé, numéro de l'étape]
+  const ONGLETS = [['vue', 'Tableau de bord', ''], ['plan', 'Planifier', '1'], ['creer', 'Créer', '2'], ['valider', 'Valider', '3'],
+    ['publier', 'Publier', '4'], ['mesurer', 'Mesurer', '5'], ['parametres', 'Paramètres', '']];
+  // Les adresses d'avant le flux mènent à l'étape qui a repris leur contenu.
+  const ANCIENS_ONGLETS = { campagnes: ['plan', 'campagnes'], calendrier: ['plan', 'calendrier'], social: ['valider', null], email: ['creer', 'newsletter'] };
+  const RESEAUX = [['facebook', 'Facebook', 'f'], ['instagram', 'Instagram', 'ig'], ['linkedin', 'LinkedIn', 'in']];
+  const PUB_ST = { programme: ['programmé', 'bleu'], en_cours: ['en cours', 'att'], publie: ['publié', 'ok'], erreur: ['en échec', 'urg'], annule: ['annulé', ''] };
   const CANAL_NOM = { campagne: 'Campagne', email: 'Newsletter', social: 'Post', charte: 'Charte', avis: 'Avis Google' };
   // Les sous-pages de Paramètres. Un magasin ne voit que l'inventaire : les réglages sont à la marque.
-  const PARAM_VUES = [['sources', 'API et tables', true], ['agent', 'Agent de contrôle', false], ['charte', 'Charte Brand Guard', false], ['pages', 'Pages Facebook', false], ['avis', 'Avis Google', false]];
+  const PARAM_VUES = [['publication', 'Publication', false], ['sources', 'API et tables', true], ['agent', 'Agent de contrôle', false], ['charte', 'Charte Brand Guard', false], ['pages', 'Pages Facebook', false], ['avis', 'Avis Google', false]];
   const POST_ST = { brouillon: ['Brouillon', ''], a_controler: ['À contrôler', 'att'], a_valider: ['À valider', 'att'], valide: ['Validé · à publier', 'bleu'], refuse: ['Refusé', 'urg'], publie: ['Publié', 'ok'] };
   const NL_ST = { draft: 'Brouillon', sched: 'Programmée', live: 'En cours d’envoi', sent: 'Envoyée' };
   const PHASE = { en_cours: 'En cours', a_venir: 'À venir', terminee: 'Terminée', brouillon: 'Brouillon', sans_date: 'Sans dates' };
-  const SOC_VUES = [
-    ['a_traiter', 'À traiter', p => p.statut === 'a_controler' || p.statut === 'a_valider'],
-    ['a_publier', 'Prêts à publier', p => p.statut === 'valide'],
-    ['publies', 'Publiés', p => p.statut === 'publie'],
-    ['refuses', 'Refusés', p => p.statut === 'refuse'],
-    ['brouillons', 'Brouillons', p => p.statut === 'brouillon'],
-    ['sauvages', 'Sauvages', null],
-    ['tous', 'Tous', () => true],
-    ['avis', 'Avis Google', null],
-  ];
   const CAMP_F = [['actives', 'En cours et à venir', c => ['en_cours', 'a_venir', 'sans_date'].includes(c.phase)], ['en_cours', 'En cours', c => c.phase === 'en_cours'],
     ['a_venir', 'À venir', c => c.phase === 'a_venir'], ['terminee', 'Terminées', c => c.phase === 'terminee'], ['brouillon', 'Brouillons', c => c.phase === 'brouillon'], ['toutes', 'Toutes', () => true]];
   const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -57,19 +49,25 @@
   const decale = (j, n) => { const t = new Date(j + 'T12:00:00'); t.setDate(t.getDate() + n); return iso(t); };
   const moisOk = m => /^\d{4}-\d{2}$/.test(m || '');
 
+  const ancien = ANCIENS_ONGLETS[q.get('onglet')] || null;
   const S = {
     shop: q.get('shop') || '',
-    onglet: ONGLETS.some(o => o[0] === q.get('onglet')) ? q.get('onglet') : 'vue',
+    onglet: ancien ? ancien[0] : (ONGLETS.some(o => o[0] === q.get('onglet')) ? q.get('onglet') : 'vue'),
+    // La sous-vue de chaque étape : planifier (campagnes | calendrier), créer (post | newsletter), mesurer (résultats | avis | sauvages).
+    planVue: ancien && ancien[0] === 'plan' ? ancien[1] : (q.get('onglet') === 'plan' && q.get('vue') === 'calendrier' ? 'calendrier' : 'campagnes'),
+    creerVue: ancien && ancien[0] === 'creer' ? ancien[1] : (q.get('vue') === 'newsletter' ? 'newsletter' : 'post'),
+    mesVue: ['avis', 'sauvages'].includes(q.get('vue')) ? q.get('vue') : 'resultats',
+    valVue: 'a_valider', campOuverte: null, nlCampagne: null, pubPanneau: {}, televersement: null, pubEtat: null, pubDraft: null, pubTest: {},
     data: null, err: null, auth: false, enCours: false, msg: null, envoi: false,
     mois: moisOk(q.get('mois')) ? q.get('mois') : AUJ.slice(0, 7),
     calF: { campagne: true, email: true, social: true }, calSel: null,
     campF: 'actives', campQ: '', campSel: null,
-    socVue: SOC_VUES.some(v => v[0] === q.get('vue')) ? q.get('vue') : 'a_traiter', postSel: null,
+    postSel: null,
     dec: {},      // brouillon de décision par post : { note, famille, type, commentaire } — part au clic seulement
     pub: {},      // id Facebook saisi par post, au moment de le marquer publié
     compose: null,
-    paramVue: PARAM_VUES.some(v => v[0] === q.get('p')) ? q.get('p') : 'sources',
-    par: { sources: null, agent: null, charte: null, pages: null, err: {}, enCours: {} },   // lu à la première ouverture de chaque sous-page
+    paramVue: PARAM_VUES.some(v => v[0] === q.get('p')) ? q.get('p') : (q.get('shop') ? 'sources' : 'publication'),
+    par: { publication: null, sources: null, agent: null, charte: null, pages: null, err: {}, enCours: {} },   // lu à la première ouverture de chaque sous-page
     agentDraft: null, charteDraft: null, chFam: 'toutes', pagesDraft: {}, mailDraft: null, cibleDraft: null, srcF: 'toutes',
     rech: null,   // la recherche de fiche Google ouverte : { magasinId, q, candidats, busy, err }
   };
@@ -127,9 +125,10 @@
     const u = new URLSearchParams();
     if (S.shop) { u.set('shop', S.shop); }
     if (S.onglet !== 'vue') { u.set('onglet', S.onglet); }
-    if (S.onglet === 'calendrier' && S.mois !== AUJ.slice(0, 7)) { u.set('mois', S.mois); }
-    if (S.onglet === 'social' && S.socVue !== 'a_traiter') { u.set('vue', S.socVue); }
-    if (S.onglet === 'parametres' && S.paramVue !== 'sources') { u.set('p', S.paramVue); }
+    if (S.onglet === 'plan' && S.planVue === 'calendrier') { u.set('vue', 'calendrier'); if (S.mois !== AUJ.slice(0, 7)) { u.set('mois', S.mois); } }
+    if (S.onglet === 'creer' && S.creerVue === 'newsletter') { u.set('vue', 'newsletter'); }
+    if (S.onglet === 'mesurer' && S.mesVue !== 'resultats') { u.set('vue', S.mesVue); }
+    if (S.onglet === 'parametres') { u.set('p', S.paramVue); }
     const s = u.toString();
     history.replaceState(null, '', location.pathname + (s ? '?' + s : ''));
   }
@@ -205,15 +204,11 @@
   function onglets() {
     const d = D();
     const urg = (d.aFaire || []).filter(a => a.niveau === 'urgent').length;
-    const soc = canal('social'), b = canal('charte'), c = canal('campagnes'), m = canal('emailing');
-    const badge = {
-      vue: urg ? `<b class="urg">${urg}</b>` : '',
-      campagnes: c.dispo && c.chiffres.enCours ? `<b>${c.chiffres.enCours}</b>` : '',
-      social: soc.dispo && (soc.chiffres.aTraiter + ((b.sauvages || []).length)) ? `<b class="${(b.sauvages || []).length ? 'urg' : ''}">${soc.chiffres.aTraiter + (b.sauvages || []).length}</b>` : '',
-      email: m.dispo && m.chiffres.programmees ? `<b>${m.chiffres.programmees}</b>` : '',
-      calendrier: '',
-    };
-    return `<div class="mk-ong">${ONGLETS.map(o => `<button data-a="onglet" data-v="${o[0]}" class="${S.onglet === o[0] ? 'on' : ''}">${o[2] ? `<i class="mk-canal-${o[2]}" style="background:var(--c)"></i>` : ''}${o[1]}${badge[o[0]] || ''}</button>`).join('')}</div>`;
+    const e = etapes();
+    const b = n => n ? `<b>${n}</b>` : '';
+    const badge = { vue: urg ? `<b class="urg">${urg}</b>` : '', plan: b(e.plan.n), creer: b(e.creer.n), valider: b(e.valider.n),
+      publier: e.publier.erreurs ? `<b class="urg">${e.publier.erreurs}</b>` : b(e.publier.n), mesurer: (canal('charte').sauvages || []).length ? `<b class="urg">${canal('charte').sauvages.length}</b>` : '' };
+    return `<div class="mk-ong">${ONGLETS.map((o, i) => `${o[2] && i > 1 ? '<span class="mk-fleche">›</span>' : ''}<button data-a="onglet" data-v="${o[0]}" class="${S.onglet === o[0] ? 'on' : ''}${o[2] ? ' etape' : ''}">${o[2] ? `<i>${o[2]}</i>` : ''}${o[1]}${badge[o[0]] || ''}</button>`).join('')}</div>`;
   }
   function message() {
     if (!S.msg) { return ''; }
@@ -225,10 +220,11 @@
     }
     if (!S.data) { return '<div class="mk-attente">Lecture des campagnes, des posts et des newsletters…</div>'; }
     switch (S.onglet) {
-      case 'calendrier': return vCalendrier();
-      case 'campagnes': return vCampagnes();
-      case 'social': return vSocial();
-      case 'email': return vEmail();
+      case 'plan': return vPlan();
+      case 'creer': return vCreer();
+      case 'valider': return vValider();
+      case 'publier': return vPublier();
+      case 'mesurer': return vMesurer();
       case 'parametres': return vParametres();
       default: return vVue();
     }
@@ -236,17 +232,156 @@
   const indispo = (k, nom) => { const c = canal(k); return c.dispo ? '' : `<div class="mk-err">${esc(nom)} indisponible — ${esc(c.raison || 'source absente')}. Les autres canaux restent lisibles.</div>`; };
 
   /* --- 1. vue d'ensemble -------------------------------------------------------------- */
+  /* --- le flux : où en est chaque étape ------------------------------------------------------- */
+  const nls = () => (canal('emailing').liste || []).filter(x => !x.exemple);
+  const campagnes = () => (canal('campagnes').liste || []);
+  const campagneDe = id => campagnes().find(c => c.id === id) || null;
+  /** L'étape du flux où un post attend son prochain geste. */
+  function etapeDuPost(p) {
+    return { brouillon: 'creer', a_controler: 'valider', a_valider: 'valider', refuse: 'valider', valide: 'publier', publie: 'mesurer' }[p.statut] || 'valider';
+  }
+  function etapes() {
+    const ps = posts(), mois = AUJ.slice(0, 7), nl = nls();
+    const vivantes = campagnes().filter(c => ['en_cours', 'a_venir', 'sans_date'].includes(c.phase));
+    const erreurs = ps.reduce((n, p) => n + (p.publications || []).filter(x => x.statut === 'erreur').length, 0);
+    return {
+      plan: { n: vivantes.length, muettes: vivantes.filter(c => { const k = contenusDe(c); return k.posts.length + k.nls.length + k.parDates.length === 0; }).length },
+      creer: { n: ps.filter(p => p.statut === 'brouillon').length + nl.filter(x => x.statut === 'draft').length,
+        posts: ps.filter(p => p.statut === 'brouillon').length, nls: nl.filter(x => x.statut === 'draft').length },
+      valider: { n: ps.filter(p => p.statut === 'a_controler' || p.statut === 'a_valider').length,
+        aValider: ps.filter(p => p.statut === 'a_valider').length, aControler: ps.filter(p => p.statut === 'a_controler').length, refuses: ps.filter(p => p.statut === 'refuse').length },
+      publier: { n: ps.filter(p => p.statut === 'valide').length + nl.filter(x => x.statut === 'sched').length, erreurs,
+        prets: ps.filter(p => p.statut === 'valide' && !(p.publications || []).some(x => x.statut === 'programme')).length,
+        programmes: ps.filter(p => (p.publications || []).some(x => x.statut === 'programme')).length, nls: nl.filter(x => x.statut === 'sched').length },
+      mesurer: { n: ps.filter(p => p.statut === 'publie' && String((p.publie || {}).le || '').startsWith(mois)).length + nl.filter(x => ['sent', 'live'].includes(x.statut) && String(x.envoiLe || '').startsWith(mois)).length },
+    };
+  }
+  /** Les contenus d'une campagne : rattachés d'abord ; à défaut, ceux de sa période qui ne sont rattachés à rien. */
+  function contenusDe(c) {
+    const ps = posts().filter(p => p.campagneId === c.id);
+    const ns = nls().filter(x => x.campagneId === c.id);
+    let parDates = [];
+    if (c.debut) {
+      const fin = c.fin || c.debut;
+      const dans = d => d && d.slice(0, 10) >= c.debut && d.slice(0, 10) <= fin;
+      parDates = posts().filter(p => p.campagneId == null && p.statut !== 'refuse' && dans((p.publie && p.publie.le) || p.publierLe)).map(p => ({ type: 'post', x: p }))
+        .concat(nls().filter(x => x.campagneId == null && dans(x.envoiLe)).map(x => ({ type: 'nl', x })));
+    }
+    return { posts: ps, nls: ns, parDates };
+  }
+  const badgeReseaux = l => (l || ['facebook']).map(r => { const x = RESEAUX.find(y => y[0] === r); return x ? `<span class="mk-rs mk-rs-${r}" title="${x[1]}">${x[2]}</span>` : ''; }).join('');
+
+  /* --- tableau de bord ----------------------------------------------------------------------- */
   function vVue() {
-    const d = D();
-    const faire = d.aFaire || [];
-    const agenda = agendaJours(AUJ, 14);
-    return `<div class="mk-grille mk-gk">${kpiCampagnes()}${kpiEmail()}${kpiSocial()}${kpiAvis()}${kpiCharte()}</div>
+    const d = D(), e = etapes(), faire = d.aFaire || [];
+    const pubOff = !(canal('social').publication || {}).reelle;
+    const mOuv = (canal('emailing').chiffres || {}).tauxOuverture;
+    const av = canal('avis'), note = av.dispo ? (S.shop ? ((av.magasins || [])[0] || {}).note : (av.reseau || {}).moyenne) : null;
+    const etape = (id, num, titre, gros, sous, alerte) => `<button class="mk-etape${alerte ? ' alerte' : ''}" data-a="onglet" data-v="${id}"><span class="num">${num}</span><span class="t">${titre}</span><span class="v">${gros}</span><span class="d">${sous}</span></button>`;
+    const chaine = [
+      etape('plan', '1', 'Planifier', pl(e.plan.n, 'campagne'), e.plan.muettes ? `<b class="ko">${pl(e.plan.muettes, 'campagne')} sans contenu</b>` : 'en cours ou à venir', e.plan.muettes),
+      etape('creer', '2', 'Créer', pl(e.creer.n, 'brouillon'), `${pl(e.creer.posts, 'post')} · ${pl(e.creer.nls, 'newsletter')}`),
+      etape('valider', '3', 'Valider', fN(e.valider.n) + ' <small>à décider</small>', `${fN(e.valider.aValider)} à valider · ${fN(e.valider.aControler)} à contrôler`, e.valider.aValider && marque()),
+      etape('publier', '4', 'Publier', fN(e.publier.n) + ' <small>prêts ou programmés</small>', e.publier.erreurs ? `<b class="ko">${pl(e.publier.erreurs, 'échec')}</b>` : (pubOff ? 'publication automatique éteinte' : `${fN(e.publier.programmes)} programmé${e.publier.programmes > 1 ? 's' : ''} · ${pl(e.publier.nls, 'newsletter')}`), e.publier.erreurs),
+      etape('mesurer', '5', 'Mesurer', fN(e.mesurer.n) + ' <small>publiés ce mois</small>', `ouverture ${mOuv == null ? '—' : fP(mOuv)} · Google ${note == null ? '—' : nf(note, 2) + ' ★'}`),
+    ].join('<span class="mk-fleche">›</span>');
+    return `<div class="mk-chaine">${chaine}</div>
       <div class="mk-grille mk-g2" style="margin-top:14px">
-        <div class="mk-card"><div class="mk-ct"><span class="mk-k">À faire</span><span class="mk-mini">${faire.length ? pl(faire.length, 'point') + ' · tous canaux' : 'rien en attente'}</span></div>
-          ${faire.length ? `<ul class="mk-liste">${faire.map((a, i) => `<li class="mk-canal-${esc(a.canal)}" data-a="faire" data-i="${i}"><span class="mk-pastille"></span><div class="tx"><div class="tt">${a.niveau === 'urgent' ? '<span class="mk-badge urg">urgent</span> ' : ''}${esc(a.titre)}</div><div class="dd">${esc(a.detail)}</div></div><span class="qd">${esc(CANAL_NOM[a.canal] || a.canal)}</span></li>`).join('')}</ul>`
-            : '<div class="mk-vide">Aucun post à décider, aucune newsletter sans test, aucune campagne muette. Rien ne presse.</div>'}</div>
-        <div class="mk-card"><div class="mk-ct"><span class="mk-k">Les 14 prochains jours</span><span class="mk-mini">campagnes, envois, posts</span></div>${agenda}</div>
+        <div class="mk-card"><div class="mk-ct"><span class="mk-k">À faire</span><span class="mk-mini">${faire.length ? pl(faire.length, 'point') + ' · toutes étapes' : 'rien en attente'}</span></div>
+          ${faire.length ? `<ul class="mk-liste">${faire.map((a, i) => `<li class="mk-canal-${esc(a.canal)}" data-a="faire" data-i="${i}"><span class="mk-pastille"></span><div class="tx"><div class="tt">${a.niveau === 'urgent' ? '<span class="mk-badge urg">urgent</span> ' : ''}${esc(a.titre)}</div><div class="dd">${esc(a.detail)}</div></div><span class="qd">${esc(nomEtape((a.cible || {}).onglet) || CANAL_NOM[a.canal] || a.canal)}</span></li>`).join('')}</ul>`
+            : '<div class="mk-vide">Aucun post à décider, aucune publication en échec, aucune campagne muette. Rien ne presse.</div>'}</div>
+        <div class="mk-card"><div class="mk-ct"><span class="mk-k">Les 14 prochains jours</span><span class="mk-mini">campagnes, envois, publications</span></div>${agendaJours(AUJ, 14)}</div>
       </div>`;
+  }
+  const nomEtape = id => { const o = ONGLETS.find(x => x[0] === id); return o ? (o[2] ? o[2] + ' · ' : '') + o[1] : ''; };
+  const chips = (cle, liste, val) => `<div class="mk-chips" style="--c:#222">${liste.map(v => `<button class="${v[0] === val ? 'on' : ''}${v[3] ? ' urg' : ''}" data-a="${cle}" data-v="${v[0]}">${v[1]}${v[2] != null ? ' <b>' + v[2] + '</b>' : ''}</button>`).join('')}</div>`;
+
+  /* --- 1 · Planifier ---------------------------------------------------------------------------- */
+  function vPlan() {
+    return `<div class="mk-barre-f">${chips('plan-vue', [['campagnes', 'Campagnes et contenus', null], ['calendrier', 'Calendrier', null]], S.planVue)}<span class="sp"></span>
+      <span class="mk-aide">Une campagne, puis ses contenus : chaque post et chaque newsletter s’y rattachent.</span></div>
+      ${S.planVue === 'calendrier' ? vCalendrier() : vCampagnes()}`;
+  }
+
+  /* --- 2 · Créer ------------------------------------------------------------------------------- */
+  function vCreer() {
+    const e = etapes();
+    const tete = `<div class="mk-barre-f">${chips('creer-vue', [['post', 'Post réseaux sociaux', e.creer.posts || null], ['newsletter', 'Newsletter', e.creer.nls || null]], S.creerVue)}</div>`;
+    if (S.creerVue === 'newsletter') {
+      const c = S.nlCampagne != null ? campagneDe(S.nlCampagne) : null;
+      return tete + (c ? `<div class="mk-msg ok" style="font-weight:500">La prochaine newsletter créée sera rattachée à la campagne « ${esc(c.nom)} ». <button class="mk-btn petit" data-a="nl-camp-x" style="margin-left:auto;font-size:11px">Ne pas rattacher</button></div>` : '') + vEmail();
+    }
+    if (!S.compose) { S.compose = composeNeuf(); }
+    const brouillons = posts().filter(p => p.statut === 'brouillon');
+    return tete + composer() + `<div class="mk-card"><div class="mk-ct"><span class="mk-k">Brouillons</span><span class="mk-mini">${brouillons.length ? 'à soumettre au contrôle quand ils sont prêts' : 'aucun'}</span></div>
+      ${brouillons.length ? `<div class="mk-cb"><div class="mk-posts">${brouillons.map(cartePost).join('')}</div></div>` : '<div class="mk-vide">Un post enregistré en brouillon reste ici, au magasin : l’agent ne relit que ce qui est soumis.</div>'}</div>`;
+  }
+
+  /* --- 3 · Valider ----------------------------------------------------------------------------- */
+  function vValider() {
+    const s = canal('social');
+    if (!s.dispo) { return indispo('social', 'Réseaux sociaux'); }
+    const e = etapes().valider;
+    const vues = [['a_valider', 'À valider', e.aValider], ['a_controler', 'À contrôler', e.aControler], ['refuse', 'Refusés', e.refuses]];
+    const v = vues.find(x => x[0] === S.valVue) || vues[0];
+    const ps = posts().filter(p => p.statut === v[0]);
+    const vide = { a_valider: 'Rien à décider : tout ce que l’agent a relu est tranché.', a_controler: 'Aucun post en attente de l’agent.', refuse: 'Aucun post refusé.' }[v[0]];
+    return `<div class="mk-barre-f">${chips('val-vue', vues, v[0])}<span class="sp"></span><span class="mk-aide">${marque() ? 'L’agent propose une note, la charte relit texte et visuels : la décision reste à la marque.' : 'La marque valide ou refuse — un refus dit quoi corriger.'}</span></div>
+      <div class="mk-cote"><div>${ps.length ? `<div class="mk-posts">${ps.map(cartePost).join('')}</div>` : `<div class="mk-card"><div class="mk-vide">${vide}</div></div>`}</div><div>${carteCharte()}</div></div>`;
+  }
+
+  /* --- 4 · Publier ----------------------------------------------------------------------------- */
+  function vPublier() {
+    const s = canal('social');
+    if (!s.dispo) { return indispo('social', 'Réseaux sociaux'); }
+    const pubR = s.publication || {};
+    const prets = posts().filter(p => p.statut === 'valide');
+    const prog = [];
+    // Un post programmé sur trois réseaux à la même heure : une ligne, trois pastilles.
+    posts().forEach(p => {
+      const parHeure = {};
+      (p.publications || []).filter(x => x.statut === 'programme').forEach(x => { (parHeure[x.prevuLe] = parHeure[x.prevuLe] || []).push(x.reseau); });
+      Object.keys(parHeure).forEach(q => prog.push({ quand: q, type: 'post', p, reseaux: parHeure[q] }));
+    });
+    nls().filter(x => x.statut === 'sched' && x.envoiLe).forEach(x => prog.push({ quand: x.envoiLe, type: 'nl', x }));
+    prog.sort((a, b) => a.quand < b.quand ? -1 : 1);
+    const bandeau = pubR.reelle ? `<div class="mk-msg ok" style="font-weight:500">Publication réelle active${pubR.auto ? ' — un post validé se programme tout seul à son heure' : ''}. L’horloge passe toutes les 5 minutes.</div>`
+      : `<div class="mk-err" style="background:#fdf1e2;color:var(--mk-att)">Publication automatique éteinte : rien ne part sur les réseaux depuis le portail. ${marque() ? '<a href="#" data-a="aller-param" data-v="publication">Paramètres → Publication</a> pour l’activer ; en attendant, publiez à la main puis marquez le post publié.' : 'Publiez à la main, puis marquez le post publié avec son identifiant Facebook.'}</div>`;
+    return `${bandeau}
+      <div class="mk-grille mk-g2">
+        <div><div class="mk-k" style="margin:2px 0 8px">Prêts à publier · ${prets.length}</div>${prets.length ? `<div class="mk-posts" style="grid-template-columns:minmax(0,1fr)">${prets.map(cartePost).join('')}</div>` : '<div class="mk-card"><div class="mk-vide">Aucun post validé en attente : tout ce qui est validé est parti.</div></div>'}</div>
+        <div class="mk-card"><div class="mk-ct"><span class="mk-k">Programmé</span><span class="mk-mini">posts et newsletters, dans l’ordre</span></div>
+          ${prog.length ? `<ul class="mk-liste">${prog.map(e => e.type === 'post'
+            ? `<li class="mk-canal-social" data-a="post-voir" data-id="${esc(e.p.id)}"><span class="mk-pastille"></span><div class="tx"><div class="tt">${badgeReseaux(e.reseaux)} ${esc(e.p.magasin || 'Réseau')}</div><div class="dd">${esc(extrait(e.p.message, 80))}</div></div><span class="qd">${esc(fDT(e.quand))}</span></li>`
+            : `<li class="mk-canal-email" data-a="creer-vue" data-v="newsletter"><span class="mk-pastille"></span><div class="tx"><div class="tt">✉ ${esc(e.x.nom)}</div><div class="dd">${esc(e.x.objet || 'newsletter programmée')}${e.x.testEnvoye ? '' : ' · <span class="ko">pas d’envoi test</span>'}</div></div><span class="qd">${esc(fDT(e.quand))}</span></li>`).join('')}</ul>`
+            : '<div class="mk-vide">Rien de programmé.</div>'}</div>
+      </div>`;
+  }
+
+  /* --- 5 · Mesurer ----------------------------------------------------------------------------- */
+  function vMesurer() {
+    const sauv = (canal('charte').sauvages || []).length;
+    const tete = `<div class="mk-barre-f">${chips('mes-vue', [['resultats', 'Résultats', null], ['avis', 'Avis Google', null], ['sauvages', 'Posts sauvages', sauv, sauv > 0]], S.mesVue)}</div>`;
+    if (S.mesVue === 'avis') { return tete + vAvis(); }
+    if (S.mesVue === 'sauvages') {
+      const b = canal('charte');
+      return tete + `<div class="mk-cote"><div>${!b.dispo ? indispo('charte', 'Brand Guard') : (sauv ? `<div class="mk-posts">${b.sauvages.map(carteSauvage).join('')}</div>` : '<div class="mk-card"><div class="mk-vide">Aucun post sauvage sur 30 jours : tout ce qui est paru sur les pages est passé par le portail.</div></div>')}</div><div>${carteCharte()}</div></div>`;
+    }
+    const publies = posts().filter(p => p.statut === 'publie').slice(0, 30);
+    const envoyees = nls().filter(x => ['sent', 'live'].includes(x.statut));
+    const vivantes = campagnes().filter(c => ['en_cours', 'a_venir', 'terminee'].includes(c.phase)).slice(0, 12);
+    return tete + `<div class="mk-grille mk-gk">${kpiCampagnes()}${kpiEmail()}${kpiSocial()}${kpiAvis()}${kpiCharte()}</div>
+      <div class="mk-grille mk-g2" style="margin-top:14px">
+        <div class="mk-card"><div class="mk-ct"><span class="mk-k">Publiés</span><span class="mk-mini">les 30 derniers, réseau par réseau</span></div>
+          ${publies.length ? `<ul class="mk-liste">${publies.map(p => `<li class="mk-canal-social" data-a="post-voir" data-id="${esc(p.id)}"><span class="mk-pastille"></span><div class="tx"><div class="tt">${esc(p.magasin || 'Réseau')}${p.campagneId && campagneDe(p.campagneId) ? ' · <span class="mu">' + esc(campagneDe(p.campagneId).nom) + '</span>' : ''}</div><div class="dd">${esc(extrait(p.message, 90))}</div>
+              <div class="dd">${(p.publications || []).length ? p.publications.map(x => x.lien ? `<a href="${esc(x.lien)}" target="_blank" rel="noopener" data-a="lien">${badgeReseaux([x.reseau])} voir ↗</a>` : badgeReseaux([x.reseau])).join(' ') : '<span class="mu">publié à la main' + ((p.publie || {}).fbId ? ' · id ' + esc(p.publie.fbId) : '') + '</span>'}</div></div><span class="qd">${esc(fDT((p.publie || {}).le))}</span></li>`).join('')}</ul>` : '<div class="mk-vide">Aucun post publié pour l’instant.</div>'}</div>
+        <div class="mk-card"><div class="mk-ct"><span class="mk-k">Newsletters envoyées</span><span class="mk-mini">ouvertures et clics réels</span></div>
+          ${envoyees.length ? `<div class="mk-defile"><table class="mk-tab"><thead><tr><th>Newsletter</th><th class="n">Envois</th><th class="n">Ouv.</th><th class="n">Clics</th></tr></thead><tbody>${envoyees.map(x => `<tr><td class="nom">${esc(x.nom)}<small>${esc(fDT(x.envoiLe))}${x.campagneId && campagneDe(x.campagneId) ? ' · ' + esc(campagneDe(x.campagneId).nom) : ''}</small></td><td class="n">${fN(x.envoyes)}</td><td class="n">${x.envoyes ? fP(Math.round(1000 * x.ouvertures / x.envoyes) / 10) : '—'}</td><td class="n">${x.envoyes ? fP(Math.round(1000 * x.clics / x.envoyes) / 10) : '—'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mk-vide">Aucune newsletter envoyée (les exemples ne comptent pas).</div>'}</div>
+      </div>
+      <div class="mk-card" style="margin-top:14px"><div class="mk-ct"><span class="mk-k">Campagnes · ce qui a été dit</span><span class="mk-mini">contenus rattachés, publiés ou non</span></div>
+        <div class="mk-defile"><table class="mk-tab"><thead><tr><th>Campagne</th><th>Période</th><th class="n">Posts</th><th class="n">Publiés</th><th class="n">Newsletters</th><th class="n">Envoyées</th></tr></thead><tbody>
+        ${vivantes.map(c => { const k = contenusDe(c); return `<tr data-a="camp-voir" data-id="${c.id}" style="cursor:pointer"><td class="nom">${esc(c.nom)}<small>${esc(PHASE[c.phase] || '')}</small></td><td class="per">${esc(periode(c.debut, c.fin))}</td><td class="n">${k.posts.length}</td><td class="n">${k.posts.filter(p => p.statut === 'publie').length}</td><td class="n">${k.nls.length}</td><td class="n">${k.nls.filter(x => ['sent', 'live'].includes(x.statut)).length}</td></tr>`; }).join('') || '<tr><td colspan="6"><div class="mk-vide">Aucune campagne.</div></td></tr>'}
+        </tbody></table></div></div>`;
   }
   function kpi(canalCss, onglet, titre, corpsHtml, dispo, raison) {
     if (!dispo) { return `<div class="mk-kpi off mk-canal-${canalCss}"><div class="t">${titre}</div><div class="d">Indisponible — ${esc(raison || '')}</div></div>`; }
@@ -255,27 +390,27 @@
   function kpiCampagnes() {
     const c = canal('campagnes'); const k = c.chiffres || {};
     const pct = k.budget > 0 ? Math.min(100, 100 * k.depense / k.budget) : 0;
-    return kpi('campagne', 'campagnes', 'Campagnes', `<div class="v">${fN(k.enCours)}<small>en cours</small></div>
+    return kpi('campagne', 'plan', 'Campagnes', `<div class="v">${fN(k.enCours)}<small>en cours</small></div>
       <div class="d"><b>${fN(k.aVenir)}</b> à venir${marque() ? ' · <b>' + fN(k.brouillons) + '</b> en brouillon' : ''} · ${fN(k.terminees)} terminées</div>
       <div class="mk-barre" title="Dépensé sur le budget des campagnes lancées"><i style="width:${pct.toFixed(1)}%"></i></div>
       <div class="d">${fE(k.depense)} dépensés sur ${fE(k.budget)}</div>`, c.dispo, c.raison);
   }
   function kpiEmail() {
     const c = canal('emailing'); const k = c.chiffres || {};
-    return kpi('email', 'email', 'Emailing', `<div class="v">${k.tauxOuverture == null ? '—' : fP(k.tauxOuverture)}<small>d’ouverture</small></div>
+    return kpi('email', 'creer', 'Emailing', `<div class="v">${k.tauxOuverture == null ? '—' : fP(k.tauxOuverture)}<small>d’ouverture</small></div>
       <div class="d">${pl(k.envoyes || 0, 'mail envoyé', 'mails envoyés')} · clic ${fP(k.tauxClic)}</div>
       <div class="d"><b>${fN(k.programmees)}</b> programmée${k.programmees > 1 ? 's' : ''} · ${fN(k.automatisations)} automatisation${k.automatisations > 1 ? 's' : ''}${k.optin != null ? ' · ' + fN(k.optin) + ' contacts opt-in' : ''}</div>
       ${c.test ? '<div><span class="mk-badge att">mode test · rien ne part</span></div>' : ''}${k.exemples ? `<div class="d mu">${pl(k.exemples, 'campagne d’exemple non comptée', 'campagnes d’exemple non comptées')}</div>` : ''}`, c.dispo, c.raison);
   }
   function kpiSocial() {
     const c = canal('social'); const k = c.chiffres || {};
-    return kpi('social', 'social', 'Réseaux sociaux', `<div class="v">${fN(k.aTraiter)}<small>post${k.aTraiter > 1 ? 's' : ''} à traiter</small></div>
+    return kpi('social', 'valider', 'Réseaux sociaux', `<div class="v">${fN(k.aTraiter)}<small>post${k.aTraiter > 1 ? 's' : ''} à traiter</small></div>
       <div class="d"><b>${fN(k.aPublier)}</b> prêt${k.aPublier > 1 ? 's' : ''} à publier · <b>${fN(k.publiesMois)}</b> publié${k.publiesMois > 1 ? 's' : ''} ce mois</div>
       <div class="d">${fN(k.refuses)} refusé${k.refuses > 1 ? 's' : ''} · note moyenne ${k.noteMoyenne == null ? '—' : nf(k.noteMoyenne, 1) + '/5'}</div>`, c.dispo, c.raison);
   }
   function kpiCharte() {
     const c = canal('charte'); const k = c.stats || {};
-    return kpi('charte', 'social', 'Charte de marque · 30 j', `<div class="v">${k.tauxConformite == null ? '—' : fP(k.tauxConformite)}<small>conformes</small></div>
+    return kpi('charte', 'mesurer', 'Charte de marque · 30 j', `<div class="v">${k.tauxConformite == null ? '—' : fP(k.tauxConformite)}<small>conformes</small></div>
       <div class="d">${pl(k.controles || 0, 'contrôle')} · score moyen ${k.scoreMoyen == null ? '—' : k.scoreMoyen + '/100'}</div>
       <div class="d">${(c.sauvages || []).length ? `<b class="ko">${pl(c.sauvages.length, 'post sauvage', 'posts sauvages')}</b>` : 'aucun post sauvage'}</div>`, c.dispo, c.raison);
   }
@@ -366,7 +501,7 @@
       acts = '<button class="mk-btn petit" data-a="onglet" data-v="email">Ouvrir l’emailing</button>';
     } else if (e.sauvage) {
       tx = `<b>${esc(r.boutique || 'Page')}</b> · <span class="ko">post sauvage</span> · ${esc(fDT(r.publieLe || r.quand))} · score ${r.score}/100<br>${esc(extrait(r.texte, 200))}`;
-      acts = `<button class="mk-btn petit" data-a="soc-vue" data-v="sauvages">Voir les sauvages</button>${r.lien ? `<a class="mk-btn petit" href="${esc(r.lien)}" target="_blank" rel="noopener">Facebook ↗</a>` : ''}`;
+      acts = `<button class="mk-btn petit" data-a="mes-vue" data-v="sauvages">Voir les sauvages</button>${r.lien ? `<a class="mk-btn petit" href="${esc(r.lien)}" target="_blank" rel="noopener">Facebook ↗</a>` : ''}`;
     } else {
       tx = `<b>${esc(r.magasin || 'Réseau')}</b> · ${esc(r.format)} · ${esc((POST_ST[r.statut] || [r.statut])[0])} · ${esc(fDT((r.publie && r.publie.le) || r.publierLe))}<br>${esc(extrait(r.message, 220))}`;
       acts = `<button class="mk-btn petit prim" data-a="post-voir" data-id="${esc(r.id)}">Ouvrir le post</button>`;
@@ -382,64 +517,44 @@
     const f = filtres.find(x => x[0] === S.campF) || filtres[0];
     const rq = S.campQ.trim().toLowerCase();
     const liste = c.liste.filter(f[2]).filter(x => !rq || (x.nom + ' ' + (x.type || '')).toLowerCase().includes(rq));
-    const chips = filtres.map(x => `<button class="${x[0] === f[0] ? 'on' : ''}" data-a="camp-f" data-v="${x[0]}">${x[1]} <b>${c.liste.filter(x[2]).length}</b></button>`).join('');
+    const chipsF = filtres.map(x => `<button class="${x[0] === f[0] ? 'on' : ''}" data-a="camp-f" data-v="${x[0]}">${x[1]} <b>${c.liste.filter(x[2]).length}</b></button>`).join('');
     const lignes = liste.map(x => {
-      const p = parole(x);
+      const k = contenusDe(x);
       const vive = x.phase === 'en_cours' || x.phase === 'a_venir';
-      const pTxt = !p ? '<span class="mu">—</span>' : (p.posts + p.mails === 0 ? `<span class="${vive ? 'wa' : 'mu'}">aucune${vive ? ' ⚠' : ''}</span>` : [p.posts ? pl(p.posts, 'post') : '', p.mails ? pl(p.mails, 'newsletter') : ''].filter(Boolean).join(' · '));
+      const n = k.posts.length + k.nls.length;
+      const etat = n ? [k.posts.length ? pl(k.posts.length, 'post') : '', k.nls.length ? pl(k.nls.length, 'newsletter') : ''].filter(Boolean).join(' · ')
+        + `<small>${k.posts.filter(p => p.statut === 'publie').length} publié${k.posts.filter(p => p.statut === 'publie').length > 1 ? 's' : ''} · ${k.posts.filter(p => p.statut === 'a_valider' || p.statut === 'a_controler').length} à valider</small>`
+        : (k.parDates.length ? `<span class="mu">${pl(k.parDates.length, 'contenu')} sur la période</span><small>non rattaché${k.parDates.length > 1 ? 's' : ''}</small>` : `<span class="${vive ? 'wa' : 'mu'}">aucun contenu${vive ? ' ⚠' : ''}</span>`);
       const pct = x.budget > 0 ? Math.min(100, 100 * x.depense / x.budget) : 0;
-      return `<tr id="camp-${x.id}" class="${S.campSel === x.id ? 'sel' : ''}">
+      const ouverte = S.campOuverte === x.id;
+      return `<tr id="camp-${x.id}" class="${S.campSel === x.id || ouverte ? 'sel' : ''}">
         <td class="masque-mob" style="width:46px">${x.image ? `<img class="mk-vign" src="${esc(image(x.image))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="mk-vign" style="background:${esc(x.typeCouleur || 'var(--mk-doux)')};opacity:.25"></span>`}</td>
-        <td class="nom">${esc(x.nom)}<small><span class="mk-pastille" style="background:${esc(x.typeCouleur || '#bbb')};width:7px;height:7px"></span> ${esc(x.type || 'sans type')}</small></td>
+        <td class="nom"><button class="mk-lien-nom" data-a="camp-ouvrir" data-id="${x.id}">${ouverte ? '▾' : '▸'} ${esc(x.nom)}</button><small><span class="mk-pastille" style="background:${esc(x.typeCouleur || '#bbb')};width:7px;height:7px"></span> ${esc(x.type || 'sans type')} · ${x.reseau ? 'réseau' : pl(x.nBoutiques, 'magasin')}</small></td>
         <td class="per">${esc(periode(x.debut, x.fin))}<small>${esc(PHASE[x.phase] || '')}</small></td>
         <td><span class="mk-statut" style="color:${esc(x.statutTexte)};background:${esc(x.statutFond)}">${esc(x.statutNom)}</span></td>
-        <td class="masque-mob">${x.reseau ? 'Réseau' : pl(x.nBoutiques, 'magasin')}</td>
         <td class="n masque-mob">${fE(x.depense)}<small>sur ${fE(x.budget)}</small><div class="mk-barre" style="width:90px;margin-left:auto;margin-top:3px"><i style="width:${pct.toFixed(1)}%"></i></div></td>
-        <td>${pTxt}</td>
-        <td><div class="acts"><button class="mk-btn petit" data-a="post-camp" data-id="${x.id}" title="Un post pré-rempli : la marque, la période, le hashtag">Préparer un post</button>
-          ${marque() ? `<a class="mk-btn petit" href="../assistant/?id=${x.id}" target="_blank" rel="noopener" title="L’assistant de campagne : offre, canaux, rétroplanning">Assistant ↗</a>` : ''}</div></td></tr>`;
+        <td>${etat}</td>
+        <td><div class="acts"><button class="mk-btn petit prim" data-a="post-camp" data-id="${x.id}" title="Un post rattaché à la campagne, pré-rempli : la marque, la période, le hashtag">+ Post</button>
+          <button class="mk-btn petit" data-a="nl-camp" data-id="${x.id}" title="Une newsletter rattachée à la campagne">+ Newsletter</button>
+          ${marque() ? `<a class="mk-btn petit" href="../assistant/?id=${x.id}" target="_blank" rel="noopener" title="L’assistant de campagne : offre, canaux, rétroplanning">Assistant ↗</a>` : ''}</div></td></tr>
+        ${ouverte ? `<tr class="mk-sous-ligne"><td colspan="7">${contenusCampagne(x, k)}</td></tr>` : ''}`;
     }).join('');
-    return `<div class="mk-barre-f mk-canal-campagne"><div class="mk-chips">${chips}</div><span class="sp"></span>
+    return `<div class="mk-barre-f mk-canal-campagne"><div class="mk-chips">${chipsF}</div><span class="sp"></span>
         <input class="mk-in" type="search" placeholder="Chercher une campagne" value="${esc(S.campQ)}" data-f="campQ" style="min-width:200px">
-        ${marque() ? '<a class="mk-btn prim" href="../assistant/" target="_blank" rel="noopener">+ Nouvelle campagne</a><a class="mk-btn" href="../#/campagnes" target="_blank" rel="noopener">Calendrier, budget, mesure ↗</a>' : ''}</div>
-      <div class="mk-card"><div class="mk-defile"><table class="mk-tab"><thead><tr><th class="masque-mob"></th><th>Campagne</th><th>Période</th><th>Statut</th><th class="masque-mob">Portée</th><th class="n masque-mob">Dépensé</th><th title="Posts et newsletters datés sur la période de la campagne">Prises de parole</th><th></th></tr></thead>
-        <tbody>${lignes || `<tr><td colspan="8"><div class="mk-vide">Aucune campagne ${esc(f[1].toLowerCase())}${rq ? ' pour « ' + esc(S.campQ) + ' »' : ''}.</div></td></tr>`}</tbody></table></div></div>
-      <div class="mk-texte">« Prises de parole » : les posts (hors refusés) et les newsletters datés entre le début et la fin de la campagne. Les tables ne relient pas un post à sa campagne : le rapprochement se fait par les dates.</div>`;
+        ${marque() ? '<a class="mk-btn prim" href="../assistant/" target="_blank" rel="noopener">+ Nouvelle campagne</a><a class="mk-btn" href="../#/campagnes" target="_blank" rel="noopener">Budget, mesure, note ↗</a>' : ''}</div>
+      <div class="mk-card"><div class="mk-defile"><table class="mk-tab"><thead><tr><th class="masque-mob"></th><th>Campagne</th><th>Période</th><th>Statut</th><th class="n masque-mob">Dépensé</th><th>Contenus</th><th></th></tr></thead>
+        <tbody>${lignes || `<tr><td colspan="7"><div class="mk-vide">Aucune campagne ${esc(f[1].toLowerCase())}${rq ? ' pour « ' + esc(S.campQ) + ' »' : ''}.</div></td></tr>`}</tbody></table></div></div>`;
   }
-
+  /** Les contenus d'une campagne, à l'étape où ils en sont. */
+  function contenusCampagne(c, k) {
+    const lp = p => `<li class="mk-canal-social" data-a="post-voir" data-id="${esc(p.id)}"><span class="mk-pastille"></span><div class="tx"><div class="tt">${badgeReseaux(p.reseaux)} ${esc(p.magasin || 'Réseau')} ${badgePost(p)}</div><div class="dd">${esc(extrait(p.message, 90))}</div></div><span class="qd">${esc(nomEtape(etapeDuPost(p)))}<small>${esc(fDT((p.publie && p.publie.le) || p.publierLe))}</small></span></li>`;
+    const ln = x => `<li class="mk-canal-email" data-a="creer-vue" data-v="newsletter"><span class="mk-pastille"></span><div class="tx"><div class="tt">✉ ${esc(x.nom)} <span class="mk-badge">${esc(NL_ST[x.statut] || x.statut)}</span></div><div class="dd">${esc(x.objet || '')}${x.envoyes ? ' · ' + pl(x.envoyes, 'envoi') + ', ' + pl(x.ouvertures, 'ouverture') : ''}</div></div><span class="qd">${esc(fDT(x.envoiLe))}</span></li>`;
+    const tous = k.posts.map(lp).concat(k.nls.map(ln));
+    return `<div class="mk-contenus">${tous.length ? `<ul class="mk-liste">${tous.join('')}</ul>` : '<div class="mk-vide">Aucun contenu rattaché. Ajoutez un post ou une newsletter : ils porteront le nom de la campagne jusqu’aux résultats.</div>'}
+      ${k.parDates.length ? `<div class="mk-aide" style="padding:8px 16px">Sur la même période, non rattachés : ${k.parDates.map(d => d.type === 'post' ? 'post ' + esc(extrait(d.x.message, 40)) : 'newsletter ' + esc(d.x.nom)).join(' · ')}.</div>` : ''}</div>`;
+  }
   /* --- 4. réseaux sociaux ---------------------------------------------------------------- */
   /** Deux volets : les posts Facebook (ce qu'on publie) et les avis Google (ce qu'on dit de nous). */
-  function segSocial() {
-    const av = canal('avis');
-    const note = av.dispo ? (S.shop ? ((av.magasins || [])[0] || {}).note : (av.reseau || {}).moyenne) : null;
-    const k = canal('social').chiffres || {};
-    return `<div class="mk-seg mk-canal-social"><button class="${S.socVue !== 'avis' ? 'on' : ''}" data-a="soc-vue" data-v="${S.socVue === 'avis' ? 'a_traiter' : esc(S.socVue)}">Posts Facebook${k.aTraiter ? ' <b>' + k.aTraiter + '</b>' : ''}</button>
-      <button class="${S.socVue === 'avis' ? 'on' : ''}" data-a="soc-vue" data-v="avis">Avis Google${note != null ? ' <b>' + nf(note, 2) + ' ★</b>' : ''}</button></div>`;
-  }
-  function vSocial() {
-    if (S.socVue === 'avis') { return segSocial() + vAvis(); }
-    const s = canal('social');
-    if (!s.dispo) { return segSocial() + indispo('social', 'Réseaux sociaux') + (S.compose ? composer() : ''); }
-    const b = canal('charte');
-    const vues = SOC_VUES.filter(v => v[0] !== 'avis');
-    const vue = vues.find(v => v[0] === S.socVue) || vues[0];
-    const nb = v => v[0] === 'sauvages' ? (b.sauvages || []).length : posts().filter(v[2]).length;
-    const chips = vues.map(v => `<button class="${v[0] === vue[0] ? 'on' : ''}${v[0] === 'sauvages' && nb(v) ? ' urg' : ''}" data-a="soc-vue" data-v="${v[0]}">${v[1]} <b>${nb(v)}</b></button>`).join('');
-    let liste;
-    if (vue[0] === 'sauvages') {
-      liste = !b.dispo ? indispo('charte', 'Brand Guard') : ((b.sauvages || []).length
-        ? `<div class="mk-posts">${b.sauvages.map(carteSauvage).join('')}</div>`
-        : '<div class="mk-card"><div class="mk-vide">Aucun post sauvage sur 30 jours : tout ce qui est paru sur les pages est passé par une demande. (Sans accès Meta configuré, les pages ne sont pas relues — voir la charte à droite.)</div></div>');
-    } else {
-      const ps = posts().filter(vue[2]);
-      liste = ps.length ? `<div class="mk-posts">${ps.map(cartePost).join('')}</div>`
-        : `<div class="mk-card"><div class="mk-vide">Aucun post ${esc(vue[1].toLowerCase())}.${vue[0] === 'a_traiter' ? ' Tout ce qui a été soumis est décidé.' : ''}</div></div>`;
-    }
-    return `${segSocial()}<div class="mk-barre-f mk-canal-social"><div class="mk-chips">${chips}</div><span class="sp"></span>
-        <button class="mk-btn prim" data-a="compose"${S.compose ? ' disabled' : ''}>+ Nouveau post</button></div>
-      ${S.compose ? composer() : ''}
-      <div class="mk-cote"><div>${liste}</div><div>${carteCharte()}</div></div>`;
-  }
   function badgePost(p) { const st = POST_ST[p.statut] || [p.statut, '']; return `<span class="mk-badge ${st[1]}">${esc(st[0])}</span>`; }
   function cartePost(p) {
     const R = regles();
@@ -448,7 +563,8 @@
     const nv = ag.note != null ? niveau(ag.note) : null;
     const ecarts = (p.ecarts || []);
     const peutEcarter = marque() && p.statut !== 'publie';
-    const medias = (p.medias || []).map(m => esc(m.nom || 'média') + (m.largeur ? ' · ' + m.largeur + ' px' : '') + (m.alt ? '' : ' · <span class="wa">sans texte alternatif</span>')).join(', ');
+    const medias = (p.medias || []).map(m => (m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.nom || 'visuel')}</a>` : esc(m.nom || 'média') + ' <span class="wa">(non téléversé)</span>') + (m.largeur ? ' · ' + m.largeur + ' px' : '') + (m.alt ? '' : ' · <span class="wa">sans texte alternatif</span>')).join(', ');
+    const camp = p.campagneId != null ? campagneDe(p.campagneId) : null;
     const agent = (ag.note != null || ecarts.length) ? `<div class="mk-agent"><div class="l1"><span class="mk-k" style="font-size:9.5px">Agent de contrôle</span>
         ${nv ? `<span class="mk-note" style="background:${esc(nv.couleur || '#777')}" title="${esc(nv.nom)}">${ag.note}/5</span>` : ''}<span>${esc(ag.resume || '')}</span>
         ${ag.passages > 1 ? `<span class="mu" style="margin-left:auto">${ag.passages} passages</span>` : ''}</div>
@@ -457,9 +573,11 @@
           ${peutEcarter ? `<button class="mk-btn petit" data-a="ecart" data-id="${esc(p.id)}" data-e="${e.id}" data-v="${e.statut === 'ignore' ? 'ouvert' : 'ignore'}"${S.envoi ? ' disabled' : ''} title="${e.statut === 'ignore' ? 'Rouvrir l’écart' : 'Accorder une dérogation : l’écart reste affiché, il sort de la note'}">${e.statut === 'ignore' ? 'Rouvrir' : 'Écarter'}</button>` : ''}</li>`).join('')}</ul>` : ''}</div>` : '';
     const dc = p.decision || {};
     const decision = dc.le ? `<div class="mk-decision"><b>${p.statut === 'refuse' ? 'Refusé' : 'Validé'}${dc.note != null ? ' ' + dc.note + '/5' : ''}</b>${dc.par ? ' par ' + esc(dc.par) : ''} le ${esc(fDT(dc.le))}${dc.famille ? ' · ' + esc(dc.famille) + ' — ' + esc(dc.type || '') : ''}${dc.commentaire ? '<br>' + esc(dc.commentaire) : ''}</div>` : '';
-    const publie = p.statut === 'publie' ? `<div class="mk-decision" style="border-color:rgba(45,122,62,.35)"><b class="ok">Publié</b> le ${esc(fDT(p.publie.le))}${p.publie.fbId ? ' · id Facebook ' + esc(p.publie.fbId) : ' · <span class="wa">sans id Facebook : Brand Guard le prendra pour un post sauvage</span>'}</div>` : '';
-    return `<div class="mk-post${S.postSel === p.id ? ' ouvert' : ''}" id="post-${esc(p.id)}"><div class="hd"><span class="mag">${esc(p.magasin || 'Réseau')}</span>${badgePost(p)}<span class="mk-badge">${esc(p.format)}</span>
+    const pubs = p.publications || [];
+    const publie = p.statut === 'publie' ? `<div class="mk-decision" style="border-color:rgba(45,122,62,.35)"><b class="ok">Publié</b> le ${esc(fDT(p.publie.le))}${pubs.length ? ' · ' + pubs.map(x => x.lien ? `<a href="${esc(x.lien)}" target="_blank" rel="noopener">${badgeReseaux([x.reseau])} voir ↗</a>` : badgeReseaux([x.reseau])).join(' ') : (p.publie.fbId ? ' · id Facebook ' + esc(p.publie.fbId) : ' · <span class="wa">sans id Facebook : Brand Guard le prendra pour un post sauvage</span>')}</div>` : '';
+    return `<div class="mk-post${S.postSel === p.id ? ' ouvert' : ''}" id="post-${esc(p.id)}"><div class="hd">${badgeReseaux(p.reseaux)}<span class="mag">${esc(p.magasin || 'Réseau')}</span>${badgePost(p)}<span class="mk-badge">${esc(p.format)}</span>
         <span class="qd">${quand ? (p.statut === 'publie' ? 'publié ' : 'prévu ') + esc(fDT(quand)) : 'sans date'}</span></div>
+      ${camp ? `<div class="mk-camp-l"><span class="mk-pastille" style="background:${esc(camp.typeCouleur || 'var(--mk-camp)')}"></span>Campagne « ${esc(camp.nom)} »</div>` : ''}
       <div class="msg">${esc(p.message)}</div>
       <div class="meta"><span>${esc(p.auteur || '')}</span><span>soumis ${esc(fDT(p.soumisLe))}</span>${p.lien ? `<a href="${esc(p.lien)}" target="_blank" rel="noopener">${esc(extrait(p.lien, 40))}</a>` : ''}${medias ? '<span>' + medias + '</span>' : ''}</div>
       ${agent}${decision}${publie}${actionsPost(p, R)}</div>`;
@@ -467,7 +585,7 @@
   function actionsPost(p, R) {
     const dis = S.envoi ? ' disabled' : '';
     if (p.statut === 'brouillon') {
-      return `<div class="mk-form"><div class="ligne"><button class="mk-btn prim" data-a="soumettre" data-id="${esc(p.id)}"${dis}>Soumettre au contrôle</button><button class="mk-btn" data-a="reprendre" data-id="${esc(p.id)}">Reprendre dans un nouveau post</button></div></div>`;
+      return `<div class="mk-form"><div class="ligne"><button class="mk-btn prim" data-a="soumettre" data-id="${esc(p.id)}"${dis}>Soumettre au contrôle</button><button class="mk-btn" data-a="reprendre" data-id="${esc(p.id)}">Reprendre dans le rédacteur</button></div></div>`;
     }
     if (p.statut === 'a_controler') {
       return `<div class="mk-form"><div class="ligne"><button class="mk-btn prim" data-a="controler" data-id="${esc(p.id)}"${dis}>Lancer le contrôle</button><span class="mk-aide">L’agent relit le texte, le lien et les visuels contre la charte.</span></div></div>`;
@@ -475,11 +593,7 @@
     if (p.statut === 'refuse') {
       return `<div class="mk-form"><div class="ligne"><button class="mk-btn" data-a="reprendre" data-id="${esc(p.id)}">Corriger et resoumettre</button><span class="mk-aide">Un nouveau post, pré-rempli avec celui-ci.</span></div></div>`;
     }
-    if (p.statut === 'valide') {
-      return `<div class="mk-form"><label>Publié sur Facebook ? Son identifiant (facultatif)</label>
-        <div class="ligne"><input class="mk-in" placeholder="ex. 123456789_987654321" value="${esc(S.pub[p.id] || '')}" data-f="pub" data-id="${esc(p.id)}"><button class="mk-btn ok" data-a="publier" data-id="${esc(p.id)}"${dis}>Marquer publié</button></div>
-        <div class="mk-aide">Avec son identifiant, Brand Guard reconnaît le post quand il relit la page — sans lui, il le compte comme « sauvage ».</div></div>`;
-    }
+    if (p.statut === 'valide') { return panneauPublication(p); }
     if (p.statut === 'a_valider' && marque()) {
       const d = S.dec[p.id] || (S.dec[p.id] = { note: (p.agent && p.agent.note) || R.seuil || 4, famille: '', type: '', commentaire: '' });
       const fam = (R.familles || []).find(f => f.nom === d.famille);
@@ -497,6 +611,36 @@
       return '<div class="mk-form"><span class="mk-aide">Contrôlé par l’agent — en attente de la décision de la marque.</span></div>';
     }
     return '';
+  }
+  /** Ce qu'un réseau exige — le miroir, à l'écran, de spPreparer() côté serveur. */
+  function preparer(p, reseau) {
+    const txt = String(p.message || '').trim(), imgs = (p.medias || []).filter(m => /^https?:\/\//.test(m.url || ''));
+    const hash = (txt.match(/#[\p{L}\p{N}_]+/gu) || []).length, n = [...txt].length, pb = [];
+    if (reseau === 'facebook' && !txt && !imgs.length) { pb.push('un texte ou un visuel'); }
+    if (reseau === 'instagram') { if (!imgs.length) { pb.push('un visuel téléversé'); } if (imgs.length > 10) { pb.push('10 visuels au plus'); } if (n > 2200) { pb.push('2 200 caractères au plus'); } if (hash > 30) { pb.push('30 hashtags au plus'); } }
+    if (reseau === 'linkedin') { if (p.magasinId) { pb.push('un post de la marque seulement'); } if (n > 3000) { pb.push('3 000 caractères au plus'); } if (!txt) { pb.push('un texte'); } }
+    return pb;
+  }
+  /** L'étape 4 sur une carte : chaque réseau, son état, et les gestes possibles. */
+  function panneauPublication(p) {
+    const pubR = canal('social').publication || {};
+    const dis = S.envoi ? ' disabled' : '';
+    const pubs = p.publications || [];
+    const lignes = (p.reseaux || ['facebook']).map(r => {
+      const x = pubs.find(y => y.reseau === r), pb = preparer(p, r), nom = (RESEAUX.find(y => y[0] === r) || [r, r])[1];
+      const accès = pubR.reseaux && pubR.reseaux[r] === false ? '<span class="wa">accès non configuré</span>' : '';
+      const etat = x ? `<span class="mk-badge ${PUB_ST[x.statut][1]}">${PUB_ST[x.statut][0]}</span> ${x.statut === 'programme' ? 'le ' + esc(fDT(x.prevuLe)) : ''}${x.statut === 'publie' && x.lien ? `<a href="${esc(x.lien)}" target="_blank" rel="noopener">voir ↗</a>` : ''}${x.erreur && x.statut === 'erreur' ? `<small class="ko">${esc(x.erreur)}${x.tentatives > 1 ? ' · ' + x.tentatives + ' essais' : ''}</small>` : ''}${x.erreur && x.statut === 'annule' ? `<small class="mu">${esc(x.erreur)}</small>` : ''}`
+        : (pb.length ? `<span class="ko">ne partira pas : ${esc(pb.join(', '))}</span>` : '<span class="mk-badge">à publier</span>');
+      return `<div class="mk-pub-l">${badgeReseaux([r])}<b>${nom}</b><span class="tx">${etat} ${accès}</span></div>`;
+    }).join('');
+    const futur = p.publierLe && p.publierLe > (AUJ + ' ' + new Date().toTimeString().slice(0, 5));
+    const prog = pubs.some(x => x.statut === 'programme'), erreur = pubs.some(x => x.statut === 'erreur');
+    const gestes = pubR.reelle ? `<div class="ligne"><button class="mk-btn ok" data-a="pub-maintenant" data-id="${esc(p.id)}"${dis}>${erreur ? 'Réessayer maintenant' : 'Publier maintenant'}</button>
+        ${futur && !prog ? `<button class="mk-btn" data-a="pub-programmer" data-id="${esc(p.id)}"${dis}>Programmer le ${esc(fDT(p.publierLe))}</button>` : ''}
+        ${prog || erreur ? `<button class="mk-btn petit ko" data-a="pub-annuler" data-id="${esc(p.id)}"${dis} style="margin-left:auto">Annuler</button>` : ''}</div>` : '';
+    const main = `<details class="mk-main"${pubR.reelle ? '' : ' open'}><summary>Publié à la main ?</summary><div class="ligne"><input class="mk-in" placeholder="id du post Facebook, ex. 123456789_987654321" value="${esc(S.pub[p.id] || '')}" data-f="pub" data-id="${esc(p.id)}"><button class="mk-btn" data-a="publier" data-id="${esc(p.id)}"${dis}>Marquer publié</button></div>
+        <div class="mk-aide">Avec son identifiant, Brand Guard reconnaît le post en relisant la page — sans lui, il le compte comme « sauvage ».</div></details>`;
+    return `<div class="mk-form"><label>Publication</label>${lignes}${gestes}${main}</div>`;
   }
   function carteSauvage(x) {
     return `<div class="mk-post"><div class="hd"><span class="mag">${esc(x.boutique || 'Page')}</span><span class="mk-badge urg">sauvage</span><span class="mk-badge ${x.statut === 'conforme' ? 'ok' : x.statut === 'bloque' ? 'urg' : 'att'}">${esc(x.statut === 'a_corriger' ? 'à corriger' : x.statut === 'bloque' ? 'bloquant' : 'conforme')} · ${x.score}/100</span>
@@ -527,59 +671,91 @@
     const m = (D().magasins || []).find(x => String(x.id) === S.shop);
     const dt = new Date(Date.now() + 86400000);
     return Object.assign({ magasinId: S.shop || '', auteur: marque() ? 'Marque' : ((m && m.franchise) || 'Franchisé'), format: 'Photo', message: '', lien: '',
-      date: iso(dt), heure: '10:00', visuel: '', alt: '', largeur: '', campagne: null }, base || {});
+      date: iso(dt), heure: '10:00', visuel: '', url: '', alt: '', largeur: '', campagneId: '', reseaux: ['facebook'] }, base || {});
   }
   function composer() {
     const c = S.compose, R = regles();
     const mags = D().magasins || [];
     const n = c.message.trim().length;
-    return `<div class="mk-card mk-canal-social"><div class="mk-ct" style="border-top:3px solid var(--c)"><span class="mk-k">Nouveau post${c.campagne ? ' · campagne « ' + esc(c.campagne) + ' »' : ''}</span><span class="mk-mini">relu par l’agent dès la soumission</span><button class="mk-btn petit" data-a="compose-x">Fermer</button></div>
+    const camps = campagnes().filter(x => marque() ? x.phase !== 'terminee' : ['en_cours', 'a_venir', 'sans_date'].includes(x.phase));
+    const linkedinOk = !c.magasinId && marque();
+    if (!linkedinOk) { c.reseaux = c.reseaux.filter(r => r !== 'linkedin'); }
+    const t = S.televersement;
+    return `<div class="mk-card mk-canal-social"><div class="mk-ct" style="border-top:3px solid var(--c)"><span class="mk-k">Nouveau post</span><span class="mk-mini">relu par l’agent dès la soumission, publié après validation</span><button class="mk-btn petit" data-a="compose-x">Vider</button></div>
       <div class="mk-compose"><div class="champs">
-        <div class="ligne"><div><label>Magasin</label>${marque()
+        <div class="ligne"><div style="flex:2"><label>Campagne</label><select data-f="c-campagneId"><option value="">Sans campagne</option>${camps.map(x => `<option value="${x.id}"${String(x.id) === String(c.campagneId) ? ' selected' : ''}>${esc(x.nom)} · ${esc(periode(x.debut, x.fin))}</option>`).join('')}</select></div>
+          <div><label>Magasin</label>${marque()
           ? `<select data-f="c-magasinId"><option value="">Réseau (post de la marque)</option>${mags.map(m => `<option value="${esc(m.id)}"${String(m.id) === c.magasinId ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`
-          : `<input class="mk-in" value="${esc(magasinNom(S.shop) || S.shop)}" disabled>`}</div>
-          <div><label>Format</label><select data-f="c-format">${(R.formats || []).map(f => `<option${f === c.format ? ' selected' : ''}>${esc(f)}</option>`).join('')}</select></div>
-          <div><label>Signé</label><input class="mk-in" value="${esc(c.auteur)}" data-f="c-auteur"></div></div>
+          : `<input class="mk-in" value="${esc(magasinNom(S.shop) || S.shop)}" disabled>`}</div></div>
+        <div><label>Réseaux</label><div class="mk-reseaux">${RESEAUX.map(r => { const off = r[0] === 'linkedin' && !linkedinOk; return `<label class="mk-case${off ? ' off' : ''}" title="${off ? 'LinkedIn publie sur la page de la marque : post réseau seulement' : ''}"><input type="checkbox" data-a="c-reseau" data-v="${r[0]}"${c.reseaux.includes(r[0]) ? ' checked' : ''}${off ? ' disabled' : ''}>${badgeReseaux([r[0]])} ${r[1]}</label>`; }).join('')}</div></div>
         <div><label>Message</label><textarea class="mk-in" data-f="c-message" placeholder="Le texte du post — ${esc(R.marque || 'la marque')}, le magasin, ${esc(R.hashtag || 'le hashtag du réseau')}…">${esc(c.message)}</textarea><div class="mk-compteur" id="mk-compteur">${n} caractère${n > 1 ? 's' : ''}</div></div>
         <div class="ligne"><div><label>Publier le</label><input class="mk-in" type="date" value="${esc(c.date)}" data-f="c-date"></div><div><label>à</label><input class="mk-in" type="time" value="${esc(c.heure)}" data-f="c-heure"></div>
+          <div><label>Format</label><select data-f="c-format">${(R.formats || []).map(f => `<option${f === c.format ? ' selected' : ''}>${esc(f)}</option>`).join('')}</select></div></div>
+        <div><label>Visuel</label><div class="ligne"><label class="mk-btn" style="cursor:pointer">${t && t.busy ? 'Téléversement…' : (c.url ? 'Changer le visuel' : 'Téléverser un visuel')}<input type="file" accept="image/jpeg,image/png,image/webp" data-f="c-fichier" hidden></label>
+          <span class="mk-aide">${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.visuel || 'visuel')}</a>${c.largeur ? ' · ' + esc(c.largeur) + ' px' : ''}` : 'JPEG, PNG ou WebP, 8 Mo au plus — Instagram l’exige'}</span></div>
+          ${t && t.avert && t.avert.length ? `<div class="mk-aide wa">${t.avert.map(esc).join(' · ')}</div>` : ''}${t && t.err ? `<div class="mk-aide ko">${esc(t.err)}</div>` : ''}</div>
+        <div class="ligne"><div style="flex:2"><label>Texte alternatif du visuel</label><input class="mk-in" placeholder="Ce que montre l’image, pour les lecteurs d’écran" value="${esc(c.alt)}" data-f="c-alt"></div>
           <div style="flex:2"><label>Lien (facultatif)</label><input class="mk-in" type="url" placeholder="https://www.atelierby.be/…" value="${esc(c.lien)}" data-f="c-lien"></div></div>
-        <div class="ligne"><div style="flex:2"><label>Visuel — nom du fichier</label><input class="mk-in" placeholder="speculoos-halle.jpg" value="${esc(c.visuel)}" data-f="c-visuel"></div>
-          <div><label>Largeur (px)</label><input class="mk-in" type="number" min="0" placeholder="1080" value="${esc(c.largeur)}" data-f="c-largeur"></div></div>
-        <div><label>Texte alternatif du visuel</label><input class="mk-in" placeholder="Ce que montre l’image, pour les lecteurs d’écran" value="${esc(c.alt)}" data-f="c-alt"></div>
-        <div class="ligne" style="justify-content:flex-end"><button class="mk-btn" data-a="envoyer-post" data-v="brouillon"${S.envoi || !n ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="mk-btn prim" data-a="envoyer-post" data-v="a_controler"${S.envoi || !n ? ' disabled' : ''}>Soumettre au contrôle</button></div>
+        <div class="ligne"><div style="flex:1;min-width:120px"><label>Signé</label><input class="mk-in" value="${esc(c.auteur)}" data-f="c-auteur"></div></div>
+        <div id="mk-pret">${pret()}</div>
+        <div class="ligne" style="justify-content:flex-end"><button class="mk-btn" data-a="envoyer-post" data-v="brouillon"${S.envoi || !n ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="mk-btn prim" data-a="envoyer-post" data-v="a_controler"${S.envoi || !n || !c.reseaux.length ? ' disabled' : ''}>Soumettre au contrôle →</button></div>
       </div><div class="apercu"><div class="mk-k" style="font-size:9.5px;margin-bottom:8px">Aperçu</div><div id="mk-apercu">${apercu()}</div></div></div></div>`;
+  }
+  /** Prêt pour chaque réseau choisi ? Le même contrôle que le serveur fera à la publication. */
+  function pret() {
+    const c = S.compose;
+    const p = { message: c.message, magasinId: c.magasinId, medias: c.url ? [{ url: c.url }] : [] };
+    if (!c.reseaux.length) { return '<div class="mk-aide ko">Choisissez au moins un réseau.</div>'; }
+    if (!c.message.trim() && !c.url) { return '<div class="mk-aide">Chaque réseau choisi dira ici s’il est prêt.</div>'; }
+    return `<div class="mk-pret">${c.reseaux.map(r => { const pb = preparer(p, r); return `<span class="${pb.length ? 'ko' : 'ok'}">${badgeReseaux([r])} ${pb.length ? 'à corriger : ' + esc(pb.join(', ')) : 'prêt'}</span>`; }).join('')}</div>`;
   }
   function apercu() {
     const c = S.compose;
     const nom = "L'Atelier by" + (c.magasinId ? ' ' + (magasinNom(c.magasinId) || '') : '');
     const t = esc(c.message || 'Votre message apparaîtra ici.').replace(/(#[\wÀ-ÿ-]+)/g, '<span class="hash">$1</span>');
-    const visuel = ['Photo', 'Carrousel', 'Vidéo'].includes(c.format) ? `<div class="img">${c.visuel ? esc(c.visuel) + (c.alt ? '<br><i>' + esc(c.alt) + '</i>' : '') : 'visuel attendu pour un post ' + esc(c.format.toLowerCase())}</div>` : '';
-    return `<div class="mk-fb"><div class="h"><img src="../assets/img/newsletter/logo-white.png" alt=""><div><b>${esc(nom.trim())}</b><small>${esc(fDL(c.date))} · ${esc(c.heure)}</small></div></div>
+    const visuel = c.url ? `<img class="img" src="${esc(c.url)}" alt="${esc(c.alt)}" style="object-fit:cover;width:100%">`
+      : (['Photo', 'Carrousel', 'Vidéo'].includes(c.format) || c.reseaux.includes('instagram') ? `<div class="img">${c.visuel ? esc(c.visuel) : 'visuel attendu'}</div>` : '');
+    return `<div class="mk-fb"><div class="h"><img src="../assets/img/newsletter/logo-white.png" alt=""><div><b>${esc(nom.trim())}</b><small>${esc(fDL(c.date))} · ${esc(c.heure)} · ${c.reseaux.map(r => (RESEAUX.find(x => x[0] === r) || [r, r])[1]).join(', ') || '—'}</small></div></div>
       <div class="t">${t}</div>${visuel}${c.lien ? `<div class="l">${esc(c.lien)}</div>` : ''}</div>`;
   }
   function envoyerPost(statut) {
     const c = S.compose;
     if (!c || !c.message.trim()) { return; }
-    const medias = c.visuel.trim() ? [{ nom: c.visuel.trim(), type: 'image', alt: c.alt.trim() || null, largeur: +c.largeur || null, hauteur: null }] : [];
+    const medias = (c.url || c.visuel.trim()) ? [{ nom: c.visuel.trim() || 'visuel.jpg', type: 'image', url: c.url || null, alt: c.alt.trim() || null, largeur: +c.largeur || null, hauteur: null }] : [];
     const corpsP = { magasinId: marque() ? c.magasinId : S.shop, auteur: c.auteur.trim() || 'Franchisé', format: c.format, message: c.message.trim(),
-      lien: c.lien.trim() || null, medias, publierLe: c.date ? c.date + ' ' + (c.heure || '10:00') + ':00' : null, statut };
-    geste(appel('POST', '/facebook/posts', corpsP), r => {
-      S.compose = null;
+      lien: c.lien.trim() || null, medias, publierLe: c.date ? c.date + ' ' + (c.heure || '10:00') + ':00' : null, statut,
+      reseaux: c.reseaux, campagneId: c.campagneId ? +c.campagneId : null };
+    geste(appel('POST', '/marketing/social/posts', corpsP), r => {
+      S.compose = null; S.televersement = null;
       S.postSel = r && r.id;
-      S.socVue = statut === 'brouillon' ? 'brouillons' : 'a_traiter';
       const k = r && r.controle;
-      return statut === 'brouillon' ? 'Brouillon enregistré.' : (k ? 'Post soumis et contrôlé — ' + k.note + '/5 · ' + (k.resume || '') : 'Post soumis au contrôle.');
+      if (statut !== 'brouillon') { S.onglet = 'valider'; S.valVue = k && k.note != null ? 'a_valider' : 'a_controler'; urlMaj(); }
+      return statut === 'brouillon' ? 'Brouillon enregistré.' : (k ? 'Post soumis et contrôlé — ' + k.note + '/5 · ' + (k.resume || '') + '. Étape 3 : la validation.' : 'Post soumis au contrôle.');
     }).then(() => defiler(S.postSel ? 'post-' + S.postSel : null));
   }
+  /** Téléverse le visuel choisi : réenregistré en JPEG côté serveur, adresse publique en retour. */
+  function televerser(fichier) {
+    if (!fichier || !S.compose) { return; }
+    if (fichier.size > 8 * 1024 * 1024) { S.televersement = { err: 'Plus de 8 Mo : réduisez l’image.' }; rendre(); return; }
+    S.televersement = { busy: true }; rendre();
+    const lecteur = new FileReader();
+    lecteur.onload = () => appel('POST', '/marketing/publication/media', { data: lecteur.result, nom: fichier.name })
+      .then(r => { Object.assign(S.compose, { url: r.url, visuel: fichier.name, largeur: String(r.largeur || '') }); S.televersement = { avert: r.avertissements || [] }; })
+      .catch(e => { S.televersement = { err: e.message || 'téléversement impossible' }; })
+      .finally(() => rendre());
+    lecteur.onerror = () => { S.televersement = { err: 'fichier illisible' }; rendre(); };
+    lecteur.readAsDataURL(fichier);
+  }
   function composerDepuisCampagne(id) {
-    const c = (canal('campagnes').liste || []).find(x => x.id === +id);
+    const c = campagneDe(+id);
     if (!c) { return; }
     const R = regles();
     const mag = S.shop ? (magasinNom(S.shop) || '') : '';
     const per = c.debut ? (c.fin && c.fin !== c.debut ? 'Du ' + fD(c.debut) + ' au ' + fD(c.fin) + '.' : 'Le ' + fD(c.debut) + '.') : '';
     const msg = [((R.marque || '') + (mag ? ' ' + mag : '')).trim() + (R.marque || mag ? ' — ' : '') + c.nom, per, R.hashtag || ''].filter(Boolean).join('\n');
-    S.compose = composeNeuf({ message: msg, date: c.debut && c.debut > AUJ ? c.debut : decale(AUJ, 1), campagne: c.nom });
-    aller('social');
+    S.compose = composeNeuf({ message: msg, date: c.debut && c.debut > AUJ ? c.debut : decale(AUJ, 1), campagneId: String(c.id) });
+    S.creerVue = 'post';
+    aller('creer');
     defiler('mk-app');
   }
   function reprendre(id) {
@@ -588,28 +764,29 @@
     const m = (p.medias || [])[0] || {};
     const q2 = p.publierLe && p.publierLe.slice(0, 10) >= AUJ ? p.publierLe : null;
     S.compose = composeNeuf({ magasinId: p.magasinId ? String(p.magasinId) : (S.shop || ''), auteur: p.auteur || '', format: p.format || 'Photo', message: p.message || '', lien: p.lien || '',
-      date: q2 ? q2.slice(0, 10) : decale(AUJ, 1), heure: q2 ? q2.slice(11, 16) : '10:00', visuel: m.nom || '', alt: m.alt || '', largeur: m.largeur ? String(m.largeur) : '' });
-    rendre();
+      date: q2 ? q2.slice(0, 10) : decale(AUJ, 1), heure: q2 ? q2.slice(11, 16) : '10:00', visuel: m.nom || '', url: m.url || '', alt: m.alt || '', largeur: m.largeur ? String(m.largeur) : '',
+      campagneId: p.campagneId != null ? String(p.campagneId) : '', reseaux: (p.reseaux || ['facebook']).slice() });
+    S.creerVue = 'post';
+    aller('creer');
     defiler('mk-app');
   }
-
   /* --- 5. emailing ------------------------------------------------------------------------ */
   function vEmail() {
     // Le mode test, le module le dit lui-même, juste en dessous : pas de second bandeau.
-    return `<div class="mk-texte">Le module newsletter du cockpit, ${marque() ? 'vue marque — segments, automatisations et réglages compris' : 'vue magasin — ses segments, sa campagne, son adresse d’envoi'}.</div>`;
+    return `<div class="mk-texte">Le module newsletter du cockpit, ${marque() ? 'vue marque — segments, automatisations et réglages compris' : 'vue magasin — ses segments, sa campagne, son adresse d’envoi'}. Ses envois et leurs résultats remontent dans 4 · Publier et 5 · Mesurer.</div>`;
   }
   let nlRole = null;
   function nlMonter() {
     const host = document.getElementById('mk-nl');
-    const voir = S.onglet === 'email' && !!S.data;
+    const voir = S.onglet === 'creer' && S.creerVue === 'newsletter' && !!S.data;
     host.hidden = !voir;
     if (!voir || !window.CockpitNewsletter) { return; }
     const role = S.shop || 'brand';
-    if (nlRole === role) { return; }   // déjà monté pour ce rôle : le module garde son DOM et ses données
-    nlRole = role;
-    window.CockpitNewsletter.mount(host, { role, apiBase: API, imgDir: '../assets/img/newsletter/', notify: t => { S.msg = { ok: true, texte: t }; rendre(); } });
+    const cle = role + '|' + (S.nlCampagne || '');
+    if (nlRole === cle) { return; }   // déjà monté ainsi : le module garde son DOM et ses données
+    nlRole = cle;
+    window.CockpitNewsletter.mount(host, { role, apiBase: API, imgDir: '../assets/img/newsletter/', campagne: S.nlCampagne || null, notify: t => { S.msg = { ok: true, texte: t }; rendre(); } });
   }
-
   /* --- avis Google ----------------------------------------------------------------------- */
   const fNote = v => v == null ? '—' : nf(v, 2);
   const etoiles = n => { const p = n == null ? 0 : Math.round(n); return `<span class="mk-etoiles" title="${n == null ? 'sans note' : nf(n, 2) + ' sur 5'}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= p ? 'on' : ''}">★</i>`).join('')}</span>`; };
@@ -620,7 +797,7 @@
     const note = m ? m.note : r.moyenne;
     const cible = c.cible;
     const sous = note != null && cible != null && note < cible;
-    return kpi('avis', 'social', 'Avis Google', `<div class="v ${sous ? 'ko' : (note != null ? 'ok' : '')}">${fNote(note)}<small>/ 5 · cible ${fNote(cible)}</small></div>
+    return kpi('avis', 'mesurer', 'Avis Google', `<div class="v ${sous ? 'ko' : (note != null ? 'ok' : '')}">${fNote(note)}<small>/ 5 · cible ${fNote(cible)}</small></div>
       <div class="d">${m ? (m.avis ? pl(m.avis, 'avis', 'avis') + ' Google' : 'fiche non raccordée') : fN(r.avis) + ' avis · ' + pl(r.notes || 0, 'magasin noté', 'magasins notés')}</div>
       <div class="d">${m ? (m.avis5Requis ? '<b>' + m.avis5Requis + '</b> avis 5★ pour la cible' : (note != null && !sous ? 'à la cible' : '')) : (r.sousCible ? '<b class="ko">' + pl(r.sousCible, 'magasin') + '</b> sous la cible' : 'tous à la cible')}</div>`, c.dispo, c.raison);
   }
@@ -665,7 +842,7 @@
   }
 
   /* --- 6. paramètres ------------------------------------------------------------------------ */
-  const PARAM_SOURCE = { sources: '/marketing/sources', agent: '/referentiels/facebook-regles', charte: '/marketing/brand-guard/rules', pages: '/marketing/brand-guard/pages' };
+  const PARAM_SOURCE = { publication: '/marketing/publication/etat', sources: '/marketing/sources', agent: '/marketing/social/regles', charte: '/marketing/brand-guard/rules', pages: '/marketing/brand-guard/pages' };
   function chargerParam(vue, force) {
     const P = S.par;
     if (!PARAM_SOURCE[vue] || P.enCours[vue] || (P[vue] && !force)) { return; }
@@ -679,14 +856,47 @@
     const chips = vues.map(v => `<button class="${v[0] === vue[0] ? 'on' : ''}" data-a="param-vue" data-v="${v[0]}">${v[1]}</button>`).join('');
     if (PARAM_SOURCE[vue[0]] && !S.par[vue[0]] && !S.par.err[vue[0]]) { setTimeout(() => chargerParam(vue[0]), 0); }
     const attente = k => S.par.err[k] ? `<div class="mk-err">Lecture impossible : ${esc(S.par.err[k])} <button class="mk-btn petit" data-a="param-relire" data-v="${k}">Réessayer</button></div>` : (!S.par[k] ? '<div class="mk-attente">Lecture…</div>' : '');
-    const corpsP = vue[0] === 'sources' ? (attente('sources') || pSources()) : vue[0] === 'agent' ? (attente('agent') || pAgent())
+    const corpsP = vue[0] === 'publication' ? (attente('publication') || pPublication()) : vue[0] === 'sources' ? (attente('sources') || pSources()) : vue[0] === 'agent' ? (attente('agent') || pAgent())
       : vue[0] === 'charte' ? (attente('charte') || pCharte()) : vue[0] === 'pages' ? (attente('pages') || pPages()) : pAvis();
     return `<div class="mk-barre-f" style="--c:#222"><div class="mk-chips">${chips}</div>${marque() ? '' : '<span class="sp"></span><span class="mk-aide">Les réglages appartiennent à la marque : un magasin voit ici d’où viennent ses données.</span>'}</div>${corpsP}`;
   }
 
+  /* La publication : réglages, accès aux réseaux, horloge — et ce qu'il faut pour qu'elle marche. */
+  function pPublication() {
+    const e = S.par.publication;
+    const d = S.pubDraft || (S.pubDraft = Object.assign({}, e.reglages));
+    const meta = e.meta || {}, li = e.linkedin || {}, n = e.compteurs || {};
+    const modifie = JSON.stringify(d) !== JSON.stringify(e.reglages);
+    const bascule = (k, titre, aide) => `<label class="mk-bascule"><input type="checkbox" data-a="pubp-bascule" data-v="${k}"${d[k] ? ' checked' : ''}><span><b>${titre}</b><small>${aide}</small></span></label>`;
+    const test = r => { const t = S.pubTest[r]; return t ? `<div class="mk-aide ${t.ok ? 'ok' : 'ko'}">${esc(t.message || '')}${(t.pages || []).map(x => `<br>${x.ok ? '✓' : '✗'} ${esc(x.nom || x.page)} — ${esc(x.detail)}`).join('')}</div>` : ''; };
+    const acces = (r, nom, ok, detail) => `<tr><td class="nom">${badgeReseaux([r])} ${nom}<small>${detail}</small>${test(r)}</td><td>${ok ? '<span class="mk-badge ok">configuré</span>' : '<span class="mk-badge">à configurer</span>'}</td><td class="n"><button class="mk-btn petit" data-a="pubp-tester" data-v="${r}"${S.envoi ? ' disabled' : ''}>Tester</button></td></tr>`;
+    const pages = (e.pages || []).filter(p => p.pageId);
+    return `<div class="mk-grille mk-g2">
+      <div class="mk-card"><div class="mk-ct"><span class="mk-k">Réglages</span><span class="mk-mini">${n.publie || 0} publiées · ${n.programme || 0} programmées · ${n.erreur || 0} en échec · horloge ${e.cronDernier ? 'passée le ' + esc(fDT(String(e.cronDernier))) : 'jamais passée'}</span></div>
+        <div class="mk-cb" style="display:flex;flex-direction:column;gap:12px">
+          ${bascule('reelle', 'Publication réelle', d.reelle ? 'Active : un post validé part sur ses réseaux, maintenant ou à son heure. Décocher arrête tout envoi.' : 'Éteinte, rien ne part sur les réseaux : le portail prépare, la marque publie à la main.')}
+          ${bascule('auto', 'Programmer à la validation', 'Un post validé se programme tout seul à son heure prévue, sur ses réseaux.')}
+          <div><label class="mk-lab" style="display:block;margin-bottom:4px">Page Facebook de la marque (posts réseau)</label>
+            <div class="ligne" style="display:flex;gap:8px;flex-wrap:wrap"><input class="mk-in" style="flex:1;min-width:160px" placeholder="identifiant de la page, ex. 883508651512115" value="${esc(d.pageMarque || '')}" data-f="pubp-pageMarque">
+            ${pages.length ? `<select data-f="pubp-pageChoix"><option value="">… ou une page connue</option>${pages.map(p => `<option value="${esc(p.pageId)}">${esc(p.boutique)} · ${esc(p.pageNom || p.pageId)}</option>`).join('')}</select>` : ''}</div>
+            <div class="mk-aide">Les posts d’un magasin partent sur SA page (Paramètres → Pages Facebook, résolue). Instagram : le compte professionnel relié à la même page.</div></div>
+          <div class="ligne" style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:2"><label class="mk-lab" style="display:block;margin-bottom:4px">Page entreprise LinkedIn (id d’organisation)</label><input class="mk-in" style="width:100%" placeholder="ex. 12345678" value="${esc(d.linkedinOrganisation || '')}" data-f="pubp-linkedinOrganisation"></div>
+            <div style="flex:1"><label class="mk-lab" style="display:block;margin-bottom:4px">Version API LinkedIn</label><input class="mk-in" style="width:100%" placeholder="${esc(li.version || 'AAAAMM')}" value="${esc(d.linkedinVersion || '')}" data-f="pubp-linkedinVersion"></div></div>
+          <div class="ligne" style="display:flex;gap:8px;justify-content:flex-end"><button class="mk-btn" data-a="pubp-annuler"${modifie ? '' : ' disabled'}>Annuler</button><button class="mk-btn prim" data-a="pubp-enregistrer"${modifie && !S.envoi ? '' : ' disabled'}>Enregistrer</button></div>
+        </div></div>
+      <div class="mk-card"><div class="mk-ct"><span class="mk-k">Accès aux réseaux</span><span class="mk-mini">les secrets restent sur le serveur — jamais ici</span></div>
+        <table class="mk-tab"><tbody>
+          ${acces('facebook', 'Facebook', !!meta.configure, 'System User Meta ' + (meta.tokenDefini ? 'défini' : 'absent (META_SYSTEM_TOKEN)') + ' · API ' + esc(meta.version || ''))}
+          ${acces('instagram', 'Instagram', !!meta.configure, 'Par le même System User : le compte professionnel relié à chaque page')}
+          ${acces('linkedin', 'LinkedIn', !!li.configure, 'Jeton ' + (li.jetonDefini ? 'défini' : 'absent (LINKEDIN_ACCESS_TOKEN)') + ' · organisation ' + esc(li.organisation || '—') + (li.joursRestants != null ? ' · <span class="' + (li.joursRestants < 10 ? 'ko' : '') + '">expire dans ' + li.joursRestants + ' j</span>' : '') + ' · version ' + esc(li.version || ''))}
+        </tbody></table>
+        <div class="mk-cb mk-aide"><b>Ce qu’il faut</b> — Meta : une application, un System User du Business Manager avec les pages attribuées et les droits pages_manage_posts, pages_read_engagement, instagram_basic, instagram_content_publish ; son jeton dans META_SYSTEM_TOKEN. LinkedIn : une application avec le produit Community Management API, un jeton d’administrateur de la page portant w_organization_social, dans LINKEDIN_ACCESS_TOKEN (60 jours). Les visuels doivent être lisibles depuis Internet : adresse du cockpit publique (${esc(e.base || '—')}). Détail : docs/publication-reseaux.md.</div></div>
+    </div>`;
+  }
+
   /* API et tables : ce que le module appelle, lu dans le code (GET /marketing/sources). */
   const FAM_API = { tfbuddy: ['Reliées à TFBuddy', 'urg'], locale: ['Locales', 'ok'], externe: ['Services extérieurs (hors TFBuddy)', 'att'] };
-  const ORIG = { tfbuddy: ['TFBuddy · base partagée', 'urg'], module: ['Module marketing · base partagée', 'att'], cockpit: ['Cockpit · créée ici', 'ok'] };
+  const ORIG = { portail: ['Portail marketing · mar_', 'ok'], module: ['Module marketing autonome · base partagée', 'att'], cockpit: ['Cockpit · créée ici', 'bleu'], tfbuddy: ['TFBuddy · base partagée', 'urg'] };
   const MODE = { lecture: 'lue', ecriture: 'écrite', creation: 'créée et écrite' };
   function pSources() {
     const d = S.par.sources;
@@ -715,7 +925,7 @@
         <div class="mk-kpi off mk-canal-campagne"><div class="t">Routes du module</div><div class="v">${routes.length}</div><div class="d">toutes servies en local par /api/cockpit</div></div>
         <div class="mk-kpi off" style="--c:var(--mk-ko)"><div class="t">Reliées à TFBuddy</div><div class="v">${nTf}</div><div class="d">${nTf ? 'appellent le panel ou l’ERP' : 'aucune route n’appelle le panel ni l’ERP TFBuddy'}</div></div>
         <div class="mk-kpi off" style="--c:var(--mk-ok)"><div class="t">Locales seules</div><div class="v">${nLoc}</div><div class="d">base MySQL et calcul, rien ne sort du serveur</div></div>
-        <div class="mk-kpi off mk-canal-charte"><div class="t">Tables</div><div class="v">${tables.length}</div><div class="d">${parOrig('tfbuddy')} TFBuddy · ${parOrig('module')} module marketing · ${parOrig('cockpit')} cockpit</div></div></div>
+        <div class="mk-kpi off mk-canal-charte"><div class="t">Tables</div><div class="v">${tables.length}</div><div class="d">${parOrig('portail')} portail (mar_) · ${parOrig('module')} module autonome · ${parOrig('cockpit')} cockpit · ${parOrig('tfbuddy')} TFBuddy</div></div></div>
       <div class="mk-card"><div class="mk-ct"><span class="mk-k">API</span><span class="mk-mini">base ${esc(d.base || '—')} · lu le ${esc(fDT(d.genere))}</span><button class="mk-btn petit" data-a="param-relire" data-v="sources">↻ Relire</button></div>
         <div class="mk-defile"><table class="mk-tab"><thead><tr><th>API</th><th class="masque-mob">Hôte</th><th>État</th><th>Utilisée par</th></tr></thead><tbody>${groupes}</tbody></table></div></div>
       <div class="mk-card"><div class="mk-ct"><span class="mk-k">Les routes du module</span><span class="mk-mini">ce que la page et la newsletter appellent, et ce que chaque route touche</span></div>
@@ -723,6 +933,11 @@
       <div class="mk-card"><div class="mk-ct"><span class="mk-k">Toutes les tables</span><div class="mk-chips" style="--c:#222;margin-left:auto">${filtres.map(f => `<button class="${tf === f[0] ? 'on' : ''}" data-a="src-f" data-v="${f[0]}">${esc(f[1])} <b>${f[2]}</b></button>`).join('')}</div></div>
         <div class="mk-defile"><table class="mk-tab"><thead><tr><th>Table</th><th>Origine</th><th>Usage</th><th>En base</th><th class="n">Lignes</th><th class="masque-mob">Routes</th></tr></thead><tbody>${lignesTables}</tbody></table></div>
         ${d.baseLue ? '' : '<div class="mk-cb mk-aide">La base n’a pas répondu : présence et lignes inconnues.</div>'}</div>
+      <div class="mk-card"><div class="mk-ct"><span class="mk-k">Registre du portail · tables mar_</span><span class="mk-mini">${(d.registre || []).length} tables, rangées par famille — un seul préfixe pour tout le marketing</span></div>
+        <div class="mk-defile"><table class="mk-tab"><thead><tr><th>Table</th><th>Famille</th><th>Ce qu’elle contient</th><th>En base</th><th class="n">Lignes</th><th class="masque-mob">Ancien nom</th></tr></thead><tbody>
+        ${(d.registre || []).map(t => `<tr><td class="nom" style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">${esc(t.nom)}${t.parLeModule ? '' : '<small style="font-family:var(--font-ui)">écrans du cockpit</small>'}</td><td>${esc(t.famille)}</td><td>${esc(t.quoi)}</td>
+          <td>${t.existe == null ? '<span class="mu">—</span>' : t.existe ? '<span class="ok">présente</span>' : '<span class="mu">créée à la première utilisation</span>'}</td><td class="n">${t.lignes == null ? '—' : '≈ ' + fN(t.lignes)}</td><td class="masque-mob mu" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px">${esc(t.ancien || 'nouvelle')}</td></tr>`).join('')}
+        </tbody></table></div></div>
       <div class="mk-card"><div class="mk-ct"><span class="mk-k">Applications liées</span><span class="mk-mini">ouvertes depuis le module, avec leur propre API</span></div>
         <div class="mk-defile"><table class="mk-tab"><tbody>${(d.liees || []).map(l => `<tr><td class="nom">${esc(l.nom)}<small>${esc(l.quoi)}</small></td><td style="font-family:ui-monospace,Menlo,monospace;font-size:11px">${esc(l.api)}</td><td>${l.tfbuddy ? '<span class="mk-badge urg">TFBuddy</span>' : '<span class="mk-badge ok">locale</span>'}</td></tr>`).join('')}</tbody></table></div></div>
       <div class="mk-texte">${esc(d.limites || '')}</div>`;
@@ -819,9 +1034,10 @@
 
   /* --- navigation ------------------------------------------------------------------------- */
   function aller(onglet) {
-    // En quittant l'emailing, on relit : une newsletter créée là-bas doit apparaître ici.
-    const relire = S.onglet === 'email' && onglet !== 'email';
+    // En quittant la newsletter, on relit : une newsletter créée là-bas doit apparaître partout ici.
+    const relire = S.onglet === 'creer' && S.creerVue === 'newsletter' && onglet !== 'creer';
     S.onglet = onglet; S.msg = null;
+    if (onglet === 'parametres' && !PARAM_VUES.filter(v => marque() || v[2]).some(v => v[0] === S.paramVue)) { S.paramVue = 'sources'; }
     urlMaj(); rendre();
     if (relire) { charger(true); }
   }
@@ -829,23 +1045,21 @@
     if (!id) { return; }
     requestAnimationFrame(() => { const el = document.getElementById(id); if (el) { el.scrollIntoView({ block: id === 'mk-app' ? 'start' : 'center', behavior: 'smooth' }); } });
   }
-  function vueDuPost(p) {
-    if (!p) { return 'tous'; }
-    const v = SOC_VUES.find(x => x[2] && x[0] !== 'tous' && x[2](p));
-    return v ? v[0] : 'tous';
-  }
   function voirPost(id) {
     const p = posts().find(x => x.id === id);
-    S.postSel = id; S.socVue = vueDuPost(p);
-    aller('social'); defiler('post-' + id);
+    S.postSel = id;
+    const etape = p ? etapeDuPost(p) : 'valider';
+    if (etape === 'valider' && p) { S.valVue = p.statut; }
+    if (etape === 'creer') { S.creerVue = 'post'; }
+    if (etape === 'mesurer') { S.mesVue = 'resultats'; }
+    aller(etape); defiler('post-' + id);
   }
   function voirCampagne(id) {
-    const c = (canal('campagnes').liste || []).find(x => x.id === +id);
-    S.campSel = +id;
+    const c = campagneDe(+id);
+    S.campSel = +id; S.campOuverte = +id; S.planVue = 'campagnes';
     if (c && !CAMP_F.find(f => f[0] === S.campF)[2](c)) { S.campF = 'toutes'; }
-    aller('campagnes'); defiler('camp-' + id);
+    aller('plan'); defiler('camp-' + id);
   }
-
   /* --- événements --------------------------------------------------------------------------- */
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-a]');
@@ -859,17 +1073,20 @@
       const c = it && it.cible || {};
       if (c.post) { voirPost(c.post); }
       else if (c.campagne) { voirCampagne(c.campagne); }
-      else if (c.vue) { S.socVue = c.vue; aller(c.onglet || 'social'); }
-      else if (c.onglet) { aller(c.onglet); }
+      else {
+        if (c.onglet === 'mesurer' && c.vue) { S.mesVue = c.vue; }
+        if (c.onglet === 'creer' && c.vue) { S.creerVue = c.vue; }
+        aller(c.onglet || 'vue');
+      }
     }
     else if (a === 'ev') {
       // Dans le calendrier, un clic ouvre le détail sous la grille ; ailleurs (l'agenda
       // de la vue d'ensemble), il mène droit à l'objet.
       const ev = trouveEv(el.dataset.c, id);
-      if (S.onglet === 'calendrier' || !ev) { S.calSel = { canal: el.dataset.c, id }; rendre(); }
+      if ((S.onglet === 'plan' && S.planVue === 'calendrier') || !ev) { S.calSel = { canal: el.dataset.c, id }; rendre(); }
       else if (ev.canal === 'campagne') { voirCampagne(ev.id); }
-      else if (ev.canal === 'email') { aller('email'); }
-      else if (ev.sauvage) { S.socVue = 'sauvages'; aller('social'); }
+      else if (ev.canal === 'email') { S.creerVue = 'newsletter'; aller('creer'); }
+      else if (ev.sauvage) { S.mesVue = 'sauvages'; aller('mesurer'); }
       else { voirPost(ev.id); }
     }
     else if (a === 'cal-jour') { S.calSel = { jour: v }; rendre(); }
@@ -884,16 +1101,55 @@
     else if (a === 'camp-voir') { voirCampagne(id); }
     else if (a === 'post-camp') { composerDepuisCampagne(id); }
     else if (a === 'post-voir') { voirPost(id); }
-    else if (a === 'soc-vue') { S.socVue = v; S.postSel = null; if (S.onglet !== 'social') { aller('social'); } else { urlMaj(); rendre(); } }
-    else if (a === 'compose') { S.compose = composeNeuf(); rendre(); }
-    else if (a === 'compose-x') { S.compose = null; rendre(); }
+    // --- les étapes et leurs sous-vues
+    else if (a === 'plan-vue') { S.planVue = v; S.calSel = null; urlMaj(); rendre(); }
+    else if (a === 'creer-vue') { S.creerVue = v; if (S.onglet !== 'creer') { aller('creer'); } else { urlMaj(); rendre(); } }
+    else if (a === 'val-vue') { S.valVue = v; S.postSel = null; rendre(); }
+    else if (a === 'mes-vue') { S.mesVue = v; if (S.onglet !== 'mesurer') { aller('mesurer'); } else { urlMaj(); rendre(); } }
+    else if (a === 'aller-param') { e.preventDefault(); S.paramVue = v; aller('parametres'); }
+    else if (a === 'camp-ouvrir') { S.campOuverte = S.campOuverte === +id ? null : +id; rendre(); }
+    else if (a === 'nl-camp') { S.nlCampagne = +id; S.creerVue = 'newsletter'; aller('creer'); defiler('mk-app'); }
+    else if (a === 'nl-camp-x') { S.nlCampagne = null; rendre(); }
+    else if (a === 'lien') { /* un lien dans une ligne cliquable : il s'ouvre, la ligne ne navigue pas */ }
+    else if (a === 'c-reseau') {
+      const l = S.compose.reseaux;
+      S.compose.reseaux = el.checked ? Array.from(new Set(l.concat(v))) : l.filter(r => r !== v);
+      rendre();
+    }
+    // --- 4 · Publier
+    else if (a === 'pub-maintenant' || a === 'pub-programmer') {
+      const maintenant = a === 'pub-maintenant';
+      if (maintenant && !confirm('Publier ce post maintenant sur ses réseaux ?')) { return; }
+      geste(appel('POST', '/marketing/social/posts/' + encodeURIComponent(id) + '/publier', { quand: maintenant ? 'maintenant' : 'programme' }), r => {
+        S.postSel = id;
+        const l = (r && r.publications) || [], ko = l.filter(x => x.statut === 'erreur');
+        if (ko.length) { return { ok: false, texte: 'Publication en échec sur ' + ko.map(x => x.reseau).join(', ') + ' : ' + ko.map(x => x.erreur).join(' ; ') }; }
+        return maintenant ? 'Publié sur ' + l.filter(x => x.statut === 'publie').map(x => x.reseau).join(', ') + '. Étape 5 : les résultats.' : 'Programmé — l’horloge le publiera à son heure.';
+      }).then(() => { const p = posts().find(x => x.id === id); if (p && p.statut === 'publie') { S.mesVue = 'resultats'; aller('mesurer'); } });
+    }
+    else if (a === 'pub-annuler') {
+      if (!confirm('Annuler ce qui n’est pas encore parti ?')) { return; }
+      geste(appel('DELETE', '/marketing/social/posts/' + encodeURIComponent(id) + '/publier'), r => 'Programmation annulée' + (r && r.annulees != null ? ' (' + pl(r.annulees, 'réseau') + ')' : '') + '.');
+    }
+    // --- Paramètres → Publication
+    else if (a === 'pubp-bascule') { S.pubDraft[v] = el.checked; rendre(); }
+    else if (a === 'pubp-annuler') { S.pubDraft = null; rendre(); }
+    else if (a === 'pubp-enregistrer') {
+      geste(appel('PUT', '/marketing/publication/reglages', Object.assign({ par: par() }, S.pubDraft)), r => { S.par.publication = r; S.pubDraft = null; return 'Publication : ' + (r.reglages.reelle ? 'réelle' : 'éteinte') + (r.reglages.auto ? ', programmée à la validation' : '') + '.'; });
+    }
+    else if (a === 'pubp-tester') {
+      S.pubTest[v] = { message: 'appel en cours…' }; rendre();
+      appel('POST', '/marketing/publication/tester', { reseau: v }).then(r => { S.pubTest[v] = r; }).catch(err => { S.pubTest[v] = { ok: false, message: err.message }; }).finally(() => rendre());
+    }
+    else if (a === 'compose') { S.compose = composeNeuf(); aller('creer'); }
+    else if (a === 'compose-x') { S.compose = composeNeuf(); S.televersement = null; rendre(); }
     else if (a === 'envoyer-post') { envoyerPost(v); }
     else if (a === 'reprendre') { reprendre(id); }
     else if (a === 'controler') {
-      geste(appel('POST', '/facebook/posts/' + encodeURIComponent(id) + '/controle', {}), r => { const k = r && r.controle; S.postSel = id; return k ? 'Contrôle relancé — ' + k.note + '/5 · ' + (k.resume || '') : 'Contrôle relancé.'; });
+      geste(appel('POST', '/marketing/social/posts/' + encodeURIComponent(id) + '/controle', {}), r => { const k = r && r.controle; S.postSel = id; return k ? 'Contrôle relancé — ' + k.note + '/5 · ' + (k.resume || '') : 'Contrôle relancé.'; });
     }
     else if (a === 'soumettre') {
-      geste(appel('POST', '/facebook/posts/' + encodeURIComponent(id) + '/controle', { soumettre: true }), r => { const k = r && r.controle; S.postSel = id; S.socVue = 'a_traiter'; return k ? 'Brouillon soumis et contrôlé — ' + k.note + '/5 · ' + (k.resume || '') : 'Brouillon soumis.'; });
+      geste(appel('POST', '/marketing/social/posts/' + encodeURIComponent(id) + '/controle', { soumettre: true }), r => { const k = r && r.controle; S.postSel = id; S.onglet = 'valider'; S.valVue = 'a_valider'; urlMaj(); return k ? 'Brouillon soumis et contrôlé — ' + k.note + '/5 · ' + (k.resume || '') : 'Brouillon soumis.'; });
     }
     else if (a === 'dec-note') { (S.dec[id] || (S.dec[id] = {})).note = +v; rendre(); }
     else if (a === 'decider') {
@@ -901,17 +1157,21 @@
       if ((v === 'refuse' || d.note < (R.seuil || 4)) && (!d.famille || !d.type)) {
         S.msg = { ok: false, texte: 'Famille et type d’écart obligatoires pour un refus ou sous la note de ' + (R.seuil || 4) + ' : le magasin doit savoir quoi corriger.' }; rendre(); return;
       }
-      geste(appel('PATCH', '/facebook/posts/' + encodeURIComponent(id), { decision: v, note: d.note, famille: d.famille || '', type: d.type || '', commentaire: d.commentaire || '', par: par() }),
-        () => { delete S.dec[id]; S.postSel = id; S.socVue = v === 'valide' ? 'a_publier' : 'refuses'; return v === 'valide' ? 'Post validé ' + d.note + '/5 — prêt à publier.' : 'Post refusé — le magasin voit pourquoi.'; });
+      geste(appel('PATCH', '/marketing/social/posts/' + encodeURIComponent(id), { decision: v, note: d.note, famille: d.famille || '', type: d.type || '', commentaire: d.commentaire || '', par: par() }),
+        () => {
+          delete S.dec[id]; S.postSel = id;
+          if (v === 'valide') { S.onglet = 'publier'; urlMaj(); return 'Post validé ' + d.note + '/5. Étape 4 : la publication.'; }
+          S.valVue = 'refuse'; return 'Post refusé — le magasin voit pourquoi.';
+        });
     }
     else if (a === 'publier') {
-      geste(appel('PATCH', '/facebook/posts/' + encodeURIComponent(id), { statut: 'publie', fbId: (S.pub[id] || '').trim(), par: par() }),
-        () => { delete S.pub[id]; S.postSel = id; S.socVue = 'publies'; return 'Post marqué publié.'; });
+      geste(appel('PATCH', '/marketing/social/posts/' + encodeURIComponent(id), { statut: 'publie', fbId: (S.pub[id] || '').trim(), par: par() }),
+        () => { delete S.pub[id]; S.postSel = id; S.onglet = 'mesurer'; S.mesVue = 'resultats'; urlMaj(); return 'Post marqué publié.'; });
     }
     // --- avis Google
     else if (a === 'avis-sync') {
       if (!id && !confirm('Relire les avis Google de toutes les fiches raccordées ? Chaque fiche relue est un appel facturé par Google.')) { return; }
-      geste(appel('POST', '/reputation/sync', id ? { magasinId: id } : {}), r => (r && r.magasins != null ? pl(r.magasins, 'magasin relu', 'magasins relus') + ', ' + pl(r.nouveaux || 0, 'nouvel avis', 'nouveaux avis') : 'Avis relus') + (r && r.erreurs && r.erreurs.length ? ' — ' + r.erreurs.length + ' en échec' : '') + '.');
+      geste(appel('POST', '/marketing/avis/sync', id ? { magasinId: id } : {}), r => (r && r.magasins != null ? pl(r.magasins, 'magasin relu', 'magasins relus') + ', ' + pl(r.nouveaux || 0, 'nouvel avis', 'nouveaux avis') : 'Avis relus') + (r && r.erreurs && r.erreurs.length ? ' — ' + r.erreurs.length + ' en échec' : '') + '.');
     }
     else if (a === 'rech-ouvrir') {
       const m = (canal('avis').magasins || []).find(x => String(x.id) === id) || {};
@@ -921,18 +1181,18 @@
     else if (a === 'rech-chercher') {
       const r = S.rech; if (!r || !r.q.trim()) { return; }
       r.busy = true; r.err = ''; rendre();
-      appel('GET', '/reputation/recherche?q=' + encodeURIComponent(r.q)).then(d => { r.candidats = (d && d.candidats) || []; })
+      appel('GET', '/marketing/avis/recherche?q=' + encodeURIComponent(r.q)).then(d => { r.candidats = (d && d.candidats) || []; })
         .catch(e => { r.err = e.message || 'Recherche impossible — vérifiez la clé Google.'; r.candidats = null; })
         .finally(() => { r.busy = false; rendre(); });
     }
     else if (a === 'rech-choisir') {
       const r = S.rech, c = r && (r.candidats || [])[+el.dataset.i];
       if (!c) { return; }
-      geste(appel('PUT', '/reputation/' + encodeURIComponent(r.magasinId) + '/fiche', { placeId: c.placeId }), () => { S.rech = null; return 'Fiche « ' + c.nom + ' » raccordée.'; });
+      geste(appel('PUT', '/marketing/avis/' + encodeURIComponent(r.magasinId) + '/fiche', { placeId: c.placeId }), () => { S.rech = null; return 'Fiche « ' + c.nom + ' » raccordée.'; });
     }
     else if (a === 'fiche-detacher') {
       if (!confirm('Détacher la fiche Google de ce magasin ? Les avis déjà rapatriés sont conservés.')) { return; }
-      geste(appel('PUT', '/reputation/' + encodeURIComponent(id) + '/fiche', { placeId: '' }), 'Fiche détachée.');
+      geste(appel('PUT', '/marketing/avis/' + encodeURIComponent(id) + '/fiche', { placeId: '' }), 'Fiche détachée.');
     }
     // --- paramètres
     else if (a === 'param-vue') { S.paramVue = v; urlMaj(); rendre(); }
@@ -943,7 +1203,7 @@
     else if (a === 'agent-annuler') { S.agentDraft = null; rendre(); }
     else if (a === 'agent-enregistrer') {
       const d = S.agentDraft; if (!d) { return; }
-      geste(appel('PUT', '/parametres/fbControle', { valeur: { seuil: d.seuil, familles: d.familles, regles: d.regles } }),
+      geste(appel('PUT', '/marketing/social/regles', { valeur: { seuil: d.seuil, familles: d.familles, regles: d.regles } }),
         () => { S.agentDraft = null; S.par.agent = null; chargerParam('agent', true); return 'Règles de l’agent enregistrées — publiable à partir de ' + d.seuil + '/5.'; });
     }
     else if (a === 'ch-fam') { S.chFam = v; rendre(); }
@@ -982,10 +1242,10 @@
     else if (a === 'cible-enregistrer') {
       const n = parseFloat(String(S.cibleDraft || '').replace(',', '.'));
       if (!(n >= 1 && n <= 5)) { S.msg = { ok: false, texte: 'La note visée est un nombre entre 1 et 5.' }; rendre(); return; }
-      geste(appel('PUT', '/parametres/reputationCible', { valeur: Math.round(n * 10) / 10 }), () => { S.cibleDraft = null; return 'Note visée : ' + nf(n, 1) + ' / 5.'; });
+      geste(appel('PUT', '/marketing/avis/cible', { valeur: Math.round(n * 10) / 10 }), () => { S.cibleDraft = null; return 'Note visée : ' + nf(n, 1) + ' / 5.'; });
     }
     else if (a === 'ecart') {
-      geste(appel('PATCH', '/facebook/posts/' + encodeURIComponent(id) + '/ecarts/' + el.dataset.e, { statut: v, par: par() }),
+      geste(appel('PATCH', '/marketing/social/posts/' + encodeURIComponent(id) + '/ecarts/' + el.dataset.e, { statut: v, par: par() }),
         r => { S.postSel = id; return (v === 'ignore' ? 'Écart écarté' : 'Écart rouvert') + (r && r.note != null ? ' — note de l’agent ' + r.note + '/5' : '') + '.'; });
     }
   });
@@ -1002,14 +1262,17 @@
     if (f === 'pg-mail') { S.mailDraft = el.value; activer('pg-enregistrer'); return; }
     if (f === 'cible') { S.cibleDraft = el.value; activer('cible-enregistrer'); return; }
     if (f === 'dec-com') { (S.dec[el.dataset.id] || (S.dec[el.dataset.id] = {})).commentaire = el.value; return; }
-    if (f.indexOf('c-') === 0 && S.compose) {
-      S.compose[f.slice(2)] = el.value;
-      const ap = document.getElementById('mk-apercu'); if (ap) { ap.innerHTML = apercu(); }
-      const n = S.compose.message.trim().length;
-      const cp = document.getElementById('mk-compteur'); if (cp) { cp.textContent = n + ' caractère' + (n > 1 ? 's' : ''); }
-      document.querySelectorAll('[data-a="envoyer-post"]').forEach(b => { b.disabled = S.envoi || !n; });
-    }
+    if (f.indexOf('pubp-') === 0 && S.pubDraft && f !== 'pubp-pageChoix') { S.pubDraft[f.slice(5)] = el.value; activer('pubp-enregistrer'); activer('pubp-annuler'); return; }
+    if (f.indexOf('c-') === 0 && f !== 'c-fichier' && S.compose) { S.compose[f.slice(2)] = el.value; majRedacteur(); }
   });
+  /** Le rédacteur suit la frappe sans se redessiner : aperçu, compteur, « prêt » par réseau, boutons. */
+  function majRedacteur() {
+    const ap = document.getElementById('mk-apercu'); if (ap) { ap.innerHTML = apercu(); }
+    const pr = document.getElementById('mk-pret'); if (pr) { pr.innerHTML = pret(); }
+    const n = S.compose.message.trim().length;
+    const cp = document.getElementById('mk-compteur'); if (cp) { cp.textContent = n + ' caractère' + (n > 1 ? 's' : ''); }
+    document.querySelectorAll('[data-a="envoyer-post"]').forEach(b => { b.disabled = S.envoi || !n || (b.dataset.v !== 'brouillon' && !S.compose.reseaux.length); });
+  }
   document.addEventListener('change', e => {
     const el = e.target, f = el.dataset && el.dataset.f;
     if (!f || !$app.contains(el)) { return; }
@@ -1021,9 +1284,12 @@
     else if (f === 'dec-famille') { const d = S.dec[el.dataset.id] || (S.dec[el.dataset.id] = {}); d.famille = el.value; d.type = ''; rendre(); }
     else if (f === 'ch-gravite') { const r = brouillonCharte()[+el.dataset.i]; if (r) { r.gravite = el.value; } rendre(); }
     else if (f === 'dec-type') { (S.dec[el.dataset.id] || (S.dec[el.dataset.id] = {})).type = el.value; }
+    else if (f === 'pubp-pageChoix' && S.pubDraft) { if (el.value) { S.pubDraft.pageMarque = el.value; } rendre(); }
+    else if (f === 'c-fichier') { televerser(el.files && el.files[0]); }
     else if (f.indexOf('c-') === 0 && S.compose) {
       S.compose[f.slice(2)] = el.value;
-      if (f === 'c-format' || f === 'c-magasinId') { const ap = document.getElementById('mk-apercu'); if (ap) { ap.innerHTML = apercu(); } }
+      // Le magasin change ce que LinkedIn permet : on redessine ; le reste suit sans redessiner.
+      if (f === 'c-magasinId') { rendre(); } else { majRedacteur(); }
     }
   });
 

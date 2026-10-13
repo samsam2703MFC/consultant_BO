@@ -435,7 +435,7 @@ function fbDoublon(array $post, array $p, string $norm): array
     $depuis = date('Y-m-d H:i:s', strtotime(($post['publierLe'] ?: date('Y-m-d H:i:s')) . ' -' . $jours . ' days'));
     $rows = Db::rows(
         "SELECT p.id, p.message, s.name AS shop
-           FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
+           FROM mar_social_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
           WHERE p.id <> ? AND p.shop_id <> ? AND p.status IN ('valide','publie')
             AND COALESCE(p.published_at, p.planned_at) >= ?",
         [(string) ($post['id'] ?? ''), (string) $post['shopId'], $depuis]);
