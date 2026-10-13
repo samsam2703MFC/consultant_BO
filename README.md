@@ -299,6 +299,21 @@ installée sur les tablettes : il ne change plus de nom.
   `.htaccess` (qui fait de même en production : sans cela le shell du cockpit
   partait en 200 à la place d'un morceau de script ou d'une image).
 
+## Module Social & Ads (/social)
+
+Publication Facebook / Instagram, publicités Meta, formulaires de leads et
+retour sur campagne : un **module indépendant** (dépôt `social`, dossier
+`/var/www/social`, adresse **/social**), ouvert depuis le rail du cockpit
+(Marque & marketing → « Social & Ads ↗ »).
+
+Il partage les accès du cockpit sans rien dupliquer : identifiants MySQL lus
+dans `config/config.php` de ce dépôt, session du cockpit (cookie `cockpit_s`,
+même secret `authSecret`), boutiques `ceo_shop`, pages Facebook de Brand Guard,
+ventes de la caisse. Ses données et ses clés Meta vivent dans ses propres
+tables `social_*` (clés dans `social_parametre`) ; il n'écrit dans aucune table
+du cockpit, sauf une ligne de journal (`ceo_journal_entry`, type « Social &
+Ads ») par geste.
+
 ## Scouting commercial
 
 Écran « Scouting commercial » (rail, groupe *Développement*) — implémentation

@@ -1392,6 +1392,9 @@ class App {
       ['Marque & marketing', [
         ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
         ['offres', 'Offres et canaux', 0],
+        // Le module Social & Ads (dépôt social) : une application à part, servie
+        // à /social sur le même serveur, qui partage la base et la session du cockpit.
+        ['ext:/social/', 'Social & Ads ↗', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
