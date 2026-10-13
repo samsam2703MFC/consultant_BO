@@ -432,7 +432,6 @@ if C:
     perteL = ''.join(f'<tr><td class="l">{H(o)}</td><td>{nf(v / 1000, 1)}&nbsp;k€</td></tr>' for o, v in pR)
     perteL += (f'<tr class="sous"><td class="l">Somme des lignes</td><td>{nf(sum(v for _, v in pR) / 1000, 1)}&nbsp;k€</td></tr>'
                f'<tr class="tot"><td class="l">Perte de la situation au 30/09</td><td>{nf(C["perteSituation"] / 1000, 1)}&nbsp;k€</td></tr>')
-    corr = ''.join(f'<li>{H(t)}</li>' for t in C['corrections'])
     margeStd = (cVar - 0.41) * cC, (cVar - 0.40) * cC
     p3 = f"""<div class="page">
 {hd}
@@ -450,7 +449,6 @@ if C:
 <table class="t serre perte">{perteL}</table>
 <p class="s">Le trou vient du démarrage trop long et de la dette, pas de la boutique qui tourne. Les lignes bouclent à {nf(abs(sum(v for _, v in pR) - C['perteSituation']) / 1000, 1)}&nbsp;k€ près.</p></div>
 </div>
-<div class="bas"><div class="sec petit">À faire corriger par Pardoen avant de signer la situation et le PV d’AG</div><ul class="pts deuxcol">{corr}</ul></div>
 {ft(3)}
 </div>"""
 
@@ -916,11 +914,6 @@ if C:
     rs = r + 1 + len(C['perte'])
     cell(ce, f'A{rs}', 'Somme des lignes', F_TOT, border=B_T); cell(ce, f'B{rs}', f'=SUM(B{r + 1}:B{rs - 1})', F_TOT, EUR, border=B_T)
     cell(ce, f'A{rs + 1}', 'Perte de la situation au 30/09'); cell(ce, f'B{rs + 1}', C['perteSituation'], F_IN, EUR)
-    # À faire corriger
-    r = rs + 3
-    cell(ce, f'A{r}', 'À faire corriger par Pardoen avant de signer la situation et le PV d’AG', F_SEC, border=B_H)
-    for i, t in enumerate(C['corrections']):
-        cell(ce, f'A{r + 1 + i}', t, F(size=8, color='5A534B'), al=WRAP); ce.merge_cells(f'A{r + 1 + i}:J{r + 1 + i}'); ce.row_dimensions[r + 1 + i].height = 24
     ce.freeze_panes = 'B20'
 
 # Feuille « Application ou bilan » : avril → septembre, l'application (feuille Mois par mois) face au bilan (feuille Compte d'exploitation)
