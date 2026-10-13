@@ -1,7 +1,7 @@
 {
   "commercial": {
-    "titre": "Augmenter le CA : dix actions sur quatre semaines",
-    "constat": "En octobre, les week-ends dépassent l’objectif de 20 % et le vendredi est à 99 %, mais du lundi au jeudi le magasin n’est qu’à 79 % (environ − 380 € par jour). Au rythme d’octobre, il manque environ 650 € par semaine pour être au budget ; au rythme de septembre, environ 1 900 €. Le plan vise + 1 500 à 2 000 € par semaine, surtout du lundi au jeudi.",
+    "titre": "Augmenter le CA : cinq actions, mi-octobre → fin novembre",
+    "constat": "En octobre, les week-ends dépassent l’objectif de 20 % et le vendredi est à 99 %, mais du lundi au jeudi le magasin n’est qu’à 79 % (environ − 380 € par jour). Au rythme d’octobre, il manque environ 650 € par semaine pour être au budget ; au rythme de septembre, environ 1 900 €. Les cinq actions visent ≈ + 1 600 € par semaine, surtout du lundi au jeudi ; la hausse de prix du volet B (≈ + 600 € par semaine) complète.",
     "actions": [
       {
         "titre": "Commandes pro en semaine",
@@ -18,11 +18,11 @@
         "effet": 400
       },
       {
-        "titre": "Le goûter, 15 h 30 – 17 h",
-        "constat": "13 – 18 h en semaine : 6 clients et 75 € par heure, la moitié d’une heure moyenne",
-        "action": "Cécémel + cookie ou couque à environ 4,50 €, panneau sur le trottoir",
-        "objectif": "10 goûters par jour",
-        "effet": 225
+        "titre": "« Et avec ceci ? » et concours d’équipe",
+        "constat": "panier 12,18 €, contre 14,26 € dans les trois autres magasins",
+        "action": "un cookie proposé à chaque client (promo « 3 cookies » active), concours de quatre semaines sur le panier du lundi au jeudi (module primes)",
+        "objectif": "panier à 13 €",
+        "effet": 290
       },
       {
         "titre": "Café + viennoiserie, 7 – 10 h",
@@ -32,50 +32,15 @@
         "effet": 240
       },
       {
-        "titre": "« Et avec ceci ? » et concours d’équipe",
-        "constat": "panier 12,18 €, contre 14,26 € dans les trois autres magasins",
-        "action": "un cookie proposé à chaque client (promo « 3 cookies » active), concours de quatre semaines sur le panier du lundi au jeudi (module primes)",
-        "objectif": "panier à 13 €",
-        "effet": 290
-      },
-      {
-        "titre": "Précommandes du week-end",
-        "constat": "tartes 16 % du CA, click & collect presque nul (8 commandes en 14 jours)",
-        "action": "carnet au comptoir et en ligne : « votre tarte du dimanche, commandez avant samedi 16 h »",
-        "objectif": "10 commandes par week-end",
-        "effet": 200
-      },
-      {
-        "titre": "Halloween, Toussaint, vacances d’automne",
-        "constat": "samedi 31/10, dimanche 1/11, lundi 2/11",
-        "action": "gamme courte de saison : cookies et couques Halloween, tarte de Toussaint pour les repas de famille",
+        "titre": "Le calendrier : Halloween, Toussaint, 11 novembre",
+        "constat": "samedi 31/10, dimanche 1/11 et lundi 2/11, mercredi 11/11 (férié) ; vacances d’automne fin octobre",
+        "action": "gamme courte de saison : cookies et couques Halloween, tarte de Toussaint pour les repas de famille ; le 11 novembre traité comme un dimanche (production et équipe)",
         "objectif": "600 € sur la période",
         "effet": 150
-      },
-      {
-        "titre": "Renfort du week-end, 8 – 11 h",
-        "constat": "la pointe : 24 à 29 clients par heure, panier d’environ 15 €",
-        "action": "heures prises sur les après-midi de semaine (6 clients par heure), à masse salariale égale ; à tester sur deux week-ends",
-        "objectif": "+ 4 clients par heure",
-        "effet": 300
-      },
-      {
-        "titre": "Avis Google, fiche en néerlandais",
-        "constat": "4,5 / 5 mais sur 46 avis ; Halle est néerlandophone",
-        "action": "QR code au comptoir et sur les sacs, fiche Google à jour (photos, horaires, « ontbijt », « broodjes », « taart »), posts en néerlandais",
-        "objectif": "+ 40 avis",
-        "effet": null
-      },
-      {
-        "titre": "Piloter le lundi → jeudi au quotidien",
-        "constat": "lundi → jeudi à 79 % de l’objectif d’octobre",
-        "action": "chaque matin l’objectif du jour et les clients manquants (dashboard du cockpit), briefing de 5 minutes ; point chaque lundi avec le consultant",
-        "objectif": "la condition des neuf autres",
-        "effet": null
       }
     ],
-    "ordre": "Cette semaine : 10, 2, 4 et 9. Semaine 2 : la tournée pro (1), le goûter (3), les précommandes (6). Semaines 3 et 4 : Halloween et la Toussaint (7), et le bilan.",
-    "liens": "Les formules se chiffrent sur les nouveaux prix (action B1). Une vitrine tenue l’après-midi, oui, mais sur ce qui s’y vend : les commandes suivent les ventes réelles (action B2)."
+    "ordre": "Dès cette semaine : la formule midi (2), le café du matin (4) et « Et avec ceci ? » (3). Semaine du 19/10 : la liste et la tournée pro (1). Du 26/10 au 2/11 : Halloween et la Toussaint (5), puis le 11 novembre. En novembre : on garde ce qui marche, bilan chaque lundi.",
+    "liens": "Pilotage : chaque matin, l’objectif du jour et les clients manquants (dashboard du cockpit) ; chaque lundi, le CA du lundi au jeudi, le panier, les formules et les commandes pro vendues, avec l’indicateur achats ÷ CA du volet B. Les formules se chiffrent sur les nouveaux prix (B1)."
   },
   "matiere": {
     "titre": "Ramener les achats à 40 % du CA",

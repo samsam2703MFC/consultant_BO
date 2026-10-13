@@ -137,7 +137,7 @@ if C:
     cPM = (cF + cN) / (1 - cVar); cPMb = (cF + cN + C['remboursementsMois']) / (1 - cVar)
     cPersoSem = (C['fixes'][0]['montant'] + cN) * 12 / 52
     caAS = sum(x['ca'] for x in M if x['m'] >= 4); caDepuis = D['fevrier']['ca'] + ca
-NPAGES = 2 + (1 if C else 0) + (1 if os.path.exists(os.path.join(ICI, 'plan.json')) else 0)
+NPAGES = 2 + (2 if C else 0) + (1 if os.path.exists(os.path.join(ICI, 'plan.json')) else 0)
 
 
 # --- 3. Le PDF -------------------------------------------------------------------------------------------------------------
@@ -299,7 +299,9 @@ sup{{font-size:5.5pt;line-height:0}}
 .t.plan td.n{{color:#8D1D2C;font-weight:500;text-align:left;width:4mm}}.t.plan td.r{{font-size:6.5pt;width:30%}}.t.plan tr.tot td{{vertical-align:middle}}
 .deux.g21{{grid-template-columns:1.55fr 1fr;gap:6mm}}.pts.plan{{font-size:7pt;line-height:1.42;padding-left:0;list-style:none}}.pts.plan li{{margin-bottom:1.8mm}}
 .pts.plan .ti{{color:#8D1D2C;font-weight:500}}.pts.plan .ef{{display:block;color:#221E1A;font-weight:500;margin-top:.4mm}}
-.t.effets td.l2{{text-align:left;white-space:normal;font-size:7pt}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
+.t.effets td.l2{{text-align:left;white-space:normal;font-size:7pt}}
+.t.comp td{{padding:1.1mm 1.4mm;font-size:7.6pt}}.t.comp td.p{{color:#7a736a;font-size:7pt}}.t.comp td.r{{font-size:6.5pt;width:34%;white-space:normal}}
+.graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
 .pts{{margin:0;padding-left:4mm;font-size:7.3pt;line-height:1.45;color:#221E1A}}.pts li{{margin-bottom:1.1mm}}
 .ft{{position:absolute;left:11mm;right:11mm;bottom:5mm;display:flex;justify-content:space-between;font-size:6.4pt;color:#9a938a;border-top:.5pt solid #e6e0d8;padding-top:1.2mm}}
 '''
@@ -461,7 +463,71 @@ if PL:
 </div>
 {ft(4)}
 </div>"""
-doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Atelier by – Halle · tableau récap</title><style>{css}</style></head><body>{page}{p3}{p4}</body></html>'
+# --- La page 5 : les mêmes mois, deux lectures — l'application (caisse et panel) et le bilan (fiduciaire), avril → septembre
+p5 = ''
+if C:
+    AS = [x for x in M if x['m'] >= 4]; nA = len(AS)
+    ap = dict(ca=S('ca', AS) / nA, tk=S('tickets', AS) / nA, mat=sum(x['ca'] * x['foodMes'] for x in AS) / nA,
+              lab=S('labMes', AS) / nA, oh=S('overhead', AS) / nA)
+    ap['mb'] = ap['ca'] - ap['mat']; ap['res'] = ap['mb'] - ap['lab'] - ap['oh']; ap['pm'] = (ap['lab'] + ap['oh']) / (1 - ap['mat'] / ap['ca'])
+    bi = dict(ca=cC, mat=cV, mb=cMB, lab=C['fixes'][0]['montant'], oh=cF - C['fixes'][0]['montant'], res=cE, pm=cF / (1 - cVar))
+    pont = [('Résultat de l’application', ap['res'], 'tot'), ('CA du bilan en plus', bi['ca'] - ap['ca'], 'v'), ('Matière achetée en plus', -(bi['mat'] - ap['mat']), 'v'),
+            ('Personnel en plus', -(bi['lab'] - ap['lab']), 'v'), ('Frais généraux en plus', -(bi['oh'] - ap['oh']), 'v'), ('EBITDA du bilan', bi['res'], 'tot')]
+    def lc(lib, a, b, fmt=fE, pct=True, note='', cls=''):
+        ea = '' if a is None else fmt(a); eb = '' if b is None else fmt(b)
+        pa = fP(a / ap['ca']) if pct and a is not None else ''; pb = fP(b / bi['ca']) if pct and b is not None else ''
+        ec = '' if a is None or b is None else ('+&nbsp;' if b - a >= 0 else '−&nbsp;') + fmt(abs(b - a))
+        return f'<tr{" class=" + cls if cls else ""}><td class="l">{lib}</td><td>{ea}</td><td class="p">{pa}</td><td>{eb}</td><td class="p">{pb}</td><td>{ec}</td><td class="l r">{note}</td></tr>'
+    rows = ''.join([
+        lc('Chiffre d’affaires', ap['ca'], bi['ca'], pct=False, note='caisse HT ; à rapprocher (période, TVA, factures hors caisse)', cls='tot'),
+        lc('Clients par mois · panier', None, None, pct=False, note=f'application seulement : {nf(ap["tk"])} tickets, {fE(ap["ca"] / ap["tk"], 2)} de panier'),
+        lc('Matière', ap['mat'], bi['mat'], note=f'application : coût de recette des ventes (panel) ; bilan : achats + emballages. Le cockpit, ticket par ticket : {fP(foodT)} (août-sept.)'),
+        lc('Marge brute', ap['mb'], bi['mb'], cls='sous'),
+        lc('Personnel', ap['lab'], bi['lab'], note='heures planifiées × taux du panel, contre salaires ; Nathan absent des deux'),
+        lc('Frais généraux', ap['oh'], bi['oh'], note=f'montant saisi au panel, contre factures ; panel d’octobre : {fE(arr(ohOct))}'),
+        lc('Résultat · EBITDA', ap['res'], bi['res'], cls='tot', note='avant Nathan, amortissements, charges financières'),
+        lc('Point mort (CA par mois)', ap['pm'], bi['pm'], pct=False, note='charges fixes ÷ (1 − matière en % du CA), Nathan non payé')])
+    # La cascade : du résultat de l'application à l'EBITDA du bilan
+    W2, H2, gx2, gy2, gb2 = 680, 175, 10, 18, 40
+    vmax2 = max(ap['res'], bi['ca'] - ap['ca'] + ap['res']) * 1.08; bw2 = (W2 - 2 * gx2) / len(pont)
+    Y2 = lambda v: gy2 + (H2 - gy2 - gb2) * (1 - v / vmax2)
+    sv = [f'<svg class="graph" viewBox="0 0 {W2} {H2}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Du résultat de l’application à l’EBITDA du bilan">',
+          f'<line x1="{gx2}" x2="{W2 - gx2}" y1="{Y2(0):.1f}" y2="{Y2(0):.1f}" stroke="#221E1A" stroke-width="1"/>']
+    cum = 0.0
+    for i, (lib, v, k) in enumerate(pont):
+        x0 = gx2 + i * bw2 + bw2 * 0.2; w = bw2 * 0.6
+        if k == 'tot': y_a, y_b, col = v, 0, '#221E1A'; cum = v
+        else: y_a, y_b = cum, cum + v; col = '#2d7a3e' if v >= 0 else '#8D1D2C'; cum += v
+        top, bot = Y2(max(y_a, y_b)), Y2(min(y_a, y_b))
+        sv.append(f'<rect x="{x0:.1f}" y="{top:.1f}" width="{w:.1f}" height="{max(bot - top, 1):.1f}" rx="3" fill="{col}"/>')
+        if i < len(pont) - 1:
+            sv.append(f'<line x1="{x0 + w:.1f}" x2="{x0 + bw2:.1f}" y1="{Y2(cum):.1f}" y2="{Y2(cum):.1f}" stroke="#b8b1a6" stroke-width="1" stroke-dasharray="3 3"/>')
+        val = (fE(v) if k == 'tot' else ('+&#8239;' if v >= 0 else '−&#8239;') + fE(abs(v)))
+        sv.append(f'<text class="val" x="{x0 + w / 2:.1f}" y="{top - 5:.1f}" text-anchor="middle">{val}</text>')
+        sv.append(f'<text class="axl" x="{x0 + w / 2:.1f}" y="{Y2(0) + 14:.1f}" text-anchor="middle">{lib}</text>')
+    sv.append('</svg>')
+    cascade = ''.join(sv)
+    p5 = f"""<div class="page">
+{hd}
+<div class="sec">L’application ou le bilan : les mêmes mois, deux lectures</div>
+<p class="s">Avril → septembre 2026, en € par mois. Application : la caisse et le P&amp;L du panel, ce que le franchisé y encode, et la matière mesurée par le panel sur les recettes vendues. Bilan : la situation au 30/09 de la fiduciaire, telle que lissée à la page 3 (à valider).</p>
+<table class="t comp">
+<tr><th class="l">Poste</th><th>Application<small>€ par mois</small></th><th>% CA</th><th>Bilan<small>€ par mois</small></th><th>% CA</th><th>Écart<small>bilan − appli.</small></th><th class="l">Ce qui change d’une source à l’autre</th></tr>
+{rows}
+</table>
+<div class="sec" style="margin-top:5mm">Du résultat de l’application à l’EBITDA du bilan</div>
+<p class="s">Chaque barre : ce que le bilan ajoute ou retire au résultat que montre l’application, en € par mois.</p>
+{cascade}
+<div class="sec" style="margin-top:3mm">Ce que ça dit</div>
+<ul class="pts">
+<li>L’application montre un résultat de {fE(arr(ap['res'], 100))} par mois, le bilan un EBITDA de {fE(arr(bi['res'], 100))} : {nf(ap['res'] / bi['res'], 1)} fois moins. L’écart vient d’abord de la matière, {fE(arr(bi['mat'] - ap['mat'], 100))} par mois : l’application compte ce que coûtent les recettes vendues ({fP(ap['mat'] / ap['ca'])}), le bilan ce qui est acheté ({fP(cVar)}). Entre les deux : la perte, les invendus, les sorties non tracées (Couq, Saint-Géry, GBXATL), les fiches recettes à revoir et un stock mal compté (− 6 173 € au bilan).</li>
+<li>Le bilan compte {fE(arr(bi['ca'] - ap['ca'], 10))} de CA de plus par mois que la caisse ({fP(bi['ca'] / ap['ca'] - 1, 0)}). Tant qu’il n’est pas expliqué, il gonfle l’EBITDA : à coûts égaux, sans ce CA, le mois finirait à {fE(arr(bi['res'] - (bi['ca'] - ap['ca']), 100))}.</li>
+<li>Personnel et frais généraux sont sous-estimés au panel : {fE(arr(bi['lab'] - ap['lab'], 10))} et {fE(arr(bi['oh'] - ap['oh'], 10))} de moins par mois que dans les comptes. Les frais généraux encodés en octobre ({fE(arr(ohOct))}) se rapprochent du bilan ({fE(bi['oh'])}).</li>
+<li>Pour piloter : l’application pour les ventes, les clients et le panier, jour par jour ; le bilan pour les coûts. L’indicateur du lundi (achats de la semaine ÷ CA de la semaine, page 4) fait entrer la matière du bilan dans le suivi de chaque semaine.</li>
+</ul>
+{ft(5 if PL else 4)}
+</div>"""
+doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Atelier by – Halle · tableau récap</title><style>{css}</style></head><body>{page}{p3}{p4}{p5}</body></html>'
 
 with tempfile.TemporaryDirectory() as tmp:
     f = os.path.join(tmp, 'recap.html'); open(f, 'w', encoding='utf-8').write(doc)
@@ -758,6 +824,43 @@ if C:
     for i, t in enumerate(C['corrections']):
         cell(ce, f'A{r + 1 + i}', t, F(size=8, color='5A534B'), al=WRAP); ce.merge_cells(f'A{r + 1 + i}:G{r + 1 + i}'); ce.row_dimensions[r + 1 + i].height = 24
     ce.freeze_panes = 'A4'
+
+# Feuille « Application ou bilan » : avril → septembre, l'application (feuille Mois par mois) face au bilan (feuille Compte d'exploitation)
+if C:
+    ab = wb.create_sheet('Application ou bilan')
+    CE = "'Compte d’exploitation'!"
+    a1, a2 = r0 + 1, rN                                  # avril → septembre dans « Mois par mois »
+    cell(ab, 'A1', 'L’application ou le bilan : avril → septembre 2026, en € par mois', F_T)
+    cell(ab, 'A2', 'Application : la caisse et le P&L du panel (feuille « Mois par mois », main-d’œuvre encodée, food cost mesuré par le panel). Bilan : la situation au 30/09 de la fiduciaire, lissée sur 6 mois (feuille « Compte d’exploitation », à valider). En vert : liens ; en noir : calculs.', F_S)
+    for col, w in zip('ABCDEFG', (34, 15, 9, 15, 9, 15, 70)): ab.column_dimensions[col].width = w
+    for i, h in enumerate(['Poste', 'Application', '% CA', 'Bilan', '% CA', 'Écart (bilan − application)', 'Ce qui change d’une source à l’autre']):
+        cell(ab, f'{chr(65 + i)}4', h, F_H, al=Alignment(horizontal='left' if i in (0, 6) else 'right', wrap_text=True, vertical='bottom'), border=B_H)
+    ab.row_dimensions[4].height = 30
+    L = [('Chiffre d’affaires', f'=AVERAGE({MP}C{a1}:C{a2})', f'={CE}B{rCAc}', 'caisse HT ; à rapprocher (période, TVA, factures hors caisse)'),
+         ('Matière', f'=SUMPRODUCT({MP}C{a1}:C{a2},{MP}T{a1}:T{a2})/{a2 - a1 + 1}', f'={CE}B{rAch}+{CE}B{rEmb}', 'application : coût de recette des ventes (panel) ; bilan : achats + emballages'),
+         ('Marge brute', '=B5-B6', '=D5-D6', ''),
+         ('Personnel', f'=AVERAGE({MP}U{a1}:U{a2})', f'={CE}B{rF0}', 'heures planifiées × taux du panel, contre salaires ; Nathan absent des deux'),
+         ('Frais généraux', f'=AVERAGE({MP}P{a1}:P{a2})', f'=SUM({CE}B{rF0 + 1}:B{rF1})', 'montant saisi au panel, contre factures'),
+         ('Résultat · EBITDA', '=B7-B8-B9', '=D7-D8-D9', 'avant Nathan, amortissements, charges financières'),
+         ('Point mort (CA par mois)', '=IF(B5>0,(B8+B9)/(1-B6/B5),0)', '=IF(D5>0,(D8+D9)/(1-D6/D5),0)', 'charges fixes ÷ (1 − matière en % du CA), Nathan non payé')]
+    for i, (lib, fa, fb, nt) in enumerate(L):
+        rr = 5 + i; tot = lib in ('Chiffre d’affaires', 'Résultat · EBITDA')
+        cell(ab, f'A{rr}', lib, F_TOT if tot else F_FX)
+        cell(ab, f'B{rr}', fa, F_LK if fa.startswith(f'=AVERAGE({MP}') or fa.startswith('=SUMPRODUCT') else F_FX, EUR)
+        cell(ab, f'D{rr}', fb, F_LK if CE in fb else F_FX, EUR)
+        if rr not in (5, 11):
+            cell(ab, f'C{rr}', f'=IF(B$5>0,B{rr}/B$5,0)', fmt=PCT); cell(ab, f'E{rr}', f'=IF(D$5>0,D{rr}/D$5,0)', fmt=PCT)
+        cell(ab, f'F{rr}', f'=D{rr}-B{rr}', F_TOT if tot else F_FX, EUR); cell(ab, f'G{rr}', nt, F_S)
+    cell(ab, 'A12', 'Clients par mois (application)'); cell(ab, 'B12', f'=AVERAGE({MP}F{a1}:F{a2})', F_LK, NB)
+    cell(ab, 'A13', 'Panier moyen (application)'); cell(ab, 'B13', '=IF(B12>0,B5/B12,0)', fmt=EUR2)
+    cell(ab, 'A15', 'Du résultat de l’application à l’EBITDA du bilan', F_SEC, border=B_H)
+    P_ = [('Résultat de l’application', '=B10'), ('+ CA du bilan en plus', '=D5-B5'), ('− matière achetée en plus', '=-(D6-B6)'),
+          ('− personnel en plus', '=-(D8-B8)'), ('− frais généraux en plus', '=-(D9-B9)')]
+    for i, (lib, f_) in enumerate(P_):
+        cell(ab, f'A{16 + i}', lib); cell(ab, f'B{16 + i}', f_, fmt=EUR)
+    cell(ab, 'A21', 'EBITDA du bilan (somme des lignes)', F_TOT, border=B_T); cell(ab, 'B21', '=SUM(B16:B20)', F_TOT, EUR, border=B_T)
+    cell(ab, 'C21', '=IF(ABS(B21-D10)<1,"= bilan","écart")', F_S)
+    ab.freeze_panes = 'A5'
 
 for ws in wb.worksheets:
     ws.sheet_view.showGridLines = False
