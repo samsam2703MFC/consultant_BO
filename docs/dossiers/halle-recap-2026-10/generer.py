@@ -301,7 +301,8 @@ sup{{font-size:5.5pt;line-height:0}}
 .pts.plan .ti{{color:#8D1D2C;font-weight:500}}.pts.plan .ef{{display:block;color:#221E1A;font-weight:500;margin-top:.4mm}}
 .t.effets td.l2{{text-align:left;white-space:normal;font-size:7pt}}
 .t.comp td{{padding:1.1mm 1.4mm;font-size:7.6pt}}.t.comp td.p{{color:#7a736a;font-size:7pt}}.t.comp td.r{{font-size:6.5pt;width:34%;white-space:normal}}
-.graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
+.graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}
+.t.sens th{{text-align:right}}.t.sens th.g{{text-align:center;border-bottom:.5pt solid #b8b1a6;color:#8D1D2C}}.t.sens td{{padding:1.2mm 1.3mm;font-size:7.6pt}}.t.sens td.g{{color:#5a534b}}.t.sens td.res{{font-weight:500}}.t.sens tr.base td{{background:#FCFAF7;color:#5a534b}}.neg{{color:#C0182B}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
 .pts{{margin:0;padding-left:4mm;font-size:7.3pt;line-height:1.45;color:#221E1A}}.pts li{{margin-bottom:1.1mm}}
 .ft{{position:absolute;left:11mm;right:11mm;bottom:5mm;display:flex;justify-content:space-between;font-size:6.4pt;color:#9a938a;border-top:.5pt solid #e6e0d8;padding-top:1.2mm}}
 '''
@@ -422,16 +423,40 @@ if C:
 </div>
 {ft(3)}
 </div>"""
-# --- La page 4 : le plan d'action — augmenter le CA (A) et ramener les achats à 40 % du CA (B)
+# --- La page 4 : ce que rapportent quelques euros de plus par jour (A), et ramener les achats à 40 % du CA (B)
 p4 = ''
 PL = json.load(open(os.path.join(ICI, 'plan.json'))) if os.path.exists(os.path.join(ICI, 'plan.json')) else None
+PALIERS = [50, 100, 150, 200, 250]
 if PL:
-    A, Bm = PL['commercial'], PL['matiere']
-    totA = sum(a['effet'] or 0 for a in A['actions'])
-    lA = ''.join(f'<tr><td class="n">{i + 1}</td><td class="l">{H(a["titre"])}<small>{H(a["action"])}</small></td><td class="l r">{H(a["constat"])}</td>'
-                 f'<td class="l">{H(a["objectif"])}</td><td>{"+&nbsp;" + fE(a["effet"]) if a["effet"] else "<span class=mu>—</span>"}</td></tr>' for i, a in enumerate(A['actions']))
-    lA += (f'<tr class="tot"><td></td><td class="l" colspan="3">Total chiffré, soit ≈ {fE(arr(totA * JM / 7, 100))} de CA par mois'
-           f'{"" if FOOD_RETENU is None else " ; à " + nfP(FOOD_RETENU) + " de food cost, ≈ " + fE(arr(totA * (1 - FOOD_RETENU), 10)) + " de marge par semaine, avant le coût des remises"}</td><td>+&nbsp;{fE(totA)}</td></tr>')
+    Bm = PL['matiere']
+    # A — à personnel et frais généraux égaux, un euro de plus ne coûte que sa matière
+    neg = lambda v, d=0: f'<span class="neg">{fE(v, d)}</span>' if v < 0 else fE(v, d)
+    tmbB = (1 - cVar) if C else None
+    def ligneA(e):
+        caM = e * JM
+        cel = [f'<td class="l">{"Aujourd’hui" if e == 0 else "+&nbsp;" + fE(e)}</td>', f'<td>{"—" if e == 0 else "+&nbsp;" + fE(caM)}</td>', f'<td>{"—" if e == 0 else "+&nbsp;" + fE(e * 365)}</td>',
+               f'<td>{"—" if e == 0 else "+&nbsp;" + nf(e / panier)}</td>', f'<td>{"—" if e == 0 else "+&nbsp;" + fE(e / tkJour, 2)}</td>',
+               f'<td class="g">{"—" if e == 0 else "+&nbsp;" + fE(caM * tmb)}</td>', f'<td class="res">{neg(resMois + caM * tmb)}</td>']
+        if C:
+            cel += [f'<td class="g">{"—" if e == 0 else "+&nbsp;" + fE(caM * tmbB)}</td>', f'<td class="res">{neg(cE - cN + caM * tmbB)}</td>',
+                    f'<td class="res">{neg(cE - cN - C["remboursementsMois"] + caM * tmbB)}</td>']
+        return f'<tr{" class=base" if e == 0 else ""}>{"".join(cel)}</tr>'
+    lignesA = ''.join(ligneA(e) for e in [0] + PALIERS)
+    entete2 = ('<th class="g" colspan="2">Récap, pages 1-2<small>food cost ' + (nfP(FOOD_RETENU) if FOOD_RETENU else 'mesuré') + (', main-d’œuvre ' + fE(MO_SEM) + '/sem.' if MO_SEM else '') + '</small></th>'
+               + ('<th class="g" colspan="3">Bilan, page 3<small>achats + emballages ' + fP(cVar) + ' du CA</small></th>' if C else ''))
+    entete3 = ('<th>Marge directe<small>par mois</small></th><th>Résultat<small>par mois</small></th>'
+               + ('<th>Marge directe<small>par mois</small></th><th>EBITDA<small>Nathan payé</small></th><th>Après<small>remboursements</small></th>' if C else ''))
+    budgetJ = (obj - caMois) / JM
+    noteC = ''
+    if C:
+        manqueN = (cPM - caAS / 6) / JM; manqueB = (cPMb - caAS / 6) / JM
+        noteC = (f' Sur la caisse ({fE(caAS / 6)} par mois d’avril à septembre) et les coûts du bilan, il faut + {fE(arr(manqueN, 5))} par jour pour payer Nathan, '
+                 f'+ {fE(arr(manqueB, 5))} par jour pour payer aussi la banque.')
+    tabA = f"""<table class="t sens">
+<tr><th rowspan="2" class="l">Par jour</th><th rowspan="2">CA en plus<small>par mois</small></th><th rowspan="2">CA en plus<small>par an</small></th><th rowspan="2">soit clients<small>par jour, au panier de {fE(panier, 2)}</small></th><th rowspan="2">ou panier<small>en plus, à {nf(tkJour)} clients par jour</small></th>{entete2}</tr>
+<tr>{entete3}</tr>
+{lignesA}
+</table>"""
     lB = ''.join(f'<li><span class="ti">B{i + 1}. {H(b["titre"])}</span> {H(b["texte"])}{" " + H(b["cockpit"]) if b.get("cockpit") else ""} <span class="ef">{H(b["effet"])}</span></li>' for i, b in enumerate(Bm['actions']))
     eff = ''.join(f'<tr><td class="l">{H(e["action"])}</td><td>{H(e["effet"])}</td></tr>' for e in Bm['effets'])
     eff += f'<tr class="tot"><td class="l">Résultat</td><td class="l2">{H(Bm["resultat"])}</td></tr>'
@@ -444,14 +469,11 @@ if PL:
         controle = ''
     p4 = f"""<div class="page">
 {hd}
-<div class="sec">A. {H(A['titre'])}</div>
-<p class="s">{H(A['constat'])} Effets par semaine : des hypothèses, à vérifier chaque lundi.</p>
-<table class="t plan">
-<tr><th></th><th class="l">Action</th><th class="l">Ce que disent les chiffres</th><th class="l">Objectif</th><th>Effet par semaine</th></tr>
-{lA}
-</table>
-<p class="s">Ordre de lancement — {H(A['ordre'])} {H(A['liens'])}</p>
-<div class="sec" style="margin-top:4mm">B. {H(Bm['titre'])}</div>
+<div class="sec">A. Ce que rapportent quelques euros de plus par jour</div>
+<p class="s">À personnel et frais généraux égaux, un euro vendu en plus ne coûte que sa matière : le reste tombe dans le résultat. Mois de {nf(JM, 1)} jours, ouvert 7 jours sur 7 ; prix inchangés. « Aujourd’hui » : moyenne de mars à septembre pour le récap, avril → septembre pour le bilan.</p>
+{tabA}
+<p class="s">Le budget de {fE(obj)} par mois demande + {fE(arr(budgetJ, 5))} par jour sur la base de la caisse ({fE(caMois)} par mois de mars à septembre).{noteC} Une vente faite avec une remise (formule, promotion) rapporte moins que la marge directe du tableau.</p>
+<div class="sec" style="margin-top:5mm">B. {H(Bm['titre'])}</div>
 <p class="s">{H(Bm['intro'])}</p>
 <div class="deux g21">
 <ol class="pts plan">{lB}</ol>
@@ -463,6 +485,7 @@ if PL:
 </div>
 {ft(4)}
 </div>"""
+
 # --- La page 5 : les mêmes mois, deux lectures — l'application (caisse et panel) et le bilan (fiduciaire), avril → septembre
 p5 = ''
 if C:
@@ -861,6 +884,38 @@ if C:
     cell(ab, 'A21', 'EBITDA du bilan (somme des lignes)', F_TOT, border=B_T); cell(ab, 'B21', '=SUM(B16:B20)', F_TOT, EUR, border=B_T)
     cell(ab, 'C21', '=IF(ABS(B21-D10)<1,"= bilan","écart")', F_S)
     ab.freeze_panes = 'A5'
+
+CE = "'Compte d’exploitation'!"
+# Feuille « Euros par jour » : + 50 → + 250 € par jour, le CA, la marge directe et le résultat — à personnel et frais généraux égaux
+ej = wb.create_sheet('Euros par jour')
+RC = "'Récap'!"
+cell(ej, 'A1', 'Ce que rapportent quelques euros de plus par jour', F_T)
+cell(ej, 'A2', 'À personnel et frais généraux égaux, un euro vendu en plus ne coûte que sa matière. Paliers en bleu (modifiables) ; liens en vert vers « Récap » et « Compte d’exploitation ».', F_S)
+for col, w in zip('ABCDEFGHIJ', (16, 14, 14, 13, 13, 15, 15, 15, 15, 16)): ej.column_dimensions[col].width = w
+cell(ej, 'A4', 'Jours par mois'); cell(ej, 'B4', f'={RC}B13', F_LK, NB1)
+cell(ej, 'A5', 'Panier moyen'); cell(ej, 'B5', f'={RC}B9', F_LK, EUR2)
+cell(ej, 'A6', 'Clients par jour'); cell(ej, 'B6', f'={RC}B8', F_LK, NB)
+cell(ej, 'A7', 'Taux de marge, récap'); cell(ej, 'B7', f'=1-{RC}B31', F_LK, PCT)
+cell(ej, 'A8', 'Résultat actuel, récap'); cell(ej, 'B8', f'={RC}B25', F_LK, EUR)
+if C:
+    cell(ej, 'D4', 'Taux de marge, bilan'); cell(ej, 'F4', f'=1-({CE}B{rAch}+{CE}B{rEmb})/{CE}B{rCAc}', F_LK, PCT)
+    cell(ej, 'D5', 'EBITDA Nathan payé, bilan'); cell(ej, 'F5', f'={CE}B{rEbN}', F_LK, EUR)
+    cell(ej, 'D6', 'Après remboursements, bilan'); cell(ej, 'F6', f'={CE}B{rAp}', F_LK, EUR)
+hh = ['€ par jour en plus', 'CA en plus par mois', 'CA en plus par an', 'Clients par jour en plus', 'ou panier en plus', 'Marge directe par mois (récap)', 'Résultat par mois (récap)']
+if C: hh += ['Marge directe par mois (bilan)', 'EBITDA Nathan payé (bilan)', 'Après remboursements (bilan)']
+for i, h in enumerate(hh):
+    cell(ej, f'{chr(65 + i)}10', h, F_H, al=Alignment(horizontal='right', wrap_text=True, vertical='bottom'), border=B_H)
+ej.row_dimensions[10].height = 40
+for i, e in enumerate([0] + PALIERS):
+    rr = 11 + i
+    cell(ej, f'A{rr}', e, F_IN, EUR)
+    cell(ej, f'B{rr}', f'=A{rr}*$B$4', fmt=EUR); cell(ej, f'C{rr}', f'=A{rr}*365', fmt=EUR)
+    cell(ej, f'D{rr}', f'=IF($B$5>0,A{rr}/$B$5,0)', fmt=NB1); cell(ej, f'E{rr}', f'=IF($B$6>0,A{rr}/$B$6,0)', fmt=EUR2)
+    cell(ej, f'F{rr}', f'=B{rr}*$B$7', fmt=EUR); cell(ej, f'G{rr}', f'=$B$8+F{rr}', F_TOT, EUR)
+    if C:
+        cell(ej, f'H{rr}', f'=B{rr}*$F$4', fmt=EUR); cell(ej, f'I{rr}', f'=$F$5+H{rr}', F_TOT, EUR); cell(ej, f'J{rr}', f'=$F$6+H{rr}', F_TOT, EUR)
+cell(ej, 'A18', 'Ligne 0 : aujourd’hui. Récap : moyenne de mars à septembre ; bilan : avril → septembre. Une vente faite avec une remise rapporte moins que la marge directe.', F_S)
+ej.freeze_panes = 'B11'
 
 for ws in wb.worksheets:
     ws.sheet_view.showGridLines = False

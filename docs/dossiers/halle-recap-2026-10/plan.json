@@ -1,47 +1,4 @@
 {
-  "commercial": {
-    "titre": "Augmenter le CA : cinq actions, mi-octobre → fin novembre",
-    "constat": "En octobre, les week-ends dépassent l’objectif de 20 % et le vendredi est à 99 %, mais du lundi au jeudi le magasin n’est qu’à 79 % (environ − 380 € par jour). Au rythme d’octobre, il manque environ 650 € par semaine pour être au budget ; au rythme de septembre, environ 1 900 €. Les cinq actions visent ≈ + 1 600 € par semaine, surtout du lundi au jeudi ; la hausse de prix du volet B (≈ + 600 € par semaine) complète.",
-    "actions": [
-      {
-        "titre": "Commandes pro en semaine",
-        "constat": "5 tickets pro en 12 jours (1,8 % du CA), 86 € par commande",
-        "action": "30 cibles proches (bureaux, écoles, cabinets, commune, AZ Sint-Maria), plateau de dégustation, tarif « réunion », commande la veille",
-        "objectif": "+ 6 commandes par semaine",
-        "effet": 500
-      },
-      {
-        "titre": "Formule midi, lundi → vendredi",
-        "constat": "11 – 13 h : 15 clients par heure, le panier le plus bas (10,36 €) ; 11 sandwiches par jour",
-        "action": "sandwich + boisson + cookie à environ 9,50 € (10,30 € au détail)",
-        "objectif": "20 formules par jour",
-        "effet": 400
-      },
-      {
-        "titre": "« Et avec ceci ? » et concours d’équipe",
-        "constat": "panier 12,18 €, contre 14,26 € dans les trois autres magasins",
-        "action": "un cookie proposé à chaque client (promo « 3 cookies » active), concours de quatre semaines sur le panier du lundi au jeudi (module primes)",
-        "objectif": "panier à 13 €",
-        "effet": 290
-      },
-      {
-        "titre": "Café + viennoiserie, 7 – 10 h",
-        "constat": "114 boissons chaudes vendues en septembre (4 par jour), 250 viennoiseries par jour",
-        "action": "café + croissant à 3,50 € (4,09 € au détail) ; le café a un food cost très bas",
-        "objectif": "+ 20 cafés par jour",
-        "effet": 240
-      },
-      {
-        "titre": "Le calendrier : Halloween, Toussaint, 11 novembre",
-        "constat": "samedi 31/10, dimanche 1/11 et lundi 2/11, mercredi 11/11 (férié) ; vacances d’automne fin octobre",
-        "action": "gamme courte de saison : cookies et couques Halloween, tarte de Toussaint pour les repas de famille ; le 11 novembre traité comme un dimanche (production et équipe)",
-        "objectif": "600 € sur la période",
-        "effet": 150
-      }
-    ],
-    "ordre": "Dès cette semaine : la formule midi (2), le café du matin (4) et « Et avec ceci ? » (3). Semaine du 19/10 : la liste et la tournée pro (1). Du 26/10 au 2/11 : Halloween et la Toussaint (5), puis le 11 novembre. En novembre : on garde ce qui marche, bilan chaque lundi.",
-    "liens": "Pilotage : chaque matin, l’objectif du jour et les clients manquants (dashboard du cockpit) ; chaque lundi, le CA du lundi au jeudi, le panier, les formules et les commandes pro vendues, avec l’indicateur achats ÷ CA du volet B. Les formules se chiffrent sur les nouveaux prix (B1)."
-  },
   "matiere": {
     "titre": "Ramener les achats à 40 % du CA",
     "intro": "Un plan qui atteint 40 % avec + 5 % de prix en moyenne et − 15,8 % d’achats, soit environ − 4 600 € de matière par mois sur la base actuelle (compte d’exploitation de la page 3).",
