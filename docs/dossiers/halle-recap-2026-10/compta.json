@@ -1,0 +1,46 @@
+{
+  "source": "Analyse transmise le 13 octobre 2026, à partir de la situation comptable au 30/09/2026 de la fiduciaire (Pardoen). Période supposée par l'analyse : avril → septembre 2026, lissée sur 6 mois ; loyer, charges locatives, assurance bâtiment et fiduciaire ramenés à leur coût mensuel. À valider.",
+  "periodeMois": 6,
+  "ca": 58216,
+  "variables": [
+    {"poste": "Achats matière (marchandises + fournitures + boissons)", "montant": 28144},
+    {"poste": "Emballages", "montant": 914}
+  ],
+  "fixes": [
+    {"poste": "Personnel (sans rémunération de Nathan)", "montant": 9364},
+    {"poste": "Loyer + charges locatives + assurance incendie", "montant": 4862},
+    {"poste": "Énergie, eau, location panneaux PV", "montant": 1514},
+    {"poste": "Autres charges diverses (probablement les redevances)", "montant": 1510},
+    {"poste": "Honoraires (fiduciaire, secrétariat social, Indeed…)", "montant": 1493},
+    {"poste": "Location containers", "montant": 1295},
+    {"poste": "Voiture (location, carburant, assurance)", "montant": 1104},
+    {"poste": "Entretien, hygiène, extincteurs", "montant": 1011},
+    {"poste": "Admin, IT, téléphone, poste", "montant": 778},
+    {"poste": "Publicité", "montant": 738},
+    {"poste": "Petit matériel, entretien machines", "montant": 685},
+    {"poste": "Caisse, terminal, assurances diverses, intérim, taxes", "montant": 512}
+  ],
+  "nathanSemaine": 500,
+  "remboursementsMois": 2900,
+  "credits": 211000,
+  "creditsAns": 10,
+  "leasing": 38000,
+  "leasingAns": 5,
+  "achatsFournitures": 19500,
+  "perteSituation": -59900,
+  "perte": [
+    {"origine": "Pré-ouverture 2025", "montant": -22600},
+    {"origine": "Charges courues d'octobre à mars sans CA (≈ 5,3 k€ par mois)", "montant": -31800},
+    {"origine": "Erreur de stock", "montant": -6200},
+    {"origine": "Exploitation réelle d'avril à septembre", "montant": 25800},
+    {"origine": "Amortissements", "montant": -13400},
+    {"origine": "Frais financiers", "montant": -11900}
+  ],
+  "corrections": [
+    "Stock négatif (− 6 173 €) : impossible. Chaque millier d'euros de vrai stock en fin de période, c'est un millier d'euros de résultat en plus.",
+    "« Formation pré et post ouverture » à − 31 000 € en actif : une immobilisation négative n'a pas de sens, probablement une note de crédit mal imputée.",
+    "Mobilier en leasing (60,9 k€) jamais amorti : il manque environ 1 000 € d'amortissement par mois, le résultat réel est donc plus mauvais que celui affiché.",
+    "Rémunération dirigeant à − 2 000 € (solde débiteur) : à expliquer.",
+    "Lignes à justifier une par une : « autres charges diverses » à 9 k€ (si ce sont bien les redevances, à 2,6 % du CA, les reclasser), containers 7,8 k€, secrétariat social 5,8 k€ (probablement Liantis de Nathan dedans), voiture 6,6 k€."
+  ]
+}
