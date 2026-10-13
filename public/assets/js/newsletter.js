@@ -9,7 +9,8 @@
  * donné par l'hôte : l'écran « Newsletter » du cockpit monte la marque,
  * « Newsletter magasin » le magasin choisi.
  *
- *   CockpitNewsletter.mount(host, { role, apiBase, imgDir, notify })
+ *   CockpitNewsletter.mount(host, { role, apiBase, imgDir, notify, campagne })
+ *   (campagne : l'id de la campagne marketing à laquelle rattacher la newsletter créée)
  *
  * Données : GET /newsletter?role=… ; écritures POST /newsletter/campagnes,
  * POST /newsletter/segments, PUT /newsletter/magasins/{id}, POST /newsletter/test.
@@ -312,7 +313,7 @@
     }
     charger() {
       const s = this.s; s.chargement = true; s.err = '';
-      return lire(this.base, '/newsletter?role=' + encodeURIComponent(this.role())).then(d => {
+      return lire(this.base, '/marketing/newsletter?role=' + encodeURIComponent(this.role())).then(d => {
         s.data = d || {}; s.chargement = false;
         const segs = this.segmentsVisibles();
         if (!segs.find(x => x.id === s.segmentId)) { const first = segs.find(x => x.src === s.sourceId) || segs[0]; if (first) { s.segmentId = first.id; s.sourceId = first.src; } }
@@ -759,16 +760,16 @@
       if (e.target.closest('input,select,textarea,a')) return;
       const a = b.dataset.a, v = b.dataset.v, s = this.s, t = this.t();
       if (a === 'view') this.go(v);
-      else if (a === 'envoyer') { if (!confirm('Envoyer cette campagne maintenant ?')) return; ecrire(this.base, 'POST', '/newsletter/campagnes/' + v + '/envoyer', { role: this.role() }).then(r => { const h = r && r.horloge; this.notify(h && h.motif ? 'Programmée pour maintenant — ' + h.motif + '.' : 'C’est parti : l’horloge envoie par lots de 100 par minute.'); return this.charger(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'envoyer') { if (!confirm('Envoyer cette campagne maintenant ?')) return; ecrire(this.base, 'POST', '/marketing/newsletter/campagnes/' + v + '/envoyer', { role: this.role() }).then(r => { const h = r && r.horloge; this.notify(h && h.motif ? 'Programmée pour maintenant — ' + h.motif + '.' : 'C’est parti : l’horloge envoie par lots de 100 par minute.'); return this.charger(); }).catch(err => this.notify(err.message)); }
       else if (a === 'dispatch') { const on = !this.data().dispatch; if (on && !confirm('Dispatcher : les campagnes programmées partiront VRAIMENT vers les clients. Continuer ?')) return; this.putReglages({ dispatch: on }); }
-      else if (a === 'tick') { s.tick = 'en cours'; this.render(); ecrire(this.base, 'POST', '/newsletter/tick', { role: this.role() }).then(r => { s.tick = r; this.notify(r.motif ? 'Horloge passée — ' + r.motif : 'Horloge passée : ' + (r.campagnes || []).length + ' campagne(s) traitée(s).'); return this.charger(); }).catch(err => { s.tick = null; this.notify(err.message); }); }
-      else if (a === 'import') { const i = s.imp; if (!i.csv.trim()) { this.notify('Collez un CSV avec une ligne d’en-tête.'); return; } s.busy = true; this.render(); ecrire(this.base, 'POST', '/newsletter/contacts/import', { role: this.role(), source: i.source, shop: i.shop, lot: i.lot, csv: i.csv }).then(r => { s.busy = false; s.imp.csv = ''; this.notify(`Importé : ${r.nouveaux} nouveaux, ${r.misAJour} mis à jour, ${r.ignores} ignorés (lot ${r.lot}).`); return this.charger(); }).catch(err => { s.busy = false; this.notify(err.message); this.render(); }); }
-      else if (a === 'lotdel') { if (!confirm('Retirer le lot « ' + v + ' » et tous ses contacts ?')) return; ecrire(this.base, 'DELETE', '/newsletter/contacts/lots/' + encodeURIComponent(v) + '?role=' + encodeURIComponent(this.role())).then(r => { this.notify(r.retires + ' contact(s) retiré(s).'); return this.charger(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'tick') { s.tick = 'en cours'; this.render(); ecrire(this.base, 'POST', '/marketing/newsletter/tick', { role: this.role() }).then(r => { s.tick = r; this.notify(r.motif ? 'Horloge passée — ' + r.motif : 'Horloge passée : ' + (r.campagnes || []).length + ' campagne(s) traitée(s).'); return this.charger(); }).catch(err => { s.tick = null; this.notify(err.message); }); }
+      else if (a === 'import') { const i = s.imp; if (!i.csv.trim()) { this.notify('Collez un CSV avec une ligne d’en-tête.'); return; } s.busy = true; this.render(); ecrire(this.base, 'POST', '/marketing/newsletter/contacts/import', { role: this.role(), source: i.source, shop: i.shop, lot: i.lot, csv: i.csv }).then(r => { s.busy = false; s.imp.csv = ''; this.notify(`Importé : ${r.nouveaux} nouveaux, ${r.misAJour} mis à jour, ${r.ignores} ignorés (lot ${r.lot}).`); return this.charger(); }).catch(err => { s.busy = false; this.notify(err.message); this.render(); }); }
+      else if (a === 'lotdel') { if (!confirm('Retirer le lot « ' + v + ' » et tous ses contacts ?')) return; ecrire(this.base, 'DELETE', '/marketing/newsletter/contacts/lots/' + encodeURIComponent(v) + '?role=' + encodeURIComponent(this.role())).then(r => { this.notify(r.retires + ' contact(s) retiré(s).'); return this.charger(); }).catch(err => this.notify(err.message)); }
       else if (a === 'lang') { s.lang = v; this.persist(); this.render(); }
       else if (a === 'wizard') this.go('wizard', { step: 1 });
       else if (a === 'filtre') { s.modeFilter = v; this.render(); }
       else if (a === 'retro') { if (e.target.closest('[data-a="retirer"]')) return; this.go('retro', { retroId: v }); }
-      else if (a === 'retirer') { if (!confirm('Retirer cette campagne ?')) return; ecrire(this.base, 'DELETE', '/newsletter/campagnes/' + v + '?role=' + encodeURIComponent(this.role())).then(() => this.charger()).catch(err => this.notify(err.message)); }
+      else if (a === 'retirer') { if (!confirm('Retirer cette campagne ?')) return; ecrire(this.base, 'DELETE', '/marketing/newsletter/campagnes/' + v + '?role=' + encodeURIComponent(this.role())).then(() => this.charger()).catch(err => this.notify(err.message)); }
       else if (a === 'source') { const first = this.segmentsVisibles().find(x => x.src === v); s.sourceId = v; if (first) s.segmentId = first.id; this.render(); }
       else if (a === 'segment') { s.segmentId = v; this.render(); }
       else if (a === 'segform') { s.segForm = true; this.render(); }
@@ -782,7 +783,7 @@
       else if (a === 'wrap') { const el = this.editLang(); const body = this.body(); s.bodies[el] = body + (v === '**' ? ' **gras**' : ' _italique_'); this.render(); }
       else if (a === 'mode') { s.sendMode = v; this.render(); }
       else if (a === 'sender') { s.senderId = v; this.render(); }
-      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/marketing/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
       else if (a === 'prev') { s.step = Math.max(1, s.step - 1); this.render(); }
       else if (a === 'next') this.nextStep();
       else if (a === 'dupAB') { const c = (this.data().campagnes || []).find(x => String(x.id) === String(v)); if (!c) return; const subj = (c.subjects && (c.subjects.fr || '')) || ''; this.go('wizard', { step: 3, templateId: TEMPLATES.some(z => z.id === c.templateId) ? c.templateId : 'gagne', segmentId: c.segment, sourceId: c.src, subjects: { fr: subj + ' (B)' }, bodies: {}, channel: c.channel === 'sms' ? 'email' : c.channel }); }
@@ -824,11 +825,11 @@
       this.render();
     }
     putReglages(patch) {
-      ecrire(this.base, 'PUT', '/newsletter/reglages', Object.assign({ role: this.role() }, patch)).then(r => { if (r && r.reglages) { this.data().reglages = r.reglages; this.data().dispatch = r.reglages.dispatch; this.data().test = !r.reglages.dispatch; } this.render(); })
+      ecrire(this.base, 'PUT', '/marketing/newsletter/reglages', Object.assign({ role: this.role() }, patch)).then(r => { if (r && r.reglages) { this.data().reglages = r.reglages; this.data().dispatch = r.reglages.dispatch; this.data().test = !r.reglages.dispatch; } this.render(); })
         .catch(err => { this.notify(err.message); this.render(); });
     }
     putShop(id, patch) {
-      ecrire(this.base, 'PUT', '/newsletter/magasins/' + encodeURIComponent(id), Object.assign({ role: this.role() }, patch)).then(r => {
+      ecrire(this.base, 'PUT', '/marketing/newsletter/magasins/' + encodeURIComponent(id), Object.assign({ role: this.role() }, patch)).then(r => {
         if (r && r.magasin) { const ms = this.magasins(); const i = ms.findIndex(x => x.id === id); if (i >= 0) ms[i] = r.magasin; if (this.data().moi && this.data().moi.id === id) { this.data().moi = r.magasin; this.data().canSend = r.magasin.canSend; } }
         this.render();
       }).catch(err => { this.notify(err.message); this.charger(); });
@@ -841,7 +842,7 @@
       if (s.segProduct !== 'all') parts.push(`${t.segRuleProduct} = ${s.segProduct}`);
       parts.push(String(t['p' + s.segPeriod.replace('dormant45', 'Dormant')] || '').toLowerCase());
       const mb = parseFloat(s.segMinBasket); if (mb > 0) parts.push(`${t.segRuleBasket} ${mb} €`);
-      ecrire(this.base, 'POST', '/newsletter/segments', { role: this.role(), name: s.segName.trim(), src: s.sourceId, shop: s.segShop === 'all' ? '' : s.segShop, product: s.segProduct === 'all' ? '' : s.segProduct, period: s.segPeriod, minBasket: mb > 0 ? mb : '', count: this.segEstimate(), rule: parts.join(' · ') })
+      ecrire(this.base, 'POST', '/marketing/newsletter/segments', { role: this.role(), name: s.segName.trim(), src: s.sourceId, shop: s.segShop === 'all' ? '' : s.segShop, product: s.segProduct === 'all' ? '' : s.segProduct, period: s.segPeriod, minBasket: mb > 0 ? mb : '', count: this.segEstimate(), rule: parts.join(' · ') })
         .then(r => { if (r && r.segment) { this.data().segments.unshift(r.segment); s.segmentId = r.segment.id; } Object.assign(s, { segForm: false, segName: '', segShop: 'all', segProduct: 'all', segPeriod: '365', segMinBasket: '' }); this.render(); })
         .catch(err => this.notify(err.message));
     }
@@ -854,7 +855,7 @@
       const par = (obj, dflt) => { const o = {}; s.sendLangs.forEach(l => { o[l] = obj[l] ?? (dflt ? (dflt[l] ?? dflt.fr ?? '') : ''); }); return o; };
       const nom = this.L(tp.name) + ' — ' + (seg.shop ? this.nomShop(seg.shop) : 'Réseau');
       s.busy = true; this.render();
-      ecrire(this.base, 'POST', '/newsletter/campagnes', { role: this.role(), name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
+      ecrire(this.base, 'POST', '/marketing/newsletter/campagnes', { role: this.role(), campagne: this.opts.campagne || null, name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
         subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), headlines: par({}, tp.headline), ctas: par({}, tp.cta),
         sendMode: s.sendMode, trigger: s.trigger, date: s.date, time: s.time, maxVouchers: s.maxVouchers, sender: this.sender().id, testSent: s.testSent })
         .then(r => {
@@ -877,6 +878,9 @@
       let h = hotes.get(host);
       if (!h) { h = new NL(host, opts); hotes.set(host, h); }
       else if (opts && opts.role != null) h.setRole(opts.role);
+      // La campagne marketing à laquelle rattacher la prochaine newsletter (portail Marketing) :
+      // posée ou retirée à chaque montage, jamais héritée d'un montage précédent.
+      if (h && opts) { h.opts.campagne = opts.campagne || null; }
       h.mount(host);
       return h;
     },

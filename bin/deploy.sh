@@ -162,6 +162,7 @@ rsync -a --delete \
 mkdir -p "$TARGET_DIR/public/uploads/plano"
 mkdir -p "$TARGET_DIR/public/uploads/visites"
 mkdir -p "$TARGET_DIR/public/uploads/reclamations"
+mkdir -p "$TARGET_DIR/public/uploads/social"     # visuels des posts (portail Marketing → Publier)
 # Vignettes 640 px de la tablette des vendeuses (src/tablette.php) : sous
 # uploads/, donc protégées du rsync --delete par la même exclusion.
 mkdir -p "$TARGET_DIR/public/uploads/tablette"
@@ -543,6 +544,7 @@ done
 # (le jeton cuit dans le fichier avait ces deux faiblesses).
 chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
 chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
+chmod +x "$TARGET_DIR/bin/social_cron.sh"
 chmod +x "$TARGET_DIR/bin/visites_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
@@ -555,6 +557,9 @@ chmod +x "$TARGET_DIR/bin/visites_cron.sh"
   # Newsletter : l'horloge des campagnes, toutes les 5 minutes (lots de 100 par
   # minute ; en mode test elle ne fait rien partir et le dit).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/newsletter_cron.sh >/dev/null 2>&1"
+  # Publication : les posts validés partent sur Facebook, Instagram, LinkedIn à l'heure prévue
+  # (rien tant que la publication réelle est éteinte dans le portail Marketing).
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/social_cron.sh >/dev/null 2>&1"
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/visites_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.

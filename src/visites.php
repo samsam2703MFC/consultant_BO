@@ -620,7 +620,7 @@ function viCampagnesDe(string $shop, string $auj): array
         $reel = $du <= $auj ? (mesSeriesJour([$shop], $du, min($au, $auj), $motifs)[$shop] ?? []) : [];
         $n1 = mesSeriesJour([$shop], mesDecale($du, -364), mesDecale($au, -364), $motifs)[$shop] ?? [];
         $effet = mktEffetAttendu($id, $du, $au, [$shop]);
-        $o = Db::row('SELECT objectif FROM ceo_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $shop]);
+        $o = Db::row('SELECT objectif FROM mar_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $shop]);
         $an = (int) substr($du, 0, 4);
         $bud = substr($du, 0, 4) === substr($au, 0, 4) && isset($budgets[$an])
             ? budgetSurFenetre($budgets[$an] + array_fill(0, 12, ['budget' => null, 'theorique' => null]), $du, $au) : ['montant' => null];

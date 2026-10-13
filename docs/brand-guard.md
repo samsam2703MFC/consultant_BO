@@ -101,7 +101,7 @@ minute, le cron du matin est le filet.
 
 ## Ce qu'un verdict enregistre
 
-`brand_guard_checks` : la source (avant / après), le post ou la demande, la
+`mar_bg_controle` : la source (avant / après), le post ou la demande, la
 boutique, **sauvage** ou non, statut (`conforme | a_corriger | bloque`),
 score 0-100, les écarts (règle, gravité, constat, correction, moteur), le
 message au franchisé, la **version de charte** (empreinte des règles

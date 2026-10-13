@@ -307,8 +307,8 @@ caractères au moins ; 80 résultats au plus, par catégorie puis volume.
 
 Écriture : `PUT /marketing/campagnes/{id}/produits` avec `{ produits: [ { id, nom, categorie } ], objectifs: { "5": 500, "3": "" } }`.
 Chaque clé absente laisse l'autre intacte ; **la liste des produits remplace la précédente** ; un objectif vide ou
-nul **efface** la ligne. `?journal=0` pour les écritures automatiques. Tables `ceo_campagne_produit`
-(clé `campagne_id, product_id`) et `ceo_campagne_objectif_produit` (clé `campagne_id, shop_id`), créées au premier appel.
+nul **efface** la ligne. `?journal=0` pour les écritures automatiques. Tables `mar_campagne_produit`
+(clé `campagne_id, product_id`) et `mar_campagne_objectif_produit` (clé `campagne_id, shop_id`), créées au premier appel.
 
 `GET /exploitation/objectifs-produits?shop=5&date=2026-10-19` — la jauge du dashboard magasin : `{ shop, date,
 campagnes: [ { id, nom, debut, fin, produits, …bilan } ] }`, une entrée par campagne en cours ce jour-là où le
@@ -520,7 +520,7 @@ vente (`src/primes.php`) :
 | Meilleure vendeuse (existant) | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` |
 | **Prime magasin** (nouveau) | l'atteinte de l'**objectif du mois** (le budget du magasin, `ceo_shop_month_perf`, sinon le CA théorique) | le palier atteint fin de mois donne tant d'**euros par heure prestée** (planning du panel, le mois entier) à chaque personne du magasin ; sous `heuresMin`, pas de part | `POST /ventes/prime-magasin {paliers: [{pct, eh, lib}], heuresMin}` (défaut : 97 % 0,50 €/h · 100 % 1 €/h · 105 % 1,50 €/h · 110 % 2 €/h · 20 h) |
 | **Les concours** (06/10/2026) : **Queen of Tartes**, **Queen of Quiches** | le nombre de **pièces** d'une famille (un motif sur la catégorie ou le nom : `tarte`, `quiche`) vendues dans le mois à son nom, `q[cle]` dans la moisson v3 (`tq` en tout) | pour chaque concours, la 1re du magasin gagne la couronne du magasin (50 €), la 1re du réseau celle du réseau (100 €, sans cumul), 10 pièces au moins ; à égalité, moins de tickets gagne ; chaque titre entre dans sa **collection** | `POST /ventes/concours {actif, liste: [{cle, lib, motif, magasin, reseau, minPieces}]}` (quatre au plus ; la clé vient du libellé et ne change plus) |
-| **Note Google** (06/10/2026) | la note de la fiche Google du magasin (`ceo_shop_reputation`, la Réputation) | un **coefficient** sur la prime : `1 + (note − neutre) × pente`, borné ; neutre 4,5, pente 0,5 par point, de × 0,5 à × 1,5 ; sur les primes de l'app (`porte: app` : ventes croisées, concours, prime magasin) ou toutes (`tout`) | `POST /ventes/prime-google {actif, neutre, pente, min, max, porte}` |
+| **Note Google** (06/10/2026) | la note de la fiche Google du magasin (`mar_avis_fiche`, la Réputation) | un **coefficient** sur la prime : `1 + (note − neutre) × pente`, borné ; neutre 4,5, pente 0,5 par point, de × 0,5 à × 1,5 ; sur les primes de l'app (`porte: app` : ventes croisées, concours, prime magasin) ou toutes (`tout`) | `POST /ventes/prime-google {actif, neutre, pente, min, max, porte}` |
 
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
@@ -1332,7 +1332,7 @@ id inconnu ou mal formé → `404` `{ "erreur": "remarque inconnue" }`.
   "rapport": { "id": 12, "actif": true, "copies": [ "ceo@…" ], "carnet": { "5": 2, "4": 0 }, "smtp": true } }
 ```
 
-Les règles : **Google**, la note de la fiche (`ceo_shop_reputation`) telle quelle, **gelée** dans `ceo_scoring_google` à chaque
+Les règles : **Google**, la note de la fiche (`mar_avis_fiche`) telle quelle, **gelée** dans `ceo_scoring_google` à chaque
 lecture du trimestre en cours — un trimestre clos relit ce qui a été gelé. **Tâches**, la moyenne des journées relevées
 (`ceo_tache_jour`) : un jour vaut la part des tâches rendues (une tâche notée vaut sa cote / 5), et un jour où une tâche
 **obligatoire** manque vaut 0 ; obligatoire = le drapeau `is_mandatory` du panel (rendu `obligatoire` par `/pwa/tasks`), que le
@@ -2487,7 +2487,7 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - `PUT /newsletter/magasins/{id}` `{ role, senderName?, email?, status?, canSend? }` : le franchisé ne touche qu'à son nom et son adresse ;
   le statut suit l'adresse (domaine de la marque = vérifié) et la marque peut le fixer ; `canSend` marque seule.
 - `POST /newsletter/test` `{ role, subject }` → `{ ok, simule: true }` : journalisé, rien ne part.
-- Tables : `ceo_nl_magasin`, `ceo_nl_source`, `ceo_nl_segment`, `ceo_nl_campagne` (créées et semées par `ensureNewsletter()` ; les magasins
+- Tables : `mar_nl_magasin`, `mar_nl_source`, `mar_nl_segment`, `mar_nl_campagne` (créées et semées par `ensureNewsletter()` ; les magasins
   suivent `ep_stores()` à chaque démarrage). Les modèles (copy FR/NL/EN, SMS) vivent dans le module front `assets/js/newsletter.js`.
 
 **Le moteur** (`src/newsletter_envoi.php`) — contacts, envoi, suivi, horloge :
@@ -2506,8 +2506,8 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
   exactement ; `birthday` : J-3 ; `firstOffice` : compte office créé il y a 2 jours ; `third` : deux mails déjà reçus ; `season` : J-7 avant la
   date de la campagne). Jamais deux mails au même contact le même jour, jamais deux fois la même campagne.
 - Suivi, routes publiques : `GET /newsletter/o/{token}` (pixel), `GET /newsletter/c/{token}` (clic → redirection vers `nlLienWebshop` ou le cockpit),
-  `GET /newsletter/u/{token}` (désinscription en un clic). Les stats d'une campagne envoyée viennent de `ceo_nl_envoi` (`stats.reel`).
-- Vouchers : codes uniques (8 caractères, `ceo_nl_voucher`) générés au départ jusqu'à `maxVouchers` ; `POST /newsletter/vouchers/{code}/utiliser` les encaisse.
+  `GET /newsletter/u/{token}` (désinscription en un clic). Les stats d'une campagne envoyée viennent de `mar_nl_envoi` (`stats.reel`).
+- Vouchers : codes uniques (8 caractères, `mar_nl_voucher`) générés au départ jusqu'à `maxVouchers` ; `POST /newsletter/vouchers/{code}/utiliser` les encaisse.
 - Non branchés, et dits tels quels dans Paramètres : SMS (aucun fournisseur), Stripe. La déclinaison sur les réseaux (LinkedIn, Instagram,
   Slack) du brief a été retirée de l'assistant, qui compte quatre étapes : segment, template, texte, envoi.
 - Page franchisé hors cockpit : `newsletter/?shop={id}` (même module, rôle = magasin).
@@ -2530,7 +2530,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/synthese` | admin | la synthèse du jour : `compteurs`, `boutiques[]`, `escalades[]`, `actions[]`, `consultants{}`. Envoyée par mail le matin si `seuils.mails` et `seuils.mailSynthese`. |
 | `GET /visites/reglages` | admin | checklist, seuils, fréquences, état de l'horloge, adresse du cron. |
 | `GET /visites/conformite?shop=` | tous | ce que le cockpit sait du comptoir sans rien ressaisir : `planogramme` (emplacements dessinés et tenus, %, comptoirs photographiés montés aujourd'hui, obligatoires sans place) et `assortiment` (références obligatoires vues en caisse sur la fenêtre calée sur la dernière vente, manquantes nommées). Une source absente rend son `motif`, pas un chiffre. |
-| `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » de `mar_campaign.objective_coef_pct`), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`ceo_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
+| `GET /visites/campagnes?shop=` | tous | les campagnes marketing de la boutique (du J−60 au J+30, hors brouillon / annulée / archivée), chacune avec les clients face au N-1 et à l'objectif : `statut` (avenir, encours, close), `jourCourant` / `nbJours`, `pct` (le « + x % » de `mar_campaign.objective_coef_pct`), `clientsA1` (les clients de l'an dernier sur la période, source `n1` ou `budget`), `clientsPrevus` = N-1 × (1 + pct) et `objectifJour` (seulement si un `pct` existe), `reel` et `n1Ecoule` (cette année et N-1 aux mêmes jours de semaine, −364 j, jusqu'à aujourd'hui), `caReel`, `caN1`, `objectifCA` (`mar_campagne_objectif`), `budget` et `clientsBudget` (budget / panier, pour dire « objectif à fixer » avec un chiffre), `serie[]` jour par jour `{date, tickets, n1}`. Calcul `viCampagneCalcul`, gardé 20 min par boutique (`viCamp|{shop}`, `force=1` pour recalculer). |
 | `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`. `{id}` est l'identifiant ou le `client_id`. |
@@ -2727,7 +2727,7 @@ CREATE TABLE ceo_product_month_sales (
 
 ```sql
 -- Contrôle des posts Facebook des magasins
-CREATE TABLE ceo_fb_post (
+CREATE TABLE mar_social_post (
   id               VARCHAR(16) PRIMARY KEY,
   shop_id          VARCHAR(8)   NULL,          -- NULL = post réseau
   author           VARCHAR(120) NOT NULL,
@@ -2753,7 +2753,7 @@ CREATE TABLE ceo_fb_post (
   CONSTRAINT fk_fbpost_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 );
 
-CREATE TABLE ceo_fb_finding (
+CREATE TABLE mar_social_ecart (
   id         BIGINT AUTO_INCREMENT PRIMARY KEY,
   post_id    VARCHAR(16)  NOT NULL,
   rule_code  VARCHAR(40)  NOT NULL,
@@ -2765,7 +2765,7 @@ CREATE TABLE ceo_fb_finding (
   extrait    VARCHAR(200) NULL,
   status     ENUM('ouvert','ignore','corrige') NOT NULL DEFAULT 'ouvert',
   created_at DATETIME     NOT NULL,
-  CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES ceo_fb_post(id) ON DELETE CASCADE
+  CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES mar_social_post(id) ON DELETE CASCADE
 );
 ```
 
@@ -2841,7 +2841,7 @@ renvoyée à l'écran.
 | Projets | `ceo_project`, `ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_project_levid` |
 | Reporting | `ceo_report_schedule`, `ceo_shop`, `position` |
 | Scoring produits | `ceo_product`, `ceo_product_month_sales` |
-| Contrôle posts Facebook | `ceo_fb_post`, `ceo_fb_finding`, `ceo_shop`, `ceo_app_setting` (clé `fbControle`) |
+| Contrôle posts Facebook | `mar_social_post`, `mar_social_ecart`, `ceo_shop`, `ceo_app_setting` (clé `fbControle`) |
 | Journal | `ceo_journal_entry` |
 | Paramètres | `of_tag`, `kpi`, `ceo_app_setting`, `ceo_shop` |
 
@@ -2985,3 +2985,183 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+### `GET /marketing/hub` — le module Marketing, tous les canaux en une lecture (13/10/2026)
+
+`GET /marketing/hub[?shop={id}]` (`src/marketing_hub.php`), lu par la page `marketing/`. Réseaux sociaux, emailing et
+campagnes vivaient dans quatre sections du rail ; la lecture les pose côte à côte **sans rien recalculer à sa façon** :
+campagnes = les lignes de `GET /marketing` (`mar_campaign`), emailing = `mar_nl_campagne` avec les statistiques de
+`GET /newsletter` (`nlStatsReelles` d'abord), réseaux sociaux = `GET /facebook/posts`, charte = `bgStatsPeriode(30)` de
+`/marketing/brand-guard/stats` plus les posts **sauvages** des 30 derniers jours (`mar_bg_controle.sauvage = 1`), qu'aucun
+écran ne listait. Sans `shop` : la vue de la marque. Avec `shop` : les posts du magasin, ses newsletters (créées par lui ou
+parties de son adresse), les campagnes RÉSEAU et celles qui le couvrent (`mar_campaign_shop`) — jamais un brouillon de la
+marque —, sa ligne de la charte. `shop` vaut un id de boutique (`[\w-]{1,16}`) ; `brand` ou `reseau` reviennent à la marque.
+
+Réponse : `{genere, aujourdhui, shop, magasin, magasins: [{id, nom, franchise}], campagnes, emailing, social, charte, aFaire}`.
+Chaque canal porte `dispo` : **une table absente rend `{dispo: false, raison}` pour ce canal seul**, jamais un 500 qui
+emporterait les autres.
+
+- `campagnes` : `{liste: [{id, nom, typeId, type, typeCouleur, reseau, nBoutiques, statut, statutNom, statutTexte,
+  statutFond, debut, fin, budget, depense, image, phase}], chiffres: {total, enCours, aVenir, terminees, brouillons, budget,
+  depense}}`. `phase` se lit aux dates, pas au libellé du statut : `brouillon` (statut draft, cancelled, canceled ou archived,
+  quelles que soient les dates), `a_venir`, `en_cours`, `terminee`, `sans_date`. Budget et dépense ne comptent pas les brouillons.
+- `emailing` : `{liste: [{id, nom, objet, statut, canal, mode, declencheur, envoiLe, expediteur, testEnvoye, exemple, envoyes,
+  ouvertures, clics, vouchers, reel}], role, test, smtp, chiffres: {total, exemples, programmees, automatisations, envoyeesMois,
+  envoyes, ouvertures, clics, tauxOuverture, tauxClic, optin}}`. Les campagnes d'exemple (`exemple = 1`) restent dans la liste
+  mais **sortent des chiffres** ; `exemples` dit combien. `optin` = contacts `mar_nl_contact` opt-in non désinscrits, `null`
+  tant qu'aucun contact n'est importé.
+- `social` : `{liste: [posts de GET /facebook/posts], parStatut, chiffres: {total, aTraiter, aPublier, publiesMois, refuses,
+  noteMoyenne}, regles: {seuil, familles, niveaux, formats, marque, hashtag}}` — de quoi décider sans second appel (familles
+  d'écart obligatoires sous le seuil ou en cas de refus) et pré-remplir un post avec la marque et le hashtag de la charte.
+- `charte` : `{stats: {jours, controles, tauxConformite, scoreMoyen, sauvages, topRegles, boutiques}, sauvages: [{id,
+  magasinId, boutique, statut, score, texte, message, lien, publieLe, quand, ecarts: [{libelle, gravite, correction}]}],
+  charteVersion, meta}`.
+- `aFaire` : `[{canal: campagne|email|social|charte|avis, niveau: urgent|normal, titre, detail, cible: {onglet:
+  plan|creer|valider|publier|mesurer, post?, campagne?, vue?}}]` (l'onglet est l'étape du flux où se fait le geste), l'urgent d'abord, 40 au plus. Post à valider (marque seulement ; urgent s'il sort sous 48 h), post à contrôler,
+  post validé dont la date est passée sans être marqué publié (urgent : sans son id Facebook, Brand Guard le prendra pour un
+  sauvage), post refusé depuis moins de 14 jours (vue magasin), posts sauvages, newsletter programmée sous 7 jours sans envoi
+  test, newsletters programmées en mode test, campagne encore en brouillon qui démarre sous 14 jours. Et la seule règle qui lit
+  les trois canaux : **une campagne en cours, ou qui démarre sous 7 jours, sans aucun post (hors refusés) ni aucune newsletter
+  datés dans sa période**. Depuis le 13/10/2026 un post (`mar_social_post.campagne_id`) et une newsletter
+(`mar_nl_campagne.campagne_id`) se rattachent à leur campagne : le rattachement compte d'abord, les dates seulement pour
+un contenu rattaché à rien. Et deux règles de la publication : **publication en échec** (urgent) et post validé dont
+l'heure est passée sans aucune publication.
+
+**Le flux (13/10/2026).** Chaque post porte aussi `reseaux` (`["facebook","instagram","linkedin"]`), `campagneId` et
+`publications: [{id, reseau, statut: programme|en_cours|publie|erreur|annule, prevuLe, publieLe, lien, externeId, erreur,
+tentatives}]` ; `social.publication` vaut `{reelle, auto, reseaux: {facebook, instagram, linkedin}}` (accès configuré
+ou non, jamais un secret) ; chaque newsletter porte `campagneId`. `POST /marketing/newsletter/campagnes` accepte
+`campagne` (l'id de la campagne de rattachement).
+
+Écritures : la page appelle les routes de chaque canal, inchangées (`POST /facebook/posts`, `PATCH /facebook/posts/{id}`,
+`PATCH …/ecarts/{id}`, et la newsletter qui écrit elle-même). Une seule extension : **`POST /facebook/posts/{id}/controle`
+accepte `{soumettre: true}`**, qui fait sortir un brouillon (statut `a_controler`, `submitted_at` à maintenant, ligne de
+journal) avant le contrôle — sans elle, un post enregistré en brouillon ne pouvait plus jamais être soumis.
+
+**La page `marketing/`** — état au 13/10/2026 : un rail à gauche, comme celui du cockpit (la vue réseau ou magasin, les
+étapes et leurs compteurs, les sous-vues de l'étape ouverte, les paramètres, les liens ; un tiroir sous 900 px), un
+tableau de bord (la chaîne des étapes, « À faire », les 14 prochains
+jours) puis cinq étapes, **1 · Planifier** (campagnes et leurs contenus, calendrier), **2 · Créer** (post : campagne,
+réseaux, visuel téléversé, aperçu, prêt ? par réseau ; newsletter), **3 · Valider** (contrôle, décision, refusés),
+**4 · Publier** (réseau par réseau, programmé, publiés maintenant, annulés ; tout ce qui est programmé) et
+**5 · Mesurer** (résultats par canal et par campagne, avis Google, posts sauvages), et les paramètres (publication, API
+et tables, agent, charte, pages, avis). Adresse : `marketing/?shop=&onglet=plan|creer|valider|publier|mesurer|parametres
+&vue=calendrier|newsletter|avis|sauvages&mois=AAAA-MM&p=publication|sources|agent|charte|pages|avis` ; les anciens
+`onglet=campagnes|calendrier|social|email` mènent à l'étape correspondante. *Première version, pour mémoire* : six onglets — vue d'ensemble (un chiffre par
+canal, à faire, les 14 prochains jours), calendrier (campagnes en bandes, newsletters et posts au jour, filtre par canal ;
+une liste au téléphone), campagnes (avec leurs prises de parole, « Préparer un post », l'assistant de campagne), réseaux sociaux
+(rédaction avec aperçu, contrôle, décision, publication avec l'id Facebook, sauvages, la charte sur 30 jours), emailing (le
+module `newsletter.js` monté tel quel, rôle `brand` ou le magasin), paramètres (règles de l'agent, charte, pages, cible des
+avis, API et tables). Adresse : `marketing/?shop=&onglet=vue|calendrier|campagnes|social|email|parametres&mois=AAAA-MM
+&vue=a_traiter|a_publier|publies|refuses|brouillons|sauvages|tous|avis&p=sources|agent|charte|pages|avis`. Comme la newsletter,
+le rôle n'est pas vérifié côté serveur : la vue magasin est une vue, pas un droit.
+
+### `GET /marketing/sources` — les API et les tables du module Marketing (13/10/2026)
+
+`GET /marketing/sources` (`src/marketing_sources.php`), lu par l'onglet Paramètres → « API et tables » de `marketing/`.
+Comme la carte des sources, **lu dans le code** : seule la liste des routes que la page appelle est déclarée
+(`MS_ROUTES` — 34 routes au 13/10/2026, la page et le module newsletter qu'elle monte ; `bin/tests.php` vérifie que chaque fonction
+existe et que le routeur l'appelle). Chaque route est suivie de fonction en fonction (6 niveaux au plus, sans
+l'installateur), et l'on relève les tables nommées dans le SQL (`FROM`, `JOIN` ⇒ lue ; `INSERT`, `UPDATE`, `DELETE`
+⇒ écrite ; `CREATE`, `ALTER` ⇒ créée ; `ON DUPLICATE KEY UPDATE col` n'est pas une table) et les API **réellement
+appelées** (`PanelApi::…`, `ErpApi::…` = TFBuddy ; `MetaGraph::http|posts|resoudrePage…`, `GoogleApi::…`,
+`Anthropic::…`, `Smtp::envoyer` ; un `statut()` ou `configured()` ne sort pas du serveur et ne compte pas).
+`wr_param_put`, qui sert tous les réglages, est déclaré à part : pour nos deux clés il n'écrit que `ceo_app_setting`.
+
+Réponse : `{genere, base, baseLue, apis, routes, tables, liees, limites}`.
+- `apis` : `[{id: base|panel|erp|meta|google|anthropic|smtp, nom, famille: locale|tfbuddy|externe, hote, quoi,
+  configure, routes: ["MÉTHODE /chemin"]}]` — l'état vient des `statut()` des clients, jamais un secret.
+- `routes` : `[{methode, chemin, fonction, fichier, quoi, existe, fonctions, apis, tfbuddy, locale, tables: [{nom,
+  mode: lecture|ecriture|creation}]}]`. `tfbuddy` : la route appelle le panel ou l'ERP ; `locale` : rien ne sort du
+  serveur (base et calcul).
+- `tables` : `[{nom, origine: portail|tfbuddy|module|cockpit, origineNom, ecrite, routes, existe, lignes}]`. Origine :
+  une table du registre `MAR_TABLES` = portail ; un autre `mar_*` = module marketing autonome (base partagée) ; une table créée par `src/` ou `sql/schema.sql` = cockpit ; le reste =
+  base partagée TFBuddy (`shops`…). `existe` et `lignes` (estimées par InnoDB) viennent d'`information_schema`,
+  `null` si la base ne répond pas.
+- `registre` : `[{nom, famille, quoi, ancien}]` — les tables du portail et leur nom d'avant le 13/10/2026.
+- `liees` : l'assistant de campagne (`/api/v1/marketing`, copie de l'API du module autonome, catalogue repris de
+  l'ERP TFBuddy) et les écrans du cockpit.
+
+**Avis Google dans `/marketing/hub` (13/10/2026).** Nouveau canal `avis` : `{cible, reseau, magasins, connecteur:
+{configure, raccordes, derniereSynchro, etat, erreur}}`, c'est `GET /reputation` tel quel (en vue magasin, sa seule
+ligne ; le réseau reste en comparaison). `aFaire` y ajoute `canal: avis` : fiche Google à raccorder, note sous la
+cible (avec le nombre d'avis 5★ à obtenir), avis non relus depuis plus de 7 jours (connecteur configuré seulement).
+
+**Règles de l'agent : les paramètres ne se perdent plus (13/10/2026).** `PUT /parametres/fbControle` reçoit le pack
+tel que `/referentiels/facebook-regles` le sert, c'est-à-dire **sans** `params` : activer une règle enregistrait des
+règles sans mots, sans domaines, sans seuils — « Conditions de promotion » ne relevait plus rien. `fbRegles()` reprend
+désormais, règle par règle, les paramètres absents du défaut livré (`fbReglesDefaut()`) ; ceux qu'on a posés restent.
+Un réglage déjà abîmé est réparé à la lecture.
+
+### Tables du portail Marketing : un seul préfixe, `mar_` (13/10/2026)
+
+Tout ce que le portail possède passe sous `mar_`, rangé par famille (`src/marketing_tables.php`, `MAR_TABLES`). Les
+tables du module marketing autonome (`mar_campaign`, `mar_campaign_type`… en anglais) ne changent pas.
+
+| Nouveau nom | Ancien nom |
+|---|---|
+| `mar_social_post` | `ceo_fb_post` |
+| `mar_social_ecart` | `ceo_fb_finding` |
+| `mar_social_publication` | — (nouvelle : une publication par post et par réseau) |
+| `mar_bg_controle` / `mar_bg_page` / `mar_bg_regle` | `brand_guard_checks` / `brand_guard_pages` / `brand_guard_rules` |
+| `mar_nl_magasin`, `_source`, `_segment`, `_campagne`, `_contact`, `_envoi`, `_voucher` | `ceo_nl_…` (même suffixe) |
+| `mar_avis_fiche` / `mar_avis` | `ceo_shop_reputation` / `ceo_shop_review` |
+| `mar_campagne_annexe` / `mar_campagne_annexe_type` | `ceo_mkt_annexe` / `ceo_mkt_annexe_type` |
+| `mar_campagne_mesure`, `_releve`, `_snapshot`, `_objectif`, `_objectif_produit`, `_produit` | `ceo_campagne_…` (même suffixe) |
+
+**Migration** : `marMigrer()`, appelée par `ensureInstalled()` avant toute création de table, au premier appel qui
+suit le déploiement. Ancienne présente et nouvelle absente : renommée. Nouvelle présente mais vide (recréée trop tôt) et
+ancienne pleine : la vide disparaît, l'ancienne est renommée. Les deux pleines : rien, une ligne de journal le dit.
+Tous les renommages partent en **une seule** instruction `RENAME TABLE` (atomique ; données, index et clés étrangères
+suivent). Une panne n'empêche pas le cockpit de répondre : l'empreinte du schéma n'est pas posée, l'appel suivant
+réessaie. Une installation neuve crée directement les nouveaux noms.
+
+**Retour arrière** (redéployer l'ancienne version ne suffit pas : elle recréerait des tables vides) — avant de
+redéployer, dans la base :
+
+```sql
+RENAME TABLE
+  mar_social_post TO ceo_fb_post, mar_social_ecart TO ceo_fb_finding,
+  mar_bg_controle TO brand_guard_checks, mar_bg_page TO brand_guard_pages, mar_bg_regle TO brand_guard_rules,
+  mar_nl_magasin TO ceo_nl_magasin, mar_nl_source TO ceo_nl_source, mar_nl_segment TO ceo_nl_segment,
+  mar_nl_campagne TO ceo_nl_campagne, mar_nl_contact TO ceo_nl_contact, mar_nl_envoi TO ceo_nl_envoi,
+  mar_nl_voucher TO ceo_nl_voucher,
+  mar_avis_fiche TO ceo_shop_reputation, mar_avis TO ceo_shop_review,
+  mar_campagne_annexe TO ceo_mkt_annexe, mar_campagne_annexe_type TO ceo_mkt_annexe_type,
+  mar_campagne_mesure TO ceo_campagne_mesure, mar_campagne_releve TO ceo_campagne_releve,
+  mar_campagne_snapshot TO ceo_campagne_snapshot, mar_campagne_objectif TO ceo_campagne_objectif,
+  mar_campagne_objectif_produit TO ceo_campagne_objectif_produit, mar_campagne_produit TO ceo_campagne_produit;
+```
+
+(Retirer de la liste une table absente de la base : `RENAME TABLE` échoue en entier sinon. `mar_social_publication`
+et les colonnes `reseaux` / `campagne_id` peuvent rester : l'ancienne version les ignore.)
+
+**Les adresses** : les API du portail vivent sous `/api/cockpit/marketing/…` — `/marketing/social/posts…`,
+`/marketing/social/regles`, `/marketing/newsletter…`, `/marketing/avis…`, `/marketing/publication…`, à côté de
+`/marketing/brand-guard…` et `/marketing/hub|sources`. Les anciennes restent servies, réécrites avant le routage
+(`MAR_ALIAS`, `marCheminCanonique()`) : `/facebook/posts` → `/marketing/social/posts`, `/referentiels/facebook-regles`
+→ `/marketing/social/regles`, `/newsletter` → `/marketing/newsletter` (les mails déjà partis portent
+`/newsletter/o|c|u/{token}`), `/reputation` → `/marketing/avis`. Deux écritures de réglage ont leur adresse :
+`PUT /marketing/social/regles` (= `PUT /parametres/fbControle`) et `PUT /marketing/avis/cible`
+(= `PUT /parametres/reputationCible`).
+
+### Publication Facebook, Instagram, LinkedIn (13/10/2026)
+
+`src/social_publication.php`, avec `MetaGraph::publierPage|publierInstagram|instagramDePage` et `LinkedInApi`. Mise en
+service, droits et jetons : `docs/publication-reseaux.md`.
+
+- `POST /marketing/social/posts/{id}/publier` `{quand: maintenant|programme, reseaux?}` → `{ok, publications}`.
+  409 si la publication réelle est éteinte ou si le post n'est pas validé. Contrôle préalable par réseau
+  (`spPreparer`) : un réseau qui ne passe pas est annulé avec sa raison et les autres partent ; 422 si aucun ne
+  passe, ou si un réseau demandé nommément (`reseaux`) ne passe pas — rien n'est parti.
+- `DELETE /marketing/social/posts/{id}/publier` : annule ce qui est programmé ou en échec.
+- `GET /marketing/publication/cron?jeton=` (`socialJeton`) : publie ce qui est dû, retente une erreur après 15 minutes
+  (3 essais), 20 par passage. Ne fait rien si la publication réelle est éteinte. Appelé par `bin/social_cron.sh`.
+- `GET /marketing/publication/etat` : `{reglages: {reelle, auto, pageMarque, linkedinOrganisation, linkedinVersion},
+  meta, linkedin, pages, reseaux, compteurs, cronDernier, base}` — l'existence des jetons, jamais leur valeur.
+- `PUT /marketing/publication/reglages` : 422 si `reelle` sans aucun accès configuré.
+- `POST /marketing/publication/tester` `{reseau}` et `POST /marketing/publication/media` `{data, nom?}` (JPEG, PNG ou
+  WebP, 8 Mo ; rendu `{url, chemin, largeur, hauteur, poids, avertissements}`).
+- Écritures existantes : `POST /marketing/social/posts` accepte `reseaux` et `campagneId` ; une **validation**
+  (`PATCH …/{id}` à `valide`) programme le post si « Programmer à la validation » est coché ; « marqué publié » à la
+  main annule ce qui était programmé.

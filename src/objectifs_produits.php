@@ -22,14 +22,14 @@ const OP_MOIS = [1 => 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'ju
 
 function ensureObjectifsProduits(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_produit ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_produit ('
         . 'campagne_id INT NOT NULL,'
         . 'product_id INT NOT NULL,'
         . 'nom VARCHAR(200) NOT NULL DEFAULT \'\','
         . 'categorie VARCHAR(120) NULL,'
         . 'PRIMARY KEY (campagne_id, product_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_objectif_produit ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_objectif_produit ('
         . 'campagne_id INT NOT NULL,'
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'pieces INT NULL,'
@@ -92,13 +92,13 @@ function opPerimetre(int $cid, array $nomDe): array
 function opProduits(int $cid): array
 {
     return array_map(static fn ($r) => ['id' => (int) $r['product_id'], 'nom' => (string) $r['nom'], 'categorie' => (string) ($r['categorie'] ?? '')],
-        Db::rows('SELECT product_id, nom, categorie FROM ceo_campagne_produit WHERE campagne_id = ? ORDER BY categorie, nom', [$cid]));
+        Db::rows('SELECT product_id, nom, categorie FROM mar_campagne_produit WHERE campagne_id = ? ORDER BY categorie, nom', [$cid]));
 }
 
 function opObjectifs(int $cid): array
 {
     $out = [];
-    foreach (Db::rows('SELECT shop_id, pieces FROM ceo_campagne_objectif_produit WHERE campagne_id = ?', [$cid]) as $r) {
+    foreach (Db::rows('SELECT shop_id, pieces FROM mar_campagne_objectif_produit WHERE campagne_id = ?', [$cid]) as $r) {
         if ($r['pieces'] !== null && (int) $r['pieces'] > 0) { $out[(string) $r['shop_id']] = (int) $r['pieces']; }
     }
     return $out;
@@ -389,14 +389,14 @@ function wr_objectifs_produits(int $id): array
     $nomDe = opMagasins();
     $nP = null; $nO = 0; $nE = 0;
     if (array_key_exists('produits', $b) && is_array($b['produits'])) {
-        Db::exec('DELETE FROM ceo_campagne_produit WHERE campagne_id = ?', [$id]);
+        Db::exec('DELETE FROM mar_campagne_produit WHERE campagne_id = ?', [$id]);
         $vus = [];
         foreach ($b['produits'] as $p) {
             $pid = (int) (is_array($p) ? ($p['id'] ?? 0) : $p);
             if ($pid <= 0 || isset($vus[$pid])) { continue; }
             $vus[$pid] = true;
             $cat = mb_substr(trim((string) (is_array($p) ? ($p['categorie'] ?? '') : '')), 0, 120);
-            Db::exec('INSERT INTO ceo_campagne_produit (campagne_id, product_id, nom, categorie) VALUES (?,?,?,?)',
+            Db::exec('INSERT INTO mar_campagne_produit (campagne_id, product_id, nom, categorie) VALUES (?,?,?,?)',
                 [$id, $pid, mb_substr(trim((string) (is_array($p) ? ($p['nom'] ?? '') : '')), 0, 200), $cat !== '' ? $cat : null]);
         }
         $nP = count($vus);
@@ -407,11 +407,11 @@ function wr_objectifs_produits(int $id): array
             if ($sid === '' || !isset($nomDe[$sid])) { continue; }
             $n = (int) round((float) str_replace(',', '.', trim((string) $pieces)));
             if ($n <= 0) {
-                Db::exec('DELETE FROM ceo_campagne_objectif_produit WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
+                Db::exec('DELETE FROM mar_campagne_objectif_produit WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
                 $nE++;
                 continue;
             }
-            Db::exec('INSERT INTO ceo_campagne_objectif_produit (campagne_id, shop_id, pieces, maj) VALUES (?,?,?,?)
+            Db::exec('INSERT INTO mar_campagne_objectif_produit (campagne_id, shop_id, pieces, maj) VALUES (?,?,?,?)
                       ON DUPLICATE KEY UPDATE pieces = VALUES(pieces), maj = VALUES(maj)', [$id, $sid, $n, date('Y-m-d H:i:s')]);
             $nO++;
         }

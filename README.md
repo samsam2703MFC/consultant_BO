@@ -82,6 +82,10 @@ public/
     js/scouting-tpl.js  gabarits HTML de l'écran Scouting
     vendor/leaflet/     Leaflet 1.9.4 (carte), embarqué
   dashboard/            dashboard magasin — page à part, hors SPA
+  marketing/            module Marketing — campagnes, réseaux sociaux, emailing
+    index.html          coquille (monte aussi assets/js/newsletter.js)
+    marketing.js        état S, rendre(), le rail et le flux en cinq étapes, gestes d'écriture
+    marketing.css       styles de la page
     index.html          coquille
     dashboard.js        état S, rendre()/brancher(), lectures lireAux()
     dashboard.css       styles de la page
@@ -92,6 +96,12 @@ src/
   endpoints.php         lectures (GET) — un endpoint par écran
   writes.php            écritures (POST/PATCH/PUT) + journalisation
   fbcontrole.php        agent de contrôle des posts Facebook (moteur de règles)
+  marketing_hub.php     GET /marketing/hub — tous les canaux marketing en une lecture
+  marketing_sources.php GET /marketing/sources — API (TFBuddy, locales, extérieures) et tables du module
+  marketing_tables.php  registre des tables mar_, migration RENAME, alias des anciennes adresses
+  social_publication.php publication Facebook / Instagram / LinkedIn, horloge /marketing/publication/cron
+  linkedin_api.php      client LinkedIn (API Posts, dépôt d'images)
+  meta_graph.php        client Meta Graph (lecture des pages, publication)
   installer.php         auto-installation du schéma au premier appel
   auth.php              authentification intégrée (optionnelle)
 sql/
@@ -113,16 +123,20 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 `/referentiels/project-templates`, `/stores`, `/stores/perf`,
 `/stores/budgets`, `/targets`, `/consultants`, `/fournisseurs`, `/projects`,
 `/projects/crm`, `/people`, `/reporting`, `/journal`, `/products/scoring`,
-`/pwa/reports`, `/pwa/tasks/nc`, `/referentiels/facebook-regles`, `/facebook/posts`.
+`/pwa/reports`, `/pwa/tasks/nc`, `/marketing/social/regles`, `/marketing/social/posts`,
+`/marketing/hub`, `/marketing/sources`, `/marketing/publication/etat`.
 
 Écritures : `POST /projects`, `PATCH /projects/{id}`,
 `POST /projects/{id}/tasks`, `PATCH /projects/{id}/tasks/{taskId}`,
 `PATCH /projects/{id}/milestones/{index}`, `POST /tasks/{id}/reminder`,
 `PUT /stores/{id}/budget`, `PATCH /reporting/reports/{id}`,
 `POST /reporting/reports/{id}/send`, `PATCH /reporting/alerts/{id}`,
-`PUT /parametres/{key}`, `POST /journal`, `POST /facebook/posts`,
-`POST /facebook/posts/{id}/controle`, `PATCH /facebook/posts/{id}`,
-`PATCH /facebook/posts/{id}/ecarts/{ecartId}`.
+`PUT /parametres/{key}`, `POST /journal`, `POST /marketing/social/posts`,
+`POST /marketing/social/posts/{id}/controle`, `PATCH /marketing/social/posts/{id}`,
+`PATCH /marketing/social/posts/{id}/ecarts/{ecartId}`,
+`POST|DELETE /marketing/social/posts/{id}/publier`, `PUT /marketing/publication/reglages`,
+`POST /marketing/publication/tester`, `POST /marketing/publication/media`
+(les anciennes adresses `/facebook/posts…` restent servies).
 
 Chaque écriture produit une ligne dans `ceo_journal_entry` (écran Journal).
 Détail complet, exemples JSON et DDL : `docs/contrat-api.md`.
@@ -164,8 +178,76 @@ colonnes resteront les mêmes le jour où l'API Meta Graph sera branchée — ce
 demandera une app Meta, un Business Manager et des Page Access Tokens, hors
 périmètre actuel.
 
-Tables : `ceo_fb_post`, `ceo_fb_finding` (DDL dans `sql/schema.sql`, créées
+Tables : `mar_social_post`, `mar_social_ecart` (DDL dans `sql/schema.sql`, créées
 aussi au démarrage par `ensureFacebook()` pour les bases déjà en service).
+
+## Module Marketing
+
+**`public/marketing/`** — `…/marketing/` pour la marque, `…/marketing/?shop=4` pour un
+magasin. Les réseaux sociaux, l'emailing, les avis et les campagnes vivaient dans quatre
+sections du rail et ne se lisaient jamais ensemble. Le portail les réunit autour d'un
+**flux de travail** : la campagne est le pivot, chaque contenu s'y rattache, et chaque
+étape dit ce qui l'attend.
+
+**Le rail** (à gauche, comme celui du cockpit) porte le menu : la vue — tout le réseau ou un
+magasin —, le tableau de bord, les cinq étapes avec leurs compteurs (rouges quand il y a
+urgence) et, dépliées sous l'étape ouverte, ses sous-vues ; les paramètres ; les liens vers
+l'assistant de campagne et le cockpit. Sous 900 px de large, il devient un tiroir qu'ouvre
+le bouton ☰ de l'en-tête.
+
+| Étape | Ce qu'on y fait |
+|---|---|
+| **Tableau de bord** | la chaîne des cinq étapes avec leur compteur (rouge s'il y a urgence), « À faire » trié par étape, les 14 prochains jours |
+| **1 · Planifier** | les campagnes et, dépliées, leurs contenus à l'étape où ils en sont ; « + Post » et « + Newsletter » les rattachent ; calendrier |
+| **2 · Créer** | le rédacteur de post (campagne, réseaux, visuel téléversé, aperçu, « prêt ? » réseau par réseau) et ses brouillons ; la newsletter (le module `newsletter.js`, rattachable à une campagne) |
+| **3 · Valider** | le contrôle de l'agent, la décision de la marque, les refusés ; la charte Brand Guard sur 30 jours |
+| **4 · Publier** | les posts validés, réseau par réseau (programmé, publié, en échec, annulé), « Publier maintenant », « Programmer », « Annuler », ou « Publié à la main ? » ; tout ce qui est programmé, posts et newsletters, dans l'ordre |
+| **5 · Mesurer** | un chiffre par canal, les publiés avec leurs liens, les newsletters envoyées, ce que chaque campagne a dit ; avis Google ; posts sauvages |
+| **Paramètres** | publication, API et tables, agent de contrôle, charte, pages Facebook, avis Google (la marque ; un magasin n'y voit que l'inventaire) |
+
+- **Une lecture** : `GET /marketing/hub` (`src/marketing_hub.php`) compile campagnes,
+  newsletters, posts (avec leurs publications), charte et avis, avec les calculs de leurs
+  écrans. Un canal dont la table manque est déclaré indisponible, les autres restent lisibles.
+- **La campagne, pivot** : `mar_social_post.campagne_id` et `mar_nl_campagne.campagne_id`.
+  Une campagne en cours sans aucun contenu rattaché (ni daté dans sa période, pour un
+  contenu qui n'est rattaché à rien) remonte dans « À faire ».
+- **Publication Facebook, Instagram, LinkedIn** (`src/social_publication.php`,
+  `src/meta_graph.php`, `src/linkedin_api.php`) : un post choisit ses réseaux ; validé, il
+  se programme (réglage « Programmer à la validation ») et l'horloge
+  (`bin/social_cron.sh`, toutes les 5 minutes) le publie à son heure — une ligne
+  `mar_social_publication` par réseau. Contrôle préalable par réseau (Instagram exige un
+  visuel téléversé, LinkedIn ne publie que les posts de la marque…) : un réseau qui ne peut
+  pas suivre est annulé avec sa raison, les autres partent. **Éteinte par défaut**
+  (Paramètres → Publication) ; les jetons restent sur le serveur. Mise en service :
+  [`docs/publication-reseaux.md`](docs/publication-reseaux.md).
+- **Tables sous `mar_`** (`src/marketing_tables.php`) : tout ce que le portail possède est
+  rangé par famille — `mar_social_*` (posts, écarts, publications), `mar_bg_*` (charte),
+  `mar_nl_*` (emailing), `mar_avis*`, `mar_campagne_*` (mesure, objectifs, annexes). Les
+  anciennes (`ceo_fb_*`, `brand_guard_*`, `ceo_nl_*`, `ceo_shop_review|reputation`,
+  `ceo_campagne_*`, `ceo_mkt_*`) sont **renommées** au premier appel après déploiement, en
+  une seule instruction `RENAME TABLE` (données, index et clés suivent). Retour arrière :
+  `docs/contrat-api.md`, « Tables du portail Marketing ».
+- **API sous `/api/cockpit/marketing/…`** : `/marketing/social`, `/marketing/newsletter`,
+  `/marketing/avis`, `/marketing/publication`, à côté de `/marketing/brand-guard`. Les
+  anciennes adresses (`/facebook/posts`, `/newsletter`, `/reputation`,
+  `/referentiels/facebook-regles`) restent valables — les mails déjà partis portent le
+  suivi `/newsletter/o|c|u/…` — réécrites avant le routage (`MAR_ALIAS`).
+- **« API et tables »** (Paramètres) : `GET /marketing/sources` suit, dans le CODE, chaque
+  route que le portail appelle et dit ce qu'elle touche — API reliées à TFBuddy (panel et
+  ERP, `atelierby.tfbuddy.com`), locales, services extérieurs (Meta, LinkedIn, Google,
+  Anthropic, SMTP) — puis chaque table avec son origine (portail `mar_`, module marketing
+  autonome, cockpit, TFBuddy), lue ou écrite, présente ou non en base, et le registre
+  `mar_` avec l'ancien nom de chaque table. Au 13/10/2026 : 34 routes, **aucune n'appelle
+  le panel ni l'ERP TFBuddy**, une seule table TFBuddy (`shops`, lue).
+- **Règles de l'agent** (correction du 13/10/2026) : activer une règle n'efface plus ses
+  paramètres — `fbRegles()` reprend ceux qui manquent du défaut livré.
+- **Écritures** : comme la newsletter, la vue magasin n'est pas un droit — l'API ne vérifie
+  pas qui parle (auth intégrée ou ERP en amont).
+- **Nom** : l'ancien module marketing autonome était servi à `/marketing/` à la **racine
+  du domaine** ; celui-ci vit sous le cockpit (`/consulant_bo/marketing/`).
+
+Tests : `php bin/tests.php` (sections « Module Marketing », « Règles de l'agent »,
+« Inventaire des sources », « Migration mar_ » et « Publication »).
 
 ## Intégration panel consultant (pwa_consultant)
 
