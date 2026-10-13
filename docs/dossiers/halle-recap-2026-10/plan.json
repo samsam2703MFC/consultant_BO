@@ -1,57 +1,53 @@
 {
   "matiere": {
     "titre": "Ramener les achats à 40 % du CA",
-    "intro": "Un plan qui atteint 40 % avec + 5 % de prix en moyenne et − 15,8 % d’achats, soit environ − 4 600 € de matière par mois sur la base actuelle (compte d’exploitation de la page 3).",
+    "intro": "Un plan qui atteint 40 % avec + 5 % de prix en moyenne et ≈ − {pctAch} d’achats, soit environ − {achEur} de matière par mois sur {NR} mois d’exploitation (compte de la page 3).",
     "actions": [
       {
         "titre": "Hausse tarifaire ciblée, + 5 % en moyenne",
         "texte": "Ne toucher ni à la baguette ni à la tradition : ce sont les produits repères, ceux sur lesquels le client compare. Monter de 8 à 10 % sur la viennoiserie, la pâtisserie et le traiteur, où personne ne connaît le prix du voisin.",
-        "effet": "+ 2,9 k€ de CA par mois, sans un euro d’achat en plus"
+        "effet": "+ {b1} de CA par mois, sans un euro d’achat en plus"
       },
       {
         "titre": "Commandes SLFood calées sur les ventes réelles, − 8 % d’achats",
-        "texte": "Chaque commande se fait sur les ventes du même jour de la semaine précédente, par produit, et plus « au feeling ». Les invendus sont comptés chaque soir, par article. Signal d’alarme : 687 € de Too Good To Go en six mois, à peine 115 € par mois : les invendus ne sont pas revalorisés, ils partent à la poubelle. Activer Too Good To Go chaque soir sur ce qui reste, mais l’objectif reste d’en avoir moins, pas de mieux les brader.",
-        "effet": "≈ − 2 300 € d’achats par mois",
+        "texte": "Chaque commande se fait sur les ventes du même jour de la semaine précédente, par produit, et plus « au feeling ». Les invendus sont comptés chaque soir, par article. Signal d’alarme : {tgtg} de Too Good To Go sur la période, à peine {tgtgMois} par mois : les invendus ne sont pas revalorisés, ils partent à la poubelle. Activer Too Good To Go chaque soir sur ce qui reste, mais l’objectif reste d’en avoir moins, pas de mieux les brader.",
+        "effet": "≈ − {b2} d’achats par mois",
         "cockpit": "Le cockpit relève déjà les invendus déclarés : 375 € au coût de production (495 pièces) du 1er au 13 octobre, 1,5 % du CA — c’est la base du comptage du soir."
       },
       {
         "titre": "Plus aucune sortie de marchandise sans trace, − 4 %",
         "texte": "Un bon de sortie obligatoire pour tout ce qui quitte la boutique sans passer en caisse : casse, repas du personnel, dépannage d’un autre point, Couq, Saint-Géry, GBXATL. Ce qui part vers une autre entité est refacturé. Un inventaire hebdomadaire des 20 références les plus chères, qui règle aussi le stock négatif en compta.",
-        "effet": "≈ − 1 150 € d’achats par mois"
+        "effet": "≈ − {b3} d’achats par mois"
       },
       {
         "titre": "Audit des « achats fournitures », − 35 % sur la ligne",
-        "texte": "19,5 k€ en six mois, soit 3,2 k€ par mois : c’est énorme pour des fournitures. Sortir toutes les factures, ligne par ligne : ce qui est acheté hors catalogue réseau, ou chez des fournisseurs locaux plus chers que ProdAtelier, revient au catalogue ; ce qui n’a rien à faire en boutique disparaît.",
-        "effet": "≈ − 1 150 € d’achats par mois"
+        "texte": "{fourn} sur la période, soit {fournMois} par mois : c’est énorme pour des fournitures. Sortir toutes les factures, ligne par ligne : ce qui est acheté hors catalogue réseau, ou chez des fournisseurs locaux plus chers que ProdAtelier, revient au catalogue ; ce qui n’a rien à faire en boutique disparaît.",
+        "effet": "≈ − {b4} d’achats par mois"
       }
     ],
     "effets": [
       {
         "action": "Prix + 5 %",
-        "effet": "+ 2 900 € de CA",
-        "ca": 2900,
-        "achats": 0
+        "type": "prix",
+        "pct": 0.05
       },
       {
-        "action": "Commandes sur ventes réelles",
-        "effet": "− 2 300 € d’achats",
-        "ca": 0,
-        "achats": -2300
+        "action": "Commandes sur ventes réelles (− 8 % d’achats)",
+        "type": "achats",
+        "pct": 0.08
       },
       {
-        "action": "Sorties tracées",
-        "effet": "− 1 150 € d’achats",
-        "ca": 0,
-        "achats": -1150
+        "action": "Sorties tracées (− 4 % d’achats)",
+        "type": "achats",
+        "pct": 0.04
       },
       {
-        "action": "Audit fournitures",
-        "effet": "− 1 150 € d’achats",
-        "ca": 0,
-        "achats": -1150
+        "action": "Audit fournitures (− 35 % sur la ligne)",
+        "type": "fournitures",
+        "pct": 0.35
       }
     ],
-    "resultat": "achats à ≈ 40 % du CA, ≈ + 5,8 k€ de marge par mois",
+    "resultat": "achats à ≈ {achPctApres} du CA, ≈ + {gain} de marge par mois",
     "indicateur": "Un seul indicateur, chaque lundi : les achats de la semaine divisés par le CA de la semaine. S’il n’est pas passé sous 45 % au bout d’un mois, c’est que les actions B2 et B3 ne sont pas réellement appliquées en boutique."
   }
 }

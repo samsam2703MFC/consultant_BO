@@ -132,11 +132,21 @@ modele = sum(c['pctBudget'] for c in D['charges'])
 # Le compte d'exploitation comptable (compta.json, analyse transmise le 13/10/2026), rapproché de la caisse
 C = json.load(open(os.path.join(ICI, 'compta.json'))) if os.path.exists(os.path.join(ICI, 'compta.json')) else None
 if C:
-    cC = C['ca']; cV = sum(x['montant'] for x in C['variables']); cF = sum(x['montant'] for x in C['fixes'])
+    # L'analyse divisait par 6 (ouverture supposée en avril) ; le magasin a ouvert en mars : les mêmes totaux se divisent par 7.
+    # Les lignes déjà ramenées à leur coût mensuel par l'analyse (loyer, honoraires) ne changent pas.
+    N6 = C['periodeMois']; NR = C.get('periodeReelleMois', N6); kR = N6 / NR; MENS = set(C.get('dejaMensuels', []))
+    recM = lambda x: x['montant'] if x['poste'] in MENS else x['montant'] * kR
+    cC6 = C['ca']; cV6 = sum(x['montant'] for x in C['variables']); cF6 = sum(x['montant'] for x in C['fixes']); cE6 = cC6 - cV6 - cF6
+    cC = cC6 * kR; VARR = [recM(x) for x in C['variables']]; FIXR = [recM(x) for x in C['fixes']]
+    cV = sum(VARR); cF = sum(FIXR); cAch = VARR[0]; cPerso = FIXR[0]
     cMB = cC - cV; cE = cMB - cF; cN = C['nathanSemaine'] * 52 / 12; cVar = cV / cC
     cPM = (cF + cN) / (1 - cVar); cPMb = (cF + cN + C['remboursementsMois']) / (1 - cVar)
-    cPersoSem = (C['fixes'][0]['montant'] + cN) * 12 / 52
+    cPersoSem = (cPerso + cN) * 12 / 52
+    MPER = M[-NR:] if NR <= len(M) else M                 # les mois de la période comptable (mars → septembre)
+    caPer = sum(x['ca'] for x in MPER); caPerM = caPer / len(MPER)
     caAS = sum(x['ca'] for x in M if x['m'] >= 4); caDepuis = D['fevrier']['ca'] + ca
+    PER_TXT = f"{NOMS[MPER[0]['m']].lower()} → {NOMS[MPER[-1]['m']].lower()}"
+    fournM = C['achatsFournitures'] / NR
 NPAGES = 2 + (2 if C else 0) + (1 if os.path.exists(os.path.join(ICI, 'plan.json')) else 0)
 
 
@@ -237,9 +247,9 @@ moisTab = f'''
 
 notes = f'''
 <ul class="notes">
-<li>Sources : {'ventes, clients, main-d’œuvre et frais généraux' if MO_SEM is None else 'ventes, clients et frais généraux'} viennent du P&amp;L du panel (ce que le franchisé y encode) ; le food cost mesuré est la marge du panel sur les recettes vendues ; le budget est celui du cockpit. Hors TVA, lu le {luTxt}. Février (ouverture le 20, {D["fevrier"]["jours"]} jours, {fE(D["fevrier"]["ca"])}) et octobre, partiels, restent hors des moyennes.</li>
+<li>Sources : {'ventes, clients, main-d’œuvre et frais généraux' if MO_SEM is None else 'ventes, clients et frais généraux'} viennent du P&amp;L du panel (ce que le franchisé y encode) ; le food cost mesuré est la marge du panel sur les recettes vendues ; le budget est celui du cockpit. Hors TVA, lu le {luTxt}. Ouverture en mars ; les ventes de février ({fE(D["fevrier"]["ca"])} du 20 au 28) et octobre, partiel, restent hors des moyennes.</li>
 <li><sup>*</sup> Juin et juillet : travaux sur le viaduc de Halle, effet estimé à − 20&nbsp;% sur le chiffre. <sup>**</sup> Octobre : jusqu’au {jusqua.day} inclus, face à l’objectif à date (le budget du mois réparti par jour de semaine).</li>
-<li>{'' if MO_SEM is None else 'Main-d’œuvre retenue : ' + fE(MO_SEM) + ' par semaine (montant communiqué le ' + luTxt + '), comptée au prorata des jours de chaque mois, soit ' + fE(labR) + ' pour un mois moyen. Elle remplace la main-d’œuvre encodée au panel, '}{'Main-d’œuvre encodée' if MO_SEM is None else 'qui'}{' = ' if MO_SEM is None else ' vaut '}{'' if MO_SEM is None else fE(labMesMois) + ' par mois en moyenne : '}heures planifiées × taux horaire du panel, {nf(min(tauxH))} à {nf(max(tauxH))}&nbsp;€ de l’heure selon les mois, le franchisé y comptant pour 0&nbsp;€/h. {'Résultat et point mort sont donc avant la rémunération du gérant.' if MO_SEM is None else ('Si la rémunération du gérant n’est pas dans les ' + fE(MO_SEM) + ', chaque 1&nbsp;000&nbsp;€ par mois à ajouter repousse le point mort de ' + fE(arr(1000 / tmb)) + '.' if not C else 'Ils comprennent les ' + fE(C['nathanSemaine']) + ' par semaine de Nathan : la fiduciaire compte ' + fE(C['fixes'][0]['montant']) + ' de personnel par mois sans lui (page 3).')}</li>
+<li>{'' if MO_SEM is None else 'Main-d’œuvre retenue : ' + fE(MO_SEM) + ' par semaine (montant communiqué le ' + luTxt + '), comptée au prorata des jours de chaque mois, soit ' + fE(labR) + ' pour un mois moyen. Elle remplace la main-d’œuvre encodée au panel, '}{'Main-d’œuvre encodée' if MO_SEM is None else 'qui'}{' = ' if MO_SEM is None else ' vaut '}{'' if MO_SEM is None else fE(labMesMois) + ' par mois en moyenne : '}heures planifiées × taux horaire du panel, {nf(min(tauxH))} à {nf(max(tauxH))}&nbsp;€ de l’heure selon les mois, le franchisé y comptant pour 0&nbsp;€/h. {'Résultat et point mort sont donc avant la rémunération du gérant.' if MO_SEM is None else ('Si la rémunération du gérant n’est pas dans les ' + fE(MO_SEM) + ', chaque 1&nbsp;000&nbsp;€ par mois à ajouter repousse le point mort de ' + fE(arr(1000 / tmb)) + '.' if not C else 'La fiduciaire compte ' + fE(cPerso) + ' de personnel par mois sans Nathan, sur sept mois : avec ses ' + fE(C['nathanSemaine']) + ' par semaine, ≈ ' + fE(arr(cPersoSem, 10)) + ' par semaine, sous les ' + fE(MO_SEM) + ' retenus (page 3).')}</li>
 <li>Frais généraux encodés : un montant mensuel saisi au panel, sans détail. Le modèle de charges du franchiseur en donne le contenu attendu — loyer 7&nbsp;%, énergie 5&nbsp;%, amortissements 5&nbsp;%, redevances 5&nbsp;%, entretien et assurances 2&nbsp;%, divers 1,5&nbsp;% : {fP(modele)} du CA, {fE(arr(modele * caMois))} par mois au rythme actuel. En octobre, le panel en alloue {fE(O["overheadJour"], 2)} par jour, {fE(arr(ohOct))} sur le mois : à confirmer avec le franchisé.</li>
 <li>{'' if FOOD_RETENU is None else 'Food cost retenu : ' + nfP(FOOD_RETENU) + ' du CA, une hypothèse de travail appliquée à tous les mois (matière, résultat, point mort). '}Deux mesures existent : {fP(foodMesR)} par le panel (juillet → septembre), {fP(foodT)} quand le cockpit recompose chaque ticket au coût de recette du jour (août-septembre). L’écart se joue sur les fiches recettes ; le tableau des hypothèses en montre l’effet sur le point mort.</li>
 </ul>
@@ -293,8 +303,8 @@ sup{{font-size:5.5pt;line-height:0}}
 .graph{{width:100%;height:auto;display:block;margin-top:1mm}}.graph .ax{{font-size:9px;fill:#7a736a}}.graph .axl{{font-size:9.5px;fill:#221E1A}}.graph .axv{{font-size:9px;fill:#7a736a}}.graph .lg{{font-size:9px;fill:#5a534b}}
 .renvoi{{margin-top:2mm;border-top:.5pt solid #e6e0d8;padding-top:1.4mm}}
 .page{{page-break-after:always}}.page:last-child{{page-break-after:auto}}
-.deux.g11{{grid-template-columns:1fr 1fr;gap:6mm}}.deux.bas{{margin-top:3mm}}.sec.petit{{font-size:10pt}}
-.t.compta td{{padding:.6mm 1.3mm;font-size:7.2pt}}.t.compta td.l{{white-space:normal;line-height:1.25;width:66%}}.t.perte td.l{{width:80%}}
+.deux.g11{{grid-template-columns:1fr 1fr;gap:6mm}}.deux.bas,.bas{{margin-top:3mm}}.pts.deuxcol{{columns:2;column-gap:6mm}}.pts.deuxcol li{{break-inside:avoid}}.sec.petit{{font-size:10pt}}
+.t.compta td{{padding:.55mm 1.2mm;font-size:7.1pt}}.t.compta td.l{{white-space:normal;line-height:1.25;width:52%}}.t.compta td.l small{{display:block;font-size:5.9pt;color:#9a938a}}.t td.a6,.t th.a6{{color:#9a938a}}.t.perte td.l{{width:62%}}
 .t.plan td{{padding:.8mm 1.2mm;font-size:7pt;vertical-align:top}}.t.plan td.l{{white-space:normal;line-height:1.3}}.t.plan td.l small{{display:block;font-size:6.3pt;color:#7a736a;margin-top:.3mm}}
 .t.plan td.n{{color:#8D1D2C;font-weight:500;text-align:left;width:4mm}}.t.plan td.r{{font-size:6.5pt;width:30%}}.t.plan tr.tot td{{vertical-align:middle}}
 .deux.g21{{grid-template-columns:1.55fr 1fr;gap:6mm}}.pts.plan{{font-size:7pt;line-height:1.42;padding-left:0;list-style:none}}.pts.plan li{{margin-bottom:1.8mm}}
@@ -314,8 +324,8 @@ retenir = f"""
 <li>{'' if FOOD_RETENU is None else 'Avec un food cost de ' + nfP(FOOD_RETENU) + ('' if MO_SEM is None else ' et ' + fE(MO_SEM) + ' de main-d’œuvre par semaine') + ', l'}{'L' if FOOD_RETENU is None else ''}e magasin couvre ses charges{' encodées' if MO_SEM is None else ''} : {fE(arr(caMois, 100))} de CA moyen par mois pour un point mort d’environ {fE(arr(pm, 100))}. Le chiffre peut baisser de {fP(securite, 0)} avant d’y passer ; le résultat opérationnel{' encodé' if MO_SEM is None else ''} est de {fE(arr(resMois, 100))} par mois ({fP(resMois / caMois, 0)} du CA).</li>
 <li>Le budget n’est atteint aucun mois : {fP(ca / bud, 0)} en cumul, de {fP(attM[0]['ca'] / attM[0]['budget'], 0)} ({NOMS[attM[0]['m']].lower()}, travaux du viaduc) à {fP(attM[-1]['ca'] / attM[-1]['budget'], 0)} ({NOMS[attM[-1]['m']].lower()}). Il manque {fE(arr(obj - caMois, 100))} par mois : {nf(cliObjJour - tkJour)} clients de plus par jour au panier actuel, ou {fE(panObj - panier, 2)} de plus par ticket.</li>
 <li>Octobre démarre mieux : {fP(oAtt, 0)} de l’objectif au {jusqua.day}, {nf(oTkJ)} clients et {fE(arr(oCaJ))} par jour, un panier de {fE(oPan, 2)}.</li>
-<li>{'À vérifier avec le franchisé : la rémunération du gérant (hors de la main-d’œuvre encodée), le contenu des frais généraux (en hausse en octobre) et le food cost — ' + fP(foodR) + ' au panel, ' + fP(foodT) + ' ticket par ticket.' if FOOD_RETENU is None else 'Le food cost est pris à ' + nfP(FOOD_RETENU) + ', au-dessus des deux mesures (' + fP(foodMesR) + ' au panel, ' + fP(foodT) + ' ticket par ticket). ' + ('Restent à vérifier avec le franchisé la rémunération du gérant (hors de la main-d’œuvre encodée) et les frais généraux, en hausse en octobre.' if MO_SEM is None else 'Restent à vérifier avec le franchisé les frais généraux, en hausse en octobre, et si les ' + fE(MO_SEM) + ' de main-d’œuvre par semaine comprennent la rémunération du gérant.' if not C else 'Restent à vérifier avec le franchisé les frais généraux, en hausse en octobre ; les ' + fE(MO_SEM) + ' de main-d’œuvre par semaine comprennent les 500&nbsp;€ de Nathan (comptes de la fiduciaire, page 3).')} Dans le cas le moins favorable du tableau, le point mort monte à {fE(arr(pmPire, 100))}.</li>
-{'' if not C else '<li>Les comptes de la fiduciaire (page 3, à valider) sont plus durs : matière et emballages à ' + fP(cVar) + ' du CA, ' + fE(arr(cF - C['fixes'][0]['montant'], 100)) + ' de frais fixes par mois hors personnel, et un point mort d’environ ' + fE(arr(cPM, 100)) + ' par mois, Nathan payé.</li>'}
+<li>{'À vérifier avec le franchisé : la rémunération du gérant (hors de la main-d’œuvre encodée), le contenu des frais généraux (en hausse en octobre) et le food cost — ' + fP(foodR) + ' au panel, ' + fP(foodT) + ' ticket par ticket.' if FOOD_RETENU is None else 'Le food cost est pris à ' + nfP(FOOD_RETENU) + ', au-dessus des deux mesures (' + fP(foodMesR) + ' au panel, ' + fP(foodT) + ' ticket par ticket). ' + ('Restent à vérifier avec le franchisé la rémunération du gérant (hors de la main-d’œuvre encodée) et les frais généraux, en hausse en octobre.' if MO_SEM is None else 'Restent à vérifier avec le franchisé les frais généraux, en hausse en octobre, et si les ' + fE(MO_SEM) + ' de main-d’œuvre par semaine comprennent la rémunération du gérant.' if not C else 'Restent à vérifier avec le franchisé les frais généraux, en hausse en octobre ; les ' + fE(MO_SEM) + ' de main-d’œuvre par semaine couvrent le personnel des comptes et les 500&nbsp;€ de Nathan (≈ ' + fE(arr(cPersoSem, 10)) + ' par semaine, page 3).')} Dans le cas le moins favorable du tableau, le point mort monte à {fE(arr(pmPire, 100))}.</li>
+{'' if not C else '<li>Les comptes de la fiduciaire (page 3, à valider) sont plus durs : matière et emballages à ' + fP(cVar) + ' du CA, ' + fE(arr(cF - cPerso, 100)) + ' de frais fixes par mois hors personnel, et un point mort d’environ ' + fE(arr(cPM, 100)) + ' par mois, Nathan payé.</li>'}
 </ul></div>
 """
 
@@ -361,7 +371,7 @@ renvoi = '' if C else f"""<p class="s renvoi">{'Main-d’œuvre et frais génér
 page = f"""<div class="page">
 {hd}
 <h1>Halle — tableau récap</h1>
-<div class="sous">Les sept mois pleins depuis l’ouverture du 20 février : mars → septembre 2026, et octobre en cours. Montants hors TVA.{'' if FOOD_RETENU is None else ' Food cost retenu : ' + nfP(FOOD_RETENU) + ' du CA.'}{'' if MO_SEM is None else ' Main-d’œuvre : ' + fE(MO_SEM) + ' par semaine.'}</div>
+<div class="sous">Les sept mois depuis l’ouverture en mars 2026 (mars → septembre), et octobre en cours. Montants hors TVA.{'' if FOOD_RETENU is None else ' Food cost retenu : ' + nfP(FOOD_RETENU) + ' du CA.'}{'' if MO_SEM is None else ' Main-d’œuvre : ' + fE(MO_SEM) + ' par semaine.'}</div>
 <div class="tiles">{tuiles}</div>
 {retenir}
 <div class="deux bloc">
@@ -381,48 +391,66 @@ page = f"""<div class="page">
 <div><div class="sec">À savoir</div>{notes}</div>
 {ft(2)}
 </div>"""
-# --- La page 3 : le compte d'exploitation comptable (analyse transmise le 13/10, à valider), rapproché de la caisse
+# --- La page 3 : le compte d'exploitation comptable — l'analyse (÷ 6) et son recalcul à l'ouverture de mars (÷ 7)
 p3 = ''
 if C:
-    lig = [f'<tr class="tot"><td class="l">Chiffre d’affaires</td><td>{fE(cC)}</td><td>100&nbsp;%</td></tr>']
-    lig += [f'<tr><td class="l">{H(x["poste"])}</td><td>{fE(x["montant"])}</td><td>{fP(x["montant"] / cC)}</td></tr>' for x in C['variables']]
-    lig += [f'<tr class="sous"><td class="l">Marge brute</td><td>{fE(cMB)}</td><td>{fP(cMB / cC)}</td></tr>']
-    lig += [f'<tr><td class="l">{H(x["poste"])}</td><td>{fE(x["montant"])}</td><td>{fP(x["montant"] / cC)}</td></tr>' for x in C['fixes']]
-    lig += [f'<tr class="tot"><td class="l">EBITDA d’exploitation</td><td>{fE(cE)}</td><td>{fP(cE / cC)}</td></tr>',
-            f'<tr><td class="l">Rémunération de Nathan ({fE(C["nathanSemaine"])} par semaine)</td><td>− {fE(cN)}</td><td></td></tr>',
-            f'<tr class="sous"><td class="l">EBITDA, Nathan payé</td><td>{fE(cE - cN)}</td><td>{fP((cE - cN) / cC)}</td></tr>',
-            f'<tr><td class="l">Remboursements crédits et leasing</td><td>− {fE(C["remboursementsMois"])}</td><td></td></tr>',
-            f'<tr class="tot"><td class="l">Après Nathan et la banque</td><td>{fE(cE - cN - C["remboursementsMois"])}</td><td>{fP((cE - cN - C["remboursementsMois"]) / cC)}</td></tr>']
-    tabCompta = f'<table class="t serre compta"><tr><th class="l">Poste</th><th>€ par mois</th><th>% du CA</th></tr>{"".join(lig)}</table>'
-    perteL = ''.join(f'<tr><td class="l">{H(x["origine"])}</td><td>{nf(x["montant"] / 1000, 1)}&nbsp;k€</td></tr>' for x in C['perte'])
-    perteL += f'<tr class="tot"><td class="l">Perte de la situation au 30/09</td><td>{nf(C["perteSituation"] / 1000, 1)}&nbsp;k€</td></tr>'
+    def l3(lib, a6, a7, cls='', pct=True, signe=False):
+        f = (lambda v: ('− ' + fE(abs(v))) if signe else fE(v))
+        return (f'<tr{" class=" + cls if cls else ""}><td class="l">{lib}</td><td class="a6">{f(a6)}</td><td>{f(a7)}</td>'
+                f'<td>{fP(a7 / cC) if pct else ""}</td></tr>')
+    lig = [l3('Chiffre d’affaires', cC6, cC, 'tot')]
+    lig += [l3(H(x['poste']) + ('<small>coût mensuel, inchangé</small>' if x['poste'] in MENS else ''), x['montant'], VARR[i]) for i, x in enumerate(C['variables'])]
+    lig += [l3('Marge brute', cC6 - cV6, cMB, 'sous')]
+    lig += [l3(H(x['poste']) + ('<small>coût mensuel, inchangé</small>' if x['poste'] in MENS else ''), x['montant'], FIXR[i]) for i, x in enumerate(C['fixes'])]
+    lig += [l3('EBITDA d’exploitation', cE6, cE, 'tot'),
+            l3(f'Rémunération de Nathan ({fE(C["nathanSemaine"])} par semaine)', cN, cN, pct=False, signe=True),
+            l3('EBITDA, Nathan payé', cE6 - cN, cE - cN, 'sous'),
+            l3('Remboursements crédits et leasing', C['remboursementsMois'], C['remboursementsMois'], pct=False, signe=True),
+            l3('Après Nathan et la banque', cE6 - cN - C['remboursementsMois'], cE - cN - C['remboursementsMois'], 'tot')]
+    tabCompta = (f'<table class="t serre compta"><tr><th class="l">Poste (€ par mois)</th><th class="a6">Analyse<small>÷ {N6} mois</small></th>'
+                 f'<th>Recalcul<small>÷ {NR} mois</small></th><th>% CA</th></tr>{"".join(lig)}</table>')
+    # La perte : la même décomposition, avec sept mois d'exploitation au lieu de six
+    pR = []
+    for x in C['perte']:
+        o = x['origine']; v = x['montant']
+        if o.startswith('Charges courues'):
+            v7 = -C['chargesCouruesMois'] * C['chargesCouruesMoisSansCA']; o7 = f'Charges courues sans CA, d’octobre à février (≈ {nf(C["chargesCouruesMois"] / 1000, 1)} k€ par mois)'
+        elif o.startswith('Exploitation'):
+            v7 = cE * NR; o7 = f'Exploitation réelle de {PER_TXT}'
+        else:
+            v7 = v; o7 = o
+        pR.append((o, v, o7, v7))
+    perteL = ''.join(f'<tr><td class="l">{H(o7)}</td><td class="a6">{nf(v / 1000, 1)}&nbsp;k€</td><td>{nf(v7 / 1000, 1)}&nbsp;k€</td></tr>' for o, v, o7, v7 in pR)
+    perteL += (f'<tr class="sous"><td class="l">Somme des lignes</td><td class="a6">{nf(sum(v for _, v, _, _ in pR) / 1000, 1)}&nbsp;k€</td><td>{nf(sum(v7 for _, _, _, v7 in pR) / 1000, 1)}&nbsp;k€</td></tr>'
+               f'<tr class="tot"><td class="l">Perte de la situation au 30/09</td><td class="a6">{nf(C["perteSituation"] / 1000, 1)}&nbsp;k€</td><td>{nf(C["perteSituation"] / 1000, 1)}&nbsp;k€</td></tr>')
     corr = ''.join(f'<li>{H(t)}</li>' for t in C['corrections'])
+    margeStd = (cVar - 0.41) * cC, (cVar - 0.40) * cC
     p3 = f"""<div class="page">
 {hd}
-<div class="sec">Le compte d’exploitation comptable, avril → septembre 2026</div>
-<p class="s">Situation au 30/09/2026 de la fiduciaire (Pardoen), période isolée et lissée sur {C['periodeMois']} mois par l’analyse transmise le {luTxt} ; loyer, charges locatives, assurance bâtiment et fiduciaire ramenés à leur coût mensuel. Montants mensuels de cette analyse, à valider.</p>
-<div class="cadre"><div class="k">À valider avant de conclure</div><ul>
-<li>Ouverture : le magasin a ouvert le 20 février 2026, pas en avril. La caisse compte {fE(D['fevrier']['ca'])} de CA en février (du 20 au 28) et {fE(M[0]['ca'])} en mars. L’exploitation réelle couvre donc sept mois pleins ; les « charges courues sans CA » ne vont que d’octobre 2025 à mi-février 2026, et le résultat de mars manque à l’exploitation réelle.</li>
-<li>Chiffre d’affaires : {fE(cC)} par mois × {C['periodeMois']} = {fE(cC * C['periodeMois'])}. La caisse (HT) donne {fE(caAS)} d’avril à septembre, soit {fE(caAS / 6)} par mois ({fP(caAS / 6 / cC - 1, 0)}), et {fE(caDepuis)} du 20 février au 30 septembre. À rapprocher avec la fiduciaire (période couverte, TVA, factures hors caisse) : d’ici là, les montants en euros sont à prendre avec réserve, les parts du CA tiennent mieux.</li>
-<li>Personnel : {fE(C['fixes'][0]['montant'])} par mois, plus {fE(C['nathanSemaine'])} par semaine pour Nathan, font {fE(cPersoSem)} par semaine : ce sont bien les {fE(MO_SEM) if MO_SEM else '2 650 €'} retenus aux pages 1 et 2.</li>
+<div class="sec">Le compte d’exploitation comptable, {PER_TXT} 2026</div>
+<p class="s">Situation au 30/09/2026 de la fiduciaire (Pardoen), période isolée par l’analyse transmise le {luTxt}, qui la lissait sur {N6} mois en supposant une ouverture en avril. Le magasin a ouvert en {C.get('ouverture', 'mars 2026')} : recalcul sur {NR} mois. À valider avec la fiduciaire.</p>
+<div class="cadre"><div class="k">Le recalcul à {NR} mois</div><ul>
+<li>Le CA comptable de la période ({fE(cC6 * N6)}) colle à la caisse de {PER_TXT} ({fE(caPer)} HT, {fP(cC6 * N6 / caPer - 1, 0)}), pas à celle d’avril à septembre ({fE(caAS)}, {fP(cC6 * N6 / caAS - 1, 0)}) : les comptes couvrent bien {NR} mois d’exploitation. Divisés par {NR}, ils donnent {fE(cC)} de CA par mois, contre {fE(caPerM)} en caisse.</li>
+<li>Méthode : chaque ligne × {N6}/{NR}, sauf le loyer, les charges locatives, l’assurance et les honoraires, que l’analyse avait déjà ramenés à leur coût mensuel. Les parts du CA ne bougent pas ; l’EBITDA baisse, parce que ces charges fixes pèsent un mois de plus.</li>
+<li>Personnel : {fE(cPerso)} par mois sur {NR} mois, plus {fE(C['nathanSemaine'])} par semaine pour Nathan, font {fE(cPersoSem)} par semaine ; les {fE(MO_SEM) if MO_SEM else '2 650 €'} retenus aux pages 1 et 2 sont donc prudents.</li>
 </ul></div>
 <div class="deux g11">
 <div>{tabCompta}</div>
 <div><div class="sec petit">Ce que ça dit</div><ol class="pts">
-<li>La matière, c’est là que l’argent part : {fP(C['variables'][0]['montant'] / cC)} d’achats et {fP(C['variables'][1]['montant'] / cC)} d’emballages, contre 38&nbsp;% + 2 à 3&nbsp;% dans la structure standard. Ce sont 5 à 6&nbsp;k€ de marge par mois, plus que l’EBITDA. Le cockpit chiffre {fP(foodT)} au coût de recette des tickets (août-septembre) : 4 à 6 points d’écart entre ce qui est acheté et ce qui est vendu. Avant d’accuser la casse, vérifier si de la marchandise est partie vers Couq / Saint-Géry ou GBXATL sans être refacturée, et ce que contiennent les {nf(C['achatsFournitures'] / 1000, 1)}&nbsp;k€ d’« achats fournitures ».</li>
-<li>Le personnel à {fP(C['fixes'][0]['montant'] / cC, 0)} est flatteur : Nathan n’est pas payé dans ces comptes. Avec ses {fE(C['nathanSemaine'])} par semaine, il passe à {fP((C['fixes'][0]['montant'] + cN) / cC)} et l’EBITDA tombe à {fE(arr(cE - cN, 100))} par mois.</li>
+<li>La matière, c’est là que l’argent part : {fP(cAch / cC)} d’achats et {fP(VARR[1] / cC)} d’emballages, contre 38&nbsp;% + 2 à 3&nbsp;% dans la structure standard. Ce sont {nf(margeStd[0] / 1000, 1)} à {nf(margeStd[1] / 1000, 1)}&nbsp;k€ de marge par mois, plus que l’EBITDA. Le cockpit chiffre {fP(foodT)} au coût de recette des tickets (août-septembre) : 4 à 6 points d’écart entre ce qui est acheté et ce qui est vendu. Avant d’accuser la casse, vérifier si de la marchandise est partie vers Couq / Saint-Géry ou GBXATL sans être refacturée, et ce que contiennent les {nf(C['achatsFournitures'] / 1000, 1)}&nbsp;k€ d’« achats fournitures ».</li>
+<li>Le personnel à {fP(cPerso / cC, 0)} est flatteur : Nathan n’est pas payé dans ces comptes. Avec ses {fE(C['nathanSemaine'])} par semaine, il passe à {fP((cPerso + cN) / cC)} et l’EBITDA tombe à {fE(arr(cE - cN, 100))} par mois.</li>
 <li>Avant la banque, la boutique ne perd pas d’argent en exploitation ; après, si. Les crédits (≈&nbsp;{nf(C['credits'] / 1000)}&nbsp;k€ sur {C['creditsAns']} ans) et le leasing (≈&nbsp;{nf(C['leasing'] / 1000)}&nbsp;k€ sur {C['leasingAns']} ans) font environ {nf(C['remboursementsMois'] / 1000, 1)}&nbsp;k€ de remboursements par mois : Nathan payé, le mois finit à {fE(arr(cE - cN - C['remboursementsMois'], 100))}. Les + 15&nbsp;% de CA visés ne sont pas un bonus, c’est le minimum pour respirer.</li>
 <li>Le point mort selon les comptes : {fE(arr(cPM, 100))} par mois Nathan payé, {fE(arr(cPMb, 100))} avec les remboursements (matière et emballages à {fP(cVar)} du CA, le reste fixe) — contre {fE(arr(pm, 100))} dans les hypothèses des pages 1 et 2 (food cost {nfP(FOOD_RETENU) if FOOD_RETENU else 'mesuré'}, frais généraux encodés au panel).</li>
-</ol></div>
+</ol>
+<div class="sec petit" style="margin-top:3mm">D’où vient la perte de {nf(-C['perteSituation'] / 1000, 1)}&nbsp;k€</div>
+<table class="t serre perte"><tr><th class="l">Origine</th><th class="a6">Analyse<small>avril</small></th><th>Recalcul<small>mars</small></th></tr>{perteL}</table>
+<p class="s">Le trou vient du démarrage trop long et de la dette, pas de la boutique qui tourne. Ouverte en mars, la boutique a cinq mois de charges sans CA et sept d’exploitation ; le recalcul boucle à {nf(abs(sum(v7 for _, _, _, v7 in pR) - C['perteSituation']) / 1000, 1)}&nbsp;k€ près.</p>
 </div>
-<div class="deux g11 bas">
-<div><div class="sec petit">D’où vient la perte de {nf(-C['perteSituation'] / 1000, 1)}&nbsp;k€</div>
-<table class="t serre perte">{perteL}</table>
-<p class="s">Le trou vient du démarrage trop long et de la dette, pas de la boutique qui tourne. Avec une ouverture au 20 février, les lignes « charges courues » et « exploitation réelle » sont à refaire.</p></div>
-<div><div class="sec petit">À faire corriger par Pardoen avant de signer la situation et le PV d’AG</div><ul class="pts">{corr}</ul></div>
 </div>
+<div class="bas"><div class="sec petit">À faire corriger par Pardoen avant de signer la situation et le PV d’AG</div><ul class="pts deuxcol">{corr}</ul></div>
 {ft(3)}
 </div>"""
+
 # --- La page 4 : ce que rapportent quelques euros de plus par jour (A), et ramener les achats à 40 % du CA (B)
 p4 = ''
 PL = json.load(open(os.path.join(ICI, 'plan.json'))) if os.path.exists(os.path.join(ICI, 'plan.json')) else None
@@ -449,32 +477,44 @@ if PL:
     budgetJ = (obj - caMois) / JM
     noteC = ''
     if C:
-        manqueN = (cPM - caAS / 6) / JM; manqueB = (cPMb - caAS / 6) / JM
-        noteC = (f' Sur la caisse ({fE(caAS / 6)} par mois d’avril à septembre) et les coûts du bilan, il faut + {fE(arr(manqueN, 5))} par jour pour payer Nathan, '
-                 f'+ {fE(arr(manqueB, 5))} par jour pour payer aussi la banque.')
+        manqueN = (cPM - caPerM) / JM; manqueB = (cPMb - caPerM) / JM
+        noteC = (f' Sur la caisse ({fE(caPerM)} par mois de {PER_TXT}) et les coûts du bilan, '
+                 + (f'Nathan est payé avec {fE(arr(-manqueN, 5))} par jour de marge, ' if manqueN <= 0 else f'il faut + {fE(arr(manqueN, 5))} par jour pour payer Nathan, ')
+                 + (f'et il faut + {fE(arr(manqueB, 5))} par jour pour payer aussi la banque.' if manqueB > 0 else f'et la banque est couverte avec {fE(arr(-manqueB, 5))} par jour de marge.'))
     tabA = f"""<table class="t sens">
 <tr><th rowspan="2" class="l">Par jour</th><th rowspan="2">CA en plus<small>par mois</small></th><th rowspan="2">CA en plus<small>par an</small></th><th rowspan="2">soit clients<small>par jour, au panier de {fE(panier, 2)}</small></th><th rowspan="2">ou panier<small>en plus, à {nf(tkJour)} clients par jour</small></th>{entete2}</tr>
 <tr>{entete3}</tr>
 {lignesA}
 </table>"""
-    lB = ''.join(f'<li><span class="ti">B{i + 1}. {H(b["titre"])}</span> {H(b["texte"])}{" " + H(b["cockpit"]) if b.get("cockpit") else ""} <span class="ef">{H(b["effet"])}</span></li>' for i, b in enumerate(Bm['actions']))
-    eff = ''.join(f'<tr><td class="l">{H(e["action"])}</td><td>{H(e["effet"])}</td></tr>' for e in Bm['effets'])
-    eff += f'<tr class="tot"><td class="l">Résultat</td><td class="l2">{H(Bm["resultat"])}</td></tr>'
+    # Les effets du plan matière, sur la base recalculée de la page 3 (les mêmes pourcentages, la période réelle)
+    bE = []; dCA = 0.0; dAch = 0.0
+    for e in Bm['effets']:
+        if not C: break
+        if e['type'] == 'prix': v = e['pct'] * cC; dCA += v; bE.append((e['action'], f'+ {fE(arr(v, 10))} de CA'))
+        else:
+            v = e['pct'] * (cAch if e['type'] == 'achats' else fournM); dAch += v; bE.append((e['action'], f'− {fE(arr(v, 5))} d’achats'))
     if C:
-        dCA = sum(e['ca'] for e in Bm['effets']); dAch = sum(e['achats'] for e in Bm['effets'])
-        achApres = C['variables'][0]['montant'] + dAch; caApres = cC + dCA
-        controle = (f'Contrôle sur la base de la page 3 : {fE(achApres)} d’achats pour {fE(caApres)} de CA, soit {fP(achApres / caApres)} ; la marge gagne {fE(dCA - dAch)} par mois. '
-                    f'Les ≈ 5,8 k€ du plan sont donc une estimation prudente. Base : le CA comptable ({fE(cC)} par mois), à rapprocher de la caisse ({fE(caAS / 6)}) ; sur la caisse, + 5 % de prix font ≈ {fE(arr(caAS / 6 * 0.05, 100))}.')
+        achApres = cAch - dAch; caApres = cC + dCA
+        VB = dict(NR=NR, pctAch=nfP(dAch / cAch), achEur=fE(arr(dAch, 100)), b1=fE(arr(Bm['effets'][0]['pct'] * cC, 10)),
+                  b2=fE(arr(Bm['effets'][1]['pct'] * cAch, 5)), b3=fE(arr(Bm['effets'][2]['pct'] * cAch, 5)), b4=fE(arr(Bm['effets'][3]['pct'] * fournM, 5)),
+                  tgtg=fE(C.get('tooGoodToGo', 0)), tgtgMois=fE(arr(C.get('tooGoodToGo', 0) / NR, 1)), fourn=nf(C['achatsFournitures'] / 1000, 1) + '\u00a0k€',
+                  fournMois=nf(fournM / 1000, 1) + '\u00a0k€', achPctApres=fP(achApres / caApres), gain=fE(arr(dCA + dAch, 100)))
+        fmtB = lambda t: t.format(**VB)
+        controle = (f'Sur la base recalculée de la page 3 ({NR} mois) : {fE(achApres)} d’achats pour {fE(caApres)} de CA, soit {fP(achApres / caApres)} ; la marge gagne {fE(dCA + dAch)} par mois. '
+                    f'L’analyse sur {N6} mois annonçait + 2 900 € de CA et − 4 600 € d’achats (≈ + 5,8 k€). Sur la caisse ({fE(caPerM)} par mois), + 5 % de prix font ≈ {fE(arr(caPerM * 0.05, 10))}.')
     else:
-        controle = ''
+        fmtB = lambda t: t; controle = ''
+    lB = ''.join(f'<li><span class="ti">B{i + 1}. {H(b["titre"])}</span> {H(fmtB(b["texte"]))}{" " + H(b["cockpit"]) if b.get("cockpit") else ""} <span class="ef">{H(fmtB(b["effet"]))}</span></li>' for i, b in enumerate(Bm['actions']))
+    eff = ''.join(f'<tr><td class="l">{H(a_)}</td><td>{H(t_)}</td></tr>' for a_, t_ in bE)
+    eff += f'<tr class="tot"><td class="l">Résultat</td><td class="l2">{H(fmtB(Bm["resultat"]))}</td></tr>'
     p4 = f"""<div class="page">
 {hd}
 <div class="sec">A. Ce que rapportent quelques euros de plus par jour</div>
-<p class="s">À personnel et frais généraux égaux, un euro vendu en plus ne coûte que sa matière : le reste tombe dans le résultat. Mois de {nf(JM, 1)} jours, ouvert 7 jours sur 7 ; prix inchangés. « Aujourd’hui » : moyenne de mars à septembre pour le récap, avril → septembre pour le bilan.</p>
+<p class="s">À personnel et frais généraux égaux, un euro vendu en plus ne coûte que sa matière : le reste tombe dans le résultat. Mois de {nf(JM, 1)} jours, ouvert 7 jours sur 7 ; prix inchangés. « Aujourd’hui » : moyenne de mars à septembre, pour le récap comme pour le bilan recalculé sur sept mois.</p>
 {tabA}
 <p class="s">Le budget de {fE(obj)} par mois demande + {fE(arr(budgetJ, 5))} par jour sur la base de la caisse ({fE(caMois)} par mois de mars à septembre).{noteC} Une vente faite avec une remise (formule, promotion) rapporte moins que la marge directe du tableau.</p>
 <div class="sec" style="margin-top:5mm">B. {H(Bm['titre'])}</div>
-<p class="s">{H(Bm['intro'])}</p>
+<p class="s">{H(fmtB(Bm['intro']))}</p>
 <div class="deux g21">
 <ol class="pts plan">{lB}</ol>
 <div>
@@ -489,20 +529,20 @@ if PL:
 # --- La page 5 : les mêmes mois, deux lectures — l'application (caisse et panel) et le bilan (fiduciaire), avril → septembre
 p5 = ''
 if C:
-    AS = [x for x in M if x['m'] >= 4]; nA = len(AS)
+    AS = MPER; nA = len(AS)
     ap = dict(ca=S('ca', AS) / nA, tk=S('tickets', AS) / nA, mat=sum(x['ca'] * x['foodMes'] for x in AS) / nA,
               lab=S('labMes', AS) / nA, oh=S('overhead', AS) / nA)
     ap['mb'] = ap['ca'] - ap['mat']; ap['res'] = ap['mb'] - ap['lab'] - ap['oh']; ap['pm'] = (ap['lab'] + ap['oh']) / (1 - ap['mat'] / ap['ca'])
-    bi = dict(ca=cC, mat=cV, mb=cMB, lab=C['fixes'][0]['montant'], oh=cF - C['fixes'][0]['montant'], res=cE, pm=cF / (1 - cVar))
-    pont = [('Résultat de l’application', ap['res'], 'tot'), ('CA du bilan en plus', bi['ca'] - ap['ca'], 'v'), ('Matière achetée en plus', -(bi['mat'] - ap['mat']), 'v'),
-            ('Personnel en plus', -(bi['lab'] - ap['lab']), 'v'), ('Frais généraux en plus', -(bi['oh'] - ap['oh']), 'v'), ('EBITDA du bilan', bi['res'], 'tot')]
+    bi = dict(ca=cC, mat=cV, mb=cMB, lab=cPerso, oh=cF - cPerso, res=cE, pm=cF / (1 - cVar))
+    pont = [('Résultat de l’application', ap['res'], 'tot'), ('Écart de CA', bi['ca'] - ap['ca'], 'v'), ('Écart de matière', -(bi['mat'] - ap['mat']), 'v'),
+            ('Écart de personnel', -(bi['lab'] - ap['lab']), 'v'), ('Écart de frais généraux', -(bi['oh'] - ap['oh']), 'v'), ('EBITDA du bilan', bi['res'], 'tot')]
     def lc(lib, a, b, fmt=fE, pct=True, note='', cls=''):
         ea = '' if a is None else fmt(a); eb = '' if b is None else fmt(b)
         pa = fP(a / ap['ca']) if pct and a is not None else ''; pb = fP(b / bi['ca']) if pct and b is not None else ''
         ec = '' if a is None or b is None else ('+&nbsp;' if b - a >= 0 else '−&nbsp;') + fmt(abs(b - a))
         return f'<tr{" class=" + cls if cls else ""}><td class="l">{lib}</td><td>{ea}</td><td class="p">{pa}</td><td>{eb}</td><td class="p">{pb}</td><td>{ec}</td><td class="l r">{note}</td></tr>'
     rows = ''.join([
-        lc('Chiffre d’affaires', ap['ca'], bi['ca'], pct=False, note='caisse HT ; à rapprocher (période, TVA, factures hors caisse)', cls='tot'),
+        lc('Chiffre d’affaires', ap['ca'], bi['ca'], pct=False, note=f'caisse HT, contre CA comptable ; écart de {fP(bi["ca"] / ap["ca"] - 1, 1)}', cls='tot'),
         lc('Clients par mois · panier', None, None, pct=False, note=f'application seulement : {nf(ap["tk"])} tickets, {fE(ap["ca"] / ap["tk"], 2)} de panier'),
         lc('Matière', ap['mat'], bi['mat'], note=f'application : coût de recette des ventes (panel) ; bilan : achats + emballages. Le cockpit, ticket par ticket : {fP(foodT)} (août-sept.)'),
         lc('Marge brute', ap['mb'], bi['mb'], cls='sous'),
@@ -512,7 +552,10 @@ if C:
         lc('Point mort (CA par mois)', ap['pm'], bi['pm'], pct=False, note='charges fixes ÷ (1 − matière en % du CA), Nathan non payé')])
     # La cascade : du résultat de l'application à l'EBITDA du bilan
     W2, H2, gx2, gy2, gb2 = 680, 175, 10, 18, 40
-    vmax2 = max(ap['res'], bi['ca'] - ap['ca'] + ap['res']) * 1.08; bw2 = (W2 - 2 * gx2) / len(pont)
+    _c = 0; _hauts = []
+    for _l, _v, _k in pont:
+        _c = _v if _k == 'tot' else _c + _v; _hauts.append(_c)
+    vmax2 = max(_hauts + [ap['res']]) * 1.12; bw2 = (W2 - 2 * gx2) / len(pont)
     Y2 = lambda v: gy2 + (H2 - gy2 - gb2) * (1 - v / vmax2)
     sv = [f'<svg class="graph" viewBox="0 0 {W2} {H2}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Du résultat de l’application à l’EBITDA du bilan">',
           f'<line x1="{gx2}" x2="{W2 - gx2}" y1="{Y2(0):.1f}" y2="{Y2(0):.1f}" stroke="#221E1A" stroke-width="1"/>']
@@ -530,10 +573,17 @@ if C:
         sv.append(f'<text class="axl" x="{x0 + w / 2:.1f}" y="{Y2(0) + 14:.1f}" text-anchor="middle">{lib}</text>')
     sv.append('</svg>')
     cascade = ''.join(sv)
+    dCAb = bi['ca'] - ap['ca']
+    constatCA = (f'<li>Le CA comptable et la caisse se tiennent : {fE(arr(abs(dCAb), 10))} d’écart par mois ({fP(dCAb / ap["ca"], 1)}). Sur sept mois, les deux sources racontent la même activité ; l’écart restant (TVA, annulations, factures) est à rapprocher avec la fiduciaire.</li>'
+                 if abs(dCAb) / ap['ca'] < 0.05 else
+                 f'<li>Le bilan compte {fE(arr(dCAb, 10))} de CA de {"plus" if dCAb > 0 else "moins"} par mois que la caisse ({fP(dCAb / ap["ca"], 0)}). Tant qu’il n’est pas expliqué, il fausse l’EBITDA d’autant.</li>')
+    dL, dO = bi['lab'] - ap['lab'], bi['oh'] - ap['oh']
+    constatPF = (f'<li>Personnel : {"le panel et les comptes se tiennent" if abs(dL) < 300 else ("le panel le sous-estime de " + fE(arr(dL, 10)) if dL > 0 else "le panel le surestime de " + fE(arr(-dL, 10)))} par mois. '
+                 f'Frais généraux : {"le panel les sous-estime de " + fE(arr(dO, 10)) if dO > 0 else "le panel les surestime de " + fE(arr(-dO, 10))} par mois ; ceux encodés en octobre ({fE(arr(ohOct))}) dépassent le bilan ({fE(bi["oh"])}).</li>')
     p5 = f"""<div class="page">
 {hd}
 <div class="sec">L’application ou le bilan : les mêmes mois, deux lectures</div>
-<p class="s">Avril → septembre 2026, en € par mois. Application : la caisse et le P&amp;L du panel, ce que le franchisé y encode, et la matière mesurée par le panel sur les recettes vendues. Bilan : la situation au 30/09 de la fiduciaire, telle que lissée à la page 3 (à valider).</p>
+<p class="s">{PER_TXT.capitalize()} 2026, en € par mois. Application : la caisse et le P&amp;L du panel, ce que le franchisé y encode, et la matière mesurée par le panel sur les recettes vendues. Bilan : la situation au 30/09 de la fiduciaire, recalculée sur {NR} mois à la page 3 (à valider).</p>
 <table class="t comp">
 <tr><th class="l">Poste</th><th>Application<small>€ par mois</small></th><th>% CA</th><th>Bilan<small>€ par mois</small></th><th>% CA</th><th>Écart<small>bilan − appli.</small></th><th class="l">Ce qui change d’une source à l’autre</th></tr>
 {rows}
@@ -544,8 +594,10 @@ if C:
 <div class="sec" style="margin-top:3mm">Ce que ça dit</div>
 <ul class="pts">
 <li>L’application montre un résultat de {fE(arr(ap['res'], 100))} par mois, le bilan un EBITDA de {fE(arr(bi['res'], 100))} : {nf(ap['res'] / bi['res'], 1)} fois moins. L’écart vient d’abord de la matière, {fE(arr(bi['mat'] - ap['mat'], 100))} par mois : l’application compte ce que coûtent les recettes vendues ({fP(ap['mat'] / ap['ca'])}), le bilan ce qui est acheté ({fP(cVar)}). Entre les deux : la perte, les invendus, les sorties non tracées (Couq, Saint-Géry, GBXATL), les fiches recettes à revoir et un stock mal compté (− 6 173 € au bilan).</li>
-<li>Le bilan compte {fE(arr(bi['ca'] - ap['ca'], 10))} de CA de plus par mois que la caisse ({fP(bi['ca'] / ap['ca'] - 1, 0)}). Tant qu’il n’est pas expliqué, il gonfle l’EBITDA : à coûts égaux, sans ce CA, le mois finirait à {fE(arr(bi['res'] - (bi['ca'] - ap['ca']), 100))}.</li>
-<li>Personnel et frais généraux sont sous-estimés au panel : {fE(arr(bi['lab'] - ap['lab'], 10))} et {fE(arr(bi['oh'] - ap['oh'], 10))} de moins par mois que dans les comptes. Les frais généraux encodés en octobre ({fE(arr(ohOct))}) se rapprochent du bilan ({fE(bi['oh'])}).</li>
+{constatCA}
+
+{constatPF}
+
 <li>Pour piloter : l’application pour les ventes, les clients et le panier, jour par jour ; le bilan pour les coûts. L’indicateur du lundi (achats de la semaine ÷ CA de la semaine, page 4) fait entrer la matière du bilan dans le suivi de chaque semaine.</li>
 </ul>
 {ft(5 if PL else 4)}
@@ -751,7 +803,7 @@ for i, t in enumerate([
         'Main-d’œuvre encodée = heures planifiées × taux horaire du panel (8 à 16 €/h selon les mois) : le franchisé y compte pour 0 €/h et les charges sociales n’y sont vraisemblablement pas toutes. Résultat et point mort sont donc avant la rémunération du gérant : l’ajouter en « Autres charges fixes ».' if MO_SEM is None else
         f'Main-d’œuvre retenue : {fE(MO_SEM)} par semaine (case C28), au prorata des jours de chaque mois. Elle remplace la main-d’œuvre encodée au panel ({fE(labMesMois)} par mois en moyenne, colonne U de « Mois par mois »). Si la rémunération du gérant n’y est pas, l’ajouter en « Autres charges fixes ».',
         'Les frais généraux encodés sont un montant mensuel saisi au panel, sans détail ; la feuille « Modèle de charges » donne le contenu attendu par le franchiseur (loyer, énergie, redevances, amortissements…).',
-        'Février (ouverture le 20) et octobre, partiels, restent hors des moyennes. Juin et juillet : travaux sur le viaduc de Halle, effet estimé − 20 %.']):
+        'Ouverture en mars ; les ventes de février (du 20 au 28) et octobre, partiels, restent hors des moyennes. Juin et juillet : travaux sur le viaduc de Halle, effet estimé − 20 %.']):
     cell(rc, f'A{r + 1 + i}', t, F(size=8, color='5A534B'), al=WRAP); rc.merge_cells(f'A{r + 1 + i}:F{r + 1 + i}'); rc.row_dimensions[r + 1 + i].height = 24
 rc.freeze_panes = 'A4'
 
@@ -773,97 +825,114 @@ cell(mc, f'A{rl + 3}', 'La matière (36 %) et l’emballage (2 %) ne sont qu’e
 for col, w in zip('ABCDEF', (30, 36, 14, 14, 18, 34)): mc.column_dimensions[col].width = w
 mc.row_dimensions[5].height = 30
 
-# Feuille « Compte d'exploitation » : l'analyse comptable (compta.json), le plan matière et le scénario + 15 % / matière 40 %
+# Feuille « Compte d'exploitation » : l'analyse (÷ 6), son recalcul sur les mois réels (paramètre), le plan matière et + 15 % / matière 40 %
 if C:
     ce = wb.create_sheet('Compte d’exploitation')
-    cell(ce, 'A1', 'Le compte d’exploitation comptable, avril → septembre 2026 (à valider)', F_T)
+    cell(ce, 'A1', f'Le compte d’exploitation comptable, {PER_TXT} 2026 (à valider)', F_T)
     cell(ce, 'A2', C['source'] + ' En bleu : montants de l’analyse ; fond jaune : paramètres ; en noir : calculs.', F_S)
-    for col, w in zip('ABCDEFG', (56, 15, 9, 17, 9, 17, 9)): ce.column_dimensions[col].width = w
+    for col, w in zip('ABCDEFGH', (56, 14, 14, 9, 16, 9, 16, 9)): ce.column_dimensions[col].width = w
     cell(ce, 'A4', 'Paramètres', F_SEC, border=B_H)
-    par = [('Hausse de prix moyenne (plan B1)', 0.05, PCT, 'baguette et tradition inchangées, + 8 à 10 % sur viennoiserie, pâtisserie, traiteur ; volumes supposés inchangés'),
-           ('Baisse des achats du plan (B2 + B3 + B4), € par mois', 4600, EUR, '2 300 € (commandes sur ventes réelles) + 1 150 € (sorties tracées) + 1 150 € (audit fournitures)'),
-           ('Hausse de CA du scénario', 0.15, PCT, 'les + 15 % visés'),
-           ('Matière du scénario (% du CA)', 0.40, PCT, 'la cible du plan'),
-           ('Rémunération de Nathan, € par semaine', C['nathanSemaine'], EUR, 'absente des comptes'),
-           ('Remboursements crédits et leasing, € par mois', C['remboursementsMois'], EUR, f'≈ {nf(C["credits"] / 1000)} k€ sur {C["creditsAns"]} ans et {nf(C["leasing"] / 1000)} k€ sur {C["leasingAns"]} ans, selon l’analyse (le capital seul fait ≈ {fE(arr(C["credits"] / C["creditsAns"] / 12 + C["leasing"] / C["leasingAns"] / 12))})')]
-    for i, (lib, v, fmt, nt) in enumerate(par):
+    par = [('Mois de l’analyse (ouverture supposée en avril)', N6, NB, None, 'la division faite par l’analyse'),
+           ('Mois d’exploitation réels (ouverture en mars)', NR, NB, JAUNE, 'chaque ligne × mois de l’analyse ÷ mois réels, sauf les coûts déjà mensuels'),
+           ('Hausse de prix moyenne (plan B1)', 0.05, PCT, JAUNE, 'baguette et tradition inchangées ; volumes supposés inchangés'),
+           ('Commandes sur ventes réelles (B2), % des achats', 0.08, PCT, JAUNE, ''),
+           ('Sorties tracées (B3), % des achats', 0.04, PCT, JAUNE, ''),
+           ('Achats fournitures sur la période', C['achatsFournitures'], EUR, None, 'total de la période, selon l’analyse'),
+           ('Audit fournitures (B4), % de la ligne', 0.35, PCT, JAUNE, ''),
+           ('Hausse de CA du scénario', 0.15, PCT, JAUNE, 'les + 15 % visés'),
+           ('Matière du scénario (% du CA)', 0.40, PCT, JAUNE, 'la cible du plan'),
+           ('Rémunération de Nathan, € par semaine', C['nathanSemaine'], EUR, JAUNE, 'absente des comptes'),
+           ('Remboursements crédits et leasing, € par mois', C['remboursementsMois'], EUR, JAUNE, f'≈ {nf(C["credits"] / 1000)} k€ sur {C["creditsAns"]} ans et {nf(C["leasing"] / 1000)} k€ sur {C["leasingAns"]} ans, selon l’analyse')]
+    for i, (lib, v, fmt, fi, nt) in enumerate(par):
         rr = 5 + i
-        cell(ce, f'A{rr}', lib); cell(ce, f'B{rr}', v, F_IN, fmt, JAUNE); cell(ce, f'D{rr}', nt, F_S)
-    cell(ce, 'A11', 'Semaines par mois'); cell(ce, 'B11', '=52/12', fmt=NB1)
-    h0 = 13
-    for i, h in enumerate(['Poste (€ par mois)', 'Actuel', '% CA', 'Plan matière (B1 → B4)', '% CA', '+ 15 % de CA, matière 40 %', '% CA']):
+        cell(ce, f'A{rr}', lib); cell(ce, f'B{rr}', v, F_IN, fmt, fi); cell(ce, f'C{rr}', nt, F_S)
+    cell(ce, 'A16', 'Semaines par mois'); cell(ce, 'B16', '=52/12', fmt=NB1)
+    h0 = 18
+    for i, h in enumerate(['Poste (€ par mois)', f'Analyse (÷ {N6})', 'Recalcul (mois réels)', '% CA', 'Plan matière (B1 → B4)', '% CA', '+ 15 % de CA, matière 40 %', '% CA']):
         cell(ce, f'{chr(65 + i)}{h0}', h, F_H, al=Alignment(horizontal='left' if i == 0 else 'right', wrap_text=True, vertical='bottom'), border=B_H)
     ce.row_dimensions[h0].height = 30
     rCAc, rAch, rEmb, rMB = h0 + 1, h0 + 2, h0 + 3, h0 + 4
     rF0 = rMB + 1; rF1 = rF0 + len(C['fixes']) - 1
     rEb, rNa, rEbN, rRb, rAp, rPM, rPMb = rF1 + 1, rF1 + 2, rF1 + 3, rF1 + 4, rF1 + 5, rF1 + 7, rF1 + 8
+    recF = lambda rr, poste: f'=B{rr}' if poste in MENS else f'=B{rr}*$B$5/$B$6'
     cell(ce, f'A{rCAc}', 'Chiffre d’affaires', F_TOT); cell(ce, f'A{rAch}', C['variables'][0]['poste']); cell(ce, f'A{rEmb}', C['variables'][1]['poste'])
     cell(ce, f'A{rMB}', 'Marge brute', F_TOT, border=B_T)
-    cell(ce, f'B{rCAc}', cC, F_IN, EUR); cell(ce, f'B{rAch}', C['variables'][0]['montant'], F_IN, EUR); cell(ce, f'B{rEmb}', C['variables'][1]['montant'], F_IN, EUR)
-    cell(ce, f'D{rCAc}', f'=B{rCAc}*(1+$B$5)', F_TOT, EUR); cell(ce, f'D{rAch}', f'=B{rAch}-$B$6', fmt=EUR); cell(ce, f'D{rEmb}', f'=B{rEmb}', fmt=EUR)
-    cell(ce, f'F{rCAc}', f'=B{rCAc}*(1+$B$7)', F_TOT, EUR); cell(ce, f'F{rAch}', f'=F{rCAc}*$B$8', fmt=EUR); cell(ce, f'F{rEmb}', f'=IF(B{rCAc}>0,B{rEmb}/B{rCAc}*F{rCAc},0)', fmt=EUR)
+    cell(ce, f'B{rCAc}', cC6, F_IN, EUR); cell(ce, f'B{rAch}', C['variables'][0]['montant'], F_IN, EUR); cell(ce, f'B{rEmb}', C['variables'][1]['montant'], F_IN, EUR)
+    cell(ce, f'C{rCAc}', recF(rCAc, ''), F_TOT, EUR); cell(ce, f'C{rAch}', recF(rAch, C['variables'][0]['poste']), fmt=EUR); cell(ce, f'C{rEmb}', recF(rEmb, C['variables'][1]['poste']), fmt=EUR)
+    cell(ce, f'E{rCAc}', f'=C{rCAc}*(1+$B$7)', F_TOT, EUR); cell(ce, f'E{rAch}', f'=C{rAch}*(1-$B$8-$B$9)-$B$10/$B$6*$B$11', fmt=EUR); cell(ce, f'E{rEmb}', f'=C{rEmb}', fmt=EUR)
+    cell(ce, f'G{rCAc}', f'=C{rCAc}*(1+$B$12)', F_TOT, EUR); cell(ce, f'G{rAch}', f'=G{rCAc}*$B$13', fmt=EUR); cell(ce, f'G{rEmb}', f'=IF(C{rCAc}>0,C{rEmb}/C{rCAc}*G{rCAc},0)', fmt=EUR)
     for i, x in enumerate(C['fixes']):
         rr = rF0 + i
-        cell(ce, f'A{rr}', x['poste']); cell(ce, f'B{rr}', x['montant'], F_IN, EUR); cell(ce, f'D{rr}', f'=B{rr}', fmt=EUR); cell(ce, f'F{rr}', f'=B{rr}', fmt=EUR)
+        cell(ce, f'A{rr}', x['poste'] + (' (coût mensuel, inchangé)' if x['poste'] in MENS else ''))
+        cell(ce, f'B{rr}', x['montant'], F_IN, EUR); cell(ce, f'C{rr}', recF(rr, x['poste']), fmt=EUR); cell(ce, f'E{rr}', f'=C{rr}', fmt=EUR); cell(ce, f'G{rr}', f'=C{rr}', fmt=EUR)
     lib2 = {rEb: 'EBITDA d’exploitation', rNa: 'Rémunération de Nathan', rEbN: 'EBITDA, Nathan payé', rRb: 'Remboursements crédits et leasing', rAp: 'Après Nathan et la banque',
             rPM: 'Point mort, Nathan payé (CA par mois)', rPMb: 'Point mort avec les remboursements (CA par mois)'}
     for rr, lib in lib2.items():
         cell(ce, f'A{rr}', lib, F_TOT if rr in (rEb, rEbN, rAp) else (F(bold=True, color=BORD) if rr in (rPM, rPMb) else F_FX), border=B_T if rr in (rEb, rAp) else None)
-    for col in 'BDF':
+    for col in 'BCEG':
         cell(ce, f'{col}{rMB}', f'={col}{rCAc}-{col}{rAch}-{col}{rEmb}', F_TOT, EUR, border=B_T)
         cell(ce, f'{col}{rEb}', f'={col}{rMB}-SUM({col}{rF0}:{col}{rF1})', F_TOT, EUR, border=B_T)
-        cell(ce, f'{col}{rNa}', '=-$B$9*$B$11', fmt=EUR)
+        cell(ce, f'{col}{rNa}', '=-$B$14*$B$16', fmt=EUR)
         cell(ce, f'{col}{rEbN}', f'={col}{rEb}+{col}{rNa}', F_TOT, EUR)
-        cell(ce, f'{col}{rRb}', '=-$B$10', fmt=EUR)
+        cell(ce, f'{col}{rRb}', '=-$B$15', fmt=EUR)
         cell(ce, f'{col}{rAp}', f'={col}{rEbN}+{col}{rRb}', F_TOT, EUR, border=B_T)
         tv = f'({col}{rAch}+{col}{rEmb})/{col}{rCAc}'
         cell(ce, f'{col}{rPM}', f'=IF({col}{rCAc}>0,(SUM({col}{rF0}:{col}{rF1})-{col}{rNa})/(1-{tv}),0)', F(bold=True, color=BORD), EUR)
         cell(ce, f'{col}{rPMb}', f'=IF({col}{rCAc}>0,(SUM({col}{rF0}:{col}{rF1})-{col}{rNa}-{col}{rRb})/(1-{tv}),0)', F(bold=True, color=BORD), EUR)
-        pc = chr(ord(col) + 1)
+    for col, pc in (('C', 'D'), ('E', 'F'), ('G', 'H')):
         for rr in [rCAc, rAch, rEmb, rMB] + list(range(rF0, rF1 + 1)) + [rEb, rNa, rEbN, rRb, rAp]:
             cell(ce, f'{pc}{rr}', f'=IF({col}${rCAc}<>0,{col}{rr}/{col}${rCAc},0)', F_TOT if rr in (rCAc, rMB, rEb, rEbN, rAp) else F_FX, PCT)
-    cell(ce, f'A{rPMb + 1}', 'Point mort : charges fixes (Nathan et remboursements compris) ÷ (1 − achats et emballages en % du CA). « Autres charges diverses » (probablement les redevances) comptées en fixe.', F_S)
+    cell(ce, f'A{rPMb + 1}', 'Point mort : charges fixes (Nathan et remboursements compris) ÷ (1 − achats et emballages en % du CA). « Autres charges diverses » (probablement les redevances) comptées en fixe. Plan matière et scénario partent du recalcul.', F_S)
     # Le rapprochement avec la caisse
     r = rPMb + 3
     cell(ce, f'A{r}', 'Le rapprochement avec la caisse', F_SEC, border=B_H)
-    cell(ce, f'A{r + 1}', f'CA comptable de la période (€ par mois × {C["periodeMois"]})'); cell(ce, f'B{r + 1}', f'=B{rCAc}*{C["periodeMois"]}', fmt=EUR)
-    cell(ce, f'A{r + 2}', 'CA de caisse HT, avril → septembre'); cell(ce, f'B{r + 2}', f"=SUM({MP}C{r0 + 1}:C{rN})", F_LK, EUR)
+    cell(ce, f'A{r + 1}', 'CA comptable de la période (analyse × mois de l’analyse)'); cell(ce, f'B{r + 1}', f'=B{rCAc}*$B$5', fmt=EUR)
+    cell(ce, f'A{r + 2}', f'CA de caisse HT, {PER_TXT}'); cell(ce, f'B{r + 2}', f"=SUM({MP}C{r0}:C{rN})", F_LK, EUR)
     cell(ce, f'A{r + 3}', 'Écart comptable − caisse'); cell(ce, f'B{r + 3}', f'=B{r + 1}-B{r + 2}', fmt=EUR); cell(ce, f'C{r + 3}', f'=IF(B{r + 2}>0,B{r + 3}/B{r + 2},0)', fmt=PCT)
-    cell(ce, f'A{r + 4}', 'CA de caisse HT, du 20 février au 30 septembre'); cell(ce, f'B{r + 4}', f"=SUM({MP}C{r0}:C{rN})+{D['fevrier']['ca']}", F_LK, EUR,
-         note=f'Mars → septembre (feuille Mois par mois) + février, du 20 au 28 : {fE(D["fevrier"]["ca"])}.')
-    cell(ce, f'D{r + 1}', 'Le magasin a ouvert le 20 février 2026, pas en avril : à rapprocher avec la fiduciaire (période couverte, TVA, factures hors caisse).', F_S)
+    cell(ce, f'A{r + 4}', 'CA de caisse HT, avril → septembre (l’hypothèse de l’analyse)'); cell(ce, f'B{r + 4}', f"=SUM({MP}C{r0 + 1}:C{rN})", F_LK, EUR)
+    cell(ce, f'A{r + 5}', 'Écart comptable − caisse d’avril à septembre'); cell(ce, f'B{r + 5}', f'=B{r + 1}-B{r + 4}', fmt=EUR); cell(ce, f'C{r + 5}', f'=IF(B{r + 4}>0,B{r + 5}/B{r + 4},0)', fmt=PCT)
+    cell(ce, f'D{r + 1}', 'Le CA comptable colle à la caisse de mars à septembre, pas à celle d’avril à septembre : les comptes couvrent sept mois.', F_S)
     # La perte
-    r = r + 6
+    r = r + 7
     cell(ce, f'A{r}', 'D’où vient la perte de la situation au 30/09', F_SEC, border=B_H)
+    cell(ce, f'B{r}', 'Analyse', F_H, al=Alignment(horizontal='right')); cell(ce, f'C{r}', 'Recalcul', F_H, al=Alignment(horizontal='right'))
+    cell(ce, f'E{r}', 'Charges courues par mois sans CA', F_S); cell(ce, f'G{r}', C['chargesCouruesMois'], F_IN, EUR)
+    cell(ce, f'E{r + 1}', 'Mois sans CA (octobre → février)', F_S); cell(ce, f'G{r + 1}', C['chargesCouruesMoisSansCA'], F_IN, NB, JAUNE)
     for i, x in enumerate(C['perte']):
-        cell(ce, f'A{r + 1 + i}', x['origine']); cell(ce, f'B{r + 1 + i}', x['montant'], F_IN, EUR)
+        rr = r + 1 + i; o = x['origine']
+        lib = ('Charges courues sans CA (analyse : octobre → mars ; recalcul : octobre → février)' if o.startswith('Charges courues')
+               else f'Exploitation réelle (analyse : avril → septembre ; recalcul : {PER_TXT})' if o.startswith('Exploitation') else o)
+        cell(ce, f'A{rr}', lib); cell(ce, f'B{rr}', x['montant'], F_IN, EUR)
+        if o.startswith('Charges courues'): cell(ce, f'C{rr}', f'=-$G${r}*$G${r + 1}', fmt=EUR)
+        elif o.startswith('Exploitation'): cell(ce, f'C{rr}', f'=C{rEb}*$B$6', fmt=EUR)
+        else: cell(ce, f'C{rr}', f'=B{rr}', fmt=EUR)
     rs = r + 1 + len(C['perte'])
-    cell(ce, f'A{rs}', 'Somme des lignes (arrondies)', F_TOT, border=B_T); cell(ce, f'B{rs}', f'=SUM(B{r + 1}:B{rs - 1})', F_TOT, EUR, border=B_T)
-    cell(ce, f'A{rs + 1}', 'Perte de la situation au 30/09'); cell(ce, f'B{rs + 1}', C['perteSituation'], F_IN, EUR)
-    cell(ce, f'D{r + 2}', 'avec une ouverture au 20 février, « charges courues » et « exploitation réelle » sont à refaire', F_S)
+    cell(ce, f'A{rs}', 'Somme des lignes', F_TOT, border=B_T)
+    for col in 'BC': cell(ce, f'{col}{rs}', f'=SUM({col}{r + 1}:{col}{rs - 1})', F_TOT, EUR, border=B_T)
+    cell(ce, f'A{rs + 1}', 'Perte de la situation au 30/09'); cell(ce, f'B{rs + 1}', C['perteSituation'], F_IN, EUR); cell(ce, f'C{rs + 1}', f'=B{rs + 1}', fmt=EUR)
     # À faire corriger
     r = rs + 3
     cell(ce, f'A{r}', 'À faire corriger par Pardoen avant de signer la situation et le PV d’AG', F_SEC, border=B_H)
     for i, t in enumerate(C['corrections']):
-        cell(ce, f'A{r + 1 + i}', t, F(size=8, color='5A534B'), al=WRAP); ce.merge_cells(f'A{r + 1 + i}:G{r + 1 + i}'); ce.row_dimensions[r + 1 + i].height = 24
+        cell(ce, f'A{r + 1 + i}', t, F(size=8, color='5A534B'), al=WRAP); ce.merge_cells(f'A{r + 1 + i}:H{r + 1 + i}'); ce.row_dimensions[r + 1 + i].height = 24
     ce.freeze_panes = 'A4'
 
 # Feuille « Application ou bilan » : avril → septembre, l'application (feuille Mois par mois) face au bilan (feuille Compte d'exploitation)
 if C:
     ab = wb.create_sheet('Application ou bilan')
     CE = "'Compte d’exploitation'!"
-    a1, a2 = r0 + 1, rN                                  # avril → septembre dans « Mois par mois »
-    cell(ab, 'A1', 'L’application ou le bilan : avril → septembre 2026, en € par mois', F_T)
-    cell(ab, 'A2', 'Application : la caisse et le P&L du panel (feuille « Mois par mois », main-d’œuvre encodée, food cost mesuré par le panel). Bilan : la situation au 30/09 de la fiduciaire, lissée sur 6 mois (feuille « Compte d’exploitation », à valider). En vert : liens ; en noir : calculs.', F_S)
+    a1, a2 = rN - len(MPER) + 1, rN                     # la période comptable (mars → septembre) dans « Mois par mois »
+    cell(ab, 'A1', f'L’application ou le bilan : {PER_TXT} 2026, en € par mois', F_T)
+    cell(ab, 'A2', 'Application : la caisse et le P&L du panel (feuille « Mois par mois », main-d’œuvre encodée, food cost mesuré par le panel). Bilan : la situation au 30/09 de la fiduciaire, recalculée sur les mois réels (feuille « Compte d’exploitation », colonne Recalcul, à valider). En vert : liens ; en noir : calculs.', F_S)
     for col, w in zip('ABCDEFG', (34, 15, 9, 15, 9, 15, 70)): ab.column_dimensions[col].width = w
     for i, h in enumerate(['Poste', 'Application', '% CA', 'Bilan', '% CA', 'Écart (bilan − application)', 'Ce qui change d’une source à l’autre']):
         cell(ab, f'{chr(65 + i)}4', h, F_H, al=Alignment(horizontal='left' if i in (0, 6) else 'right', wrap_text=True, vertical='bottom'), border=B_H)
     ab.row_dimensions[4].height = 30
-    L = [('Chiffre d’affaires', f'=AVERAGE({MP}C{a1}:C{a2})', f'={CE}B{rCAc}', 'caisse HT ; à rapprocher (période, TVA, factures hors caisse)'),
-         ('Matière', f'=SUMPRODUCT({MP}C{a1}:C{a2},{MP}T{a1}:T{a2})/{a2 - a1 + 1}', f'={CE}B{rAch}+{CE}B{rEmb}', 'application : coût de recette des ventes (panel) ; bilan : achats + emballages'),
+    L = [('Chiffre d’affaires', f'=AVERAGE({MP}C{a1}:C{a2})', f'={CE}C{rCAc}', 'caisse HT, contre CA comptable recalculé'),
+         ('Matière', f'=SUMPRODUCT({MP}C{a1}:C{a2},{MP}T{a1}:T{a2})/{a2 - a1 + 1}', f'={CE}C{rAch}+{CE}C{rEmb}', 'application : coût de recette des ventes (panel) ; bilan : achats + emballages'),
          ('Marge brute', '=B5-B6', '=D5-D6', ''),
-         ('Personnel', f'=AVERAGE({MP}U{a1}:U{a2})', f'={CE}B{rF0}', 'heures planifiées × taux du panel, contre salaires ; Nathan absent des deux'),
-         ('Frais généraux', f'=AVERAGE({MP}P{a1}:P{a2})', f'=SUM({CE}B{rF0 + 1}:B{rF1})', 'montant saisi au panel, contre factures'),
+         ('Personnel', f'=AVERAGE({MP}U{a1}:U{a2})', f'={CE}C{rF0}', 'heures planifiées × taux du panel, contre salaires ; Nathan absent des deux'),
+         ('Frais généraux', f'=AVERAGE({MP}P{a1}:P{a2})', f'=SUM({CE}C{rF0 + 1}:C{rF1})', 'montant saisi au panel, contre factures'),
          ('Résultat · EBITDA', '=B7-B8-B9', '=D7-D8-D9', 'avant Nathan, amortissements, charges financières'),
          ('Point mort (CA par mois)', '=IF(B5>0,(B8+B9)/(1-B6/B5),0)', '=IF(D5>0,(D8+D9)/(1-D6/D5),0)', 'charges fixes ÷ (1 − matière en % du CA), Nathan non payé')]
     for i, (lib, fa, fb, nt) in enumerate(L):
@@ -877,8 +946,8 @@ if C:
     cell(ab, 'A12', 'Clients par mois (application)'); cell(ab, 'B12', f'=AVERAGE({MP}F{a1}:F{a2})', F_LK, NB)
     cell(ab, 'A13', 'Panier moyen (application)'); cell(ab, 'B13', '=IF(B12>0,B5/B12,0)', fmt=EUR2)
     cell(ab, 'A15', 'Du résultat de l’application à l’EBITDA du bilan', F_SEC, border=B_H)
-    P_ = [('Résultat de l’application', '=B10'), ('+ CA du bilan en plus', '=D5-B5'), ('− matière achetée en plus', '=-(D6-B6)'),
-          ('− personnel en plus', '=-(D8-B8)'), ('− frais généraux en plus', '=-(D9-B9)')]
+    P_ = [('Résultat de l’application', '=B10'), ('Écart de CA', '=D5-B5'), ('Écart de matière', '=-(D6-B6)'),
+          ('Écart de personnel', '=-(D8-B8)'), ('Écart de frais généraux', '=-(D9-B9)')]
     for i, (lib, f_) in enumerate(P_):
         cell(ab, f'A{16 + i}', lib); cell(ab, f'B{16 + i}', f_, fmt=EUR)
     cell(ab, 'A21', 'EBITDA du bilan (somme des lignes)', F_TOT, border=B_T); cell(ab, 'B21', '=SUM(B16:B20)', F_TOT, EUR, border=B_T)
@@ -898,9 +967,9 @@ cell(ej, 'A6', 'Clients par jour'); cell(ej, 'B6', f'={RC}B8', F_LK, NB)
 cell(ej, 'A7', 'Taux de marge, récap'); cell(ej, 'B7', f'=1-{RC}B31', F_LK, PCT)
 cell(ej, 'A8', 'Résultat actuel, récap'); cell(ej, 'B8', f'={RC}B25', F_LK, EUR)
 if C:
-    cell(ej, 'D4', 'Taux de marge, bilan'); cell(ej, 'F4', f'=1-({CE}B{rAch}+{CE}B{rEmb})/{CE}B{rCAc}', F_LK, PCT)
-    cell(ej, 'D5', 'EBITDA Nathan payé, bilan'); cell(ej, 'F5', f'={CE}B{rEbN}', F_LK, EUR)
-    cell(ej, 'D6', 'Après remboursements, bilan'); cell(ej, 'F6', f'={CE}B{rAp}', F_LK, EUR)
+    cell(ej, 'D4', 'Taux de marge, bilan'); cell(ej, 'F4', f'=1-({CE}C{rAch}+{CE}C{rEmb})/{CE}C{rCAc}', F_LK, PCT)
+    cell(ej, 'D5', 'EBITDA Nathan payé, bilan'); cell(ej, 'F5', f'={CE}C{rEbN}', F_LK, EUR)
+    cell(ej, 'D6', 'Après remboursements, bilan'); cell(ej, 'F6', f'={CE}C{rAp}', F_LK, EUR)
 hh = ['€ par jour en plus', 'CA en plus par mois', 'CA en plus par an', 'Clients par jour en plus', 'ou panier en plus', 'Marge directe par mois (récap)', 'Résultat par mois (récap)']
 if C: hh += ['Marge directe par mois (bilan)', 'EBITDA Nathan payé (bilan)', 'Après remboursements (bilan)']
 for i, h in enumerate(hh):
@@ -914,7 +983,7 @@ for i, e in enumerate([0] + PALIERS):
     cell(ej, f'F{rr}', f'=B{rr}*$B$7', fmt=EUR); cell(ej, f'G{rr}', f'=$B$8+F{rr}', F_TOT, EUR)
     if C:
         cell(ej, f'H{rr}', f'=B{rr}*$F$4', fmt=EUR); cell(ej, f'I{rr}', f'=$F$5+H{rr}', F_TOT, EUR); cell(ej, f'J{rr}', f'=$F$6+H{rr}', F_TOT, EUR)
-cell(ej, 'A18', 'Ligne 0 : aujourd’hui. Récap : moyenne de mars à septembre ; bilan : avril → septembre. Une vente faite avec une remise rapporte moins que la marge directe.', F_S)
+cell(ej, 'A18', 'Ligne 0 : aujourd’hui, moyenne de mars à septembre (le bilan recalculé sur sept mois). Une vente faite avec une remise rapporte moins que la marge directe.', F_S)
 ej.freeze_panes = 'B11'
 
 for ws in wb.worksheets:
