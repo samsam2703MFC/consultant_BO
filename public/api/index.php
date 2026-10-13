@@ -60,6 +60,7 @@ require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';
 require __DIR__ . '/../../src/mkt_agences.php';
 require __DIR__ . '/../../src/marketing_hub.php';
+require __DIR__ . '/../../src/marketing_sources.php';
 require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/prod_manque.php';
 require __DIR__ . '/../../src/analyse_magasin.php';
@@ -285,6 +286,8 @@ function route(string $method, string $path): mixed
             $path === '/marketing'                     => ep_mkt(),
             // Le module Marketing (/marketing) : tous les canaux en une lecture.
             $path === '/marketing/hub'                 => ep_marketing_hub(),
+            // Ses API (TFBuddy, locales, extérieures) et ses tables, lues dans le code.
+            $path === '/marketing/sources'             => ep_marketing_sources(),
             // Le calendrier des campagnes posé sur la courbe du budget, et le
             // détail magasin par magasin de la campagne regardée.
             $path === '/marketing/budget-campagnes'    => ep_budget_campagnes(),

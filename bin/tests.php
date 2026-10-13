@@ -26,13 +26,16 @@ final class Db
     public static function exec(string $sql, array $a = []): void {}
     public static function pdo(): never { throw new RuntimeException('pas de base en test'); }
 }
-function setting(string $k, mixed $d = null): mixed { return $d; }
+// Un réglage se pose dans $GLOBALS['reglages'] le temps d'un test ; sinon, la valeur par défaut.
+function setting(string $k, mixed $d = null): mixed { return $GLOBALS['reglages'][$k] ?? $d; }
 function journalAdd(string $actor, string $kind, ?string $project, string $message): void {}
 function body(): array { return []; }
 
 require __DIR__ . '/../src/meta_graph.php';
 require __DIR__ . '/../src/brand_guard.php';
 require __DIR__ . '/../src/marketing_hub.php';
+require __DIR__ . '/../src/marketing_sources.php';
+require __DIR__ . '/../src/fbcontrole.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -198,6 +201,43 @@ $af = mhAFaire($camp, $mail, $soc([$post('valide', '2026-10-12 10:00')]), $off, 
 verifie('validé, date passée, pas marqué publié ⇒ urgent', ($af[0]['niveau'] ?? '') === 'urgent' && str_starts_with($af[0]['titre'], 'Post validé'), json_encode($af[0] ?? null));
 $af = mhAFaire(['dispo' => false], $mail, $soc([$post('a_valider', '2026-10-14 10:00')]), $off, '4', $auj);
 verifie('vue magasin : la décision n’est pas à faire chez lui', !array_filter($af, static fn ($a) => str_starts_with($a['titre'], 'Post à valider')));
+
+// --- 9. les règles de l'agent : un enregistrement sans paramètres ne les efface pas -----------
+echo "Règles de l'agent\n";
+$sansParams = fbReglesDefaut();
+foreach ($sansParams['regles'] as &$r) { unset($r['params']); } unset($r);   // ce que l'écran renvoie (/referentiels/facebook-regles)
+$iCasse = array_search('marque-casse', array_column($sansParams['regles'], 'code'), true);
+$sansParams['regles'][$iCasse]['actif'] = false;                                 // une autre règle désactivée au passage
+$GLOBALS['reglages'] = ['fbControle' => $sansParams];
+$pack = array_column(fbRegles()['regles'], null, 'code');
+verifie('les mots de « Conditions de promotion » reviennent du défaut', !empty($pack['promo-conditions']['params']['mots']));
+verifie('le choix d’activation, lui, est gardé', $pack['marque-casse']['actif'] === false && $pack['promo-conditions']['actif'] === true);
+$res = fbControler(['id' => 't', 'shopId' => null, 'shopNom' => null, 'auteur' => 'x', 'format' => 'Texte', 'message' => "Promo chez L'Atelier by : 2+1 sur les croissants ! #latelierby", 'lien' => null, 'medias' => [], 'publierLe' => null]);
+verifie('une promotion sans période est encore relevée', (bool) array_filter($res['ecarts'], static fn ($e) => $e['code'] === 'promo-conditions'), json_encode(array_column($res['ecarts'], 'code')));
+$GLOBALS['reglages'] = [];
+
+// --- 10. l'inventaire des sources : lu dans le code ---------------------------------------
+echo "Inventaire des sources\n";
+$t = msTablesDe("SELECT * FROM ceo_fb_post p JOIN ceo_shop s ON 1; INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
+verifie('FROM et JOIN ⇒ lue', ($t['ceo_fb_post'] ?? '') === 'lecture' && ($t['ceo_shop'] ?? '') === 'lecture', json_encode($t));
+verifie('INSERT INTO ⇒ écrite', ($t['ceo_app_setting'] ?? '') === 'ecriture');
+verifie('« ON DUPLICATE KEY UPDATE value » n’est pas une table', !isset($t['value']), json_encode($t));
+$t = msTablesDe("CREATE TABLE IF NOT EXISTS ceo_x (id INT); SELECT * FROM ceo_x");
+verifie('créée puis lue ⇒ créée', ($t['ceo_x'] ?? '') === 'creation');
+$idx = msIndex(dirname(__DIR__));
+$routeur = (string) file_get_contents(__DIR__ . '/../public/api/index.php');
+$absentes = array_filter(MS_ROUTES, static fn ($r) => !isset($idx[$r[2]]));
+verifie('chaque route du module a sa fonction dans src/', $absentes === [], json_encode(array_column($absentes, 2)));
+$nonRoutees = array_filter(MS_ROUTES, static fn ($r) => !str_contains($routeur, $r[2] . '('));
+verifie('chaque fonction est appelée par le routeur', $nonRoutees === [], json_encode(array_column($nonRoutees, 2)));
+verifie('chercher une fiche Google ⇒ Google Places', in_array('google', msSuivre('ep_reputation_recherche', $idx)['apis'], true));
+verifie('un envoi test ⇒ serveur SMTP', in_array('smtp', msSuivre('wr_newsletter_test_post', $idx)['apis'], true));
+$dec = msSuivre('wr_fb_decision', $idx);
+verifie('décider d’un post ⇒ ceo_fb_post écrite', ($dec['tables']['ceo_fb_post'] ?? '') === 'ecriture', json_encode($dec['tables']));
+verifie('wr_param_put ⇒ seulement ceo_app_setting', array_keys(msSuivre('wr_param_put', $idx)['tables']) === ['ceo_app_setting']);
+$cr = msTablesCreees(dirname(__DIR__));
+verifie('origine : shops vient de TFBuddy, mar_* du module, ceo_* du cockpit',
+    msOrigine('shops', $cr)['origine'] === 'tfbuddy' && msOrigine('mar_campaign', $cr)['origine'] === 'module' && msOrigine('ceo_fb_post', $cr)['origine'] === 'cockpit');
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

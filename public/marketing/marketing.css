@@ -3,7 +3,7 @@
   --mk-ok:#2d7a3e;--mk-att:#B45309;--mk-ko:#C0182B;--mk-fond:var(--color-bg,#EAE4DC);--mk-carte:var(--color-surface,#fff);
   --mk-trait:rgba(34,34,34,.10);--mk-trait2:rgba(34,34,34,.18);--mk-doux:#F4EFE8;--mk-mu:#8a847c;
   /* Une couleur par canal, la même partout : chiffres, calendrier, à faire. */
-  --mk-camp:var(--color-primary,#8D1D2C);--mk-mail:#c17a2a;--mk-soc:#1f5f8b;--mk-charte:var(--color-popup,#78554B)
+  --mk-camp:var(--color-primary,#8D1D2C);--mk-mail:#c17a2a;--mk-soc:#1f5f8b;--mk-charte:var(--color-popup,#78554B);--mk-avis:#a8861c
 }
 *{box-sizing:border-box}
 /* Gotham Light pour le texte courant, comme le cockpit : en Regular, tout l'écran paraissait en gras. */
@@ -55,7 +55,8 @@ select,.mk-in{font:400 12px var(--font-ui);padding:6px 10px;border:.5px solid va
 .mk-g2{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
 .mk-g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .mk-pastille{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
-.mk-canal-campagne{--c:var(--mk-camp)}.mk-canal-email{--c:var(--mk-mail)}.mk-canal-social{--c:var(--mk-soc)}.mk-canal-charte{--c:var(--mk-charte)}
+.mk-canal-campagne{--c:var(--mk-camp)}.mk-canal-email{--c:var(--mk-mail)}.mk-canal-social{--c:var(--mk-soc)}.mk-canal-charte{--c:var(--mk-charte)}.mk-canal-avis{--c:var(--mk-avis)}
+.mk-gk{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
 
 /* Chiffres par canal */
 .mk-kpi{font-weight:300;background:var(--mk-carte);border:.5px solid var(--mk-trait);border-top:3px solid var(--c);border-radius:12px;padding:12px 14px 13px;cursor:pointer;text-align:left;font-family:var(--font-ui);color:#222;display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -210,7 +211,8 @@ textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120
   .mk-titre{font-size:21px}
   .mk-hd img{height:26px}
   .mk-hd select{max-width:46vw}
-  .mk-g4{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .mk-g4,.mk-gk{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .mk-avis-tete{gap:14px}
   .mk-kpi .v{font-size:21px}
   .mk-posts{grid-template-columns:minmax(0,1fr)}
   .mk-cal{display:none}
@@ -219,3 +221,33 @@ textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120
   .mk-filtres{margin-left:0}
   .mk-tab .masque-mob{display:none}
 }
+
+/* Réseaux sociaux : deux volets, les posts et les avis Google */
+.mk-seg{display:inline-flex;border:.5px solid var(--mk-trait2);border-radius:999px;background:#fff;padding:3px;margin:0 0 12px;gap:2px}
+.mk-seg button{font:600 12px var(--font-ui);padding:7px 14px;border-radius:999px;border:none;background:none;color:#444;cursor:pointer;white-space:nowrap}
+.mk-seg button b{font-weight:600;margin-left:4px;color:var(--c)}
+.mk-seg button.on{background:var(--c);color:#fff}
+.mk-seg button.on b{color:#fff}
+.mk-etoiles{display:inline-flex;gap:1px;font-size:13px;line-height:1}
+.mk-etoiles i{font-style:normal;color:#ddd7cd}
+.mk-etoiles i.on{color:#C9A227}
+.mk-avis-tete{display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:14px 16px}
+.mk-gros{font:400 40px var(--font-display);line-height:1}
+.mk-gros-m{font:400 26px var(--font-display);line-height:1}
+.mk-avis-note{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.mk-barres{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.mk-barres div{display:grid;grid-template-columns:32px 1fr 40px;align-items:center;gap:8px;font-size:11px}
+.mk-barres span{font-weight:600}
+.mk-barres i{display:block;height:7px;border-radius:999px;background:var(--mk-doux);overflow:hidden}
+.mk-barres i b{display:block;height:100%;border-radius:999px}
+.mk-barres em{font-style:normal;text-align:right;color:#777;font-variant-numeric:tabular-nums}
+.mk-revues{list-style:none;margin:0;padding:0 14px 8px}
+.mk-revues li{padding:7px 0;border-top:.5px dashed var(--mk-trait2);font-size:11.5px;line-height:1.45}
+.mk-revues .l1{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
+.mk-revues .mk-etoiles{font-size:11px}
+
+/* Paramètres : l'inventaire des API et des tables */
+.mk-tab tr.grp td{background:#fbf9f6;padding:7px 10px}
+.mk-tbl{display:inline-block;font:500 10px ui-monospace,Menlo,monospace;padding:1px 5px;border-radius:4px;margin:1px 0;background:#eef3ee;color:#2d5a36}
+.mk-tbl.ecriture{background:#fdf1e2;color:#8a4b08}
+.mk-tbl.creation{background:#fbe9eb;color:#8D1D2C}

@@ -3029,10 +3029,47 @@ emporterait les autres.
 accepte `{soumettre: true}`**, qui fait sortir un brouillon (statut `a_controler`, `submitted_at` à maintenant, ligne de
 journal) avant le contrôle — sans elle, un post enregistré en brouillon ne pouvait plus jamais être soumis.
 
-**La page `marketing/`** (`public/marketing/`, hors SPA comme `production/`) : cinq onglets — vue d'ensemble (un chiffre par
+**La page `marketing/`** (`public/marketing/`, hors SPA comme `production/`) : six onglets — vue d'ensemble (un chiffre par
 canal, à faire, les 14 prochains jours), calendrier (campagnes en bandes, newsletters et posts au jour, filtre par canal ;
 une liste au téléphone), campagnes (avec leurs prises de parole, « Préparer un post », l'assistant de campagne), réseaux sociaux
 (rédaction avec aperçu, contrôle, décision, publication avec l'id Facebook, sauvages, la charte sur 30 jours), emailing (le
-module `newsletter.js` monté tel quel, rôle `brand` ou le magasin). Adresse : `marketing/?shop=&onglet=vue|calendrier|
-campagnes|social|email&mois=AAAA-MM&vue=a_traiter|a_publier|publies|refuses|brouillons|sauvages|tous`. Comme la newsletter,
+module `newsletter.js` monté tel quel, rôle `brand` ou le magasin), paramètres (règles de l'agent, charte, pages, cible des
+avis, API et tables). Adresse : `marketing/?shop=&onglet=vue|calendrier|campagnes|social|email|parametres&mois=AAAA-MM
+&vue=a_traiter|a_publier|publies|refuses|brouillons|sauvages|tous|avis&p=sources|agent|charte|pages|avis`. Comme la newsletter,
 le rôle n'est pas vérifié côté serveur : la vue magasin est une vue, pas un droit.
+
+### `GET /marketing/sources` — les API et les tables du module Marketing (13/10/2026)
+
+`GET /marketing/sources` (`src/marketing_sources.php`), lu par l'onglet Paramètres → « API et tables » de `marketing/`.
+Comme la carte des sources, **lu dans le code** : seule la liste des routes que la page appelle est déclarée
+(`MS_ROUTES` — 27 routes, la page et le module newsletter qu'elle monte ; `bin/tests.php` vérifie que chaque fonction
+existe et que le routeur l'appelle). Chaque route est suivie de fonction en fonction (6 niveaux au plus, sans
+l'installateur), et l'on relève les tables nommées dans le SQL (`FROM`, `JOIN` ⇒ lue ; `INSERT`, `UPDATE`, `DELETE`
+⇒ écrite ; `CREATE`, `ALTER` ⇒ créée ; `ON DUPLICATE KEY UPDATE col` n'est pas une table) et les API **réellement
+appelées** (`PanelApi::…`, `ErpApi::…` = TFBuddy ; `MetaGraph::http|posts|resoudrePage…`, `GoogleApi::…`,
+`Anthropic::…`, `Smtp::envoyer` ; un `statut()` ou `configured()` ne sort pas du serveur et ne compte pas).
+`wr_param_put`, qui sert tous les réglages, est déclaré à part : pour nos deux clés il n'écrit que `ceo_app_setting`.
+
+Réponse : `{genere, base, baseLue, apis, routes, tables, liees, limites}`.
+- `apis` : `[{id: base|panel|erp|meta|google|anthropic|smtp, nom, famille: locale|tfbuddy|externe, hote, quoi,
+  configure, routes: ["MÉTHODE /chemin"]}]` — l'état vient des `statut()` des clients, jamais un secret.
+- `routes` : `[{methode, chemin, fonction, fichier, quoi, existe, fonctions, apis, tfbuddy, locale, tables: [{nom,
+  mode: lecture|ecriture|creation}]}]`. `tfbuddy` : la route appelle le panel ou l'ERP ; `locale` : rien ne sort du
+  serveur (base et calcul).
+- `tables` : `[{nom, origine: tfbuddy|module|cockpit, origineNom, ecrite, routes, existe, lignes}]`. Origine :
+  `mar_*` = module marketing (base partagée) ; une table créée par `src/` ou `sql/schema.sql` = cockpit ; le reste =
+  base partagée TFBuddy (`shops`…). `existe` et `lignes` (estimées par InnoDB) viennent d'`information_schema`,
+  `null` si la base ne répond pas.
+- `liees` : l'assistant de campagne (`/api/v1/marketing`, copie de l'API du module autonome, catalogue repris de
+  l'ERP TFBuddy) et les écrans du cockpit.
+
+**Avis Google dans `/marketing/hub` (13/10/2026).** Nouveau canal `avis` : `{cible, reseau, magasins, connecteur:
+{configure, raccordes, derniereSynchro, etat, erreur}}`, c'est `GET /reputation` tel quel (en vue magasin, sa seule
+ligne ; le réseau reste en comparaison). `aFaire` y ajoute `canal: avis` : fiche Google à raccorder, note sous la
+cible (avec le nombre d'avis 5★ à obtenir), avis non relus depuis plus de 7 jours (connecteur configuré seulement).
+
+**Règles de l'agent : les paramètres ne se perdent plus (13/10/2026).** `PUT /parametres/fbControle` reçoit le pack
+tel que `/referentiels/facebook-regles` le sert, c'est-à-dire **sans** `params` : activer une règle enregistrait des
+règles sans mots, sans domaines, sans seuils — « Conditions de promotion » ne relevait plus rien. `fbRegles()` reprend
+désormais, règle par règle, les paramètres absents du défaut livré (`fbReglesDefaut()`) ; ceux qu'on a posés restent.
+Un réglage déjà abîmé est réparé à la lecture.

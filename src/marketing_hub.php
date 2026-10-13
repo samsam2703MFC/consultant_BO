@@ -15,7 +15,8 @@ declare(strict_types=1);
  *  - emailing : ceo_nl_campagne, mêmes statistiques que GET /newsletter
  *    (nlStatsReelles d'abord, stats_json en repli) ;
  *  - réseaux sociaux : ceo_fb_post, le cycle brouillon → contrôle → décision → publication ;
- *  - charte : brand_guard_checks sur 30 jours, mêmes chiffres que /marketing/brand-guard/stats.
+ *  - charte : brand_guard_checks sur 30 jours, mêmes chiffres que /marketing/brand-guard/stats ;
+ *  - avis Google : GET /reputation tel quel (ceo_shop_reputation, ceo_shop_review).
  *
  * Chaque canal se lit À PART : une table absente rend { dispo:false, raison }
  * pour ce canal seul, l'écran garde les autres. Les écritures ne passent pas
@@ -44,6 +45,7 @@ function ep_marketing_hub(): array
     // La charte et les posts sauvages sont l'affaire du franchiseur : un
     // magasin voit les siens, pas le palmarès du réseau.
     $charte    = mhCanal(static fn () => mhCharte($shop));
+    $avis      = mhCanal(static fn () => mhAvis($shop));
 
     return [
         'genere' => date('Y-m-d H:i'),
@@ -55,7 +57,8 @@ function ep_marketing_hub(): array
         'emailing' => $emailing,
         'social' => $social,
         'charte' => $charte,
-        'aFaire' => mhAFaire($campagnes, $emailing, $social, $charte, $shop, $auj),
+        'avis' => $avis,
+        'aFaire' => array_slice(array_merge(mhAFaire($campagnes, $emailing, $social, $charte, $shop, $auj), mhAFaireAvis($avis, $auj)), 0, 40),
     ];
 }
 
@@ -308,6 +311,58 @@ function mhCharte(?string $shop): array
         'charteVersion' => bgCharteVersion(),
         'meta' => class_exists('MetaGraph') ? MetaGraph::statut() : null,
     ];
+}
+
+/* --- avis Google (ceo_shop_reputation) ---------------------------------------------- */
+
+/**
+ * La réputation, telle que GET /reputation la sert : la note et le nombre d'avis
+ * viennent de Google, la moyenne réseau est pondérée par les avis, « avis5Requis »
+ * dit combien d'avis 5★ ramènent à la cible. Rien n'est recompté ici. En vue
+ * magasin, le réseau reste affiché à côté : c'est le point de comparaison.
+ */
+function mhAvis(?string $shop): array
+{
+    $r = ep_reputation();
+    if (!empty($r['indispo'])) { throw new RuntimeException((string) ($r['raison'] ?? 'réputation indisponible')); }
+    $magasins = $r['magasins'] ?? [];
+    if ($shop !== null) {
+        $magasins = array_values(array_filter($magasins, static fn ($m) => (string) $m['id'] === $shop));
+    }
+    $co = $r['connecteur'] ?? [];
+    return [
+        'cible' => $r['cible'],
+        'reseau' => $r['reseau'] ?? [],
+        'magasins' => $magasins,
+        // L'état du connecteur Google, sans la clé : configuré, fiches raccordées, dernière synchro.
+        'connecteur' => ['configure' => !empty($co['configure']), 'raccordes' => (int) ($co['raccordes'] ?? 0),
+            'derniereSynchro' => $co['derniereSynchro'] ?? null, 'etat' => $co['etat'] ?? null, 'erreur' => $co['erreur'] ?? null],
+    ];
+}
+
+/** Ce que les avis demandent : une fiche à raccorder, un magasin sous la cible, une synchro trop vieille. */
+function mhAFaireAvis(array $avis, string $auj): array
+{
+    if (!($avis['dispo'] ?? false)) { return []; }
+    $out = [];
+    $cible = (float) $avis['cible'];
+    foreach ($avis['magasins'] as $m) {
+        if (($m['placeId'] ?? null) === null) {
+            $out[] = ['canal' => 'avis', 'niveau' => 'normal', 'titre' => 'Fiche Google à raccorder — ' . $m['nom'],
+                'detail' => 'Sans fiche raccordée, la note du magasin ne se suit pas.', 'cible' => ['onglet' => 'social', 'vue' => 'avis']];
+        } elseif ($m['note'] !== null && $m['note'] < $cible) {
+            $out[] = ['canal' => 'avis', 'niveau' => 'normal', 'titre' => 'Note Google sous la cible — ' . $m['nom'],
+                'detail' => number_format((float) $m['note'], 2, ',', '') . ' pour ' . number_format($cible, 1, ',', '')
+                    . ($m['avis5Requis'] !== null ? ' · ' . $m['avis5Requis'] . ' avis 5★ pour l’atteindre' : ''),
+                'cible' => ['onglet' => 'social', 'vue' => 'avis']];
+        }
+    }
+    $s = $avis['connecteur']['derniereSynchro'] ?? null;
+    if ($avis['connecteur']['configure'] && $avis['connecteur']['raccordes'] > 0 && ($s === null || substr($s, 0, 10) < date('Y-m-d', strtotime($auj . ' -7 days')))) {
+        $out[] = ['canal' => 'avis', 'niveau' => 'normal', 'titre' => 'Avis Google non relus depuis ' . ($s === null ? 'toujours' : 'le ' . mhJour($s)),
+            'detail' => 'La synchronisation est un geste (chaque fiche relue est facturée par Google).', 'cible' => ['onglet' => 'social', 'vue' => 'avis']];
+    }
+    return $out;
 }
 
 /* --- ce qui demande un geste, tous canaux confondus --------------------------------- */
