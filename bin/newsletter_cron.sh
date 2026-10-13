@@ -15,4 +15,4 @@ JETON="$(php -r '
   echo is_string($v) ? (string) json_decode($v, true) : "";
 ' "$DIR/config/config.php" 2>/dev/null || true)"
 [[ -n "$JETON" ]] || exit 0
-curl -fsS -m 340 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/newsletter/cron?jeton=${JETON}" >/dev/null
+curl -fsS -m 340 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/marketing/newsletter/cron?jeton=${JETON}" >/dev/null

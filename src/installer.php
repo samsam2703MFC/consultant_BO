@@ -28,6 +28,19 @@ function ensureInstalled(): void
         runSqlFile(__DIR__ . '/../sql/schema.sql');
     }
 
+    // Les tables du marketing passent sous mar_ (13/10/2026) : renommées AVANT que
+    // les ensure*() ci-dessous ne créent leurs nouvelles tables vides. Une panne ici
+    // ne doit pas fermer tout le cockpit : elle se note, et l'appel suivant réessaie
+    // (une table recréée vide entre-temps sera remplacée par l'ancienne, pleine).
+    $marOk = true;
+    if (function_exists('marMigrer')) {
+        try { marMigrer(); }
+        catch (Throwable $e) {
+            $marOk = false;   // l'empreinte ne sera pas posée : l'appel suivant réessaie
+            try { journalAdd('Installation', 'Erreur', 'Marketing', 'Migration des tables mar_ impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ }
+        }
+    }
+
     // Jeu de démonstration : chargé UNIQUEMENT s'il est explicitement activé
     // (config 'seed' = true, ou variable d'env COCKPIT_SEED=1). Désactivé par
     // défaut → une base neuve reste vide, prête pour les vraies données.
@@ -59,9 +72,12 @@ function ensureInstalled(): void
     ensureProspection();
     ensureVisites();
     ensureFacebook();
+    if (function_exists('ensureSocialPublication')) { ensureSocialPublication(); }   // après les posts : elle les complète
     ensureTabletteRemarques();
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['schemaVu', json_encode($emp)]);
+    if ($marOk) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['schemaVu', json_encode($emp)]);
+    }
 }
 
 /** L'empreinte du code qui porte le schéma : nom, date et taille des sources et de schema.sql. */
@@ -939,7 +955,7 @@ function seedEnabled(): bool
  */
 function ensureReputation(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_reputation ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_avis_fiche ('
         . 'shop_id VARCHAR(8) PRIMARY KEY,'
         . 'place_id VARCHAR(120) NULL,'
         . 'profile_url VARCHAR(400) NULL,'
@@ -948,7 +964,7 @@ function ensureReputation(): void
         . 'synced_at DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_review ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_avis ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'shop_id VARCHAR(8) NOT NULL,'
         . "source VARCHAR(20) NOT NULL DEFAULT 'google',"
@@ -978,7 +994,7 @@ function ensureReputation(): void
  */
 function ensureFacebook(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fb_post ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_social_post ('
         . 'id VARCHAR(16) PRIMARY KEY,'
         . 'shop_id VARCHAR(8) NULL,'
         . 'author VARCHAR(120) NOT NULL,'
@@ -1005,7 +1021,7 @@ function ensureFacebook(): void
         . 'KEY idx_shop (shop_id, planned_at)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fb_finding ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_social_ecart ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'post_id VARCHAR(16) NOT NULL,'
         . 'rule_code VARCHAR(40) NOT NULL,'

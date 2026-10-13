@@ -337,7 +337,7 @@ function googleNote(string $shop): ?array
     if ($memo === null) {
         $memo = [];
         try {
-            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count FROM ceo_shop_reputation') as $r) {
+            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count FROM mar_avis_fiche') as $r) {
                 if ($r['rating_avg'] !== null) { $memo[(string) $r['shop_id']] = ['note' => round((float) $r['rating_avg'], 2), 'avis' => (int) ($r['rating_count'] ?? 0)]; }
             }
         } catch (PDOException $e) { /* pas de réputation : coefficient neutre */ }
