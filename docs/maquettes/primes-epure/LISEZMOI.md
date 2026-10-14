@@ -14,7 +14,7 @@ of Quiches…) : le rang, les quantités, qui est 1re. Tout texte d'explication 
 |---|---|---|
 | **Target** | ventes croisées ≥ 55 %, bats ton record, objectif magasin ≥ 100 % | chaque vendeuse qui atteint la cible |
 | **Catégorie** | Queen of Tartes, Queen of Quiches (un motif sur le produit) | la 1re du magasin, au nombre de pièces |
-| **Promo** | la promo du mois (ses produits, ses dates) | la 1re du magasin, au nombre de pièces vendues |
+| **Promo** | une promotion du panel : un bundle ou un « X achetés + Y offerts » (nom, dates, magasins et produits lus à l'API) | la 1re du magasin, au nombre de bundles vendus ou d'offres données |
 
 Toutes les cartes ont la même forme : emoji, nom, type, récompense, puis la mesure, une jauge,
 une pastille d'état (✓ gagné, 👑 1re, 2e / 6, −0,06) et une ligne de chiffres (la cible, ou la 1re
@@ -46,9 +46,38 @@ remplit toutes d'un coup (la colonne « Proposée »). « Exporter CSV » sort l
 Les données existent déjà : la moisson de chaque jour et de chaque magasin compte, par vendeuse,
 les tickets, les lignes, les ventes croisées et les pièces de chaque famille (`pvLignesJour()`,
 `src/panel_ventes.php`). Le CA vient des caches de CA du cockpit. Pour une promo, ses produits
-doivent devenir une famille de la moisson, comme une catégorie. La ligne Réseau est pondérée par
+deviennent une famille de la moisson, par identifiant (voir plus bas). La ligne Réseau est pondérée par
 les tickets. Dans la maquette, Halle reprend ses chiffres réels d'octobre (≈ 150 tickets par jour,
 ticket moyen 12,74 €) ; les autres magasins sont inventés.
+
+## Les promos : lues à l'API promotions et bundles du panel (demande du 14/10/2026)
+
+Une prime Promo ne se saisit plus à la main. « + Promotion », ou « + prime » dans le bloc
+**Promotions du panel**, la crée à partir d'une promotion active du panel. Le nom, les dates, les
+magasins et les produits viennent de la promotion, et la prime s'arrête avec elle.
+
+| Route du panel | Ce qu'elle donne |
+|---|---|
+| `GET /admin/promotions/bundles?active=1` | les bundles actifs : nom, prix, dates, magasins, produits |
+| `GET /admin/promotions/buy-x-get-y` | les offres « X achetés + Y offerts » |
+| `GET /admin/promotions` | la liste de toutes les promotions |
+
+Ce qui compte pour la prime :
+
+- **Bundle** : le nombre de bundles vendus par la vendeuse. Le bundle est une ligne du ticket, un
+  produit de la catégorie « Bundle », comme le lit déjà `svBundles()` (`src/stats_ventes.php`).
+- **X + Y offert** : le nombre d'offres données. La façon de le lire sur le ticket (ligne offerte
+  à 0 €, ou pièces des produits X) reste à fixer quand on aura vu la réponse de l'API.
+
+Dans la moisson (`pvLignesJour()`), une famille se reconnaît aujourd'hui à un motif sur le nom
+(« tarte »). Une promo y entre par ses identifiants de produits, lus à l'API.
+
+**Bloquant** : ces routes sont déjà interrogées en lecture seule par `GET /exploitation/bundles/sonde`
+(`src/canaux_offres.php`). Le 10/10/2026, le compte API du cockpit y recevait **403**
+(`docs/contrat-api.md`). L'admin du panel doit ouvrir la lecture des promotions à ce compte ; il faut
+ensuite relancer la sonde pour voir la forme exacte des réponses. En attendant, les bundles restent
+lisibles comme produits de la catégorie « Bundle » du catalogue, mais pas leurs dates ni leurs
+magasins, et les offres « X + Y » pas du tout.
 
 Captures : `*-tel.png` (premier écran), `*-long.png` (la page entière), `a-menu.png`, `b-menu.png`,
 `cockpit.png`, `planche.jpg`. Les prénoms et les chiffres sont inventés (Halle, au 14 octobre).

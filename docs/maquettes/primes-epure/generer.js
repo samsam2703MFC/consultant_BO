@@ -174,14 +174,29 @@ const RES = { nom: 'Réseau', v: somme('v'), t: somme('t'), ca: somme('ca'), tar
   l: MAGS.reduce((a, m) => a + m.l * m.t, 0) / somme('t'), c: MAGS.reduce((a, m) => a + m.c * m.t, 0) / somme('t') };
 const parV = (m, k) => ent(m[k] / m.v);
 
+// une promotion du panel, choisie dans la liste (/admin/promotions/bundles, /admin/promotions/buy-x-get-y) : son nom, sa sorte, ses dates
+const choixPromo = (nom, sorte, dates) => `<span class="choix"><i class="src">panel</i>${e(nom)} <span class="mu">· ${e(sorte)} · ${e(dates)}</span><span class="fl">▾</span></span>`;
 const LIGNES = [
   ['🛍️', 'Ventes croisées', 'target', `tickets à 2 articles ou plus ≥ ${champ('55 %')} · ${champ('30')} tickets min.`, `${pc(RES.c)} · ${ent(RES.t / RES.v)} tickets / vend.`, 'chaque vendeuse', true],
   ['🚀', 'Bats ton record', 'target', 'lignes par ticket au-dessus du record 12 mois', `${n2(RES.l)} lignes / ticket`, 'chaque vendeuse', false],
   ['🏪', 'Objectif magasin', 'target', `CA du magasin ≥ ${champ('100 %')} de l’objectif`, '96 % de l’objectif', 'toute l’équipe', false],
   ['👑', 'Queen of Tartes', 'categorie', `produits ${champ('tarte', true)} · ${champ('10')} pcs min.`, `${parV(RES, 'tartes')} pcs / vend.`, '1re du magasin', true],
   ['👑', 'Queen of Quiches', 'categorie', `produits ${champ('quiche', true)} · ${champ('10')} pcs min.`, `${parV(RES, 'quiches')} pcs / vend.`, '1re du magasin', true],
-  ['🏷️', 'Promo café + croissant', 'promo', `${champ('Café + croissant 3,50 €', true)} · ${champ('01/10')} → ${champ('31/10')}`, `${parV(RES, 'promo')} pcs / vend.`, '1re du magasin', true],
+  ['🏷️', 'Promo café + croissant', 'promo', `${choixPromo('Café + croissant', 'Bundle', '01/10 → 31/10')} · bundles vendus`, `${parV(RES, 'promo')} / vend.`, '1re du magasin', true],
+  ['🏷️', 'Macarons 5 + 1 offert', 'promo', `${choixPromo('5 macarons + 1 offert', 'X + Y', '07/10 → 20/10')} · offres données`, '—', '1re du magasin', true, false],
 ];
+// les promotions actives du panel : bundles et X achetés + Y offerts ; une prime se crée d'un geste
+const PROMOS = [
+  { nom: 'Café + croissant', sorte: 'Bundle', prix: '3,50 €', dates: '01/10 → 31/10', mags: 'tous', produits: 'Café, Croissant', prime: true },
+  { nom: '5 macarons + 1 offert', sorte: 'X + Y offert', prix: '', dates: '07/10 → 20/10', mags: '6 magasins', produits: 'Macarons (12 parfums)', prime: 'off' },
+  { nom: 'Menu midi quiche + boisson', sorte: 'Bundle', prix: '9,90 €', dates: '01/10 → 30/11', mags: 'Halle, Namur, Waterloo', produits: 'Quiches (8), Boissons (6)', prime: false },
+  { nom: '2 Cookies', sorte: 'Bundle', prix: '4,90 €', dates: 'sans fin', mags: 'tous', produits: 'Cookies (4)', prime: false },
+];
+const blocPromos = `<div class="carte sans"><div class="tete"><h2>Promotions du panel</h2><span class="mu s">actives au 14/10 · bundles et X + Y offerts</span></div>
+<table class="t"><thead><tr><th class="g">Promotion</th><th class="g">Sorte</th><th>Prix</th><th class="g">Dates</th><th class="g">Magasins</th><th class="g">Produits</th><th class="c">Prime</th></tr></thead><tbody>
+${PROMOS.map(x => `<tr><td class="g"><b>${e(x.nom)}</b></td><td class="g"><span class="typ promo">${e(x.sorte)}</span></td><td class="num">${e(x.prix)}</td><td class="g">${e(x.dates)}</td><td class="g mu">${e(x.mags)}</td><td class="g mu">${e(x.produits)}</td>`
+  + `<td class="c">${x.prime === true ? '<span class="ok">✓ active</span>' : x.prime === 'off' ? '<span class="mu">éteinte</span>' : '<span class="bt sec">+ prime</span>'}</td></tr>`).join('\n')}
+</tbody></table></div>`;
 const ligneMag = (m, res) => `<tr class="${res ? 'res' : ''}"><td class="g"><b>${e(m.nom)}</b></td><td class="num">${m.v}</td><td class="num">${ent(m.t)}</td><td class="num">${parV(m, 't')}</td>`
   + `<td class="num">${n2(m.ca / m.t)} €</td><td class="num">${n2(m.l)}</td><td class="num">${pc(m.c)}</td><td class="num">${parV(m, 'tartes')}</td><td class="num">${parV(m, 'quiches')}</td><td class="num">${parV(m, 'promo')}</td>`
   + `<td class="num sep">${res ? champ(CIBLE_DEFAUT + ' %', false, 'def') : m.cible ? champ(m.cible + ' %') : champ(CIBLE_DEFAUT + ' %', false, 'vide')}</td>`
@@ -213,15 +228,21 @@ const cockpit = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><met
 .pied{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px}
 .tete{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px 4px}
 .caler{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.choix{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:.5px solid var(--color-border-secondary);border-radius:7px;background:#fff;font-weight:600;white-space:nowrap}
+.choix .src{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#e6edf5;color:#2a5a8a;border-radius:999px;padding:1px 6px}
+.choix .fl{color:var(--color-text-muted);margin-left:2px}
+.t tr.off td{opacity:.5}
+.interr.off{background:var(--color-border-secondary)}.interr.off::after{right:auto;left:2px}
 </style></head>
 <body><div id="ecran"><div class="cap">Équipe & ventes › Paramètres</div>
 <div class="barre"><div><h1>Primes de l’app worker</h1></div><div class="defaut">Récompense par défaut ${champ('50')} €</div></div>
 <div class="carte sans"><table class="t"><thead><tr><th class="c">Active</th><th class="g">Prime</th><th class="g">Type</th><th class="g">Ce qui compte</th><th class="g">Moyenne réseau<small>3 derniers mois, par mois</small></th><th class="g">Qui gagne</th><th class="c">Classement</th><th>Récompense</th></tr></thead><tbody>
-${LIGNES.map(([emo, lib, t, mesure, moy, qui, cl]) => `<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">${emo}</span><b>${e(lib)}</b></td><td class="g">${typ(t)}</td><td class="g">${mesure}</td><td class="g moy">${moy}</td><td class="g mu">${qui}</td><td class="c">${coche(cl)}</td><td class="num"><span class="champ eur">50</span> €</td></tr>`).join('\n')}
+${LIGNES.map(([emo, lib, t, mesure, moy, qui, cl, actif = true]) => `<tr class="${actif ? '' : 'off'}"><td class="c"><span class="interr${actif ? '' : ' off'}"></span></td><td class="g"><span class="emo">${emo}</span><b>${e(lib)}</b></td><td class="g">${typ(t)}</td><td class="g">${mesure}</td><td class="g moy">${moy}</td><td class="g mu">${qui}</td><td class="c">${coche(cl && actif)}</td><td class="num"><span class="champ eur">50</span> €</td></tr>`).join('\n')}
 </tbody></table>
 <div class="pied"><div style="display:flex;gap:8px"><span class="bt sec">+ Target</span><span class="bt sec">+ Catégorie</span><span class="bt sec">+ Promotion</span></div><span class="bt">Enregistrer</span></div></div>
+${blocPromos}
 <div class="carte sans"><div class="tete"><h2>Moyennes par magasin</h2><div class="seg"><span>1 mois</span><span class="on">3 mois</span><span>6 mois</span></div></div>
-<table class="t mags"><thead><tr><th class="g">Magasin</th><th>Vendeuses</th><th>Tickets<small>par mois</small></th><th>Tickets<small>par vendeuse</small></th><th>Ticket moyen</th><th>Lignes<small>par ticket</small></th><th>Ventes croisées</th><th>Tartes<small>par vendeuse</small></th><th>Quiches<small>par vendeuse</small></th><th>Promo<small>par vend., dès le 01/10</small></th><th class="sep">Cible ventes croisées</th><th>Proposée<small>moyenne + 3 pts</small></th></tr></thead><tbody>
+<table class="t mags"><thead><tr><th class="g">Magasin</th><th>Vendeuses</th><th>Tickets<small>par mois</small></th><th>Tickets<small>par vendeuse</small></th><th>Ticket moyen</th><th>Lignes<small>par ticket</small></th><th>Ventes croisées</th><th>Tartes<small>par vendeuse</small></th><th>Quiches<small>par vendeuse</small></th><th>Café + croissant<small>par vend., dès le 01/10</small></th><th class="sep">Cible ventes croisées</th><th>Proposée<small>moyenne + 3 pts</small></th></tr></thead><tbody>
 ${MAGS.map(m => ligneMag(m)).join('\n')}
 ${ligneMag(RES, true)}
 </tbody></table>
