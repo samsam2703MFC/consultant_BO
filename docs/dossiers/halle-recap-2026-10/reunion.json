@@ -1,0 +1,21 @@
+{
+  "titre": "Réunion Nathan — plan d’action du 15/10/2026 au 15/01/2027",
+  "date": "2026-10-12",
+  "auteur": "Sam",
+  "decisions": [
+    "Période : du 15/10/2026 au 15/01/2027.",
+    "Nathan : 500 € par semaine, virement automatique chaque lundi.",
+    "Gratuité SLFood : 20 % de chaque commande.",
+    "Revente à coefficient minimum × 2 : 2 000 € versés chaque lundi sur le compte tiers séparé.",
+    "Premier versement le 19/10 : 14 versements, 28 000 € au 18/01.",
+    "Cet argent sert uniquement aux dettes prioritaires.",
+    "Autres dettes : plan d’étalement.",
+    "Objectif : + 10 % à + 15 % de CA, soit le niveau du budget.",
+    "Développement commercial au maximum.",
+    "Plan hebdomadaire écrit par Nathan, le vendredi pour le lundi."
+  ],
+  "versement": {"premier": "2026-10-19", "dernier": "2027-01-18", "montant": 2000},
+  "remboursements": [
+    {"rang": 1, "creancier": "Nathan Charlot, précompte + Liantis", "montant": 4300}
+  ]
+}

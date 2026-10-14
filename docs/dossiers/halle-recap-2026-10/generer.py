@@ -10,6 +10,7 @@
 #   --mo 2650 | --mo encodee      main-d'œuvre par semaine des mêmes feuilles (défaut : 2 650 €)
 #   puis : python3 <skill xlsx>/scripts/recalc.py Halle-tableau-recap.xlsx   (les formules n'ont de valeur en cache qu'après recalcul)
 #
+# Page 4 : la réunion avec Nathan (reunion.json), si le fichier est là.
 # Ouverture en mars 2026 ; mois pleins : mars → septembre (février : ventes du 20 au 28 ; octobre : en cours, jusqu'à la veille).
 import json, html, base64, os, sys, subprocess, tempfile, urllib.request, datetime
 from openpyxl import Workbook
@@ -239,6 +240,7 @@ sup{{font-size:5.5pt;line-height:0}}
 .t.effets td.l2{{text-align:left;white-space:normal;font-size:7pt}}
 .t.comp td{{padding:1.1mm 1.4mm;font-size:7.6pt}}.t.comp td.p{{color:#7a736a;font-size:7pt}}.t.comp td.r{{font-size:6.5pt;width:34%;white-space:normal}}
 .graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}
+.pts.decisions{{font-size:8.8pt;line-height:1.55;columns:2;column-gap:8mm}}.pts.decisions li{{margin-bottom:1.6mm;break-inside:avoid}}
 .t.plan2 td{{padding:1.4mm 1.4mm;font-size:7.8pt}}.t.plan2 td.l small{{font-size:6.9pt;line-height:1.35}}.t.plan2 td{{vertical-align:top}}.t.plan2 tr.tot td{{vertical-align:middle}}.t.compta td.l small{{display:block;font-size:6pt;color:#9a938a;white-space:normal}}
 .t.sens th{{text-align:right}}.t.sens th.g{{text-align:center;border-bottom:.5pt solid #b8b1a6;color:#8D1D2C}}.t.sens td{{padding:1.2mm 1.3mm;font-size:7.6pt}}.t.sens td.g{{color:#5a534b}}.t.sens td.res{{font-weight:500}}.t.sens tr.base td{{background:#FCFAF7;color:#5a534b}}.neg{{color:#C0182B}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
 .pts{{margin:0;padding-left:4mm;font-size:7.3pt;line-height:1.45;color:#221E1A}}.pts li{{margin-bottom:1.1mm}}
@@ -313,7 +315,7 @@ def graphCA(pmJ, libPM):
     svg.append('</svg>')
     return ''.join(svg)
 
-NPAGES = 3
+NPAGES = 4 if os.path.exists(os.path.join(ICI, 'reunion.json')) else 3
 ft = lambda n: f'<div class="ft"><span>Atelier by – Halle · tableau récap · mars → septembre 2026 · caisse du panel, comptes de la fiduciaire au 30/09</span><span>{n} / {NPAGES}</span></div>'
 remb = C['remboursementsMois']; resA = COLS[0]['ap']; pm0 = COLS[1]['ca']; pm0J = pm0 / JM
 autresF = cF - cPerso - FIXR[1]
@@ -418,7 +420,45 @@ q3 = f"""<div class="page">
 {ft(3)}
 </div>"""
 
-doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Atelier by – Halle · tableau récap</title><style>{css}</style></head><body>{q1}{q2}{q3}</body></html>'
+# Page 4 — la réunion avec Nathan (reunion.json) : les décisions, le calendrier des versements sur le compte tiers, l'ordre de remboursement
+RE = json.load(open(os.path.join(ICI, 'reunion.json'))) if os.path.exists(os.path.join(ICI, 'reunion.json')) else None
+q4 = ''
+if RE:
+    fD = lambda d_: d_.strftime('%d/%m/%Y')
+    vD = []; d_ = datetime.date.fromisoformat(RE['versement']['premier']); fin_ = datetime.date.fromisoformat(RE['versement']['dernier'])
+    while d_ <= fin_: vD.append(d_); d_ += datetime.timedelta(days=7)
+    mV = RE['versement']['montant']
+    lvv = ''.join(f'<tr><td class="n">{i + 1}</td><td class="l">lundi {fD(x)}</td><td>{fE(mV)}</td><td>{fE(mV * (i + 1))}</td></tr>' for i, x in enumerate(vD))
+    lvv += f'<tr class="tot"><td></td><td class="l">{len(vD)} versements</td><td></td><td>{fE(mV * len(vD))}</td></tr>'
+    cumD = 0; lrr = ''
+    for r_ in RE['remboursements']:
+        cumD += r_['montant']; k_ = next((i for i in range(len(vD)) if mV * (i + 1) >= cumD), None)
+        lrr += (f'<tr><td class="n">{r_["rang"]}</td><td class="l">{H(r_["creancier"])}</td><td>{fE(r_["montant"])}</td>'
+                f'<td class="l">{"lundi " + fD(vD[k_]) + " (" + str(k_ + 1) + "<sup>e</sup> versement)" if k_ is not None else "après le " + fD(vD[-1])}</td></tr>')
+    rest_ = mV * len(vD) - cumD
+    lrr += f'<tr class="sous"><td></td><td class="l">Reste pour les dettes prioritaires suivantes</td><td>{fE(rest_)}</td><td></td></tr>'
+    dReu = datetime.date.fromisoformat(RE['date'])
+    q4 = f"""<div class="page">
+{hd}
+<div class="sec">{H(RE['titre'])}</div>
+<p class="s">Réunion du {dReu.day} {MOISL[dReu.month]} {dReu.year} · {H(RE['auteur'])}</p>
+<div class="sec petit" style="margin-top:3mm">Décisions</div>
+<ul class="pts decisions">{''.join(f'<li>{H(t)}</li>' for t in RE['decisions'])}</ul>
+<div class="deux g11 bas">
+<div><div class="sec petit">Les versements sur le compte tiers</div>
+<table class="t serre"><tr><th></th><th class="l">Date</th><th>Versement</th><th>Cumul</th></tr>{lvv}</table></div>
+<div><div class="sec petit">Ordre de remboursement</div>
+<table class="t serre"><tr><th></th><th class="l">Créancier</th><th>Montant</th><th class="l">Soldé le</th></tr>{lrr}</table>
+<div class="cadre" style="margin-top:4mm"><div class="k">Repères</div><ul>
+<li>CA de la caisse, mars → septembre : {fE(caMois)} par mois. + 10&nbsp;% : {fE(caMois * 1.10)} ; + 15&nbsp;% : {fE(caMois * 1.15)}, soit {fP(caMois * 1.15 / obj, 0)} du budget de {fE(obj)}.</li>
+<li>Nathan : {fE(C['nathanSemaine'])} par semaine, {fE(cN)} par mois, déjà compté dans le compte du mois (page 1).</li>
+<li>Les versements sur le compte tiers : {fE(mV)} par semaine, ≈ {fE(arr(mV * 52 / 12, 10))} par mois.</li>
+</ul></div></div>
+</div>
+{ft(4)}
+</div>"""
+
+doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Atelier by – Halle · tableau récap</title><style>{css}</style></head><body>{q1}{q2}{q3}{q4}</body></html>'
 
 with tempfile.TemporaryDirectory() as tmp:
     f = os.path.join(tmp, 'recap.html'); open(f, 'w', encoding='utf-8').write(doc)
