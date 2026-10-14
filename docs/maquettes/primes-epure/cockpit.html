@@ -1,0 +1,33 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cockpit — Primes de l’app</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../prix-volume/pv.css"><link rel="stylesheet" href="/public/employee/assets/atelier/marque.css">
+<style>
+#ecran{max-width:1160px}
+.champ{display:inline-block;min-width:54px;padding:4px 8px;border:.5px solid var(--color-border-secondary);border-radius:7px;background:#fff;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.champ.l{text-align:left;font-weight:500;min-width:90px}
+.champ.eur{min-width:48px}
+.ch{display:inline-flex}.ch i{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--color-border-secondary);display:inline-block;background:#fff;position:relative}
+.ch i.on{border-color:var(--color-primary);background:var(--color-primary)}.ch i.on::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.interr{width:34px;height:19px;border-radius:999px;background:var(--color-primary);display:inline-block;position:relative}.interr::after{content:'';position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+.t td{padding:9px 12px}.t td.g{font-size:13px}
+.t td.c,.t th.c{text-align:center}
+.emo{font-size:16px;margin-right:6px}
+.typ{display:inline-block;font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
+.typ.target{background:#e6edf5;color:#2a5a8a}.typ.categorie{background:#fbe9d6;color:#8a4a12}.typ.promo{background:#f6dfe2;color:#8D1D2C}
+.bt{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;background:var(--color-primary);color:#fff;font-weight:600;font-size:12.5px}
+.bt.sec{background:#fff;color:var(--color-text);border:.5px solid var(--color-border-secondary)}
+.defaut{display:flex;align-items:center;gap:10px;font-size:13px}
+.defaut .champ{font-size:15px;min-width:60px}
+.pied{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+</style></head>
+<body><div id="ecran"><div class="cap">Équipe & ventes › Paramètres</div>
+<div class="barre"><div><h1>Primes de l’app worker</h1></div><div class="defaut">Récompense par défaut <span class="champ">50</span> €</div></div>
+<div class="carte sans"><table class="t"><thead><tr><th class="c">Active</th><th class="g">Prime</th><th class="g">Type</th><th class="g">Ce qui compte</th><th class="g">Qui gagne</th><th class="c">Classement</th><th>Récompense</th></tr></thead><tbody>
+<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">🛍️</span><b>Ventes croisées</b></td><td class="g"><span class="typ target">Target</span></td><td class="g">tickets à 2 articles ou plus ≥ <span class="champ">55 %</span></td><td class="g mu">chaque vendeuse</td><td class="c"><span class="ch"><i class="car on"></i></span></td><td class="num"><span class="champ eur">50</span> €</td></tr>
+<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">🚀</span><b>Bats ton record</b></td><td class="g"><span class="typ target">Target</span></td><td class="g">lignes par ticket au-dessus du record 12 mois</td><td class="g mu">chaque vendeuse</td><td class="c"><span class="ch"><i class="car"></i></span></td><td class="num"><span class="champ eur">50</span> €</td></tr>
+<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">🏪</span><b>Objectif magasin</b></td><td class="g"><span class="typ target">Target</span></td><td class="g">CA du magasin ≥ <span class="champ">100 %</span> de l’objectif</td><td class="g mu">toute l’équipe</td><td class="c"><span class="ch"><i class="car"></i></span></td><td class="num"><span class="champ eur">50</span> €</td></tr>
+<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">👑</span><b>Queen of Tartes</b></td><td class="g"><span class="typ categorie">Catégorie</span></td><td class="g">produits <span class="champ l">tarte</span> · <span class="champ">10</span> pcs min.</td><td class="g mu">1re du magasin</td><td class="c"><span class="ch"><i class="car on"></i></span></td><td class="num"><span class="champ eur">50</span> €</td></tr>
+<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">👑</span><b>Queen of Quiches</b></td><td class="g"><span class="typ categorie">Catégorie</span></td><td class="g">produits <span class="champ l">quiche</span> · <span class="champ">10</span> pcs min.</td><td class="g mu">1re du magasin</td><td class="c"><span class="ch"><i class="car on"></i></span></td><td class="num"><span class="champ eur">50</span> €</td></tr>
+<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">🏷️</span><b>Promo café + croissant</b></td><td class="g"><span class="typ promo">Promo</span></td><td class="g"><span class="champ l">Café + croissant 3,50 €</span> · <span class="champ">01/10</span> → <span class="champ">31/10</span></td><td class="g mu">1re du magasin</td><td class="c"><span class="ch"><i class="car on"></i></span></td><td class="num"><span class="champ eur">50</span> €</td></tr>
+</tbody></table>
+<div class="pied"><div style="display:flex;gap:8px"><span class="bt sec">+ Target</span><span class="bt sec">+ Catégorie</span><span class="bt sec">+ Promotion</span></div><span class="bt">Enregistrer</span></div></div>
+</div></body></html>
