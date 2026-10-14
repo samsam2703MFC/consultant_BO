@@ -65,6 +65,7 @@ require __DIR__ . '/../src/ventes.php';
 require __DIR__ . '/../src/panel_ventes.php';
 require __DIR__ . '/../src/primes.php';
 require __DIR__ . '/../src/primes_app.php';
+require __DIR__ . '/../src/sms.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -259,6 +260,58 @@ verifie('Halle : ticket moyen 12,50 €, 2,6 lignes, 57,5 % de croisées', $h['4
 verifie('Halle : objectif atteint à 80 %, 5 tartes par vendeuse', $h['4']['atteinte'] === 80.0 && $h['4']['pieces']['tartes'] === 5.0, json_encode($h['4']));
 verifie('Halle : sa cible en face', $h['4']['cible'] === 55.0 && $h['5']['cible'] === null);
 verifie('le réseau : 160 tickets, 3 vendeuses, 11,88 € de ticket moyen', $moy['reseau']['tickets'] === 160 && $moy['reseau']['vendeuses'] === 3.0 && $moy['reseau']['ticketMoyen'] === 11.88, json_encode($moy['reseau']));
+
+// --- 9. qui paie : la marque, le magasin, un sponsor --------------------------------------------
+echo "Qui paie\n";
+verifie('la marque par défaut', primesAppPayeur([]) === ['payeur' => 'marque', 'sponsor' => '']);
+verifie('un sponsor nommé', primesAppPayeur(['payeur' => 'sponsor', 'sponsor' => ' Lavazza ']) === ['payeur' => 'sponsor', 'sponsor' => 'Lavazza']);
+verifie('un sponsor sans nom reste à la marque', primesAppPayeur(['payeur' => 'sponsor', 'sponsor' => '']) === ['payeur' => 'marque', 'sponsor' => '']);
+verifie('un payeur inconnu : la marque', primesAppPayeur(['payeur' => 'banque']) === ['payeur' => 'marque', 'sponsor' => '']);
+$GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => [
+    ['type' => 'target', 'cle' => 'croisees', 'montant' => 50, 'categorie' => 'Boissons chaudes'],
+    ['type' => 'target', 'cle' => 'objectif', 'montant' => 50, 'payeur' => 'magasin'],
+    ['type' => 'categorie', 'cle' => 'tartes', 'lib' => 'Queen of Tartes', 'motif' => 'tarte', 'montant' => 50, 'payeur' => 'sponsor', 'sponsor' => 'Moulins Dumont']],
+    'externes' => ['record' => ['payeur' => 'magasin'], 'meilleure' => ['payeur' => 'sponsor', 'sponsor' => 'Lavazza']], 'sms' => ['actif' => true]];
+wr_primes_app();
+relire();
+verifie('chaque prime garde son payeur', primesPayeurDe('objectif') === 'magasin' && primesPayeurDe('tartes') === 'sponsor:Moulins Dumont' && primesPayeurDe('croisees') === 'marque');
+verifie('le record et la meilleure vendeuse aussi', primesPayeurDe('record') === 'magasin' && primesPayeurDe('meilleure') === 'sponsor:Lavazza');
+verifie('les SMS à la réussite sont activés', primesAppReglages()['sms']['actif'] === true);
+verifie('le payeur passe au journal', str_contains(end($GLOBALS['JOURNAL']), 'Queen of Tartes 50 € (sponsor Moulins Dumont)') && str_contains(end($GLOBALS['JOURNAL']), 'SMS à la réussite activés'));
+
+// --- 10. les ventes croisées d'une catégorie -----------------------------------------------------
+echo "Les ventes croisées d'une catégorie\n";
+verifie('la catégorie réglée', croiseesReglages()['categorie'] === 'Boissons chaudes' && pvCroiseesCategorie() === 'Boissons chaudes');
+$mk = date('Y-m', strtotime('first day of last month'));
+$GLOBALS['TABLES']['shops'] = [['id' => 4, 'name' => 'Atelier by - Halle']];
+$GLOBALS['REGLAGES'] = array_filter($GLOBALS['REGLAGES'], static fn ($k) => !str_starts_with((string) $k, 'pvL'), ARRAY_FILTER_USE_KEY);
+// Le 1 : compté par catégorie ; le 2 : moissonné avant (sans « k »).
+$GLOBALS['REGLAGES']['pvL4:' . $mk . '-01'] = ['v' => 3, 'k' => 1, 'f' => ['tartes'], 'e' => [2 => ['t' => 40, 'l' => 90, 'c' => 20, 'cc' => ['Boissons chaudes' => 8, 'Viennoiseries' => 15]]]];
+$GLOBALS['REGLAGES']['pvL4:' . $mk . '-02'] = ['v' => 3, 'f' => [], 'e' => [2 => ['t' => 30, 'l' => 70, 'c' => 15]]];
+$crK = pvCroiseesMois($mk);
+verifie('la prime compte les tickets avec une boisson chaude', $crK['e'][2]['c'] === 8, json_encode($crK['e'][2]));
+verifie('sur les seuls jours comptés par catégorie', $crK['e'][2]['t'] === 40 && !$crK['complet']);
+verifie('un jour sans le compte par catégorie se recompte', !pvFamillesOk($GLOBALS['REGLAGES']['pvL4:' . $mk . '-02'], 4, $mk . '-02', pvFamillesRequises()));
+verifie('un jour compté par catégorie est à jour', pvFamillesOk($GLOBALS['REGLAGES']['pvL4:' . $mk . '-01'], 4, $mk . '-01', pvFamillesRequises()));
+verifie('le menu déroulant : les catégories, sans les bundles', primesCategories() === ['Quiches', 'Tartes'], json_encode(primesCategories()));
+
+// --- 11. le SMS à la réussite --------------------------------------------------------------
+echo "Le SMS à la réussite\n";
+verifie('un numéro belge national devient international', smsNumero('0470 12 34 56') === '+32470123456');
+verifie('0032 devient +32', smsNumero('0032470123456') === '+32470123456' && smsNumero('+32 470 12 34 56') === '+32470123456');
+verifie('un numéro trop court refusé', smsNumero('123') === null && smsNumero('') === null);
+$pSms = ['id' => 2, 'nom' => 'Léa Dupont', 'total' => 100.0, 'croisees' => ['montant' => 50], 'magasin' => 0, 'concours' => ['titres' => [['lib' => 'Queen of Quiches']]], 'promo' => ['titres' => []], 'record' => ['montant' => 0], 'meilleure' => 0];
+$txt = primesSmsTexte($pSms, '2026-10');
+verifie('le texte : prénom, mois, total, primes', $txt === 'Bravo Léa ! Octobre : 100 € de primes gagnées (Ventes croisées, Queen of Quiches). L’Atelier', $txt);
+verifie('il tient dans un SMS', mb_strlen($txt) <= 160);
+$GLOBALS['TABLES']['employes'] = [['id' => 2, 'id_shop' => 4, 'display_name' => 'Léa', 'name' => '', 'surname' => '', 'phone' => '0470123456']];
+$GLOBALS['REGLAGES']['pvEmployesTel'] = ['t' => [2 => '0470123456']];
+$r = primesSmsReussite('2026-10', [$pSms, ['id' => 3, 'nom' => 'Inès', 'total' => 50.0], ['id' => 4, 'nom' => 'Julie', 'total' => 0.0]]);
+verifie('sans fournisseur : rien ne part, c’est dit', $r['actif'] && !$r['configure'] && $r['envoyes'] === 0 && $r['echecs'] === 1 && $r['sansNumero'] === 1, json_encode($r));
+verifie('le journal le dit', str_contains(end($GLOBALS['JOURNAL']), 'aucun fournisseur SMS réglé'));
+$GLOBALS['CORPS'] = ['sms' => ['actif' => false]];
+wr_primes_app(); relire();
+verifie('éteints : aucun SMS', primesSmsReussite('2026-10', [$pSms]) === ['actif' => false]);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

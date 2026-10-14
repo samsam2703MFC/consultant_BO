@@ -7097,7 +7097,7 @@ class App {
     const R = moy ? moy.reseau : null;
     const moyDe = e => {
       if (!R) { return ''; }
-      if (e.cle === 'croisees') { return pc(R.croisees) + (R.ticketsVendeuse != null ? ' · ' + R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''); }
+      if (e.cle === 'croisees') { return [R.croisees != null ? pc(R.croisees) : '', R.ticketsVendeuse != null ? R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''].filter(Boolean).join(' · '); }
       if (e.cle === 'objectif') { return R.atteinte != null ? pc(R.atteinte) + ' de l’objectif' : ''; }
       if (e.type === 'categorie') { const v = (R.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
       if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
@@ -7115,9 +7115,13 @@ class App {
         poserMontant: ev => { const v = num(ev.target.value); if (v != null) { e.montant = Math.max(0, Math.round(v)); } re(); },
         poserLib: ev => { e.lib = ev.target.value; re(); },
         poser: (cle, entier) => ev => { const v = entier ? num(ev.target.value) : ev.target.value; if (v != null) { e[cle] = entier ? Math.max(0, Math.round(v)) : v; } re(); },
-        retirer: () => { app.liste.splice(i, 1); re(); } };
+        retirer: () => { app.liste.splice(i, 1); re(); },
+        payeur: e.payeur || 'marque', sponsor: e.sponsor || '',
+        poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); } };
       if (e.cle === 'croisees') {
         Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
+          categorie: e.categorie || '', categories: [''].concat(d.categories || []).concat(e.categorie && !(d.categories || []).includes(e.categorie) ? [e.categorie] : []),
+          poserCategorie: ev => { e.categorie = ev.target.value; re(); },
           poserCibleDefaut: ev => { const v = num(ev.target.value); if (v != null) { cr.cibleDefaut = v; } reCr(); },
           poserMinTickets: ev => { const v = num(ev.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } reCr(); } });
       } else if (e.cle === 'objectif') {
@@ -7131,18 +7135,22 @@ class App {
       }
       lignes.push(L);
       // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
+      const ext = cle => { app.externes = app.externes || {}; app.externes[cle] = app.externes[cle] || { payeur: 'marque', sponsor: '' }; const x = app.externes[cle];
+        return { payeur: x.payeur || 'marque', sponsor: x.sponsor || '', poserPayeur: ev => { x.payeur = ev.target.value; re(); }, poserSponsor: ev => { x.sponsor = ev.target.value; re(); } }; };
       if (e.cle === 'croisees' && (d.record || {}).eurDixieme > 0) {
-        lignes.push({ externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
+        lignes.push(Object.assign(ext('record'), { externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
           montant: d.record.eurDixieme + ' € par dixième' + (d.record.maxDixiemes > 1 ? ', ' + d.record.maxDixiemes + ' au plus' : ''),
-          qui: 'chacune', moyenne: R && R.lignesTicket != null ? fr(R.lignesTicket, 2) + ' lignes / ticket' : '' });
+          qui: 'chacune', moyenne: R && R.lignesTicket != null ? fr(R.lignesTicket, 2) + ' lignes / ticket' : '' }));
       }
       if (e.cle === 'objectif' && (d.meilleure || {}).magasin > 0) {
-        lignes.push({ externe: true, type: 'classement', typLib: 'Classement', emo: '🏆', lib: 'Meilleure vendeuse', texte: 'CA par heure prestée, pondéré par les heures',
-          montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '' });
+        lignes.push(Object.assign(ext('meilleure'), { externe: true, type: 'classement', typLib: 'Classement', emo: '🏆', lib: 'Meilleure vendeuse', texte: 'CA par heure prestée, pondéré par les heures',
+          montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '' }));
       }
     });
     common.prApp = {
       lignes, recompense: String(app.recompense),
+      sms: !!(app.sms && app.sms.actif), smsConfigure: !!d.smsConfigure,
+      poserSms: ev => { app.sms = { actif: !!ev.target.checked }; re(); },
       poserRecompense: ev => { const v = num(ev.target.value); if (v != null) { app.recompense = Math.max(0, Math.round(v)); } re(); },
       ajouterCategorie: () => { app.liste.push({ type: 'categorie', cle: '', lib: '', motif: '', minPieces: 10, montant: app.recompense, actif: true, classement: true }); re(); },
       versPromos: () => { const el = document.querySelector('[data-pr="promos"]'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } },
@@ -7152,7 +7160,7 @@ class App {
         suite.then(r1 => {
           if (r1 && r1.ok === false) { return; }
           if (!appModifie) { finir('Ventes croisées enregistrées'); return; }
-          this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste }).then(r => {
+          this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms }).then(r => {
             if (r && r.ok === false) { return; }
             finir('Primes de l’app enregistrées');
           });
@@ -7188,6 +7196,7 @@ class App {
       ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })),
       chargement: moy === undefined, motif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : '',
       periode: moy ? moy.mois.map(x => x.lib).join(', ') : '', nMois: n + ' mois',
+      croiseesCat: (d.croisees || {}).categorie || '',
       cats: cats.map(c => c.lib), promos: prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '' })),
       lignes: !moy ? [] : moy.magasins.map(m => Object.assign(ligneMoy(m), {
         nom: court(m.nom), promos: prs.map(p => fr((p.magasins || {})[m.id], 0)),
@@ -7312,6 +7321,7 @@ class App {
       concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Catégories', concoursActif: !!(pm && pm.concours && pm.concours.actif),
       promosLib: pm && pm.promos && pm.promos.liste ? pm.promos.liste.map(k => k.lib).join(' · ') : 'Promos', promosActif: !!(pm && pm.promos && pm.promos.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
+      parPayeur: !pm || !pm.totaux || !pm.totaux.parPayeur ? '' : Object.keys(pm.totaux.parPayeur).map(k => (k.startsWith('sponsor:') ? 'sponsor ' + k.slice(8) : k) + ' ' + eur(pm.totaux.parPayeur[k])).join(' · '),
       enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · primes de l’app : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
     };
 

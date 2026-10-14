@@ -1,4 +1,4 @@
-{# primes/primes.twig — « Mes primes » (14/10/2026) : une carte par prime (target, catégorie, promo) et sa récompense ; le classement à la Strava dans un menu déroulant. Pas de texte d'explication. #}
+{# primes/primes.twig — « Mes primes » (14/10/2026) : une carte par prime (target, catégorie, promo) et sa récompense, en gris tant qu'elle n'est pas gagnée ; le classement à la Strava dans un menu déroulant. Pas de texte d'explication. #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'primes' %}
 {% set T = translations %}
@@ -32,9 +32,9 @@
 {# Les primes fixes portent leur nom dans la langue de l'app ; les catégories et les promos, celui que l'admin leur donne. #}
 {% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, meilleure: T.best_seller ?? null } %}
 {% for c in p.cartes %}
-<div class="pp {{ c.etat == 'gagne' ? 'gagne' : (c.etat == 'tete' ? 'tete' : '') }}" data-carte="{{ c.cle }}">
+<div class="pp {{ c.etat == 'gagne' ? 'gagne' : (c.etat == 'tete' ? 'tete' : 'non') }}" data-carte="{{ c.cle }}">
   <div class="pp-h"><span class="emo">{{ c.emo }}</span>
-    <div class="t"><b>{{ nomFixe[c.cle] ?? c.lib }}</b><span class="typ {{ c.type }}">{{ attribute(T, 'type_' ~ c.type) ?? c.type }}</span></div>
+    <div class="t"><b>{{ nomFixe[c.cle] ?? c.lib }}{% if c.categorie ?? '' %} · {{ c.categorie }}{% endif %}</b><span class="typ {{ c.type }}">{{ attribute(T, 'type_' ~ c.type) ?? c.type }}</span></div>
     <span class="m">{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(0, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% if c.max and c.gain <= 0 %}<small>max</small>{% endif %}</span>
   </div>
   <div class="pp-b">
@@ -67,10 +67,10 @@
 <div class="titre-section" id="classement"><h2>{{ T.leaderboard ?? 'Classement' }}</h2><small>{{ mois(p.m) }}</small></div>
 <div class="dd" data-cl-dd>
   <span class="emo" data-cl-emo>{{ c0.type == 'target' ? '🛍️' : (c0.type == 'promo' ? '🏷️' : '👑') }}</span>
-  <div class="t"><b data-cl-lib>{{ nomFixe[c0.cle] ?? c0.lib }}</b><span class="typ {{ c0.type }}" data-cl-typ>{{ attribute(T, 'type_' ~ c0.type) ?? c0.type }}</span></div>
+  <div class="t"><b data-cl-lib>{{ nomFixe[c0.cle] ?? c0.lib }}{% if c0.categorie ?? '' %} · {{ c0.categorie }}{% endif %}</b><span class="typ {{ c0.type }}" data-cl-typ>{{ attribute(T, 'type_' ~ c0.type) ?? c0.type }}</span></div>
   <i class="bi bi-chevron-down"></i>
   <select data-cl-choix aria-label="{{ T.leaderboard ?? 'Classement' }}">
-    {% for x in cls %}<option value="{{ x.cle }}" data-emo="{{ x.type == 'target' ? '🛍️' : (x.type == 'promo' ? '🏷️' : '👑') }}" data-type="{{ x.type }}" data-typ="{{ attribute(T, 'type_' ~ x.type) ?? x.type }}">{{ nomFixe[x.cle] ?? x.lib }}</option>{% endfor %}
+    {% for x in cls %}<option value="{{ x.cle }}" data-emo="{{ x.type == 'target' ? '🛍️' : (x.type == 'promo' ? '🏷️' : '👑') }}" data-type="{{ x.type }}" data-typ="{{ attribute(T, 'type_' ~ x.type) ?? x.type }}">{{ nomFixe[x.cle] ?? x.lib }}{% if x.categorie ?? '' %} · {{ x.categorie }}{% endif %}</option>{% endfor %}
   </select>
 </div>
 <div class="cl-carte" data-classements>

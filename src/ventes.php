@@ -475,6 +475,7 @@ function venteEmployesPanel(): array
     if ($chemins === []) { return $memo; }
     $res = PanelApi::getParallele($chemins, 8);
     $muet = false;
+    $tels = [];
     foreach ($chemins as $sid => $ch) {
         $l = $res[$sid] ?? null;
         if (!is_array($l)) { $muet = true; continue; }
@@ -484,12 +485,17 @@ function venteEmployesPanel(): array
             $nom = trim((string) ($em['display_name'] ?? ''));
             if ($nom === '') { $nom = trim(((string) ($em['name'] ?? '')) . ' ' . ((string) ($em['surname'] ?? ''))); }
             $memo[$id] = ['nom' => $nom !== '' ? $nom : 'Employé ' . $id, 'shop' => (string) ($em['id_shop'] ?? $sid)];
+            // Le téléphone, à part (les SMS à la réussite des primes) : il ne voyage pas avec le nom.
+            $tel = trim((string) ($em['phone'] ?? ($em['mobile'] ?? '')));
+            if ($tel !== '') { $tels[$id] = $tel; }
         }
     }
     // Un magasin muet : on garde ce qu'on a lu, sans le graver — la prochaine lecture réessaie.
     if (!$muet && $memo !== []) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['pvEmployes', json_encode(['quand' => time(), 'e' => $memo], JSON_UNESCAPED_UNICODE)]);
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['pvEmployesTel', json_encode(['quand' => time(), 't' => $tels])]);
     }
     return $memo;
 }

@@ -517,7 +517,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 
 | Prime | Type | Mesure | Qui gagne la récompense | Réglage |
 |---|---|---|---|---|
-| Ventes croisées | target | ses tickets à **2 lignes ou plus** (deux produits différents ; trois croissants font une ligne), en % de ses tickets, sur les jours moissonnés | chaque vendeuse dont le taux du mois atteint la **cible du magasin** (sinon celle du réseau), 30 tickets au moins | la récompense dans la liste ; `POST /ventes/croisees {cibleDefaut, cibles: {shop: pct ou ""}, minTickets}` |
+| Ventes croisées | target | ses tickets à **2 lignes ou plus** (deux produits différents ; trois croissants font une ligne) **dont une au moins de la catégorie choisie** (`categorie`, un menu déroulant des catégories du catalogue ; vide : toutes), en % de ses tickets, sur les jours moissonnés | chaque vendeuse dont le taux du mois atteint la **cible du magasin** (sinon celle du réseau), 30 tickets au moins | la récompense et la catégorie dans la liste ; `POST /ventes/croisees {cibleDefaut, cibles: {shop: pct ou ""}, minTickets}` |
 | Objectif magasin | target | l'atteinte de l'**objectif du mois** (le budget, `ceo_shop_month_perf`, sinon le CA théorique), en projection pour le mois en cours | chaque personne du magasin au planning, au-dessus de `heuresMin`, si l'atteinte dépasse `pct` (100 % par défaut) | dans la liste : `pct`, `heuresMin` |
 | Catégories : **Queen of Tartes**, **Queen of Quiches**… | categorie | le nombre de **pièces** d'une famille (un motif sur la catégorie ou le nom : `tarte`, `quiche`) vendues dans le mois à son nom (`q[cle]` de la moisson) | la **1re du magasin**, `minPieces` au moins ; à égalité, moins de tickets gagne. Plus de couronne du réseau payée | dans la liste : `lib`, `motif`, `minPieces` (six au plus ; la clé vient du libellé et ne change plus) |
 | Promos du panel | promo | les **bundles vendus** (le produit du bundle, une ligne du ticket) ou les pièces des produits d'une offre « X achetés + Y offerts », sur les **seules dates** et dans les **seuls magasins** de la promotion (`qp[cle]`) | la **1re du magasin** de la promo, `minPieces` au moins | une promo se crée depuis la liste des promotions du panel (`GET /ventes/primes-promos`) ; six au plus |
@@ -527,12 +527,15 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 
 - `POST /ventes/primes-app {recompense, liste: [{type: target|categorie|promo, cle, lib, actif, montant,
   classement, …}]}` : la liste des primes (`ceo_app_setting.ventePrimesApp`). Les deux targets (`croisees`,
-  `objectif` : `pct`, `heuresMin`) sont toujours là ; une catégorie porte `motif` et `minPieces` ; une promo
+  `objectif` : `pct`, `heuresMin` ; `croisees` : `categorie`) sont toujours là ; une catégorie porte `motif` et `minPieces` ; une promo
   nouvelle arrive avec sa référence `ref: {source: api|catalogue, id}`, que le cockpit relit dans la liste des
   promotions (`primesPromos`) : rien de ce que le navigateur envoie sur ses produits n'est cru, une promo déjà
   là garde ce qu'elle avait. `classement` : la prime a sa liste dans le menu déroulant de l'app. Au premier
   appel, la liste se déduit des réglages d'avant (`venteConcoursTQ` → catégories, au montant de leur couronne
-  du magasin ; `ventePrimeMagasin.heuresMin`). Au journal ; les fiches du mois en cours se recalculent.
+  du magasin ; `ventePrimeMagasin.heuresMin`). **Qui paie** chaque prime : `payeur: marque|magasin|sponsor`
+  et `sponsor` (son nom ; un sponsor sans nom reste à la marque) ; `externes: {record, meilleure}` dit qui paie
+  ces deux-là. `sms: {actif}` : le **SMS à la réussite** (plus bas). Au journal ; les fiches du mois en cours
+  se recalculent.
   `POST /ventes/prime-magasin` et `POST /ventes/concours` n'existent plus.
 - `GET /ventes/primes-promos[?frais=1]` : les promotions qu'une prime peut suivre, gravées une heure
   (`primesPromos`) : `{api, erreurs: [{chemin, code, erreur}], liste: [{source, sorte: bundle|xy, id, nom,
@@ -549,8 +552,9 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   magasins: {shop: pièces par vendeuse depuis le début}, reseau}]`. Écran : Équipe & ventes › Paramètres,
   « Moyennes par magasin », la cible de ventes croisées de chaque magasin en face, « caler sur la moyenne +
   n pts », export CSV.
-- `GET /ventes/primes-reglages` : `{app (la liste), magasin, croisees, concours, google, record, meilleure,
-  magasins, m, lib}`. Écran : Équipe & ventes › **Paramètres** (la liste des primes, les promotions du panel,
+- `GET /ventes/primes-reglages` : `{app (la liste, externes, sms), smsConfigure, categories (le menu déroulant des
+  ventes croisées : les catégories du catalogue, sans les bundles), magasin, croisees, concours, google, record,
+  meilleure, magasins, m, lib}`. Écran : Équipe & ventes › **Paramètres** (la liste des primes, les promotions du panel,
   les moyennes par magasin, la note Google ; il s'ouvre même si le classement n'a pas pu être calculé).
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
@@ -579,13 +583,25 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   `magasins[] {id, nom, objectif, ca, atteinte, atteinteProj, palier: {pct, montant}, eligibles, equipe, cible,
   google}`, `personnes[] {id, nom, shopId, magasinNom, heures, tickets, croisees: {taux, montant}, record,
   meilleure, concours: {pieces, titres, montant}, promo: {pieces, titres, montant}, magasin, coef, brut,
-  avecCoef, total}`, `totaux`, `concours`, `promos: {actif, liste[]}`, `google`, `enregistre`. Écran :
-  Équipe & ventes › Résultats. **« Enregistrer les primes »** (`POST /ventes/primes {m}`) grave en plus, sous
-  `appWorker`, les primes de l'app de chacune (ventes croisées, catégories, promos, objectif magasin, après
-  coefficient ; identifiants et montants, jamais de nom) et une ligne de journal par personne primée.
+  avecCoef, total, parPayeur, parPayeurApp}`, `totaux` (avec `parPayeur` : `{marque, magasin, "sponsor:Nom"}`,
+  après coefficient), `magasins[].parPayeur`, `concours`, `promos: {actif, liste[]}`, `google`, `enregistre`.
+  Écran : Équipe & ventes › Résultats (« Payé par : … »). **« Enregistrer les primes »** (`POST /ventes/primes
+  {m}`) grave en plus, sous `appWorker`, les primes de l'app de chacune (ventes croisées, catégories, promos,
+  objectif magasin, après coefficient ; identifiants, montants et `parPayeur`, jamais de nom) et une ligne de
+  journal par personne primée, qui dit qui paie. Puis, si le **SMS à la réussite** est activé, chaque personne
+  primée reçoit un SMS (« Bravo Léa ! Octobre : 100 € de primes gagnées (Ventes croisées, Queen of Quiches). »),
+  une fois par mois (`primesSms{mois}`) : `appWorker.sms: {actif, configure, envoyes, echecs, sansNumero}`, et
+  une ligne de journal. La réussite est alors acquise, pas une projection. Le numéro vient de la fiche
+  (`franchisee_employee.phone`, sinon `/shops/{id}/employees` du panel, gardé à part : `pvEmployesTel`), mis au
+  format +32. Le fournisseur : Twilio, réglé dans `config/config.php › sms` (`sid`, `token`, `expediteur`) ou
+  `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
+  le disent.
 - La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte `c` (les tickets à deux lignes ou
-  plus), `q` les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de
-  produits, `promoFamilles`) — et `tq` en tout, par vendeuse ; `f` liste les familles comptées ce jour-là.
+  plus), `cc` ces mêmes tickets par catégorie de produits qu'ils contiennent (`k` : le jour les compte), `q`
+  les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de produits,
+  `promoFamilles`) — et `tq` en tout, par vendeuse ; `f` liste les familles comptées ce jour-là. Avec une
+  catégorie de ventes croisées réglée, `c` se lit dans `cc` partout (le mois, les semaines, les moyennes, le
+  compteur du jour) et les jours sans `k` depuis le mois d'avant se recomptent.
   Le complément du cron (`pvCroiseesComplement`, 1 500 tickets par heure) recompte les jours des versions
   d'avant **et** les jours qui n'ont pas une famille qu'ils doivent porter (`pvFamillesRequises` : une
   catégorie depuis le mois d'avant, une promo sur ses dates et ses magasins). `pvCroiseesMois` rend aussi

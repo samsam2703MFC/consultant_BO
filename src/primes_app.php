@@ -97,10 +97,35 @@ function primesAppClePromo(array $promo): string
 }
 
 /**
+ * Qui paie une prime (14/10/2026) : la marque, le magasin, ou un sponsor nommé. La marque par défaut,
+ * comme avant ; un sponsor sans nom reste à la marque.
+ */
+function primesAppPayeur(array $x): array
+{
+    $p = (string) ($x['payeur'] ?? 'marque');
+    $nom = mb_substr(trim((string) ($x['sponsor'] ?? '')), 0, 60);
+    if ($p === 'sponsor' && $nom !== '') { return ['payeur' => 'sponsor', 'sponsor' => $nom]; }
+    return ['payeur' => $p === 'magasin' ? 'magasin' : 'marque', 'sponsor' => ''];
+}
+
+/** La clé de comptabilité d'un payeur : « marque », « magasin » ou « sponsor:Nom ». */
+function primesPayeurCle(array $e): string
+{
+    return ($e['payeur'] ?? 'marque') === 'sponsor' ? 'sponsor:' . ($e['sponsor'] ?? '') : (($e['payeur'] ?? '') === 'magasin' ? 'magasin' : 'marque');
+}
+
+/**
  * Une entrée de la liste, nettoyée, ou null si elle ne tient pas debout. Les deux targets ont leur
  * clé fixe ; une catégorie tire la sienne de son titre (concoursEntree) ; une promo, de sa promotion.
+ * Chacune dit qui la paie.
  */
 function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
+{
+    $e = primesAppEntreeValideSansPayeur($x, $i, $recompense);
+    return $e === null ? null : $e + primesAppPayeur($x);
+}
+
+function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?array
 {
     $type = (string) ($x['type'] ?? '');
     $actif = !array_key_exists('actif', $x) || (bool) $x['actif'];
@@ -108,8 +133,11 @@ function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
     if ($type === 'target') {
         $cle = (string) ($x['cle'] ?? '');
         if ($cle === 'croisees') {
+            // La catégorie (14/10/2026) : une vente croisée est un ticket à deux lignes ou plus dont une au moins de cette
+            // catégorie de produits ; vide : toutes les catégories (la règle d'avant).
             return ['cle' => 'croisees', 'type' => 'target', 'lib' => mb_substr(trim((string) ($x['lib'] ?? '')), 0, 40) ?: 'Ventes croisées',
-                'actif' => $actif, 'montant' => $montant, 'classement' => !array_key_exists('classement', $x) || (bool) $x['classement']];
+                'actif' => $actif, 'montant' => $montant, 'classement' => !array_key_exists('classement', $x) || (bool) $x['classement'],
+                'categorie' => mb_substr(trim((string) ($x['categorie'] ?? '')), 0, 80)];
         }
         if ($cle === 'objectif') {
             $pct = (isset($x['pct']) && is_numeric($x['pct'])) ? max(50, min(200, (int) round((float) $x['pct']))) : 100;
@@ -157,7 +185,7 @@ function primesAppListePropre(array $liste, int $recompense): array
     $def = primesAppDefauts()['liste'];
     foreach (['objectif', 'croisees'] as $cle) {
         if (isset($vus[$cle])) { continue; }
-        foreach ($def as $d) { if ($d['cle'] === $cle) { array_unshift($out, array_merge($d, ['montant' => $recompense])); } }
+        foreach ($def as $d) { if ($d['cle'] === $cle) { array_unshift($out, array_merge($d, ['montant' => $recompense], primesAppPayeur([]))); } }
     }
     // Les targets d'abord, dans leur ordre ; le reste dans l'ordre reçu.
     usort($out, static function ($a, $b) {
@@ -167,15 +195,35 @@ function primesAppListePropre(array $liste, int $recompense): array
     return $out;
 }
 
-/** Le réglage en vigueur : {recompense, liste}. Gardé le temps de la requête ; $relire le relit (après un enregistrement). */
+/**
+ * Le réglage en vigueur : {recompense, liste, externes: {record, meilleure} (qui paie ces deux-là, réglées
+ * ailleurs), sms: {actif}}. Gardé le temps de la requête ; $relire le relit (après un enregistrement).
+ */
 function primesAppReglages(bool $relire = false): array
 {
     static $memo = null;
     if ($memo !== null && !$relire) { return $memo; }
     $c = setting('ventePrimesApp');
-    if (!is_array($c) || !is_array($c['liste'] ?? null)) { return $memo = primesAppDefauts(); }
+    if (!is_array($c) || !is_array($c['liste'] ?? null)) { $c = primesAppDefauts(); }
     $r = primesAppMontant($c['recompense'] ?? null, PRIMES_APP_RECOMPENSE);
-    return $memo = ['recompense' => $r, 'liste' => primesAppListePropre($c['liste'], $r)];
+    return $memo = ['recompense' => $r, 'liste' => primesAppListePropre($c['liste'], $r),
+        'externes' => primesAppExternes($c['externes'] ?? null), 'sms' => ['actif' => (bool) ($c['sms']['actif'] ?? false)]];
+}
+
+/** Qui paie Bats ton record et la meilleure vendeuse : la marque par défaut. */
+function primesAppExternes($x): array
+{
+    $x = is_array($x) ? $x : [];
+    return ['record' => primesAppPayeur((array) ($x['record'] ?? [])), 'meilleure' => primesAppPayeur((array) ($x['meilleure'] ?? []))];
+}
+
+/** Le payeur d'une prime par sa clé (une prime de la liste, « record » ou « meilleure ») : « marque », « magasin », « sponsor:Nom ». */
+function primesPayeurDe(string $cle): string
+{
+    $ext = primesAppReglages()['externes'];
+    if (isset($ext[$cle])) { return primesPayeurCle($ext[$cle]); }
+    $e = primesAppEntree($cle);
+    return $e !== null ? primesPayeurCle($e) : 'marque';
 }
 
 /** Une entrée par sa clé, ou null. */
@@ -242,12 +290,16 @@ function wr_primes_app(): array
         }
         $liste = primesAppListePropre($liste, $r);
     }
-    $out = ['recompense' => $r, 'liste' => $liste];
+    $ext = array_key_exists('externes', $b) ? primesAppExternes($b['externes']) : $cur['externes'];
+    $sms = array_key_exists('sms', $b) ? ['actif' => (bool) (is_array($b['sms']) ? ($b['sms']['actif'] ?? false) : $b['sms'])] : $cur['sms'];
+    $out = ['recompense' => $r, 'liste' => $liste, 'externes' => $ext, 'sms' => $sms];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['ventePrimesApp', json_encode($out, JSON_UNESCAPED_UNICODE)]);
     primesAppReglages(true);
     primesCachesVider();
+    $payeLib = static fn (array $e) => $e['payeur'] === 'sponsor' ? 'sponsor ' . $e['sponsor'] : $e['payeur'];
     journalAdd('CEO', 'Paramètre', 'Primes de l’app', 'Récompense par défaut ' . $r . ' € · ' . implode(' · ', array_map(
-        static fn ($e) => $e['lib'] . ' ' . $e['montant'] . ' €' . ($e['actif'] ? '' : ' (éteinte)'), $liste)));
+        static fn ($e) => $e['lib'] . ' ' . $e['montant'] . ' € (' . $payeLib($e) . ')' . ($e['actif'] ? '' : ' (éteinte)'), $liste))
+        . ' · SMS à la réussite ' . ($sms['actif'] ? 'activés' : 'éteints'));
     return ['ok' => true, 'reglages' => $out];
 }
 
@@ -432,6 +484,8 @@ function pvFamillesRequises(): array
     $out = [];
     $debut = date('Y-m-01', strtotime('first day of last month'));
     foreach (primesAppDuType('categorie', false) as $e) { $out[$e['cle']] = ['du' => $debut, 'au' => null, 'shops' => null, 'promo' => false]; }
+    // Des ventes croisées par catégorie : les jours depuis le mois d'avant doivent porter le compte par catégorie (« k »).
+    if (function_exists('pvCroiseesCategorie') && pvCroiseesCategorie() !== null) { $out['#k'] = ['du' => $debut, 'au' => null, 'shops' => null, 'promo' => true]; }
     $familles = promoFamilles();
     foreach (promoPeriodes() as $cle => $per) {
         if (!isset($familles[$cle])) { continue; }
@@ -449,9 +503,20 @@ function pvFamillesOk(array $entree, int $sid, string $jour, array $requises): b
     $f = isset($entree['f']) && is_array($entree['f']) ? array_fill_keys(array_map('strval', $entree['f']), true) : null;
     foreach ($requises as $cle => $r) {
         if (!promoCouvre($r, $jour, (string) $sid)) { continue; }
+        if ($cle === '#k') { if (!isset($entree['k'])) { return false; } continue; }
         if ($f === null ? $r['promo'] : !isset($f[$cle])) { return false; }
     }
     return true;
+}
+
+/** Les catégories de produits du catalogue, pour le menu déroulant des ventes croisées (sans les bundles). */
+function primesCategories(): array
+{
+    if (!function_exists('svCategories')) { return []; }
+    try { $cats = array_values(array_unique(array_filter(array_map('strval', svCategories()), static fn ($c) => $c !== '' && preg_match('/bundle|promotion/iu', $c) !== 1))); }
+    catch (Throwable $e) { return []; }
+    sort($cats, SORT_NATURAL | SORT_FLAG_CASE);
+    return $cats;
 }
 
 /* ======================================================================
@@ -468,7 +533,8 @@ function pvFamillesOk(array $entree, int $sid, string $jour, array $requises): b
 function primesMoyennesMois(string $m): array
 {
     $clos = date('Y-m-t', strtotime($m . '-01')) < date('Y-m-d');
-    $cle = 'prMoy' . $m;
+    $cat = function_exists('pvCroiseesCategorie') ? pvCroiseesCategorie() : null;
+    $cle = 'prMoy' . $m . ($cat !== null ? ':' . substr(md5($cat), 0, 8) : '');
     $c = setting($cle);
     if ($clos && is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - PRIMES_MOY_CACHE) { return (array) $c['s']; }
     try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
@@ -485,7 +551,8 @@ function primesMoyennesMois(string $m): array
             foreach ((array) $d['e'] as $id => $y) {
                 $t = (int) ($y['t'] ?? 0);
                 $x['t'] += $t; $x['l'] += (int) ($y['l'] ?? 0);
-                if ($v >= 1) { $x['c'] += (int) ($y['c'] ?? 0); $x['tc'] += $t; }
+                $cY = $v >= 1 ? pvCroiseesDe($d, (array) $y, $cat) : null;
+                if ($cY !== null) { $x['c'] += $cY; $x['tc'] += $t; }
                 if ((int) $id > 0) { $x['e'][(int) $id] = ($x['e'][(int) $id] ?? 0) + $t; }
                 if ($v >= 3) { foreach ((array) ($y['q'] ?? []) as $k => $q) { $x['q'][$k] = ($x['q'][$k] ?? 0.0) + (float) $q; } }
             }
@@ -634,7 +701,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
     $eC = primesAppEntree('croisees');
     if ($eC !== null && $eC['actif']) {
         $val = $c['taux']; $cible = (float) $c['cible'];
-        $cartes[] = ['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'lib' => $eC['lib'], 'montant' => (int) $eC['montant'], 'max' => false,
+        $cartes[] = ['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'lib' => $eC['lib'], 'categorie' => (string) ($eC['categorie'] ?? ''), 'montant' => (int) $eC['montant'], 'max' => false,
             'gain' => (float) $c['montant'], 'etat' => $c['montant'] > 0 ? 'gagne' : ($val === null ? 'vide' : 'att'),
             'val' => $val, 'unite' => 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
             'jauge' => primesJauge($val, max(0, $cible - 20), $cible + 10), 'repere' => primesJauge($cible, max(0, $cible - 20), $cible + 10),
@@ -691,4 +758,71 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'motif' => $p === null ? 'pas_compte' : null, 'classement' => isset($clDe[$q['cle']])];
     }
     return $cartes;
+}
+
+/* ======================================================================
+   Le SMS à la réussite
+   ====================================================================== */
+
+/** Le téléphone de chaque personne : la fiche locale (franchisee_employee.phone), sinon celle du panel. */
+function primesTelephones(): array
+{
+    $out = [];
+    try {
+        foreach (Db::rows("SELECT id, phone FROM franchisee_employee WHERE phone IS NOT NULL AND phone <> ''") as $r) { $out[(int) $r['id']] = (string) $r['phone']; }
+    } catch (Throwable $e) { /* pas de colonne phone : le panel seulement */ }
+    $c = setting('pvEmployesTel');
+    foreach ((array) ($c['t'] ?? []) as $id => $tel) { if (!isset($out[(int) $id]) && (string) $tel !== '') { $out[(int) $id] = (string) $tel; } }
+    return $out;
+}
+
+/** Les primes gagnées d'une personne sur le mois (une ligne de primesMoisTous), par leur nom. */
+function primesGagnees(array $p): array
+{
+    $out = [];
+    $nom = static fn (string $cle, string $defaut) => (primesAppEntree($cle)['lib'] ?? '') ?: $defaut;
+    if (($p['croisees']['montant'] ?? 0) > 0) { $out[] = $nom('croisees', 'Ventes croisées'); }
+    if (($p['magasin'] ?? 0) > 0) { $out[] = $nom('objectif', 'Objectif magasin'); }
+    foreach ((array) ($p['concours']['titres'] ?? []) as $t) { $out[] = $t['lib']; }
+    foreach ((array) ($p['promo']['titres'] ?? []) as $t) { $out[] = $t['lib']; }
+    if (($p['record']['montant'] ?? 0) > 0) { $out[] = 'Bats ton record'; }
+    if (($p['meilleure'] ?? 0) > 0) { $out[] = 'Meilleure vendeuse'; }
+    return $out;
+}
+
+/** Le texte du SMS : le prénom, le mois, le total, les primes. Court : il tient dans un SMS. */
+function primesSmsTexte(array $p, string $m): string
+{
+    $prenom = explode(' ', trim((string) $p['nom']))[0] ?? '';
+    $lib = function_exists('primesLibMois') ? primesLibMois($m) : $m;
+    return 'Bravo ' . $prenom . ' ! ' . ucfirst(explode(' ', $lib)[0]) . ' : ' . number_format((float) $p['total'], 0, ',', ' ') . ' € de primes gagnées ('
+        . implode(', ', primesGagnees($p)) . '). L’Atelier';
+}
+
+/**
+ * Les SMS à la réussite d'un mois, au moment où le CEO enregistre les primes (la réussite est alors
+ * acquise, pas une projection) : un SMS par personne primée, s'ils sont activés. Jamais deux fois au
+ * même mois (primesSms{mois}). Rend {actif, configure, envoyes, echecs, sansNumero}.
+ */
+function primesSmsReussite(string $m, array $personnes): array
+{
+    $reg = primesAppReglages()['sms'];
+    if (!$reg['actif']) { return ['actif' => false]; }
+    $configure = function_exists('smsConfigure') && smsConfigure();
+    $deja = setting('primesSms' . $m);
+    $deja = is_array($deja) ? $deja : [];
+    $tels = primesTelephones();
+    $n = ['envoyes' => 0, 'echecs' => 0, 'sansNumero' => 0];
+    foreach ($personnes as $p) {
+        if ((float) ($p['total'] ?? 0) <= 0 || !empty($deja[(string) $p['id']]['ok'])) { continue; }
+        $num = function_exists('smsNumero') ? smsNumero($tels[(int) $p['id']] ?? null) : null;
+        if ($num === null) { $n['sansNumero']++; continue; }
+        $r = $configure ? smsEnvoyer($num, primesSmsTexte($p, $m)) : ['ok' => false, 'erreur' => 'aucun fournisseur SMS réglé'];
+        $deja[(string) $p['id']] = ['quand' => date('Y-m-d H:i'), 'ok' => $r['ok'], 'erreur' => $r['erreur']];
+        $n[$r['ok'] ? 'envoyes' : 'echecs']++;
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesSms' . $m, json_encode($deja, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Vente', null, 'SMS à la réussite ' . $m . ' — ' . $n['envoyes'] . ' envoyé(s), ' . $n['echecs'] . ' en échec, ' . $n['sansNumero'] . ' sans numéro'
+        . ($configure ? '' : ' (aucun fournisseur SMS réglé : config.php › sms)'));
+    return ['actif' => true, 'configure' => $configure] + $n;
 }

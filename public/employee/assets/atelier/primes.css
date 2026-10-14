@@ -386,3 +386,13 @@ a.acc-etape{text-decoration:none;color:inherit}
 .cl-row .av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);color:#fff;flex:0 0 auto}
 .cl-row.moi .av{box-shadow:0 0 0 2px var(--la-rubis)}
 .cl-row.ecart{justify-content:center;color:var(--la-muet);padding:2px 0;border-top:none;letter-spacing:2px}
+/* Une prime pas (encore) gagnée : en gris (14/10/2026). Gagnée : en vert ; en tête : en or. */
+.pp.non{background:#f3f0eb;border-color:rgba(34,34,34,.06);box-shadow:none}
+.pp.non .pp-h .emo{filter:grayscale(1);opacity:.55;background:#e8e3dc}
+.pp.non .pp-h .t b,.pp.non .pp-b .v{color:#8c857c}
+.pp.non .pp-h .m{color:#9d968d}
+.pp.non .jg{background:#e6e1da}
+.pp.non .jg i{background:#b9b1a6}
+.pp.non .typ{filter:grayscale(1);opacity:.7}
+.pp.non .etat.att,.pp.non .etat.mu{background:#e6e1da;color:#7a736a}
+.pp.non .pp-p b{color:#7a736a}

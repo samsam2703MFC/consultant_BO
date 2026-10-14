@@ -15,6 +15,12 @@ Les choix faits au moment de coder, sans réponse sur les points ouverts :
   primes) : l'app les montre comme des cartes, le cockpit comme des lignes « réglé dans Targets & primes ».
   Les passer à une récompense unique reste possible.
 
+Ajouts du 14/10/2026, deuxième demande : **qui paie** chaque prime (la marque, le magasin ou un sponsor
+nommé), réglé dans les paramètres et compté dans les Résultats ; les **ventes croisées par catégorie** (un
+menu déroulant des catégories du catalogue) ; les primes **pas encore gagnées en gris** dans l'app ; le **SMS
+à la réussite** (un interrupteur dans les paramètres), envoyé quand le CEO enregistre les primes du mois,
+par Twilio dès que `config.php › sms` est rempli.
+
 Demande du 14/10/2026, sur `/consulant_bo/employee/primes` : chaque tableau est une prime (un
 target, une catégorie de produits ou une promotion) avec sa récompense, réglée par l'admin,
 50 € par défaut. Le classement à la Strava se trouve dans un menu déroulant (Queen of Tartes, Queen

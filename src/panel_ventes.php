@@ -162,6 +162,9 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
     $idsDe = [];
     foreach (function_exists('concoursFamilles') ? concoursFamilles() : [] as $cleF => $motifF) { $idsDe[$cleF] = pvFamilleIds($motifF); }
     foreach (function_exists('promoFamilles') ? promoFamilles() : [] as $cleF => $ids) { $idsDe[$cleF] = $ids; }
+    // Les ventes croisées par catégorie (14/10/2026) : pour chaque ticket à deux lignes ou plus, les catégories de
+    // produits qu'il contient (« cc ») — la prime choisit la sienne sans relire les tickets.
+    $catDe = function_exists('svCategories') ? svCategories() : [];
     foreach (array_chunk(array_keys($tickets), 40, true) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -172,7 +175,7 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
             // partiel paierait des primes fausses.
             if (!is_array($t)) { return null; }
             $e = (int) ($t['id_employee'] ?? $tickets[$id]);
-            if (!isset($emp[$e])) { $emp[$e] = ['l' => 0, 't' => 0, 'c' => 0, 'tq' => 0.0, 'q' => []]; }
+            if (!isset($emp[$e])) { $emp[$e] = ['l' => 0, 't' => 0, 'c' => 0, 'cc' => [], 'tq' => 0.0, 'q' => []]; }
             $emp[$e]['t']++;
             // La règle maison : le nombre de LIGNES du ticket, pas la somme
             // des quantités — la même mesure que la table locale.
@@ -180,7 +183,12 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
             $n = count($lignes);
             $emp[$e]['l'] += $n;
             // La VENTE CROISÉE (primes de l'app worker, 06/10/2026) : un ticket à deux lignes ou plus.
-            if ($n >= 2) { $emp[$e]['c']++; }
+            if ($n >= 2) {
+                $emp[$e]['c']++;
+                $cats = [];
+                foreach ($lignes as $l) { $cat = $catDe[(int) ($l['id_product'] ?? 0)] ?? ''; if ($cat !== '') { $cats[$cat] = true; } }
+                foreach ($cats as $cat => $_) { $emp[$e]['cc'][$cat] = ($emp[$e]['cc'][$cat] ?? 0) + 1; }
+            }
             // Les concours : les pièces de chaque famille vendues sur le ticket (« q » par famille, « tq » en tout).
             foreach ($lignes as $l) {
                 $pid = (int) ($l['id_product'] ?? 0); $qte = (float) ($l['quantity'] ?? 1);
@@ -197,7 +205,7 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
     $cout += count($tickets);
     // « f » : les familles comptées ce jour-là — une famille ajoutée plus tard se recompte (pvCroiseesComplement).
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        [$cle, json_encode(['quand' => time(), 'v' => PV_LIGNES_VERSION, 'f' => array_map('strval', array_keys($idsDe)), 'e' => $emp], JSON_UNESCAPED_UNICODE)]);
+        [$cle, json_encode(['quand' => time(), 'v' => PV_LIGNES_VERSION, 'f' => array_map('strval', array_keys($idsDe))] + ($catDe !== [] ? ['k' => 1] : []) + ['e' => $emp], JSON_UNESCAPED_UNICODE)]);
     return $emp;
 }
 
@@ -322,6 +330,24 @@ function pvLignesAvecC(array $e): bool
     return true;
 }
 
+/** La catégorie des ventes croisées réglée dans les primes (14/10/2026) ; null : toutes les catégories. */
+function pvCroiseesCategorie(): ?string
+{
+    $c = function_exists('croiseesReglages') ? (string) (croiseesReglages()['categorie'] ?? '') : '';
+    return $c !== '' ? $c : null;
+}
+
+/**
+ * Les ventes croisées d'une personne sur un jour moissonné : tous ses tickets à deux lignes ou plus, ou
+ * ceux qui contiennent un produit de la catégorie réglée. Null : ce jour ne les compte pas encore par
+ * catégorie (« k »), il attend d'être recompté.
+ */
+function pvCroiseesDe(array $jour, array $x, ?string $cat): ?int
+{
+    if ($cat === null) { return (int) ($x['c'] ?? 0); }
+    return isset($jour['k']) ? (int) ($x['cc'][$cat] ?? 0) : null;
+}
+
 /**
  * Les ventes croisées d'un mois, par personne, depuis les jours moissonnés : tickets, ventes
  * croisées (tickets à deux lignes ou plus), lignes. Le mois en cours s'arrête à hier. Null tant
@@ -335,6 +361,7 @@ function pvCroiseesMois(string $m): ?array
     $out = []; $jours = 0; $manquants = 0; $sansC = 0; $sansTq = 0; $joursVus = []; $joursTqShop = [];
     // Les promos : leurs pièces sur leurs seules dates et dans leurs seuls magasins (« qp »).
     $periodes = function_exists('promoPeriodes') ? promoPeriodes() : [];
+    $cat = pvCroiseesCategorie();
     for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
         foreach ($shops as $sid) {
             $c = setting('pvL' . $sid . ':' . $j);
@@ -343,7 +370,7 @@ function pvCroiseesMois(string $m): ?array
             $version = pvLignesVersion($c);
             $promosDuJour = [];
             foreach ($periodes as $cleP => $per) { if (promoCouvre($per, $j, (string) $sid)) { $promosDuJour[] = $cleP; } }
-            $avecC = $version >= 1;
+            $avecC = $version >= 1 && ($cat === null || isset($c['k']));
             if (!$avecC) { $sansC++; }
             if ($version < 3) { $sansTq++; } else { $joursTqShop[$sid] = ($joursTqShop[$sid] ?? 0) + 1; }
             $joursVus[$j] = true;
@@ -353,7 +380,7 @@ function pvCroiseesMois(string $m): ?array
                 $out[$id]['t'] += (int) ($x['t'] ?? 0);
                 $out[$id]['l'] += (int) ($x['l'] ?? 0);
                 // Le taux se mesure sur les seuls jours comptés : tc = les tickets de ces jours-là.
-                if ($avecC) { $out[$id]['c'] += (int) ($x['c'] ?? 0); $out[$id]['tc'] += (int) ($x['t'] ?? 0); }
+                if ($avecC) { $out[$id]['c'] += (int) pvCroiseesDe($c, (array) $x, $cat); $out[$id]['tc'] += (int) ($x['t'] ?? 0); }
                 // Les pièces des concours, sur les jours qui les comptent par famille (version 3).
                 if ($version >= 3) {
                     $out[$id]['tq'] += (float) ($x['tq'] ?? 0); $out[$id]['tqT'] += (int) ($x['t'] ?? 0);
@@ -382,26 +409,6 @@ function pvCroiseesMois(string $m): ?array
         'complet' => $manquants === 0 && $sansC === 0, 'tqComplet' => $manquants === 0 && $sansTq === 0];
 }
 
-/** Le taux de ventes croisées d'un mois, magasin par magasin (sur les jours comptés). */
-function pvCroiseesMoisMagasins(string $m): array
-{
-    try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
-    catch (PDOException $e) { return []; }
-    $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d', strtotime('-1 day')));
-    $out = [];
-    foreach ($shops as $sid) {
-        $t = 0; $c = 0; $jours = 0;
-        for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
-            $x = setting('pvL' . $sid . ':' . $j);
-            if (!is_array($x) || !isset($x['e']) || !pvLignesAvecC((array) $x['e'])) { continue; }
-            $jours++;
-            foreach ((array) $x['e'] as $y) { $t += (int) ($y['t'] ?? 0); $c += (int) ($y['c'] ?? 0); }
-        }
-        $out[(string) $sid] = ['tickets' => $t, 'croisees' => $c, 'jours' => $jours, 'taux' => $t > 0 ? round(100 * $c / $t, 1) : null];
-    }
-    return $out;
-}
-
 /**
  * Les n dernières semaines (lundi à dimanche, la semaine en cours comprise), pour TOUT le réseau :
  * par semaine, par personne, les tickets, les ventes croisées et les pièces du concours, depuis
@@ -409,7 +416,7 @@ function pvCroiseesMoisMagasins(string $m): array
  */
 function pvSemainesReseau(int $n): array
 {
-    $cle = 'pvSemReseau' . $n;
+    $cle = 'pvSemReseau' . $n . (function_exists('pvCroiseesCategorie') && pvCroiseesCategorie() !== null ? ':' . substr(md5((string) pvCroiseesCategorie()), 0, 8) : '');
     $c = setting($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
@@ -419,6 +426,7 @@ function pvSemainesReseau(int $n): array
     for ($i = $n - 1; $i >= 0; $i--) {
         $du = date('Y-m-d', strtotime($lundi . ' -' . (7 * $i) . ' days'));
         $sem = ['lib' => 'S' . (int) date('W', strtotime($du)), 'du' => $du, 'e' => [], 'jours' => 0, 'joursTq' => 0];
+        $cat = pvCroiseesCategorie();
         for ($k = 0; $k < 7; $k++) {
             $j = date('Y-m-d', strtotime($du . ' +' . $k . ' days'));
             if ($j >= date('Y-m-d')) { break; }
@@ -432,9 +440,11 @@ function pvSemainesReseau(int $n): array
                 if ($version >= 3) { $sem['joursTq']++; }
                 foreach ((array) $x['e'] as $id => $y) {
                     $id = (int) $id;
-                    if (!isset($sem['e'][$id])) { $sem['e'][$id] = ['t' => 0, 'c' => 0, 'tq' => 0.0, 'q' => [], 'shop' => (string) $sid]; }
+                    if (!isset($sem['e'][$id])) { $sem['e'][$id] = ['t' => 0, 'tc' => 0, 'c' => 0, 'tq' => 0.0, 'q' => [], 'shop' => (string) $sid]; }
                     $sem['e'][$id]['t'] += (int) ($y['t'] ?? 0);
-                    $sem['e'][$id]['c'] += (int) ($y['c'] ?? 0);
+                    // Le taux se mesure sur les jours qui comptent les ventes croisées de la catégorie réglée.
+                    $cY = pvCroiseesDe($x, (array) $y, $cat);
+                    if ($cY !== null) { $sem['e'][$id]['c'] += $cY; $sem['e'][$id]['tc'] += (int) ($y['t'] ?? 0); }
                     if ($version >= 3) {
                         $sem['e'][$id]['tq'] += (float) ($y['tq'] ?? 0);
                         foreach ((array) ($y['q'] ?? []) as $cleF => $v) { $sem['e'][$id]['q'][$cleF] = ($sem['e'][$id]['q'][$cleF] ?? 0.0) + (float) $v; }
@@ -509,7 +519,10 @@ function pvVentesJoursMoisson(int $budget): array
  */
 function pvLignesJourPersonne(int $sid, int $emp): ?array
 {
-    $cle = 'pvLJ' . $sid . ':' . $emp;
+    // La catégorie des ventes croisées (14/10/2026) : le compteur du jour compte la même chose que la prime.
+    $cat = pvCroiseesCategorie();
+    $catDe = ($cat !== null && function_exists('svCategories')) ? svCategories() : [];
+    $cle = 'pvLJ' . $sid . ':' . $emp . ($cat !== null ? ':' . substr(md5($cat), 0, 8) : '');
     $c = setting($cle);
     if (is_array($c) && isset($c['t']) && (string) ($c['jour'] ?? '') === date('Y-m-d') && (int) ($c['quand'] ?? 0) > time() - 600) { return $c; }
     if (!PanelApi::configured()) { return null; }
@@ -527,9 +540,12 @@ function pvLignesJourPersonne(int $sid, int $emp): ?array
         foreach ($lot as $id) {
             $t = $res[$id] ?? null;
             if (!is_array($t)) { return null; }
-            $n = count((array) ($t['products'] ?? []));
+            $lignes = (array) ($t['products'] ?? []);
+            $n = count($lignes);
             $l += $n;
-            if ($n >= 2) { $cc++; }
+            if ($n < 2) { continue; }
+            if ($cat === null) { $cc++; continue; }
+            foreach ($lignes as $li) { if (($catDe[(int) ($li['id_product'] ?? 0)] ?? '') === $cat) { $cc++; break; } }
         }
     }
     $out = ['t' => count($ids), 'c' => $cc, 'l' => $l, 'jour' => date('Y-m-d'), 'quand' => time()];

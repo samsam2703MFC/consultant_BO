@@ -81,6 +81,7 @@ require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
+require __DIR__ . '/../../src/sms.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');

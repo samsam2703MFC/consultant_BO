@@ -70,7 +70,9 @@ la ligne depuis les montants.
 En haut, **acquis** et **en jeu**. Puis une carte par prime, dans l'ordre du réglage du cockpit : l'emoji,
 le nom, le type (**Target**, **Catégorie**, **Promo** ; Classement pour la meilleure vendeuse), la
 récompense (« +50 € » une fois gagnée), la mesure et sa jauge (avec le repère de la cible), une pastille
-(✓ gagné, 👑 1re, 2e / 6, −2 pt) et une ligne de chiffres (la cible, ou la 1re et sa quantité). En bas,
+(✓ gagné, 👑 1re, 2e / 6, −2 pt) et une ligne de chiffres (la cible, ou la 1re et sa quantité). Une prime
+gagnée est verte, en tête dorée, **pas encore gagnée grise**. Les ventes croisées portent leur catégorie
+quand le cockpit en a choisi une (« Ventes croisées · Boissons chaudes »). En bas,
 **Classement** : un menu déroulant (un vrai `<select>`, la roue native du téléphone) choisit la prime
 (Queen of Tartes, Queen of Quiches, la promo, les ventes croisées), une bascule Mon magasin / Réseau, le
 podium (la 1re couronnée) puis les rangs suivants, moi en évidence. Toucher une carte qui a un classement
