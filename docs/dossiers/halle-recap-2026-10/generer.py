@@ -241,6 +241,7 @@ sup{{font-size:5.5pt;line-height:0}}
 .t.comp td{{padding:1.1mm 1.4mm;font-size:7.6pt}}.t.comp td.p{{color:#7a736a;font-size:7pt}}.t.comp td.r{{font-size:6.5pt;width:34%;white-space:normal}}
 .graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}
 .pts.decisions{{font-size:8.8pt;line-height:1.55;columns:2;column-gap:8mm}}.t.remb td.l{{white-space:normal;line-height:1.3}}.vignette{{background:#8D1D2C;color:#fff;border-radius:8px;padding:3.2mm 5mm;margin:2.5mm 0 3mm;font-family:Vank,Georgia,serif;font-size:14pt;line-height:1.25}}
+.effort{{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:0 0 3mm}}.effort .intro{{grid-column:1 / -1;font-size:9pt;font-weight:500;color:#8D1D2C}}.effort .jr{{border:1px solid #e6e0d8;border-left:3px solid #8D1D2C;border-radius:6px;background:#fbf9f5;padding:2mm 3mm}}.effort .k{{font-size:6.6pt;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;font-weight:500}}.effort .t{{font-size:8.6pt;font-weight:500;margin:.6mm 0}}.effort .q{{font-size:7.6pt;color:#5a534b;line-height:1.4}}.deuxv{{display:grid;grid-template-columns:1fr 1fr;gap:4mm}}
 .rythme{{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin-bottom:1mm}}.rythme .jr{{border:1px solid #e6e0d8;border-left:3px solid #8D1D2C;border-radius:6px;background:#fbf9f5;padding:2mm 3mm}}.rythme .k{{font-size:6.6pt;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;font-weight:500}}.rythme .t{{font-size:8.6pt;font-weight:500;margin:.6mm 0}}.rythme .q{{font-size:7.6pt;color:#5a534b;line-height:1.4}}.t.remb tr.hors td{{color:#C0182B}}.pts.decisions li{{margin-bottom:1.6mm;break-inside:avoid}}
 .t.plan2 td{{padding:1.4mm 1.4mm;font-size:7.8pt}}.t.plan2 td.l small{{font-size:6.9pt;line-height:1.35}}.t.plan2 td{{vertical-align:top}}.t.plan2 tr.tot td{{vertical-align:middle}}.t.compta td.l small{{display:block;font-size:6pt;color:#9a938a;white-space:normal}}
 .t.sens th{{text-align:right}}.t.sens th.g{{text-align:center;border-bottom:.5pt solid #b8b1a6;color:#8D1D2C}}.t.sens td{{padding:1.2mm 1.3mm;font-size:7.6pt}}.t.sens td.g{{color:#5a534b}}.t.sens td.res{{font-weight:500}}.t.sens tr.base td{{background:#FCFAF7;color:#5a534b}}.neg{{color:#C0182B}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
@@ -429,8 +430,11 @@ if RE:
     vD = []; d_ = datetime.date.fromisoformat(RE['versement']['premier']); fin_ = datetime.date.fromisoformat(RE['versement']['dernier'])
     while d_ <= fin_: vD.append(d_); d_ += datetime.timedelta(days=7)
     mV = RE['versement']['montant']
-    lvv = ''.join(f'<tr><td class="n">{i + 1}</td><td class="l">lundi {fD(x)}</td><td>{fE(mV)}</td><td>{fE(mV * (i + 1))}</td></tr>' for i, x in enumerate(vD))
-    lvv += f'<tr class="tot"><td></td><td class="l">{len(vD)} versements</td><td></td><td>{fE(mV * len(vD))}</td></tr>'
+    moitie = (len(vD) + 1) // 2
+    demi = lambda L_, o_: ''.join(f'<tr><td class="n">{o_ + i + 1}</td><td class="l">{fD(x)}</td><td>{fE(mV * (o_ + i + 1))}</td></tr>' for i, x in enumerate(L_))
+    tete = '<tr><th></th><th class="l">Lundi</th><th>Cumul</th></tr>'
+    lvv = (f'<div class="deuxv"><table class="t serre">{tete}{demi(vD[:moitie], 0)}</table><table class="t serre">{tete}{demi(vD[moitie:], moitie)}</table></div>'
+           f'<table class="t serre"><tr class="tot"><td class="l">{len(vD)} versements de {fE(mV)}</td><td>{fE(mV * len(vD))}</td></tr></table>')
     cumD = 0; lrr = ''
     for r_ in RE['remboursements']:
         cumD += r_['montant']; k_ = next((i for i in range(len(vD)) if mV * (i + 1) >= cumD), None)
@@ -449,12 +453,13 @@ if RE:
 <div class="sec">{H(RE['titre'])}</div>
 <p class="s">Réunion du {dReu.day} {MOISL[dReu.month]} {dReu.year} · {H(RE['auteur'])}</p>
 {('<div class="vignette">' + H(RE['vignette']) + '</div>') if RE.get('vignette') else ''}
+{('<div class="effort"><div class="intro">' + H(RE['effort']['intro']) + '</div>' + ''.join(f'<div class="jr"><div class="k">Côté {H(c_["qui"])}</div><div class="t">{H(c_["titre"])}</div><div class="q">{H(c_["quoi"])}</div></div>' for c_ in RE['effort']['cotes']) + '</div>') if RE.get('effort') else ''}
 <div class="sec petit" style="margin-top:3mm">Décisions</div>
 <ul class="pts decisions">{''.join(f'<li>{H(t)}</li>' for t in RE['decisions'])}</ul>
 {('<div class="sec petit" style="margin-top:3mm">Chaque semaine, jusqu’au ' + H(RE.get('rythmeJusqua', '')) + '</div><div class="rythme">' + ''.join(f'<div class="jr"><div class="k">{H(r_["jour"])}</div><div class="t">{H(r_["titre"])}</div><div class="q">{H(r_["quoi"])}</div></div>' for r_ in RE['rythme']) + '</div>') if RE.get('rythme') else ''}
 <div class="deux g11 bas">
-<div><div class="sec petit">Les versements sur le compte tiers</div>
-<table class="t serre"><tr><th></th><th class="l">Date</th><th>Versement</th><th>Cumul</th></tr>{lvv}</table>
+<div><div class="sec petit">Les versements sur le compte tiers, chaque lundi</div>
+{lvv}
 <div class="cadre" style="margin-top:4mm"><div class="k">Repères</div><ul>
 <li>CA de la caisse, mars → septembre : {fE(caMois)} par mois. + 10&nbsp;% : {fE(caMois * 1.10)} ; + 15&nbsp;% : {fE(caMois * 1.15)}, soit {fP(caMois * 1.15 / obj, 0)} du budget de {fE(obj)}.</li>
 <li>Nathan : {fE(C['nathanSemaine'])} par semaine, {fE(cN)} par mois, déjà compté dans le compte du mois (page 1).</li>

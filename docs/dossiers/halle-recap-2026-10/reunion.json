@@ -5,13 +5,11 @@
   "decisions": [
     "Période : du 15/10/2026 au 15/01/2027.",
     "Nathan : 500 € par semaine, virement automatique chaque lundi.",
-    "Gratuité SLFood : 20 % de chaque commande.",
     "Revente à coefficient minimum × 2 : 2 000 € versés chaque lundi sur le compte tiers séparé.",
     "Premier versement le 19/10 : 14 versements, 28 000 € au 18/01.",
     "Cet argent sert uniquement aux dettes prioritaires.",
     "Autres dettes : plan d’étalement.",
-    "Objectif : + 10 % à + 15 % de CA, soit le niveau du budget.",
-    "Développement commercial au maximum."
+    "Objectif : + 10 % à + 15 % de CA, soit le niveau du budget."
   ],
   "versement": {
     "premier": "2026-10-19",
@@ -71,5 +69,20 @@
     }
   ],
   "rythmeJusqua": "15/01/2027",
-  "vignette": "Maintenant que le magasin sait tourner tout seul, ton rôle, Nathan, est de développer le CA."
+  "vignette": "Maintenant que le magasin sait tourner tout seul, ton rôle, Nathan, est de développer le CA.",
+  "effort": {
+    "intro": "On doit être tous les deux sûrs que l’effort sera fait.",
+    "cotes": [
+      {
+        "qui": "SLFood",
+        "titre": "Les remises de marchandises",
+        "quoi": "Gratuité de 20 % sur chaque commande, revendue à coefficient × 2 au minimum : c’est elle qui alimente les 2 000 € du lundi."
+      },
+      {
+        "qui": "Nathan",
+        "titre": "Le développement du CA",
+        "quoi": "Développement commercial au maximum, pour + 10 à + 15 % de CA : le niveau du budget."
+      }
+    ]
+  }
 }
