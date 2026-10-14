@@ -21,7 +21,7 @@ final class Db
     {
         $T = $GLOBALS['TABLES'];
         if (str_contains($sql, 'FROM shops')) { return $T['shops']; }
-        if (str_contains($sql, 'ceo_shop_reputation')) { return $T['reputation']; }
+        if (str_contains($sql, 'ceo_shop_reputation') || str_contains($sql, 'mar_avis_fiche')) { return $T['reputation']; }
         if (str_contains($sql, 'franchisee_employee_schedule')) { return $T['planning']; }
         if (str_contains($sql, 'FROM franchisee_employee')) { return $T['employes']; }
         if (str_contains($sql, 'ceo_shop_month_perf')) { return $T['budgets']; }
