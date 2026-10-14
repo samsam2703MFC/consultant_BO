@@ -278,8 +278,7 @@ for e in Bm['effets']:
     else:
         v = e['pct'] * (cAch if e['type'] == 'achats' else fournM); dAch += v; bE.append((e['action'], f'− {fE(arr(v, 5))} d’achats'))
 achApres = cAch - dAch; caApres = cC + dCA
-VB = dict(NR=NR, pctAch=nfP(dAch / cAch), achEur=fE(arr(dAch, 100)), b1=fE(arr(Bm['effets'][0]['pct'] * cC, 10)),
-          b2=fE(arr(Bm['effets'][1]['pct'] * cAch, 5)), b3=fE(arr(Bm['effets'][2]['pct'] * cAch, 5)), b4=fE(arr(Bm['effets'][3]['pct'] * fournM, 5)),
+VB = dict(NR=NR, pctAch=nfP(dAch / cAch), achEur=fE(arr(dAch, 100)),
           tgtg=fE(C.get('tooGoodToGo', 0)), tgtgMois=fE(arr(C.get('tooGoodToGo', 0) / NR, 1)), fourn=nf(C['achatsFournitures'] / 1000, 1) + '\u00a0k€',
           fournMois=nf(fournM / 1000, 1) + '\u00a0k€', achPctApres=fP(achApres / caApres), gain=fE(arr(dCA + dAch, 100)))
 fmtB = lambda t: t.format(**VB)
@@ -412,9 +411,9 @@ q3 = f"""<div class="page">
 <p class="s">À personnel et frais égaux, un euro vendu en plus ne coûte que sa matière et son emballage ({fP(cVar)}) : le reste tombe dans le résultat. Prix inchangés ; une vente faite avec une remise rapporte moins.</p>
 {tabA3}
 <p class="s">Le budget de {fE(obj)} par mois demande + {fE(arr((obj - caMois) / JM, 5))} par jour sur la base de la caisse.</p>
-<div class="sec" style="margin-top:5mm">Ramener les achats à 40 % du CA</div>
+<div class="sec" style="margin-top:5mm">{H(Bm['titre'])}</div>
 <table class="t plan plan2"><tr><th></th><th class="l">Action</th><th>Effet par mois</th></tr>{lb}</table>
-<p class="s">Avec ces quatre actions, le résultat après Nathan et la banque passe de {fE(arr(resA, 10))} à ≈ {fE(arr(resA + gainB, 10))} par mois.</p>
+<p class="s">Avec {'ces deux actions' if len(Bm['actions']) == 2 else 'ces ' + str(len(Bm['actions'])) + ' actions'}, le résultat après Nathan et la banque passe de {fE(arr(resA, 10))} à ≈ {fE(arr(resA + gainB, 10))} par mois.</p>
 <div class="cadre" style="margin-top:3mm"><div class="k">L’indicateur du lundi</div><div class="ind">{H(Bm['indicateur'])}</div></div>
 {ft(3)}
 </div>"""
@@ -656,18 +655,17 @@ if C:
            ('Semaines par mois', '=52/12', NB1, None, ''), ('Jours par mois', '=365/12', NB1, None, 'ouvert 7 jours sur 7'),
            ('Mois d’exploitation (ouverture en mars)', NR, NB, None, 'pour ramener au mois les totaux de la période'),
            ('Hausse de prix moyenne (plan B1)', 0.05, PCT, JAUNE, 'baguette et tradition inchangées ; volumes supposés inchangés'),
-           ('Commandes sur ventes réelles (B2), % des achats', 0.08, PCT, JAUNE, ''), ('Sorties tracées (B3), % des achats', 0.04, PCT, JAUNE, ''),
-           ('Achats fournitures sur la période', C['achatsFournitures'], EUR, None, 'total de la période'), ('Audit fournitures (B4), % de la ligne', 0.35, PCT, JAUNE, ''),
+           ('Commandes sur ventes réelles (B2), % des achats', 0.08, PCT, JAUNE, ''),
            ('Hausse de CA du scénario', 0.15, PCT, JAUNE, 'les + 15 % visés'), ('Matière du scénario (% du CA)', 0.40, PCT, JAUNE, 'la cible du plan')]
     for i, (lib, v, fmt, fi, nt) in enumerate(par):
         rr = 5 + i
         cell(ce, f'A{rr}', lib); cell(ce, f'B{rr}', v, F_IN if not isinstance(v, str) else F_FX, fmt, fi); cell(ce, f'C{rr}', nt, F_S)
-    # 5 Nathan · 6 remboursements · 7 semaines/mois · 8 jours/mois · 9 mois · 10 prix · 11 commandes · 12 sorties · 13 fournitures · 14 audit · 15 + CA · 16 matière
+    # 5 Nathan · 6 remboursements · 7 semaines/mois · 8 jours/mois · 9 mois · 10 prix · 11 commandes · 12 + CA · 13 matière
     rT = 18
     cell(ce, f'A{rT}', 'Résultat visé après Nathan et la banque (€ par mois)', F_H)
     for col, t in zip('DEF', CIBLES): cell(ce, f'{col}{rT}', t, F_IN, EUR, JAUNE)
     h0 = rT + 1
-    for i, h in enumerate(['Poste (€ par mois)', 'Analyse', '% CA', 'CA pour le résultat visé', 'CA pour le résultat visé', 'CA pour le résultat visé', 'Plan matière (B1 → B4)', '% CA', '+ 15 % de CA, matière 40 %', '% CA']):
+    for i, h in enumerate(['Poste (€ par mois)', 'Analyse', '% CA', 'CA pour le résultat visé', 'CA pour le résultat visé', 'CA pour le résultat visé', 'Plan achats (B1 + B2)', '% CA', '+ 15 % de CA, matière 40 %', '% CA']):
         cell(ce, f'{chr(65 + i)}{h0}', h, F_H, al=Alignment(horizontal='left' if i == 0 else 'right', wrap_text=True, vertical='bottom'), border=B_H)
     ce.row_dimensions[h0].height = 30
     rCAc, rAch, rEmb, rMB = h0 + 1, h0 + 2, h0 + 3, h0 + 4
@@ -680,8 +678,8 @@ if C:
     for col in 'DEF':
         cell(ce, f'{col}{rCAc}', f'=(SUM($B${rF0}:$B${rF1})+$B$5*$B$7+$B$6+{col}${rT})/(1-{tvB})', F(bold=True, color=BORD), EUR)
         cell(ce, f'{col}{rAch}', f'={col}{rCAc}*$B${rAch}/$B${rCAc}', fmt=EUR); cell(ce, f'{col}{rEmb}', f'={col}{rCAc}*$B${rEmb}/$B${rCAc}', fmt=EUR)
-    cell(ce, f'G{rCAc}', f'=B{rCAc}*(1+$B$10)', F_TOT, EUR); cell(ce, f'G{rAch}', f'=B{rAch}*(1-$B$11-$B$12)-$B$13/$B$9*$B$14', fmt=EUR); cell(ce, f'G{rEmb}', f'=B{rEmb}', fmt=EUR)
-    cell(ce, f'I{rCAc}', f'=B{rCAc}*(1+$B$15)', F_TOT, EUR); cell(ce, f'I{rAch}', f'=I{rCAc}*$B$16', fmt=EUR); cell(ce, f'I{rEmb}', f'=IF(B{rCAc}>0,B{rEmb}/B{rCAc}*I{rCAc},0)', fmt=EUR)
+    cell(ce, f'G{rCAc}', f'=B{rCAc}*(1+$B$10)', F_TOT, EUR); cell(ce, f'G{rAch}', f'=B{rAch}*(1-$B$11)', fmt=EUR); cell(ce, f'G{rEmb}', f'=B{rEmb}', fmt=EUR)
+    cell(ce, f'I{rCAc}', f'=B{rCAc}*(1+$B$12)', F_TOT, EUR); cell(ce, f'I{rAch}', f'=I{rCAc}*$B$13', fmt=EUR); cell(ce, f'I{rEmb}', f'=IF(B{rCAc}>0,B{rEmb}/B{rCAc}*I{rCAc},0)', fmt=EUR)
     for i, x in enumerate(C['fixes']):
         rr = rF0 + i
         cell(ce, f'A{rr}', x['poste']); cell(ce, f'B{rr}', round(FIXR[i], 2), F_IN, EUR)

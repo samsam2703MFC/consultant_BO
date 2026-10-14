@@ -1,6 +1,6 @@
 {
   "matiere": {
-    "titre": "Ramener les achats à 40 % du CA",
+    "titre": "Réduire les achats",
     "intro": "Un plan qui atteint 40 % avec + 5 % de prix en moyenne et ≈ − {pctAch} d’achats, soit environ − {achEur} de matière par mois sur {NR} mois d’exploitation (compte de la page 3).",
     "actions": [
       {
@@ -17,20 +17,6 @@
         "cockpit": "Le cockpit relève déjà les invendus déclarés : 375 € au coût de production (495 pièces) du 1er au 13 octobre, 1,5 % du CA — c’est la base du comptage du soir.",
         "court": "Chaque commande sur les ventes du même jour la semaine précédente, par produit ; invendus comptés chaque soir ; Too Good To Go sur le reste.",
         "titreCourt": "Commandes sur les ventes réelles"
-      },
-      {
-        "titre": "Plus aucune sortie de marchandise sans trace, − 4 %",
-        "texte": "Un bon de sortie obligatoire pour tout ce qui quitte la boutique sans passer en caisse : casse, repas du personnel, dépannage d’un autre point, Couq, Saint-Géry, GBXATL. Ce qui part vers une autre entité est refacturé. Un inventaire hebdomadaire des 20 références les plus chères, qui règle aussi le stock négatif en compta.",
-        "effet": "≈ − {b3} d’achats par mois",
-        "court": "Bon de sortie pour tout ce qui ne passe pas en caisse (casse, repas, dépannage, Couq, Saint-Géry, GBXATL), refacturé aux autres entités ; inventaire hebdomadaire des 20 références les plus chères.",
-        "titreCourt": "Aucune sortie sans trace"
-      },
-      {
-        "titre": "Audit des « achats fournitures », − 35 % sur la ligne",
-        "texte": "{fourn} sur la période, soit {fournMois} par mois : c’est énorme pour des fournitures. Sortir toutes les factures, ligne par ligne : ce qui est acheté hors catalogue réseau, ou chez des fournisseurs locaux plus chers que ProdAtelier, revient au catalogue ; ce qui n’a rien à faire en boutique disparaît.",
-        "effet": "≈ − {b4} d’achats par mois",
-        "court": "Les {fourn} de la période ({fournMois} par mois) relus facture par facture : retour au catalogue réseau (ProdAtelier), plus rien qui n’a rien à faire en boutique.",
-        "titreCourt": "Audit des achats fournitures"
       }
     ],
     "effets": [
@@ -43,19 +29,9 @@
         "action": "Commandes sur ventes réelles (− 8 % d’achats)",
         "type": "achats",
         "pct": 0.08
-      },
-      {
-        "action": "Sorties tracées (− 4 % d’achats)",
-        "type": "achats",
-        "pct": 0.04
-      },
-      {
-        "action": "Audit fournitures (− 35 % sur la ligne)",
-        "type": "fournitures",
-        "pct": 0.35
       }
     ],
     "resultat": "achats à ≈ {achPctApres} du CA, ≈ + {gain} de marge par mois",
-    "indicateur": "Un seul indicateur, chaque lundi : les achats de la semaine divisés par le CA de la semaine. S’il n’est pas passé sous 45 % au bout d’un mois, c’est que les actions B2 et B3 ne sont pas réellement appliquées en boutique."
+    "indicateur": "Un seul indicateur, chaque lundi : les achats de la semaine divisés par le CA de la semaine. S’il n’est pas passé sous 45 % au bout d’un mois, c’est que l’action B2 n’est pas réellement appliquée en boutique."
   }
 }
