@@ -1,0 +1,264 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+/**
+ * Tests des primes de l'app worker (14/10/2026) — sans base, sans réseau, sans token.
+ *
+ *   php bin/tests_primes.php
+ *
+ * Ce qui se vérifie : la liste des primes (réglage d'avant repris, deux targets toujours là, une
+ * promo créée depuis la liste du panel et jamais depuis ce que le navigateur envoie), une récompense
+ * par prime (ventes croisées à la cible, objectif magasin par personne, 1re du magasin pour une
+ * catégorie ou une promo), les pièces d'une promo sur ses seules dates et dans ses seuls magasins,
+ * la relecture des jours sans une famille, les promotions du panel mises à plat, les moyennes par
+ * magasin, les cartes de l'app.
+ *
+ * `Db`, `setting()` et le panel sont remplacés par des doublures : un magasin de réglages en mémoire
+ * que les écritures du code remplissent.
+ */
+
+// --- doublures ---------------------------------------------------------------------------
+$GLOBALS['REGLAGES'] = [];
+$GLOBALS['TABLES'] = ['shops' => [], 'employes' => [], 'planning' => [], 'budgets' => []];
+final class Db
+{
+    public static function rows(string $sql, array $a = []): array
+    {
+        $T = $GLOBALS['TABLES'];
+        if (str_contains($sql, 'FROM shops')) { return $T['shops']; }
+        if (str_contains($sql, 'franchisee_employee_schedule')) { return $T['planning']; }
+        if (str_contains($sql, 'FROM franchisee_employee')) { return $T['employes']; }
+        if (str_contains($sql, 'ceo_shop_month_perf')) { return $T['budgets'][(int) $a[0] . '-' . str_pad((string) $a[1], 2, '0', STR_PAD_LEFT)] ?? []; }
+        return [];
+    }
+    public static function row(string $sql, array $a = []): ?array { return null; }
+    public static function exec(string $sql, array $a = []): void
+    {
+        if (str_starts_with($sql, 'INSERT INTO ceo_app_setting')) { $GLOBALS['REGLAGES'][$a[0]] = json_decode($a[1], true); }
+    }
+}
+function setting(string $k, mixed $d = null): mixed { return $GLOBALS['REGLAGES'][$k] ?? $d; }
+$GLOBALS['JOURNAL'] = [];
+function journalAdd(string $actor, string $kind, ?string $project, string $message, ?string $ts = null): void { $GLOBALS['JOURNAL'][] = $message; }
+$GLOBALS['CORPS'] = [];
+function body(): array { return $GLOBALS['CORPS']; }
+final class PanelApi
+{
+    public static array $reponses = [];
+    public static bool $configure = false;
+    public static function configured(): bool { return self::$configure; }
+    public static function sondeGet(string $path, int $timeout = 12): array { return self::$reponses[$path] ?? ['code' => 403, 'corps' => ['message' => 'Forbidden'], 'erreur' => 'HTTP 403']; }
+    public static function liste(array $d): array
+    {
+        if (array_is_list($d)) { return array_values(array_filter($d, 'is_array')); }
+        foreach (['data', 'items'] as $k) { if (isset($d[$k]) && is_array($d[$k])) { return self::liste($d[$k]); } }
+        return [];
+    }
+    public static function get(string $p): mixed { return null; }
+}
+/** Le catalogue : deux bundles, une tarte, une quiche. */
+function svCategories(): array { return [900 => 'Bundle', 901 => 'Bundle', 10 => 'Tartes', 20 => 'Quiches']; }
+function svNomProduit(int|string $cle, string $nomLu): string { return [900 => 'Café + croissant', 901 => '2 Cookies', 10 => 'Tarte aux pommes', 20 => 'Quiche lorraine'][(int) $cle] ?? $nomLu; }
+
+require __DIR__ . '/../src/ventes.php';
+require __DIR__ . '/../src/panel_ventes.php';
+require __DIR__ . '/../src/primes.php';
+require __DIR__ . '/../src/primes_app.php';
+
+$ok = 0; $ko = 0;
+function verifie(string $nom, bool $cond, string $detail = ''): void
+{
+    global $ok, $ko;
+    if ($cond) { $ok++; echo "  ok  $nom\n"; }
+    else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
+}
+/** Le réglage relu à neuf (primesAppReglages le garde le temps d'une requête). */
+function relire(): array { return primesAppReglages(true); }
+
+// --- 1. la liste des primes ------------------------------------------------------------------
+echo "La liste des primes\n";
+$GLOBALS['REGLAGES']['venteConcoursTQ'] = ['actif' => true, 'liste' => [
+    ['cle' => 'tartes', 'lib' => 'Queen of Tartes', 'motif' => 'tarte', 'magasin' => 60, 'reseau' => 100, 'minPieces' => 12],
+    ['cle' => 'quiches', 'lib' => 'Queen of Quiches', 'motif' => 'quiche', 'magasin' => 50, 'reseau' => 100, 'minPieces' => 10]]];
+$GLOBALS['REGLAGES']['ventePrimeMagasin'] = ['paliers' => [], 'heuresMin' => 24];
+$d = primesAppDefauts();
+verifie('le réglage d’avant repris : 2 targets + 2 catégories', array_column($d['liste'], 'cle') === ['croisees', 'objectif', 'tartes', 'quiches'], json_encode(array_column($d['liste'], 'cle')));
+verifie('la catégorie garde le montant de sa couronne du magasin', $d['liste'][2]['montant'] === 60 && $d['liste'][2]['minPieces'] === 12);
+verifie('l’objectif garde le minimum d’heures', $d['liste'][1]['heuresMin'] === 24 && $d['liste'][1]['pct'] === 100);
+verifie('les targets valent la récompense par défaut', $d['liste'][0]['montant'] === 50 && $d['liste'][1]['montant'] === 50);
+$l = primesAppListePropre([['type' => 'categorie', 'lib' => 'Queen of Tartes', 'motif' => 'tarte'], ['type' => 'categorie', 'lib' => 'Queen of Tartes', 'motif' => 'tarte']], 40);
+verifie('les targets manquants reviennent en tête, sans doublon', array_column($l, 'cle') === ['croisees', 'objectif', 'queenoftartes'], json_encode(array_column($l, 'cle')));
+verifie('une prime sans montant prend la récompense par défaut', $l[0]['montant'] === 40 && $l[2]['montant'] === 40);
+$l = primesAppListePropre([['type' => 'categorie', 'lib' => 'Pain au chocolat', 'motif' => 'chocolat']], 50);
+verifie('une catégorie ne prend pas la forme d’une clé de promo', $l[2]['cle'] === 'kpainauchocolat', $l[2]['cle']);
+verifie('un motif invalide refusé', primesAppEntreeValide(['type' => 'categorie', 'lib' => 'X', 'motif' => '(('], 0, 50) === null);
+verifie('un target inconnu refusé', primesAppEntreeValide(['type' => 'target', 'cle' => 'autre'], 0, 50) === null);
+
+// --- 2. la création d'une promo : depuis la liste du panel, jamais depuis le navigateur ---------------
+echo "Une promo créée depuis la liste du panel\n";
+$GLOBALS['REGLAGES']['primesPromos'] = ['quand' => time(), 'api' => false, 'erreurs' => [], 'liste' => [
+    ['source' => 'catalogue', 'sorte' => 'bundle', 'id' => '900', 'nom' => 'Café + croissant', 'prix' => null, 'du' => null, 'au' => null, 'shops' => [], 'ids' => [900], 'composants' => []]]];
+$GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => [
+    ['type' => 'target', 'cle' => 'croisees', 'montant' => 50],
+    ['type' => 'target', 'cle' => 'objectif', 'montant' => 50, 'pct' => 100, 'heuresMin' => 20],
+    ['type' => 'categorie', 'cle' => 'tartes', 'lib' => 'Queen of Tartes', 'motif' => 'tarte', 'minPieces' => 10, 'montant' => 50],
+    ['type' => 'promo', 'ref' => ['source' => 'catalogue', 'id' => '900'], 'montant' => 50, 'promo' => ['ids' => [1, 2, 3]]]]];
+$r = wr_primes_app();
+$c = relire();
+$promo = $c['liste'][3] ?? [];
+verifie('la promo enregistrée', ($r['ok'] ?? false) && ($promo['type'] ?? '') === 'promo' && $promo['cle'] === 'pc900', json_encode($promo));
+verifie('ses produits viennent du panel, pas du navigateur', ($promo['promo']['ids'] ?? null) === [900]);
+verifie('elle prend le nom de la promotion', $promo['lib'] === 'Café + croissant');
+verifie('le réglage passe au journal', str_contains(end($GLOBALS['JOURNAL']), 'Café + croissant 50 €'));
+$GLOBALS['CORPS'] = ['liste' => [['type' => 'promo', 'ref' => ['source' => 'catalogue', 'id' => '999']]]];
+$r = @wr_primes_app();   // 422 (le code HTTP ne se pose pas en ligne de commande)
+verifie('une promotion inconnue refusée', str_contains((string) ($r['error'] ?? ''), 'introuvable'), json_encode($r));
+$GLOBALS['CORPS'] = ['liste' => array_merge($c['liste'], [])];
+$GLOBALS['CORPS']['liste'][3]['promo'] = ['source' => 'catalogue', 'id' => '900', 'ids' => [7, 8]];
+wr_primes_app();
+verifie('une promo déjà là garde ses produits', (relire()['liste'][3]['promo']['ids'] ?? null) === [900]);
+
+// --- 3. une récompense par prime ---------------------------------------------------------------
+echo "Une récompense par prime\n";
+$cfg = ['montant' => 50, 'minTickets' => 30];
+verifie('ventes croisées à la cible : la récompense', croiseesPrime(55.0, 55.0, $cfg, 40)['montant'] === 50);
+verifie('sous la cible : rien, la cible à viser', croiseesPrime(54.9, 55.0, $cfg, 40)['montant'] === 0 && croiseesPrime(54.9, 55.0, $cfg, 40)['prochain']['taux'] === 55.0);
+verifie('trop peu de tickets : rien', croiseesPrime(70.0, 55.0, $cfg, 29)['montant'] === 0);
+verifie('prime éteinte : rien, rien à viser', croiseesPrime(70.0, 55.0, ['montant' => 0, 'minTickets' => 30], 40) === ['montant' => 0, 'palier' => null, 'prochain' => null]);
+$m = date('Y-m', strtotime('first day of last month'));
+$GLOBALS['REGLAGES']['pvCa4:' . $m] = ['quand' => time(), 'ca' => 61000.0, 'tickets' => 4600];
+$reg = ['paliers' => [['pct' => 100, 'montant' => 50, 'lib' => 'Objectif']], 'heuresMin' => 20];
+$pm = primesMagasinMois(4, $m, $reg, 128.0, 604.0, ['montant' => 60000.0, 'source' => 'budget'], 5);
+verifie('objectif atteint : la récompense, pas des euros par heure', $pm['vous'] === 50.0 && $pm['equipe'] === 250.0, json_encode([$pm['vous'], $pm['equipe']]));
+$pm = primesMagasinMois(4, $m, $reg, 12.0, 604.0, ['montant' => 60000.0, 'source' => 'budget'], 5);
+verifie('sous le minimum d’heures : rien', $pm['vous'] === 0.0 && $pm['sousMin']);
+$pm = primesMagasinMois(4, $m, $reg, 128.0, 604.0, ['montant' => 65000.0, 'source' => 'budget'], 5);
+verifie('objectif manqué : rien', $pm['vous'] === 0.0 && $pm['palier'] === null);
+
+// --- 4. les pièces d'une promo : ses dates, ses magasins -------------------------------------------
+echo "Les pièces d'une promo\n";
+$GLOBALS['TABLES']['shops'] = [['id' => 4, 'name' => 'Atelier by - Halle', 'active' => 1], ['id' => 5, 'name' => 'Atelier by - Namur', 'active' => 1]];
+$GLOBALS['TABLES']['employes'] = [
+    ['id' => 1, 'id_shop' => 4, 'display_name' => 'Léa', 'name' => '', 'surname' => ''],
+    ['id' => 2, 'id_shop' => 4, 'display_name' => 'Toi', 'name' => '', 'surname' => ''],
+    ['id' => 3, 'id_shop' => 5, 'display_name' => 'Inès', 'name' => '', 'surname' => '']];
+$mc = date('Y-m', strtotime('first day of last month'));
+$jour = static fn (int $d) => $mc . '-' . str_pad((string) $d, 2, '0', STR_PAD_LEFT);
+// La promo du 5 au 10, à Halle seulement.
+$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][3]['promo']['du'] = $jour(5);
+$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][3]['promo']['au'] = $jour(10);
+$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][3]['promo']['shops'] = ['4'];
+relire();
+$per = ['du' => $jour(5), 'au' => $jour(10), 'shops' => ['4' => true]];
+verifie('dans la promo : le 7 à Halle', promoCouvre($per, $jour(7), '4'));
+verifie('hors dates : le 11', !promoCouvre($per, $jour(11), '4'));
+verifie('hors magasins : Namur', !promoCouvre($per, $jour(7), '5'));
+verifie('une promo sans dates ni magasins couvre tout', promoCouvre(['du' => null, 'au' => null, 'shops' => null], $jour(1), '5'));
+
+// La moisson du mois : la promo ne compte que du 5 au 10, et qu'à Halle.
+$GLOBALS['TABLES']['shops'] = [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 5, 'name' => 'Atelier by - Namur']];
+foreach ([3, 7, 12] as $d) {
+    $GLOBALS['REGLAGES']['pvL4:' . $jour($d)] = ['v' => 3, 'f' => ['tartes', 'pc900'], 'e' => [2 => ['t' => 10, 'l' => 20, 'c' => 5, 'q' => ['tartes' => 1, 'pc900' => 4]]]];
+    $GLOBALS['REGLAGES']['pvL5:' . $jour($d)] = ['v' => 3, 'f' => ['tartes', 'pc900'], 'e' => [3 => ['t' => 10, 'l' => 20, 'c' => 5, 'q' => ['tartes' => 2, 'pc900' => 9]]]];
+}
+$crM = pvCroiseesMois($mc);
+verifie('les catégories : le mois entier', $crM['e'][2]['q']['tartes'] === 3.0 && $crM['e'][3]['q']['tartes'] === 6.0, json_encode($crM['e']));
+verifie('la promo : ses seules dates (le 7)', $crM['e'][2]['qp']['pc900'] === 4.0, json_encode($crM['e'][2]['qp'] ?? null));
+verifie('la promo : ses seuls magasins (rien à Namur)', !isset($crM['e'][3]['qp']['pc900']), json_encode($crM['e'][3]['qp'] ?? null));
+$f = promoFamilles();
+verifie('la moisson compte la promo par ses produits', isset($f['pc900'][900]));
+
+// Les familles requises : un jour gravé sans « f » est juste pour les catégories, pas pour une promo.
+$req = ['tartes' => ['du' => $jour(1), 'au' => null, 'shops' => null, 'promo' => false], 'pc900' => ['du' => $jour(5), 'au' => $jour(10), 'shops' => ['4' => true], 'promo' => true]];
+verifie('jour ancien, hors promo : à jour', pvFamillesOk(['e' => []], 4, $jour(2), $req));
+verifie('jour ancien, dans la promo : à recompter', !pvFamillesOk(['e' => []], 4, $jour(6), $req));
+verifie('jour compté avec la promo : à jour', pvFamillesOk(['e' => [], 'f' => ['tartes', 'pc900']], 4, $jour(6), $req));
+verifie('jour compté sans une catégorie ajoutée : à recompter', !pvFamillesOk(['e' => [], 'f' => ['pc900']], 4, $jour(6), $req));
+verifie('autre magasin : la promo ne compte pas', pvFamillesOk(['e' => [], 'f' => ['tartes']], 5, $jour(6), $req));
+
+// --- 5. le classement au nombre de pièces, la 1re du magasin ----------------------------------------
+echo "Le classement, la 1re du magasin\n";
+$emps = venteEmployes();
+$cr = ['e' => [
+    1 => ['t' => 300, 'q' => ['tartes' => 51.0], 'qp' => ['pc900' => 20.0]],
+    2 => ['t' => 260, 'q' => ['tartes' => 42.0], 'qp' => ['pc900' => 31.0]],
+    3 => ['t' => 280, 'q' => ['tartes' => 68.0], 'qp' => ['pc900' => 90.0]]]];
+$cfgK = ['actif' => true, 'liste' => [['cle' => 'tartes', 'lib' => 'Queen of Tartes', 'magasin' => 50, 'reseau' => 0, 'minPieces' => 10]]];
+$cls = concoursClassement($cr, $emps, $cfgK);
+verifie('Léa 1re de Halle, Inès 1re du réseau', $cls['tartes'][1]['rangMag'] === 1 && $cls['tartes'][3]['rangRes'] === 1 && $cls['tartes'][2]['rangMag'] === 2);
+verifie('la 1re du magasin gagne la récompense', concoursPrime($cls, 1, $cfgK) === 50 && concoursPrime($cls, 2, $cfgK) === 0);
+verifie('plus de couronne du réseau payée', concoursTitres($cls, 3, $cfgK) === [['cle' => 'tartes', 'lib' => 'Queen of Tartes', 'niveau' => 'magasin', 'montant' => 50]]);
+$promos = [['cle' => 'pc900', 'lib' => 'Café + croissant', 'magasin' => 50, 'reseau' => 0, 'minPieces' => 1, 'shops' => ['4']]];
+$clsP = promosClassement($cr, $emps, $promos);
+verifie('promo : Namur hors classement', !isset($clsP['pc900'][3]));
+verifie('promo : Toi 1re de Halle avec 31', $clsP['pc900'][2]['rangMag'] === 1 && $clsP['pc900'][2]['surRes'] === 2);
+$cfgK['liste'][0]['minPieces'] = 60;
+$cls = concoursClassement($cr, $emps, $cfgK);
+verifie('sous le minimum de pièces : pas classée', $cls['tartes'][1]['rangMag'] === null && concoursPrime($cls, 1, $cfgK) === 0);
+
+// --- 6. les promotions du panel, mises à plat ------------------------------------------------------
+echo "Les promotions du panel\n";
+$cat = primesPromosCatalogue();
+verifie('le repli : les bundles du catalogue', array_column($cat, 'id') === ['901', '900'] && $cat[1]['ids'] === [900], json_encode(array_column($cat, 'id')));
+$p = primesPromoNormaliser(['id' => 12, 'name' => 'Café + croissant', 'price' => '3.50', 'start_date' => date('Y-m-01'), 'end_date' => date('Y-m-t'), 'shops' => [['id' => 4], ['id' => 5]], 'items' => [['product_id' => 1], ['product_id' => 2]]], 'bundle', $cat);
+verifie('un bundle sans produit à lui : le produit du catalogue à son nom', $p !== null && $p['ids'] === [900] && $p['composants'] === [1, 2], json_encode($p));
+verifie('ses dates, son prix, ses magasins', $p['du'] === date('Y-m-01') && $p['prix'] === 3.5 && $p['shops'] === ['4', '5']);
+$p = primesPromoNormaliser(['id' => 13, 'title' => 'Menu midi', 'product_id' => 950, 'is_active' => 1], 'bundle', $cat);
+verifie('un bundle avec son produit : ce produit', $p['ids'] === [950]);
+$p = primesPromoNormaliser(['id' => 5, 'name' => '5 macarons + 1 offert', 'buy_products' => [['id_product' => 30], ['id_product' => 31]], 'get_products' => [31]], 'xy', $cat);
+verifie('une offre X + Y : ses produits', $p['ids'] === [30, 31], json_encode($p['ids'] ?? null));
+verifie('une promotion éteinte écartée', primesPromoNormaliser(['id' => 6, 'name' => 'x', 'active' => false], 'bundle', $cat) === null);
+verifie('une promotion finie depuis longtemps écartée', primesPromoNormaliser(['id' => 7, 'name' => 'x', 'end_date' => '2020-01-01'], 'bundle', $cat) === null);
+PanelApi::$configure = true;
+PanelApi::$reponses = ['/admin/promotions/bundles?active=1' => ['code' => 200, 'corps' => ['data' => [['id' => 12, 'name' => 'Café + croissant', 'items' => []]]], 'erreur' => null]];
+$pp = primesPromosPanel(true);
+verifie('l’API : le bundle, puis les bundles du catalogue qu’elle n’a pas donnés', array_map(static fn ($x) => $x['source'] . ':' . $x['id'], $pp['liste']) === ['api:12', 'catalogue:901'], json_encode(array_map(static fn ($x) => $x['source'] . ':' . $x['id'], $pp['liste'])));
+verifie('le 403 des offres X + Y est dit', $pp['api'] && $pp['erreurs'][0]['code'] === 403 && str_contains($pp['erreurs'][0]['chemin'], 'buy-x-get-y'));
+PanelApi::$configure = false;
+
+// --- 7. les cartes de l'app ------------------------------------------------------------------
+echo "Les cartes de l'app\n";
+$b = ['croisees' => ['taux' => 56.0, 'cible' => 55.0, 'montant' => 50, 'tickets' => 262, 'minTickets' => 30],
+    'record' => ['lt' => 2.74, 'record' => 2.8, 'montant' => 0, 'eurDixieme' => 100, 'maxDixiemes' => 3],
+    'meilleure' => ['score' => 59, 'rangMag' => 2, 'surMag' => 6, 'scorePremier' => 61, 'premierNom' => 'Léa', 'secondNom' => 'Toi', 'scoreSecond' => 59, 'montant' => 0, 'montantMag' => 75],
+    'concours' => ['liste' => [['cle' => 'tartes', 'lib' => 'Queen of Tartes', 'pieces' => 42.0, 'rangMag' => 2, 'surMag' => 6, 'minPieces' => 10, 'montantMag' => 50, 'montant' => 0]]],
+    'promos' => ['liste' => [['cle' => 'pc900', 'lib' => 'Café + croissant', 'pieces' => 31.0, 'rangMag' => 1, 'surMag' => 6, 'minPieces' => 1, 'montantMag' => 50, 'montant' => 50, 'du' => null, 'au' => null]]]];
+$pmC = ['clos' => false, 'atteinte' => 40.0, 'atteinteProj' => 98.0, 'vous' => 0.0, 'sousMin' => false, 'objectif' => 61000.0];
+$clsC = [['cle' => 'tartes', 'magasin' => [['nom' => 'Léa', 'pieces' => 51.0, 'moi' => false], ['nom' => 'Toi', 'pieces' => 42.0, 'moi' => true]]],
+    ['cle' => 'pc900', 'magasin' => [['nom' => 'Toi', 'pieces' => 31.0, 'moi' => true], ['nom' => 'Manon', 'pieces' => 30.0, 'moi' => false]]]];
+$cartes = primesCartes($b, $pmC, $clsC, true);
+$par = array_column($cartes, null, 'cle');
+verifie('l’ordre : croisées, record, objectif, meilleure, catégorie, promo', array_column($cartes, 'cle') === ['croisees', 'record', 'objectif', 'meilleure', 'tartes', 'pc900'], json_encode(array_column($cartes, 'cle')));
+verifie('croisées gagnées', $par['croisees']['etat'] === 'gagne' && $par['croisees']['gain'] === 50.0);
+verifie('record : la cible est le record + 0,2 (le 1er dixième pose le record)', $par['record']['cible'] === 3.0 && $par['record']['etat'] === 'att' && abs($par['record']['ecart'] - 0.26) < 1e-9);
+verifie('record : jusqu’à 3 dixièmes', $par['record']['montant'] === 300 && $par['record']['max']);
+verifie('objectif : projeté, manque 2 pts', $par['objectif']['etat'] === 'att' && $par['objectif']['ecart'] === 2.0 && $par['objectif']['projete']);
+verifie('catégorie : 2e, la 1re nommée avec sa quantité', $par['tartes']['etat'] === 'rang' && $par['tartes']['premier']['nom'] === 'Léa' && $par['tartes']['premier']['q'] === 51.0);
+verifie('promo : en tête, la 2e nommée', $par['pc900']['etat'] === 'tete' && $par['pc900']['second']['nom'] === 'Manon');
+verifie('mois clos : en tête devient gagné', array_column(primesCartes($b, $pmC, $clsC, false), null, 'cle')['pc900']['etat'] === 'gagne');
+
+// --- 8. les moyennes par magasin -------------------------------------------------------------
+echo "Les moyennes par magasin\n";
+$mm = date('Y-m', strtotime(date('Y-m') . '-01 -1 month'));
+$GLOBALS['REGLAGES'] = array_filter($GLOBALS['REGLAGES'], static fn ($k) => !str_starts_with((string) $k, 'pvL') && !str_starts_with((string) $k, 'prMoy'), ARRAY_FILTER_USE_KEY);
+for ($d = 1; $d <= 2; $d++) {
+    $j = $mm . '-0' . $d;
+    $GLOBALS['REGLAGES']['pvL4:' . $j] = ['v' => 3, 'f' => ['tartes'], 'e' => [1 => ['t' => 20, 'l' => 50, 'c' => 11, 'q' => ['tartes' => 3]], 2 => ['t' => 20, 'l' => 54, 'c' => 12, 'q' => ['tartes' => 2]]]];
+    $GLOBALS['REGLAGES']['pvL5:' . $j] = ['v' => 3, 'f' => ['tartes'], 'e' => [3 => ['t' => 40, 'l' => 100, 'c' => 20, 'q' => ['tartes' => 6]]]];
+}
+$GLOBALS['REGLAGES']['pvCa4:' . $mm] = ['quand' => time(), 'ca' => 1000.0, 'tickets' => 80];
+$GLOBALS['REGLAGES']['pvCa5:' . $mm] = ['quand' => time(), 'ca' => 900.0, 'tickets' => 80];
+$GLOBALS['TABLES']['budgets'][$mm] = [['shop_id' => 4, 'revenue_budget' => 1250, 'ca_theorique' => null]];
+$GLOBALS['REGLAGES']['venteCroisees'] = ['cibleDefaut' => 50, 'cibles' => ['4' => 55], 'minTickets' => 30];
+$_GET['n'] = 1;
+$moy = ep_primes_moyennes();
+$h = array_column($moy['magasins'], null, 'id');
+verifie('Halle : 80 tickets, 2 vendeuses à 30 tickets ou plus, 40 par vendeuse', $h['4']['tickets'] === 80 && $h['4']['vendeuses'] === 2.0 && $h['4']['ticketsVendeuse'] === 40, json_encode($h['4']));
+verifie('Halle : ticket moyen 12,50 €, 2,6 lignes, 57,5 % de croisées', $h['4']['ticketMoyen'] === 12.5 && $h['4']['lignesTicket'] === 2.6 && $h['4']['croisees'] === 57.5);
+verifie('Halle : objectif atteint à 80 %, 5 tartes par vendeuse', $h['4']['atteinte'] === 80.0 && $h['4']['pieces']['tartes'] === 5.0, json_encode($h['4']));
+verifie('Halle : sa cible en face', $h['4']['cible'] === 55.0 && $h['5']['cible'] === null);
+verifie('le réseau : 160 tickets, 3 vendeuses, 11,88 € de ticket moyen', $moy['reseau']['tickets'] === 160 && $moy['reseau']['vendeuses'] === 3.0 && $moy['reseau']['ticketMoyen'] === 11.88, json_encode($moy['reseau']));
+
+echo "\n$ok ok, $ko KO\n";
+exit($ko > 0 ? 1 : 0);

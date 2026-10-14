@@ -315,3 +315,74 @@ a.acc-etape{text-decoration:none;color:inherit}
 .vm-r{grid-area:r;font:700 11.5px var(--font-ui);background:var(--la-beige-doux);border-radius:999px;padding:5px 9px;white-space:nowrap;min-width:52px;text-align:center}
 .vm-r small{font-weight:500;color:var(--la-muet)}
 .vm-r.or{background:#f6e3a1}
+
+/* ── « Mes primes » épuré (14/10/2026) : une carte par prime, le classement dans un menu déroulant. ── */
+.hx{background:linear-gradient(140deg,#9a2233 0%,#8D1D2C 45%,#4e0f19 100%);color:#fff;border-radius:18px;padding:14px 16px 12px;margin-bottom:6px;box-shadow:0 14px 30px rgba(141,29,44,.25)}
+.hx .l{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.hx b{display:block;font:400 34px/1 var(--font-display)}
+.hx small{display:block;font:600 10px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.75);margin-top:5px}
+.hx .r{text-align:right}
+.hx .r b{font-size:22px;color:rgba(255,255,255,.92)}
+.hx .bar{height:6px;border-radius:999px;background:rgba(255,255,255,.2);margin-top:12px;overflow:hidden}
+.hx .bar i{display:block;height:100%;background:#fff;border-radius:999px}
+.pp{background:#fff;border:.5px solid var(--la-trait);border-radius:18px;padding:12px 14px;margin-bottom:10px;box-shadow:0 6px 18px rgba(50,30,20,.05)}
+.pp.cliquable{cursor:pointer}
+.pp.gagne{border:1.5px solid #2d7a3e;background:linear-gradient(180deg,#fff 0%,#f3faf4 100%)}
+.pp.tete{border:1.5px solid #c9962a;background:linear-gradient(180deg,#fff 0%,#fffaf0 100%)}
+.pp-h{display:flex;align-items:center;gap:10px}
+.pp-h .emo{width:38px;height:38px;border-radius:12px;background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto}
+.pp.gagne .pp-h .emo{background:#e4f3e8}
+.pp.tete .pp-h .emo{background:#f6e3a1}
+.pp-h .t{flex:1;min-width:0}
+.pp-h .t b{display:block;font:600 14.5px/1.2 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-h .m{font:400 24px/1 var(--font-display);color:var(--la-rubis);white-space:nowrap;text-align:right}
+.pp-h .m small{display:block;font:600 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);margin-top:2px}
+.pp.gagne .pp-h .m{color:#2d7a3e}
+.typ{display:inline-block;font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-top:4px}
+.typ.target{background:#e6edf5;color:#2a5a8a}
+.typ.categorie{background:#fbe9d6;color:#8a4a12}
+.typ.promo{background:#f6dfe2;color:var(--la-rubis)}
+.typ.classement{background:#efe9f6;color:#5a3d8a}
+.pp-b{display:flex;align-items:center;gap:10px;margin-top:10px}
+.pp-b .v{font:400 22px/1 var(--font-display);white-space:nowrap;min-width:64px}
+.pp-b .v small{font:500 11px var(--font-ui);color:var(--la-muet);margin-left:3px}
+.jg{flex:1;position:relative;height:8px;border-radius:999px;background:var(--la-beige-doux)}
+.jg i{display:block;height:100%;border-radius:999px;background:var(--la-rubis)}
+.pp.gagne .jg i{background:#2d7a3e}
+.pp.tete .jg i{background:#c9962a}
+.jg .c{position:absolute;top:-4px;width:2px;height:16px;border-radius:1px;background:var(--la-encre)}
+.etat{font:700 11px var(--font-ui);padding:4px 9px;border-radius:999px;white-space:nowrap}
+.etat.ok{background:#e4f3e8;color:#2d7a3e}
+.etat.or{background:#f6e3a1;color:#6b4e00}
+.etat.att{background:#fdf0e0;color:#b25f00}
+.etat.mu{background:var(--la-beige-doux);color:var(--la-encre)}
+.pp-p{font-size:11.5px;color:var(--la-muet);margin-top:6px}
+.pp-p b{color:var(--la-encre);font-weight:600}
+/* Le menu déroulant : un vrai <select> posé sur l'étiquette, pour la roue native du téléphone. */
+.dd{position:relative;display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--la-encre);border-radius:14px;padding:9px 12px}
+.dd .emo{font-size:20px}
+.dd .t{flex:1;min-width:0}
+.dd b{display:block;font:600 15px/1.2 var(--font-ui)}
+.dd .typ{margin-top:2px}
+.dd .bi{font-size:16px}
+.dd select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.cl-carte{background:#fff;border:.5px solid var(--la-trait);border-radius:18px;padding:12px 14px;margin:10px 0 12px;box-shadow:0 6px 18px rgba(50,30,20,.05)}
+.cl-carte .cl-tog{margin-bottom:4px}
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:6px;margin:10px 0 4px;text-align:center}
+.pod{min-width:0}
+.pod .cr{display:block;font-size:22px;line-height:1;margin-bottom:2px}
+.pod .av{width:44px;height:44px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font:700 16px var(--font-ui);color:#fff}
+.pod.p1 .av{width:58px;height:58px;font-size:21px;box-shadow:0 0 0 3px #f6e3a1}
+.pod.moi .av{box-shadow:0 0 0 3px var(--la-rubis)}
+.pod b{display:block;font:600 12.5px var(--font-ui);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod.moi b{color:var(--la-rubis)}
+.pod small{display:block;font-size:10px;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod .q{font:400 20px/1 var(--font-display);margin-top:4px}
+.pod .q small{display:inline;font:500 10px var(--font-ui)}
+.pod .socle{margin-top:6px;border-radius:10px 10px 0 0;background:var(--la-beige-doux);font:400 18px var(--font-display);color:var(--la-muet);padding-top:5px}
+.pod.p1 .socle{height:52px;background:#f6e3a1;color:#6b4e00}
+.pod.p2 .socle{height:36px}
+.pod.p3 .socle{height:24px}
+.cl-row .av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);color:#fff;flex:0 0 auto}
+.cl-row.moi .av{box-shadow:0 0 0 2px var(--la-rubis)}
+.cl-row.ecart{justify-content:center;color:var(--la-muet);padding:2px 0;border-top:none;letter-spacing:2px}

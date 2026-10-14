@@ -1,7 +1,19 @@
-# Mes primes, épurées : une carte = une prime, le classement dans un menu déroulant
+# Mes primes, épurées : une carte par prime, le classement dans un menu déroulant
 
-**Statut : maquettes, à choisir (14/10/2026).** Rien n'est codé : la page en ligne reste
-`apps/employee/src/app/Views/primes/primes.twig`.
+**Statut : codé le 14/10/2026, variante A.** L'app : `apps/employee/src/app/Views/primes/primes.twig` ;
+le cockpit : `src/primes.php`, `src/primes_app.php`, Équipe & ventes › Paramètres ; le contrat :
+`docs/contrat-api.md`, « Les primes dans l'app worker ». Captures du code, sur un jeu d'essai calculé par
+le moteur : `code-app.png` (`php rendu.php` → `rendu-app.html`), `code-cockpit.png`.
+
+Les choix faits au moment de coder, sans réponse sur les points ouverts :
+
+- **la variante A** : la liste des primes, puis le classement dans un menu déroulant ;
+- **une récompense par prime**, 50 € par défaut, pour les ventes croisées (à la cible), l'objectif du magasin
+  (chaque personne au planning, au-dessus du minimum d'heures) et chaque catégorie ou promo (la 1re du magasin) ;
+  plus de paliers, plus d'euros par heure, plus de couronne du réseau payée ;
+- **Bats ton record** et **la meilleure vendeuse** gardent leur système et leurs montants (onglet Targets &
+  primes) : l'app les montre comme des cartes, le cockpit comme des lignes « réglé dans Targets & primes ».
+  Les passer à une récompense unique reste possible.
 
 Demande du 14/10/2026, sur `/consulant_bo/employee/primes` : chaque tableau est une prime (un
 target, une catégorie de produits ou une promotion) avec sa récompense, réglée par l'admin,
@@ -87,13 +99,6 @@ Captures : `*-tel.png` (premier écran), `*-long.png` (la page entière), `a-men
 Le compteur « Aujourd'hui », « Ma collection », les 12 dernières semaines, les ventes mois par mois,
 les mois payés et toutes les phrases « comment ça marche ». Les bascules Mon magasin / Réseau
 restent ; la bascule mois / semaine disparaît.
-
-## À trancher avant de coder
-
-- **Meilleure vendeuse** (CA par heure) n'entre dans aucun des trois types : elle est absente des maquettes.
-- **Objectif magasin** se paie aujourd'hui en euros par heure prestée, par palier ; **Bats ton record**
-  100 € par dixième. Dans les maquettes, ce sont des targets à 50 €.
-- **La couronne du réseau** des concours (100 € aujourd'hui) n'apparaît plus : une seule récompense par prime.
 
 ## Pour refaire les captures
 

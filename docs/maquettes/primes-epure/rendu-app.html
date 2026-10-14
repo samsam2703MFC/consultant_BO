@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Mes primes</title>
+    <link rel="stylesheet" href="/public/employee/assets/atelier/app.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/atelier/marque.css?v=1791869247">
+
+    <link rel="manifest" href="/public/employee/manifest.webmanifest">
+    <meta name="theme-color" content="#8D1D2C">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/public/employee/assets/pwa/icon-192.png">
+
+    <style>
+        :root{
+            --emp-tabbar-h: 72px;
+        }
+
+        body{
+            background: var(--la-beige); /* Mazer-ish */
+        }
+
+        /* CONTENT: zawsze nad tabbarem */
+        .emp-content{
+            padding-bottom: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+        }
+        /* Sur un grand écran, l'app garde sa largeur de téléphone au centre. */
+        .emp-content .container, .emp-topbar .container{ max-width: 600px; }
+
+        /* TOP BAR */
+        .emp-topbar{
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding-top: env(safe-area-inset-top, 0px);
+            background: rgba(234,228,220,.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .emp-topbar-inner{
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .emp-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .emp-subtitle{
+            margin: 0;
+            font-size: .85rem;
+            color: var(--la-muet);
+        }
+
+        /* BOTTOM NAV */
+        .emp-bottom-nav{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1030;
+
+            height: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,.06);
+            max-width: 600px;
+            margin: 0 auto;
+
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+        }
+
+        .emp-bottom-item{
+            text-decoration: none;
+            color: var(--la-muet);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .emp-bottom-item i{
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .emp-bottom-item.is-active{
+            color: var(--la-rubis); /* Mazer primary-ish */
+        }
+
+        .emp-bottom-item.is-active i{
+            transform: translateY(-1px);
+        }
+    </style>
+
+    <link rel="stylesheet" href="/public/employee/assets/atelier/primes.css?v=1791992023"></head>
+<body>
+
+    <div class="emp-topbar">
+        <div class="container">
+            <div class="emp-topbar-inner">
+                <div>
+                    <p class="emp-title">Mes primes</p>
+                    <p class="emp-subtitle">Halle · octobre 2026, au 14</p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                                    </div>
+            </div>
+        </div>
+    </div>
+
+<main class="emp-content">
+    <div class="container py-3">
+        
+<div class="hx">
+  <div class="l">
+    <div><b>150&nbsp;€</b><small>acquis</small></div>
+    <div class="r"><b>625&nbsp;€</b><small>en jeu</small></div>  </div>
+  <div class="bar"><i style="width:24%"></i></div></div>
+
+<div class="titre-section"><h2>Mes primes</h2><small>7</small></div>
+<div class="pp gagne" data-carte="croisees">
+  <div class="pp-h"><span class="emo">🛍️</span>
+    <div class="t"><b>Ventes croisées</b><span class="typ target">Target</span></div>
+    <span class="m">+50&nbsp;€</span>
+  </div>
+  <div class="pp-b">
+    <span class="v">56<small>%</small></span>
+    <div class="jg"><i style="width:70.3%"></i><span class="c" style="left:66.7%"></span></div>
+    <span class="etat ok">✓ gagné</span>
+      </div>
+  <div class="pp-p">
+    cible <b>55&nbsp;%</b>      </div>
+</div>
+<div class="pp " data-carte="record">
+  <div class="pp-h"><span class="emo">🚀</span>
+    <div class="t"><b>Bats ton record</b><span class="typ target">Target</span></div>
+    <span class="m">300&nbsp;€<small>max</small></span>
+  </div>
+  <div class="pp-b">
+    <span class="v">2,74</span>
+    <div class="jg"><i style="width:54%"></i><span class="c" style="left:80%"></span></div>
+    <span class="etat att">−0,26</span>
+      </div>
+  <div class="pp-p">
+    cible <b>3,00</b> · record 2,80      </div>
+</div>
+<div class="pp gagne" data-carte="objectif">
+  <div class="pp-h"><span class="emo">🏪</span>
+    <div class="t"><b>Objectif magasin</b><span class="typ target">Target</span></div>
+    <span class="m">+50&nbsp;€</span>
+  </div>
+  <div class="pp-b">
+    <span class="v">108<small>%</small></span>
+    <div class="jg"><i style="width:93.8%"></i><span class="c" style="left:75%"></span></div>
+    <span class="etat ok">✓ gagné</span>
+      </div>
+  <div class="pp-p">
+    cible <b>100&nbsp;%</b> · projeté      </div>
+</div>
+<div class="pp " data-carte="meilleure">
+  <div class="pp-h"><span class="emo">🏆</span>
+    <div class="t"><b>Meilleure vendeuse</b><span class="typ classement">Classement</span></div>
+    <span class="m">75&nbsp;€</span>
+  </div>
+  <div class="pp-b">
+    <span class="v">59<small>score</small></span>
+    <div class="jg"><i style="width:96.7%"></i></div>
+    <span class="etat mu">2e / 4</span>
+      </div>
+  <div class="pp-p">
+          👑 <b>Léa</b> 61      </div>
+</div>
+<div class="pp " data-carte="tartes">
+  <div class="pp-h"><span class="emo">👑</span>
+    <div class="t"><b>Queen of Tartes</b><span class="typ categorie">Catégorie</span></div>
+    <span class="m">50&nbsp;€</span>
+  </div>
+  <div class="pp-b">
+    <span class="v">42<small>pcs</small></span>
+    <div class="jg"><i style="width:82.4%"></i></div>
+    <span class="etat mu">2e / 6</span>
+      </div>
+  <div class="pp-p">
+          👑 <b>Léa</b> 51      </div>
+</div>
+<div class="pp tete" data-carte="quiches">
+  <div class="pp-h"><span class="emo">👑</span>
+    <div class="t"><b>Queen of Quiches</b><span class="typ categorie">Catégorie</span></div>
+    <span class="m">50&nbsp;€</span>
+  </div>
+  <div class="pp-b">
+    <span class="v">27<small>pcs</small></span>
+    <div class="jg"><i style="width:100%"></i></div>
+    <span class="etat or">👑 1re</span>
+      </div>
+  <div class="pp-p">
+          2e · <b>Sarah</b> 24      </div>
+</div>
+<div class="pp " data-carte="pc900">
+  <div class="pp-h"><span class="emo">🏷️</span>
+    <div class="t"><b>Promo café + croissant</b><span class="typ promo">Promo</span></div>
+    <span class="m">50&nbsp;€</span>
+  </div>
+  <div class="pp-b">
+    <span class="v">31<small>pcs</small></span>
+    <div class="jg"><i style="width:91.2%"></i></div>
+    <span class="etat mu">2e / 6</span>
+      </div>
+  <div class="pp-p">
+          👑 <b>Manon</b> 34      </div>
+</div>
+
+<div class="titre-section" id="classement"><h2>Classement</h2><small>octobre 2026</small></div>
+<div class="dd" data-cl-dd>
+  <span class="emo" data-cl-emo>👑</span>
+  <div class="t"><b data-cl-lib>Queen of Tartes</b><span class="typ categorie" data-cl-typ>Catégorie</span></div>
+  <i class="bi bi-chevron-down"></i>
+  <select data-cl-choix aria-label="Classement">
+    <option value="tartes" data-emo="👑" data-type="categorie" data-typ="Catégorie">Queen of Tartes</option><option value="quiches" data-emo="👑" data-type="categorie" data-typ="Catégorie">Queen of Quiches</option><option value="pc900" data-emo="🏷️" data-type="promo" data-typ="Promo">Promo café + croissant</option><option value="croisees" data-emo="🛍️" data-type="target" data-typ="Target">Ventes croisées</option>  </select>
+</div>
+<div class="cl-carte" data-classements>
+  <div class="cl-tog"><span class="on" data-cl-niv="magasin">Mon magasin</span><span data-cl-niv="reseau">Réseau</span></div>
+        <div class="cl-liste on" data-cl="tartes:magasin">
+                <div class="podium">
+                  <div class="pod p2 moi">
+                <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+        <b>Toi</b>        <div class="q">42<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#a0606e">L</span>
+        <b>Léa</b>        <div class="q">51<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#9a8a4a">M</span>
+        <b>Manon</b>        <div class="q">37<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#9a8a4a">S</span>
+      <span class="nom">Sarah</span>
+      <span class="val">29<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#9a8a4a">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">18<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#8a5a7a">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">12<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="tartes:reseau">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av" style="background:#5a7a9a">N</span>
+        <b>Nora</b><small>Louvain-la-Neuve</small>        <div class="q">63<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#5a7a9a">I</span>
+        <b>Inès</b><small>Namur</small>        <div class="q">68<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#5a7a9a">E</span>
+        <b>Emma</b><small>Waterloo</small>        <div class="q">57<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#a0606e">L</span>
+      <span class="nom">Léa<span class="mag">· Halle</span></span>
+      <span class="val">51<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#9a8a4a">C</span>
+      <span class="nom">Chloé<span class="mag">· Uccle</span></span>
+      <span class="val">49<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#a0606e">Z</span>
+      <span class="nom">Zoé<span class="mag">· Sombreffe</span></span>
+      <span class="val">46<small>pcs</small></span></div>
+            <div class="cl-row moi"><span class="r">7</span>
+      <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+      <span class="nom">Toi<span class="mag">· Halle</span></span>
+      <span class="val">42<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">8</span>
+      <span class="av" style="background:#9a8a4a">L</span>
+      <span class="nom">Lucie<span class="mag">· Wavre</span></span>
+      <span class="val">40<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">9</span>
+      <span class="av" style="background:#9a8a4a">M</span>
+      <span class="nom">Manon<span class="mag">· Halle</span></span>
+      <span class="val">37<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">10</span>
+      <span class="av" style="background:#8a5a7a">Y</span>
+      <span class="nom">Yasmine<span class="mag">· Ixelles</span></span>
+      <span class="val">35<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="quiches:magasin">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av" style="background:#9a8a4a">S</span>
+        <b>Sarah</b>        <div class="q">24<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1 moi">
+        <span class="cr">👑</span>        <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+        <b>Toi</b>        <div class="q">27<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#a0606e">L</span>
+        <b>Léa</b>        <div class="q">19<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#9a8a4a">M</span>
+      <span class="nom">Manon</span>
+      <span class="val">15<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#9a8a4a">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">9<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#8a5a7a">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">6<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="quiches:reseau">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av" style="background:#5a7a9a">I</span>
+        <b>Inès</b><small>Namur</small>        <div class="q">36<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#6a8a8a">A</span>
+        <b>Amélie</b><small>Wavre</small>        <div class="q">41<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#9a8a4a">L</span>
+        <b>Laura</b><small>Namur</small>        <div class="q">33<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#9a8a4a">L</span>
+      <span class="nom">Lucie<span class="mag">· Wavre</span></span>
+      <span class="val">30<small>pcs</small></span></div>
+            <div class="cl-row moi"><span class="r">5</span>
+      <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+      <span class="nom">Toi<span class="mag">· Halle</span></span>
+      <span class="val">27<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#5a7a9a">N</span>
+      <span class="nom">Nora<span class="mag">· Louvain-la-Neuve</span></span>
+      <span class="val">26<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">7</span>
+      <span class="av" style="background:#9a8a4a">S</span>
+      <span class="nom">Sarah<span class="mag">· Halle</span></span>
+      <span class="val">24<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">8</span>
+      <span class="av" style="background:#5a7a9a">E</span>
+      <span class="nom">Emma<span class="mag">· Waterloo</span></span>
+      <span class="val">22<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">9</span>
+      <span class="av" style="background:#9a8a4a">C</span>
+      <span class="nom">Chloé<span class="mag">· Uccle</span></span>
+      <span class="val">21<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">10</span>
+      <span class="av" style="background:#a0606e">L</span>
+      <span class="nom">Léa<span class="mag">· Halle</span></span>
+      <span class="val">19<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="pc900:magasin">
+                <div class="podium">
+                  <div class="pod p2 moi">
+                <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+        <b>Toi</b>        <div class="q">31<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#9a8a4a">M</span>
+        <b>Manon</b>        <div class="q">34<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#a0606e">L</span>
+        <b>Léa</b>        <div class="q">22<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#9a8a4a">S</span>
+      <span class="nom">Sarah</span>
+      <span class="val">20<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#9a8a4a">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">11<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#8a5a7a">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">7<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="pc900:reseau">
+                <div class="podium">
+                  <div class="pod p2 moi">
+                <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+        <b>Toi</b><small>Halle</small>        <div class="q">31<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#9a8a4a">M</span>
+        <b>Manon</b><small>Halle</small>        <div class="q">34<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#a0606e">L</span>
+        <b>Léa</b><small>Halle</small>        <div class="q">22<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#9a8a4a">S</span>
+      <span class="nom">Sarah<span class="mag">· Halle</span></span>
+      <span class="val">20<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#9a8a4a">J</span>
+      <span class="nom">Julie<span class="mag">· Halle</span></span>
+      <span class="val">11<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#8a5a7a">C</span>
+      <span class="nom">Camille<span class="mag">· Halle</span></span>
+      <span class="val">7<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="croisees:magasin">
+                <div class="podium">
+                  <div class="pod p2 moi">
+                <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+        <b>Toi</b>        <div class="q">56<small> %</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#9a8a4a">S</span>
+        <b>Sarah</b>        <div class="q">61<small> %</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#a0606e">L</span>
+        <b>Léa</b>        <div class="q">54<small> %</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#9a8a4a">M</span>
+      <span class="nom">Manon</span>
+      <span class="val">52,1&nbsp;%<small>125/240</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#9a8a4a">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">49,3&nbsp;%<small>74/150</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av" style="background:#8a5a7a">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">44,2&nbsp;%<small>53/120</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="croisees:reseau">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av" style="background:#5a7a9a">N</span>
+        <b>Nora</b><small>Louvain-la-Neuve</small>        <div class="q">64<small> %</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av" style="background:#9a8a4a">C</span>
+        <b>Chloé</b><small>Uccle</small>        <div class="q">66<small> %</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av" style="background:#9a8a4a">S</span>
+        <b>Sarah</b><small>Halle</small>        <div class="q">61<small> %</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av" style="background:#5a7a9a">I</span>
+      <span class="nom">Inès<span class="mag">· Namur</span></span>
+      <span class="val">60,0&nbsp;%<small>198/330</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av" style="background:#6a8a8a">A</span>
+      <span class="nom">Amélie<span class="mag">· Wavre</span></span>
+      <span class="val">58,1&nbsp;%<small>157/270</small></span></div>
+            <div class="cl-row moi"><span class="r">6</span>
+      <span class="av" style="background:var(--la-rubis)"><i class="bi bi-person-fill"></i></span>
+      <span class="nom">Toi<span class="mag">· Halle</span></span>
+      <span class="val">56,1&nbsp;%<small>147/262</small></span></div>
+            <div class="cl-row "><span class="r">7</span>
+      <span class="av" style="background:#5a7a9a">E</span>
+      <span class="nom">Emma<span class="mag">· Waterloo</span></span>
+      <span class="val">55,2&nbsp;%<small>160/290</small></span></div>
+            <div class="cl-row "><span class="r">8</span>
+      <span class="av" style="background:#a0606e">L</span>
+      <span class="nom">Léa<span class="mag">· Halle</span></span>
+      <span class="val">54,0&nbsp;%<small>162/300</small></span></div>
+            <div class="cl-row "><span class="r">9</span>
+      <span class="av" style="background:#9a8a4a">L</span>
+      <span class="nom">Laura<span class="mag">· Namur</span></span>
+      <span class="val">53,9&nbsp;%<small>124/230</small></span></div>
+            <div class="cl-row "><span class="r">10</span>
+      <span class="av" style="background:#9a8a4a">L</span>
+      <span class="nom">Lucie<span class="mag">· Wavre</span></span>
+      <span class="val">53,8&nbsp;%<small>140/260</small></span></div>
+          </div>
+  </div>
+    </div>
+</main>
+
+
+<nav class="emp-bottom-nav" role="navigation" aria-label="Navigation principale">
+                    <a class="emp-bottom-item "
+           href="/public/employee/dashboard"
+           aria-current="false">
+            <i class="bi bi-house"></i>
+            <span>Accueil</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/schedule"
+           aria-current="false">
+            <i class="bi bi-calendar3"></i>
+            <span>Planning</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/tasks"
+           aria-current="false">
+            <i class="bi bi-check2-square"></i>
+            <span>Tâches</span>
+        </a>
+                    <a class="emp-bottom-item is-active"
+           href="/public/employee/primes"
+           aria-current="page">
+            <i class="bi bi-trophy"></i>
+            <span>Primes</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/me"
+           aria-current="false">
+            <i class="bi bi-person"></i>
+            <span>Profil</span>
+        </a>
+    </nav>
+<script>
+(function () {
+  var bloc = document.querySelector('[data-classements]'); if (!bloc) { return; }
+  var choix = document.querySelector('[data-cl-choix]');
+  var cat = choix.value, niv = 'magasin';
+  function montre() {
+    bloc.querySelectorAll('[data-cl]').forEach(function (l) { l.classList.toggle('on', l.dataset.cl === cat + ':' + niv); });
+    bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.classList.toggle('on', c.dataset.clNiv === niv); });
+    var o = choix.options[choix.selectedIndex];
+    document.querySelector('[data-cl-lib]').textContent = o.text;
+    document.querySelector('[data-cl-emo]').textContent = o.dataset.emo;
+    var t = document.querySelector('[data-cl-typ]'); t.textContent = o.dataset.typ; t.className = 'typ ' + o.dataset.type;
+  }
+  choix.addEventListener('change', function () { cat = choix.value; montre(); });
+  bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.addEventListener('click', function () { niv = c.dataset.clNiv; montre(); }); });
+  // Une carte avec un classement ouvre le sien.
+  document.querySelectorAll('[data-carte]').forEach(function (k) {
+    var cle = k.dataset.carte;
+    if (!choix.querySelector('option[value="' + cle + '"]')) { return; }
+    k.classList.add('cliquable');
+    k.addEventListener('click', function () { choix.value = cle; cat = cle; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
+  });
+})();
+</script>
+
+<script>
+    (function () {
+        if (!("serviceWorker" in navigator)) return;
+
+        window.addEventListener("load", async () => {
+            try {
+                const reg = await navigator.serviceWorker.register("/public/employee/sw.js", { scope: "/public/employee/" });
+                // Opcjonalnie log:
+                console.log("SW registered", reg);
+            } catch (e) {
+                console.warn("SW register failed", e);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

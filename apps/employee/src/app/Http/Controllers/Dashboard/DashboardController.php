@@ -95,13 +95,11 @@ class DashboardController extends Controller
             $out[] = ['cle' => 'record', 'gain' => (int) $r['eurDixieme'], 'ecart' => number_format(abs((float) $r['ecart']), 2, ',', ' '),
                 'record' => number_format((float) $r['record'], 1, ',', ' '), 'ordre' => (int) round(abs((float) $r['ecart']) * 100)];
         }
-        $k = $b['concours'] ?? null;
-        foreach (($k && !empty($k['actif'])) ? (array) ($k['liste'] ?? []) : [] as $q) {
-            if ($q['pieces'] === null || ($q['titre'] ?? null) === 'reseau') { continue; }
-            if (($q['rangMag'] ?? null) === 1) {
-                $manque = max(1, (int) ceil((float) ($q['premierRes'] ?? 0) - (float) $q['pieces']) + 1);
-                $out[] = ['cle' => 'concours', 'niveau' => 'reseau', 'gain' => (int) $q['montantRes'], 'n' => $manque, 'lib' => (string) $q['lib'], 'ordre' => $manque];
-            } else {
+        // Les catégories et les promos : la 1re du magasin gagne ; déjà 1re, rien de plus à gagner.
+        foreach (['concours', 'promos'] as $bq) {
+            $k = $b[$bq] ?? null;
+            foreach (($k && !empty($k['actif'])) ? (array) ($k['liste'] ?? []) : [] as $q) {
+                if ($q['pieces'] === null || ($q['rangMag'] ?? null) === 1 || (int) ($q['montantMag'] ?? 0) <= 0) { continue; }
                 $manque = max(1, (int) ceil(max((float) ($q['premierMag'] ?? 0), (float) $q['minPieces']) - (float) $q['pieces']) + 1);
                 $out[] = ['cle' => 'concours', 'niveau' => 'magasin', 'gain' => (int) $q['montantMag'], 'n' => $manque, 'lib' => (string) $q['lib'], 'ordre' => $manque];
             }

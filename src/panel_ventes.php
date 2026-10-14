@@ -157,9 +157,11 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
         if ($id > 0) { $tickets[$id] = (int) ($t['id_employee'] ?? 0); }
     }
     $emp = [];
-    // Les concours (Queen of Tartes, Queen of Quiches, 06/10/2026) : les produits de chaque famille, par identifiant.
+    // Les catégories (Queen of Tartes, Queen of Quiches, 06/10/2026) : les produits de chaque famille, par identifiant.
+    // Les promos du panel (14/10/2026) : leurs produits, par identifiant ; leurs dates jouent au compte du mois.
     $idsDe = [];
     foreach (function_exists('concoursFamilles') ? concoursFamilles() : [] as $cleF => $motifF) { $idsDe[$cleF] = pvFamilleIds($motifF); }
+    foreach (function_exists('promoFamilles') ? promoFamilles() : [] as $cleF => $ids) { $idsDe[$cleF] = $ids; }
     foreach (array_chunk(array_keys($tickets), 40, true) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -193,8 +195,9 @@ function pvLignesJour(int $sid, string $jour, int &$cout, bool $force = false): 
         foreach ($x['q'] as $cleF => $v) { $emp[$e]['q'][$cleF] = round($v, 2); }
     }
     $cout += count($tickets);
+    // « f » : les familles comptées ce jour-là — une famille ajoutée plus tard se recompte (pvCroiseesComplement).
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        [$cle, json_encode(['quand' => time(), 'v' => PV_LIGNES_VERSION, 'e' => $emp], JSON_UNESCAPED_UNICODE)]);
+        [$cle, json_encode(['quand' => time(), 'v' => PV_LIGNES_VERSION, 'f' => array_map('strval', array_keys($idsDe)), 'e' => $emp], JSON_UNESCAPED_UNICODE)]);
     return $emp;
 }
 
@@ -286,8 +289,10 @@ function pvLignesCron(): string
 
 /**
  * Les jours-magasins moissonnés dans une version plus ancienne (sans les ventes croisées, puis sans
- * les pièces du concours) se relisent, du plus récent au plus ancien, dans la limite d'un budget de
- * tickets : le mois en cours d'abord, puis les mois d'avant, sans jamais bloquer la moisson courante.
+ * les pièces du concours), ou sans une famille qu'ils doivent compter (une catégorie ajoutée, une
+ * promo sur ses dates : pvFamillesRequises), se relisent, du plus récent au plus ancien, dans la
+ * limite d'un budget de tickets : le mois en cours d'abord, puis les mois d'avant, sans jamais
+ * bloquer la moisson courante.
  */
 function pvCroiseesComplement(int $budget): array
 {
@@ -296,11 +301,12 @@ function pvCroiseesComplement(int $budget): array
     catch (PDOException $e) { return ['joursFaits' => 0, 'joursRestants' => 0, 'etat' => 'magasins illisibles']; }
     $cout = 0; $faits = 0; $restants = 0;
     $debut = pvLignesDebut() . '-01';
+    $requises = function_exists('pvFamillesRequises') ? pvFamillesRequises() : [];
     for ($j = date('Y-m-d', strtotime('-1 day')); $j >= $debut; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
         foreach ($shops as $sid) {
             $c = setting('pvL' . $sid . ':' . $j);
             if (!is_array($c) || !isset($c['e'])) { continue; }          // pas encore moissonné : la moisson s'en charge
-            if (pvLignesVersion($c) >= PV_LIGNES_VERSION) { continue; }  // déjà à jour
+            if (pvLignesVersion($c) >= PV_LIGNES_VERSION && ($requises === [] || pvFamillesOk($c, $sid, $j, $requises))) { continue; }  // déjà à jour
             if ($cout >= $budget) { $restants++; continue; }
             if (pvLignesJour($sid, $j, $cout, true) !== null) { $faits++; } else { $restants++; }
         }
@@ -327,19 +333,23 @@ function pvCroiseesMois(string $m): ?array
     catch (PDOException $e) { return null; }
     $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d', strtotime('-1 day')));
     $out = []; $jours = 0; $manquants = 0; $sansC = 0; $sansTq = 0; $joursVus = []; $joursTqShop = [];
+    // Les promos : leurs pièces sur leurs seules dates et dans leurs seuls magasins (« qp »).
+    $periodes = function_exists('promoPeriodes') ? promoPeriodes() : [];
     for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
         foreach ($shops as $sid) {
             $c = setting('pvL' . $sid . ':' . $j);
             if (!is_array($c) || !isset($c['e'])) { $manquants++; continue; }
             $e = (array) $c['e'];
             $version = pvLignesVersion($c);
+            $promosDuJour = [];
+            foreach ($periodes as $cleP => $per) { if (promoCouvre($per, $j, (string) $sid)) { $promosDuJour[] = $cleP; } }
             $avecC = $version >= 1;
             if (!$avecC) { $sansC++; }
             if ($version < 3) { $sansTq++; } else { $joursTqShop[$sid] = ($joursTqShop[$sid] ?? 0) + 1; }
             $joursVus[$j] = true;
             foreach ($e as $id => $x) {
                 $id = (int) $id;
-                if (!isset($out[$id])) { $out[$id] = ['t' => 0, 'l' => 0, 'c' => 0, 'tc' => 0, 'tq' => 0.0, 'tqT' => 0, 'q' => []]; }
+                if (!isset($out[$id])) { $out[$id] = ['t' => 0, 'l' => 0, 'c' => 0, 'tc' => 0, 'tq' => 0.0, 'tqT' => 0, 'q' => [], 'qp' => []]; }
                 $out[$id]['t'] += (int) ($x['t'] ?? 0);
                 $out[$id]['l'] += (int) ($x['l'] ?? 0);
                 // Le taux se mesure sur les seuls jours comptés : tc = les tickets de ces jours-là.
@@ -348,6 +358,7 @@ function pvCroiseesMois(string $m): ?array
                 if ($version >= 3) {
                     $out[$id]['tq'] += (float) ($x['tq'] ?? 0); $out[$id]['tqT'] += (int) ($x['t'] ?? 0);
                     foreach ((array) ($x['q'] ?? []) as $cleF => $v) { $out[$id]['q'][$cleF] = ($out[$id]['q'][$cleF] ?? 0.0) + (float) $v; }
+                    foreach ($promosDuJour as $cleP) { $out[$id]['qp'][$cleP] = ($out[$id]['qp'][$cleP] ?? 0.0) + (float) ($x['q'][$cleP] ?? 0); }
                 }
             }
         }
@@ -358,8 +369,12 @@ function pvCroiseesMois(string $m): ?array
     foreach ($out as $id => $x) {
         if ($x['tc'] === 0 && $sansC > 0) { unset($out[$id]['c']); }
         elseif ($x['tc'] > 0 && $x['tc'] < $x['t']) { $out[$id]['t'] = $x['tc']; }   // le taux sur les jours comptés
-        if ($x['tqT'] === 0 && $sansTq > 0) { unset($out[$id]['tq'], $out[$id]['q']); }
-        else { $out[$id]['tq'] = round($x['tq'], 2); foreach ($x['q'] as $cleF => $v) { $out[$id]['q'][$cleF] = round($v, 2); } }
+        if ($x['tqT'] === 0 && $sansTq > 0) { unset($out[$id]['tq'], $out[$id]['q'], $out[$id]['qp']); }
+        else {
+            $out[$id]['tq'] = round($x['tq'], 2);
+            foreach ($x['q'] as $cleF => $v) { $out[$id]['q'][$cleF] = round($v, 2); }
+            foreach ($x['qp'] as $cleF => $v) { $out[$id]['qp'][$cleF] = round($v, 2); }
+        }
         unset($out[$id]['tc'], $out[$id]['tqT']);
     }
     // joursTqShop : par magasin, les jours dont les pièces du concours sont comptées (version 2).
@@ -383,32 +398,6 @@ function pvCroiseesMoisMagasins(string $m): array
             foreach ((array) $x['e'] as $y) { $t += (int) ($y['t'] ?? 0); $c += (int) ($y['c'] ?? 0); }
         }
         $out[(string) $sid] = ['tickets' => $t, 'croisees' => $c, 'jours' => $jours, 'taux' => $t > 0 ? round(100 * $c / $t, 1) : null];
-    }
-    return $out;
-}
-
-/**
- * Les ventes croisées d'une personne, semaine par semaine (lundi à dimanche), sur les n dernières
- * semaines, depuis les jours moissonnés de son magasin.
- */
-function pvCroiseesSemaines(int $emp, int $n, int $sid): array
-{
-    $out = [];
-    $lundi = date('Y-m-d', strtotime('monday this week'));
-    for ($i = $n - 1; $i >= 0; $i--) {
-        $du = date('Y-m-d', strtotime($lundi . ' -' . (7 * $i) . ' days'));
-        $t = 0; $c = 0; $jours = 0;
-        for ($k = 0; $k < 7; $k++) {
-            $j = date('Y-m-d', strtotime($du . ' +' . $k . ' days'));
-            if ($j >= date('Y-m-d')) { break; }
-            $x = setting('pvL' . $sid . ':' . $j);
-            if (!is_array($x) || !isset($x['e']) || !pvLignesAvecC((array) $x['e'])) { continue; }
-            $jours++;
-            $y = $x['e'][$emp] ?? ($x['e'][(string) $emp] ?? null);
-            if (is_array($y)) { $t += (int) ($y['t'] ?? 0); $c += (int) ($y['c'] ?? 0); }
-        }
-        $out[] = ['lib' => 'S' . (int) date('W', strtotime($du)), 'du' => $du, 'tickets' => $t, 'croisees' => $c, 'jours' => $jours,
-            'taux' => $t > 0 ? round(100 * $c / $t, 1) : null];
     }
     return $out;
 }

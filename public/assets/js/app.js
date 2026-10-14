@@ -7046,134 +7046,190 @@ class App {
   }
 
   /**
-   * Paramètres des primes de l'app worker (06/10/2026, maquette B) : la prime magasin (des euros par
-   * heure prestée selon le palier d'atteinte de l'objectif du mois) et les ventes croisées (cible par
-   * magasin, paliers), avec l'aperçu du mois en cours d'un magasin. Ce qu'on tape reste un brouillon
-   * jusqu'à « Enregistrer » : les paliers se règlent ensemble.
+   * Paramètres des primes de l'app worker (14/10/2026) : la liste des primes — targets, catégories,
+   * promos du panel — avec UNE récompense chacune (50 € par défaut) ; les promotions du panel à
+   * suivre ; les moyennes par magasin pour régler les seuils au plus juste, avec la cible de ventes
+   * croisées de chaque magasin en face. Bats ton record et la meilleure vendeuse se montrent, réglés
+   * dans Targets & primes. Ce qu'on tape reste un brouillon jusqu'à « Enregistrer ».
    */
   valsPrimesParams(common){
     const S = this.state;
-    const shop = S.prShop || '';
-    const cle = shop || '_';
     const court = nom => String(nom || '').split(' - ').pop();
-    if (!this._pr) { this._pr = {}; }
-    if (this._pr[cle] === undefined && !this._prEnCours) {
-      this._prEnCours = true;
-      readOne('/ventes/primes-reglages' + (shop ? '?shop=' + shop : ''))
-        .then(d => { this._prEnCours = false; this._pr[cle] = (d && !d.error) ? d : null; if (d && d.shop && !shop) { this._pr[d.shop] = this._pr[cle]; } this.setState({}); })
-        .catch(() => { this._prEnCours = false; this._pr[cle] = null; this.setState({}); });
-    }
-    const d = this._pr[cle];
+    if (!this._prL) { this._prL = {}; }
+    // Une lecture par clé, une seule à la fois ; null : la lecture a échoué.
+    const lire = (cle, url) => {
+      if (this._prL[cle] === undefined && !this._prL['~' + cle]) {
+        this._prL['~' + cle] = true;
+        readOne(url).then(x => { this._prL['~' + cle] = false; this._prL[cle] = (x && !x.error) ? x : null; this.setState({}); })
+          .catch(() => { this._prL['~' + cle] = false; this._prL[cle] = null; this.setState({}); });
+      }
+      return this._prL[cle];
+    };
+    const d = lire('reglages', '/ventes/primes-reglages');
+    const n = S.prMoyN || 3;
+    const moy = lire('moy' + n, '/ventes/primes-moyennes?n=' + n);
+    const promos = lire('promos', '/ventes/primes-promos' + (S.prPromosFrais ? '?frais=1' : ''));
     common.prChargement = d === undefined;
     common.prMotif = d === null ? 'Les paramètres des primes n’ont pas pu être lus.' : '';
     if (!d) { return; }
-    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-    const n2 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
-    const mag = S.prMag || { paliers: d.magasin.paliers.map(p => Object.assign({}, p)), heuresMin: d.magasin.heuresMin };
-    const cr = S.prCr || { cibleDefaut: d.croisees.cibleDefaut, cibles: Object.assign({}, d.croisees.cibles), paliers: d.croisees.paliers.map(p => Object.assign({}, p)), minTickets: d.croisees.minTickets };
-    const enregistrer = (chemin, corps, quoi) => this.api('POST', chemin, corps).then(r => {
-      if (r && r.ok === false) { return; }
-      this.notify(quoi + ' enregistrés — ils valent dès ce mois');
-      this._pr = {}; this.setState({ prMag: undefined, prCr: undefined });
+    const fr = (v, k) => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: k, maximumFractionDigits: k }));
+    const pc = v => (v == null ? '' : fr(v, 1) + ' %');
+    const num = v => { const x = parseFloat(String(v).replace(',', '.')); return isNaN(x) ? null : x; };
+    const jj = s => (s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '');
+    const nomMag = {}; (d.magasins || []).forEach(m => { nomMag[m.id] = court(m.nom); });
+    const dates = p => (p.du || p.au ? (p.du ? jj(p.du) : '…') + ' → ' + (p.au ? jj(p.au) : '…') : 'sans dates');
+    const mags = p => ((p.shops || []).length ? p.shops.map(s => nomMag[s] || s).join(', ') : 'tous');
+    const sorte = p => (p.sorte === 'xy' ? 'X + Y offert' : 'Bundle');
+
+    // Le brouillon : la liste des primes, et les réglages des ventes croisées (cible par défaut, par magasin, minimum de tickets).
+    const app = S.prApp || JSON.parse(JSON.stringify(d.app));
+    const re = () => this.setState({ prApp: app });
+    const cr0 = { cibleDefaut: d.croisees.cibleDefaut, minTickets: d.croisees.minTickets, cibles: Object.assign({}, d.croisees.cibles) };
+    const cr = S.prCr || JSON.parse(JSON.stringify(cr0));
+    const reCr = () => this.setState({ prCr: cr });
+    const appModifie = JSON.stringify(app) !== JSON.stringify(d.app);
+    const crModifie = JSON.stringify(cr) !== JSON.stringify(cr0);
+    const finir = quoi => { this.notify(quoi + ' — valables dès ce mois'); this._prL = {}; this.setState({ prApp: undefined, prCr: undefined }); };
+    const enregistrerCr = () => this.api('POST', '/ventes/croisees', { cibleDefaut: cr.cibleDefaut, minTickets: cr.minTickets,
+      cibles: Object.assign({}, ...(d.magasins || []).map(m => ({ [m.id]: cr.cibles[m.id] != null ? cr.cibles[m.id] : '' }))) });
+
+    // La moyenne du réseau en face de chaque seuil.
+    const R = moy ? moy.reseau : null;
+    const moyDe = e => {
+      if (!R) { return ''; }
+      if (e.cle === 'croisees') { return pc(R.croisees) + (R.ticketsVendeuse != null ? ' · ' + R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''); }
+      if (e.cle === 'objectif') { return R.atteinte != null ? pc(R.atteinte) + ' de l’objectif' : ''; }
+      if (e.type === 'categorie') { const v = (R.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
+      if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
+      return '';
+    };
+    const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.type === 'promo' ? '🏷️' : '👑');
+    const typLib = { target: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement' };
+    const lignes = [];
+    app.liste.forEach((e, i) => {
+      const L = { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
+        externe: false, peutRetirer: e.type !== 'target', peutClasser: e.cle !== 'objectif', moyenne: moyDe(e), libLibre: e.type !== 'target',
+        qui: e.cle === 'croisees' ? 'chacune à la cible' : e.cle === 'objectif' ? 'chacune au planning' : '1re du magasin',
+        poserActif: ev => { e.actif = !!ev.target.checked; re(); },
+        poserClassement: ev => { e.classement = !!ev.target.checked; re(); },
+        poserMontant: ev => { const v = num(ev.target.value); if (v != null) { e.montant = Math.max(0, Math.round(v)); } re(); },
+        poserLib: ev => { e.lib = ev.target.value; re(); },
+        poser: (cle, entier) => ev => { const v = entier ? num(ev.target.value) : ev.target.value; if (v != null) { e[cle] = entier ? Math.max(0, Math.round(v)) : v; } re(); },
+        retirer: () => { app.liste.splice(i, 1); re(); } };
+      if (e.cle === 'croisees') {
+        Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
+          poserCibleDefaut: ev => { const v = num(ev.target.value); if (v != null) { cr.cibleDefaut = v; } reCr(); },
+          poserMinTickets: ev => { const v = num(ev.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } reCr(); } });
+      } else if (e.cle === 'objectif') {
+        Object.assign(L, { champs: 'objectif', pct: String(e.pct ?? 100), heuresMin: String(e.heuresMin ?? 20) });
+      } else if (e.type === 'categorie') {
+        Object.assign(L, { champs: 'categorie', motif: e.motif || '', minPieces: String(e.minPieces ?? 10) });
+      } else if (e.type === 'promo') {
+        const p = e.promo || {};
+        Object.assign(L, { champs: 'promo', minPieces: String(e.minPieces ?? 1), promoNom: p.nom || '', promoSorte: sorte(p), promoDates: dates(p), promoMags: mags(p),
+          promoSource: p.source === 'api' ? 'panel' : 'catalogue', promoVide: !(p.ids || []).length });
+      }
+      lignes.push(L);
+      // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
+      if (e.cle === 'croisees' && (d.record || {}).eurDixieme > 0) {
+        lignes.push({ externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
+          montant: d.record.eurDixieme + ' € par dixième' + (d.record.maxDixiemes > 1 ? ', ' + d.record.maxDixiemes + ' au plus' : ''),
+          qui: 'chacune', moyenne: R && R.lignesTicket != null ? fr(R.lignesTicket, 2) + ' lignes / ticket' : '' });
+      }
+      if (e.cle === 'objectif' && (d.meilleure || {}).magasin > 0) {
+        lignes.push({ externe: true, type: 'classement', typLib: 'Classement', emo: '🏆', lib: 'Meilleure vendeuse', texte: 'CA par heure prestée, pondéré par les heures',
+          montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '' });
+      }
     });
-    const hEq = d.apercu ? d.apercu.heuresEquipe : 0;
-    common.prMag = {
-      paliers: mag.paliers.map((p, i) => ({
-        pct: String(p.pct), eh: String(p.eh), lib: p.lib || '',
-        equipe: hEq > 0 ? eur(p.eh * hEq) : '',
-        poserPct: e => { const v = num(e.target.value); if (v != null) { mag.paliers[i].pct = Math.round(v); } this.setState({ prMag: mag }); },
-        poserEh: e => { const v = num(e.target.value); if (v != null) { mag.paliers[i].eh = Math.round(v * 100) / 100; } this.setState({ prMag: mag }); },
-        poserLib: e => { mag.paliers[i].lib = e.target.value; this.setState({ prMag: mag }); },
-        retirer: () => { mag.paliers.splice(i, 1); this.setState({ prMag: mag }); },
-      })),
-      ajouter: () => { const der = mag.paliers[mag.paliers.length - 1] || { pct: 95, eh: 0.5 }; mag.paliers.push({ pct: der.pct + 5, eh: Math.round((der.eh + 0.5) * 100) / 100, lib: '' }); this.setState({ prMag: mag }); },
-      heuresMin: String(mag.heuresMin),
-      poserHeuresMin: e => { const v = num(e.target.value); if (v != null) { mag.heuresMin = Math.max(0, Math.round(v)); } this.setState({ prMag: mag }); },
-      enregistrer: () => enregistrer('/ventes/prime-magasin', { paliers: mag.paliers, heuresMin: mag.heuresMin }, 'Paliers de la prime magasin'),
-      modifie: JSON.stringify(mag) !== JSON.stringify({ paliers: d.magasin.paliers, heuresMin: d.magasin.heuresMin }),
-    };
-    const mes = d.mesures || {};
-    common.prCr = {
-      cibleDefaut: String(cr.cibleDefaut),
-      poserCibleDefaut: e => { const v = num(e.target.value); if (v != null) { cr.cibleDefaut = v; } this.setState({ prCr: cr }); },
-      magasins: (d.magasins || []).map(m => ({
-        id: m.id, nom: court(m.nom),
-        cible: cr.cibles[m.id] != null ? String(cr.cibles[m.id]) : '',
-        effective: (cr.cibles[m.id] != null ? cr.cibles[m.id] : cr.cibleDefaut) + ' %' + (cr.cibles[m.id] != null ? '' : ' (réseau)'),
-        mesure: mes[m.id] && mes[m.id].taux != null ? n1(mes[m.id].taux) + ' %' : '',
-        mesureSub: mes[m.id] && mes[m.id].jours ? (mes[m.id].jours + ' j · ' + (mes[m.id].tickets || 0).toLocaleString('fr-BE') + ' tickets') : 'pas encore moissonné',
-        poser: e => { const v = num(e.target.value); if (v == null || v <= 0) { delete cr.cibles[m.id]; } else { cr.cibles[m.id] = v; } this.setState({ prCr: cr }); },
-      })),
-      paliers: cr.paliers.map((p, i) => ({
-        plus: String(p.plus), m: String(p.m),
-        poserPlus: e => { const v = num(e.target.value); if (v != null) { cr.paliers[i].plus = v; } this.setState({ prCr: cr }); },
-        poserM: e => { const v = num(e.target.value); if (v != null) { cr.paliers[i].m = Math.round(v); } this.setState({ prCr: cr }); },
-        retirer: () => { cr.paliers.splice(i, 1); this.setState({ prCr: cr }); },
-      })),
-      ajouter: () => { const der = cr.paliers[cr.paliers.length - 1] || { plus: -5, m: 10 }; cr.paliers.push({ plus: der.plus + 5, m: der.m + 30 }); this.setState({ prCr: cr }); },
-      minTickets: String(cr.minTickets),
-      poserMinTickets: e => { const v = num(e.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } this.setState({ prCr: cr }); },
+    common.prApp = {
+      lignes, recompense: String(app.recompense),
+      poserRecompense: ev => { const v = num(ev.target.value); if (v != null) { app.recompense = Math.max(0, Math.round(v)); } re(); },
+      ajouterCategorie: () => { app.liste.push({ type: 'categorie', cle: '', lib: '', motif: '', minPieces: 10, montant: app.recompense, actif: true, classement: true }); re(); },
+      versPromos: () => { const el = document.querySelector('[data-pr="promos"]'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } },
+      modifie: appModifie || crModifie,
       enregistrer: () => {
-        const cibles = {};
-        (d.magasins || []).forEach(m => { cibles[m.id] = cr.cibles[m.id] != null ? cr.cibles[m.id] : ''; });
-        enregistrer('/ventes/croisees', { cibleDefaut: cr.cibleDefaut, cibles, paliers: cr.paliers, minTickets: cr.minTickets }, 'Réglages des ventes croisées');
+        const suite = crModifie ? enregistrerCr() : Promise.resolve({ ok: true });
+        suite.then(r1 => {
+          if (r1 && r1.ok === false) { return; }
+          if (!appModifie) { finir('Ventes croisées enregistrées'); return; }
+          this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste }).then(r => {
+            if (r && r.ok === false) { return; }
+            finir('Primes de l’app enregistrées');
+          });
+        });
       },
-      modifie: JSON.stringify(cr) !== JSON.stringify({ cibleDefaut: d.croisees.cibleDefaut, cibles: d.croisees.cibles, paliers: d.croisees.paliers, minTickets: d.croisees.minTickets }),
-      mesuresMois: d.mesuresMois || '',
     };
-    const kc = S.prK || JSON.parse(JSON.stringify(d.concours || { actif: true, liste: [] }));
-    const kRe = () => this.setState({ prK: kc });
-    common.prK = {
-      actif: !!kc.actif,
-      poserActif: e => { kc.actif = !!e.target.checked; kRe(); },
-      liste: (kc.liste || []).map((q, i) => ({
-        cle: q.cle || '', lib: q.lib || '', motif: q.motif || '', magasin: String(q.magasin ?? 50), reseau: String(q.reseau ?? 100), minPieces: String(q.minPieces ?? 10),
-        poser: cle => e => { const v = cle === 'lib' || cle === 'motif' ? e.target.value : num(e.target.value); if (v != null) { q[cle] = cle === 'lib' || cle === 'motif' ? v : Math.max(0, Math.round(v)); } kRe(); },
-        retirer: () => { kc.liste.splice(i, 1); kRe(); },
-      })),
-      ajouter: () => { kc.liste = kc.liste || []; if (kc.liste.length < 4) { kc.liste.push({ cle: '', lib: '', motif: '', magasin: 50, reseau: 100, minPieces: 10 }); } kRe(); },
-      peutAjouter: (kc.liste || []).length < 4,
-      enregistrer: () => this.api('POST', '/ventes/concours', { actif: !!kc.actif, liste: (kc.liste || []).map(q => ({ cle: q.cle || undefined, lib: q.lib, motif: q.motif, magasin: q.magasin, reseau: q.reseau, minPieces: q.minPieces })) }).then(r => {
-        if (r && r.ok === false) { return; }
-        this.notify('Concours enregistrés');
-        this._pr = {}; this.setState({ prK: undefined });
+
+    // Les promotions du panel : celles qui ont déjà leur prime, les autres en un geste.
+    const prises = {};
+    app.liste.filter(e => e.type === 'promo').forEach(e => { const p = e.promo || {}; prises[(e.ref ? e.ref.source + ':' + e.ref.id : p.source + ':' + p.id)] = e; });
+    common.prPromos = {
+      chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : '',
+      erreur: promos && (promos.erreurs || []).length ? 'API des promotions : ' + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : 'injoignable')).join(' · ')
+        + (promos.api ? '' : ' — les bundles du catalogue en attendant (sans dates ni magasins)') : '',
+      liste: (promos ? promos.liste : []).map(p => {
+        const e = prises[p.source + ':' + p.id];
+        return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), magasins: mags(p),
+          source: p.source === 'api' ? 'panel' : 'catalogue', produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable',
+          comptable: (p.ids || []).length > 0, statut: e ? (e.actif ? 'prime active' : 'prime éteinte') : '',
+          ajouter: e || !(p.ids || []).length ? null : () => { app.liste.push({ type: 'promo', ref: { source: p.source, id: p.id }, lib: p.nom, montant: app.recompense, minPieces: 1, actif: true, classement: true, promo: p }); re(); } };
       }),
-      modifie: JSON.stringify(kc) !== JSON.stringify(d.concours || {}),
+      relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); },
     };
+
+    // Les moyennes par magasin : régler chaque seuil au plus juste, la cible de ventes croisées en face.
+    const ecart = S.prEcart != null ? S.prEcart : 3;
+    const cats = moy ? (moy.categories || []) : [];
+    const prs = moy ? (moy.promos || []) : [];
+    const ligneMoy = m => ({ vendeuses: fr(m.vendeuses, 1), tickets: m.tickets != null ? m.tickets.toLocaleString('fr-BE') : '', ticketsVendeuse: m.ticketsVendeuse != null ? m.ticketsVendeuse.toLocaleString('fr-BE') : '',
+      ticketMoyen: m.ticketMoyen != null ? fr(m.ticketMoyen, 2) + ' €' : '', lignes: fr(m.lignesTicket, 2), croisees: pc(m.croisees), atteinte: pc(m.atteinte),
+      pieces: cats.map(c => fr((m.pieces || {})[c.cle], 0)) });
+    common.prMoy = {
+      ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })),
+      chargement: moy === undefined, motif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : '',
+      periode: moy ? moy.mois.map(x => x.lib).join(', ') : '', nMois: n + ' mois',
+      cats: cats.map(c => c.lib), promos: prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '' })),
+      lignes: !moy ? [] : moy.magasins.map(m => Object.assign(ligneMoy(m), {
+        nom: court(m.nom), promos: prs.map(p => fr((p.magasins || {})[m.id], 0)),
+        cible: cr.cibles[m.id] != null ? String(cr.cibles[m.id]) : '', defaut: String(cr.cibleDefaut),
+        proposee: m.croisees != null ? Math.round(m.croisees + ecart) + ' %' : '',
+        poserCible: ev => { const v = num(ev.target.value); if (v == null || v <= 0) { delete cr.cibles[m.id]; } else { cr.cibles[m.id] = v; } reCr(); } })),
+      reseau: !moy ? null : Object.assign(ligneMoy(moy.reseau), { promos: prs.map(p => fr(p.reseau, 0)) }),
+      ecart: String(ecart), poserEcart: ev => { const v = num(ev.target.value); this.setState({ prEcart: v == null ? 3 : v }); },
+      appliquer: () => { (moy ? moy.magasins : []).forEach(m => { if (m.croisees != null) { cr.cibles[m.id] = Math.round(m.croisees + ecart); } }); reCr(); },
+      modifie: crModifie,
+      enregistrer: () => enregistrerCr().then(r => { if (r && r.ok === false) { return; } finir('Cibles de ventes croisées enregistrées'); }),
+      csv: () => {
+        if (!moy) { return; }
+        const t = [['Magasin', 'Vendeuses', 'Tickets par mois', 'Tickets par vendeuse', 'Ticket moyen', 'Lignes par ticket', 'Ventes croisées', 'Objectif atteint']
+          .concat(cats.map(c => c.lib + ' par vendeuse'), prs.map(p => p.lib + ' par vendeuse'), ['Cible ventes croisées'])];
+        const ligne = (nom, m, pr, cible) => [nom, m.vendeuses, m.tickets, m.ticketsVendeuse, m.ticketMoyen, m.lignesTicket, m.croisees, m.atteinte]
+          .concat(cats.map(c => (m.pieces || {})[c.cle]), pr, [cible]).map(v => (v == null ? '' : String(v).replace('.', ',')));
+        moy.magasins.forEach(m => t.push(ligne(court(m.nom), m, prs.map(p => (p.magasins || {})[m.id]), cr.cibles[m.id] != null ? cr.cibles[m.id] : cr.cibleDefaut)));
+        t.push(ligne('Réseau', moy.reseau, prs.map(p => p.reseau), cr.cibleDefaut));
+        const csv = '﻿' + t.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = 'moyennes-magasins-' + n + '-mois.csv';
+        document.body.appendChild(a); a.click(); a.remove();
+      },
+    };
+
+    // La note Google, inchangée.
     const gg = S.prG || Object.assign({}, d.google || {});
     common.prG = {
       actif: !!gg.actif, neutre: String(gg.neutre ?? ''), pente: String(gg.pente ?? ''), min: String(gg.min ?? ''), max: String(gg.max ?? ''), porte: gg.porte || 'app',
       poserActif: e => { gg.actif = !!e.target.checked; this.setState({ prG: gg }); },
       poser: cle => e => { const v = num(e.target.value); if (v != null) { gg[cle] = v; } this.setState({ prG: gg }); },
       poserPorte: e => { gg.porte = e.target.value === 'tout' ? 'tout' : 'app'; this.setState({ prG: gg }); },
-      exemples: [4.0, 4.3, 4.5, 4.7, 4.9].map(n => ({ note: n.toFixed(1).replace('.', ','), coef: Math.max(+gg.min || 0, Math.min(+gg.max || 9, 1 + (n - (+gg.neutre || 4.5)) * (+gg.pente || 0))).toFixed(2).replace('.', ',') })),
+      exemples: [4.0, 4.3, 4.5, 4.7, 4.9].map(x => ({ note: x.toFixed(1).replace('.', ','), coef: Math.max(+gg.min || 0, Math.min(+gg.max || 9, 1 + (x - (+gg.neutre || 4.5)) * (+gg.pente || 0))).toFixed(2).replace('.', ',') })),
       enregistrer: () => this.api('POST', '/ventes/prime-google', { actif: !!gg.actif, neutre: gg.neutre, pente: gg.pente, min: gg.min, max: gg.max, porte: gg.porte }).then(r => {
         if (r && r.ok === false) { return; }
         this.notify('Coefficient Google enregistré');
-        this._pr = {}; this.setState({ prG: undefined });
+        this._prL = {}; this.setState({ prG: undefined });
       }),
       modifie: JSON.stringify(gg) !== JSON.stringify(d.google || {}),
     };
-    common.prShops = (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: (shop || d.shop) === m.id, choisir: () => this.setState({ prShop: m.id }) }));
-    const a = d.apercu;
-    common.prApercu = !a ? null : {
-      nom: court(((d.magasins || []).find(m => m.id === (shop || d.shop)) || {}).nom || ''), lib: d.lib,
-      objectif: a.objectif != null ? eur(a.objectif) : 'pas d’objectif encodé',
-      source: a.objectifSource === 'budget' ? 'le budget' : (a.objectifSource === 'theorique' ? 'le CA théorique' : ''),
-      ca: eur(a.ca), atteinte: a.atteinte != null ? n1(a.atteinte) + ' %' : '',
-      projection: a.projection != null ? eur(a.projection) : '', atteinteProj: a.atteinteProj != null ? n1(a.atteinteProj) + ' %' : '',
-      rythme: a.moySem != null ? eur(a.moySem) + ' les jours de semaine' + (a.moyWe != null ? ', ' + eur(a.moyWe) + ' le week-end' : '') : '',
-      joursRestants: a.joursRestants, heuresEquipe: n1(a.heuresEquipe) + ' h', personnes: a.personnes,
-      planningJusquau: a.planningJusquau ? ' · planning saisi jusqu’au ' + a.planningJusquau.split('-').reverse().join('/') : '',
-      palier: a.palier ? a.palier.pct + ' % · ' + n2(a.palier.eh) + ' €/h' : 'aucun palier au rythme actuel',
-      paliers: (a.paliers || []).map(p => ({ pct: p.pct + ' %', lib: p.lib, atteint: p.atteint, eh: n2(p.eh) + ' €/h', equipe: eur(p.equipe),
-        manque: p.atteint ? 'atteint au rythme actuel' : (p.manque != null ? eur(p.manque) + (p.parJour ? ' · ' + eur(p.parJour) + ' par jour' : '') : '') })),
-      pctEnv: (a.objectif > 0 && a.paliers && a.paliers[1]) ? n2(100 * a.paliers[1].equipe / a.objectif) + ' % de l’objectif' : '',
-      google: a.google && a.google.actif ? (a.google.note != null ? 'note Google ' + n1(a.google.note) + ' (' + a.google.avis + ' avis) → × ' + n2(a.google.coef) : 'pas encore de note Google : coefficient 1') : '',
-    };
-    common.prRecord = d.record || {}; common.prMeilleure = d.meilleure || {};
   }
 
   valsVentes(common){
@@ -7236,24 +7292,27 @@ class App {
       lib: pm ? pm.lib : '', enCours: !!(pm && pm.enCours),
       magasins: !pm ? [] : (pm.magasins || []).filter(m => !filtre || m.id === filtre).map(m => ({
         nom: court(m.nom), objectif: m.objectif != null ? eur(m.objectif) : 'pas d’objectif',
-        atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % · ' + n2(m.palier.eh) + ' €/h' : 'aucun palier',
-        equipe: eur(m.equipe), heures: nb1(m.heuresEquipe) + ' h · ' + m.personnes + ' pers.', cible: 'cible ' + nb1(m.cible) + ' %',
+        atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % atteint · ' + eur(m.palier.montant) + ' par personne' : 'pas atteint',
+        equipe: eur(m.equipe), heures: (m.eligibles ?? m.personnes) + ' pers. · ' + nb1(m.heuresEquipe) + ' h', cible: 'cible ' + nb1(m.cible) + ' %',
         google: m.google && m.google.actif && m.google.note != null ? 'Google ' + nb1(m.google.note) + ' → × ' + n2(m.google.coef) : '',
       })),
       personnes: !pm ? [] : (pm.personnes || []).filter(l => !filtre || l.shopId === filtre).map(l => ({
         nom: l.nom, magasin: court(l.magasinNom), heures: nb1(l.heures) + ' h',
         croisees: l.croisees.taux != null ? nb1(l.croisees.taux) + ' %' : '', croiseesM: l.croisees.montant > 0 ? eur(l.croisees.montant) : '',
         record: l.record.lt != null ? nb1(l.record.lt) + (l.record.record != null ? ' / ' + nb1(l.record.record) : '') : '', recordM: l.record.montant > 0 ? eur(l.record.montant) : '',
-        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? n2(l.magasin) + ' €' : '',
-        concours: l.concours && l.concours.pieces ? Object.keys(l.concours.pieces).map(k => Math.round(l.concours.pieces[k]).toLocaleString('fr-BE') + ' ' + k).join(' · ') + ((l.concours.titres || []).length ? ' · ' + l.concours.titres.map(t => '👑 ' + t.lib + ' ' + (t.niveau === 'reseau' ? 'réseau' : 'magasin')).join(', ') : '') : '',
+        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? eur(l.magasin) : '',
+        concours: l.concours && l.concours.pieces ? Object.keys(l.concours.pieces).map(k => Math.round(l.concours.pieces[k]).toLocaleString('fr-BE') + ' ' + k).join(' · ') + ((l.concours.titres || []).length ? ' · ' + l.concours.titres.map(t => '👑 ' + t.lib).join(', ') : '') : '',
         concoursM: l.concours && l.concours.montant > 0 ? eur(l.concours.montant) : '',
+        promo: l.promo && l.promo.pieces ? Object.keys(l.promo.pieces).map(k => Math.round(l.promo.pieces[k]).toLocaleString('fr-BE') + ' ' + ((((pm.promos || {}).liste || []).find(q => q.cle === k) || {}).lib || k)).join(' · ') + ((l.promo.titres || []).length ? ' · 👑' : '') : '',
+        promoM: l.promo && l.promo.montant > 0 ? eur(l.promo.montant) : '',
         total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
         coef: l.coef != null && Math.abs(l.coef - 1) > 1e-9 ? '× ' + n2(l.coef) : '',
       })),
-      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), magasin: n2(pm.totaux.magasin) + ' €', total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
-      concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Concours', concoursActif: !!(pm && pm.concours && pm.concours.actif),
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Catégories', concoursActif: !!(pm && pm.concours && pm.concours.actif),
+      promosLib: pm && pm.promos && pm.promos.liste ? pm.promos.liste.map(k => k.lib).join(' · ') : 'Promos', promosActif: !!(pm && pm.promos && pm.promos.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
-      enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · ventes croisées et prime magasin : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
+      enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · primes de l’app : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
     };
 
     // La prime s'enregistre ici : le calcul désigne, l'humain confirme.
