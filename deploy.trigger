@@ -775,3 +775,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-12T05:56:14Z inventaires : justesse plafonnee par matiere
 2026-10-13T07:22:59Z marketing : portail en cinq etapes, tables mar_, publication reseaux (eteinte)
 2026-10-13T07:46:14Z marketing : rail du menu
+2026-10-14T20:28:54Z primes : une carte par prime, note Google 25 euros, icones, design system
