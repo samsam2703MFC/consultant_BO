@@ -240,7 +240,7 @@ sup{{font-size:5.5pt;line-height:0}}
 .t.effets td.l2{{text-align:left;white-space:normal;font-size:7pt}}
 .t.comp td{{padding:1.1mm 1.4mm;font-size:7.6pt}}.t.comp td.p{{color:#7a736a;font-size:7pt}}.t.comp td.r{{font-size:6.5pt;width:34%;white-space:normal}}
 .graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}
-.pts.decisions{{font-size:8.8pt;line-height:1.55;columns:2;column-gap:8mm}}.pts.decisions li{{margin-bottom:1.6mm;break-inside:avoid}}
+.pts.decisions{{font-size:8.8pt;line-height:1.55;columns:2;column-gap:8mm}}.t.remb td.l{{white-space:normal;line-height:1.3}}.t.remb tr.hors td{{color:#C0182B}}.pts.decisions li{{margin-bottom:1.6mm;break-inside:avoid}}
 .t.plan2 td{{padding:1.4mm 1.4mm;font-size:7.8pt}}.t.plan2 td.l small{{font-size:6.9pt;line-height:1.35}}.t.plan2 td{{vertical-align:top}}.t.plan2 tr.tot td{{vertical-align:middle}}.t.compta td.l small{{display:block;font-size:6pt;color:#9a938a;white-space:normal}}
 .t.sens th{{text-align:right}}.t.sens th.g{{text-align:center;border-bottom:.5pt solid #b8b1a6;color:#8D1D2C}}.t.sens td{{padding:1.2mm 1.3mm;font-size:7.6pt}}.t.sens td.g{{color:#5a534b}}.t.sens td.res{{font-weight:500}}.t.sens tr.base td{{background:#FCFAF7;color:#5a534b}}.neg{{color:#C0182B}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
 .pts{{margin:0;padding-left:4mm;font-size:7.3pt;line-height:1.45;color:#221E1A}}.pts li{{margin-bottom:1.1mm}}
@@ -433,10 +433,15 @@ if RE:
     cumD = 0; lrr = ''
     for r_ in RE['remboursements']:
         cumD += r_['montant']; k_ = next((i for i in range(len(vD)) if mV * (i + 1) >= cumD), None)
-        lrr += (f'<tr><td class="n">{r_["rang"]}</td><td class="l">{H(r_["creancier"])}</td><td>{fE(r_["montant"])}</td>'
-                f'<td class="l">{"lundi " + fD(vD[k_]) + " (" + str(k_ + 1) + "<sup>e</sup> versement)" if k_ is not None else "après le " + fD(vD[-1])}</td></tr>')
+        if k_ is not None:
+            quand = 'lundi ' + fD(vD[k_]) + ' (' + str(k_ + 1) + '<sup>e</sup> versement)'
+        else:                                                   # au-delà du 18/01 : le lundi où il serait soldé si les versements continuaient
+            n_ = -(-cumD // mV); quand = 'après la période : lundi ' + fD(vD[0] + datetime.timedelta(days=7 * (n_ - 1))) + ' si les versements continuent'
+        lrr += (f'<tr{" class=hors" if k_ is None else ""}><td class="n">{r_["rang"]}</td><td class="l">{H(r_["creancier"])}</td><td>{fE(r_["montant"])}</td>'
+                f'<td>{fE(cumD)}</td><td class="l">{quand}</td></tr>')
     rest_ = mV * len(vD) - cumD
-    lrr += f'<tr class="sous"><td></td><td class="l">Reste pour les dettes prioritaires suivantes</td><td>{fE(rest_)}</td><td></td></tr>'
+    lrr += (f'<tr class="tot"><td></td><td class="l">Dettes prioritaires</td><td>{fE(cumD)}</td><td></td><td class="l">'
+            + (f'reste {fE(rest_)} sur le compte tiers au {fD(vD[-1])}' if rest_ >= 0 else f'manque {fE(-rest_)} au {fD(vD[-1])}') + '</td></tr>')
     dReu = datetime.date.fromisoformat(RE['date'])
     q4 = f"""<div class="page">
 {hd}
@@ -448,7 +453,8 @@ if RE:
 <div><div class="sec petit">Les versements sur le compte tiers</div>
 <table class="t serre"><tr><th></th><th class="l">Date</th><th>Versement</th><th>Cumul</th></tr>{lvv}</table></div>
 <div><div class="sec petit">Ordre de remboursement</div>
-<table class="t serre"><tr><th></th><th class="l">Créancier</th><th>Montant</th><th class="l">Soldé le</th></tr>{lrr}</table>
+<table class="t serre remb"><tr><th></th><th class="l">Créancier</th><th>Montant</th><th>Cumul</th><th class="l">Soldé le</th></tr>{lrr}</table>
+{('<div class="sec petit" style="margin-top:4mm">Chez l’avocat, hors compte tiers</div><table class="t serre">' + ''.join(f'<tr><td class="l">{H(a_["dette"])}</td><td class="l">{H(a_.get("note", "à confier à l’avocat"))}</td><td>{fE(a_["montant"]) if a_.get("montant") else ""}</td></tr>' for a_ in RE.get('avocat', [])) + '</table>') if RE.get('avocat') else ''}
 <div class="cadre" style="margin-top:4mm"><div class="k">Repères</div><ul>
 <li>CA de la caisse, mars → septembre : {fE(caMois)} par mois. + 10&nbsp;% : {fE(caMois * 1.10)} ; + 15&nbsp;% : {fE(caMois * 1.15)}, soit {fP(caMois * 1.15 / obj, 0)} du budget de {fE(obj)}.</li>
 <li>Nathan : {fE(C['nathanSemaine'])} par semaine, {fE(cN)} par mois, déjà compté dans le compte du mois (page 1).</li>

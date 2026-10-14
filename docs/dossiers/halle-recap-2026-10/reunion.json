@@ -12,10 +12,47 @@
     "Autres dettes : plan d’étalement.",
     "Objectif : + 10 % à + 15 % de CA, soit le niveau du budget.",
     "Développement commercial au maximum.",
-    "Plan hebdomadaire écrit par Nathan, le vendredi pour le lundi."
+    "Plan hebdomadaire écrit par Nathan, le vendredi pour le lundi.",
+    "Point de trésorerie chaque semaine, le mercredi."
   ],
-  "versement": {"premier": "2026-10-19", "dernier": "2027-01-18", "montant": 2000},
+  "versement": {
+    "premier": "2026-10-19",
+    "dernier": "2027-01-18",
+    "montant": 2000
+  },
   "remboursements": [
-    {"rang": 1, "creancier": "Nathan Charlot, précompte + Liantis", "montant": 4300}
+    {
+      "rang": 1,
+      "creancier": "Nathan Charlot, précompte + Liantis",
+      "montant": 4300
+    },
+    {
+      "rang": 2,
+      "creancier": "LC",
+      "montant": 12000
+    },
+    {
+      "rang": 3,
+      "creancier": "Light Lect",
+      "montant": 5000
+    },
+    {
+      "rang": 4,
+      "creancier": "Didier",
+      "montant": 5000
+    },
+    {
+      "rang": 5,
+      "creancier": "Jaques",
+      "montant": 5000
+    }
+  ],
+  "avocat": [
+    {
+      "dette": "Loyer"
+    },
+    {
+      "dette": "Green Energy"
+    }
   ]
 }
