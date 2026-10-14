@@ -315,3 +315,90 @@ a.acc-etape{text-decoration:none;color:inherit}
 .vm-r{grid-area:r;font:700 11.5px var(--font-ui);background:var(--la-beige-doux);border-radius:999px;padding:5px 9px;white-space:nowrap;min-width:52px;text-align:center}
 .vm-r small{font-weight:500;color:var(--la-muet)}
 .vm-r.or{background:#f6e3a1}
+
+/* ── « Mes primes » épuré (14/10/2026) : une carte par prime, le classement dans un menu déroulant. ──
+   Toutes les couleurs, polices, rayons et ombres viennent des variables (marque.css, d'après le design system). */
+.hx{background:linear-gradient(140deg,var(--la-rubis) 0%,var(--la-rubis-fonce) 100%);color:var(--la-blanc);border-radius:var(--radius-xl);padding:14px 16px 12px;margin-bottom:6px;box-shadow:var(--la-ombre-rubis)}
+.hx .l{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.hx b{display:block;font:400 34px/1 var(--font-display)}
+.hx small{display:block;font:600 10px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;opacity:.75;margin-top:5px}
+.hx .r{text-align:right}
+.hx .r b{font-size:22px;opacity:.92}
+.hx .bar{height:6px;border-radius:var(--radius-pill);background:var(--la-voile);margin-top:12px;overflow:hidden}
+.hx .bar i{display:block;height:100%;background:var(--la-blanc);border-radius:var(--radius-pill)}
+.pp{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);padding:12px 14px;margin-bottom:10px;box-shadow:var(--la-ombre)}
+.pp.cliquable{cursor:pointer}
+.pp.gagne{border:1.5px solid var(--la-ok)}
+.pp.tete{border:1.5px solid var(--la-or)}
+.pp-h{display:flex;align-items:center;gap:10px}
+/* La tuile de l'icône : l'icône déposée par l'admin (image), sinon l'emoji. */
+.pp-h .emo,.dd .emo{width:38px;height:38px;border-radius:var(--radius-lg);background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;flex:0 0 auto;overflow:hidden}
+.pp-h .emo img,.dd .emo img{width:26px;height:26px;object-fit:contain;display:block}
+.pp.gagne .pp-h .emo{background:var(--la-ok-doux)}
+.pp.tete .pp-h .emo{background:var(--la-or-doux)}
+.pp-h .t{flex:1;min-width:0}
+.pp-h .t b{display:block;font:600 14.5px/1.2 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-h .m{font:400 24px/1 var(--font-display);color:var(--la-rubis);white-space:nowrap;text-align:right}
+.pp-h .m small{display:block;font:600 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);margin-top:2px}
+.pp.gagne .pp-h .m{color:var(--la-ok)}
+.typ{display:inline-block;font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);margin-top:4px}
+.typ.target{background:var(--la-beige-doux);color:var(--la-encre)}
+.typ.categorie{background:var(--la-or-doux);color:var(--la-or-encre)}
+.typ.promo{background:var(--la-abricot);color:var(--la-abricot-encre)}
+.typ.classement{background:var(--la-brun);color:var(--la-blanc)}
+.pp-b{display:flex;align-items:center;gap:10px;margin-top:10px}
+.pp-b .v{font:400 22px/1 var(--font-display);white-space:nowrap;min-width:64px}
+.pp-b .v small{font:500 11px var(--font-ui);color:var(--la-muet);margin-left:3px}
+.jg{flex:1;position:relative;height:8px;border-radius:var(--radius-pill);background:var(--la-beige-doux)}
+.jg i{display:block;height:100%;border-radius:var(--radius-pill);background:var(--la-rubis)}
+.pp.gagne .jg i{background:var(--la-ok)}
+.pp.tete .jg i{background:var(--la-or)}
+.jg .c{position:absolute;top:-4px;width:2px;height:16px;border-radius:1px;background:var(--la-encre)}
+.etat{font:700 11px var(--font-ui);padding:4px 9px;border-radius:var(--radius-pill);white-space:nowrap}
+.etat.ok{background:var(--la-ok-doux);color:var(--la-ok)}
+.etat.or{background:var(--la-or-doux);color:var(--la-or-encre)}
+.etat.att{background:var(--la-abricot);color:var(--la-abricot-encre)}
+.etat.mu{background:var(--la-beige-doux);color:var(--la-encre)}
+.pp-p{font-size:11.5px;color:var(--la-muet);margin-top:6px}
+.pp-p b{color:var(--la-encre);font-weight:600}
+/* Le menu déroulant : un vrai <select> posé sur l'étiquette, pour la roue native du téléphone. */
+.dd{position:relative;display:flex;align-items:center;gap:10px;background:var(--la-blanc);border:1.5px solid var(--la-encre);border-radius:var(--radius-lg);padding:9px 12px}
+.dd .emo{width:34px;height:34px}
+.dd .t{flex:1;min-width:0}
+.dd b{display:block;font:600 15px/1.2 var(--font-ui)}
+.dd .typ{margin-top:2px}
+.dd .bi{font-size:16px}
+.dd select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.cl-carte{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);padding:12px 14px;margin:10px 0 12px;box-shadow:var(--la-ombre)}
+.cl-carte .cl-tog{margin-bottom:4px}
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:6px;margin:10px 0 4px;text-align:center}
+.pod{min-width:0}
+.pod .cr{display:block;font-size:22px;line-height:1;margin-bottom:2px}
+.pod .av{width:44px;height:44px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font:700 16px var(--font-ui);color:var(--la-blanc)}
+.pod.p1 .av{width:58px;height:58px;font-size:21px;box-shadow:0 0 0 3px var(--la-or-doux)}
+.pod.moi .av{box-shadow:0 0 0 3px var(--la-rubis)}
+.pod b{display:block;font:600 12.5px var(--font-ui);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod.moi b{color:var(--la-rubis)}
+.pod small{display:block;font-size:10px;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod .q{font:400 20px/1 var(--font-display);margin-top:4px}
+.pod .q small{display:inline;font:500 10px var(--font-ui)}
+.pod .socle{margin-top:6px;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--la-beige-doux);font:400 18px var(--font-display);color:var(--la-muet);padding-top:5px}
+.pod.p1 .socle{height:52px;background:var(--la-or-doux);color:var(--la-or-encre)}
+.pod.p2 .socle{height:36px}
+.pod.p3 .socle{height:24px}
+.cl-row .av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);color:var(--la-blanc);flex:0 0 auto}
+.cl-row.moi .av{box-shadow:0 0 0 2px var(--la-rubis)}
+.cl-row.ecart{justify-content:center;color:var(--la-muet);padding:2px 0;border-top:none;letter-spacing:2px}
+/* Les avatars : une teinte de la palette, la mienne en rubis. */
+.av.t0{background:var(--la-teinte-1)}.av.t1{background:var(--la-teinte-2)}.av.t2{background:var(--la-teinte-3)}.av.t3{background:var(--la-teinte-4)}
+.av.t4{background:var(--la-teinte-5)}.av.t5{background:var(--la-teinte-6)}.av.t6{background:var(--la-teinte-7)}.av.t7{background:var(--la-teinte-8)}
+.av.moi{background:var(--la-rubis)}
+/* Une prime pas (encore) gagnée : en gris (14/10/2026). Gagnée : en vert ; en tête : en or. */
+.pp.non{background:var(--la-gris-doux);border-color:var(--la-trait);box-shadow:none}
+.pp.non .pp-h .emo{filter:grayscale(1);opacity:.55;background:var(--la-gris-trait)}
+.pp.non .pp-h .t b,.pp.non .pp-b .v,.pp.non .pp-h .m{color:var(--la-gris)}
+.pp.non .jg{background:var(--la-gris-trait)}
+.pp.non .jg i{background:var(--la-gris)}
+.pp.non .typ{filter:grayscale(1);opacity:.7}
+.pp.non .etat.att,.pp.non .etat.mu{background:var(--la-gris-trait);color:var(--la-encre)}
+.pp.non .pp-p b{color:var(--la-encre)}

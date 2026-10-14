@@ -88,6 +88,8 @@ require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
+require __DIR__ . '/../../src/primes_app.php';
+require __DIR__ . '/../../src/sms.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -395,6 +397,8 @@ function route(string $method, string $path): mixed
             $path === '/ventes/moi'                   => ep_ventes_moi(),
             $path === '/ventes/primes-reglages'       => ep_primes_reglages(),
             $path === '/ventes/primes-mois'           => ep_primes_mois(),
+            $path === '/ventes/primes-promos'         => ep_primes_promos(),
+            $path === '/ventes/primes-moyennes'       => ep_primes_moyennes(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),
             $path === '/ventes/affiche.pdf'           => ep_ventes_affiche(),
             $path === '/ventes/explication.pdf'        => ep_ventes_explication_pdf(),
@@ -565,10 +569,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-paliers') { return wr_ventes_cross_paliers(); }
     if ($method === 'POST' && $path === '/ventes/primes-montants') { return wr_ventes_primes_montants(); }
-    if ($method === 'POST' && $path === '/ventes/prime-magasin') { return wr_prime_magasin(); }
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
-    if ($method === 'POST' && $path === '/ventes/concours') { return wr_concours(); }
-    if ($method === 'POST' && $path === '/ventes/prime-google') { return wr_prime_google(); }
+    if ($method === 'POST' && $path === '/ventes/primes-app') { return wr_primes_app(); }
+    if ($method === 'POST' && $path === '/ventes/primes-icone') { return wr_primes_icone(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }

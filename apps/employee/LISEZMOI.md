@@ -64,21 +64,31 @@ personne (`langue`, un global Twig). Les lignes de détail des mois payés sont 
 par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
 la ligne depuis les montants.
 
-## L'onglet Primes (06/10/2026) : un seul écran, ce qu'elle peut gagner et comment
+## L'onglet Primes (14/10/2026) : une carte par prime, le classement dans un menu déroulant
 
-`/primes` : plus d'onglets (« retirer Mon magasin, garder seulement Moi »). De haut en bas : le héros
-(déjà gagné, jusqu'à, le nombre de titres, la note Google), le compteur du jour, **« Ce que tu peux
-gagner »** en cartes-missions, une par prime (ventes croisées, record, meilleure vendeuse, un concours
-par famille — Queen of Tartes, Queen of Quiches —, la prime magasin en dernier) : ce que ça rapporte,
-comment en une phrase, où elle en est, le prochain cran ; **« Ma collection »** : les titres en badges
-(couronne du magasin / du réseau par concours, meilleure vendeuse, ventes croisées, record, prime
-magasin), gagnés, en cours ou à gagner ; **les classements** à la Strava (Tartes, Quiches,
-Cross-selling ; mon magasin / réseau ; les dix premières nommées, moi en évidence) ; les douze
-semaines ; les ventes mois par mois ; les mois payés. Style mobile gen Z : gradient, gros chiffres,
-émojis, badges ; tutoiement en français. La page ne calcule rien : `PrimesService`
-appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec le jeton de la session ; le cockpit
-le fait confirmer par le panel et ne rend que la fiche de la personne connectée (voir
-`docs/contrat-api.md`, « Les primes dans l'app worker »). `COCKPIT_API_URL` se déduit de l'adresse
-de l'app (`…/consulant_bo/api/cockpit`), sinon `EMPLOYEE_COCKPIT_API`. Styles :
-`public/employee/assets/atelier/primes.css` ; textes : `translations/page/{fr,en}/primes.json`
-(les autres langues retombent sur l'anglais).
+`/primes` (variante A de `docs/maquettes/primes-epure/`) : rien que des primes, sans texte d'explication.
+En haut, **acquis** et **en jeu**. Puis une carte par prime, dans l'ordre du réglage du cockpit : l'icône
+déposée par l'admin dans le cockpit (sinon l'emoji), le nom, le type (**Target**, **Catégorie**, **Promo** ;
+Classement pour la meilleure vendeuse), la
+récompense (« +50 € » une fois gagnée), la mesure et sa jauge (avec le repère de la cible), une pastille
+(✓ gagné, 👑 1re, 2e / 6, −2 pt) et une ligne de chiffres (la cible, ou la 1re et sa quantité). Une prime
+gagnée est verte, en tête dorée, **pas encore gagnée grise**. Les ventes croisées portent leur catégorie
+quand le cockpit en a choisi une (« Ventes croisées · Boissons chaudes »). La **note Google** du magasin a
+sa carte : la note face au seuil (4,6 ★, cible 4,5 ★), +25 € pour chacune au planning quand elle tient le
+seuil. En bas,
+**Classement** : un menu déroulant (un vrai `<select>`, la roue native du téléphone) choisit la prime
+(Queen of Tartes, Queen of Quiches, la promo, les ventes croisées), une bascule Mon magasin / Réseau, le
+podium (la 1re couronnée) puis les rangs suivants, moi en évidence. Toucher une carte qui a un classement
+ouvre le sien. Le compteur du jour, la collection, les semaines et les mois quittent la page (l'Accueil
+garde ce qui lui sert).
+
+La page ne calcule rien : `PrimesService` appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec
+le jeton de la session ; la fiche porte `cartes` et `classements` (voir `docs/contrat-api.md`, « Les primes
+dans l'app worker »). Les noms des primes fixes (ventes croisées, record, objectif magasin, meilleure
+vendeuse, note Google) sont traduits par l'app ; les catégories et les promos gardent le nom que l'admin
+leur donne. Les icônes sont servies par le cockpit (`public/uploads/primes`) : `PrimesService` ajoute à la
+fiche l'adresse du cockpit (`iconesBase`, `COCKPIT_API_URL` sans « /api/… »). Styles :
+`public/employee/assets/atelier/primes.css` (fin du fichier), sans aucune couleur en dur : toutes sont des
+variables de `marque.css`, aux valeurs du design system (`public/assets/ds/global.css`) ; textes :
+`translations/page/{fr,en,it,nl,pl}/primes.json`. Un rendu sur un jeu d'essai, calculé par le moteur du
+cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|en|…]`.

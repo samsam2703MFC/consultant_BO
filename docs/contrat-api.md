@@ -507,21 +507,65 @@ l'employé (`POST /employees/authenticate`, puis `/employees/{id}`, `/employees/
 `apps/employee/LISEZMOI.md`. Aux couleurs et à la typo de la marque. Seule exception : l'onglet
 **Primes** lit le cockpit (`GET /ventes/moi`, ci-dessous) avec le jeton d'employé.
 
-### Les primes dans l'app worker — `GET /ventes/moi`, `GET /ventes/primes-reglages`
+### Les primes dans l'app worker — `GET /ventes/moi`, `GET /ventes/primes-reglages`, `POST /ventes/primes-app`
 
-Demande du 06/10/2026, maquette B (`docs/maquettes/primes/`) : l'onglet **Primes** de l'app employés,
-deux onglets, Moi et Mon magasin. Deux primes qui s'additionnent, chaque mois, pour chaque personne de
-vente (`src/primes.php`) :
+Demande du 06/10/2026, refondue le 14/10/2026 (`docs/maquettes/primes-epure/`, variante A) : dans l'onglet
+**Primes** de l'app employés, **chaque carte est une prime**, un target, une catégorie de produits ou une
+promotion du panel, avec **une récompense** réglée par l'admin, 50 € par défaut. Le classement à la Strava
+est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php` (le calcul) et
+`src/primes_app.php` (la liste, les promos, les moyennes, les cartes).
 
-| Prime | Mesure | Règle | Réglages |
-|---|---|---|---|
-| Ventes croisées (nouveau) | ses tickets à **2 lignes ou plus** (deux produits différents ; trois croissants font une ligne), en % de ses tickets, sur les jours moissonnés | le plus haut palier franchi au-dessus de la **cible du magasin** (sinon celle du réseau) ; 30 tickets minimum | `POST /ventes/croisees {cibleDefaut, cibles: {shop: pct ou ""}, paliers: [{plus, m}], minTickets}` (défaut : 50 %, cible 40 €, + 5 pts 70 €, + 10 pts 100 €) |
-| Bats ton record (existant) | lignes par ticket face à son record 12 mois | 100 € par dixième dès le 2e, 3 au plus | `POST /ventes/record` |
-| Meilleure vendeuse (existant) | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` |
-| **Prime magasin** (nouveau) | l'atteinte de l'**objectif du mois** (le budget du magasin, `ceo_shop_month_perf`, sinon le CA théorique) | le palier atteint fin de mois donne tant d'**euros par heure prestée** (planning du panel, le mois entier) à chaque personne du magasin ; sous `heuresMin`, pas de part | `POST /ventes/prime-magasin {paliers: [{pct, eh, lib}], heuresMin}` (défaut : 97 % 0,50 €/h · 100 % 1 €/h · 105 % 1,50 €/h · 110 % 2 €/h · 20 h) |
-| **Les concours** (06/10/2026) : **Queen of Tartes**, **Queen of Quiches** | le nombre de **pièces** d'une famille (un motif sur la catégorie ou le nom : `tarte`, `quiche`) vendues dans le mois à son nom, `q[cle]` dans la moisson v3 (`tq` en tout) | pour chaque concours, la 1re du magasin gagne la couronne du magasin (50 €), la 1re du réseau celle du réseau (100 €, sans cumul), 10 pièces au moins ; à égalité, moins de tickets gagne ; chaque titre entre dans sa **collection** | `POST /ventes/concours {actif, liste: [{cle, lib, motif, magasin, reseau, minPieces}]}` (quatre au plus ; la clé vient du libellé et ne change plus) |
-| **Note Google** (06/10/2026) | la note de la fiche Google du magasin (`mar_avis_fiche`, la Réputation) | un **coefficient** sur la prime : `1 + (note − neutre) × pente`, borné ; neutre 4,5, pente 0,5 par point, de × 0,5 à × 1,5 ; sur les primes de l'app (`porte: app` : ventes croisées, concours, prime magasin) ou toutes (`tout`) | `POST /ventes/prime-google {actif, neutre, pente, min, max, porte}` |
+| Prime | Type | Mesure | Qui gagne la récompense | Réglage |
+|---|---|---|---|---|
+| Ventes croisées | target | ses tickets à **2 lignes ou plus** (deux produits différents ; trois croissants font une ligne) **dont une au moins de la catégorie choisie** (`categorie`, un menu déroulant des catégories du catalogue ; vide : toutes), en % de ses tickets, sur les jours moissonnés | chaque vendeuse dont le taux du mois atteint la **cible du magasin** (sinon celle du réseau), 30 tickets au moins | la récompense et la catégorie dans la liste ; `POST /ventes/croisees {cibleDefaut, cibles: {shop: pct ou ""}, minTickets}` |
+| Objectif magasin | target | l'atteinte de l'**objectif du mois** (le budget, `ceo_shop_month_perf`, sinon le CA théorique), en projection pour le mois en cours | chaque personne du magasin au planning, au-dessus de `heuresMin`, si l'atteinte dépasse `pct` (100 % par défaut) | dans la liste : `pct`, `heuresMin` |
+| Catégories : **Queen of Tartes**, **Queen of Quiches**… | categorie | le nombre de **pièces** d'une famille (un motif sur la catégorie ou le nom : `tarte`, `quiche`) vendues dans le mois à son nom (`q[cle]` de la moisson) | la **1re du magasin**, `minPieces` au moins ; à égalité, moins de tickets gagne. Plus de couronne du réseau payée | dans la liste : `lib`, `motif`, `minPieces` (six au plus ; la clé vient du libellé et ne change plus) |
+| Promos du panel | promo | les **bundles vendus** (le produit du bundle, une ligne du ticket) ou les pièces des produits d'une offre « X achetés + Y offerts », sur les **seules dates** et dans les **seuls magasins** de la promotion (`qp[cle]`) | la **1re du magasin** de la promo, `minPieces` au moins | une promo se crée depuis la liste des promotions du panel (`GET /ventes/primes-promos`) ; six au plus |
+| Bats ton record (inchangé) | target | lignes par ticket face à son record 12 mois | 100 € par dixième dès le 2e, 3 au plus | `POST /ventes/record` (onglet Targets & primes) |
+| Meilleure vendeuse (inchangé) | classement | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` (onglet Targets & primes) |
+| **Note Google** (14/10/2026, à la place du coefficient) | target | la note de la fiche Google du magasin (`mar_avis_fiche`, la Réputation), face au seuil (`seuil`, 4,5 par défaut) | quand la note est **au seuil ou au-dessus**, chaque personne du magasin au planning, au-dessus de `heuresMin`, gagne la récompense (**25 €** par défaut, la sienne, pas la récompense par défaut) ; en dessous, rien | dans la liste : `seuil`, `heuresMin`, `montant`, le payeur. `POST /ventes/prime-google` n'existe plus |
 
+- `POST /ventes/primes-app {recompense, liste: [{type: target|categorie|promo, cle, lib, actif, montant,
+  classement, icone, …}]}` : la liste des primes (`ceo_app_setting.ventePrimesApp`). Les trois targets (`croisees`,
+  `objectif` : `pct`, `heuresMin` ; `croisees` : `categorie` ; `google` : `seuil`, `heuresMin`, 25 € par défaut,
+  éteinte au départ si l'ancien coefficient l'était) sont toujours là, dans cet ordre ; une catégorie porte `motif` et `minPieces` ; une promo
+  nouvelle arrive avec sa référence `ref: {source: api|catalogue, id}`, que le cockpit relit dans la liste des
+  promotions (`primesPromos`) : rien de ce que le navigateur envoie sur ses produits n'est cru, une promo déjà
+  là garde ce qu'elle avait. `classement` : la prime a sa liste dans le menu déroulant de l'app. Au premier
+  appel, la liste se déduit des réglages d'avant (`venteConcoursTQ` → catégories, au montant de leur couronne
+  du magasin ; `ventePrimeMagasin.heuresMin`). **Qui paie** chaque prime : `payeur: marque|magasin|sponsor`
+  et `sponsor` (son nom ; un sponsor sans nom reste à la marque) ; `externes: {record, meilleure}` dit qui paie
+  ces deux-là. `icone` : le chemin d'une icône déposée (`uploads/primes/<hex>.<png|webp|jpg|svg>`, rien d'autre
+  n'est gardé), sur chaque prime et sur `externes.record`, `externes.meilleure` ; sans icône, l'app met l'emoji.
+  `sms: {actif}` : le **SMS à la réussite** (plus bas). Au journal ; les fiches du mois en cours se recalculent.
+- `POST /ventes/primes-icone {data}` (14/10/2026) : une icône en data-URL, PNG, WebP ou JPEG (16 px au moins) ou
+  SVG, **1 Mo au plus**. Un SVG n'entre que sans script, gestionnaire d'événement, objet embarqué ni entité, et
+  si ses liens restent dans le fichier (`#id`) ou sont des images `data:` (`primesSvgSain`). Elle est écrite sous
+  `public/uploads/primes/` avec un nom tiré au hasard ; la réponse `{ok, icone}` donne le chemin que la liste
+  garde ensuite (`POST /ventes/primes-app`). 413 si trop lourde, 415 si le format est refusé, 422 si illisible.
+  Le `.htaccess` sert ces SVG avec une CSP qui les empêche d'exécuter quoi que ce soit, même ouverts seuls.
+  Écran : Équipe & ventes › Paramètres, un clic sur la tuile d'une prime (✕ : retour à l'emoji).
+  `POST /ventes/prime-magasin` et `POST /ventes/concours` n'existent plus.
+- `GET /ventes/primes-promos[?frais=1]` : les promotions qu'une prime peut suivre, gravées une heure
+  (`primesPromos`) : `{api, erreurs: [{chemin, code, erreur}], liste: [{source, sorte: bundle|xy, id, nom,
+  prix, du, au, shops[], ids[], composants[], prime: {cle, actif} | null}]}`. D'abord l'API du panel
+  (`/admin/promotions/bundles?active=1`, `/admin/promotions/buy-x-get-y` : nom, dates, magasins, prix ; le
+  produit d'un bundle est son `product_id`, sinon le produit du catalogue qui porte son nom ; une offre X + Y,
+  ses produits), puis les bundles du catalogue (catégorie « Bundle ») que l'API n'a pas donnés, sans dates
+  ni magasins. **Au 10/10/2026, le compte API reçoit 403 sur ces routes** : `erreurs` le dit, et seuls les
+  bundles du catalogue sont là.
+- `GET /ventes/primes-moyennes?n=1|3|6` : par magasin (et `reseau`), la moyenne mensuelle des n derniers
+  mois clos, depuis les jours moissonnés (`prMoy{mois}`, un jour) et les KPIs du mois (`pvCa`) :
+  `{vendeuses (30 tickets au moins dans le mois), tickets, ticketsVendeuse, ticketMoyen, lignesTicket,
+  croisees, atteinte (CA ÷ objectif), pieces: {cle: par vendeuse}, cible}` ; `promos: [{cle, lib, du,
+  magasins: {shop: pièces par vendeuse depuis le début}, reseau}]`. Écran : Équipe & ventes › Paramètres,
+  « Moyennes par magasin », la cible de ventes croisées de chaque magasin en face, « caler sur la moyenne +
+  n pts », export CSV.
+- `GET /ventes/primes-reglages` : `{app (la liste, externes, sms), smsConfigure, categories (le menu déroulant des
+  ventes croisées : les catégories du catalogue, sans les bundles), magasin, croisees, concours, google: {actif,
+  seuil, montant, heuresMin, notes: {shop: note}}, record, meilleure, magasins, m, lib}`. La colonne « Moyenne
+  réseau » de la note Google en tire la note moyenne et le nombre de magasins au seuil. Écran : Équipe & ventes › **Paramètres** (la liste des primes, les promotions du panel,
+  les moyennes par magasin ; il s'ouvre même si le classement n'a pas pu être calculé).
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
   `X-Worker-Nom` en base64, `X-Worker-Jour`, `X-Worker-Sign` = HMAC-SHA256 de `emp|nom|jour` avec
@@ -530,75 +574,56 @@ vente (`src/primes.php`) :
   est confirmé par le panel (`GET /employees/{id}` avec ce même jeton, vérifié une fois par dix
   minutes). Sans cela, 401. La personne se retrouve par son identifiant, sinon par son nom
   d'affichage ; le personnel vient de la table locale **et** du panel (`/shops/{id}/employees`, gravé
-  une heure), pour qu'une embauche récente existe. Inconnue partout : 404 avec le nom reçu. Depuis
-  le cockpit (session), `GET /ventes/moi?emp=&m=` ou `?nom=` montre la même fiche. L'app appelle le
-  cockpit d'abord en local (127.0.0.1, l'hôte public en en-tête), puis par l'adresse publique, et
-  montre la réponse du cockpit quand elle n'est pas une fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom}, heures: {mois, faites, equipe,
-  personnes, planningJusquau}, aujourdhui: {tickets, croisees, lignes, taux, quand} | null, acquis, aPortee,
-  acquisBrut, google: {actif, note, avis, coef, neutre, porte}, montants: {croisees, record, meilleure,
-  concours, magasin, total, brut} (chaque montant après coefficient),
-  briques: {croisees: {croisees, tickets, taux, cible, montant, palier, prochain: {taux, montant,
-  manque}, jours, complet, motif}, record: {lt, record, recordMois, ecart, tranches, montant,
-  eurDixieme, maxDixiemes}, meilleure: {score, caHeure, heures, ca, tickets, rangMag, surMag,
-  scorePremier, rangRes, surRes, montantMag, montantRes, montant}, concours: {actif, liste: [{cle, lib,
-  motif, pieces, tickets, par100, rangMag, surMag, rangRes, surRes, premierMag, premierRes, montantMag,
-  montantRes, minPieces, titre: reseau|magasin|null, montant}], titres: [{cle, lib, niveau, montant}],
-  montant, pieces, jours, complet, motif}}, collection: {depuis, mois[], titres: [{cle, niveau, lib, n,
-  mois[], montant}], enCours: [{cle, niveau, lib, montant}]} (les six derniers mois clos, un titre par
-  mois et par prime : croisees, record, meilleure (magasin|reseau), concours:<cle> (magasin|reseau),
-  magasin ; gravée un jour, `primesColl{emp}`), classements: [{cle, lib, unite: pieces|taux, magasin[],
-  reseau[], nMag, nRes, semaine: {lib, du, magasin[], reseau[], nMag, nRes}}] (à la Strava : un concours
-  par catégorie plus le cross-selling, le mois et la semaine en cours, les dix premières et la
-  personne, chaque ligne avec le nom du panel et la localité du magasin : c'est le seul endroit de la
-  fiche qui porte des noms), prime: {objectif, ca, atteinte,
-  projection, atteinteProj, moySem, moyWe, joursRestants, objectifJour, jours: [{date, ca, we, auj}],
-  paliers: [{pct, eh, lib, atteint, manque, parJour, vous, equipe}], palier, heures, heuresMin,
-  sousMin, heuresEquipe, part, vous, equipe}, semaines: [{lib, du, tickets, croisees, taux}],
-  semaines12: [{lib, du, jours, tickets, croisees, taux, rang, sur, pieces, rangPieces, surPieces, ca,
-  heures, caHeure}] (les douze dernières semaines ISO, la place au taux de ventes croisées et au
-  nombre de pièces parmi les vendeuses du réseau à dix tickets au moins, le CA par heure du planning ;
-  gravé une heure par personne, `primesS12:{emp}`),
-  ventes: [{m, lib, enCours, ca, tickets, heures, caHeure, panier, rang, sur, rangCaH, surCaH, medianeCaH}] (six mois, le
-  CA par heure sur les heures prestées pour le mois en cours, la place au CA par heure parmi les vendeuses classées),
-  mois: [{m, lib, total, paye, detail[], croisees, record, meilleure, concours, magasin, coef, brut, titres[]}]}`. Hors
-  des classements, jamais un autre nom que celui du magasin : les collègues sont des heures. `acquis` = ce que le mois donnerait s'il
-  finissait comme ça, coefficient Google compris (`acquisBrut` avant) ; `aPortee` = un cran de plus
-  sur chaque règle (un mois clos : `aPortee` = `acquis`). L'écran de l'app (refonte du 06/10/2026) :
-  un seul écran, centré sur elle, au style mobile gen Z (demande du 06/10/2026 : « retirer Mon magasin,
-  garder seulement Moi, en gros ce qu'elle peut gagner et comment ») : le héros (déjà gagné, jusqu'à,
-  les titres), le compteur du jour, « Ce que tu peux gagner » en cartes-missions (une par prime : ce
-  que ça rapporte, comment, où elle en est, le prochain cran ; la prime magasin en dernier), « Ma
-  collection » en badges (couronnes, trophées, en cours, à gagner), les classements à la Strava, les
-  douze semaines, les ventes mois par mois, les mois payés. Le tutoiement en français. La projection du magasin : les
-  jours clos tels quels, puis chaque jour restant au rythme moyen de son genre de jour (semaine ou
-  week-end). Mis en cache 15 minutes (mois en cours) ou un jour (mois clos) par personne ;
-  `&frais=1` recalcule.
-- `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut), tel que
-  l'app le montre à chacune : `magasins[] {id, nom, objectif, ca, atteinte, atteinteProj, palier,
-  heuresEquipe, personnes, equipe, cible}`, `personnes[] {id, nom, shopId, magasinNom, heures, tickets,
-  croisees: {taux, montant}, record: {lt, record, montant}, meilleure, concours: {pieces: {cle: n},
-  titres: [{cle, lib, niveau, montant}], montant}, magasin, coef, brut, avecCoef, total}` (le total après le coefficient Google du
-  magasin, `magasins[].google`), `totaux`, `concours: {actif, liste[], complet}` et `google` (les réglages), et
-  `enregistre` (ce que le CEO a gravé). Écran : Équipe & ventes › Résultats, la carte « Les primes du
-  mois ». **« Enregistrer les primes »** (`POST /ventes/primes {m}`) grave en plus, sous
-  `appWorker`, la prime magasin, les ventes croisées et le concours de chacune, après coefficient
-  (identifiants, montants, coefficient ; jamais de nom) et une ligne de journal par personne primée ;
-  l'app marque alors le mois « payée ».
-- `GET /ventes/primes-reglages?shop=` : tous les réglages (`magasin`, `croisees`, `record`,
-  `meilleure`, `concours`, `google`), les magasins, l'`apercu` du mois en cours du magasin (objectif, encaissé, projection,
-  paliers avec ce qu'il manque et la prime de l'équipe, `heuresEquipe`, `personnes`, `planningJusquau`,
-  `google` : la note du magasin et son coefficient) et les `mesures`
-  (taux de ventes croisées par magasin sur le dernier mois clos). Écran : Équipe & ventes ›
-  **Paramètres**.
-- La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte désormais `c`, les tickets à deux
-  lignes ou plus, `q` les pièces par famille de concours (`{tartes: n, quiches: n}`) et `tq` en tout, par vendeuse
-  (le complément du cron recompte les jours des versions d'avant, 1 500 tickets par heure) ; `pvE{shop}:{jour}`
-  grave les ventes du jour par vendeuse (CA, tickets) pour le CA par heure des semaines ; les jours moissonnés avant ce compte se refont du plus récent au
-  plus ancien avec le reste du budget du cron (`pvCroiseesComplement`). Le compteur du jour d'une
-  personne lit ses seuls tickets du jour (`pvLJ{shop}:{emp}`, dix minutes). Le CA d'un magasin jour
-  par jour se grave (`pvJ{shop}:{jour}`), le jour en cours toutes les dix minutes.
+  une heure). Inconnue partout : 404 avec le nom reçu. Depuis le cockpit (session),
+  `GET /ventes/moi?emp=&m=` ou `?nom=` montre la même fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom},
+  cartes: [{cle, type: target|categorie|promo|classement, emo, icone (le chemin de l'icône déposée, sinon ""),
+  lib, montant (la récompense ; le record : son plafond, max), gain, etat: gagne|tete|rang|att|vide, val,
+  unite: pct|pcs|lpt|score|note, cible, ecart, jauge, repere, rang, sur, premier: {nom, q, moi}, second,
+  minPieces, avis (la note Google), motif: pas_compte|pas_objectif|pas_note|heures|pas_classee|pas_record|
+  min_tickets|null, classement}], classements: [{cle, lib, type, emo, icone, unite: pieces|taux, magasin[],
+  reseau[], nMag, nRes}] (les dix premières et la personne, avec le nom du panel et la localité : le seul
+  endroit qui porte des noms), acquis, enJeu (= aPortee), google: {actif, note, avis, seuil, recompense,
+  heuresMin, atteint, sousMin, montant}, montants: {croisees, record, meilleure, concours, promo, magasin,
+  google}, heures, aujourdhui, briques: {croisees, record,
+  meilleure, concours, promos, google}, prime: {objectif, ca, atteinte, projection, atteinteProj, paliers: [{pct,
+  montant, atteint, manque, parJour, vous, equipe}], palier, sousMin, vous, equipe, personnes},
+  collection, semaines12}`. `acquis` = ce que le mois donnerait s'il finissait comme ça (la 1re d'une
+  catégorie ou d'une promo compte), la note Google comprise ; `enJeu` = la récompense de chaque carte. Les
+  briques, la collection et les douze semaines nourrissent l'Accueil de l'app. Mis en cache 15 minutes
+  (mois en cours) ou un jour (mois clos) par personne ; `&frais=1` recalcule.
+- `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut) :
+  `magasins[] {id, nom, objectif, ca, atteinte, atteinteProj, palier: {pct, montant}, eligibles, equipe, cible,
+  google: {note, seuil, montant, atteint, eligibles, equipe}}`, `personnes[] {id, nom, shopId, magasinNom, heures,
+  tickets, croisees: {taux, montant}, record, meilleure, concours: {pieces, titres, montant}, promo: {pieces,
+  titres, montant}, magasin, google, total, parPayeur, parPayeurApp}`, `totaux` (avec `google` et `parPayeur` :
+  `{marque, magasin, "sponsor:Nom"}`), `magasins[].parPayeur`, `concours`, `promos: {actif, liste[]}`, `google`,
+  `enregistre`.
+  Écran : Équipe & ventes › Résultats (« Payé par : … »). **« Enregistrer les primes »** (`POST /ventes/primes
+  {m}`) grave en plus, sous `appWorker`, les primes de l'app de chacune (ventes croisées, catégories, promos,
+  objectif magasin, note Google ; identifiants, montants et `parPayeur`, jamais de nom) et une ligne de
+  journal par personne primée, qui dit qui paie. Puis, si le **SMS à la réussite** est activé, chaque personne
+  primée reçoit un SMS (« Bravo Léa ! Octobre : 100 € de primes gagnées (Ventes croisées, Queen of Quiches). »),
+  une fois par mois (`primesSms{mois}`) : `appWorker.sms: {actif, configure, envoyes, echecs, sansNumero}`, et
+  une ligne de journal. La réussite est alors acquise, pas une projection. Le numéro vient de la fiche
+  (`franchisee_employee.phone`, sinon `/shops/{id}/employees` du panel, gardé à part : `pvEmployesTel`), mis au
+  format +32. Le fournisseur : Twilio, réglé dans `config/config.php › sms` (`sid`, `token`, `expediteur`) ou
+  `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
+  le disent.
+- La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte `c` (les tickets à deux lignes ou
+  plus), `cc` ces mêmes tickets par catégorie de produits qu'ils contiennent (`k` : le jour les compte), `q`
+  les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de produits,
+  `promoFamilles`) — et `tq` en tout, par vendeuse ; `f` liste les familles comptées ce jour-là. Avec une
+  catégorie de ventes croisées réglée, `c` se lit dans `cc` partout (le mois, les semaines, les moyennes, le
+  compteur du jour) et les jours sans `k` depuis le mois d'avant se recomptent.
+  Le complément du cron (`pvCroiseesComplement`, 1 500 tickets par heure) recompte les jours des versions
+  d'avant **et** les jours qui n'ont pas une famille qu'ils doivent porter (`pvFamillesRequises` : une
+  catégorie depuis le mois d'avant, une promo sur ses dates et ses magasins). `pvCroiseesMois` rend aussi
+  `qp`, les pièces de chaque promo sur ses seules dates et ses seuls magasins. `pvE{shop}:{jour}` grave les
+  ventes du jour par vendeuse ; le compteur du jour lit ses seuls tickets (`pvLJ{shop}:{emp}`, dix
+  minutes) ; le CA d'un magasin jour par jour se grave (`pvJ{shop}:{jour}`).
 - L'app (`apps/employee`, route `/primes`, `PrimesService`) appelle le cockpit à
   `COCKPIT_API_URL` (déduit de son adresse, sinon `EMPLOYEE_COCKPIT_API`) avec le jeton de la session.
+- Tests sans base ni réseau : `php bin/tests_primes.php`.
 
 ### `/production/flux/*` — l'application Production du magasin (`/production`)
 
