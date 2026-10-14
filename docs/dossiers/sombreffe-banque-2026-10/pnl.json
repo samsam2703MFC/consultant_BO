@@ -1,0 +1,914 @@
+{
+ "societe": "ANTALARMO",
+ "magasin": "Atelier by Harmonie – Sombreffe",
+ "source": "p-and-l-ANTALARMO-2026-2027.xlsx, feuille « Tableau d’analyse »",
+ "colonnes": {
+  "n": "2026 - 2027 (6 mois, avril → septembre 2026)",
+  "premier": "2024 - 2026 (premier exercice)"
+ },
+ "lignes": [
+  {
+   "niveau": 0,
+   "libelle": "Ventes et prestations",
+   "compte": null,
+   "n": 322242.26,
+   "premier": 578897.87
+  },
+  {
+   "niveau": 1,
+   "libelle": "Chiffre d'affaires",
+   "compte": null,
+   "n": 306513.43,
+   "premier": 571036.63
+  },
+  {
+   "niveau": 2,
+   "libelle": "Ventes et prestations 6 %",
+   "compte": "700006",
+   "n": 305082.44,
+   "premier": 565477.81
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais de livraison",
+   "compte": "700021",
+   "n": 1430.99,
+   "premier": 460.54
+  },
+  {
+   "niveau": 2,
+   "libelle": "Ventes To Good to Go",
+   "compte": "700030",
+   "n": 0,
+   "premier": 5098.28
+  },
+  {
+   "niveau": 1,
+   "libelle": "En-cours de fabrication",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Production immobilisé",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Autres produits d'exploitation",
+   "compte": null,
+   "n": 15728.83,
+   "premier": 7861.24
+  },
+  {
+   "niveau": 2,
+   "libelle": "Subsides et montants compensatoire",
+   "compte": "740000",
+   "n": 3917.99,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Commissions reçues",
+   "compte": "743000",
+   "n": 450,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais divers récupérés",
+   "compte": "745900",
+   "n": 3874.93,
+   "premier": 7407.54
+  },
+  {
+   "niveau": 2,
+   "libelle": "Exonération Précomtpe professionnel",
+   "compte": "749210",
+   "n": 52.12,
+   "premier": 350.7
+  },
+  {
+   "niveau": 2,
+   "libelle": "Récupération compagnie assurance",
+   "compte": "749300",
+   "n": 7385.79,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Avantages en nature",
+   "compte": "749900",
+   "n": 48,
+   "premier": 103
+  },
+  {
+   "niveau": 1,
+   "libelle": "Produits exploitation non récurrents",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 0,
+   "libelle": "Coût des ventes et prestations",
+   "compte": null,
+   "n": 149481.55,
+   "premier": 285712.73
+  },
+  {
+   "niveau": 1,
+   "libelle": "Approvisionnements marchandises",
+   "compte": null,
+   "n": 149481.55,
+   "premier": 285712.73
+  },
+  {
+   "niveau": 2,
+   "libelle": "Achats",
+   "compte": null,
+   "n": 149481.55,
+   "premier": 293863.3
+  },
+  {
+   "niveau": 3,
+   "libelle": "Achats de marchandises",
+   "compte": "604000",
+   "n": 112176.52,
+   "premier": 280831.27
+  },
+  {
+   "niveau": 3,
+   "libelle": "Achats fournitures",
+   "compte": "604001",
+   "n": 29308.98,
+   "premier": 0
+  },
+  {
+   "niveau": 3,
+   "libelle": "Achats boissons",
+   "compte": "604002",
+   "n": 4137.32,
+   "premier": 0
+  },
+  {
+   "niveau": 3,
+   "libelle": "Emballages",
+   "compte": "604100",
+   "n": 3861.94,
+   "premier": 13049.65
+  },
+  {
+   "niveau": 3,
+   "libelle": "Remises, rabais, ristournes",
+   "compte": "608000",
+   "n": -3.21,
+   "premier": -17.62
+  },
+  {
+   "niveau": 2,
+   "libelle": "Stocks: réduction / augmentation",
+   "compte": null,
+   "n": 0,
+   "premier": -8150.57
+  },
+  {
+   "niveau": 3,
+   "libelle": "Variation stocks marchandises",
+   "compte": "609400",
+   "n": 0,
+   "premier": -8150.57
+  },
+  {
+   "niveau": 0,
+   "libelle": "Marge brute d'exploitation",
+   "compte": null,
+   "n": 172760.71,
+   "premier": 293185.14
+  },
+  {
+   "niveau": 0,
+   "libelle": "Services et Biens",
+   "compte": null,
+   "n": 163104.88,
+   "premier": 317965.78
+  },
+  {
+   "niveau": 1,
+   "libelle": "Services et biens divers",
+   "compte": null,
+   "n": 97877.41,
+   "premier": 170525.13
+  },
+  {
+   "niveau": 2,
+   "libelle": "Loyer",
+   "compte": "610000",
+   "n": 19250,
+   "premier": 32250
+  },
+  {
+   "niveau": 2,
+   "libelle": "Loyer bureau",
+   "compte": "610001",
+   "n": 1200,
+   "premier": 600
+  },
+  {
+   "niveau": 2,
+   "libelle": "Précompte immobilier",
+   "compte": "610050",
+   "n": 1400,
+   "premier": 799
+  },
+  {
+   "niveau": 2,
+   "libelle": "Loyer requalifié",
+   "compte": "610150",
+   "n": 0,
+   "premier": -299.65
+  },
+  {
+   "niveau": 2,
+   "libelle": "Eau locaux professionnels",
+   "compte": "610400",
+   "n": 3271.76,
+   "premier": 1787.49
+  },
+  {
+   "niveau": 2,
+   "libelle": "Electricité locaux professionnels",
+   "compte": "610420",
+   "n": 13638.07,
+   "premier": 13405.67
+  },
+  {
+   "niveau": 2,
+   "libelle": "Entretiens des locaux professionnels",
+   "compte": "610440",
+   "n": 1709.85,
+   "premier": 12473.43
+  },
+  {
+   "niveau": 2,
+   "libelle": "Produits d'entretiens",
+   "compte": "610460",
+   "n": 470.64,
+   "premier": 988.57
+  },
+  {
+   "niveau": 2,
+   "libelle": "Assurance incendie locaux professionnels",
+   "compte": "610480",
+   "n": 819.38,
+   "premier": 1112.1
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais de locaux divers",
+   "compte": "610900",
+   "n": 64.15,
+   "premier": 760.16
+  },
+  {
+   "niveau": 2,
+   "libelle": "Autres frais de déplacement",
+   "compte": "611900",
+   "n": 1764.5,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Téléphones/Internet",
+   "compte": "612100",
+   "n": 501.75,
+   "premier": 1009.04
+  },
+  {
+   "niveau": 2,
+   "libelle": "GSM",
+   "compte": "612200",
+   "n": 199.22,
+   "premier": 108.19
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais postaux",
+   "compte": "612300",
+   "n": 0,
+   "premier": 9.85
+  },
+  {
+   "niveau": 2,
+   "libelle": "Cotisations groupements prof.",
+   "compte": "612500",
+   "n": 200,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Cotisations société",
+   "compte": "612510",
+   "n": 0,
+   "premier": 787.07
+  },
+  {
+   "niveau": 2,
+   "libelle": "Fournitures de bureau",
+   "compte": "612600",
+   "n": 297.8,
+   "premier": 395.98
+  },
+  {
+   "niveau": 2,
+   "libelle": "Revues, documentation et abonnements",
+   "compte": "612610",
+   "n": 158,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Petit matériel et mobilier de bureau",
+   "compte": "612620",
+   "n": -49.59,
+   "premier": 4810.2
+  },
+  {
+   "niveau": 2,
+   "libelle": "Abonnement facturation électronique",
+   "compte": "612640",
+   "n": 116.62,
+   "premier": 285
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais de maintenance informatique",
+   "compte": "612670",
+   "n": 1103.25,
+   "premier": 756.96
+  },
+  {
+   "niveau": 2,
+   "libelle": "Publications légales",
+   "compte": "612680",
+   "n": 67,
+   "premier": 416.96
+  },
+  {
+   "niveau": 2,
+   "libelle": "Publicités et annonces",
+   "compte": "613000",
+   "n": 166.12,
+   "premier": 3682.45
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais de restaurant",
+   "compte": "613100",
+   "n": 0,
+   "premier": 11.65
+  },
+  {
+   "niveau": 2,
+   "libelle": "Cadeaux clients",
+   "compte": "613120",
+   "n": 382.08,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Dons et libéralités déductibles",
+   "compte": "613400",
+   "n": 250,
+   "premier": 560
+  },
+  {
+   "niveau": 2,
+   "libelle": "Honoraires Fiduciaire Pardoen",
+   "compte": "614100",
+   "n": 4527.48,
+   "premier": 8563.16
+  },
+  {
+   "niveau": 2,
+   "libelle": "Commissions To Good To Go",
+   "compte": "614500",
+   "n": 0,
+   "premier": 1655.79
+  },
+  {
+   "niveau": 2,
+   "libelle": "Honoraires Pluxee",
+   "compte": "614600",
+   "n": 76.14,
+   "premier": 123.53
+  },
+  {
+   "niveau": 2,
+   "libelle": "Secrétariat social",
+   "compte": "614700",
+   "n": 5040.1,
+   "premier": 10289.11
+  },
+  {
+   "niveau": 2,
+   "libelle": "Honoraires GS Nivelles",
+   "compte": "614900",
+   "n": 1168.94,
+   "premier": 1111.13
+  },
+  {
+   "niveau": 2,
+   "libelle": "Entretien matériel d'exploitation",
+   "compte": "615100",
+   "n": 193.04,
+   "premier": 1127.3
+  },
+  {
+   "niveau": 2,
+   "libelle": "Achat petit matériel et outillage",
+   "compte": "615110",
+   "n": 3381.21,
+   "premier": 7470.43
+  },
+  {
+   "niveau": 2,
+   "libelle": "Location matériel",
+   "compte": "615140",
+   "n": 659,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Location containers",
+   "compte": "615150",
+   "n": 1903.14,
+   "premier": 3509.77
+  },
+  {
+   "niveau": 2,
+   "libelle": "Achats fournitures médicales",
+   "compte": "615160",
+   "n": 0,
+   "premier": 151.62
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais terminal de paiement",
+   "compte": "615170",
+   "n": 1656.26,
+   "premier": 2775.94
+  },
+  {
+   "niveau": 2,
+   "libelle": "Assurance responsabilité civile",
+   "compte": "615190",
+   "n": 178.04,
+   "premier": 281.1
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais de port",
+   "compte": "615200",
+   "n": 0.49,
+   "premier": 106.52
+  },
+  {
+   "niveau": 2,
+   "libelle": "Biens de consommation",
+   "compte": "615400",
+   "n": 70.43,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Franchise caisse",
+   "compte": "615500",
+   "n": 897,
+   "premier": 2392
+  },
+  {
+   "niveau": 2,
+   "libelle": "Royalties",
+   "compte": "615600",
+   "n": 11972.32,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Sous-traitance Evalya",
+   "compte": "616010",
+   "n": 0,
+   "premier": 7337.84
+  },
+  {
+   "niveau": 2,
+   "libelle": "Sous-traitance Rousseau Gilles",
+   "compte": "616020",
+   "n": 2660,
+   "premier": 10960
+  },
+  {
+   "niveau": 2,
+   "libelle": "Rémunérations",
+   "compte": "618000",
+   "n": 11400,
+   "premier": 25061.82
+  },
+  {
+   "niveau": 2,
+   "libelle": "Cotisations sociales et mutuelle",
+   "compte": "618010",
+   "n": 2308.02,
+   "premier": 3758.07
+  },
+  {
+   "niveau": 2,
+   "libelle": "Précompte professionnel",
+   "compte": "618100",
+   "n": 1800,
+   "premier": 4315.5
+  },
+  {
+   "niveau": 2,
+   "libelle": "Avantages en nature",
+   "compte": "618140",
+   "n": 48,
+   "premier": 103
+  },
+  {
+   "niveau": 2,
+   "libelle": "Loyer requalifié",
+   "compte": "618150",
+   "n": 0,
+   "premier": 299.65
+  },
+  {
+   "niveau": 2,
+   "libelle": "Assurance dirigeants/vie-prêts",
+   "compte": "618300",
+   "n": 857.2,
+   "premier": 1157.2
+  },
+  {
+   "niveau": 2,
+   "libelle": "Assurance revenu garanti",
+   "compte": "618400",
+   "n": 100,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Chèques repas dirigeants QP déductible",
+   "compte": "618800",
+   "n": 0,
+   "premier": 366
+  },
+  {
+   "niveau": 2,
+   "libelle": "Chèques repas dirigeants QP Non-déductib",
+   "compte": "618810",
+   "n": 0,
+   "premier": 898.53
+  },
+  {
+   "niveau": 1,
+   "libelle": "Rémunérations, charges sociales, ...",
+   "compte": null,
+   "n": 55323.16,
+   "premier": 95377.45
+  },
+  {
+   "niveau": 2,
+   "libelle": "Appointements",
+   "compte": "620200",
+   "n": 29704.26,
+   "premier": 56880.63
+  },
+  {
+   "niveau": 2,
+   "libelle": "Double pécule de vacances",
+   "compte": "620250",
+   "n": 790.61,
+   "premier": 1912.92
+  },
+  {
+   "niveau": 2,
+   "libelle": "Autres indemnités et avantages",
+   "compte": "620290",
+   "n": 312.23,
+   "premier": 514.7
+  },
+  {
+   "niveau": 2,
+   "libelle": "Salaires",
+   "compte": "620300",
+   "n": 1055.42,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Pécule de vacances complémentaire",
+   "compte": "620350",
+   "n": 2302.99,
+   "premier": 1477.1
+  },
+  {
+   "niveau": 2,
+   "libelle": "Autres indemnités et avantages",
+   "compte": "620390",
+   "n": 157.59,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Autres membres du personnel",
+   "compte": "620400",
+   "n": 12436.38,
+   "premier": 17132.5
+  },
+  {
+   "niveau": 2,
+   "libelle": "Part patronale chèques repas",
+   "compte": "620500",
+   "n": 2023.53,
+   "premier": 1026.19
+  },
+  {
+   "niveau": 2,
+   "libelle": "Ch-repas déductible",
+   "compte": "620501",
+   "n": 0,
+   "premier": 418
+  },
+  {
+   "niveau": 2,
+   "libelle": "Cotisations patronales employés",
+   "compte": "621200",
+   "n": 5443.09,
+   "premier": 6843.05
+  },
+  {
+   "niveau": 2,
+   "libelle": "Cotisations patronales ouvriers",
+   "compte": "621300",
+   "n": 384.82,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Assurance loi",
+   "compte": "623200",
+   "n": 832.45,
+   "premier": 695.21
+  },
+  {
+   "niveau": 2,
+   "libelle": "Dotation provision pécule vacances",
+   "compte": "623280",
+   "n": 0,
+   "premier": 5161.04
+  },
+  {
+   "niveau": 2,
+   "libelle": "Service médical",
+   "compte": "623400",
+   "n": -364.16,
+   "premier": 2650.11
+  },
+  {
+   "niveau": 2,
+   "libelle": "Frais de déplacements incombant à l'empl",
+   "compte": "623430",
+   "n": 360.36,
+   "premier": 592
+  },
+  {
+   "niveau": 2,
+   "libelle": "Vivres et boissons",
+   "compte": "623440",
+   "n": 0,
+   "premier": 74
+  },
+  {
+   "niveau": 2,
+   "libelle": "Chèques repas QP Déductible",
+   "compte": "623800",
+   "n": 304,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Eco-chèques",
+   "compte": "623820",
+   "n": -420.41,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Amortissements / immobilisés",
+   "compte": null,
+   "n": 9367.05,
+   "premier": 51854.93
+  },
+  {
+   "niveau": 2,
+   "libelle": "Dot. amort. s/frais d'établissement",
+   "compte": "630000",
+   "n": 0,
+   "premier": 5708.76
+  },
+  {
+   "niveau": 2,
+   "libelle": "Dot. amort. s/immob. corp.",
+   "compte": "630200",
+   "n": 9367.05,
+   "premier": 46146.17
+  },
+  {
+   "niveau": 2,
+   "libelle": "dont Immobilisés incorporelles",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Réductions valeur / stocks, ...",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Prov. pour risques & charges",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Autres charges d'exploitation",
+   "compte": null,
+   "n": 537.26,
+   "premier": 208.27
+  },
+  {
+   "niveau": 2,
+   "libelle": "Taxes communales et provinciales",
+   "compte": "640000",
+   "n": 40,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Taxes diverses",
+   "compte": "640020",
+   "n": 200,
+   "premier": 0
+  },
+  {
+   "niveau": 2,
+   "libelle": "Afsca",
+   "compte": "640330",
+   "n": 297.26,
+   "premier": 133.27
+  },
+  {
+   "niveau": 2,
+   "libelle": "Droit d'enregistrement",
+   "compte": "640400",
+   "n": 0,
+   "premier": 75
+  },
+  {
+   "niveau": 1,
+   "libelle": "Frais de restructuration",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Charges non récurrentes",
+   "compte": null,
+   "n": 0,
+   "premier": 0
+  },
+  {
+   "niveau": 0,
+   "libelle": "Bénéfice/Perte d'exploitation",
+   "compte": null,
+   "n": 9655.83,
+   "premier": -24780.64
+  },
+  {
+   "niveau": 0,
+   "libelle": "Produits financiers",
+   "compte": null,
+   "n": 132.58,
+   "premier": 4.48
+  },
+  {
+   "niveau": 1,
+   "libelle": "Produits des immobilisations financières",
+   "compte": "750000",
+   "n": 132.55,
+   "premier": 1.8
+  },
+  {
+   "niveau": 1,
+   "libelle": "Différence de paiement",
+   "compte": "758400",
+   "n": 0.03,
+   "premier": 2.68
+  },
+  {
+   "niveau": 0,
+   "libelle": "Charges financières",
+   "compte": null,
+   "n": 4662.66,
+   "premier": 8743.37
+  },
+  {
+   "niveau": 1,
+   "libelle": "Intérêts bancaires débiteurs",
+   "compte": "650000",
+   "n": 382.37,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Intérêts crédit 071-0735187-85",
+   "compte": "650085",
+   "n": 2128.66,
+   "premier": 5535.9
+  },
+  {
+   "niveau": 1,
+   "libelle": "Intérêts leasing 630464",
+   "compte": "650100",
+   "n": 805.6,
+   "premier": 1215.56
+  },
+  {
+   "niveau": 1,
+   "libelle": "Int leasing 639343 Armoire de fermentati",
+   "compte": "650102",
+   "n": 185.44,
+   "premier": 207.17
+  },
+  {
+   "niveau": 1,
+   "libelle": "Intérêts de retard TVA",
+   "compte": "650200",
+   "n": 28.44,
+   "premier": 28.44
+  },
+  {
+   "niveau": 1,
+   "libelle": "Différence de paiement",
+   "compte": "657000",
+   "n": 0.1,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Frais de banque et CCP",
+   "compte": "657100",
+   "n": 316.11,
+   "premier": 1121.24
+  },
+  {
+   "niveau": 1,
+   "libelle": "Frais sur cartes bancaires",
+   "compte": "657102",
+   "n": 595.84,
+   "premier": 515.87
+  },
+  {
+   "niveau": 1,
+   "libelle": "AUTRES FRAIS FINANCIERS",
+   "compte": "657200",
+   "n": 187.6,
+   "premier": 0
+  },
+  {
+   "niveau": 1,
+   "libelle": "Autres charges financières",
+   "compte": "659000",
+   "n": 32.5,
+   "premier": 119.19
+  },
+  {
+   "niveau": 0,
+   "libelle": "Bénéfice/Perte avant impôts",
+   "compte": null,
+   "n": 5125.75,
+   "premier": -33519.53
+  }
+ ]
+}
