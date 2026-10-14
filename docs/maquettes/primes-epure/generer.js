@@ -150,29 +150,59 @@ const C = page('Mes primes — C, chaque prime déroule son classement', `${haut
 <div class="titre-section"><h2>Mes primes</h2><small>${P.length} primes</small></div>
 ${P.map(p => p.cle === 'tartes' ? carte(p, { chev: true, ouvert: true, dedans }) : carte(p, { chev: !!p.cl })).join('\n')}`);
 
-// ---------- le cockpit : une ligne par prime, sa récompense
-const champ = (v, l) => `<span class="champ${l ? ' l' : ''}">${e(v)}</span>`;
+// ---------- le cockpit : une ligne par prime, sa récompense, la moyenne du réseau ; puis les moyennes par magasin
+const champ = (v, l, cls) => `<span class="champ${l ? ' l' : ''}${cls ? ' ' + cls : ''}">${e(v)}</span>`;
 const coche = on => `<span class="ch"><i class="car${on ? ' on' : ''}"></i></span>`;
-const LIGNES = [
-  ['🛍️', 'Ventes croisées', 'target', `tickets à 2 articles ou plus ≥ ${champ('55 %')}`, 'chaque vendeuse', true],
-  ['🚀', 'Bats ton record', 'target', 'lignes par ticket au-dessus du record 12 mois', 'chaque vendeuse', false],
-  ['🏪', 'Objectif magasin', 'target', `CA du magasin ≥ ${champ('100 %')} de l’objectif`, 'toute l’équipe', false],
-  ['👑', 'Queen of Tartes', 'categorie', `produits ${champ('tarte', true)} · ${champ('10')} pcs min.`, '1re du magasin', true],
-  ['👑', 'Queen of Quiches', 'categorie', `produits ${champ('quiche', true)} · ${champ('10')} pcs min.`, '1re du magasin', true],
-  ['🏷️', 'Promo café + croissant', 'promo', `${champ('Café + croissant 3,50 €', true)} · ${champ('01/10')} → ${champ('31/10')}`, '1re du magasin', true],
+const pc = v => Math.round(v) + NB + '%';
+
+// les moyennes mensuelles des trois derniers mois, par magasin (Halle sur ses chiffres réels, les autres inventés) :
+// vendeuses classées, tickets par mois, CA par mois, lignes, ventes croisées, pièces par famille, la cible du magasin
+const MAGS = [
+  { nom: 'Halle', v: 6, t: 4650, ca: 59241, l: 2.68, c: 55.4, tartes: 552, quiches: 306, promo: 96, cible: 55 },
+  { nom: 'Namur', v: 5, t: 5120, ca: 60928, l: 2.52, c: 51.2, tartes: 590, quiches: 330, promo: 104 },
+  { nom: 'Sombreffe', v: 3, t: 2210, ca: 31161, l: 2.81, c: 58.3, tartes: 222, quiches: 120, promo: 51 },
+  { nom: 'Louvain-la-Neuve', v: 5, t: 4980, ca: 53784, l: 2.41, c: 47.1, tartes: 605, quiches: 245, promo: 88 },
+  { nom: 'Waterloo', v: 4, t: 3940, ca: 53584, l: 2.74, c: 56.2, tartes: 440, quiches: 232, promo: 83 },
+  { nom: 'Uccle', v: 4, t: 3610, ca: 47652, l: 2.66, c: 54.0, tartes: 384, quiches: 176, promo: 70 },
+  { nom: 'Wavre', v: 4, t: 3380, ca: 41574, l: 2.58, c: 52.1, tartes: 352, quiches: 288, promo: 74 },
+  { nom: 'Ixelles', v: 4, t: 3450, ca: 39330, l: 2.47, c: 48.6, tartes: 276, quiches: 152, promo: 92 },
+  { nom: 'Gembloux', v: 3, t: 2470, ca: 31863, l: 2.63, c: 53.0, tartes: 243, quiches: 171, promo: 48 },
 ];
+const CIBLE_DEFAUT = 50;
+const somme = k => MAGS.reduce((a, m) => a + m[k], 0);
+const RES = { nom: 'Réseau', v: somme('v'), t: somme('t'), ca: somme('ca'), tartes: somme('tartes'), quiches: somme('quiches'), promo: somme('promo'),
+  l: MAGS.reduce((a, m) => a + m.l * m.t, 0) / somme('t'), c: MAGS.reduce((a, m) => a + m.c * m.t, 0) / somme('t') };
+const parV = (m, k) => ent(m[k] / m.v);
+
+const LIGNES = [
+  ['🛍️', 'Ventes croisées', 'target', `tickets à 2 articles ou plus ≥ ${champ('55 %')} · ${champ('30')} tickets min.`, `${pc(RES.c)} · ${ent(RES.t / RES.v)} tickets / vend.`, 'chaque vendeuse', true],
+  ['🚀', 'Bats ton record', 'target', 'lignes par ticket au-dessus du record 12 mois', `${n2(RES.l)} lignes / ticket`, 'chaque vendeuse', false],
+  ['🏪', 'Objectif magasin', 'target', `CA du magasin ≥ ${champ('100 %')} de l’objectif`, '96 % de l’objectif', 'toute l’équipe', false],
+  ['👑', 'Queen of Tartes', 'categorie', `produits ${champ('tarte', true)} · ${champ('10')} pcs min.`, `${parV(RES, 'tartes')} pcs / vend.`, '1re du magasin', true],
+  ['👑', 'Queen of Quiches', 'categorie', `produits ${champ('quiche', true)} · ${champ('10')} pcs min.`, `${parV(RES, 'quiches')} pcs / vend.`, '1re du magasin', true],
+  ['🏷️', 'Promo café + croissant', 'promo', `${champ('Café + croissant 3,50 €', true)} · ${champ('01/10')} → ${champ('31/10')}`, `${parV(RES, 'promo')} pcs / vend.`, '1re du magasin', true],
+];
+const ligneMag = (m, res) => `<tr class="${res ? 'res' : ''}"><td class="g"><b>${e(m.nom)}</b></td><td class="num">${m.v}</td><td class="num">${ent(m.t)}</td><td class="num">${parV(m, 't')}</td>`
+  + `<td class="num">${n2(m.ca / m.t)} €</td><td class="num">${n2(m.l)}</td><td class="num">${pc(m.c)}</td><td class="num">${parV(m, 'tartes')}</td><td class="num">${parV(m, 'quiches')}</td><td class="num">${parV(m, 'promo')}</td>`
+  + `<td class="num sep">${res ? champ(CIBLE_DEFAUT + ' %', false, 'def') : m.cible ? champ(m.cible + ' %') : champ(CIBLE_DEFAUT + ' %', false, 'vide')}</td>`
+  + `<td class="num mu">${res ? '' : pc(m.c + 3)}</td></tr>`;
 const cockpit = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cockpit — Primes de l’app</title>
 <link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../prix-volume/pv.css"><link rel="stylesheet" href="/public/employee/assets/atelier/marque.css">
 <style>
-#ecran{max-width:1160px}
+#ecran{max-width:1300px}
+.t.mags td,.t.mags th{padding-left:9px;padding-right:9px}
 .champ{display:inline-block;min-width:54px;padding:4px 8px;border:.5px solid var(--color-border-secondary);border-radius:7px;background:#fff;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
 .champ.l{text-align:left;font-weight:500;min-width:90px}
 .champ.eur{min-width:48px}
+.champ.vide{color:var(--color-text-muted);font-weight:500;border-style:dashed}
 .ch{display:inline-flex}.ch i{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--color-border-secondary);display:inline-block;background:#fff;position:relative}
 .ch i.on{border-color:var(--color-primary);background:var(--color-primary)}.ch i.on::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .interr{width:34px;height:19px;border-radius:999px;background:var(--color-primary);display:inline-block;position:relative}.interr::after{content:'';position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff}
 .t td{padding:9px 12px}.t td.g{font-size:13px}
 .t td.c,.t th.c{text-align:center}
+.t td.moy{color:#2a5a8a;font-weight:600;white-space:nowrap}
+.t tr.res td{background:#FCFAF7;border-top:1px solid var(--color-border-secondary);font-weight:700}
+.t td.sep,.t th.sep{border-left:.5px solid var(--color-border-tertiary)}
 .emo{font-size:16px;margin-right:6px}
 .typ{display:inline-block;font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
 .typ.target{background:#e6edf5;color:#2a5a8a}.typ.categorie{background:#fbe9d6;color:#8a4a12}.typ.promo{background:#f6dfe2;color:#8D1D2C}
@@ -180,21 +210,29 @@ const cockpit = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><met
 .bt.sec{background:#fff;color:var(--color-text);border:.5px solid var(--color-border-secondary)}
 .defaut{display:flex;align-items:center;gap:10px;font-size:13px}
 .defaut .champ{font-size:15px;min-width:60px}
-.pied{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+.pied{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px}
+.tete{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px 4px}
+.caler{display:flex;align-items:center;gap:8px;font-size:12.5px}
 </style></head>
 <body><div id="ecran"><div class="cap">Équipe & ventes › Paramètres</div>
 <div class="barre"><div><h1>Primes de l’app worker</h1></div><div class="defaut">Récompense par défaut ${champ('50')} €</div></div>
-<div class="carte sans"><table class="t"><thead><tr><th class="c">Active</th><th class="g">Prime</th><th class="g">Type</th><th class="g">Ce qui compte</th><th class="g">Qui gagne</th><th class="c">Classement</th><th>Récompense</th></tr></thead><tbody>
-${LIGNES.map(([emo, lib, t, mesure, qui, cl]) => `<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">${emo}</span><b>${e(lib)}</b></td><td class="g">${typ(t)}</td><td class="g">${mesure}</td><td class="g mu">${qui}</td><td class="c">${coche(cl)}</td><td class="num"><span class="champ eur">50</span> €</td></tr>`).join('\n')}
+<div class="carte sans"><table class="t"><thead><tr><th class="c">Active</th><th class="g">Prime</th><th class="g">Type</th><th class="g">Ce qui compte</th><th class="g">Moyenne réseau<small>3 derniers mois, par mois</small></th><th class="g">Qui gagne</th><th class="c">Classement</th><th>Récompense</th></tr></thead><tbody>
+${LIGNES.map(([emo, lib, t, mesure, moy, qui, cl]) => `<tr><td class="c"><span class="interr"></span></td><td class="g"><span class="emo">${emo}</span><b>${e(lib)}</b></td><td class="g">${typ(t)}</td><td class="g">${mesure}</td><td class="g moy">${moy}</td><td class="g mu">${qui}</td><td class="c">${coche(cl)}</td><td class="num"><span class="champ eur">50</span> €</td></tr>`).join('\n')}
 </tbody></table>
 <div class="pied"><div style="display:flex;gap:8px"><span class="bt sec">+ Target</span><span class="bt sec">+ Catégorie</span><span class="bt sec">+ Promotion</span></div><span class="bt">Enregistrer</span></div></div>
+<div class="carte sans"><div class="tete"><h2>Moyennes par magasin</h2><div class="seg"><span>1 mois</span><span class="on">3 mois</span><span>6 mois</span></div></div>
+<table class="t mags"><thead><tr><th class="g">Magasin</th><th>Vendeuses</th><th>Tickets<small>par mois</small></th><th>Tickets<small>par vendeuse</small></th><th>Ticket moyen</th><th>Lignes<small>par ticket</small></th><th>Ventes croisées</th><th>Tartes<small>par vendeuse</small></th><th>Quiches<small>par vendeuse</small></th><th>Promo<small>par vend., dès le 01/10</small></th><th class="sep">Cible ventes croisées</th><th>Proposée<small>moyenne + 3 pts</small></th></tr></thead><tbody>
+${MAGS.map(m => ligneMag(m)).join('\n')}
+${ligneMag(RES, true)}
+</tbody></table>
+<div class="pied"><div class="caler">Caler chaque cible sur la moyenne du magasin + ${champ('3')} pts</div><div style="display:flex;gap:8px"><span class="bt sec">Appliquer</span><span class="bt sec">Exporter CSV</span></div></div></div>
 </div></body></html>`;
 
 // ---------- la planche
 const planche = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Planche — Mes primes épurées</title><link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="/public/employee/assets/atelier/marque.css">
 <style>body{margin:0;background:#EAE4DC;font-family:var(--font-ui);color:#222;padding:28px 32px}h1{font:400 30px var(--font-display);margin:0 0 4px}.s{color:#666;font-size:13px;margin-bottom:22px}
 .tels{display:flex;gap:26px;align-items:flex-start;margin-bottom:30px}.tel{flex:0 0 auto}.tel h2{font:400 18px var(--font-display);margin:0 0 4px}.tel .d{font-size:12px;color:#666;margin-bottom:8px;max-width:390px;min-height:17px}
-.tel img{width:390px;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.22);display:block}.ck img{width:1160px;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.18);display:block}.ck h2{font:400 18px var(--font-display);margin:0 0 8px}</style></head>
+.tel img{width:390px;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.22);display:block}.ck img{width:1226px;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.18);display:block}.ck h2{font:400 18px var(--font-display);margin:0 0 8px}</style></head>
 <body><h1>Mes primes, épurées</h1><div class="s">Une carte = une prime (target, catégorie ou promo) et sa récompense, 50 € par défaut, réglée dans le cockpit. Le classement dans un menu déroulant.</div>
 <div class="tels">
 <div class="tel"><h2>A · La liste, puis le classement</h2><div class="d">Les primes, puis le podium sous un menu déroulant.</div><img src="a-liste-long.png"></div>
@@ -205,7 +243,7 @@ const planche = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><tit
 <div class="tel"><h2>B · Le menu ouvert</h2><div class="d">Les six primes, ta place dans chacune.</div><img src="b-menu.png"></div>
 <div class="tel"><h2>C · Chaque prime déroule son classement</h2><div class="d">Pas de menu : on touche la carte.</div><img src="c-deroule-long.png"></div>
 </div>
-<div class="ck"><h2>Cockpit · Primes de l’app worker</h2><img src="cockpit.png"></div></body></html>`;
+<div class="ck"><h2>Cockpit · Primes de l’app worker, et les moyennes par magasin pour régler les seuils</h2><img src="cockpit.png"></div></body></html>`;
 
 const out = { 'a-liste.html': A, 'a-menu.html': Am, 'b-une-prime.html': B, 'b-menu.html': Bm, 'c-deroule.html': C, 'cockpit.html': cockpit, 'planche.html': planche };
 for (const [f, h] of Object.entries(out)) { fs.writeFileSync(path.join(D, f), h); }

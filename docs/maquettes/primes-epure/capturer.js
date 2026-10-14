@@ -32,7 +32,7 @@ const D = __dirname, BASE = 'http://127.0.0.1:8099/docs/maquettes/primes-epure/'
   await ouvrir('b-menu');
   await p.screenshot({ path: path.join(D, 'b-menu.png') });
   await p.close();
-  const c = await b.newPage({ viewport: { width: 1200, height: 480 } }); c.on('pageerror', x => err.push(x.message));
+  const c = await b.newPage({ viewport: { width: 1340, height: 480 } }); c.on('pageerror', x => err.push(x.message));
   await c.goto(BASE + 'cockpit.html', { waitUntil: 'networkidle' }); await c.evaluate(() => document.fonts.ready);
   mes.cockpit = await c.evaluate(() => ({ h: document.documentElement.scrollHeight, deb: document.documentElement.scrollWidth > innerWidth }));
   await c.screenshot({ path: path.join(D, 'cockpit.png'), fullPage: true });
