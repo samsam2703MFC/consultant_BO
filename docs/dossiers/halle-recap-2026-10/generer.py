@@ -240,7 +240,7 @@ sup{{font-size:5.5pt;line-height:0}}
 .t.effets td.l2{{text-align:left;white-space:normal;font-size:7pt}}
 .t.comp td{{padding:1.1mm 1.4mm;font-size:7.6pt}}.t.comp td.p{{color:#7a736a;font-size:7pt}}.t.comp td.r{{font-size:6.5pt;width:34%;white-space:normal}}
 .graph .val{{font-size:10px;font-weight:500;fill:#221E1A}}
-.pts.decisions{{font-size:8.8pt;line-height:1.55;columns:2;column-gap:8mm}}.t.remb td.l{{white-space:normal;line-height:1.3}}.t.remb tr.hors td{{color:#C0182B}}.pts.decisions li{{margin-bottom:1.6mm;break-inside:avoid}}
+.pts.decisions{{font-size:8.8pt;line-height:1.55;columns:2;column-gap:8mm}}.t.remb td.l{{white-space:normal;line-height:1.3}}.rythme{{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin-bottom:1mm}}.rythme .jr{{border:1px solid #e6e0d8;border-left:3px solid #8D1D2C;border-radius:6px;background:#fbf9f5;padding:2mm 3mm}}.rythme .k{{font-size:6.6pt;letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C;font-weight:500}}.rythme .t{{font-size:8.6pt;font-weight:500;margin:.6mm 0}}.rythme .q{{font-size:7.6pt;color:#5a534b;line-height:1.4}}.t.remb tr.hors td{{color:#C0182B}}.pts.decisions li{{margin-bottom:1.6mm;break-inside:avoid}}
 .t.plan2 td{{padding:1.4mm 1.4mm;font-size:7.8pt}}.t.plan2 td.l small{{font-size:6.9pt;line-height:1.35}}.t.plan2 td{{vertical-align:top}}.t.plan2 tr.tot td{{vertical-align:middle}}.t.compta td.l small{{display:block;font-size:6pt;color:#9a938a;white-space:normal}}
 .t.sens th{{text-align:right}}.t.sens th.g{{text-align:center;border-bottom:.5pt solid #b8b1a6;color:#8D1D2C}}.t.sens td{{padding:1.2mm 1.3mm;font-size:7.6pt}}.t.sens td.g{{color:#5a534b}}.t.sens td.res{{font-weight:500}}.t.sens tr.base td{{background:#FCFAF7;color:#5a534b}}.neg{{color:#C0182B}}.cadre .ind{{font-size:7.4pt;line-height:1.45}}
 .pts{{margin:0;padding-left:4mm;font-size:7.3pt;line-height:1.45;color:#221E1A}}.pts li{{margin-bottom:1.1mm}}
@@ -449,6 +449,7 @@ if RE:
 <p class="s">Réunion du {dReu.day} {MOISL[dReu.month]} {dReu.year} · {H(RE['auteur'])}</p>
 <div class="sec petit" style="margin-top:3mm">Décisions</div>
 <ul class="pts decisions">{''.join(f'<li>{H(t)}</li>' for t in RE['decisions'])}</ul>
+{('<div class="sec petit" style="margin-top:3mm">Chaque semaine, jusqu’au ' + H(RE.get('rythmeJusqua', '')) + '</div><div class="rythme">' + ''.join(f'<div class="jr"><div class="k">{H(r_["jour"])}</div><div class="t">{H(r_["titre"])}</div><div class="q">{H(r_["quoi"])}</div></div>' for r_ in RE['rythme']) + '</div>') if RE.get('rythme') else ''}
 <div class="deux g11 bas">
 <div><div class="sec petit">Les versements sur le compte tiers</div>
 <table class="t serre"><tr><th></th><th class="l">Date</th><th>Versement</th><th>Cumul</th></tr>{lvv}</table></div>
