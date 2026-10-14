@@ -546,7 +546,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/primes-montants') { return wr_ventes_primes_montants(); }
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
     if ($method === 'POST' && $path === '/ventes/primes-app') { return wr_primes_app(); }
-    if ($method === 'POST' && $path === '/ventes/prime-google') { return wr_prime_google(); }
+    if ($method === 'POST' && $path === '/ventes/primes-icone') { return wr_primes_icone(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }

@@ -67,12 +67,15 @@ la ligne depuis les montants.
 ## L'onglet Primes (14/10/2026) : une carte par prime, le classement dans un menu déroulant
 
 `/primes` (variante A de `docs/maquettes/primes-epure/`) : rien que des primes, sans texte d'explication.
-En haut, **acquis** et **en jeu**. Puis une carte par prime, dans l'ordre du réglage du cockpit : l'emoji,
-le nom, le type (**Target**, **Catégorie**, **Promo** ; Classement pour la meilleure vendeuse), la
+En haut, **acquis** et **en jeu**. Puis une carte par prime, dans l'ordre du réglage du cockpit : l'icône
+déposée par l'admin dans le cockpit (sinon l'emoji), le nom, le type (**Target**, **Catégorie**, **Promo** ;
+Classement pour la meilleure vendeuse), la
 récompense (« +50 € » une fois gagnée), la mesure et sa jauge (avec le repère de la cible), une pastille
 (✓ gagné, 👑 1re, 2e / 6, −2 pt) et une ligne de chiffres (la cible, ou la 1re et sa quantité). Une prime
 gagnée est verte, en tête dorée, **pas encore gagnée grise**. Les ventes croisées portent leur catégorie
-quand le cockpit en a choisi une (« Ventes croisées · Boissons chaudes »). En bas,
+quand le cockpit en a choisi une (« Ventes croisées · Boissons chaudes »). La **note Google** du magasin a
+sa carte : la note face au seuil (4,6 ★, cible 4,5 ★), +25 € pour chacune au planning quand elle tient le
+seuil. En bas,
 **Classement** : un menu déroulant (un vrai `<select>`, la roue native du téléphone) choisit la prime
 (Queen of Tartes, Queen of Quiches, la promo, les ventes croisées), une bascule Mon magasin / Réseau, le
 podium (la 1re couronnée) puis les rangs suivants, moi en évidence. Toucher une carte qui a un classement
@@ -82,7 +85,10 @@ garde ce qui lui sert).
 La page ne calcule rien : `PrimesService` appelle le cockpit, `GET {COCKPIT_API_URL}/ventes/moi?m=`, avec
 le jeton de la session ; la fiche porte `cartes` et `classements` (voir `docs/contrat-api.md`, « Les primes
 dans l'app worker »). Les noms des primes fixes (ventes croisées, record, objectif magasin, meilleure
-vendeuse) sont traduits par l'app ; les catégories et les promos gardent le nom que l'admin leur donne.
-Styles : `public/employee/assets/atelier/primes.css` (fin du fichier) ; textes :
+vendeuse, note Google) sont traduits par l'app ; les catégories et les promos gardent le nom que l'admin
+leur donne. Les icônes sont servies par le cockpit (`public/uploads/primes`) : `PrimesService` ajoute à la
+fiche l'adresse du cockpit (`iconesBase`, `COCKPIT_API_URL` sans « /api/… »). Styles :
+`public/employee/assets/atelier/primes.css` (fin du fichier), sans aucune couleur en dur : toutes sont des
+variables de `marque.css`, aux valeurs du design system (`public/assets/ds/global.css`) ; textes :
 `translations/page/{fr,en,it,nl,pl}/primes.json`. Un rendu sur un jeu d'essai, calculé par le moteur du
 cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|en|…]`.

@@ -13,8 +13,15 @@ declare(strict_types=1);
  *  - une catégorie ou une promo paie la 1re du magasin, au nombre de pièces vendues (à égalité, moins
  *    de tickets gagne), au-dessus d'un minimum de pièces.
  *
+ * La NOTE GOOGLE est un target aussi (14/10/2026, à la place du coefficient) : quand la note du magasin
+ * tient son seuil (4,5), chaque personne du magasin au planning, au-dessus du minimum d'heures, gagne sa
+ * récompense, 25 € par défaut.
+ *
  * Bats ton record et la meilleure vendeuse gardent leur système (src/ventes.php, onglet Targets &
  * primes) : l'app les montre à côté, avec leurs montants à eux.
+ *
+ * Chaque prime peut porter une ICÔNE déposée par l'admin (PNG, WebP, JPEG ou SVG, sous
+ * public/uploads/primes/) : l'app la montre à la place de l'emoji.
  *
  * Les promos viennent de l'API du panel (/admin/promotions/bundles, /admin/promotions/buy-x-get-y) ;
  * tant que le compte API y reçoit 403, les bundles du catalogue (catégorie « Bundle ») en tiennent
@@ -30,6 +37,10 @@ const PRIMES_APP_MAX_CATEGORIES = 6;
 const PRIMES_APP_MAX_PROMOS = 6;
 const PRIMES_PROMOS_CACHE = 3600;         // la liste des promotions du panel : une heure
 const PRIMES_MOY_CACHE = 86400;           // les moyennes d'un mois clos : un jour
+const PRIMES_GOOGLE_SEUIL = 4.5;          // la note Google à tenir
+const PRIMES_GOOGLE_MONTANT = 25;         // la récompense Google, par personne
+const PRIMES_ICONE_MAX = 1048576;         // une icône : 1 Mo au plus
+const PRIMES_TARGETS = ['croisees', 'objectif', 'google'];  // les targets, toujours là, dans cet ordre
 
 /* ======================================================================
    Le réglage : la liste des primes
@@ -44,6 +55,7 @@ function primesAppDefauts(): array
     $liste = [
         ['cle' => 'croisees', 'type' => 'target', 'lib' => 'Ventes croisées', 'actif' => true, 'montant' => $r, 'classement' => true],
         ['cle' => 'objectif', 'type' => 'target', 'lib' => 'Objectif magasin', 'actif' => true, 'montant' => $r, 'classement' => false, 'pct' => 100, 'heuresMin' => $heuresMin],
+        primesAppGoogleDefaut($heuresMin),
     ];
     // Les concours d'avant deviennent des catégories, au montant de leur couronne du magasin.
     $k = setting('venteConcoursTQ');
@@ -56,6 +68,22 @@ function primesAppDefauts(): array
             'classement' => true, 'motif' => $e['motif'], 'minPieces' => (int) $e['minPieces']];
     }
     return ['recompense' => $r, 'liste' => $liste];
+}
+
+/** La note Google par défaut : 25 € par personne à 4,5 ou mieux ; éteinte si l'ancien coefficient l'était. */
+function primesAppGoogleDefaut(int $heuresMin = 20): array
+{
+    $g = setting('ventePrimeGoogle');
+    $actif = !is_array($g) || !array_key_exists('actif', $g) || (bool) $g['actif'];
+    return ['cle' => 'google', 'type' => 'target', 'lib' => 'Note Google', 'actif' => $actif, 'montant' => PRIMES_GOOGLE_MONTANT,
+        'classement' => false, 'seuil' => PRIMES_GOOGLE_SEUIL, 'heuresMin' => $heuresMin];
+}
+
+/** Une icône déposée : son chemin sous public/, « uploads/primes/<hex>.<ext> », sinon "". */
+function primesAppIcone($v): string
+{
+    $v = is_string($v) ? trim($v) : '';
+    return preg_match('#^uploads/primes/[a-f0-9]{16,40}\.(png|webp|jpg|svg)$#', $v) ? $v : '';
 }
 
 /** Un montant de récompense : un entier de 0 à 5 000 €, sinon la valeur par défaut. */
@@ -122,7 +150,7 @@ function primesPayeurCle(array $e): string
 function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
 {
     $e = primesAppEntreeValideSansPayeur($x, $i, $recompense);
-    return $e === null ? null : $e + primesAppPayeur($x);
+    return $e === null ? null : $e + primesAppPayeur($x) + ['icone' => primesAppIcone($x['icone'] ?? null)];
 }
 
 function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?array
@@ -145,11 +173,18 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
             return ['cle' => 'objectif', 'type' => 'target', 'lib' => mb_substr(trim((string) ($x['lib'] ?? '')), 0, 40) ?: 'Objectif magasin',
                 'actif' => $actif, 'montant' => $montant, 'classement' => false, 'pct' => $pct, 'heuresMin' => $hMin];
         }
+        if ($cle === 'google') {
+            // La note Google : sa récompense à elle (25 € par défaut, pas celle des autres primes), son seuil, son minimum d'heures.
+            $seuil = (isset($x['seuil']) && is_numeric($x['seuil'])) ? max(1.0, min(5.0, round((float) $x['seuil'], 1))) : PRIMES_GOOGLE_SEUIL;
+            $hMin = (isset($x['heuresMin']) && is_numeric($x['heuresMin'])) ? max(0, min(200, (int) $x['heuresMin'])) : 20;
+            return ['cle' => 'google', 'type' => 'target', 'lib' => mb_substr(trim((string) ($x['lib'] ?? '')), 0, 40) ?: 'Note Google',
+                'actif' => $actif, 'montant' => primesAppMontant($x['montant'] ?? null, PRIMES_GOOGLE_MONTANT), 'classement' => false, 'seuil' => $seuil, 'heuresMin' => $hMin];
+        }
         return null;
     }
     if ($type === 'categorie') {
         $e = concoursEntree($x, $i);
-        if ($e === null || in_array($e['cle'], ['croisees', 'objectif'], true) || str_starts_with($e['cle'], 'p')) {
+        if ($e === null || in_array($e['cle'], PRIMES_TARGETS, true) || str_starts_with($e['cle'], 'p')) {
             // Une catégorie ne prend jamais la clé d'un target ni la forme d'une clé de promo.
             if ($e === null) { return null; }
             $e['cle'] = 'k' . $e['cle'];
@@ -170,7 +205,7 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
     return null;
 }
 
-/** Une liste propre : les deux targets toujours là et en tête, pas de doublon, des catégories et des promos en nombre borné. */
+/** Une liste propre : les targets toujours là et en tête, pas de doublon, des catégories et des promos en nombre borné. */
 function primesAppListePropre(array $liste, int $recompense): array
 {
     $out = []; $vus = []; $nCat = 0; $nPro = 0;
@@ -183,13 +218,14 @@ function primesAppListePropre(array $liste, int $recompense): array
         $out[] = $e;
     }
     $def = primesAppDefauts()['liste'];
-    foreach (['objectif', 'croisees'] as $cle) {
+    foreach (PRIMES_TARGETS as $cle) {
         if (isset($vus[$cle])) { continue; }
-        foreach ($def as $d) { if ($d['cle'] === $cle) { array_unshift($out, array_merge($d, ['montant' => $recompense], primesAppPayeur([]))); } }
+        // Une liste enregistrée avant la note Google la reçoit avec ses 25 € ; les autres targets, à la récompense par défaut.
+        foreach ($def as $d) { if ($d['cle'] === $cle) { $out[] = array_merge($d, $cle === 'google' ? [] : ['montant' => $recompense], primesAppPayeur([]), ['icone' => '']); } }
     }
-    // Les targets d'abord, dans leur ordre ; le reste dans l'ordre reçu.
+    // Les targets d'abord, dans leur ordre ; le reste dans l'ordre reçu (usort est stable).
     usort($out, static function ($a, $b) {
-        $r = static fn ($e) => $e['cle'] === 'croisees' ? 0 : ($e['cle'] === 'objectif' ? 1 : 2);
+        $r = static fn ($e) => ($i = array_search($e['cle'], PRIMES_TARGETS, true)) === false ? 9 : $i;
         return $r($a) <=> $r($b);
     });
     return $out;
@@ -210,11 +246,20 @@ function primesAppReglages(bool $relire = false): array
         'externes' => primesAppExternes($c['externes'] ?? null), 'sms' => ['actif' => (bool) ($c['sms']['actif'] ?? false)]];
 }
 
-/** Qui paie Bats ton record et la meilleure vendeuse : la marque par défaut. */
+/** Qui paie Bats ton record et la meilleure vendeuse (la marque par défaut), et leur icône. */
 function primesAppExternes($x): array
 {
     $x = is_array($x) ? $x : [];
-    return ['record' => primesAppPayeur((array) ($x['record'] ?? [])), 'meilleure' => primesAppPayeur((array) ($x['meilleure'] ?? []))];
+    $un = static fn ($e) => primesAppPayeur((array) $e) + ['icone' => primesAppIcone(((array) $e)['icone'] ?? null)];
+    return ['record' => $un($x['record'] ?? []), 'meilleure' => $un($x['meilleure'] ?? [])];
+}
+
+/** L'icône d'une prime par sa clé (une prime de la liste, « record » ou « meilleure »), "" sans icône. */
+function primesIconeDe(string $cle): string
+{
+    $ext = primesAppReglages()['externes'];
+    if (isset($ext[$cle])) { return (string) $ext[$cle]['icone']; }
+    return (string) (primesAppEntree($cle)['icone'] ?? '');
 }
 
 /** Le payeur d'une prime par sa clé (une prime de la liste, « record » ou « meilleure ») : « marque », « magasin », « sponsor:Nom ». */
@@ -301,6 +346,61 @@ function wr_primes_app(): array
         static fn ($e) => $e['lib'] . ' ' . $e['montant'] . ' € (' . $payeLib($e) . ')' . ($e['actif'] ? '' : ' (éteinte)'), $liste))
         . ' · SMS à la réussite ' . ($sms['actif'] ? 'activés' : 'éteints'));
     return ['ok' => true, 'reglages' => $out];
+}
+
+/* ======================================================================
+   Les icônes des primes
+   ====================================================================== */
+
+/**
+ * POST /ventes/primes-icone {data: data-URL} — une icône pour une prime (14/10/2026) : PNG, WebP, JPEG
+ * ou SVG, 1 Mo au plus. Écrite sous public/uploads/primes/ avec un nom tiré au hasard ; rend son chemin,
+ * que la liste des primes garde ensuite (POST /ventes/primes-app, champ « icone »).
+ */
+function wr_primes_icone(): array
+{
+    $r = primesIconeEcrire((string) (body()['data'] ?? ''));
+    if (isset($r['error'])) { http_response_code($r['code']); return ['error' => $r['error']]; }
+    journalAdd('CEO', 'Paramètre', 'Primes de l’app', 'Icône déposée : ' . $r['icone']);
+    return ['ok' => true, 'icone' => $r['icone']];
+}
+
+/** Lit une icône en data-URL, la vérifie et l'écrit dans $dossier (public/uploads/primes par défaut). */
+function primesIconeEcrire(string $data, ?string $dossier = null): array
+{
+    if (!preg_match('#^data:([\w/+.-]+)(?:;[\w=-]+)*;base64,(.+)$#s', $data, $m)) { return ['code' => 422, 'error' => 'icône illisible (data-URL attendue)']; }
+    $bin = base64_decode($m[2], true);
+    if ($bin === false || strlen($bin) < 32) { return ['code' => 422, 'error' => 'icône illisible']; }
+    if (strlen($bin) > PRIMES_ICONE_MAX) { return ['code' => 413, 'error' => 'icône trop lourde — 1 Mo au maximum']; }
+    $info = @getimagesizefromstring($bin);
+    $ext = ['image/png' => 'png', 'image/webp' => 'webp', 'image/jpeg' => 'jpg'][$info['mime'] ?? ''] ?? null;
+    if ($ext !== null && ($info[0] < 16 || $info[1] < 16)) { return ['code' => 422, 'error' => 'icône trop petite — 16 px au moins']; }
+    if ($ext === null && primesSvgSain($bin)) { $ext = 'svg'; }
+    if ($ext === null) { return ['code' => 415, 'error' => 'format non accepté — PNG, WebP, JPEG ou SVG (sans script ni lien externe)']; }
+    $dos = $dossier ?? __DIR__ . '/../public/uploads/primes';
+    if (!is_dir($dos) && !@mkdir($dos, 0775, true) && !is_dir($dos)) { return ['code' => 500, 'error' => 'dossier des icônes impossible à créer']; }
+    $nom = bin2hex(random_bytes(10)) . '.' . $ext;
+    if (@file_put_contents($dos . '/' . $nom, $bin) === false) { return ['code' => 500, 'error' => 'écriture de l’icône impossible']; }
+    return ['icone' => 'uploads/primes/' . $nom];
+}
+
+/**
+ * Un SVG qu'on peut servir : un <svg>, sans script, sans gestionnaire d'événement, sans objet embarqué,
+ * sans entité, et dont les liens ne pointent que dans le fichier (#id) ou vers une image en data:.
+ */
+function primesSvgSain(string $s): bool
+{
+    if (!preg_match('#<svg[\s>]#i', $s)) { return false; }
+    if (preg_match('#<!(?:DOCTYPE|ENTITY)|<\s*(?:script|foreignObject|iframe|embed|object|handler|listener)\b|\son[a-z]+\s*=|javascript:|@import|&\##i', $s)) { return false; }
+    // Une animation ne réécrit ni un gestionnaire d'événement ni un lien.
+    if (preg_match('#attributeName\s*=\s*(["\'])\s*(?:on|(?:xlink:)?href)#i', $s)) { return false; }
+    preg_match_all('#\b(?:xlink:)?href\s*=\s*(["\'])(.*?)\1#is', $s, $mm);
+    foreach ($mm[2] as $h) {
+        $h = trim($h);
+        if ($h !== '' && $h[0] !== '#' && !preg_match('#^data:image/(?:png|jpeg|webp);base64,#i', $h)) { return false; }
+    }
+    // url(…) seulement vers un élément du fichier : url(#dégradé).
+    return !preg_match('#url\(\s*(["\']?)\s*(?!\#)#i', $s);
 }
 
 /* ======================================================================
@@ -688,9 +788,9 @@ function primesTete(?array $cl, string $champ): array
 
 /**
  * Les cartes de « Mes primes », dans l'ordre du réglage : les ventes croisées, Bats ton record,
- * l'objectif du magasin, la meilleure vendeuse, puis les catégories et les promos. Une carte dit la
- * récompense, l'état (gagne | tete | rang | att | vide), la mesure, la jauge, et la 1re quand il y a
- * un classement. La vue met les mots.
+ * l'objectif du magasin, la note Google, la meilleure vendeuse, puis les catégories et les promos. Une
+ * carte dit la récompense, l'état (gagne | tete | rang | att | vide), la mesure, la jauge, et la 1re
+ * quand il y a un classement ; l'icône déposée par l'admin (« icone », sinon l'emoji). La vue met les mots.
  */
 function primesCartes(array $b, array $pm, array $classements, bool $enCours): array
 {
@@ -701,7 +801,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
     $eC = primesAppEntree('croisees');
     if ($eC !== null && $eC['actif']) {
         $val = $c['taux']; $cible = (float) $c['cible'];
-        $cartes[] = ['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'lib' => $eC['lib'], 'categorie' => (string) ($eC['categorie'] ?? ''), 'montant' => (int) $eC['montant'], 'max' => false,
+        $cartes[] = ['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'icone' => $eC['icone'], 'lib' => $eC['lib'], 'categorie' => (string) ($eC['categorie'] ?? ''), 'montant' => (int) $eC['montant'], 'max' => false,
             'gain' => (float) $c['montant'], 'etat' => $c['montant'] > 0 ? 'gagne' : ($val === null ? 'vide' : 'att'),
             'val' => $val, 'unite' => 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
             'jauge' => primesJauge($val, max(0, $cible - 20), $cible + 10), 'repere' => primesJauge($cible, max(0, $cible - 20), $cible + 10),
@@ -712,7 +812,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
     if (($r['eurDixieme'] ?? 0) > 0) {
         $cible = $r['record'] !== null ? round((float) $r['record'] + 0.2, 2) : null;
         $lt = $r['lt'] !== null ? (float) $r['lt'] : null;
-        $cartes[] = ['cle' => 'record', 'type' => 'target', 'emo' => '🚀', 'lib' => 'Bats ton record', 'montant' => (int) $r['eurDixieme'] * max(1, (int) $r['maxDixiemes']),
+        $cartes[] = ['cle' => 'record', 'type' => 'target', 'emo' => '🚀', 'icone' => primesIconeDe('record'), 'lib' => 'Bats ton record', 'montant' => (int) $r['eurDixieme'] * max(1, (int) $r['maxDixiemes']),
             'max' => (int) $r['maxDixiemes'] > 1, 'gain' => (float) $r['montant'],
             'etat' => $r['montant'] > 0 ? 'gagne' : (($lt === null || $cible === null) ? 'vide' : 'att'),
             'val' => $lt, 'unite' => 'lpt', 'cible' => $cible, 'record' => $r['record'], 'ecart' => ($lt !== null && $cible !== null) ? round(max(0, $cible - $lt), 2) : null,
@@ -724,16 +824,28 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         $pct = (float) $eO['pct'];
         $att = $pm['clos'] ? $pm['atteinte'] : ($pm['atteinteProj'] ?? null);
         $etat = $pm['vous'] > 0 ? 'gagne' : (($att === null || $pm['sousMin']) ? 'vide' : 'att');
-        $cartes[] = ['cle' => 'objectif', 'type' => 'target', 'emo' => '🏪', 'lib' => $eO['lib'], 'montant' => (int) $eO['montant'], 'max' => false,
+        $cartes[] = ['cle' => 'objectif', 'type' => 'target', 'emo' => '🏪', 'icone' => $eO['icone'], 'lib' => $eO['lib'], 'montant' => (int) $eO['montant'], 'max' => false,
             'gain' => (float) $pm['vous'], 'etat' => $etat, 'val' => $att, 'unite' => 'pct', 'cible' => $pct, 'projete' => !$pm['clos'],
             'ecart' => $att !== null ? round(max(0, $pct - $att), 1) : null,
             'jauge' => primesJauge($att, max(0, $pct - 30), $pct + 10), 'repere' => primesJauge($pct, max(0, $pct - 30), $pct + 10),
             'motif' => $pm['objectif'] === null ? 'pas_objectif' : ($pm['sousMin'] ? 'heures' : ($att === null ? 'pas_compte' : null)),
             'heuresMin' => (int) $eO['heuresMin'], 'classement' => false];
     }
+    // La note Google : la note du magasin face au seuil ; la récompense pour chacune au planning, au-dessus du minimum d'heures.
+    $g = $b['google'] ?? null;
+    $eG = primesAppEntree('google');
+    if ($g !== null && $eG !== null && $eG['actif']) {
+        $note = $g['note']; $seuil = (float) $g['seuil'];
+        $cartes[] = ['cle' => 'google', 'type' => 'target', 'emo' => '⭐', 'icone' => $eG['icone'], 'lib' => $eG['lib'], 'montant' => (int) $eG['montant'], 'max' => false,
+            'gain' => (float) $g['montant'], 'etat' => $g['montant'] > 0 ? 'gagne' : (($note === null || $g['sousMin']) ? 'vide' : 'att'),
+            'val' => $note, 'unite' => 'note', 'cible' => $seuil, 'avis' => (int) $g['avis'],
+            'ecart' => $note !== null ? round(max(0, $seuil - $note), 1) : null,
+            'jauge' => primesJauge($note, $seuil - 1, 5.0), 'repere' => primesJauge($seuil, $seuil - 1, 5.0),
+            'motif' => $note === null ? 'pas_note' : ($g['sousMin'] ? 'heures' : null), 'heuresMin' => (int) $g['heuresMin'], 'classement' => false];
+    }
     $v = $b['meilleure'];
     if (($v['montantMag'] ?? 0) > 0) {
-        $cartes[] = ['cle' => 'meilleure', 'type' => 'classement', 'emo' => '🏆', 'lib' => 'Meilleure vendeuse', 'montant' => (int) $v['montantMag'], 'max' => false,
+        $cartes[] = ['cle' => 'meilleure', 'type' => 'classement', 'emo' => '🏆', 'icone' => primesIconeDe('meilleure'), 'lib' => 'Meilleure vendeuse', 'montant' => (int) $v['montantMag'], 'max' => false,
             'gain' => (float) $v['montant'],
             'etat' => $v['score'] === null ? 'vide' : ($v['rangMag'] === 1 ? ($enCours ? 'tete' : 'gagne') : 'rang'),
             'val' => $v['score'], 'unite' => 'score', 'rang' => $v['rangMag'], 'sur' => $v['surMag'],
@@ -749,7 +861,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         [$un, $deux] = primesTete($clDe[$q['cle']] ?? null, 'pieces');
         $p = $q['pieces'];
         $etat = $p === null ? 'vide' : ($q['rangMag'] === 1 ? ($enCours ? 'tete' : 'gagne') : ($q['rangMag'] === null ? 'att' : 'rang'));
-        $cartes[] = ['cle' => $q['cle'], 'type' => $q['type'], 'emo' => $q['emo'], 'lib' => $q['lib'], 'montant' => (int) $q['montantMag'], 'max' => false,
+        $cartes[] = ['cle' => $q['cle'], 'type' => $q['type'], 'emo' => $q['emo'], 'icone' => primesIconeDe($q['cle']), 'lib' => $q['lib'], 'montant' => (int) $q['montantMag'], 'max' => false,
             'gain' => (float) $q['montant'], 'etat' => $etat, 'val' => $p, 'unite' => 'pcs', 'rang' => $q['rangMag'], 'sur' => $q['surMag'],
             'minPieces' => (int) $q['minPieces'], 'ecart' => ($p !== null && $q['rangMag'] === null) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
             'premier' => $un, 'second' => $deux,
@@ -783,6 +895,7 @@ function primesGagnees(array $p): array
     $nom = static fn (string $cle, string $defaut) => (primesAppEntree($cle)['lib'] ?? '') ?: $defaut;
     if (($p['croisees']['montant'] ?? 0) > 0) { $out[] = $nom('croisees', 'Ventes croisées'); }
     if (($p['magasin'] ?? 0) > 0) { $out[] = $nom('objectif', 'Objectif magasin'); }
+    if (($p['google'] ?? 0) > 0) { $out[] = $nom('google', 'Note Google'); }
     foreach ((array) ($p['concours']['titres'] ?? []) as $t) { $out[] = $t['lib']; }
     foreach ((array) ($p['promo']['titres'] ?? []) as $t) { $out[] = $t['lib']; }
     if (($p['record']['montant'] ?? 0) > 0) { $out[] = 'Bats ton record'; }

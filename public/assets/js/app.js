@@ -7095,7 +7095,12 @@ class App {
 
     // La moyenne du réseau en face de chaque seuil.
     const R = moy ? moy.reseau : null;
+    // La note Google : la moyenne des fiches du réseau, et combien de magasins tiennent le seuil.
+    const notes = Object.values((d.google || {}).notes || {}).filter(v => v != null);
+    const moyGoogle = e => (!notes.length ? '' : fr(notes.reduce((a, b) => a + b, 0) / notes.length, 1) + ' ★ · '
+      + notes.filter(v => v + 1e-9 >= (+e.seuil || 4.5)).length + ' / ' + notes.length + ' magasins au seuil');
     const moyDe = e => {
+      if (e.cle === 'google') { return moyGoogle(e); }
       if (!R) { return ''; }
       if (e.cle === 'croisees') { return [R.croisees != null ? pc(R.croisees) : '', R.ticketsVendeuse != null ? R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''].filter(Boolean).join(' · '); }
       if (e.cle === 'objectif') { return R.atteinte != null ? pc(R.atteinte) + ' de l’objectif' : ''; }
@@ -7103,13 +7108,31 @@ class App {
       if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
       return '';
     };
-    const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.type === 'promo' ? '🏷️' : '👑');
+    const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.cle === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : '👑');
+    // Les icônes déposées (public/uploads/primes) : servies à côté du cockpit, à la place de l'emoji dans l'app.
+    const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
+    const icone = x => ({
+      icone: x.icone ? racine + x.icone : '',
+      poserIcone: ev => {
+        const f = ev.target.files && ev.target.files[0];
+        ev.target.value = '';
+        if (!f) { return; }
+        if (f.size > 1048576) { this.notify('Icône trop lourde — 1 Mo au maximum'); return; }
+        const lu = new FileReader();
+        lu.onload = () => this.api('POST', '/ventes/primes-icone', { data: lu.result }).then(r => {
+          if (!r || r.ok === false || !r.icone) { return; }
+          x.icone = r.icone; re();
+        });
+        lu.readAsDataURL(f);
+      },
+      retirerIcone: () => { x.icone = ''; re(); },
+    });
     const typLib = { target: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement' };
     const lignes = [];
     app.liste.forEach((e, i) => {
-      const L = { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
-        externe: false, peutRetirer: e.type !== 'target', peutClasser: e.cle !== 'objectif', moyenne: moyDe(e), libLibre: e.type !== 'target',
-        qui: e.cle === 'croisees' ? 'chacune à la cible' : e.cle === 'objectif' ? 'chacune au planning' : '1re du magasin',
+      const L = Object.assign(icone(e), { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
+        externe: false, peutRetirer: e.type !== 'target', peutClasser: e.type !== 'target' || e.cle === 'croisees', moyenne: moyDe(e), libLibre: e.type !== 'target',
+        qui: e.cle === 'croisees' ? 'chacune à la cible' : (e.cle === 'objectif' || e.cle === 'google') ? 'chacune au planning' : '1re du magasin',
         poserActif: ev => { e.actif = !!ev.target.checked; re(); },
         poserClassement: ev => { e.classement = !!ev.target.checked; re(); },
         poserMontant: ev => { const v = num(ev.target.value); if (v != null) { e.montant = Math.max(0, Math.round(v)); } re(); },
@@ -7117,7 +7140,7 @@ class App {
         poser: (cle, entier) => ev => { const v = entier ? num(ev.target.value) : ev.target.value; if (v != null) { e[cle] = entier ? Math.max(0, Math.round(v)) : v; } re(); },
         retirer: () => { app.liste.splice(i, 1); re(); },
         payeur: e.payeur || 'marque', sponsor: e.sponsor || '',
-        poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); } };
+        poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); } });
       if (e.cle === 'croisees') {
         Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
           categorie: e.categorie || '', categories: [''].concat(d.categories || []).concat(e.categorie && !(d.categories || []).includes(e.categorie) ? [e.categorie] : []),
@@ -7126,6 +7149,9 @@ class App {
           poserMinTickets: ev => { const v = num(ev.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } reCr(); } });
       } else if (e.cle === 'objectif') {
         Object.assign(L, { champs: 'objectif', pct: String(e.pct ?? 100), heuresMin: String(e.heuresMin ?? 20) });
+      } else if (e.cle === 'google') {
+        Object.assign(L, { champs: 'google', seuil: String(e.seuil ?? 4.5), heuresMin: String(e.heuresMin ?? 20),
+          poserSeuil: ev => { const v = num(ev.target.value); if (v != null) { e.seuil = Math.max(1, Math.min(5, Math.round(v * 10) / 10)); } re(); } });
       } else if (e.type === 'categorie') {
         Object.assign(L, { champs: 'categorie', motif: e.motif || '', minPieces: String(e.minPieces ?? 10) });
       } else if (e.type === 'promo') {
@@ -7135,8 +7161,8 @@ class App {
       }
       lignes.push(L);
       // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
-      const ext = cle => { app.externes = app.externes || {}; app.externes[cle] = app.externes[cle] || { payeur: 'marque', sponsor: '' }; const x = app.externes[cle];
-        return { payeur: x.payeur || 'marque', sponsor: x.sponsor || '', poserPayeur: ev => { x.payeur = ev.target.value; re(); }, poserSponsor: ev => { x.sponsor = ev.target.value; re(); } }; };
+      const ext = cle => { app.externes = app.externes || {}; app.externes[cle] = app.externes[cle] || { payeur: 'marque', sponsor: '', icone: '' }; const x = app.externes[cle];
+        return Object.assign(icone(x), { payeur: x.payeur || 'marque', sponsor: x.sponsor || '', poserPayeur: ev => { x.payeur = ev.target.value; re(); }, poserSponsor: ev => { x.sponsor = ev.target.value; re(); } }); };
       if (e.cle === 'croisees' && (d.record || {}).eurDixieme > 0) {
         lignes.push(Object.assign(ext('record'), { externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
           montant: d.record.eurDixieme + ' € par dixième' + (d.record.maxDixiemes > 1 ? ', ' + d.record.maxDixiemes + ' au plus' : ''),
@@ -7223,22 +7249,6 @@ class App {
         document.body.appendChild(a); a.click(); a.remove();
       },
     };
-
-    // La note Google, inchangée.
-    const gg = S.prG || Object.assign({}, d.google || {});
-    common.prG = {
-      actif: !!gg.actif, neutre: String(gg.neutre ?? ''), pente: String(gg.pente ?? ''), min: String(gg.min ?? ''), max: String(gg.max ?? ''), porte: gg.porte || 'app',
-      poserActif: e => { gg.actif = !!e.target.checked; this.setState({ prG: gg }); },
-      poser: cle => e => { const v = num(e.target.value); if (v != null) { gg[cle] = v; } this.setState({ prG: gg }); },
-      poserPorte: e => { gg.porte = e.target.value === 'tout' ? 'tout' : 'app'; this.setState({ prG: gg }); },
-      exemples: [4.0, 4.3, 4.5, 4.7, 4.9].map(x => ({ note: x.toFixed(1).replace('.', ','), coef: Math.max(+gg.min || 0, Math.min(+gg.max || 9, 1 + (x - (+gg.neutre || 4.5)) * (+gg.pente || 0))).toFixed(2).replace('.', ',') })),
-      enregistrer: () => this.api('POST', '/ventes/prime-google', { actif: !!gg.actif, neutre: gg.neutre, pente: gg.pente, min: gg.min, max: gg.max, porte: gg.porte }).then(r => {
-        if (r && r.ok === false) { return; }
-        this.notify('Coefficient Google enregistré');
-        this._prL = {}; this.setState({ prG: undefined });
-      }),
-      modifie: JSON.stringify(gg) !== JSON.stringify(d.google || {}),
-    };
   }
 
   valsVentes(common){
@@ -7303,21 +7313,20 @@ class App {
         nom: court(m.nom), objectif: m.objectif != null ? eur(m.objectif) : 'pas d’objectif',
         atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % atteint · ' + eur(m.palier.montant) + ' par personne' : 'pas atteint',
         equipe: eur(m.equipe), heures: (m.eligibles ?? m.personnes) + ' pers. · ' + nb1(m.heuresEquipe) + ' h', cible: 'cible ' + nb1(m.cible) + ' %',
-        google: m.google && m.google.actif && m.google.note != null ? 'Google ' + nb1(m.google.note) + ' → × ' + n2(m.google.coef) : '',
+        google: m.google && m.google.actif && m.google.note != null ? 'Google ' + nb1(m.google.note) + ' ★' + (m.google.atteint ? ' · ' + eur(m.google.montant) + ' × ' + m.google.eligibles + ' pers.' : ' · sous ' + nb1(m.google.seuil)) : '',
       })),
       personnes: !pm ? [] : (pm.personnes || []).filter(l => !filtre || l.shopId === filtre).map(l => ({
         nom: l.nom, magasin: court(l.magasinNom), heures: nb1(l.heures) + ' h',
         croisees: l.croisees.taux != null ? nb1(l.croisees.taux) + ' %' : '', croiseesM: l.croisees.montant > 0 ? eur(l.croisees.montant) : '',
         record: l.record.lt != null ? nb1(l.record.lt) + (l.record.record != null ? ' / ' + nb1(l.record.record) : '') : '', recordM: l.record.montant > 0 ? eur(l.record.montant) : '',
-        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? eur(l.magasin) : '',
+        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? eur(l.magasin) : '', googleM: l.google > 0 ? eur(l.google) : '',
         concours: l.concours && l.concours.pieces ? Object.keys(l.concours.pieces).map(k => Math.round(l.concours.pieces[k]).toLocaleString('fr-BE') + ' ' + k).join(' · ') + ((l.concours.titres || []).length ? ' · ' + l.concours.titres.map(t => '👑 ' + t.lib).join(', ') : '') : '',
         concoursM: l.concours && l.concours.montant > 0 ? eur(l.concours.montant) : '',
         promo: l.promo && l.promo.pieces ? Object.keys(l.promo.pieces).map(k => Math.round(l.promo.pieces[k]).toLocaleString('fr-BE') + ' ' + ((((pm.promos || {}).liste || []).find(q => q.cle === k) || {}).lib || k)).join(' · ') + ((l.promo.titres || []).length ? ' · 👑' : '') : '',
         promoM: l.promo && l.promo.montant > 0 ? eur(l.promo.montant) : '',
         total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
-        coef: l.coef != null && Math.abs(l.coef - 1) > 1e-9 ? '× ' + n2(l.coef) : '',
       })),
-      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
       concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Catégories', concoursActif: !!(pm && pm.concours && pm.concours.actif),
       promosLib: pm && pm.promos && pm.promos.liste ? pm.promos.liste.map(k => k.lib).join(' · ') : 'Promos', promosActif: !!(pm && pm.promos && pm.promos.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),

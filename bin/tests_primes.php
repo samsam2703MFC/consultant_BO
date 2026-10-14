@@ -20,13 +20,16 @@ declare(strict_types=1);
 
 // --- doublures ---------------------------------------------------------------------------
 $GLOBALS['REGLAGES'] = [];
-$GLOBALS['TABLES'] = ['shops' => [], 'employes' => [], 'planning' => [], 'budgets' => []];
+// La note Google des magasins (la Réputation) : Halle à 4,6, Namur à 4,3.
+$GLOBALS['TABLES'] = ['shops' => [], 'employes' => [], 'planning' => [], 'budgets' => [],
+    'reputation' => [['shop_id' => 4, 'rating_avg' => 4.6, 'rating_count' => 312], ['shop_id' => 5, 'rating_avg' => 4.3, 'rating_count' => 120]]];
 final class Db
 {
     public static function rows(string $sql, array $a = []): array
     {
         $T = $GLOBALS['TABLES'];
         if (str_contains($sql, 'FROM shops')) { return $T['shops']; }
+        if (str_contains($sql, 'ceo_shop_reputation')) { return $T['reputation']; }
         if (str_contains($sql, 'franchisee_employee_schedule')) { return $T['planning']; }
         if (str_contains($sql, 'FROM franchisee_employee')) { return $T['employes']; }
         if (str_contains($sql, 'ceo_shop_month_perf')) { return $T['budgets'][(int) $a[0] . '-' . str_pad((string) $a[1], 2, '0', STR_PAD_LEFT)] ?? []; }
@@ -84,15 +87,24 @@ $GLOBALS['REGLAGES']['venteConcoursTQ'] = ['actif' => true, 'liste' => [
     ['cle' => 'quiches', 'lib' => 'Queen of Quiches', 'motif' => 'quiche', 'magasin' => 50, 'reseau' => 100, 'minPieces' => 10]]];
 $GLOBALS['REGLAGES']['ventePrimeMagasin'] = ['paliers' => [], 'heuresMin' => 24];
 $d = primesAppDefauts();
-verifie('le réglage d’avant repris : 2 targets + 2 catégories', array_column($d['liste'], 'cle') === ['croisees', 'objectif', 'tartes', 'quiches'], json_encode(array_column($d['liste'], 'cle')));
-verifie('la catégorie garde le montant de sa couronne du magasin', $d['liste'][2]['montant'] === 60 && $d['liste'][2]['minPieces'] === 12);
+verifie('le réglage d’avant repris : 3 targets + 2 catégories', array_column($d['liste'], 'cle') === ['croisees', 'objectif', 'google', 'tartes', 'quiches'], json_encode(array_column($d['liste'], 'cle')));
+verifie('la catégorie garde le montant de sa couronne du magasin', $d['liste'][3]['montant'] === 60 && $d['liste'][3]['minPieces'] === 12);
+verifie('la note Google : 25 € à 4,5, le minimum d’heures de l’objectif', $d['liste'][2]['montant'] === 25 && $d['liste'][2]['seuil'] === 4.5 && $d['liste'][2]['heuresMin'] === 24 && $d['liste'][2]['actif']);
 verifie('l’objectif garde le minimum d’heures', $d['liste'][1]['heuresMin'] === 24 && $d['liste'][1]['pct'] === 100);
 verifie('les targets valent la récompense par défaut', $d['liste'][0]['montant'] === 50 && $d['liste'][1]['montant'] === 50);
 $l = primesAppListePropre([['type' => 'categorie', 'lib' => 'Queen of Tartes', 'motif' => 'tarte'], ['type' => 'categorie', 'lib' => 'Queen of Tartes', 'motif' => 'tarte']], 40);
-verifie('les targets manquants reviennent en tête, sans doublon', array_column($l, 'cle') === ['croisees', 'objectif', 'queenoftartes'], json_encode(array_column($l, 'cle')));
-verifie('une prime sans montant prend la récompense par défaut', $l[0]['montant'] === 40 && $l[2]['montant'] === 40);
+verifie('les targets manquants reviennent en tête, sans doublon', array_column($l, 'cle') === ['croisees', 'objectif', 'google', 'queenoftartes'], json_encode(array_column($l, 'cle')));
+verifie('une prime sans montant prend la récompense par défaut', $l[0]['montant'] === 40 && $l[3]['montant'] === 40);
+verifie('la note Google revenue garde ses 25 €, pas la récompense par défaut', $l[2]['montant'] === 25);
 $l = primesAppListePropre([['type' => 'categorie', 'lib' => 'Pain au chocolat', 'motif' => 'chocolat']], 50);
-verifie('une catégorie ne prend pas la forme d’une clé de promo', $l[2]['cle'] === 'kpainauchocolat', $l[2]['cle']);
+verifie('une catégorie ne prend pas la forme d’une clé de promo', $l[3]['cle'] === 'kpainauchocolat', $l[3]['cle']);
+$l = primesAppListePropre([['type' => 'categorie', 'lib' => 'Google', 'motif' => 'google']], 50);
+verifie('une catégorie ne prend pas la clé de la note Google', $l[3]['cle'] === 'kgoogle', $l[3]['cle']);
+$eG = primesAppEntreeValide(['type' => 'target', 'cle' => 'google', 'seuil' => 9, 'heuresMin' => 10, 'montant' => 30, 'payeur' => 'magasin'], 0, 50);
+verifie('la note Google : un seuil borné à 5, son montant, son payeur', $eG['seuil'] === 5.0 && $eG['montant'] === 30 && $eG['heuresMin'] === 10 && $eG['payeur'] === 'magasin');
+$GLOBALS['REGLAGES']['ventePrimeGoogle'] = ['actif' => false];
+verifie('l’ancien coefficient éteint : la note Google éteinte', primesAppDefauts()['liste'][2]['actif'] === false);
+unset($GLOBALS['REGLAGES']['ventePrimeGoogle']);
 verifie('un motif invalide refusé', primesAppEntreeValide(['type' => 'categorie', 'lib' => 'X', 'motif' => '(('], 0, 50) === null);
 verifie('un target inconnu refusé', primesAppEntreeValide(['type' => 'target', 'cle' => 'autre'], 0, 50) === null);
 
@@ -107,7 +119,7 @@ $GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => [
     ['type' => 'promo', 'ref' => ['source' => 'catalogue', 'id' => '900'], 'montant' => 50, 'promo' => ['ids' => [1, 2, 3]]]]];
 $r = wr_primes_app();
 $c = relire();
-$promo = $c['liste'][3] ?? [];
+$promo = $c['liste'][4] ?? [];
 verifie('la promo enregistrée', ($r['ok'] ?? false) && ($promo['type'] ?? '') === 'promo' && $promo['cle'] === 'pc900', json_encode($promo));
 verifie('ses produits viennent du panel, pas du navigateur', ($promo['promo']['ids'] ?? null) === [900]);
 verifie('elle prend le nom de la promotion', $promo['lib'] === 'Café + croissant');
@@ -116,9 +128,9 @@ $GLOBALS['CORPS'] = ['liste' => [['type' => 'promo', 'ref' => ['source' => 'cata
 $r = @wr_primes_app();   // 422 (le code HTTP ne se pose pas en ligne de commande)
 verifie('une promotion inconnue refusée', str_contains((string) ($r['error'] ?? ''), 'introuvable'), json_encode($r));
 $GLOBALS['CORPS'] = ['liste' => array_merge($c['liste'], [])];
-$GLOBALS['CORPS']['liste'][3]['promo'] = ['source' => 'catalogue', 'id' => '900', 'ids' => [7, 8]];
+$GLOBALS['CORPS']['liste'][4]['promo'] = ['source' => 'catalogue', 'id' => '900', 'ids' => [7, 8]];
 wr_primes_app();
-verifie('une promo déjà là garde ses produits', (relire()['liste'][3]['promo']['ids'] ?? null) === [900]);
+verifie('une promo déjà là garde ses produits', (relire()['liste'][4]['promo']['ids'] ?? null) === [900]);
 
 // --- 3. une récompense par prime ---------------------------------------------------------------
 echo "Une récompense par prime\n";
@@ -147,9 +159,9 @@ $GLOBALS['TABLES']['employes'] = [
 $mc = date('Y-m', strtotime('first day of last month'));
 $jour = static fn (int $d) => $mc . '-' . str_pad((string) $d, 2, '0', STR_PAD_LEFT);
 // La promo du 5 au 10, à Halle seulement.
-$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][3]['promo']['du'] = $jour(5);
-$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][3]['promo']['au'] = $jour(10);
-$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][3]['promo']['shops'] = ['4'];
+$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][4]['promo']['du'] = $jour(5);
+$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][4]['promo']['au'] = $jour(10);
+$GLOBALS['REGLAGES']['ventePrimesApp']['liste'][4]['promo']['shops'] = ['4'];
 relire();
 $per = ['du' => $jour(5), 'au' => $jour(10), 'shops' => ['4' => true]];
 verifie('dans la promo : le 7 à Halle', promoCouvre($per, $jour(7), '4'));
@@ -238,6 +250,62 @@ verifie('objectif : projeté, manque 2 pts', $par['objectif']['etat'] === 'att' 
 verifie('catégorie : 2e, la 1re nommée avec sa quantité', $par['tartes']['etat'] === 'rang' && $par['tartes']['premier']['nom'] === 'Léa' && $par['tartes']['premier']['q'] === 51.0);
 verifie('promo : en tête, la 2e nommée', $par['pc900']['etat'] === 'tete' && $par['pc900']['second']['nom'] === 'Manon');
 verifie('mois clos : en tête devient gagné', array_column(primesCartes($b, $pmC, $clsC, false), null, 'cle')['pc900']['etat'] === 'gagne');
+
+// --- 7 bis. la note Google : 25 € par personne à 4,5 ou mieux (14/10/2026) ----------------------
+echo "La note Google\n";
+relire();
+$g4 = googleDuMagasin('4'); $g5 = googleDuMagasin('5');
+verifie('Halle à 4,6 : le seuil tenu, 25 €', $g4['atteint'] && $g4['note'] === 4.6 && $g4['montant'] === 25 && $g4['seuil'] === 4.5, json_encode($g4));
+verifie('Namur à 4,3 : sous le seuil', !$g5['atteint']);
+verifie('Halle : 25 € à chacune au-dessus du minimum d’heures, rien en dessous', googlePrime($g4, 30.0) === 25.0 && googlePrime($g4, 10.0) === 0.0);
+verifie('Namur : rien', googlePrime($g5, 30.0) === 0.0);
+verifie('un magasin sans fiche Google : pas de note, rien', googleDuMagasin('9')['note'] === null && googlePrime(googleDuMagasin('9'), 30.0) === 0.0);
+$b2 = $b; $b2['google'] = googleBrique('4', 30.0);
+$cartesG = primesCartes($b2, $pmC, $clsC, true);
+$parG = array_column($cartesG, null, 'cle');
+verifie('la carte Google vient après l’objectif', array_column($cartesG, 'cle') === ['croisees', 'record', 'objectif', 'google', 'meilleure', 'tartes', 'pc900'], json_encode(array_column($cartesG, 'cle')));
+verifie('Halle : gagnée, +25 €, la note face au seuil', $parG['google']['etat'] === 'gagne' && $parG['google']['gain'] === 25.0 && $parG['google']['val'] === 4.6 && $parG['google']['cible'] === 4.5 && $parG['google']['unite'] === 'note');
+$b2['google'] = googleBrique('5', 30.0);
+$cG = array_column(primesCartes($b2, $pmC, $clsC, true), null, 'cle')['google'];
+verifie('Namur : en gris, 0,2 point à prendre', $cG['etat'] === 'att' && $cG['ecart'] === 0.2 && $cG['gain'] === 0.0 && $cG['montant'] === 25);
+$b2['google'] = googleBrique('4', 10.0);
+$cG = array_column(primesCartes($b2, $pmC, $clsC, true), null, 'cle')['google'];
+verifie('sous le minimum d’heures : rien, le motif le dit', $cG['etat'] === 'vide' && $cG['motif'] === 'heures' && $cG['gain'] === 0.0);
+$b2['google'] = googleBrique('4', 30.0);
+$b2['concours']['montant'] = 0; $b2['promos']['montant'] = 50;
+verifie('les montants du mois comptent la note Google, sans coefficient', primesMontants($b2, $pmC + ['vous' => 0.0])['google'] === 25.0 && primesMontants($b2, $pmC)['croisees'] === 50.0);
+verifie('le titre « Note Google » entre dans la collection', in_array('google', array_column(primesTitres($b2, $pmC), 'cle'), true));
+verifie('le SMS nomme la note Google', in_array('Note Google', primesGagnees(['google' => 25.0]), true));
+verifie('le payeur de la note Google : la marque par défaut', primesPayeurDe('google') === 'marque');
+
+// --- 7 ter. les icônes des primes (14/10/2026) ------------------------------------------------
+echo "Les icônes\n";
+$ic = 'uploads/primes/0123456789abcdef0123.svg';
+verifie('un chemin d’icône gardé', primesAppIcone($ic) === $ic);
+verifie('un chemin hors du dossier, un script, une adresse : refusés', primesAppIcone('../config/config.php') === '' && primesAppIcone('uploads/primes/0123456789abcdef0123.php') === '' && primesAppIcone('https://ailleurs.be/x.png') === '');
+verifie('une prime garde son icône', primesAppEntreeValide(['type' => 'target', 'cle' => 'croisees', 'icone' => $ic], 0, 50)['icone'] === $ic);
+verifie('le record et la meilleure ont la leur', primesAppExternes(['record' => ['icone' => $ic]])['record']['icone'] === $ic && primesAppExternes([])['meilleure']['icone'] === '');
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => $e['cle'] === 'croisees' ? ['icone' => $ic] + $e : $e, relire()['liste']), 'externes' => ['record' => ['icone' => $ic]]];
+wr_primes_app();
+relire();
+$parI = array_column(primesCartes($b, $pmC, $clsC, true), null, 'cle');
+verifie('les cartes portent l’icône (et l’emoji en repli)', $parI['croisees']['icone'] === $ic && $parI['record']['icone'] === $ic && $parI['objectif']['icone'] === '' && $parI['objectif']['emo'] === '🏪');
+$dos = sys_get_temp_dir() . '/icones-' . bin2hex(random_bytes(4));
+$im = imagecreatetruecolor(32, 32); ob_start(); imagepng($im); $png = (string) ob_get_clean();
+$r = primesIconeEcrire('data:image/png;base64,' . base64_encode($png), $dos);
+verifie('un PNG écrit sous uploads/primes, au nom tiré au hasard', preg_match('#^uploads/primes/[a-f0-9]{20}\.png$#', $r['icone'] ?? '') === 1 && is_file($dos . '/' . basename((string) ($r['icone'] ?? 'x'))), json_encode($r));
+$im = imagecreatetruecolor(8, 8); ob_start(); imagepng($im); $png = (string) ob_get_clean();
+verifie('une icône de 8 px refusée', (primesIconeEcrire('data:image/png;base64,' . base64_encode($png), $dos)['code'] ?? 0) === 422);
+$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#8D1D2C"/></linearGradient></defs><path fill="url(#g)" d="M12 2l3 7h7l-6 4 2 7-6-4-6 4 2-7-6-4h7z"/><use href="#g"/></svg>';
+verifie('un SVG propre accepté', str_ends_with((string) (primesIconeEcrire('data:image/svg+xml;base64,' . base64_encode($svg), $dos)['icone'] ?? ''), '.svg'));
+verifie('un SVG avec un script refusé', (primesIconeEcrire('data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'), $dos)['code'] ?? 0) === 415);
+verifie('un SVG avec un gestionnaire d’événement refusé', !primesSvgSain('<svg onload="alert(1)"></svg>') && !primesSvgSain('<svg><a href="javascript:alert(1)"><rect/></a></svg>'));
+verifie('un SVG qui appelle l’extérieur refusé', !primesSvgSain('<svg><image href="https://ailleurs.be/x.png"/></svg>') && !primesSvgSain('<svg><rect style="fill:url(https://ailleurs.be/y)"/></svg>'));
+verifie('un SVG qui anime un gestionnaire ou un lien refusé', !primesSvgSain('<svg><set attributeName="onmouseover" to="alert(1)"/></svg>') && !primesSvgSain('<svg><a><animate attributeName="href" values="https://ailleurs.be"/></a></svg>'));
+verifie('un SVG avec une entité refusé', !primesSvgSain('<!DOCTYPE svg [<!ENTITY x "y">]><svg>&x;</svg>'));
+verifie('du texte qui n’est pas une image refusé', (primesIconeEcrire('data:text/plain;base64,' . base64_encode(str_repeat('pas une image ', 5)), $dos)['code'] ?? 0) === 415);
+verifie('plus d’un Mo refusé', (primesIconeEcrire('data:image/png;base64,' . base64_encode(str_repeat('x', PRIMES_ICONE_MAX + 1)), $dos)['code'] ?? 0) === 413);
+array_map('unlink', glob($dos . '/*') ?: []); @rmdir($dos);
 
 // --- 8. les moyennes par magasin -------------------------------------------------------------
 echo "Les moyennes par magasin\n";

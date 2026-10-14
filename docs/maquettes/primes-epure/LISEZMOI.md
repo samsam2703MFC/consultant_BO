@@ -21,6 +21,21 @@ menu déroulant des catégories du catalogue) ; les primes **pas encore gagnées
 à la réussite** (un interrupteur dans les paramètres), envoyé quand le CEO enregistre les primes du mois,
 par Twilio dès que `config.php › sms` est rempli.
 
+Ajouts du 14/10/2026, troisième demande :
+
+- **la note Google** devient une prime de la liste, un target comme les autres : quand la note de la
+  fiche Google du magasin est à **4,5 ou plus**, chaque personne au planning du mois (au-dessus du minimum
+  d'heures) gagne **25 €**. Sous 4,5, elle ne gagne rien. Le seuil, le montant, les heures et le payeur se
+  règlent dans les paramètres. Le coefficient du 06/10 (× 0,5 à × 1,5) disparaît ;
+- **les icônes** : l'admin dépose une icône par prime (PNG, SVG, WebP ou JPEG, 1 Mo au plus) en cliquant
+  sur sa tuile dans les paramètres. L'app la montre à la place de l'emoji, dans la carte et dans le menu
+  du classement. Sans icône, l'emoji reste. Le rendu d'essai en utilise trois (`demo/uploads/primes` : la
+  tarte, la quiche, le café) ;
+- **le design system** : les couleurs, rayons et ombres des primes (app et cockpit) sont tous des
+  variables. Côté app, ce sont celles de `marque.css` (valeurs du design system : l'ambre des collections
+  pour « en tête », l'abricot et le brun pop-up pour les types, la palette packaging pour les avatars).
+  Côté cockpit, ce sont celles de `assets/ds/global.css`.
+
 Demande du 14/10/2026, sur `/consulant_bo/employee/primes` : chaque tableau est une prime (un
 target, une catégorie de produits ou une promotion) avec sa récompense, réglée par l'admin,
 50 € par défaut. Le classement à la Strava se trouve dans un menu déroulant (Queen of Tartes, Queen
@@ -30,11 +45,11 @@ of Quiches…) : le rang, les quantités, qui est 1re. Tout texte d'explication 
 
 | Type | Exemples | Qui gagne la récompense |
 |---|---|---|
-| **Target** | ventes croisées ≥ 55 %, bats ton record, objectif magasin ≥ 100 % | chaque vendeuse qui atteint la cible |
+| **Target** | ventes croisées ≥ 55 %, bats ton record, objectif magasin ≥ 100 %, note Google ≥ 4,5 | chaque vendeuse qui atteint la cible (objectif et note Google : chaque personne au planning) |
 | **Catégorie** | Queen of Tartes, Queen of Quiches (un motif sur le produit) | la 1re du magasin, au nombre de pièces |
 | **Promo** | une promotion du panel : un bundle ou un « X achetés + Y offerts » (nom, dates, magasins et produits lus à l'API) | la 1re du magasin, au nombre de bundles vendus ou d'offres données |
 
-Toutes les cartes ont la même forme : emoji, nom, type, récompense, puis la mesure, une jauge,
+Toutes les cartes ont la même forme : l'icône (déposée, sinon l'emoji), nom, type, récompense, puis la mesure, une jauge,
 une pastille d'état (✓ gagné, 👑 1re, 2e / 6, −0,06) et une ligne de chiffres (la cible, ou la 1re
 et sa quantité). Le haut de la page affiche seulement l'acquis et le total en jeu.
 

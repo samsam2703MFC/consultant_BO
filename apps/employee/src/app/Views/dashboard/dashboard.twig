@@ -22,7 +22,7 @@
     {% if p.enCours %}<div class="gros2">{{ T.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
     <div class="s">{{ T.earned_so_far ?? 'acquis si le mois finit comme ça' }} · {{ T.within_reach ?? 'si tu passes un cran de plus partout' }}</div>
     {% else %}<div class="gros2">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div><div class="s">{{ T.month_closed ?? 'mois clos' }}</div>{% endif %}
-    {% set gg = p.google ?? null %}{% if gg and gg.actif and gg.note is not null and gg.coef != 1 %}<span class="puce google"><i class="bi bi-star-fill"></i> Google {{ gg.note|number_format(1, ',', ' ') }} → × {{ gg.coef|number_format(2, ',', ' ') }}</span>{% endif %}
+    {% set gg = p.google ?? null %}{% if gg and gg.actif and gg.note is not null %}<span class="puce google"><i class="bi bi-star-fill"></i> Google {{ gg.note|number_format(1, ',', ' ') }}{% if (gg.montant ?? 0) > 0 %} · +{{ gg.montant|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</span>{% endif %}
     <div class="acc-voir">{{ T.see_details ?? 'Voir le détail' }} <i class="bi bi-arrow-right"></i></div>
   </div>
 </a>
@@ -87,7 +87,7 @@
 {% if collection %}
 <a class="pr-card acc-lien acc-mag" href="{{ ROOT }}/primes#collection">
   <div><div class="k">{{ T.my_collection ?? 'Ma collection' }}</div>
-    <div class="s"><b>👑 {{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }} 🔥{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ (dt.cle starts with 'concours:' or dt.cle starts with 'promo:') ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (T.shop_bonus_title ?? 'Prime magasin')))) }}{% endif %}</div></div>
+    <div class="s"><b>👑 {{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }} 🔥{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ (dt.cle starts with 'concours:' or dt.cle starts with 'promo:') ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (dt.cle == 'google' ? (T.google_rating ?? 'Note Google') : (T.shop_bonus_title ?? 'Prime magasin'))))) }}{% endif %}</div></div>
   <i class="bi bi-chevron-right mu"></i>
 </a>
 {% endif %}

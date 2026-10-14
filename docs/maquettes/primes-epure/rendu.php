@@ -6,19 +6,22 @@ declare(strict_types=1);
  * calculée par le moteur du cockpit (primesBriques, primesMagasinMois, primesClassements,
  * primesCartes), sans base ni panel — des doublures en mémoire comme bin/tests_primes.php —, puis
  * rendue par la vue Twig de l'app. Prénoms et chiffres inventés (Halle d'après ses chiffres d'octobre).
+ * Trois icônes déposées (demo/uploads/primes : la tarte, la quiche, le café) ; les autres primes gardent
+ * leur emoji. La note Google de Halle : 4,6, au-dessus du seuil de 4,5.
  *
  *   php docs/maquettes/primes-epure/rendu.php            → rendu-app.html (à servir depuis la racine du dépôt)
  */
 
 $RACINE = dirname(__DIR__, 3);
 $GLOBALS['REGLAGES'] = [];
-$GLOBALS['TABLES'] = ['shops' => [], 'employes' => [], 'planning' => [], 'budgets' => []];
+$GLOBALS['TABLES'] = ['shops' => [], 'employes' => [], 'planning' => [], 'budgets' => [], 'reputation' => [['shop_id' => 4, 'rating_avg' => 4.6, 'rating_count' => 312]]];
 final class Db
 {
     public static function rows(string $sql, array $a = []): array
     {
         $T = $GLOBALS['TABLES'];
         if (str_contains($sql, 'FROM shops')) { return $T['shops']; }
+        if (str_contains($sql, 'ceo_shop_reputation')) { return $T['reputation']; }
         if (str_contains($sql, 'franchisee_employee_schedule')) { return $T['planning']; }
         if (str_contains($sql, 'FROM franchisee_employee')) { return $T['employes']; }
         if (str_contains($sql, 'ceo_shop_month_perf')) { return $T['budgets']; }
@@ -64,9 +67,10 @@ $GLOBALS['REGLAGES']['venteCroisees'] = ['cibleDefaut' => 50, 'cibles' => ['4' =
 $GLOBALS['REGLAGES']['ventePrimesApp'] = ['recompense' => 50, 'liste' => [
     ['type' => 'target', 'cle' => 'croisees', 'montant' => 50],
     ['type' => 'target', 'cle' => 'objectif', 'montant' => 50, 'pct' => 100, 'heuresMin' => 20],
-    ['type' => 'categorie', 'cle' => 'tartes', 'lib' => 'Queen of Tartes', 'motif' => 'tarte', 'minPieces' => 10, 'montant' => 50],
-    ['type' => 'categorie', 'cle' => 'quiches', 'lib' => 'Queen of Quiches', 'motif' => 'quiche', 'minPieces' => 10, 'montant' => 50],
-    ['type' => 'promo', 'montant' => 50, 'lib' => 'Promo café + croissant', 'promo' => ['source' => 'catalogue', 'sorte' => 'bundle', 'id' => '900', 'nom' => 'Café + croissant',
+    ['type' => 'target', 'cle' => 'google', 'montant' => 25, 'seuil' => 4.5, 'heuresMin' => 20],
+    ['type' => 'categorie', 'cle' => 'tartes', 'lib' => 'Queen of Tartes', 'motif' => 'tarte', 'minPieces' => 10, 'montant' => 50, 'icone' => 'uploads/primes/7a1e0c3b9f2d4e5a6b70.svg'],
+    ['type' => 'categorie', 'cle' => 'quiches', 'lib' => 'Queen of Quiches', 'motif' => 'quiche', 'minPieces' => 10, 'montant' => 50, 'icone' => 'uploads/primes/3c9d2b81e04f6a7c5d12.svg'],
+    ['type' => 'promo', 'montant' => 50, 'icone' => 'uploads/primes/e58b40d2c7a91f36b0c4.svg', 'lib' => 'Promo café + croissant', 'promo' => ['source' => 'catalogue', 'sorte' => 'bundle', 'id' => '900', 'nom' => 'Café + croissant',
         'du' => $m . '-01', 'au' => date('Y-m-t'), 'shops' => [], 'ids' => [900]]]]];
 // Le CA de Halle jour par jour (≈ 1 900 € les jours de semaine, 2 700 € le week-end) : la projection de l'objectif.
 for ($j = $m . '-01'; $j <= date('Y-m-d'); $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
@@ -82,16 +86,16 @@ foreach ([[1, 'Léa', 61], [2, 'Toi', 59], [3, 'Manon', 52], [4, 'Sarah', 50]] a
 $avant = date('Y-m', strtotime($m . '-01 -1 month'));
 $parMois = [$avant => [['id' => '2', 'tickets' => 240, 'lignesTicket' => 2.8]]];
 $b = primesBriques(2, $m, $moi, $lignes, $cr, $parMois, '4');
+$b['google'] = googleBrique('4', 38.5);
 $reg = primeMagasinReglages();
 $pm = primesMagasinMois(4, $m, $reg, 128.0, 604.0, ['montant' => 61000.0, 'source' => 'budget'], 6);
 $classements = primesClassements(2, '4', $cr, $emps, concoursReglages(), croiseesReglages(), $nomDe, promosConfig($m, '4'));
 $cartes = primesCartes($b, $pm, $classements, true);
-$google = ['actif' => false, 'note' => null, 'coef' => 1.0, 'porte' => 'app'];
-$acquis = googleApplique(primesMontants($b, $pm), $google)['total'];
+$acquis = round(array_sum(primesMontants($b, $pm)), 2);
 $enJeu = 0.0;
 foreach ($cartes as $c) { $enJeu += max((float) $c['montant'], (float) $c['gain']); }
 $fiche = ['emp' => 2, 'm' => $m, 'enCours' => true, 'magasin' => ['id' => '4', 'nom' => 'Atelier by - Halle'],
-    'cartes' => $cartes, 'classements' => $classements, 'acquis' => $acquis, 'enJeu' => max($acquis, $enJeu)];
+    'cartes' => $cartes, 'classements' => $classements, 'acquis' => $acquis, 'enJeu' => max($acquis, $enJeu), 'iconesBase' => 'demo'];
 
 // --- le rendu par la vue de l'app ------------------------------------------------------------
 require $RACINE . '/apps/employee/vendor/autoload.php';

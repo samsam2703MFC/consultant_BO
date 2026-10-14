@@ -1765,10 +1765,10 @@ function ep_ventes_explication_pdf(): array
             . implode('', array_map(static fn ($k) => '<tr><td><b>' . $e($k['lib']) . '</b></td><td>' . (($k['du'] ?? null) || ($k['au'] ?? null) ? $e(($k['du'] ? date('d/m', strtotime($k['du'])) : '…') . ' → ' . ($k['au'] ? date('d/m', strtotime($k['au'])) : '…')) : 'tout le mois') . '</td><td align="right">' . (int) $k['magasin'] . ' €</td></tr>', $promosK))
             . '</table>')
 
-        . (($regG === null || !$regG['actif']) ? '' :
+        . (($regG === null || !$regG['actif'] || $regG['montant'] <= 0) ? '' :
             '<div class="encart" style="margin-top:6mm"><span class="k">La note Google du magasin</span>'
-            . '<div style="font-size:9.5pt;margin-top:1mm">Elle multiplie ' . ($regG['porte'] === 'tout' ? 'toutes les primes' : 'les primes de l\'app (ventes croisées, objectif magasin, catégories, promos)') . ' : <b>' . number_format($regG['neutre'], 1, ',', ' ') . ' est neutre</b>, au-dessus la prime monte, en dessous elle baisse — '
-            . number_format($regG['pente'], 2, ',', ' ') . ' par point, entre × ' . number_format($regG['min'], 2, ',', ' ') . ' et × ' . number_format($regG['max'], 2, ',', ' ') . '. '
+            . '<div style="font-size:9.5pt;margin-top:1mm">Quand la note Google du magasin est à <b>' . number_format($regG['seuil'], 1, ',', ' ') . ' ou plus</b>, chacune au planning du mois ('
+            . (int) $regG['heuresMin'] . ' h au moins) gagne <b>' . (int) $regG['montant'] . ' €</b>. En dessous, rien. '
             . 'Un client content qui laisse un avis, c\'est aussi votre prime.</div></div>')
 
         . '<div class="encart" style="margin-top:6mm">'
@@ -2067,7 +2067,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . (($cfgKf === null || !$cfgKf['actif']) ? '' :
                 '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>👑 ' . implode(' · ', array_map(static fn ($k) => $e($k['lib']), $cfgKf['liste'])) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">'
                 . implode(' / ', array_unique(array_map(static fn ($k) => (int) $k['magasin'] . ' €', $cfgKf['liste']))) . '</b>.'
-                . (($regGf !== null && $regGf['actif']) ? ' La note Google du magasin multiplie ces primes : ' . number_format($regGf['neutre'], 1, ',', ' ') . ' est neutre.' : '') . '</div>')
+                . (($regGf !== null && $regGf['actif'] && $regGf['montant'] > 0) ? ' ⭐ Note Google à ' . number_format($regGf['seuil'], 1, ',', ' ') . ' ou plus : <b class="acc">' . (int) $regGf['montant'] . ' €</b> pour chacune au planning.' : '') . '</div>')
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'

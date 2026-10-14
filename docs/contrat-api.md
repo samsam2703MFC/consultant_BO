@@ -523,19 +523,28 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 | Promos du panel | promo | les **bundles vendus** (le produit du bundle, une ligne du ticket) ou les pièces des produits d'une offre « X achetés + Y offerts », sur les **seules dates** et dans les **seuls magasins** de la promotion (`qp[cle]`) | la **1re du magasin** de la promo, `minPieces` au moins | une promo se crée depuis la liste des promotions du panel (`GET /ventes/primes-promos`) ; six au plus |
 | Bats ton record (inchangé) | target | lignes par ticket face à son record 12 mois | 100 € par dixième dès le 2e, 3 au plus | `POST /ventes/record` (onglet Targets & primes) |
 | Meilleure vendeuse (inchangé) | classement | score = CA ÷ (heures + 20) × créneau | 1re du magasin 75 €, 1re du réseau 150 € | `POST /ventes/primes-montants` (onglet Targets & primes) |
-| **Note Google** | coefficient | la note de la fiche Google du magasin (`ceo_shop_reputation`) | `1 + (note − neutre) × pente`, borné ; sur les primes de l'app (`porte: app` : ventes croisées, objectif magasin, catégories, promos) ou toutes (`tout`) | `POST /ventes/prime-google {actif, neutre, pente, min, max, porte}` |
+| **Note Google** (14/10/2026, à la place du coefficient) | target | la note de la fiche Google du magasin (`ceo_shop_reputation`), face au seuil (`seuil`, 4,5 par défaut) | quand la note est **au seuil ou au-dessus**, chaque personne du magasin au planning, au-dessus de `heuresMin`, gagne la récompense (**25 €** par défaut, la sienne, pas la récompense par défaut) ; en dessous, rien | dans la liste : `seuil`, `heuresMin`, `montant`, le payeur. `POST /ventes/prime-google` n'existe plus |
 
 - `POST /ventes/primes-app {recompense, liste: [{type: target|categorie|promo, cle, lib, actif, montant,
-  classement, …}]}` : la liste des primes (`ceo_app_setting.ventePrimesApp`). Les deux targets (`croisees`,
-  `objectif` : `pct`, `heuresMin` ; `croisees` : `categorie`) sont toujours là ; une catégorie porte `motif` et `minPieces` ; une promo
+  classement, icone, …}]}` : la liste des primes (`ceo_app_setting.ventePrimesApp`). Les trois targets (`croisees`,
+  `objectif` : `pct`, `heuresMin` ; `croisees` : `categorie` ; `google` : `seuil`, `heuresMin`, 25 € par défaut,
+  éteinte au départ si l'ancien coefficient l'était) sont toujours là, dans cet ordre ; une catégorie porte `motif` et `minPieces` ; une promo
   nouvelle arrive avec sa référence `ref: {source: api|catalogue, id}`, que le cockpit relit dans la liste des
   promotions (`primesPromos`) : rien de ce que le navigateur envoie sur ses produits n'est cru, une promo déjà
   là garde ce qu'elle avait. `classement` : la prime a sa liste dans le menu déroulant de l'app. Au premier
   appel, la liste se déduit des réglages d'avant (`venteConcoursTQ` → catégories, au montant de leur couronne
   du magasin ; `ventePrimeMagasin.heuresMin`). **Qui paie** chaque prime : `payeur: marque|magasin|sponsor`
   et `sponsor` (son nom ; un sponsor sans nom reste à la marque) ; `externes: {record, meilleure}` dit qui paie
-  ces deux-là. `sms: {actif}` : le **SMS à la réussite** (plus bas). Au journal ; les fiches du mois en cours
-  se recalculent.
+  ces deux-là. `icone` : le chemin d'une icône déposée (`uploads/primes/<hex>.<png|webp|jpg|svg>`, rien d'autre
+  n'est gardé), sur chaque prime et sur `externes.record`, `externes.meilleure` ; sans icône, l'app met l'emoji.
+  `sms: {actif}` : le **SMS à la réussite** (plus bas). Au journal ; les fiches du mois en cours se recalculent.
+- `POST /ventes/primes-icone {data}` (14/10/2026) : une icône en data-URL, PNG, WebP ou JPEG (16 px au moins) ou
+  SVG, **1 Mo au plus**. Un SVG n'entre que sans script, gestionnaire d'événement, objet embarqué ni entité, et
+  si ses liens restent dans le fichier (`#id`) ou sont des images `data:` (`primesSvgSain`). Elle est écrite sous
+  `public/uploads/primes/` avec un nom tiré au hasard ; la réponse `{ok, icone}` donne le chemin que la liste
+  garde ensuite (`POST /ventes/primes-app`). 413 si trop lourde, 415 si le format est refusé, 422 si illisible.
+  Le `.htaccess` sert ces SVG avec une CSP qui les empêche d'exécuter quoi que ce soit, même ouverts seuls.
+  Écran : Équipe & ventes › Paramètres, un clic sur la tuile d'une prime (✕ : retour à l'emoji).
   `POST /ventes/prime-magasin` et `POST /ventes/concours` n'existent plus.
 - `GET /ventes/primes-promos[?frais=1]` : les promotions qu'une prime peut suivre, gravées une heure
   (`primesPromos`) : `{api, erreurs: [{chemin, code, erreur}], liste: [{source, sorte: bundle|xy, id, nom,
@@ -553,9 +562,10 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   « Moyennes par magasin », la cible de ventes croisées de chaque magasin en face, « caler sur la moyenne +
   n pts », export CSV.
 - `GET /ventes/primes-reglages` : `{app (la liste, externes, sms), smsConfigure, categories (le menu déroulant des
-  ventes croisées : les catégories du catalogue, sans les bundles), magasin, croisees, concours, google, record,
-  meilleure, magasins, m, lib}`. Écran : Équipe & ventes › **Paramètres** (la liste des primes, les promotions du panel,
-  les moyennes par magasin, la note Google ; il s'ouvre même si le classement n'a pas pu être calculé).
+  ventes croisées : les catégories du catalogue, sans les bundles), magasin, croisees, concours, google: {actif,
+  seuil, montant, heuresMin, notes: {shop: note}}, record, meilleure, magasins, m, lib}`. La colonne « Moyenne
+  réseau » de la note Google en tire la note moyenne et le nombre de magasins au seuil. Écran : Équipe & ventes › **Paramètres** (la liste des primes, les promotions du panel,
+  les moyennes par magasin ; il s'ouvre même si le classement n'a pas pu être calculé).
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
   `X-Worker-Nom` en base64, `X-Worker-Jour`, `X-Worker-Sign` = HMAC-SHA256 de `emp|nom|jour` avec
@@ -566,28 +576,31 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   d'affichage ; le personnel vient de la table locale **et** du panel (`/shops/{id}/employees`, gravé
   une heure). Inconnue partout : 404 avec le nom reçu. Depuis le cockpit (session),
   `GET /ventes/moi?emp=&m=` ou `?nom=` montre la même fiche. Réponse : `{emp, m, lib, enCours, magasin: {id, nom},
-  cartes: [{cle, type: target|categorie|promo|classement, emo, lib, montant (la récompense ; le record : son
-  plafond, max), gain, etat: gagne|tete|rang|att|vide, val, unite: pct|pcs|lpt|score, cible, ecart, jauge,
-  repere, rang, sur, premier: {nom, q, moi}, second, minPieces, motif: pas_compte|pas_objectif|heures|
-  pas_classee|pas_record|min_tickets|null, classement}], classements: [{cle, lib, type, unite: pieces|taux,
-  magasin[], reseau[], nMag, nRes}] (les dix premières et la personne, avec le nom du panel et la localité :
-  le seul endroit qui porte des noms), acquis, enJeu (= aPortee), acquisBrut, google, montants: {croisees,
-  record, meilleure, concours, promo, magasin, total, brut}, heures, aujourdhui, briques: {croisees, record,
-  meilleure, concours, promos}, prime: {objectif, ca, atteinte, projection, atteinteProj, paliers: [{pct,
+  cartes: [{cle, type: target|categorie|promo|classement, emo, icone (le chemin de l'icône déposée, sinon ""),
+  lib, montant (la récompense ; le record : son plafond, max), gain, etat: gagne|tete|rang|att|vide, val,
+  unite: pct|pcs|lpt|score|note, cible, ecart, jauge, repere, rang, sur, premier: {nom, q, moi}, second,
+  minPieces, avis (la note Google), motif: pas_compte|pas_objectif|pas_note|heures|pas_classee|pas_record|
+  min_tickets|null, classement}], classements: [{cle, lib, type, emo, icone, unite: pieces|taux, magasin[],
+  reseau[], nMag, nRes}] (les dix premières et la personne, avec le nom du panel et la localité : le seul
+  endroit qui porte des noms), acquis, enJeu (= aPortee), google: {actif, note, avis, seuil, recompense,
+  heuresMin, atteint, sousMin, montant}, montants: {croisees, record, meilleure, concours, promo, magasin,
+  google}, heures, aujourdhui, briques: {croisees, record,
+  meilleure, concours, promos, google}, prime: {objectif, ca, atteinte, projection, atteinteProj, paliers: [{pct,
   montant, atteint, manque, parJour, vous, equipe}], palier, sousMin, vous, equipe, personnes},
   collection, semaines12}`. `acquis` = ce que le mois donnerait s'il finissait comme ça (la 1re d'une
-  catégorie ou d'une promo compte), coefficient Google compris ; `enJeu` = la récompense de chaque carte. Les
+  catégorie ou d'une promo compte), la note Google comprise ; `enJeu` = la récompense de chaque carte. Les
   briques, la collection et les douze semaines nourrissent l'Accueil de l'app. Mis en cache 15 minutes
   (mois en cours) ou un jour (mois clos) par personne ; `&frais=1` recalcule.
 - `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut) :
   `magasins[] {id, nom, objectif, ca, atteinte, atteinteProj, palier: {pct, montant}, eligibles, equipe, cible,
-  google}`, `personnes[] {id, nom, shopId, magasinNom, heures, tickets, croisees: {taux, montant}, record,
-  meilleure, concours: {pieces, titres, montant}, promo: {pieces, titres, montant}, magasin, coef, brut,
-  avecCoef, total, parPayeur, parPayeurApp}`, `totaux` (avec `parPayeur` : `{marque, magasin, "sponsor:Nom"}`,
-  après coefficient), `magasins[].parPayeur`, `concours`, `promos: {actif, liste[]}`, `google`, `enregistre`.
+  google: {note, seuil, montant, atteint, eligibles, equipe}}`, `personnes[] {id, nom, shopId, magasinNom, heures,
+  tickets, croisees: {taux, montant}, record, meilleure, concours: {pieces, titres, montant}, promo: {pieces,
+  titres, montant}, magasin, google, total, parPayeur, parPayeurApp}`, `totaux` (avec `google` et `parPayeur` :
+  `{marque, magasin, "sponsor:Nom"}`), `magasins[].parPayeur`, `concours`, `promos: {actif, liste[]}`, `google`,
+  `enregistre`.
   Écran : Équipe & ventes › Résultats (« Payé par : … »). **« Enregistrer les primes »** (`POST /ventes/primes
   {m}`) grave en plus, sous `appWorker`, les primes de l'app de chacune (ventes croisées, catégories, promos,
-  objectif magasin, après coefficient ; identifiants, montants et `parPayeur`, jamais de nom) et une ligne de
+  objectif magasin, note Google ; identifiants, montants et `parPayeur`, jamais de nom) et une ligne de
   journal par personne primée, qui dit qui paie. Puis, si le **SMS à la réussite** est activé, chaque personne
   primée reçoit un SMS (« Bravo Léa ! Octobre : 100 € de primes gagnées (Ventes croisées, Queen of Quiches). »),
   une fois par mois (`primesSms{mois}`) : `appWorker.sms: {actif, configure, envoyes, echecs, sansNumero}`, et
