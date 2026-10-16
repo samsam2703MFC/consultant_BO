@@ -125,8 +125,16 @@ cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|
 - **12 semaines** : une colonne par semaine, un indicateur à la fois (ventes croisées avec la ligne de la
   cible, CA par heure, tickets), la semaine en cours en rubis ; toucher une semaine affiche sa valeur. La même
   série existe en tableau pour les lecteurs d'écran ;
-- **mon magasin** : le CA à date face à l'objectif, où en être au jour J (pointillé), la projection ;
+- **mon magasin**, toujours là : le CA à date face à l'objectif, où en être au jour J (pointillé), la
+  projection ; ses tickets, son panier moyen, le CA par heure de l'équipe, ses ventes croisées face à la cible,
+  ses lignes par ticket, la moyenne par jour face à l'objectif du jour ; le **CA jour par jour** du mois (le
+  week-end un ton plus sombre, aujourd'hui en rubis, la ligne de l'objectif du jour). Des totaux du magasin
+  (`magasinStats` de la fiche), jamais le chiffre d'une collègue ;
 - **mes titres** des six derniers mois.
+
+Sans vente à son nom ce mois-ci (16/10/2026 : 20 personnes sur 58, souvent en renfort ou sur un compte de
+caisse partagé), la page ne montre pas une grille de zéros : un mot (« Pas encore de vente à ton nom ce
+mois-ci ») puis le magasin ; les douze semaines ne s'affichent que s'il y a eu des ventes.
 
 Les tâches n'ont plus d'onglet : on y arrive par la tuile « tâches à faire » de l'Accueil (les pages des tâches
 allument « Accueil » dans la barre du bas). Rendu d'essai : `php docs/maquettes/primes-epure/rendu.php` écrit

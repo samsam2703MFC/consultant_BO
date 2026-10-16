@@ -55,3 +55,16 @@
 .st-titres{display:flex;flex-wrap:wrap;gap:6px}
 .st-titre{background:var(--la-or-doux);color:var(--la-or-encre);font:600 12px var(--font-ui);padding:6px 10px;border-radius:var(--radius-pill)}
 .st-titre.live{background:var(--la-abricot);color:var(--la-abricot-encre)}
+
+/* Rien à son nom ce mois-ci : un mot clair, puis le magasin. */
+.st-vide{display:flex;gap:12px;align-items:flex-start;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-lg);padding:14px;box-shadow:var(--la-ombre);margin-top:6px}
+.st-vide .bi{font-size:22px;color:var(--la-rubis);line-height:1}
+.st-vide b{display:block;font:600 14px/1.3 var(--font-ui);color:var(--la-encre)}
+.st-vide span{display:block;font-size:12.5px;color:var(--la-muet);margin-top:3px;line-height:1.4}
+/* Le magasin : ses tuiles sous la barre, le jour par jour (le week-end un ton plus sombre). */
+.st-mag-t{margin-top:10px}
+.st-bar.we{fill:var(--la-brun)}
+.st-col.der .st-bar.we{fill:var(--la-rubis)}
+.lg-gris{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--la-gris)}
+.lg-gris.we{background:var(--la-brun)}
+.lg-ligne{display:inline-block;width:14px;border-top:1.5px solid var(--la-encre);opacity:.6;vertical-align:middle}

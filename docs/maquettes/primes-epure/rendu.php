@@ -124,6 +124,8 @@ $b['meilleure'] = array_merge($b['meilleure'], ['ca' => 3290, 'caHeure' => 85, '
 $fiche += ['briques' => $b, 'semaines12' => $sem, 'prime' => $pm, 'aujourdhui' => ['tickets' => 19, 'croisees' => 11, 'lignes' => 52, 'taux' => 57.9, 'quand' => '15:40'],
     'collection' => ['titres' => [['cle' => 'concours:quiches', 'lib' => 'Queen of Quiches', 'n' => 2], ['cle' => 'croisees', 'lib' => 'Ventes croisées', 'n' => 3]],
         'enCours' => [['cle' => 'croisees', 'lib' => 'Ventes croisées']]]];
+$fiche['magasinStats'] = primesMagasinStats('4', [['shopId' => '4', 'ca' => 9800, 'tickets' => 770, 'heures' => 128.0], ['shopId' => '4', 'ca' => 3290, 'tickets' => 262, 'heures' => 38.5]],
+    $cr, $emps, $pm);
 $trS = array_merge(
     json_decode((string) file_get_contents($RACINE . '/apps/employee/src/core/I18n/translations/page/' . $lang . '/components.json'), true) ?: [],
     json_decode((string) file_get_contents($RACINE . '/apps/employee/src/core/I18n/translations/page/' . $lang . '/stats.json'), true) ?: []);
