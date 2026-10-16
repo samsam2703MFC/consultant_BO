@@ -109,7 +109,7 @@ verifie('une catégorie ne prend pas la forme d’une clé de promo', $l[3]['cle
 $l = primesAppListePropre([['type' => 'categorie', 'lib' => 'Google', 'motif' => 'google']], 50);
 verifie('une catégorie ne prend pas la clé de la note Google', $l[3]['cle'] === 'kgoogle', $l[3]['cle']);
 $eG = primesAppEntreeValide(['type' => 'target', 'cle' => 'google', 'seuil' => 9, 'heuresMin' => 10, 'montant' => 30, 'payeur' => 'magasin'], 0, 50);
-verifie('la note Google : un seuil borné à 5, son montant, son payeur', $eG['seuil'] === 5.0 && $eG['montant'] === 30 && $eG['heuresMin'] === 10 && $eG['payeur'] === 'magasin');
+verifie('la note Google : un seuil borné à 5, son montant ; une prime de la marque n’est pas payée par le magasin', $eG['seuil'] === 5.0 && $eG['montant'] === 30 && $eG['heuresMin'] === 10 && $eG['payeur'] === 'marque' && $eG['famille'] === 'marque');
 $GLOBALS['REGLAGES']['ventePrimeGoogle'] = ['actif' => false];
 verifie('l’ancien coefficient éteint : la note Google éteinte', primesAppDefauts()['liste'][2]['actif'] === false);
 unset($GLOBALS['REGLAGES']['ventePrimeGoogle']);
@@ -278,18 +278,59 @@ verifie('une sélection vide ou bancale est refusée', isset(primesPromoCockpit(
 verifie('une fin avant le début est refusée', isset(primesPromoCockpit(['sel' => [['t' => 'categorie', 'v' => 'Tartes']], 'du' => '2026-11-30', 'au' => '2026-11-01'], 'X')['error']));
 $avantListe = relire()['liste'] ?? [];
 $GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => array_merge($avantListe, [
-    ['type' => 'promo', 'ref' => ['source' => 'cockpit'], 'lib' => 'Queen of Tartes au sucre', 'montant' => 40, 'minPieces' => 5, 'regle' => 'seuil', 'payeur' => 'magasin',
+    ['type' => 'promo', 'ref' => ['source' => 'cockpit'], 'lib' => 'Queen of Tartes au sucre', 'montant' => 40, 'minPieces' => 5, 'regle' => 'seuil', 'payeur' => 'sponsor', 'sponsor' => 'Moulins Dumont',
      'promo' => ['sel' => [['t' => 'categorie', 'v' => 'Tartes', 'lib' => 'Tartes'], ['t' => 'produit', 'v' => '20', 'lib' => 'Quiche lorraine']], 'du' => '2026-11-01', 'au' => '2026-11-30', 'shops' => ['4'], 'ids' => [999]]]])];
 $r = wr_primes_app();
 $pk = null; foreach (relire()['liste'] ?? [] as $e) { if (str_starts_with($e['cle'], 'pk')) { $pk = $e; } }
 verifie('la prime promotion du cockpit est enregistrée (clé pk…)', ($r['ok'] ?? false) && $pk !== null && $pk['type'] === 'promo' && $pk['lib'] === 'Queen of Tartes au sucre', json_encode($r));
 verifie('ses produits sont relus dans le catalogue, pas pris au navigateur', $pk !== null && $pk['promo']['ids'] == [10, 20] || ($pk !== null && $pk['promo']['ids'] == [20, 10]), json_encode($pk['promo']['ids'] ?? null));
-verifie('sa règle, ses dates, ses magasins, qui paie', $pk !== null && $pk['regle'] === 'seuil' && $pk['promo']['du'] === '2026-11-01' && $pk['promo']['shops'] === ['4'] && $pk['payeur'] === 'magasin');
+verifie('sa règle, ses dates, ses magasins, qui paie', $pk !== null && $pk['regle'] === 'seuil' && $pk['promo']['du'] === '2026-11-01' && $pk['promo']['shops'] === ['4'] && $pk['payeur'] === 'sponsor' && $pk['famille'] === 'marque');
 $GLOBALS['CORPS'] = ['liste' => relire()['liste']];
 wr_primes_app();
 $pk2 = null; foreach (relire()['liste'] ?? [] as $e) { if (str_starts_with($e['cle'], 'pk')) { $pk2 = $e; } }
 verifie('réenregistrée telle quelle, elle garde sa clé et sa sélection', $pk2 !== null && $pk2['cle'] === $pk['cle'] && $pk2['promo']['sel'] === $pk['promo']['sel']);
 verifie('la moisson compte ses produits', isset(promoFamilles()[$pk['cle']][10]) && isset(promoFamilles()[$pk['cle']][20]));
+// Les primes d'un franchisé (16/10/2026) : une prime promo pour SON magasin, payée par lui.
+$avantMag = relire()['liste'];
+$mag = static fn (array $promo, string $shop, array $plus = []) => array_merge(['type' => 'promo', 'famille' => 'magasin', 'shop' => $shop, 'lib' => 'Prime du magasin', 'montant' => 30, 'minPieces' => 3, 'payeur' => 'marque'], $promo, $plus);
+$GLOBALS['CORPS'] = ['liste' => array_merge($avantMag, [$mag(['ref' => ['source' => 'cockpit'], 'promo' => ['sel' => [['t' => 'categorie', 'v' => 'Quiches', 'lib' => 'Quiches']], 'du' => '2026-11-01', 'au' => '2026-11-30', 'shops' => ['4', '5']]], '5')])];
+$r = wr_primes_app();
+$pm = null; foreach (relire()['liste'] as $e) { if (($e['famille'] ?? '') === 'magasin') { $pm = $e; } }
+verifie('une prime de franchisé : son magasin, et lui seul', ($r['ok'] ?? false) && $pm !== null && $pm['shop'] === '5' && $pm['promo']['shops'] === ['5'], json_encode([$r, $pm]));
+verifie('payée par le magasin, quoi que dise le navigateur', $pm !== null && $pm['payeur'] === 'magasin' && primesPayeurDe($pm['cle']) === 'magasin');
+verifie('sa clé porte le magasin (pm5z…)', $pm !== null && str_starts_with($pm['cle'], 'pm5zk'), $pm['cle'] ?? '');
+verifie('ses vendeuses la voient, pas celles des autres magasins', promoCouvre(promoPeriodes()[$pm['cle']], '2026-11-10', '5') && !promoCouvre(promoPeriodes()[$pm['cle']], '2026-11-10', '4'));
+$GLOBALS['CORPS'] = ['liste' => array_merge($avantMag, [$mag(['ref' => ['source' => 'cockpit'], 'promo' => ['sel' => [['t' => 'categorie', 'v' => 'Quiches', 'lib' => 'Quiches']]]], '')])];
+$r = wr_primes_app();
+verifie('sans magasin : refusée', ($r['error'] ?? '') !== '' && str_contains($r['error'], 'magasin'), json_encode($r));
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => ($e['famille'] ?? '') === 'magasin' ? array_merge($e, ['famille' => 'marque', 'payeur' => 'marque']) : $e, relire()['liste'])];
+wr_primes_app();
+$pm2 = null; foreach (relire()['liste'] as $e) { if ($e['cle'] === $pm['cle']) { $pm2 = $e; } }
+verifie('réenregistrée, elle reste au magasin (la famille ne change pas)', $pm2 !== null && $pm2['famille'] === 'magasin' && $pm2['payeur'] === 'magasin');
+// Une promotion du panel : la prime de la marque et celle d'un magasin, côte à côte.
+$GLOBALS['REGLAGES']['primesPromos3'] = ['quand' => time(), 'api' => true, 'erreurs' => [], 'liste' => [
+    ['source' => 'api', 'sorte' => 'bundle', 'id' => '77', 'nom' => 'Menu goûter', 'prix' => 6.5, 'du' => null, 'au' => null, 'shops' => [], 'ids' => [900], 'composants' => []],
+    ['source' => 'api', 'sorte' => 'bundle', 'id' => '78', 'nom' => 'Menu Halle', 'prix' => 6.5, 'du' => null, 'au' => null, 'shops' => ['4'], 'ids' => [901], 'composants' => []]]];
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], [
+    ['type' => 'promo', 'ref' => ['source' => 'api', 'id' => '77'], 'lib' => 'Menu goûter', 'montant' => 50],
+    $mag(['ref' => ['source' => 'api', 'id' => '77']], '5', ['lib' => 'Menu goûter chez nous'])])];
+$r = wr_primes_app();
+$cles = array_column(relire()['liste'], 'cle');
+verifie('la même promotion du panel : une prime de la marque (pb77) et une du magasin (pm5zb77)', ($r['ok'] ?? false) && in_array('pb77', $cles, true) && in_array('pm5zb77', $cles, true), json_encode([$r, $cles]));
+$p77 = null; foreach (relire()['liste'] as $e) { if ($e['cle'] === 'pm5zb77') { $p77 = $e; } }
+verifie('celle du magasin ne compte que ses ventes', $p77 !== null && $p77['promo']['shops'] === ['5']);
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], [$mag(['ref' => ['source' => 'api', 'id' => '78']], '5')])];
+$r = wr_primes_app();
+verifie('une promotion qui ne tourne pas dans ce magasin : refusée', str_contains($r['error'] ?? '', 'ne tourne pas dans ce magasin'), json_encode($r));
+// Six au plus par magasin, sans toucher aux primes de la marque.
+$sept = []; for ($k = 1; $k <= 7; $k++) { $sept[] = $mag(['ref' => ['source' => 'cockpit'], 'promo' => ['sel' => [['t' => 'produit', 'v' => '10', 'lib' => 'Tarte']]]], '4', ['lib' => 'Prime ' . $k]); }
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], $sept)];
+wr_primes_app();
+$n4 = count(array_filter(relire()['liste'], static fn ($e) => ($e['shop'] ?? '') === '4'));
+verifie('six primes au plus par magasin', $n4 === PRIMES_APP_MAX_PROMOS, (string) $n4);
+verifie('les primes de la marque restent là', in_array('pb77', array_column(relire()['liste'], 'cle'), true) && in_array($pk['cle'], array_column(relire()['liste'], 'cle'), true));
+$GLOBALS['CORPS'] = ['liste' => $avantMag];
+wr_primes_app();
 // La règle du seuil : chacune pour soi.
 $clsS = ['pz' => [1 => ['pieces' => 25.0, 'rangMag' => 1], 2 => ['pieces' => 22.0, 'rangMag' => 2], 3 => ['pieces' => 12.0, 'rangMag' => 3]]];
 $cfgS = ['actif' => true, 'liste' => [['cle' => 'pz', 'lib' => 'Promo Z', 'magasin' => 40, 'minPieces' => 20, 'regle' => 'seuil']]];
@@ -473,6 +514,7 @@ verifie('la marque par défaut', primesAppPayeur([]) === ['payeur' => 'marque', 
 verifie('un sponsor nommé', primesAppPayeur(['payeur' => 'sponsor', 'sponsor' => ' Lavazza ']) === ['payeur' => 'sponsor', 'sponsor' => 'Lavazza']);
 verifie('un sponsor sans nom reste à la marque', primesAppPayeur(['payeur' => 'sponsor', 'sponsor' => '']) === ['payeur' => 'marque', 'sponsor' => '']);
 verifie('un payeur inconnu : la marque', primesAppPayeur(['payeur' => 'banque']) === ['payeur' => 'marque', 'sponsor' => '']);
+verifie('le magasin ne paie que ses primes : sur une prime de la marque, la marque', primesAppPayeur(['payeur' => 'magasin']) === ['payeur' => 'marque', 'sponsor' => '']);
 $GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => [
     ['type' => 'target', 'cle' => 'croisees', 'montant' => 50, 'categorie' => 'Boissons chaudes'],
     ['type' => 'target', 'cle' => 'objectif', 'montant' => 50, 'payeur' => 'magasin'],
@@ -480,8 +522,8 @@ $GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => [
     'externes' => ['record' => ['payeur' => 'magasin'], 'meilleure' => ['payeur' => 'sponsor', 'sponsor' => 'Lavazza']], 'sms' => ['actif' => true]];
 wr_primes_app();
 relire();
-verifie('chaque prime garde son payeur', primesPayeurDe('objectif') === 'magasin' && primesPayeurDe('tartes') === 'sponsor:Moulins Dumont' && primesPayeurDe('croisees') === 'marque');
-verifie('le record et la meilleure vendeuse aussi', primesPayeurDe('record') === 'magasin' && primesPayeurDe('meilleure') === 'sponsor:Lavazza');
+verifie('chaque prime garde son payeur ; le magasin ne paie pas une prime de la marque', primesPayeurDe('objectif') === 'marque' && primesPayeurDe('tartes') === 'sponsor:Moulins Dumont' && primesPayeurDe('croisees') === 'marque');
+verifie('le record et la meilleure vendeuse aussi', primesPayeurDe('record') === 'marque' && primesPayeurDe('meilleure') === 'sponsor:Lavazza');
 verifie('les SMS à la réussite sont activés', primesAppReglages()['sms']['actif'] === true);
 verifie('le payeur passe au journal', str_contains(end($GLOBALS['JOURNAL']), 'Queen of Tartes 50 € (sponsor Moulins Dumont)') && str_contains(end($GLOBALS['JOURNAL']), 'SMS à la réussite activés'));
 
