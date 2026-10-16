@@ -70,7 +70,7 @@ $GLOBALS['REGLAGES']['ventePrimesApp'] = ['recompense' => 50, 'liste' => [
     ['type' => 'target', 'cle' => 'google', 'montant' => 25, 'seuil' => 4.5, 'heuresMin' => 20],
     ['type' => 'categorie', 'cle' => 'tartes', 'lib' => 'Queen of Tartes', 'motif' => 'tarte', 'minPieces' => 10, 'montant' => 50, 'icone' => 'uploads/primes/7a1e0c3b9f2d4e5a6b70.svg'],
     ['type' => 'categorie', 'cle' => 'quiches', 'lib' => 'Queen of Quiches', 'motif' => 'quiche', 'minPieces' => 10, 'montant' => 50, 'icone' => 'uploads/primes/3c9d2b81e04f6a7c5d12.svg'],
-    ['type' => 'promo', 'montant' => 50, 'icone' => 'uploads/primes/e58b40d2c7a91f36b0c4.svg', 'lib' => 'Promo café + croissant', 'promo' => ['source' => 'catalogue', 'sorte' => 'bundle', 'id' => '900', 'nom' => 'Café + croissant',
+    ['type' => 'promo', 'montant' => 50, 'icone' => 'uploads/primes/e58b40d2c7a91f36b0c4.svg', 'lib' => 'Promo café + croissant', 'promo' => ['source' => 'api', 'sorte' => 'bundle', 'id' => '900', 'nom' => 'Café + croissant',
         'du' => $m . '-01', 'au' => date('Y-m-t'), 'shops' => [], 'ids' => [900]]]]];
 // Le CA de Halle jour par jour (≈ 1 900 € les jours de semaine, 2 700 € le week-end) : la projection de l'objectif.
 for ($j = $m . '-01'; $j <= date('Y-m-d'); $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
