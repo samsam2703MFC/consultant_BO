@@ -50,9 +50,11 @@
 {# ── Les primes, en carrés deux par ligne : les targets d'un côté, les catégories et les promos de l'autre (16/10/2026). ── #}
 {# Les primes fixes portent leur nom dans la langue de l'app ; les catégories et les promos, celui que l'admin leur donne. #}
 {% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
+{# Catégories : la section est retirée de la page (16/10/2026, à la demande) ; leurs classements restent dans le
+   Classement plus bas. Pour la remettre, dans groupes, entre targets et promos :
+   { cle: 'categories', titre: T.section_categories ?? 'Catégories', liste: p.cartes|filter(c => c.type == 'categorie') }, #}
 {% set groupes = [
   { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement') },
-  { cle: 'categories', titre: T.section_categories ?? 'Catégories', liste: p.cartes|filter(c => c.type == 'categorie') },
   { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') },
 ] %}
 {# Les targets et les catégories (16/10/2026) : une par ligne, en drapeau ; toucher la ligne déroule son détail. #}
