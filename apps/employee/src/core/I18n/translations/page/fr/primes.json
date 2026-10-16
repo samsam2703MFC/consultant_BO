@@ -271,5 +271,13 @@
   "you_are_in": "tu es dans la course",
   "you_are_queen": "c’est toi la reine du réseau",
   "you_short": "Toi",
-  "of_which_you": "dont toi"
+  "of_which_you": "dont toi",
+  "upcoming": "à venir",
+  "upcoming_title": "Les primes prévues ce mois-là",
+  "upcoming_text": "Ce que tu pourras gagner. Le compteur démarre le premier jour du mois.",
+  "rule_first": "la 1re du magasin gagne",
+  "rule_threshold": "chacune dès {n} {u}",
+  "rule_shop": "le magasin : objectif {n} {u}",
+  "rule_mine": "ton objectif : {n} {u}",
+  "dates_from_to": "du {du} au {au}"
 }

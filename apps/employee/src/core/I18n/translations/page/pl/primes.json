@@ -271,5 +271,13 @@
   "you_are_in": "jesteś w grze",
   "you_are_queen": "to ty jesteś królową sieci",
   "you_short": "Ty",
-  "of_which_you": "w tym ty"
+  "of_which_you": "w tym ty",
+  "upcoming": "wkrótce",
+  "upcoming_title": "Premie zaplanowane na ten miesiąc",
+  "upcoming_text": "Ile możesz zarobić. Liczenie zaczyna się pierwszego dnia miesiąca.",
+  "rule_first": "wygrywa najlepsza w sklepie",
+  "rule_threshold": "każda od {n} {u}",
+  "rule_shop": "sklep: cel {n} {u}",
+  "rule_mine": "twój cel: {n} {u}",
+  "dates_from_to": "od {du} do {au}"
 }

@@ -271,5 +271,13 @@
   "you_are_in": "doe je mee",
   "you_are_queen": "jij bent de koningin van het netwerk",
   "you_short": "Jij",
-  "of_which_you": "waarvan jij"
+  "of_which_you": "waarvan jij",
+  "upcoming": "komt eraan",
+  "upcoming_title": "Geplande premies die maand",
+  "upcoming_text": "Wat je kunt verdienen. De teller start op de eerste dag van de maand.",
+  "rule_first": "de nr. 1 van de winkel wint",
+  "rule_threshold": "iedereen vanaf {n} {u}",
+  "rule_shop": "de winkel: doel {n} {u}",
+  "rule_mine": "jouw doel: {n} {u}",
+  "dates_from_to": "van {du} tot {au}"
 }
