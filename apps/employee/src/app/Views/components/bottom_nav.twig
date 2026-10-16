@@ -1,8 +1,8 @@
-{# components/bottom_nav.twig #}
+{# components/bottom_nav.twig — Statistiques à la place de Tâches (16/10/2026) : les tâches restent sur l'Accueil (la tuile « tâches à faire »). #}
 {% set items = items ?? [
     { key: 'dashboard', label: translations.home ?? 'Home', icon: 'bi-house', href: ROOT ~ '/dashboard' },
     { key: 'schedule',  label: translations.schedule ?? 'Schedule', icon: 'bi-calendar3', href: ROOT ~ '/schedule' },
-    { key: 'tasks',     label: translations.tasks ?? 'Tasks', icon: 'bi-check2-square', href: ROOT ~ '/tasks' },
+    { key: 'stats',     label: translations.statistics ?? 'Statistics', icon: 'bi-bar-chart-line', href: ROOT ~ '/statistiques' },
     { key: 'primes',    label: translations.bonuses ?? 'Bonuses', icon: 'bi-trophy', href: ROOT ~ '/primes' },
     { key: 'profile',   label: translations.profile ?? 'Profile', icon: 'bi-person', href: ROOT ~ '/me' },
 ] %}

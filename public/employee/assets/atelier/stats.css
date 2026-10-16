@@ -1,0 +1,57 @@
+/* « Statistiques » dans l'app employés (16/10/2026) : par-dessus primes.css. Toutes les couleurs, polices,
+   rayons et ombres sont des variables (marque.css, d'après le design system). */
+
+/* Les tuiles : une étiquette, une valeur, une ligne qui la situe. */
+.st-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.st-grille.trois{grid-template-columns:repeat(3,minmax(0,1fr))}
+.st{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-lg);padding:11px 12px;box-shadow:var(--la-ombre);min-width:0}
+.st-l{display:block;font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-v{display:block;font:600 22px/1.1 var(--font-ui);color:var(--la-encre);margin-top:5px;white-space:nowrap;font-variant-numeric:proportional-nums}
+.st-v small{font:500 11px var(--font-ui);color:var(--la-muet);margin-left:3px}
+.st-s{display:block;font-size:11px;color:var(--la-muet);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-s.ok{color:var(--la-ok);font-weight:600}
+.st-s.att{color:var(--la-abricot-encre)}
+
+/* Les douze semaines : une colonne par semaine, la semaine en cours en rubis, les autres en gris ; la cible en trait plein. */
+.st-graphe .seg button{font-size:11.5px;padding:7px 6px}
+.st-ind{display:none}
+.st-ind.on{display:block}
+.st-cap{font-size:12.5px;color:var(--la-muet);margin:6px 2px 2px;min-height:18px}
+.st-cap b{color:var(--la-encre)}
+.st-ind svg{display:block;width:100%;height:auto}
+.st-base{stroke:var(--la-trait2);stroke-width:1}
+.st-cible{stroke:var(--la-encre);stroke-width:1;opacity:.5}
+.st-cible-t{font:600 9px var(--font-ui);fill:var(--la-muet)}
+.st-bar{fill:var(--la-gris)}
+.st-col.der .st-bar{fill:var(--la-rubis)}
+.st-col.sel .st-bar{fill:var(--la-encre)}
+.st-col.der.sel .st-bar{fill:var(--la-rubis-fonce)}
+.st-hit{fill:transparent}
+.st-col{cursor:pointer;outline:none}
+.st-col:focus-visible .st-hit{stroke:var(--la-rubis);stroke-width:1.5}
+.st-x{font:500 8.5px var(--font-ui);fill:var(--la-muet)}
+.st-col.der .st-x{fill:var(--la-encre);font-weight:700}
+
+/* Le magasin face à son objectif : la barre à date, où en être au jour J (pointillé), l'objectif (repère sombre). */
+.st-mag-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.st-mag-h b{font:400 30px/1 var(--font-display);color:var(--la-encre)}
+.st-mag-h b small{font:500 12px var(--font-ui);color:var(--la-muet);margin-left:2px}
+.st-mag-h span{font-size:12px;color:var(--la-muet)}
+.st-barre{position:relative;height:12px;border-radius:var(--radius-pill);background:var(--la-beige-doux);margin:12px 0 8px}
+.st-barre i{display:block;height:100%;border-radius:var(--radius-pill);background:var(--la-rubis)}
+.st-obj{position:absolute;top:-5px;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:var(--la-encre)}
+.st-jr{position:absolute;top:-4px;height:20px;margin-left:-.75px;border-left:1.5px dashed var(--la-muet)}
+.st-mag-l{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--la-muet)}
+.st-mag-l > span{display:inline-flex;align-items:center;gap:5px}
+.st-mag-l b{color:inherit}
+.st-mag-l .ok{color:var(--la-ok);font-weight:600}
+.st-mag-l .att{color:var(--la-abricot-encre);font-weight:600}
+.lg-moi,.lg-obj{display:inline-block;width:10px;height:10px;border-radius:3px}
+.lg-moi{background:var(--la-rubis)}
+.lg-obj{width:3px;height:12px;border-radius:2px;background:var(--la-encre)}
+.lg-jr{display:inline-block;width:0;height:12px;border-left:1.5px dashed var(--la-muet)}
+
+/* Les titres gagnés. */
+.st-titres{display:flex;flex-wrap:wrap;gap:6px}
+.st-titre{background:var(--la-or-doux);color:var(--la-or-encre);font:600 12px var(--font-ui);padding:6px 10px;border-radius:var(--radius-pill)}
+.st-titre.live{background:var(--la-abricot);color:var(--la-abricot-encre)}

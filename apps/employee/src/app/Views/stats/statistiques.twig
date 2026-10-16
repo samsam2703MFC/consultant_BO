@@ -1,0 +1,150 @@
+{# stats/statistiques.twig — « Statistiques » (16/10/2026, à la place de Tâches) : ses chiffres à elle. Aujourd'hui, le mois au jour J (des tuiles), ses douze dernières semaines (une colonne par semaine, un indicateur à la fois), le magasin face à son objectif, ses titres. La fiche est celle de « Mes primes » (GET /ventes/moi du cockpit). #}
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'stats' %}
+{% set T = translations %}
+{% block title %}{{ T.stats_title ?? 'Statistiques' }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}"><link rel="stylesheet" href="{{ asset('assets/atelier/stats.css') }}">{% endblock %}
+{% block page_title %}{{ T.stats_title ?? 'Statistiques' }}{% endblock %}
+{% block page_subtitle %}{% if fiche %}{{ fiche.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ mois(fiche.m) }}{% if fiche.enCours %}, {{ T.as_of ?? 'au' }} {{ jour }}{% endif %}{% endif %}{% endblock %}
+{% block content %}
+{% set f = fiche %}
+{% if not f or f.briques is not defined %}
+<div class="pr-card"><div class="pr-h"><h2>{{ T.stats_title ?? 'Statistiques' }}</h2></div>
+  <div class="note">{{ T.unavailable ?? 'Les statistiques ne peuvent pas être lues pour le moment. Réessaie dans un instant.' }}{% if ficheErreur %}<br><span class="mu" style="font-size:11px">{{ ficheErreur }}</span>{% endif %}</div></div>
+{% else %}
+{% set eur = '€' %}
+{% set b = f.briques %}
+{% set mv = b.meilleure %}
+{% set cr = b.croisees %}
+{% set rc = b.record %}
+{% set rangPre = T.rank_prefix ?? '' %}{% set rangSuf = T.rank_suffix ?? 'e' %}
+
+{# ── Aujourd'hui ── #}
+{% set a = f.aujourdhui ?? null %}
+{% if f.enCours and a %}
+<div class="titre-section"><h2>{{ T.today ?? 'Aujourd’hui' }}</h2><small>{{ T.at ?? 'à' }} {{ a.quand }}</small></div>
+<div class="st-grille trois">
+  <div class="st"><span class="st-l">{{ T.tickets ?? 'Tickets' }}</span><b class="st-v">{{ a.tickets|number_format(0, ',', ' ') }}</b></div>
+  <div class="st"><span class="st-l">{{ T.cross_short ?? 'Croisées' }}</span><b class="st-v">{{ a.croisees|number_format(0, ',', ' ') }}</b></div>
+  <div class="st"><span class="st-l">{{ T.rate ?? 'Taux' }}</span><b class="st-v">{% if a.taux is not null %}{{ a.taux|number_format(0, ',', ' ') }}<small>%</small>{% else %}—{% endif %}</b>{% if cr.cible %}<span class="st-s">{{ T.target ?? 'cible' }} {{ cr.cible|number_format(0, ',', ' ') }}&nbsp;%</span>{% endif %}</div>
+</div>
+{% endif %}
+
+{# ── Le mois, au jour J ── #}
+<div class="titre-section"><h2>{{ f.enCours ? (T.this_month ?? 'Ce mois-ci') : mois(f.m) }}</h2><small>{% if f.enCours %}{{ T.day_prefix ?? 'J' }}{{ jour }}{% endif %}</small></div>
+<div class="st-grille">
+  <div class="st"><span class="st-l">{{ T.revenue ?? 'Chiffre d’affaires' }}</span><b class="st-v">{{ (mv.ca ?? 0)|number_format(0, ',', ' ') }}<small>{{ eur }}</small></b>{% if mv.heures %}<span class="st-s">{{ mv.heures|number_format(1, ',', ' ') }}&nbsp;h</span>{% endif %}</div>
+  <div class="st"><span class="st-l">{{ T.revenue_per_hour ?? 'CA par heure' }}</span><b class="st-v">{% if mv.caHeure is not null %}{{ mv.caHeure|number_format(0, ',', ' ') }}<small>{{ eur }}/h</small>{% else %}—{% endif %}</b></div>
+  <div class="st"><span class="st-l">{{ T.tickets ?? 'Tickets' }}</span><b class="st-v">{{ (mv.tickets ?? 0)|number_format(0, ',', ' ') }}</b></div>
+  <div class="st"><span class="st-l">{{ T.basket ?? 'Panier moyen' }}</span><b class="st-v">{% if mv.panier is not null %}{{ mv.panier|number_format(2, ',', ' ') }}<small>{{ eur }}</small>{% else %}—{% endif %}</b></div>
+  <div class="st"><span class="st-l">{{ T.cross_sales ?? 'Ventes croisées' }}</span><b class="st-v">{% if cr.taux is not null %}{{ cr.taux|number_format(0, ',', ' ') }}<small>%</small>{% else %}—{% endif %}</b>
+    {% if cr.taux is not null and cr.cible %}{% set ok = cr.taux >= cr.cible %}<span class="st-s {{ ok ? 'ok' : 'att' }}">{{ ok ? '✓' : '' }} {{ T.target ?? 'cible' }} {{ cr.cible|number_format(0, ',', ' ') }}&nbsp;%</span>{% endif %}</div>
+  <div class="st"><span class="st-l">{{ T.lines_per_ticket ?? 'Lignes par ticket' }}</span><b class="st-v">{% if rc.lt is not null %}{{ rc.lt|number_format(2, ',', ' ') }}{% else %}—{% endif %}</b>
+    {% if rc.record is not null %}<span class="st-s {{ rc.lt is not null and rc.lt > rc.record ? 'ok' }}">{{ T.record ?? 'record' }} {{ rc.record|number_format(2, ',', ' ') }}</span>{% endif %}</div>
+  <div class="st"><span class="st-l">{{ T.score ?? 'Score' }}</span><b class="st-v">{% if mv.score is not null %}{{ mv.score|number_format(0, ',', ' ') }}{% else %}—{% endif %}</b>
+    {% if mv.rangMag %}<span class="st-s">{{ mv.rangMag == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : rangPre ~ mv.rangMag ~ rangSuf }} / {{ mv.surMag }} · {{ T.my_shop_short ?? 'magasin' }}</span>{% endif %}</div>
+  <div class="st"><span class="st-l">{{ T.network ?? 'Réseau' }}</span><b class="st-v">{% if mv.rangRes %}{{ mv.rangRes == 1 ? (T.first_abbr ?? '1re') : rangPre ~ mv.rangRes ~ rangSuf }}<small>/ {{ mv.surRes }}</small>{% else %}—{% endif %}</b><span class="st-s">{{ T.place_score ?? 'place au score' }}</span></div>
+</div>
+
+{# ── Mes douze dernières semaines : une colonne par semaine, un indicateur à la fois ; la semaine en cours en rubis. ── #}
+{% set s12 = f.semaines12 ?? [] %}
+{% if s12|length %}
+{% set ind = [
+  { cle: 'taux', lib: T.cross_sales ?? 'Ventes croisées', unite: '%', dec: 0, cible: cr.cible ?? null },
+  { cle: 'caHeure', lib: T.revenue_per_hour ?? 'CA par heure', unite: eur ~ '/h', dec: 0, cible: null },
+  { cle: 'tickets', lib: T.tickets ?? 'Tickets', unite: '', dec: 0, cible: null },
+] %}
+<div class="titre-section"><h2>{{ T.twelve_weeks ?? '12 semaines' }}</h2><small>{{ (s12|first).lib }} → {{ (s12|last).lib }}</small></div>
+<div class="cl-carte st-graphe" data-graphe>
+  <div class="seg" role="tablist">{% for i in ind %}<button type="button" role="tab" class="{{ loop.first ? 'on' }}" aria-selected="{{ loop.first ? 'true' : 'false' }}" data-ind="{{ i.cle }}">{{ i.lib }}</button>{% endfor %}</div>
+  {% for i in ind %}
+  {% set vals = s12|map(s => attribute(s, i.cle))|filter(v => v is not null) %}
+  {% set mx = vals|length ? max(vals|merge([i.cible ?? 0])) : 0 %}
+  {% set haut = mx > 0 ? mx * 1.12 : 1 %}
+  {% set n = s12|length %}{% set slot = 328 / n %}
+  <div class="st-ind {{ loop.first ? 'on' }}" data-ind-v="{{ i.cle }}">
+    {% set der = s12|last %}{% set vDer = attribute(der, i.cle) %}
+    <p class="st-cap" data-cap>{{ T.week ?? 'Semaine' }} {{ der.lib }} : <b>{% if vDer is not null %}{{ vDer|number_format(i.dec, ',', ' ') }}{{ i.unite ? ' ' ~ i.unite }}{% else %}—{% endif %}</b></p>
+    <svg viewBox="0 0 340 150" role="img" aria-label="{{ i.lib }}, {{ T.twelve_weeks ?? '12 semaines' }}">
+      <line class="st-base" x1="6" y1="124" x2="334" y2="124"/>
+      {% if i.cible %}{% set yc = 124 - 106 * i.cible / haut %}<line class="st-cible" x1="6" y1="{{ yc|round(1) }}" x2="334" y2="{{ yc|round(1) }}"/><text class="st-cible-t" x="8" y="{{ (yc - 4)|round(1) }}">{{ T.target ?? 'cible' }} {{ i.cible|number_format(0, ',', ' ') }} {{ i.unite }}</text>{% endif %}
+      {% for s in s12 %}{% set v = attribute(s, i.cle) %}
+      {% set x = 6 + (loop.index0 * slot) + (slot - 16) / 2 %}
+      <g class="st-col{{ loop.last ? ' der' }}" tabindex="0" data-lib="{{ T.week ?? 'Semaine' }} {{ s.lib }}" data-val="{% if v is not null %}{{ v|number_format(i.dec, ',', ' ') }}{{ i.unite ? ' ' ~ i.unite }}{% else %}—{% endif %}">
+        <title>{{ s.lib }} : {% if v is not null %}{{ v|number_format(i.dec, ',', ' ') }} {{ i.unite }}{% else %}—{% endif %}</title>
+        <rect class="st-hit" x="{{ (6 + loop.index0 * slot)|round(1) }}" y="10" width="{{ slot|round(1) }}" height="130"/>
+        {% if v is not null and v > 0 %}{% set h = 106 * v / haut %}
+        <rect class="st-bar" x="{{ x|round(1) }}" y="{{ (124 - h)|round(1) }}" width="16" height="{{ h|round(1) }}" rx="{{ h > 4 ? 4 : 0 }}"/>
+        {% if h > 4 %}<rect class="st-bar" x="{{ x|round(1) }}" y="{{ (124 - 4)|round(1) }}" width="16" height="4"/>{% endif %}
+        {% endif %}
+        <text class="st-x" x="{{ (x + 8)|round(1) }}" y="140" text-anchor="middle">{{ s.lib }}</text>
+      </g>{% endfor %}
+    </svg>
+    {# La même série en tableau, pour les lecteurs d'écran. #}
+    <table class="visually-hidden"><caption>{{ i.lib }}</caption><tbody>{% for s in s12 %}{% set v = attribute(s, i.cle) %}<tr><th>{{ s.lib }}</th><td>{% if v is not null %}{{ v|number_format(i.dec, ',', ' ') }} {{ i.unite }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Le magasin face à son objectif : le CA à date, où en être au jour J, la projection. ── #}
+{% set pm = f.prime ?? null %}
+{% if pm and pm.objectif %}
+{% set echelle = max(pm.objectif * 1.1, pm.projection ?? 0, pm.ca) %}
+<div class="titre-section"><h2>{{ T.my_shop_short ?? 'Mon magasin' }}</h2><small>{{ T.goal ?? 'Objectif' }} {{ pm.objectif|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></div>
+<div class="cl-carte st-mag">
+  <div class="st-mag-h"><b>{{ (pm.atteinte ?? 0)|number_format(0, ',', ' ') }}<small>%</small></b><span>{{ pm.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} / {{ pm.objectif|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>
+  <div class="st-barre" role="img" aria-label="{{ (pm.atteinte ?? 0)|number_format(0, ',', ' ') }} % {{ T.of_goal ?? 'de l’objectif' }}">
+    <i style="width:{{ (100 * pm.ca / echelle)|round(1) }}%"></i>
+    {# Où en être aujourd'hui, au prorata des jours du mois ; puis l'objectif. #}
+    {% if f.enCours %}{% set aj = pm.objectif * jour / ('now'|date('t')) %}<span class="st-jr" style="left:{{ (100 * aj / echelle)|round(1) }}%"></span>{% endif %}
+    <span class="st-obj" style="left:{{ (100 * pm.objectif / echelle)|round(1) }}%"></span>
+  </div>
+  <div class="st-mag-l">
+    <span><span class="lg-moi"></span>{{ T.to_date ?? 'à date' }}</span>
+    {% if f.enCours %}<span><span class="lg-jr"></span>{{ T.day_prefix ?? 'J' }}{{ jour }} : {{ (100 * jour / ('now'|date('t')))|number_format(0, ',', ' ') }}&nbsp;%</span>{% endif %}
+    <span><span class="lg-obj"></span>{{ T.goal ?? 'Objectif' }} 100&nbsp;%</span>
+    {% if pm.atteinteProj is not null and f.enCours %}<span class="{{ pm.atteinteProj >= 100 ? 'ok' : 'att' }}">{{ T.proj_short ?? 'proj.' }} <b>{{ pm.atteinteProj|number_format(0, ',', ' ') }}&nbsp;%</b></span>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ── Mes titres ── #}
+{% set coll = f.collection ?? null %}
+{% if coll and (coll.titres|length or coll.enCours|length) %}
+<div class="titre-section"><h2>{{ T.my_titles ?? 'Mes titres' }}</h2><small>{{ T.six_months ?? '6 mois' }}</small></div>
+<div class="st-titres">
+  {% for t in coll.enCours %}<span class="st-titre live">🔥 {{ t.lib }}</span>{% endfor %}
+  {% for t in coll.titres %}<span class="st-titre">👑 {{ t.lib }}{% if t.n > 1 %} <b>×{{ t.n }}</b>{% endif %}</span>{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var g = document.querySelector('[data-graphe]'); if (!g) { return; }
+  // Un indicateur à la fois.
+  g.querySelectorAll('[data-ind]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      g.querySelectorAll('[data-ind]').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      g.querySelectorAll('[data-ind-v]').forEach(function (v) { v.classList.toggle('on', v.dataset.indV === b.dataset.ind); });
+    });
+  });
+  // Toucher une semaine affiche sa valeur au-dessus du graphique.
+  g.querySelectorAll('.st-ind').forEach(function (ind) {
+    var cap = ind.querySelector('[data-cap]');
+    ind.querySelectorAll('.st-col').forEach(function (col) {
+      function montre() {
+        ind.querySelectorAll('.st-col').forEach(function (c) { c.classList.toggle('sel', c === col); });
+        cap.innerHTML = '';
+        cap.appendChild(document.createTextNode(col.dataset.lib + ' : '));
+        var bv = document.createElement('b'); bv.textContent = col.dataset.val; cap.appendChild(bv);
+      }
+      col.addEventListener('click', montre);
+      col.addEventListener('focus', montre);
+    });
+  });
+})();
+</script>
+{% endblock %}
