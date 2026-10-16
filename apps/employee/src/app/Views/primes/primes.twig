@@ -5,7 +5,7 @@
 {% block title %}{{ T.my_bonuses ?? 'Mes primes' }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">{% endblock %}
 {% block page_title %}{{ T.my_bonuses ?? 'Mes primes' }}{% endblock %}
-{% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ mois(primes.m) }}{% if primes.enCours %}, {{ T.as_of ?? 'au' }} {{ jour }}{% endif %}{% endif %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
 {% block content %}
 {% set p = primes %}
 {% if not p or p.cartes is not defined %}
@@ -17,6 +17,20 @@
 {% set rangPre = T.rank_prefix ?? '' %}{% set rangSuf = T.rank_suffix ?? 'e' %}
 {# Les icônes déposées dans le cockpit vivent à côté de lui (public/uploads/primes) : PrimesService donne son adresse. #}
 {% set ib = p.iconesBase ?? (ROOT ~ '/..') %}
+
+{# ── Le mois (16/10/2026) : une flèche à gauche, le mois au centre, une flèche à droite ; douze mois en arrière au
+   plus, pas de mois à venir. ── #}
+{% set mCour = 'now'|date('Y-m') %}
+{% set mPrec = (p.m ~ '-01')|date_modify('-1 month')|date('Y-m') %}
+{% set mSuiv = (p.m ~ '-01')|date_modify('+1 month')|date('Y-m') %}
+{% set mMin = ('now'|date('Y-m') ~ '-01')|date_modify('-12 months')|date('Y-m') %}
+<nav class="mois-sel" aria-label="{{ T.month ?? 'Mois' }}" data-mois>
+  {% if mPrec >= mMin %}<a class="ms-f" href="{{ ROOT }}/primes?m={{ mPrec }}" aria-label="{{ T.prev_month ?? 'Mois précédent' }}"><i class="bi bi-chevron-left"></i></a>
+  {% else %}<span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>{% endif %}
+  <div class="ms-l"><b>{{ mois(p.m)|capitalize }}</b>{% if p.enCours %}<small>{{ T.in_progress ?? 'en cours' }} · {{ T.as_of ?? 'au' }} {{ jour }}</small>{% endif %}</div>
+  {% if mSuiv <= mCour %}<a class="ms-f" href="{{ ROOT }}/primes{{ mSuiv < mCour ? '?m=' ~ mSuiv }}" aria-label="{{ T.next_month ?? 'Mois suivant' }}"><i class="bi bi-chevron-right"></i></a>
+  {% else %}<span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>{% endif %}
+</nav>
 
 {# ── Acquis, en jeu ── #}
 {% set part = p.enJeu > 0 ? min(1, p.acquis / p.enJeu) : 0 %}
@@ -83,7 +97,7 @@
       {%- elseif c.motif == 'heures' %}{{ T.below ?? 'sous' }} {{ c.heuresMin }}&nbsp;h
       {%- elseif c.motif == 'min_tickets' %}{{ c.minTickets }} {{ T.tickets ?? 'tickets' }} min.
       {%- elseif enJour %}<b class="{{ c.val is not null and c.val >= c.cible ? 'okp' }}">{{ T.proj_short ?? 'proj.' }} {{ (c.val ?? 0)|number_format(0, ',', ' ') }}&nbsp;%</b> · <span class="jr-l"></span>{{ T.day_prefix ?? 'J' }}{{ c.jour }} : {{ c.cibleJour|number_format(0, ',', ' ') }}&nbsp;%
-      {%- elseif v is not null and c.repereVal is not null and c.repereVal > v %}{{ T.still ?? 'encore' }} {{ (c.repereVal - v)|number_format(dec, ',', ' ') }}{{ ue }}
+      {%- elseif v is not null and c.repereVal is not null and c.repereVal > v %}{{ p.enCours ? (T.still ?? 'encore') : (T.was_missing ?? 'il manquait') }} {{ (c.repereVal - v)|number_format(dec, ',', ' ') }}{{ ue }}
       {%- endif -%}
       </span>
       {% if c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}👑 {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
@@ -267,6 +281,10 @@
 {% endblock %}
 {% block scripts %}
 <script>
+(function () {
+  var m = document.querySelector('[data-mois]');
+  if (m) { m.querySelectorAll('a.ms-f').forEach(function (a) { a.addEventListener('click', function () { m.classList.add('charge'); }); }); }
+})();
 (function () {
   // Les targets : toucher une ligne déroule son détail, une seule ouverte à la fois.
   var lignes = Array.prototype.slice.call(document.querySelectorAll('[data-pl]'));
