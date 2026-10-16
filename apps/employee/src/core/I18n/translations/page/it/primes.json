@@ -279,5 +279,12 @@
   "rule_threshold": "ognuna da {n} {u}",
   "rule_shop": "il negozio: obiettivo {n} {u}",
   "rule_mine": "il tuo obiettivo: {n} {u}",
-  "dates_from_to": "dal {du} al {au}"
+  "dates_from_to": "dal {du} al {au}",
+  "value": "valore",
+  "offered_by": "Offerto da",
+  "your_shop": "il tuo negozio",
+  "the_brand": "il marchio",
+  "d_period": "Periodo",
+  "d_rule": "Chi vince",
+  "details": "Dettagli del premio"
 }

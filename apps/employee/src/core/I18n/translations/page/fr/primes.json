@@ -279,5 +279,12 @@
   "rule_threshold": "chacune dès {n} {u}",
   "rule_shop": "le magasin : objectif {n} {u}",
   "rule_mine": "ton objectif : {n} {u}",
-  "dates_from_to": "du {du} au {au}"
+  "dates_from_to": "du {du} au {au}",
+  "value": "valeur",
+  "offered_by": "Offerte par",
+  "your_shop": "ton magasin",
+  "the_brand": "la marque",
+  "d_period": "Période",
+  "d_rule": "Qui gagne",
+  "details": "Détails de la prime"
 }

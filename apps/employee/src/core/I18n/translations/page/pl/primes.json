@@ -279,5 +279,12 @@
   "rule_threshold": "każda od {n} {u}",
   "rule_shop": "sklep: cel {n} {u}",
   "rule_mine": "twój cel: {n} {u}",
-  "dates_from_to": "od {du} do {au}"
+  "dates_from_to": "od {du} do {au}",
+  "value": "wartość",
+  "offered_by": "Funduje",
+  "your_shop": "twój sklep",
+  "the_brand": "marka",
+  "d_period": "Okres",
+  "d_rule": "Kto wygrywa",
+  "details": "Szczegóły premii"
 }

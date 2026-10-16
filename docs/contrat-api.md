@@ -574,6 +574,16 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
+- **Argent ou cadeau, sponsor, description** (16/10/2026). Chaque prime peut porter `cadeau: {nom, valeur?}` (un voucher,
+  un voyage… ; il ne compte pas en euros : `magasin` à 0 dans les configs, le titre gagné porte `cadeau` et 0 €),
+  `description` (une ligne), et pour un sponsor `sponsorLogo` (un dépôt comme une icône), `sponsorSite` (http·s, complété
+  en https), `sponsorTexte` (une ligne). `primesAppInfosDe(cle)` les donne à chaque carte de l'app : `cadeau`,
+  `description`, `payeur`, `sponsor: {nom, logo, site, texte} | null`. Une carte au seuil ou sur objectif est gagnée au
+  titre (pas au montant). Fiche v9. Assistant, étape « Qui gagne » : 💶 Argent / 🎁 Cadeau (nom, valeur facultative),
+  « Offerte par » (marque ou sponsor : nom, logo réduit à 256 px sans recadrage, site, une ligne) ; étape 4 : la ligne
+  de description. App : toucher un carré (ou une ligne d'un mois à venir) ouvre la fiche de la prime — à gagner, la
+  description, qui l'offre (logo, site), qui gagne, la période, « Voir le classement » ; le détail d'une ligne de target
+  montre aussi « à gagner » et « offerte par ».
 - **La période d'une prime** (16/10/2026) : une catégorie ou un target (ventes croisées, objectif, note Google) porte
   `du` / `au` (AAAA-MM-JJ, l'un ou l'autre ou aucun ; à l'envers, remis dans l'ordre) ; une promo a les dates de sa
   promotion. Une prime compte et s'affiche dans **chaque mois que sa période touche**, nulle part ailleurs : le mois

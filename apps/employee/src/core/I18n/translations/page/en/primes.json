@@ -279,5 +279,12 @@
   "rule_threshold": "everyone from {n} {u}",
   "rule_shop": "the shop: target {n} {u}",
   "rule_mine": "your target: {n} {u}",
-  "dates_from_to": "from {du} to {au}"
+  "dates_from_to": "from {du} to {au}",
+  "value": "worth",
+  "offered_by": "Offered by",
+  "your_shop": "your shop",
+  "the_brand": "the brand",
+  "d_period": "Period",
+  "d_rule": "Who wins",
+  "details": "Bonus details"
 }

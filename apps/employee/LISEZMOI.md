@@ -73,7 +73,11 @@ mois en cours), une flèche à droite (jusqu'à trois mois à venir). Les flèch
 `/primes?m=AAAA-MM` ; un mois clos dit « il manquait » au lieu de « encore ». **Un mois à venir** (16/10/2026)
 montre les primes prévues — « à venir » sous le mois, le total en jeu, puis chaque target et chaque promo de ce
 mois dans son magasin avec sa récompense, sa règle (la 1re du magasin, dès N pcs, objectif du magasin, ton
-objectif), son objectif et ses dates ; rien de compté, pas de détail ni de classement.
+objectif), son objectif et ses dates ; rien de compté, pas de détail ni de classement. **La fiche d'une prime** (16/10/2026) : toucher
+un carré de promo (ou une ligne d'un mois à venir) ouvre une feuille — ce qu'on gagne (de l'argent, ou un cadeau 🎁 avec
+sa valeur), la ligne de description, qui l'offre (la marque, le magasin, ou le sponsor avec son logo, une ligne et son
+site), qui gagne, la période et « Voir le classement ». Le détail d'une ligne de target montre aussi « À gagner » et
+« Offerte par ».
 
 Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 
