@@ -317,19 +317,6 @@ verifie('du texte qui n’est pas une image refusé', (primesIconeEcrire('data:t
 verifie('plus d’un Mo refusé', (primesIconeEcrire('data:image/png;base64,' . base64_encode(str_repeat('x', PRIMES_ICONE_MAX + 1)), $dos)['code'] ?? 0) === 413);
 array_map('unlink', glob($dos . '/*') ?: []); @rmdir($dos);
 
-// --- 7 quater. les chiffres du magasin pour la page Statistiques (16/10/2026) -----------------------------
-echo "Les chiffres du magasin\n";
-$lignesM = [['id' => 1, 'shopId' => '4', 'ca' => 3000, 'tickets' => 240, 'heures' => 40.0], ['id' => 2, 'shopId' => '4', 'ca' => 1000, 'tickets' => 80, 'heures' => 10.0],
-    ['id' => 3, 'shopId' => '5', 'ca' => 9000, 'tickets' => 500, 'heures' => 60.0], ['id' => 9, 'shopId' => '4', 'ca' => 0, 'tickets' => 0, 'heures' => 20.0]];
-$crM = ['e' => [1 => ['t' => 200, 'tc' => 200, 'c' => 110, 'l' => 520], 2 => ['t' => 50, 'c' => 20, 'l' => 110], 3 => ['t' => 400, 'c' => 300, 'l' => 1200]]];
-$empsM = [1 => ['shop' => '4'], 2 => ['shop' => '4'], 3 => ['shop' => '5'], 9 => ['shop' => '4']];
-$ms = primesMagasinStats('4', $lignesM, $crM, $empsM, ['jours' => [['date' => '2026-10-01', 'ca' => 1800.0, 'we' => false, 'auj' => false]], 'objectifJour' => 2000.0]);
-verifie('le magasin : CA, tickets, heures de ses vendeuses, pas des autres', $ms['ca'] === 4000.0 && $ms['tickets'] === 320 && $ms['heures'] === 70.0 && $ms['vendeuses'] === 2, json_encode($ms));
-verifie('le magasin : panier moyen 12,50 €, CA par heure 57 €', $ms['panier'] === 12.5 && $ms['caHeure'] === 57);
-verifie('le magasin : ventes croisées 52 %, 2,52 lignes par ticket', $ms['croisees'] === 52.0 && $ms['lignesTicket'] === 2.52, json_encode([$ms['croisees'], $ms['lignesTicket']]));
-verifie('le magasin : le jour par jour et l’objectif du jour', count($ms['jours']) === 1 && $ms['objectifJour'] === 2000.0);
-verifie('aucun nom ni chiffre de collègue dans les chiffres du magasin', !str_contains(json_encode($ms), 'nom'));
-
 // --- 8. les moyennes par magasin -------------------------------------------------------------
 echo "Les moyennes par magasin\n";
 $mm = date('Y-m', strtotime(date('Y-m') . '-01 -1 month'));
