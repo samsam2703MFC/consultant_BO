@@ -850,7 +850,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     $enCours = $m === date('Y-m');
     if (!$frais) {
         $c = setting($cle);
-        if (is_array($c) && isset($c['emp'], $c['cartes'], $c['magasinStats']) && array_key_exists('google', (array) ($c['montants'] ?? [])) && (int) ($c['quand'] ?? 0) > time() - ($enCours ? PRIMES_CACHE_MOI : PRIMES_CACHE_CLOS)) { return $c; }
+        if (is_array($c) && isset($c['emp'], $c['cartes']) && array_key_exists('google', (array) ($c['montants'] ?? [])) && (int) ($c['quand'] ?? 0) > time() - ($enCours ? PRIMES_CACHE_MOI : PRIMES_CACHE_CLOS)) { return $c; }
     }
     $emps = venteEmployes();
     if (!isset($emps[$emp])) { return ['error' => 'personne inconnue', 'code' => 404]; }
@@ -903,36 +903,9 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => $classements, 'collection' => $collection,
         'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
         'aujourdhui' => $auj, 'acquis' => $acquis, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => $b['google'], 'montants' => $montants,
-        'briques' => $b, 'prime' => $pm, 'semaines12' => $semaines12, 'motif' => $r['motif'],
-        'magasinStats' => primesMagasinStats($shop, $r['lignes'], $cr, $emps, $pm)];
+        'briques' => $b, 'prime' => $pm, 'semaines12' => $semaines12, 'motif' => $r['motif']];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
     return $out;
-}
-
-/**
- * Les chiffres du magasin sur le mois (16/10/2026, pour la page Statistiques de l'app) : des totaux, jamais
- * le chiffre d'une collègue. Le CA, les tickets et les heures des vendeuses du magasin (venteMois), le panier
- * moyen, le CA par heure de l'équipe ; les ventes croisées et les lignes par ticket des jours moissonnés ;
- * le CA jour par jour du mois en cours face à l'objectif du jour.
- */
-function primesMagasinStats(string $shop, array $lignes, ?array $cr, array $emps, array $pm): array
-{
-    $ca = 0.0; $tickets = 0; $heures = 0.0; $vend = 0;
-    foreach ($lignes as $l) {
-        if ((string) ($l['shopId'] ?? '') !== $shop) { continue; }
-        $ca += (float) ($l['ca'] ?? 0); $tickets += (int) ($l['tickets'] ?? 0); $heures += (float) ($l['heures'] ?? 0);
-        if ((int) ($l['tickets'] ?? 0) > 0) { $vend++; }
-    }
-    $t = 0; $tc = 0; $c = 0; $li = 0;
-    foreach ((array) ($cr['e'] ?? []) as $id => $x) {
-        if ((string) ($emps[(int) $id]['shop'] ?? '') !== $shop) { continue; }
-        $t += (int) ($x['t'] ?? 0); $tc += (int) ($x['tc'] ?? $x['t'] ?? 0); $c += (int) ($x['c'] ?? 0); $li += (int) ($x['l'] ?? 0);
-    }
-    return ['ca' => round($ca, 2), 'tickets' => $tickets, 'heures' => round($heures, 1), 'vendeuses' => $vend,
-        'panier' => $tickets > 0 ? round($ca / $tickets, 2) : null, 'caHeure' => $heures > 0 && $ca > 0 ? (int) round($ca / $heures) : null,
-        'croisees' => $tc > 0 ? round(100 * $c / $tc, 1) : null, 'lignesTicket' => $t > 0 && $li > 0 ? round($li / $t, 2) : null,
-        'jours' => array_values(array_map(static fn ($j) => ['date' => $j['date'], 'ca' => $j['ca'], 'we' => (bool) $j['we'], 'auj' => (bool) $j['auj']], (array) ($pm['jours'] ?? []))),
-        'objectifJour' => $pm['objectifJour'] ?? null, 'moySem' => $pm['moySem'] ?? null, 'moyWe' => $pm['moyWe'] ?? null];
 }
 
 /** Les heures du planning d'une personne, semaine par semaine (lundi), entre deux dates. */
@@ -960,7 +933,8 @@ function primesHeuresSemaines(int $emp, string $du, string $au): array
  */
 function primesSemaines12(int $emp, int $sid): array
 {
-    $cle = 'primesS12:' . $emp;
+    // v2 (16/10/2026) : chaque semaine porte aussi son ticket moyen et ses lignes par ticket.
+    $cle = 'primesS12v2:' . $emp;
     $c = setting($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];
@@ -1006,7 +980,9 @@ function primesSemaines12(int $emp, int $sid): array
             'rang' => $rang, 'sur' => count($taux),
             'pieces' => $cfgK['actif'] ? $mesTq : null, 'rangPieces' => $cfgK['actif'] ? $rangTq : null, 'surPieces' => count($tq),
             'ca' => $joursCa > 0 ? round($ca, 2) : null, 'heures' => round($h, 1),
-            'caHeure' => ($joursCa > 0 && $h > 0 && $ca > 0) ? (int) round($ca / $h) : null];
+            'caHeure' => ($joursCa > 0 && $h > 0 && $ca > 0) ? (int) round($ca / $h) : null,
+            'panier' => ($tickets > 0 && $ca > 0) ? round($ca / $tickets, 2) : null,
+            'lignesTicket' => ($moi !== null && (int) $moi['t'] > 0 && (int) ($moi['l'] ?? 0) > 0) ? round((int) $moi['l'] / (int) $moi['t'], 2) : null];
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out], JSON_UNESCAPED_UNICODE)]);
     return $out;

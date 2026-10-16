@@ -118,14 +118,13 @@ $sem = [];
 foreach ([[47, 210, 6150, 41.5, 78], [49, 190, 5660, 40, 74], [52, 230, 7010, 44, 81], [50, 205, 6020, 38.5, 79], [54, 240, 7400, 45, 83], [51, 214, 6390, 41, 80],
     [55, 251, 7700, 46.5, 84], [53, 222, 6800, 42, 82], [57, 248, 7860, 46, 86], [56, 236, 7210, 44.5, 85], [58, 262, 8090, 47, 87], [56, 131, 3950, 22.5, 88]] as $i => [$tx, $t, $ca, $h, $cah]) {
     $sem[] = ['lib' => 'S' . (int) date('W', strtotime('monday this week -' . (11 - $i) . ' weeks')), 'tickets' => $t, 'croisees' => (int) round($t * $tx / 100), 'taux' => (float) $tx,
-        'ca' => (float) $ca, 'heures' => $h, 'caHeure' => $cah, 'rang' => null, 'sur' => 0];
+        'ca' => (float) $ca, 'heures' => $h, 'caHeure' => $cah, 'rang' => null, 'sur' => 0,
+        'panier' => round($ca / $t, 2), 'lignesTicket' => round(2.45 + 0.03 * $i + ($i % 3) * 0.04, 2)];
 }
 $b['meilleure'] = array_merge($b['meilleure'], ['ca' => 3290, 'caHeure' => 85, 'heures' => 38.5, 'tickets' => 262, 'panier' => 12.56]);
 $fiche += ['briques' => $b, 'semaines12' => $sem, 'prime' => $pm, 'aujourdhui' => ['tickets' => 19, 'croisees' => 11, 'lignes' => 52, 'taux' => 57.9, 'quand' => '15:40'],
     'collection' => ['titres' => [['cle' => 'concours:quiches', 'lib' => 'Queen of Quiches', 'n' => 2], ['cle' => 'croisees', 'lib' => 'Ventes croisées', 'n' => 3]],
         'enCours' => [['cle' => 'croisees', 'lib' => 'Ventes croisées']]]];
-$fiche['magasinStats'] = primesMagasinStats('4', [['shopId' => '4', 'ca' => 9800, 'tickets' => 770, 'heures' => 128.0], ['shopId' => '4', 'ca' => 3290, 'tickets' => 262, 'heures' => 38.5]],
-    $cr, $emps, $pm);
 $trS = array_merge(
     json_decode((string) file_get_contents($RACINE . '/apps/employee/src/core/I18n/translations/page/' . $lang . '/components.json'), true) ?: [],
     json_decode((string) file_get_contents($RACINE . '/apps/employee/src/core/I18n/translations/page/' . $lang . '/stats.json'), true) ?: []);

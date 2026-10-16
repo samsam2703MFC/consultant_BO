@@ -597,10 +597,10 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   pièces) ; `repereVal` le chiffre à atteindre. L'objectif du magasin en cours de mois porte `aDate`
   (l'atteinte à date), `jour`, `cibleJour` (où en être au jour J, au prorata des jours), `repereJour` (sa
   position), `avance` (aDate − cibleJour) ; `val` reste la projection. La page **Statistiques** de l'app lit la
-  même fiche (briques, aujourdhui, semaines12, prime, collection) et `magasinStats` (16/10/2026,
-  `primesMagasinStats`) : les totaux du magasin sur le mois, sans nom ni chiffre de collègue — `{ca, tickets,
-  heures, vendeuses, panier, caHeure, croisees, lignesTicket, jours: [{date, ca, we, auj}], objectifJour, moySem,
-  moyWe}`. Les
+  même fiche, ses chiffres à elle seule : briques (ticket moyen `meilleure.panier`, lignes par ticket
+  `record.lt`, ventes croisées, CA, CA par heure, tickets, places), aujourdhui, collection, et `semaines12`, dont
+  chaque semaine porte depuis le 16/10/2026 `panier` (son CA ÷ ses tickets) et `lignesTicket` (cache
+  `primesS12v2:{emp}`). Les
   briques, la collection et les douze semaines nourrissent l'Accueil de l'app. Mis en cache 15 minutes
   (mois en cours) ou un jour (mois clos) par personne ; `&frais=1` recalcule.
 - `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut) :
