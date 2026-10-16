@@ -370,6 +370,17 @@ a.acc-etape{text-decoration:none;color:inherit}
    barre, le trait noir de l'objectif (toujours à 75 %, aligné d'une ligne à l'autre) et la récompense posée dessus ;
    la passer active la prime (vert). Le pointillé : où en être au jour J. Toucher la ligne déroule son
    détail, une seule ouverte à la fois. */
+/* Le sélecteur de mois (16/10/2026) : centré, une flèche de chaque côté ; grisée au bout (pas de mois à venir). */
+.mois-sel{display:flex;align-items:center;justify-content:center;gap:16px;margin:0 0 12px}
+.ms-f{width:38px;height:38px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--la-blanc);border:.5px solid var(--la-trait2);color:var(--la-encre);font-size:15px;text-decoration:none;box-shadow:var(--la-ombre)}
+.ms-f:hover{color:var(--la-rubis)}
+.ms-f.off{opacity:.35;box-shadow:none}
+.ms-l{min-width:150px;text-align:center}
+.ms-l b{display:block;font:400 23px/1.05 var(--font-display);color:var(--la-encre)}
+.ms-l small{display:block;font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet);margin-top:3px}
+.mois-sel.charge .ms-l{opacity:.45}
+.mois-sel.charge .ms-f{pointer-events:none}
+
 /* Le mois est compté mais aucun ticket à son nom : un mot clair en tête, plutôt que des « pas encore compté ». */
 .pl-vide{display:flex;gap:12px;align-items:flex-start;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-lg);padding:13px 14px;box-shadow:var(--la-ombre);margin:12px 0 4px}
 .pl-vide .bi{font-size:21px;color:var(--la-rubis);line-height:1}

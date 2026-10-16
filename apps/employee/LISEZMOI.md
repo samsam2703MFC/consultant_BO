@@ -67,6 +67,11 @@ la ligne depuis les montants.
 
 ## L'onglet Primes (16/10/2026) : des carrés deux par ligne, une demi-jauge, le classement dans un menu qui monte du bas
 
+En tête de page, **le sélecteur de mois** (16/10/2026, à la place de « Halle · octobre 2026, au 16 ») : centré, une
+flèche à gauche (le mois d'avant, douze mois en arrière au plus), le mois au milieu (« en cours · au 16 » pour le
+mois en cours), une flèche à droite (grisée au mois en cours : pas de mois à venir). Les flèches sont des liens
+`/primes?m=AAAA-MM` ; un mois clos dit « il manquait » au lieu de « encore ».
+
 Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 
 - **trois sections** : les **Targets** (ventes croisées, Bats ton record, objectif magasin, note Google, et la
