@@ -786,3 +786,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T13:10:25Z primes : drapeau sans cadenas
 2026-10-16T13:17:05Z primes : categories en drapeau
 2026-10-16T13:22:17Z app : statistiques retiree du menu
+2026-10-16T13:23:11Z app : accueil et planning masques du menu
