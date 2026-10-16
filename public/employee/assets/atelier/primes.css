@@ -329,7 +329,8 @@ a.acc-etape{text-decoration:none;color:inherit}
 .hx .bar i{display:block;height:100%;background:var(--la-blanc);border-radius:var(--radius-pill)}
 /* Les carrés. */
 .pq-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:6px}
-.pq{position:relative;aspect-ratio:1/1;display:flex;flex-direction:column;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);padding:9px 10px;box-shadow:var(--la-ombre);min-width:0}
+@media (min-width:600px){.pq-grille{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pq{position:relative;container-type:inline-size;aspect-ratio:1/1;display:flex;flex-direction:column;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);padding:9px 10px;box-shadow:var(--la-ombre);min-width:0}
 .pq.cliquable{cursor:pointer}
 .pq.gagne{border:1.5px solid var(--la-ok)}
 .pq.tete{border:1.5px solid var(--la-or)}
@@ -350,8 +351,9 @@ a.acc-etape{text-decoration:none;color:inherit}
 .typ.promo{background:var(--la-abricot);color:var(--la-abricot-encre)}
 .typ.classement{background:var(--la-brun);color:var(--la-blanc)}
 /* La demi-jauge : la piste, mon niveau (le trait et le point rubis), l'objectif (le repère sombre), le jour J (pointillé). */
-.pq-g{position:relative;width:100%;max-width:116px;margin:auto auto 0}
-.dj{display:block;width:100%;height:auto;overflow:visible}
+/* La jauge prend toute la place libre du carré, quelle que soit sa taille (16/10/2026 : plus de vide sous le nom). */
+.pq-g{position:relative;flex:1 1 0;min-height:58px;display:flex;align-items:flex-end;justify-content:center;margin-top:4px}
+.dj{display:block;height:100%;width:auto;max-width:100%;overflow:visible}
 .dj .fond,.dj .val{fill:none;stroke-width:9;stroke-linecap:round}
 .dj .fond{stroke:var(--la-beige-doux)}
 .dj .val{stroke:var(--la-rubis)}
@@ -361,14 +363,14 @@ a.acc-etape{text-decoration:none;color:inherit}
 .dj .moi{fill:var(--la-blanc);stroke:var(--la-rubis);stroke-width:3.5}
 .pq.gagne .dj .val{stroke:var(--la-ok)}.pq.gagne .dj .moi{stroke:var(--la-ok)}
 .pq.tete .dj .val{stroke:var(--la-or)}.pq.tete .dj .moi{stroke:var(--la-or)}
-.pq-v{position:absolute;left:0;right:0;bottom:0;text-align:center;font:400 19px/1 var(--font-display);color:var(--la-encre);white-space:nowrap}
-.pq-v small{font:500 10px var(--font-ui);color:var(--la-muet);margin-left:2px}
-.pq-v i{display:block;font:600 8.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:2px}
+.pq-v{position:absolute;left:0;right:0;bottom:0;text-align:center;font:400 clamp(19px,12cqw,34px)/1 var(--font-display);color:var(--la-encre);white-space:nowrap}
+.pq-v small{font:500 clamp(10px,5cqw,13px) var(--font-ui);color:var(--la-muet);margin-left:2px}
+.pq-v i{display:block;font:600 clamp(8.5px,4cqw,10.5px) var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:2px}
 /* L'objectif en clair, avec le même repère que la jauge ; puis l'état et ce qui l'explique. */
 .pq-o{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--la-encre);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pq-o b{font-weight:700}
 .pq-o .lg{width:8px;height:8px;border-radius:50%;background:var(--la-encre);box-shadow:0 0 0 1.5px var(--la-blanc),0 0 0 2.5px var(--la-encre);flex:0 0 auto}
-.pq-f{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:4px;min-width:0}
+.pq-f{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 5px;margin-top:4px;min-width:0}
 .pq-c .jr-l{display:inline-block;width:9px;border-top:1.5px dashed var(--la-muet);vertical-align:middle;margin-right:3px}
 .pq-c{font-size:10.5px;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .pq-c b{color:var(--la-encre);font-weight:600}
