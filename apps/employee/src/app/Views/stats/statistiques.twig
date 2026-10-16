@@ -1,7 +1,9 @@
-{# stats/statistiques.twig — « Statistiques » (16/10/2026, à la place de Tâches) : SES chiffres, rien que les siens. Aujourd'hui ; le mois au jour J (ticket moyen, lignes par ticket, ventes croisées, CA par heure, CA, tickets, sa place) ; ses douze dernières semaines, un indicateur à la fois ; ses titres. La fiche est celle de « Mes primes » (GET /ventes/moi du cockpit). #}
+{# stats/statistiques.twig — « Statistiques » (16/10/2026, à la place de Tâches) : SES chiffres, rien que les siens. Aujourd'hui ; le mois au jour J (ticket moyen, lignes par ticket, ventes croisées, CA par heure, CA, tickets, sa place) ; ses douze dernières semaines face à la moyenne de son magasin et du réseau, un indicateur à la fois ; ses titres. La fiche est celle de « Mes primes » (GET /ventes/moi du cockpit). #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'stats' %}
 {% set T = translations %}
+{# Une valeur et son unité, ou un tiret. #}
+{% macro val(v, dec, unite) %}{{ v is not null ? v|number_format(dec, ',', ' ') ~ (unite ? ' ' ~ unite) : '—' }}{% endmacro %}
 {% block title %}{{ T.stats_title ?? 'Statistiques' }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}"><link rel="stylesheet" href="{{ asset('assets/atelier/stats.css') }}">{% endblock %}
 {% block page_title %}{{ T.stats_title ?? 'Statistiques' }}{% endblock %}
@@ -54,50 +56,83 @@
 </div>
 {% endif %}
 
-{# ── Mes douze dernières semaines : une colonne par semaine, un indicateur à la fois ; la semaine en cours en rubis. ── #}
+{# ── Mes douze dernières semaines, en lignes : moi (rubis, avec mes points), la vendeuse moyenne de mon magasin
+   (ambre) et celle du réseau (bleu, en tirets). Un indicateur à la fois ; une semaine sans donnée laisse un trou.
+   Les moyennes s'affichent même sans vente à mon nom : la courbe a toujours un repère. ── #}
 {% set s12 = f.semaines12 ?? [] %}
 {% set ventes12 = 0 %}{% for s in s12 %}{% set ventes12 = ventes12 + (s.tickets ?? 0) %}{% endfor %}
-{% if s12|length and ventes12 > 0 %}
-{% set ind = [
-  { cle: 'panier', lib: T.avg_ticket ?? 'Ticket moyen', unite: eur, dec: 2, cible: null, cibleLib: null },
-  { cle: 'lignesTicket', lib: T.lines_short ?? 'Lignes/ticket', unite: '', dec: 2, cible: rc.record ?? null, cibleLib: T.record ?? 'record' },
-  { cle: 'taux', lib: T.cross_short ?? 'Croisées', unite: '%', dec: 0, cible: cr.cible ?? null, cibleLib: T.target ?? 'cible' },
-  { cle: 'caHeure', lib: T.revenue_per_hour ?? 'CA par heure', unite: eur ~ '/h', dec: 0, cible: null, cibleLib: null },
-  { cle: 'tickets', lib: T.tickets ?? 'Tickets', unite: '', dec: 0, cible: null, cibleLib: null },
+{% set indTous = [
+  { cle: 'panier', lib: T.avg_ticket ?? 'Ticket moyen', unite: eur, dec: 2, ax: 0, cible: null, cibleLib: null },
+  { cle: 'lignesTicket', lib: T.lines_short ?? 'Lignes/ticket', unite: '', dec: 2, ax: 1, cible: rc.record ?? null, cibleLib: T.record_mine ?? 'mon record' },
+  { cle: 'taux', lib: T.cross_short ?? 'Croisées', unite: '%', dec: 0, ax: 0, cible: cr.cible ?? null, cibleLib: T.target ?? 'cible' },
+  { cle: 'caHeure', lib: T.revenue_per_hour ?? 'CA par heure', unite: eur ~ '/h', dec: 0, ax: 0, cible: null, cibleLib: null },
+  { cle: 'tickets', lib: T.tickets ?? 'Tickets', unite: '', dec: 0, ax: 0, cible: null, cibleLib: null },
 ] %}
-{# L'indicateur montré d'abord : le premier qui a des données (une semaine sans CA lu n'a pas de ticket moyen). #}
-{% set choisi = null %}
-{% for i in ind %}{% if choisi is null and (s12|map(s => attribute(s, i.cle))|filter(v => v is not null and v > 0))|length %}{% set choisi = i.cle %}{% endif %}{% endfor %}
-{% set choisi = choisi ?? (ind|first).cle %}
+{# Les trois séries de chaque indicateur ; zéro compte comme « pas de donnée », sauf pour un taux. #}
+{% set ind = [] %}
+{% for i in indTous %}
+  {% set pMoi = [] %}{% set pMag = [] %}{% set pRes = [] %}
+  {% for s in s12 %}
+    {% set vs = [attribute(s, i.cle), (s.mag ?? null) ? attribute(s.mag, i.cle) : null, (s.res ?? null) ? attribute(s.res, i.cle) : null]|map(v => (v is not null and (v > 0 or i.cle == 'taux')) ? v : null) %}
+    {% set pMoi = pMoi|merge([vs[0]]) %}{% set pMag = pMag|merge([vs[1]]) %}{% set pRes = pRes|merge([vs[2]]) %}
+  {% endfor %}
+  {% set tous = pMoi|merge(pMag)|merge(pRes)|filter(v => v is not null) %}
+  {% if tous|length %}{% set ind = ind|merge([i|merge({ moi: pMoi, mag: pMag, res: pRes, tous: tous })]) %}{% endif %}
+{% endfor %}
+{% if s12|length and ind|length %}
+{% set choisi = (ind|first).cle %}
+{% set n = s12|length %}{% set X0 = 34 %}{% set X1 = 332 %}{% set Y0 = 14 %}{% set Y1 = 120 %}{% set slot = (X1 - X0) / n %}
 <div class="titre-section"><h2>{{ T.twelve_weeks ?? '12 semaines' }}</h2><small>{{ (s12|first).lib }} → {{ (s12|last).lib }}</small></div>
 <div class="cl-carte st-graphe" data-graphe>
-  <div class="st-puces" role="tablist">{% for i in ind %}<button type="button" role="tab" class="{{ i.cle == choisi ? 'on' }}" aria-selected="{{ i.cle == choisi ? 'true' : 'false' }}" data-ind="{{ i.cle }}">{{ i.lib }}</button>{% endfor %}</div>
+  {% if ind|length > 1 %}<div class="st-puces" role="tablist">{% for i in ind %}<button type="button" role="tab" class="{{ i.cle == choisi ? 'on' }}" aria-selected="{{ i.cle == choisi ? 'true' : 'false' }}" data-ind="{{ i.cle }}">{{ i.lib }}</button>{% endfor %}</div>{% endif %}
   {% for i in ind %}
-  {% set vals = s12|map(s => attribute(s, i.cle))|filter(v => v is not null) %}
-  {% set mx = vals|length ? max(vals|merge([i.cible ?? 0])) : 0 %}
-  {% set haut = mx > 0 ? mx * 1.12 : 1 %}
-  {% set n = s12|length %}{% set slot = 328 / n %}
+  {# L'échelle : de la plus petite à la plus grande valeur des trois séries (et la cible), avec de l'air. #}
+  {% set bornes = i.tous|merge(i.cible ? [i.cible] : []) %}
+  {% set mn = min(bornes) %}{% set mx = max(bornes) %}
+  {% set air = mx > mn ? (mx - mn) * 0.2 : (mx > 0 ? mx * 0.2 : 1) %}
+  {% set lo = (max(0, mn - air))|round(i.ax, 'floor') %}{% set hi = (mx + air)|round(i.ax, 'ceil') %}
+  {% if hi <= lo %}{% set hi = lo + 1 %}{% endif %}
+  {% set mi = ((lo + hi) / 2)|round(i.ax) %}
+  {# La semaine montrée d'abord : la dernière qui a une valeur. #}
+  {% set sel = n - 1 %}{% for k in 0..(n - 1) %}{% if i.moi[k] is not null or i.mag[k] is not null or i.res[k] is not null %}{% set sel = k %}{% endif %}{% endfor %}
   <div class="st-ind {{ i.cle == choisi ? 'on' }}" data-ind-v="{{ i.cle }}">
-    {% set der = s12|last %}{% set vDer = attribute(der, i.cle) %}
-    <p class="st-cap" data-cap>{{ T.week ?? 'Semaine' }} {{ der.lib }} : <b>{% if vDer is not null %}{{ vDer|number_format(i.dec, ',', ' ') }}{{ i.unite ? ' ' ~ i.unite }}{% else %}—{% endif %}</b></p>
-    <svg viewBox="0 0 340 150" role="img" aria-label="{{ i.lib }}, {{ T.twelve_weeks ?? '12 semaines' }}">
-      <line class="st-base" x1="6" y1="124" x2="334" y2="124"/>
-      {% if i.cible %}{% set yc = 124 - 106 * i.cible / haut %}<line class="st-cible" x1="6" y1="{{ yc|round(1) }}" x2="334" y2="{{ yc|round(1) }}"/>{% endif %}
-      {% for s in s12 %}{% set v = attribute(s, i.cle) %}
-      {% set x = 6 + (loop.index0 * slot) + (slot - 16) / 2 %}
-      <g class="st-col{{ loop.last ? ' der' }}" tabindex="0" data-lib="{{ T.week ?? 'Semaine' }} {{ s.lib }}" data-val="{% if v is not null %}{{ v|number_format(i.dec, ',', ' ') }}{{ i.unite ? ' ' ~ i.unite }}{% else %}—{% endif %}">
-        <title>{{ s.lib }} : {% if v is not null %}{{ v|number_format(i.dec, ',', ' ') }} {{ i.unite }}{% else %}—{% endif %}</title>
-        <rect class="st-hit" x="{{ (6 + loop.index0 * slot)|round(1) }}" y="10" width="{{ slot|round(1) }}" height="130"/>
-        {% if v is not null and v > 0 %}{% set h = 106 * v / haut %}
-        <rect class="st-bar" x="{{ x|round(1) }}" y="{{ (124 - h)|round(1) }}" width="16" height="{{ h|round(1) }}" rx="{{ h > 4 ? 4 : 0 }}"/>
-        {% if h > 4 %}<rect class="st-bar" x="{{ x|round(1) }}" y="{{ (124 - 4)|round(1) }}" width="16" height="4"/>{% endif %}
-        {% endif %}
-        <text class="st-x" x="{{ (x + 8)|round(1) }}" y="140" text-anchor="middle">{{ s.lib }}</text>
+    <p class="st-cap" data-sem>{{ T.week ?? 'Semaine' }} {{ s12[sel].lib }}</p>
+    <div class="st-leg" aria-live="polite">
+      <div class="st-li moi"><span><i></i>{{ T.me ?? 'Moi' }}</span><b data-v="moi">{{ _self.val(i.moi[sel], i.dec, i.unite) }}</b></div>
+      <div class="st-li mag"><span><i></i>{{ T.my_shop ?? 'Mon magasin' }}</span><b data-v="mag">{{ _self.val(i.mag[sel], i.dec, i.unite) }}</b></div>
+      <div class="st-li res"><span><i></i>{{ T.network ?? 'Réseau' }}</span><b data-v="res">{{ _self.val(i.res[sel], i.dec, i.unite) }}</b></div>
+    </div>
+    <svg viewBox="0 0 340 140" role="img" aria-label="{{ i.lib }}, {{ T.twelve_weeks ?? '12 semaines' }} : {{ T.me ?? 'Moi' }}, {{ T.my_shop ?? 'Mon magasin' }}, {{ T.network ?? 'Réseau' }}">
+      {% for g in [lo, mi, hi]|reduce((c, v) => v in c ? c : c|merge([v]), []) %}{% set yg = Y1 - (Y1 - Y0) * (g - lo) / (hi - lo) %}
+      <line class="st-grl" x1="{{ X0 }}" y1="{{ yg|round(1) }}" x2="{{ X1 }}" y2="{{ yg|round(1) }}"/>
+      <text class="st-y" x="{{ X0 - 5 }}" y="{{ (yg + 3)|round(1) }}" text-anchor="end">{{ g|number_format(i.ax, ',', ' ') }}</text>{% endfor %}
+      {# Une colonne par semaine : la zone qu'on touche, le trait qui marque la semaine choisie, son nom. #}
+      {% for s in s12 %}{% set k = loop.index0 %}{% set x = X0 + slot * (k + 0.5) %}
+      <g class="st-col{{ loop.last ? ' der' }}{{ k == sel ? ' sel' }}" data-i="{{ k }}" tabindex="0" data-lib="{{ T.week ?? 'Semaine' }} {{ s.lib }}" data-moi="{{ _self.val(i.moi[k], i.dec, i.unite) }}" data-mag="{{ _self.val(i.mag[k], i.dec, i.unite) }}" data-res="{{ _self.val(i.res[k], i.dec, i.unite) }}">
+        <title>{{ s.lib }} · {{ T.me ?? 'Moi' }} {{ _self.val(i.moi[k], i.dec, i.unite) }} · {{ T.my_shop ?? 'Mon magasin' }} {{ _self.val(i.mag[k], i.dec, i.unite) }} · {{ T.network ?? 'Réseau' }} {{ _self.val(i.res[k], i.dec, i.unite) }}</title>
+        <rect class="st-hit" x="{{ (X0 + slot * k)|round(1) }}" y="4" width="{{ slot|round(1) }}" height="132"/>
+        <line class="st-guide" x1="{{ x|round(1) }}" y1="{{ Y0 - 6 }}" x2="{{ x|round(1) }}" y2="{{ Y1 }}"/>
+        <text class="st-x" x="{{ x|round(1) }}" y="{{ Y1 + 14 }}" text-anchor="middle">{{ s.lib }}</text>
       </g>{% endfor %}
+      {% if i.cible %}{% set yc = Y1 - (Y1 - Y0) * (i.cible - lo) / (hi - lo) %}<line class="st-cible" x1="{{ X0 }}" y1="{{ yc|round(1) }}" x2="{{ X1 }}" y2="{{ yc|round(1) }}"/>{% endif %}
+      {# Les trois lignes, le réseau dessous, moi dessus ; une valeur entourée de trous devient un point. #}
+      {% for se in ['res', 'mag', 'moi'] %}{% set p = attribute(i, se) %}{% set d = '' %}{% set pose = false %}
+      {% for v in p %}{% if v is null %}{% set pose = false %}{% else %}{% set d = d ~ (pose ? ' L' : ' M') ~ (X0 + slot * (loop.index0 + 0.5))|round(1) ~ ' ' ~ (Y1 - (Y1 - Y0) * (v - lo) / (hi - lo))|round(1) %}{% set pose = true %}{% endif %}{% endfor %}
+      {% if d %}<path class="st-ligne {{ se }}" d="{{ d|trim }}"/>{% endif %}{% endfor %}
+      {% for s in s12 %}{% set k = loop.index0 %}{% set x = X0 + slot * (k + 0.5) %}
+      <g class="st-pts{{ k == sel ? ' sel' }}" data-i="{{ k }}">{% for se in ['res', 'mag', 'moi'] %}{% set p = attribute(i, se) %}{% set v = p[k] %}{% if v is not null %}
+        {% set seul = (k == 0 or p[k - 1] is null) and (k == n - 1 or p[k + 1] is null) %}
+        <circle class="st-pt {{ se }}{{ seul ? ' seul' }}" cx="{{ x|round(1) }}" cy="{{ (Y1 - (Y1 - Y0) * (v - lo) / (hi - lo))|round(1) }}" r="{{ se == 'moi' ? 3.5 : 3 }}"/>{% endif %}{% endfor %}</g>{% endfor %}
     </svg>
-    {% if i.cible %}<div class="st-mag-l"><span><span class="lg-ligne"></span>{{ i.cibleLib }} {{ i.cible|number_format(i.dec, ',', ' ') }}{{ i.unite ? ' ' ~ i.unite }}</span></div>{% endif %}
-    {# La même série en tableau, pour les lecteurs d'écran. #}
-    <table class="visually-hidden"><caption>{{ i.lib }}</caption><tbody>{% for s in s12 %}{% set v = attribute(s, i.cle) %}<tr><th>{{ s.lib }}</th><td>{% if v is not null %}{{ v|number_format(i.dec, ',', ' ') }} {{ i.unite }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table>
+    <div class="st-mag-l">
+      {% if i.cible %}<span><span class="lg-ligne"></span>{{ i.cibleLib }} {{ _self.val(i.cible, i.dec, i.unite) }}</span>{% endif %}
+      <span>{{ T.avg_note ?? 'Magasin, réseau : la vendeuse moyenne de la semaine' }}</span>
+    </div>
+    {% if i.moi|filter(v => v is not null)|length == 0 %}<p class="st-note">{{ T.no_own_weeks ?? 'Aucune vente à ton nom sur ces 12 semaines : seules les moyennes s’affichent.' }}</p>{% endif %}
+    {# Les mêmes séries en tableau, pour les lecteurs d'écran. #}
+    <table class="visually-hidden"><caption>{{ i.lib }}</caption>
+      <thead><tr><th>{{ T.week ?? 'Semaine' }}</th><th>{{ T.me ?? 'Moi' }}</th><th>{{ T.my_shop ?? 'Mon magasin' }}</th><th>{{ T.network ?? 'Réseau' }}</th></tr></thead>
+      <tbody>{% for s in s12 %}{% set k = loop.index0 %}<tr><th>{{ s.lib }}</th><td>{{ _self.val(i.moi[k], i.dec, i.unite) }}</td><td>{{ _self.val(i.mag[k], i.dec, i.unite) }}</td><td>{{ _self.val(i.res[k], i.dec, i.unite) }}</td></tr>{% endfor %}</tbody></table>
   </div>
   {% endfor %}
 </div>
@@ -125,15 +160,14 @@
         g.querySelectorAll('[data-ind-v]').forEach(function (v) { v.classList.toggle('on', v.dataset.indV === b.dataset.ind); });
       });
     });
-    // Toucher une semaine affiche sa valeur au-dessus du graphique.
+    // Toucher une semaine affiche ses trois valeurs au-dessus du graphique.
     g.querySelectorAll('.st-ind').forEach(function (ind) {
-      var cap = ind.querySelector('[data-cap]');
+      var sem = ind.querySelector('[data-sem]');
       ind.querySelectorAll('.st-col').forEach(function (col) {
         function montre() {
-          ind.querySelectorAll('.st-col').forEach(function (c) { c.classList.toggle('sel', c === col); });
-          cap.innerHTML = '';
-          cap.appendChild(document.createTextNode(col.dataset.lib + ' : '));
-          var bv = document.createElement('b'); bv.textContent = col.dataset.val; cap.appendChild(bv);
+          ind.querySelectorAll('[data-i]').forEach(function (c) { c.classList.toggle('sel', c.dataset.i === col.dataset.i); });
+          sem.textContent = col.dataset.lib;
+          ['moi', 'mag', 'res'].forEach(function (k) { ind.querySelector('[data-v="' + k + '"]').textContent = col.dataset[k]; });
         }
         col.addEventListener('click', montre);
         col.addEventListener('focus', montre);

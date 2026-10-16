@@ -122,14 +122,17 @@ fiche que Primes (`GET /ventes/moi` du cockpit, rien n'est calculé dans l'app).
 - **ce mois-ci, au jour J** : d'abord le geste de vente, en avant — son **ticket moyen** et ses **lignes par
   ticket** (son record en regard) —, puis ses ventes croisées (la cible en regard), son CA par heure (ses
   heures), son chiffre d'affaires, ses tickets, son score et sa place dans le magasin et dans le réseau ;
-- **12 semaines** : une colonne par semaine, un indicateur à la fois, choisi dans une rangée de puces (ticket
-  moyen, lignes par ticket avec la ligne du record, ventes croisées avec la ligne de la cible, CA par heure,
-  tickets) ; la semaine en cours en rubis ; toucher une semaine affiche sa valeur. La page ouvre sur le premier
-  indicateur qui a des données. La même série existe en tableau pour les lecteurs d'écran ;
+- **12 semaines** : trois lignes, un indicateur à la fois, choisi dans une rangée de puces (ticket moyen, lignes
+  par ticket avec la ligne de son record, ventes croisées avec la ligne de la cible, CA par heure, tickets) —
+  **moi** (rubis, épaisse, avec ses points), **mon magasin** (ambre) et **réseau** (bleu, en tirets) : la vendeuse
+  moyenne de la semaine, jamais une collègue. Une semaine sans donnée laisse un trou. Au-dessus, les trois valeurs
+  de la semaine touchée (la dernière au départ). Couleurs : `--la-serie-moi/-mag/-res` (marque.css), vérifiées
+  pour les daltoniens. La page ouvre sur le premier indicateur qui a des données. Les trois séries existent en
+  tableau pour les lecteurs d'écran ;
 - **mes titres** des six derniers mois.
 
 Sans vente à son nom ce mois-ci, la page ne montre pas une grille de zéros mais un mot (« Pas encore de vente à
-ton nom ce mois-ci — tes chiffres s'affichent dès ton premier ticket »), puis ses douze semaines si elle a vendu
-avant. Les tâches n'ont plus d'onglet : on y arrive par la tuile « tâches à faire » de l'Accueil (les pages des
+ton nom ce mois-ci — tes chiffres s'affichent dès ton premier ticket »), puis les douze semaines : sans aucune
+vente à son nom, les moyennes du magasin et du réseau s'affichent seules, avec un mot qui le dit. Les tâches n'ont plus d'onglet : on y arrive par la tuile « tâches à faire » de l'Accueil (les pages des
 tâches allument « Accueil » dans la barre du bas). Rendu d'essai : `php docs/maquettes/primes-epure/rendu.php`
 écrit aussi `rendu-stats.html`.
