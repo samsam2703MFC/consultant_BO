@@ -798,3 +798,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T18:55:25Z primes : Marketing franchisé, marque / franchisés, fiches des promotions
 2026-10-16T18:59:23Z primes : icône dans l'assistant
 2026-10-16T19:06:24Z primes : tableau par magasin, objectif en %, prime magasin ou par vendeuse
+2026-10-16T19:07:17Z analyse magasin : onglet Leviers retiré
