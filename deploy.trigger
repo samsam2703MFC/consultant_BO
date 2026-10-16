@@ -778,3 +778,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-14T20:28:54Z primes : une carte par prime, note Google 25 euros, icones, design system
 2026-10-16T11:09:58Z primes : carres, jauge au jour J, menu du classement ; statistiques a la place de taches
 2026-10-16T11:26:42Z primes : jauge pleine largeur ; statistiques : chiffres du magasin, etat vide
+2026-10-16T11:47:32Z statistiques : rien que ses chiffres (ticket moyen, lignes par ticket) ; primes : deux colonnes
