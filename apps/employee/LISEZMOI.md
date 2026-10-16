@@ -82,15 +82,16 @@ Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
   aujourd'hui ; ses lignes par ticket, son record et son mois ; le CA du magasin, le jour J, la fin de mois au
   rythme actuel, chaque palier, ses heures ; la note et les avis ; son score, sa place, la 1re, son CA par heure)
   et la règle, plus « Voir le classement » quand il y en a un ;
-- les catégories et les promos sont des **carrés**, deux par ligne : l'icône, la récompense, le nom, une **demi-jauge**, l'objectif
+- les **catégories** sont aussi **une par ligne, en drapeau** (16/10/2026, maquette A de
+  `propositions-categories-barre.html`) : ses pièces en haut à droite ; le trait, c'est ce qu'il lui faut pour être
+  1re (la 1re + 1 pièce, le minimum compris) — ou, quand elle mène, la 2e à garder derrière ; dessous sa place et ce
+  qui lui manque (« 2e / 6 · encore 10 pcs pour être 1re », « 👑 1re / 4 · +3 pcs d'avance ») et la 1re (ou la 2e).
+  Le détail déroulé montre le podium du magasin, le minimum de pièces et « Voir le classement » ;
+- les promos sont des **carrés**, deux par ligne : l'icône, la récompense, le nom, une **demi-jauge**, l'objectif
   en clair, l'état. Le point rubis sur la jauge, c'est **elle aujourd'hui** (la valeur au centre, avec « Toi »,
   « magasin » ou « J16 ») ; le repère sombre, c'est **l'objectif à atteindre**, écrit dessous (« ◉ Objectif
   55 % »). La cible pour un target, le seuil pour la note Google, **52 pcs** pour passer la 1re d'une promo
-  (la sienne + 1), « Garder la 1re place » quand elle mène. Les **catégories** n'ont pas de jauge mais **le podium du
-  magasin** : les trois premières avec leurs pièces, elle surlignée (rubis ; or quand elle mène ; à la 3e ligne,
-  à son rang, quand elle est plus loin), et une pastille : **ce qu'il lui manque pour être 1re** (« 10 pcs pour
-  être 1re », le minimum compris) ou **son avance** (« +3 pcs d'avance »). Choisi parmi quatre maquettes
-  (`docs/maquettes/primes-epure/propositions-categories.html`, la « C »). Pour l'objectif du magasin, la jauge montre
+  (la sienne + 1), « Garder la 1re place » quand elle mène. Les catégories sont passées en lignes (ci-dessus). Pour l'objectif du magasin, la jauge montre
   **l'atteinte à date** (le CA encaissé ÷ l'objectif du mois), le repère 100 %, et un pointillé **où il faudrait
   en être au jour J** (le prorata des jours) ; la pastille donne la projection (« ✓ proj. 108 % ») ;
 - le **classement** : un bouton (l'icône, le nom, mon rang « 2e / 6 ») ouvre une **feuille qui monte du bas** :

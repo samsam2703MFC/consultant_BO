@@ -940,6 +940,14 @@ function primesCarteJauge(array $c): array
         $barre = $v !== null ? $sur((float) $v) : null;
         $barreJour = $jour !== null ? $sur($jour) : null;
     }
+    // Les catégories (16/10/2026, le drapeau comme les targets) : le trait, c'est ce qu'il lui faut pour être 1re (ses
+    // pièces + pour1 : la 1re + 1, le minimum compris) ; quand elle mène, la 2e qu'elle doit garder derrière ; seule
+    // en lice, le minimum.
+    if (($c['type'] ?? '') === 'categorie' && $v !== null) {
+        $objCat = $avance1 !== null ? (($c['second'] ?? null) !== null ? (float) $c['second']['q'] : null) : ($pour1 !== null ? (float) $v + $pour1 : null);
+        $objCat = ($objCat !== null && $objCat > 0) ? $objCat : max(1.0, (float) ($c['minPieces'] ?? 0));
+        $barre = round(max(0.0, min(100.0, PRIMES_BARRE_OBJ * (float) $v / $objCat)), 1);
+    }
     $actif = ($c['cle'] === 'objectif' && ($c['jour'] ?? null) !== null)
         ? ($v !== null && (float) $v >= (float) $c['cible'] && ($c['motif'] ?? null) === null)
         : in_array($c['etat'] ?? '', ['gagne', 'tete'], true);
