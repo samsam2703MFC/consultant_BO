@@ -7185,6 +7185,14 @@ class App {
     // modifie dans l'assistant (une promo) ou dans la fenêtre de réglage (targets, catégories, record, meilleure).
     const sauver = quoi => this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms })
       .then(r => { if (r && r.ok === false) { return; } finir(quoi); });
+    // La période d'une prime (16/10/2026) : la sienne (catégorie, target) ou celle de sa promotion ; face au mois en cours.
+    const tAuj = new Date();
+    const debM = tAuj.getFullYear() + '-' + String(tAuj.getMonth() + 1).padStart(2, '0') + '-01';
+    const finM = tAuj.getFullYear() + '-' + String(tAuj.getMonth() + 1).padStart(2, '0') + '-' + String(new Date(tAuj.getFullYear(), tAuj.getMonth() + 1, 0).getDate()).padStart(2, '0');
+    const jjA = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '');
+    const periodeDe = x => { const du = x.type === 'promo' ? (x.promo || {}).du : x.du; const au = x.type === 'promo' ? (x.promo || {}).au : x.au;
+      return { du: du || null, au: au || null, txt: du && au ? 'du ' + jjA(du) + ' au ' + jjA(au) : du ? 'dès le ' + jjA(du) : au ? 'jusqu’au ' + jjA(au) : '',
+        etat: du && du > finM ? 'à venir' : au && au < debM ? 'terminée' : '' }; };
     const payeurTxt = x => (x.famille === 'magasin' ? (nomMag[x.shop] || x.shop || 'Magasin') + ' — le magasin' : x.payeur === 'sponsor' && x.sponsor ? 'Sponsor · ' + x.sponsor : 'Marque');
     const lignes = [];
     app.liste.forEach((e, i) => {
@@ -7202,6 +7210,7 @@ class App {
         // La famille (16/10/2026) : la marque (ou un sponsor), ou le franchisé pour son magasin.
         famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', shopNom: nomMag[e.shop] || e.shop || '',
         poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); },
+        periodeTxt: e.type === 'promo' ? '' : periodeDe(e).txt, etatPeriode: periodeDe(e).etat,
         payeurTxt: payeurTxt(e), montantTxt: (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
         basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
         modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }) });
@@ -7272,11 +7281,12 @@ class App {
       famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null,
       // Un seul assistant (16/10/2026) : une promotion (des produits sur une période) ou une catégorie (chaque mois, les
       // produits dont le nom contient un mot) ; un franchisé ne pose que des promotions.
-      sorte: 'promo', motif: '' });
+      sorte: 'promo', motif: '', cPer: 'toujours', cdu: '', cau: '' });
     // Rouvrir une promo dans l'assistant (16/10/2026) : tout prérempli ; « edit » garde sa clé, le serveur refait ses produits.
     const wizDe = e => {
       if (e.type === 'categorie') {
         return Object.assign(wizNeuf('marque', ''), { edit: e.cle, sorte: 'categorie', motif: e.motif || '', regle: 'premiere', minPieces: String(e.minPieces ?? 10),
+          cPer: e.du || e.au ? 'dates' : 'toujours', cdu: e.du || '', cau: e.au || '',
           montant: String(e.montant ?? app.recompense), payeur: e.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: e.sponsor || '', nom: e.lib || '', nomTouche: true, iconeExist: e.icone || '' });
       }
       const p = e.promo || {};
@@ -7357,11 +7367,12 @@ class App {
       // Une promotion du panel sans dates compte tant qu'elle tourne.
       const datesOk = W.api ? (!du || !au || au >= du) : (!!du && !!au && au >= du);
       const magsOk = fam ? magsPermis.some(m => m.id === W.shop) : (W.api || W.magsMode === 'tous' || W.mags.length > 0);
-      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat || (datesOk && magsOk), montant != null && montant > 0 && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
+      const catDatesOk = W.cPer === 'toujours' || ((!!W.cdu || !!W.cau) && (!W.cdu || !W.cau || W.cau >= W.cdu));
+      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat ? catDatesOk : (datesOk && magsOk), montant != null && montant > 0 && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
       const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
       const resume = estCat ? [
         ['Produits', 'dont le nom contient « ' + W.motif.trim() + ' » · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
-        ['Période', 'chaque mois, du 1er au dernier jour'],
+        ['Période', W.cPer === 'dates' ? 'chaque mois' + (W.cdu ? ' dès le ' + jjmm(W.cdu) : '') + (W.cau ? ' jusqu’au ' + jjmm(W.cau) : '') : 'chaque mois, sans fin'],
         ['Magasins', 'tous (' + (d.magasins || []).length + ')'],
         ['Gagne', 'la 1re de chaque magasin' + (minP ? ', ' + minP + ' pcs min.' : '')],
         ['Récompense', (montant || 0) + ' € · payée par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
@@ -7377,6 +7388,7 @@ class App {
         if (estCat) {
           const ancienneC = W.edit ? app.liste.find(x => x.cle === W.edit) : null;
           const eC = { type: 'categorie', cle: W.edit || '', lib: W.nom.trim(), motif: W.motif.trim(), minPieces: Math.max(0, Math.round(minP || 0)), montant: Math.round(montant),
+            du: W.cPer === 'dates' && W.cdu ? W.cdu : null, au: W.cPer === 'dates' && W.cau ? W.cau : null,
             actif: ancienneC ? !!ancienneC.actif : true, classement: ancienneC ? ancienneC.classement !== false : true,
             payeur: W.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: W.payeur === 'sponsor' ? W.sponsor.trim() : '', icone: W.iconeExist || '' };
           W.envoi = true; reW();
@@ -7429,6 +7441,9 @@ class App {
         categorie: estCat, sortes: fam || W.edit ? null : [['promo', '🏷️', 'Promotion', 'Des produits choisis, sur une période : une promo du panel ou la vôtre.'],
           ['categorie', '👑', 'Catégorie', 'Chaque mois, les produits dont le nom contient un mot : « tarte », « quiche »…']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.sorte === v,
           choisir: () => { W.sorte = v; if (v === 'categorie') { W.regle = 'premiere'; } else { W.regle = 'magasin'; } W.nomTouche = false; reW(); } })),
+        cPer: W.cPer, cdu: W.cdu, cau: W.cau, catDatesOk,
+        cPers: [['toujours', 'Tous les mois, sans fin'], ['dates', 'Entre deux dates']].map(([v, nom]) => ({ nom, on: W.cPer === v, choisir: () => { W.cPer = v; reW(); } })),
+        poserCdu: ev => { W.cdu = ev.target.value; reW(); }, poserCau: ev => { W.cau = ev.target.value; reW(); },
         motif: W.motif, motifErr, motifN: prodsMotif.length, motifEx: prodsMotif.slice(0, 12).map(pr => ({ nom: pr.nom, cat: pr.cat })), poserMotif: ev => { W.motif = ev.target.value; reW(); },
         iconeExist: W.iconeExist ? racine + W.iconeExist : '',
         supprimer: W.edit ? () => { if (!window.confirm('Supprimer la prime « ' + (W.nom || '') + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== W.edit); this.setState({ prWiz: undefined }); sauver('Prime supprimée'); } : null,
@@ -7494,7 +7509,7 @@ class App {
         champs: nouveau ? { lib: '', motif: '', minPieces: '10', montant: String(app.recompense), classement: true }
           : { lib: x.lib || '', motif: x.motif || '', minPieces: String(x.minPieces ?? 10), montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
             categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin ?? 20), seuil: String(x.seuil ?? 4.5),
-            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets) },
+            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), du: x.du || '', au: x.au || '' },
         payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
     };
     const PE = S.prEdit;
@@ -7505,14 +7520,16 @@ class App {
       const ch = (cle, lib, sorte, plus) => Object.assign({ cle, lib, sorte, valeur: f[cle] == null ? '' : String(f[cle]), coche: !!f[cle],
         poser: ev => { f[cle] = sorte === 'case' ? !!ev.target.checked : ev.target.value; reE(); } }, plus || {});
       const montantCh = ch('montant', 'Récompense', 'nombre', { unite: '€', pas: 5 });
+      // La période (16/10/2026) : vide, sans début ni fin — la prime tourne tous les mois.
+      const periodeCh = [ch('du', 'Du (vide : sans début)', 'date'), ch('au', 'Au (vide : sans fin)', 'date')];
       const champs = { croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
-          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh],
-        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh],
-        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh],
+          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh),
+        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh),
+        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh),
         categorie: [ch('lib', 'Nom dans l’app', 'texte', { indice: 'Queen of …' }), ch('motif', 'Les produits dont le nom contient', 'texte', { indice: 'tarte' }),
           ch('minPieces', 'Minimum de pièces pour être classée', 'nombre', { unite: 'pcs', pas: 1 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh],
         ext: [] }[PE.type] || [];
-      const ok = PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '');
+      const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du);
       const entier = v => { const n = num(v); return n == null ? null : n; };
       const enregistrer = () => {
         if (PE.envoi || !ok) { return; }
@@ -7530,6 +7547,7 @@ class App {
             const e = PE.nouveau ? { type: 'categorie', cle: '', actif: true } : app.liste.find(x => x.cle === PE.cle);
             if (!e) { PE.envoi = false; reE(); return; }
             Object.assign(e, qui, { icone, montant: Math.max(0, Math.round(entier(f.montant) ?? e.montant ?? app.recompense)) });
+            if (['croisees', 'objectif', 'google'].includes(PE.type)) { Object.assign(e, { du: f.du || null, au: f.au || null }); }
             if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: Math.max(0, Math.round(entier(f.minPieces) ?? 10)), classement: !!f.classement }); }
             if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
             if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
