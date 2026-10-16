@@ -9391,6 +9391,84 @@ function tplCrois(c, x){
   </div>`;
 }
 
+/* L'assistant « Nouvelle prime promotion » (16/10/2026), dans Équipe & ventes → Paramètres : quatre étapes, les produits
+   choisis par une barre de recherche (catégories, sous-catégories, produits) ou une promotion de l'API du panel. */
+function tplPrWiz(W, x){
+  const esc = x.esc;
+  const B = (on, prim) => `border:1px solid ${prim ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${prim ? 'var(--color-primary)' : on ? 'var(--color-text)' : 'var(--color-surface)'};color:${prim || on ? '#fff' : 'var(--color-text)'};border-radius:var(--radius-pill);padding:8px 16px;font:600 13px var(--font-ui);cursor:pointer`;
+  const lab = 'display:block;font:600 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px';
+  const chp = 'border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:9px 12px;font:500 13.5px var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const q = 'font:600 13.5px var(--font-ui);margin:0 0 10px';
+  const mu = 'color:var(--color-text-muted)';
+  const morceaux = it => it.morceaux.map(m => m.m ? `<mark style="background:#FCE7A6;padding:0 1px;border-radius:2px">${esc(m.t)}</mark>` : esc(m.t)).join('');
+  const ligne = it => `<div ${x.A(it.basculer)} style="display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13.5px;border-top:.5px solid var(--color-border-tertiary);cursor:pointer;${it.pris ? 'background:#FBF3EE' : ''}">
+      <div style="flex:1;min-width:0">${morceaux(it)}${it.sous ? `<small style="display:block;font-size:11.5px;${mu}">${it.t === 'categorie' ? 'dans ' : ''}${esc(it.sous)}</small>` : ''}</div>
+      ${it.t !== 'produit' ? `<span style="font-size:12px;${mu}">${it.n} produit${it.n > 1 ? 's' : ''}</span>` : ''}
+      <span style="width:24px;height:24px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1px solid ${it.pris ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${it.pris ? 'background:var(--color-primary);color:#fff' : ''};font-weight:700">${it.pris ? '✓' : '+'}</span></div>`;
+  const grp = (titre, l) => l.length ? `<div style="font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;${mu};padding:9px 14px 4px;background:var(--color-background-secondary)">${titre}</div>${l.map(ligne).join('')}` : '';
+  let corps = '';
+  if (W.etape === 1) {
+    const onglets = `<div style="display:inline-flex;background:var(--color-background-secondary);border-radius:var(--radius-pill);padding:3px;margin-bottom:14px">${W.onglets.map(o => `<button ${x.A(o.choisir)} style="border:0;padding:7px 14px;border-radius:var(--radius-pill);font:600 12.5px var(--font-ui);cursor:pointer;${o.on ? 'background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 3px rgba(0,0,0,.08)' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}</div>`;
+    if (W.onglet === 'panel') {
+      corps = onglets + `<p style="${q}">Partir d’une promotion du panel <span style="${mu};font-weight:500">— ses produits, ses dates et ses magasins sont repris.</span></p>`
+        + (W.apiErreur ? `<div style="font-size:12.5px;line-height:1.45;background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot);border-radius:var(--radius-md);padding:10px 12px">${esc(W.apiErreur)}</div>`
+        : !W.apiListe.length ? `<div style="font-size:12.5px;${mu}">Aucune promotion du panel avec des produits.</div>`
+        : `<div style="border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);overflow:hidden">${W.apiListe.map(p => `<div ${x.A(p.choisir)} style="display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:.5px solid var(--color-border-tertiary);cursor:pointer;${p.pris ? 'background:#FBF3EE' : ''}"><div style="flex:1"><b>${esc(p.nom)}</b><small style="display:block;font-size:11.5px;${mu}">${esc(p.sorte)} · ${esc(p.dates)} · ${esc(p.magasins)}</small></div><span style="font-weight:700;color:${p.pris ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${p.pris ? '✓ choisie' : 'choisir'}</span></div>`).join('')}</div>`);
+    } else {
+      corps = onglets + `<p style="${q}">Quels produits comptent ? <span style="${mu};font-weight:500">Une catégorie, une sous-catégorie ou des produits : tout ce qui est ajouté compte.</span></p>
+        <div style="position:relative"><span style="position:absolute;left:13px;top:10px;font-size:15px;${mu}">🔍</span>
+          <input id="prw-q" value="${esc(W.q)}" ${x.I(W.poserQ)} placeholder="Rechercher une catégorie, une sous-catégorie ou un produit…" autocomplete="off" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-text);border-radius:var(--radius-md);padding:11px 14px 11px 38px;font:500 14px var(--font-ui)"></div>
+        ${W.chargement ? `<div style="padding:12px 2px;font-size:12.5px;${mu}">Lecture du catalogue…</div>` : W.catMotif ? `<div style="padding:12px 2px;font-size:12.5px;color:var(--color-primary)">${esc(W.catMotif)}</div>`
+          : W.vide ? `<div style="padding:12px 2px;font-size:12.5px;${mu}">Rien ne correspond à « ${esc(W.q)} ».</div>`
+          : `<div style="border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);margin-top:6px;max-height:320px;overflow-y:auto" data-scroll="prw-res">${grp(W.parcourir ? 'Catégories — ou tapez un nom' : 'Catégories', W.res.groupes)}${grp('Sous-catégories', W.res.categories)}${grp('Produits', W.res.produits)}</div>`}
+        ${W.sel.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${W.sel.map(z => `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);border-radius:var(--radius-pill);padding:5px 6px 5px 10px;font-size:12.5px"><span style="font:700 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;${mu}">${esc(z.type)}</span> ${esc(z.lib)}${z.n ? ' · ' + esc(z.n) : ''}<button ${x.A(z.retirer)} title="Retirer" style="width:18px;height:18px;border:0;border-radius:50%;background:var(--color-surface);font-size:11px;${mu};cursor:pointer">✕</button></span>`).join('')}</div>` : ''}`;
+    }
+  } else if (W.etape === 2) {
+    corps = `<p style="${q}">Quand ?</p>` + (W.apiDates ? `<div style="font-size:13px">Les dates de la promotion du panel : <b>${esc(W.du || '…')}</b> → <b>${esc(W.au || '…')}</b></div>`
+      : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${W.periodes.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)}">${esc(o.nom)}</button>`).join('')}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="${lab};margin:0">du</span><input id="prw-du" type="date" value="${esc(W.du)}" ${x.C(W.poserDu)} style="${chp}"><span style="${lab};margin:0">au</span><input id="prw-au" type="date" value="${esc(W.au)}" ${x.C(W.poserAu)} style="${chp}"><span style="font-size:12.5px;${mu}">les pièces se comptent sur ces dates seulement</span></div>`)
+      + `<p style="${q};margin-top:22px">Dans quels magasins ?</p>` + (W.apiDates ? `<div style="font-size:13px">Ceux de la promotion du panel.</div>`
+      : `<div style="display:flex;gap:8px;margin-bottom:10px"><button ${x.A(W.tousMags)} style="${B(W.magsMode === 'tous')}">Tous</button><button ${x.A(W.choisirMags)} style="${B(W.magsMode === 'choix')}">Choisir</button></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${W.mags.map(m => `<div ${x.A(m.basculer)} style="display:flex;align-items:center;gap:10px;border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:10px 12px;font-size:13.5px;cursor:pointer"><span style="width:18px;height:18px;border-radius:4px;border:1.5px solid var(--color-text);display:inline-flex;align-items:center;justify-content:center;font-size:12px;${m.on ? 'background:var(--color-text);color:#fff' : ''}">${m.on ? '✓' : ''}</span>${esc(m.nom)}</div>`).join('')}</div>`);
+  } else if (W.etape === 3) {
+    corps = `<p style="${q}">Qui gagne ?</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px">${W.regles.map(r => `<div ${x.A(r.choisir)} style="border:1.5px solid ${r.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${r.on ? 'background:#FBF3EE;' : ''}border-radius:var(--radius-lg);padding:14px;cursor:pointer"><span style="font-size:22px">${r.e}</span><b style="display:block;font-size:14px;margin:6px 0 4px">${esc(r.nom)}</b><p style="margin:0;font-size:12.5px;line-height:1.4;${mu}">${esc(r.txt)}</p></div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px">
+        <div><span style="${lab}">${W.regle === 'seuil' ? 'Le seuil à atteindre' : 'Minimum de pièces pour être classée'}</span><input id="prw-min" type="number" min="0" step="1" value="${esc(W.minPieces)}" ${x.I(W.poserMin)} style="${chp};width:90px"> <span style="${mu}">pcs</span></div>
+        <div><span style="${lab}">Récompense</span><input id="prw-montant" type="number" min="0" step="5" value="${esc(W.montant)}" ${x.I(W.poserMontant)} style="${chp};width:90px"> <span style="${mu}">€ ${W.regle === 'seuil' ? 'par vendeuse' : 'par magasin'}</span></div>
+        <div><span style="${lab}">Payée par</span>${W.payeurs.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)};margin-right:6px">${esc(o.nom)}</button>`).join('')}${W.payeur === 'sponsor' ? `<input id="prw-sponsor" value="${esc(W.sponsor)}" ${x.I(W.poserSponsor)} placeholder="nom du sponsor" style="${chp};margin-top:8px;width:200px">` : ''}</div>
+      </div>`;
+  } else {
+    corps = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+      <div><span style="${lab}">Nom dans l’app</span><input id="prw-nom" value="${esc(W.nom)}" ${x.I(W.poserNom)} maxlength="60" style="${chp};width:100%;box-sizing:border-box;margin-bottom:14px">
+        <div style="font-size:13px;line-height:1.5">${W.resume.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:.5px dashed var(--color-border-secondary)"><span style="${mu}">${esc(k)}</span><span style="font-weight:600;text-align:right">${esc(v)}</span></div>`).join('')}</div>
+        <div style="font-size:12px;${mu};margin-top:8px">L’icône se dépose ensuite sur la ligne de la prime, comme pour les autres.</div></div>
+      <div><span style="${lab}">Aperçu dans l’app</span><div style="background:#EAE4DC;border-radius:var(--radius-lg);padding:14px">
+        <div style="background:#fff;border-radius:18px;padding:11px 14px 10px;box-shadow:0 6px 18px rgba(50,30,20,.05)">
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:8px;background:#F4EFE8;display:flex;align-items:center;justify-content:center">🏷️</span><b style="flex:1;font:600 14px var(--font-ui)">${esc(W.nom)}</b><span style="font:400 21px/1 var(--font-display);color:#8D1D2C">0<small style="font:600 12px var(--font-ui);color:#666;margin-left:3px">pcs</small></span></div>
+          <div style="position:relative;height:10px;margin-top:30px;border-radius:999px;background:#EAE4DC"><span style="position:absolute;left:75%;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#222"></span><span style="position:absolute;left:75%;bottom:calc(100% + 7px);transform:translateX(-50%);font:700 11px var(--font-ui);padding:3px 8px;border-radius:999px;background:#222;color:#fff;white-space:nowrap">${esc(W.montant || '0')} €</span></div>
+          <div style="display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:#666;margin-top:8px"><span>${W.regle === 'seuil' ? 'encore ' + esc(W.minPieces || '0') + ' pcs' : 'la 1re du magasin gagne'}</span><span>${W.regle === 'seuil' ? 'objectif ' + esc(W.minPieces || '0') + ' pcs' : ''}</span></div></div></div>
+        <p style="font-size:12px;${mu};margin:8px 2px 0">Elle apparaît dans Mes primes pendant sa période, avec son classement.</p></div></div>`;
+  }
+  const info = W.etape === 1 ? (W.api ? `<b>${esc(W.api.nom)}</b> · promotion du panel` : `<b>${W.compte} produit${W.compte > 1 ? 's' : ''}</b> compté${W.compte > 1 ? 's' : ''}`)
+    : W.etape === 3 ? `<b>${esc(W.plafond)}</b>` : esc(W.resume[1][1] + ' · ' + W.resume[2][1]);
+  return `
+  <div ${x.A(W.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;pointer-events:none" data-scroll="prw">
+    <div role="dialog" aria-modal="true" aria-label="Nouvelle prime promotion" style="pointer-events:auto;width:100%;max-width:760px;background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden" data-pr-wiz="${W.etape}">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px 22px 12px"><div style="font:400 24px/1.1 var(--font-display)">Nouvelle prime promotion</div><button ${x.A(W.fermer)} aria-label="Fermer" style="margin-left:auto;border:0;background:none;font-size:20px;${mu};cursor:pointer">✕</button></div>
+      <div style="display:flex;gap:6px;padding:0 22px 14px;border-bottom:.5px solid var(--color-border-tertiary)">${W.pas.map(p => `<span ${p.aller ? x.A(p.aller) : ''} style="flex:1;display:flex;align-items:center;gap:8px;font:600 12px var(--font-ui);padding:8px 10px;border-radius:var(--radius-md);${p.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-background-secondary);color:' + (p.fait ? 'var(--color-text)' : 'var(--color-text-muted)')};${p.aller ? 'cursor:pointer' : ''}"><b style="width:22px;height:22px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;${p.on ? 'background:#fff;color:var(--color-primary)' : p.fait ? 'background:var(--color-text);color:#fff' : 'background:var(--color-surface);border:1px solid var(--color-border-secondary)'}">${p.fait ? '✓' : p.n}</b>${esc(p.nom)}</span>`).join('')}</div>
+      <div style="padding:18px 22px 10px;min-height:300px">${corps}</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        <span style="font-size:12.5px;${mu}">${info}</span>
+        <span style="flex:1"></span>
+        ${W.etape === 1 ? `<button ${x.A(W.fermer)} style="${B(false)}">Annuler</button>` : `<button ${x.A(W.precedent)} style="${B(false)}">‹ Retour</button>`}
+        ${W.etape < 4 ? `<button ${x.A(W.suivant)} style="${B(false, true)}${W.ok ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-suivant>Suivant ›</button>`
+          : `<button ${x.A(W.creer)} style="${B(false, true)}${W.ok && !W.envoi ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-creer>${W.envoi ? 'Création…' : 'Créer la prime'}</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplVentes(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -9443,7 +9521,7 @@ function tplVentes(c, x){
       : l.champs === 'categorie'
       ? `produits <input value="${esc(l.motif)}" placeholder="tarte" ${x.C(l.poser('motif', false))} style="${inp(110)};text-align:left;font-family:ui-monospace,monospace"> · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(52)}"> pcs min.`
       : l.champs === 'promo'
-      ? `vendus pendant la promo · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(48)}"> min.<span style="${sm};color:var(--color-text-muted)">${esc(l.promoNom)} · ${esc(l.promoSorte)} · ${esc(l.promoDates)} · ${esc(l.promoMags)} · ${esc(l.promoSource)}${l.promoVide ? ' · <b style="color:var(--color-primary)">produit introuvable</b>' : ''}</span>`
+      ? `vendus pendant la promo · <select ${x.C(l.poserRegle)} style="${inp(150)};text-align:left"><option value="premiere"${l.regle === 'premiere' ? ' selected' : ''}>la 1re du magasin</option><option value="seuil"${l.regle === 'seuil' ? ' selected' : ''}>chaque vendeuse au seuil</option></select> · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(48)}"> ${l.regle === 'seuil' ? 'pcs (seuil)' : 'min.'}<span style="${sm};color:var(--color-text-muted)">${esc(l.promoNom)} · ${esc(l.promoSorte)} · ${esc(l.promoDates)} · ${esc(l.promoMags)} · ${esc(l.promoSource)}${l.promoVide ? ' · <b style="color:var(--color-primary)">produit introuvable</b>' : ''}</span>`
       : esc(l.texte || '');
     return `
   <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
@@ -9482,7 +9560,7 @@ function tplVentes(c, x){
       </table></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
         <button ${x.A(P.ajouterCategorie)} style="${bt(false)}">+ Catégorie</button>
-        <button ${x.A(P.versPromos)} style="${bt(false)}">+ Promotion</button>
+        <button ${x.A(P.nouvelle)} style="${bt(true)}" data-pr-nouvelle>+ Nouvelle prime promotion</button>
         <span style="flex:1"></span>
         <button ${x.A(P.enregistrer)} style="${bt(true)}${P.modifie ? '' : ';opacity:.55'}" data-pr-enregistrer="app">Enregistrer</button>
       </div>
@@ -9543,6 +9621,7 @@ function tplVentes(c, x){
         <button ${x.A(MY.enregistrer)} style="${bt(true)}${MY.modifie ? '' : ';opacity:.55'}" data-pr-enregistrer="cibles">Enregistrer les cibles</button>
       </div>
     </div>`}
+    ${c.prWiz ? tplPrWiz(c.prWiz, x) : ''}
   </div>`;
   }
 

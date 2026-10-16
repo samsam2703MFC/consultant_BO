@@ -236,6 +236,42 @@ verifie('une promo « catalogue » d’avant n’est plus gardée', primesAppPro
 verifie('une promo par quantité garde sa sorte', (primesAppPromoPropre(['source' => 'api', 'sorte' => 'quantite', 'id' => '7', 'ids' => [5]])['sorte'] ?? null) === 'quantite');
 PanelApi::$configure = false;
 
+// --- 6 bis. l'assistant : une prime promotion créée dans le cockpit (16/10/2026) ---------------------
+echo "L'assistant de création d'une prime promotion\n";
+$catP = primesCatalogue(true);
+verifie('le catalogue à plat pour la recherche : id, nom, sous-catégorie', count($catP) === 4 && ($catP[0]['nom'] ?? '') !== '' && in_array('Tartes', array_column($catP, 'cat'), true), json_encode($catP));
+$epc = ep_primes_catalogue();
+verifie('la barre de recherche reçoit les sous-catégories et les produits', count($epc['produits']) === 4 && in_array('Tartes', array_column($epc['categories'], 'nom'), true));
+verifie('une sous-catégorie devient ses produits', primesSelIds([['t' => 'categorie', 'v' => 'Tartes']]) === [10]);
+verifie('une sous-catégorie avec sa catégorie (« groupe\\0nom ») aussi', primesSelIds([['t' => 'categorie', 'v' => "\0Tartes"]]) === [10]);
+verifie('un produit, lui-même ; deux choix s’additionnent', primesSelIds([['t' => 'produit', 'v' => '20'], ['t' => 'categorie', 'v' => 'Tartes']]) == [10, 20] || primesSelIds([['t' => 'produit', 'v' => '20'], ['t' => 'categorie', 'v' => 'Tartes']]) == [20, 10]);
+verifie('une sélection vide ou bancale est refusée', isset(primesPromoCockpit(['sel' => [['t' => 'autre', 'v' => 'x']]], 'X')['error']) && isset(primesPromoCockpit(['sel' => [['t' => 'categorie', 'v' => 'Inconnue']]], 'X')['error']));
+verifie('une fin avant le début est refusée', isset(primesPromoCockpit(['sel' => [['t' => 'categorie', 'v' => 'Tartes']], 'du' => '2026-11-30', 'au' => '2026-11-01'], 'X')['error']));
+$avantListe = relire()['liste'] ?? [];
+$GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => array_merge($avantListe, [
+    ['type' => 'promo', 'ref' => ['source' => 'cockpit'], 'lib' => 'Queen of Tartes au sucre', 'montant' => 40, 'minPieces' => 5, 'regle' => 'seuil', 'payeur' => 'magasin',
+     'promo' => ['sel' => [['t' => 'categorie', 'v' => 'Tartes', 'lib' => 'Tartes'], ['t' => 'produit', 'v' => '20', 'lib' => 'Quiche lorraine']], 'du' => '2026-11-01', 'au' => '2026-11-30', 'shops' => ['4'], 'ids' => [999]]]])];
+$r = wr_primes_app();
+$pk = null; foreach (relire()['liste'] ?? [] as $e) { if (str_starts_with($e['cle'], 'pk')) { $pk = $e; } }
+verifie('la prime promotion du cockpit est enregistrée (clé pk…)', ($r['ok'] ?? false) && $pk !== null && $pk['type'] === 'promo' && $pk['lib'] === 'Queen of Tartes au sucre', json_encode($r));
+verifie('ses produits sont relus dans le catalogue, pas pris au navigateur', $pk !== null && $pk['promo']['ids'] == [10, 20] || ($pk !== null && $pk['promo']['ids'] == [20, 10]), json_encode($pk['promo']['ids'] ?? null));
+verifie('sa règle, ses dates, ses magasins, qui paie', $pk !== null && $pk['regle'] === 'seuil' && $pk['promo']['du'] === '2026-11-01' && $pk['promo']['shops'] === ['4'] && $pk['payeur'] === 'magasin');
+$GLOBALS['CORPS'] = ['liste' => relire()['liste']];
+wr_primes_app();
+$pk2 = null; foreach (relire()['liste'] ?? [] as $e) { if (str_starts_with($e['cle'], 'pk')) { $pk2 = $e; } }
+verifie('réenregistrée telle quelle, elle garde sa clé et sa sélection', $pk2 !== null && $pk2['cle'] === $pk['cle'] && $pk2['promo']['sel'] === $pk['promo']['sel']);
+verifie('la moisson compte ses produits', isset(promoFamilles()[$pk['cle']][10]) && isset(promoFamilles()[$pk['cle']][20]));
+// La règle du seuil : chacune pour soi.
+$clsS = ['pz' => [1 => ['pieces' => 25.0, 'rangMag' => 1], 2 => ['pieces' => 22.0, 'rangMag' => 2], 3 => ['pieces' => 12.0, 'rangMag' => 3]]];
+$cfgS = ['actif' => true, 'liste' => [['cle' => 'pz', 'lib' => 'Promo Z', 'magasin' => 40, 'minPieces' => 20, 'regle' => 'seuil']]];
+verifie('au seuil : la 1re et la 2e au-dessus de 20 gagnent, pas la 3e', concoursPrime($clsS, 1, $cfgS) === 40 && concoursPrime($clsS, 2, $cfgS) === 40 && concoursPrime($clsS, 3, $cfgS) === 0);
+$cfgS['liste'][0]['regle'] = 'premiere';
+verifie('à la 1re du magasin : seule la 1re gagne', concoursPrime($clsS, 1, $cfgS) === 40 && concoursPrime($clsS, 2, $cfgS) === 0);
+$jS = primesCarteJauge(['cle' => 'pz', 'type' => 'promo', 'etat' => 'att', 'val' => 12.0, 'minPieces' => 20, 'regle' => 'seuil', 'premier' => ['nom' => 'A', 'q' => 25.0, 'moi' => false]]);
+verifie('la carte d’une promo au seuil vise le seuil, pas la 1re', $jS['repereType'] === 'cible' && $jS['repereVal'] === 20.0);
+$GLOBALS['CORPS'] = ['liste' => $avantListe];
+wr_primes_app();
+
 // --- 7. les cartes de l'app ------------------------------------------------------------------
 echo "Les cartes de l'app\n";
 $b = ['croisees' => ['taux' => 56.0, 'cible' => 55.0, 'montant' => 50, 'tickets' => 262, 'minTickets' => 30],

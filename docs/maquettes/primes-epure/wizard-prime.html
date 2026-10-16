@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nouvelle prime : assistant</title>
+<!-- Maquette (16/10/2026) : l'assistant de création d'une prime « promotion » dans le cockpit (Analyse magasin →
+     Équipe & ventes → Paramètres → Primes de l'app worker → « + Nouvelle prime »). Quatre étapes ; les produits se
+     choisissent par une barre de recherche (catégories, sous-catégories, produits du vrai catalogue). Styles du
+     design system du cockpit (assets/ds/global.css), le reste ici avec ses variables. -->
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/css/app.css">
+<style>
+  body{margin:0;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)}
+  .etape{padding:28px 0 36px;background:rgba(34,34,34,.45)}
+  .etape + .etape{border-top:6px solid var(--color-bg)}
+  .lbl{max-width:760px;margin:0 auto 10px;font:600 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#fff}
+  .mod{max-width:760px;margin:0 auto;background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden}
+  .mod-h{display:flex;align-items:center;gap:12px;padding:18px 22px 12px}
+  .mod-h h2{margin:0;font:400 24px/1.1 var(--font-display);color:var(--color-text)}
+  .mod-h .x{margin-left:auto;font-size:20px;color:var(--color-text-muted)}
+  .pas{display:flex;gap:6px;padding:0 22px 14px;border-bottom:.5px solid var(--color-border-tertiary)}
+  .pas span{flex:1;display:flex;align-items:center;gap:8px;font:600 12px var(--font-ui);color:var(--color-text-muted);padding:8px 10px;border-radius:var(--radius-md);background:var(--color-background-secondary)}
+  .pas span b{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--color-surface);border:1px solid var(--color-border-secondary);font-size:11px}
+  .pas span.on{background:var(--color-primary);color:#fff}
+  .pas span.on b{background:#fff;color:var(--color-primary);border-color:#fff}
+  .pas span.fait{color:var(--color-text)}
+  .pas span.fait b{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+  .corps{padding:18px 22px 6px;min-height:330px}
+  .pied{display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+  .pied .info{font-size:12.5px;color:var(--color-text-muted)}
+  .pied .info b{color:var(--color-text)}
+  .btn{border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:var(--radius-pill);padding:9px 18px;font:600 13px var(--font-ui)}
+  .btn.prim{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+  .btn.d{margin-left:auto}
+  .q{font:600 13.5px var(--font-ui);margin:0 0 10px}
+  .mu{color:var(--color-text-muted)}
+  .onglets{display:inline-flex;background:var(--color-background-secondary);border-radius:var(--radius-pill);padding:3px;margin-bottom:14px}
+  .onglets span{padding:7px 14px;border-radius:var(--radius-pill);font:600 12.5px var(--font-ui);color:var(--color-text-muted)}
+  .onglets span.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  /* La barre de recherche et ses résultats groupés. */
+  .rech{position:relative}
+  .rech input{width:100%;box-sizing:border-box;border:1.5px solid var(--color-text);border-radius:var(--radius-md);padding:11px 14px 11px 38px;font:500 14px var(--font-ui)}
+  .rech .loupe{position:absolute;left:13px;top:11px;font-size:15px;color:var(--color-text-muted)}
+  .res{border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);margin-top:6px;box-shadow:0 10px 24px rgba(0,0,0,.08);max-height:300px;overflow:hidden}
+  .grp{font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);padding:9px 14px 4px;background:var(--color-background-secondary)}
+  .li{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13.5px;border-top:.5px solid var(--color-border-tertiary)}
+  .li .t{flex:1}
+  .li .t small{display:block;font-size:11.5px;color:var(--color-text-muted)}
+  .li .n{font-size:12px;color:var(--color-text-muted)}
+  .li .plus{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--color-border-secondary);font-weight:700}
+  .li.pris{background:#FBF3EE}
+  .li.pris .plus{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+  .li mark{background:#FCE7A6;padding:0 1px;border-radius:2px}
+  .puces{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .puce{display:inline-flex;align-items:center;gap:6px;background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);border-radius:var(--radius-pill);padding:5px 6px 5px 10px;font-size:12.5px}
+  .puce i{font-style:normal;font:700 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .puce .x2{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--color-surface);font-size:11px;color:var(--color-text-muted)}
+  .avis{font-size:12.5px;line-height:1.45;background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot);border-radius:var(--radius-md);padding:10px 12px}
+  /* Période, magasins, règle. */
+  .ligne{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .chp{border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:9px 12px;font:500 13.5px var(--font-ui);background:var(--color-surface);min-width:120px}
+  .pill{border:1px solid var(--color-border-secondary);border-radius:var(--radius-pill);padding:7px 13px;font:600 12.5px var(--font-ui);color:var(--color-text-muted)}
+  .pill.on{background:var(--color-text);border-color:var(--color-text);color:#fff}
+  .mags{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .mag{display:flex;align-items:center;gap:10px;border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:10px 12px;font-size:13.5px}
+  .mag .cb{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--color-text);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .mag.on .cb{background:var(--color-text);color:#fff}
+  .cartes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  .carte{border:1.5px solid var(--color-border-secondary);border-radius:var(--radius-lg);padding:14px}
+  .carte.on{border-color:var(--color-primary);background:#FBF3EE}
+  .carte b{display:block;font-size:14px;margin:6px 0 4px}
+  .carte p{margin:0;font-size:12.5px;line-height:1.4;color:var(--color-text-muted)}
+  .carte .e{font-size:22px}
+  .grille2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
+  .lab{display:block;font:600 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px}
+  /* L'aperçu : la ligne « drapeau » de l'app. */
+  .apercu{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .tel{background:#EAE4DC;border-radius:var(--radius-lg);padding:14px}
+  .pl{background:#fff;border-radius:18px;padding:11px 14px 10px;box-shadow:0 6px 18px rgba(50,30,20,.05)}
+  .pl-h{display:flex;align-items:center;gap:9px}
+  .pl-h .em{width:30px;height:30px;border-radius:8px;background:#F4EFE8;display:flex;align-items:center;justify-content:center}
+  .pl-h b{flex:1;font:600 14px var(--font-ui)}
+  .pl-h .v{font:400 21px/1 var(--font-display);color:#8D1D2C}
+  .pl-h .v small{font:600 12px var(--font-ui);color:#666;margin-left:3px}
+  .pl-j{position:relative;height:10px;margin-top:30px;border-radius:999px;background:#EAE4DC}
+  .pl-j i{position:absolute;left:0;top:0;bottom:0;width:22%;border-radius:999px;background:#8D1D2C}
+  .pl-j .ob{position:absolute;left:75%;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#222}
+  .pl-j .fl{position:absolute;left:75%;bottom:calc(100% + 7px);transform:translateX(-50%);font:700 11px var(--font-ui);padding:3px 8px;border-radius:999px;background:#222;color:#fff;white-space:nowrap}
+  .pl-s{display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:#666;margin-top:8px}
+  .res2{font-size:13px;line-height:1.5}
+  .res2 div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:.5px dashed var(--color-border-secondary)}
+  .res2 div span:first-child{color:var(--color-text-muted)}
+  .res2 div span:last-child{font-weight:600;text-align:right}
+</style>
+</head>
+<body>
+
+<!-- ─────────────── 1. Les produits ─────────────── -->
+<section class="etape" id="e1">
+  <div class="lbl">Étape 1 — les produits</div>
+  <div class="mod">
+    <div class="mod-h"><h2>Nouvelle prime promotion</h2><span class="x">✕</span></div>
+    <div class="pas"><span class="on"><b>1</b>Produits</span><span><b>2</b>Période & magasins</span><span><b>3</b>Qui gagne</span><span><b>4</b>Nom & aperçu</span></div>
+    <div class="corps">
+      <div class="onglets"><span class="on">Choisir les produits</span><span>Promotions du panel (API)</span></div>
+      <p class="q">Quels produits comptent ? <span class="mu">Une catégorie, une sous-catégorie ou des produits : tout ce qui est ajouté compte.</span></p>
+      <div class="rech"><span class="loupe">🔍</span><input value="tart" aria-label="Rechercher"></div>
+      <div class="res">
+        <div class="grp">Catégories</div>
+        <div class="li"><div class="t"><mark>Tart</mark>es</div><span class="n">94 produits</span><span class="plus">+</span></div>
+        <div class="li"><div class="t">Pâtisserie · <mark>Tart</mark>es</div><span class="n">14 produits</span><span class="plus">+</span></div>
+        <div class="grp">Sous-catégories</div>
+        <div class="li pris"><div class="t"><mark>Tart</mark>es au sucre<small>dans Tartes</small></div><span class="n">8 produits</span><span class="plus">✓</span></div>
+        <div class="li"><div class="t"><mark>Tart</mark>e Fruits Frais<small>dans Tartes</small></div><span class="n">6 produits</span><span class="plus">+</span></div>
+        <div class="li"><div class="t"><mark>Tart</mark>es – Ø 28 cm<small>dans Tartes</small></div><span class="n">29 produits</span><span class="plus">+</span></div>
+        <div class="grp">Produits</div>
+        <div class="li pris"><div class="t"><mark>Tart</mark>e Fraises<small>Tarte Fruits Frais</small></div><span class="plus">✓</span></div>
+        <div class="li"><div class="t"><mark>Tart</mark>e Banane - Fraises<small>Tarte Fruits Frais</small></div><span class="plus">+</span></div>
+      </div>
+      <div class="puces">
+        <span class="puce"><i>Sous-catégorie</i> Tartes au sucre · 8<span class="x2">✕</span></span>
+        <span class="puce"><i>Produit</i> Tarte Fraises<span class="x2">✕</span></span>
+      </div>
+    </div>
+    <div class="pied"><span class="info"><b>9 produits</b> comptés · <u>voir la liste</u></span><button class="btn d">Annuler</button><button class="btn prim">Suivant ›</button></div>
+  </div>
+</section>
+
+<!-- ─────────────── 1 bis. Les promotions du panel (API) ─────────────── -->
+<section class="etape" id="e1b">
+  <div class="lbl">Étape 1 — ou partir d’une promotion du panel</div>
+  <div class="mod">
+    <div class="mod-h"><h2>Nouvelle prime promotion</h2><span class="x">✕</span></div>
+    <div class="pas"><span class="on"><b>1</b>Produits</span><span><b>2</b>Période & magasins</span><span><b>3</b>Qui gagne</span><span><b>4</b>Nom & aperçu</span></div>
+    <div class="corps">
+      <div class="onglets"><span>Choisir les produits</span><span class="on">Promotions du panel (API)</span></div>
+      <p class="q">Partir d’une promotion du panel <span class="mu">— ses produits, ses dates et ses magasins sont repris.</span></p>
+      <div class="avis"><b>L’API promotions du panel refuse l’accès au compte du cockpit (403).</b> Aucune promotion ne peut être lue tant
+        que l’accès n’est pas ouvert côté panel (bundles, buy-x-get-y, quantity, scheduled-product-discount). En attendant :
+        « Choisir les produits ».</div>
+    </div>
+    <div class="pied"><span class="info">—</span><button class="btn d">Annuler</button><button class="btn" disabled style="opacity:.4">Suivant ›</button></div>
+  </div>
+</section>
+
+<!-- ─────────────── 2. Période et magasins ─────────────── -->
+<section class="etape" id="e2">
+  <div class="lbl">Étape 2 — période & magasins</div>
+  <div class="mod">
+    <div class="mod-h"><h2>Nouvelle prime promotion</h2><span class="x">✕</span></div>
+    <div class="pas"><span class="fait"><b>✓</b>Produits</span><span class="on"><b>2</b>Période & magasins</span><span><b>3</b>Qui gagne</span><span><b>4</b>Nom & aperçu</span></div>
+    <div class="corps">
+      <p class="q">Quand ?</p>
+      <div class="ligne"><span class="pill">Ce mois-ci</span><span class="pill on">Le mois prochain</span><span class="pill">Dates libres</span></div>
+      <div class="ligne"><span class="lab" style="margin:0">du</span><span class="chp">01/11/2026</span><span class="lab" style="margin:0">au</span><span class="chp">30/11/2026</span><span class="mu" style="font-size:12.5px">30 jours · les pièces se comptent sur ces dates seulement</span></div>
+      <p class="q" style="margin-top:22px">Dans quels magasins ?</p>
+      <div class="ligne"><span class="pill on">Tous</span><span class="pill">Choisir</span></div>
+      <div class="mags">
+        <div class="mag on"><span class="cb">✓</span>Halle</div>
+        <div class="mag on"><span class="cb">✓</span>Corbais</div>
+        <div class="mag on"><span class="cb">✓</span>Sombreffe</div>
+        <div class="mag on"><span class="cb">✓</span>Gosselies</div>
+      </div>
+    </div>
+    <div class="pied"><span class="info"><b>9 produits</b> · du 1er au 30 novembre · 4 magasins</span><button class="btn d">‹ Retour</button><button class="btn prim">Suivant ›</button></div>
+  </div>
+</section>
+
+<!-- ─────────────── 3. Qui gagne ─────────────── -->
+<section class="etape" id="e3">
+  <div class="lbl">Étape 3 — qui gagne, combien</div>
+  <div class="mod">
+    <div class="mod-h"><h2>Nouvelle prime promotion</h2><span class="x">✕</span></div>
+    <div class="pas"><span class="fait"><b>✓</b>Produits</span><span class="fait"><b>✓</b>Période & magasins</span><span class="on"><b>3</b>Qui gagne</span><span><b>4</b>Nom & aperçu</span></div>
+    <div class="corps">
+      <p class="q">Qui gagne ?</p>
+      <div class="cartes">
+        <div class="carte on"><span class="e">👑</span><b>La 1re de chaque magasin</b><p>La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.</p></div>
+        <div class="carte"><span class="e">🎯</span><b>Chaque vendeuse au-dessus d’un seuil</b><p>Toutes celles qui atteignent le nombre de pièces fixé.</p></div>
+      </div>
+      <div class="grille2">
+        <div><span class="lab">Minimum de pièces pour être classée</span><span class="chp" style="display:inline-block;min-width:80px">10</span> <span class="mu">pcs</span></div>
+        <div><span class="lab">Récompense</span><span class="chp" style="display:inline-block;min-width:80px">50</span> <span class="mu">€ par magasin</span></div>
+        <div><span class="lab">Payée par</span><span class="pill on">Marque</span> <span class="pill">Magasin</span> <span class="pill">Sponsor</span></div>
+        <div><span class="lab">Moyenne réseau, pour régler le seuil</span><span style="font-size:13px"><b>23 pcs</b> <span class="mu">par vendeuse et par mois sur ces produits</span></span></div>
+      </div>
+    </div>
+    <div class="pied"><span class="info"><b>4 magasins × 50 €</b> = 200 € au plus</span><button class="btn d">‹ Retour</button><button class="btn prim">Suivant ›</button></div>
+  </div>
+</section>
+
+<!-- ─────────────── 4. Nom et aperçu ─────────────── -->
+<section class="etape" id="e4">
+  <div class="lbl">Étape 4 — nom & aperçu</div>
+  <div class="mod">
+    <div class="mod-h"><h2>Nouvelle prime promotion</h2><span class="x">✕</span></div>
+    <div class="pas"><span class="fait"><b>✓</b>Produits</span><span class="fait"><b>✓</b>Période & magasins</span><span class="fait"><b>✓</b>Qui gagne</span><span class="on"><b>4</b>Nom & aperçu</span></div>
+    <div class="corps">
+      <div class="apercu">
+        <div>
+          <span class="lab">Nom dans l’app</span><div class="chp" style="margin-bottom:14px">Queen of Tartes au sucre</div>
+          <span class="lab">Icône</span><div class="ligne"><span class="chp" style="min-width:0;padding:8px 12px">🥧</span><span class="mu" style="font-size:12.5px">ou déposer une image (PNG, SVG…)</span></div>
+          <div class="res2">
+            <div><span>Produits</span><span>Tartes au sucre (8) + Tarte Fraises</span></div>
+            <div><span>Période</span><span>1er → 30 novembre 2026</span></div>
+            <div><span>Magasins</span><span>les 4</span></div>
+            <div><span>Gagne</span><span>la 1re de chaque magasin, 10 pcs min.</span></div>
+            <div><span>Récompense</span><span>50 € · payée par la marque</span></div>
+          </div>
+        </div>
+        <div>
+          <span class="lab">Aperçu dans l’app</span>
+          <div class="tel">
+            <div class="pl"><div class="pl-h"><span class="em">🥧</span><b>Queen of Tartes au sucre</b><span class="v">4<small>pcs</small></span></div>
+              <div class="pl-j"><i></i><span class="ob"></span><span class="fl">50 €</span></div>
+              <div class="pl-s"><span><b style="color:#222">3e / 7</b> · encore 11 pcs pour être 1re</span><span>👑 Léa 14</span></div></div>
+          </div>
+          <p class="mu" style="font-size:12px;margin:8px 2px 0">Elle apparaît dans Mes primes le 1er novembre, avec son classement.</p>
+        </div>
+      </div>
+    </div>
+    <div class="pied"><span class="info">Active dès sa création</span><button class="btn d">‹ Retour</button><button class="btn prim">Créer la prime</button></div>
+  </div>
+</section>
+
+</body>
+</html>

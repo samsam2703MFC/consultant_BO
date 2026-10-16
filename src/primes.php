@@ -205,7 +205,7 @@ function promosConfig(string $m, ?string $shop = null): array
 {
     return array_map(static fn ($e) => ['cle' => $e['cle'], 'lib' => $e['lib'], 'magasin' => (int) $e['montant'], 'reseau' => 0, 'minPieces' => (int) $e['minPieces'],
         'du' => $e['promo']['du'], 'au' => $e['promo']['au'], 'classement' => (bool) $e['classement'], 'shops' => $e['promo']['shops'],
-        'sorte' => $e['promo']['sorte']], promosDuMois($m, $shop));
+        'sorte' => $e['promo']['sorte'], 'regle' => $e['regle'] ?? 'premiere'], promosDuMois($m, $shop));
 }
 
 /** Le classement des promos d'un mois : leurs pièces sur leurs dates (« qp »), dans leurs magasins. */
@@ -217,8 +217,9 @@ function promosClassement(?array $cr, array $emps, array $promos): array
 }
 
 /**
- * Les titres d'une personne sur une liste de familles (catégories ou promos) : [{cle, lib, niveau: magasin, montant}].
- * La 1re du magasin gagne la récompense ; la couronne du réseau n'est plus payée (une récompense par prime).
+ * Les titres d'une personne sur une liste de familles (catégories ou promos) : [{cle, lib, niveau: magasin|seuil, montant}].
+ * La 1re du magasin gagne la récompense ; la couronne du réseau n'est plus payée (une récompense par prime). Une promo à
+ * la règle « seuil » (16/10/2026) : chaque vendeuse qui atteint le nombre de pièces gagne la récompense.
  */
 function concoursTitres(array $classements, int $id, array $cfg): array
 {
@@ -227,7 +228,10 @@ function concoursTitres(array $classements, int $id, array $cfg): array
     foreach ($cfg['liste'] as $k) {
         $cl = $classements[$k['cle']][$id] ?? null;
         if ($cl === null) { continue; }
-        if (($cl['rangMag'] ?? null) === 1 && (int) $k['magasin'] > 0) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'magasin', 'montant' => (int) $k['magasin']]; }
+        if ((int) $k['magasin'] <= 0) { continue; }
+        if (($k['regle'] ?? 'premiere') === 'seuil') {
+            if ((float) ($cl['pieces'] ?? 0) > 0 && (float) ($cl['pieces'] ?? 0) >= max(1, (int) $k['minPieces'])) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'seuil', 'montant' => (int) $k['magasin']]; }
+        } elseif (($cl['rangMag'] ?? null) === 1) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'magasin', 'montant' => (int) $k['magasin']]; }
     }
     return $out;
 }
@@ -632,8 +636,8 @@ function primesBriquePieces(int $emp, array $cfg, array $cls, int $tickets): arr
             'rangMag' => $k['rangMag'] ?? null, 'surMag' => $k['surMag'] ?? 0, 'rangRes' => $k['rangRes'] ?? null, 'surRes' => $k['surRes'] ?? 0,
             'premierMag' => $k['premierMag'] ?? null, 'premierRes' => $k['premierRes'] ?? null,
             'montantMag' => (int) $kc['magasin'], 'montantRes' => 0, 'minPieces' => (int) $kc['minPieces'],
-            'du' => $kc['du'] ?? null, 'au' => $kc['au'] ?? null,
-            'titre' => $titre, 'montant' => $titre === 'magasin' ? (int) $kc['magasin'] : 0];
+            'du' => $kc['du'] ?? null, 'au' => $kc['au'] ?? null, 'regle' => $kc['regle'] ?? 'premiere',
+            'titre' => $titre, 'montant' => $titre !== null ? (int) $kc['magasin'] : 0];
     }
     $piecesTot = 0.0; $unCompte = false;
     foreach ($liste as $x) { if ($x['pieces'] !== null) { $unCompte = true; $piecesTot += $x['pieces']; } }
