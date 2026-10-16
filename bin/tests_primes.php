@@ -260,6 +260,22 @@ verifie('objectif d’un mois clos : pas de repère du jour', array_column(prime
 verifie('catégorie, 2e : l’objectif est de passer la 1re (51 + 1)', $par['tartes']['repereType'] === 'passer' && $par['tartes']['repereVal'] === 52.0);
 verifie('promo, 1re : l’objectif est de garder la place devant la 2e (30)', $par['pc900']['repereType'] === 'garder' && $par['pc900']['repereVal'] === 30.0);
 verifie('meilleure vendeuse : passer la 1re du magasin (61 + 1)', $par['meilleure']['repereType'] === 'passer' && $par['meilleure']['repereVal'] === 62.0);
+// Les catégories : la quantité pour être 1re, pas une jauge (16/10/2026).
+verifie('catégorie, 2e à 42 pièces derrière 51 : 10 pièces pour être 1re', $par['tartes']['pour1'] === 10 && $par['tartes']['avance1'] === null);
+verifie('la promo garde sa jauge (pas de quantité pour être 1re)', $par['pc900']['pour1'] === null && $par['pc900']['jauge'] !== null);
+$cat = static fn (array $c) => primesCarteJauge($c + ['cle' => 'q', 'type' => 'categorie', 'val' => 27.0, 'minPieces' => 10, 'premier' => null, 'second' => null]);
+verifie('catégorie, 1re à 27 devant 24 : 3 pièces d’avance', $cat(['premier' => ['nom' => 'Toi', 'q' => 27.0, 'moi' => true], 'second' => ['nom' => 'Sarah', 'q' => 24.0, 'moi' => false]])['avance1'] === 3);
+verifie('catégorie, personne classée : le minimum fait la 1re (10 − 4 = 6)', $cat(['val' => 4.0])['pour1'] === 6);
+verifie('catégorie, en tête mais sous le minimum : ce qui manque au minimum', $cat(['val' => 7.0, 'premier' => ['nom' => 'Toi', 'q' => 7.0, 'moi' => true]])['pour1'] === 3);
+verifie('catégorie, la 1re sous le minimum : le minimum compte (10 − 2 = 8)', $cat(['val' => 2.0, 'premier' => ['nom' => 'Léa', 'q' => 5.0, 'moi' => false]])['pour1'] === 8);
+verifie('catégorie pas encore comptée : ni quantité ni avance', $cat(['val' => null])['pour1'] === null && $cat(['val' => null])['avance1'] === null);
+// Le podium des catégories (16/10/2026).
+verifie('podium de la catégorie : Léa 51 puis elle 42', array_map(static fn ($x) => [$x['rang'], $x['nom'], $x['q'], $x['moi']], $par['tartes']['podium']) === [[1, 'Léa', 51.0, false], [2, 'Toi', 42.0, true]], json_encode($par['tartes']['podium']));
+verifie('pas de podium pour une promo', $par['pc900']['podium'] === []);
+$cl5 = ['magasin' => [['nom' => 'A', 'pieces' => 9.0, 'rang' => 1], ['nom' => 'B', 'pieces' => 8.0, 'rang' => 2], ['nom' => 'C', 'pieces' => 7.0, 'rang' => 3], ['nom' => 'D', 'pieces' => 6.0, 'rang' => 4], ['nom' => 'Moi', 'pieces' => 5.0, 'rang' => 5, 'moi' => true]]];
+verifie('5e du magasin : la 1re, la 2e, puis elle à son rang', array_column(primesPodium($cl5), 'rang') === [1, 2, 5] && primesPodium($cl5)[2]['moi']);
+verifie('3e du magasin : les trois premières telles quelles', array_column(primesPodium(['magasin' => array_slice($cl5['magasin'], 0, 3)]), 'nom') === ['A', 'B', 'C']);
+verifie('personne dans le classement : podium vide', primesPodium(null) === []);
 
 // --- 7 bis. la note Google : 25 € par personne à 4,5 ou mieux (14/10/2026) ----------------------
 echo "La note Google\n";

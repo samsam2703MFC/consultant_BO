@@ -787,6 +787,19 @@ function primesTete(?array $cl, string $champ): array
 }
 
 /**
+ * Le podium d'une catégorie (16/10/2026) : les trois premières du magasin, chacune avec son rang, son nom et ses
+ * pièces ; quand elle est plus loin, elle prend la 3e ligne (1re, 2e, puis elle à son rang).
+ */
+function primesPodium(?array $cl): array
+{
+    $l = array_values((array) ($cl['magasin'] ?? []));
+    foreach ($l as $i => $x) { $l[$i]['rang'] = (int) ($x['rang'] ?? $i + 1); }
+    $out = array_slice($l, 0, 3);
+    foreach ($l as $x) { if (!empty($x['moi']) && (int) ($x['rang'] ?? 0) > 3 && count($out) === 3) { $out[2] = $x; } }
+    return array_map(static fn ($x) => ['rang' => $x['rang'], 'nom' => (string) ($x['nom'] ?? ''), 'q' => (float) ($x['pieces'] ?? 0), 'moi' => (bool) ($x['moi'] ?? false)], $out);
+}
+
+/**
  * Les cartes de « Mes primes », dans l'ordre du réglage : les ventes croisées, Bats ton record,
  * l'objectif du magasin, la note Google, la meilleure vendeuse, puis les catégories et les promos. Une
  * carte dit la récompense, l'état (gagne | tete | rang | att | vide), la mesure, la jauge, et la 1re
@@ -865,7 +878,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         $cartes[] = ['cle' => $q['cle'], 'type' => $q['type'], 'emo' => $q['emo'], 'icone' => primesIconeDe($q['cle']), 'lib' => $q['lib'], 'montant' => (int) $q['montantMag'], 'max' => false,
             'gain' => (float) $q['montant'], 'etat' => $etat, 'val' => $p, 'unite' => 'pcs', 'rang' => $q['rangMag'], 'sur' => $q['surMag'],
             'minPieces' => (int) $q['minPieces'], 'ecart' => ($p !== null && $q['rangMag'] === null) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
-            'premier' => $un, 'second' => $deux,
+            'premier' => $un, 'second' => $deux, 'podium' => $q['type'] === 'categorie' ? primesPodium($clDe[$q['cle']] ?? null) : [],
             'du' => $q['du'] ?? null, 'au' => $q['au'] ?? null,
             'motif' => $p === null ? 'pas_compte' : null, 'classement' => isset($clDe[$q['cle']])];
     }
@@ -908,7 +921,15 @@ function primesCarteJauge(array $c): array
         $haut = max((float) ($rVal ?? 0), (float) ($v ?? 0), (float) ($c['minPieces'] ?? 0)) * 1.15;
     }
     $ok = $v !== null && $haut !== null && $haut > $bas;
-    return $c + ['jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
+    // Les catégories (16/10/2026) : pas de jauge, la quantité qu'il faut pour être 1re (« pour1 »), ou, en tête,
+    // l'avance sur la 2e (« avance1 »).
+    $pour1 = null; $avance1 = null;
+    if (($c['type'] ?? '') === 'categorie' && $v !== null) {
+        $un = $c['premier'] ?? null; $deux = $c['second'] ?? null; $min = (float) ($c['minPieces'] ?? 0);
+        if ($un !== null && $un['moi'] && $v >= $min) { $avance1 = $deux !== null ? (int) floor($v - (float) $deux['q']) : null; }
+        else { $pour1 = max(1, (int) ceil(max($un !== null && !$un['moi'] ? floor((float) $un['q']) + 1 : 1, $min) - $v)); }
+    }
+    return $c + ['pour1' => $pour1, 'avance1' => $avance1, 'jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
         'repere' => ($haut !== null && $haut > $bas && $rVal !== null) ? primesJauge($rVal, $bas, $haut) : null,
         'repereType' => $rVal !== null ? $rType : null, 'repereVal' => $rVal,
         'repereJour' => ($haut !== null && $jour !== null) ? primesJauge($jour, $bas, $haut) : null];

@@ -596,7 +596,11 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   meilleure vendeuse), `garder` (elle est 1re : le chiffre de la 2e), `min` (personne n'a vendu : le minimum de
   pièces) ; `repereVal` le chiffre à atteindre. L'objectif du magasin en cours de mois porte `aDate`
   (l'atteinte à date), `jour`, `cibleJour` (où en être au jour J, au prorata des jours), `repereJour` (sa
-  position), `avance` (aDate − cibleJour) ; `val` reste la projection. La page **Statistiques** de l'app lit la
+  position), `avance` (aDate − cibleJour) ; `val` reste la projection. Les **catégories** n'ont plus de jauge à
+  l'écran mais un podium : `podium` = `[{rang, nom, q, moi}]`, les trois premières du magasin (elle à la 3e ligne,
+  à son rang, quand elle est plus loin ; vide pour une promo ou un target) ; `pour1` = les pièces qu'il lui faut
+  pour être 1re (dépasser la 1re, le minimum compris), `avance1` = son avance sur la 2e quand elle mène. La fiche porte `v` (sa forme, 5 au
+  16/10/2026) : un cache d'une autre forme est recalculé, un déploiement ne sert pas une fiche d'avant. La page **Statistiques** de l'app lit la
   même fiche, ses chiffres à elle seule : briques (ticket moyen `meilleure.panier`, lignes par ticket
   `record.lt`, ventes croisées, CA, CA par heure, tickets, places), aujourdhui, collection, et `semaines12`, dont
   chaque semaine porte depuis le 16/10/2026 `panier` (son CA ÷ ses tickets), `lignesTicket`, et `mag` / `res` :
