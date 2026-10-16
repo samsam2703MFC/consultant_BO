@@ -880,6 +880,8 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
 {
     // Un mois à venir (16/10/2026) : rien à compter encore — les primes prévues, leur récompense, leur objectif.
     if ($m > date('Y-m') && function_exists('primesAVenir')) { return primesAVenir($emp, $m); }
+    // Les primes de ce mois-là : une catégorie ou un target hors de sa période n'y est pas (16/10/2026).
+    if (function_exists('primesAppMois')) { primesAppMois($m, true); }
     $cle = 'primesMoi' . $emp . ':' . $m;
     $enCours = $m === date('Y-m');
     if (!$frais) {
@@ -1114,6 +1116,7 @@ function primesSemaines12(int $emp, int $sid): array
  */
 function primesMoisTous(string $m, bool $frais = false): array
 {
+    if (function_exists('primesAppMois')) { primesAppMois($m, true); }
     $cle = 'primesTous' . $m;
     $enCours = $m === date('Y-m');
     if (!$frais) {

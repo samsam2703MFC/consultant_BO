@@ -574,6 +574,13 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
+- **La période d'une prime** (16/10/2026) : une catégorie ou un target (ventes croisées, objectif, note Google) porte
+  `du` / `au` (AAAA-MM-JJ, l'un ou l'autre ou aucun ; à l'envers, remis dans l'ordre) ; une promo a les dates de sa
+  promotion. Une prime compte et s'affiche dans **chaque mois que sa période touche**, nulle part ailleurs : le mois
+  calculé (`primesAppMois`, posé par la fiche, le mois à venir et les primes du mois) lit une prime hors période comme
+  éteinte (`primesAppEntree`, `primesAppDuType`) ; les réglages et l'enregistrement lisent la liste telle quelle.
+  Cockpit : l'assistant (catégorie) propose « Tous les mois, sans fin » ou « Entre deux dates », la fenêtre de réglage
+  des targets « Du » / « Au » ; le tableau montre la période et « à venir » / « terminée » face au mois en cours.
 - **Sur objectif** (16/10/2026) : deux règles de plus pour une prime promo, posées par l'assistant. `regle: magasin` —
   une **prime pour le magasin** : quand le **total du magasin** sur les produits et la période atteint son objectif, la
   récompense est **une seule somme pour le magasin**, partagée à parts égales (au centime) entre ses vendeuses du mois

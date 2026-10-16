@@ -176,7 +176,42 @@ function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
         $e['cle'] = primesAppClePromo($e['promo'], $shop);
         return $e + ['famille' => 'magasin', 'shop' => $shop, 'payeur' => 'magasin', 'sponsor' => ''] + $icone;
     }
+    // La période (16/10/2026) : une catégorie ou un target peut tourner du … au … (vide : sans début, sans fin) ; une promo
+    // a les dates de sa promotion.
+    if ($e['type'] !== 'promo') {
+        [$du, $au] = [primesAppDate($x['du'] ?? null), primesAppDate($x['au'] ?? null)];
+        if ($du !== null && $au !== null && $au < $du) { [$du, $au] = [$au, $du]; }
+        $e += ['du' => $du, 'au' => $au];
+    }
     return $e + ['famille' => 'marque'] + primesAppPayeur($x) + $icone;
+}
+
+/**
+ * Le mois qu'on calcule (16/10/2026) : posé par la fiche d'une personne, le mois à venir ou les primes du mois. Une
+ * catégorie ou un target hors de sa période, ce mois-là, est lu comme éteint (primesAppEntree, primesAppDuType) ; les
+ * réglages et l'enregistrement lisent la liste telle quelle (primesAppReglages).
+ */
+function primesAppMois(?string $m = null, bool $poser = false): ?string
+{
+    static $mois = null;
+    if ($poser) { $mois = $m; }
+    return $mois;
+}
+
+/** Une prime tourne-t-elle ce mois-là ? Sa période (du, au) touche le mois ; sans période, toujours. */
+function primesAppEnVigueur(array $e, string $m): bool
+{
+    $debut = $m . '-01'; $fin = date('Y-m-t', strtotime($debut));
+    $du = $e['du'] ?? null; $au = $e['au'] ?? null;
+    return ($du === null || $du <= $fin) && ($au === null || $au >= $debut);
+}
+
+/** L'entrée telle que le mois calculé la voit : éteinte hors de sa période (une promo garde les dates de sa promotion). */
+function primesAppAuMois(array $e): array
+{
+    $m = primesAppMois();
+    if ($m !== null && $e['type'] !== 'promo' && $e['actif'] && !primesAppEnVigueur($e, $m)) { $e['actif'] = false; }
+    return $e;
 }
 
 function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?array
@@ -340,14 +375,14 @@ function primesPayeurDe(string $cle): string
 /** Une entrée par sa clé, ou null. */
 function primesAppEntree(string $cle): ?array
 {
-    foreach (primesAppReglages()['liste'] as $e) { if ($e['cle'] === $cle) { return $e; } }
+    foreach (primesAppReglages()['liste'] as $e) { if ($e['cle'] === $cle) { return primesAppAuMois($e); } }
     return null;
 }
 
 /** Les entrées d'un type, actives seulement si demandé. */
 function primesAppDuType(string $type, bool $actives = true): array
 {
-    return array_values(array_filter(primesAppReglages()['liste'], static fn ($e) => $e['type'] === $type && (!$actives || $e['actif'])));
+    return array_values(array_filter(array_map('primesAppAuMois', primesAppReglages()['liste']), static fn ($e) => $e['type'] === $type && (!$actives || $e['actif'])));
 }
 
 /** Les fiches calculées en cache (le mois en cours, tout le monde) : un réglage change, elles se refont. */
@@ -1224,6 +1259,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
  */
 function primesAVenir(int $emp, string $m): array
 {
+    primesAppMois($m, true);
     $emps = venteEmployes();
     if (!isset($emps[$emp])) { return ['error' => 'personne inconnue', 'code' => 404]; }
     $shop = (string) $emps[$emp]['shop'];
