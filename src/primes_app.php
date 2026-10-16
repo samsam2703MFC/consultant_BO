@@ -384,9 +384,18 @@ function wr_primes_app(): array
                 // La prime d'un franchisé (16/10/2026) : un magasin, et un seul.
                 $shop = is_scalar($x['shop'] ?? null) && preg_match('/^\d+$/', (string) $x['shop']) ? (string) $x['shop'] : '';
                 if ($cle !== '' && isset($deja[$cle]) && $deja[$cle]['type'] === 'promo') {
-                    // Déjà là : sa promotion et sa famille restent ce qu'elles étaient.
-                    $x['promo'] = $deja[$cle]['promo'];
+                    // Déjà là : sa promotion et sa famille restent ce qu'elles étaient. Rouverte dans l'assistant (« refaire »,
+                    // 16/10/2026), une promo du cockpit relit ses produits, ses dates et ses magasins — même identifiant, même clé.
                     $x['famille'] = $deja[$cle]['famille'] ?? 'marque';
+                    $x['promo'] = $deja[$cle]['promo'];
+                    if (!empty($x['refaire']) && ($deja[$cle]['promo']['source'] ?? '') === 'cockpit' && is_array($x['promo_neuve'] ?? null)) {
+                        $pc = $x['promo_neuve'];
+                        if ($x['famille'] === 'magasin') { $pc['shops'] = $deja[$cle]['promo']['shops']; }
+                        $p = primesPromoCockpit($pc, (string) ($x['lib'] ?? ''));
+                        if (isset($p['error'])) { http_response_code(422); return ['error' => 'prime ' . ($i + 1) . ' : ' . $p['error']]; }
+                        $p['id'] = $deja[$cle]['promo']['id'];
+                        $x['promo'] = $p;
+                    }
                 } elseif (($x['ref']['source'] ?? '') === 'cockpit') {
                     $pc = is_array($x['promo'] ?? null) ? $x['promo'] : [];
                     if (($x['famille'] ?? '') === 'magasin') { $pc['shops'] = $shop !== '' ? [$shop] : []; }

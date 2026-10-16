@@ -7181,6 +7181,11 @@ class App {
       retirerIcone: () => { x.icone = ''; re(); },
     });
     const typLib = { target: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement' };
+    // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint s'enregistre tout de suite, le reste se
+    // modifie dans l'assistant (une promo) ou dans la fenêtre de réglage (targets, catégories, record, meilleure).
+    const sauver = quoi => this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms })
+      .then(r => { if (r && r.ok === false) { return; } finir(quoi); });
+    const payeurTxt = x => (x.famille === 'magasin' ? (nomMag[x.shop] || x.shop || 'Magasin') + ' — le magasin' : x.payeur === 'sponsor' && x.sponsor ? 'Sponsor · ' + x.sponsor : 'Marque');
     const lignes = [];
     app.liste.forEach((e, i) => {
       const L = Object.assign(icone(e), { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
@@ -7196,7 +7201,20 @@ class App {
         payeur: e.payeur || 'marque', sponsor: e.sponsor || '',
         // La famille (16/10/2026) : la marque (ou un sponsor), ou le franchisé pour son magasin.
         famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', shopNom: nomMag[e.shop] || e.shop || '',
-        poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); } });
+        poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); },
+        payeurTxt: payeurTxt(e), montantTxt: (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
+        basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
+        modifier: () => this.setState(e.type === 'promo' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }) });
+      // Ce qui compte, en clair (le tableau ne s'édite plus).
+      const regleTxt = { seuil: (e.minPieces || 0) + ' pcs (seuil)', premiere: e.minPieces ? e.minPieces + ' pcs min.' : '' };
+      L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %) · ' + cr.minTickets + ' tickets min.'
+          + (Object.keys(cr.cibles).length ? ' · ' + Object.keys(cr.cibles).length + ' magasin(s) avec sa cible' : '')
+        : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif · ' + (e.heuresMin ?? 20) + ' h min.'
+        : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★ · ' + (e.heuresMin ?? 20) + ' h min.'
+        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' » · ' + (e.minPieces ?? 10) + ' pcs min.'
+        : e.type === 'promo' ? [(e.promo || {}).nom, sorte(e.promo || {}), dates(e.promo || {}), mags(e.promo || {}), { api: 'panel', cockpit: 'créée dans le cockpit' }[(e.promo || {}).source]].filter(Boolean).join(' · ')
+          + (e.regle === 'magasin' || e.regle === 'vendeuse' ? '' : regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] ? ' · ' + regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] : '')
+        : '';
       if (e.cle === 'croisees') {
         Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
           categorie: e.categorie || '', categories: [''].concat(d.categories || []).concat(e.categorie && !(d.categories || []).includes(e.categorie) ? [e.categorie] : []),
@@ -7226,7 +7244,8 @@ class App {
       lignes.push(L);
       // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
       const ext = cle => { app.externes = app.externes || {}; app.externes[cle] = app.externes[cle] || { payeur: 'marque', sponsor: '', icone: '' }; const x = app.externes[cle];
-        return Object.assign(icone(x), { payeur: x.payeur || 'marque', sponsor: x.sponsor || '', poserPayeur: ev => { x.payeur = ev.target.value; re(); }, poserSponsor: ev => { x.sponsor = ev.target.value; re(); } }); };
+        return Object.assign(icone(x), { payeur: x.payeur || 'marque', sponsor: x.sponsor || '', poserPayeur: ev => { x.payeur = ev.target.value; re(); }, poserSponsor: ev => { x.sponsor = ev.target.value; re(); },
+          payeurTxt: payeurTxt(x), modifier: () => this.setState({ prEdit: editDe(null, cle) }) }); };
       if (e.cle === 'croisees' && (d.record || {}).eurDixieme > 0) {
         lignes.push(Object.assign(ext('record'), { externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
           montant: d.record.eurDixieme + ' € par dixième' + (d.record.maxDixiemes > 1 ? ', ' + d.record.maxDixiemes + ' au plus' : ''),
@@ -7251,6 +7270,18 @@ class App {
     const wizNeuf = (famille, shop, api) => ({ etape: 1, onglet: api ? 'panel' : 'produits', q: '', sel: [], api: api || null, periode: 'suivant', du: suivDu, au: suivAu,
       magsMode: 'tous', mags: [], regle: 'magasin', pct: '10', obj: {}, minPieces: '10', montant: String(app.recompense), payeur: famille === 'magasin' ? 'magasin' : 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false,
       famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null });
+    // Rouvrir une promo dans l'assistant (16/10/2026) : tout prérempli ; « edit » garde sa clé, le serveur refait ses produits.
+    const wizDe = e => {
+      const p = e.promo || {};
+      const W0 = wizNeuf(e.famille === 'magasin' ? 'magasin' : 'marque', e.shop || '', p.source === 'api' ? p : null);
+      const obj = {}; Object.keys(e.objectifs || {}).forEach(k => { obj[k] = String(e.objectifs[k]); });
+      return Object.assign(W0, { edit: e.cle, onglet: p.source === 'api' ? 'panel' : 'produits',
+        sel: p.source === 'cockpit' ? (p.sel || []).map(z => ({ t: z.t, v: z.v, lib: z.lib })) : [],
+        periode: 'libre', du: p.du || W0.du, au: p.au || W0.au, magsMode: (p.shops || []).length && e.famille !== 'magasin' ? 'choix' : 'tous', mags: (p.shops || []).slice(),
+        regle: ['seuil', 'magasin', 'vendeuse'].includes(e.regle) ? e.regle : 'premiere', pct: e.pct != null ? String(e.pct) : '10', obj,
+        minPieces: String(e.minPieces ?? 10), montant: String(e.montant ?? app.recompense), payeur: e.payeur === 'sponsor' ? 'sponsor' : (e.famille === 'magasin' ? 'magasin' : 'marque'),
+        sponsor: e.sponsor || '', nom: e.lib || '', nomTouche: true, iconeExist: e.icone || '' });
+    };
     common.prWiz = null;
     if (W) {
       const reW = () => this.setState({ prWiz: W });
@@ -7330,19 +7361,24 @@ class App {
         const base = { type: 'promo', lib: W.nom.trim(), montant: Math.round(montant), minPieces: surObj ? 0 : Math.round(minP || 0), regle: W.regle,
           objectifs: surObj ? objectifs : undefined, vendeuses: surObj ? vendeuses : undefined, n1: surObj ? ref : undefined, pct: surObj ? pct : undefined,
           payeur: fam ? 'magasin' : W.payeur, sponsor: fam ? '' : W.sponsor, actif: true, classement: true, famille: W.famille, shop: fam ? W.shop : '' };
+        // Rouverte : elle garde sa clé, son état, son classement, son icône ; « refaire » demande au serveur de relire ses produits.
+        const ancienne = W.edit ? app.liste.find(x => x.cle === W.edit) : null;
+        if (ancienne) { Object.assign(base, { cle: W.edit, refaire: true, actif: !!ancienne.actif, classement: ancienne.classement !== false, icone: W.iconeExist || '' }); }
         const e = W.api ? Object.assign(base, { ref: { source: W.api.source, id: W.api.id }, promo: W.api })
           : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
+        // Rouverte : la promo d'avant reste celle du serveur ; la nouvelle sélection part à côté (« promo_neuve »).
+        if (ancienne && !W.api) { e.promo_neuve = e.promo; e.promo = ancienne.promo; }
         W.envoi = true; reW();
         // L'icône choisie (un emoji ou une photo, déjà en PNG) se dépose d'abord : la prime garde son chemin.
         const icone = W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null);
         icone.then(ri => {
           if (W.icone && (!ri || ri.ok === false || !ri.icone)) { W.envoi = false; reW(); return; }
           if (ri && ri.icone) { e.icone = ri.icone; }
-          const liste = app.liste.concat([e]);
+          const liste = ancienne ? app.liste.map(x => (x.cle === W.edit ? e : x)) : app.liste.concat([e]);
           this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
             if (r && r.ok === false) { W.envoi = false; reW(); return; }
             this.setState({ prWiz: undefined });
-            finir('Prime « ' + W.nom.trim() + ' » créée');
+            finir('Prime « ' + W.nom.trim() + ' » ' + (ancienne ? 'modifiée' : 'créée'));
           });
         });
       };
@@ -7350,8 +7386,10 @@ class App {
         etape: W.etape, onglet: W.onglet, q: W.q, chargement: cat === undefined, catMotif: cat === null ? 'Le catalogue n’a pas pu être lu.' : '',
         res, vide: !!q && cat && !res.groupes.length && !res.categories.length && !res.produits.length, parcourir: !q,
         sel: W.sel.map(z => ({ type: { groupe: 'Catégorie', categorie: 'Sous-catégorie', produit: 'Produit' }[z.t], lib: z.lib, n: z.t === 'produit' ? '' : String(z.n || ''), retirer: basculer(z) })),
-        titre: fam ? 'Nouvelle prime du magasin' : 'Nouvelle prime promotion', fam,
-        compte, api: W.api, apiErreur: PR_ERR(), apiListe: (promos ? promos.liste : []).filter(p => (p.ids || []).length && (!fam || !W.shop || tourne(p, W.shop))).map(p => ({ nom: p.nom, sorte: sorte(p), dates: dates(p), magasins: mags(p), pris: !!(W.api && W.api.id === p.id && W.api.source === p.source),
+        titre: W.edit ? 'Modifier « ' + (W.nom || 'la prime') + ' »' : fam ? 'Nouvelle prime du magasin' : 'Nouvelle prime promotion', fam, edit: !!W.edit,
+        iconeExist: W.iconeExist ? racine + W.iconeExist : '',
+        supprimer: W.edit ? () => { if (!window.confirm('Supprimer la prime « ' + (W.nom || '') + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== W.edit); this.setState({ prWiz: undefined }); sauver('Prime supprimée'); } : null,
+        compte, api: W.api, apiErreur: PR_ERR(), apiListe: (promos ? promos.liste : []).filter(p => (p.ids || []).length && (!fam || !W.shop || tourne(p, W.shop)) && (!W.edit || !W.api || p.id === W.api.id)).map(p => ({ nom: p.nom, sorte: sorte(p), dates: dates(p), magasins: mags(p), pris: !!(W.api && W.api.id === p.id && W.api.source === p.source),
           choisir: () => { W.api = (W.api && W.api.id === p.id) ? null : p; W.sel = []; if (fam && W.api && W.shop && !tourne(W.api, W.shop)) { W.shop = ''; } reW(); } })),
         periode: W.periode, du, au, apiDates: !!W.api, magsMode: W.magsMode, mags: (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: W.magsMode === 'tous' || W.mags.includes(m.id),
           basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
@@ -7360,11 +7398,13 @@ class App {
         plafond: W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
           : surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
           : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
-        magsUn: magsPermis.map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
+        // Rouverte, la prime d'un franchisé reste à son magasin (sa clé le porte).
+        magsUn: magsPermis.filter(m => !W.edit || !fam || m.id === W.shop).map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
         ok: ok[W.etape], envoi: W.envoi,
         pas: ['Produits', 'Période & magasins', 'Qui gagne', 'Nom & aperçu'].map((nom, i) => ({ n: i + 1, nom, on: W.etape === i + 1, fait: W.etape > i + 1, aller: W.etape > i + 1 ? () => { W.etape = i + 1; reW(); } : null })),
         poserQ: ev => { W.q = ev.target.value; reW(); },
-        onglets: [['produits', 'Choisir les produits'], ['panel', 'Promotions du panel (API)']].map(([v, nom]) => ({ nom, on: W.onglet === v, choisir: () => { W.onglet = v; reW(); } })),
+        // Rouverte : une promo du panel reste la sienne, une promo du cockpit garde le choix des produits.
+        onglets: [['produits', 'Choisir les produits'], ['panel', 'Promotions du panel (API)']].filter(([v]) => !W.edit || (W.api ? v === 'panel' : v === 'produits')).map(([v, nom]) => ({ nom, on: W.onglet === v, choisir: () => { W.onglet = v; reW(); } })),
         periodes: [['mois', 'Ce mois-ci'], ['suivant', 'Le mois prochain'], ['libre', 'Dates libres']].map(([v, nom]) => ({ nom, on: W.periode === v,
           choisir: () => { W.periode = v; if (v !== 'libre') { [W.du, W.au] = moisDe(v === 'mois' ? 0 : 1); } reW(); } })),
         poserDu: ev => { W.du = ev.target.value; W.periode = 'libre'; reW(); }, poserAu: ev => { W.au = ev.target.value; W.periode = 'libre'; reW(); },
@@ -7384,7 +7424,7 @@ class App {
         poserSponsor: ev => { W.sponsor = ev.target.value; reW(); },
         poserNom: ev => { W.nom = ev.target.value; W.nomTouche = true; reW(); },
         // L'icône (16/10/2026) : un emoji dessiné en PNG, ou une photo recadrée au carré, réduite à 128 px, coins arrondis.
-        icone: W.icone ? W.icone.data : '', iconeSorte: W.icone ? W.icone.sorte : '',
+        icone: W.icone ? W.icone.data : (W.iconeExist ? racine + W.iconeExist : ''), iconeSorte: W.icone ? W.icone.sorte : '',
         emojis: PR_EMOJIS.map(em => ({ em, on: !!(W.icone && W.icone.sorte === 'emoji' && W.icone.em === em),
           choisir: () => { const data = prIconeEmoji(em); if (data) { W.icone = { sorte: 'emoji', em, data }; reW(); } } })),
         poserPhoto: ev => {
@@ -7394,11 +7434,93 @@ class App {
           if (!/^image\//.test(f.type)) { this.notify('Une image, s’il te plaît (photo JPEG, PNG, WebP)'); return; }
           prIconePhoto(f).then(data => { W.icone = { sorte: 'photo', data }; reW(); }).catch(() => this.notify('Cette photo n’a pas pu être lue'));
         },
-        retirerIcone: () => { W.icone = null; reW(); },
+        retirerIcone: () => { W.icone = null; W.iconeExist = ''; reW(); },
         fermer: () => this.setState({ prWiz: undefined }),
         precedent: () => { W.etape = Math.max(1, W.etape - 1); reW(); },
         suivant: () => { if (ok[W.etape]) { W.etape = Math.min(4, W.etape + 1); reW(); } },
         creer,
+      };
+    }
+
+    // La fenêtre de réglage (16/10/2026) : une prime qui n'est pas une promo — un target, une catégorie, Bats ton record,
+    // la meilleure vendeuse — se modifie ici, comme l'assistant : ses réglages, qui paie, son icône. « ext » : record ou meilleure.
+    const editDe = (e, ext) => {
+      const x = ext ? ((app.externes || {})[ext] || {}) : (e || {});
+      const nouveau = !e && !ext;
+      return { cle: e ? e.cle : '', ext: ext || '', type: ext ? 'ext' : (nouveau ? 'categorie' : (e.type === 'target' ? e.cle : e.type)), nouveau,
+        champs: nouveau ? { lib: '', motif: '', minPieces: '10', montant: String(app.recompense), classement: true }
+          : { lib: x.lib || '', motif: x.motif || '', minPieces: String(x.minPieces ?? 10), montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
+            categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin ?? 20), seuil: String(x.seuil ?? 4.5),
+            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets) },
+        payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
+    };
+    const PE = S.prEdit;
+    common.prEdit = null;
+    if (PE) {
+      const reE = () => this.setState({ prEdit: PE });
+      const f = PE.champs;
+      const ch = (cle, lib, sorte, plus) => Object.assign({ cle, lib, sorte, valeur: f[cle] == null ? '' : String(f[cle]), coche: !!f[cle],
+        poser: ev => { f[cle] = sorte === 'case' ? !!ev.target.checked : ev.target.value; reE(); } }, plus || {});
+      const montantCh = ch('montant', 'Récompense', 'nombre', { unite: '€', pas: 5 });
+      const champs = { croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
+          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh],
+        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh],
+        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh],
+        categorie: [ch('lib', 'Nom dans l’app', 'texte', { indice: 'Queen of …' }), ch('motif', 'Les produits dont le nom contient', 'texte', { indice: 'tarte' }),
+          ch('minPieces', 'Minimum de pièces pour être classée', 'nombre', { unite: 'pcs', pas: 1 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh],
+        ext: [] }[PE.type] || [];
+      const ok = PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '');
+      const entier = v => { const n = num(v); return n == null ? null : n; };
+      const enregistrer = () => {
+        if (PE.envoi || !ok) { return; }
+        PE.envoi = true; reE();
+        const ic = PE.icone ? this.api('POST', '/ventes/primes-icone', { data: PE.icone.data }) : Promise.resolve(null);
+        ic.then(ri => {
+          if (PE.icone && (!ri || ri.ok === false || !ri.icone)) { PE.envoi = false; reE(); return; }
+          const icone = ri && ri.icone ? ri.icone : PE.iconeExist;
+          const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '' };
+          let suite = Promise.resolve({ ok: true });
+          if (PE.ext) {
+            app.externes = app.externes || {};
+            app.externes[PE.ext] = Object.assign({}, app.externes[PE.ext] || {}, qui, { icone });
+          } else {
+            const e = PE.nouveau ? { type: 'categorie', cle: '', actif: true } : app.liste.find(x => x.cle === PE.cle);
+            if (!e) { PE.envoi = false; reE(); return; }
+            Object.assign(e, qui, { icone, montant: Math.max(0, Math.round(entier(f.montant) ?? e.montant ?? app.recompense)) });
+            if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: Math.max(0, Math.round(entier(f.minPieces) ?? 10)), classement: !!f.classement }); }
+            if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
+            if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
+            if (PE.type === 'croisees') {
+              Object.assign(e, { categorie: f.categorie || '', classement: !!f.classement });
+              cr.cibleDefaut = entier(f.cibleDefaut) ?? cr.cibleDefaut; cr.minTickets = Math.max(0, Math.round(entier(f.minTickets) ?? cr.minTickets));
+              suite = enregistrerCr();
+            }
+            if (PE.nouveau) { app.liste.push(e); }
+          }
+          suite.then(r1 => {
+            if (r1 && r1.ok === false) { PE.envoi = false; reE(); return; }
+            this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms }).then(r => {
+              if (r && r.ok === false) { PE.envoi = false; reE(); return; }
+              this.setState({ prEdit: undefined });
+              finir(PE.nouveau ? 'Catégorie créée' : 'Prime modifiée');
+            });
+          });
+        });
+      };
+      const nomE = PE.ext === 'record' ? 'Bats ton record' : PE.ext === 'meilleure' ? 'Meilleure vendeuse' : (f.lib || (app.liste.find(x => x.cle === PE.cle) || {}).lib || '');
+      common.prEdit = {
+        titre: PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, ok, envoi: PE.envoi,
+        note: PE.ext ? 'Son montant se règle dans Analyse magasin → Équipe & ventes → Targets & primes.' : PE.type === 'croisees' ? 'La cible de chaque magasin se règle plus bas, dans les moyennes par magasin.' : '',
+        payeurs: [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: PE.payeur === v, choisir: () => { PE.payeur = v; reE(); } })),
+        payeur: PE.payeur, sponsor: PE.sponsor, poserSponsor: ev => { PE.sponsor = ev.target.value; reE(); },
+        icone: PE.icone ? PE.icone.data : (PE.iconeExist ? racine + PE.iconeExist : ''),
+        emojis: PR_EMOJIS.map(em => ({ em, on: !!(PE.icone && PE.icone.sorte === 'emoji' && PE.icone.em === em), choisir: () => { const data = prIconeEmoji(em); if (data) { PE.icone = { sorte: 'emoji', em, data }; reE(); } } })),
+        poserPhoto: ev => { const fi = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fi) { return; }
+          if (!/^image\//.test(fi.type)) { this.notify('Une image, s’il te plaît (photo JPEG, PNG, WebP)'); return; }
+          prIconePhoto(fi).then(data => { PE.icone = { sorte: 'photo', data }; reE(); }).catch(() => this.notify('Cette photo n’a pas pu être lue')); },
+        retirerIcone: () => { PE.icone = null; PE.iconeExist = ''; reE(); },
+        supprimer: PE.type === 'categorie' && !PE.nouveau ? () => { if (!window.confirm('Supprimer la prime « ' + nomE + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== PE.cle); this.setState({ prEdit: undefined }); sauver('Prime supprimée'); } : null,
+        enregistrer, fermer: () => this.setState({ prEdit: undefined }),
       };
     }
 
@@ -7416,7 +7538,7 @@ class App {
       sms: !!(app.sms && app.sms.actif), smsConfigure: !!d.smsConfigure,
       poserSms: ev => { app.sms = { actif: !!ev.target.checked }; re(); },
       poserRecompense: ev => { const v = num(ev.target.value); if (v != null) { app.recompense = Math.max(0, Math.round(v)); } re(); },
-      ajouterCategorie: () => { app.liste.push({ type: 'categorie', cle: '', lib: '', motif: '', minPieces: 10, montant: app.recompense, actif: true, classement: true }); re(); },
+      ajouterCategorie: () => this.setState({ prEdit: editDe(null, null) }),
       versPromos: () => { const el = document.querySelector('[data-pr="promos"]'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } },
       nouvelle: () => this.setState({ prWiz: wizNeuf('marque') }),
       modifie: appModifie || crModifie,
@@ -7453,7 +7575,8 @@ class App {
           ajouterMag: !seul || eMag || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('magasin', seul, p), { etape: 2 }) }),
           source: 'panel', produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable',
           comptable: (p.ids || []).length > 0, statut: e ? (e.actif ? 'prime active' : 'prime éteinte') : '',
-          ajouter: e || !(p.ids || []).length ? null : () => { app.liste.push({ type: 'promo', ref: { source: p.source, id: p.id }, lib: p.nom, montant: app.recompense, minPieces: 1, actif: true, classement: true, promo: p }); re(); } };
+          // « + prime » : l'assistant, la promotion déjà choisie (16/10/2026).
+          ajouter: e || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('marque', '', p), { etape: 2 }) }) };
       }),
       relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); },
     };
