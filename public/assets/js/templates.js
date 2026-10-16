@@ -4,7 +4,7 @@
  * x = { A: onClick, C: onChange, I: onInput, DS: dragstart, DP: drop, EN: mouseenter, esc }.
  */
 
-import { tplGC, tplFF, tplRO, tplCQM } from './franchises-tpl.js';
+import { tplGC, tplFF, tplCQM } from './franchises-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
@@ -151,6 +151,7 @@ export function render(c, x){
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
+      ${c.isCltMyst ? tplCltMyst(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
@@ -160,7 +161,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
+      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
@@ -2086,6 +2087,14 @@ export function tplSqMsp(c, x){
         <div class="mko-corps" style="padding-top:8px">${F.histChargement ? '<div class="mko-mu">Lecture…</div>' : (F.hist.length ? `<table class="mko-tab sq-hist"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${F.hist.map(h => `<tr><td>${esc(h.tri)}</td><td class="n">${esc(h.recu)}</td><td class="n"><b>${esc(h.sur5)}</b> ${st(h.pct, false, 'sm')}</td><td>${h.fichier ? `<a class="sq-lien" href="${esc(h.fichier)}" target="_blank" rel="noopener">ouvrir</a>` : '<span class="mko-mu">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="mko-mu">Aucun rapport encodé pour ce magasin.</div>')}
           <div style="margin-top:14px"><span class="mko-lab">Où ça arrive ensuite</span><ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted)"><li>le classement, poste « Client mystère », dès l’enregistrement ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
     </div>`;
+}
+
+/* Paramètres › Client mystère : l'encodage du rapport reçu (le poste Client mystère du scoring). */
+function tplCltMyst(c, x){
+  const { esc } = x;
+  const corps = c.sqIndispo ? `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`
+    : (c.sqMsp ? tplSqMsp(c, x) : '<div class="mko-mu" style="padding:20px 0">Lecture du scoring…</div>');
+  return `<div data-screen="client-mystere" class="mko">${corps}</div>`;
 }
 
 function tplScoringTri(c, x){
