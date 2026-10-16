@@ -127,23 +127,29 @@ function primesAppPromoPropre($p): ?array
     return $out;
 }
 
-/** La clé d'une prime promo : « p » + la source + l'identifiant de la promotion, en minuscules sans signes. */
-function primesAppClePromo(array $promo): string
+/**
+ * La clé d'une prime promo : « p » + la source + l'identifiant de la promotion, en minuscules sans signes. Celle d'un
+ * franchisé (16/10/2026) porte son magasin — « pm » + magasin + « z » + le reste : la même promotion du panel peut avoir
+ * sa prime de marque et la prime de chaque magasin.
+ */
+function primesAppClePromo(array $promo, ?string $shop = null): string
 {
     $id = preg_replace('/[^a-z0-9]+/', '', strtolower($promo['id'])) ?? '';
-    return mb_substr('p' . ($promo['source'] === 'api' ? (['xy' => 'x', 'quantite' => 'q', 'remise' => 'r'][$promo['sorte']] ?? 'b') : ($promo['source'] === 'cockpit' ? 'k' : 'c')) . $id, 0, 24);
+    $sorte = $promo['source'] === 'api' ? (['xy' => 'x', 'quantite' => 'q', 'remise' => 'r'][$promo['sorte']] ?? 'b') : ($promo['source'] === 'cockpit' ? 'k' : 'c');
+    return mb_substr($shop !== null ? 'pm' . $shop . 'z' . $sorte . $id : 'p' . $sorte . $id, 0, 24);
 }
 
 /**
- * Qui paie une prime (14/10/2026) : la marque, le magasin, ou un sponsor nommé. La marque par défaut,
- * comme avant ; un sponsor sans nom reste à la marque.
+ * Qui paie une prime de la marque : la marque ou un sponsor nommé (14/10/2026). La marque par défaut ; un sponsor
+ * sans nom reste à la marque. Le magasin ne paie que SES primes, celles du franchisé (16/10/2026) : « magasin »
+ * demandé pour une prime de la marque revient à la marque.
  */
 function primesAppPayeur(array $x): array
 {
     $p = (string) ($x['payeur'] ?? 'marque');
     $nom = mb_substr(trim((string) ($x['sponsor'] ?? '')), 0, 60);
     if ($p === 'sponsor' && $nom !== '') { return ['payeur' => 'sponsor', 'sponsor' => $nom]; }
-    return ['payeur' => $p === 'magasin' ? 'magasin' : 'marque', 'sponsor' => ''];
+    return ['payeur' => 'marque', 'sponsor' => ''];
 }
 
 /** La clé de comptabilité d'un payeur : « marque », « magasin » ou « sponsor:Nom ». */
@@ -155,12 +161,22 @@ function primesPayeurCle(array $e): string
 /**
  * Une entrée de la liste, nettoyée, ou null si elle ne tient pas debout. Les deux targets ont leur
  * clé fixe ; une catégorie tire la sienne de son titre (concoursEntree) ; une promo, de sa promotion.
- * Chacune dit qui la paie.
+ * Chacune dit qui la paie et à quelle famille elle appartient (16/10/2026) : « marque » — posée par la marque,
+ * payée par elle ou un sponsor, visible de chaque franchisé — ou « magasin » — une prime promo qu'un franchisé
+ * pose pour SON magasin, un seul, et qu'il paie.
  */
 function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
 {
     $e = primesAppEntreeValideSansPayeur($x, $i, $recompense);
-    return $e === null ? null : $e + primesAppPayeur($x) + ['icone' => primesAppIcone($x['icone'] ?? null)];
+    if ($e === null) { return null; }
+    $icone = ['icone' => primesAppIcone($x['icone'] ?? null)];
+    if (($x['famille'] ?? '') === 'magasin') {
+        if ($e['type'] !== 'promo' || count($e['promo']['shops']) !== 1) { return null; }
+        $shop = $e['promo']['shops'][0];
+        $e['cle'] = primesAppClePromo($e['promo'], $shop);
+        return $e + ['famille' => 'magasin', 'shop' => $shop, 'payeur' => 'magasin', 'sponsor' => ''] + $icone;
+    }
+    return $e + ['famille' => 'marque'] + primesAppPayeur($x) + $icone;
 }
 
 function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?array
@@ -215,15 +231,21 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
     return null;
 }
 
-/** Une liste propre : les targets toujours là et en tête, pas de doublon, des catégories et des promos en nombre borné. */
+/**
+ * Une liste propre : les targets toujours là et en tête, pas de doublon, des catégories et des promos en nombre borné —
+ * les promos de la marque d'un côté, celles de chaque magasin de l'autre (autant par magasin).
+ */
 function primesAppListePropre(array $liste, int $recompense): array
 {
-    $out = []; $vus = []; $nCat = 0; $nPro = 0;
+    $out = []; $vus = []; $nCat = 0; $nPro = 0; $nMag = [];
     foreach (array_values($liste) as $i => $x) {
         $e = is_array($x) ? primesAppEntreeValide($x, $i, $recompense) : null;
         if ($e === null || isset($vus[$e['cle']])) { continue; }
         if ($e['type'] === 'categorie' && ++$nCat > PRIMES_APP_MAX_CATEGORIES) { continue; }
-        if ($e['type'] === 'promo' && ++$nPro > PRIMES_APP_MAX_PROMOS) { continue; }
+        if ($e['famille'] === 'magasin') {
+            $nMag[$e['shop']] = ($nMag[$e['shop']] ?? 0) + 1;
+            if ($nMag[$e['shop']] > PRIMES_APP_MAX_PROMOS) { continue; }
+        } elseif ($e['type'] === 'promo' && ++$nPro > PRIMES_APP_MAX_PROMOS) { continue; }
         $vus[$e['cle']] = true;
         $out[] = $e;
     }
@@ -231,7 +253,7 @@ function primesAppListePropre(array $liste, int $recompense): array
     foreach (PRIMES_TARGETS as $cle) {
         if (isset($vus[$cle])) { continue; }
         // Une liste enregistrée avant la note Google la reçoit avec ses 25 € ; les autres targets, à la récompense par défaut.
-        foreach ($def as $d) { if ($d['cle'] === $cle) { $out[] = array_merge($d, $cle === 'google' ? [] : ['montant' => $recompense], primesAppPayeur([]), ['icone' => '']); } }
+        foreach ($def as $d) { if ($d['cle'] === $cle) { $out[] = array_merge($d, $cle === 'google' ? [] : ['montant' => $recompense], ['famille' => 'marque'], primesAppPayeur([]), ['icone' => '']); } }
     }
     // Les targets d'abord, dans leur ordre ; le reste dans l'ordre reçu (usort est stable).
     usort($out, static function ($a, $b) {
@@ -325,10 +347,16 @@ function wr_primes_app(): array
             if (!is_array($x)) { continue; }
             if (($x['type'] ?? '') === 'promo') {
                 $cle = (string) ($x['cle'] ?? '');
+                // La prime d'un franchisé (16/10/2026) : un magasin, et un seul.
+                $shop = is_scalar($x['shop'] ?? null) && preg_match('/^\d+$/', (string) $x['shop']) ? (string) $x['shop'] : '';
                 if ($cle !== '' && isset($deja[$cle]) && $deja[$cle]['type'] === 'promo') {
+                    // Déjà là : sa promotion et sa famille restent ce qu'elles étaient.
                     $x['promo'] = $deja[$cle]['promo'];
+                    $x['famille'] = $deja[$cle]['famille'] ?? 'marque';
                 } elseif (($x['ref']['source'] ?? '') === 'cockpit') {
-                    $p = primesPromoCockpit(is_array($x['promo'] ?? null) ? $x['promo'] : [], (string) ($x['lib'] ?? ''));
+                    $pc = is_array($x['promo'] ?? null) ? $x['promo'] : [];
+                    if (($x['famille'] ?? '') === 'magasin') { $pc['shops'] = $shop !== '' ? [$shop] : []; }
+                    $p = primesPromoCockpit($pc, (string) ($x['lib'] ?? ''));
                     if (isset($p['error'])) { http_response_code(422); return ['error' => 'prime ' . ($i + 1) . ' : ' . $p['error']]; }
                     $x['promo'] = $p;
                 } else {
@@ -337,7 +365,17 @@ function wr_primes_app(): array
                     $trouve = null;
                     foreach ($promosPanel['liste'] as $p) { if ($p['source'] === ($ref['source'] ?? '') && $p['id'] === (string) ($ref['id'] ?? '')) { $trouve = $p; } }
                     if ($trouve === null) { http_response_code(422); return ['error' => 'promotion ' . ($i + 1) . ' introuvable dans la liste du panel']; }
+                    if (($x['famille'] ?? '') === 'magasin') {
+                        // Une promotion du panel prise par un franchisé : ses ventes dans SON magasin, si elle y tourne.
+                        if ($shop === '' || ($trouve['shops'] !== [] && !in_array($shop, $trouve['shops'], true))) {
+                            http_response_code(422); return ['error' => 'prime ' . ($i + 1) . ' : la promotion ne tourne pas dans ce magasin'];
+                        }
+                        $trouve['shops'] = [$shop];
+                    }
                     $x['promo'] = $trouve;
+                }
+                if (($x['famille'] ?? '') === 'magasin' && $x['promo']['shops'] === []) {
+                    http_response_code(422); return ['error' => 'prime ' . ($i + 1) . ' : une prime de franchisé est pour un magasin'];
                 }
             }
             $e = primesAppEntreeValide($x, $i, $r);
@@ -355,7 +393,7 @@ function wr_primes_app(): array
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['ventePrimesApp', json_encode($out, JSON_UNESCAPED_UNICODE)]);
     primesAppReglages(true);
     primesCachesVider();
-    $payeLib = static fn (array $e) => $e['payeur'] === 'sponsor' ? 'sponsor ' . $e['sponsor'] : $e['payeur'];
+    $payeLib = static fn (array $e) => $e['payeur'] === 'sponsor' ? 'sponsor ' . $e['sponsor'] : ($e['payeur'] === 'magasin' ? 'magasin ' . ($e['shop'] ?? '') : $e['payeur']);
     journalAdd('CEO', 'Paramètre', 'Primes de l’app', 'Récompense par défaut ' . $r . ' € · ' . implode(' · ', array_map(
         static fn ($e) => $e['lib'] . ' ' . $e['montant'] . ' € (' . $payeLib($e) . ')' . ($e['actif'] ? '' : ' (éteinte)'), $liste))
         . ' · SMS à la réussite ' . ($sms['actif'] ? 'activés' : 'éteints'));
@@ -545,6 +583,28 @@ function primesPromosPanel(bool $frais = false): array
     $out = ['quand' => time(), 'api' => $api, 'compte' => $compte, 'erreurs' => $erreurs, 'liste' => $liste];
     if ($liste !== [] || $erreurs !== []) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesPromos3', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    }
+    return $out;
+}
+
+/**
+ * GET /ventes/primes-promos/sonde — la forme brute de l'API promotions (compte admin ERP), lecture seule : pour chaque
+ * liste, ses clés, le 1er élément et sa fiche (/admin/promotions/{sorte}/{id}). De quoi régler la lecture des produits.
+ */
+function ep_primes_promos_sonde(): array
+{
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['erreur' => 'compte admin ERP indisponible']; }
+    $out = [];
+    foreach (['bundles', 'buy-x-get-y', 'quantity', 'scheduled-product-discount'] as $r) {
+        $l = ErpApi::sondeGet('/admin/promotions/' . $r . '?status=ACTIVE&limit=2');
+        $items = is_array($l['corps']) ? PanelApi::liste($l['corps']) : [];
+        $un = $items[0] ?? null;
+        $fiche = null;
+        if (is_array($un) && isset($un['id']) && is_scalar($un['id'])) {
+            $f = ErpApi::sondeGet('/admin/promotions/' . $r . '/' . rawurlencode((string) $un['id']));
+            $fiche = ['code' => $f['code'], 'corps' => $f['corps']];
+        }
+        $out[$r] = ['code' => $l['code'], 'cles' => is_array($l['corps']) ? array_keys($l['corps']) : null, 'item' => $un, 'fiche' => $fiche];
     }
     return $out;
 }
