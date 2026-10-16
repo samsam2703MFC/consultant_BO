@@ -311,7 +311,6 @@ class App {
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
       usage: 'usage-catalogue', anaprod: 'analyse-produits', prixvolume: 'prix-volume',
       manque: 'manque-a-gagner',
-      analysemag: 'analyse-magasin',
       ventes: 'target-ventes',
       croisements: 'croisements',
       caAchats: 'commandes', caFacturation: 'facturation',
@@ -352,7 +351,10 @@ class App {
   static get ADRESSES_RETIREES(){
     return { stock: 'caAchats', 'commandes-franchises': 'caAchats', 'resultat-du-jour': 'resultatJour',
       // L'application consultant a quitté le rail : elle vit sur le téléphone (visites/).
-      'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi' };
+      'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi',
+      // L'onglet « Leviers » a quitté Analyse magasin (16/10/2026) : son adresse
+      // ouvre désormais le premier onglet restant, Équipe & ventes.
+      'analyse-magasin': 'ventes', analysemag: 'ventes' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -1034,8 +1036,8 @@ class App {
         [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['caReglages', 'Centrale d’achat'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
         [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
-      analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
-        [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
+      ventes: ['Analyse magasin', 'Un magasin, trois lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
+        [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
         [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
       catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
@@ -1403,10 +1405,10 @@ class App {
           ['assortiment', 'Conformité du comptoir', 0]] }]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
-      // Trois questions : comment va ce magasin (leviers, équipe, panier,
-      // réputation), quel budget il tient, où il va sur trois ans.
+      // Trois questions : comment va ce magasin (équipe, panier, réputation),
+      // quel budget il tient, où il va sur trois ans.
       ['Magasins', [
-        ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements']],
+        ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements']],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
         ['creux', 'Jours creux', 0],
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
