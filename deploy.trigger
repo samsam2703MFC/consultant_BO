@@ -803,3 +803,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T19:20:52Z primes : tableau en lecture seule, modification dans l'assistant
 2026-10-16T19:24:47Z app worker : mois à venir, primes prévues
 2026-10-16T19:24:53Z console allégée : écrans morts retirés, production et prospection regroupées
+2026-10-16T19:37:03Z primes : un seul assistant (promotion ou catégorie)
