@@ -75,7 +75,7 @@ Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 - les **targets** (ventes croisées, record, objectif du magasin, note Google, meilleure vendeuse) sont **une par
   ligne**, en couleur d'office, en « drapeau » (16/10/2026, maquette B de `propositions-targets.html`) : la valeur
   en haut à droite ; une barre avec **le trait noir de l'objectif**, toujours au même endroit (75 %), et la
-  récompense posée dessus, cadenassée (« 🔒 50 € ») ; **passer le trait active la prime** (la barre, la valeur et
+  récompense posée dessus (« 50 € », sans cadenas depuis le 16/10/2026) ; **passer le trait active la prime** (la barre, la valeur et
   le drapeau passent en vert, « ✓ Prime activée »). Dessous : ce qu'il reste (« encore 0,26 ») et l'objectif ;
   pour l'objectif du magasin, la projection et un pointillé où en être au jour J. **Toucher la ligne déroule
   son détail** (une seule ouverte à la fois, clavier : Entrée ou Espace) : ses chiffres (son taux et ses tickets,
