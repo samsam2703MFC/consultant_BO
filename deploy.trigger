@@ -805,3 +805,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T19:24:53Z console allégée : écrans morts retirés, production et prospection regroupées
 2026-10-16T19:37:03Z primes : un seul assistant (promotion ou catégorie)
 2026-10-16T19:45:19Z primes : période du … au …
+2026-10-16T19:46:33Z console : production, prospection, centrale d'achat, offres et canaux sortis ; export CSV prospection
