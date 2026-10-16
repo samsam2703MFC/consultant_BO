@@ -488,6 +488,24 @@ function primesPromoProduits(array $x): array
     return array_values(array_unique(array_filter($ids, static fn ($v) => $v > 0)));
 }
 
+/** Les produits des catégories qu'une promotion vise, par leur nom dans le catalogue (sous-catégorie, sinon catégorie). */
+function primesPromoCategoriesIds(array $x): array
+{
+    $noms = [];
+    foreach (['trigger.categories', 'reward.categories', 'eligible_categories', 'reward_categories', 'categories'] as $k) {
+        foreach ((array) (primesPromoChamp($x, [$k]) ?? []) as $c) {
+            $n = is_array($c) ? ($c['name'] ?? $c['nom'] ?? null) : null;
+            if (is_string($n) && trim($n) !== '') { $noms[mb_strtolower(trim($n))] = true; }
+        }
+    }
+    if ($noms === []) { return []; }
+    $ids = [];
+    foreach (primesCatalogue() as $p) {
+        if (isset($noms[mb_strtolower($p['cat'])]) || isset($noms[mb_strtolower($p['grp'])])) { $ids[] = (int) $p['id']; }
+    }
+    return $ids;
+}
+
 /**
  * Une promotion du panel, mise à plat : {source, sorte, id, nom, prix, du, au, shops, ids, composants}.
  * Les clés de l'API ne sont pas encore connues (403 au 10/10/2026) : on lit les noms d'usage.
@@ -507,19 +525,25 @@ function primesPromoNormaliser(array $x, string $sorte, array $bundlesCatalogue)
     $au = primesAppDate(primesPromoChamp($x, ['ends_at', 'end_date', 'date_end', 'date_to', 'valid_to', 'valid_until', 'end', 'to']));
     if ($au !== null && $au < date('Y-m-01', strtotime('first day of last month'))) { return null; }   // finie depuis longtemps
     $shops = [];
-    foreach ((array) (primesPromoChamp($x, ['shops', 'shop_ids', 'id_shops']) ?? []) as $s) {
-        $v = is_array($s) ? ($s['id'] ?? $s['id_shop'] ?? null) : $s;
+    $lus = primesPromoChamp($x, ['shops', 'shop_ids', 'id_shops']) ?? [];
+    if (is_string($lus)) { $lus = explode(',', $lus); }   // la liste de l'API : « 4 » ou « 4,5 »
+    foreach ((array) $lus as $s) {
+        $v = is_array($s) ? ($s['id'] ?? $s['id_shop'] ?? null) : (is_string($s) ? trim($s) : $s);
         if (is_numeric($v)) { $shops[] = (string) (int) $v; }
     }
     $s1 = primesPromoChamp($x, ['id_shop', 'shop_id']);
     if (is_numeric($s1)) { $shops[] = (string) (int) $s1; }
-    $composants = primesPromoProduits($x);
+    // Les produits nommés, et ceux des catégories visées (trigger/reward.categories : « Cookies ») relues dans le
+    // catalogue par leur nom — sous-catégorie ou catégorie.
+    $composants = array_values(array_unique(array_merge(primesPromoProduits($x), primesPromoCategoriesIds($x))));
     if ($sorte === 'bundle') {
         $propre = primesPromoChamp($x, ['id_product', 'product_id', 'product.id']);
         $ids = is_numeric($propre) ? [(int) $propre] : [];
         if ($ids === [] && $nom !== '') {
             foreach ($bundlesCatalogue as $b) { if (mb_strtolower($b['nom']) === mb_strtolower($nom)) { $ids = $b['ids']; } }
         }
+        // Un bundle de l'API sans produit à lui : ses articles (items) se comptent.
+        if ($ids === []) { $ids = $composants; }
     } else {
         $ids = $composants;
     }
@@ -564,8 +588,8 @@ function primesPromosPanel(bool $frais = false): array
     $compte = class_exists('ErpApi') && ErpApi::disponible() ? 'admin' : (class_exists('PanelApi') && PanelApi::configured() ? 'consultant' : null);
     if ($compte !== null) {
         foreach (['bundle' => '/admin/promotions/bundles', 'xy' => '/admin/promotions/buy-x-get-y',
-                  'quantite' => '/admin/promotions/quantity', 'remise' => '/admin/promotions/scheduled-product-discount'] as $sorte => $chemin) {
-            $chemin .= '?status=ACTIVE&limit=100';
+                  'quantite' => '/admin/promotions/quantity', 'remise' => '/admin/promotions/scheduled-product-discount'] as $sorte => $route) {
+            $chemin = $route . '?status=ACTIVE&limit=100';
             $r = $compte === 'admin' ? ErpApi::sondeGet($chemin) : PanelApi::sondeGet($chemin, 20);
             if ((int) $r['code'] < 200 || (int) $r['code'] >= 300 || !is_array($r['corps'])) {
                 $erreurs[] = ['chemin' => $chemin, 'code' => (int) $r['code'], 'erreur' => $r['erreur'] ?? null];
@@ -573,7 +597,14 @@ function primesPromosPanel(bool $frais = false): array
             }
             $api = true;
             foreach (PanelApi::liste($r['corps']) as $x) {
-                $p = is_array($x) ? primesPromoNormaliser($x, $sorte, $catalogue) : null;
+                if (!is_array($x)) { continue; }
+                // La liste ne porte que des compteurs : les produits et les catégories sont dans la fiche
+                // (/admin/promotions/{sorte}/{id} — items, trigger, reward…), lue promotion par promotion (16/10/2026).
+                if ($compte === 'admin' && isset($x['id']) && is_scalar($x['id'])) {
+                    $f = ErpApi::sondeGet($route . '/' . rawurlencode((string) $x['id']));
+                    if ((int) $f['code'] >= 200 && (int) $f['code'] < 300 && is_array($f['corps'])) { $x = array_merge($x, $f['corps']['data'] ?? $f['corps']); }
+                }
+                $p = primesPromoNormaliser($x, $sorte, $catalogue);
                 if ($p !== null) { $liste[] = $p; }
             }
         }

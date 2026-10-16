@@ -262,6 +262,22 @@ verifie('prix par quantité : eligible_product_ids, magasins, dates', ($par['31'
 verifie('X + Y : les produits du déclencheur et de la récompense', ($par['41']['ids'] ?? null) === [50, 51], json_encode($par['41'] ?? null));
 verifie('bundle : son produit et son prix (bundle_promotion.bundle_price)', ($par['51']['ids'] ?? null) === [960] && $par['51']['prix'] === 9.9, json_encode($par['51'] ?? null));
 verifie('le 403 du compte admin sur les remises est dit', count($pp['erreurs']) === 1 && str_contains($pp['erreurs'][0]['chemin'], 'scheduled-product-discount'));
+// La fiche d'une promotion porte ses produits et ses catégories (la liste n'a que des compteurs).
+ErpApi::$reponses = [
+    '/admin/promotions/buy-x-get-y?status=ACTIVE&limit=100' => ['code' => 200, 'erreur' => null, 'corps' => ['items' => [
+        ['id' => 17, 'name' => '3 Tartes', 'status' => 'ACTIVE', 'shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => '4,5', 'trigger_categories_count' => 1]]]],
+    '/admin/promotions/buy-x-get-y/17' => ['code' => 200, 'erreur' => null, 'corps' => ['id' => 17, 'name' => '3 Tartes', 'status' => 'ACTIVE', 'shop_ids' => [4],
+        'trigger' => ['quantity' => 2, 'product_ids' => [], 'categories' => [['id' => 321, 'name' => 'Tartes']]], 'reward' => ['quantity' => 1, 'categories' => [['id' => 321, 'name' => 'Tartes']]]]],
+    '/admin/promotions/bundles?status=ACTIVE&limit=100' => ['code' => 200, 'erreur' => null, 'corps' => ['items' => [['id' => 15, 'name' => 'Précommande Galettes', 'status' => 'ACTIVE', 'shop_ids' => null]]]],
+    '/admin/promotions/bundles/15' => ['code' => 200, 'erreur' => null, 'corps' => ['id' => 15, 'name' => 'Précommande Galettes', 'status' => 'ACTIVE', 'shop_ids' => [], 'bundle_promotion' => ['bundle_price' => '19.90'],
+        'items' => [['id_product' => 20, 'product_name' => 'Quiche lorraine', 'quantity' => '1.0000']]]],
+];
+$pp = primesPromosPanel(true);
+$par = []; foreach ($pp['liste'] as $x) { $par[$x['id']] = $x; }
+verifie('X + Y sur une catégorie (« Tartes ») : ses produits, relus dans le catalogue par leur nom', ($par['17']['ids'] ?? null) === [10], json_encode($par['17'] ?? null));
+verifie('la fiche l’emporte sur la liste (magasins)', ($par['17']['shops'] ?? null) === ['4']);
+verifie('un bundle de l’API sans produit à lui : ses articles', ($par['15']['ids'] ?? null) === [20] && $par['15']['prix'] === 19.9, json_encode($par['15'] ?? null));
+verifie('les magasins de la liste en texte (« 4,5 »)', (primesPromoNormaliser(['id' => 9, 'name' => 'x', 'shop_ids' => '4,5'], 'xy', [])['shops'] ?? null) === ['4', '5']);
 ErpApi::$dispo = false; ErpApi::$reponses = [];
 PanelApi::$configure = false;
 

@@ -296,6 +296,8 @@ class App {
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
       tablette: 'tablette-vendeuses',
+      // Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes, rangées dans Marketing franchisé.
+      primesApp: 'primes-app-worker',
       posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle',
       productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
       // Franchisés · évaluation et suivi (09/10/2026)
@@ -957,6 +959,7 @@ class App {
       newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
       prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
       prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
+      primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
@@ -1409,6 +1412,9 @@ class App {
         ['ext:employee/auth', 'App worker ↗', 0],
         ['newsletter', 'Newsletter', 0],
         ['newsletterShop', 'Newsletter magasin', 0],
+        // Le marketing du franchisé (16/10/2026) : les primes de l'app worker — celles de la marque et des sponsors,
+        // qu'il voit, et celles de son magasin.
+        { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] },
         // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,
         // par magasin et par jour — le plan, le suivi avant chaque cuisson, les paramètres.
         { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0], ['productionFours', '5 · Fours', 0]] }]],
@@ -1448,11 +1454,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO', 'isPrimesApp'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1850,6 +1856,7 @@ class App {
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
+    if (common.isPrimesApp) { this.valsPrimesParams(common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
@@ -7142,7 +7149,7 @@ class App {
     app.liste.forEach((e, i) => {
       const L = Object.assign(icone(e), { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
         externe: false, peutRetirer: e.type !== 'target', peutClasser: e.type !== 'target' || e.cle === 'croisees', moyenne: moyDe(e), libLibre: e.type !== 'target',
-        qui: e.cle === 'croisees' ? 'chacune à la cible' : (e.cle === 'objectif' || e.cle === 'google') ? 'chacune au planning' : '1re du magasin',
+        qui: e.cle === 'croisees' ? 'chacune à la cible' : (e.cle === 'objectif' || e.cle === 'google') ? 'chacune au planning' : e.regle === 'seuil' ? 'chacune au seuil' : '1re du magasin',
         poserActif: ev => { e.actif = !!ev.target.checked; re(); },
         poserClassement: ev => { e.classement = !!ev.target.checked; re(); },
         poserMontant: ev => { const v = num(ev.target.value); if (v != null) { e.montant = Math.max(0, Math.round(v)); } re(); },
@@ -7150,6 +7157,8 @@ class App {
         poser: (cle, entier) => ev => { const v = entier ? num(ev.target.value) : ev.target.value; if (v != null) { e[cle] = entier ? Math.max(0, Math.round(v)) : v; } re(); },
         retirer: () => { app.liste.splice(i, 1); re(); },
         payeur: e.payeur || 'marque', sponsor: e.sponsor || '',
+        // La famille (16/10/2026) : la marque (ou un sponsor), ou le franchisé pour son magasin.
+        famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', shopNom: nomMag[e.shop] || e.shop || '',
         poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); } });
       if (e.cle === 'croisees') {
         Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
@@ -7195,8 +7204,10 @@ class App {
     const ymd = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
     const moisDe = decal => { const t = new Date(); const a = new Date(t.getFullYear(), t.getMonth() + decal, 1); const b = new Date(t.getFullYear(), t.getMonth() + decal + 1, 0); return [ymd(a), ymd(b)]; };
     const [suivDu, suivAu] = moisDe(1);
-    const wizNeuf = () => ({ etape: 1, onglet: 'produits', q: '', sel: [], api: null, periode: 'suivant', du: suivDu, au: suivAu,
-      magsMode: 'tous', mags: [], regle: 'premiere', minPieces: '10', montant: String(app.recompense), payeur: 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false });
+    // famille « marque » : la marque ou un sponsor, tout le réseau ou des magasins ; « magasin » : la prime d'un franchisé, un magasin, payée par lui.
+    const wizNeuf = (famille, shop, api) => ({ etape: 1, onglet: api ? 'panel' : 'produits', q: '', sel: [], api: api || null, periode: 'suivant', du: suivDu, au: suivAu,
+      magsMode: 'tous', mags: [], regle: 'premiere', minPieces: '10', montant: String(app.recompense), payeur: famille === 'magasin' ? 'magasin' : 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false,
+      famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '' });
     common.prWiz = null;
     if (W) {
       const reW = () => this.setState({ prWiz: W });
@@ -7224,22 +7235,29 @@ class App {
       const compte = !cat ? 0 : cat.produits.filter(pr => W.sel.some(z => (z.t === 'groupe' && pr.grp === z.v) || (z.t === 'categorie' && (pr.grp + SEP + pr.cat) === z.v) || (z.t === 'produit' && String(pr.id) === z.v))).length;
       const nomDefaut = () => (W.api ? W.api.nom : (W.sel.length ? 'Promo ' + W.sel.map(z => z.lib).slice(0, 2).join(' + ') : 'Promo'));
       if (!W.nomTouche) { W.nom = nomDefaut(); }
+      const fam = W.famille === 'magasin';
+      // Les magasins où la prime d'un franchisé peut se poser : tous, ou ceux de la promotion du panel choisie.
+      const tourne = (p, sid) => !(p.shops || []).length || p.shops.includes(sid);
+      const magsPermis = (d.magasins || []).filter(m => !W.api || tourne(W.api, m.id));
       const du = W.api ? W.api.du : W.du; const au = W.api ? W.api.au : W.au;
-      const shops = W.api ? (W.api.shops || []) : (W.magsMode === 'tous' ? [] : W.mags);
-      const nbMags = shops.length || (d.magasins || []).length;
+      const shops = fam ? (W.shop ? [W.shop] : []) : W.api ? (W.api.shops || []) : (W.magsMode === 'tous' ? [] : W.mags);
+      const nbMags = fam ? 1 : (shops.length || (d.magasins || []).length);
       const montant = num(W.montant); const minP = num(W.minPieces);
-      const ok = [null, W.sel.length > 0 || !!W.api, !!du && !!au && au >= du && (W.api || W.magsMode === 'tous' || W.mags.length > 0), montant != null && montant > 0 && minP != null && minP >= (W.regle === 'seuil' ? 1 : 0), W.nom.trim() !== ''];
+      // Une promotion du panel sans dates compte tant qu'elle tourne.
+      const datesOk = W.api ? (!du || !au || au >= du) : (!!du && !!au && au >= du);
+      const magsOk = fam ? magsPermis.some(m => m.id === W.shop) : (W.api || W.magsMode === 'tous' || W.mags.length > 0);
+      const ok = [null, W.sel.length > 0 || !!W.api, datesOk && magsOk, montant != null && montant > 0 && minP != null && minP >= (W.regle === 'seuil' ? 1 : 0) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
       const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
       const resume = [
         ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
-        ['Période', jjmm(du) + ' → ' + jjmm(au)],
-        ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
-        ['Gagne', W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : 'la 1re de chaque magasin' + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', (montant || 0) + ' € · payée par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : W.payeur === 'magasin' ? 'le magasin' : 'la marque')]];
+        ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
+        fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
+        ['Gagne', W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
+        ['Récompense', (montant || 0) + ' € · payée par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
       const creer = () => {
         if (W.envoi) { return; }
         const base = { type: 'promo', lib: W.nom.trim(), montant: Math.round(montant), minPieces: Math.round(minP || 0), regle: W.regle,
-          payeur: W.payeur, sponsor: W.sponsor, actif: true, classement: true };
+          payeur: fam ? 'magasin' : W.payeur, sponsor: fam ? '' : W.sponsor, actif: true, classement: true, famille: W.famille, shop: fam ? W.shop : '' };
         const e = W.api ? Object.assign(base, { ref: { source: W.api.source, id: W.api.id }, promo: W.api })
           : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
         W.envoi = true; reW();
@@ -7254,12 +7272,14 @@ class App {
         etape: W.etape, onglet: W.onglet, q: W.q, chargement: cat === undefined, catMotif: cat === null ? 'Le catalogue n’a pas pu être lu.' : '',
         res, vide: !!q && cat && !res.groupes.length && !res.categories.length && !res.produits.length, parcourir: !q,
         sel: W.sel.map(z => ({ type: { groupe: 'Catégorie', categorie: 'Sous-catégorie', produit: 'Produit' }[z.t], lib: z.lib, n: z.t === 'produit' ? '' : String(z.n || ''), retirer: basculer(z) })),
-        compte, api: W.api, apiErreur: PR_ERR(), apiListe: (promos ? promos.liste : []).filter(p => (p.ids || []).length).map(p => ({ nom: p.nom, sorte: sorte(p), dates: dates(p), magasins: mags(p), pris: !!(W.api && W.api.id === p.id && W.api.source === p.source),
-          choisir: () => { W.api = (W.api && W.api.id === p.id) ? null : p; W.sel = []; reW(); } })),
+        titre: fam ? 'Nouvelle prime du magasin' : 'Nouvelle prime promotion', fam,
+        compte, api: W.api, apiErreur: PR_ERR(), apiListe: (promos ? promos.liste : []).filter(p => (p.ids || []).length && (!fam || !W.shop || tourne(p, W.shop))).map(p => ({ nom: p.nom, sorte: sorte(p), dates: dates(p), magasins: mags(p), pris: !!(W.api && W.api.id === p.id && W.api.source === p.source),
+          choisir: () => { W.api = (W.api && W.api.id === p.id) ? null : p; W.sel = []; if (fam && W.api && W.shop && !tourne(W.api, W.shop)) { W.shop = ''; } reW(); } })),
         periode: W.periode, du, au, apiDates: !!W.api, magsMode: W.magsMode, mags: (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: W.magsMode === 'tous' || W.mags.includes(m.id),
           basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
         regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
-        plafond: W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
+        plafond: W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
+        magsUn: magsPermis.map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
         ok: ok[W.etape], envoi: W.envoi,
         pas: ['Produits', 'Période & magasins', 'Qui gagne', 'Nom & aperçu'].map((nom, i) => ({ n: i + 1, nom, on: W.etape === i + 1, fait: W.etape > i + 1, aller: W.etape > i + 1 ? () => { W.etape = i + 1; reW(); } : null })),
         poserQ: ev => { W.q = ev.target.value; reW(); },
@@ -7272,7 +7292,8 @@ class App {
           ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,
           choisir: () => { W.regle = v; if (v === 'seuil' && (num(W.minPieces) || 0) < 1) { W.minPieces = '20'; } reW(); } })),
         poserMin: ev => { W.minPieces = ev.target.value; reW(); }, poserMontant: ev => { W.montant = ev.target.value; reW(); },
-        payeurs: [['marque', 'Marque'], ['magasin', 'Magasin'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reW(); } })),
+        // Une prime de la marque : la marque ou un sponsor. Celle d'un franchisé : son magasin, sans choix.
+        payeurs: fam ? [] : [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reW(); } })),
         poserSponsor: ev => { W.sponsor = ev.target.value; reW(); },
         poserNom: ev => { W.nom = ev.target.value; W.nomTouche = true; reW(); },
         fermer: () => this.setState({ prWiz: undefined }),
@@ -7282,14 +7303,23 @@ class App {
       };
     }
 
+    // Les deux familles (16/10/2026) : la marque et ses sponsors d'un côté, les franchisés — magasin par magasin — de l'autre.
+    const filtreMag = S.prMag || '';
+    const lignesMag = lignes.filter(l => l.famille === 'magasin');
     common.prApp = {
-      lignes, recompense: String(app.recompense),
+      lignes: lignes.filter(l => l.famille !== 'magasin'),
+      lignesMag: lignesMag.filter(l => !filtreMag || l.shop === filtreMag),
+      magsFiltre: [{ nom: 'Tous les magasins', n: lignesMag.length, on: !filtreMag, choisir: () => this.setState({ prMag: '' }) }]
+        .concat((d.magasins || []).map(m => ({ nom: court(m.nom), n: lignesMag.filter(l => l.shop === m.id).length, on: filtreMag === m.id, choisir: () => this.setState({ prMag: m.id }) }))),
+      magFiltreNom: filtreMag ? (nomMag[filtreMag] || filtreMag) : '',
+      nouvelleMag: () => this.setState({ prWiz: wizNeuf('magasin', filtreMag) }),
+      recompense: String(app.recompense),
       sms: !!(app.sms && app.sms.actif), smsConfigure: !!d.smsConfigure,
       poserSms: ev => { app.sms = { actif: !!ev.target.checked }; re(); },
       poserRecompense: ev => { const v = num(ev.target.value); if (v != null) { app.recompense = Math.max(0, Math.round(v)); } re(); },
       ajouterCategorie: () => { app.liste.push({ type: 'categorie', cle: '', lib: '', motif: '', minPieces: 10, montant: app.recompense, actif: true, classement: true }); re(); },
       versPromos: () => { const el = document.querySelector('[data-pr="promos"]'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } },
-      nouvelle: () => this.setState({ prWiz: wizNeuf() }),
+      nouvelle: () => this.setState({ prWiz: wizNeuf('marque') }),
       modifie: appModifie || crModifie,
       enregistrer: () => {
         const suite = crModifie ? enregistrerCr() : Promise.resolve({ ok: true });
@@ -7305,8 +7335,9 @@ class App {
     };
 
     // Les promotions du panel : celles qui ont déjà leur prime, les autres en un geste.
-    const prises = {};
-    app.liste.filter(e => e.type === 'promo').forEach(e => { const p = e.promo || {}; prises[(e.ref ? e.ref.source + ':' + e.ref.id : p.source + ':' + p.id)] = e; });
+    const prises = {}; const prisesMag = {};
+    app.liste.filter(e => e.type === 'promo').forEach(e => { const p = e.promo || {}; const k = (e.ref ? e.ref.source + ':' + e.ref.id : p.source + ':' + p.id);
+      if (e.famille === 'magasin') { prisesMag[k + ':' + (e.shop || '')] = e; } else { prises[k] = e; } });
     common.prPromos = {
       chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : '',
       // L'API promotions du panel, et elle seule (16/10/2026) : plus de repli sur les bundles du catalogue.
@@ -7315,7 +7346,12 @@ class App {
         + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : (x.erreur || 'injoignable'))).join(' · ') + (promos.api ? '' : ' — ' + PR_MOTIF()) : '',
       liste: (promos ? promos.liste : []).map(p => {
         const e = prises[p.source + ':' + p.id];
-        return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), magasins: mags(p),
+        // Une promotion d'un seul magasin : celle d'un franchisé — sa prime peut être celle du magasin.
+        const seul = (p.shops || []).length === 1 ? p.shops[0] : '';
+        const eMag = seul ? prisesMag[p.source + ':' + p.id + ':' + seul] : null;
+        return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), magasins: mags(p), portee: seul ? 'magasin' : 'réseau',
+          statutMag: eMag ? (eMag.actif ? 'prime du magasin' : 'prime du magasin éteinte') : '',
+          ajouterMag: !seul || eMag || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('magasin', seul, p), { etape: 2 }) }),
           source: 'panel', produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable',
           comptable: (p.ids || []).length > 0, statut: e ? (e.actif ? 'prime active' : 'prime éteinte') : '',
           ajouter: e || !(p.ids || []).length ? null : () => { app.liste.push({ type: 'promo', ref: { source: p.source, id: p.id }, lib: p.nom, montant: app.recompense, minPieces: 1, actif: true, classement: true, promo: p }); re(); } };
@@ -7375,11 +7411,11 @@ class App {
     // Deux sous-pages : les RÉSULTATS (podium, tops, classement, primes
     // débloquées) et les TARGETS (tous les réglages au même endroit). Lire ne
     // se mélange pas avec régler.
-    const onglet = S.tvOnglet || 'resultats';
+    // Les paramètres des primes de l'app ont quitté ces onglets (16/10/2026) : ERP franchisé → Marketing franchisé.
+    const onglet = S.tvOnglet === 'targets' ? 'targets' : 'resultats';
     common.tvOnglet = onglet;
-    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes'], ['parametres', 'Paramètres']]
+    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes']]
       .map(([v, nom]) => ({ nom, on: onglet === v, choisir: () => this.setState({ tvOnglet: v }) }));
-    if (onglet === 'parametres') { this.valsPrimesParams(common); }
     common.tvChargement = d === undefined;
     common.tvMotif = d === null ? 'Le classement n’a pas pu être calculé.' : ((d && d.motif) || '');
     common.tvMoisPills = ((d && d.mois) || []).map(m => ({
