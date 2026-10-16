@@ -784,3 +784,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T12:46:11Z primes : targets une par ligne, detail deroulant
 2026-10-16T13:05:28Z primes : targets en drapeau, en couleur
 2026-10-16T13:10:25Z primes : drapeau sans cadenas
+2026-10-16T13:17:05Z primes : categories en drapeau
