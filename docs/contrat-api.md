@@ -574,6 +574,19 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
+- **Sur objectif** (16/10/2026) : deux règles de plus pour une prime promo, posées par l'assistant. `regle: magasin` —
+  collective : quand le **total du magasin** sur les produits et la période atteint son objectif, **chacune de ses
+  vendeuses du mois** gagne la récompense (niveau `equipe`) ; `regle: vendeuse` — chacune qui atteint **son** objectif
+  (`objVend` : l'objectif du magasin ÷ ses vendeuses, arrondi au-dessus ; niveau `objectif`). L'entrée porte
+  `objectifs: {magasin: pièces}`, `vendeuses: {magasin: moyenne}`, `objVend`, `pct` (la hausse demandée), `n1: {magasin:
+  pièces l'an dernier}` ; sans objectif, 422. Le classement des promos porte `shop` et `totalMag` ; la carte de l'app
+  (`objPcs`, `moiPcs`) : pour « magasin », la jauge est le total du magasin face à son objectif, « dont toi X pcs » en
+  dessous ; pour « vendeuse », ses pièces face au sien.
+- `GET /ventes/primes-reference?ids=1,2&du=&au=&shops=4,5` (16/10/2026, l'assistant) : par magasin, les pièces vendues de
+  ces produits sur la même période l'an dernier (`n1` ; `/shops/{id}/statistics/sales/product-category-groups`, gardé par
+  `apTranches2`), à défaut au rythme des 28 derniers jours ramené à la période (`recent`) ; `ref`, `source: n1|recent`.
+  L'assistant (étape « Qui gagne ») en fait le tableau : l'an dernier, l'objectif (+ x %, modifiable magasin par
+  magasin), les vendeuses (moyenne des `primes-moyennes`), l'objectif par vendeuse.
 - **L'icône dans l'assistant** (16/10/2026) : à l'étape « Nom & aperçu », un emoji (dessiné en PNG de 128 px) ou une
   photo (recadrée au carré par le centre, réduite à 128 px, coins arrondis), faits dans le navigateur ; à la création,
   `POST /ventes/primes-icone` d'abord, puis la prime avec le chemin rendu (`icone`).

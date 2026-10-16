@@ -7403,7 +7403,13 @@ class App {
         Object.assign(L, { champs: 'promo', minPieces: String(e.minPieces ?? 1), promoNom: p.nom || '', promoSorte: sorte(p), promoDates: dates(p), promoMags: mags(p),
           promoSource: { api: 'panel', cockpit: 'créée dans le cockpit' }[p.source] || p.source, promoVide: !(p.ids || []).length,
           // La règle (16/10/2026) : la 1re du magasin, ou chaque vendeuse au-dessus du seuil.
-          regle: e.regle === 'seuil' ? 'seuil' : 'premiere', poserRegle: ev => { e.regle = ev.target.value === 'seuil' ? 'seuil' : 'premiere'; re(); } });
+          regle: ['seuil', 'magasin', 'vendeuse'].includes(e.regle) ? e.regle : 'premiere',
+          // Sur objectif (16/10/2026, posées par l'assistant) : le magasin ou chaque vendeuse — offertes seulement si la prime a ses objectifs.
+          regles: [['premiere', 'la 1re du magasin'], ['seuil', 'chaque vendeuse au seuil']].concat(e.objectifs ? [['magasin', 'objectif du magasin'], ['vendeuse', 'objectif par vendeuse']] : []),
+          surObjectif: e.regle === 'magasin' || e.regle === 'vendeuse',
+          objectifsTxt: e.objectifs ? Object.keys(e.objectifs).map(sid => (nomMag[sid] || sid) + ' ' + e.objectifs[sid] + (e.regle === 'vendeuse' && e.objVend && e.objVend[sid] ? ' (' + e.objVend[sid] + ' / vend.)' : '')).join(' · ')
+            + (e.pct != null ? ' — ' + (e.pct >= 0 ? '+' : '') + e.pct + ' % sur l’an dernier' : '') : '',
+          poserRegle: ev => { const v = ev.target.value; e.regle = ['seuil', 'magasin', 'vendeuse'].includes(v) && (v === 'seuil' || e.objectifs) ? v : 'premiere'; re(); } });
       }
       lignes.push(L);
       // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
@@ -7431,7 +7437,7 @@ class App {
     const [suivDu, suivAu] = moisDe(1);
     // famille « marque » : la marque ou un sponsor, tout le réseau ou des magasins ; « magasin » : la prime d'un franchisé, un magasin, payée par lui.
     const wizNeuf = (famille, shop, api) => ({ etape: 1, onglet: api ? 'panel' : 'produits', q: '', sel: [], api: api || null, periode: 'suivant', du: suivDu, au: suivAu,
-      magsMode: 'tous', mags: [], regle: 'premiere', minPieces: '10', montant: String(app.recompense), payeur: famille === 'magasin' ? 'magasin' : 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false,
+      magsMode: 'tous', mags: [], regle: 'magasin', pct: '10', obj: {}, minPieces: '10', montant: String(app.recompense), payeur: famille === 'magasin' ? 'magasin' : 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false,
       famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null });
     common.prWiz = null;
     if (W) {
@@ -7457,7 +7463,8 @@ class App {
         }
       }
       // Les produits comptés : l'union de la sélection, lue ici pour l'affichage (le serveur la relit).
-      const compte = !cat ? 0 : cat.produits.filter(pr => W.sel.some(z => (z.t === 'groupe' && pr.grp === z.v) || (z.t === 'categorie' && (pr.grp + SEP + pr.cat) === z.v) || (z.t === 'produit' && String(pr.id) === z.v))).length;
+      const prodsSel = !cat ? [] : cat.produits.filter(pr => W.sel.some(z => (z.t === 'groupe' && pr.grp === z.v) || (z.t === 'categorie' && (pr.grp + SEP + pr.cat) === z.v) || (z.t === 'produit' && String(pr.id) === z.v)));
+      const compte = prodsSel.length;
       const nomDefaut = () => (W.api ? W.api.nom : (W.sel.length ? 'Promo ' + W.sel.map(z => z.lib).slice(0, 2).join(' + ') : 'Promo'));
       if (!W.nomTouche) { W.nom = nomDefaut(); }
       const fam = W.famille === 'magasin';
@@ -7468,20 +7475,48 @@ class App {
       const shops = fam ? (W.shop ? [W.shop] : []) : W.api ? (W.api.shops || []) : (W.magsMode === 'tous' ? [] : W.mags);
       const nbMags = fam ? 1 : (shops.length || (d.magasins || []).length);
       const montant = num(W.montant); const minP = num(W.minPieces);
+      // Le tableau par magasin (16/10/2026) : ce que chaque magasin a vendu des produits choisis sur la même période l'an
+      // dernier (à défaut, au rythme des 4 dernières semaines), l'objectif = cela + x %, ses vendeuses (moyenne des mois
+      // récents) et l'objectif de chacune. Lu à l'étape 3, quand les produits, la période et les magasins sont posés.
+      const surObj = W.regle === 'magasin' || W.regle === 'vendeuse';
+      const idsSel = W.api ? (W.api.ids || []) : prodsSel.map(pr => pr.id);
+      const shopsRef = shops.length ? shops : (d.magasins || []).map(m => m.id);
+      const urlRef = '/ventes/primes-reference?ids=' + idsSel.join(',') + '&du=' + (du || '') + '&au=' + (au || '') + '&shops=' + shopsRef.join(',');
+      const refL = W.etape >= 3 && idsSel.length ? lire('ref:' + urlRef, urlRef) : undefined;
+      const refDe = {}; ((refL && refL.magasins) || []).forEach(m => { refDe[m.id] = m; });
+      const vendDe = {}; (moy ? moy.magasins : []).forEach(m => { if (m.vendeuses > 0) { vendDe[m.id] = m.vendeuses; } });
+      const pct = num(W.pct);
+      const objDe = sid => { const t = W.obj[sid]; if (t != null && String(t).trim() !== '') { const v = num(t); return v != null && v > 0 ? Math.ceil(v) : null; }
+        const r = refDe[sid]; return r && r.ref != null && pct != null ? Math.max(1, Math.ceil(r.ref * (1 + pct / 100))) : null; };
+      const tableau = shopsRef.map(sid => {
+        const r = refDe[sid] || {}; const o = objDe(sid); const v = vendDe[sid] || null;
+        return { id: sid, nom: nomMag[sid] || sid, n1: r.n1 != null ? fr(r.n1, 0) : '—', recent: r.source === 'recent' ? fr(r.recent, 0) : '', source: r.source || '',
+          obj: o != null ? String(o) : '', objTouche: W.obj[sid] != null && String(W.obj[sid]).trim() !== '', vend: v != null ? fr(v, 1) : '—',
+          parVend: o != null ? String(Math.max(1, Math.ceil(o / Math.max(1, v || 1)))) : '', parVendN1: r.ref != null && v ? fr(r.ref / v, 0) : '—',
+          poserObj: ev => { W.obj[sid] = ev.target.value; reW(); } };
+      });
+      const objOk = shopsRef.length > 0 && shopsRef.every(sid => objDe(sid) != null);
+      const nVendTot = shopsRef.reduce((a, sid) => a + (vendDe[sid] || 0), 0);
       // Une promotion du panel sans dates compte tant qu'elle tourne.
       const datesOk = W.api ? (!du || !au || au >= du) : (!!du && !!au && au >= du);
       const magsOk = fam ? magsPermis.some(m => m.id === W.shop) : (W.api || W.magsMode === 'tous' || W.mags.length > 0);
-      const ok = [null, W.sel.length > 0 || !!W.api, datesOk && magsOk, montant != null && montant > 0 && minP != null && minP >= (W.regle === 'seuil' ? 1 : 0) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
+      const ok = [null, W.sel.length > 0 || !!W.api, datesOk && magsOk, montant != null && montant > 0 && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
       const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
       const resume = [
         ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
         fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
-        ['Gagne', W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
+        ['Gagne', W.regle === 'magasin' ? 'chaque vendeuse, si son magasin atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
+          : W.regle === 'vendeuse' ? 'chaque vendeuse qui atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
+          : W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
         ['Récompense', (montant || 0) + ' € · payée par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
       const creer = () => {
         if (W.envoi) { return; }
-        const base = { type: 'promo', lib: W.nom.trim(), montant: Math.round(montant), minPieces: Math.round(minP || 0), regle: W.regle,
+        // Sur objectif : l'objectif de chaque magasin, ses vendeuses, l'an dernier, le % (le serveur en tire l'objectif par vendeuse).
+        const objectifs = {}; const vendeuses = {}; const ref = {};
+        if (surObj) { shopsRef.forEach(sid => { objectifs[sid] = objDe(sid); if (vendDe[sid]) { vendeuses[sid] = vendDe[sid]; } if (refDe[sid] && refDe[sid].ref != null) { ref[sid] = refDe[sid].ref; } }); }
+        const base = { type: 'promo', lib: W.nom.trim(), montant: Math.round(montant), minPieces: surObj ? 0 : Math.round(minP || 0), regle: W.regle,
+          objectifs: surObj ? objectifs : undefined, vendeuses: surObj ? vendeuses : undefined, n1: surObj ? ref : undefined, pct: surObj ? pct : undefined,
           payeur: fam ? 'magasin' : W.payeur, sponsor: fam ? '' : W.sponsor, actif: true, classement: true, famille: W.famille, shop: fam ? W.shop : '' };
         const e = W.api ? Object.assign(base, { ref: { source: W.api.source, id: W.api.id }, promo: W.api })
           : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
@@ -7509,7 +7544,8 @@ class App {
         periode: W.periode, du, au, apiDates: !!W.api, magsMode: W.magsMode, mags: (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: W.magsMode === 'tous' || W.mags.includes(m.id),
           basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
         regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
-        plafond: W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
+        plafond: surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
+          : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
         magsUn: magsPermis.map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
         ok: ok[W.etape], envoi: W.envoi,
         pas: ['Produits', 'Période & magasins', 'Qui gagne', 'Nom & aperçu'].map((nom, i) => ({ n: i + 1, nom, on: W.etape === i + 1, fait: W.etape > i + 1, aller: W.etape > i + 1 ? () => { W.etape = i + 1; reW(); } : null })),
@@ -7519,7 +7555,13 @@ class App {
           choisir: () => { W.periode = v; if (v !== 'libre') { [W.du, W.au] = moisDe(v === 'mois' ? 0 : 1); } reW(); } })),
         poserDu: ev => { W.du = ev.target.value; W.periode = 'libre'; reW(); }, poserAu: ev => { W.au = ev.target.value; W.periode = 'libre'; reW(); },
         tousMags: () => { W.magsMode = 'tous'; W.mags = []; reW(); }, choisirMags: () => { W.magsMode = 'choix'; W.mags = (d.magasins || []).map(m => m.id); reW(); },
-        regles: [['premiere', '👑', 'La 1re de chaque magasin', 'La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.'],
+        surObj, tableau, refChargement: W.etape >= 3 && idsSel.length > 0 && refL === undefined, refMotif: refL === null ? 'Les ventes de l’an dernier n’ont pas pu être lues.' : (!idsSel.length ? 'Aucun produit compté : pas de tableau.' : ''),
+        refPeriode: refL ? jjmm(refL.du1) + ' → ' + jjmm(refL.au1) : '', refRecent: !!(refL && (refL.magasins || []).some(m => m.source === 'recent')), pct: W.pct,
+        poserPct: ev => { W.pct = ev.target.value; reW(); }, effacerObj: () => { W.obj = {}; reW(); }, objTouches: Object.keys(W.obj).some(k => String(W.obj[k]).trim() !== ''),
+        objPreview: (() => { const o = shopsRef.map(objDe).filter(v => v != null); return o.length ? (W.regle === 'vendeuse' ? Math.max(1, Math.ceil(o[0] / Math.max(1, vendDe[shopsRef[0]] || 1))) : o[0]) : null; })(),
+        regles: [['magasin', '🏪', 'Objectif du magasin', 'Le magasin atteint son objectif : chacune de ses vendeuses gagne la prime.'],
+          ['vendeuse', '👤', 'Objectif par vendeuse', 'Chaque vendeuse a son objectif (celui du magasin ÷ ses vendeuses) : celles qui l’atteignent gagnent.'],
+          ['premiere', '👑', 'La 1re de chaque magasin', 'La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.'],
           ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,
           choisir: () => { W.regle = v; if (v === 'seuil' && (num(W.minPieces) || 0) < 1) { W.minPieces = '20'; } reW(); } })),
         poserMin: ev => { W.minPieces = ev.target.value; reW(); }, poserMontant: ev => { W.montant = ev.target.value; reW(); },

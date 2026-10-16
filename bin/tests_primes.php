@@ -60,6 +60,14 @@ final class PanelApi
     }
     public static function get(string $p): mixed { return null; }
 }
+/** Les ventes par produit d'un magasin sur une tranche (la route product-category-groups) : [« sid:du » => pid => [nom, cat, qté, CA]]. */
+$GLOBALS['TRANCHES'] = [];
+function apTranches2(array $couples): array
+{
+    $out = [];
+    foreach ($couples as [$sid, $du, $au]) { $out[$sid . ':' . $du] = $GLOBALS['TRANCHES'][$sid . ':' . $du] ?? null; }
+    return $out;
+}
 /** Le compte admin ERP (POST /admin/auth/login) : celui qui lit les promotions (16/10/2026). */
 final class ErpApi
 {
@@ -523,6 +531,42 @@ verifie('Halle : ticket moyen 12,50 €, 2,6 lignes, 57,5 % de croisées', $h['4
 verifie('Halle : objectif atteint à 80 %, 5 tartes par vendeuse', $h['4']['atteinte'] === 80.0 && $h['4']['pieces']['tartes'] === 5.0, json_encode($h['4']));
 verifie('Halle : sa cible en face', $h['4']['cible'] === 55.0 && $h['5']['cible'] === null);
 verifie('le réseau : 160 tickets, 3 vendeuses, 11,88 € de ticket moyen', $moy['reseau']['tickets'] === 160 && $moy['reseau']['vendeuses'] === 3.0 && $moy['reseau']['ticketMoyen'] === 11.88, json_encode($moy['reseau']));
+
+// --- 8 ter. sur objectif : l'an dernier + x %, le magasin ou chaque vendeuse (16/10/2026) -----------
+echo "Les primes sur objectif\n";
+$base = ['type' => 'promo', 'lib' => 'Cookies +10 %', 'montant' => 20, 'promo' => ['source' => 'api', 'sorte' => 'xy', 'id' => '17', 'ids' => [10], 'shops' => []]];
+$eO = primesAppEntreeValide($base + ['regle' => 'vendeuse', 'objectifs' => ['4' => 120, '5' => '80.4', 'x' => 9], 'vendeuses' => ['4' => 4, '5' => 3], 'pct' => 10, 'n1' => ['4' => 109, '5' => 73]], 0, 50);
+verifie('sur objectif : l’objectif de chaque magasin, arrondi au-dessus', $eO !== null && $eO['regle'] === 'vendeuse' && $eO['objectifs'] === ['4' => 120, '5' => 81], json_encode($eO));
+verifie('par vendeuse : l’objectif du magasin ÷ ses vendeuses', $eO['objVend'] === ['4' => 30, '5' => 27] && $eO['pct'] === 10 && $eO['n1'] === ['4' => 109.0, '5' => 73.0], json_encode($eO['objVend'] ?? null));
+verifie('sur objectif sans objectif : refusée', primesAppEntreeValide($base + ['regle' => 'magasin', 'objectifs' => []], 0, 50) === null);
+$eP = primesAppEntreeValide(array_replace_recursive($base, ['promo' => ['shops' => ['4']]]) + ['regle' => 'magasin', 'objectifs' => ['4' => 50, '5' => 60]], 0, 50);
+verifie('une promo d’un magasin ne garde que son objectif', $eP !== null && $eP['objectifs'] === ['4' => 50], json_encode($eP['objectifs'] ?? null));
+// Le classement porte le magasin et son total.
+$empsO = [1 => ['nom' => 'Ana', 'shop' => '4'], 2 => ['nom' => 'Bea', 'shop' => '4'], 3 => ['nom' => 'Cléo', 'shop' => '4'], 4 => ['nom' => 'Dora', 'shop' => '5']];
+$crO = ['e' => [1 => ['t' => 50, 'qp' => ['po' => 100.0]], 2 => ['t' => 40, 'qp' => ['po' => 25.0]], 3 => ['t' => 10, 'qp' => ['po' => 0.0]], 4 => ['t' => 30, 'qp' => ['po' => 50.0]]]];
+foreach ($crO['e'] as $i => $x) { $crO['e'][$i]['q'] = []; }
+$kO = ['cle' => 'po', 'lib' => 'Cookies', 'magasin' => 20, 'reseau' => 0, 'minPieces' => 0, 'classement' => true, 'shops' => [], 'objectifs' => ['4' => 120, '5' => 80], 'objVend' => ['4' => 30, '5' => 27]];
+$clsO = promosClassement($crO, $empsO, [$kO]);
+verifie('le classement dit le magasin et son total', ($clsO['po'][1]['shop'] ?? '') === '4' && ($clsO['po'][1]['totalMag'] ?? null) === 125.0 && ($clsO['po'][4]['totalMag'] ?? null) === 50.0, json_encode($clsO['po'][1] ?? null));
+$cfgO = ['actif' => true, 'liste' => [$kO + ['regle' => 'magasin']]];
+verifie('« magasin » : le magasin passe son objectif (125 ≥ 120), chacune de ses vendeuses gagne, même à 0 pièce', concoursPrime($clsO, 1, $cfgO) === 20 && concoursPrime($clsO, 2, $cfgO) === 20 && concoursPrime($clsO, 3, $cfgO) === 20);
+verifie('« magasin » : un magasin sous son objectif (50 < 80), personne', concoursPrime($clsO, 4, $cfgO) === 0);
+$cfgV = ['actif' => true, 'liste' => [$kO + ['regle' => 'vendeuse']]];
+verifie('« vendeuse » : chacune à son objectif (30) — 100 oui, 25 non', concoursPrime($clsO, 1, $cfgV) === 20 && concoursPrime($clsO, 2, $cfgV) === 0 && concoursPrime($clsO, 4, $cfgV) === 20);
+$bO = primesBriquePieces(2, $cfgO, $clsO, 40);
+verifie('la brique porte l’objectif et le total du magasin', ($bO['liste'][0]['objectif'] ?? null) === 120.0 && ($bO['liste'][0]['totalMag'] ?? null) === 125.0, json_encode($bO['liste'][0] ?? null));
+$jO = primesCarteJauge(['cle' => 'po', 'type' => 'promo', 'etat' => 'att', 'val' => 60.0, 'minPieces' => 0, 'regle' => 'magasin', 'objPcs' => 120.0, 'premier' => null]);
+verifie('la carte vise l’objectif du magasin', $jO['repereType'] === 'cible' && $jO['repereVal'] === 120.0 && $jO['barre'] === 37.5, json_encode([$jO['repereType'], $jO['repereVal'], $jO['barre']]));
+// La référence de l'assistant : l'an dernier, sinon le rythme récent.
+$GLOBALS['TABLES']['shops'] = [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 5, 'name' => 'Atelier by - Namur']];
+$GLOBALS['TRANCHES'] = ['4:2025-11-01' => [10 => ['Tarte', 'Tartes', 110.0, 0], 20 => ['Quiche', 'Quiches', 7.0, 0], 99 => ['Autre', 'X', 500.0, 0]],
+    '5:2025-11-01' => [], '5:' . date('Y-m-d', strtotime('-28 days')) => [10 => ['Tarte', 'Tartes', 28.0, 0]]];
+$_GET = ['ids' => '10,20', 'du' => '2026-11-01', 'au' => '2026-11-30', 'shops' => '4,5'];
+$rf = ep_primes_reference();
+$parM = []; foreach ($rf['magasins'] ?? [] as $x) { $parM[$x['id']] = $x; }
+verifie('l’an dernier : la même période, les seuls produits choisis', ($rf['du1'] ?? '') === '2025-11-01' && ($parM['4']['n1'] ?? null) === 117.0 && $parM['4']['source'] === 'n1', json_encode($parM['4'] ?? null));
+verifie('sans l’an dernier : le rythme des 28 derniers jours ramené à la période', ($parM['5']['ref'] ?? null) === 30.0 && $parM['5']['source'] === 'recent', json_encode($parM['5'] ?? null));
+$_GET = [];
 
 // --- 9. qui paie : la marque, le magasin, un sponsor --------------------------------------------
 echo "Qui paie\n";

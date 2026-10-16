@@ -224,11 +224,45 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
         if ($promo === null) { return null; }
         $lib = mb_substr(trim((string) ($x['lib'] ?? '')), 0, 60);
         $min = (isset($x['minPieces']) && is_numeric($x['minPieces'])) ? max(0, min(5000, (int) $x['minPieces'])) : 1;
-        return ['cle' => primesAppClePromo($promo), 'type' => 'promo', 'lib' => $lib !== '' ? $lib : ($promo['nom'] !== '' ? $promo['nom'] : 'Promo'),
+        $regle = in_array($x['regle'] ?? '', ['seuil', 'magasin', 'vendeuse'], true) ? $x['regle'] : 'premiere';
+        $e = ['cle' => primesAppClePromo($promo), 'type' => 'promo', 'lib' => $lib !== '' ? $lib : ($promo['nom'] !== '' ? $promo['nom'] : 'Promo'),
             'actif' => $actif, 'montant' => $montant, 'classement' => !array_key_exists('classement', $x) || (bool) $x['classement'],
-            'minPieces' => $min, 'regle' => ($x['regle'] ?? '') === 'seuil' ? 'seuil' : 'premiere', 'promo' => $promo];
+            'minPieces' => $min, 'regle' => $regle, 'promo' => $promo];
+        if ($regle === 'magasin' || $regle === 'vendeuse') {
+            // Sur objectif (16/10/2026) : l'objectif de chaque magasin (pièces), et pour « vendeuse » sa part par vendeuse.
+            $o = primesAppObjectifs($x, $promo['shops']);
+            if ($o === null) { return null; }
+            $e += $o;
+        }
+        return $e;
     }
     return null;
+}
+
+/**
+ * Les objectifs d'une prime promo sur objectif : {objectifs: {magasin: pièces}, vendeuses: {magasin: nombre}, objVend:
+ * {magasin: pièces par vendeuse}, pct, n1: {magasin: pièces l'an dernier}} — ou null s'il n'y en a aucun. Une promo de
+ * quelques magasins ne garde que les leurs. Par vendeuse : l'objectif du magasin ÷ ses vendeuses, arrondi au-dessus.
+ */
+function primesAppObjectifs(array $x, array $shops): ?array
+{
+    $num = static fn ($v, float $max) => is_numeric($v) && (float) $v > 0 ? min($max, round((float) $v, 1)) : null;
+    $obj = []; $vend = []; $ref = []; $parV = [];
+    foreach ((array) ($x['objectifs'] ?? []) as $sid => $v) {
+        $sid = (string) $sid;
+        if (!preg_match('/^\d+$/', $sid) || ($shops !== [] && !in_array($sid, $shops, true))) { continue; }
+        $o = $num($v, 100000);
+        if ($o === null) { continue; }
+        $obj[$sid] = (int) ceil($o);
+        $n = $num(((array) ($x['vendeuses'] ?? []))[$sid] ?? null, 200);
+        if ($n !== null) { $vend[$sid] = $n; }
+        $parV[$sid] = (int) max(1, ceil($obj[$sid] / max(1.0, $n ?? 1.0)));
+        $r = ((array) ($x['n1'] ?? []))[$sid] ?? null;
+        if (is_numeric($r) && (float) $r >= 0) { $ref[$sid] = round((float) $r, 1); }
+    }
+    if ($obj === []) { return null; }
+    $pct = isset($x['pct']) && is_numeric($x['pct']) ? max(-90, min(500, (int) round((float) $x['pct']))) : null;
+    return ['objectifs' => $obj, 'vendeuses' => $vend, 'objVend' => $parV, 'pct' => $pct, 'n1' => $ref];
 }
 
 /**
@@ -381,7 +415,8 @@ function wr_primes_app(): array
             $e = primesAppEntreeValide($x, $i, $r);
             if ($e === null) {
                 http_response_code(422);
-                return ['error' => 'prime ' . ($i + 1) . ' : ' . (($x['type'] ?? '') === 'categorie' ? 'un titre et un motif valide (une expression comme tarte)' : 'réglage illisible')];
+                return ['error' => 'prime ' . ($i + 1) . ' : ' . (($x['type'] ?? '') === 'categorie' ? 'un titre et un motif valide (une expression comme tarte)'
+                    : (in_array($x['regle'] ?? '', ['magasin', 'vendeuse'], true) ? 'un objectif pour au moins un de ses magasins' : 'réglage illisible'))];
             }
             $liste[] = $e;
         }
@@ -638,6 +673,48 @@ function ep_primes_promos_sonde(): array
         $out[$r] = ['code' => $l['code'], 'cles' => is_array($l['corps']) ? array_keys($l['corps']) : null, 'item' => $un, 'fiche' => $fiche];
     }
     return $out;
+}
+
+/**
+ * GET /ventes/primes-reference?ids=1,2&du=&au=&shops=4,5 — pour l'assistant (16/10/2026) : ce que chaque magasin a vendu de
+ * ces produits sur la même période l'an dernier (`n1`, en pièces ; /shops/{id}/statistics/sales/product-category-groups,
+ * gardé par apTranches2), et à défaut au rythme des 28 derniers jours ramené à la période (`recent`). `ref` : n1 s'il y en a,
+ * sinon recent ; `source` le dit. Sans période : le mois en cours.
+ */
+function ep_primes_reference(): array
+{
+    $ids = [];
+    foreach (explode(',', (string) ($_GET['ids'] ?? '')) as $v) { if (ctype_digit(trim($v))) { $ids[(int) trim($v)] = true; } }
+    if ($ids === []) { http_response_code(422); return ['error' => 'aucun produit']; }
+    $du = primesAppDate($_GET['du'] ?? null) ?? date('Y-m-01');
+    $au = primesAppDate($_GET['au'] ?? null) ?? date('Y-m-t');
+    if ($au < $du) { [$du, $au] = [$au, $du]; }
+    $jours = (int) round((strtotime($au) - strtotime($du)) / 86400) + 1;
+    $nomDe = primesMagasins();
+    $shops = [];
+    foreach (explode(',', (string) ($_GET['shops'] ?? '')) as $v) { $v = trim($v); if ($v !== '' && isset($nomDe[$v])) { $shops[] = (int) $v; } }
+    if ($shops === []) { $shops = array_map('intval', array_keys($nomDe)); }
+    $du1 = date('Y-m-d', strtotime($du . ' -1 year')); $au1 = date('Y-m-d', strtotime($au . ' -1 year'));
+    $rAu = date('Y-m-d', strtotime('-1 day')); $rDu = date('Y-m-d', strtotime('-28 days'));
+    $couples = [];
+    foreach ($shops as $sid) { $couples[] = [$sid, $du1, $au1]; $couples[] = [$sid, $rDu, $rAu]; }
+    $t = function_exists('apTranches2') ? apTranches2($couples) : [];
+    $somme = static function (?array $p) use ($ids): ?float {
+        if (!is_array($p)) { return null; }
+        $q = 0.0;
+        foreach ($p as $pid => $x) { if (isset($ids[(int) $pid])) { $q += (float) $x[2]; } }
+        return round($q, 1);
+    };
+    $out = [];
+    foreach ($shops as $sid) {
+        $n1 = $somme($t[$sid . ':' . $du1] ?? null);
+        $r = $somme($t[$sid . ':' . $rDu] ?? null);
+        $recent = $r !== null ? round($r * $jours / 28, 1) : null;
+        $ref = ($n1 !== null && $n1 > 0) ? $n1 : (($recent !== null && $recent > 0) ? $recent : null);
+        $out[] = ['id' => (string) $sid, 'nom' => $nomDe[(string) $sid] ?? ('Magasin ' . $sid), 'n1' => $n1, 'recent' => $recent, 'ref' => $ref,
+            'source' => $ref === null ? null : (($n1 !== null && $n1 > 0) ? 'n1' : 'recent')];
+    }
+    return ['du' => $du, 'au' => $au, 'jours' => $jours, 'du1' => $du1, 'au1' => $au1, 'recentDu' => $rDu, 'recentAu' => $rAu, 'magasins' => $out];
 }
 
 /** GET /ventes/primes-promos[?frais] — les promotions du panel, et celles qui ont déjà leur prime. */
@@ -1111,14 +1188,19 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
     foreach ($pieces as $q) {
         [$un, $deux] = primesTete($clDe[$q['cle']] ?? null, 'pieces');
         $p = $q['pieces'];
-        $seuil = ($q['regle'] ?? 'premiere') === 'seuil';
-        // Une promo au seuil : gagnée dès le seuil atteint ; sinon, il manque des pièces. La 1re du magasin sinon.
+        $regle = $q['regle'] ?? 'premiere';
+        // Sur objectif (16/10/2026) : « magasin », la jauge est le total du magasin face à son objectif ; « vendeuse »,
+        // ses pièces face au sien. Comme au seuil : gagnée dès l'objectif atteint.
+        $obj = in_array($regle, ['magasin', 'vendeuse'], true) ? ($q['objectif'] ?? null) : null;
+        $seuil = $regle === 'seuil' || $obj !== null;
+        if ($regle === 'magasin' && $p !== null) { $p = (float) ($q['totalMag'] ?? $p); }
         $etat = $p === null ? 'vide' : ($seuil ? ((int) ($q['montant'] ?? 0) > 0 ? 'gagne' : 'att')
             : ($q['rangMag'] === 1 ? ($enCours ? 'tete' : 'gagne') : ($q['rangMag'] === null ? 'att' : 'rang')));
+        $cible = $obj ?? (float) $q['minPieces'];
         $cartes[] = ['cle' => $q['cle'], 'type' => $q['type'], 'emo' => $q['emo'], 'icone' => primesIconeDe($q['cle']), 'lib' => $q['lib'], 'montant' => (int) $q['montantMag'], 'max' => false,
             'gain' => (float) $q['montant'], 'etat' => $etat, 'val' => $p, 'unite' => 'pcs', 'rang' => $q['rangMag'], 'sur' => $q['surMag'],
-            'minPieces' => (int) $q['minPieces'], 'regle' => $q['regle'] ?? 'premiere',
-            'ecart' => ($p !== null && ($seuil ? $p < $q['minPieces'] : $q['rangMag'] === null)) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
+            'minPieces' => (int) $q['minPieces'], 'regle' => $regle, 'objPcs' => $obj, 'moiPcs' => $regle === 'magasin' ? $q['pieces'] : null,
+            'ecart' => ($p !== null && ($seuil ? $p < $cible : $q['rangMag'] === null)) ? max(1, (int) ceil(($seuil ? $cible : $q['minPieces']) - $p)) : null,
             'premier' => $un, 'second' => $deux, 'podium' => $q['type'] === 'categorie' ? primesPodium($clDe[$q['cle']] ?? null) : [],
             'du' => $q['du'] ?? null, 'au' => $q['au'] ?? null,
             'motif' => $p === null ? $vide('pas_compte') : null, 'classement' => isset($clDe[$q['cle']])];
@@ -1157,7 +1239,8 @@ function primesCarteJauge(array $c): array
         // Les classements (catégories, promos, meilleure vendeuse) : passer la 1re, garder la place, ou le minimum. Une
         // promo au seuil (16/10/2026) : le seuil est l'objectif, chacune pour soi.
         $un = $c['premier'] ?? null; $deux = $c['second'] ?? null;
-        if (($c['regle'] ?? '') === 'seuil') { [$rType, $rVal] = ['cible', (float) max(1, (int) ($c['minPieces'] ?? 1))]; }
+        if (($c['objPcs'] ?? null) !== null) { [$rType, $rVal] = ['cible', (float) $c['objPcs']]; }
+        elseif (($c['regle'] ?? '') === 'seuil') { [$rType, $rVal] = ['cible', (float) max(1, (int) ($c['minPieces'] ?? 1))]; }
         elseif ($un !== null && !$un['moi']) { [$rType, $rVal] = ['passer', floor((float) $un['q']) + 1]; }
         elseif ($un !== null && $deux !== null) { [$rType, $rVal] = ['garder', (float) $deux['q']]; }
         elseif ($un === null && ($c['minPieces'] ?? 0) > 0) { [$rType, $rVal] = ['min', (float) $c['minPieces']]; }
