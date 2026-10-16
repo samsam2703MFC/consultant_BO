@@ -271,5 +271,13 @@
   "you_are_in": "sei in gara",
   "you_are_queen": "sei tu la regina della rete",
   "you_short": "Tu",
-  "of_which_you": "di cui tu"
+  "of_which_you": "di cui tu",
+  "upcoming": "in arrivo",
+  "upcoming_title": "I premi previsti quel mese",
+  "upcoming_text": "Ciò che potrai guadagnare. Il conteggio parte il primo giorno del mese.",
+  "rule_first": "vince la 1ª del negozio",
+  "rule_threshold": "ognuna da {n} {u}",
+  "rule_shop": "il negozio: obiettivo {n} {u}",
+  "rule_mine": "il tuo obiettivo: {n} {u}",
+  "dates_from_to": "dal {du} al {au}"
 }

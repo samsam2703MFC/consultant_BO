@@ -617,6 +617,11 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   seuil, montant, heuresMin, notes: {shop: note}}, record, meilleure, magasins, m, lib}`. La colonne « Moyenne
   réseau » de la note Google en tire la note moyenne et le nombre de magasins au seuil. Écran : ERP franchisé › Marketing franchisé › **Primes de l'app worker** (16/10/2026, avant : Équipe & ventes › Paramètres ; la liste des primes, les promotions du panel,
   les moyennes par magasin ; il s'ouvre même si le classement n'a pas pu être calculé).
+- **Un mois à venir** (16/10/2026) : `m` peut aller jusqu'à trois mois en avance (`PRIMES_MOIS_A_VENIR`). La fiche est
+  alors celle des primes prévues (`primesAVenir`) : `aVenir: true`, `acquis: 0`, `enJeu` la somme des récompenses,
+  `cartes: [{cle, type, emo, icone, lib, montant, max, etat: avenir, objectif, unite, regle, du, au, heuresMin?,
+  minTickets?}]` — les targets actives, Bats ton record, la meilleure vendeuse, et les promos dont la période touche
+  le mois dans le magasin de la personne (l'objectif est celui de son magasin) ; pas de classement, rien de compté.
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
   `X-Worker-Nom` en base64, `X-Worker-Jour`, `X-Worker-Sign` = HMAC-SHA256 de `emp|nom|jour` avec

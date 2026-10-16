@@ -19,19 +19,61 @@
 {% set ib = p.iconesBase ?? (ROOT ~ '/..') %}
 
 {# ── Le mois (16/10/2026) : une flèche à gauche, le mois au centre, une flèche à droite ; douze mois en arrière au
-   plus, pas de mois à venir. ── #}
+   plus, trois mois à venir (les primes prévues). ── #}
 {% set mCour = 'now'|date('Y-m') %}
 {% set mPrec = (p.m ~ '-01')|date_modify('-1 month')|date('Y-m') %}
 {% set mSuiv = (p.m ~ '-01')|date_modify('+1 month')|date('Y-m') %}
 {% set mMin = ('now'|date('Y-m') ~ '-01')|date_modify('-12 months')|date('Y-m') %}
+{% set mMax = ('now'|date('Y-m') ~ '-01')|date_modify('+3 months')|date('Y-m') %}
 <nav class="mois-sel" aria-label="{{ T.month ?? 'Mois' }}" data-mois>
   {% if mPrec >= mMin %}<a class="ms-f" href="{{ ROOT }}/primes?m={{ mPrec }}" aria-label="{{ T.prev_month ?? 'Mois précédent' }}"><i class="bi bi-chevron-left"></i></a>
   {% else %}<span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>{% endif %}
-  <div class="ms-l"><b>{{ mois(p.m)|capitalize }}</b>{% if p.enCours %}<small>{{ T.in_progress ?? 'en cours' }} · {{ T.as_of ?? 'au' }} {{ jour }}</small>{% endif %}</div>
-  {% if mSuiv <= mCour %}<a class="ms-f" href="{{ ROOT }}/primes{{ mSuiv < mCour ? '?m=' ~ mSuiv }}" aria-label="{{ T.next_month ?? 'Mois suivant' }}"><i class="bi bi-chevron-right"></i></a>
+  <div class="ms-l"><b>{{ mois(p.m)|capitalize }}</b>{% if p.enCours %}<small>{{ T.in_progress ?? 'en cours' }} · {{ T.as_of ?? 'au' }} {{ jour }}</small>{% elseif p.aVenir ?? false %}<small>{{ T.upcoming ?? 'à venir' }}</small>{% endif %}</div>
+  {% if mSuiv <= mMax %}<a class="ms-f" href="{{ ROOT }}/primes{{ mSuiv != mCour ? '?m=' ~ mSuiv }}" aria-label="{{ T.next_month ?? 'Mois suivant' }}"><i class="bi bi-chevron-right"></i></a>
   {% else %}<span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>{% endif %}
 </nav>
 
+{% if p.aVenir ?? false %}
+{# ── Un mois à venir (16/10/2026) : les primes prévues, leur récompense, leur règle, leur objectif ; rien de compté. ── #}
+{% set eur = '€' %}{% set pcs = T.pcs ?? 'pcs' %}
+{% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
+<div class="hx"><div class="l"><div><b>{{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.in_play ?? 'en jeu' }}</small></div></div></div>
+<div class="pl-vide av"><i class="bi bi-calendar-event"></i><div><b>{{ T.upcoming_title ?? 'Les primes prévues ce mois-là' }}</b>
+  <span>{{ T.upcoming_text ?? 'Ce que tu pourras gagner. Le compteur démarre le premier jour du mois.' }}</span></div></div>
+{% for g in [
+  { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement') },
+  { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') }]|filter(g => g.liste|length) %}
+{% set max = 0 %}{% for c in g.liste %}{% set max = max + c.montant %}{% endfor %}
+<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></div>
+<div class="pl-liste">
+{% for c in g.liste %}
+{% set u = c.unite %}{% set dec = u == 'note' ? 1 : 0 %}
+{% set suf = u == 'pct' ? ' %' : (u == 'pcs' ? ' ' ~ pcs : (u == 'note' ? ' ★' : '')) %}
+{% set n = c.objectif is not null ? c.objectif|number_format(dec, ',', ' ') : '' %}
+<div class="pl av" data-carte="{{ c.cle }}">
+  <div class="pl-b">
+    <div class="pl-h">
+      <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
+      <b class="pl-t">{{ nomFixe[c.cle] ?? c.lib }}</b>
+      <span class="pl-v">{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small></span>
+    </div>
+    <div class="pl-s">
+      <span class="mu">
+      {%- if c.regle == 'magasin' %}{{ (T.rule_shop ?? 'le magasin : objectif {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- elseif c.regle == 'vendeuse' %}{{ (T.rule_mine ?? 'ton objectif : {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- elseif c.regle == 'seuil' %}{{ (T.rule_threshold ?? 'chacune dès {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- elseif c.regle == 'premiere' %}{{ T.rule_first ?? 'la 1re du magasin gagne' }}
+      {%- elseif c.objectif is not null %}{{ T.goal_lower ?? 'objectif' }} {{ n }}{{ suf }}
+      {%- endif -%}
+      </span>
+      {% if c.du or c.au %}<span>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endfor %}
+{% else %}
 {# ── Acquis, en jeu ── #}
 {% set part = p.enJeu > 0 ? min(1, p.acquis / p.enJeu) : 0 %}
 <div class="hx">
@@ -282,6 +324,7 @@
   {% endfor %}{% endfor %}
 </div>
 {% endif %}
+{% endif %}{# fin du mois compté (le mois à venir est plus haut) #}
 {% endif %}
 {% endblock %}
 {% block scripts %}

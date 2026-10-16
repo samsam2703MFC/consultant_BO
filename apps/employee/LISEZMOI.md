@@ -69,8 +69,11 @@ la ligne depuis les montants.
 
 En tête de page, **le sélecteur de mois** (16/10/2026, à la place de « Halle · octobre 2026, au 16 ») : centré, une
 flèche à gauche (le mois d'avant, douze mois en arrière au plus), le mois au milieu (« en cours · au 16 » pour le
-mois en cours), une flèche à droite (grisée au mois en cours : pas de mois à venir). Les flèches sont des liens
-`/primes?m=AAAA-MM` ; un mois clos dit « il manquait » au lieu de « encore ».
+mois en cours), une flèche à droite (jusqu'à trois mois à venir). Les flèches sont des liens
+`/primes?m=AAAA-MM` ; un mois clos dit « il manquait » au lieu de « encore ». **Un mois à venir** (16/10/2026)
+montre les primes prévues — « à venir » sous le mois, le total en jeu, puis chaque target et chaque promo de ce
+mois dans son magasin avec sa récompense, sa règle (la 1re du magasin, dès N pcs, objectif du magasin, ton
+objectif), son objectif et ses dates ; rien de compté, pas de détail ni de classement.
 
 Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 

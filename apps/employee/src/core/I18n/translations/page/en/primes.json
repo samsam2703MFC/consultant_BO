@@ -271,5 +271,13 @@
   "you_are_in": "you are in the race",
   "you_are_queen": "you are the queen of the network",
   "you_short": "You",
-  "of_which_you": "of which you"
+  "of_which_you": "of which you",
+  "upcoming": "upcoming",
+  "upcoming_title": "Bonuses planned for that month",
+  "upcoming_text": "What you can earn. Counting starts on the first day of the month.",
+  "rule_first": "the shop’s #1 wins",
+  "rule_threshold": "everyone from {n} {u}",
+  "rule_shop": "the shop: target {n} {u}",
+  "rule_mine": "your target: {n} {u}",
+  "dates_from_to": "from {du} to {au}"
 }

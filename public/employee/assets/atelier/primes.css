@@ -514,3 +514,7 @@ a.acc-etape{text-decoration:none;color:inherit}
 .av.t0{background:var(--la-teinte-1)}.av.t1{background:var(--la-teinte-2)}.av.t2{background:var(--la-teinte-3)}.av.t3{background:var(--la-teinte-4)}
 .av.t4{background:var(--la-teinte-5)}.av.t5{background:var(--la-teinte-6)}.av.t6{background:var(--la-teinte-7)}.av.t7{background:var(--la-teinte-8)}
 .av.moi{background:var(--la-rubis)}
+
+/* Un mois à venir (16/10/2026) : les primes prévues, sans barre ni détail. */
+.pl.av .pl-b{cursor:default}
+.pl.av .pl-v small{margin-left:2px}
