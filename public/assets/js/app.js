@@ -304,7 +304,7 @@ class App {
       manque: 'manque-a-gagner',
       ventes: 'target-ventes',
       croisements: 'croisements',
-      projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
+      projets: 'projets', fonds: 'fonds', marketing: 'marketing', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
       bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', scoringTri: 'scoring-trimestre',
       suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
@@ -948,6 +948,7 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
@@ -971,8 +972,11 @@ class App {
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
-      mktCampagnes: ['Campagnes', 'Les campagnes du réseau : qui occupe quel mois, la liste et leurs statuts, ce qu’elles devraient rapporter, et ce qu’elles ont changé.',
-        [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
+      // Le marketing réuni (C1, 16/10/2026) : campagnes, réseaux sociaux et newsletters. La console
+      // montre ce qui demande un geste ; le travail se fait dans l'espace marque (le portail
+      // marketing/) ou se regarde comme le franchisé le voit (marketing/?shop=).
+      marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit. La console montre ce qui demande un geste ; le travail se fait dans l’espace marque, ou se regarde comme le franchisé le voit.',
+        [['marketing', 'Aujourd’hui'], ['mktCampagnes', 'Campagnes'], ['mktCalendrier', 'Calendrier'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
@@ -1381,8 +1385,8 @@ class App {
       // 16/10/2026, posts et newsletters ne vivent plus que là ; Offres et canaux
       // est retiré, comme la Centrale d'achat.
       ['Marque & marketing', [
-        ['ext:marketing/', 'Module Marketing ↗', 0],
-        ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
+        // Une seule entrée (16/10/2026) : le hub, ses deux portes vers le portail, et les onglets de campagne.
+        ['marketing', 'Marketing', ((((this.state.mh || {}).d || {}).social || {}).chiffres || {}).aTraiter || 0, ['mktCampagnes', 'mktCalendrier', 'bxcampagnes', 'mesure']],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
@@ -1438,10 +1442,10 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isRO', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktHub', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isRO', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
+      marketing: 'isMktHub', mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1825,6 +1829,7 @@ class App {
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
+    if (common.isMktHub) this.valsMktHub(common);
     if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
@@ -2569,6 +2574,60 @@ class App {
     }, 350);
   }
 
+  /* --- Marketing : le hub ---------------------------------------------------
+   * Une seule lecture, celle du tableau de bord du portail (/marketing/hub) : ses
+   * chiffres par canal et sa liste « à faire ». Chaque ligne ouvre l'élément dans
+   * l'espace marque ; la vue franchisé est le même portail avec ?shop=.
+   */
+  mhCharge(force){
+    const b = this.state.mh || {};
+    if (!force && (b.d || b.chargement)) { return; }
+    if (this._mhEnCours) { return; }
+    this._mhEnCours = true;
+    this.setState({ mh: { chargement: true, d: b.d || null } });
+    readOne('/marketing/hub').catch(() => null)
+      .then(d => { this._mhEnCours = false; this.setState({ mh: { chargement: false, d: d || { error: 'injoignable' } } }); });
+  }
+  valsMktHub(common){
+    const S = this.state;
+    this.mhCharge(false);
+    const b = S.mh || {}, d = b.d && !b.d.error ? b.d : null;
+    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+    const portail = q => base + 'marketing/' + (q ? '?' + q : '');
+    const mags = d && (d.magasins || []).length ? d.magasins : this.open().map(s => ({ id: String(s.id), nom: s.nom }));
+    const shop = String(S.mhShop || (mags[0] || {}).id || '');
+    const canal = k => (d && d[k] && d[k].dispo) ? d[k] : null;
+    const so = canal('social'), em = canal('emailing'), ca = canal('campagnes');
+    const cs = (so && so.chiffres) || {}, ce = (em && em.chiffres) || {}, cc = (ca && ca.chiffres) || {};
+    const n = v => v == null ? '—' : String(v);
+    const vue = shop ? portail('shop=' + encodeURIComponent(shop)) : '';
+    const etats = [];
+    if (so && so.publication && !so.publication.reelle) { etats.push('Publication automatique éteinte : un post validé se publie à la main, depuis Publier.'); }
+    if (em && em.test) { etats.push('Newsletter en mode test : aucun envoi ne part tant que l’envoi réel n’est pas activé.'); }
+    const NOMS = { social: 'post', emailing: 'newsletter', campagnes: 'campagne', charte: 'charte', avis: 'avis' };
+    common.mh = {
+      chargement: !d && !(b.d && b.d.error),
+      indispo: b.d && b.d.error ? 'La lecture de /marketing/hub a échoué — voir Diagnostic API.' : '',
+      relire: () => this.mhCharge(true),
+      marque: { ouvrir: portail(''), campagne: base + 'assistant/', post: portail('onglet=creer'), newsletter: portail('onglet=creer&vue=newsletter') },
+      magasins: mags.map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === shop })),
+      setShop: e => this.setState({ mhShop: e.target.value }),
+      vueFranchise: vue,
+      copier: () => { try { navigator.clipboard.writeText(vue); this.notify('Lien copié — la vue marketing du magasin.'); } catch (e) { this.notify('Copie impossible : ouvrez la vue et copiez l’adresse.'); } },
+      chiffres: [
+        { k: 'Posts à traiter', v: n(so ? cs.aTraiter : null), s: so ? (cs.aPublier || 0) + ' validé(s) à publier' : 'canal indisponible', fort: (cs.aTraiter || 0) > 0, lien: portail('onglet=valider') },
+        { k: 'Newsletters programmées', v: n(em ? ce.programmees : null), s: em ? (em.test ? 'mode test' : (ce.envoyeesMois || 0) + ' envoyée(s) ce mois') : 'canal indisponible', lien: portail('onglet=publier') },
+        { k: 'Campagnes en cours', v: n(ca ? cc.enCours : null), s: ca ? (cc.aVenir || 0) + ' à venir · ' + (cc.brouillons || 0) + ' brouillon(s)' : 'canal indisponible', lien: portail('onglet=plan') },
+        { k: 'Budget engagé', v: ca && cc.budget ? this.fE(cc.depense || 0) : '—', s: ca && cc.budget ? 'sur ' + this.fE(cc.budget) + ' des campagnes vivantes' : 'aucun budget posé', lien: portail('onglet=plan') }],
+      etats,
+      aFaire: ((d && d.aFaire) || []).slice(0, 12).map(a => {
+        const c = a.cible || {};
+        return { canal: NOMS[a.canal] || a.canal, titre: a.titre, detail: a.detail || '', urgent: a.niveau === 'urgent',
+          lien: portail('onglet=' + encodeURIComponent(c.onglet || 'vue') + (c.vue ? '&vue=' + encodeURIComponent(c.vue) : '')) };
+      }),
+      plus: Math.max(0, ((d && d.aFaire) || []).length - 12),
+    };
+  }
   /* --- invendus et poubelle : une lecture réseau sur la période choisie --- */
   ivCharge(force){
     const per = this.state.ivPeriode || 'jour', M = this.state.iv || {}, b = M[per];

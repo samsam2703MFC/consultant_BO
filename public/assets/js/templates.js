@@ -148,6 +148,7 @@ export function render(c, x){
       ${c.isPlan ? tplPlan(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
+      ${c.isMktHub ? tplMktHub(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
@@ -5452,6 +5453,63 @@ const dcap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spa
 const dsel = 'width:100%;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)';
 
 /* --- Paramètres — Brand Guard : la charte et les pages Facebook -------------- */
+/* Marketing (C1) : les deux portes — l'espace marque et la vue franchisé —, les chiffres
+   par canal, et ce qui demande un geste. Tout lien ouvre le portail marketing/. */
+function tplMktHub(c, x){
+  const { esc } = x, h = c.mh;
+  const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
+  const btn = 'display:inline-flex;align-items:center;min-height:38px;padding:0 15px;border-radius:999px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-decoration:none;cursor:pointer;white-space:nowrap';
+  const blanc = btn + ';background:#fff;border:none;color:var(--color-primary)';
+  const ligne = btn + ';background:transparent;border:0.5px solid rgba(255,255,255,.55);color:#fff';
+  const plein = btn + ';background:var(--color-primary);border:none;color:#fff';
+  const vide = btn + ';background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text)';
+  const sel = 'font-family:var(--font-ui);font-size:12.5px;padding:9px 10px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:260px';
+  const ext = 'target="_blank" rel="noopener"';
+  const portes = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px">
+    <section style="background:var(--color-primary);color:#fff;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+      <div style="${cap};color:rgba(255,255,255,.75)">Espace marque · franchiseur</div>
+      <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Créer, valider, publier</div>
+      <div style="font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.9)">Nouvelle campagne (assistant), posts Facebook, Instagram et LinkedIn, newsletters, validation par la charte, publication.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a href="${esc(h.marque.campagne)}" ${ext} style="${blanc}">+ Campagne</a>
+        <a href="${esc(h.marque.post)}" ${ext} style="${blanc}">+ Post</a>
+        <a href="${esc(h.marque.newsletter)}" ${ext} style="${blanc}">+ Newsletter</a>
+        <a href="${esc(h.marque.ouvrir)}" ${ext} style="${ligne}">Ouvrir l’espace marque ↗</a>
+      </div>
+    </section>
+    <section style="${card};padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+      <div style="${cap}">Vue franchisé</div>
+      <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Voir comme le magasin</div>
+      <div style="font-size:12.5px;line-height:1.6;color:var(--color-text-muted)">Le portail tel que le franchisé l’ouvre : les campagnes qui le couvrent, ses posts, sa newsletter, ce qu’il doit faire.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:8px"><span style="${cap}">Magasin</span>
+          <select ${x.C(h.setShop)} style="${sel}">${h.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
+        ${h.vueFranchise ? `<a href="${esc(h.vueFranchise)}" ${ext} style="${plein}">Ouvrir la vue franchisé ↗</a><button ${x.A(h.copier)} style="${vide}">Copier son lien</button>` : ''}
+      </div>
+    </section>
+  </div>`;
+  if (h.indispo) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:#8D1D2C">${esc(h.indispo)} <button ${x.A(h.relire)} style="${vide};min-height:30px;margin-left:8px">Relire</button></div></div>`; }
+  if (h.chargement) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:var(--color-text-muted)">Lecture du portail marketing…</div></div>`; }
+  const chiffres = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${h.chiffres.map(k => `
+    <a href="${esc(k.lien)}" ${ext} style="${card};padding:14px 16px;text-decoration:none;color:var(--color-text);display:flex;flex-direction:column;gap:4px">
+      <span style="${cap}">${esc(k.k)}</span>
+      <span style="font-size:24px;font-weight:500;${k.fort ? 'color:var(--color-primary)' : ''}">${esc(k.v)}</span>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(k.s)}</span></a>`).join('')}</div>`;
+  const etats = h.etats.length ? `<div style="display:flex;flex-direction:column;gap:6px">${h.etats.map(t => `<div style="padding:9px 12px;border-radius:8px;background:#FBF3DC;border:1px solid #E8C9A0;font-size:12px;color:var(--color-on-abricot)">${esc(t)}</div>`).join('')}</div>` : '';
+  const tag = a => a.urgent ? 'background:rgba(141,29,44,.10);color:#8D1D2C' : 'background:var(--color-background-secondary);color:#444';
+  const faire = `<section style="${card};padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px"><div style="font-size:14px;font-weight:500">Ce qui demande un geste</div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre l’élément dans l’espace marque</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
+    ${h.aFaire.length ? h.aFaire.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12.5px">
+      <span style="display:inline-block;min-width:78px;text-align:center;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:500;${tag(a)}">${esc(a.canal)}</span>
+      <span style="flex:1;min-width:0"><span style="font-weight:500">${esc(a.titre)}</span>${a.detail ? `<span style="display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(a.detail)}</span>` : ''}</span>
+      <a href="${esc(a.lien)}" ${ext} style="font-size:12px;font-weight:500;white-space:nowrap">Ouvrir ›</a></div>`).join('')
+      : '<div style="font-size:12.5px;color:var(--color-text-muted);padding:10px 0">Rien n’attend : aucun post à valider, aucune publication en échec.</div>'}
+    ${h.plus ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding-top:8px">… et ${h.plus} autre(s) dans <a href="${esc(h.marque.ouvrir)}" ${ext}>le tableau de bord du portail ↗</a></div>` : ''}
+  </section>`;
+  return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}${chiffres}${etats}${faire}</div>`;
+}
 /* Invendus et poubelle (Magasins) : le réseau, magasin par magasin, et les produits les plus jetés. */
 function tplInvendus(c, x){
   const { esc } = x, o = c.iv;
