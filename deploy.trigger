@@ -790,3 +790,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T18:08:09Z primes : aucune vente a ton nom
 2026-10-16T18:12:59Z primes : selecteur de mois
 2026-10-16T18:17:21Z primes : section categories retiree
+2026-10-16T18:21:59Z primes : promotions de l'API promotions seulement
