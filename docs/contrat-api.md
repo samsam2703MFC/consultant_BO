@@ -579,7 +579,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   cartes: [{cle, type: target|categorie|promo|classement, emo, icone (le chemin de l'icône déposée, sinon ""),
   lib, montant (la récompense ; le record : son plafond, max), gain, etat: gagne|tete|rang|att|vide, val,
   unite: pct|pcs|lpt|score|note, cible, ecart, jauge, repere, rang, sur, premier: {nom, q, moi}, second,
-  minPieces, avis (la note Google), motif: pas_compte|pas_objectif|pas_note|heures|pas_classee|pas_record|
+  minPieces, avis (la note Google), motif: pas_compte|sans_vente (le mois est compté, aucun ticket à son nom)|pas_objectif|pas_note|heures|pas_classee|pas_record|
   min_tickets|null, classement, jauge, repere, repereType, repereVal, repereJour}], classements: [{cle, lib, type,
   emo, icone, unite: pieces|taux, magasin[],
   reseau[], nMag, nRes}] (les dix premières et la personne, avec le nom du panel et la localité : le seul
@@ -604,7 +604,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   note Google ; bornée à 100), `barreJour` = le jour J sur la même échelle (pour une catégorie, le trait est ses pièces + `pour1`, ou la 2e quand
   elle mène, le minimum quand elle est seule), `actif` = la prime est activée (carte
   gagnée ou en tête ; objectif du magasin en cours de mois : le CA encaissé a passé l'objectif). La fiche porte `v`
-  (sa forme, 7 au 16/10/2026) : un cache d'une autre forme est recalculé, un déploiement ne sert pas une fiche d'avant. La page **Statistiques** de l'app lit la
+  (sa forme, 8 au 16/10/2026) : un cache d'une autre forme est recalculé, un déploiement ne sert pas une fiche d'avant. La page **Statistiques** de l'app lit la
   même fiche, ses chiffres à elle seule : briques (ticket moyen `meilleure.panier`, lignes par ticket
   `record.lt`, ventes croisées, CA, CA par heure, tickets, places), aujourdhui, collection, et `semaines12`, dont
   chaque semaine porte depuis le 16/10/2026 `panier` (son CA ÷ ses tickets), `lignesTicket`, et `mag` / `res` :

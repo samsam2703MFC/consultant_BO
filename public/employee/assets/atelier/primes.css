@@ -370,6 +370,11 @@ a.acc-etape{text-decoration:none;color:inherit}
    barre, le trait noir de l'objectif (toujours à 75 %, aligné d'une ligne à l'autre) et la récompense posée dessus ;
    la passer active la prime (vert). Le pointillé : où en être au jour J. Toucher la ligne déroule son
    détail, une seule ouverte à la fois. */
+/* Le mois est compté mais aucun ticket à son nom : un mot clair en tête, plutôt que des « pas encore compté ». */
+.pl-vide{display:flex;gap:12px;align-items:flex-start;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-lg);padding:13px 14px;box-shadow:var(--la-ombre);margin:12px 0 4px}
+.pl-vide .bi{font-size:21px;color:var(--la-rubis);line-height:1}
+.pl-vide b{display:block;font:600 14px/1.3 var(--font-ui);color:var(--la-encre)}
+.pl-vide span{display:block;font:500 12.5px/1.4 var(--font-ui);color:var(--la-muet);margin-top:3px}
 .pl-liste{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
 .pl{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);box-shadow:var(--la-ombre)}
 .pl-b{padding:11px 14px 10px;cursor:pointer;outline:none;border-radius:inherit}

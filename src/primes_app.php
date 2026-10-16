@@ -810,6 +810,9 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
 {
     $clDe = [];
     foreach ($classements as $cl) { $clDe[$cl['cle']] = $cl; }
+    // Le mois est compté mais elle n'a aucun ticket à son nom (16/10/2026) : « sans_vente », pas « pas encore compté ».
+    $sansVente = (int) ($b['croisees']['jours'] ?? 0) > 0 && (int) ($b['croisees']['tickets'] ?? 0) === 0 && (int) ($b['meilleure']['tickets'] ?? 0) === 0;
+    $vide = static fn (string $motif) => $sansVente ? 'sans_vente' : $motif;
     $cartes = [];
     $c = $b['croisees'];
     $eC = primesAppEntree('croisees');
@@ -818,7 +821,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         $cartes[] = ['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'icone' => $eC['icone'], 'lib' => $eC['lib'], 'categorie' => (string) ($eC['categorie'] ?? ''), 'montant' => (int) $eC['montant'], 'max' => false,
             'gain' => (float) $c['montant'], 'etat' => $c['montant'] > 0 ? 'gagne' : ($val === null ? 'vide' : 'att'),
             'val' => $val, 'unite' => 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
-            'motif' => $val === null ? 'pas_compte' : (($c['tickets'] < $c['minTickets']) ? 'min_tickets' : null), 'minTickets' => (int) $c['minTickets'],
+            'motif' => $val === null ? $vide('pas_compte') : (($c['tickets'] < $c['minTickets']) ? 'min_tickets' : null), 'minTickets' => (int) $c['minTickets'],
             'classement' => isset($clDe['croisees'])];
     }
     $r = $b['record'];
@@ -829,7 +832,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'max' => (int) $r['maxDixiemes'] > 1, 'gain' => (float) $r['montant'],
             'etat' => $r['montant'] > 0 ? 'gagne' : (($lt === null || $cible === null) ? 'vide' : 'att'),
             'val' => $lt, 'unite' => 'lpt', 'cible' => $cible, 'record' => $r['record'], 'ecart' => ($lt !== null && $cible !== null) ? round(max(0, $cible - $lt), 2) : null,
-            'motif' => $lt === null ? 'pas_compte' : ($r['record'] === null ? 'pas_record' : null), 'classement' => false];
+            'motif' => $lt === null ? $vide('pas_compte') : ($r['record'] === null ? 'pas_record' : null), 'classement' => false];
     }
     $eO = primesAppEntree('objectif');
     if ($eO !== null && $eO['actif']) {
@@ -867,7 +870,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'val' => $v['score'], 'unite' => 'score', 'rang' => $v['rangMag'], 'sur' => $v['surMag'],
             'premier' => $v['premierNom'] !== null ? ['nom' => $v['premierNom'], 'q' => (float) $v['scorePremier'], 'moi' => $v['rangMag'] === 1] : null,
             'second' => $v['secondNom'] !== null ? ['nom' => $v['secondNom'], 'q' => (float) $v['scoreSecond'], 'moi' => false] : null,
-            'motif' => $v['score'] === null ? 'pas_classee' : null, 'classement' => false];
+            'motif' => $v['score'] === null ? $vide('pas_classee') : null, 'classement' => false];
     }
     $pieces = array_merge(
         array_map(static fn ($q) => $q + ['type' => 'categorie', 'emo' => '👑'], (array) ($b['concours']['liste'] ?? [])),
@@ -881,7 +884,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'minPieces' => (int) $q['minPieces'], 'ecart' => ($p !== null && $q['rangMag'] === null) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
             'premier' => $un, 'second' => $deux, 'podium' => $q['type'] === 'categorie' ? primesPodium($clDe[$q['cle']] ?? null) : [],
             'du' => $q['du'] ?? null, 'au' => $q['au'] ?? null,
-            'motif' => $p === null ? 'pas_compte' : null, 'classement' => isset($clDe[$q['cle']])];
+            'motif' => $p === null ? $vide('pas_compte') : null, 'classement' => isset($clDe[$q['cle']])];
     }
     return array_map('primesCarteJauge', $cartes);
 }

@@ -276,6 +276,14 @@ verifie('catégorie, personne classée : le minimum fait la 1re (10 − 4 = 6)',
 verifie('catégorie, en tête mais sous le minimum : ce qui manque au minimum', $cat(['val' => 7.0, 'premier' => ['nom' => 'Toi', 'q' => 7.0, 'moi' => true]])['pour1'] === 3);
 verifie('catégorie, la 1re sous le minimum : le minimum compte (10 − 2 = 8)', $cat(['val' => 2.0, 'premier' => ['nom' => 'Léa', 'q' => 5.0, 'moi' => false]])['pour1'] === 8);
 verifie('catégorie pas encore comptée : ni quantité ni avance', $cat(['val' => null])['pour1'] === null && $cat(['val' => null])['avance1'] === null);
+// Le mois compté sans aucun ticket à son nom : « sans_vente », pas « pas encore compté » (16/10/2026).
+$bVide = $b; $bVide['croisees'] = array_merge($b['croisees'], ['tickets' => 0, 'taux' => null, 'croisees' => 0, 'jours' => 15]);
+$bVide['record'] = array_merge($b['record'], ['lt' => null]); $bVide['meilleure'] = array_merge($b['meilleure'], ['tickets' => 0, 'score' => null]);
+$bVide['concours']['liste'] = array_map(static fn ($q) => array_merge($q, ['pieces' => null]), $b['concours']['liste'] ?? []);
+$parV = array_column(primesCartes($bVide, $pmC, $clsC, true), 'motif', 'cle');
+verifie('aucun ticket à son nom : croisées, record, meilleure, catégorie disent « sans_vente »', $parV['croisees'] === 'sans_vente' && $parV['record'] === 'sans_vente' && $parV['meilleure'] === 'sans_vente' && $parV['tartes'] === 'sans_vente', json_encode($parV));
+$bPas = $bVide; $bPas['croisees']['jours'] = 0;
+verifie('le mois pas encore compté : « pas_compte » reste', array_column(primesCartes($bPas, $pmC, $clsC, true), 'motif', 'cle')['croisees'] === 'pas_compte');
 // La barre des catégories (16/10/2026) : le trait, ce qu'il faut pour être 1re ; en tête, la 2e à garder derrière.
 verifie('catégorie 2e à 42, la 1re à 51 : le trait à 52, la barre à 60,6, pas activée', $par['tartes']['barre'] === 60.6 && $par['tartes']['actif'] === false, json_encode([$par['tartes']['barre'], $par['tartes']['actif']]));
 $catB = primesCarteJauge(['cle' => 'q', 'type' => 'categorie', 'etat' => 'tete', 'val' => 27.0, 'minPieces' => 10, 'premier' => ['nom' => 'Toi', 'q' => 27.0, 'moi' => true], 'second' => ['nom' => 'Sarah', 'q' => 24.0, 'moi' => false]]);
