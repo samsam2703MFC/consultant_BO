@@ -20,31 +20,50 @@
 .st-vide b{display:block;font:600 14px/1.3 var(--font-ui);color:var(--la-encre)}
 .st-vide span{display:block;font-size:12.5px;color:var(--la-muet);margin-top:3px;line-height:1.4}
 
-/* Les douze semaines : l'indicateur se choisit dans une rangée de puces qui défile ; une colonne par semaine,
-   la semaine en cours en rubis, les autres en gris ; la cible ou le record en trait plein. */
+/* Les douze semaines : l'indicateur se choisit dans une rangée de puces qui défile. Trois lignes : moi (rubis, épaisse,
+   avec mes points), la vendeuse moyenne de mon magasin (ambre) et celle du réseau (bleu, en tirets) ; au-dessus, les
+   trois valeurs de la semaine touchée ; la cible ou mon record en trait fin. */
 .st-puces{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px 4px;padding:2px}
 .st-puces::-webkit-scrollbar{display:none}
 .st-puces button{flex:0 0 auto;border:0;background:var(--la-beige-doux);color:var(--la-muet);border-radius:var(--radius-pill);padding:7px 12px;font:600 12px var(--font-ui);white-space:nowrap}
 .st-puces button.on{background:var(--la-encre);color:var(--la-blanc)}
 .st-ind{display:none}
 .st-ind.on{display:block}
-.st-cap{font-size:12.5px;color:var(--la-muet);margin:6px 2px 2px;min-height:18px}
-.st-cap b{color:var(--la-encre)}
+.st-cap{font-size:12px;color:var(--la-muet);margin:8px 2px 4px}
+.st-leg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 2px 2px}
+.st-li span{display:flex;align-items:center;gap:5px;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-li i{flex:0 0 auto;width:14px;border-top:3px solid var(--la-serie-moi);border-radius:var(--radius-pill)}
+.st-li.mag i{border-top:2.5px solid var(--la-serie-mag)}
+.st-li.res i{border-top:2.5px dashed var(--la-serie-res);border-radius:0}
+.st-li b{display:block;font:600 16px/1.2 var(--font-ui);color:var(--la-encre);margin-top:3px;white-space:nowrap;font-variant-numeric:proportional-nums}
+.st-li.moi b{color:var(--la-serie-moi)}
 .st-ind svg{display:block;width:100%;height:auto}
-.st-base{stroke:var(--la-trait2);stroke-width:1}
-.st-cible{stroke:var(--la-encre);stroke-width:1;opacity:.5}
-.st-bar{fill:var(--la-gris)}
-.st-col.der .st-bar{fill:var(--la-rubis)}
-.st-col.sel .st-bar{fill:var(--la-encre)}
-.st-col.der.sel .st-bar{fill:var(--la-rubis-fonce)}
+.st-grl{stroke:var(--la-trait);stroke-width:1}
+.st-y{font:500 8px var(--font-ui);fill:var(--la-muet)}
+.st-cible{stroke:var(--la-encre);stroke-width:1;opacity:.45}
+.st-ligne{fill:none;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
+.st-ligne.moi{stroke:var(--la-serie-moi);stroke-width:2.75}
+.st-ligne.mag{stroke:var(--la-serie-mag);stroke-width:2}
+.st-ligne.res{stroke:var(--la-serie-res);stroke-width:2;stroke-dasharray:5 3}
+.st-pts{pointer-events:none}
+.st-pt{stroke:var(--la-blanc);stroke-width:1.5}
+.st-pt.moi{fill:var(--la-serie-moi)}
+.st-pt.mag{fill:var(--la-serie-mag)}
+.st-pt.res{fill:var(--la-serie-res)}
+.st-pt.mag,.st-pt.res{display:none}
+.st-pts.sel .st-pt,.st-pt.seul{display:inline}
+.st-guide{stroke:var(--la-trait2);stroke-width:1;display:none}
+.st-col.sel .st-guide{display:inline}
 .st-hit{fill:transparent}
 .st-col{cursor:pointer;outline:none}
 .st-col:focus-visible .st-hit{stroke:var(--la-rubis);stroke-width:1.5}
 .st-x{font:500 8.5px var(--font-ui);fill:var(--la-muet)}
 .st-col.der .st-x{fill:var(--la-encre);font-weight:700}
-.st-mag-l{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--la-muet);margin-top:2px}
+.st-col.sel .st-x{fill:var(--la-encre)}
+.st-mag-l{display:flex;flex-wrap:wrap;gap:4px 14px;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:4px}
 .st-mag-l > span{display:inline-flex;align-items:center;gap:5px}
 .lg-ligne{display:inline-block;width:14px;border-top:1.5px solid var(--la-encre);opacity:.6;vertical-align:middle}
+.st-note{font:500 12px/1.4 var(--font-ui);color:var(--la-muet);background:var(--la-beige-doux);border-radius:var(--radius-md);padding:8px 10px;margin:8px 0 0}
 
 /* Les titres gagnés. */
 .st-titres{display:flex;flex-wrap:wrap;gap:6px}

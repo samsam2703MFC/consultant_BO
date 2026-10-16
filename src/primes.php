@@ -927,14 +927,93 @@ function primesHeuresSemaines(int $emp, string $du, string $au): array
 }
 
 /**
+ * Les moyennes des douze dernières semaines (16/10/2026, les lignes « mon magasin » et « réseau » du
+ * graphique de Statistiques) : semaine par semaine, pour chaque magasin et pour le réseau, la vendeuse
+ * moyenne — ventes croisées (Σ croisées ÷ Σ tickets comptés), lignes par ticket (Σ lignes ÷ Σ tickets),
+ * tickets par vendeuse (celles qui ont vendu), ticket moyen (Σ CA ÷ Σ tickets) et CA par heure (Σ CA ÷ Σ
+ * heures de celles qui ont vendu). Des moyennes, jamais le chiffre d'une collègue. Gravé une heure.
+ *
+ * @return array<string, array{mag: array<string, array>, res: array}> par lundi de semaine
+ */
+function primesSemainesMoyennes(): array
+{
+    $cle = 'primesS12moy';
+    $c = setting($cle);
+    if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
+    $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];
+    if ($reseau === []) { return []; }
+    $du = $reseau[0]['du']; $au = date('Y-m-d', strtotime('-1 day'));
+    $emps = venteEmployes();
+    // Les heures de chacune, semaine par semaine, en une lecture du planning.
+    $heures = [];
+    $duree = '((TIME_TO_SEC(s.end_hour) - TIME_TO_SEC(s.start_hour) + 86400) % 86400)';
+    try {
+        foreach (Db::rows('SELECT s.id_employee emp, YEARWEEK(s.work_date, 3) sem, SUM(' . $duree . ') / 3600 h
+                             FROM franchisee_employee_schedule s
+                            WHERE s.work_date >= ? AND s.work_date <= ?
+                            GROUP BY s.id_employee, YEARWEEK(s.work_date, 3)', [$du, $au]) as $r) {
+            $yw = (string) $r['sem'];
+            $heures[date('Y-m-d', strtotime(substr($yw, 0, 4) . 'W' . substr($yw, 4, 2)))][(int) $r['emp']] = (float) $r['h'];
+        }
+    } catch (PDOException $e) { /* planning illisible : pas de CA par heure moyen */ }
+    try { $shops = array_map(fn ($s) => (string) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { $shops = []; }
+    $vide = static fn () => ['t' => 0, 'l' => 0, 'c' => 0, 'tc' => 0, 'vend' => 0, 'ca' => 0.0, 'tE' => 0, 'caH' => 0.0, 'h' => 0.0];
+    $moyenne = static fn (array $a) => [
+        'taux' => $a['tc'] > 0 ? round(100 * $a['c'] / $a['tc'], 1) : null,
+        'lignesTicket' => ($a['t'] > 0 && $a['l'] > 0) ? round($a['l'] / $a['t'], 2) : null,
+        'tickets' => $a['vend'] > 0 ? (int) round($a['t'] / $a['vend']) : null,
+        'panier' => ($a['tE'] > 0 && $a['ca'] > 0) ? round($a['ca'] / $a['tE'], 2) : null,
+        'caHeure' => ($a['h'] > 0 && $a['caH'] > 0) ? (int) round($a['caH'] / $a['h']) : null];
+    $out = [];
+    foreach ($reseau as $sem) {
+        $mag = []; $res = $vide();
+        // Les tickets, les lignes, les ventes croisées : la moisson de la semaine.
+        foreach ((array) ($sem['e'] ?? []) as $id => $x) {
+            $sid = (string) ($x['shop'] ?? ''); $mag[$sid] ??= $vide();
+            foreach (['t', 'l', 'c', 'tc'] as $k) { $mag[$sid][$k] += (int) ($x[$k] ?? 0); $res[$k] += (int) ($x[$k] ?? 0); }
+            if ((int) ($x['t'] ?? 0) > 0) { $mag[$sid]['vend']++; $res['vend']++; }
+        }
+        // Le CA et ses tickets : les ventes par vendeuse de chaque jour (pvE, moissonnées par le cron).
+        $caEmp = [];
+        foreach ($shops as $sid) {
+            for ($k = 0; $k < 7; $k++) {
+                $j = date('Y-m-d', strtotime($sem['du'] . ' +' . $k . ' days'));
+                if ($j >= date('Y-m-d')) { break; }
+                $v = setting('pvE' . $sid . ':' . $j);
+                if (!is_array($v) || !isset($v['e'])) { continue; }
+                foreach ((array) $v['e'] as $id => $y) {
+                    if ((float) ($y['ca'] ?? 0) <= 0) { continue; }
+                    $caEmp[$sid][(int) $id]['ca'] = ($caEmp[$sid][(int) $id]['ca'] ?? 0.0) + (float) $y['ca'];
+                    $caEmp[$sid][(int) $id]['t'] = ($caEmp[$sid][(int) $id]['t'] ?? 0) + (int) ($y['t'] ?? 0);
+                }
+            }
+        }
+        foreach ($caEmp as $sid => $parEmp) {
+            $mag[$sid] ??= $vide();
+            foreach ($parEmp as $id => $y) {
+                $h = (float) ($heures[$sem['du']][$id] ?? 0);
+                $mag[$sid]['ca'] += $y['ca']; $mag[$sid]['tE'] += $y['t']; $res['ca'] += $y['ca']; $res['tE'] += $y['t'];
+                // Le CA par heure ne compte que les heures de celles qui ont vendu, et leur CA à elles seules.
+                if ($h > 0) { $mag[$sid]['h'] += $h; $res['h'] += $h; $mag[$sid]['caH'] += $y['ca']; $res['caH'] += $y['ca']; }
+            }
+        }
+        $out[$sem['du']] = ['mag' => array_map($moyenne, $mag), 'res' => $moyenne($res)];
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out], JSON_UNESCAPED_UNICODE)]);
+    return $out;
+}
+
+/**
  * Les douze dernières semaines d'une personne : ses ventes croisées (taux) et sa place au taux
  * parmi les vendeuses du réseau (dix tickets au moins la semaine), ses pièces du concours et sa
  * place, son CA, ses heures, son CA par heure. Mis en cache une heure.
  */
 function primesSemaines12(int $emp, int $sid): array
 {
-    // v2 (16/10/2026) : chaque semaine porte aussi son ticket moyen et ses lignes par ticket.
-    $cle = 'primesS12v2:' . $emp;
+    // v4 (16/10/2026) : chaque semaine porte son ticket moyen, ses lignes par ticket, et les moyennes de son
+    // magasin (« mag ») et du réseau (« res ») pour les mêmes indicateurs.
+    $cle = 'primesS12v4:' . $emp;
     $c = setting($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];
@@ -948,6 +1027,7 @@ function primesSemaines12(int $emp, int $sid): array
         foreach (array_slice(array_reverse($manquants), 0, 30) as $j) { pvVentesJour($sid, $j); }
     }
     $cfgK = concoursReglages();
+    $moy = primesSemainesMoyennes();
     $out = [];
     foreach ($reseau as $sem) {
         $e = (array) ($sem['e'] ?? []);
@@ -982,7 +1062,8 @@ function primesSemaines12(int $emp, int $sid): array
             'ca' => $joursCa > 0 ? round($ca, 2) : null, 'heures' => round($h, 1),
             'caHeure' => ($joursCa > 0 && $h > 0 && $ca > 0) ? (int) round($ca / $h) : null,
             'panier' => ($tickets > 0 && $ca > 0) ? round($ca / $tickets, 2) : null,
-            'lignesTicket' => ($moi !== null && (int) $moi['t'] > 0 && (int) ($moi['l'] ?? 0) > 0) ? round((int) $moi['l'] / (int) $moi['t'], 2) : null];
+            'lignesTicket' => ($moi !== null && (int) $moi['t'] > 0 && (int) ($moi['l'] ?? 0) > 0) ? round((int) $moi['l'] / (int) $moi['t'], 2) : null,
+            'mag' => $moy[$sem['du']]['mag'][(string) $sid] ?? null, 'res' => $moy[$sem['du']]['res'] ?? null];
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out], JSON_UNESCAPED_UNICODE)]);
     return $out;

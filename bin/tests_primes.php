@@ -317,6 +317,26 @@ verifie('du texte qui n’est pas une image refusé', (primesIconeEcrire('data:t
 verifie('plus d’un Mo refusé', (primesIconeEcrire('data:image/png;base64,' . base64_encode(str_repeat('x', PRIMES_ICONE_MAX + 1)), $dos)['code'] ?? 0) === 413);
 array_map('unlink', glob($dos . '/*') ?: []); @rmdir($dos);
 
+// --- 7 quater. les semaines du réseau portent les lignes (16/10/2026, lignes par ticket de Statistiques) -----
+echo "Les semaines\n";
+$lundiP = date('Y-m-d', strtotime('monday this week -7 days'));
+$GLOBALS['REGLAGES']['pvL4:' . $lundiP] = ['v' => 3, 'f' => [], 'e' => [2 => ['t' => 10, 'l' => 27, 'c' => 5], 1 => ['t' => 4, 'l' => 9, 'c' => 1]]];
+$GLOBALS['REGLAGES']['pvL4:' . date('Y-m-d', strtotime($lundiP . ' +1 day'))] = ['v' => 3, 'f' => [], 'e' => [2 => ['t' => 6, 'l' => 13, 'c' => 2]]];
+$semR = array_column(pvSemainesReseau(2), null, 'du');
+verifie('une semaine cumule les tickets et les lignes de chacune', ($semR[$lundiP]['e'][2]['t'] ?? null) === 16 && ($semR[$lundiP]['e'][2]['l'] ?? null) === 40, json_encode($semR[$lundiP]['e'][2] ?? null));
+// Les moyennes du magasin et du réseau, semaine par semaine : la vendeuse moyenne, jamais une collègue.
+$GLOBALS['REGLAGES']['pvE4:' . $lundiP] = ['quand' => time(), 'e' => [2 => ['ca' => 200.0, 't' => 16], 1 => ['ca' => 40.0, 't' => 4], 3 => ['ca' => 60.0, 't' => 5]]];
+$planningAvant = $GLOBALS['TABLES']['planning'];
+$GLOBALS['TABLES']['planning'] = [['emp' => 2, 'sem' => date('oW', strtotime($lundiP)), 'h' => 8], ['emp' => 1, 'sem' => date('oW', strtotime($lundiP)), 'h' => 4]];
+unset($GLOBALS['REGLAGES']['primesS12moy']);
+$moyS = primesSemainesMoyennes();
+$m4 = $moyS[$lundiP]['mag']['4'] ?? [];
+verifie('moyenne du magasin : 2,45 lignes par ticket, 10 tickets par vendeuse', ($m4['lignesTicket'] ?? null) === 2.45 && ($m4['tickets'] ?? null) === 10, json_encode($m4));
+verifie('moyenne du magasin : ticket moyen 12 €, 20 € par heure (sans le CA de qui n’a pas d’heures)', ($m4['panier'] ?? null) === 12.0 && ($m4['caHeure'] ?? null) === 20, json_encode($m4));
+verifie('moyenne du réseau la même semaine (un seul magasin a vendu)', ($moyS[$lundiP]['res']['panier'] ?? null) === 12.0 && ($moyS[$lundiP]['res']['lignesTicket'] ?? null) === 2.45);
+verifie('aucun nom dans les moyennes', !str_contains(json_encode($moyS), 'nom'));
+$GLOBALS['TABLES']['planning'] = $planningAvant;
+
 // --- 8. les moyennes par magasin -------------------------------------------------------------
 echo "Les moyennes par magasin\n";
 $mm = date('Y-m', strtotime(date('Y-m') . '-01 -1 month'));

@@ -119,8 +119,13 @@ foreach ([[47, 210, 6150, 41.5, 78], [49, 190, 5660, 40, 74], [52, 230, 7010, 44
     [55, 251, 7700, 46.5, 84], [53, 222, 6800, 42, 82], [57, 248, 7860, 46, 86], [56, 236, 7210, 44.5, 85], [58, 262, 8090, 47, 87], [56, 131, 3950, 22.5, 88]] as $i => [$tx, $t, $ca, $h, $cah]) {
     $sem[] = ['lib' => 'S' . (int) date('W', strtotime('monday this week -' . (11 - $i) . ' weeks')), 'tickets' => $t, 'croisees' => (int) round($t * $tx / 100), 'taux' => (float) $tx,
         'ca' => (float) $ca, 'heures' => $h, 'caHeure' => $cah, 'rang' => null, 'sur' => 0,
-        'panier' => round($ca / $t, 2), 'lignesTicket' => round(2.45 + 0.03 * $i + ($i % 3) * 0.04, 2)];
+        'panier' => round($ca / $t, 2), 'lignesTicket' => round(2.45 + 0.03 * $i + ($i % 3) * 0.04, 2),
+        // La vendeuse moyenne de son magasin et du réseau, la même semaine.
+        'mag' => ['panier' => round(28.4 + 0.25 * $i - ($i % 2) * 0.6, 2), 'lignesTicket' => round(2.52 + 0.015 * $i, 2), 'taux' => 46.0 + ($i % 4), 'caHeure' => 72 + $i, 'tickets' => 176 + 3 * $i],
+        'res' => ['panier' => round(27.6 + 0.12 * $i, 2), 'lignesTicket' => round(2.47 + 0.01 * $i, 2), 'taux' => 44.0 + ($i % 3), 'caHeure' => 69 + (int) ($i / 2), 'tickets' => 168 + 2 * $i]];
 }
+// Une semaine de congé : pas de vente à son nom, un trou dans sa ligne, les moyennes continuent.
+$sem[4] = array_merge($sem[4], ['tickets' => 0, 'croisees' => 0, 'taux' => null, 'ca' => 0.0, 'heures' => 0, 'caHeure' => null, 'panier' => null, 'lignesTicket' => null]);
 $b['meilleure'] = array_merge($b['meilleure'], ['ca' => 3290, 'caHeure' => 85, 'heures' => 38.5, 'tickets' => 262, 'panier' => 12.56]);
 $fiche += ['briques' => $b, 'semaines12' => $sem, 'prime' => $pm, 'aujourdhui' => ['tickets' => 19, 'croisees' => 11, 'lignes' => 52, 'taux' => 57.9, 'quand' => '15:40'],
     'collection' => ['titres' => [['cle' => 'concours:quiches', 'lib' => 'Queen of Quiches', 'n' => 2], ['cle' => 'croisees', 'lib' => 'Ventes croisées', 'n' => 3]],

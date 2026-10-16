@@ -411,12 +411,13 @@ function pvCroiseesMois(string $m): ?array
 
 /**
  * Les n dernières semaines (lundi à dimanche, la semaine en cours comprise), pour TOUT le réseau :
- * par semaine, par personne, les tickets, les ventes croisées et les pièces du concours, depuis
- * les jours moissonnés. C'est la matière des positions semaine par semaine. Gravé une heure.
+ * par semaine, par personne, les tickets, leurs lignes (16/10/2026 : les lignes par ticket de la page
+ * Statistiques), les ventes croisées et les pièces du concours, depuis les jours moissonnés. C'est la
+ * matière des positions semaine par semaine. Gravé une heure.
  */
 function pvSemainesReseau(int $n): array
 {
-    $cle = 'pvSemReseau' . $n . (function_exists('pvCroiseesCategorie') && pvCroiseesCategorie() !== null ? ':' . substr(md5((string) pvCroiseesCategorie()), 0, 8) : '');
+    $cle = 'pvSemReseau2:' . $n . (function_exists('pvCroiseesCategorie') && pvCroiseesCategorie() !== null ? ':' . substr(md5((string) pvCroiseesCategorie()), 0, 8) : '');
     $c = setting($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
@@ -440,8 +441,9 @@ function pvSemainesReseau(int $n): array
                 if ($version >= 3) { $sem['joursTq']++; }
                 foreach ((array) $x['e'] as $id => $y) {
                     $id = (int) $id;
-                    if (!isset($sem['e'][$id])) { $sem['e'][$id] = ['t' => 0, 'tc' => 0, 'c' => 0, 'tq' => 0.0, 'q' => [], 'shop' => (string) $sid]; }
+                    if (!isset($sem['e'][$id])) { $sem['e'][$id] = ['t' => 0, 'l' => 0, 'tc' => 0, 'c' => 0, 'tq' => 0.0, 'q' => [], 'shop' => (string) $sid]; }
                     $sem['e'][$id]['t'] += (int) ($y['t'] ?? 0);
+                    $sem['e'][$id]['l'] += (int) ($y['l'] ?? 0);
                     // Le taux se mesure sur les jours qui comptent les ventes croisées de la catégorie réglée.
                     $cY = pvCroiseesDe($x, (array) $y, $cat);
                     if ($cY !== null) { $sem['e'][$id]['c'] += $cY; $sem['e'][$id]['tc'] += (int) ($y['t'] ?? 0); }
