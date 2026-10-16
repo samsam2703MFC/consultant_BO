@@ -44,7 +44,7 @@
   { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement') },
   { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') }]|filter(g => g.liste|length) %}
 {% set max = 0 %}{% for c in g.liste %}{% set max = max + c.montant %}{% endfor %}
-<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></div>
+<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}🎁{% else %}{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
 <div class="pl-liste">
 {% for c in g.liste %}
 {% set u = c.unite %}{% set dec = u == 'note' ? 1 : 0 %}
@@ -55,7 +55,7 @@
     <div class="pl-h">
       <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
       <b class="pl-t">{{ nomFixe[c.cle] ?? c.lib }}</b>
-      <span class="pl-v">{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small></span>
+      <span class="pl-v">{% if c.cadeau ?? null %}🎁<small>{{ c.cadeau.nom }}</small>{% else %}{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small>{% endif %}</span>
     </div>
     <div class="pl-s">
       <span class="mu">
@@ -105,7 +105,7 @@
 {% for g in groupes|filter(g => g.liste|length) %}
 {% set ligne = g.cle in ['targets', 'categories'] %}
 {% set max = 0 %}{% for c in g.liste %}{% set max = max + max(c.montant, c.gain) %}{% endfor %}
-<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if p.enCours %}{{ T.up_to ?? 'jusqu’à' }} {% endif %}{{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></div>
+<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}🎁{% else %}{% if p.enCours %}{{ T.up_to ?? 'jusqu’à' }} {% endif %}{{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
 <div class="{{ ligne ? 'pl-liste' : 'pq-grille' }}">
 {% for c in g.liste %}
 {% set enJour = c.cle == 'objectif' and (c.jour ?? null) %}
@@ -149,6 +149,7 @@
     </div>
   </div>
   <div class="pl-d" id="pd-{{ c.cle }}" hidden>
+    {{ _self.infos(c, T, ib) }}
     <dl class="pl-l">
     {% if c.cle == 'croisees' %}{% set cr = b.croisees %}
       <div><dt>{{ T.d_my_rate ?? 'Ton taux ce mois' }}</dt><dd>{% if cr.taux is not null %}{{ cr.taux|number_format(1, ',', ' ') }}&nbsp;%{% else %}—{% endif %}<small>{{ cr.croisees ?? 0 }} / {{ cr.tickets ?? 0 }} {{ T.tickets ?? 'tickets' }}</small></dd></div>
@@ -201,9 +202,9 @@
   <div class="pq-h">
     <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
     {#- Une prime du magasin (16/10/2026) : sa somme, « magasin » ; gagnée, sa part (au centime). #}
-    <span class="pq-m">{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(c.gain == c.gain|round ? 0 : 2, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% if c.max and c.gain <= 0 %}<i>max</i>{% endif %}{% if (c.regle ?? '') == 'magasin' and not (c.gain > 0 and c.etat == 'gagne') %}<i>{{ T.shop_word ?? 'magasin' }}</i>{% endif %}{% if c.type == 'classement' %}<small class="typ {{ c.type }}">{{ T.type_classement ?? 'Classement' }}</small>{% endif %}</span>
+    <span class="pq-m">{% if c.cadeau ?? null %}🎁{% if c.etat == 'gagne' %} ✓{% endif %}{% else %}{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(c.gain == c.gain|round ? 0 : 2, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% endif %}{% if c.max and c.gain <= 0 %}<i>max</i>{% endif %}{% if (c.regle ?? '') == 'magasin' and not (c.gain > 0 and c.etat == 'gagne') %}<i>{{ T.shop_word ?? 'magasin' }}</i>{% endif %}{% if c.type == 'classement' %}<small class="typ {{ c.type }}">{{ T.type_classement ?? 'Classement' }}</small>{% endif %}</span>
   </div>
-  <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
+  <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.cadeau ?? null %}<small>{{ c.cadeau.nom }}</small>{% elseif c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
   <div class="pq-g">
     {# La demi-jauge : le point rubis, c'est elle aujourd'hui ; le repère sombre, l'objectif à atteindre ; le pointillé, où en être au jour J. #}
     <svg class="dj" viewBox="0 12 120 62" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -325,6 +326,33 @@
 </div>
 {% endif %}
 {% endif %}{# fin du mois compté (le mois à venir est plus haut) #}
+
+{# ── La fiche d'une prime (16/10/2026) : toucher un carré, ou une ligne d'un mois à venir, l'ouvre — ce qu'on gagne
+   (de l'argent ou un cadeau), la ligne de description, qui l'offre (le logo et le site du sponsor), la règle, les dates. ── #}
+<div class="feuille" id="pr-detail" data-detail-feuille hidden>
+  <div class="feuille-fond" data-detail-fermer></div>
+  <div class="feuille-c" role="dialog" aria-modal="true" aria-label="{{ T.details ?? 'Détails' }}">
+    <div class="feuille-poignee"></div>
+    {% for c in p.cartes %}
+    {% set objD = c.objPcs ?? (c.objectif ?? ((c.minPieces ?? 0) > 0 ? c.minPieces : null)) %}
+    {% set nD = objD is not null ? objD|number_format(0, ',', ' ') : '' %}
+    <section class="pdm" data-pdm="{{ c.cle }}" hidden>
+      <div class="pdm-h"><span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span><b>{{ nomFixe[c.cle] ?? c.lib }}</b><button type="button" class="feuille-x" data-detail-fermer aria-label="{{ T.close ?? 'Fermer' }}"><i class="bi bi-x-lg"></i></button></div>
+      {{ _self.infos(c, T, ib) }}
+      <dl class="pl-l">
+        {% if c.type == 'promo' or c.type == 'categorie' %}<div><dt>{{ T.d_rule ?? 'Qui gagne' }}</dt><dd>
+          {%- if c.regle == 'magasin' %}{{ (T.rule_shop ?? 'le magasin : objectif {n} {u}')|replace({'{n}': nD, '{u}': pcs}) }}
+          {%- elseif c.regle == 'vendeuse' %}{{ (T.rule_mine ?? 'ton objectif : {n} {u}')|replace({'{n}': nD, '{u}': pcs}) }}
+          {%- elseif c.regle == 'seuil' %}{{ (T.rule_threshold ?? 'chacune dès {n} {u}')|replace({'{n}': nD, '{u}': pcs}) }}
+          {%- else %}{{ T.rule_first ?? 'la 1re du magasin gagne' }}{% if objD %} · {{ nD }} {{ pcs }} min.{% endif %}{% endif -%}
+        </dd></div>{% endif %}
+        {% if (c.du ?? null) or (c.au ?? null) %}<div><dt>{{ T.d_period ?? 'Période' }}</dt><dd>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</dd></div>{% endif %}
+      </dl>
+      {% if c.cle in (aCl ?? []) %}<button type="button" class="pl-cl" data-voir-cl="{{ c.cle }}" data-detail-fermer>{{ T.d_see_leaderboard ?? 'Voir le classement' }} <i class="bi bi-arrow-down"></i></button>{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+</div>
 {% endif %}
 {% endblock %}
 {% block scripts %}
@@ -394,12 +422,33 @@
   document.querySelectorAll('[data-voir-cl]').forEach(function (v) {
     v.addEventListener('click', function () { cat = v.dataset.voirCl; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
   });
-  document.querySelectorAll('.pq:not(.ligne)[data-carte]').forEach(function (k) {
-    var cle = k.dataset.carte;
-    if (!feuille.querySelector('[data-choix="' + cle + '"]')) { return; }
-    k.classList.add('cliquable');
-    k.addEventListener('click', function () { cat = cle; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
+})();
+(function () {
+  // La fiche d'une prime (16/10/2026) : toucher un carré, ou une ligne d'un mois à venir, ouvre son détail.
+  var f = document.querySelector('[data-detail-feuille]'); if (!f) { return; }
+  var der = null;
+  function ouvre(cle, src) {
+    var sec = f.querySelector('[data-pdm="' + cle + '"]'); if (!sec) { return; }
+    f.querySelectorAll('[data-pdm]').forEach(function (x) { x.hidden = x !== sec; });
+    der = src || null; f.hidden = false;
+    requestAnimationFrame(function () { f.classList.add('ouverte'); });
+  }
+  function ferme() { f.classList.remove('ouverte'); setTimeout(function () { f.hidden = true; }, 200); if (der) { der.focus(); } }
+  document.querySelectorAll('.pq[data-carte], .pl.av[data-carte]').forEach(function (k) {
+    k.classList.add('cliquable'); k.setAttribute('role', 'button'); k.tabIndex = 0;
+    k.addEventListener('click', function () { ouvre(k.dataset.carte, k); });
+    k.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvre(k.dataset.carte, k); } });
   });
+  f.querySelectorAll('[data-detail-fermer]').forEach(function (b) { b.addEventListener('click', ferme); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !f.hidden) { ferme(); } });
 })();
 </script>
 {% endblock %}
+
+{# Ce qu'on gagne, la ligne de description, qui offre la prime (16/10/2026) : la fiche et le détail d'une ligne. #}
+{% macro infos(c, T, ib) %}
+<div class="pdm-g"><small>{{ T.to_win ?? 'À gagner' }}</small><b>{% if c.cadeau ?? null %}🎁 {{ c.cadeau.nom }}{% if c.cadeau.valeur %} <i>· {{ T.value ?? 'valeur' }} {{ c.cadeau.valeur|number_format(0, ',', ' ') }}&nbsp;€</i>{% endif %}{% else %}{{ c.montant|number_format(0, ',', ' ') }}&nbsp;€{% if c.max ?? false %} max{% endif %}{% endif %}</b></div>
+{% if c.description ?? '' %}<p class="pdm-d">{{ c.description }}</p>{% endif %}
+{% set sp = c.sponsor ?? null %}
+<div class="pdm-s">{% if sp and sp.logo %}<img src="{{ ib }}/{{ sp.logo }}" alt="">{% endif %}<div><small>{{ T.offered_by ?? 'Offerte par' }}</small><b>{{ sp ? sp.nom : ((c.payeur ?? '') == 'magasin' ? (T.your_shop ?? 'ton magasin') : (T.the_brand ?? 'la marque')) }}</b>{% if sp and sp.texte %}<span>{{ sp.texte }}</span>{% endif %}{% if sp and sp.site %}<a href="{{ sp.site }}" target="_blank" rel="noopener noreferrer">{{ sp.site|replace({'https://': '', 'http://': ''})|trim('/') }} ↗</a>{% endif %}</div></div>
+{% endmacro %}

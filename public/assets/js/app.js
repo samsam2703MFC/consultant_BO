@@ -185,6 +185,27 @@ function prIconeEmoji(em){
   x.fillText(em, 64, 72);
   return c.toDataURL('image/png');
 }
+/* Le logo d'un sponsor (16/10/2026) : réduit pour tenir dans 256 px, sans le recadrer, fond transparent gardé. */
+function prLogo(fichier){
+  return new Promise((ok, ko) => {
+    const lu = new FileReader();
+    lu.onerror = ko;
+    lu.onload = () => {
+      const img = new Image();
+      img.onerror = ko;
+      img.onload = () => {
+        const w = img.naturalWidth || 256, h = img.naturalHeight || 256;
+        const k = Math.min(1, 256 / Math.max(w, h));
+        const c = document.createElement('canvas'); c.width = Math.max(16, Math.round(w * k)); c.height = Math.max(16, Math.round(h * k));
+        const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+        x.drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/png'));
+      };
+      img.src = lu.result;
+    };
+    lu.readAsDataURL(fichier);
+  });
+}
 function prIconePhoto(fichier){
   return new Promise((ok, ko) => {
     const lu = new FileReader();
@@ -6862,7 +6883,7 @@ class App {
         famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', shopNom: nomMag[e.shop] || e.shop || '',
         poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); },
         periodeTxt: e.type === 'promo' ? '' : periodeDe(e).txt, etatPeriode: periodeDe(e).etat,
-        payeurTxt: payeurTxt(e), montantTxt: (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
+        payeurTxt: payeurTxt(e), montantTxt: e.cadeau ? '🎁 ' + e.cadeau.nom + (e.cadeau.valeur ? ' (valeur ' + e.cadeau.valeur + ' €)' : '') : (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
         basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
         modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }) });
       // Ce qui compte, en clair (le tableau ne s'édite plus).
@@ -6932,9 +6953,15 @@ class App {
       famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null,
       // Un seul assistant (16/10/2026) : une promotion (des produits sur une période) ou une catégorie (chaque mois, les
       // produits dont le nom contient un mot) ; un franchisé ne pose que des promotions.
-      sorte: 'promo', motif: '', cPer: 'toujours', cdu: '', cau: '' });
+      sorte: 'promo', motif: '', cPer: 'toujours', cdu: '', cau: '',
+      // Ce qu'on gagne (16/10/2026) : de l'argent ou un cadeau ; une ligne de description ; le sponsor (logo, site, une ligne).
+      gain: 'argent', cadeauNom: '', cadeauValeur: '', description: '', sponsorLogo: null, sponsorLogoExist: '', sponsorSite: '', sponsorTexte: '' });
     // Rouvrir une promo dans l'assistant (16/10/2026) : tout prérempli ; « edit » garde sa clé, le serveur refait ses produits.
-    const wizDe = e => {
+    // Les détails déjà posés d'une prime rouverte : cadeau, description, sponsor.
+    const infosDe = e => ({ gain: e.cadeau ? 'cadeau' : 'argent', cadeauNom: e.cadeau ? e.cadeau.nom : '', cadeauValeur: e.cadeau && e.cadeau.valeur != null ? String(e.cadeau.valeur) : '',
+      description: e.description || '', sponsorLogoExist: e.sponsorLogo || '', sponsorSite: e.sponsorSite || '', sponsorTexte: e.sponsorTexte || '' });
+    const wizDe = e => Object.assign(wizDe0(e), infosDe(e));
+    const wizDe0 = e => {
       if (e.type === 'categorie') {
         return Object.assign(wizNeuf('marque', ''), { edit: e.cle, sorte: 'categorie', motif: e.motif || '', regle: 'premiere', minPieces: String(e.minPieces ?? 10),
           cPer: e.du || e.au ? 'dates' : 'toujours', cdu: e.du || '', cau: e.au || '',
@@ -7019,21 +7046,30 @@ class App {
       const datesOk = W.api ? (!du || !au || au >= du) : (!!du && !!au && au >= du);
       const magsOk = fam ? magsPermis.some(m => m.id === W.shop) : (W.api || W.magsMode === 'tous' || W.mags.length > 0);
       const catDatesOk = W.cPer === 'toujours' || ((!!W.cdu || !!W.cau) && (!W.cdu || !W.cau || W.cau >= W.cdu));
-      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat ? catDatesOk : (datesOk && magsOk), montant != null && montant > 0 && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
+      const estCadeau = W.gain === 'cadeau';
+      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat ? catDatesOk : (datesOk && magsOk), (estCadeau ? W.cadeauNom.trim() !== '' : (montant != null && montant > 0)) && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
       const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
+      const gainTxt = () => (estCadeau ? '🎁 ' + (W.cadeauNom.trim() || 'un cadeau') + (num(W.cadeauValeur) ? ' (valeur ' + num(W.cadeauValeur) + ' €)' : '') : (montant || 0) + ' €');
       const resume = estCat ? [
         ['Produits', 'dont le nom contient « ' + W.motif.trim() + ' » · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', W.cPer === 'dates' ? 'chaque mois' + (W.cdu ? ' dès le ' + jjmm(W.cdu) : '') + (W.cau ? ' jusqu’au ' + jjmm(W.cau) : '') : 'chaque mois, sans fin'],
         ['Magasins', 'tous (' + (d.magasins || []).length + ')'],
         ['Gagne', 'la 1re de chaque magasin' + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', (montant || 0) + ' € · payée par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
+        ['Récompense', gainTxt() + ' · offerte par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
         ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
         fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
         ['Gagne', W.regle === 'magasin' ? 'le magasin, s’il atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '') + ' — partagée entre ses vendeuses'
           : W.regle === 'vendeuse' ? 'chaque vendeuse qui atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
           : W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', (montant || 0) + ' €' + (W.regle === 'magasin' ? ' par magasin' : '') + ' · payée par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
+        ['Récompense', gainTxt() + (W.regle === 'magasin' && !estCadeau ? ' par magasin' : '') + ' · offerte par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
+      // Le cadeau, la description, le sponsor ; l'icône et le logo se déposent ensemble avant l'enregistrement.
+      const details = () => ({ cadeau: estCadeau ? { nom: W.cadeauNom.trim(), valeur: num(W.cadeauValeur) } : null, description: W.description.trim(),
+        sponsorSite: W.payeur === 'sponsor' ? W.sponsorSite.trim() : '', sponsorTexte: W.payeur === 'sponsor' ? W.sponsorTexte.trim() : '',
+        sponsorLogo: W.payeur === 'sponsor' ? W.sponsorLogoExist : '' });
+      const logoNeuf = () => W.payeur === 'sponsor' && !!W.sponsorLogo;
+      const deposer = () => Promise.all([W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null),
+        logoNeuf() ? this.api('POST', '/ventes/primes-icone', { data: W.sponsorLogo.data }) : Promise.resolve(null)]);
       const creer = () => {
         if (W.envoi) { return; }
         if (estCat) {
@@ -7042,11 +7078,12 @@ class App {
             du: W.cPer === 'dates' && W.cdu ? W.cdu : null, au: W.cPer === 'dates' && W.cau ? W.cau : null,
             actif: ancienneC ? !!ancienneC.actif : true, classement: ancienneC ? ancienneC.classement !== false : true,
             payeur: W.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: W.payeur === 'sponsor' ? W.sponsor.trim() : '', icone: W.iconeExist || '' };
+          Object.assign(eC, details());
           W.envoi = true; reW();
-          const icC = W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null);
-          icC.then(ri => {
-            if (W.icone && (!ri || ri.ok === false || !ri.icone)) { W.envoi = false; reW(); return; }
+          deposer().then(([ri, rl]) => {
+            if ((W.icone && (!ri || ri.ok === false || !ri.icone)) || (logoNeuf() && (!rl || rl.ok === false || !rl.icone))) { W.envoi = false; reW(); return; }
             if (ri && ri.icone) { eC.icone = ri.icone; }
+            if (rl && rl.icone) { eC.sponsorLogo = rl.icone; }
             const liste = ancienneC ? app.liste.map(x => (x.cle === W.edit ? eC : x)) : app.liste.concat([eC]);
             this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
               if (r && r.ok === false) { W.envoi = false; reW(); return; }
@@ -7069,12 +7106,13 @@ class App {
           : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
         // Rouverte : la promo d'avant reste celle du serveur ; la nouvelle sélection part à côté (« promo_neuve »).
         if (ancienne && !W.api) { e.promo_neuve = e.promo; e.promo = ancienne.promo; }
+        Object.assign(e, details());
         W.envoi = true; reW();
-        // L'icône choisie (un emoji ou une photo, déjà en PNG) se dépose d'abord : la prime garde son chemin.
-        const icone = W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null);
-        icone.then(ri => {
-          if (W.icone && (!ri || ri.ok === false || !ri.icone)) { W.envoi = false; reW(); return; }
+        // L'icône choisie (un emoji ou une photo, déjà en PNG) et le logo du sponsor se déposent d'abord : la prime garde leurs chemins.
+        deposer().then(([ri, rl]) => {
+          if ((W.icone && (!ri || ri.ok === false || !ri.icone)) || (logoNeuf() && (!rl || rl.ok === false || !rl.icone))) { W.envoi = false; reW(); return; }
           if (ri && ri.icone) { e.icone = ri.icone; }
+          if (rl && rl.icone) { e.sponsorLogo = rl.icone; }
           const liste = ancienne ? app.liste.map(x => (x.cle === W.edit ? e : x)) : app.liste.concat([e]);
           this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
             if (r && r.ok === false) { W.envoi = false; reW(); return; }
@@ -7104,7 +7142,7 @@ class App {
           basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
         regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
         // Objectif du magasin : une prime par magasin (16/10/2026) ; par vendeuse : une par vendeuse.
-        plafond: W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
+        plafond: estCadeau ? gainTxt() + (W.regle === 'seuil' || surObj ? ' pour chaque gagnante' : ' pour la 1re de chaque magasin') : W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
           : surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
           : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
         // Rouverte, la prime d'un franchisé reste à son magasin (sa clé le porte).
@@ -7144,6 +7182,16 @@ class App {
           prIconePhoto(f).then(data => { W.icone = { sorte: 'photo', data }; reW(); }).catch(() => this.notify('Cette photo n’a pas pu être lue'));
         },
         retirerIcone: () => { W.icone = null; W.iconeExist = ''; reW(); },
+        gain: W.gain, estCadeau, cadeauNom: W.cadeauNom, cadeauValeur: W.cadeauValeur,
+        gains: [['argent', '💶', 'Argent'], ['cadeau', '🎁', 'Cadeau']].map(([v, e, nom]) => ({ e, nom, on: W.gain === v, choisir: () => { W.gain = v; reW(); } })),
+        poserCadeauNom: ev => { W.cadeauNom = ev.target.value; reW(); }, poserCadeauValeur: ev => { W.cadeauValeur = ev.target.value; reW(); },
+        description: W.description, poserDescription: ev => { W.description = ev.target.value; reW(); },
+        sponsorSite: W.sponsorSite, sponsorTexte: W.sponsorTexte, poserSponsorSite: ev => { W.sponsorSite = ev.target.value; reW(); }, poserSponsorTexte: ev => { W.sponsorTexte = ev.target.value; reW(); },
+        logo: W.sponsorLogo ? W.sponsorLogo.data : (W.sponsorLogoExist ? racine + W.sponsorLogoExist : ''),
+        poserLogo: ev => { const fi = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fi) { return; }
+          if (!/^image\//.test(fi.type)) { this.notify('Une image, s’il te plaît (PNG, JPEG, WebP, SVG)'); return; }
+          prLogo(fi).then(data => { W.sponsorLogo = { data }; reW(); }).catch(() => this.notify('Ce logo n’a pas pu être lu')); },
+        retirerLogo: () => { W.sponsorLogo = null; W.sponsorLogoExist = ''; reW(); },
         fermer: () => this.setState({ prWiz: undefined }),
         precedent: () => { W.etape = Math.max(1, W.etape - 1); reW(); },
         suivant: () => { if (ok[W.etape]) { W.etape = Math.min(4, W.etape + 1); reW(); } },

@@ -671,5 +671,23 @@ primesAppMois('2026-10', true); $cO = primesAppEntree('croisees');
 primesAppMois(null, true);
 verifie('un target jusqu’au 31/10 : éteint en novembre, actif en octobre', $cN !== null && !$cN['actif'] && $cO['actif'] && relire()['liste'][0]['actif'], json_encode([$cN['actif'] ?? null, $cO['actif'] ?? null]));
 
+// --- 14. cadeau, description, sponsor (16/10/2026) ---------------------------------------------------
+echo "Cadeau, description, sponsor\n";
+primesAppMois(null, true);
+$iP = primesAppInfosPropres(['cadeau' => ['nom' => ' Voucher Fnac ', 'valeur' => '50'], 'description' => ' Vends le plus de cookies ', 'sponsorSite' => 'lavazza.be', 'sponsorLogo' => 'uploads/primes/0123456789abcdef0123.png', 'sponsorTexte' => 'Le café italien']);
+verifie('un cadeau : son nom, sa valeur ; la description ; le site du sponsor complété en https', $iP['cadeau'] === ['nom' => 'Voucher Fnac', 'valeur' => 50.0] && $iP['description'] === 'Vends le plus de cookies' && $iP['sponsorSite'] === 'https://lavazza.be' && $iP['sponsorLogo'] !== '', json_encode($iP));
+verifie('un site douteux ou un logo hors des dépôts : écartés', primesAppInfosPropres(['sponsorSite' => 'javascript:alert(1)', 'sponsorLogo' => '../config.php'])['sponsorSite'] === '' && primesAppInfosPropres(['sponsorLogo' => '../config.php'])['sponsorLogo'] === '');
+verifie('sans nom, pas de cadeau (de l’argent)', primesAppInfosPropres(['cadeau' => ['nom' => '', 'valeur' => 30]])['cadeau'] === null);
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], [['type' => 'categorie', 'lib' => 'Queen of Cookies', 'motif' => 'cookie', 'minPieces' => 0, 'montant' => 50,
+    'cadeau' => ['nom' => 'Week-end à Paris', 'valeur' => 400], 'payeur' => 'sponsor', 'sponsor' => 'Lavazza', 'sponsorSite' => 'https://lavazza.be', 'description' => 'La 1re du magasin part à Paris']])];
+wr_primes_app();
+$kC = null; foreach (concoursReglages()['liste'] as $k) { if ($k['lib'] === 'Queen of Cookies') { $kC = $k; } }
+verifie('une catégorie en cadeau : 0 € à verser, le cadeau gardé', $kC !== null && $kC['magasin'] === 0 && $kC['cadeau']['nom'] === 'Week-end à Paris', json_encode($kC));
+$clsC = [$kC['cle'] => [1 => ['pieces' => 30.0, 'rangMag' => 1, 'shop' => '4'], 2 => ['pieces' => 10.0, 'rangMag' => 2, 'shop' => '4']]];
+$tC = concoursTitres($clsC, 1, ['actif' => true, 'liste' => [$kC]]);
+verifie('la 1re gagne le cadeau : un titre sans euros, qui nomme le cadeau', count($tC) === 1 && $tC[0]['montant'] === 0 && ($tC[0]['cadeau'] ?? '') === 'Week-end à Paris' && concoursPrime($clsC, 1, ['actif' => true, 'liste' => [$kC]]) === 0, json_encode($tC));
+$inf = primesAppInfosDe($kC['cle']);
+verifie('les détails pour l’app : description, sponsor (nom, site), cadeau', $inf['description'] === 'La 1re du magasin part à Paris' && $inf['sponsor']['nom'] === 'Lavazza' && $inf['sponsor']['site'] === 'https://lavazza.be' && $inf['cadeau']['valeur'] === 400.0, json_encode($inf));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

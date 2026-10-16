@@ -25,8 +25,8 @@ declare(strict_types=1);
 
 const PRIMES_CACHE_MOI = 900;      // 15 min : la fiche d'une personne pour le mois en cours
 // La forme de la fiche : à monter quand elle change, pour qu'un déploiement ne serve pas une fiche d'avant
-// gardée en cache (16/10/2026 : 5 les douze semaines avec mag et res, le podium des catégories ; 6 la barre des targets ; 7 la barre des catégories ; 8 « sans_vente »).
-const PRIMES_FICHE_V = 8;
+// gardée en cache (16/10/2026 : 5 les douze semaines avec mag et res, le podium des catégories ; 6 la barre des targets ; 7 la barre des catégories ; 8 « sans_vente » ; 9 cadeau, description, sponsor).
+const PRIMES_FICHE_V = 9;
 const PRIMES_CACHE_CLOS = 86400;   // un jour : un mois clos ne bouge que si le CEO l'enregistre
 const PRIMES_CACHE_JETON = 600;    // 10 min : un jeton d'employé vérifié chez le panel
 const PRIMES_CACHE_JOUR = 600;     // 10 min : le compteur du jour
@@ -128,8 +128,9 @@ function concoursEntree(array $c, int $i): ?array
  */
 function concoursReglages(): array
 {
-    $liste = array_map(static fn ($e) => ['cle' => $e['cle'], 'lib' => $e['lib'], 'motif' => $e['motif'], 'magasin' => (int) $e['montant'], 'reseau' => 0,
-        'minPieces' => (int) $e['minPieces'], 'classement' => (bool) $e['classement']], primesAppDuType('categorie'));
+    // Un cadeau (16/10/2026) : pas d'euros à verser, le titre porte le cadeau.
+    $liste = array_map(static fn ($e) => ['cle' => $e['cle'], 'lib' => $e['lib'], 'motif' => $e['motif'], 'magasin' => !empty($e['cadeau']) ? 0 : (int) $e['montant'], 'reseau' => 0,
+        'minPieces' => (int) $e['minPieces'], 'classement' => (bool) $e['classement'], 'cadeau' => $e['cadeau'] ?? null], primesAppDuType('categorie'));
     return ['actif' => $liste !== [], 'liste' => $liste];
 }
 
@@ -206,7 +207,7 @@ function concoursClassement(?array $cr, array $emps, array $cfg): array
 /** Les promos d'un mois, sous la forme des concours : {cle, lib, magasin (la récompense), minPieces, du, au, classement, shops}. */
 function promosConfig(string $m, ?string $shop = null): array
 {
-    return array_map(static fn ($e) => ['cle' => $e['cle'], 'lib' => $e['lib'], 'magasin' => (int) $e['montant'], 'reseau' => 0, 'minPieces' => (int) $e['minPieces'],
+    return array_map(static fn ($e) => ['cle' => $e['cle'], 'lib' => $e['lib'], 'magasin' => !empty($e['cadeau']) ? 0 : (int) $e['montant'], 'reseau' => 0, 'minPieces' => (int) $e['minPieces'], 'cadeau' => $e['cadeau'] ?? null,
         'du' => $e['promo']['du'], 'au' => $e['promo']['au'], 'classement' => (bool) $e['classement'], 'shops' => $e['promo']['shops'],
         'sorte' => $e['promo']['sorte'], 'regle' => $e['regle'] ?? 'premiere', 'objectifs' => $e['objectifs'] ?? [], 'objVend' => $e['objVend'] ?? []], promosDuMois($m, $shop));
 }
@@ -241,7 +242,7 @@ function concoursTitres(array $classements, int $id, array $cfg): array
     foreach ($cfg['liste'] as $k) {
         $cl = $classements[$k['cle']][$id] ?? null;
         if ($cl === null) { continue; }
-        if ((int) $k['magasin'] <= 0) { continue; }
+        if ((int) $k['magasin'] <= 0 && empty($k['cadeau'])) { continue; }
         $regle = $k['regle'] ?? 'premiere';
         if ($regle === 'vendeuse' || $regle === 'magasin') {
             $obj = primesObjectifDe($k, (string) ($cl['shop'] ?? ''));
@@ -256,6 +257,8 @@ function concoursTitres(array $classements, int $id, array $cfg): array
             if ((float) ($cl['pieces'] ?? 0) > 0 && (float) ($cl['pieces'] ?? 0) >= max(1, (int) $k['minPieces'])) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'seuil', 'montant' => (int) $k['magasin']]; }
         } elseif (($cl['rangMag'] ?? null) === 1) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'magasin', 'montant' => (int) $k['magasin']]; }
     }
+    // Un cadeau : le titre le nomme, sans euros (16/10/2026).
+    foreach ($out as $i => $t) { foreach ($cfg['liste'] as $k) { if ($k['cle'] === $t['cle'] && !empty($k['cadeau'])) { $out[$i]['cadeau'] = $k['cadeau']['nom']; } } }
     return $out;
 }
 

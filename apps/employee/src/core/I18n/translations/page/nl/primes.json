@@ -279,5 +279,12 @@
   "rule_threshold": "iedereen vanaf {n} {u}",
   "rule_shop": "de winkel: doel {n} {u}",
   "rule_mine": "jouw doel: {n} {u}",
-  "dates_from_to": "van {du} tot {au}"
+  "dates_from_to": "van {du} tot {au}",
+  "value": "waarde",
+  "offered_by": "Aangeboden door",
+  "your_shop": "jouw winkel",
+  "the_brand": "het merk",
+  "d_period": "Periode",
+  "d_rule": "Wie wint",
+  "details": "Details van de premie"
 }

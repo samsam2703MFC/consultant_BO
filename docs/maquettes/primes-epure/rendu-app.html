@@ -111,7 +111,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="/public/employee/assets/atelier/primes.css?v=1792174333"></head>
+    <link rel="stylesheet" href="/public/employee/assets/atelier/primes.css?v=1792183044"></head>
 <body>
 
     <div class="emp-topbar">
@@ -134,7 +134,8 @@
 <nav class="mois-sel" aria-label="Mois" data-mois>
   <a class="ms-f" href="/public/employee/primes?m=2026-09" aria-label="Mois précédent"><i class="bi bi-chevron-left"></i></a>
     <div class="ms-l"><b>Octobre 2026</b><small>en cours · au 16</small></div>
-  <span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-right"></i></span></nav>
+  <a class="ms-f" href="/public/employee/primes?m=2026-11" aria-label="Mois suivant"><i class="bi bi-chevron-right"></i></a>
+  </nav>
 
 <div class="hx">
   <div class="l">
@@ -160,6 +161,9 @@
       <span>objectif 55 %</span>    </div>
   </div>
   <div class="pl-d" id="pd-croisees" hidden>
+    <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
     <dl class="pl-l">
           <div><dt>Ton taux ce mois</dt><dd>56,1&nbsp;%<small>147 / 262 tickets</small></dd></div>
       <div><dt>Cible</dt><dd>55&nbsp;%</dd></div>
@@ -181,6 +185,9 @@
       <span>objectif 3,00</span>    </div>
   </div>
   <div class="pl-d" id="pd-record" hidden>
+    <div class="pdm-g"><small>à gagner</small><b>300&nbsp;€ max</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
     <dl class="pl-l">
           <div><dt>Tes lignes par ticket ce mois</dt><dd>2,74</dd></div>
       <div><dt>Ton record</dt><dd>2,80<small>septembre 2026</small></dd></div>
@@ -203,6 +210,9 @@
       <span>objectif 100 %</span>    </div>
   </div>
   <div class="pl-d" id="pd-objectif" hidden>
+    <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
     <dl class="pl-l">
           <div><dt>CA du magasin</dt><dd>33 320&nbsp;€<small>sur 61 000&nbsp;€</small></dd></div>      <div><dt>J16</dt><dd class="ok">54,6&nbsp;%<small>il faudrait 51,6&nbsp;%</small></dd></div>      <div><dt>Fin de mois, au rythme actuel</dt><dd>65 570&nbsp;€<small>107,5&nbsp;%</small></dd></div>      <div><dt>100&nbsp;% · 50&nbsp;€ pour toi</dt><dd class="ok">✓ atteint</dd></div>      <div><dt>Tes heures</dt><dd class="">128,0&nbsp;h<small>20&nbsp;h min. pour toucher la prime</small></dd></div>    </dl>
           </div>
@@ -222,6 +232,9 @@
       <span>objectif 4,5 ★</span>    </div>
   </div>
   <div class="pl-d" id="pd-google" hidden>
+    <div class="pdm-g"><small>à gagner</small><b>25&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
     <dl class="pl-l">
           <div><dt>Note du magasin</dt><dd>4,6 ★<small>312 avis</small></dd></div>
       <div><dt>Seuil</dt><dd>4,5 ★</dd></div>
@@ -244,6 +257,9 @@
       <span>objectif 62 pts</span>    </div>
   </div>
   <div class="pl-d" id="pd-meilleure" hidden>
+    <div class="pdm-g"><small>à gagner</small><b>75&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
     <dl class="pl-l">
           <div><dt>Ton score</dt><dd>59<small>2e / 4 · Mon magasin</small></dd></div>
       <div><dt>1re du magasin</dt><dd>Léa<small>61</small></dd></div>      <div><dt>Réseau</dt><dd>2e / 4</dd></div>      <div><dt>CA par heure</dt><dd>85&nbsp;€/h<small>38,5&nbsp;h</small></dd></div>      <div><dt>Ticket moyen</dt><dd>12,56&nbsp;€</dd></div>    </dl><p class="pl-n">Ton CA par heure, corrigé du créneau, face aux autres vendeuses.</p>
@@ -552,6 +568,77 @@
       <span class="val">53,8&nbsp;%<small>140/260</small></span></div>
           </div>
   </div>
+
+<div class="feuille" id="pr-detail" data-detail-feuille hidden>
+  <div class="feuille-fond" data-detail-fermer></div>
+  <div class="feuille-c" role="dialog" aria-modal="true" aria-label="Détails de la prime">
+    <div class="feuille-poignee"></div>
+                <section class="pdm" data-pdm="croisees" hidden>
+      <div class="pdm-h"><span class="emo">🛍️</span><b>Ventes croisées</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+                      </dl>
+      <button type="button" class="pl-cl" data-voir-cl="croisees" data-detail-fermer>Voir le classement <i class="bi bi-arrow-down"></i></button>    </section>
+                <section class="pdm" data-pdm="record" hidden>
+      <div class="pdm-h"><span class="emo">🚀</span><b>Bats ton record</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>300&nbsp;€ max</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+                      </dl>
+          </section>
+                <section class="pdm" data-pdm="objectif" hidden>
+      <div class="pdm-h"><span class="emo">🏪</span><b>Objectif magasin</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+                      </dl>
+          </section>
+                <section class="pdm" data-pdm="google" hidden>
+      <div class="pdm-h"><span class="emo">⭐</span><b>Note Google</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>25&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+                      </dl>
+          </section>
+                <section class="pdm" data-pdm="meilleure" hidden>
+      <div class="pdm-h"><span class="emo">🏆</span><b>Meilleure vendeuse</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>75&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+                      </dl>
+          </section>
+                <section class="pdm" data-pdm="tartes" hidden>
+      <div class="pdm-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><b>Queen of Tartes</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+        <div><dt>Qui gagne</dt><dd>la 1re du magasin gagne · 10 pcs min.</dd></div>              </dl>
+      <button type="button" class="pl-cl" data-voir-cl="tartes" data-detail-fermer>Voir le classement <i class="bi bi-arrow-down"></i></button>    </section>
+                <section class="pdm" data-pdm="quiches" hidden>
+      <div class="pdm-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><b>Queen of Quiches</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+        <div><dt>Qui gagne</dt><dd>la 1re du magasin gagne · 10 pcs min.</dd></div>              </dl>
+      <button type="button" class="pl-cl" data-voir-cl="quiches" data-detail-fermer>Voir le classement <i class="bi bi-arrow-down"></i></button>    </section>
+                <section class="pdm" data-pdm="pb900" hidden>
+      <div class="pdm-h"><span class="emo"><img src="demo/uploads/primes/e58b40d2c7a91f36b0c4.svg" alt=""></span><b>Promo café + croissant</b><button type="button" class="feuille-x" data-detail-fermer aria-label="Fermer"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-g"><small>à gagner</small><b>50&nbsp;€</b></div>
+<div class="pdm-s"><div><small>Offerte par</small><b>la marque</b></div></div>
+
+      <dl class="pl-l">
+        <div><dt>Qui gagne</dt><dd>la 1re du magasin gagne · 1 pcs min.</dd></div>        <div><dt>Période</dt><dd>du 01/10 au 31/10</dd></div>      </dl>
+      <button type="button" class="pl-cl" data-voir-cl="pb900" data-detail-fermer>Voir le classement <i class="bi bi-arrow-down"></i></button>    </section>
+      </div>
+</div>
     </div>
 </main>
 
@@ -636,12 +723,25 @@
   document.querySelectorAll('[data-voir-cl]').forEach(function (v) {
     v.addEventListener('click', function () { cat = v.dataset.voirCl; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
   });
-  document.querySelectorAll('.pq:not(.ligne)[data-carte]').forEach(function (k) {
-    var cle = k.dataset.carte;
-    if (!feuille.querySelector('[data-choix="' + cle + '"]')) { return; }
-    k.classList.add('cliquable');
-    k.addEventListener('click', function () { cat = cle; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
+})();
+(function () {
+  // La fiche d'une prime (16/10/2026) : toucher un carré, ou une ligne d'un mois à venir, ouvre son détail.
+  var f = document.querySelector('[data-detail-feuille]'); if (!f) { return; }
+  var der = null;
+  function ouvre(cle, src) {
+    var sec = f.querySelector('[data-pdm="' + cle + '"]'); if (!sec) { return; }
+    f.querySelectorAll('[data-pdm]').forEach(function (x) { x.hidden = x !== sec; });
+    der = src || null; f.hidden = false;
+    requestAnimationFrame(function () { f.classList.add('ouverte'); });
+  }
+  function ferme() { f.classList.remove('ouverte'); setTimeout(function () { f.hidden = true; }, 200); if (der) { der.focus(); } }
+  document.querySelectorAll('.pq[data-carte], .pl.av[data-carte]').forEach(function (k) {
+    k.classList.add('cliquable'); k.setAttribute('role', 'button'); k.tabIndex = 0;
+    k.addEventListener('click', function () { ouvre(k.dataset.carte, k); });
+    k.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvre(k.dataset.carte, k); } });
   });
+  f.querySelectorAll('[data-detail-fermer]').forEach(function (b) { b.addEventListener('click', ferme); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !f.hidden) { ferme(); } });
 })();
 </script>
 
