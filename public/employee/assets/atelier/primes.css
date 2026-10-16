@@ -408,23 +408,20 @@ a.acc-etape{text-decoration:none;color:inherit}
 .pl-n{font:500 11.5px/1.4 var(--font-ui);color:var(--la-muet);margin:4px 0 0}
 .pl-cl{display:inline-flex;align-items:center;gap:6px;margin-top:8px;border:0;background:var(--la-beige-doux);color:var(--la-encre);border-radius:var(--radius-pill);padding:7px 12px;font:600 12px var(--font-ui);cursor:pointer}
 
-/* Les catégories : le podium du magasin à la place de la jauge — les trois premières, elle surlignée (rubis ; or
-   quand elle mène) — et une pastille : ce qu'il lui manque pour être 1re, ou son avance. */
-.pq-pd{flex-direction:column;align-items:stretch;justify-content:center;gap:5px}
+/* Le podium du magasin, dans le détail d'une catégorie : les trois premières, elle surlignée (rubis ; or quand elle
+   mène) ; à la 3e ligne, à son rang, quand elle est plus loin. */
 .pd{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.pd li{display:flex;align-items:center;gap:6px;padding:3px 7px;border-radius:var(--radius-md);font:500 clamp(10.5px,6.4cqw,12.5px)/1.25 var(--font-ui);color:var(--la-encre);min-width:0}
-.pd .r{width:16px;flex:0 0 auto;text-align:center;font-weight:700;color:var(--la-muet)}
+.pd li{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--radius-md);font:500 12.5px/1.25 var(--font-ui);color:var(--la-encre);min-width:0}
+.pd .r{width:18px;flex:0 0 auto;text-align:center;font-weight:700;color:var(--la-muet)}
 .pd .n{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pd .q{font-weight:700;font-variant-numeric:tabular-nums}
 .pd li.moi{background:var(--la-rubis);color:var(--la-blanc)}
 .pd li.moi .r{color:var(--la-blanc)}
 .pd li.moi.un{background:var(--la-or-doux);color:var(--la-or-encre)}
 .pd li.moi.un .r{color:var(--la-or-encre)}
-.pq.gagne .pd li.moi.un{background:var(--la-ok-doux);color:var(--la-ok)}
-.pd-vide{font:500 11px var(--font-ui);color:var(--la-muet);text-align:center}
-.pd-e{align-self:center;max-width:100%;font:700 clamp(9.5px,5.6cqw,10.5px) var(--font-ui);border-radius:var(--radius-pill);padding:3px 8px;background:var(--la-abricot);color:var(--la-abricot-encre);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pd-e.ok{background:var(--la-or-doux);color:var(--la-or-encre)}
-.pq.gagne .pd-e.ok{background:var(--la-ok-doux);color:var(--la-ok)}
+.pl-st{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);margin:10px 0 6px}
+.pl-s .rg{color:var(--la-encre)}
+.pl.ok .pl-s .rg{color:var(--la-ok)}
 .pq-o{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--la-encre);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pq-o b{font-weight:700}
 .pq-o .lg{width:8px;height:8px;border-radius:50%;background:var(--la-encre);box-shadow:0 0 0 1.5px var(--la-blanc),0 0 0 2.5px var(--la-encre);flex:0 0 auto}
