@@ -7268,7 +7268,7 @@ class App {
     const nomMag = {}; (d.magasins || []).forEach(m => { nomMag[m.id] = court(m.nom); });
     const dates = p => (p.du || p.au ? (p.du ? jj(p.du) : '…') + ' → ' + (p.au ? jj(p.au) : '…') : 'sans dates');
     const mags = p => ((p.shops || []).length ? p.shops.map(s => nomMag[s] || s).join(', ') : 'tous');
-    const sorte = p => (p.sorte === 'xy' ? 'X + Y offert' : 'Bundle');
+    const sorte = p => ({ xy: 'X + Y offert', quantite: 'Prix par quantité', remise: 'Remise programmée' }[p.sorte] || 'Bundle');
 
     // Le brouillon : la liste des primes, et les réglages des ventes croisées (cible par défaut, par magasin, minimum de tickets).
     const app = S.prApp || JSON.parse(JSON.stringify(d.app));
@@ -7388,12 +7388,13 @@ class App {
     app.liste.filter(e => e.type === 'promo').forEach(e => { const p = e.promo || {}; prises[(e.ref ? e.ref.source + ':' + e.ref.id : p.source + ':' + p.id)] = e; });
     common.prPromos = {
       chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : '',
-      erreur: promos && (promos.erreurs || []).length ? 'API des promotions : ' + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : 'injoignable')).join(' · ')
-        + (promos.api ? '' : ' — les bundles du catalogue en attendant (sans dates ni magasins)') : '',
+      // L'API promotions du panel, et elle seule (16/10/2026) : plus de repli sur les bundles du catalogue.
+      erreur: promos && (promos.erreurs || []).length ? 'API promotions du panel : ' + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : 'injoignable')).join(' · ')
+        + (promos.api ? '' : (promos.erreurs.some(x => x.code === 403) ? ' — le compte API du cockpit n’a pas le droit de lire les promotions : à ouvrir côté panel. Aucune promotion tant que ce n’est pas fait.' : ' — aucune promotion lue.')) : '',
       liste: (promos ? promos.liste : []).map(p => {
         const e = prises[p.source + ':' + p.id];
         return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), magasins: mags(p),
-          source: p.source === 'api' ? 'panel' : 'catalogue', produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable',
+          source: 'panel', produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable',
           comptable: (p.ids || []).length > 0, statut: e ? (e.actif ? 'prime active' : 'prime éteinte') : '',
           ajouter: e || !(p.ids || []).length ? null : () => { app.liste.push({ type: 'promo', ref: { source: p.source, id: p.id }, lib: p.nom, montant: app.recompense, minPieces: 1, actif: true, classement: true, promo: p }); re(); } };
       }),

@@ -23,10 +23,11 @@ declare(strict_types=1);
  * Chaque prime peut porter une ICÔNE déposée par l'admin (PNG, WebP, JPEG ou SVG, sous
  * public/uploads/primes/) : l'app la montre à la place de l'emoji.
  *
- * Les promos viennent de l'API du panel (/admin/promotions/bundles, /admin/promotions/buy-x-get-y) ;
- * tant que le compte API y reçoit 403, les bundles du catalogue (catégorie « Bundle ») en tiennent
- * lieu, sans dates ni magasins. Une promo devient une famille de la moisson par ses identifiants de
- * produits (pvLignesJour) ; ses pièces se comptent sur ses seules dates et ses seuls magasins.
+ * Les promos viennent de l'API promotions du panel, et d'elle seule (16/10/2026) : /admin/promotions/
+ * bundles, buy-x-get-y, quantity, scheduled-product-discount. Plus de repli sur les bundles du catalogue :
+ * tant que le compte API y reçoit 403, la liste est vide et le cockpit le dit. (Le catalogue sert encore à
+ * retrouver le produit d'un bundle par son nom.) Une promo devient une famille de la moisson par ses
+ * identifiants de produits (pvLignesJour) ; ses pièces se comptent sur ses seules dates et ses seuls magasins.
  *
  * Le réglage vit dans ceo_app_setting.ventePrimesApp ; au premier appel il se déduit des réglages
  * d'avant (concours, minimum d'heures de la prime magasin).
@@ -105,14 +106,15 @@ function primesAppDate($v): ?string
 function primesAppPromoPropre($p): ?array
 {
     if (!is_array($p)) { return null; }
-    $source = ($p['source'] ?? '') === 'api' ? 'api' : (($p['source'] ?? '') === 'catalogue' ? 'catalogue' : null);
+    // L'API promotions du panel seulement (16/10/2026) : une promo « catalogue » d'avant n'est plus gardée.
+    $source = ($p['source'] ?? '') === 'api' ? 'api' : null;
     $id = mb_substr(trim((string) ($p['id'] ?? '')), 0, 40);
     if ($source === null || $id === '') { return null; }
     $shops = [];
     foreach ((array) ($p['shops'] ?? []) as $s) { if (is_scalar($s) && preg_match('/^\d+$/', (string) $s)) { $shops[] = (string) $s; } }
     $ids = [];
     foreach ((array) ($p['ids'] ?? []) as $x) { if (is_numeric($x) && (int) $x > 0) { $ids[] = (int) $x; } }
-    return ['source' => $source, 'sorte' => ($p['sorte'] ?? '') === 'xy' ? 'xy' : 'bundle', 'id' => $id,
+    return ['source' => $source, 'sorte' => in_array($p['sorte'] ?? '', ['xy', 'quantite', 'remise'], true) ? $p['sorte'] : 'bundle', 'id' => $id,
         'nom' => mb_substr(trim((string) ($p['nom'] ?? '')), 0, 80), 'prix' => (isset($p['prix']) && is_numeric($p['prix'])) ? round((float) $p['prix'], 2) : null,
         'du' => primesAppDate($p['du'] ?? null), 'au' => primesAppDate($p['au'] ?? null),
         'shops' => array_values(array_unique($shops)), 'ids' => array_values(array_unique($ids))];
@@ -122,7 +124,7 @@ function primesAppPromoPropre($p): ?array
 function primesAppClePromo(array $promo): string
 {
     $id = preg_replace('/[^a-z0-9]+/', '', strtolower($promo['id'])) ?? '';
-    return mb_substr('p' . ($promo['source'] === 'api' ? ($promo['sorte'] === 'xy' ? 'x' : 'b') : 'c') . $id, 0, 24);
+    return mb_substr('p' . ($promo['source'] === 'api' ? (['xy' => 'x', 'quantite' => 'q', 'remise' => 'r'][$promo['sorte']] ?? 'b') : 'c') . $id, 0, 24);
 }
 
 /**
@@ -491,19 +493,20 @@ function primesPromosCatalogue(): array
 }
 
 /**
- * Les promotions du panel qu'une prime peut suivre : celles de l'API (bundles actifs, offres X + Y),
- * puis les bundles du catalogue que l'API n'a pas déjà donnés. Gravé une heure.
+ * Les promotions du panel qu'une prime peut suivre : celles de l'API promotions, et d'elle seule (bundles
+ * actifs, offres X + Y, prix par quantité, remises programmées). Gravé une heure.
  *
  * @return array{quand:int, api:bool, erreurs:list<array{chemin:string,code:int,erreur:?string}>, liste:list<array>}
  */
 function primesPromosPanel(bool $frais = false): array
 {
-    $c = setting('primesPromos');
+    $c = setting('primesPromos2');
     if (!$frais && is_array($c) && isset($c['liste']) && (int) ($c['quand'] ?? 0) > time() - PRIMES_PROMOS_CACHE) { return $c; }
     $catalogue = primesPromosCatalogue();
     $liste = []; $erreurs = []; $api = false;
     if (class_exists('PanelApi') && PanelApi::configured()) {
-        foreach (['bundle' => '/admin/promotions/bundles?active=1', 'xy' => '/admin/promotions/buy-x-get-y'] as $sorte => $chemin) {
+        foreach (['bundle' => '/admin/promotions/bundles?active=1', 'xy' => '/admin/promotions/buy-x-get-y',
+                  'quantite' => '/admin/promotions/quantity', 'remise' => '/admin/promotions/scheduled-product-discount'] as $sorte => $chemin) {
             $r = PanelApi::sondeGet($chemin, 20);
             if ((int) $r['code'] < 200 || (int) $r['code'] >= 300 || !is_array($r['corps'])) {
                 $erreurs[] = ['chemin' => $chemin, 'code' => (int) $r['code'], 'erreur' => $r['erreur'] ?? null];
@@ -518,12 +521,9 @@ function primesPromosPanel(bool $frais = false): array
     } else {
         $erreurs[] = ['chemin' => '/admin/promotions', 'code' => 0, 'erreur' => 'compte API non configuré'];
     }
-    $pris = [];
-    foreach ($liste as $p) { foreach ($p['ids'] as $id) { $pris[$id] = true; } }
-    foreach ($catalogue as $b) { if (!isset($pris[$b['ids'][0]])) { $liste[] = $b; } }
     $out = ['quand' => time(), 'api' => $api, 'erreurs' => $erreurs, 'liste' => $liste];
     if ($liste !== [] || $erreurs !== []) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesPromos', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesPromos2', json_encode($out, JSON_UNESCAPED_UNICODE)]);
     }
     return $out;
 }
