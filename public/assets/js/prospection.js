@@ -14,7 +14,7 @@
  *
  * Script classique (pas de module ES) : chargé tel quel par le cockpit et par
  * la page mobile. Expose aussi `CockpitProspection.etat(shop)` / `.set(...)`
- * pour que l'écran Développement commercial partage la réserve.
+ * pour qu'un autre écran puisse partager la réserve.
  */
 (function () {
   'use strict';

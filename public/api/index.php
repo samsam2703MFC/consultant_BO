@@ -68,7 +68,6 @@ require __DIR__ . '/../../src/marketing_hub.php';
 require __DIR__ . '/../../src/marketing_sources.php';
 require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/prod_manque.php';
-require __DIR__ . '/../../src/analyse_magasin.php';
 require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
@@ -257,7 +256,6 @@ function route(string $method, string $path): mixed
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
-            $path === '/exploitation/magasin'          => ep_exploitation_magasin(),
             $path === '/exploitation/reseau'           => ep_exploitation_reseau(),
             $path === '/exploitation/rentabilite'      => ep_exploitation_rentabilite(),
             $path === '/exploitation/jour'             => ep_exploitation_jour(),
@@ -340,7 +338,6 @@ function route(string $method, string $path): mixed
             $path === '/production/periodes'           => ep_prod_periodes(),
             $path === '/production/saisons'            => ep_prod_saisons(),
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
-            $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
             $path === '/tablette/book'                 => ep_tablette_book(),
@@ -368,8 +365,6 @@ function route(string $method, string $path): mixed
             $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
             $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
-            $path === '/magasin/analyse'              => ep_mag_analyse(),
-            $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/ventes/clients/sonde'         => ep_ventes_clients_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),

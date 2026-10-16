@@ -304,8 +304,8 @@ class App {
    */
   static get ADRESSES(){
     return {
-      taches: 'taches-consultants', resultatJour: 'resultat', exploitation: 'pl-magasins',
-      performance: 'performance', magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
+      resultatJour: 'resultat',
+      performance: 'performance', magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', plan: 'plan-developpement', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
@@ -328,8 +328,8 @@ class App {
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
-      demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
-      prospection: 'prospection', prospectionMobile: 'prospection-mobile',
+      newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
+      prospection: 'prospection',
       tablette: 'tablette-vendeuses',
       // Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes, rangées dans Marketing franchisé.
       primesApp: 'primes-app-worker',
@@ -354,7 +354,13 @@ class App {
       'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi',
       // L'onglet « Leviers » a quitté Analyse magasin (16/10/2026) : son adresse
       // ouvre désormais le premier onglet restant, Équipe & ventes.
-      'analyse-magasin': 'ventes', analysemag: 'ventes' };
+      'analyse-magasin': 'ventes', analysemag: 'ventes',
+      // Écrans sans entrée, retirés (16/10/2026) : leur contenu vit ailleurs.
+      'taches-consultants': 'gestionConsultant', taches: 'gestionConsultant',
+      'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
+      // Une seule entrée pour la liste de démarchage : Prospection.
+      'developpement-commercial': 'prospection', demarchage: 'prospection',
+      'prospection-mobile': 'prospection', prospectionMobile: 'prospection' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -972,7 +978,6 @@ class App {
       brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
       posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
       scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
-      analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
       croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
       anaprod: ['Produits × magasins', 'Chaque référence, où elle se vend : une jauge par magasin face à la moyenne réseau — vert au-dessus, rouge en dessous, le delta en %, les « jamais vendu » et les éteints qui sautent aux yeux. Cliquez une référence pour sa fiche de vie — courbe fine par magasin, moyenne réseau et an dernier. Lu en direct chez le panel, tranche par tranche.'],
@@ -984,7 +989,6 @@ class App {
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
       caAchats: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs, de l’envoi à la livraison. Un fournisseur se relance par courrier à tout moment.'],
-      caCommandes: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs.'],
       caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
       caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
@@ -992,11 +996,9 @@ class App {
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
-      demarchage: ['Développement commercial', 'La liste de démarchage du magasin : les lieux qui rassemblent du monde autour de lui — entreprises, écoles, santé, administrations, formation, funéraire, sport, hôtels, commerces en zoning — relevés dans OpenStreetMap. On coche, on date la visite, on note le retour ; une annotation part au CRM marketing.'],
       newsletter: ['Newsletter — marque', 'Campagnes email et SMS aux clients captés en boutique : segments, modèles, vouchers, automatisations. La vue de la marque : tout, y compris les paramètres et les droits des franchisés. Mode test : aucun envoi ne part.'],
       newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
       prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
-      prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', ''],
@@ -1020,8 +1022,7 @@ class App {
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], plan: ['Plan de développement', 'Comment chaque franchisé va développer son chiffre : la rampe à 5 ans de l’étude, l’engagement de l’année déposé par le franchisé et validé par le consultant, les actions pour y arriver, puis le rituel trimestriel — constat, annotations du franchisé, du consultant et de la marque, et ce qui est mis en route. Le PDF reprend l’ensemble.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], performance: ['Performance', 'Comment évoluent les magasins, sur le temps long : le dernier mois clos (marge, CA contre cible, tickets, panier, douze mois de clients par jour et de ticket moyen), l\u2019année et les horizons à 3 et 5 ans, puis la marge et la maîtrise des coûts avec les leviers à traiter. Pour la journée, la semaine et le mois en cours : Résultat.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], plan: ['Plan de développement', 'Comment chaque franchisé va développer son chiffre : la rampe à 5 ans de l’étude, l’engagement de l’année déposé par le franchisé et validé par le consultant, les actions pour y arriver, puis le rituel trimestriel — constat, annotations du franchisé, du consultant et de la marque, et ce qui est mis en route. Le PDF reprend l’ensemble.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], performance: ['Performance', 'Comment évoluent les magasins, sur le temps long : le dernier mois clos (marge, CA contre cible, tickets, panier, douze mois de clients par jour et de ticket moyen), l\u2019année et les horizons à 3 et 5 ans, puis la marge et la maîtrise des coûts avec les leviers à traiter. Pour la journée, la semaine et le mois en cours : Résultat.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
@@ -1046,7 +1047,11 @@ class App {
         [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
       anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte. Prix × volume : le prix que chaque magasin encaisse, face à ce qu’il vend.',
         [['anaprod', 'Par référence'], ['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner'], ['prixvolume', 'Prix × volume']]],
-      analyse: ['Dans le temps', titles.analyse[1], null] };
+      analyse: ['Dans le temps', titles.analyse[1], null],
+      // Les cinq étapes de la production : un écran chacune, un seul titre ; le
+      // sous-titre reste celui de l'étape ouverte.
+      productionPlan: ['Gestion de production', (titles[S.screen] || titles.productionPlan)[1],
+        [['productionParams', '1 · Paramètres'], ['productionPlan', '2 · Plan'], ['productionSuivi', '3 · Validation et suivi'], ['productionCloture', '4 · Clôture'], ['productionFours', '5 · Fours']]] };
     const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
     if (grp) {
       common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
@@ -1453,12 +1458,11 @@ class App {
       // en attendant — la prospection autour du magasin, sa tablette, sa production.
       // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
-        ['demarchage', 'Développement commercial', 0],
+        // Une seule entrée pour la liste de démarchage (16/10/2026) : Développement
+        // commercial et Prospection mobile y sont fondus — le lien du téléphone y est.
         ['prospection', 'Prospection', 0],
-        ['prospectionMobile', 'Prospection mobile', 0],
-        // Le book des vendeuses : une application à part (tablette/), comme
-        // Prospection mobile — l'écran donne ses liens, un aperçu et l'état
-        // des données que le BO lui sert.
+        // Le book des vendeuses : une application à part (tablette/) — l'écran
+        // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
         // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
         // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
@@ -1466,9 +1470,9 @@ class App {
         // Le marketing du franchisé (16/10/2026) : les primes de l'app worker — celles de la marque et des sponsors,
         // qu'il voit, et celles de son magasin.
         { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] },
-        // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,
-        // par magasin et par jour — le plan, le suivi avant chaque cuisson, les paramètres.
-        { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0], ['productionFours', '5 · Fours', 0]] }]],
+        // La gestion de production du franchisé (demande du 03/10/2026), par magasin et par
+        // jour : une entrée, ses cinq étapes en onglets (16/10/2026 — c'était un sous-menu de cinq).
+        ['productionPlan', 'Gestion de production', 0, ['productionParams', 'productionSuivi', 'productionCloture', 'productionFours']]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
@@ -1503,11 +1507,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
+      assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1605,9 +1609,9 @@ class App {
       };
     }
 
-    // --- heatmap
-    // La heatmap vit aussi sous Résultat › Mois : douze mois sous le tableau du mois.
-    if (common.isHeatmap || (common.isRJour && (S.rjOnglet || 'jour') === 'mois')){
+    // --- heatmap : douze mois sous le tableau du mois, dans Résultat › Mois
+    // (l'écran Heatmap à part est retiré, 16/10/2026).
+    if (common.isRJour && (S.rjOnglet || 'jour') === 'mois'){
       const E = this.exo();
       const year = (S.hmYear === E - 1) ? E - 1 : E;
       // Le mode « % d'atteinte » suppose des objectifs encodés. Tant qu'il n'y
@@ -1864,7 +1868,6 @@ class App {
     if (common.isPlano) { this.valsPlanoStd(common); this._psCommon = common; }
     if (common.isFonds) this.valsFonds(common);
     if (common.isMktCal || common.isMktCamp || common.isMktTypes) this.valsMkt(common);
-    if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isAnaprod) { this.apCharge(false); this.valsAnaprod(common); }
     if (common.isPxv) { this.pxvCharge(false); this.valsPxv(common); }
@@ -1872,8 +1875,6 @@ class App {
     this.valsLacunes(common);
     if (common.isDiag) { this.coCharge(); this.valsDiag(common); }
     if (common.isSeuil) this.valsSeuil(common);
-    // --- exploitation (P&L court des magasins)
-    if (common.isExploit) this.valsExploitation(common);
     // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
     if (common.isReput) { this.repCharge(); this.valsReputation(common); }
     // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
@@ -1894,8 +1895,7 @@ class App {
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
-    if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
-    if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
+    if (common.isProspection || common.isNewsletterShop) { this.dmCharge(); this.valsProspection(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
@@ -1903,7 +1903,6 @@ class App {
     if (common.isScoringTri) this.valsScoring(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
-    if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
@@ -1915,16 +1914,14 @@ class App {
     }
     // --- scoring produits
     if (common.isProduits) this.valsProduits(common);
-    // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
-    if (common.isMarge || common.isExploit) this.valsMarge(common);
+    // --- marge
+    if (common.isMarge) this.valsMarge(common);
     // --- projets
     if (common.isProjets) this.valsProjets(common, projEff);
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
     if (common.isKpiT) this.valsKpiT(common);
-    // --- tâches consultants
-    if (common.isTaches) this.valsTaches(common, flat);
     // --- contrôle des posts Facebook
     if (common.isPosts) this.valsPosts(common);
     if (common.isBrandGuard) this.valsBrandGuard(common);
@@ -4349,28 +4346,6 @@ class App {
       this.setState({});
     });
   }
-  /**
-   * Écran Exploitation — le P&L court des magasins.
-   *
-   * Le serveur a déjà tranché les questions délicates (quel jour montrer,
-   * quel objectif au prorata) : on n'en refait aucune ici. L'écran se borne à
-   * mettre en forme, et à distinguer trois états que la donnée impose —
-   * mois clos, mois partiellement encodé, mois sans budget.
-   */
-  /**
-   * Tableau N vs N-1 de toutes les boutiques.
-   * Chargé à l'ouverture de l'écran puis à chaque changement de période ; une
-   * seule requête réseau, jamais une par magasin.
-   */
-  exChargeReseau(per){
-    if (this._exReseauEnCours === per) return;
-    this._exReseauEnCours = per;
-    this.setState({ exReseau: { per, chargement: true, d: null } });
-    readOne('/exploitation/reseau?periode=' + per)
-      .then(d => { this._exReseauEnCours = null;
-        this.setState(s => (s.exReseau && s.exReseau.per === per)
-          ? { exReseau: { per, chargement: false, d: d || null } } : {}); });
-  }
   /** Rapports réels (table ceo_rapport) : définitions + dernières générations. */
   /** Budget × Campagnes : lu à l'ouverture de l'écran, et à chaque changement
    *  de campagne ou d'exercice — le réalisé vient du panel, il ne se devine pas. */
@@ -4877,14 +4852,6 @@ class App {
         this.setState(s => (s.exRent && s.exRent.per === per)
           ? { exRent: { per, chargement: false, d: d || null } } : {}); });
   }
-  /** Ouvre le détail d'un magasin : lecture ponctuelle, hors chargement initial. */
-  exOpen(id, nom){
-    const per = this.state.exPeriode || 'mois';
-    this.setState({ exDetail: { id, nom, per, chargement: true, d: null } });
-    readOne('/exploitation/magasin?id=' + encodeURIComponent(id) + '&periode=' + per)
-      .then(d => this.setState(s => (s.exDetail && s.exDetail.id === id)
-        ? { exDetail: Object.assign({}, s.exDetail, { chargement: false, d: d || null }) } : {}));
-  }
   /**
    * Catalogue, assortiment et planogramme : trois lectures d'une même liste.
    *
@@ -5357,49 +5324,6 @@ class App {
           this.notify('« ' + e.nom + ' » enregistré');
         });
       });
-  }
-  /** Suivi de production — produit, jeté, motifs, par boutique et référence. */
-  valsProduction(common){
-    const S = this.state;
-    const d = S.prodSuivi;
-    if (!d && !this._prodEnCours){
-      this._prodEnCours = true;
-      readOne('/production/suivi').then(r => { this._prodEnCours = false;
-        this.setState({ prodSuivi: r || { vide: true } }); });
-    }
-    common.prChargement = !d;
-    if (!d) return common;
-    common.prPeriode = (d.du || '') + ' → ' + (d.au || '');
-    common.prAvert = d.avertissement || '';
-    const r = d.reseau || {};
-    common.prReseau = [
-      { l: 'vendu', v: (r.vendu || 0).toLocaleString('fr-BE') },
-      { l: 'jeté', v: (r.jete || 0).toLocaleString('fr-BE') },
-      { l: 'taux de perte', v: r.taux == null ? '' : this.fP(r.taux, 1) },
-      { l: 'fournées déclarées', v: (r.produit || 0).toLocaleString('fr-BE') }
-    ];
-    const tx = t => t == null ? 'var(--color-text-muted)'
-      : (t >= 0.08 ? 'var(--color-primary)' : t >= 0.05 ? '#C17A2A' : '#2d7a3e');
-    common.prMagasins = (d.magasins || []).map(m => ({
-      magasin: m.magasin, vendu: (m.vendu || 0).toLocaleString('fr-BE'),
-      jete: (m.jete || 0).toLocaleString('fr-BE'),
-      taux: m.taux == null ? '' : this.fP(m.taux, 1), col: tx(m.taux),
-      // « Journal non tenu » n'est pas « zéro fournée » : la distinction décide
-      // de ce qu'on va dire au franchisé.
-      note: m.journalTenu ? '' : 'journal des fournées non tenu'
-    }));
-    const mx = Math.max.apply(null, (d.produits || []).map(p => p.jete || 0).concat([1]));
-    common.prProduits = (d.produits || []).slice(0, 20).map(p => ({
-      nom: p.nom, jete: (p.jete || 0).toLocaleString('fr-BE'),
-      vendu: (p.vendu || 0).toLocaleString('fr-BE'),
-      taux: p.taux == null ? '' : this.fP(p.taux, 1), col: tx(p.taux),
-      w: Math.max(2, 100 * (p.jete || 0) / mx).toFixed(0) + '%'
-    }));
-    common.prMotifs = (d.motifs || []).map(m => ({
-      motif: m.motif || '', quantite: (m.quantite || 0).toLocaleString('fr-BE'),
-      lignes: (m.lignes || 0).toLocaleString('fr-BE')
-    }));
-    return common;
   }
   /**
    * Analyse dans le temps — une catégorie ou une référence, sur un horizon.
@@ -5982,7 +5906,7 @@ class App {
   }
   valsLacunes(common){
     this.lacunes();
-    const ecr = { magasins: 'magasins', marge: 'marge', exploitation: 'exploitation',
+    const ecr = { magasins: 'magasins', marge: 'marge',
       parametres: 'parametres', assortiment: 'assortiment', catalogue: 'catalogue',
       produits: 'produits', analyse: 'analyse', controle: 'controle' }[this.state.screen === 'performance' ? (this.state.pfOnglet || 'magasins') : this.state.screen];
     const l = ((this.D.lacunes || {})[ecr] || []);
@@ -6933,26 +6857,6 @@ class App {
     }
   }
 
-  /**
-   * L'analyse d'un magasin : une lecture par magasin et par durée.
-   *
-   * Le serveur rend les quatre étapes d'un coup — leviers et plan viennent du
-   * même calcul, et un wizard qui rechargerait entre deux étapes pourrait
-   * afficher un plan qui ne correspond plus aux leviers montrés avant.
-   */
-  anmCharge(){
-    const S = this.state;
-    const cle = (S.anmShop || '') + '|' + (S.anmMois || 6);
-    if (!this._anm) { this._anm = {}; }
-    if (this._anm[cle] === undefined && !this._anmEnCours) {
-      this._anmEnCours = true;
-      readOne('/magasin/analyse?mois=' + (S.anmMois || 6)
-        + (S.anmShop ? '&shop=' + encodeURIComponent(S.anmShop) : ''))
-        .then(d => { this._anmEnCours = false; this._anm[cle] = (d && !d.error) ? d : null; this.setState({}); })
-        .catch(() => { this._anmEnCours = false; this._anm[cle] = null; this.setState({}); });
-    }
-  }
-
   /** Le classement des ventes : une lecture par mois, la fiche au clic. */
   ventesCharge(){
     const S = this.state;
@@ -7862,112 +7766,6 @@ class App {
     };
   }
 
-  valsAnm(common){
-    const S = this.state;
-    const d = (this._anm || {})[(S.anmShop || '') + '|' + (S.anmMois || 6)];
-    const court = nom => String(nom || '').split(' - ').pop();
-    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
-    const px = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
-
-    common.anmChargement = d === undefined;
-    common.anmMotif = d === null ? 'L’analyse n’a pas pu être calculée.' : ((d && d.motif) || '');
-    common.anmShops = ((d && d.shops) || []).map(x => ({ id: String(x.id), nom: court(x.nom),
-      // Les identifiants voyagent tantôt en nombre, tantôt en chaîne selon la
-      // couche qui les a produits : on compare des chaînes, ou on compare rien.
-      on: String((d && d.shop) ?? '') === String(x.id) }));
-    common.anmChoisir = e => this.setState({ anmShop: e.target.value, anmEtape: 1 });
-    common.anmDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === (S.anmMois || 6),
-      choisir: () => this.setState({ anmMois: v }) }));
-
-    const etape = S.anmEtape || 1;
-    common.anmEtapes = [[1, 'Vue d’ensemble'], [2, 'Catégories'], [3, 'Prix'], [4, 'Le plan'], [5, 'Le PDF']]
-      .map(([v, nom]) => ({ v, nom, on: etape === v, fait: v < etape,
-        choisir: () => this.setState({ anmEtape: v }) }));
-    common.anmEtape = etape;
-    common.anmPrec = etape > 1 ? () => this.setState({ anmEtape: etape - 1 }) : null;
-    common.anmSuiv = etape < 5 ? () => this.setState({ anmEtape: etape + 1 }) : null;
-    // L'étape Prix vit sans la caisse locale : lue chez le panel, elle part
-    // avec le motif quand le reste de l'analyse ne peut pas se calculer.
-    common.anmPrixSeul = !!(d && d.motif && d.prixSeul && d.levier3);
-    if (d && d.levier3) {
-      const l3p = d.levier3;
-      common.anmNom = court(d.nom);
-      common.anmPrix = (l3p.refs || []).map(r => ({
-        nom: r.nom, groupe: r.groupe, prix: px(r.prix), prixReseau: px(r.prixReseau),
-        ecart: '− ' + Math.abs(r.ecartPct).toFixed(1).replace('.', ',') + ' %',
-        fort: r.ecartPct <= -8,
-        volMois: nb(r.volMois) + ' u', gainMois: eur(r.gainMois), gainAn: eur(r.gainAn),
-      }));
-      common.anmPrixReste = l3p.resteN ? '+ ' + l3p.resteN + ' autres références — '
-        + eur(l3p.resteMois) + ' / mois' : '';
-      common.anmPrixSource = l3p.source || '';
-      common.anmPrixTotal = l3p.nb ? l3p.nb + ' référence(s) · + ' + eur(l3p.potMois) + ' / mois — ' + eur(l3p.potAn) + ' / an, à volume constant' : '';
-    }
-    if (!d || d.motif) { return; }
-
-    const k = d.kpis, l1 = d.levier1, l2 = d.levier2, l3 = d.levier3;
-    common.anmNom = court(d.nom);
-    common.anmKpis = [
-      { lbl: 'CA — ' + d.n + ' mois', v: eur(k.ca), sub: eur(k.caMois) + ' / mois' },
-      { lbl: 'Panier', v: px(k.panier), sub: 'réseau : ' + px(k.panierReseau) },
-      { lbl: 'Assortiment vendu', v: nb(k.refsVendues), sub: 'meilleur magasin : ' + nb(k.refsMax) + ' références' },
-      { lbl: 'Potentiel identifié', v: '+ ' + eur(k.totalMois) + ' / mois',
-        sub: eur(k.totalAn) + ' / an — ' + pc(k.partCa) + ' du CA actuel', accent: true },
-    ];
-    common.anmLeviers = [
-      { lbl: 'Levier 1 — Assortiment', mois: l1.retenuMois, an: l1.retenuAn,
-        regle: 'en rattrapant la moitié du manque (' + eur(l1.manque) + ' sur ' + d.n + ' mois)',
-        note: nb(l1.refs) + ' références que les autres vendent et pas lui — le détail est à l’écran « Manque à gagner ».',
-        aller: null },
-      { lbl: 'Levier 2 — Catégories à pousser', mois: l2.potMois, an: l2.potAn,
-        regle: 'en revenant à la part réseau',
-        note: l2.enRetrait + ' catégorie(s) où sa part du CA est sous celle des autres — étape 2.',
-        aller: () => this.setState({ anmEtape: 2 }) },
-      { lbl: 'Levier 3 — Prix sous le réseau', mois: l3.potMois, an: l3.potAn,
-        regle: 'à volume constant',
-        note: l3.nb + ' référence(s) vendues sous le prix des autres, sans volume supérieur — étape 3.',
-        aller: () => this.setState({ anmEtape: 3 }) },
-    ].map(x => ({ ...x, moisTxt: '+ ' + eur(x.mois) + ' / mois', anTxt: eur(x.an) + ' / an — ' + x.regle }));
-
-    common.anmGroupes = (l2.groupes || []).map(g => ({
-      nom: g.nom, part: pc(g.part), partReseau: pc(g.partReseau),
-      delta: (g.delta > 0 ? '+ ' : '− ') + Math.abs(g.delta).toFixed(1).replace('.', ',') + ' pts',
-      retrait: g.potMois > 0, force: g.force,
-      potMois: g.potMois > 0 ? eur(g.potMois) : (g.force ? 'sa force' : 'au niveau'),
-      potAn: g.potMois > 0 ? eur(g.potAn) : '',
-      // Les deux barres partagent l'échelle de la plus grande part de la
-      // liste : comparer des barres normalisées chacune sur soi ne dit rien.
-      barre: g.part, barreReseau: g.partReseau,
-    }));
-    const maxPart = Math.max(1, ...common.anmGroupes.map(g => Math.max(g.barre, g.barreReseau)));
-    common.anmGroupes.forEach(g => { g.barre = Math.round(100 * g.barre / maxPart);
-      g.barreReseau = Math.round(100 * g.barreReseau / maxPart); });
-
-    common.anmPlan = (d.plan || []).map(a => ({
-      rang: a.rang, action: a.action, levier: a.levier,
-      mois: eur(a.eurMois), an: eur(a.eurAn), cumul: eur(a.cumulAn),
-    }));
-    common.anmPlanTotal = d.plan && d.plan.length
-      ? 'Plan complet : + ' + eur(d.plan.reduce((t, a) => t + a.eurMois, 0)) + ' / mois — '
-        + eur(d.plan[d.plan.length - 1].cumulAn) + ' / an si tout est tenu.'
-      : '';
-    common.anmSource = d.source || '';
-    common.anmPdfHref = API_BASE + '/magasin/analyse.pdf?shop=' + encodeURIComponent(d.shop)
-      + '&mois=' + (S.anmMois || 6);
-    common.anmPdfNom = 'analyse-' + court(d.nom).toLowerCase() + '.pdf';
-    // Ce que le PDF contient, énuméré depuis les données AFFICHÉES : la
-    // promesse de l'étape 5 ne peut pas diverger de ce qu'on vient de lire.
-    common.anmPdfContenu = [
-      'La synthèse : CA, panier, assortiment, et le potentiel de ' + eur(k.totalMois) + ' / mois — ' + eur(k.totalAn) + ' / an',
-      'Les trois leviers, chacun par mois et par an',
-      'Le mix par catégorie face au réseau (' + (common.anmGroupes || []).length + ' catégories)',
-      'Les prix sous le réseau (' + (d.levier3.nb || 0) + ' références, gain à volume constant)',
-      'Le plan : ' + (d.plan || []).length + ' actions classées, avec le cumul annuel',
-    ];
-  }
-
   /**
    * Le manque à gagner — une seule lecture, tout est dedans.
    *
@@ -8620,36 +8418,6 @@ class App {
       this.setState({ reclChargement: false });
     }).catch(() => { this._reclEnCours = null; this.D.recl = { cle, indispo: true };
       this.setState({ reclChargement: false }); });
-  }
-
-  /* La photo de contrôle d'une tâche née d'une note : cliché et repères, lus
-     une fois puis gardés. Une tâche sans origine ne déclenche aucun appel. */
-  srcCharge(src){
-    if (!src || !src.taskId || !src.date) { return null; }
-    const cle = src.shopId + '/' + src.taskId + '/' + src.date;
-    if (!this.D.srcPhoto) { this.D.srcPhoto = {}; }
-    if (this.D.srcPhoto[cle] !== undefined) { return this.D.srcPhoto[cle]; }
-    this.D.srcPhoto[cle] = null;
-    readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(src.shopId)
-      + '&task=' + encodeURIComponent(src.taskId) + '&date=' + encodeURIComponent(src.date))
-      .then(d => { this.D.srcPhoto[cle] = d || { erreur: true }; this.setState({ srcMaj: cle }); })
-      .catch(() => { this.D.srcPhoto[cle] = { erreur: true }; this.setState({ srcMaj: cle }); });
-    return null;
-  }
-
-  /* Le lien de la photo est SIGNÉ et expire. Le navigateur ne l'apprend qu'à la
-     fin de la requête : on écoute son échec plutôt que d'afficher une icône
-     cassée surmontée de cadres flottants. */
-  srcSurveille(cle){
-    setTimeout(() => {
-      const img = document.querySelector('[data-tphoto="' + cle + '"]');
-      if (!img) { return; }
-      if (!this.D.srcPhotoErr) { this.D.srcPhotoErr = {}; }
-      const rate = () => { if (!this.D.srcPhotoErr[cle]) {
-        this.D.srcPhotoErr[cle] = true; this.setState({ srcErr: cle }); } };
-      if (img.complete) { if (!img.naturalWidth) { rate(); } return; }
-      img.addEventListener('error', rate, { once: true });
-    }, 0);
   }
 
   /* Le classement des tâches du jour — lu chez le panel, pas recalculé.
@@ -9422,19 +9190,11 @@ class App {
       return r;
     });
   }
-  /* --- Développement commercial : la liste de démarchage d'un magasin ----
-   * Les lieux viennent de GET /scouting/demarchage (OpenStreetMap, autour du
-   * magasin) ; ce que le franchisé en fait — coché, date de visite, retour,
-   * note — tient pour l'instant dans le navigateur (localStorage), par
-   * magasin : le prototype se juge à l'écran avant d'écrire en base.
+  /* --- Prospection : le magasin dont on ouvre la liste de démarchage ---------
+   * Les lieux, la liste et la carte sont l'affaire du module Prospection
+   * (prospection.js) ; le cockpit ne fait que choisir le magasin, parmi ceux
+   * pointés sur la carte (/scouting/reseau).
    */
-  static get DM_FAMILLES(){
-    return [['bureaux', 'Entreprises & bureaux'], ['industrie', 'Industrie'], ['ecoles', 'Écoles'], ['sante', 'Santé'], ['administration', 'Administrations'],
-      ['formation', 'Formation'], ['funeraire', 'Funéraire'], ['sport', 'Sport & loisirs'], ['evenements', 'Hôtels & événements'], ['commerces', 'Commerces en zoning'], ['artisans', 'Artisans']];
-  }
-  static get DM_RETOURS(){
-    return [['', '—'], ['rappeler', 'À rappeler'], ['rdv', 'RDV pris'], ['interesse', 'Intéressé'], ['refus', 'Pas intéressé'], ['client', 'Client']];
-  }
   dmMagasins(){
     const R = this.D.dmReseau || null;
     return R ? (R.magasins || []).filter(m => m.lat != null && m.lng != null) : [];
@@ -9443,63 +9203,12 @@ class App {
     const ms = this.dmMagasins();
     return ms.find(m => String(m.id) === String(this.state.dmShop)) || ms.find(m => m.ouvert) || ms[0] || null;
   }
-  dmCle(){ const m = this.dmMagasin(); return m ? m.id + '|' + (this.state.dmR || 5000) : ''; }
-  dmCharge(force){
-    if (!this.D.dmReseau && !this._dmReseauEnCours) {
-      this._dmReseauEnCours = true;
-      readOne('/scouting/reseau').then(r => { this._dmReseauEnCours = false; this.D.dmReseau = r || { magasins: [] }; this.setState({}); });
-      return;
-    }
-    const m = this.dmMagasin();
-    if (!m) { return; }
-    const cle = this.dmCle();
-    if (!this.D.dm) { this.D.dm = {}; }
-    if (!this._dmEnCours) { this._dmEnCours = {}; }
-    if (this._dmEnCours[cle] || (this.D.dm[cle] && !force)) { return; }
-    this._dmEnCours[cle] = true;
-    const r = this.state.dmR || 5000;
-    readOne('/scouting/demarchage?lat=' + m.lat.toFixed(5) + '&lng=' + m.lng.toFixed(5) + '&r=' + r + (force ? '&force=1' : '')).then(d => {
-      this._dmEnCours[cle] = false;
-      this.D.dm[cle] = d || { erreur: true };
-      this.setState({});
-    });
+  dmCharge(){
+    if (this.D.dmReseau || this._dmReseauEnCours) { return; }
+    this._dmReseauEnCours = true;
+    readOne('/scouting/reseau').then(r => { this._dmReseauEnCours = false; this.D.dmReseau = r || { magasins: [] }; this.setState({}); });
   }
-  /**
-   * Ce que le franchisé a fait de chaque lieu, par magasin — AU SERVEUR
-   * (/prospection/{shop}), la réserve que tient le module Prospection : le
-   * même lieu coché ici l'est sur le téléphone du franchisé. Sans le module
-   * (script absent), l'écran garde l'état en mémoire le temps de la page.
-   */
-  dmEtat(){
-    const P = window.CockpitProspection;
-    const m = this.dmMagasin();
-    if (P && m) {
-      // La réserve arrive du serveur après le premier rendu : on se fait
-      // prévenir une fois, et l'écran se redessine avec les cases cochées.
-      if (!this._dmAbonne) { this._dmAbonne = true; P.chargerOffres(false); P.ecouter(() => { if (/^(demarchage|prospection|prospectionMobile)$/.test(this.state.screen)) this.setState({}); }); }
-      const tout = {}; tout[m.id] = P.etat(m.id); return tout;
-    }
-    if (!this._dmEtat) { this._dmEtat = {}; }
-    return this._dmEtat;
-  }
-  dmSet(shopId, id, patch){
-    const P = window.CockpitProspection;
-    if (P) {
-      const d = (this.D.dm || {})[this.dmCle()];
-      const l = d && (d.lieux || []).find(x => x.id === id);
-      P.set(shopId, id, patch, l && l.nom).then(() => this.setState({}));
-      this.setState({});
-      return;
-    }
-    const tout = this.dmEtat();
-    const par = tout[shopId] || (tout[shopId] = {});
-    const cur = par[id] || (par[id] = { coche: false, visite: '', retour: '', note: '' });
-    Object.assign(cur, patch);
-    if (patch.note !== undefined || patch.retour !== undefined || patch.visite !== undefined) { cur.le = new Date().toISOString().slice(0, 10); }
-    if (!cur.coche && !cur.visite && !cur.retour && !cur.note) { delete par[id]; }
-    this.setState({});
-  }
-  /** Les écrans Prospection, Prospection mobile et Newsletter magasin : le magasin choisi, le lien mobile. */
+  /** Les écrans Prospection et Newsletter magasin : le magasin choisi, le lien mobile. */
   valsProspection(common){
     const ms = this.dmMagasins();
     const m = this.dmMagasin();
@@ -9510,15 +9219,13 @@ class App {
     common.prMagasin = m ? { id: String(m.id), nom: m.nom } : null;
     const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
     common.prLienMobile = m ? base + 'prospection/?shop=' + encodeURIComponent(String(m.id)) : '';
-    common.prLiens = ms.map(x => ({ id: String(x.id), nom: x.nom, url: base + 'prospection/?shop=' + encodeURIComponent(String(x.id)), on: m && String(x.id) === String(m.id) }));
     common.prCopier = () => { try { navigator.clipboard.writeText(common.prLienMobile); this.notify('Lien copié — à ouvrir sur le téléphone du franchisé.'); } catch (e) { this.notify('Copie impossible : sélectionnez le lien.'); } };
   }
 
   /* --- Tablette vendeuses ------------------------------------------------------
    * Le book des vendeuses est une application à part, servie depuis tablette/
-   * (compilée dans le dépôt pwa_sales_tablet, puis copiée ici). Comme pour
-   * Prospection mobile, l'écran donne le lien de chaque magasin et un aperçu en
-   * ligne. Il y ajoute l'état des données que le BO sert à la tablette
+   * (compilée dans le dépôt pwa_sales_tablet, puis copiée ici). L'écran donne
+   * le lien de chaque magasin et un aperçu en ligne. Il y ajoute l'état des données que le BO sert à la tablette
    * (GET /tablette/book), un bouton pour les recalculer, et la récupération des
    * photos du panel (POST /tablette/photos, par lots, tant qu'il en reste).
    */
@@ -9964,95 +9671,6 @@ class App {
       ob.repere = 'Repère : le réseau fait ' + art(rv.mois.parTicket, 2) + ' articles par ticket ce mois'
         + (rv.semaine && rv.semaine.parTicket != null ? ' (' + art(rv.semaine.parTicket, 2) + ' cette semaine)' : '') + '.';
     }
-  }
-  valsDemarchage(common){
-    const S = this.state;
-    const ms = this.dmMagasins();
-    const m = this.dmMagasin();
-    common.dmChargement = !this.D.dmReseau;
-    common.dmMagasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: m && String(x.id) === String(m.id) }));
-    common.dmSetMagasin = e => this.setState({ dmShop: e.target.value });
-    common.dmR = String(S.dmR || 5000);
-    common.dmRayons = [['3000', '3 km'], ['5000', '5 km'], ['8000', '8 km'], ['12000', '12 km']].map(([v, l]) => ({ v, l, on: v === String(S.dmR || 5000) }));
-    common.dmSetR = e => this.setState({ dmR: +e.target.value });
-    common.dmVue = S.dmVue === 'cartes' ? 'cartes' : 'tableau';
-    common.dmVues = [['tableau', 'Tableau'], ['cartes', 'Fiches']].map(([v, l]) => ({ v, l, on: v === common.dmVue, go: () => this.setState({ dmVue: v }) }));
-    common.dmGrand = !!S.dmGrand;
-    common.dmToggleGrand = () => this.setState({ dmGrand: !S.dmGrand });
-    common.dmSeul = !!S.dmSeul;
-    common.dmToggleSeul = () => this.setState({ dmSeul: !S.dmSeul });
-    common.dmQ = S.dmQ || '';
-    common.dmSetQ = e => this.setState({ dmQ: e.target.value });
-    common.dmRefresh = () => this.dmCharge(true);
-    common.dmSansMagasin = !!this.D.dmReseau && !m;
-    common.dmLieux = []; common.dmFamilles = []; common.dmGroupes = []; common.dmResume = null; common.dmNote = '';
-    if (!m) { return; }
-    const d = (this.D.dm || {})[this.dmCle()];
-    common.dmLecture = !d;
-    common.dmErreur = !!(d && (d.erreur || d.error));
-    common.dmErreurTxt = d && d.error ? d.error : 'La lecture de /scouting/demarchage a échoué — voir Diagnostic API.';
-    if (!d || common.dmErreur) { return; }
-    const etat = this.dmEtat()[m.id] || {};
-    const fams = App.DM_FAMILLES;
-    const nomFam = Object.fromEntries(fams);
-    const actives = S.dmFam && S.dmFam.length ? S.dmFam : fams.map(f => f[0]);
-    const q = (S.dmQ || '').trim().toLowerCase();
-    // la boulangerie du franchisé et les autres boulangeries ne sont pas des prospects
-    const brut = (d.lieux || []).filter(l => !/bakery|pastry/.test(l.genre) && !/atelier by/i.test(l.nom));
-    const compte = {};
-    brut.forEach(l => { compte[l.famille] = (compte[l.famille] || 0) + 1; });
-    common.dmFamilles = fams.filter(f => compte[f[0]]).map(f => ({ k: f[0], l: f[1], n: compte[f[0]], on: actives.includes(f[0]),
-      go: () => { const cur = (S.dmFam && S.dmFam.length ? S.dmFam : fams.map(x => x[0])); const nx = cur.includes(f[0]) ? cur.filter(k => k !== f[0]) : cur.concat([f[0]]); this.setState({ dmFam: nx.length === fams.length ? [] : nx }); } }));
-    common.dmToutesFam = () => this.setState({ dmFam: [] });
-    const fD = d2 => this.fD(d2);
-    const retours = Object.fromEntries(App.DM_RETOURS);
-    const lieux = brut.filter(l => actives.includes(l.famille))
-      .filter(l => !S.dmGrand || l.grand === true)
-      .filter(l => !q || (l.nom + ' ' + l.genre + ' ' + l.adresse + ' ' + (l.zoning || '')).toLowerCase().includes(q))
-      .filter(l => !S.dmSeul || (etat[l.id] && etat[l.id].coche))
-      .map(l => {
-        const e = etat[l.id] || {};
-        const maps = 'https://www.google.com/maps/search/?api=1&query=' + l.lat + ',' + l.lng;
-        return {
-          id: l.id, nom: l.nom, genre: l.genre, famille: l.famille, fam: nomFam[l.famille] || l.famille,
-          adresse: l.adresse || '', sansAdresse: !l.adresse, tel: l.tel || '', site: l.site || '', mail: l.mail || '', maps,
-          zoning: l.zoning || '', dist: l.dKm.toFixed(1).replace('.', ',') + ' km',
-          taille: l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers. (probable)' : (l.grand === false ? '< 20 pers. (probable)' : 'taille inconnue')),
-          offre: (() => { const P = window.CockpitProspection; if (!P) return ''; const o = P.offreParId(P.offreDe(l, e.offre)); return o ? o.nom : ''; })(),
-          tailleCoul: l.grand === true ? '#2d7a3e' : (l.grand === false ? 'var(--color-text-muted)' : '#C17A2A'),
-          coche: !!e.coche, visite: e.visite || '', retour: e.retour || '', retourTxt: retours[e.retour || ''] || '', note: e.note || '',
-          crm: !!(e.note && e.note.trim()), le: e.le ? fD(e.le) : '',
-          setCoche: ev => this.dmSet(m.id, l.id, { coche: !!ev.target.checked }),
-          setVisite: ev => this.dmSet(m.id, l.id, { visite: ev.target.value }),
-          setRetour: ev => this.dmSet(m.id, l.id, { retour: ev.target.value }),
-          setNote: ev => this.dmSet(m.id, l.id, { note: ev.target.value }),
-        };
-      });
-    common.dmLieux = lieux;
-    // les fiches, par famille, dans l'ordre des familles
-    common.dmGroupes = fams.map(f => ({ k: f[0], l: f[1], lieux: lieux.filter(l => l.famille === f[0]) })).filter(g => g.lieux.length);
-    const coches = brut.filter(l => etat[l.id] && etat[l.id].coche);
-    const visites = brut.filter(l => etat[l.id] && etat[l.id].visite);
-    const annotes = brut.filter(l => etat[l.id] && etat[l.id].note && etat[l.id].note.trim());
-    common.dmResume = { total: brut.length, montre: lieux.length, coches: coches.length, visites: visites.length, annotes: annotes.length,
-      adresses: brut.filter(l => l.adresse).length, zonings: d.zonings || 0 };
-    common.dmRetours = App.DM_RETOURS.map(([v, l]) => ({ v, l }));
-    common.dmExporter = () => {
-      const P = window.CockpitProspection;
-      const offreNom = l => { if (!P) return ''; const o = P.offreParId(P.offreDe(l, (etat[l.id] || {}).offre)); return o ? o.nom : ''; };
-      const lignes = [['Lieu', 'Type', 'Genre', 'Offre', 'Adresse', 'Téléphone', 'Site', 'Distance (km)', 'Taille', 'Zoning', 'Coché', 'Visite', 'Retour', 'Note']];
-      brut.filter(l => etat[l.id] && etat[l.id].coche).forEach(l => { const e = etat[l.id]; lignes.push([l.nom, nomFam[l.famille] || l.famille, l.genre, offreNom(l), l.adresse, l.tel, l.site, String(l.dKm).replace('.', ','), l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers.' : ''), l.zoning || '', 'oui', e.visite || '', retours[e.retour || ''] || '', e.note || '']); });
-      const csv = '﻿' + lignes.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-      const a = document.createElement('a');
-      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-      a.download = 'demarchage-' + String(m.nom).toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
-      a.click();
-      this.notify('Liste exportée — ' + lignes.length + ' lieux');
-    };
-    common.dmCrm = () => this.notify(annotes.length ? annotes.length + ' annotation(s) à envoyer au CRM marketing — branchement à décider' : 'Aucune annotation : rien à envoyer au CRM');
-    common.dmNote = 'Lieux relevés dans OpenStreetMap' + (d.osm ? ' (données du ' + new Date(d.osm).toLocaleDateString('fr-BE') + ')' : '') + ', dans un rayon de ' + ((S.dmR || 5000) / 1000) + ' km autour du magasin'
-      + (d.releve ? ', relevé ' + (d.cache ? 'gardé depuis le ' : 'du ') + new Date(String(d.releve).replace(' ', 'T')).toLocaleDateString('fr-BE') : '')
-      + '. Taille : ce que la carte dit (employés, élèves, lits) ; sinon la vraisemblance du genre — un hôpital, une école, un site industriel rassemblent plus de vingt personnes, un cabinet ou un artisan rarement. Adresse absente : lieu cartographié sans adresse, le lien Maps mène au point.';
   }
 
   valsPlan(common){
@@ -12256,7 +11874,7 @@ class App {
     // Ce que l'écran est en train de lire, dit en clair pendant l'attente.
     common.caTitre = { caAchats: 'Commandes',
       caFacturation: 'Facturation magasins', caReglages: 'Réglages de la centrale',
-      caDemande: 'Demandes', caCommandes: 'Commandes' }[ecr] || 'Lecture en cours';
+      caDemande: 'Demandes' }[ecr] || 'Lecture en cours';
     common.caChargeTxt = ecr === 'caAchats'
       ? 'Lecture des commandes chez le panel, magasin par magasin — quelques secondes.'
       : 'Lecture des données de la centrale…';
@@ -12305,47 +11923,6 @@ class App {
         { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
         { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
       common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
-    } else if (ecr === 'caCommandes') {
-      // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
-      // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
-      // jeu complet, pas sur le filtre — sinon ils mentent dès qu'on filtre.
-      const lgs = d.lignes || [];
-      const fSt = S.caCmdStatut || '';
-      const nSt = code => lgs.filter(x => x.statut === code).length;
-      common.caChips = [['PENDING', 'En attente', '#8a5a13', 'rgba(193,122,42,0.16)'],
-                        ['REALISED', 'Réalisée', '#2d7a3e', 'rgba(45,122,62,0.12)']]
-        .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
-          on: fSt === code,
-          pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
-      // L'écran se lit PAR FOURNISSEUR : une carte par fournisseur, ses 5
-      // dernières commandes, l'attente en évidence. Le filtre de statut
-      // s'applique aux lignes de chaque carte.
-      common.caFournGroupes = (d.parFournisseur || []).map(g => ({
-        nom: g.fournisseur,
-        special: g.fournisseur === 'À répartir' || g.fournisseur === 'Sans fournisseur',
-        resume: g.enAttente
-          ? g.enAttente + ' en attente · ' + this.fE(g.valeurAttente)
-          : 'rien en attente',
-        resumeCol: g.enAttente ? '#8a5a13' : '#2d7a3e',
-        resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
-        note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
-        commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
-          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '',
-          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '')),
-          col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
-          valeur: this.fE(x.valeur), par: x.par || '' })),
-      })).filter(g => g.commandes.length);
-      common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
-        : 'Aucune réquisition matière remontée par le panel.';
-      // La ventilation actionnable : une ligne = UNE commande à passer chez UN
-      // fournisseur, avec ses références et son montant estimé.
-      common.caTable2 = (d.aCommander && d.aCommander.length) ? {
-        titre: 'À commander maintenant — une commande par fournisseur',
-        cols: ['Magasin', 'Fournisseur', 'Références à commander', 'Montant estimé (HT)'],
-        rows: d.aCommander.map(a => ({ cells: [
-          { t: a.magasin, mut: true }, { t: a.fournisseur },
-          { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
-      } : null;
     } else if (ecr === 'caAchats') {
       // ── Ce que les franchisés ont demandé, et qui attend leur validation.
       //    Même écran que le suivi fournisseur : une commande se suit d'un
@@ -12570,277 +12147,6 @@ class App {
     this.setState({ anBusy: true });
     readOne('/produits/analyse?type=' + type + '&cle=' + encodeURIComponent(cle) + '&granularite=' + gran)
       .then(d => this.setState({ anBusy: false, anData: d || { motif: 'API injoignable' } }));
-  }
-  valsExploitation(common){
-    const D = this.D, E = D.exploitation || {};
-    const MOIS1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-    common.exJour = E.jour || '';
-    common.exAvertissement = E.avertissement || '';
-    common.exBase = E.objectifBase || '';
-    common.exVide = !(E.magasins || []).length;
-    const cumule = this.state.exCumul === true;
-    common.exCumul = cumule;
-    common.exVueMois = () => this.setState({ exCumul: false });
-    common.exVueCumul = () => this.setState({ exCumul: true });
-    const ongl = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;'
-      + 'padding:5px 12px;border-radius:8px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exVueNom = cumule ? 'Cumulé' : 'Par mois';
-    common.exStMois = ongl(!cumule);
-    common.exStCumul = ongl(cumule);
-    common.exLegendeReel = cumule ? 'réel cumulé' : 'réel du mois';
-    common.exLegendeCible = cumule ? 'cible cumulée' : 'budget du mois (le contenant)';
-    common.exLegendeOr = cumule ? '' : 'au-dessus du budget';
-    // --- N vs N-1, toutes boutiques
-    const rp = (this.state.exNvPer || 'mois');
-    const rz = this.state.exReseau;
-    if (!rz || rz.per !== rp) { setTimeout(() => this.exChargeReseau(rp), 0); }
-    const ongN = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
-      + 'padding:4px 11px;border-radius:7px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exNvBtns = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']]
-      .map(b => ({ label: b[1], st: ongN(rp === b[0]),
-        go: () => { this.setState({ exNvPer: b[0] }); this.exChargeReseau(b[0]); } }));
-    common.exNv = {
-      chargement: !rz || rz.chargement,
-      motif: rz && rz.d ? (rz.d.motif || '') : '',
-      periode: rz && rz.d ? (rz.d.du || '') + ' → ' + (rz.d.au || '') : '',
-      source: rz && rz.d ? (rz.d.source || '') : '',
-      lignes: (rz && rz.d && rz.d.magasins ? rz.d.magasins : []).map(m => ({
-        magasin: m.magasin,
-        n: m.n == null ? '' : (Math.abs(m.n) >= 100000 ? this.fK(m.n) : this.fE(m.n)),
-        n1: m.n1 == null ? '' : (Math.abs(m.n1) >= 100000 ? this.fK(m.n1) : this.fE(m.n1)),
-        // Pas d'écart sans N-1 : une boutique ouverte cette année n'a pas
-        // « 0 % de croissance », elle n'a pas d'an dernier.
-        ecart: m.ecart == null ? '' : (m.ecart > 0 ? '+' : '') + m.ecart.toFixed(1).replace('.', ',') + ' %',
-        col: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
-        pt: m.ecart == null ? 'transparent' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)') }))
-    };
-    this.valsRentabilite(common, 'semaine');
-    // Détail d'un magasin. Chaque bloc porte son état : « ok » quand l'API a
-    // répondu, « attente » sinon. Aucun chiffre n'est fabriqué pour combler —
-    // un écran qui annonce ce qui lui manque vaut mieux qu'un écran rempli
-    // d'une source qu'on n'a pas voulue.
-    const S2 = this.state, det = S2.exDetail;
-    common.exPer = S2.exPeriode || 'mois';
-    common.exSetPer = p => () => {
-      this.setState({ exPeriode: p });
-      if (S2.exDetail) { this.exOpen(S2.exDetail.id, S2.exDetail.nom); }
-    };
-    const ongP = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
-      + 'padding:4px 11px;border-radius:7px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exPerBtns = [['jour', 'Aujourd\u2019hui'], ['semaine', 'Semaine'], ['mois', 'Mois']]
-      .map(p => ({ cle: p[0], label: p[1], st: ongP(common.exPer === p[0]), go: common.exSetPer(p[0]) }));
-    common.exDetail = det ? {
-      nom: det.nom, chargement: det.chargement,
-      close: () => this.setState({ exDetail: null }),
-      du: det.d ? det.d.du : null, au: det.d ? det.d.au : null,
-      blocs: det.d && det.d.blocs ? Object.keys(det.d.blocs).map(k => {
-        const b = det.d.blocs[k], D2 = b.donnees;
-        const o = { cle: k, titre: b.titre, attente: b.etat !== 'ok',
-          motif: b.motif || '', source: b.source || '', avert: b.avertissement || '',
-          lignes: [], tuiles: null, cascade: null, cats: null, rang: null };
-        if (b.etat !== 'ok') return o;
-        if (k === 'kpis'){
-          o.tuiles = [
-            { l: 'CA de la période', v: this.fE(D2.ca) },
-            { l: 'tickets', v: D2.tickets == null ? '' : D2.tickets.toLocaleString('fr-BE') },
-            { l: 'panier moyen', v: this.fEd(D2.panier) },
-            { l: 'produits / client', v: D2.produitsParClient == null ? '' : String(D2.produitsParClient) }];
-        } else if (k === 'pnl'){
-          const p = x => x && x.pct != null ? x.pct.toFixed(1).replace('.', ',') + ' %' : '';
-          const v = x => x && x.valeur != null ? this.fE(x.valeur) : '';
-          o.cascade = [
-            { l: 'Chiffre d\u2019affaires', v: this.fE(D2.ca), p: '', fort: true },
-            { l: 'Food cost', v: v(D2.food), p: p(D2.food) },
-            { l: 'Main-d\u2019œuvre', v: v(D2.labour), p: p(D2.labour) },
-            { l: 'Frais généraux', v: v(D2.overhead), p: p(D2.overhead) },
-            { l: 'Résultat', v: v(D2.result), p: p(D2.result), fort: true }];
-          // La période RENDUE par l'API, pas celle demandée : si elle diffère,
-          // l'écran doit le montrer plutôt que de laisser croire au contraire.
-          o.lignes = (D2.du && D2.au) ? [{ k: 'période rendue', v: D2.du + ' → ' + D2.au }] : [];
-        } else if (k === 'categories'){
-          const mx = Math.max.apply(null, D2.map(c => c.ca || 0).concat([1]));
-          // Couleur = niveau de MARGE, largeur = poids dans le CA : deux
-          // informations, deux canaux. Sans marge connue, la barre reste
-          // neutre — une catégorie grise dit « on ne sait pas », une catégorie
-          // verte par défaut dirait « tout va bien ».
-          const tm = m => this.echelleMarge(m);
-          o.cats = D2.slice(0, 12).map(c => ({ nom: c.categorie, ca: this.fE(c.ca),
-            part: c.partCa == null ? '' : this.fP(c.partCa, 0),
-            w: Math.max(2, 100 * (c.ca || 0) / mx).toFixed(0) + '%',
-            col: tm(c.margePct),
-            marge: c.margePct == null ? '' : 'marge ' + c.margePct.toFixed(0) + ' %',
-            delta: c.delta == null ? '' : (c.delta > 0 ? '+' : '') + c.delta.toFixed(1).replace('.', ',') + ' %',
-            deltaC: c.delta == null ? 'var(--color-text-muted)' : (c.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)') }));
-          o.sansMarge = D2.every(c => c.margePct == null);
-          o.echelle = this.paliersMarge();
-        } else if (k === 'reseau'){
-          const av = D2.filter(r => r.panier != null).map(r => r.panier);
-          const moy = av.length ? av.reduce((a, b2) => a + b2, 0) / av.length : null;
-          o.rang = { moyenne: this.fEd(moy),
-            lignes: D2.slice().sort((a, b2) => (b2.panier || 0) - (a.panier || 0)).map(r => ({
-              magasin: r.magasin, moi: r.moi, panier: this.fEd(r.panier),
-              ppc: r.produitsParClient == null ? '' : String(r.produitsParClient) })) };
-        }
-        return o;
-      }) : []
-    } : null;
-    const an = E.mois ? +E.mois.slice(0, 4) : this.exo();
-    const mc = E.mois ? +E.mois.slice(5, 7) : 12;
-
-    // Atteinte : sans objectif on ne rend PAS une pastille rouge — on dit que
-    // le budget manque. Un magasin non budgété n'est pas un magasin en échec.
-    const att = a => a == null
-      ? { txt: 'sans budget', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
-      : { txt: this.fP(a, 0),
-          st: a >= 1 ? 'background:#E6F2E9;color:#2d7a3e'
-             : a >= 0.9 ? 'background:#FBEFE0;color:#C17A2A'
-             : 'background:#F7E4E6;color:var(--color-primary)' };
-    const jauge = a => {
-      if (a == null) return { w: '0%', c: 'transparent' };
-      return { w: Math.min(100, 100 * a).toFixed(0) + '%',
-        c: a >= 1 ? '#2d7a3e' : a >= 0.9 ? '#C17A2A' : 'var(--color-primary)' };
-    };
-
-    const r = E.reseau || {};
-    const rm = r.mois || {};
-    common.exRes = { ca: this.fE(rm.ca), clients: rm.tickets == null ? '' : rm.tickets.toLocaleString('fr-BE'),
-      panier: rm.panier == null ? '' : this.fEd(rm.panier), objectif: this.fE(rm.objectif),
-      att: att(rm.atteinte), jauge: jauge(rm.atteinte) };
-
-    common.exMagasins = (E.magasins || []).map(m => {
-      // Série mensuelle : le réel vient de la perf déjà chargée (une seule
-      // source pour tout le cockpit), pas d'un second appel.
-      const st = (D.stores || []).find(s => String(s.id) === String(m.shopId));
-      const ligne = (st && st.perf && st.perf[an]) ? st.perf[an] : [];
-      const reels = [], buds = [];
-      for (let i = 0; i < 12; i++){
-        const c = ligne[i] || {};
-        reels.push(c.ca != null && c.ca > 0 ? c.ca : null);
-        // Le budget mensuel est normalisé sous `caT` par joinPerf, pas sous
-        // `caBudget` : lire la mauvaise clé ne lève aucune erreur, elle rend
-        // simplement « budget non encodé » sur un magasin qui en a un.
-        // Et à défaut de budget négocié, le CA THÉORIQUE de l'étude fait
-        // contenant — sinon Corbais, qui n'a que deux mois validés mais douze
-        // mois de théorique, n'avait aucun repère à l'écran.
-        buds.push(c.caT != null && c.caT > 0 ? c.caT
-          : (c.theo != null && c.theo > 0 ? c.theo : null));
-      }
-      const nb = buds.filter(b => b != null).length;
-      const nbValide = ligne.filter(c => c && c.caT).length;
-      // Vue cumulée. Cumuler huit mois de réel face à deux mois de budget
-      // comparerait deux choses différentes : le cumul du budget ne court donc
-      // que sur les mois budgétés, et le réel cumulé se restreint aux MÊMES
-      // mois dès qu'un budget existe. Sans budget, le cumul du réel garde tout
-      // son sens et reste affiché seul.
-      const cumR = [], cumB = [];
-      let aR = 0, aB = 0;
-      for (let i = 0; i < 12; i++){
-        // Le réel cumule TOUS les mois connus : c'est la trajectoire du
-        // magasin, et la restreindre aux seuls mois budgétés privait celui qui
-        // a le plus de données de sa courbe — l'inverse du but recherché.
-        // Ne rien reporter en revanche sur un mois sans donnée : prolonger le
-        // cumul jusqu'à décembre faisait paraître l'exercice déjà bouclé.
-        if (reels[i] != null){ aR += reels[i]; cumR.push(aR); } else { cumR.push(null); }
-        // La cible ne court que sur les mois réellement encodés. Elle s'arrête
-        // donc visiblement plus tôt que le réel quand le budget est partiel —
-        // c'est ce décrochage qui dit de ne pas comparer les deux extrémités,
-        // et la mention sous le graphique le nomme.
-        if (buds[i] != null){ aB += buds[i]; cumB.push(aB); } else { cumB.push(null); }
-      }
-      const serie = (rs, bs) => {
-        const vals = rs.concat(bs).filter(v => v != null);
-        const hi = vals.length ? Math.max.apply(null, vals) * 1.15 : 0;
-        const W = 300, H = 70, PB = 12, sw = W / 12;
-        const y = v => (H - PB) * (1 - v / hi);
-        const barres = [], reperes = [], labels = [];
-        for (let i = 0; i < 12; i++){
-          const cx = i * sw, bx = (cx + sw * 0.18).toFixed(2), bw = (sw * 0.64).toFixed(2);
-          // Tout mois à partir du dernier mois de caisse est incomplet — pas
-          // seulement celui-ci. Une barre pleine sur un mois tronqué se lit
-          // comme un effondrement, et c'est le contraire de ce qu'elle dit.
-          const partiel = (i + 1) >= mc;
-          const bud = bs[i], reel = rs[i];
-          // Le BUDGET est le contenant, le réel le remplit. Un trait noir
-          // au-dessus d'une barre demandait de comparer deux hauteurs ; un
-          // verre à moitié plein se lit sans y penser — et les mois à venir
-          // gardent leur contenant vide, qui attend son réel.
-          if (hi > 0 && bud != null && bud > 0){
-            barres.push({ x: bx, y: y(bud).toFixed(2), w: bw,
-              h: Math.max((H - PB) - y(bud), 1).toFixed(2), fill: 'rgba(34,34,34,0.07)' });
-          }
-          if (hi > 0 && reel != null && reel > 0){
-            const dedans = (bud != null && bud > 0) ? Math.min(reel, bud) : reel;
-            barres.push({ x: bx, y: y(dedans).toFixed(2), w: bw,
-              h: Math.max((H - PB) - y(dedans), 1).toFixed(2),
-              fill: partiel ? 'url(#exhach)' : 'var(--color-primary)' });
-            // Ce qui dépasse le budget sort en or, au-dessus du contenant.
-            if (bud != null && bud > 0 && reel > bud){
-              barres.push({ x: bx, y: y(reel).toFixed(2), w: bw,
-                h: Math.max(y(bud) - y(reel), 1).toFixed(2), fill: '#C9A227' });
-            }
-          }
-          labels.push({ x: (cx + sw / 2).toFixed(2), y: H - 3,
-            t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });
-        }
-        return { vide: !vals.length, W: W, H: H,
-          grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
-          barres: barres, reperes: reperes, labels: labels,
-          max: hi > 0 ? this.fK(hi / 1.15) : '' };
-      };
-      // Le cumulé se lit en trajectoire, pas en volumes : deux courbes, réel
-      // plein et cible pointillée, comme l'écran Objectifs de CA. Empiler des
-      // barres cumulées répondait « combien » quand la question est « où en
-      // est-on ». Même langage visuel d'un écran à l'autre, sinon deux
-      // graphiques qui disent la même chose paraissent dire autre chose.
-      const courbes = (rs, bs) => {
-        const vals = rs.concat(bs).filter(v => v != null);
-        const hi = vals.length ? Math.max.apply(null, vals) * 1.15 : 0;
-        const W = 300, H = 70, PB = 12, sw = W / 12;
-        const y = v => (H - PB) * (1 - v / hi);
-        const pts = arr => arr.map((v, i) => v == null ? null
-          : ((i + 0.5) * sw).toFixed(2) + ',' + y(v).toFixed(2))
-          .filter(Boolean).join(' ');
-        const labels = [];
-        for (let i = 0; i < 12; i++){
-          labels.push({ x: ((i + 0.5) * sw).toFixed(2), y: H - 3,
-            t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });
-        }
-        return { vide: !vals.length, W: W, H: H, courbe: true,
-          grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
-          reel: pts(rs), cible: pts(bs), barres: [], reperes: [], labels: labels,
-          base: (H - PB).toFixed(2),
-          max: hi > 0 ? this.fK(hi / 1.15) : '' };
-      };
-      const g = cumule ? courbes(cumR, cumB) : serie(reels, buds);
-      const vals = reels.concat(buds).filter(v => v != null);
-      return { shopId: m.shopId, magasin: m.magasin,
-        ouvrir: () => this.exOpen(m.shopId, m.magasin),
-        // Dire d'où vient la cible : un objectif repris du théorique n'est pas
-        // un budget négocié, et la carte ne doit pas laisser croire l'inverse.
-        objMois: this.fE(m.moisPlein) + (m.budgetSource === 'theorique' ? ' (théorique)' : ''),
-        jourCa: this.fE(m.jour.ca), jourClients: (m.jour.tickets || 0).toLocaleString('fr-BE'),
-        jourPanier: m.jour.panier == null ? '' : this.fEd(m.jour.panier),
-        semCa: this.fE(m.semaine.ca), semJauge: jauge(m.semaine.atteinte),
-        moisCa: this.fE(m.mois.ca), moisJauge: jauge(m.mois.atteinte),
-        att: att(m.mois.atteinte),
-        gVide: g.vide, gW: g.W, gH: g.H, gCourbe: !!g.courbe,
-        gReel: g.reel || '', gCible: g.cible || '', gBase: g.base || 0,
-        gGrille: g.grille, gBarres: g.barres, gReperes: g.reperes, gLabels: g.labels,
-        gMax: g.max,
-        gNote: !nb ? 'budget non encodé'
-             : cumule ? ('cible partielle : ' + nb + ' mois encodés sur 12')
-             : (nbValide === nb ? 'budget encodé sur ' + nb + ' mois'
-               : (nbValide ? nbValide + ' mois validés, ' + (nb - nbValide) + ' repris du théorique'
-                 : 'contenant : CA théorique de l’étude')),
-        exercice: an };
-    });
-    return common;
   }
   /**
    * Aplatit une réponse d'API en lignes « libellé / valeur ».
@@ -15176,274 +14482,6 @@ class App {
           this.setState(s2 => ({ familleOv: Object.assign({}, s2.familleOv, { [id]: fa }) }));
           this.api('PATCH', '/projects/' + id, { famille: fa });
           this.log('Famille', p.nom, 'Famille passée de « ' + this.pFamille(p) + ' » à « ' + fa + ' » (kanban)'); this.notify('« ' + p.nom + ' » → ' + fa); } }; });
-  }
-
-  /* --- tâches consultants --------------------------------------------------------- */
-  valsTaches(common, flat){
-    const S = this.state, D = this.D, M = this.M;
-    // --- Tableau de bord du consultant : ce qui l'attend, en cinq tuiles.
-    // Une tuile ne s'allume que si elle demande une action — un cadre coloré
-    // devant un compteur à zéro use l'attention pour rien, et le jour où un
-    // vrai retard apparaît il ne se distingue plus.
-    const PT = (D.pwaTasks || {}).totals || {};
-    const enRetard = flat.filter(t => !t.t.done && t.t.due < M.TODAY).length;
-    const aNoter = flat.filter(t => !!t.t.done && (t.t.note === null || t.t.note === undefined)).length;
-    const nProjLate = (D.projects || []).filter(pr => (pr.taches || [])
-      .some(t => !t.done && t.due && t.due < M.TODAY)).length;
-    const tuile = (cle, n, lib, sous, ecran, urgent) => ({
-      cle, n, lib, sous,
-      valeur: n == null ? '' : Math.round(n).toLocaleString('fr-BE'),
-      vif: !!n && urgent,
-      col: (!!n && urgent) ? 'var(--color-primary)' : (n ? 'var(--color-text)' : 'var(--color-text-muted)'),
-      // La tuile emmène AVEC son filtre : arriver sur la liste complète après
-      // avoir cliqué « à contrôler » oblige à refaire à la main le tri qu'on
-      // vient de demander.
-      go: ecran ? () => this.setState(Object.assign({ screen: ecran },
-        cle === 'controler' ? { ctrlOnly: 'acontroler', ctrlShop: 'Toutes les boutiques' }
-        : cle === 'sansPhoto' ? { ctrlOnly: 'sansphoto', ctrlShop: 'Toutes les boutiques' } : {})) : null });
-    // --- P&L court par magasin : où en est chacun sur le mois EN COURS.
-    // La source est l'API, pas la caisse en base : celle-ci s'arrête au dernier
-    // jour encodé (mesuré : 34 jours de retard), et un mois clos ne répond pas
-    // à « où en sont-ils aujourd'hui ».
-    this.tkReseau();
-    const R = this.D.tkReseau || null;
-    common.tkPnlEtat = R ? (R.etat || 'attente') : 'chargement';
-    common.tkPnlPeriode = R && R.du ? (this.fD(R.du) + ' → ' + this.fD(R.au)) : '';
-    const budgets = (D.budgets || []);
-    const objDe = id => { const b = budgets.find(x => String(x.storeId || x.shopId || x.id) === String(id));
-      const v = b ? (b.caObjectifMois != null ? b.caObjectifMois : (b.caT != null ? b.caT : null)) : null;
-      return (v != null && isFinite(v) && v > 0) ? +v : null; };
-    const mags = ((R && R.magasins) || []).slice().sort((a, b) => (b.n || 0) - (a.n || 0));
-    const hi = Math.max.apply(null, mags.map(m => m.n || 0).concat([1]));
-    common.tkPnl = mags.map(m => {
-      const obj = objDe(m.shopId);
-      const att = obj ? (m.n || 0) / obj : null;
-      return { nom: m.magasin, ca: this.fMt(m.n),
-        // Une barre relative au plus gros magasin, faute d'objectif : elle
-        // compare les tailles, et l'écran ne prétend pas mesurer une atteinte
-        // qui n'existe pas.
-        barre: 'display:block;height:6px;border-radius:999px;background:var(--color-primary);width:'
-          + Math.max(3, Math.round(100 * (m.n || 0) / hi)) + '%',
-        n1: m.n1 ? this.fMt(m.n1) : '',
-        ecart: m.ecart == null ? '' : (m.ecart >= 0 ? '+' : '') + String(m.ecart).replace('.', ',') + ' %',
-        ecartCol: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
-        tickets: m.tickets ? Math.round(m.tickets).toLocaleString('fr-BE') : '',
-        panier: m.panier ? this.fU(m.panier) : '',
-        obj: obj ? this.fMt(obj) : null,
-        att: att == null ? null : this.fP(att, 0),
-        attCol: att == null ? '' : (att >= 0.95 ? '#2d7a3e' : att >= 0.8 ? '#B87512' : 'var(--color-primary)') };
-    });
-    common.tkPnlSansObj = common.tkPnl.filter(x => !x.obj).length;
-    common.tkPnlTotal = common.tkPnl.length;
-
-    common.tkTuiles = [
-      tuile('controler', PT.aControler || 0, 'À contrôler',
-        'tâches photographiées, en attente de note', 'controle', true),
-      tuile('sansPhoto', PT.sansPhoto || 0, 'Rendues sans photo',
-        'faites, mais rien à juger', 'controle', false),
-      tuile('mesTaches', enRetard, 'Mes tâches en retard',
-        'échéance dépassée, non rendues', null, true),
-      tuile('aNoter', aNoter, 'À noter',
-        'mes tâches rendues, pas encore évaluées', null, false),
-      tuile('projets', nProjLate, 'Projets en retard',
-        'au moins un jalon dépassé', 'projets', true)
-    ];
-
-    // Le compte connecté EST un consultant : ses tâches sont les siennes, et
-    // c'est ce qu'il vient voir. L'identifiant vient du panel (la position du
-    // compte qui interroge), pas d'un rapprochement de noms — « Sam V. » et
-    // « Sam Verheyden » ne se ressemblent que pour un humain.
-    const moiId = ((this.meta || {}).utilisateur || {}).consultantId || null;
-    const moi = moiId ? (D.consultants || []).find(c => String(c.id) === String(moiId)) : null;
-    common.tkMoi = moi ? moi.nom : '';
-    common.tkMoiVal = moi ? 'c:' + moi.id : '';
-    common.tkMoiOn = !!moi && S.tkWho === 'c:' + moi.id;
-    common.tkMoiGo = moi ? () => this.setState({ tkWho: common.tkMoiOn ? 'all' : 'c:' + moi.id }) : null;
-    common.tkMoiN = moi ? flat.filter(x => (x.t.owner.t + ':' + x.t.owner.id) === 'c:' + moi.id && !x.t.done).length : 0;
-    common.tkWho = S.tkWho;
-    common.setTkWho = e => this.setState({ tkWho: e.target.value });
-    common.tkPeople = [{ val: 'all', nom: 'Tous les intervenants' }]
-      .concat(D.consultants.map(c => ({ val: 'c:' + c.id,
-        nom: c.nom + ' — ' + c.role + (String(c.id) === String(moiId) ? ' (moi)' : '') })))
-      .concat(D.suppliers.map(s => ({ val: 's:' + s.id, nom: s.nom + ' — Fournisseur' })));
-    common.tkStore = S.tkStore;
-    common.setTkStore = e => this.setState({ tkStore: e.target.value });
-    common.tkStores = [{ val: 'tous', nom: 'Tous les magasins' }, { val: 'reseau', nom: 'Tâches réseau (sans magasin)' }]
-      .concat(D.stores.map(s => ({ val: s.id, nom: s.nom })));
-    const mine = flat.filter(x => (S.tkWho === 'all' || (x.t.owner.t + ':' + x.t.owner.id) === S.tkWho)
-      && (S.tkStore === 'tous' || (S.tkStore === 'reseau' ? !x.t.magasin : x.t.magasin === S.tkStore)));
-    const SG = M.SIGNAL || { seuil: 4, niveaux: [], familles: [] };
-    const seuil = SG.seuil || 4;
-    const niv = n => (SG.niveaux || []).find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666', aide: '' };
-    // Une tâche livrée mais pas encore notée attend une décision : c'est le
-    // seul état que la case à cocher ne savait pas exprimer.
-    const aValider = x => !!x.t.done && (x.t.note === null || x.t.note === undefined);
-    const validee = x => x.t.note !== null && x.t.note !== undefined;
-    const nValid = mine.filter(validee).length;
-    const nAttente = mine.filter(aValider).length;
-    const nRetard = mine.filter(x => !x.t.done && x.t.due < M.TODAY).length;
-    const notes = mine.filter(validee).map(x => x.t.note);
-    const moy = notes.length ? (notes.reduce((a, b) => a + b, 0) / notes.length) : null;
-    const nSignal = mine.filter(x => x.t.signalement && x.t.signalement.ouvert).length;
-    common.tkResume = mine.length + ' tâches · ' + nAttente + ' à valider · ' + nValid + ' validées'
-      + (moy !== null ? ' · note moyenne ' + moy.toFixed(1).replace('.', ',') : '')
-      + (nSignal ? ' · ' + nSignal + ' signalement' + (nSignal > 1 ? 's' : '') + ' ouvert' + (nSignal > 1 ? 's' : '') : '')
-      + (nRetard ? ' · ' + nRetard + ' en retard' : '');
-    common.tkVide = mine.length === 0;
-    const ordre = mine.slice().sort((a, b) => (validee(a) ? 1 : 0) - (validee(b) ? 1 : 0) || (a.t.due < b.t.due ? -1 : 1));
-    const mk = (x, i) => { const done = !!x.t.done, late = !done && x.t.due < M.TODAY, ouvert = !!S.openInfo['tk:' + x.t.id];
-      const crm = D.crm[x.p.id];
-      const mag = x.t.magasin ? (D.stores.find(s => s.id === x.t.magasin) || {}).nom : null;
-      const note = validee(x) ? x.t.note : null, sig = x.t.signalement;
-      const l = note !== null ? niv(note) : null;
-      // Le brouillon de la ligne : la note ne part qu'au clic sur « Valider ».
-      const d = S.tkVal['tk:' + x.t.id] || { note: note, famille: '', type: '', commentaire: '' };
-      const dn = d.note, dl = dn ? niv(dn) : null, sous = !!dn && dn < seuil;
-      const fams = SG.familles || [];
-      const famCour = d.famille || (fams[0] || {}).nom || '';
-      const typs = ((fams.find(f => f.nom === famCour) || {}).types) || [];
-      const maj = f => this.setState(s2 => ({ tkVal: Object.assign({}, s2.tkVal, { ['tk:' + x.t.id]: Object.assign({}, d, f) }) }));
-      // Le passif de l'intervenant : valider sans lui, c'est valider de mémoire.
-      const sien = mine.filter(y => y.o.nom === x.o.nom);
-      const sesNotes = sien.filter(validee).map(y => y.t.note);
-      const sesSig = sien.filter(y => y.t.signalement && y.t.signalement.ouvert).length;
-      return { nom: x.t.nom, qui: x.o.nom, projet: x.p.nom, ouvert, hasMag: !!mag, magasin: mag || '',
-        due: note !== null ? 'Validée le ' + this.fD(x.t.done) : done ? (x.t.renduePar ? 'Annoncée le ' : 'Cochée le ') + this.fD(x.t.done)
-          : (late ? 'En retard depuis le ' : 'Pour le ') + this.fD(x.t.due),
-        rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
-        nomSt: 'font-size:13px;font-weight:500;line-height:1.4;' + (note !== null ? 'color:var(--color-text-muted)' : ''),
-        dueSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;margin-top:1px;color:' + (late ? '#8D1D2C' : note !== null ? l.couleur : 'var(--color-text-muted)'),
-        // La case garde son sens d'origine — « livrée » — et la note s'y ajoute.
-        boxSt: 'flex:0 0 auto;width:17px;height:17px;margin-top:1px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:1px ' + (done && note === null ? 'dashed #8D1D2C' : 'solid ' + (done ? '#2d7a3e' : 'var(--color-border-secondary)')) + ';background:' + (note !== null ? '#2d7a3e' : 'transparent') + ';color:' + (note !== null ? '#fff' : '#8D1D2C'),
-        boxTxt: note !== null ? '✓' : done ? '?' : '',
-        // La pastille de niveau, sur la ligne repliée.
-        hasLvl: note !== null,
-        lvlTxt: note !== null ? l.nom : '',
-        lvlSt: note !== null ? 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur : '',
-        lvlNum: note !== null ? String(note) : '',
-        lvlNumSt: note !== null ? 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;background:' + l.couleur : '',
-        hasSig: !!(sig && sig.ouvert),
-        sigTxt: sig && sig.ouvert ? 'Signalement · ' + sig.famille + ' · ' + sig.type : '',
-        sigSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
-        chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        rows: [{ k: 'Attendu', v: x.t.desc || crm && crm.objectif || x.p.valeurTxt || '' },
-          { k: 'Intervenant', v: x.o.nom + ' — ' + x.o.type }, { k: 'Contact', v: x.o.email },
-          { k: 'Échéance', v: this.fD(x.t.due) + (done ? ' · rendue le ' + this.fD(x.t.done) : late ? ' · dépassée' : '') },
-          { k: 'Budget', v: x.t.budget !== null && x.t.budget !== undefined ? this.fE(x.t.budget) : '' },
-          { k: 'Remise', v: done ? (x.t.renduePar ? 'Annoncée par ' + x.t.renduePar + ' le ' + this.fD(x.t.done) : 'Cochée par la direction le ' + this.fD(x.t.done)) : 'Pas encore annoncée' },
-          { k: 'Mot du consultant', v: x.t.noteRemise || '' },
-          { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
-          { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }]
-          .concat(x.t.panelNote ? [{ k: 'Panel', v: 'Note #' + x.t.panelNote + ' déposée sur le magasin — visible par le consultant' }] : []),
-        // La photo qui a motivé la demande, avec ses repères. Chargée seulement
-        // quand la ligne est dépliée : une liste de trente tâches ne doit pas
-        // déclencher trente lectures d'API.
-        photo: (() => {
-          const src = x.t.source;
-          if (!src) { return null; }
-          const d2 = ouvert ? this.srcCharge(src) : null;
-          const jf = s2 => String(s2 || '').split('-').reverse().join('/');
-          if (!ouvert) { return { attente: true, titre: 'Photo de contrôle du ' + jf(src.date) }; }
-          if (!d2) { return { chargement: true, titre: 'Photo de contrôle du ' + jf(src.date) }; }
-          if (d2.erreur || !d2.photo) {
-            return { vide: true, titre: 'Photo de contrôle du ' + jf(src.date),
-              motif: d2.erreur ? 'lecture impossible' : 'aucune photo sur cette tâche de contrôle' };
-          }
-          const NIV = { 1: '#8D1D2C', 2: '#C17A2A', 3: '#C9A227', 4: '#6b8f4e', 5: '#2d7a3e' };
-          // `reperes` est un OBJET {liste, maj, auteur}, pas un tableau : appeler
-          // `.map` dessus jetait dans le calcul des valeurs, et l'écran restait
-          // figé sur « lecture de la photo… » sans rien dire.
-          const brut = (d2.reperes && Array.isArray(d2.reperes.liste)) ? d2.reperes.liste
-            : (Array.isArray(d2.reperes) ? d2.reperes : []);
-          const rep = brut.map(r => ({
-            n: r.n, txt: r.txt || '',
-            coul: NIV[r.niveau] || '#8D1D2C',
-            boxSt: 'position:absolute;left:' + (r.x * 100).toFixed(2) + '%;top:' + (r.y * 100).toFixed(2)
-              + '%;width:' + (r.l * 100).toFixed(2) + '%;height:' + (r.h * 100).toFixed(2)
-              + '%;border:2px solid ' + (NIV[r.niveau] || '#8D1D2C') + ';border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.25)',
-            numSt: 'position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:17px;height:17px;border-radius:50%;'
-              + 'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:'
-              + (NIV[r.niveau] || '#8D1D2C') }));
-          const cle = src.shopId + '/' + src.taskId + '/' + src.date;
-          const perdue = !!(this.D.srcPhotoErr || {})[cle];
-          if (!perdue) { this.srcSurveille(cle); }
-          return { titre: 'Photo de contrôle du ' + jf(src.date),
-            url: d2.photo, cle, imgErr: perdue,
-            imgErrTxt: 'Le lien signé de la photo a expiré ou le stockage du panel est injoignable. Rouvrez la tâche dans Contrôle des tâches pour en obtenir un neuf.',
-            tache: d2.tache || ('Tâche #' + src.taskId),
-            // Les cadres disparaissent avec la photo, PAS les remarques : ce que
-            // le consultant doit reprendre se lit même sans le cliché.
-            reperes: rep,
-            nRep: rep.length,
-            legende: rep.length
-              ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'
-                + ((d2.reperes || {}).auteur ? ' par ' + d2.reperes.auteur : '')
-              : 'aucun repère posé sur cette photo',
-            avis: d2.avis && d2.avis.note != null
-              ? ('notée ' + d2.avis.note + '/5' + (d2.avis.comment ? ' — ' + d2.avis.comment : ''))
-              : '' };
-        })(),
-        // Supprimer une tâche : une note envoyée par erreur, un essai, un
-        // doublon. Le journal en garde la trace — c'est lui la mémoire.
-        supprimer: () => {
-          if (!window.confirm('Supprimer la tâche « ' + x.t.nom + ' » ?\n\nSes signalements éventuels partent avec elle. Le journal en garde la trace.')) { return; }
-          this.api('DELETE', '/projects/' + x.p.id + '/tasks/' + x.t.id, {}).then(r => {
-            if (!r || r.ok === false) { this.notify((r && r.error) || 'Suppression refusée'); return; }
-            readOne('/projects').then(pj => { if (pj) { this.D.projects = pj; } this.setState({ tkSuppr: x.t.id }); });
-            this.notify('Tâche supprimée' + (r.signalements ? ' — ' + r.signalements + ' signalement(s) fermé(s)' : ''));
-          });
-        },
-        histo: [{ k: 'Ce mois', v: sesNotes.length ? sesNotes.length + ' tâche' + (sesNotes.length > 1 ? 's' : '') + ' validée' + (sesNotes.length > 1 ? 's' : '') + ' · note moyenne ' + (sesNotes.reduce((a, b) => a + b, 0) / sesNotes.length).toFixed(1).replace('.', ',') : 'Aucune tâche validée' },
-          { k: 'Signalements', v: sesSig ? sesSig + ' ouvert' + (sesSig > 1 ? 's' : '') : 'Aucun ouvert' }],
-        // --- le panneau de validation
-        vOuvert: done,
-        vNote: dn || 0,
-        starSt: n => 'border:0;background:none;padding:0 1px;font-size:25px;line-height:1;cursor:pointer;color:' + (dn && n <= dn ? dl.couleur : '#d9d2c8'),
-        setNote: n => maj({ note: n === dn ? null : n }),
-        hasLvb: !!dn,
-        lvbTxt: dl ? dl.nom : '', lvbNum: dn ? String(dn) : '', lvbAide: dl ? dl.aide : '',
-        lvbSt: dl ? 'margin-top:7px;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:' + dl.couleur + '1f;color:' + dl.couleur : '',
-        lvbNumSt: dl ? 'width:19px;height:19px;border-radius:50%;color:#fff;font-style:normal;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + dl.couleur : '',
-        sousSeuil: sous,
-        sousTxt: sous ? dl.nom.replace('Non conforme — ', '') + ' — ' + dn + '/5' : '',
-        fams: fams.map(f => f.nom), famCour,
-        // Changer de famille remet le type à zéro : « Cuisson » sous « Budget »
-        // n'existe pas, et un couple impossible passerait sans bruit.
-        setFam: e => maj({ famille: e.target.value, type: '' }),
-        typs, typCour: d.type || typs[0] || '',
-        setTyp: e => maj({ type: e.target.value }),
-        commentaire: d.commentaire || '',
-        setCom: e => maj({ commentaire: e.target.value }),
-        boutonTxt: sous ? 'Valider et signaler' : 'Valider la tâche',
-        peutValider: !!dn && (!sous || (famCour && (d.type || typs[0]))),
-        valider: e => { e.stopPropagation();
-          if (!dn) { this.notify('Choisissez une note avant de valider'); return; }
-          const fa = sous ? famCour : null, ty = sous ? (d.type || typs[0]) : null;
-          if (sous && (!fa || !ty)) { this.notify('Famille et type de problème obligatoires'); return; }
-          x.t.note = dn; x.t.done = x.t.done || M.TODAY;
-          if (sous) { x.t.signalement = { note: dn, famille: fa, type: ty, comment: d.commentaire || null, statut: 'nouveau', ouvert: true, creeLe: M.TODAY, creePar: 'CEO' }; }
-          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id,
-            { note: dn, famille: fa, type: ty, commentaire: d.commentaire || null, done: x.t.done, par: 'CEO' });
-          this.log('Validation', x.p.nom, 'Tâche « ' + x.t.nom + ' » validée ' + dn + '/5 — ' + dl.nom + ' (' + x.o.nom + ')');
-          if (sous) { this.log('Signalement', x.p.nom, 'Signalement ouvert sur « ' + x.t.nom + ' » — ' + fa + ' · ' + ty); }
-          this.setState(s2 => ({ tkVal: Object.assign({}, s2.tkVal, { ['tk:' + x.t.id]: undefined }),
-            openInfo: Object.assign({}, s2.openInfo, { ['tk:' + x.t.id]: false }) }));
-          this.notify('« ' + x.t.nom + ' » ' + dn + '/5 — ' + dl.nom); this.forceUpdate(); },
-        toggleOpen: () => this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { ['tk:' + x.t.id]: !s2.openInfo['tk:' + x.t.id] }) })),
-        check: e => { e.stopPropagation();
-          // La case ne dit plus que « rendue » : dénoter se fait par les étoiles.
-          const nv = done ? null : M.TODAY;
-          x.t.done = nv; if (nv === null) { x.t.note = null; }
-          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id, nv === null ? { done: null, note: null } : { done: nv });
-          this.log('Tâche', x.p.nom, 'Tâche « ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'rendue le ' + this.fD(M.TODAY)) + ' (' + x.o.nom + ')');
-          this.notify('« ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'rendue')); this.forceUpdate(); } }; };
-    const grp = [['En retard', '#8D1D2C', x => !x.t.done && x.t.due < M.TODAY],
-      ['À valider', '#8D1D2C', aValider],
-      ['À faire', '#8a5a13', x => !x.t.done && x.t.due >= M.TODAY],
-      ['Validées', '#2d7a3e', validee]];
-    common.tkGroups = grp.map(([nom, couleur, f]) => { const items = ordre.filter(f);
-      return { nom, couleur, n: items.length, items: items.map((x, i) => mk(x, i)),
-        dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
   }
 
   /* --- suivi des tâches ------------------------------------------------------------- */
