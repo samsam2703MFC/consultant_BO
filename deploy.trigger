@@ -809,3 +809,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T20:15:03Z jours creux retiré de la console
 2026-10-16T20:34:16Z fusions : Résultat + Performance, Fiche & scoring, Marketing (hub)
 2026-10-16T20:39:10Z primes : argent ou cadeau, sponsor, fiche détaillée
+2026-10-16T21:08:30Z fiche allégée, client mystère dans Paramètres, remarques opérateurs retiré
