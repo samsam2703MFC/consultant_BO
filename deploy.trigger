@@ -788,3 +788,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T13:22:17Z app : statistiques retiree du menu
 2026-10-16T13:23:11Z app : accueil et planning masques du menu
 2026-10-16T18:08:09Z primes : aucune vente a ton nom
+2026-10-16T18:12:59Z primes : selecteur de mois
