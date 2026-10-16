@@ -794,3 +794,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T18:35:01Z cockpit : assistant nouvelle prime promotion
 2026-10-16T18:44:18Z promotions du panel via le compte admin ERP
 2026-10-16T18:48:21Z primes marque / franchisé (serveur) + sonde promotions
+2026-10-16T18:54:07Z primes : Marketing franchisé, marque / franchisés, fiches des promotions

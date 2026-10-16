@@ -544,7 +544,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   `public/uploads/primes/` avec un nom tiré au hasard ; la réponse `{ok, icone}` donne le chemin que la liste
   garde ensuite (`POST /ventes/primes-app`). 413 si trop lourde, 415 si le format est refusé, 422 si illisible.
   Le `.htaccess` sert ces SVG avec une CSP qui les empêche d'exécuter quoi que ce soit, même ouverts seuls.
-  Écran : Équipe & ventes › Paramètres, un clic sur la tuile d'une prime (✕ : retour à l'emoji).
+  Écran : ERP franchisé › Marketing franchisé › Primes de l'app worker (`#/primes-app-worker`), un clic sur la tuile d'une prime (✕ : retour à l'emoji).
   `POST /ventes/prime-magasin` et `POST /ventes/concours` n'existent plus.
 - `GET /ventes/primes-promos[?frais=1]` : les promotions qu'une prime peut suivre, gravées une heure
   (`primesPromos3`) : `{api, compte: admin|consultant|null, erreurs: [{chemin, code, erreur}], liste: [{source: api,
@@ -557,10 +557,24 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   promo « catalogue » d'avant n'est plus gardée. **Ces routes sont sous `/admin`, l'API consultant n'en a aucune** :
   elles se lisent avec le **compte admin ERP** (`ErpApi`, `POST /admin/auth/login`, Paramètres → Compte admin ERP) ;
   sans lui, le compte consultant en repli reçoit 403 — `compte` et `erreurs` le disent, la liste est vide.
+  La liste de l'API ne porte que des compteurs : la **fiche** de chaque promotion (`/admin/promotions/{sorte}/{id}`) est
+  lue aussi — `items[].id_product` (bundle), `trigger/reward.products|product_ids`, et les **catégories visées**
+  (`trigger/reward.categories[].name`, « Cookies ») relues dans le catalogue par leur nom (sous-catégorie, sinon
+  catégorie). Un bundle de l'API sans produit à lui se compte par ses articles. `shop_ids` de la liste peut être un
+  texte (« 4,5 »). `GET /ventes/primes-promos/sonde` (lecture seule) rend la forme brute : clés, 1er élément, sa fiche.
+- **Deux familles de primes** (16/10/2026). `famille: marque` (défaut) : posée par la marque, payée par la marque
+  ou un sponsor (`payeur: magasin` demandé sur une prime de la marque revient à la marque), visible de chaque
+  franchisé. `famille: magasin` : la prime promo qu'un **franchisé** pose pour **son** magasin — `shop` (un seul), la
+  promotion ne compte que ses ventes (`promo.shops = [shop]`), `payeur: magasin` imposé ; clé `pm{shop}z…` (une même
+  promotion du panel peut porter la prime de la marque `pb15` et celle d'un magasin `pm4zb15`). Six au plus par
+  magasin (six promos de la marque à part). Une promotion du panel prise par un franchisé doit tourner dans son
+  magasin (422 sinon). Réenregistrée, une prime garde sa famille. Cockpit : carte « Primes de la marque et des
+  sponsors » et carte « Primes des franchisés » (filtre par magasin, « + Nouvelle prime du magasin ») ; dans les
+  promotions du panel, une promotion d'un seul magasin propose « + prime du magasin ».
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
-- **L'assistant « Nouvelle prime promotion »** (cockpit, Équipe & ventes → Paramètres, 16/10/2026) enregistre par
+- **L'assistant « Nouvelle prime promotion »** (cockpit, Marketing franchisé → Primes de l'app worker, 16/10/2026) enregistre par
   `POST /ventes/primes-app` une entrée `{type: promo, ref: {source: cockpit}, lib, montant, minPieces, regle:
   premiere|seuil, payeur, sponsor, promo: {source: cockpit, sel: [{t: groupe|categorie|produit, v, lib}], du, au,
   shops[]}}` (une sous-catégorie : `v` = « catégorie\0sous-catégorie »). Le serveur relit les produits de la
@@ -572,13 +586,13 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   mois clos, depuis les jours moissonnés (`prMoy{mois}`, un jour) et les KPIs du mois (`pvCa`) :
   `{vendeuses (30 tickets au moins dans le mois), tickets, ticketsVendeuse, ticketMoyen, lignesTicket,
   croisees, atteinte (CA ÷ objectif), pieces: {cle: par vendeuse}, cible}` ; `promos: [{cle, lib, du,
-  magasins: {shop: pièces par vendeuse depuis le début}, reseau}]`. Écran : Équipe & ventes › Paramètres,
+  magasins: {shop: pièces par vendeuse depuis le début}, reseau}]`. Écran : Marketing franchisé › Primes de l'app worker,
   « Moyennes par magasin », la cible de ventes croisées de chaque magasin en face, « caler sur la moyenne +
   n pts », export CSV.
 - `GET /ventes/primes-reglages` : `{app (la liste, externes, sms), smsConfigure, categories (le menu déroulant des
   ventes croisées : les catégories du catalogue, sans les bundles), magasin, croisees, concours, google: {actif,
   seuil, montant, heuresMin, notes: {shop: note}}, record, meilleure, magasins, m, lib}`. La colonne « Moyenne
-  réseau » de la note Google en tire la note moyenne et le nombre de magasins au seuil. Écran : Équipe & ventes › **Paramètres** (la liste des primes, les promotions du panel,
+  réseau » de la note Google en tire la note moyenne et le nombre de magasins au seuil. Écran : ERP franchisé › Marketing franchisé › **Primes de l'app worker** (16/10/2026, avant : Équipe & ventes › Paramètres ; la liste des primes, les promotions du panel,
   les moyennes par magasin ; il s'ouvre même si le classement n'a pas pu être calculé).
 - `GET /ventes/moi?m=AAAA-MM` depuis l'app worker : la route est ouverte avant la session du
   cockpit, pour une identité prouvée. Soit l'**identité signée** par l'app (`X-Worker-Emp`,
