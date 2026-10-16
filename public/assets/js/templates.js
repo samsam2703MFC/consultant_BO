@@ -138,11 +138,10 @@ export function render(c, x){
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
-      ${c.isPerf ? tplPerformance(c, x) : ''}
-      ${c.isMagasins && !c.isPerf ? tplMagasins(c, x) : ''}
-      ${c.isObjectifs && !c.isPerf ? tplObjectifs(c, x) : ''}
+      ${c.isMagasins && !c.isRJour ? tplMagasins(c, x) : ''}
+      ${c.isObjectifs && !c.isRJour ? tplObjectifs(c, x) : ''}
       ${c.isBudget ? tplBudget(c, x) : ''}
-      ${c.isMarge && !c.isPerf ? tplMarge(c, x) : ''}
+      ${c.isMarge && !c.isRJour ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isPlan ? tplPlan(c, x) : ''}
@@ -4018,19 +4017,6 @@ function tplPlanRituel(r, x, busy, err){
   </div>`;
 }
 
-function tplPerformance(c, x){
-  const { esc } = x;
-  const ong = o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
-  return `
-  <div data-screen="performance" style="display:flex;flex-direction:column;gap:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.pfOngletTxt)}</div>
-      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.pfOnglets.map(ong).join('')}</div>
-    </div>
-    ${c.pfOnglet === 'magasins' ? tplMagasins(c, x) : (c.pfOnglet === 'objectifs' ? tplObjectifs(c, x) : tplMarge(c, x))}
-  </div>`;
-}
-
 /** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
 /* Le petit feu d'artifice d'une ligne qui a passé son objectif, et la pluie de
  * papiers quand c'est tout le réseau. Les deux sont décoratifs — `aria-hidden`
@@ -4087,7 +4073,17 @@ function tplResultat(c, x){
       <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
       <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted);margin-top:5px"><i class="rj-ring"></i><span style="font-weight:500;color:var(--color-text)">Lecture du panel</span><span>${esc(c.rjChargeTxt)}</span><span style="margin-left:auto;font-variant-numeric:tabular-nums">${esc(c.rjChargeSec)}</span></div>
     </div>` : ''}
-    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : (c.rjOnglet === 'reseau' ? tplResultatReseau(c, x) : tplResultatPeriode(c, x))}
+    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x)
+      : c.rjOnglet === 'reseau' ? tplResultatReseau(c, x)
+      : (c.rjOnglet === 'annee' || c.rjOnglet === 'horizons') ? tplObjectifs(c, x)
+      : c.rjOnglet === 'marge' ? tplMarge(c, x)
+      : tplResultatPeriode(c, x) + (c.rjOnglet === 'mois' && c.isMagasins ? `
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <div style="font-family:var(--font-display);font-size:24px">Le dernier mois clos</div>
+      <span style="flex:1;height:0.5px;background:var(--color-border-secondary)"></span>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">marge, valeur et CA face aux cibles, puis douze mois de clients et de panier</span>
+    </div>
+    ${tplMagasins(c, x)}` : '')}
   </div>`;
 }
 
