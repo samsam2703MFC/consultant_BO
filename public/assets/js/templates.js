@@ -9397,15 +9397,25 @@ function tplPrWiz(W, x){
       <span style="width:24px;height:24px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1px solid ${it.pris ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${it.pris ? 'background:var(--color-primary);color:#fff' : ''};font-weight:700">${it.pris ? '✓' : '+'}</span></div>`;
   const grp = (titre, l) => l.length ? `<div style="font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;${mu};padding:9px 14px 4px;background:var(--color-background-secondary)">${titre}</div>${l.map(ligne).join('')}` : '';
   let corps = '';
-  if (W.etape === 1) {
+  // La sorte de prime (16/10/2026) : promotion ou catégorie, en tête de l'étape 1 d'une prime neuve de la marque.
+  const sortes = W.sortes ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px">${W.sortes.map(o => `<div ${x.A(o.choisir)} data-prw-sorte style="border:1.5px solid ${o.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${o.on ? 'background:#FBF3EE;' : ''}border-radius:var(--radius-lg);padding:11px 14px;cursor:pointer;display:flex;gap:10px;align-items:flex-start"><span style="font-size:20px">${o.e}</span><span><b style="display:block;font-size:14px">${esc(o.nom)}</b><span style="font-size:12.5px;line-height:1.4;${mu}">${esc(o.txt)}</span></span></div>`).join('')}</div>` : '';
+  if (W.etape === 1 && W.categorie) {
+    corps = sortes + `<p style="${q}">Quels produits comptent ? <span style="${mu};font-weight:500">Ceux dont le nom contient ce mot, tous les mois.</span></p>
+      <input id="prw-motif" value="${esc(W.motif)}" ${x.I(W.poserMotif)} placeholder="tarte, quiche, cookie…" autocomplete="off" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-text);border-radius:var(--radius-md);padding:11px 14px;font:500 14px var(--font-ui)">
+      ${W.motifErr ? `<div style="padding:10px 2px;font-size:12.5px;color:var(--color-primary)">${esc(W.motifErr)}</div>`
+        : W.chargement ? `<div style="padding:10px 2px;font-size:12.5px;${mu}">Lecture du catalogue…</div>`
+        : W.motif.trim() ? `<div style="font-size:12.5px;margin:10px 2px 6px"><b>${W.motifN} produit${W.motifN > 1 ? 's' : ''}</b> <span style="${mu}">dans le catalogue</span></div>
+          ${W.motifN ? `<div style="border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);max-height:240px;overflow-y:auto">${W.motifEx.map(pr => `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-top:.5px solid var(--color-border-tertiary);font-size:13px"><span>${esc(pr.nom)}</span><small style="${mu}">${esc(pr.cat)}</small></div>`).join('')}${W.motifN > W.motifEx.length ? `<div style="padding:7px 14px;font-size:12px;${mu};border-top:.5px solid var(--color-border-tertiary)">et ${W.motifN - W.motifEx.length} autre(s)</div>` : ''}</div>` : `<div style="font-size:12.5px;${mu}">Aucun produit ne contient ce mot.</div>`}`
+        : ''}`;
+  } else if (W.etape === 1) {
     const onglets = `<div style="display:inline-flex;background:var(--color-background-secondary);border-radius:var(--radius-pill);padding:3px;margin-bottom:14px">${W.onglets.map(o => `<button ${x.A(o.choisir)} style="border:0;padding:7px 14px;border-radius:var(--radius-pill);font:600 12.5px var(--font-ui);cursor:pointer;${o.on ? 'background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 3px rgba(0,0,0,.08)' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}</div>`;
     if (W.onglet === 'panel') {
-      corps = onglets + `<p style="${q}">Partir d’une promotion du panel <span style="${mu};font-weight:500">— ses produits, ses dates et ses magasins sont repris.</span></p>`
+      corps = sortes + onglets + `<p style="${q}">Partir d’une promotion du panel <span style="${mu};font-weight:500">— ses produits, ses dates et ses magasins sont repris.</span></p>`
         + (W.apiErreur ? `<div style="font-size:12.5px;line-height:1.45;background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot);border-radius:var(--radius-md);padding:10px 12px">${esc(W.apiErreur)}</div>`
         : !W.apiListe.length ? `<div style="font-size:12.5px;${mu}">Aucune promotion du panel avec des produits.</div>`
         : `<div style="border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);overflow:hidden">${W.apiListe.map(p => `<div ${x.A(p.choisir)} style="display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:.5px solid var(--color-border-tertiary);cursor:pointer;${p.pris ? 'background:#FBF3EE' : ''}"><div style="flex:1"><b>${esc(p.nom)}</b><small style="display:block;font-size:11.5px;${mu}">${esc(p.sorte)} · ${esc(p.dates)} · ${esc(p.magasins)}</small></div><span style="font-weight:700;color:${p.pris ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${p.pris ? '✓ choisie' : 'choisir'}</span></div>`).join('')}</div>`);
     } else {
-      corps = onglets + `<p style="${q}">Quels produits comptent ? <span style="${mu};font-weight:500">Une catégorie, une sous-catégorie ou des produits : tout ce qui est ajouté compte.</span></p>
+      corps = sortes + onglets + `<p style="${q}">Quels produits comptent ? <span style="${mu};font-weight:500">Une catégorie, une sous-catégorie ou des produits : tout ce qui est ajouté compte.</span></p>
         <div style="position:relative"><span style="position:absolute;left:13px;top:10px;font-size:15px;${mu}">🔍</span>
           <input id="prw-q" value="${esc(W.q)}" ${x.I(W.poserQ)} placeholder="Rechercher une catégorie, une sous-catégorie ou un produit…" autocomplete="off" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-text);border-radius:var(--radius-md);padding:11px 14px 11px 38px;font:500 14px var(--font-ui)"></div>
         ${W.chargement ? `<div style="padding:12px 2px;font-size:12.5px;${mu}">Lecture du catalogue…</div>` : W.catMotif ? `<div style="padding:12px 2px;font-size:12.5px;color:var(--color-primary)">${esc(W.catMotif)}</div>`
@@ -9413,6 +9423,8 @@ function tplPrWiz(W, x){
           : `<div style="border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);margin-top:6px;max-height:320px;overflow-y:auto" data-scroll="prw-res">${grp(W.parcourir ? 'Catégories — ou tapez un nom' : 'Catégories', W.res.groupes)}${grp('Sous-catégories', W.res.categories)}${grp('Produits', W.res.produits)}</div>`}
         ${W.sel.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${W.sel.map(z => `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);border-radius:var(--radius-pill);padding:5px 6px 5px 10px;font-size:12.5px"><span style="font:700 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;${mu}">${esc(z.type)}</span> ${esc(z.lib)}${z.n ? ' · ' + esc(z.n) : ''}<button ${x.A(z.retirer)} title="Retirer" style="width:18px;height:18px;border:0;border-radius:50%;background:var(--color-surface);font-size:11px;${mu};cursor:pointer">✕</button></span>`).join('')}</div>` : ''}`;
     }
+  } else if (W.etape === 2 && W.categorie) {
+    corps = `<p style="${q}">Quand et où ?</p><div style="font-size:13.5px;line-height:1.55">Une catégorie compte <b>chaque mois</b>, du 1er au dernier jour, dans <b>tous les magasins</b>. Elle tourne tant qu’elle est active : l’interrupteur du tableau l’éteint.</div>`;
   } else if (W.etape === 2) {
     corps = `<p style="${q}">Quand ?</p>` + (W.apiDates ? `<div style="font-size:13px">${W.du || W.au ? `Les dates de la promotion du panel : <b>${esc(W.du || '…')}</b> → <b>${esc(W.au || '…')}</b>` : 'La promotion du panel n’a pas de dates : la prime compte tant qu’elle tourne.'}</div>`
       : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${W.periodes.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)}">${esc(o.nom)}</button>`).join('')}</div>
@@ -9467,7 +9479,7 @@ function tplPrWiz(W, x){
           <div style="display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:#666;margin-top:8px"><span>${W.regle === 'magasin' ? 'le magasin : 0 pcs' : W.regle === 'vendeuse' ? 'encore ' + esc(W.objPreview || '…') + ' pcs' : W.regle === 'seuil' ? 'encore ' + esc(W.minPieces || '0') + ' pcs' : 'la 1re du magasin gagne'}</span><span>${W.surObj ? 'objectif ' + esc(W.objPreview || '…') + ' pcs' : W.regle === 'seuil' ? 'objectif ' + esc(W.minPieces || '0') + ' pcs' : ''}</span></div></div></div>
         <p style="font-size:12px;${mu};margin:8px 2px 0">Elle apparaît dans Mes primes pendant sa période, avec son classement.</p></div></div>`;
   }
-  const info = W.etape === 1 ? (W.api ? `<b>${esc(W.api.nom)}</b> · promotion du panel` : `<b>${W.compte} produit${W.compte > 1 ? 's' : ''}</b> compté${W.compte > 1 ? 's' : ''}`)
+  const info = W.etape === 1 && W.categorie ? `<b>${W.motifN} produit${W.motifN > 1 ? 's' : ''}</b> compté${W.motifN > 1 ? 's' : ''}` : W.etape === 1 ? (W.api ? `<b>${esc(W.api.nom)}</b> · promotion du panel` : `<b>${W.compte} produit${W.compte > 1 ? 's' : ''}</b> compté${W.compte > 1 ? 's' : ''}`)
     : W.etape === 3 ? `<b>${esc(W.plafond)}</b>` : esc(W.resume[1][1] + ' · ' + W.resume[2][1]);
   return `
   <div ${x.A(W.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
@@ -9557,8 +9569,7 @@ function tplPrimesApp(c, x){
       <tbody>${P.lignes.map(tr).join('')}</tbody>
     </table></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
-      <button ${x.A(P.ajouterCategorie)} style="${bt(false)}" data-pr-categorie>+ Catégorie</button>
-      <button ${x.A(P.nouvelle)} style="${bt(true)}" data-pr-nouvelle>+ Nouvelle prime promotion</button>
+      <button ${x.A(P.nouvelle)} style="${bt(true)}" data-pr-nouvelle>+ Nouvelle prime</button>
       <span style="flex:1"></span>
       ${P.modifie ? `<span style="font-size:11.5px;color:var(--color-text-muted)">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${bt(true)}" data-pr-enregistrer="app">Enregistrer</button>` : ''}
     </div>
