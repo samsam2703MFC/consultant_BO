@@ -588,6 +588,12 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   `apTranches2`), à défaut au rythme des 28 derniers jours ramené à la période (`recent`) ; `ref`, `source: n1|recent`.
   L'assistant (étape « Qui gagne ») en fait le tableau : l'an dernier, l'objectif (+ x %, modifiable magasin par
   magasin), les vendeuses (moyenne des `primes-moyennes`), l'objectif par vendeuse.
+- **Le tableau des primes ne s'édite plus** (16/10/2026) : seul l'interrupteur actif / éteint, enregistré tout de suite
+  (`POST /ventes/primes-app`). « Modifier » rouvre l'assistant (une promo : tout prérempli, sa clé gardée) ou la fenêtre
+  de réglage (target, catégorie, Bats ton record, meilleure vendeuse : ses réglages, qui paie, son icône ; « Supprimer »
+  pour une catégorie ou une promo). « + Catégorie » ouvre la fenêtre ; « + prime » d'une promotion du panel ouvre
+  l'assistant, la promotion choisie. Une promo du cockpit rouverte part avec `refaire: true` et sa nouvelle sélection
+  dans `promo_neuve` : le serveur la relit en produits (même identifiant, même clé ; 422 si elle ne donne aucun produit).
 - **L'icône dans l'assistant** (16/10/2026) : à l'étape « Nom & aperçu », un emoji (dessiné en PNG de 128 px) ou une
   photo (recadrée au carré par le centre, réduite à 128 px, coins arrondis), faits dans le navigateur ; à la création,
   `POST /ventes/primes-icone` d'abord, puis la prime avec le chemin rendu (`icone`).

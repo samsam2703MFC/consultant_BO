@@ -9394,6 +9394,45 @@ function tplCrois(c, x){
 
 /* L'assistant « Nouvelle prime promotion » (16/10/2026), dans Marketing franchisé → Primes de l'app worker : quatre étapes, les produits
    choisis par une barre de recherche (catégories, sous-catégories, produits) ou une promotion de l'API du panel. */
+/* La fenêtre de réglage d'une prime qui n'est pas une promo (16/10/2026) : un target, une catégorie, Bats ton record, la
+   meilleure vendeuse — ses réglages, qui paie, son icône ; même cadre que l'assistant. */
+function tplPrEdit(E, x){
+  const esc = x.esc;
+  const B = (on, prim) => `border:1px solid ${prim ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${prim ? 'var(--color-primary)' : on ? 'var(--color-text)' : 'var(--color-surface)'};color:${prim || on ? '#fff' : 'var(--color-text)'};border-radius:var(--radius-pill);padding:8px 16px;font:600 13px var(--font-ui);cursor:pointer`;
+  const lab = 'display:block;font:600 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px';
+  const chp = 'border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:9px 12px;font:500 13.5px var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const mu = 'color:var(--color-text-muted)';
+  const champ = f => f.sorte === 'case'
+    ? `<label style="display:flex;align-items:center;gap:8px;font:600 13px var(--font-ui);padding-top:20px;cursor:pointer"><input type="checkbox" ${f.coche ? 'checked' : ''} ${x.C(f.poser)}> ${esc(f.lib)}</label>`
+    : `<div><span style="${lab}">${esc(f.lib)}</span>${f.sorte === 'choix'
+      ? `<select ${x.C(f.poser)} id="pre-${esc(f.cle)}" style="${chp};width:100%">${f.options.map(([v, t]) => `<option value="${esc(v)}"${v === f.valeur ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`
+      : `<input id="pre-${esc(f.cle)}" ${f.sorte === 'nombre' ? `type="number" step="${f.pas || 1}"` : ''} value="${esc(f.valeur)}" placeholder="${esc(f.indice || '')}" ${x.I(f.poser)} style="${chp};width:${f.sorte === 'nombre' ? '110px' : '100%'};box-sizing:border-box"> ${f.unite ? `<span style="${mu}">${esc(f.unite)}</span>` : ''}`}</div>`;
+  return `
+  <div ${x.A(E.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(E.titre)}" data-pr-edit style="pointer-events:auto;width:100%;max-width:640px;background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px 22px 12px;border-bottom:.5px solid var(--color-border-tertiary)"><div style="font:400 24px/1.1 var(--font-display)">${esc(E.titre)}</div><button ${x.A(E.fermer)} aria-label="Fermer" style="margin-left:auto;border:0;background:none;font-size:20px;${mu};cursor:pointer">✕</button></div>
+      <div style="padding:18px 22px 10px">
+        ${E.champs.length ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px">${E.champs.map(champ).join('')}</div>` : ''}
+        ${E.note ? `<div style="font-size:12px;${mu};margin-top:10px">${esc(E.note)}</div>` : ''}
+        <div style="margin-top:16px"><span style="${lab}">Payée par</span>${E.payeurs.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)};margin-right:6px">${esc(o.nom)}</button>`).join('')}${E.payeur === 'sponsor' ? `<input id="pre-sponsor" value="${esc(E.sponsor)}" ${x.I(E.poserSponsor)} placeholder="nom du sponsor" style="${chp};margin-left:6px;width:200px">` : ''}</div>
+        <span style="${lab};margin-top:16px">Icône dans l’app</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${E.emojis.map(o => `<button ${x.A(o.choisir)} style="width:38px;height:38px;border-radius:10px;font-size:20px;line-height:1;cursor:pointer;border:1.5px solid ${o.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${o.on ? '#FBF3EE' : 'var(--color-surface)'}">${esc(o.em)}</button>`).join('')}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin:10px 0 6px">
+          <label style="${B(false)};display:inline-flex;align-items:center;gap:6px">📷 Une photo → icône<input type="file" accept="image/*" ${x.C(E.poserPhoto)} style="display:none"></label>
+          ${E.icone ? `<img src="${esc(E.icone)}" alt="" style="width:38px;height:38px;border-radius:10px;object-fit:cover;border:.5px solid var(--color-border-secondary)"><button ${x.A(E.retirerIcone)} style="border:0;background:none;${mu};cursor:pointer;font-size:12px">retirer</button>` : `<span style="font-size:12px;${mu}">l’emoji par défaut</span>`}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        ${E.supprimer ? `<button ${x.A(E.supprimer)} style="border:0;background:none;color:var(--color-primary);font:600 12.5px var(--font-ui);cursor:pointer">Supprimer</button>` : ''}
+        <span style="flex:1"></span>
+        <button ${x.A(E.fermer)} style="${B(false)}">Annuler</button>
+        <button ${x.A(E.enregistrer)} data-pre-enregistrer style="${B(false, true)}${E.ok && !E.envoi ? '' : ';opacity:.4;cursor:not-allowed'}">${E.envoi ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplPrWiz(W, x){
   const esc = x.esc;
   const B = (on, prim) => `border:1px solid ${prim ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${prim ? 'var(--color-primary)' : on ? 'var(--color-text)' : 'var(--color-surface)'};color:${prim || on ? '#fff' : 'var(--color-text)'};border-radius:var(--radius-pill);padding:8px 16px;font:600 13px var(--font-ui);cursor:pointer`;
@@ -9490,9 +9529,10 @@ function tplPrWiz(W, x){
       <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
         <span style="font-size:12.5px;${mu}">${info}</span>
         <span style="flex:1"></span>
+        ${W.supprimer ? `<button ${x.A(W.supprimer)} data-prw-supprimer style="border:0;background:none;color:var(--color-primary);font:600 12.5px var(--font-ui);cursor:pointer;margin-right:4px">Supprimer</button>` : ''}
         ${W.etape === 1 ? `<button ${x.A(W.fermer)} style="${B(false)}">Annuler</button>` : `<button ${x.A(W.precedent)} style="${B(false)}">‹ Retour</button>`}
         ${W.etape < 4 ? `<button ${x.A(W.suivant)} style="${B(false, true)}${W.ok ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-suivant>Suivant ›</button>`
-          : `<button ${x.A(W.creer)} style="${B(false, true)}${W.ok && !W.envoi ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-creer>${W.envoi ? 'Création…' : 'Créer la prime'}</button>`}
+          : `<button ${x.A(W.creer)} style="${B(false, true)}${W.ok && !W.envoi ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-creer>${W.envoi ? (W.edit ? 'Enregistrement…' : 'Création…') : (W.edit ? 'Enregistrer' : 'Créer la prime')}</button>`}
       </div>
     </div>
   </div>`;
@@ -9534,25 +9574,20 @@ function tplPrimesApp(c, x){
     : l.champs === 'promo'
     ? `vendus pendant la promo · <select ${x.C(l.poserRegle)} style="${inp(150)};text-align:left">${l.regles.map(([v, t]) => `<option value="${v}"${l.regle === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.surObjectif ? `<span style="${sm};margin-top:3px;color:var(--color-text)">objectifs : ${esc(l.objectifsTxt)}</span>` : ` · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(48)}"> ${l.regle === 'seuil' ? 'pcs (seuil)' : 'min.'}`}<span style="${sm};color:var(--color-text-muted)">${esc(l.promoNom)} · ${esc(l.promoSorte)} · ${esc(l.promoDates)} · ${esc(l.promoMags)} · ${esc(l.promoSource)}${l.promoVide ? ' · <b style="color:var(--color-primary)">produit introuvable</b>' : ''}</span>`
     : esc(l.texte || '');
-  const tr = l => l.externe ? `<tr style="color:var(--color-text-muted)">
-        <td style="${td2};text-align:center">—</td>
-        <td style="${td2};text-align:left">${nomPrime(l, `<b style="color:var(--color-text)">${esc(l.lib)}</b>`)}</td>
+  // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint, et « Modifier » qui rouvre l'assistant.
+  const inter = l => `<label title="${l.actif ? 'Active — cliquer pour l’éteindre' : 'Éteinte — cliquer pour l’activer'}" data-pr-actif style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;vertical-align:middle"><input type="checkbox" ${l.actif ? 'checked' : ''} ${x.C(l.basculer)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:999px;background:${l.actif ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${l.actif ? 18 : 2}px;width:16px;height:16px;border-radius:50%;background:var(--color-surface);box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></label>`;
+  const tuileFixe = l => `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);overflow:hidden">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}</span>`;
+  const modif = l => `<button ${x.A(l.modifier)} data-pr-modifier style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:var(--radius-pill);padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;cursor:pointer">Modifier</button>`;
+  const tr = l => `<tr data-pr-prime="${esc(l.type)}" style="${l.externe || l.actif ? '' : 'opacity:.55'}">
+        <td style="${td2};text-align:center">${l.externe ? '<span style="color:var(--color-text-muted)">—</span>' : inter(l)}</td>
+        <td style="${td2};text-align:left"><span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuileFixe(l)}<b>${esc(l.lib)}</b></span></td>
         <td style="${td2};text-align:left">${typ(l.type, l.typLib)}</td>
-        <td style="${td2};text-align:left;white-space:normal;min-width:250px">${esc(l.texte)}<span style="${sm};margin-top:3px">gagne : ${esc(l.qui)}</span></td>
+        <td style="${td2};text-align:left;white-space:normal;min-width:250px">${esc(l.texte || '')}${l.surObjectif ? `<span style="${sm};margin-top:3px;color:var(--color-text)">objectifs : ${esc(l.objectifsTxt)}</span>` : ''}${l.promoVide ? ` <b style="color:var(--color-primary)">produit introuvable</b>` : ''}<span style="${sm};margin-top:3px;color:var(--color-text-muted)">gagne : ${esc(l.qui)}</span></td>
         <td style="${td2};text-align:left;color:var(--color-popup);font-weight:600;white-space:normal">${esc(l.moyenne)}</td>
-        <td style="${td2}"></td>
-        <td style="${td2};text-align:left">${payeur(l)}</td>
-        <td style="${td2};white-space:normal" colspan="2">${esc(l.montant)}<span style="${sm}">réglé dans Targets &amp; primes</span></td></tr>`
-        : `<tr data-pr-prime="${esc(l.type)}" style="${l.actif ? '' : 'opacity:.55'}">
-        <td style="${td2};text-align:center"><input type="checkbox" ${l.actif ? 'checked' : ''} ${x.C(l.poserActif)}></td>
-        <td style="${td2};text-align:left">${nomPrime(l, l.libLibre ? `<input value="${esc(l.lib)}" placeholder="Queen of …" ${x.C(l.poserLib)} style="${inp(150)};text-align:left;font-weight:600">` : `<b>${esc(l.lib)}</b>`)}</td>
-        <td style="${td2};text-align:left">${typ(l.type, l.typLib)}</td>
-        <td style="${td2};text-align:left;white-space:normal;min-width:250px">${champs(l)}<span style="${sm};margin-top:3px;color:var(--color-text-muted)">gagne : ${esc(l.qui)}</span></td>
-        <td style="${td2};text-align:left;color:var(--color-popup);font-weight:600;white-space:normal">${esc(l.moyenne)}</td>
-        <td style="${td2};text-align:center">${l.peutClasser ? `<input type="checkbox" ${l.classement ? 'checked' : ''} ${x.C(l.poserClassement)}>` : ''}</td>
-        <td style="${td2};text-align:left">${payeur(l)}</td>
-        <td style="${td2}"><input type="number" min="0" max="5000" step="5" value="${esc(l.montant)}" ${x.C(l.poserMontant)} style="${inp(62)}"> €</td>
-        <td style="${td2}">${l.peutRetirer ? `<button ${x.A(l.retirer)} title="Retirer" style="border:0;background:transparent;color:var(--color-text-muted);cursor:pointer;font-size:14px">✕</button>` : ''}</td></tr>`;
+        <td style="${td2};text-align:center;color:var(--color-text-muted)">${l.externe ? '' : l.peutClasser ? (l.classement ? '✓' : '—') : ''}</td>
+        <td style="${td2};text-align:left;white-space:normal">${esc(l.payeurTxt || '')}</td>
+        <td style="${td2};white-space:normal">${l.externe ? `${esc(l.montant)}<span style="${sm}">réglé dans Targets &amp; primes</span>` : esc(l.montantTxt || '')}</td>
+        <td style="${td2}">${modif(l)}</td></tr>`;
   const entete = colPayeur => `<thead><tr><th style="${th2};text-align:center">Active</th><th style="${th2};text-align:left">Prime</th><th style="${th2};text-align:left">Type</th><th style="${th2};text-align:left">Ce qui compte</th>
         <th style="${th2};text-align:left">Moyenne réseau<span style="${sm}">${esc(MY.nMois || '')}, par mois</span></th><th style="${th2};text-align:center">Classement</th><th style="${th2};text-align:left">${colPayeur}</th><th style="${th2}">Récompense</th><th style="${th2}"></th></tr></thead>`;
   return `
@@ -9572,10 +9607,10 @@ function tplPrimesApp(c, x){
       <tbody>${P.lignes.map(tr).join('')}</tbody>
     </table></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
-      <button ${x.A(P.ajouterCategorie)} style="${bt(false)}">+ Catégorie</button>
+      <button ${x.A(P.ajouterCategorie)} style="${bt(false)}" data-pr-categorie>+ Catégorie</button>
       <button ${x.A(P.nouvelle)} style="${bt(true)}" data-pr-nouvelle>+ Nouvelle prime promotion</button>
       <span style="flex:1"></span>
-      <button ${x.A(P.enregistrer)} style="${bt(true)}${P.modifie ? '' : ';opacity:.55'}" data-pr-enregistrer="app">Enregistrer</button>
+      ${P.modifie ? `<span style="font-size:11.5px;color:var(--color-text-muted)">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${bt(true)}" data-pr-enregistrer="app">Enregistrer</button>` : ''}
     </div>
   </div>
 
@@ -9592,8 +9627,6 @@ function tplPrimesApp(c, x){
     </table></div>` : `<div style="padding:6px 16px 16px;font-size:12.5px;color:var(--color-text-muted)">${P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant.' : 'Aucune prime de franchisé pour l’instant.'}</div>`}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
       <button ${x.A(P.nouvelleMag)} style="${bt(true)}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
-      <span style="flex:1"></span>
-      <button ${x.A(P.enregistrer)} style="${bt(true)}${P.modifie ? '' : ';opacity:.55'}" data-pr-enregistrer="magasins">Enregistrer</button>
     </div>
   </div>
 
@@ -9655,6 +9688,7 @@ function tplPrimesApp(c, x){
     </div>
   </div>`}
   ${c.prWiz ? tplPrWiz(c.prWiz, x) : ''}
+  ${c.prEdit ? tplPrEdit(c.prEdit, x) : ''}
 </div>`;
 }
 

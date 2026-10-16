@@ -314,6 +314,14 @@ wr_primes_app();
 $pk2 = null; foreach (relire()['liste'] ?? [] as $e) { if (str_starts_with($e['cle'], 'pk')) { $pk2 = $e; } }
 verifie('réenregistrée telle quelle, elle garde sa clé et sa sélection', $pk2 !== null && $pk2['cle'] === $pk['cle'] && $pk2['promo']['sel'] === $pk['promo']['sel']);
 verifie('la moisson compte ses produits', isset(promoFamilles()[$pk['cle']][10]) && isset(promoFamilles()[$pk['cle']][20]));
+// Rouverte dans l'assistant (16/10/2026) : « refaire » relit ses produits dans la nouvelle sélection, même clé, même identifiant.
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => $e['cle'] === $pk['cle'] ? $e + ['refaire' => true, 'promo_neuve' => ['source' => 'cockpit', 'sel' => [['t' => 'categorie', 'v' => 'Quiches', 'lib' => 'Quiches']], 'du' => '2026-12-01', 'au' => '2026-12-31', 'shops' => ['4']]] : $e, relire()['liste'])];
+$r = wr_primes_app();
+$pk3 = null; foreach (relire()['liste'] as $e) { if ($e['cle'] === $pk['cle']) { $pk3 = $e; } }
+verifie('rouverte et modifiée : même clé, ses nouveaux produits et dates', ($r['ok'] ?? false) && $pk3 !== null && $pk3['promo']['ids'] === [20] && $pk3['promo']['du'] === '2026-12-01' && $pk3['promo']['id'] === $pk['promo']['id'], json_encode([$r, $pk3['promo'] ?? null]));
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => $e['cle'] === $pk['cle'] ? $e + ['refaire' => true, 'promo_neuve' => ['source' => 'cockpit', 'sel' => [['t' => 'categorie', 'v' => 'Inconnue', 'lib' => 'X']]]] : $e, relire()['liste'])];
+$r = wr_primes_app();
+verifie('rouverte avec une sélection vide de produits : refusée, rien ne change', isset($r['error']) && (relire()['liste'][array_search($pk['cle'], array_column(relire()['liste'], 'cle'), true)]['promo']['ids'] ?? null) === [20], json_encode($r));
 // Les primes d'un franchisé (16/10/2026) : une prime promo pour SON magasin, payée par lui.
 $avantMag = relire()['liste'];
 $mag = static fn (array $promo, string $shop, array $plus = []) => array_merge(['type' => 'promo', 'famille' => 'magasin', 'shop' => $shop, 'lib' => 'Prime du magasin', 'montant' => 30, 'minPieces' => 3, 'payeur' => 'marque'], $promo, $plus);
