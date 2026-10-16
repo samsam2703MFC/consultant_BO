@@ -554,6 +554,17 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   produit du catalogue qui porte son nom ; les autres, leurs produits). Plus de repli sur les bundles du catalogue,
   et une prime de promo « catalogue » d'avant n'est plus gardée. **Au 16/10/2026, le compte API du cockpit reçoit
   403 sur toutes ces routes** : `erreurs` le dit, la liste est vide, le cockpit demande d'ouvrir l'accès côté panel.
+- `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
+  promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
+  de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
+- **L'assistant « Nouvelle prime promotion »** (cockpit, Équipe & ventes → Paramètres, 16/10/2026) enregistre par
+  `POST /ventes/primes-app` une entrée `{type: promo, ref: {source: cockpit}, lib, montant, minPieces, regle:
+  premiere|seuil, payeur, sponsor, promo: {source: cockpit, sel: [{t: groupe|categorie|produit, v, lib}], du, au,
+  shops[]}}` (une sous-catégorie : `v` = « catégorie\0sous-catégorie »). Le serveur relit les produits de la
+  sélection dans le catalogue (`primesSelIds`, jamais les identifiants du navigateur), tire l'identifiant, et la clé
+  devient `pk…`. La moisson relit la sélection chaque jour (un produit ajouté à la catégorie compte). `regle` vaut
+  aussi pour les promos du panel : `premiere` (la 1re du magasin gagne, comme avant) ou `seuil` (chaque vendeuse à
+  `minPieces` pièces ou plus gagne la récompense ; la carte de l'app vise alors le seuil, `repereType: cible`).
 - `GET /ventes/primes-moyennes?n=1|3|6` : par magasin (et `reseau`), la moyenne mensuelle des n derniers
   mois clos, depuis les jours moissonnés (`prMoy{mois}`, un jour) et les KPIs du mois (`pvCa`) :
   `{vendeuses (30 tickets au moins dans le mois), tickets, ticketsVendeuse, ticketMoyen, lignesTicket,

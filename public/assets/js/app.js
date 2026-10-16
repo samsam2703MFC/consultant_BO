@@ -7079,7 +7079,7 @@ class App {
     const nomMag = {}; (d.magasins || []).forEach(m => { nomMag[m.id] = court(m.nom); });
     const dates = p => (p.du || p.au ? (p.du ? jj(p.du) : '…') + ' → ' + (p.au ? jj(p.au) : '…') : 'sans dates');
     const mags = p => ((p.shops || []).length ? p.shops.map(s => nomMag[s] || s).join(', ') : 'tous');
-    const sorte = p => ({ xy: 'X + Y offert', quantite: 'Prix par quantité', remise: 'Remise programmée' }[p.sorte] || 'Bundle');
+    const sorte = p => ({ xy: 'X + Y offert', quantite: 'Prix par quantité', remise: 'Remise programmée', produits: 'Produits choisis' }[p.sorte] || 'Bundle');
 
     // Le brouillon : la liste des primes, et les réglages des ventes croisées (cible par défaut, par magasin, minimum de tickets).
     const app = S.prApp || JSON.parse(JSON.stringify(d.app));
@@ -7157,7 +7157,9 @@ class App {
       } else if (e.type === 'promo') {
         const p = e.promo || {};
         Object.assign(L, { champs: 'promo', minPieces: String(e.minPieces ?? 1), promoNom: p.nom || '', promoSorte: sorte(p), promoDates: dates(p), promoMags: mags(p),
-          promoSource: p.source === 'api' ? 'panel' : 'catalogue', promoVide: !(p.ids || []).length });
+          promoSource: { api: 'panel', cockpit: 'créée dans le cockpit' }[p.source] || p.source, promoVide: !(p.ids || []).length,
+          // La règle (16/10/2026) : la 1re du magasin, ou chaque vendeuse au-dessus du seuil.
+          regle: e.regle === 'seuil' ? 'seuil' : 'premiere', poserRegle: ev => { e.regle = ev.target.value === 'seuil' ? 'seuil' : 'premiere'; re(); } });
       }
       lignes.push(L);
       // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
@@ -7173,6 +7175,104 @@ class App {
           montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '' }));
       }
     });
+    // L'assistant « Nouvelle prime promotion » (16/10/2026) : quatre étapes — les produits (une barre de recherche sur
+    // les catégories, les sous-catégories et les produits du catalogue, ou une promotion de l'API du panel), la période
+    // et les magasins, qui gagne et combien, le nom et l'aperçu. Le serveur relit les produits de la sélection.
+    const W = S.prWiz;
+    // L'API promotions : lue, refusée (403) ou muette.
+    const PR_ERR = () => (promos === undefined ? '' : promos === null ? 'Les promotions du panel n’ont pas pu être lues.'
+      : promos.api ? '' : ((promos.erreurs || []).some(x => x.code === 403) ? 'L’API promotions du panel refuse l’accès au compte du cockpit (403). Aucune promotion ne peut être lue tant que l’accès n’est pas ouvert côté panel (bundles, buy-x-get-y, quantity, scheduled-product-discount). En attendant : « Choisir les produits ».'
+        : 'L’API promotions du panel n’a rien répondu.'));
+    const ymd = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+    const moisDe = decal => { const t = new Date(); const a = new Date(t.getFullYear(), t.getMonth() + decal, 1); const b = new Date(t.getFullYear(), t.getMonth() + decal + 1, 0); return [ymd(a), ymd(b)]; };
+    const [suivDu, suivAu] = moisDe(1);
+    const wizNeuf = () => ({ etape: 1, onglet: 'produits', q: '', sel: [], api: null, periode: 'suivant', du: suivDu, au: suivAu,
+      magsMode: 'tous', mags: [], regle: 'premiere', minPieces: '10', montant: String(app.recompense), payeur: 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false });
+    common.prWiz = null;
+    if (W) {
+      const reW = () => this.setState({ prWiz: W });
+      const cat = lire('catalogue', '/ventes/primes-catalogue');
+      const sansAccent = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const q = sansAccent(W.q.trim());
+      const pris = it => W.sel.some(z => z.t === it.t && z.v === it.v);
+      const basculer = it => () => { const i = W.sel.findIndex(z => z.t === it.t && z.v === it.v); if (i >= 0) { W.sel.splice(i, 1); } else { W.sel.push(it); } W.api = null; reW(); };
+      const surligne = (nom) => { if (!q) { return [{ t: nom, m: false }]; } const n = sansAccent(nom); const i = n.indexOf(q); return i < 0 ? [{ t: nom, m: false }] : [{ t: nom.slice(0, i), m: false }, { t: nom.slice(i, i + q.length), m: true }, { t: nom.slice(i + q.length), m: false }]; };
+      const SEP = '\u0000';
+      const itemG = g => ({ t: 'groupe', v: g.nom, lib: g.nom, n: g.n });
+      const itemC = c2 => ({ t: 'categorie', v: c2.groupe + SEP + c2.nom, lib: c2.nom, n: c2.n, sous: c2.groupe });
+      const itemP = pr => ({ t: 'produit', v: String(pr.id), lib: pr.nom, n: 1, sous: pr.cat });
+      const vue = it => Object.assign({}, it, { morceaux: surligne(it.lib), pris: pris(it), basculer: basculer(it) });
+      let res = { groupes: [], categories: [], produits: [] };
+      if (cat) {
+        if (!q) { res.groupes = cat.groupes.map(itemG).map(vue); }
+        else {
+          res.groupes = cat.groupes.filter(g => sansAccent(g.nom).includes(q)).slice(0, 5).map(itemG).map(vue);
+          res.categories = cat.categories.filter(c2 => sansAccent(c2.nom).includes(q)).slice(0, 8).map(itemC).map(vue);
+          res.produits = cat.produits.filter(pr => sansAccent(pr.nom).includes(q)).slice(0, 10).map(itemP).map(vue);
+        }
+      }
+      // Les produits comptés : l'union de la sélection, lue ici pour l'affichage (le serveur la relit).
+      const compte = !cat ? 0 : cat.produits.filter(pr => W.sel.some(z => (z.t === 'groupe' && pr.grp === z.v) || (z.t === 'categorie' && (pr.grp + SEP + pr.cat) === z.v) || (z.t === 'produit' && String(pr.id) === z.v))).length;
+      const nomDefaut = () => (W.api ? W.api.nom : (W.sel.length ? 'Promo ' + W.sel.map(z => z.lib).slice(0, 2).join(' + ') : 'Promo'));
+      if (!W.nomTouche) { W.nom = nomDefaut(); }
+      const du = W.api ? W.api.du : W.du; const au = W.api ? W.api.au : W.au;
+      const shops = W.api ? (W.api.shops || []) : (W.magsMode === 'tous' ? [] : W.mags);
+      const nbMags = shops.length || (d.magasins || []).length;
+      const montant = num(W.montant); const minP = num(W.minPieces);
+      const ok = [null, W.sel.length > 0 || !!W.api, !!du && !!au && au >= du && (W.api || W.magsMode === 'tous' || W.mags.length > 0), montant != null && montant > 0 && minP != null && minP >= (W.regle === 'seuil' ? 1 : 0), W.nom.trim() !== ''];
+      const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
+      const resume = [
+        ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
+        ['Période', jjmm(du) + ' → ' + jjmm(au)],
+        ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
+        ['Gagne', W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : 'la 1re de chaque magasin' + (minP ? ', ' + minP + ' pcs min.' : '')],
+        ['Récompense', (montant || 0) + ' € · payée par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : W.payeur === 'magasin' ? 'le magasin' : 'la marque')]];
+      const creer = () => {
+        if (W.envoi) { return; }
+        const base = { type: 'promo', lib: W.nom.trim(), montant: Math.round(montant), minPieces: Math.round(minP || 0), regle: W.regle,
+          payeur: W.payeur, sponsor: W.sponsor, actif: true, classement: true };
+        const e = W.api ? Object.assign(base, { ref: { source: W.api.source, id: W.api.id }, promo: W.api })
+          : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
+        W.envoi = true; reW();
+        const liste = app.liste.concat([e]);
+        this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
+          if (r && r.ok === false) { W.envoi = false; reW(); return; }
+          this.setState({ prWiz: undefined });
+          finir('Prime « ' + W.nom.trim() + ' » créée');
+        });
+      };
+      common.prWiz = {
+        etape: W.etape, onglet: W.onglet, q: W.q, chargement: cat === undefined, catMotif: cat === null ? 'Le catalogue n’a pas pu être lu.' : '',
+        res, vide: !!q && cat && !res.groupes.length && !res.categories.length && !res.produits.length, parcourir: !q,
+        sel: W.sel.map(z => ({ type: { groupe: 'Catégorie', categorie: 'Sous-catégorie', produit: 'Produit' }[z.t], lib: z.lib, n: z.t === 'produit' ? '' : String(z.n || ''), retirer: basculer(z) })),
+        compte, api: W.api, apiErreur: PR_ERR(), apiListe: (promos ? promos.liste : []).filter(p => (p.ids || []).length).map(p => ({ nom: p.nom, sorte: sorte(p), dates: dates(p), magasins: mags(p), pris: !!(W.api && W.api.id === p.id && W.api.source === p.source),
+          choisir: () => { W.api = (W.api && W.api.id === p.id) ? null : p; W.sel = []; reW(); } })),
+        periode: W.periode, du, au, apiDates: !!W.api, magsMode: W.magsMode, mags: (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: W.magsMode === 'tous' || W.mags.includes(m.id),
+          basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
+        regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
+        plafond: W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
+        ok: ok[W.etape], envoi: W.envoi,
+        pas: ['Produits', 'Période & magasins', 'Qui gagne', 'Nom & aperçu'].map((nom, i) => ({ n: i + 1, nom, on: W.etape === i + 1, fait: W.etape > i + 1, aller: W.etape > i + 1 ? () => { W.etape = i + 1; reW(); } : null })),
+        poserQ: ev => { W.q = ev.target.value; reW(); },
+        onglets: [['produits', 'Choisir les produits'], ['panel', 'Promotions du panel (API)']].map(([v, nom]) => ({ nom, on: W.onglet === v, choisir: () => { W.onglet = v; reW(); } })),
+        periodes: [['mois', 'Ce mois-ci'], ['suivant', 'Le mois prochain'], ['libre', 'Dates libres']].map(([v, nom]) => ({ nom, on: W.periode === v,
+          choisir: () => { W.periode = v; if (v !== 'libre') { [W.du, W.au] = moisDe(v === 'mois' ? 0 : 1); } reW(); } })),
+        poserDu: ev => { W.du = ev.target.value; W.periode = 'libre'; reW(); }, poserAu: ev => { W.au = ev.target.value; W.periode = 'libre'; reW(); },
+        tousMags: () => { W.magsMode = 'tous'; W.mags = []; reW(); }, choisirMags: () => { W.magsMode = 'choix'; W.mags = (d.magasins || []).map(m => m.id); reW(); },
+        regles: [['premiere', '👑', 'La 1re de chaque magasin', 'La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.'],
+          ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,
+          choisir: () => { W.regle = v; if (v === 'seuil' && (num(W.minPieces) || 0) < 1) { W.minPieces = '20'; } reW(); } })),
+        poserMin: ev => { W.minPieces = ev.target.value; reW(); }, poserMontant: ev => { W.montant = ev.target.value; reW(); },
+        payeurs: [['marque', 'Marque'], ['magasin', 'Magasin'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reW(); } })),
+        poserSponsor: ev => { W.sponsor = ev.target.value; reW(); },
+        poserNom: ev => { W.nom = ev.target.value; W.nomTouche = true; reW(); },
+        fermer: () => this.setState({ prWiz: undefined }),
+        precedent: () => { W.etape = Math.max(1, W.etape - 1); reW(); },
+        suivant: () => { if (ok[W.etape]) { W.etape = Math.min(4, W.etape + 1); reW(); } },
+        creer,
+      };
+    }
+
     common.prApp = {
       lignes, recompense: String(app.recompense),
       sms: !!(app.sms && app.sms.actif), smsConfigure: !!d.smsConfigure,
@@ -7180,6 +7280,7 @@ class App {
       poserRecompense: ev => { const v = num(ev.target.value); if (v != null) { app.recompense = Math.max(0, Math.round(v)); } re(); },
       ajouterCategorie: () => { app.liste.push({ type: 'categorie', cle: '', lib: '', motif: '', minPieces: 10, montant: app.recompense, actif: true, classement: true }); re(); },
       versPromos: () => { const el = document.querySelector('[data-pr="promos"]'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } },
+      nouvelle: () => this.setState({ prWiz: wizNeuf() }),
       modifie: appModifie || crModifie,
       enregistrer: () => {
         const suite = crModifie ? enregistrerCr() : Promise.resolve({ ok: true });

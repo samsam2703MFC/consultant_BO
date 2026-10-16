@@ -106,25 +106,32 @@ function primesAppDate($v): ?string
 function primesAppPromoPropre($p): ?array
 {
     if (!is_array($p)) { return null; }
-    // L'API promotions du panel seulement (16/10/2026) : une promo « catalogue » d'avant n'est plus gardée.
-    $source = ($p['source'] ?? '') === 'api' ? 'api' : null;
+    // L'API promotions du panel, ou une promotion créée dans le cockpit par l'assistant (16/10/2026) ; une promo
+    // « catalogue » d'avant n'est plus gardée.
+    $source = in_array($p['source'] ?? '', ['api', 'cockpit'], true) ? (string) $p['source'] : null;
     $id = mb_substr(trim((string) ($p['id'] ?? '')), 0, 40);
     if ($source === null || $id === '') { return null; }
     $shops = [];
     foreach ((array) ($p['shops'] ?? []) as $s) { if (is_scalar($s) && preg_match('/^\d+$/', (string) $s)) { $shops[] = (string) $s; } }
     $ids = [];
     foreach ((array) ($p['ids'] ?? []) as $x) { if (is_numeric($x) && (int) $x > 0) { $ids[] = (int) $x; } }
-    return ['source' => $source, 'sorte' => in_array($p['sorte'] ?? '', ['xy', 'quantite', 'remise'], true) ? $p['sorte'] : 'bundle', 'id' => $id,
+    $out = ['source' => $source, 'sorte' => $source === 'cockpit' ? 'produits' : (in_array($p['sorte'] ?? '', ['xy', 'quantite', 'remise'], true) ? $p['sorte'] : 'bundle'), 'id' => $id,
         'nom' => mb_substr(trim((string) ($p['nom'] ?? '')), 0, 80), 'prix' => (isset($p['prix']) && is_numeric($p['prix'])) ? round((float) $p['prix'], 2) : null,
         'du' => primesAppDate($p['du'] ?? null), 'au' => primesAppDate($p['au'] ?? null),
         'shops' => array_values(array_unique($shops)), 'ids' => array_values(array_unique($ids))];
+    if ($source === 'cockpit') {
+        // Une promotion du cockpit : ce qui a été choisi (catégories, sous-catégories, produits), relu en produits ici.
+        $out['sel'] = primesSelPropre($p['sel'] ?? []);
+        if ($out['sel'] === []) { return null; }
+    }
+    return $out;
 }
 
 /** La clé d'une prime promo : « p » + la source + l'identifiant de la promotion, en minuscules sans signes. */
 function primesAppClePromo(array $promo): string
 {
     $id = preg_replace('/[^a-z0-9]+/', '', strtolower($promo['id'])) ?? '';
-    return mb_substr('p' . ($promo['source'] === 'api' ? (['xy' => 'x', 'quantite' => 'q', 'remise' => 'r'][$promo['sorte']] ?? 'b') : 'c') . $id, 0, 24);
+    return mb_substr('p' . ($promo['source'] === 'api' ? (['xy' => 'x', 'quantite' => 'q', 'remise' => 'r'][$promo['sorte']] ?? 'b') : ($promo['source'] === 'cockpit' ? 'k' : 'c')) . $id, 0, 24);
 }
 
 /**
@@ -203,7 +210,7 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
         $min = (isset($x['minPieces']) && is_numeric($x['minPieces'])) ? max(0, min(5000, (int) $x['minPieces'])) : 1;
         return ['cle' => primesAppClePromo($promo), 'type' => 'promo', 'lib' => $lib !== '' ? $lib : ($promo['nom'] !== '' ? $promo['nom'] : 'Promo'),
             'actif' => $actif, 'montant' => $montant, 'classement' => !array_key_exists('classement', $x) || (bool) $x['classement'],
-            'minPieces' => $min, 'promo' => $promo];
+            'minPieces' => $min, 'regle' => ($x['regle'] ?? '') === 'seuil' ? 'seuil' : 'premiere', 'promo' => $promo];
     }
     return null;
 }
@@ -320,6 +327,10 @@ function wr_primes_app(): array
                 $cle = (string) ($x['cle'] ?? '');
                 if ($cle !== '' && isset($deja[$cle]) && $deja[$cle]['type'] === 'promo') {
                     $x['promo'] = $deja[$cle]['promo'];
+                } elseif (($x['ref']['source'] ?? '') === 'cockpit') {
+                    $p = primesPromoCockpit(is_array($x['promo'] ?? null) ? $x['promo'] : [], (string) ($x['lib'] ?? ''));
+                    if (isset($p['error'])) { http_response_code(422); return ['error' => 'prime ' . ($i + 1) . ' : ' . $p['error']]; }
+                    $x['promo'] = $p;
                 } else {
                     $ref = is_array($x['ref'] ?? null) ? $x['ref'] : [];
                     $promosPanel ??= primesPromosPanel();
@@ -538,11 +549,132 @@ function ep_primes_promos(): array
     return $p;
 }
 
+/* ----------------------------------------------------------------------
+   L'assistant de création d'une prime promotion (16/10/2026) : le catalogue pour la barre de recherche
+   (catégories, sous-catégories, produits), la sélection relue en produits, la promotion du cockpit.
+   ---------------------------------------------------------------------- */
+
+/**
+ * Le catalogue, à plat pour la recherche : [{id, nom, cat, grp}] (id = l'identifiant du produit au panel, celui des
+ * lignes de tickets ; cat = la sous-catégorie ; grp = la catégorie). Gardé une heure.
+ */
+function primesCatalogue(bool $frais = false): array
+{
+    static $memo = null;
+    if ($memo !== null && !$frais) { return $memo; }
+    $c = setting('primesCatalogue');
+    if (!$frais && is_array($c) && isset($c['p']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = (array) $c['p']; }
+    $out = [];
+    if (function_exists('ep_prod_catalogue')) {
+        try {
+            foreach (ep_prod_catalogue() as $pr) {
+                $id = $pr['pwaId'] ?? null;
+                if (!is_numeric($id) || (int) $id <= 0) { continue; }
+                $out[(int) $id] = ['id' => (int) $id, 'nom' => (string) ($pr['nom'] ?? ''), 'cat' => (string) ($pr['categorie'] ?? ''), 'grp' => (string) ($pr['groupe'] ?? '')];
+            }
+        } catch (Throwable $e) { /* catalogue muet : le repli ci-dessous */ }
+    }
+    if ($out === [] && function_exists('svCategories')) {
+        $grp = function_exists('svGroupes') ? svGroupes() : [];
+        foreach (svCategories() as $pid => $cat) {
+            $out[(int) $pid] = ['id' => (int) $pid, 'nom' => function_exists('svNomProduit') ? svNomProduit((int) $pid, 'Produit ' . $pid) : 'Produit ' . $pid,
+                'cat' => (string) $cat, 'grp' => (string) ($grp[(string) $cat] ?? '')];
+        }
+    }
+    $out = array_values($out);
+    usort($out, static fn ($a, $b) => strcasecmp($a['nom'], $b['nom']));
+    if ($out !== []) {
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesCatalogue', json_encode(['quand' => time(), 'p' => $out], JSON_UNESCAPED_UNICODE)]); }
+        catch (Throwable $e) { /* sans gravure */ }
+    }
+    return $memo = $out;
+}
+
+/** GET /ventes/primes-catalogue — les catégories, les sous-catégories et les produits, pour la barre de recherche de l'assistant. */
+function ep_primes_catalogue(): array
+{
+    $p = primesCatalogue(isset($_GET['frais']));
+    $grp = []; $cat = [];
+    foreach ($p as $x) {
+        if ($x['grp'] !== '') { $grp[$x['grp']] = ($grp[$x['grp']] ?? 0) + 1; }
+        if ($x['cat'] !== '') { $k = $x['grp'] . "\0" . $x['cat']; $cat[$k] = ($cat[$k] ?? 0) + 1; }
+    }
+    $groupes = []; foreach ($grp as $nom => $n) { $groupes[] = ['nom' => (string) $nom, 'n' => $n]; }
+    $cats = []; foreach ($cat as $k => $n) { [$g, $c] = explode("\0", (string) $k, 2); $cats[] = ['nom' => $c, 'groupe' => $g, 'n' => $n]; }
+    usort($groupes, static fn ($a, $b) => strcasecmp($a['nom'], $b['nom']));
+    usort($cats, static fn ($a, $b) => strcasecmp($a['nom'], $b['nom']));
+    return ['groupes' => $groupes, 'categories' => $cats, 'produits' => $p];
+}
+
+/** Une sélection propre : [{t: groupe|categorie|produit, v, lib}], quarante au plus, sans doublon. */
+function primesSelPropre($sel): array
+{
+    $out = []; $vus = [];
+    foreach (is_array($sel) ? $sel : [] as $x) {
+        if (!is_array($x)) { continue; }
+        $t = (string) ($x['t'] ?? '');
+        if (!in_array($t, ['groupe', 'categorie', 'produit'], true)) { continue; }
+        $v = mb_substr(trim((string) ($x['v'] ?? '')), 0, 120);
+        if ($v === '' || ($t === 'produit' && !ctype_digit($v))) { continue; }
+        if (isset($vus[$t . ':' . $v])) { continue; }
+        $vus[$t . ':' . $v] = true;
+        $out[] = ['t' => $t, 'v' => $v, 'lib' => mb_substr(trim((string) ($x['lib'] ?? $v)), 0, 80) ?: $v];
+        if (count($out) >= 40) { break; }
+    }
+    return $out;
+}
+
+/**
+ * Les produits d'une sélection, relus dans le catalogue : une catégorie (groupe), tous ses produits ; une
+ * sous-catégorie, les siens ; un produit, lui. Pour une sous-catégorie, le groupe peut suivre (« groupe\0nom »).
+ */
+function primesSelIds(array $sel): array
+{
+    if ($sel === []) { return []; }
+    $ids = [];
+    foreach (primesCatalogue() as $p) {
+        foreach ($sel as $x) {
+            $v = (string) ($x['v'] ?? '');
+            $ok = match ($x['t'] ?? '') {
+                'groupe' => $p['grp'] !== '' && $p['grp'] === $v,
+                'categorie' => str_contains($v, "\0") ? ($p['grp'] . "\0" . $p['cat']) === $v : ($p['cat'] !== '' && $p['cat'] === $v),
+                'produit' => (string) $p['id'] === $v,
+                default => false,
+            };
+            if ($ok) { $ids[$p['id']] = true; break; }
+        }
+    }
+    return array_map('intval', array_keys($ids));
+}
+
+/**
+ * Une promotion créée dans le cockpit par l'assistant : son nom, ses dates, ses magasins et sa sélection ; ses
+ * produits relus ici (rien de ce que le navigateur envoie sur les identifiants n'est cru). Erreur claire sinon.
+ */
+function primesPromoCockpit(array $p, string $lib): array
+{
+    $sel = primesSelPropre($p['sel'] ?? []);
+    if ($sel === []) { return ['error' => 'choisir au moins une catégorie, une sous-catégorie ou un produit']; }
+    $ids = primesSelIds($sel);
+    if ($ids === []) { return ['error' => 'aucun produit du catalogue dans cette sélection']; }
+    $du = primesAppDate($p['du'] ?? null); $au = primesAppDate($p['au'] ?? null);
+    if ($du !== null && $au !== null && $au < $du) { return ['error' => 'la fin de la période est avant son début']; }
+    $shops = [];
+    foreach ((array) ($p['shops'] ?? []) as $s) { if (is_scalar($s) && preg_match('/^\d+$/', (string) $s)) { $shops[] = (string) $s; } }
+    $nom = mb_substr(trim($lib !== '' ? $lib : (string) ($p['nom'] ?? '')), 0, 80);
+    return ['source' => 'cockpit', 'sorte' => 'produits', 'id' => substr(md5(json_encode($sel) . $du . $au . microtime(true) . random_int(0, PHP_INT_MAX)), 0, 10),
+        'nom' => $nom !== '' ? $nom : 'Promo ' . $sel[0]['lib'], 'prix' => null, 'du' => $du, 'au' => $au,
+        'shops' => array_values(array_unique($shops)), 'ids' => $ids, 'sel' => $sel];
+}
+
 /** Les familles des promos à compter dans la moisson : [cle => ids], éteintes comprises (le compte attend). */
 function promoFamilles(): array
 {
     $out = [];
-    foreach (primesAppDuType('promo', false) as $e) { if ($e['promo']['ids'] !== []) { $out[$e['cle']] = array_fill_keys($e['promo']['ids'], true); } }
+    foreach (primesAppDuType('promo', false) as $e) {
+        $ids = ($e['promo']['source'] ?? '') === 'cockpit' ? (primesSelIds($e['promo']['sel'] ?? []) ?: $e['promo']['ids']) : $e['promo']['ids'];
+        if ($ids !== []) { $out[$e['cle']] = array_fill_keys($ids, true); }
+    }
     return $out;
 }
 
@@ -878,10 +1010,14 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
     foreach ($pieces as $q) {
         [$un, $deux] = primesTete($clDe[$q['cle']] ?? null, 'pieces');
         $p = $q['pieces'];
-        $etat = $p === null ? 'vide' : ($q['rangMag'] === 1 ? ($enCours ? 'tete' : 'gagne') : ($q['rangMag'] === null ? 'att' : 'rang'));
+        $seuil = ($q['regle'] ?? 'premiere') === 'seuil';
+        // Une promo au seuil : gagnée dès le seuil atteint ; sinon, il manque des pièces. La 1re du magasin sinon.
+        $etat = $p === null ? 'vide' : ($seuil ? ((int) ($q['montant'] ?? 0) > 0 ? 'gagne' : 'att')
+            : ($q['rangMag'] === 1 ? ($enCours ? 'tete' : 'gagne') : ($q['rangMag'] === null ? 'att' : 'rang')));
         $cartes[] = ['cle' => $q['cle'], 'type' => $q['type'], 'emo' => $q['emo'], 'icone' => primesIconeDe($q['cle']), 'lib' => $q['lib'], 'montant' => (int) $q['montantMag'], 'max' => false,
             'gain' => (float) $q['montant'], 'etat' => $etat, 'val' => $p, 'unite' => 'pcs', 'rang' => $q['rangMag'], 'sur' => $q['surMag'],
-            'minPieces' => (int) $q['minPieces'], 'ecart' => ($p !== null && $q['rangMag'] === null) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
+            'minPieces' => (int) $q['minPieces'], 'regle' => $q['regle'] ?? 'premiere',
+            'ecart' => ($p !== null && ($seuil ? $p < $q['minPieces'] : $q['rangMag'] === null)) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
             'premier' => $un, 'second' => $deux, 'podium' => $q['type'] === 'categorie' ? primesPodium($clDe[$q['cle']] ?? null) : [],
             'du' => $q['du'] ?? null, 'au' => $q['au'] ?? null,
             'motif' => $p === null ? $vide('pas_compte') : null, 'classement' => isset($clDe[$q['cle']])];
@@ -917,9 +1053,11 @@ function primesCarteJauge(array $c): array
         [$rType, $rVal] = ['seuil', (float) $c['cible']];
         [$bas, $haut] = [$rVal - 1, 5.0];
     } else {
-        // Les classements (catégories, promos, meilleure vendeuse) : passer la 1re, garder la place, ou le minimum.
+        // Les classements (catégories, promos, meilleure vendeuse) : passer la 1re, garder la place, ou le minimum. Une
+        // promo au seuil (16/10/2026) : le seuil est l'objectif, chacune pour soi.
         $un = $c['premier'] ?? null; $deux = $c['second'] ?? null;
-        if ($un !== null && !$un['moi']) { [$rType, $rVal] = ['passer', floor((float) $un['q']) + 1]; }
+        if (($c['regle'] ?? '') === 'seuil') { [$rType, $rVal] = ['cible', (float) max(1, (int) ($c['minPieces'] ?? 1))]; }
+        elseif ($un !== null && !$un['moi']) { [$rType, $rVal] = ['passer', floor((float) $un['q']) + 1]; }
         elseif ($un !== null && $deux !== null) { [$rType, $rVal] = ['garder', (float) $deux['q']]; }
         elseif ($un === null && ($c['minPieces'] ?? 0) > 0) { [$rType, $rVal] = ['min', (float) $c['minPieces']]; }
         $haut = max((float) ($rVal ?? 0), (float) ($v ?? 0), (float) ($c['minPieces'] ?? 0)) * 1.15;

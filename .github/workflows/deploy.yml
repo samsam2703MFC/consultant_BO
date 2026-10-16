@@ -280,4 +280,13 @@ jobs:
             echo; echo "=== toutes les routes GET ==="
             grep -rhoE "get\([\"'\''][^\"'\'']+" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
               | grep -v vendor | sort -u | head -100
+            echo; echo "=== promotions, remises, bundles : routes et fichiers (16/10/2026) ==="
+            grep -rnoE "(get|post|put|delete)\([\"'\''][^\"'\'']*(promotion|discount|bundle|buy-x|voucher)[^\"'\'']*" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
+              | grep -v vendor | sort -u | head -80
+            echo; echo "=== connexions (auth/login) ==="
+            grep -rhoE "post\([\"'\''][^\"'\'']*(login|auth)[^\"'\'']*" /var/www/html/tfb/api --include="*.php" 2>/dev/null | grep -v vendor | sort -u | head -30
+            echo; echo "=== qui a le droit : les routes promotions et ce qui les garde ==="
+            for f in $(grep -rlE "promotions" /var/www/html/tfb/api --include="*Routes*.php" 2>/dev/null | grep -v vendor | head -6); do
+              echo "--- $f"; grep -nE "promotion|middleware|Middleware|role|Role|admin|consultant|group\(" "$f" | head -60
+            done
           '
