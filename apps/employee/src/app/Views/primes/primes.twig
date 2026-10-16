@@ -28,6 +28,11 @@
   {% if p.enCours %}<div class="bar"><i style="width:{{ (100 * part)|round(1) }}%"></i></div>{% endif %}
 </div>
 
+{% if p.cartes|filter(c => c.motif == 'sans_vente')|length %}
+<div class="pl-vide"><i class="bi bi-receipt"></i><div><b>{{ T.no_sale_title ?? 'Aucune vente à ton nom ce mois-ci' }}</b>
+  <span>{{ T.no_sale_text ?? 'Tes primes à toi (ventes croisées, record, classements) s’affichent dès ton premier ticket encaissé à ton nom. Le magasin et la note Google, eux, comptent déjà.' }}</span></div></div>
+{% endif %}
+
 {# ── Les primes, en carrés deux par ligne : les targets d'un côté, les catégories et les promos de l'autre (16/10/2026). ── #}
 {# Les primes fixes portent leur nom dans la langue de l'app ; les catégories et les promos, celui que l'admin leur donne. #}
 {% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
@@ -70,8 +75,8 @@
     {% endif %}
     <div class="pl-s">
       <span class="{{ ok ? 'ok' : (c.motif ? 'mu') }}">
-      {%- if c.motif in ['pas_compte', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}
-        {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}
+      {%- if c.motif in ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}
+        {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'sans_vente' %}{{ T.no_sale_short ?? 'aucune vente à ton nom' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}
       {%- elseif c.type == 'categorie' %}<b class="rg">{{ c.rang == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : (c.rang ? rangPre ~ c.rang ~ rangSuf : (T.not_ranked ?? 'pas classée')) }}{% if c.rang and c.sur %} / {{ c.sur }}{% endif %}</b> ·
         {% if c.pour1 is not null %}{{ p.enCours ? (T.still ?? 'encore') ~ ' ' ~ c.pour1 ~ ' ' ~ pcs ~ ' ' ~ (T.to_be_first ?? 'pour être 1re') : (T.short_of_first ?? 'à {n} {u} de la 1re')|replace({'{n}': c.pour1, '{u}': pcs}) }}{% elseif c.avance1 is not null %}+{{ c.avance1 }} {{ pcs }} {{ T.lead_short ?? 'd’avance' }}{% else %}{{ T.first_alone ?? '1re, seule en lice' }}{% endif %}
       {%- elseif ok %}✓ {{ T.activated ?? 'Prime activée' }}
@@ -154,8 +159,8 @@
   </div>
   {# L'objectif à atteindre, en clair, avec le même repère que sur la jauge. #}
   <div class="pq-o">
-    {%- if c.motif in ['pas_compte', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}<span class="mu">
-      {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}</span>
+    {%- if c.motif in ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}<span class="mu">
+      {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'sans_vente' %}{{ T.no_sale_short ?? 'aucune vente à ton nom' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}</span>
     {%- elseif c.repereType == 'garder' %}<span class="lg"></span>{{ T.keep_first ?? 'Garder la 1re place' }}
     {%- elseif c.repereType %}<span class="lg"></span>{{ T.goal ?? 'Objectif' }} <b>{{ c.repereVal|number_format(c.repereType == 'seuil' ? 1 : dec, ',', ' ') }}{{ c.repereType == 'seuil' ? ' ★' : suf }}</b>{% if c.repereType == 'min' %} min.{% endif %}
     {%- endif -%}
