@@ -86,8 +86,11 @@
 <div class="cl-carte st-graphe" data-graphe>
   {% if ind|length > 1 %}<div class="st-puces" role="tablist">{% for i in ind %}<button type="button" role="tab" class="{{ i.cle == choisi ? 'on' }}" aria-selected="{{ i.cle == choisi ? 'true' : 'false' }}" data-ind="{{ i.cle }}">{{ i.lib }}</button>{% endfor %}</div>{% endif %}
   {% for i in ind %}
-  {# L'échelle : de la plus petite à la plus grande valeur des trois séries (et la cible), avec de l'air. #}
-  {% set bornes = i.tous|merge(i.cible ? [i.cible] : []) %}
+  {# L'échelle : de la plus petite à la plus grande valeur des trois séries, avec de l'air ; la cible ou le record
+     aussi, sauf s'ils sont loin des semaines (ils écraseraient les lignes) : on les dit alors sans les tracer. #}
+  {% set dMin = min(i.tous) %}{% set dMax = max(i.tous) %}{% set dEt = max(dMax - dMin, dMax * 0.1) %}
+  {% set cibleDans = i.cible and i.cible <= dMax + dEt and i.cible >= dMin - dEt %}
+  {% set bornes = i.tous|merge(cibleDans ? [i.cible] : []) %}
   {% set mn = min(bornes) %}{% set mx = max(bornes) %}
   {% set air = mx > mn ? (mx - mn) * 0.2 : (mx > 0 ? mx * 0.2 : 1) %}
   {% set lo = (max(0, mn - air))|round(i.ax, 'floor') %}{% set hi = (mx + air)|round(i.ax, 'ceil') %}
@@ -114,7 +117,7 @@
         <line class="st-guide" x1="{{ x|round(1) }}" y1="{{ Y0 - 6 }}" x2="{{ x|round(1) }}" y2="{{ Y1 }}"/>
         <text class="st-x" x="{{ x|round(1) }}" y="{{ Y1 + 14 }}" text-anchor="middle">{{ s.lib }}</text>
       </g>{% endfor %}
-      {% if i.cible %}{% set yc = Y1 - (Y1 - Y0) * (i.cible - lo) / (hi - lo) %}<line class="st-cible" x1="{{ X0 }}" y1="{{ yc|round(1) }}" x2="{{ X1 }}" y2="{{ yc|round(1) }}"/>{% endif %}
+      {% if cibleDans %}{% set yc = Y1 - (Y1 - Y0) * (i.cible - lo) / (hi - lo) %}<line class="st-cible" x1="{{ X0 }}" y1="{{ yc|round(1) }}" x2="{{ X1 }}" y2="{{ yc|round(1) }}"/>{% endif %}
       {# Les trois lignes, le réseau dessous, moi dessus ; une valeur entourée de trous devient un point. #}
       {% for se in ['res', 'mag', 'moi'] %}{% set p = attribute(i, se) %}{% set d = '' %}{% set pose = false %}
       {% for v in p %}{% if v is null %}{% set pose = false %}{% else %}{% set d = d ~ (pose ? ' L' : ' M') ~ (X0 + slot * (loop.index0 + 0.5))|round(1) ~ ' ' ~ (Y1 - (Y1 - Y0) * (v - lo) / (hi - lo))|round(1) %}{% set pose = true %}{% endif %}{% endfor %}
@@ -125,7 +128,7 @@
         <circle class="st-pt {{ se }}{{ seul ? ' seul' }}" cx="{{ x|round(1) }}" cy="{{ (Y1 - (Y1 - Y0) * (v - lo) / (hi - lo))|round(1) }}" r="{{ se == 'moi' ? 3.5 : 3 }}"/>{% endif %}{% endfor %}</g>{% endfor %}
     </svg>
     <div class="st-mag-l">
-      {% if i.cible %}<span><span class="lg-ligne"></span>{{ i.cibleLib }} {{ _self.val(i.cible, i.dec, i.unite) }}</span>{% endif %}
+      {% if i.cible %}<span>{% if cibleDans %}<span class="lg-ligne"></span>{% endif %}{{ i.cibleLib }} {{ _self.val(i.cible, i.dec, i.unite) }}</span>{% endif %}
       <span>{{ T.avg_note ?? 'Magasin, réseau : la vendeuse moyenne de la semaine' }}</span>
     </div>
     {% if i.moi|filter(v => v is not null)|length == 0 %}<p class="st-note">{{ T.no_own_weeks ?? 'Aucune vente à ton nom sur ces 12 semaines : seules les moyennes s’affichent.' }}</p>{% endif %}

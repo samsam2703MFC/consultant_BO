@@ -24,6 +24,9 @@ declare(strict_types=1);
  */
 
 const PRIMES_CACHE_MOI = 900;      // 15 min : la fiche d'une personne pour le mois en cours
+// La forme de la fiche : à monter quand elle change, pour qu'un déploiement ne serve pas une fiche d'avant
+// gardée en cache (16/10/2026 : les douze semaines avec mag et res, la quantité pour être 1re des catégories).
+const PRIMES_FICHE_V = 5;
 const PRIMES_CACHE_CLOS = 86400;   // un jour : un mois clos ne bouge que si le CEO l'enregistre
 const PRIMES_CACHE_JETON = 600;    // 10 min : un jeton d'employé vérifié chez le panel
 const PRIMES_CACHE_JOUR = 600;     // 10 min : le compteur du jour
@@ -850,7 +853,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     $enCours = $m === date('Y-m');
     if (!$frais) {
         $c = setting($cle);
-        if (is_array($c) && isset($c['emp'], $c['cartes']) && array_key_exists('google', (array) ($c['montants'] ?? [])) && (int) ($c['quand'] ?? 0) > time() - ($enCours ? PRIMES_CACHE_MOI : PRIMES_CACHE_CLOS)) { return $c; }
+        if (is_array($c) && isset($c['emp'], $c['cartes']) && ($c['v'] ?? 0) === PRIMES_FICHE_V && (int) ($c['quand'] ?? 0) > time() - ($enCours ? PRIMES_CACHE_MOI : PRIMES_CACHE_CLOS)) { return $c; }
     }
     $emps = venteEmployes();
     if (!isset($emps[$emp])) { return ['error' => 'personne inconnue', 'code' => 404]; }
@@ -899,7 +902,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
 
     $collection = primesCollection($emp, $shop, $nomDe, $b, $pm);
 
-    $out = ['emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
+    $out = ['v' => PRIMES_FICHE_V, 'emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => $classements, 'collection' => $collection,
         'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
         'aujourdhui' => $auj, 'acquis' => $acquis, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => $b['google'], 'montants' => $montants,

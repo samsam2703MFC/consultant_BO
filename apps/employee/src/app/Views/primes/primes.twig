@@ -52,6 +52,15 @@
     <span class="pq-m">{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(0, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% if c.max and c.gain <= 0 %}<i>max</i>{% endif %}{% if c.type == 'classement' %}<small class="typ {{ c.type }}">{{ T.type_classement ?? 'Classement' }}</small>{% endif %}</span>
   </div>
   <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
+  {% if c.type == 'categorie' %}
+  {# Les catégories (16/10/2026) : pas de jauge, la quantité qu'il faut pour être 1re ; en tête, l'avance sur la 2e. #}
+  <div class="pq-g pq-q">
+    {% if c.pour1 is not null %}<b class="qn">{{ c.pour1|number_format(0, ',', ' ') }}<small>{{ pcs }}</small></b><i>{{ p.enCours ? (T.to_be_first ?? 'pour être 1re') : (T.to_be_first_past ?? 'manquaient pour la 1re') }}</i>
+    {% elseif c.avance1 is not null %}<b class="qn tete">+{{ c.avance1|number_format(0, ',', ' ') }}<small>{{ pcs }}</small></b><i>{{ T.lead_on_second ?? 'd’avance sur la 2e' }}</i>
+    {% elseif v is not null %}<b class="qn tete">👑</b><i>{{ T.first_alone ?? '1re, seule en lice' }}</i>
+    {% else %}<b class="qn">—</b>{% endif %}
+  </div>
+  {% else %}
   <div class="pq-g">
     {# La demi-jauge : le point rubis, c'est elle aujourd'hui ; le repère sombre, l'objectif à atteindre ; le pointillé, où en être au jour J. #}
     <svg class="dj" viewBox="0 12 120 62" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -64,10 +73,12 @@
     <span class="pq-v">{% if v is null %}—{% else %}{{ v|number_format(dec, ',', ' ') }}<small>{{ u == 'pct' ? '%' : (u == 'pcs' ? pcs : (u == 'note' ? '★' : (u == 'score' ? (T.score ?? 'score') : ''))) }}</small>{% endif %}
       <i>{{ enJour ? (T.day_prefix ?? 'J') ~ c.jour : (c.cle in ['objectif', 'google'] ? (T.shop_word ?? 'magasin') : (T.you_short ?? 'Toi')) }}</i></span>
   </div>
+  {% endif %}
   {# L'objectif à atteindre, en clair, avec le même repère que sur la jauge. #}
   <div class="pq-o">
     {%- if c.motif in ['pas_compte', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}<span class="mu">
       {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}</span>
+    {%- elseif c.type == 'categorie' %}{{ T.you_short ?? 'Toi' }} <b>{{ v|number_format(0, ',', ' ') }} {{ pcs }}</b>{% if c.premier is null and c.minPieces > 0 %} · min. {{ c.minPieces }}{% endif %}
     {%- elseif c.repereType == 'garder' %}<span class="lg"></span>{{ T.keep_first ?? 'Garder la 1re place' }}
     {%- elseif c.repereType %}<span class="lg"></span>{{ T.goal ?? 'Objectif' }} <b>{{ c.repereVal|number_format(c.repereType == 'seuil' ? 1 : dec, ',', ' ') }}{{ c.repereType == 'seuil' ? ' ★' : suf }}</b>{% if c.repereType == 'min' %} min.{% endif %}
     {%- endif -%}

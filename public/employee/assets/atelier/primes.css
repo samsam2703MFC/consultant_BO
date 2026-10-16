@@ -366,6 +366,14 @@ a.acc-etape{text-decoration:none;color:inherit}
 .pq-v small{font:500 clamp(10px,5cqw,13px) var(--font-ui);color:var(--la-muet);margin-left:2px}
 .pq-v i{display:block;font:600 clamp(8.5px,4cqw,10.5px) var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:2px}
 /* L'objectif en clair, avec le même repère que la jauge ; puis l'état et ce qui l'explique. */
+/* Les catégories : la quantité pour être 1re, en grand, à la place de la jauge ; en tête, l'avance sur la 2e. */
+.pq-q{flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.pq-q .qn{font:400 clamp(30px,24cqw,56px)/1 var(--font-display);color:var(--la-rubis);white-space:nowrap}
+.pq-q .qn small{font:500 clamp(10px,5cqw,13px) var(--font-ui);color:var(--la-muet);margin-left:3px}
+.pq-q .qn.tete{color:var(--la-or-encre)}
+.pq.gagne .pq-q .qn.tete{color:var(--la-ok)}
+.pq.non .pq-q .qn{color:var(--la-encre)}
+.pq-q i{display:block;font:600 clamp(8.5px,4cqw,10.5px) var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:5px}
 .pq-o{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--la-encre);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pq-o b{font-weight:700}
 .pq-o .lg{width:8px;height:8px;border-radius:50%;background:var(--la-encre);box-shadow:0 0 0 1.5px var(--la-blanc),0 0 0 2.5px var(--la-encre);flex:0 0 auto}

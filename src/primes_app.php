@@ -908,7 +908,15 @@ function primesCarteJauge(array $c): array
         $haut = max((float) ($rVal ?? 0), (float) ($v ?? 0), (float) ($c['minPieces'] ?? 0)) * 1.15;
     }
     $ok = $v !== null && $haut !== null && $haut > $bas;
-    return $c + ['jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
+    // Les catégories (16/10/2026) : pas de jauge, la quantité qu'il faut pour être 1re (« pour1 »), ou, en tête,
+    // l'avance sur la 2e (« avance1 »).
+    $pour1 = null; $avance1 = null;
+    if (($c['type'] ?? '') === 'categorie' && $v !== null) {
+        $un = $c['premier'] ?? null; $deux = $c['second'] ?? null; $min = (float) ($c['minPieces'] ?? 0);
+        if ($un !== null && $un['moi'] && $v >= $min) { $avance1 = $deux !== null ? (int) floor($v - (float) $deux['q']) : null; }
+        else { $pour1 = max(1, (int) ceil(max($un !== null && !$un['moi'] ? floor((float) $un['q']) + 1 : 1, $min) - $v)); }
+    }
+    return $c + ['pour1' => $pour1, 'avance1' => $avance1, 'jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
         'repere' => ($haut !== null && $haut > $bas && $rVal !== null) ? primesJauge($rVal, $bas, $haut) : null,
         'repereType' => $rVal !== null ? $rType : null, 'repereVal' => $rVal,
         'repereJour' => ($haut !== null && $jour !== null) ? primesJauge($jour, $bas, $haut) : null];
