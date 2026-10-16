@@ -171,7 +171,7 @@
       {% if c.jauge is not null %}<circle class="moi" cx="60" cy="20" r="6.5" transform="rotate({{ ((c.jauge - 50) * 1.8)|round(1) }} 60 68)"/>{% endif %}
     </svg>
     <span class="pq-v">{% if v is null %}—{% else %}{{ v|number_format(dec, ',', ' ') }}<small>{{ u == 'pct' ? '%' : (u == 'pcs' ? pcs : (u == 'note' ? '★' : (u == 'score' ? (T.score ?? 'score') : ''))) }}</small>{% endif %}
-      <i>{{ enJour ? (T.day_prefix ?? 'J') ~ c.jour : (c.cle in ['objectif', 'google'] ? (T.shop_word ?? 'magasin') : (T.you_short ?? 'Toi')) }}</i></span>
+      <i>{{ enJour ? (T.day_prefix ?? 'J') ~ c.jour : ((c.cle in ['objectif', 'google'] or (c.regle ?? '') == 'magasin') ? (T.shop_word ?? 'magasin') : (T.you_short ?? 'Toi')) }}</i></span>
   </div>
   {# L'objectif à atteindre, en clair, avec le même repère que sur la jauge. #}
   <div class="pq-o">
@@ -193,6 +193,8 @@
     {%- if enJour %}<span class="jr-l"></span>{{ T.day_prefix ?? 'J' }}{{ c.jour }} : {{ c.cibleJour|number_format(0, ',', ' ') }}&nbsp;%
     {%- elseif c.motif == 'heures' %}{{ T.below ?? 'sous' }} {{ c.heuresMin }}&nbsp;h
     {%- elseif c.motif == 'min_tickets' %}{{ c.minTickets }} {{ T.tickets ?? 'tickets' }} min.
+    {#- Sur objectif du magasin (16/10/2026) : la jauge est le total du magasin, sa part à elle en dessous. #}
+    {%- elseif (c.regle ?? '') == 'magasin' and (c.moiPcs ?? null) is not null %}{{ T.of_which_you ?? 'dont toi' }} {{ c.moiPcs|number_format(0, ',', ' ') }} {{ pcs }}
     {%- elseif c.repereType == 'passer' %}👑 <b>{{ c.premier.nom }}</b> {{ c.premier.q|number_format(0, ',', ' ') }}
     {%- elseif c.repereType == 'garder' %}{{ rangPre }}2{{ rangSuf }} <b>{{ c.second.nom }}</b> {{ c.second.q|number_format(0, ',', ' ') }}
     {%- elseif c.cle == 'record' and c.record is not null %}{{ T.record ?? 'record' }} {{ c.record|number_format(2, ',', ' ') }}
