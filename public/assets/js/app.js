@@ -7080,6 +7080,16 @@ class App {
     const dates = p => (p.du || p.au ? (p.du ? jj(p.du) : '…') + ' → ' + (p.au ? jj(p.au) : '…') : 'sans dates');
     const mags = p => ((p.shops || []).length ? p.shops.map(s => nomMag[s] || s).join(', ') : 'tous');
     const sorte = p => ({ xy: 'X + Y offert', quantite: 'Prix par quantité', remise: 'Remise programmée', produits: 'Produits choisis' }[p.sorte] || 'Bundle');
+    // Pourquoi aucune promotion : le compte qui les lit, et ce qu'il a reçu.
+    const PR_MOTIF = () => {
+      const er = (promos && promos.erreurs) || [];
+      const refus = er.some(x => x.code === 403);
+      if (promos && promos.compte === 'admin') {
+        return refus ? 'Le compte admin ERP n’a pas le droit de lire les promotions (403) : à ouvrir côté panel pour ce compte.'
+          : 'Le compte admin ERP n’a pas pu se connecter' + (er[0] && er[0].erreur ? ' (' + er[0].erreur + ')' : '') + ' : vérifiez-le dans Paramètres → Compte admin ERP (API TFBuddy).';
+      }
+      return 'Les promotions ne se lisent qu’avec un compte admin du panel (le compte consultant reçoit 403) : renseignez-le dans Paramètres → Compte admin ERP (API TFBuddy).';
+    };
 
     // Le brouillon : la liste des primes, et les réglages des ventes croisées (cible par défaut, par magasin, minimum de tickets).
     const app = S.prApp || JSON.parse(JSON.stringify(d.app));
@@ -7181,8 +7191,7 @@ class App {
     const W = S.prWiz;
     // L'API promotions : lue, refusée (403) ou muette.
     const PR_ERR = () => (promos === undefined ? '' : promos === null ? 'Les promotions du panel n’ont pas pu être lues.'
-      : promos.api ? '' : ((promos.erreurs || []).some(x => x.code === 403) ? 'L’API promotions du panel refuse l’accès au compte du cockpit (403). Aucune promotion ne peut être lue tant que l’accès n’est pas ouvert côté panel (bundles, buy-x-get-y, quantity, scheduled-product-discount). En attendant : « Choisir les produits ».'
-        : 'L’API promotions du panel n’a rien répondu.'));
+      : promos.api ? '' : PR_MOTIF() + ' En attendant : « Choisir les produits ».');
     const ymd = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
     const moisDe = decal => { const t = new Date(); const a = new Date(t.getFullYear(), t.getMonth() + decal, 1); const b = new Date(t.getFullYear(), t.getMonth() + decal + 1, 0); return [ymd(a), ymd(b)]; };
     const [suivDu, suivAu] = moisDe(1);
@@ -7301,8 +7310,9 @@ class App {
     common.prPromos = {
       chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : '',
       // L'API promotions du panel, et elle seule (16/10/2026) : plus de repli sur les bundles du catalogue.
-      erreur: promos && (promos.erreurs || []).length ? 'API promotions du panel : ' + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : 'injoignable')).join(' · ')
-        + (promos.api ? '' : (promos.erreurs.some(x => x.code === 403) ? ' — le compte API du cockpit n’a pas le droit de lire les promotions : à ouvrir côté panel. Aucune promotion tant que ce n’est pas fait.' : ' — aucune promotion lue.')) : '',
+      // Lues avec le compte admin ERP (16/10/2026) : les promotions ne vivent que sous /admin, le compte consultant reçoit 403.
+      erreur: promos && (promos.erreurs || []).length ? 'API promotions du panel (' + (promos.compte === 'admin' ? 'compte admin ERP' : promos.compte === 'consultant' ? 'compte consultant' : 'aucun compte') + ') : '
+        + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : (x.erreur || 'injoignable'))).join(' · ') + (promos.api ? '' : ' — ' + PR_MOTIF()) : '',
       liste: (promos ? promos.liste : []).map(p => {
         const e = prises[p.source + ':' + p.id];
         return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), magasins: mags(p),

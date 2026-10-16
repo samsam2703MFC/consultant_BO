@@ -547,13 +547,16 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   Écran : Équipe & ventes › Paramètres, un clic sur la tuile d'une prime (✕ : retour à l'emoji).
   `POST /ventes/prime-magasin` et `POST /ventes/concours` n'existent plus.
 - `GET /ventes/primes-promos[?frais=1]` : les promotions qu'une prime peut suivre, gravées une heure
-  (`primesPromos2`) : `{api, erreurs: [{chemin, code, erreur}], liste: [{source: api, sorte: bundle|xy|quantite|remise,
-  id, nom, prix, du, au, shops[], ids[], composants[], prime: {cle, actif} | null}]}`. **L'API promotions du panel,
-  et elle seule** (16/10/2026) : `/admin/promotions/bundles?active=1`, `buy-x-get-y`, `quantity`,
-  `scheduled-product-discount` (nom, dates, magasins, prix ; le produit d'un bundle est son `product_id`, sinon le
-  produit du catalogue qui porte son nom ; les autres, leurs produits). Plus de repli sur les bundles du catalogue,
-  et une prime de promo « catalogue » d'avant n'est plus gardée. **Au 16/10/2026, le compte API du cockpit reçoit
-  403 sur toutes ces routes** : `erreurs` le dit, la liste est vide, le cockpit demande d'ouvrir l'accès côté panel.
+  (`primesPromos3`) : `{api, compte: admin|consultant|null, erreurs: [{chemin, code, erreur}], liste: [{source: api,
+  sorte: bundle|xy|quantite|remise, id, nom, prix, du, au, shops[], ids[], composants[], prime: {cle, actif} | null}]}`.
+  **L'API promotions du panel, et elle seule** (16/10/2026) : `/admin/promotions/bundles`, `buy-x-get-y`, `quantity`,
+  `scheduled-product-discount`, chacune `?status=ACTIVE&limit=100` (nom, `valid_from`/`valid_to`, `shop_ids`, prix
+  `bundle_promotion.bundle_price` ; produits : `items`, `eligible_product_ids`, `reward_product_ids`,
+  `trigger/reward.product_ids` ; le produit d'un bundle est son `product_id`, sinon le produit du catalogue qui porte
+  son nom). Un brouillon (`status` ≠ ACTIVE) est écarté. Plus de repli sur les bundles du catalogue, et une prime de
+  promo « catalogue » d'avant n'est plus gardée. **Ces routes sont sous `/admin`, l'API consultant n'en a aucune** :
+  elles se lisent avec le **compte admin ERP** (`ErpApi`, `POST /admin/auth/login`, Paramètres → Compte admin ERP) ;
+  sans lui, le compte consultant en repli reçoit 403 — `compte` et `erreurs` le disent, la liste est vide.
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
