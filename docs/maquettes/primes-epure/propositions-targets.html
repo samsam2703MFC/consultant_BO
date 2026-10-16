@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Targets : propositions</title>
+<!-- Généré par propositions-targets.php. Les vrais styles de l'app ; ce qui est propre aux propositions est ici, avec les variables du design system. -->
+<link rel="stylesheet" href="/public/employee/assets/atelier/app.css">
+<link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css">
+<link rel="stylesheet" href="/public/employee/assets/atelier/marque.css">
+<link rel="stylesheet" href="/public/employee/assets/atelier/primes.css">
+<style>
+  body{margin:0}
+  .page{max-width:600px;margin:0 auto;padding:6px 14px 30px}
+  .prop-t{display:flex;align-items:baseline;gap:10px;margin:22px 4px 2px}
+  .prop-t b{font:400 26px/1 var(--font-display);color:var(--la-rubis)}
+  .prop-t h2{font:400 22px/1.1 var(--font-display);margin:0;color:var(--la-encre)}
+  .prop-d{font:500 12.5px/1.45 var(--font-ui);color:var(--la-muet);margin:4px 4px 0}
+  .prop .titre-section{margin-top:12px}
+  .ta-v small,.tf-v small,.te-v small{font:600 12px var(--font-ui);color:var(--la-muet);margin-left:3px}
+  .liste{display:flex;flex-direction:column;gap:8px}
+  .emo{width:30px;height:30px;border-radius:var(--radius-md);background:var(--la-beige-doux);display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1;flex:0 0 auto}
+  .carte{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);box-shadow:var(--la-ombre)}
+  /* La jauge commune : la piste, le remplissage, le trait d'objectif, le repère du jour J en pointillé. */
+  .jg{position:relative;height:10px;border-radius:var(--radius-pill);background:var(--la-beige)}
+  .jg > i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--radius-pill);background:var(--la-rubis)}
+  .ok .jg > i{background:var(--la-ok)}
+  .jg .ob{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--la-encre)}
+  .jg .jr{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--la-muet)}
+  .jr-l{display:inline-block;width:10px;border-top:2px dashed var(--la-muet);vertical-align:middle;margin-right:3px}
+
+  /* A */
+  .ta{padding:11px 14px 10px}
+  .ta-h{display:flex;align-items:center;gap:9px}
+  .ta-h b{flex:1;font:600 14px var(--font-ui);color:var(--la-encre)}
+  .ta-m{font:400 19px/1 var(--font-display);color:var(--la-rubis);white-space:nowrap}
+  .ta.ok .ta-m{color:var(--la-ok)}
+  .ta-b{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .ta-v{flex:0 0 64px;font:400 22px/1 var(--font-display);color:var(--la-encre);white-space:nowrap}
+  .ta-b .jg{flex:1}
+  .ta-b .ob small{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font:700 9.5px var(--font-ui);color:var(--la-encre);white-space:nowrap;margin-bottom:1px}
+  .ta-s{font:500 11px var(--font-ui);color:var(--la-muet);margin:7px 0 0 74px}
+  .ta.ok .ta-s{color:var(--la-ok);font-weight:700}
+
+  /* B */
+  .tf{padding:11px 14px 10px}
+  .tf-h{display:flex;align-items:center;gap:9px}
+  .tf-h b{flex:1;font:600 14px var(--font-ui)}
+  .tf-v{font:400 21px/1 var(--font-display);color:var(--la-rubis)}
+  .tf.ok .tf-v{color:var(--la-ok)}
+  .tf .jg{margin:30px 0 0}
+  .tf .fl{position:absolute;bottom:calc(100% + 7px);transform:translateX(-50%);font:700 11px var(--font-ui);padding:3px 8px;border-radius:var(--radius-pill);background:var(--la-encre);color:var(--la-blanc);white-space:nowrap}
+  .tf.ok .fl{background:var(--la-ok)}
+  .tf-s{display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:8px}
+  .tf.ok .tf-s span:first-child{color:var(--la-ok);font-weight:700}
+
+  /* C */
+  .tc{padding:11px 14px 10px;--c:var(--la-teinte-1);background:color-mix(in srgb,var(--c) 9%,var(--la-blanc));border-color:color-mix(in srgb,var(--c) 30%,var(--la-blanc))}
+  .tc.t2{--c:var(--la-teinte-2)}.tc.t3{--c:var(--la-teinte-3)}.tc.t5{--c:var(--la-teinte-5)}.tc.t6{--c:var(--la-teinte-6)}
+  .tc .emo{background:color-mix(in srgb,var(--c) 22%,var(--la-blanc))}
+  .tc-h{display:flex;align-items:center;gap:9px}
+  .tc-h b{flex:1;font:600 14px var(--font-ui)}
+  .tc-m{font:400 19px/1 var(--font-display);color:var(--c);white-space:nowrap}
+  .tc.ok .tc-m{color:var(--la-ok)}
+  .tc .jg{height:24px;margin-top:11px;background:color-mix(in srgb,var(--c) 16%,var(--la-blanc))}
+  .tc .jg > i{background:var(--c);display:flex;align-items:center;justify-content:flex-end;min-width:58px}
+  .tc .jg > i span{font:700 12px var(--font-ui);color:var(--la-blanc);padding-right:9px;white-space:nowrap}
+  .tc .jg .ob{top:-5px;bottom:-5px}
+  .tc-s{position:relative;display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:6px;height:14px}
+  .tc-s span:last-child{position:absolute;transform:translateX(-50%);font-weight:700;color:var(--la-encre)}
+  .tc.ok .tc-s span:first-child{color:var(--la-ok);font-weight:700}
+
+  /* D */
+  .td-liste{padding:4px 12px}
+  .td{display:grid;grid-template-columns:30px minmax(0,1fr) 34% auto;align-items:center;gap:10px;height:56px;border-bottom:.5px solid var(--la-trait)}
+  .td:last-child{border-bottom:0}
+  .td-t b{display:block;font:600 13px/1.2 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .td-t small{display:block;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:2px}
+  .td .jg{height:8px}
+  .td .jg .ob{top:-5px;bottom:-5px}
+  .td-m{font:700 12px var(--font-ui);padding:4px 8px;border-radius:var(--radius-pill);background:var(--la-beige-doux);color:var(--la-encre);white-space:nowrap}
+  .td.ok .td-m{background:var(--la-ok-doux);color:var(--la-ok)}
+
+  /* E */
+  .te{padding:11px 14px 10px}
+  .te-h{display:flex;align-items:center;gap:9px}
+  .te-h b{flex:1;font:600 14px var(--font-ui)}
+  .te-v{font:400 21px/1 var(--font-display);color:var(--la-rubis)}
+  .te.ok .te-v{color:var(--la-ok)}
+  .te .jg{height:22px;margin-top:11px;overflow:visible}
+  .te .zone{position:absolute;top:0;bottom:0;right:0;border-radius:0 var(--radius-pill) var(--radius-pill) 0;background:var(--la-ok-doux);display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font:700 11px var(--font-ui);color:var(--la-ok)}
+  .te .jg > i{background:var(--la-rubis);opacity:.9}
+  .te.ok .jg > i{background:var(--la-ok);opacity:.35}
+  .te.ok .zone{background:var(--la-ok);color:var(--la-blanc)}
+  .te .pt{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--la-blanc);border:3px solid var(--la-rubis)}
+  .te.ok .pt{border-color:var(--la-ok)}
+  .te-s{display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:7px}
+  .te.ok .te-s span:first-child{color:var(--la-ok);font-weight:700}
+</style>
+</head>
+<body>
+<div class="page">
+<section class="prop" id="prop-a">
+  <div class="prop-t"><b>A</b><h2>La ligne d’arrivée</h2></div>
+  <p class="prop-d">Une barre fine, la valeur à gauche, un trait à l’objectif. La récompense en haut à droite s’allume en vert quand le trait est passé.</p>
+  <div class="titre-section"><h2>Targets</h2><small>jusqu’à 300 €</small></div>
+  <div class="liste"><div class="carte ta ok"><div class="ta-h"><span class="emo">🛍️</span><b>Ventes croisées</b><span class="ta-m">✓ 50&nbsp;€</span></div><div class="ta-b"><span class="ta-v">56<small>%</small></span><div class="jg"><i style="width:76.4%"></i><span class="ob" style="left:75%"><small>55 %</small></span></div></div><div class="ta-s">Prime activée</div></div><div class="carte ta "><div class="ta-h"><span class="emo">🚀</span><b>Bats ton record</b><span class="ta-m">100&nbsp;€</span></div><div class="ta-b"><span class="ta-v">2,74</span><div class="jg"><i style="width:68.5%"></i><span class="ob" style="left:75%"><small>3,00</small></span></div></div><div class="ta-s">encore 0,26</div></div><div class="carte ta "><div class="ta-h"><span class="emo">🏪</span><b>Objectif magasin</b><span class="ta-m">50&nbsp;€</span></div><div class="ta-b"><span class="ta-v">55<small>%</small></span><div class="jg"><i style="width:41.3%"></i><span class="jr" style="left:39%"></span><span class="ob" style="left:75%"><small>100 %</small></span></div></div><div class="ta-s">projeté 108 % · <span class="jr-l"></span>J16 : 52&nbsp;% attendu</div></div><div class="carte ta ok"><div class="ta-h"><span class="emo">⭐</span><b>Note Google</b><span class="ta-m">✓ 25&nbsp;€</span></div><div class="ta-b"><span class="ta-v">4,6<small>★</small></span><div class="jg"><i style="width:82.5%"></i><span class="ob" style="left:75%"><small>4,5 ★</small></span></div></div><div class="ta-s">Prime activée</div></div><div class="carte ta "><div class="ta-h"><span class="emo">🏆</span><b>Meilleure vendeuse</b><span class="ta-m">75&nbsp;€</span></div><div class="ta-b"><span class="ta-v">59<small>pts</small></span><div class="jg"><i style="width:71.4%"></i><span class="ob" style="left:75%"><small>62 pts</small></span></div></div><div class="ta-s">encore 3 pts</div></div></div></section>
+<section class="prop" id="prop-b">
+  <div class="prop-t"><b>B</b><h2>Le drapeau</h2></div>
+  <p class="prop-d">La récompense est posée sur le trait d’objectif, cadenassée ; la jauge qui la dépasse la débloque.</p>
+  <div class="titre-section"><h2>Targets</h2><small>jusqu’à 300 €</small></div>
+  <div class="liste"><div class="carte tf ok"><div class="tf-h"><span class="emo">🛍️</span><b>Ventes croisées</b><span class="tf-v">56<small>%</small></span></div><div class="jg"><i style="width:76.4%"></i><span class="ob" style="left:75%"></span><span class="fl" style="left:75%">✓ 50&nbsp;€</span></div><div class="tf-s"><span>Prime activée</span><span>objectif 55 %</span></div></div><div class="carte tf "><div class="tf-h"><span class="emo">🚀</span><b>Bats ton record</b><span class="tf-v">2,74</span></div><div class="jg"><i style="width:68.5%"></i><span class="ob" style="left:75%"></span><span class="fl" style="left:75%">🔒 100&nbsp;€</span></div><div class="tf-s"><span>encore 0,26</span><span>objectif 3,00</span></div></div><div class="carte tf "><div class="tf-h"><span class="emo">🏪</span><b>Objectif magasin</b><span class="tf-v">55<small>%</small></span></div><div class="jg"><i style="width:41.3%"></i><span class="jr" style="left:39%"></span><span class="ob" style="left:75%"></span><span class="fl" style="left:75%">🔒 50&nbsp;€</span></div><div class="tf-s"><span>projeté 108 %</span><span>objectif 100 %</span></div></div><div class="carte tf ok"><div class="tf-h"><span class="emo">⭐</span><b>Note Google</b><span class="tf-v">4,6<small>★</small></span></div><div class="jg"><i style="width:82.5%"></i><span class="ob" style="left:75%"></span><span class="fl" style="left:75%">✓ 25&nbsp;€</span></div><div class="tf-s"><span>Prime activée</span><span>objectif 4,5 ★</span></div></div><div class="carte tf "><div class="tf-h"><span class="emo">🏆</span><b>Meilleure vendeuse</b><span class="tf-v">59<small>pts</small></span></div><div class="jg"><i style="width:71.4%"></i><span class="ob" style="left:75%"></span><span class="fl" style="left:75%">🔒 75&nbsp;€</span></div><div class="tf-s"><span>encore 3 pts</span><span>objectif 62 pts</span></div></div></div></section>
+<section class="prop" id="prop-c">
+  <div class="prop-t"><b>C</b><h2>Une couleur par prime</h2></div>
+  <p class="prop-d">Chaque prime a sa couleur, la barre est épaisse avec la valeur dedans, le trait d’objectif la traverse.</p>
+  <div class="titre-section"><h2>Targets</h2><small>jusqu’à 300 €</small></div>
+  <div class="liste"><div class="carte tc t1 ok"><div class="tc-h"><span class="emo">🛍️</span><b>Ventes croisées</b><span class="tc-m"><i class="bi bi-check-circle-fill"></i> 50&nbsp;€</span></div><div class="jg"><i style="width:76.4%"><span>56 %</span></i><span class="ob" style="left:75%"></span></div><div class="tc-s"><span>Prime activée</span><span style="left:75%">55 %</span></div></div><div class="carte tc t2 "><div class="tc-h"><span class="emo">🚀</span><b>Bats ton record</b><span class="tc-m">100&nbsp;€</span></div><div class="jg"><i style="width:68.5%"><span>2,74</span></i><span class="ob" style="left:75%"></span></div><div class="tc-s"><span>encore 0,26</span><span style="left:75%">3,00</span></div></div><div class="carte tc t3 "><div class="tc-h"><span class="emo">🏪</span><b>Objectif magasin</b><span class="tc-m">50&nbsp;€</span></div><div class="jg"><i style="width:41.3%"><span>55 %</span></i><span class="jr" style="left:39%"></span><span class="ob" style="left:75%"></span></div><div class="tc-s"><span>projeté 108 %</span><span style="left:75%">100 %</span></div></div><div class="carte tc t5 ok"><div class="tc-h"><span class="emo">⭐</span><b>Note Google</b><span class="tc-m"><i class="bi bi-check-circle-fill"></i> 25&nbsp;€</span></div><div class="jg"><i style="width:82.5%"><span>4,6 ★</span></i><span class="ob" style="left:75%"></span></div><div class="tc-s"><span>Prime activée</span><span style="left:75%">4,5 ★</span></div></div><div class="carte tc t6 "><div class="tc-h"><span class="emo">🏆</span><b>Meilleure vendeuse</b><span class="tc-m">75&nbsp;€</span></div><div class="jg"><i style="width:71.4%"><span>59 pts</span></i><span class="ob" style="left:75%"></span></div><div class="tc-s"><span>encore 3 pts</span><span style="left:75%">62 pts</span></div></div></div></section>
+<section class="prop" id="prop-d">
+  <div class="prop-t"><b>D</b><h2>La liste compacte</h2></div>
+  <p class="prop-d">Une ligne de 56 px par prime : le nom, la mini-jauge, la récompense. Le plus court.</p>
+  <div class="titre-section"><h2>Targets</h2><small>jusqu’à 300 €</small></div>
+  <div class="carte td-liste"><div class="td ok"><span class="emo">🛍️</span><div class="td-t"><b>Ventes croisées</b><small>56 % / 55 %</small></div><div class="jg"><i style="width:76.4%"></i><span class="ob" style="left:75%"></span></div><span class="td-m">✓ 50&nbsp;€</span></div><div class="td "><span class="emo">🚀</span><div class="td-t"><b>Bats ton record</b><small>2,74 / 3,00</small></div><div class="jg"><i style="width:68.5%"></i><span class="ob" style="left:75%"></span></div><span class="td-m">100&nbsp;€</span></div><div class="td "><span class="emo">🏪</span><div class="td-t"><b>Objectif magasin</b><small>55 % / 100 %</small></div><div class="jg"><i style="width:41.3%"></i><span class="jr" style="left:39%"></span><span class="ob" style="left:75%"></span></div><span class="td-m">50&nbsp;€</span></div><div class="td ok"><span class="emo">⭐</span><div class="td-t"><b>Note Google</b><small>4,6 ★ / 4,5 ★</small></div><div class="jg"><i style="width:82.5%"></i><span class="ob" style="left:75%"></span></div><span class="td-m">✓ 25&nbsp;€</span></div><div class="td "><span class="emo">🏆</span><div class="td-t"><b>Meilleure vendeuse</b><small>59 pts / 62 pts</small></div><div class="jg"><i style="width:71.4%"></i><span class="ob" style="left:75%"></span></div><span class="td-m">75&nbsp;€</span></div></div>
+  </section>
+<section class="prop" id="prop-e">
+  <div class="prop-t"><b>E</b><h2>La zone prime</h2></div>
+  <p class="prop-d">Après le trait, la jauge entre dans une zone verte qui porte la récompense ; y entrer active la prime.</p>
+  <div class="titre-section"><h2>Targets</h2><small>jusqu’à 300 €</small></div>
+  <div class="liste"><div class="carte te ok"><div class="te-h"><span class="emo">🛍️</span><b>Ventes croisées</b><span class="te-v">56<small>%</small></span></div><div class="jg"><span class="zone" style="left:75%">+50&nbsp;€</span><i style="width:76.4%"></i><span class="ob" style="left:75%"></span><span class="pt" style="left:76.4%"></span></div><div class="te-s"><span>✓ Prime activée</span><span>objectif 55 %</span></div></div><div class="carte te "><div class="te-h"><span class="emo">🚀</span><b>Bats ton record</b><span class="te-v">2,74</span></div><div class="jg"><span class="zone" style="left:75%">+100&nbsp;€</span><i style="width:68.5%"></i><span class="ob" style="left:75%"></span><span class="pt" style="left:68.5%"></span></div><div class="te-s"><span>encore 0,26</span><span>objectif 3,00</span></div></div><div class="carte te "><div class="te-h"><span class="emo">🏪</span><b>Objectif magasin</b><span class="te-v">55<small>%</small></span></div><div class="jg"><span class="zone" style="left:75%">+50&nbsp;€</span><i style="width:41.3%"></i><span class="jr" style="left:39%"></span><span class="ob" style="left:75%"></span><span class="pt" style="left:41.3%"></span></div><div class="te-s"><span>projeté 108 %</span><span>objectif 100 %</span></div></div><div class="carte te ok"><div class="te-h"><span class="emo">⭐</span><b>Note Google</b><span class="te-v">4,6<small>★</small></span></div><div class="jg"><span class="zone" style="left:75%">+25&nbsp;€</span><i style="width:82.5%"></i><span class="ob" style="left:75%"></span><span class="pt" style="left:82.5%"></span></div><div class="te-s"><span>✓ Prime activée</span><span>objectif 4,5 ★</span></div></div><div class="carte te "><div class="te-h"><span class="emo">🏆</span><b>Meilleure vendeuse</b><span class="te-v">59<small>pts</small></span></div><div class="jg"><span class="zone" style="left:75%">+75&nbsp;€</span><i style="width:71.4%"></i><span class="ob" style="left:75%"></span><span class="pt" style="left:71.4%"></span></div><div class="te-s"><span>encore 3 pts</span><span>objectif 62 pts</span></div></div></div></section>
+</div>
+</body>
+</html>
