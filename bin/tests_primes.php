@@ -649,5 +649,27 @@ verifie('la promo du mois prochain : sa récompense, sa règle, l’objectif de 
     && $parC['Tartes du mois prochain']['objectif'] === 90.0 && $parC['Tartes du mois prochain']['du'] === $mP . '-01' && $parC['Tartes du mois prochain']['etat'] === 'avenir');
 verifie('en jeu : la somme des récompenses prévues', $av['enJeu'] === (float) array_sum(array_column($av['cartes'], 'montant')));
 
+// --- 13. la période d'une prime (16/10/2026) ---------------------------------------------------------
+echo "La période d'une prime\n";
+primesAppMois(null, true);
+$eP = primesAppEntreeValide(['type' => 'categorie', 'lib' => 'Queen of Bûches', 'motif' => 'bûche', 'du' => '2026-12-01', 'au' => '2026-12-31'], 0, 50);
+verifie('une catégorie garde sa période', ($eP['du'] ?? null) === '2026-12-01' && ($eP['au'] ?? null) === '2026-12-31', json_encode($eP));
+verifie('des dates à l’envers se remettent dans l’ordre', (primesAppEntreeValide(['type' => 'categorie', 'lib' => 'X', 'motif' => 'x', 'du' => '2026-12-31', 'au' => '2026-12-01'], 0, 50)['du'] ?? null) === '2026-12-01');
+verifie('une promo n’a pas de période à elle (les dates de sa promotion)', !array_key_exists('du', primesAppEntreeValide(['type' => 'promo', 'promo' => ['source' => 'api', 'sorte' => 'xy', 'id' => '9', 'ids' => [1]]], 0, 50) ?? []));
+verifie('en vigueur : le mois touché, pas les autres ; sans période, toujours', primesAppEnVigueur($eP, '2026-12') && !primesAppEnVigueur($eP, '2026-11') && !primesAppEnVigueur($eP, '2027-01') && primesAppEnVigueur(['du' => null, 'au' => null], '2030-05'));
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], [['type' => 'categorie', 'lib' => 'Queen of Bûches', 'motif' => 'bûche', 'minPieces' => 5, 'montant' => 80, 'du' => '2026-12-01', 'au' => '2026-12-31']])];
+wr_primes_app();
+$cles = static fn () => array_column(concoursReglages()['liste'], 'cle');
+primesAppMois('2026-11', true); $nov = $cles();
+primesAppMois('2026-12', true); $dec = $cles();
+primesAppMois(null, true); $tout = $cles();
+verifie('la catégorie de décembre compte en décembre, pas en novembre ; les réglages la voient toujours', !in_array('queenofbuches', $nov, true) && in_array('queenofbuches', $dec, true) && in_array('queenofbuches', $tout, true), json_encode([$nov, $dec]));
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => $e['cle'] === 'croisees' ? array_merge($e, ['au' => '2026-10-31']) : $e, relire()['liste'])];
+wr_primes_app();
+primesAppMois('2026-11', true); $cN = primesAppEntree('croisees');
+primesAppMois('2026-10', true); $cO = primesAppEntree('croisees');
+primesAppMois(null, true);
+verifie('un target jusqu’au 31/10 : éteint en novembre, actif en octobre', $cN !== null && !$cN['actif'] && $cO['actif'] && relire()['liste'][0]['actif'], json_encode([$cN['actif'] ?? null, $cO['actif'] ?? null]));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
