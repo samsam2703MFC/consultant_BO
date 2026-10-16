@@ -911,6 +911,14 @@ class App {
     this.setState({ rel: { kind: 'task', id: x.t.id, projet: x.p.nom, to: x.o.nom, email: x.o.email, sujet: sub(base.sujet), corps: sub(corps) } }); }
   /* --- valeurs de rendu (port de renderVals) --------------------------------- */
   renderVals(){
+    // L'ancien écran Scoring du trimestre vit dans la fiche (B2, 16/10/2026) : le classement en est
+    // « Le réseau », l'encodage du client mystère son onglet du même nom. Un ancien lien y mène.
+    if (this.state.screen === 'scoringTri') {
+      this.state.screen = 'ficheFranchise';
+      this.state.ffOnglet = this.state.sqVue === 'msp' ? 'msp' : 'reseau';
+      const juste = this.adresseDe('ficheFranchise');
+      if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
+    }
     const S = this.state;
     if (S.gate){
       const g = S.gate;
@@ -969,7 +977,7 @@ class App {
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
       gestionConsultant: ['Gestion consultant', 'Le planning du consultant tous magasins, ses tâches de toutes sources (visites, plans d’action, panel, helpdesk, perso), le réseau consultants × magasins, et le cadre de visite : par magasin, combien de visites, de quel type, par quel profil, avec quelle checklist. Chaque type de visite porte sa checklist et ses tâches à faire ; l’agenda Google suit par flux ICS et invitations.'],
-      ficheFranchise: ['Franchisés · évaluation et suivi', 'Par franchisé : ce que les données disent chaque jour, ce que le consultant constate sur place. Une tuile se déplie sur son détail, « Tout voir » ouvre la liste complète.'],
+      ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
       remarquesOperateurs: ['Remarques aux opérateurs', 'Les remarques faites depuis la modale des invendus sur une pièce jetée pour un problème de qualité : l’opérateur qui a produit, la pièce, l’heure, le motif. Par magasin et par opérateur, pour l’entretien d’évaluation.'],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
@@ -1344,10 +1352,10 @@ class App {
       // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
       // en deux volets : ce que les données disent chaque jour, sans aller sur
       // place ; ce que le consultant constate sur place. Le scoring du
-      // trimestre est la synthèse des deux, la fiche les réunit par magasin.
+      // trimestre est la synthèse des deux : depuis le 16/10/2026 (B2), il est en tête de
+      // la fiche, et le classement du réseau en est un onglet — une seule entrée.
       ['Franchisés · évaluation et suivi', [
-        ['ficheFranchise', 'Fiche franchisé', 0],
-        ['scoringTri', 'Scoring du trimestre', 0],
+        ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
         { sub: 'Suivi journalier et opérations', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
           ['controlesQualite', 'Contrôles qualité du mois', 0],
@@ -1358,7 +1366,6 @@ class App {
         { sub: 'Suivi de terrain', children: [
           ['gestionConsultant', 'Gestion consultant', 0],
           ['ext:visites/?role=admin', 'Visites ↗', 0],
-          ['scoringTri', 'Client mystère', 0, null, { sqVue: 'msp' }],
           ['assortiment', 'Conformité du comptoir', 0]] }]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).

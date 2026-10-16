@@ -160,7 +160,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
+      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
@@ -2041,28 +2041,13 @@ function tplMesure(c, x){
 
 /* Scoring du trimestre : quatre postes de cinq points par magasin, le classement
    en étoiles, les règles, l'encodage du client mystère, le rapport A4 et son envoi. */
-function tplScoringTri(c, x){
+/** Les étoiles du scoring : le fond gris, le plein à la proportion de la note. */
+const sqSt = (pct, na, cls) => `<span class="sq-st ${cls || ''}${na ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${(pct || 0).toFixed(1)}%">★★★★★</span></span>`;
+
+/* Les règles du scoring et l’envoi du rapport A4 : sous le classement, ici comme dans la fiche (B2). */
+export function tplSqCartes(c, x){
   const { esc } = x;
-  const st = (pct, na, cls) => `<span class="sq-st ${cls || ''}${na ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${(pct || 0).toFixed(1)}%">★★★★★</span></span>`;
-  const entete = `
-    <div class="mko-hd">
-      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
-      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
-      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
-      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
-    </div>`;
-  let corps = '';
-  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
-  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
-  else if (c.sqVue === 'tableau') {
-    corps = `
-    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
-      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = la note sur 5</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
-        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
-          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée, compté${l.manque > 1 ? 's' : ''} 0</span>` : ''}</div></div></div></td>
-          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
-      </tbody></table></div>
-      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur ${c.sqReseau.magasins} magasins · ${esc(c.sqReseau.etoiles)} ★ · ${c.sqReseau.complets} noté${c.sqReseau.complets > 1 ? 's' : ''} sur les quatre postes` : ''} · un poste sans donnée compte 0, et le tableau nomme ce qui manque.</div></div>
+  return `
     <div class="cx-deux" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)">
       <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les règles — quatre postes, cinq points chacun, 20 en tout · un poste sans donnée vaut 0</span><span class="mko-mini">un trimestre se clôture le 1er jour du suivant</span></div>
         <div class="mko-corps"><div class="sq-regles">${c.sqPostes.map(p => `<div><div class="k">Poste ${p.n}</div><div class="t">${esc(p.nom)}</div><div class="r">${esc(p.regle)}</div></div>`).join('')}</div></div></div>
@@ -2075,9 +2060,13 @@ function tplScoringTri(c, x){
           ${c.sqBilan ? `<div class="sq-bilan${c.sqBilan.ko ? ' ko' : ''}"><b>${esc(c.sqBilan.txt)}</b>${c.sqBilan.lignes && c.sqBilan.lignes.length ? '<br>' + c.sqBilan.lignes.map(esc).join('<br>') : ''}</div>` : ''}
         </div></div>
     </div>`;
-  } else {
-    const F = c.sqMsp;
-    corps = `
+}
+
+/* Le client mystère : l’encodage d’un rapport, et les trimestres du magasin (B2 : aussi dans la fiche). */
+export function tplSqMsp(c, x){
+  const { esc } = x, st = sqSt;
+  const F = c.sqMsp;
+  return `
     <div class="cx-deux" style="grid-template-columns:minmax(0,1fr) 420px">
       <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le rapport reçu</span><span class="mko-mini">un rapport par magasin et par trimestre · réencoder remplace</span></div>
         <div class="mko-corps">
@@ -2097,6 +2086,33 @@ function tplScoringTri(c, x){
         <div class="mko-corps" style="padding-top:8px">${F.histChargement ? '<div class="mko-mu">Lecture…</div>' : (F.hist.length ? `<table class="mko-tab sq-hist"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${F.hist.map(h => `<tr><td>${esc(h.tri)}</td><td class="n">${esc(h.recu)}</td><td class="n"><b>${esc(h.sur5)}</b> ${st(h.pct, false, 'sm')}</td><td>${h.fichier ? `<a class="sq-lien" href="${esc(h.fichier)}" target="_blank" rel="noopener">ouvrir</a>` : '<span class="mko-mu">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="mko-mu">Aucun rapport encodé pour ce magasin.</div>')}
           <div style="margin-top:14px"><span class="mko-lab">Où ça arrive ensuite</span><ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted)"><li>le classement, poste « Client mystère », dès l’enregistrement ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
     </div>`;
+}
+
+function tplScoringTri(c, x){
+  const { esc } = x;
+  const st = sqSt;
+  const entete = `
+    <div class="mko-hd">
+      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
+      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
+      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
+      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
+    </div>`;
+  let corps = '';
+  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
+  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
+  else if (c.sqVue === 'tableau') {
+    corps = `
+    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = la note sur 5</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
+        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
+          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée, compté${l.manque > 1 ? 's' : ''} 0</span>` : ''}</div></div></div></td>
+          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur ${c.sqReseau.magasins} magasins · ${esc(c.sqReseau.etoiles)} ★ · ${c.sqReseau.complets} noté${c.sqReseau.complets > 1 ? 's' : ''} sur les quatre postes` : ''} · un poste sans donnée compte 0, et le tableau nomme ce qui manque.</div></div>
+    ${tplSqCartes(c, x)}`;
+  } else {
+    corps = tplSqMsp(c, x);
   }
   return `<div data-screen="scoring" class="mko">${entete}${corps}</div>`;
 }
