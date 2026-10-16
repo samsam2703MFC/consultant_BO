@@ -808,3 +808,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T19:46:33Z console : production, prospection, centrale d'achat, offres et canaux sortis ; export CSV prospection
 2026-10-16T20:15:03Z jours creux retiré de la console
 2026-10-16T20:34:16Z fusions : Résultat + Performance, Fiche & scoring, Marketing (hub)
+2026-10-16T20:39:10Z primes : argent ou cadeau, sponsor, fiche détaillée
