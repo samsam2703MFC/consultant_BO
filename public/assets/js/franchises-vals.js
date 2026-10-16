@@ -273,87 +273,23 @@ export function ffCharge(app, shop, force){
   app.setState({ ff: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
   readOne('/franchises/fiche?shop=' + encodeURIComponent(shop) + '&_cache=300' + (force ? '&rafraichir=1' : '')).then(d => { app._ffEnCours = null; app.setState({ ff: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
 }
-export function ffAgCharge(app, force){
-  const m0 = auj().slice(0, 7), m1 = decaleMois(m0, 1), cle = m0, b = app.state.ffAg;
-  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
-  if (app._ffAgEnCours === cle && !force) { return; }
-  app._ffAgEnCours = cle;
-  app.setState({ ffAg: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
-  const lire = m => readOne('/consultants/gestion?consultant=tous&mois=' + m + (force ? '&rafraichir=1' : '')).then(d => d && !d.error ? d : null);
-  Promise.all([lire(m0), +auj().slice(8) >= 15 ? lire(m1) : Promise.resolve(null)]).then(([a, c]) => { app._ffAgEnCours = null; app.setState({ ffAg: { cle, chargement: false, d: a ? { visites: a.visites.concat(c ? c.visites : []), lu: a.lu } : { error: 'injoignable' } } }); });
-}
-export function ffCkCharge(app, cons, shop, force){
-  const cle = (cons || '') + '|' + (shop || ''), b = app.state.ffCk;
-  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
-  if (app._ffCkEnCours === cle && !force) { return; }
-  app._ffCkEnCours = cle;
-  app.setState({ ffCk: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
-  readOne('/consultants/checklists?consultant=' + encodeURIComponent(cons || '') + '&shop=' + encodeURIComponent(shop || '') + '&_t=' + Date.now()).then(d => { app._ffCkEnCours = null; app.setState({ ffCk: { cle, chargement: false, d: d || { error: 'injoignable' } } }); });
-}
-function ffCkSauver(app, shop, ck, sel, F, panel){
-  const taches = sel.taches.filter(t => F.taches[t.id] && F.taches[t.id].etat).map(t => ({ task_id: t.id, nom: t.nom, etat: F.taches[t.id].etat, commentaire: F.taches[t.id].commentaire || '' }));
-  if (!taches.length) { app.setState({ ffCkMsg: { txt: 'Rien à enregistrer : choisissez Fait, Pas fait ou N/A pour au moins une tâche.', ko: true } }); return; }
-  const cons = (ck.consultants || []).find(c => c.id === ck.choisi) || {};
-  app.setState({ ffCkBusy: true, ffCkMsg: null });
-  app.api('POST', '/consultants/checklists', { shop, consultant: ck.choisi, consultant_nom: cons.nom || '', moi: !!ck.moi, checklist_id: sel.id, checklist_nom: sel.nom, panel: !!panel, taches, qui: 'Cockpit' }).then(r => {
-    const ok = !!(r && r.ok !== false && !r.error);
-    app.setState({ ffCkBusy: false, ffCkMsg: { ko: !ok, txt: ok ? 'Checklist enregistrée · ' + pl(r.enregistrees, 'tâche') + (r.panelEnvoyees ? ' · ' + r.panelEnvoyees + ' envoyée' + (r.panelEnvoyees > 1 ? 's' : '') + ' au panel' : '') + (r.panelRefusees ? ' · ' + r.panelRefusees + ' refusée' + (r.panelRefusees > 1 ? 's' : '') + ' par le panel' : '') : 'Enregistrement refusé : ' + ((r && r.error) || 'sans réponse') } });
-    if (ok) { ffCkCharge(app, ck.choisi, shop, true); }
-  });
-}
-export function ffMeteoCharge(app, shop, force){
-  const b = app.state.ffMeteo;
-  if (!shop) { return; }
-  if (!force && b && b.shop === shop && (b.d || b.chargement)) { return; }
-  if (app._ffMeteoEnCours === shop && !force) { return; }
-  app._ffMeteoEnCours = shop;
-  app.setState({ ffMeteo: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
-  readOne('/franchises/meteo?shop=' + encodeURIComponent(shop) + '&_t=' + Date.now()).then(d => { app._ffMeteoEnCours = null; app.setState({ ffMeteo: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
-}
-const METEO_I = { 1: '⛈️', 2: '🌧️', 3: '☁️', 4: '🌤️', 5: '☀️' };
-const METEO_L = { 1: 'orage', 2: 'pluie', 3: 'nuageux', 4: 'éclaircies', 5: 'soleil' };
-const METEO_K = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
-const METEO_T = [['envies', 'Ses envies, ses projets', 'ouvrir le dimanche, lancer les plateaux traiteur…'], ['demandes', 'Ses demandes', 'une par ligne : chacune devient une tâche'], ['inquietudes', 'Ses inquiétudes, ce qui bloque', 'personnel, travaux, trésorerie…'], ['note', 'Ce que j’en retiens', 'pour le consultant seulement']];
-const mCls = v => v == null ? 'mu' : (v >= 4 ? 'ok' : v === 3 ? 'att' : 'ko');
-function ffMeteoSauver(app, shop){
-  const F = app.state.ffMeteoForm && app.state.ffMeteoForm.shop === shop ? app.state.ffMeteoForm : { shop };
-  const dem = String(F.demandes || '').split('\n').map(x => x.trim()).filter(Boolean);
-  const rien = !METEO_K.some(([k]) => F[k]) && !dem.length && !['envies', 'inquietudes', 'note'].some(k => String(F[k] || '').trim());
-  if (rien) { app.setState({ ffMeteoMsg: { txt: 'Rien à enregistrer : choisissez une météo ou écrivez une ligne.', ko: true } }); return; }
-  app.setState({ ffMeteoBusy: true, ffMeteoMsg: null });
-  const body = { client_id: 'mt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), shop, demandes: dem, taches: F.taches !== false, qui: 'Cockpit' };
-  METEO_K.forEach(([k]) => { body[k] = F[k] || null; });
-  ['envies', 'inquietudes', 'note'].forEach(k => { body[k] = String(F[k] || ''); });
-  app.api('POST', '/franchises/meteo', body).then(r => {
-    const ok = !!(r && r.ok !== false && !r.error);
-    app.setState({ ffMeteoBusy: false, ffMeteoForm: ok ? { shop, taches: F.taches !== false } : F,
-      ffMeteoMsg: { txt: ok ? 'Météo enregistrée' + (r.taches ? ' · ' + pl(r.taches, 'tâche') + ' dans votre liste' : '') : 'Enregistrement refusé : ' + ((r && r.error) || 'sans réponse'), ko: !ok } });
-    if (ok) { ffMeteoCharge(app, shop, true); }
-  });
-}
 export function valsFF(app, common){
   const S = app.state; const auj0 = auj();
   ffTableCharge(app, false);
   const TB = S.ffTable || {}, T = TB.d && !TB.d.error ? TB.d : null;
   const mags = T ? T.magasins : app.open().map(s => ({ id: String(s.id), court: s.nom.split(' - ').pop(), nom: s.nom }));
   const shop = String(S.ffShop || (mags[0] || {}).id || '');
-  // Fiche et scoring ne font qu'une entrée (B2, 16/10/2026) : elle s'ouvre sur ce magasin, plus sur l'agenda.
-  const onglet = ({ fiche: 'sante', journal: 'sante', tableau: 'reseau', checklists: 'checklist', scoring: 'reseau' })[S.ffOnglet] || S.ffOnglet || 'sante';
-  const choisi = !!S.ffShopChoisi;
-  if (onglet === 'agenda') { ffAgCharge(app, false); }
-  if (shop) { ffCharge(app, shop, false); if (onglet === 'checklist') { ffCkCharge(app, S.ffCkCons || '', choisi ? shop : '', false); } if (onglet === 'sante' || onglet === 'meteo') { ffMeteoCharge(app, shop, false); } }
+  // Fiche et scoring ne font qu'une entrée (B2) ; la visite et le client mystère en sont sortis (16/10/2026) :
+  // deux lectures, ce magasin et le réseau. Un ancien onglet (agenda, checklist, météo, client mystère) ouvre ce magasin.
+  const onglet = ({ tableau: 'reseau', scoring: 'reseau', reseau: 'reseau' })[S.ffOnglet] || 'sante';
+  if (shop) { ffCharge(app, shop, false); }
   const B = S.ff || {}, d = B.shop === shop && B.d && !B.d.error ? B.d : null;
   const go = (screen, extra) => () => app.setState(Object.assign({ screen }, extra || {}));
-  // En tête, trois lectures : ce magasin (le scoring en bandeau, puis la santé), le réseau (classement du
-  // trimestre et benchmark dans une seule table) et le client mystère. Puis la visite, dans l'ordre.
-  const VUES = [['sante', 'Ce magasin'], ['reseau', 'Le réseau'], ['msp', 'Client mystère']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) }));
-  const ETAPES = [['agenda', 'Agenda'], ['checklist', 'Checklist'], ['meteo', 'Fin de visite · météo']].map(([v, nom], i) => ({ v, nom: (i + 1) + ' · ' + nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }), visite: true }));
-  const f = { onglet, onglets: VUES.concat(ETAPES), enVisite: ETAPES.some(e => e.on),
-    visite: () => app.setState({ ffOnglet: 'agenda' }), encoderMsp: () => app.setState({ ffOnglet: 'msp' }),
-    magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value, ffShopChoisi: true, ffCkSel: null }),
-    choisi, aChoisir: !choisi && ['checklist', 'meteo'].includes(onglet), etapes: null,
+  const VUES = [['sante', 'Ce magasin'], ['reseau', 'Le réseau']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) }));
+  const f = { onglet, onglets: VUES,
+    magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value }),
     menu: () => app.setState({ railOuvert: !S.railOuvert }),
-    rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); if (onglet === 'agenda') { ffAgCharge(app, true); } if (onglet === 'checklist') { ffCkCharge(app, S.ffCkCons || '', choisi ? shop : '', true); } ffMeteoCharge(app, shop, true); },
+    rafraichir: () => { ffTableCharge(app, true); ffCharge(app, shop, true); },
     pageFranchise: shop ? racine() + 'dashboard/suivi.html?shop=' + encodeURIComponent(shop) : '',
     shopNom: (mags.find(m => String(m.id) === shop) || {}).court || shop, tableau: null, tableauChargement: !!TB.chargement && !T,
     chargement: !!B.chargement && !d, indispo: !B.chargement && B.d && !d ? 'Lecture impossible — API injoignable.' : '', kpis: [], journalier: [], terrain: [], journal: [], sous: '' };
@@ -383,96 +319,16 @@ export function valsFF(app, common){
   const tab = (cols, rows) => '<table class="ff-tab"><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
   const mu = s => '<span class="mu">' + esc(s) + '</span>';
   const nZ = (n, u) => n ? n + ' ' + u + (n > 1 ? 's' : '') : '';
-  const FERME = { mois: 'mois', trimestre: 'trimestre' };
-  const MARK = e => e === 'ok' ? '<b class="ok">✓</b>' : e === 'ko' ? '<b class="ko">✕</b>' : e === 'na' ? '<span class="mu">n/a</span>' : '<span class="mu">·</span>';
-  // Étape suivante, étape précédente : la visite se lit dans l'ordre.
-  const iE = ETAPES.findIndex(e => e.on);
-  // L'habillage de l'application tablette (10/10/2026), comme la PWA Visites : en-tête, étape, barre du bas.
-  const NAV = { msp: ['🕵', 'Client mystère', 'Le rapport reçu, magasin par magasin et par trimestre'], agenda: ['📅', 'Agenda', 'Vos visites des 14 jours · choisissez le magasin'], checklist: ['✅', 'Checklist', 'La checklist du consultant, tâche par tâche'], sante: ['📊', 'Santé', 'CA, B2B, scoring, infractions, météo'], reseau: ['🏆', 'Réseau', 'Le magasin face au réseau'], meteo: ['☀️', 'Météo', 'Fin de visite · comment se sent le franchisé'] };
-  const JL = new Date(auj0 + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
-  f.app = { titre: choisi ? 'Visite · ' + f.shopNom : 'Visites terrain', sous: JL + (common.userNom ? ' · ' + common.userNom : ''), init: common.userInit || (common.userNom || '·').split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase(),
-    etape: { num: iE + 1, total: ETAPES.length, nom: ETAPES[iE] ? ETAPES[iE].nom.replace(/^\d+ · /, '') : '', aide: (NAV[onglet] || [])[2] || '' },
-    nav: f.onglets.map(e => ({ icone: (NAV[e.v] || ['•'])[0], nom: (NAV[e.v] || ['', e.nom])[1], on: e.on, choisir: e.choisir })) };
-  // Précédent / suivant : seulement pendant la visite — ce magasin et le réseau ne sont pas des étapes.
-  f.etapes = iE < 0 ? null : { prec: iE > 0 ? { nom: ETAPES[iE - 1].nom, aller: ETAPES[iE - 1].choisir } : null, suiv: iE < ETAPES.length - 1 ? { nom: ETAPES[iE + 1].nom, aller: ETAPES[iE + 1].choisir } : null };
-  // Le réseau et le client mystère lisent le scoring (/scoring) : le classement, ses règles, l'envoi
-  // du rapport A4, et le formulaire du client mystère — ceux de l'ancien écran Scoring du trimestre.
-  if (onglet === 'reseau' || onglet === 'msp') {
-    const sqd = (S.sq || {}).d;
-    if (onglet === 'msp') {
-      if (S.sqVue !== 'msp') { app.state.sqVue = 'msp'; }
-      if (sqd && sqd.trimestre && shop && app._ffMspPose !== shop) {
-        app._ffMspPose = shop; app.state.sqMspForm = app.sqMspForm(shop, sqd.trimestre.cle); app.sqHistCharge(shop, false);
-      }
-    } else { app._ffMspPose = null; if (S.sqVue === 'msp') { app.state.sqVue = 'tableau'; } }
-    app.valsScoring(common);
-  } else { app._ffMspPose = null; }
+  // Le réseau lit le scoring (/scoring) : le classement, ses règles et l'envoi du rapport A4.
+  if (onglet === 'reseau') { if (S.sqVue === 'msp') { app.state.sqVue = 'tableau'; } app.valsScoring(common); }
   if (onglet === 'reseau' && f.tableau) {
     const sqm = (((S.sq || {}).d) || {}).magasins || [], parId = {};
     sqm.forEach((l, i) => { parId[String(l.id)] = (common.sqLignes || [])[i] || null; });
     f.reseau = f.tableau.rows.map(r => Object.assign({}, r, { sq: parId[r.id] || null }))
       .sort((a, b) => ((a.sq ? a.sq.rang : 99) - (b.sq ? b.sq.rang : 99)) || String(a.court).localeCompare(String(b.court)));
   }
-  // 1. Agenda : les visites des 14 prochains jours, et le choix du magasin.
-  const choisirMag = (id, suite) => () => app.setState({ ffShop: String(id), ffShopChoisi: true, ffOnglet: suite || 'checklist', ffCkSel: null, ffCkMsg: null });
-  const AG = S.ffAg || {}, ag = AG.d && !AG.d.error ? AG.d : null;
-  const fin14 = plusJours(auj0, 13);
-  const vis = ag ? ag.visites.filter(v => v.statut !== 'annulee' && v.prevu_le >= auj0 && v.prevu_le <= fin14).sort((x, y) => (x.prevu_le + x.debut_h) < (y.prevu_le + y.debut_h) ? -1 : 1) : [];
-  const parJ = {}; vis.forEach(v => { (parJ[v.prevu_le] = parJ[v.prevu_le] || []).push(v); });
-  f.agenda = { chargement: !!AG.chargement && !ag, indispo: AG.d && AG.d.error ? 'L’agenda ne se lit pas.' : '',
-    jours: Object.keys(parJ).sort().map(dte => ({ lib: dte === auj0 ? 'Aujourd’hui · ' + fmtDJ(dte) : fmtDJ(dte), auj: dte === auj0,
-      visites: parJ[dte].map(v => ({ heure: v.debut_h, magasin: v.magasin || ('Magasin ' + v.shop), type: v.typeNom || '', consultant: v.consultantNom || '', statut: (ST[v.statut] || ['', ''])[0], cls: (ST[v.statut] || ['', ''])[1], mienne: !!v.mienne, choisir: choisirMag(v.shop) })) })),
-    magasins: mags.map(m => { const r = T ? T.magasins.find(x => String(x.id) === String(m.id)) : null; const t = r ? r.terrain : null;
-      return { id: m.id, court: m.court, feu: r ? r.feu : '', on: choisi && String(m.id) === shop, sous: t ? (t.derniereVisite ? 'dernière ' + fmtD(t.derniereVisite.le) : 'jamais visité') + (t.prochaineVisite ? ' · prochaine ' + fmtD(t.prochaineVisite.le) : '') : '', choisir: choisirMag(m.id) }; }),
-    planifier: go('gestionConsultant', { gcOnglet: 'planning' }) };
-  // 2. Checklist : les checklists du consultant (API du panel), puis la liste des tâches et le formulaire.
-  const CK = S.ffCk || {}, ck = CK.d && !CK.d.error && CK.cle === (S.ffCkCons || '') + '|' + (choisi ? shop : '') ? CK.d : null;
-  const SA = ck && ck.saisies ? ck.saisies : {};
-  f.ck = { chargement: !!CK.chargement && !ck, indispo: CK.d && CK.d.error ? 'La checklist ne se lit pas.' : (ck && !ck.lu ? 'Panel : ' + (ck.motif || 'sans réponse') : ''), consultants: [], liste: [], sel: null, busy: !!S.ffCkBusy, msg: S.ffCkMsg || null, source: ck && ck.lu ? 'API du panel · ' + fmtDJ(ck.date) : '' };
-  if (ck && ck.lu) {
-    f.ck.consultants = ck.consultants.map(c => ({ nom: c.nom + (c.moi ? ' · moi' : ''), sous: [c.poste, c.niveau].filter(Boolean).join(' · '), on: c.id === ck.choisi, choisir: () => app.setState({ ffCkCons: String(c.id), ffCkSel: null, ffCkMsg: null }) }));
-    const remplies = cl => cl.taches.filter(t => SA[t.id]).length;
-    f.ck.liste = ck.checklists.map(cl => ({ id: cl.id, nom: cl.nom, sous: [cl.poste, cl.heure].filter(Boolean).join(' · '), n: cl.taches.length, remplies: remplies(cl), oblig: cl.taches.filter(t => t.obligatoire).length, choisir: () => app.setState({ ffCkSel: String(cl.id), ffCkMsg: null }) }));
-    const sel = S.ffCkSel != null ? ck.checklists.find(cl => String(cl.id) === String(S.ffCkSel)) : null;
-    if (sel) {
-      const cleF = ck.choisi + '|' + shop + '|' + sel.id;
-      if (!app.state.ffCkForm || app.state.ffCkForm.cle !== cleF) { const tt = {}; sel.taches.forEach(t => { if (SA[t.id]) { tt[t.id] = { etat: SA[t.id].etat, commentaire: SA[t.id].commentaire || '' }; } }); app.state.ffCkForm = { cle: cleF, taches: tt, panel: true }; }
-      const F = app.state.ffCkForm;
-      const tF = id => (F.taches[id] = F.taches[id] || { etat: '', commentaire: '' });
-      f.ck.sel = { nom: sel.nom, description: sel.description, moi: !!ck.moi, panel: F.panel !== false, setPanel: e => { F.panel = !!e.target.checked; app.setState({}); },
-        retour: () => app.setState({ ffCkSel: null, ffCkMsg: null }), enregistrer: () => ffCkSauver(app, shop, ck, sel, F, F.panel !== false && ck.moi),
-        faites: sel.taches.filter(t => (F.taches[t.id] || {}).etat).length,
-        taches: sel.taches.map(t => { const e = (F.taches[t.id] || {}).etat || ''; const sa = SA[t.id];
-          return { id: t.id, nom: t.nom, description: t.description || t.note || '', groupe: [t.section, t.categorie, t.sousCategorie].filter(Boolean).join(' › '),
-            badges: [t.obligatoire ? 'obligatoire' : '', t.photoRequise ? 'photo requise' : '', t.priorite != null ? 'priorité ' + t.priorite : '', t.heure ? t.heure : '', t.faitPanel ? 'fait dans le panel' : ''].filter(Boolean),
-            choix: [['fait', 'Fait'], ['pas_fait', 'Pas fait'], ['na', 'N/A']].map(([v, nom]) => ({ v, nom, on: e === v, choisir: () => { tF(t.id).etat = e === v ? '' : v; app.setState({ ffCkMsg: null }); } })),
-            commentaire: (F.taches[t.id] || {}).commentaire || '', setCom: ev => { tF(t.id).commentaire = ev.target.value; },
-            deja: sa ? 'enregistrée à ' + sa.le + (sa.panel ? ' · panel ' + sa.panel : '') : '' }; }) };
-    }
-  }
-  // Onglet Météo : le formulaire, puis les météos passées.
-  const MT = S.ffMeteo || {}, mt = MT.shop === shop && MT.d && !MT.d.error ? MT.d : null;
-  const FM = S.ffMeteoForm && S.ffMeteoForm.shop === shop ? S.ffMeteoForm : { shop, taches: true };
-  const majF = patch => { app.state.ffMeteoForm = Object.assign({}, FM, app.state.ffMeteoForm && app.state.ffMeteoForm.shop === shop ? app.state.ffMeteoForm : {}, patch); };
-  f.meteo = { chargement: !!MT.chargement && !mt, busy: !!S.ffMeteoBusy, msg: S.ffMeteoMsg || null, taches: FM.taches !== false,
-    setTaches: e => { majF({ taches: !!e.target.checked }); app.setState({}); },
-    echelles: METEO_K.map(([k, nom]) => ({ nom, v: FM[k] || null, choix: [1, 2, 3, 4, 5].map(n => ({ n, icone: METEO_I[n], titre: METEO_L[n], on: FM[k] === n, choisir: () => { majF({ [k]: FM[k] === n ? null : n }); app.setState({ ffMeteoMsg: null }); } })) })),
-    textes: METEO_T.map(([k, nom, aide]) => ({ nom, aide, v: FM[k] || '', set: e => majF({ [k]: e.target.value }) })),
-    enregistrer: () => ffMeteoSauver(app, shop), derniere: null, tendance: [], historique: [], ouvertes: 0 };
-  const echTxt = m => METEO_K.map(([k, nom]) => m[k] != null ? nom.split(',')[0] + ' ' + METEO_I[m[k]] + ' ' + m[k] : '').filter(Boolean).join(' · ');
-  const meteoHtml = m => METEO_K.map(([k, nom]) => '<div class="ff-clp"><span style="width:22px">' + (m[k] != null ? METEO_I[m[k]] : '·') + '</span><span>' + esc(nom) + ' : <b>' + (m[k] != null ? m[k] + ' / 5 · ' + METEO_L[m[k]] : '—') + '</b></span></div>').join('')
-    + (m.envies ? '<div class="ff-clm"><b>Ses envies</b>' + esc(m.envies).replace(/\n/g, '<br>') + '</div>' : '')
-    + (m.demandes.length ? '<div class="ff-clm"><b>Ses demandes</b>' + m.demandes.map(x => '<div class="ff-clp">' + (x.statut === 'fait' ? '<b class="ok">✓</b>' : x.statut === 'annule' ? '<span class="mu">✕</span>' : '<b class="att">○</b>') + '<span>' + esc(x.texte) + (x.tacheId ? ' <span class="mu">· tâche ' + (x.statut === 'fait' ? 'faite' + (x.faitLe ? ' le ' + fmtD(String(x.faitLe).slice(0, 10)) : '') : x.statut === 'annule' ? 'annulée' : 'ouverte') + '</span>' : '') + '</span></div>').join('') + '</div>' : '')
-    + (m.inquietudes ? '<div class="ff-clm"><b>Ses inquiétudes</b>' + esc(m.inquietudes).replace(/\n/g, '<br>') + '</div>' : '')
-    + (m.note ? '<div class="ff-clm"><b>Ce que j’en retiens</b>' + esc(m.note).replace(/\n/g, '<br>') + '</div>' : '');
-  if (mt) {
-    f.meteo.ouvertes = mt.demandesOuvertes || 0;
-    f.meteo.derniere = mt.derniere ? { le: fmtDJ(mt.derniere.le), qui: mt.derniere.consultant || mt.derniere.creePar, cases: METEO_K.map(([k, nom]) => ({ nom, icone: mt.derniere[k] != null ? METEO_I[mt.derniere[k]] : '·', v: mt.derniere[k] != null ? mt.derniere[k] + ' / 5' : '—', cls: mCls(mt.derniere[k]) })) } : null;
-    f.meteo.tendance = METEO_K.map(([k, nom]) => ({ nom, points: (mt.tendance || []).map(x => ({ icone: x[k] != null ? METEO_I[x[k]] : '·', titre: fmtD(x.le) + (x[k] != null ? ' : ' + x[k] + ' / 5' : '') })) }));
-    f.meteo.historique = mt.meteos.map(m => TU('mt:' + m.id, fmtDJ(m.le) + (m.consultant ? ' · ' + m.consultant : ''), m.moral != null ? METEO_I[m.moral] + ' ' + m.moral + ' / 5' : '—', echTxt(m) + (m.demandes.length ? ' · ' + pl(m.demandes.length, 'demande') : ''), mCls(m.moral), meteoHtml(m)));
-  }
   if (!d) { return; }
-  const J = d.journalier, R = d.terrain, V = R.visites;
+  const J = d.journalier, R = d.terrain;
   const fe = d.feu || {};
   f.sous = 'fiche franchisé · ' + (d.magasin.ville || '') + (d.consultants.length ? ' · ' + d.consultants.map(c => c.nom + ' (' + c.types.join(', ') + ')').join(' · ') : '') + (fe.feu ? ' · feu ' + fe.feu + (fe.motifs && fe.motifs.length ? ' : ' + fe.motifs[0] : '') : '');
   const sc = R.scoring; const RV = J.revues || {}, RC = J.reclamations || {}, TA = J.taches || {}, IV = J.invendus || {}, tj = J.tachesJour || {};
@@ -503,31 +359,15 @@ export function valsFF(app, common){
       (OB.produits.length ? OB.produits.map(c => '« ' + esc(c.nom) + ' » : <b>' + (c.pct != null ? c.pct + ' %' : '—') + '</b> · ' + nf(c.vendu) + ' / ' + nf(c.objectif) + ' pièces · jusqu’au ' + fmtD(c.fin)).join('<br>') : mu('Pas d’objectif produits en cours.')) + (OB.campagnes.length ? '<br>' + OB.campagnes.map(c => 'Campagne « ' + esc(c.nom) + ' » : <b>' + nf(c.reel) + '</b> clients' + (c.clientsPrevus != null ? ' / ' + nf(c.clientsPrevus) : '') + (c.n1Ecoule != null ? ' · N−1 ' + nf(c.n1Ecoule) : '') + (c.jourCourant ? ' · jour ' + c.jourCourant + ' / ' + c.nbJours : '')).join('<br>') : ''),
       { lien: go('mktObjectifs'), lienTxt: 'Objectifs' }),
     TU('remarques', 'Remarques · 30 j', String(J.remarques.n || 0), J.remarques.n ? J.remarques.parOperateur.map(o => o.employe + ' ' + o.n).join(' · ') : 'aucune', J.remarques.n ? 'att' : 'ok',
-      J.remarques.n ? '<span class="mu">' + J.remarques.dernieres.map(r => fmtD(r.le) + ' ' + esc(r.employe) + ' — ' + esc(r.produit) + (r.motifLib ? ' · ' + esc(r.motifLib) : '') + (r.texte ? ' : ' + esc(r.texte) : '')).join('<br>') + '</span>' : mu('Aucune remarque sur 30 jours.'),
-      { lien: go('remarquesOperateurs', { roShop: shop }), lienTxt: 'Remarques aux opérateurs' }),
+      J.remarques.n ? '<span class="mu">' + J.remarques.dernieres.map(r => fmtD(r.le) + ' ' + esc(r.employe) + ' — ' + esc(r.produit) + (r.motifLib ? ' · ' + esc(r.motifLib) : '') + (r.texte ? ' : ' + esc(r.texte) : '')).join('<br>') + '</span>' : mu('Aucune remarque sur 30 jours.')),
     TU('google', 'Note Google', J.google && J.google.note != null ? nf(J.google.note, 1) : '—', J.google && J.google.note != null ? nf(J.google.avis) + ' avis · ' + (J.google.faibles ? J.google.faibles + ' ≤ 2 sur 30 j' : 'aucun avis faible') + (J.google.cible ? ' · cible ' + nf(J.google.cible, 1) : '') : 'pas de fiche reliée', J.google && J.google.note != null ? (J.google.faibles || (J.google.cible && J.google.note < J.google.cible) ? 'att' : 'ok') : 'mu',
       J.google && (J.google.derniers || []).length ? '<span class="mu">' + J.google.derniers.slice(0, 5).map(a => fmtD(a.le) + ' ' + a.note + '/5' + (a.extrait ? ' « ' + esc(a.extrait) + ' »' : '')).join('<br>') + '</span>' : mu('Pas d’avis récent.'),
       { lien: go('reputation'), lienTxt: 'Note Google et avis' }),
     TU('ca', 'CA semaine', J.ca ? nf(J.ca.ca) + ' €' : '—', J.ca ? ((J.ca.objectif ? 'objectif ' + nf(J.ca.objectif) + ' €' : '') + (J.ca.pct != null ? ' · ' + (J.ca.pct >= 0 ? '+ ' : '− ') + Math.abs(J.ca.pct) + ' %' : '')) : 'ne se lit pas', J.ca && J.ca.pct != null ? (J.ca.pct < -10 ? 'ko' : J.ca.pct < 0 ? 'att' : 'ok') : 'mu',
       J.ca ? pl(J.ca.jours, 'jour') + ' vu' + (J.ca.jours > 1 ? 's' : '') + ' cette semaine. ' + mu('Le poste Budget du scoring lit le CA du trimestre face au budget.') : mu('Le CA de la semaine ne se lit pas.'),
       { lien: go('resultatJour'), lienTxt: 'Résultat' })];
-  const der = V.derniere; const pls = R.plans.filter(p => /^(ouvert|reprendre|escalade|attente)$/.test(p.statut)); const fermes = R.plans.filter(p => p.statut === 'ferme' || p.statut === 'valide');
-  const msp = R.msp; const conf = R.conformite || {}; const plano = conf.planogramme || {}; const asso = conf.assortiment || {};
-  const nP = p => pls.filter(x => x.priorite === p).length; const pr0 = V.prochaines[0];
-  const PRI = p => '<span class="gc-st ' + (p.priorite === 'P0' ? 'p0' : p.priorite === 'P1' ? 'att' : 'm') + '">' + p.priorite + '</span>';
+  const conf = R.conformite || {}; const plano = conf.planogramme || {}; const asso = conf.assortiment || {};
   f.terrain = [
-    TU('visite', 'Dernière visite', der ? (der.points.total ? der.points.ok + ' / ' + der.points.total : fmtD(der.prevu_le)) : '—', der ? fmtD(der.prevu_le) + ' · ' + der.typeNom + ' · ' + der.consultantNom : 'aucune visite terminée', der ? (der.points.ko ? 'ko' : 'ok') : 'mu',
-      der ? (der.points.ko ? '<b class="ko">' + der.points.ko + ' non conforme' + (der.points.ko > 1 ? 's' : '') + '</b> : ' + der.ecarts.map(e => esc(e.libelle) + (e.valeur != null ? ' ' + e.valeur + ' %' : e.note != null ? ' ' + e.note + '/5' : '') + (e.commentaire ? ' (' + esc(e.commentaire) + ')' : '')).join(', ') : '<span class="ok">Rien de non conforme.</span>') + (der.reco ? '<br>' + mu('Recommandation : ' + der.reco) : '') + (der.diagnostic ? '<br>' + mu('Diagnostic : ' + der.diagnostic) : '') : mu('Aucune visite terminée.'),
-      { href: racine() + 'visites/?role=admin#historique/' + shop, lienTxt: 'Visites' }),
-    TU('plans', 'Plans d’action', String(pls.length), pls.length ? [nZ(nP('P0'), 'P0'), nZ(nP('P1'), 'P1'), nZ(nP('P2'), 'P2')].filter(Boolean).join(' · ') : 'aucun ouvert', nP('P0') ? 'ko' : (pls.length ? 'att' : 'ok'),
-      (pls.length ? pls.map(p => PRI(p) + ' ' + esc(p.titre) + ' — ' + (PLAN_ST[p.statut] || p.statut) + (p.echeance ? ', échéance ' + fmtD(p.echeance) : '') + (p.retard ? ' · <b class="ko">retard ' + p.retard + ' j</b>' : '') + ' · ' + (ASSIGNES[p.assigne] || '')).join('<br>') : mu('Aucun plan ouvert.')) + (fermes.length ? '<br>' + mu(fermes.length + ' fermé(s) ou validé(s) sur 90 jours') : ''),
-      { modal: R.plans.length ? M('Les plans d’action · 90 jours', tab(['Priorité', 'Plan', 'Statut', 'Échéance', 'Retard', 'Assigné'], R.plans.map(p => [PRI(p), '<b>' + esc(p.titre) + '</b>' + (p.detail ? '<br><span class="mu">' + esc(p.detail) + '</span>' : ''), esc(PLAN_ST[p.statut] || p.statut), p.echeance ? fmtDJ(p.echeance) : '—', p.retard ? '<b class="ko">' + p.retard + ' j</b>' : '—', esc(ASSIGNES[p.assigne] || '')]))) : null, href: racine() + 'visites/?role=admin', lienTxt: 'Plans d’action' }),
-    TU('prochaine', 'Prochaine visite', pr0 ? fmtD(pr0.prevu_le) : '—', pr0 ? pr0.typeNom + ' · ' + pr0.consultantNom + ' · ' + pr0.debut_h : (R.cadre.length ? 'à planifier d’après le cadre' : 'aucun cadre réglé'), pr0 ? '' : (R.cadre.length ? 'att' : 'mu'),
-      (V.prochaines.length ? V.prochaines.map(v => fmtDJ(v.prevu_le) + ' ' + v.debut_h + ' · <b>' + esc(v.typeNom) + '</b> · ' + esc(v.consultantNom) + ' · ' + (ST[v.statut] || ['', ''])[0]).join('<br>') : mu('Rien de planifié.')) + '<br>' + (R.cadre.length ? mu('Cadre du mois : ' + R.cadre.map(l => l.typeNom + ' ' + l.faites + ' faite(s) + ' + l.planifiees + ' planifiée(s) / ' + l.attendu + (l.aPlanifier ? ' · ' + l.aPlanifier + ' à planifier' : '') + (l.consultantNom ? ' (' + l.consultantNom + ')' : '')).join(' · ')) : mu('Aucune ligne de cadre pour ce magasin.')) + '<br>' + mu('Ce mois : ' + V.mois.faites + ' faite(s), ' + V.mois.planifiees + ' planifiée(s).'),
-      { lien: go('gestionConsultant', { gcOnglet: 'planning' }), lienTxt: 'Gestion consultant' }),
-    TU('msp', 'Client mystère', msp ? nf(msp.obtenu) + ' / ' + nf(msp.maximum) : '—', msp ? msp.trimestre.replace(/^\d{4}-/, '') + (msp.v != null ? ' · ' + nf(msp.v, 1) + ' / 5' : '') + (msp.le ? ' · le ' + fmtD(msp.le) : '') : 'pas de rapport encodé', msp && msp.v != null ? (msp.v >= 4 ? 'ok' : msp.v >= 3 ? 'att' : 'ko') : 'mu',
-      msp ? (((Object.keys(msp.rubriques || {}).length ? Object.keys(msp.rubriques).map(k => esc(k) + ' <b>' + esc(msp.rubriques[k]) + '</b>').join(' · ') : '') + (msp.commentaire ? '<br>' + mu('« ' + msp.commentaire + ' »') : '')) || mu('Sans rubrique ni commentaire.')) : mu('Pas de rapport encodé au scoring.'),
-      { lien: () => app.setState({ ffOnglet: 'msp' }), lienTxt: 'Client mystère' }),
     TU('comptoir', 'Comptoir', plano.pct != null ? plano.pct + ' %' : '—', (plano.pct != null ? 'planogramme tenu' : (plano.motif || conf.motif || 'planogramme non lu')) + (asso.obligatoires != null && !asso.motif ? ' · obligatoires ' + asso.presentes + ' / ' + asso.obligatoires : ''), plano.pct != null ? ((asso.manquantes || plano.pct < 80) ? 'att' : 'ok') : 'mu',
       (plano.pct != null ? 'Planogramme : <b>' + plano.pct + ' %</b>' + (plano.tenus != null ? ' (' + plano.tenus + ' / ' + plano.emplacements + ' emplacements)' : '') + (plano.comptoirsMontes != null ? ' · ' + plano.comptoirsMontes + ' comptoir(s) photographié(s) aujourd’hui' : '') : mu('Planogramme : ' + (plano.motif || conf.motif || 'non lu'))) + '<br>' + (asso.obligatoires != null && !asso.motif ? 'Obligatoires vues en caisse sur ' + (asso.jours || 30) + ' j : <b>' + asso.presentes + ' / ' + asso.obligatoires + '</b>' + (asso.manquantes ? ' · <b class="ko">' + pl(asso.manquantes, 'manquante') + '</b>' + ((asso.liste || []).length ? ' : ' + asso.liste.filter(l => l.manquante !== false).slice(0, 6).map(l => esc(l.nom)).join(', ') : '') : ' · toutes passées en caisse') : mu('Assortiment : ' + (asso.motif || 'non lu'))) + (R.plano ? '<br>' + mu('À la dernière visite : planogramme ' + R.plano.pct + ' % le ' + fmtD(R.plano.le)) : ''),
       { lien: go('assortiment'), lienTxt: 'Conformité du comptoir' }),
@@ -544,7 +384,6 @@ export function valsFF(app, common){
   const joursM = (MO.jours || []).filter(x => x.passe && !x.ferme);
   const maxJ = Math.max(1, ...joursM.map(x => Math.max(+x.ca || 0, +x.objectif || 0)));
   const barres = joursM.length ? '<div class="ff-bars">' + joursM.map(x => '<i title="' + esc(x.court) + ' : ' + nf(x.ca) + ' €' + (x.objectif != null ? ' / ' + nf(x.objectif) + ' €' : '') + '"><b class="' + (x.objectif != null && x.ca != null && x.ca < x.objectif ? 'ko' : 'ok') + '" style="height:' + Math.round(100 * (+x.ca || 0) / maxJ) + '%"></b>' + (x.objectif != null ? '<u style="bottom:' + Math.round(100 * x.objectif / maxJ) + '%"></u>' : '') + '</i>').join('') + '</div><div class="gc-leg" style="margin-top:2px"><span><i style="background:#8FBF98"></i>CA du jour</span><span><i style="background:#D98C8C"></i>sous le budget</span><span><i style="background:#333"></i>budget du jour</span></div>' : '';
-  const MT2 = mt && mt.derniere ? mt.derniere : null;
   f.sante = [
     TU('mois', 'CA du mois / budget', MO.lu ? (MO.atteinte != null ? nf(MO.atteinte) + ' %' : nf(MO.ca) + ' €') : '—', MO.lu ? nf(MO.ca) + ' €' + (MO.attendu != null ? ' sur ' + nf(MO.attendu) + ' € attendus à date' : ' · pas de budget') : (MO.motif || ''), MO.lu && MO.atteinte != null ? (MO.atteinte >= 100 ? 'ok' : MO.atteinte >= 90 ? 'att' : 'ko') : 'mu',
       MO.lu ? (MO.budget != null ? 'Budget du mois : <b>' + nf(MO.budget) + ' €</b>' + (MO.ecart != null ? ' · écart à date <b class="' + (MO.ecart < 0 ? 'ko' : 'ok') + '">' + (MO.ecart >= 0 ? '+ ' : '− ') + nf(Math.abs(MO.ecart)) + ' €</b>' : '') : mu('Aucun budget encodé pour ce mois.')) + (MO.tickets ? '<br>' + nf(MO.tickets) + ' tickets · panier ' + nf(MO.panier, 2) + ' €' : '') + barres : mu(MO.motif || 'le résultat du mois ne se lit pas'),
@@ -556,9 +395,7 @@ export function valsFF(app, common){
     TU('scTaches', 'Scoring tâches', pv('taches') != null ? nf(pv('taches'), 1) + ' / 5' : '—', (TA.pct != null ? TA.pct + ' % faites' : (TA.motif || 'pas de relevé')) + (RV.lu && RV.moyenne != null ? ' · points moyens ' + nf(RV.moyenne, 1) : ''), c5(pv('taches')),
       (TA.pct != null ? 'Faites sur 30 jours : <b>' + TA.rendues + ' / ' + TA.attendues + '</b>' + (TA.joursObligManques ? ' · <b class="ko">obligatoire manquée ' + nZ(TA.joursObligManques, 'jour') + '</b>' : ' · obligatoires tenues') : '') + (RV.lu && RV.notees ? '<div class="ff-rep" style="margin-top:6px">' + (RV.parNote || []).map(p => '<div><span>' + p.note + ' ★ ' + esc(p.nom) + '</span><i><b style="width:' + Math.round(100 * p.n / RV.notees) + '%"></b></i><span>' + p.n + '</span></div>').join('') + '</div>' : ''),
       { lien: go('suivi'), lienTxt: 'Contrôle des tâches' }),
-    tInf && Object.assign(tInf, { lab: 'Infractions mineures · 30 j', v: RV.lu ? String(RV.mineures || 0) : '—', sous: RV.lu ? ([nZ(RV.majeures, 'majeure'), nZ(RV.critiques, 'critique')].filter(Boolean).join(' · ') || (RV.nc ? 'aucune majeure' : 'aucune infraction')) : (RV.motif || ''), cls: RV.lu ? ((RV.majeures || RV.critiques) ? 'ko' : (RV.mineures ? 'att' : 'ok')) : 'mu' }),
-    TU('meteo', 'Météo du franchisé', MT2 && MT2.moral != null ? METEO_I[MT2.moral] + ' ' + MT2.moral + ' / 5' : '—', MT2 ? 'le ' + fmtD(MT2.le) + (mt.demandesOuvertes ? ' · ' + pl(mt.demandesOuvertes, 'demande') + ' ouverte' + (mt.demandesOuvertes > 1 ? 's' : '') : '') : (mt ? 'pas encore relevée' : 'lecture…'), MT2 ? mCls(MT2.moral) : 'mu',
-      MT2 ? meteoHtml(MT2) : mu('Aucune météo relevée pour ce franchisé.'), { lien: () => app.setState({ ffOnglet: 'meteo' }), lienTxt: MT2 ? 'Nouvelle météo' : 'Relever la météo' })].filter(Boolean);
+    tInf && Object.assign(tInf, { lab: 'Infractions mineures · 30 j', v: RV.lu ? String(RV.mineures || 0) : '—', sous: RV.lu ? ([nZ(RV.majeures, 'majeure'), nZ(RV.critiques, 'critique')].filter(Boolean).join(' · ') || (RV.nc ? 'aucune majeure' : 'aucune infraction')) : (RV.motif || ''), cls: RV.lu ? ((RV.majeures || RV.critiques) ? 'ko' : (RV.mineures ? 'att' : 'ok')) : 'mu' })].filter(Boolean);
   f.journal = (d.journal || []).map(e => ({ le: fmtD(e.le), volet: e.volet, texte: e.texte }));
   // Le bandeau du scoring (B2) : la note du trimestre en tête de la fiche, ses quatre postes, le rang.
   const nfS = (n, dd) => n == null ? '—' : nf(n, dd == null ? 1 : dd);
@@ -570,47 +407,11 @@ export function valsFF(app, common){
     deltaCls: sc.delta == null ? 'mu' : (sc.delta >= 0.05 ? 'ok' : (sc.delta <= -0.05 ? 'ko' : 'mu')),
     postes: Object.keys(sc.postes || {}).map(k => { const x = sc.postes[k] || {}; return { nom: (sc.noms && sc.noms[k]) || k, v: x.v == null ? '—' : nf(x.v, 1), na: x.v == null,
       pct: x.v == null ? 0 : x.v / 5 * 100, d: app.sqDetail(k, x, nfS), alerte: k === 'taches' && x.joursZero ? pl(x.joursZero, 'jour') + ' à 0 — obligatoire manquée' : '',
-      encoder: k === 'msp' ? () => app.setState({ ffOnglet: 'msp' }) : null }; }),
+      // Le client mystère s'encode dans Paramètres (16/10/2026) : le lien y mène, ce magasin choisi.
+      encoder: k === 'msp' ? () => { if (sc.trimestre && sc.trimestre.cle) { app.sqMspOuvrir(shop, sc.trimestre.cle); } app.setState({ screen: 'clientMystere' }); } : null }; }),
     rapport: sc.trimestre && sc.trimestre.cle ? API_BASE + '/scoring/rapport?trimestre=' + encodeURIComponent(sc.trimestre.cle) : '' } : null;
 }
 
-/* --- Remarques aux opérateurs ---------------------------------------------------------- */
-export function roCharge(app, shop, periode, force){
-  const b = app.state.ro; const cle = shop + '|' + periode;
-  if (!shop) { return; }
-  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
-  if (app._roEnCours === cle && !force) { return; }
-  app._roEnCours = cle;
-  app.setState({ ro: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
-  const du = plusJours(auj(), -(+periode - 1));
-  readOne('/equipe/remarques?shop=' + encodeURIComponent(shop) + '&du=' + du + '&au=' + auj()).then(d => { app._roEnCours = null; app.setState({ ro: { cle, chargement: false, d: d || { error: 'injoignable' } } }); });
-}
-export function valsRO(app, common){
-  const S = app.state;
-  const mags = app.open().map(s => ({ id: String(s.id), court: s.nom.split(' - ').pop() }));
-  const shop = String(S.roShop || (mags[0] || {}).id || '');
-  const periode = String(S.roPeriode || '90');
-  roCharge(app, shop, periode, false);
-  const b = S.ro || {}, d = b.d && !b.d.error ? b.d : null;
-  const op = S.roOp || '';
-  const r = { magasins: mags.map(m => ({ v: m.id, nom: m.court, on: m.id === shop })), setShop: e => app.setState({ roShop: e.target.value, roOp: '' }),
-    periodes: [['30', '30 jours'], ['90', '90 jours'], ['365', '12 mois']].map(([v, nom]) => ({ v, nom, on: periode === v })), setPeriode: e => app.setState({ roPeriode: e.target.value }),
-    operateurs: [], rafraichir: () => roCharge(app, shop, periode, true), chargement: !!b.chargement && !d, indispo: !b.chargement && b.d && !d ? 'Lecture impossible — API injoignable.' : '', kpis: [], lignes: [], parOperateur: [], titre: '', mini: '' };
-  common.ro = r;
-  if (!d) { return; }
-  const tout = d.remarques || [];
-  r.operateurs = [{ nom: 'Tous', on: op === '', n: tout.length, choisir: () => app.setState({ roOp: '' }) }].concat((d.parOperateur || []).map(o => ({ nom: o.employe, n: o.n, on: op === o.employe, choisir: () => app.setState({ roOp: o.employe }) })));
-  const liste = tout.filter(x => !op || x.employe === op);
-  const parMotif = {}; liste.forEach(x => { const k = x.motifLib || x.motif || '—'; parMotif[k] = (parMotif[k] || 0) + 1; });
-  const motifs = Object.keys(parMotif).sort((a, c) => parMotif[c] - parMotif[a]);
-  r.kpis = [['Remarques', String(liste.length), 'sur ' + periode + ' jours' + (op ? ' · ' + op : '')], ['Opérateurs concernés', String(new Set(liste.map(x => x.employe)).size), (d.parOperateur || []).slice(0, 3).map(o => o.employe + ' ' + o.n).join(' · ')],
-    ['Pièces en cause', nf(liste.reduce((a, x) => a + (x.pieces || 0), 0)), 'jetées pour qualité ou casse'], ['Motif principal', motifs[0] || '—', motifs.slice(0, 3).map(m => m + ' ' + parMotif[m]).join(' · ')]];
-  r.titre = 'Les remarques' + (op ? ' — ' + op : '') + ' · ' + ((mags.find(m => m.id === shop) || {}).court || shop);
-  r.mini = 'du ' + fmtD(d.du || '') + ' au ' + fmtD(d.au || '') + ' · pour l’entretien d’évaluation';
-  r.lignes = liste.map(x => ({ le: fmtD(x.le), heure: x.heure || '', employe: x.employe, produit: x.produit, pieces: x.pieces != null ? nf(x.pieces, x.pieces % 1 ? 1 : 0) : '—', motif: x.motifLib || x.motif || '', texte: x.texte || '', auteur: x.auteur || '' }));
-  const max = Math.max(1, ...(d.parOperateur || []).map(o => o.n));
-  r.parOperateur = (d.parOperateur || []).map(o => ({ nom: o.employe, pct: Math.round(100 * o.n / max), txt: pl(o.n, 'remarque') + ' · dernière ' + fmtD(o.derniere) }));
-}
 
 /* --- Contrôles qualité du mois (12/10/2026) ------------------------------------------------
  * Tous les contrôles photo du mois, magasin par magasin, une ligne chacun, avec le badge de sa note
