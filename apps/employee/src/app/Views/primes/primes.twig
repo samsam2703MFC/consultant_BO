@@ -158,7 +158,8 @@
 <div class="pq {{ c.etat == 'gagne' ? 'gagne' : (c.etat == 'tete' ? 'tete' : 'non') }}" data-carte="{{ c.cle }}">
   <div class="pq-h">
     <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
-    <span class="pq-m">{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(0, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% if c.max and c.gain <= 0 %}<i>max</i>{% endif %}{% if c.type == 'classement' %}<small class="typ {{ c.type }}">{{ T.type_classement ?? 'Classement' }}</small>{% endif %}</span>
+    {#- Une prime du magasin (16/10/2026) : sa somme, « magasin » ; gagnée, sa part (au centime). #}
+    <span class="pq-m">{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(c.gain == c.gain|round ? 0 : 2, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% if c.max and c.gain <= 0 %}<i>max</i>{% endif %}{% if (c.regle ?? '') == 'magasin' and not (c.gain > 0 and c.etat == 'gagne') %}<i>{{ T.shop_word ?? 'magasin' }}</i>{% endif %}{% if c.type == 'classement' %}<small class="typ {{ c.type }}">{{ T.type_classement ?? 'Classement' }}</small>{% endif %}</span>
   </div>
   <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
   <div class="pq-g">
