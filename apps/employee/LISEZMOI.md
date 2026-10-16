@@ -87,7 +87,10 @@ Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
   aujourd'hui ; ses lignes par ticket, son record et son mois ; le CA du magasin, le jour J, la fin de mois au
   rythme actuel, chaque palier, ses heures ; la note et les avis ; son score, sa place, la 1re, son CA par heure)
   et la règle, plus « Voir le classement » quand il y en a un ;
-- les **catégories** sont aussi **une par ligne, en drapeau** (16/10/2026, maquette A de
+- les **catégories** : leur section est **retirée de la page** depuis le 16/10/2026 (à la demande) ; leurs
+  classements restent dans le **Classement** en bas de page (le menu qui monte du bas). Le code des lignes reste
+  prêt (l'entrée `categories` des `groupes` de primes.twig, en commentaire). Quand elle était affichée, chacune était
+  **une par ligne, en drapeau** (16/10/2026, maquette A de
   `propositions-categories-barre.html`) : ses pièces en haut à droite ; le trait, c'est ce qu'il lui faut pour être
   1re (la 1re + 1 pièce, le minimum compris) — ou, quand elle mène, la 2e à garder derrière ; dessous sa place et ce
   qui lui manque (« 2e / 6 · encore 10 pcs pour être 1re », « 👑 1re / 4 · +3 pcs d'avance ») et la 1re (ou la 2e).
