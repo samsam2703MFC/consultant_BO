@@ -5596,9 +5596,7 @@ class App {
     });
   }
   /* La carte des sources : d'où vient ce que chaque écran affiche. Établie
-   * chaque nuit dans le code — une liste tenue à la main mentirait.
-   * Le nom ne peut pas commencer par « ca » : la Centrale d'achat a déjà son
-   * caCharge(), et la dernière définition d'une classe écrase la première. */
+   * chaque nuit dans le code — une liste tenue à la main mentirait. */
   carteCharge(){
     if (this._carteEnCours || this.D.carte) { return; }
     this._carteEnCours = true;
