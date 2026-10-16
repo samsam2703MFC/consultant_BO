@@ -123,7 +123,6 @@ export function render(c, x){
         </div>`).join('')}
       </div>` : ''}
       ${c.isCat ? tplReferentiel(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
-      ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
       ${c.isCentrale ? tplCentrale(c, x) : ''}
@@ -131,7 +130,7 @@ export function render(c, x){
       ${c.isSeuil ? tplSeuil(c, x) : ''}
       ${c.isUsage ? tplUsage(c, x) : ''}
       ${c.isManque ? tplManque(c, x) : ''}
-      ${c.isAnm ? tplAnm(c, x) : ''}${c.isPxv ? tplPxv(c, x) : ''}
+      ${c.isPxv ? tplPxv(c, x) : ''}
       ${c.isVentes ? tplVentes(c, x) : ''}
       ${c.isCrois ? tplCrois(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
@@ -140,20 +139,16 @@ export function render(c, x){
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
-      ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isPerf ? tplPerformance(c, x) : ''}
       ${c.isMagasins && !c.isPerf ? tplMagasins(c, x) : ''}
-      ${c.isHeatmap ? tplHeatmap(c, x) : ''}
       ${c.isObjectifs && !c.isPerf ? tplObjectifs(c, x) : ''}
       ${c.isBudget ? tplBudget(c, x) : ''}
       ${c.isMarge && !c.isPerf ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isPlan ? tplPlan(c, x) : ''}
-      ${c.isDemarchage ? tplDemarchage(c, x) : ''}
       ${c.isNewsletter || c.isNewsletterShop ? tplNewsletter(c, x) : ''}
       ${c.isProspection ? tplProspection(c, x) : ''}
-      ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
@@ -166,7 +161,6 @@ export function render(c, x){
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
       ${c.isKpiT ? tplKpiT(c, x) : ''}
-      ${c.isTaches ? tplTaches(c, x) : ''}
       ${c.isPosts ? tplPosts(c, x) : ''}
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isOffres ? tplOffres(c, x) : ''}
@@ -236,134 +230,6 @@ function opts(list, val, getV, getN){
 }
 
 /* --- Tableau des magasins --------------------------------------------------- */
-/* Exploitation — une carte par magasin, avec le budget en regard du réel.
-   Le graphique bascule entre mensuel et cumulé pour TOUTES les cartes à la
-   fois : deux cartes réglées différemment se compareraient à leur insu. */
-function tplExploitation(c, x){
-  const { esc } = x;
-  const carte = m => `
-    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:9px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div>
-          <button ${x.A(m.ouvrir)} title="Ouvrir le P&amp;L détaillé" style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-weight:500;font-size:13.5px;color:var(--color-text);text-align:left" class="hv-line">${esc(m.magasin)}</button>
-          <div style="font-size:11.5px;color:var(--color-text-muted)">objectif du mois ${esc(m.objMois)}</div>
-        </div>
-        <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;white-space:nowrap;${m.att.st}">${esc(m.att.txt)}</span>
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:16px">
-        <div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">CA du jour</div>
-          <div style="font-family:var(--font-display);font-size:27px;line-height:1">${esc(m.jourCa)}</div>
-        </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);padding-bottom:3px">
-          ${esc(m.jourClients)} clients<br>panier ${esc(m.jourPanier)}
-        </div>
-      </div>
-      <div style="display:flex;gap:14px">
-        <div style="flex:1">
-          <div style="font-size:10.5px;color:var(--color-text-muted)">Semaine</div>
-          <div style="font-weight:500">${esc(m.semCa)}</div>
-          <div style="height:6px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${m.semJauge.w};background:${m.semJauge.c}"></i></div>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:10.5px;color:var(--color-text-muted)">Mois</div>
-          <div style="font-weight:500">${esc(m.moisCa)}</div>
-          <div style="height:6px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${m.moisJauge.w};background:${m.moisJauge.c}"></i></div>
-        </div>
-      </div>
-      <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:9px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:3px">
-          Budget vs réel — exercice ${esc(String(m.exercice))}${c.exCumul ? ' · cumulé' : ''}
-        </div>
-        ${m.gVide ? `<div style="padding:22px 0;text-align:center;font-size:11.5px;color:var(--color-text-muted)">aucun historique mensuel</div>` : `
-        <svg viewBox="0 0 ${m.gW} ${m.gH}" style="width:100%;height:auto;display:block">
-          ${m.gGrille.map(g => `<line x1="0" x2="${g.w}" y1="${g.y}" y2="${g.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.6"/>`).join('')}
-          ${m.gCourbe ? `
-            <line x1="0" x2="${m.gW}" y1="${m.gBase}" y2="${m.gBase}" stroke="rgba(34,34,34,0.15)" stroke-width="0.6"/>
-            ${m.gCible ? `<polyline points="${m.gCible}" fill="none" stroke="#c9a06a" stroke-width="1.6" stroke-dasharray="3 2.4" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
-            ${m.gReel ? `<polyline points="${m.gReel}" fill="none" stroke="#8D1D2C" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
-          ` : `
-            ${m.gBarres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="1.4" fill="${b.fill}"/>`).join('')}
-            ${m.gReperes.map(r => `<line x1="${r.x1}" x2="${r.x2}" y1="${r.y}" y2="${r.y}" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
-          `}
-          ${m.gLabels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="7" fill="${l.c}">${esc(l.t)}</text>`).join('')}
-        </svg>
-        <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:11.5px;color:var(--color-text-muted)">
-          <span>max ${esc(m.gMax)}</span><span>${esc(m.gNote)}</span>
-        </div>`}
-      </div>
-    </div>`;
-  return `
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-      <pattern id="exhach" width="4" height="4" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-        <rect width="4" height="4" fill="#D9B3B8"/>
-        <line x1="0" y1="0" x2="0" y2="4" stroke="var(--color-primary)" stroke-width="1.6"/>
-      </pattern>
-    </defs></svg>
-    ${c.exAvertissement ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 11px;border-radius:8px;margin-bottom:14px;display:inline-block">${esc(c.exAvertissement)}</div>` : ''}
-    ${c.exVide ? `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Aucune vente enregistrée en caisse — l'écran se remplira dès la première remontée.</div>` : `
-    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px;margin-bottom:14px;display:flex;gap:32px;align-items:center;flex-wrap:wrap">
-      <div>
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Réseau — mois</div>
-        <div style="font-family:var(--font-display);font-size:27px;line-height:1">${esc(c.exRes.ca)}</div>
-      </div>
-      <div><div style="font-size:11.5px;color:var(--color-text-muted)">clients</div><div style="font-size:17px;font-weight:500">${esc(c.exRes.clients)}</div></div>
-      <div><div style="font-size:11.5px;color:var(--color-text-muted)">panier moyen</div><div style="font-size:17px;font-weight:500">${esc(c.exRes.panier)}</div></div>
-      <div style="flex:1;min-width:160px">
-        <div style="font-size:11.5px;color:var(--color-text-muted)">objectif ${esc(c.exRes.objectif)}</div>
-        <div style="height:6px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${c.exRes.jauge.w};background:${c.exRes.jauge.c}"></i></div>
-      </div>
-      <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;white-space:nowrap;${c.exRes.att.st}">${esc(c.exRes.att.txt)}</span>
-      <div style="display:flex;gap:4px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
-        <button ${x.A(c.exVueMois)} style="${c.exStMois}">Par mois</button>
-        <button ${x.A(c.exVueCumul)} style="${c.exStCumul}">Cumulé</button>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px">
-      ${c.exMagasins.map(carte).join('')}
-    </div>
-    ${tplRentabilite(c, x)}
-    <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:13px;font-weight:500">N vs N-1 — toutes les boutiques</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.exNv.periode)}${c.exNv.source ? ' · ' + esc(c.exNv.source.split('?')[0]) : ''}</div>
-        </div>
-        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
-          ${c.exNvBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
-        </div>
-      </div>
-      ${c.exNv.chargement ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel…</div>`
-        : (!c.exNv.lignes.length ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">${esc(c.exNv.motif || 'aucune donnée')}</div>` : `
-      ${c.exNv.motif ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-bottom:8px">${esc(c.exNv.motif)}</div>` : ''}
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-        <thead><tr>
-          <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Magasin</th>
-          <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">N</th>
-          <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">N-1</th>
-          <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Écart</th>
-        </tr></thead>
-        <tbody>${c.exNv.lignes.map(l => `<tr>
-          <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);font-weight:500">${esc(l.magasin)}</td>
-          <td style="padding:7px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.n)}</td>
-          <td style="padding:7px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
-          <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;color:${l.col};font-weight:500">${esc(l.ecart)}<i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${l.pt};margin-left:6px;vertical-align:1px"></i></td>
-        </tr>`).join('')}</tbody>
-      </table>`)}
-    </div>
-    <div style="margin-top:16px">${tplRatiosCouts(c, x)}</div>
-    ${c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}
-    ${c.exDetail ? tplExploitDetail(c, x) : ''}
-    <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
-      <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
-      <span>${c.exCumul
-        ? `<i style="display:inline-block;width:14px;height:0;border-top:2px dashed #c9a06a;vertical-align:4px"></i>`
-        : `<i style="display:inline-block;width:9px;height:9px;background:rgba(34,34,34,0.07);border:0.5px solid var(--color-border-secondary);border-radius:2px;vertical-align:-1px"></i>`} ${esc(c.exLegendeCible)}</span>
-      ${c.exCumul ? '' : `<span><i style="display:inline-block;width:9px;height:9px;background:#C9A227;border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeOr)}</span>`}
-      ${c.exCumul ? '' : `<span><i style="display:inline-block;width:9px;height:9px;background:#D9B3B8;border-radius:2px;vertical-align:-1px"></i> mois partiellement encodé</span>`}
-      ${c.exBase ? `<span>objectif jour et semaine : ${esc(c.exBase)}</span>` : ''}
-    </div>`}`;
-}
 
 
 /* La modale d'un jour de la heatmap de rentabilité : l'addition ligne à
@@ -391,87 +257,6 @@ function tplExploitRentModal(d, x){
     </div>
     ${d.motif ? `<div style="margin-top:10px;font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 10px;border-radius:8px">${esc(d.motif)}</div>` : ''}
     <div style="margin-top:10px;font-size:11px;color:var(--color-text-muted)">${esc(d.note)}</div>
-  </div>`;
-}
-
-/* P&L détaillé d'un magasin. Chaque bloc affiche soit ses données, soit la
-   raison pour laquelle il n'en a pas : tant qu'un endpoint du panel n'a pas
-   répondu, on écrit « en attente d'API » plutôt que de combler avec une autre
-   source. Un écran qui annonce ce qui lui manque est réparable ; un écran
-   rempli en douce ne l'est pas. */
-function tplExploitDetail(c, x){
-  const { esc } = x;
-  const d = c.exDetail;
-  return `
-  <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
-      <div>
-        <div style="font-family:var(--font-display);font-size:19px;line-height:1.2">${esc(d.nom)}</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted)">P&amp;L détaillé${d.du ? ' · ' + esc(d.du) + ' → ' + esc(d.au) : ''}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
-          ${c.exPerBtns.map(p => `<button ${x.A(p.go)} style="${p.st}">${esc(p.label)}</button>`).join('')}
-        </div>
-        <button ${x.A(d.close)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
-      </div>
-    </div>
-    ${d.chargement ? `<div style="padding:26px 0;color:var(--color-text-muted);font-size:12.5px">Lecture des API du panel…</div>`
-      : (!d.blocs.length ? `<div style="padding:26px 0;color:var(--color-text-muted);font-size:12.5px">Aucune réponse du panel.</div>` : `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
-      ${d.blocs.map(b => `
-        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:13px;background:${b.attente ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-            <div style="font-size:12.5px;font-weight:500">${esc(b.titre)}</div>
-            ${b.attente
-              ? `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;background:#FBEFE0;color:var(--color-on-abricot);white-space:nowrap">en attente d’API</span>`
-              : `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e;white-space:nowrap">API</span>`}
-          </div>
-          ${b.attente
-            ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5;word-break:break-word">${esc(b.motif)}</div>`
-            : `<div style="font-size:10.5px;color:var(--color-text-muted);margin-bottom:8px;word-break:break-all">${esc(b.source)}</div>
-               ${b.avert ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-bottom:8px;line-height:1.45">${esc(b.avert)}</div>` : ''}
-               ${b.tuiles ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                 ${b.tuiles.map(t => `<div style="background:var(--color-background-secondary);border-radius:8px;padding:9px 11px">
-                   <div style="font-family:var(--font-display);font-size:18px;line-height:1.1">${esc(t.v)}</div>
-                   <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(t.l)}</div>
-                 </div>`).join('')}</div>` : ''}
-               ${b.cascade ? `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
-                 ${b.cascade.map(l => `<tr style="${l.fort ? 'font-weight:500' : ''}">
-                   <td style="padding:5px 0;border-top:0.5px solid var(--color-border-tertiary)">${esc(l.l)}</td>
-                   <td style="padding:5px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.v)}</td>
-                   <td style="padding:5px 0 5px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(l.p)}</td>
-                 </tr>`).join('')}</table>` : ''}
-               ${b.cats ? `<div style="display:flex;flex-direction:column;gap:6px">
-                 ${b.cats.map(c => `<div>
-                   <div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px">
-                     <span>${esc(c.nom)}${c.marge ? `<span style="color:var(--color-text-muted)"> · ${esc(c.marge)}</span>` : ''}</span>
-                     <span style="white-space:nowrap"><span style="font-variant-numeric:tabular-nums">${esc(c.ca)}</span>
-                       <span style="color:var(--color-text-muted)"> · ${esc(c.part)}</span>
-                       ${c.delta ? `<span style="color:${c.deltaC}"> ${esc(c.delta)}</span>` : ''}</span>
-                   </div>
-                   <div style="height:5px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${c.w};background:${c.col}"></i></div>
-                 </div>`).join('')}
-                 <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px;font-size:10px;color:var(--color-text-muted)">
-                   ${b.echelle.map(e => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${e.c};vertical-align:-1px"></i> ${esc(e.l)}</span>`).join('')}
-                 </div>
-                 <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">Largeur : poids dans le CA · Couleur : niveau de marge</div>
-                 ${b.sansMarge ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:6px;line-height:1.45">l’API ne renvoie pas de food cost par catégorie : les barres restent grises, faute de marge connue</div>` : ''}
-                 </div>` : ''}
-               ${b.rang ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">panier moyen réseau ${esc(b.rang.moyenne)}</div>
-                 <table style="width:100%;border-collapse:collapse;font-size:12px">
-                 ${b.rang.lignes.map(r => `<tr style="${r.moi ? 'font-weight:500;color:var(--color-primary)' : ''}">
-                   <td style="padding:3px 0">${esc(r.magasin)}</td>
-                   <td style="padding:3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(r.panier)}</td>
-                   <td style="padding:3px 0 3px 10px;text-align:right;color:var(--color-text-muted)">${esc(r.ppc)}</td>
-                 </tr>`).join('')}</table>` : ''}
-               ${b.lignes.length ? `<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px">
-                 ${b.lignes.map(l => `<tr>
-                   <td style="padding:3px 0;color:var(--color-text-muted)">${esc(l.k)}</td>
-                   <td style="padding:3px 0;text-align:right">${esc(l.v)}</td>
-                 </tr>`).join('')}</table>` : ''}`}
-        </div>`).join('')}
-    </div>`)}
   </div>`;
 }
 
@@ -623,66 +408,6 @@ function tplRefEdit(c, x){
         <button ${x.A(e.close)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 16px;border-radius:9px">Annuler</button>
         <button ${x.A(e.save)} style="border:none;background:var(--color-primary);color:#fff;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;padding:8px 18px;border-radius:9px;opacity:${e.busy ? '.6' : '1'}">${e.busy ? 'Enregistrement…' : 'Enregistrer'}</button>
       </div>
-    </div>
-  </div>`;
-}
-
-/* Suivi de production. Le taux de perte se calcule sur les VENTES : deux
-   boutiques sur quatre ne déclarent pas leurs fournées, et diviser par ce
-   champ leur attribuait 100 % de perte pour une case non remplie. */
-function tplProduction(c, x){
-  const { esc } = x;
-  if (c.prChargement) return `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Lecture des mouvements de caisse…</div>`;
-  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
-  const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px';
-  const TD = 'padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
-  const num = 'text-align:right;font-variant-numeric:tabular-nums';
-  return `
-  ${c.prAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 11px;border-radius:8px;margin-bottom:14px;display:inline-block">${esc(c.prAvert)}</div>` : ''}
-  <div style="${CARD};margin-bottom:14px;display:flex;gap:34px;align-items:center;flex-wrap:wrap">
-    <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Réseau</div>
-      <div style="font-size:12.5px;color:var(--color-text-muted)">${esc(c.prPeriode)}</div></div>
-    ${c.prReseau.map(k => `<div><div style="font-family:var(--font-display);font-size:23px;line-height:1">${esc(k.v)}</div>
-      <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(k.l)}</div></div>`).join('')}
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px">
-    <div style="${CARD}">
-      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Par boutique</div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr><th style="${TH}">Boutique</th><th style="${TH};${num}">Vendu</th><th style="${TH};${num}">Jeté</th><th style="${TH};${num}">Taux</th></tr></thead>
-        <tbody>${c.prMagasins.map(m => `<tr>
-          <td style="${TD}">${esc(m.magasin)}${m.note ? `<div style="font-size:10.5px;color:var(--color-on-abricot)">${esc(m.note)}</div>` : ''}</td>
-          <td style="${TD};${num};color:var(--color-text-muted)">${esc(m.vendu)}</td>
-          <td style="${TD};${num}">${esc(m.jete)}</td>
-          <td style="${TD};${num};color:${m.col};font-weight:500">${esc(m.taux)}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>
-    <div style="${CARD}">
-      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Motifs de rebut</div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr><th style="${TH}">Motif</th><th style="${TH};${num}">Quantité</th><th style="${TH};${num}">Lignes</th></tr></thead>
-        <tbody>${c.prMotifs.map(m => `<tr>
-          <td style="${TD}">${esc(m.motif)}</td>
-          <td style="${TD};${num}">${esc(m.quantite)}</td>
-          <td style="${TD};${num};color:var(--color-text-muted)">${esc(m.lignes)}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>
-  </div>
-  <div style="${CARD};margin-top:14px">
-    <div style="font-size:13px;font-weight:500;margin-bottom:3px">Références les plus jetées</div>
-    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">quantité jetée sur la période, et taux rapporté aux ventes</div>
-    <div style="display:flex;flex-direction:column;gap:7px">
-      ${c.prProduits.map(p => `<div>
-        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px">
-          <span>${esc(p.nom)}</span>
-          <span style="white-space:nowrap"><b style="font-variant-numeric:tabular-nums">${esc(p.jete)}</b>
-            <span style="color:var(--color-text-muted)"> jetés · ${esc(p.vendu)} vendus · </span>
-            <span style="color:${p.col};font-weight:500">${esc(p.taux)}</span></span>
-        </div>
-        <div style="height:5px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${p.w};background:var(--color-primary)"></i></div>
-      </div>`).join('')}
     </div>
   </div>`;
 }
@@ -1141,12 +866,7 @@ function tplMagasins(c, x){
   </div>`;
 }
 
-/* --- Heatmap mensuelle ------------------------------------------------------ */
-function tplHeatmap(c, x){
-  return `
-  <div data-screen="heatmap" style="display:flex;flex-direction:column;gap:14px">${tplHeatmapCorps(c, x)}</div>`;
-}
-/** Le corps de la heatmap : sert à l'écran Heatmap comme à Résultat › Mois. */
+/** Le corps de la heatmap : douze mois sous le tableau de Résultat › Mois. */
 function tplHeatmapCorps(c, x){
   const { esc } = x;
   const cell = cc => `<div ${x.EN(cc.enter)} ${x.A(cc.clic)} style="${cc.st};cursor:pointer">${cc.txt}</div>`;
@@ -4206,50 +3926,6 @@ function tplMktTypes(c, x){
    dessous la cascade du magasin, sa ventilation par catégorie et la place du
    jour dans son mois. Sans sélection, la page garde les petites ventilations :
    elles montrent où cliquer. */
-/** La heatmap de rentabilité — résultat net par jour. Sert P&L magasins et Résultat › Mois. */
-function tplRentabilite(c, x){
-  const { esc } = x;
-  return `
-    <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:13px;font-weight:500">Analyse rentabilité — résultat net par jour</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.exRent.periode)}</div>
-        </div>
-        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
-          ${c.exRent.btns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
-        </div>
-      </div>
-      ${c.exRent.chargement ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel…</div>`
-        : (c.exRent.indispo ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">${esc(c.exRent.indispo)}</div>` : `
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${c.exRent.lignes.map(l => `
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <div style="width:210px;flex:none">
-              <div style="font-weight:500;font-size:12.5px">${esc(l.nom)}</div>
-              ${l.total ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(l.total)}</div>` : ''}
-            </div>
-            ${l.motif ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.motif)}</div>` : `
-            <div style="display:flex;gap:5px;flex-wrap:wrap">
-              ${l.chips.map(ch => ch.go ? `
-                <button ${x.A(ch.go)} title="${esc(ch.title)}" style="border:none;cursor:pointer;font-family:var(--font-ui);border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
-                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
-                  <span style="display:block;font-size:${ch.semaine ? '12px' : '10px'};font-weight:600;margin-top:1px">${esc(ch.pct)}</span>
-                </button>` : `
-                <span title="${esc(ch.title)}" style="display:inline-block;border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
-                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
-                  <span style="display:block;font-size:${ch.semaine ? '11px' : '10px'};margin-top:1px">${esc(ch.pct)}</span>
-                </span>`).join('')}
-            </div>`}
-          </div>`).join('')}
-      </div>
-      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--color-text-muted)">
-        <span style="font-weight:500">Résultat net :</span>
-        ${c.exRent.legende.map(g => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;${g.st}"></i> ${esc(g.lib)}</span>`).join('')}
-        ${c.exRent.source ? `<span style="margin-left:auto">${esc(c.exRent.source)}</span>` : ''}
-      </div>`)}
-    </div>`;
-}
 
 /** Performance : un seul écran, trois onglets — le mois clos, l'année, la marge. */
 /** Plan de développement : la rampe à gauche, l'année à droite, le rituel en modale. */
@@ -5932,165 +5608,6 @@ const dk = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spaci
 const dv = 'font-size:12px;line-height:1.45;text-wrap:pretty';
 const dcap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
 const dsel = 'width:100%;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)';
-
-function tplTaches(c, x){
-  const { esc } = x;
-  return `
-  <div data-screen="taches" style="display:flex;flex-direction:column;gap:14px">
-    <!-- Tableau de bord : les compteurs d'abord, la liste ensuite. Tuiles
-         sobres, un seul chiffre par tuile, et la couleur réservée à ce qui
-         demande une action — sinon elle ne veut plus rien dire. -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px">
-      ${(c.tkTuiles || []).map(t => `<${t.go ? 'button' : 'div'} ${t.go ? x.A(t.go) : ''} ${t.go ? 'class="hv-fade"' : ''}
-        style="text-align:left;font-family:var(--font-ui);background:var(--color-surface);border:0.5px solid ${t.vif ? 'rgba(141,29,44,0.28)' : 'var(--color-border-tertiary)'};border-radius:12px;padding:14px 15px;display:flex;flex-direction:column;gap:2px;${t.go ? 'cursor:pointer;' : ''}min-width:0">
-        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">${esc(t.lib)}</span>
-        <span style="font-family:var(--font-display);font-size:30px;line-height:1.05;color:${t.col}">${esc(t.valeur)}</span>
-        <span style="font-size:11px;font-weight:300;color:var(--color-text-muted);line-height:1.35">${esc(t.sous)}</span>
-      </${t.go ? 'button' : 'div'}>`).join('')}
-    </div>
-    <!-- P&L court par magasin, sur le mois EN COURS. La source est l'API :
-         la caisse en base s'arrête au dernier jour encodé et ne peut pas
-         répondre à « où en sont-ils aujourd'hui ». -->
-    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-        <div style="font-size:13px;font-weight:700">Chiffre d’affaires du mois par magasin</div>
-        <div style="font-size:11.5px;font-weight:300;color:var(--color-text-muted)">${esc(c.tkPnlPeriode)} · source API, mois en cours</div>
-      </div>
-      ${c.tkPnlEtat === 'chargement' ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:14px 0">Lecture de l’API…</div>`
-        : !(c.tkPnl || []).length ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:14px 0">Aucun magasin rendu par l’API sur le mois en cours.</div>` : `
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:660px">
-        <thead><tr>
-          ${['Magasin', 'CA du mois', 'N-1', 'Écart', 'Tickets', 'Panier', 'Objectif', 'Atteinte']
-            .map((h, i) => `<th style="text-align:${i ? 'right' : 'left'};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap">${esc(h)}</th>`).join('')}
-        </tr></thead>
-        <tbody>${c.tkPnl.map(m => `<tr>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px">
-            <div style="font-weight:500">${esc(m.nom)}</div>
-            <span style="${m.barre};margin-top:5px;max-width:200px"></span></td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500">${esc(m.ca)}</td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.n1)}</td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500;color:${m.ecartCol}">${esc(m.ecart) || ''}</td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.tickets)}</td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.panier)}</td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-size:12.5px">${m.obj
-            ? `<span style="font-variant-numeric:tabular-nums">${esc(m.obj)}</span>`
-            : `<span style="font-size:10.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap">à renseigner</span>`}</td>
-          <td style="padding:9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:${m.attCol}">${m.att ? esc(m.att) : ''}</td>
-        </tr>`).join('')}</tbody>
-      </table></div>
-      ${c.tkPnlSansObj ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">
-        <strong style="font-weight:700">${c.tkPnlSansObj} magasin${c.tkPnlSansObj > 1 ? 's' : ''} sur ${c.tkPnlTotal} sans objectif de CA encodé</strong> — l’atteinte reste vide : elle ne peut pas se calculer contre une cible absente. Le budget se saisit dans « Encodage du budget ». En attendant, l’écart N-1 est la seule référence disponible.</div>` : ''}`}
-    </div>
-
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      ${c.tkMoi ? `<button ${x.A(c.tkMoiGo)} title="Les tâches dont je suis l'intervenant" style="border:0.5px solid ${c.tkMoiOn ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${c.tkMoiOn ? 'var(--color-primary)' : 'transparent'};color:${c.tkMoiOn ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap">Mes tâches${c.tkMoiN ? ' · ' + c.tkMoiN : ''}</button>` : ''}
-      <select ${x.C(c.setTkWho)} style="${selCss}">${opts(c.tkPeople, c.tkWho, o => o.val, o => esc(o.nom))}</select>
-      <select ${x.C(c.setTkStore)} style="${selCss}">${opts(c.tkStores, c.tkStore, o => o.val, o => esc(o.nom))}</select>
-      <span style="flex:1;min-width:0;font-size:12px;color:var(--color-text-muted)">${esc(c.tkResume)}</span>
-      <button ${x.A(c.ntOpen)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle tâche</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      ${c.tkGroups.map(g => `
-        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-          <div style="display:flex;align-items:center;gap:9px;padding:11px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
-            <span style="${g.dotSt}"></span>
-            <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:${g.couleur}">${g.nom}</span>
-            <span style="font-size:11px;color:var(--color-text-muted)">${g.n}</span>
-          </div>
-          ${g.items.map(t => `
-            <div style="${t.rowSt}">
-              <div ${x.A(t.toggleOpen)} class="hv-bg" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;cursor:pointer">
-                <span ${x.A(t.check)} style="${t.boxSt}">${t.boxTxt}</span>
-                <div style="flex:1;min-width:0">
-                  <div style="${t.nomSt}">${esc(t.nom)}</div>
-                  <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px">
-                    <span style="font-size:11px;color:var(--color-text-muted)">${esc(t.qui)} · ${esc(t.projet)}</span>
-                    ${t.hasMag ? `<span style="font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text);white-space:nowrap">${esc(t.magasin)}</span>` : ''}
-                    ${t.hasLvl ? `<span style="${t.lvlSt}"><i style="${t.lvlNumSt};font-style:normal">${t.lvlNum}</i>${esc(t.lvlTxt)}</span>` : ''}
-                    ${t.hasSig ? `<span style="${t.sigSt}">${esc(t.sigTxt)}</span>` : ''}
-                  </div>
-                </div>
-                <span style="${t.dueSt}">${t.due}</span>
-                <span style="${t.chevSt}">▾</span>
-              </div>
-              ${t.ouvert ? `
-                <div style="margin:0 16px 14px 44px;display:grid;grid-template-columns:${t.vOuvert ? 'minmax(0,1fr) 372px' : 'minmax(0,1fr)'};gap:14px;align-items:start">
-                  <div style="padding:11px 14px;border-radius:9px;background:var(--color-background-secondary)">
-                    <div style="${dkv}">
-                      ${t.rows.map(r => `
-                        <span style="${dk}">${r.k}</span>
-                        <span style="${dv}">${esc(r.v)}</span>`).join('')}
-                    </div>
-                    <div style="${dcap};margin:13px 0 6px">Cet intervenant</div>
-                    <div style="${dkv}">
-                      ${t.histo.map(r => `
-                        <span style="${dk}">${r.k}</span>
-                        <span style="${dv}">${esc(r.v)}</span>`).join('')}
-                    </div>
-                    <!-- La photo de contrôle qui a motivé la demande, avec ses
-                         repères : une consigne se comprend mieux devant le
-                         cliché qu'à côté d'une phrase. -->
-                    ${t.photo ? `
-                      <div style="${dcap};margin:13px 0 6px">${esc(t.photo.titre)}</div>
-                      ${t.photo.chargement || t.photo.attente
-                        ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${t.photo.attente ? 'dépliez pour la charger' : 'lecture de la photo…'}</div>`
-                        : (t.photo.vide
-                          ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(t.photo.motif)}</div>`
-                          : `<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
-                              <div style="position:relative;display:inline-block;line-height:0;flex:0 1 380px;max-width:100%${t.photo.imgErr ? ';min-height:150px;background:var(--color-background-secondary);border-radius:8px' : ''}">
-                                <img data-tphoto="${esc(t.photo.cle)}" src="${t.photo.url}" alt="Photo de contrôle" style="display:${t.photo.imgErr ? 'none' : 'block'};width:100%;border-radius:8px">
-                                ${t.photo.imgErr
-                                  ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center;font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(t.photo.imgErrTxt)}</div>`
-                                  : t.photo.reperes.map(r => `<div style="${r.boxSt}"><span style="${r.numSt}">${r.n}</span></div>`).join('')}
-                              </div>
-                              <div style="flex:1;min-width:180px">
-                                <div style="font-size:11.5px;font-weight:500">${esc(t.photo.tache)}</div>
-                                <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(t.photo.legende)}${t.photo.avis ? ' · ' + esc(t.photo.avis) : ''}</div>
-                                <div style="display:flex;flex-direction:column;gap:6px;margin-top:9px">
-                                  ${t.photo.reperes.filter(r => r.txt).map(r => `
-                                    <div style="display:flex;gap:7px;align-items:flex-start;font-size:11.5px;line-height:1.45">
-                                      <span style="flex:0 0 auto;width:16px;height:16px;border-radius:50%;color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;background:${r.coul}">${r.n}</span>
-                                      <span>${esc(r.txt)}</span>
-                                    </div>`).join('')}
-                                </div>
-                              </div>
-                            </div>`)}` : ''}
-                    <div style="margin-top:12px;display:flex;justify-content:flex-end">
-                      <button ${x.A(t.supprimer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:5px 12px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Supprimer la tâche</button>
-                    </div>
-                  </div>
-                  ${t.vOuvert ? `
-                  <div style="padding:12px 14px;border-radius:9px;background:var(--color-surface);border:0.5px solid var(--color-border-secondary)">
-                    <div style="${dcap};margin-bottom:6px">Votre validation</div>
-                    <div style="display:flex;align-items:center;gap:1px">
-                      ${[1, 2, 3, 4, 5].map(n => `<button ${x.A(() => t.setNote(n))} aria-label="${n}/5" style="${t.starSt(n)}">★</button>`).join('')}
-                    </div>
-                    ${t.hasLvb ? `
-                      <div style="${t.lvbSt}"><i style="${t.lvbNumSt}">${t.lvbNum}</i>${esc(t.lvbTxt)}
-                        <span style="margin-left:auto;font-size:10.5px;font-weight:500;opacity:0.75">${esc(t.lvbAide)}</span></div>` : ''}
-                    ${t.sousSeuil ? `
-                      <div style="margin-top:10px;border:1px solid rgba(141,29,44,0.26);border-radius:9px;background:rgba(141,29,44,0.035);padding:10px">
-                        <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-primary);margin-bottom:8px">
-                          <span style="width:14px;height:14px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">!</span>
-                          Signaler à l'intervenant
-                          <span style="margin-left:auto;text-transform:none;letter-spacing:0;font-size:10px;background:rgba(192,24,43,0.12);color:#C0182B;border-radius:999px;padding:1px 8px">${esc(t.sousTxt)}</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-                          <select ${x.C(t.setFam)} style="${dsel}">${opts(t.fams, t.famCour)}</select>
-                          <select ${x.C(t.setTyp)} style="${dsel}">${opts(t.typs, t.typCour)}</select>
-                        </div>
-                      </div>` : ''}
-                    <textarea ${x.C(t.setCom)} rows="2" placeholder="Commentaire (facultatif)" style="width:100%;margin-top:9px;border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:7px 9px;font-size:12px;font-family:var(--font-ui);color:var(--color-text);resize:vertical;box-sizing:border-box">${esc(t.commentaire)}</textarea>
-                    <button ${x.A(t.valider)} class="hv-fade" style="width:100%;margin-top:9px;border:none;border-radius:999px;padding:9px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${t.peutValider ? '' : 'opacity:0.5;cursor:default'}">${t.boutonTxt}</button>
-                  </div>` : ''}
-                </div>` : ''}
-            </div>`).join('')}
-        </div>`).join('')}
-      ${c.tkVide ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12px;color:var(--color-text-muted)">Aucune tâche pour cet intervenant.</div>` : ''}
-    </div>
-    <div style="font-size:12px;color:var(--color-text-muted)">Cochez une tâche quand elle est rendue, ouvrez la ligne pour la noter de 1 à 5. Une note sous 4 ouvre un signalement — tout est tracé dans le journal.</div>
-  </div>`;
-}
 
 /* --- Paramètres — Brand Guard : la charte et les pages Facebook -------------- */
 /** Offres et canaux : la part de chaque canal magasin par magasin, et les offres en lignes, les magasins en colonnes. */
@@ -8937,46 +8454,8 @@ function tplCentrale(c, x){
       </div>
     </div>`}` : '';
 
-  // Commandes franchisés : une carte par fournisseur, ses 5 dernières
-  // commandes. Les chips de statut vivent au-dessus de la grille.
-  const groupes = c.caFournGroupes ? `
-    ${c.caChips && c.caChips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      ${c.caChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? ch.texte : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? ch.fond : 'transparent'};color:${ch.texte}">${esc(ch.nom)}</button>`).join('')}
-      ${c.caChips.some(ch => ch.on) ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">re-cliquer pour tout afficher</span>` : ''}
-    </div>` : ''}
-    ${!c.caFournGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted)">${esc(c.caRien || 'aucune ligne')}</div>` : `
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:14px">
-      ${c.caFournGroupes.map(g => `<div style="${CARD};display:flex;flex-direction:column">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
-          <div>
-            <div style="font-size:13.5px;font-weight:600${g.special ? ';color:var(--color-text-muted)' : ''}">${esc(g.nom)}</div>
-            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(g.note)}</div>
-          </div>
-          <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:${g.resumeFond};color:${g.resumeCol}">${esc(g.resume)}</span>
-        </div>
-        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-          <thead><tr>
-            <th style="${TH}">Réquisition</th><th style="${TH}">Magasin</th><th style="${TH}">Début</th>
-            <th style="${TH}">Statut</th><th style="${TH};text-align:right">Valeur</th><th style="${TH}">Par</th>
-          </tr></thead>
-          <tbody>${g.commandes.map(o => `<tr>
-            <td style="${TD};font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(o.id)}</td>
-            <td style="${TD}">${esc(o.magasin)}</td>
-            <td style="${TD};color:var(--color-text-muted);white-space:nowrap">${esc(o.debut)}</td>
-            <td style="${TD};white-space:nowrap"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${o.col};margin-right:6px;vertical-align:1px"></span><span style="color:${o.col};font-weight:500;font-size:12px">${esc(o.statut)}</span></td>
-            <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(o.valeur)}</td>
-            <td style="${TD};color:var(--color-text-muted)">${esc(o.par)}</td>
-          </tr>`).join('')}</tbody>
-        </table></div>
-      </div>`).join('')}
-    </div>`}` : '';
-
   const table = c.caCols ? `<div style="${CARD}">
     ${c.caAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-bottom:12px">${esc(c.caAvert)}</div>` : ''}
-    ${c.caChips && c.caChips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      ${c.caChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? ch.texte : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? ch.fond : 'transparent'};color:${ch.texte}">${esc(ch.nom)}</button>`).join('')}
-      ${c.caChips.some(ch => ch.on) ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">re-cliquer pour tout afficher</span>` : ''}
-    </div>` : ''}
     ${c.caFiche ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 22px;margin-bottom:14px;padding:12px 14px;background:var(--color-background-secondary);border-radius:10px">
       ${c.caFiche.map(f2 => `<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">${esc(f2[0])}</div>
         <div style="font-size:12.5px;margin-top:2px">${esc(f2[1])}</div></div>`).join('')}
@@ -9008,7 +8487,7 @@ function tplCentrale(c, x){
     </table></div>
   </div>` : '';
 
-  return periodes + recl + suivi + kpis + manquants + params + recherche + groupes + table + table2;
+  return periodes + recl + suivi + kpis + manquants + params + recherche + table + table2;
 }
 
 
@@ -10000,194 +9479,6 @@ function tplVentes(c, x){
   </div>`;
 }
 
-function tplAnm(c, x){
-  const { esc } = x;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
-  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
-  const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
-  const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 12px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
-  const badge = t => `<span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;${
-    t === 'Assortiment' ? 'background:rgba(141,29,44,.09);color:var(--color-primary)'
-    : t === 'Catégorie' ? 'background:#FBEFE0;color:#8a5a1c'
-    : 'background:rgba(45,122,62,.1);color:#2d7a3e'}">${esc(t)}</span>`;
-
-  // La tête du wizard : le magasin, la durée, et les quatre étapes.
-  const tete = `
-    <div style="${carte}">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px 12px">
-        <span style="${lbl}">Magasin</span>
-        <select ${x.C(c.anmChoisir)} style="${SEL}">
-          ${c.anmShops.map(m => `<option value="${esc(m.id)}" ${m.on ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}
-        </select>
-        <span style="width:10px"></span>
-        ${c.anmDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
-        <span style="flex:1"></span>
-        <span style="font-size:11px;color:var(--color-text-muted)">comparé aux autres magasins, à fréquentation ramenée</span>
-      </div>
-      <div style="display:flex;gap:0;border-top:0.5px solid var(--color-border-tertiary)">
-        ${c.anmEtapes.map((e2, i) => `
-        <div ${x.A(e2.choisir)} style="flex:1;text-align:center;padding:11px 6px;cursor:pointer;font-size:12px;
-          ${e2.on ? 'font-weight:600;color:var(--color-primary);box-shadow:inset 0 -2px 0 var(--color-primary)'
-            : e2.fait ? 'color:var(--color-text)' : 'color:var(--color-text-muted)'}
-          ${i ? ';border-left:0.5px solid var(--color-border-tertiary)' : ''}">
-          <span style="display:inline-flex;width:17px;height:17px;border-radius:50%;align-items:center;justify-content:center;font-size:10px;margin-right:6px;
-            ${e2.on || e2.fait ? 'background:var(--color-primary);color:#fff' : 'background:rgba(34,34,34,.08);color:var(--color-text-muted)'}">${e2.fait ? '✓' : e2.v}</span>${esc(e2.nom)}
-        </div>`).join('')}
-      </div>
-    </div>`;
-
-  const e3f = () => `
-    <div style="${carte}">
-      <div style="padding:16px 18px 0">
-        <div style="${lbl}">${esc(c.anmNom)} — les prix sous le réseau</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Au prix réellement encaissé, remises comprises. Une référence dont le volume dépasse celui des autres, à taille égale, n’apparaît pas : son prix bas travaille. Le gain est à volume constant — si le volume tient, c’est de la marge pure.${c.anmPrixTotal ? ' <b style="color:var(--color-text)">' + esc(c.anmPrixTotal) + '</b>' : ''}</div>
-      </div>
-      ${!c.anmPrix.length ? `<div style="font-size:12.5px;color:#2d7a3e;padding:14px 18px 16px">Aucun prix sous le réseau : la grille de ce magasin est au niveau.</div>` : `
-      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px">
-        <thead><tr>
-          <th style="${th};text-align:left;padding-left:18px">Référence</th>
-          <th style="${th};text-align:left">Catégorie</th>
-          <th style="${th}">Votre prix</th><th style="${th}">Prix réseau</th><th style="${th}">Écart</th>
-          <th style="${th}">Volume / mois</th><th style="${th}">Gain / mois</th><th style="${th};padding-right:18px">Par an</th>
-        </tr></thead>
-        <tbody>
-          ${c.anmPrix.map(r => `<tr>
-            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(r.nom)}</td>
-            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.groupe)}</td>
-            <td style="${td}">${esc(r.prix)}</td>
-            <td style="${td};color:var(--color-text-muted)">${esc(r.prixReseau)}</td>
-            <td style="${td};color:${r.fort ? 'var(--color-primary)' : '#C17A2A'};font-weight:600">${esc(r.ecart)}</td>
-            <td style="${td}">${esc(r.volMois)}</td>
-            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(r.gainMois)}</td>
-            <td style="${td};padding-right:18px;color:var(--color-text-muted)">${esc(r.gainAn)}</td>
-          </tr>`).join('')}
-          ${!c.anmPrixReste ? '' : `<tr><td colspan="8" style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${esc(c.anmPrixReste)}</td></tr>`}
-        </tbody>
-      </table></div>`}
-      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Prix encaissés lus ${c.anmPrixSource ? 'chez le ' + esc(c.anmPrixSource) : 'sur la période'}, entre magasins ayant vendu au moins 5 unités ; le volume se compare à taille égale (pièces pour 10 000 € de chiffre du magasin). Le détail magasin par magasin est dans Produits › Où ça se vend › Prix × volume. L’alignement est une décision du franchisé : l’écran chiffre, il ne fixe pas les prix.</div>
-    </div>`;
-
-  if (c.anmChargement) {
-    return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
-      <div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Analyse en cours — la caisse est relue sur toute la période…</div></div>`;
-  }
-  if (c.anmMotif) {
-    // La caisse locale ne répond pas sur la période : les étapes qui en
-    // dépendent se taisent, l'étape Prix — lue chez le panel — reste.
-    if (c.anmPrixSeul) {
-      return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
-        <div style="${carte};padding:14px 18px;font-size:12.5px;line-height:1.55"><b>${esc(c.anmMotif.charAt(0).toUpperCase() + c.anmMotif.slice(1))}</b> — la vue d’ensemble, les catégories et le plan s’appuient sur la caisse locale et ne peuvent pas se calculer sur cette période. L’étape Prix, lue chez le panel, est ci-dessous.</div>
-        ${e3f()}</div>`;
-    }
-    return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
-      <div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.anmMotif)}</div></div>`;
-  }
-
-  const e1 = `
-    <div style="${carte}">
-      <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px">
-        ${c.anmKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
-          <b style="display:block;font-size:20px;font-weight:600;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
-          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span></div>`).join('')}
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
-      ${c.anmLeviers.map(l => `
-      <div style="${carte};padding:16px 18px${l.aller ? ';cursor:pointer' : ''}" ${l.aller ? x.A(l.aller) : ''}>
-        <span style="${lbl}">${esc(l.lbl)}</span>
-        <b style="display:block;font-size:21px;font-weight:600;color:var(--color-primary);margin:4px 0 1px">${esc(l.moisTxt)}</b>
-        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.anTxt)}</span>
-        <div style="font-size:11.5px;color:var(--color-text);margin-top:8px;line-height:1.5">${esc(l.note)}</div>
-      </div>`).join('')}
-    </div>`;
-
-  const e2c = `
-    <div style="${carte}">
-      <div style="padding:16px 18px 0">
-        <div style="${lbl}">${esc(c.anmNom)} — part du CA par catégorie, contre la part réseau</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Une catégorie en retrait est un rayon qui existe déjà : la développer ne demande ni référence ni prix nouveaux. Le trait noir marque la part réseau.</div>
-      </div>
-      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
-        <thead><tr>
-          <th style="${th};text-align:left;padding-left:18px">Catégorie</th>
-          <th style="${th}">Votre part</th><th style="${th}">Part réseau</th>
-          <th style="${th};text-align:left;padding-left:22px">Position</th>
-          <th style="${th}">Écart</th><th style="${th}">Potentiel / mois</th><th style="${th};padding-right:18px">Par an</th>
-        </tr></thead>
-        <tbody>
-          ${c.anmGroupes.map(g => `<tr>
-            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(g.nom)}</td>
-            <td style="${td}">${esc(g.part)}</td>
-            <td style="${td};color:var(--color-text-muted)">${esc(g.partReseau)}</td>
-            <td style="${td};text-align:left;padding-left:22px"><span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.07);width:150px;vertical-align:middle">
-              <i style="position:absolute;left:0;top:0;height:8px;border-radius:999px;width:${g.barre}%;background:${g.retrait ? 'var(--color-primary)' : '#2d7a3e'}"></i>
-              <i style="position:absolute;top:-3px;width:2px;height:14px;background:#26221E;border-radius:2px;left:${g.barreReseau}%"></i></span></td>
-            <td style="${td};color:${g.retrait ? 'var(--color-primary)' : '#2d7a3e'};font-weight:600">${esc(g.delta)}</td>
-            <td style="${td};font-weight:600;${g.retrait ? 'color:var(--color-primary)' : 'color:var(--color-text-muted);font-weight:400;font-size:11px'}">${esc(g.potMois)}</td>
-            <td style="${td};padding-right:18px;color:var(--color-text-muted)">${esc(g.potAn)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Le potentiel = revenir à la part médiane des autres magasins, le CA mensuel actuel posé comme assiette — <b>moins ce que le levier 1 compte déjà</b> : une catégorie en retrait l’est souvent parce que des références y manquent, et additionner les deux promettrait deux fois le même euro. Une catégorie au-dessus du réseau n’est pas « à corriger » : c’est l’identité du magasin — elle est marquée comme force, jamais comptée en négatif.</div>
-    </div>`;
-
-
-  const e4 = `
-    <div style="${carte}">
-      <div style="padding:16px 18px 0">
-        <div style="${lbl}">${esc(c.anmNom)} — le plan, classé par euros mensuels</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Les actions des trois leviers fusionnées. La colonne « cumul » se lit comme un objectif d’équipe : jusqu’où on descend la liste, et ce que ça fait sur l’année.</div>
-      </div>
-      ${!c.anmPlan.length ? `<div style="font-size:12.5px;color:#2d7a3e;padding:14px 18px 16px">Rien à recommander : ce magasin vend ce que le réseau vend, aux prix du réseau.</div>` : `
-      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
-        <thead><tr>
-          <th style="${th};text-align:left;padding-left:18px">#</th>
-          <th style="${th};text-align:left">Action</th><th style="${th};text-align:left">Levier</th>
-          <th style="${th}">/ mois</th><th style="${th}">/ an</th><th style="${th};padding-right:18px">Cumul / an</th>
-        </tr></thead>
-        <tbody>
-          ${c.anmPlan.map(a => `<tr>
-            <td style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${a.rang}</td>
-            <td style="${td};text-align:left;font-weight:500;line-height:1.45">${esc(a.action)}</td>
-            <td style="${td};text-align:left">${badge(a.levier)}</td>
-            <td style="${td};font-weight:600">${esc(a.mois)}</td>
-            <td style="${td};color:var(--color-text-muted)">${esc(a.an)}</td>
-            <td style="${td};padding-right:18px;font-weight:600;color:var(--color-primary)">${esc(a.cumul)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table></div>`}
-      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55"><b>${esc(c.anmPlanTotal)}</b> Les actions d’assortiment sont déjà retenues à la moitié de leur estimation — un plan qui promet le maximum n’est pas un plan.</div>
-    </div>`;
-
-  const e5 = `
-    <div style="${carte};padding:26px 28px;display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start">
-      <div style="flex:1;min-width:320px">
-        <div style="${lbl}">${esc(c.anmNom)} — le dossier complet, en deux pages A4</div>
-        <div style="font-size:13px;line-height:1.6;margin:10px 0 14px;max-width:640px">Le même moteur que la note de campagne, les mêmes chiffres que les quatre étapes que vous venez de lire — mis en page pour être posés sur la table de l’entretien franchisé.</div>
-        ${(c.anmPdfContenu || []).map(t => `<div style="display:flex;gap:9px;font-size:12.5px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:#2d7a3e;font-weight:700">✓</span><span>${esc(t)}</span></div>`).join('')}
-        <div style="font-size:11px;color:var(--color-text-muted);margin-top:12px;line-height:1.55">Le pied de page porte le magasin, la période et la date d’édition — chaque feuille reste identifiable une fois agrafée à d’autres.</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch;min-width:250px">
-        <a href="${esc(c.anmPdfHref)}" target="_blank" rel="noreferrer" style="display:block;text-align:center;background:var(--color-primary);color:#fff;border-radius:11px;padding:15px 26px;font-size:14px;font-weight:600;text-decoration:none">↓ Télécharger le PDF</a>
-        <span style="text-align:center;font-size:11px;color:var(--color-text-muted)">${esc(c.anmPdfNom || '')} · 2 pages A4</span>
-      </div>
-    </div>`;
-
-  return `
-  <div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
-    ${tete}
-    ${c.anmEtape === 1 ? e1 : c.anmEtape === 2 ? e2c : c.anmEtape === 3 ? e3f() : c.anmEtape === 4 ? e4 : e5}
-    <div style="display:flex;align-items:center;gap:10px">
-      ${c.anmPrec ? `<button ${x.A(c.anmPrec)} style="${pill(false)}">← Précédent</button>` : ''}
-      <span style="flex:1"></span>
-      <span style="font-size:10.5px;color:var(--color-text-muted);max-width:760px;text-align:right;line-height:1.5">${esc(c.anmSource || '')}</span>
-      ${c.anmSuiv ? `<button ${x.A(c.anmSuiv)} style="${pill(true)}">Suivant →</button>` : ''}
-    </div>
-  </div>`;
-}
-
 function tplManque(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -10500,110 +9791,6 @@ function tplSeuil(c, x){
 }
 
 
-/* --- Développement commercial : la liste de démarchage d'un magasin -------- */
-/* Deux lectures des mêmes lieux : le tableau, dense, pour préparer la liste ;
-   les fiches, par famille, pour la tournée. Chaque lieu porte sa case, la
-   date de visite, le retour et la note — la note l'envoie au CRM. */
-function tplDemarchage(c, x){
-  const { esc } = x;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
-  const num = 'font-variant-numeric:tabular-nums';
-  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
-  const inp = 'font-family:var(--font-ui);font-size:12px;padding:5px 7px;border-radius:7px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);box-sizing:border-box';
-  const btnP = 'border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
-  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
-  const puce = on => `border:1px solid ${on ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-text)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:4px 11px;font-size:11.5px;cursor:pointer;font-family:var(--font-ui)`;
-  const badgeCrm = `<span title="Annoté : part au CRM marketing" style="display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:2px 7px;border-radius:999px;background:#E6F2E9;color:#2d7a3e;white-space:nowrap">→ CRM</span>`;
-  const retourSel = l => `<select ${x.C(l.setRetour)} style="${inp};width:118px">${c.dmRetours.map(r => `<option value="${esc(r.v)}"${r.v === l.retour ? ' selected' : ''}>${esc(r.l)}</option>`).join('')}</select>`;
-  const dateInp = l => `<input type="date" value="${esc(l.visite)}" ${x.C(l.setVisite)} style="${inp};width:132px">`;
-  const noteInp = (l, w) => `<input type="text" value="${esc(l.note)}" placeholder="Annotation…" ${x.C(l.setNote)} style="${inp};width:${w}">`;
-  const coche = l => `<input type="checkbox" ${l.coche ? 'checked' : ''} ${x.C(l.setCoche)} style="width:16px;height:16px;accent-color:var(--color-primary);cursor:pointer">`;
-  const adresse = l => l.sansAdresse
-    ? `<span style="color:var(--color-text-muted)">adresse non cartographiée</span> <a href="${esc(l.maps)}" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:none;white-space:nowrap">📍 Maps</a>`
-    : `${esc(l.adresse)} <a href="${esc(l.maps)}" target="_blank" rel="noopener" title="Ouvrir dans Google Maps" style="color:var(--color-primary);text-decoration:none;white-space:nowrap">📍</a>`;
-  const entete = `
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
-      <select ${x.C(c.dmSetMagasin)} style="${SEL};font-weight:500">${c.dmMagasins.map(o => `<option value="${esc(o.id)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
-      <span style="font-size:12px;color:var(--color-text-muted)">Rayon</span>
-      <select ${x.C(c.dmSetR)} style="${SEL}">${c.dmRayons.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.l)}</option>`).join('')}</select>
-      <input type="search" value="${esc(c.dmQ)}" ${x.C(c.dmSetQ)} placeholder="Chercher un lieu, une rue…" style="${SEL};min-width:220px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" ${c.dmGrand ? 'checked' : ''} ${x.C(c.dmToggleGrand)} style="accent-color:var(--color-primary)">20 personnes et plus</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" ${c.dmSeul ? 'checked' : ''} ${x.C(c.dmToggleSeul)} style="accent-color:var(--color-primary)">Ma liste seulement</label>
-      <span style="flex:1"></span>
-      <span style="display:inline-flex;gap:4px">${c.dmVues.map(v => `<button ${x.A(v.go)} style="${puce(v.on)}">${esc(v.l)}</button>`).join('')}</span>
-      <button ${x.A(c.dmRefresh)} title="Relever à nouveau dans OpenStreetMap" style="${btnS}">↻ Relever</button>
-    </div>`;
-  if (c.dmChargement) { return `<div data-screen="demarchage" style="display:flex;flex-direction:column;gap:16px"><div style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture des magasins du réseau…</div></div>`; }
-  if (c.dmSansMagasin) { return `<div data-screen="demarchage" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">Aucun magasin du réseau n’a de position : pointez-les sur la carte dans Scouting — où ouvrir (Magasins du réseau).</div>`; }
-  if (c.dmLecture) { return `<div data-screen="demarchage" style="display:flex;flex-direction:column;gap:16px">${entete}<div style="${carte};padding:40px 20px;font-size:13px;color:var(--color-text-muted)">Relevé des lieux autour du magasin dans OpenStreetMap — une minute la première fois, puis gardé 45 jours…</div></div>`; }
-  if (c.dmErreur) { return `<div data-screen="demarchage" style="display:flex;flex-direction:column;gap:16px">${entete}<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.dmErreurTxt)}</div></div>`; }
-  const R = c.dmResume;
-  const resume = `
-    <div style="${carte};padding:12px 16px;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
-      ${[['Lieux relevés', R.total, R.adresses + ' avec adresse · ' + R.zonings + ' zonings'], ['Affichés', R.montre, 'selon les filtres'], ['Cochés', R.coches, 'ma liste de démarchage'], ['Visités', R.visites, 'date de visite posée'], ['Annotés → CRM', R.annotes, 'à envoyer au CRM marketing']].map(t => `
-      <div><div style="${cap}">${esc(t[0])}</div><div style="font-family:var(--font-display);font-size:22px;line-height:1.1;margin-top:2px;${num}">${esc(String(t[1]))}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(t[2])}</div></div>`).join('')}
-      <span style="flex:1"></span>
-      <button ${x.A(c.dmExporter)} style="${btnS}" ${R.coches ? '' : 'disabled'}>⤓ Exporter ma liste (CSV)</button>
-      <button ${x.A(c.dmCrm)} style="${btnP}">Envoyer au CRM · ${esc(String(R.annotes))}</button>
-    </div>`;
-  const familles = `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <span style="${cap};margin-right:4px">Types</span>
-      ${c.dmFamilles.map(f => `<button ${x.A(f.go)} style="${puce(f.on)}">${esc(f.l)} <span style="opacity:.7">${esc(String(f.n))}</span></button>`).join('')}
-      <button ${x.A(c.dmToutesFam)} style="border:none;background:transparent;color:var(--color-text-muted);font-size:11px;cursor:pointer;font-family:var(--font-ui)">tous</button>
-    </div>`;
-  const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
-  const tableau = `
-    <div style="${carte};padding:6px 14px 10px;overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <tr>${['', 'Lieu', 'Type', 'Adresse', 'Dist.', 'Taille', 'Visite', 'Retour', 'Annotation', ''].map((h, i) => `<th style="text-align:${i === 4 ? 'right' : 'left'};padding:9px 8px 7px;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap">${esc(h)}</th>`).join('')}</tr>
-        ${c.dmLieux.map(l => `<tr style="${l.coche ? 'background:rgba(141,29,44,0.04)' : ''}">
-          <td style="padding:7px 4px 7px 8px;${bord};width:22px">${coche(l)}</td>
-          <td style="padding:7px 8px;${bord};min-width:180px"><div style="font-weight:600">${esc(l.nom)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.genre)}${l.zoning ? ' · ' + esc(l.zoning) : ''}${l.tel ? ' · ' + esc(l.tel) : ''}</div></td>
-          <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11.5px">${esc(l.fam)}${l.offre ? `<div style="font-size:10.5px;color:var(--color-primary)">${esc(l.offre)}</div>` : ''}</td>
-          <td style="padding:7px 8px;${bord};min-width:200px;font-size:11.5px">${adresse(l)}</td>
-          <td style="padding:7px 8px;${bord};text-align:right;white-space:nowrap;${num}">${esc(l.dist)}</td>
-          <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11px;color:${l.tailleCoul}">${esc(l.taille)}</td>
-          <td style="padding:5px 6px;${bord}">${dateInp(l)}</td>
-          <td style="padding:5px 6px;${bord}">${retourSel(l)}</td>
-          <td style="padding:5px 6px;${bord};min-width:180px">${noteInp(l, '100%')}</td>
-          <td style="padding:7px 8px 7px 4px;${bord}">${l.crm ? badgeCrm : ''}</td>
-        </tr>`).join('')}
-      </table>
-      ${c.dmLieux.length ? '' : `<div style="padding:20px 0;font-size:12.5px;color:var(--color-text-muted)">Aucun lieu ne passe les filtres.</div>`}
-    </div>`;
-  const fiche = l => `
-    <div style="background:var(--color-surface);border:1px solid ${l.coche ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px">
-      <div style="display:flex;align-items:flex-start;gap:9px">
-        ${coche(l)}
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px;line-height:1.2">${esc(l.nom)}</div>
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(l.genre)}${l.zoning ? ' · ' + esc(l.zoning) : ''}</div>
-        </div>
-        <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;${num}">${esc(l.dist)}</span>
-      </div>
-      <div style="font-size:11.5px;line-height:1.4">${adresse(l)}${l.tel ? `<div style="color:var(--color-text-muted)">${esc(l.tel)}</div>` : ''}</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10.5px;font-weight:600;color:${l.tailleCoul}">${esc(l.taille)}</span>${l.crm ? badgeCrm : ''}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:4px;border-top:0.5px dashed var(--color-border-tertiary)">${dateInp(l)}${retourSel(l)}</div>
-      ${noteInp(l, '100%')}
-    </div>`;
-  const fiches = c.dmGroupes.length ? c.dmGroupes.map(g => `
-    <div>
-      <div style="${cap};margin:6px 0 8px">${esc(g.l)} · ${esc(String(g.lieux.length))}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px">${g.lieux.map(fiche).join('')}</div>
-    </div>`).join('') : `<div style="${carte};padding:20px;font-size:12.5px;color:var(--color-text-muted)">Aucun lieu ne passe les filtres.</div>`;
-  return `
-  <div data-screen="demarchage" style="display:flex;flex-direction:column;gap:14px">
-    ${entete}
-    ${resume}
-    ${familles}
-    ${c.dmVue === 'cartes' ? fiches : tableau}
-    <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.5;text-wrap:pretty">${esc(c.dmNote)}</div>
-  </div>`;
-}
-
 /* --- Newsletter : module à part (assets/js/newsletter.js), monté après le rendu ---
  * La vue marque (admin) et la vue magasin (franchisé) sont deux écrans du
  * rail ; le module reçoit le rôle. Ici : l'en-tête, le choix du magasin pour
@@ -10635,37 +9822,10 @@ function tplProspection(c, x){
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="${cap}">Magasin</span>
       ${c.prChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</span>' : `<select ${x.C(c.prSetMagasin)} style="${SEL}">${c.prMagasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`}
-      ${c.prMagasin ? `<span style="font-size:11.5px;color:var(--color-text-muted)">La même liste sur le téléphone : <a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="color:var(--color-primary)">Prospection mobile ↗</a></span>` : ''}
+      ${c.prMagasin ? `<span style="font-size:11.5px;color:var(--color-text-muted)">La même liste sur le téléphone : <a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="color:var(--color-primary)">Prospection mobile ↗</a> · <button ${x.A(c.prCopier)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;color:var(--color-primary)">copier le lien</button></span>` : ''}
     </div>
     ${c.prSansMagasin ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin pointé sur la carte : pointez-le dans Scouting (Magasins du réseau).</div>' : ''}
     <div id="prospection-root" style="min-height:400px"></div>
-  </div>`;
-}
-
-/* --- Prospection mobile : la page du téléphone, ses liens, un aperçu --- */
-function tplProspectionMobile(c, x){
-  const { esc } = x;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
-  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
-  return `
-  <div data-screen="prospectionMobile" style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px;align-items:start">
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div style="${carte};padding:16px 18px">
-        <div style="${cap};margin-bottom:8px">Le lien de chaque magasin</div>
-        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-bottom:12px">Une page à part, faite pour le téléphone : ma liste et l’annotation en tournée (un tap fait avancer le statut, la note part au CRM), la carte des concentrations, le CA possible. Elle lit et écrit la même réserve que l’écran Prospection : ce qui est coché au bureau l’est sur le téléphone, et inversement. À envoyer au franchisé, ou à ajouter à l’écran d’accueil de son téléphone.</div>
-        ${c.prChargement ? '<div style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</div>' : `<div style="display:flex;flex-direction:column;gap:6px">${c.prLiens.map(l => `
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:${l.on ? 'var(--color-background-secondary)' : 'transparent'}">
-            <button ${x.A(() => c.prSetMagasin({ target: { value: l.id } }))} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--color-text);text-align:left;flex:0 0 220px">${esc(l.nom)}</button>
-            <a href="${esc(l.url)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--color-primary);word-break:break-all;flex:1">${esc(l.url)}</a>
-          </div>`).join('')}</div>`}
-        ${c.prMagasin ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button ${x.A(c.prCopier)} style="${btnS}">Copier le lien de ${esc(c.prMagasin.nom)}</button><a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="${btnS};text-decoration:none;display:inline-flex;align-items:center">Ouvrir dans un onglet ↗</a></div>` : ''}
-      </div>
-    </div>
-    <div style="${carte};padding:14px 16px 16px">
-      <div style="${cap};margin-bottom:10px;display:flex;justify-content:space-between"><span>Aperçu · ${esc(c.prMagasin ? c.prMagasin.nom : '')}</span><span>390 × 760</span></div>
-      ${c.prMagasin ? `<div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.prLienMobile)}" title="Prospection mobile" style="width:390px;height:760px;border:none;display:block"></iframe></div>` : '<div style="font-size:12px;color:var(--color-text-muted)">Choisissez un magasin.</div>'}
-    </div>
   </div>`;
 }
 
