@@ -631,5 +631,23 @@ $GLOBALS['CORPS'] = ['sms' => ['actif' => false]];
 wr_primes_app(); relire();
 verifie('éteints : aucun SMS', primesSmsReussite('2026-10', [$pSms]) === ['actif' => false]);
 
+// --- 12. les mois à venir (16/10/2026) ------------------------------------------------------------
+echo "Les mois à venir\n";
+$mP = date('Y-m', strtotime(date('Y-m-01') . ' +1 month'));
+$_GET = ['m' => $mP]; $mA = primesMoisDemande();
+$_GET = ['m' => date('Y-m', strtotime(date('Y-m-01') . ' +4 months'))]; $mB = primesMoisDemande();
+$_GET = [];
+verifie('le mois prochain s’ouvre ; au-delà de trois mois, le mois en cours', $mA === $mP && $mB === date('Y-m'), $mA . ' / ' . $mB);
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], [
+    ['type' => 'promo', 'ref' => ['source' => 'cockpit'], 'lib' => 'Tartes du mois prochain', 'montant' => 120, 'regle' => 'magasin', 'objectifs' => ['4' => 90],
+     'promo' => ['sel' => [['t' => 'categorie', 'v' => 'Tartes', 'lib' => 'Tartes']], 'du' => $mP . '-01', 'au' => date('Y-m-t', strtotime($mP . '-01')), 'shops' => ['4']]]])];
+wr_primes_app();
+$av = primesMoi(2, $mP);
+$parC = []; foreach ($av['cartes'] ?? [] as $c) { $parC[$c['lib']] = $c; }
+verifie('un mois à venir : la fiche des primes prévues, rien de compté', ($av['aVenir'] ?? false) === true && ($av['acquis'] ?? null) === 0.0 && isset($parC['Tartes du mois prochain']), json_encode(array_keys($parC)));
+verifie('la promo du mois prochain : sa récompense, sa règle, l’objectif de son magasin, ses dates', ($parC['Tartes du mois prochain']['montant'] ?? null) === 120 && $parC['Tartes du mois prochain']['regle'] === 'magasin'
+    && $parC['Tartes du mois prochain']['objectif'] === 90.0 && $parC['Tartes du mois prochain']['du'] === $mP . '-01' && $parC['Tartes du mois prochain']['etat'] === 'avenir');
+verifie('en jeu : la somme des récompenses prévues', $av['enJeu'] === (float) array_sum(array_column($av['cartes'], 'montant')));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

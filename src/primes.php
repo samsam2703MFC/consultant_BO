@@ -30,6 +30,7 @@ const PRIMES_FICHE_V = 8;
 const PRIMES_CACHE_CLOS = 86400;   // un jour : un mois clos ne bouge que si le CEO l'enregistre
 const PRIMES_CACHE_JETON = 600;    // 10 min : un jeton d'employé vérifié chez le panel
 const PRIMES_CACHE_JOUR = 600;     // 10 min : le compteur du jour
+const PRIMES_MOIS_A_VENIR = 3;     // les mois à venir qu'on peut ouvrir dans l'app (16/10/2026)
 
 /* ======================================================================
    Les réglages
@@ -877,6 +878,8 @@ function primesMoisClos(int $emp, string $m, string $shop, array $nomDe): array
  */
 function primesMoi(int $emp, string $m, bool $frais = false): array
 {
+    // Un mois à venir (16/10/2026) : rien à compter encore — les primes prévues, leur récompense, leur objectif.
+    if ($m > date('Y-m') && function_exists('primesAVenir')) { return primesAVenir($emp, $m); }
     $cle = 'primesMoi' . $emp . ':' . $m;
     $enCours = $m === date('Y-m');
     if (!$frais) {
@@ -1294,7 +1297,8 @@ function primesEnregistrer(string $m): array
 function primesMoisDemande(): string
 {
     $m = trim((string) ($_GET['m'] ?? ''));
-    if (!preg_match('/^\d{4}-\d{2}$/', $m) || $m > date('Y-m')) { $m = date('Y-m'); }
+    // Les mois à venir (16/10/2026) : trois au plus, pour voir les primes prévues.
+    if (!preg_match('/^\d{4}-\d{2}$/', $m) || $m > date('Y-m', strtotime(date('Y-m-01') . ' +' . PRIMES_MOIS_A_VENIR . ' months'))) { $m = date('Y-m'); }
     return $m;
 }
 

@@ -1218,6 +1218,57 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
 }
 
 /**
+ * Un mois à venir (16/10/2026) : la fiche des primes prévues — les targets actives, Bats ton record, la meilleure
+ * vendeuse, et les promos dont la période touche le mois dans le magasin de la personne —, chacune avec sa récompense,
+ * sa règle et son objectif (pour son magasin), sans rien de compté. `aVenir: true`, `etat: avenir`.
+ */
+function primesAVenir(int $emp, string $m): array
+{
+    $emps = venteEmployes();
+    if (!isset($emps[$emp])) { return ['error' => 'personne inconnue', 'code' => 404]; }
+    $shop = (string) $emps[$emp]['shop'];
+    $nomDe = primesMagasins();
+    $carte = static fn (array $c) => $c + ['gain' => 0.0, 'etat' => 'avenir', 'val' => null, 'max' => false, 'objectif' => null, 'unite' => null, 'regle' => null, 'du' => null, 'au' => null];
+    $cartes = [];
+    $eC = primesAppEntree('croisees');
+    if ($eC !== null && $eC['actif']) {
+        $cfgC = croiseesReglages();
+        $cartes[] = $carte(['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'icone' => $eC['icone'], 'lib' => $eC['lib'], 'montant' => (int) $eC['montant'],
+            'objectif' => croiseesCible($cfgC, $shop), 'unite' => 'pct', 'minTickets' => (int) $cfgC['minTickets'], 'categorie' => (string) ($eC['categorie'] ?? '')]);
+    }
+    $regR = venteRecordReglages();
+    if ($regR['eurDixieme'] > 0) {
+        $cartes[] = $carte(['cle' => 'record', 'type' => 'target', 'emo' => '🚀', 'icone' => primesIconeDe('record'), 'lib' => 'Bats ton record',
+            'montant' => (int) $regR['eurDixieme'] * max(1, (int) $regR['maxDixiemes']), 'max' => (int) $regR['maxDixiemes'] > 1, 'unite' => 'lpt']);
+    }
+    $eO = primesAppEntree('objectif');
+    if ($eO !== null && $eO['actif']) {
+        $cartes[] = $carte(['cle' => 'objectif', 'type' => 'target', 'emo' => '🏪', 'icone' => $eO['icone'], 'lib' => $eO['lib'], 'montant' => (int) $eO['montant'],
+            'objectif' => (float) $eO['pct'], 'unite' => 'pct', 'heuresMin' => (int) $eO['heuresMin']]);
+    }
+    $eG = primesAppEntree('google');
+    if ($eG !== null && $eG['actif']) {
+        $cartes[] = $carte(['cle' => 'google', 'type' => 'target', 'emo' => '⭐', 'icone' => $eG['icone'], 'lib' => $eG['lib'], 'montant' => (int) $eG['montant'],
+            'objectif' => (float) $eG['seuil'], 'unite' => 'note', 'heuresMin' => (int) $eG['heuresMin']]);
+    }
+    $mv = ventePrimesConfig();
+    if (($mv['magasin'] ?? 0) > 0) {
+        $cartes[] = $carte(['cle' => 'meilleure', 'type' => 'classement', 'emo' => '🏆', 'icone' => primesIconeDe('meilleure'), 'lib' => 'Meilleure vendeuse', 'montant' => (int) $mv['magasin'], 'regle' => 'premiere']);
+    }
+    foreach (promosConfig($m, $shop) as $k) {
+        $regle = $k['regle'] ?? 'premiere';
+        $obj = in_array($regle, ['magasin', 'vendeuse'], true) ? primesObjectifDe($k, $shop) : ((int) $k['minPieces'] > 0 ? (float) $k['minPieces'] : null);
+        $cartes[] = $carte(['cle' => $k['cle'], 'type' => 'promo', 'emo' => '🏷️', 'icone' => primesIconeDe($k['cle']), 'lib' => $k['lib'], 'montant' => (int) $k['magasin'],
+            'objectif' => $obj, 'unite' => 'pcs', 'regle' => $regle, 'du' => $k['du'], 'au' => $k['au']]);
+    }
+    $enJeu = (float) array_sum(array_map(static fn ($c) => $c['montant'], $cartes));
+    return ['v' => PRIMES_FICHE_V, 'emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => false, 'aVenir' => true, 'quand' => time(),
+        'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => [], 'collection' => [],
+        'heures' => null, 'aujourdhui' => null, 'acquis' => 0.0, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => null, 'montants' => [],
+        'briques' => [], 'prime' => [], 'semaines12' => [], 'motif' => null];
+}
+
+/**
  * La demi-jauge d'une carte (16/10/2026) : où elle en est aujourd'hui (« jauge », en % d'une échelle qui part de
  * 0) et l'objectif à atteindre (« repere » sur la même échelle, « repereVal » le chiffre à atteindre) :
  *  - cible : la cible du target (ventes croisées, record, objectif du magasin — 100 % du mois) ;
