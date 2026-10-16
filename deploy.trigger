@@ -796,3 +796,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T18:48:21Z primes marque / franchisé (serveur) + sonde promotions
 2026-10-16T18:54:07Z primes : Marketing franchisé, marque / franchisés, fiches des promotions
 2026-10-16T18:55:25Z primes : Marketing franchisé, marque / franchisés, fiches des promotions
+2026-10-16T18:59:23Z primes : icône dans l'assistant
