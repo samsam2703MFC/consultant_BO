@@ -52,7 +52,7 @@
 {% set suf = u == 'pct' ? ' %' : (u == 'pcs' ? ' ' ~ pcs : (u == 'note' ? ' ★' : '')) %}
 {% if ligne %}
 {# Le drapeau (16/10/2026, maquette B) : la valeur en haut à droite ; une barre, le trait noir de l'objectif (toujours
-   au même endroit) et la récompense posée dessus, cadenassée ; la passer active la prime (vert). En couleur d'office. #}
+   au même endroit) et la récompense posée dessus ; la passer active la prime (vert). En couleur d'office. #}
 {% set ok = c.actif ?? false %}
 {% set uc = u == 'pct' ? '%' : (u == 'note' ? '★' : (u == 'score' ? (T.pts ?? 'pts') : '')) %}
 {% set ue = u == 'pct' or u == 'score' ? ' ' ~ (T.pts ?? 'pts') : (u == 'note' ? ' ★' : '') %}
@@ -66,7 +66,7 @@
     </div>
     {% if c.barre is not null %}
     <div class="pl-j" aria-hidden="true"><i style="width:{{ c.barre }}%"></i>{% if c.barreJour is not null %}<span class="jr" style="left:{{ c.barreJour }}%"></span>{% endif %}<span class="ob"></span>
-      <span class="fl">{{ ok ? '✓' : '🔒' }} {{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if c.max and not ok %} max{% endif %}</span></div>
+      <span class="fl">{{ ok ? '✓ ' }}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if c.max and not ok %} max{% endif %}</span></div>
     {% endif %}
     <div class="pl-s">
       <span class="{{ ok ? 'ok' : (c.motif ? 'mu') }}">

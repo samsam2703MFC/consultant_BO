@@ -367,8 +367,8 @@ a.acc-etape{text-decoration:none;color:inherit}
 .pq-v i{display:block;font:600 clamp(8.5px,4cqw,10.5px) var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:2px}
 /* L'objectif en clair, avec le même repère que la jauge ; puis l'état et ce qui l'explique. */
 /* Les targets (16/10/2026, le « drapeau ») : une par ligne, en couleur d'office. La valeur en haut à droite ; une
-   barre, le trait noir de l'objectif (toujours à 75 %, aligné d'une ligne à l'autre) et la récompense posée dessus,
-   cadenassée ; la passer active la prime (vert). Le pointillé : où en être au jour J. Toucher la ligne déroule son
+   barre, le trait noir de l'objectif (toujours à 75 %, aligné d'une ligne à l'autre) et la récompense posée dessus ;
+   la passer active la prime (vert). Le pointillé : où en être au jour J. Toucher la ligne déroule son
    détail, une seule ouverte à la fois. */
 .pl-liste{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
 .pl{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);box-shadow:var(--la-ombre)}
