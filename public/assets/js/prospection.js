@@ -166,6 +166,21 @@
       return this.lieux().filter(l => l.dans).sort((a, b) => (rang(a) - rang(b)) || ((ordre[a.st] || 0) - (ordre[b.st] || 0)) || (a.dKm - b.dKm));
     }
     aFaire() { return this.lieux().filter(l => l.dans && l.action); }
+    /** Ma liste en CSV (Excel : point-virgule, BOM) — l'export qu'avait Développement commercial. */
+    exporter() {
+      const L = this.maListe(); if (!L.length) return;
+      const o = l => { const x = offreParId(l.offre); return x ? x.nom : ''; };
+      const lignes = [['Lieu', 'Type', 'Genre', 'Offre', 'Adresse', 'Téléphone', 'Site', 'Distance (km)', 'Taille', 'Zoning', 'Statut', 'Visite', 'Action à suivre', 'Pour le', 'Note']]
+        .concat(L.map(l => [l.nom, NOM[l.famille] || l.famille, l.genre, o(l), l.adresse, l.tel, l.site, String(l.dKm).replace('.', ','),
+          l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers.' : ''), l.zoning || '',
+          this.stat(l.st)[1], l.visite, ACT_NOM[l.action] || l.action, l.actionLe, l.note]));
+      const csv = '\ufeff' + lignes.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+      const m = this.magasin(), nom = (m && m.nom) || this.opts.nom || this.shop();
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = 'prospection-' + String(nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-') + '-' + AUJ + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+    }
     candidats(tous) {
       const s = this.s, q = s.q.trim().toLowerCase();
       return tous.filter(l => !l.dans && (!s.fam || l.famille === s.fam) && (!s.grand || l.grand === true) && (!q || (l.nom + ' ' + l.genre + ' ' + l.adresse + ' ' + (l.zoning || '')).toLowerCase().includes(q)));
@@ -275,6 +290,7 @@
         <div class="pr-hd"><div class="pr-nav">${[['liste', 'Ma liste · ' + L.length], ['choisir', '＋ Créer ma liste'], ['calcul', 'Pénétration & CA']].map(v => `<button class="${s.vue === v[0] ? 'on' : ''}" data-a="vue" data-v="${v[0]}">${v[1]}</button>`).join('')}</div>
           <span class="sp"></span><span class="pr-lab">Rayon</span><select class="pr-sel" data-c="r">${RAYONS.map(r => `<option value="${r}" ${s.r === r ? 'selected' : ''}>${r / 1000} km</option>`).join('')}</select>
           <button class="pr-btn" data-a="relire">↻ Relire</button>
+          ${L.length ? `<button class="pr-btn" data-a="csv" title="Ma liste, avec statut, visite, action et note">⤓ Exporter (CSV)</button>` : ''}
           <span class="pr-mini">${tous.length} lieux relevés · ${L.filter(l => l.st === 'client').length} client(s) · ${L.filter(l => l.note).length} note(s) → CRM</span></div>
         <div class="pr-grid">
           <div class="pr-card pr-col"><div class="ct"><b>${s.vue === 'choisir' ? 'Choisir les lieux à démarcher' : (s.vue === 'calcul' ? 'Pénétration et CA possible par secteur' : 'Ma liste de démarchage')}</b><span class="pr-mini">${s.vue === 'choisir' ? 'un tap ajoute le lieu' : (s.vue === 'calcul' ? 'réglages gardés sur ce poste' : 'un tap sur le statut le fait avancer · la note part au CRM')}</span></div>
@@ -366,6 +382,7 @@
         set(this.shop(), v, { action: '', actionLe: '', note: (l.note ? l.note + ' · ' : '') + trace }, l.nom).then(() => this.render()); this.render();
       }
       else if (a === 'relire') { this.charger(true); etatCharger(this.shop(), true); this.render(); }
+      else if (a === 'csv') { this.exporter(); }
       else if (a === 'add') { const l = this.lieux().find(x => x.id === v); set(this.shop(), v, { coche: true }, l && l.nom).then(() => this.render()); this.render(); }
       else if (a === 'tout') {
         const cand = this.candidats(this.lieux());
