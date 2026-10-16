@@ -138,16 +138,16 @@ export function render(c, x){
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
-      ${c.isPerf ? tplPerformance(c, x) : ''}
-      ${c.isMagasins && !c.isPerf ? tplMagasins(c, x) : ''}
-      ${c.isObjectifs && !c.isPerf ? tplObjectifs(c, x) : ''}
+      ${c.isMagasins && !c.isRJour ? tplMagasins(c, x) : ''}
+      ${c.isObjectifs && !c.isRJour ? tplObjectifs(c, x) : ''}
       ${c.isBudget ? tplBudget(c, x) : ''}
-      ${c.isMarge && !c.isPerf ? tplMarge(c, x) : ''}
+      ${c.isMarge && !c.isRJour ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isPlan ? tplPlan(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
+      ${c.isMktHub ? tplMktHub(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
@@ -160,7 +160,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
+      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
@@ -2041,28 +2041,13 @@ function tplMesure(c, x){
 
 /* Scoring du trimestre : quatre postes de cinq points par magasin, le classement
    en étoiles, les règles, l'encodage du client mystère, le rapport A4 et son envoi. */
-function tplScoringTri(c, x){
+/** Les étoiles du scoring : le fond gris, le plein à la proportion de la note. */
+const sqSt = (pct, na, cls) => `<span class="sq-st ${cls || ''}${na ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${(pct || 0).toFixed(1)}%">★★★★★</span></span>`;
+
+/* Les règles du scoring et l’envoi du rapport A4 : sous le classement, ici comme dans la fiche (B2). */
+export function tplSqCartes(c, x){
   const { esc } = x;
-  const st = (pct, na, cls) => `<span class="sq-st ${cls || ''}${na ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${(pct || 0).toFixed(1)}%">★★★★★</span></span>`;
-  const entete = `
-    <div class="mko-hd">
-      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
-      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
-      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
-      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
-    </div>`;
-  let corps = '';
-  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
-  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
-  else if (c.sqVue === 'tableau') {
-    corps = `
-    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
-      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = la note sur 5</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
-        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
-          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée, compté${l.manque > 1 ? 's' : ''} 0</span>` : ''}</div></div></div></td>
-          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
-      </tbody></table></div>
-      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur ${c.sqReseau.magasins} magasins · ${esc(c.sqReseau.etoiles)} ★ · ${c.sqReseau.complets} noté${c.sqReseau.complets > 1 ? 's' : ''} sur les quatre postes` : ''} · un poste sans donnée compte 0, et le tableau nomme ce qui manque.</div></div>
+  return `
     <div class="cx-deux" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)">
       <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les règles — quatre postes, cinq points chacun, 20 en tout · un poste sans donnée vaut 0</span><span class="mko-mini">un trimestre se clôture le 1er jour du suivant</span></div>
         <div class="mko-corps"><div class="sq-regles">${c.sqPostes.map(p => `<div><div class="k">Poste ${p.n}</div><div class="t">${esc(p.nom)}</div><div class="r">${esc(p.regle)}</div></div>`).join('')}</div></div></div>
@@ -2075,9 +2060,13 @@ function tplScoringTri(c, x){
           ${c.sqBilan ? `<div class="sq-bilan${c.sqBilan.ko ? ' ko' : ''}"><b>${esc(c.sqBilan.txt)}</b>${c.sqBilan.lignes && c.sqBilan.lignes.length ? '<br>' + c.sqBilan.lignes.map(esc).join('<br>') : ''}</div>` : ''}
         </div></div>
     </div>`;
-  } else {
-    const F = c.sqMsp;
-    corps = `
+}
+
+/* Le client mystère : l’encodage d’un rapport, et les trimestres du magasin (B2 : aussi dans la fiche). */
+export function tplSqMsp(c, x){
+  const { esc } = x, st = sqSt;
+  const F = c.sqMsp;
+  return `
     <div class="cx-deux" style="grid-template-columns:minmax(0,1fr) 420px">
       <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le rapport reçu</span><span class="mko-mini">un rapport par magasin et par trimestre · réencoder remplace</span></div>
         <div class="mko-corps">
@@ -2097,6 +2086,33 @@ function tplScoringTri(c, x){
         <div class="mko-corps" style="padding-top:8px">${F.histChargement ? '<div class="mko-mu">Lecture…</div>' : (F.hist.length ? `<table class="mko-tab sq-hist"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${F.hist.map(h => `<tr><td>${esc(h.tri)}</td><td class="n">${esc(h.recu)}</td><td class="n"><b>${esc(h.sur5)}</b> ${st(h.pct, false, 'sm')}</td><td>${h.fichier ? `<a class="sq-lien" href="${esc(h.fichier)}" target="_blank" rel="noopener">ouvrir</a>` : '<span class="mko-mu">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="mko-mu">Aucun rapport encodé pour ce magasin.</div>')}
           <div style="margin-top:14px"><span class="mko-lab">Où ça arrive ensuite</span><ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted)"><li>le classement, poste « Client mystère », dès l’enregistrement ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
     </div>`;
+}
+
+function tplScoringTri(c, x){
+  const { esc } = x;
+  const st = sqSt;
+  const entete = `
+    <div class="mko-hd">
+      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
+      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
+      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
+      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
+    </div>`;
+  let corps = '';
+  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
+  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
+  else if (c.sqVue === 'tableau') {
+    corps = `
+    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = la note sur 5</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
+        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
+          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée, compté${l.manque > 1 ? 's' : ''} 0</span>` : ''}</div></div></div></td>
+          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur ${c.sqReseau.magasins} magasins · ${esc(c.sqReseau.etoiles)} ★ · ${c.sqReseau.complets} noté${c.sqReseau.complets > 1 ? 's' : ''} sur les quatre postes` : ''} · un poste sans donnée compte 0, et le tableau nomme ce qui manque.</div></div>
+    ${tplSqCartes(c, x)}`;
+  } else {
+    corps = tplSqMsp(c, x);
   }
   return `<div data-screen="scoring" class="mko">${entete}${corps}</div>`;
 }
@@ -4017,19 +4033,6 @@ function tplPlanRituel(r, x, busy, err){
   </div>`;
 }
 
-function tplPerformance(c, x){
-  const { esc } = x;
-  const ong = o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
-  return `
-  <div data-screen="performance" style="display:flex;flex-direction:column;gap:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.pfOngletTxt)}</div>
-      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.pfOnglets.map(ong).join('')}</div>
-    </div>
-    ${c.pfOnglet === 'magasins' ? tplMagasins(c, x) : (c.pfOnglet === 'objectifs' ? tplObjectifs(c, x) : tplMarge(c, x))}
-  </div>`;
-}
-
 /** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
 /* Le petit feu d'artifice d'une ligne qui a passé son objectif, et la pluie de
  * papiers quand c'est tout le réseau. Les deux sont décoratifs — `aria-hidden`
@@ -4086,7 +4089,17 @@ function tplResultat(c, x){
       <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
       <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted);margin-top:5px"><i class="rj-ring"></i><span style="font-weight:500;color:var(--color-text)">Lecture du panel</span><span>${esc(c.rjChargeTxt)}</span><span style="margin-left:auto;font-variant-numeric:tabular-nums">${esc(c.rjChargeSec)}</span></div>
     </div>` : ''}
-    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : (c.rjOnglet === 'reseau' ? tplResultatReseau(c, x) : tplResultatPeriode(c, x))}
+    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x)
+      : c.rjOnglet === 'reseau' ? tplResultatReseau(c, x)
+      : (c.rjOnglet === 'annee' || c.rjOnglet === 'horizons') ? tplObjectifs(c, x)
+      : c.rjOnglet === 'marge' ? tplMarge(c, x)
+      : tplResultatPeriode(c, x) + (c.rjOnglet === 'mois' && c.isMagasins ? `
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <div style="font-family:var(--font-display);font-size:24px">Le dernier mois clos</div>
+      <span style="flex:1;height:0.5px;background:var(--color-border-secondary)"></span>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">marge, valeur et CA face aux cibles, puis douze mois de clients et de panier</span>
+    </div>
+    ${tplMagasins(c, x)}` : '')}
   </div>`;
 }
 
@@ -5452,6 +5465,63 @@ const dcap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spa
 const dsel = 'width:100%;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)';
 
 /* --- Paramètres — Brand Guard : la charte et les pages Facebook -------------- */
+/* Marketing (C1) : les deux portes — l'espace marque et la vue franchisé —, les chiffres
+   par canal, et ce qui demande un geste. Tout lien ouvre le portail marketing/. */
+function tplMktHub(c, x){
+  const { esc } = x, h = c.mh;
+  const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
+  const btn = 'display:inline-flex;align-items:center;min-height:38px;padding:0 15px;border-radius:999px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-decoration:none;cursor:pointer;white-space:nowrap';
+  const blanc = btn + ';background:#fff;border:none;color:var(--color-primary)';
+  const ligne = btn + ';background:transparent;border:0.5px solid rgba(255,255,255,.55);color:#fff';
+  const plein = btn + ';background:var(--color-primary);border:none;color:#fff';
+  const vide = btn + ';background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text)';
+  const sel = 'font-family:var(--font-ui);font-size:12.5px;padding:9px 10px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:260px';
+  const ext = 'target="_blank" rel="noopener"';
+  const portes = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px">
+    <section style="background:var(--color-primary);color:#fff;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+      <div style="${cap};color:rgba(255,255,255,.75)">Espace marque · franchiseur</div>
+      <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Créer, valider, publier</div>
+      <div style="font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.9)">Nouvelle campagne (assistant), posts Facebook, Instagram et LinkedIn, newsletters, validation par la charte, publication.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a href="${esc(h.marque.campagne)}" ${ext} style="${blanc}">+ Campagne</a>
+        <a href="${esc(h.marque.post)}" ${ext} style="${blanc}">+ Post</a>
+        <a href="${esc(h.marque.newsletter)}" ${ext} style="${blanc}">+ Newsletter</a>
+        <a href="${esc(h.marque.ouvrir)}" ${ext} style="${ligne}">Ouvrir l’espace marque ↗</a>
+      </div>
+    </section>
+    <section style="${card};padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+      <div style="${cap}">Vue franchisé</div>
+      <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Voir comme le magasin</div>
+      <div style="font-size:12.5px;line-height:1.6;color:var(--color-text-muted)">Le portail tel que le franchisé l’ouvre : les campagnes qui le couvrent, ses posts, sa newsletter, ce qu’il doit faire.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:8px"><span style="${cap}">Magasin</span>
+          <select ${x.C(h.setShop)} style="${sel}">${h.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
+        ${h.vueFranchise ? `<a href="${esc(h.vueFranchise)}" ${ext} style="${plein}">Ouvrir la vue franchisé ↗</a><button ${x.A(h.copier)} style="${vide}">Copier son lien</button>` : ''}
+      </div>
+    </section>
+  </div>`;
+  if (h.indispo) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:#8D1D2C">${esc(h.indispo)} <button ${x.A(h.relire)} style="${vide};min-height:30px;margin-left:8px">Relire</button></div></div>`; }
+  if (h.chargement) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:var(--color-text-muted)">Lecture du portail marketing…</div></div>`; }
+  const chiffres = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${h.chiffres.map(k => `
+    <a href="${esc(k.lien)}" ${ext} style="${card};padding:14px 16px;text-decoration:none;color:var(--color-text);display:flex;flex-direction:column;gap:4px">
+      <span style="${cap}">${esc(k.k)}</span>
+      <span style="font-size:24px;font-weight:500;${k.fort ? 'color:var(--color-primary)' : ''}">${esc(k.v)}</span>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(k.s)}</span></a>`).join('')}</div>`;
+  const etats = h.etats.length ? `<div style="display:flex;flex-direction:column;gap:6px">${h.etats.map(t => `<div style="padding:9px 12px;border-radius:8px;background:#FBF3DC;border:1px solid #E8C9A0;font-size:12px;color:var(--color-on-abricot)">${esc(t)}</div>`).join('')}</div>` : '';
+  const tag = a => a.urgent ? 'background:rgba(141,29,44,.10);color:#8D1D2C' : 'background:var(--color-background-secondary);color:#444';
+  const faire = `<section style="${card};padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px"><div style="font-size:14px;font-weight:500">Ce qui demande un geste</div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre l’élément dans l’espace marque</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
+    ${h.aFaire.length ? h.aFaire.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12.5px">
+      <span style="display:inline-block;min-width:78px;text-align:center;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:500;${tag(a)}">${esc(a.canal)}</span>
+      <span style="flex:1;min-width:0"><span style="font-weight:500">${esc(a.titre)}</span>${a.detail ? `<span style="display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(a.detail)}</span>` : ''}</span>
+      <a href="${esc(a.lien)}" ${ext} style="font-size:12px;font-weight:500;white-space:nowrap">Ouvrir ›</a></div>`).join('')
+      : '<div style="font-size:12.5px;color:var(--color-text-muted);padding:10px 0">Rien n’attend : aucun post à valider, aucune publication en échec.</div>'}
+    ${h.plus ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding-top:8px">… et ${h.plus} autre(s) dans <a href="${esc(h.marque.ouvrir)}" ${ext}>le tableau de bord du portail ↗</a></div>` : ''}
+  </section>`;
+  return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}${chiffres}${etats}${faire}</div>`;
+}
 /* Invendus et poubelle (Magasins) : le réseau, magasin par magasin, et les produits les plus jetés. */
 function tplInvendus(c, x){
   const { esc } = x, o = c.iv;

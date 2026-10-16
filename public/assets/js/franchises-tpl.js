@@ -123,7 +123,7 @@ function tplGCCadre(g, x){
 /* --- Fiche franchisé ----------------------------------------------------------------- */
 export function tplFF(c, x){
   const { esc } = x, f = c.ff;
-  const entete = `<div class="mko-hd" style="margin-bottom:14px"><button type="button" class="ff-menu" ${x.A(f.menu)} aria-label="Menu" title="Menu">☰</button><div class="cx-vues">${f.onglets.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
+  const entete = `<div class="mko-hd" style="margin-bottom:14px"><button type="button" class="ff-menu" ${x.A(f.menu)} aria-label="Menu" title="Menu">☰</button><div class="cx-vues">${f.onglets.map((o, i) => (o.visite && !(f.onglets[i - 1] || {}).visite ? '<span class="mko-mu" style="align-self:center;padding:0 6px 0 12px;font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase">Visite</span>' : '') + `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
     <span class="mko-mu" style="margin-left:auto">Franchisé</span>${sel(x, esc, f.setShop, f.magasins)}<button ${x.A(f.rafraichir)} class="mko-pied-btn">Relire</button>${f.pageFranchise ? `<a class="mko-pied-btn" href="${esc(f.pageFranchise)}" target="_blank" rel="noopener">La page du franchisé ↗</a>` : ''}</div>`;
   const tableau = f.tableau ? `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Benchmark réseau — les franchisés côte à côte</span><span class="mko-mini">${esc(f.tableau.mini)}</span></div>
     <div style="overflow-x:auto"><table class="mko-tab"><thead><tr><th></th><th colspan="8" class="ff-grp j">Suivi journalier et opérations</th><th colspan="4" class="ff-grp t">Suivi de terrain</th></tr>
@@ -145,7 +145,46 @@ export function tplFF(c, x){
   const carte = (h, corps, style) => `<div class="mko-carte"${style ? ` style="${style}"` : ''}><div class="mko-corps"><h2 class="ff-h2">${esc(h)}</h2>${corps}</div></div>`;
   const A = f.agenda, K = f.ck;
   const choixMag = h => carte(h, `<div class="ff-mags">${A.magasins.map(m => `<button ${x.A(m.choisir)} class="ff-mag${m.on ? ' on' : ''}"><span class="gc-feu ${esc(m.feu)}"></span><b>${esc(m.court)}</b><small>${esc(m.sous)}</small></button>`).join('')}</div>`);
-  if (f.onglet === 'reseau') { return page(tableau); }
+  // B2 : le réseau — le classement du trimestre et le benchmark dans une seule table, puis les
+  // règles du scoring et l'envoi du rapport A4 ; le client mystère — le formulaire du scoring.
+  const st = x.sqSt;
+  if (f.onglet === 'msp') {
+    if (c.sqIndispo) { return page(attente(c.sqIndispo)); }
+    return page(c.sqMsp ? x.sqMsp(c, x) : attente('Lecture du scoring…'));
+  }
+  if (f.onglet === 'reseau') {
+    if (c.sqIndispo && !f.reseau) { return page(attente(c.sqIndispo)); }
+    if (!f.reseau) { return page(attente(f.tableauChargement ? 'Lecture du réseau…' : 'Le benchmark du réseau ne se lit pas.')); }
+    const outils = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <span class="mko-mu">Trimestre</span><select ${x.C(c.setSqTrimestre)} class="mko-sel">${(c.sqTrimestres || []).map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
+      <span style="flex:1"></span>
+      ${c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
+    </div></div>`;
+    const sqTete = c.sqTri ? 'Scoring ' + c.sqTri.lib + (c.sqTri.enCours ? ' · en cours, au ' + c.sqTri.arrete : '') : 'Scoring du trimestre';
+    const postesTete = (c.sqPostes || []).map(p => `<th>${esc(p.nom)}</th>`).join('');
+    const nP = (c.sqPostes || []).length || 4;
+    const table = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Le réseau — le classement du trimestre et le benchmark, côte à côte</span><span class="mko-mini">${esc(f.tableau.mini)}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab"><thead>
+        <tr><th colspan="3"></th><th colspan="${nP}" class="ff-grp">${esc(sqTete)} · /5</th><th colspan="6" class="ff-grp j">Suivi journalier et opérations</th><th colspan="3" class="ff-grp t">Suivi de terrain</th></tr>
+        <tr><th></th><th>Franchisé</th><th>Note</th>${postesTete}<th>Tâches 30 j</th><th>Points moyens</th><th>Invendus 7 j</th><th>Réclamations 30 j</th><th>CA / budget mois</th><th>B2B mois</th><th>Dernière visite</th><th>Plans ouverts</th><th>Planogramme</th></tr></thead><tbody>
+        ${f.reseau.map(r => { const q = r.sq; return `<tr class="${r.on ? 'on' : ''}" ${x.A(r.choisir)} style="cursor:pointer">
+          <td>${q ? `<span class="sq-rang${q.top ? ' or' : ''}">${q.rang}</span>` : ''}</td>
+          <td class="nom"><span class="gc-feu ${r.feu}"></span>${esc(r.court)}<small>${esc(r.sous)}</small></td>
+          <td>${q ? `<b>${esc(q.total)}</b><small> / ${q.sur}</small><div>${st(q.pct, q.na, 'sm')}</div><small class="${q.deltaCls}">${esc(q.delta)}</small>` : '—'}</td>
+          ${q ? q.postes.map(p => `<td><b>${esc(p.v)}</b><div>${st(p.pct, p.na, 'sm')}</div><small>${esc(p.d)}</small>${p.alerte ? `<small class="ko">${esc(p.alerte)}</small>` : ''}</td>`).join('') : `<td colspan="${nP}" class="mko-mu">pas de scoring calculé</td>`}
+          <td><b>${esc(r.taches)}</b><small>${esc(r.tachesSous)}</small></td>
+          <td><b>${esc(r.revues)}</b><small>${esc(r.revuesSous || '')}</small></td>
+          <td><b class="${r.invendusCls || ''}">${esc(r.invendus)}</b></td>
+          <td><b>${esc(r.reclamations)}</b><small>${esc(r.reclamationsSous || '')}</small></td>
+          <td><b>${esc(r.mois)}</b><small>${esc(r.moisSous || '')}</small></td>
+          <td><b class="${r.b2bCls || ''}">${esc(r.b2b)}</b><small>${esc(r.b2bSous || '')}</small></td>
+          <td><b>${esc(r.derniere)}</b><small>${esc(r.derniereSous || '')}</small></td>
+          <td><b class="${r.plansCls || ''}">${esc(r.plans)}</b></td>
+          <td><b>${esc(r.plano)}</b></td></tr>`; }).join('')}
+      </tbody></table></div>
+      <div class="mko-corps mko-mu" style="padding-top:8px">Un clic sur une ligne ouvre la fiche du magasin. Le feu est celui du module Visites. Le scoring : Note Google et Tâches viennent du volet journalier, Client mystère du terrain, Budget du pilotage${c.sqReseau ? ` · réseau ${esc(c.sqReseau.sur20)} / 20 en moyenne` : ''}.</div></div>`;
+    return page(outils + table + (c.sqTri ? x.sqCartes(c, x) : ''));
+  }
   if (f.onglet === 'agenda') {
     const jours = A.chargement ? attente('Lecture de l’agenda…') : (A.indispo ? attente(A.indispo) : carte('Mes visites · 14 jours', (A.jours.length ? A.jours.map(j => `<div class="ff-ag-j${j.auj ? ' auj' : ''}"><div class="ff-ag-d">${esc(j.lib)}</div>${j.visites.map(v => `<button ${x.A(v.choisir)} class="ff-ag-v ${esc(v.cls)}"><b>${esc(v.heure)}</b><span><b>${esc(v.magasin)}</b> · ${esc(v.type)}<small>${esc(v.consultant)}${v.statut ? ' · ' + esc(v.statut) : ''}</small></span><i>Commencer ›</i></button>`).join('')}</div>`).join('') : '<div class="mko-mu">Aucune visite planifiée sur 14 jours.</div>') + `<div class="cx-ligne" style="margin-top:10px"><button ${x.A(A.planifier)} class="mko-pied-btn">Planifier une visite</button></div>`));
     return page(`<div class="ff-deux ff-ag">${jours}${choixMag('Choisir le magasin')}</div>`);
@@ -178,7 +217,23 @@ export function tplFF(c, x){
   if (f.indispo) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:#8D1D2C;font-size:13px">${esc(f.indispo)}</div>`); }
   if (f.chargement) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:var(--color-text-muted);font-size:13px">Lecture de la fiche de ${esc(f.shopNom)} : tâches et leurs notes, invendus, réclamations, objectifs, visites, plans, scoring…</div>`); }
   const journal = `<div class="mko-carte" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Journal — constaté, noté ou décidé</span><span class="mko-mini">60 jours</span></div><div class="mko-corps" style="padding-top:4px">${f.journal.length ? f.journal.map(e => `<div class="ff-jl"><span class="d">${esc(e.le)}</span><span class="gc-src ${e.volet === 'terrain' ? 't' : 'j'}">${esc(e.volet)}</span><span>${esc(e.texte)}</span></div>`).join('') : '<div class="mko-mu">Rien sur la période.</div>'}</div></div>`;
-  return page(titre + carte('Santé du magasin', `<div class="ff-grille ff-g4">${f.sante.map(tuile).join('')}</div>`)
+  // La fiche s'ouvre désormais sur ce magasin (B2) : avant sa première lecture, on attend.
+  if (!f.sante) { return page(titre + attente('Lecture de la fiche de ' + f.shopNom + '…')); }
+  // Le scoring du trimestre en bandeau (B2) : la note, le rang, les quatre postes, et les deux gestes.
+  const S2 = f.score;
+  const bandeau = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps" style="display:flex;flex-wrap:wrap;gap:18px;align-items:stretch">
+    <div style="flex:1 1 220px;display:flex;flex-direction:column;gap:6px;justify-content:center">
+      <span class="mko-lab">Scoring · ${esc(S2 ? S2.tri : 'du trimestre')}${S2 && S2.enCours ? ' · en cours' : ''}</span>
+      ${S2 ? `<div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--font-display);font-size:46px;line-height:1">${esc(S2.total)}</span><span class="mko-mu" style="font-size:15px">/ ${S2.sur}</span></div>
+      <div>${st(S2.pct, S2.na, 'gd')}</div>
+      <div class="mko-mu" style="font-size:12px">${S2.rang}<sup>e</sup> sur ${S2.magasins} · <span class="${S2.deltaCls}">${esc(S2.delta)}</span>${S2.manque ? ` · ${S2.manque} poste(s) sans donnée, compté(s) 0` : ''}${S2.rapport ? ` · <a href="${esc(S2.rapport)}" target="_blank" rel="noopener">rapport A4</a>` : ''}</div>` : '<div class="mko-mu">Pas de scoring calculé pour ce trimestre.</div>'}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"><button ${x.A(f.visite)} class="cx-btn prim">Commencer la visite ›</button><button ${x.A(f.encoderMsp)} class="mko-pied-btn">Encoder le client mystère</button></div>
+    </div>
+    ${S2 ? `<div style="flex:3 1 560px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">${S2.postes.map(p => `<div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+      <span class="mko-lab">${esc(p.nom)}</span><div>${st(p.pct, p.na, 'sm')}</div><b style="font-size:16px">${esc(p.v)}${p.na ? '' : '<small class="mko-mu"> / 5</small>'}</b>
+      <span class="mko-mu" style="font-size:11.5px">${esc(p.d)}</span>${p.alerte ? `<span class="ko" style="font-size:11.5px;font-weight:500">${esc(p.alerte)}</span>` : ''}${p.encoder ? `<button ${x.A(p.encoder)} class="mko-pied-btn" style="align-self:flex-start;margin-top:2px">${p.na ? 'encoder' : 'modifier'}</button>` : ''}</div>`).join('')}</div>` : ''}
+  </div></div>`;
+  return page(titre + bandeau + carte('Santé du magasin', `<div class="ff-grille ff-g4">${f.sante.map(tuile).join('')}</div>`)
     + `<div class="ff-deux" style="margin-top:12px">${volet('j', 'Suivi journalier et opérations', f.journalier)}${volet('t', 'Suivi de terrain', f.terrain)}</div>${journal}`);
 }
 
