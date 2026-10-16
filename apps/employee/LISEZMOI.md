@@ -76,9 +76,11 @@ Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
   en clair, l'état. Le point rubis sur la jauge, c'est **elle aujourd'hui** (la valeur au centre, avec « Toi »,
   « magasin » ou « J16 ») ; le repère sombre, c'est **l'objectif à atteindre**, écrit dessous (« ◉ Objectif
   55 % »). La cible pour un target, le seuil pour la note Google, **52 pcs** pour passer la 1re d'une promo
-  (la sienne + 1), « Garder la 1re place » quand elle mène. Les **catégories** n'ont pas de jauge : en grand, **la
-  quantité qu'il lui faut pour être 1re** (« 10 pcs — pour être 1re », le minimum compris), ou, quand elle mène,
-  **son avance sur la 2e** (« +3 pcs — d'avance sur la 2e ») ; dessous, ses pièces, son rang et la 1re. Pour l'objectif du magasin, la jauge montre
+  (la sienne + 1), « Garder la 1re place » quand elle mène. Les **catégories** n'ont pas de jauge mais **le podium du
+  magasin** : les trois premières avec leurs pièces, elle surlignée (rubis ; or quand elle mène ; à la 3e ligne,
+  à son rang, quand elle est plus loin), et une pastille : **ce qu'il lui manque pour être 1re** (« 10 pcs pour
+  être 1re », le minimum compris) ou **son avance** (« +3 pcs d'avance »). Choisi parmi quatre maquettes
+  (`docs/maquettes/primes-epure/propositions-categories.html`, la « C »). Pour l'objectif du magasin, la jauge montre
   **l'atteinte à date** (le CA encaissé ÷ l'objectif du mois), le repère 100 %, et un pointillé **où il faudrait
   en être au jour J** (le prorata des jours) ; la pastille donne la projection (« ✓ proj. 108 % ») ;
 - le **classement** : un bouton (l'icône, le nom, mon rang « 2e / 6 ») ouvre une **feuille qui monte du bas** :

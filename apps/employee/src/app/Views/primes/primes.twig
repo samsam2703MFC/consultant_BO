@@ -53,12 +53,14 @@
   </div>
   <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
   {% if c.type == 'categorie' %}
-  {# Les catégories (16/10/2026) : pas de jauge, la quantité qu'il faut pour être 1re ; en tête, l'avance sur la 2e. #}
-  <div class="pq-g pq-q">
-    {% if c.pour1 is not null %}<b class="qn">{{ c.pour1|number_format(0, ',', ' ') }}<small>{{ pcs }}</small></b><i>{{ p.enCours ? (T.to_be_first ?? 'pour être 1re') : (T.to_be_first_past ?? 'manquaient pour la 1re') }}</i>
-    {% elseif c.avance1 is not null %}<b class="qn tete">+{{ c.avance1|number_format(0, ',', ' ') }}<small>{{ pcs }}</small></b><i>{{ T.lead_on_second ?? 'd’avance sur la 2e' }}</i>
-    {% elseif v is not null %}<b class="qn tete">👑</b><i>{{ T.first_alone ?? '1re, seule en lice' }}</i>
-    {% else %}<b class="qn">—</b>{% endif %}
+  {# Les catégories (16/10/2026) : pas de jauge, le podium du magasin — les trois premières, elle surlignée (à la
+     3e ligne si elle est plus loin) — et ce qu'il lui manque pour être 1re, ou son avance sur la 2e. #}
+  <div class="pq-g pq-pd">
+    {% if c.podium|length %}<ol class="pd">{% for x in c.podium %}<li class="{{ x.moi ? 'moi' }}{{ x.moi and x.rang == 1 ? ' un' }}"><span class="r">{{ x.rang == 1 ? '👑' : x.rang }}</span><span class="n">{{ x.moi ? (T.you_short ?? 'Toi') : x.nom }}</span><span class="q">{{ x.q|number_format(0, ',', ' ') }}</span></li>{% endfor %}</ol>
+    {% else %}<span class="pd-vide">{{ T.nobody_yet ?? 'Personne n’a encore vendu' }}</span>{% endif %}
+    {% if c.pour1 is not null %}<span class="pd-e">{{ p.enCours ? c.pour1 ~ ' ' ~ pcs ~ ' ' ~ (T.to_be_first ?? 'pour être 1re') : (T.short_of_first ?? 'à {n} {u} de la 1re')|replace({'{n}': c.pour1, '{u}': pcs}) }}</span>
+    {% elseif c.avance1 is not null %}<span class="pd-e ok">+{{ c.avance1 }} {{ pcs }} {{ T.lead_short ?? 'd’avance' }}</span>
+    {% elseif v is not null %}<span class="pd-e ok">{{ T.first_alone ?? '1re, seule en lice' }}</span>{% endif %}
   </div>
   {% else %}
   <div class="pq-g">
@@ -78,11 +80,12 @@
   <div class="pq-o">
     {%- if c.motif in ['pas_compte', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}<span class="mu">
       {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}</span>
-    {%- elseif c.type == 'categorie' %}{{ T.you_short ?? 'Toi' }} <b>{{ v|number_format(0, ',', ' ') }} {{ pcs }}</b>{% if c.premier is null and c.minPieces > 0 %} · min. {{ c.minPieces }}{% endif %}
+    {%- elseif c.type == 'categorie' %}{% if c.premier is null and c.minPieces > 0 %}min. {{ c.minPieces }} {{ pcs }}{% endif %}
     {%- elseif c.repereType == 'garder' %}<span class="lg"></span>{{ T.keep_first ?? 'Garder la 1re place' }}
     {%- elseif c.repereType %}<span class="lg"></span>{{ T.goal ?? 'Objectif' }} <b>{{ c.repereVal|number_format(c.repereType == 'seuil' ? 1 : dec, ',', ' ') }}{{ c.repereType == 'seuil' ? ' ★' : suf }}</b>{% if c.repereType == 'min' %} min.{% endif %}
     {%- endif -%}
   </div>
+  {% if c.type != 'categorie' %}
   <div class="pq-f">
     {% if enJour and c.val is not null %}<span class="etat {{ c.val >= c.cible ? 'ok' : 'att' }}">{{ c.val >= c.cible ? '✓ ' }}{{ T.proj_short ?? 'proj.' }} {{ c.val|number_format(0, ',', ' ') }}&nbsp;%</span>
     {% elseif c.etat == 'gagne' %}<span class="etat ok">✓ {{ T.won ?? 'gagné' }}</span>
@@ -102,6 +105,7 @@
     {%- endif -%}
     </span>
   </div>
+  {% endif %}
 </div>
 {% endfor %}
 </div>
