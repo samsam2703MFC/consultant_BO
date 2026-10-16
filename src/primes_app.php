@@ -40,6 +40,7 @@ const PRIMES_MOY_CACHE = 86400;           // les moyennes d'un mois clos : un jo
 const PRIMES_GOOGLE_SEUIL = 4.5;          // la note Google à tenir
 const PRIMES_GOOGLE_MONTANT = 25;         // la récompense Google, par personne
 const PRIMES_ICONE_MAX = 1048576;         // une icône : 1 Mo au plus
+const PRIMES_BARRE_OBJ = 75.0;   // la barre des targets : l'objectif à 75 % de sa longueur, sur chaque ligne
 const PRIMES_TARGETS = ['croisees', 'objectif', 'google'];  // les targets, toujours là, dans cet ordre
 
 /* ======================================================================
@@ -929,7 +930,20 @@ function primesCarteJauge(array $c): array
         if ($un !== null && $un['moi'] && $v >= $min) { $avance1 = $deux !== null ? (int) floor($v - (float) $deux['q']) : null; }
         else { $pour1 = max(1, (int) ceil(max($un !== null && !$un['moi'] ? floor((float) $un['q']) + 1 : 1, $min) - $v)); }
     }
-    return $c + ['pour1' => $pour1, 'avance1' => $avance1, 'jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
+    // La barre des targets (16/10/2026, le « drapeau ») : l'objectif toujours au même endroit (PRIMES_BARRE_OBJ % de
+    // la barre), la valeur et le repère du jour J sur la même échelle (de 0 ; de seuil − 1 pour la note Google).
+    // « actif » : la prime est activée — la carte gagnée ou en tête ; pour l'objectif du magasin en cours de mois,
+    // le CA encaissé a passé l'objectif.
+    [$barre, $barreJour] = [null, null];
+    if ($rVal !== null && $rVal > $bas) {
+        $sur = static fn (float $x) => round(max(0.0, min(100.0, PRIMES_BARRE_OBJ * ($x - $bas) / ($rVal - $bas))), 1);
+        $barre = $v !== null ? $sur((float) $v) : null;
+        $barreJour = $jour !== null ? $sur($jour) : null;
+    }
+    $actif = ($c['cle'] === 'objectif' && ($c['jour'] ?? null) !== null)
+        ? ($v !== null && (float) $v >= (float) $c['cible'] && ($c['motif'] ?? null) === null)
+        : in_array($c['etat'] ?? '', ['gagne', 'tete'], true);
+    return $c + ['barre' => $barre, 'barreJour' => $barreJour, 'actif' => $actif, 'pour1' => $pour1, 'avance1' => $avance1, 'jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
         'repere' => ($haut !== null && $haut > $bas && $rVal !== null) ? primesJauge($rVal, $bas, $haut) : null,
         'repereType' => $rVal !== null ? $rType : null, 'repereVal' => $rVal,
         'repereJour' => ($haut !== null && $jour !== null) ? primesJauge($jour, $bas, $haut) : null];

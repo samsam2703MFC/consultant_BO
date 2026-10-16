@@ -25,8 +25,8 @@ declare(strict_types=1);
 
 const PRIMES_CACHE_MOI = 900;      // 15 min : la fiche d'une personne pour le mois en cours
 // La forme de la fiche : à monter quand elle change, pour qu'un déploiement ne serve pas une fiche d'avant
-// gardée en cache (16/10/2026 : les douze semaines avec mag et res ; le podium des catégories, la quantité pour être 1re).
-const PRIMES_FICHE_V = 5;
+// gardée en cache (16/10/2026 : 5 les douze semaines avec mag et res, le podium des catégories ; 6 la barre des targets).
+const PRIMES_FICHE_V = 6;
 const PRIMES_CACHE_CLOS = 86400;   // un jour : un mois clos ne bouge que si le CEO l'enregistre
 const PRIMES_CACHE_JETON = 600;    // 10 min : un jeton d'employé vérifié chez le panel
 const PRIMES_CACHE_JOUR = 600;     // 10 min : le compteur du jour

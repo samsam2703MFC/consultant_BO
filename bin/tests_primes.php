@@ -260,6 +260,13 @@ verifie('objectif d’un mois clos : pas de repère du jour', array_column(prime
 verifie('catégorie, 2e : l’objectif est de passer la 1re (51 + 1)', $par['tartes']['repereType'] === 'passer' && $par['tartes']['repereVal'] === 52.0);
 verifie('promo, 1re : l’objectif est de garder la place devant la 2e (30)', $par['pc900']['repereType'] === 'garder' && $par['pc900']['repereVal'] === 30.0);
 verifie('meilleure vendeuse : passer la 1re du magasin (61 + 1)', $par['meilleure']['repereType'] === 'passer' && $par['meilleure']['repereVal'] === 62.0);
+// La barre des targets, le « drapeau » (16/10/2026) : l'objectif toujours à 75 %.
+verifie('croisées 56 % pour 55 % : la barre passe le trait (76,4), la prime est activée', $par['croisees']['barre'] === 76.4 && $par['croisees']['actif'] === true, json_encode([$par['croisees']['barre'], $par['croisees']['actif']]));
+verifie('record 2,74 pour 3,00 : 68,5, pas encore activée', $par['record']['barre'] === 68.5 && $par['record']['actif'] === false, json_encode([$par['record']['barre'], $par['record']['actif']]));
+verifie('objectif du magasin à 40 % au jour J : 30 sur la barre, le repère du jour au prorata, pas activé', $par['objectif']['barre'] === 30.0 && $par['objectif']['barreJour'] === round(75 * $cJ / 100, 1) && $par['objectif']['actif'] === false);
+verifie('meilleure vendeuse 2e : la barre sous le trait de la 1re + 1', $par['meilleure']['barre'] !== null && $par['meilleure']['barre'] < 75 && $par['meilleure']['actif'] === false);
+verifie('la barre ne dépasse jamais 100', primesCarteJauge(['cle' => 'croisees', 'type' => 'target', 'etat' => 'gagne', 'val' => 99.0, 'cible' => 40.0])['barre'] === 100.0);
+verifie('note Google 4,6 pour 4,5 : l’échelle part de 3,5 (82,5)', primesCarteJauge(['cle' => 'google', 'type' => 'target', 'etat' => 'gagne', 'val' => 4.6, 'cible' => 4.5])['barre'] === 82.5);
 // Les catégories : la quantité pour être 1re, pas une jauge (16/10/2026).
 verifie('catégorie, 2e à 42 pièces derrière 51 : 10 pièces pour être 1re', $par['tartes']['pour1'] === 10 && $par['tartes']['avance1'] === null);
 verifie('la promo garde sa jauge (pas de quantité pour être 1re)', $par['pc900']['pour1'] === null && $par['pc900']['jauge'] !== null);
