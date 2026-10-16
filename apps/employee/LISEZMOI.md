@@ -2,7 +2,7 @@
 
 L'application mobile des employés du réseau (TFB-Employee, livrée en zip le 06/10/2026), servie par
 le cockpit à l'adresse `/consulant_bo/employee/`, et liée depuis le rail du cockpit, ERP franchisé ›
-**App worker ↗**, vers sa page de connexion. Horaire, statistiques, primes, profil ; les tâches à faire (avec
+**App worker ↗**, vers sa page de connexion. Horaire, primes, profil ; les tâches à faire (avec
 photo) s'ouvrent depuis l'Accueil.
 
 ## Où vit quoi
@@ -127,7 +127,11 @@ variables de `marque.css`, aux valeurs du design system (`public/assets/ds/globa
 `translations/page/{fr,en,it,nl,pl}/primes.json`. Un rendu sur un jeu d'essai, calculé par le moteur du
 cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|en|…]`.
 
-## Statistiques (16/10/2026) : à la place de Tâches dans la barre du bas
+## Statistiques (16/10/2026) : la page existe, hors du menu
+
+Retirée de la barre du bas le 16/10/2026 à la demande (la barre a quatre onglets : Accueil, Horaire, Primes,
+Profil) ; la page reste joignable à `/statistiques`. Pour la remettre : l'entrée `stats` de
+`components/bottom_nav.twig`.
 
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même
