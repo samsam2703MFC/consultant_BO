@@ -129,9 +129,11 @@ cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|
 
 ## Statistiques (16/10/2026) : la page existe, hors du menu
 
-Retirée de la barre du bas le 16/10/2026 à la demande (la barre a quatre onglets : Accueil, Horaire, Primes,
-Profil) ; la page reste joignable à `/statistiques`. Pour la remettre : l'entrée `stats` de
-`components/bottom_nav.twig`.
+Retirée de la barre du bas le 16/10/2026 à la demande, avec l'Accueil et le Planning : la barre n'a plus que
+**Primes** et **Profil**. Les pages restent joignables (`/statistiques`, `/dashboard`, `/schedule`) et la connexion
+ouvre toujours l'Accueil. Pour remettre un onglet : sa ligne dans `components/bottom_nav.twig`
+(`{ key: 'stats', label: translations.statistics, icon: 'bi-bar-chart-line', href: ROOT ~ '/statistiques' }`,
+`dashboard` → `bi-house` `/dashboard`, `schedule` → `bi-calendar3` `/schedule`).
 
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même

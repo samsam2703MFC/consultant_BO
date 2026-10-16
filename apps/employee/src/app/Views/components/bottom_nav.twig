@@ -1,8 +1,7 @@
-{# components/bottom_nav.twig — quatre onglets (16/10/2026) : Accueil, Horaire, Primes, Profil. Statistiques est retirée du menu pour le
-   moment (la page reste à /statistiques) ; les tâches restent sur l'Accueil (la tuile « tâches à faire »). #}
+{# components/bottom_nav.twig — deux onglets (16/10/2026) : Primes et Profil. Accueil, Planning et Statistiques sont masqués du menu pour le
+   moment (les pages restent à /dashboard, /schedule, /statistiques ; la connexion ouvre toujours l'Accueil, où sont
+   les tâches). Pour en remettre un : sa ligne ici, { key, label, icon, href }. #}
 {% set items = items ?? [
-    { key: 'dashboard', label: translations.home ?? 'Home', icon: 'bi-house', href: ROOT ~ '/dashboard' },
-    { key: 'schedule',  label: translations.schedule ?? 'Schedule', icon: 'bi-calendar3', href: ROOT ~ '/schedule' },
     { key: 'primes',    label: translations.bonuses ?? 'Bonuses', icon: 'bi-trophy', href: ROOT ~ '/primes' },
     { key: 'profile',   label: translations.profile ?? 'Profile', icon: 'bi-person', href: ROOT ~ '/me' },
 ] %}
