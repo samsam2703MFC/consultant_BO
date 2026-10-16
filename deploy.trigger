@@ -781,3 +781,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-16T11:47:32Z statistiques : rien que ses chiffres (ticket moyen, lignes par ticket) ; primes : deux colonnes
 2026-10-16T12:07:57Z statistiques : 12 semaines en trois lignes (moi, mon magasin, reseau) ; lignes par ticket de chaque semaine
 2026-10-16T12:27:01Z primes : podium des categories ; fiche versionnee ; statistiques : record hors echelle
+2026-10-16T12:46:11Z primes : targets une par ligne, detail deroulant
