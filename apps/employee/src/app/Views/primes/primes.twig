@@ -54,7 +54,7 @@
   <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
   <div class="pq-g">
     {# La demi-jauge : le point rubis, c'est elle aujourd'hui ; le repère sombre, l'objectif à atteindre ; le pointillé, où en être au jour J. #}
-    <svg class="dj" viewBox="0 0 120 74" aria-hidden="true">
+    <svg class="dj" viewBox="0 0 120 74" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
       <path class="fond" d="M12 68 A48 48 0 0 1 108 68" pathLength="100"/>
       {% if c.jauge is not null and c.jauge > 0 %}<path class="val" d="M12 68 A48 48 0 0 1 108 68" pathLength="100" stroke-dasharray="{{ c.jauge }} 100"/>{% endif %}
       {% if (c.repereJour ?? null) is not null %}<line class="jr" x1="60" y1="12" x2="60" y2="28" transform="rotate({{ ((c.repereJour - 50) * 1.8)|round(1) }} 60 68)"/>{% endif %}
