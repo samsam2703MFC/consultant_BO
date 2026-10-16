@@ -933,8 +933,8 @@ function primesHeuresSemaines(int $emp, string $du, string $au): array
  */
 function primesSemaines12(int $emp, int $sid): array
 {
-    // v2 (16/10/2026) : chaque semaine porte aussi son ticket moyen et ses lignes par ticket.
-    $cle = 'primesS12v2:' . $emp;
+    // v3 (16/10/2026) : chaque semaine porte aussi son ticket moyen et ses lignes par ticket.
+    $cle = 'primesS12v3:' . $emp;
     $c = setting($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];

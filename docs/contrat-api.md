@@ -600,7 +600,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   même fiche, ses chiffres à elle seule : briques (ticket moyen `meilleure.panier`, lignes par ticket
   `record.lt`, ventes croisées, CA, CA par heure, tickets, places), aujourdhui, collection, et `semaines12`, dont
   chaque semaine porte depuis le 16/10/2026 `panier` (son CA ÷ ses tickets) et `lignesTicket` (cache
-  `primesS12v2:{emp}`). Les
+  `primesS12v3:{emp}`). Les
   briques, la collection et les douze semaines nourrissent l'Accueil de l'app. Mis en cache 15 minutes
   (mois en cours) ou un jour (mois clos) par personne ; `&frais=1` recalcule.
 - `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut) :
