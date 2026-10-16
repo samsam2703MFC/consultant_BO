@@ -227,9 +227,6 @@ class App {
       // Suivi : la période affichée, les données du serveur, et le
       // brouillon de traitement par signalement.
       suiviPeriode: 'semaine', suiviData: null, suiviNote: {},
-      // Contrôle des posts Facebook : filtres de l'écran, brouillon de décision
-      // par post (`fbVal`, envoyé au clic seulement) et modale de soumission.
-      fbStore: 'tous', fbEtat: 'À traiter', fbVal: {}, fbNew: null,
       // Brand Guard : la période du tableau de bord (7, 30, 90 jours).
       bgJours: 30,
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
@@ -253,12 +250,6 @@ class App {
     }
     // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
     // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
-    // L'application Production intégrée renvoie le jour choisi dans sa barre des jours : le
-    // cockpit le retient (sans se redessiner) pour la garder sur ce jour d'une page à l'autre.
-    window.addEventListener('message', e => {
-      if (e.origin !== location.origin || !e.data || typeof e.data.pfDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.data.pfDate)) { return; }
-      this.gpDateVu = e.data.pfDate;
-    });
     window.addEventListener('hashchange', () => {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
@@ -313,8 +304,6 @@ class App {
       manque: 'manque-a-gagner',
       ventes: 'target-ventes',
       croisements: 'croisements',
-      caAchats: 'commandes', caFacturation: 'facturation',
-      caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
       bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', creux: 'jours-creux', scoringTri: 'scoring-trimestre',
       suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
@@ -328,13 +317,10 @@ class App {
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
-      newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
-      prospection: 'prospection',
       tablette: 'tablette-vendeuses',
       // Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes, rangées dans Marketing franchisé.
       primesApp: 'primes-app-worker',
-      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle', inventaires: 'inventaires',
-      productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
+      brandGuard: 'brand-guard', invendus: 'invendus-poubelle', inventaires: 'inventaires',
       // Franchisés · évaluation et suivi (09/10/2026)
       gestionConsultant: 'gestion-consultant', ficheFranchise: 'fiche-franchise', remarquesOperateurs: 'remarques-operateurs', controlesQualite: 'controles-qualite',
     };
@@ -349,7 +335,10 @@ class App {
     return { magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge' };
   }
   static get ADRESSES_RETIREES(){
-    return { stock: 'caAchats', 'commandes-franchises': 'caAchats', 'resultat-du-jour': 'resultatJour',
+    return { 'resultat-du-jour': 'resultatJour',
+      // La centrale d'achat et Offres et canaux, retirés (16/10/2026) : l'accueil.
+      commandes: 'resultatJour', stock: 'resultatJour', 'commandes-franchises': 'resultatJour', demandes: 'resultatJour',
+      facturation: 'resultatJour', 'centrale-reglages': 'resultatJour', 'centrale-campagnes': 'resultatJour', 'offres-canaux': 'resultatJour',
       // L'application consultant a quitté le rail : elle vit sur le téléphone (visites/).
       'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi',
       // L'onglet « Leviers » a quitté Analyse magasin (16/10/2026) : son adresse
@@ -358,9 +347,18 @@ class App {
       // Écrans sans entrée, retirés (16/10/2026) : leur contenu vit ailleurs.
       'taches-consultants': 'gestionConsultant', taches: 'gestionConsultant',
       'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
-      // Une seule entrée pour la liste de démarchage : Prospection.
-      'developpement-commercial': 'prospection', demarchage: 'prospection',
-      'prospection-mobile': 'prospection', prospectionMobile: 'prospection' };
+    };
+  }
+  /**
+   * Les adresses d'écrans partis dans une application à part (16/10/2026) :
+   * l'ancien lien ouvre l'application, à la bonne page.
+   */
+  static get ADRESSES_SORTIES(){
+    return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=suivi',
+      'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
+      prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
+      // Posts et newsletters : le portail Marketing (marketing/), qui les tient déjà.
+      'controle-posts-facebook': 'marketing/?onglet=valider', newsletter: 'marketing/', 'newsletter-magasin': 'marketing/' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -369,6 +367,7 @@ class App {
     const t = App.ADRESSES;
     for (const id of Object.keys(t)) { if (t[id] === brut) { return id; } }
     if (App.ADRESSES_RETIREES[brut]) { return App.ADRESSES_RETIREES[brut]; }
+    if (App.ADRESSES_SORTIES[brut]) { location.replace(location.pathname.replace(/[^/]*$/, '') + App.ADRESSES_SORTIES[brut]); return ''; }
     // Un identifiant technique reste accepté : les liens d'avant continuent
     // de fonctionner.
     return Object.prototype.hasOwnProperty.call(t, brut) ? brut : '';
@@ -656,17 +655,6 @@ class App {
       if (!this.scouting) this.scouting = new Scouting(this);
       this.scouting.mount(document.getElementById('scouting-root'));
     }
-    // Prospection et Newsletter sont des modules à part (partagés avec la page
-    // mobile) : ils tiennent leur DOM, on les ré-attache après chaque rendu.
-    if (this.state.ready && this.state.screen === 'prospection' && window.CockpitProspection){
-      const m = this.dmMagasin();
-      if (m) window.CockpitProspection.mount(document.getElementById('prospection-root'), { shop: String(m.id), apiBase: API_BASE, mobile: false, leafletDir: 'assets/vendor/leaflet/' });
-    }
-    if (this.state.ready && (this.state.screen === 'newsletter' || this.state.screen === 'newsletterShop') && window.CockpitNewsletter){
-      const role = this.state.screen === 'newsletter' ? 'brand' : String((this.dmMagasin() || {}).id || '');
-      if (role) window.CockpitNewsletter.mount(document.getElementById('newsletter-root'), { role, apiBase: API_BASE, imgDir: 'assets/img/newsletter/', notify: msg => this.notify(msg) });
-    }
-
     // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
     // `usageInventaire`). Après la fusion, jamais avant : c'est le DOM vivant
     // qu'on inventorie, pas la chaîne rendue.
@@ -906,35 +894,6 @@ class App {
   seuils(){ const d = (this.meta && this.meta.seuils) || {};
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
       l: this.state.sLabour != null ? +this.state.sLabour : d.labour, o: d.overhead }; }
-  /* --- contrôle des posts Facebook ------------------------------------------
-   * Les libellés, gravités et familles viennent du pack de règles (M.FB) et
-   * les cinq niveaux de notes de M.SIGNAL : rien n'est redéclaré ici.
-   */
-  fbPosts(){ return (this.D && this.D.fbPosts) || []; }
-  /** Les posts qui attendent une action : le badge de la navigation. */
-  fbAttente(){ return this.fbPosts().filter(p => p.statut === 'a_controler' || p.statut === 'a_valider'); }
-  fbSeuil(){ const f = (this.M && this.M.FB) || {}; return f.seuil || 4; }
-  fbNiv(n){ const S = ((this.M && this.M.SIGNAL) || {}).niveaux || [];
-    return S.find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666666', aide: '' }; }
-  fbEtats(){ return { a_controler: ['À contrôler', '#8a5a13'], a_valider: ['À valider', '#8D1D2C'],
-    refuse: ['Refusé', '#8D1D2C'], valide: ['Validé', '#2d7a3e'], publie: ['Publié', '#2d7a3e'], brouillon: ['Brouillon', '#666666'] }; }
-  fbGrav(g){ return { 1: ['mineur', '#D97706'], 2: ['majeur', '#C0182B'], 3: ['critique', '#8D1D2C'] }[g] || ['mineur', '#666666']; }
-  /**
-   * La note d'un post depuis ses écarts — miroir de fbNote() (src/fbcontrole.php).
-   *
-   * L'autorité reste le serveur : en mode API, la note affichée est celle qu'il
-   * renvoie. Cette copie ne sert qu'à garder l'écran cohérent quand on écarte
-   * un écart en mode démonstration, où aucune requête ne partira jamais. Si la
-   * règle de calcul change, elle change dans les deux — d'où le rappel ici.
-   */
-  fbNoteLocale(ecarts){
-    const r = (ecarts || []).filter(e => e.statut !== 'ignore');
-    if (!r.length) return 5;
-    const pire = Math.max(...r.map(e => e.gravite));
-    if (pire >= 3) return 1;
-    if (pire === 2) return 2;
-    return r.length >= 3 ? 3 : 4;
-  }
   openRelTask(x){ const tpl = this.state.tpl; const late = x.st === 'En retard'; const base = this.D.emailTemplates[late ? 1 : 0]; const corps = (tpl[base.id] || base.corps);
     const sub = s => s.replace('{tache}', x.t.nom).replace('{projet}', x.p.nom).replace('{echeance}', this.fDA(x.t.due)).replace('{destinataire}', x.o.nom).replace('{zone}', '');
     this.setState({ rel: { kind: 'task', id: x.t.id, projet: x.p.nom, to: x.o.nom, email: x.o.email, sujet: sub(base.sujet), corps: sub(corps) } }); }
@@ -976,7 +935,6 @@ class App {
     };
     const titles = {
       brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
-      posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
       scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
       croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
@@ -986,19 +944,11 @@ class App {
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
-      caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
-      caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
-      caAchats: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs, de l’envoi à la livraison. Un fournisseur se relance par courrier à tout moment.'],
-      caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
-      caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
-      newsletter: ['Newsletter — marque', 'Campagnes email et SMS aux clients captés en boutique : segments, modèles, vouchers, automatisations. La vue de la marque : tout, y compris les paramètres et les droits des franchisés. Mode test : aucun envoi ne part.'],
-      newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
-      prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', ''],
@@ -1009,14 +959,8 @@ class App {
       ficheFranchise: ['Franchisés · évaluation et suivi', 'Par franchisé : ce que les données disent chaque jour, ce que le consultant constate sur place. Une tuile se déplie sur son détail, « Tout voir » ouvre la liste complète.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
       remarquesOperateurs: ['Remarques aux opérateurs', 'Les remarques faites depuis la modale des invendus sur une pièce jetée pour un problème de qualité : l’opérateur qui a produit, la pièce, l’heure, le motif. Par magasin et par opérateur, pour l’entretien d’évaluation.'],
-      offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
-      productionParams: ['Production — 1. Paramètres', 'Par jour de la semaine, le nombre de cuissons et la production minimum de la 1re cuisson ; les cuissons et leur part de la journée ; les catégories (cuissons, plaques, préparées la veille, se gardent au lendemain) ; les produits obligatoires et leurs jours.'],
-      productionPlan: ['Production — 2. Plan de production', 'Section › catégorie › produit : vendu à J\u22127 (en magasin, webshop, commandes magasin), à produire pour la 1re période, à préparer pour la 2e cuisson et les suivantes, à préparer pour la 1re cuisson du lendemain — en pièces, en plaques et en chiffre d\u2019affaires.'],
-      productionSuivi: ['Production — 3. Validation et suivi', 'Ce qui est réellement sorti du four, cuisson par cuisson ; le stock de chaque produit heure par heure, vendu d\u2019après les tickets et projeté d\u2019après les 6 derniers mêmes jours, et le manque prévu.'],
-      productionFours: ['Production — 5. Fours', 'Le Gantt des fours du jour : les fournées de chaque cuisson, four par four, enchaînées pour sortir à l’ouverture de la vente ; les fours du magasin et la cuisson de chaque catégorie (four, température, durée, pièces par plaque).'],
-      productionCloture: ['Production — 4. Clôture', 'En fin de journée, produit par produit : ce qui reste, ce qui se garde pour demain (le stock de départ du plan du lendemain) et ce qui se jette (à déclarer en caisse).'],
       creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
@@ -1027,14 +971,12 @@ class App {
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
-      caAchats: ['Achats', 'Ce que les magasins commandent, ce qu’on négocie et ce que la centrale met en avant : les commandes de l’envoi à la livraison, les demandes de prix aux fournisseurs, et les campagnes commerciales.',
-        [['caAchats', 'Commandes'], ['caDemande', 'Demande de prix'], ['caCampagnes', 'Campagnes commerciales']]],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : qui occupe quel mois, la liste et leurs statuts, ce qu’elles devraient rapporter, et ce qu’elles ont changé.',
         [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
-        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['caReglages', 'Centrale d’achat'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
+        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
         [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
       ventes: ['Analyse magasin', 'Un magasin, trois lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
@@ -1047,11 +989,7 @@ class App {
         [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
       anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte. Prix × volume : le prix que chaque magasin encaisse, face à ce qu’il vend.',
         [['anaprod', 'Par référence'], ['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner'], ['prixvolume', 'Prix × volume']]],
-      analyse: ['Dans le temps', titles.analyse[1], null],
-      // Les cinq étapes de la production : un écran chacune, un seul titre ; le
-      // sous-titre reste celui de l'étape ouverte.
-      productionPlan: ['Gestion de production', (titles[S.screen] || titles.productionPlan)[1],
-        [['productionParams', '1 · Paramètres'], ['productionPlan', '2 · Plan'], ['productionSuivi', '3 · Validation et suivi'], ['productionCloture', '4 · Clôture'], ['productionFours', '5 · Fours']]] };
+      analyse: ['Dans le temps', titles.analyse[1], null] };
     const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
     if (grp) {
       common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
@@ -1434,33 +1372,27 @@ class App {
         ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
         ['anaprod', 'Où ça se vend', 0, ['usage', 'manque', 'prixvolume']],
         ['analyse', 'Dans le temps', 0]]],
-      ['Centrale d’achat', [
-        ['caAchats', 'Achats', 0, ['caDemande', 'caCampagnes']],
-        ['caFacturation', 'Facturation magasins', 0]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
       // Le marketing réuni (demande du 13/10/2026) : les posts Facebook (venus de
       // « Contrôle ») et les newsletters (venues d'« ERP franchisé ») rejoignent les
       // campagnes, et le module Marketing (marketing/) les lit tous ensemble —
-      // calendrier commun, ce qui demande un geste, la vue d'un magasin.
+      // calendrier commun, ce qui demande un geste, la vue d'un magasin. Depuis le
+      // 16/10/2026, posts et newsletters ne vivent plus que là ; Offres et canaux
+      // est retiré, comme la Centrale d'achat.
       ['Marque & marketing', [
         ['ext:marketing/', 'Module Marketing ↗', 0],
         ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
-        ['offres', 'Offres et canaux', 0],
-        { sub: 'Canaux · réseaux sociaux et emailing', children: [
-          ['posts', 'Posts Facebook', this.fbAttente().length],
-          ['newsletter', 'Newsletter', 0],
-          ['newsletterShop', 'Newsletter magasin', 0]] },
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
       // en attendant — la prospection autour du magasin, sa tablette, sa production.
       // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
-        // Une seule entrée pour la liste de démarchage (16/10/2026) : Développement
-        // commercial et Prospection mobile y sont fondus — le lien du téléphone y est.
-        ['prospection', 'Prospection', 0],
+        // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
+        // mise en page bureau sur grand écran, mobile sur le téléphone.
+        ['ext:prospection/', 'Prospection ↗', 0],
         // Le book des vendeuses : une application à part (tablette/) — l'écran
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
@@ -1470,11 +1402,11 @@ class App {
         // Le marketing du franchisé (16/10/2026) : les primes de l'app worker — celles de la marque et des sponsors,
         // qu'il voit, et celles de son magasin.
         { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] },
-        // La gestion de production du franchisé (demande du 03/10/2026), par magasin et par
-        // jour : une entrée, ses cinq étapes en onglets (16/10/2026 — c'était un sous-menu de cinq).
-        ['productionPlan', 'Gestion de production', 0, ['productionParams', 'productionSuivi', 'productionCloture', 'productionFours']]]],
+        // La gestion de production du franchisé (demande du 03/10/2026) vit dans son
+        // application (production/, 16/10/2026) : ses cinq étapes y sont en onglets.
+        ['ext:production/', 'Production ↗', 0]]],
       ['Administration', [
-        ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable', 'brandGuard']],
+        ['parametres', 'Paramètres', 0, ['scoring', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
@@ -1507,14 +1439,13 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isRO', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
-    if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
     // Performance : un écran, trois onglets — chacun garde ses valeurs et son
     // gabarit d'origine, l'écran ne fait que les réunir.
     common.isPerf = S.screen === 'performance';
@@ -1871,7 +1802,6 @@ class App {
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isAnaprod) { this.apCharge(false); this.valsAnaprod(common); }
     if (common.isPxv) { this.pxvCharge(false); this.valsPxv(common); }
-    if (common.isCentrale) this.valsCentrale(common);
     this.valsLacunes(common);
     if (common.isDiag) { this.coCharge(); this.valsDiag(common); }
     if (common.isSeuil) this.valsSeuil(common);
@@ -1895,7 +1825,6 @@ class App {
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
-    if (common.isProspection || common.isNewsletterShop) { this.dmCharge(); this.valsProspection(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
@@ -1923,16 +1852,13 @@ class App {
     if (common.isSuiviM) this.valsSuiviM(common);
     if (common.isKpiT) this.valsKpiT(common);
     // --- contrôle des posts Facebook
-    if (common.isPosts) this.valsPosts(common);
     if (common.isBrandGuard) this.valsBrandGuard(common);
-    if (common.isOffres) this.valsOffres(common);
     if (common.isInvendus) this.valsInvendus(common);
     if (common.isInventaires) this.valsInventaires(common);
     if (common.isGC) valsGC(this, common);
     if (common.isFF) valsFF(this, common);
     if (common.isRO) valsRO(this, common);
     if (common.isCQM) valsCQM(this, common);
-    if (common.isGP) this.valsGP(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches
@@ -2824,65 +2750,6 @@ class App {
     if (!window.confirm('Supprimer « ' + m.nom + ' » ? Une mécanique utilisée par une promotion en cours sera refusée : désactivez-la plutôt.')) { return; }
     this.api('DELETE', '/promo/mecaniques/' + m.id, {}).then(r => { if (r && r.ok !== false) { this.notify('Mécanique supprimée'); this.setState({ cxMecEdit: null }); this.cxMecsCharge(true); } });
   }
-  /* --- offres et canaux : les deux lectures réseau, sur la période choisie --- */
-  ocCharge(force){
-    // Une lecture par période, gardée : revenir sur « Aujourd’hui » ne relit pas ; « Relire » si.
-    const per = this.state.ocPeriode || 'jour', M = this.state.oc || {}, b = M[per];
-    if (!force && b && (b.d || b.chargement)) { return; }
-    if (this._ocEnCours === per && !force) { return; }
-    this._ocEnCours = per;
-    this.setState({ oc: Object.assign({}, M, { [per]: { chargement: true, d: b ? b.d : null } }) });
-    Promise.all([readOne('/exploitation/canaux?periode=' + per).catch(() => null), readOne('/exploitation/offres?periode=' + per).catch(() => null)])
-      .then(([canaux, offres]) => { this._ocEnCours = null; this.setState({ oc: Object.assign({}, this.state.oc || {}, { [per]: { chargement: false, d: { canaux, offres } } }) }); });
-  }
-  valsOffres(common){
-    const S = this.state, per = S.ocPeriode || 'jour';
-    this.ocCharge(false);
-    const b = (S.oc || {})[per] || {}, d = b.d || {}, C = d.canaux && !d.canaux.error ? d.canaux : null, O = d.offres && !d.offres.error ? d.offres : null;
-    const nf = (n, dd) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: dd || 0, maximumFractionDigits: dd || 0 });
-    const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
-    const fU = n => n == null ? '—' : nf(n, 2) + ' €';
-    const fP = n => n == null ? '—' : nf(n, 1) + ' %';
-    const fD = v => v ? v.slice(8, 10) + '/' + v.slice(5, 7) : '';
-    const libPer = { jour: 'du jour', '7': 'des 7 jours', '30': 'des 30 jours' }[per];
-    const oc = { periode: per, libPer,
-      periodes: [['jour', 'Aujourd’hui'], ['7', '7 jours'], ['30', '30 jours']].map(([v, nom]) => ({ v, nom, on: per === v, choisir: () => this.setState({ ocPeriode: v }) })),
-      chargement: !!b.chargement && !b.d, rafraichir: () => this.ocCharge(true),
-      date: C ? C.date : (O ? O.date : ''), du: C ? C.du : '', au: C ? C.au : '',
-      indispo: !b.chargement && b.d && !C && !O ? 'Lecture impossible — API injoignable.' : '', kpi: [], mags: [], reseau: null, offres: [], cols: [], vide: '', canauxVide: '', okpi: null };
-    const pluriel = (n, u) => n + ' ' + u + (n > 1 ? 's' : '');
-    if (C && C.reseau) {
-      const R = C.reseau, tot = R.total || 0;
-      const w = v => tot > 0 ? (100 * v / tot).toFixed(1) : '0';
-      oc.mags = (C.magasins || []).map(m => { const t = m.total || 0; const pw = v => t > 0 ? (100 * v / t).toFixed(1) : '0'; return { nom: m.nom, comptoir: fE(m.comptoir), lu: m.joursLus > 0, indispo: !!m.indispo, cc: m.cc.n ? fE(m.cc.ca) : '', ccN: m.cc.n, liv: m.liv.n ? fE(m.liv.ca) : '', livN: m.liv.n, part: m.cc.n + m.liv.n ? fP(m.part) : '', wC: pw(m.comptoir), wW: pw(m.cc.ca), wL: pw(m.liv.ca), tickets: m.tickets }; });
-      oc.reseau = { comptoir: fE(R.comptoir), cc: fE(R.cc.ca), liv: fE(R.liv.ca), part: fP(R.part), wC: w(R.comptoir), wW: w(R.cc.ca), wL: w(R.liv.ca) };
-      const nW = R.cc.n + R.liv.n;
-      oc.kpi.push(['Webshop · réseau', fE(R.webshop), (R.part != null ? fP(R.part) + ' du CA ' + libPer : '—') + ' · ' + pluriel(nW, 'commande') + (R.vendent ? ' · ' + pluriel(R.vendent, 'magasin') + ' vend' + (R.vendent > 1 ? 'ent' : '') + ' en ligne' : '')]);
-      oc.kpi.push(['Click & collect', fE(R.cc.ca), R.cc.n ? pluriel(R.cc.n, 'commande') + ' · panier ' + fU(R.cc.ca / R.cc.n) : 'aucune commande ' + libPer]);
-      oc.kpi.push(['Livraison', fE(R.liv.ca), R.liv.n ? pluriel(R.liv.n, 'commande') + ' · panier ' + fU(R.liv.ca / R.liv.n) + (R.livrent ? ' · ' + pluriel(R.livrent, 'magasin') + ' livre' + (R.livrent > 1 ? 'nt' : '') : '') : 'aucune livraison ' + libPer]);
-      if (!nW) { oc.canauxVide = 'Aucune commande webshop ' + libPer + ' : tout passe au comptoir.'; }
-    }
-    if (O) {
-      const K = O.kpi || {}, M = O.magasins || [];
-      oc.cols = M.map(m => ({ shop: m.shop, nom: m.nom }));
-      const nAj = (O.offres || []).filter(o => Object.values(o.magasins || {}).some(v => v.verdict === 'ajuster' || v.verdict === 'arreter')).length;
-      oc.kpi.push(['Offres actives', String((K.bundles || 0) + (K.promos || 0)), pluriel(K.bundles || 0, 'bundle') + ' · ' + pluriel(K.promos || 0, 'promotion') + (nAj ? ' · ' + nAj + ' à ajuster quelque part' : '')]);
-      oc.kpi.push(['CA des offres', fE(K.ca), (K.part != null ? fP(K.part) + ' du CA ' + libPer : '—') + (per !== 'jour' && K.caJour ? ' · aujourd’hui ' + fE(K.caJour) : '')]);
-      const VERD = { garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'], tot: ['Trop tôt', 'tot'] };
-      oc.offres = (O.offres || []).map(o => {
-        const dlt = v => v.delta == null ? '' : (v.delta >= 0 ? '+' : '−') + nf(Math.abs(v.delta)) + ' % ';
-        const cells = M.map(m => { const v = o.magasins[m.shop]; if (!v) { return { txt: '', verdict: '' }; } const verd = VERD[v.verdict] || VERD.tot; return { txt: v.pieces != null ? nf(v.pieces) : fE(v.ca), sous: v.pieces != null ? fE(v.ca) : '', verdict: verd[1], titre: m.nom + ' : ' + verd[0] + ' · ' + dlt(v) + (v.mot || '') }; });
-        const comptes = {}; Object.values(o.magasins).forEach(v => { comptes[v.verdict] = (comptes[v.verdict] || 0) + 1; });
-        const verdicts = ['garder', 'ajuster', 'arreter', 'tot'].filter(k => comptes[k]).map(k => ({ lib: VERD[k][0], cls: VERD[k][1], n: comptes[k] }));
-        const premier = Object.values(o.magasins)[0] || {};
-        return { type: o.type, typeLib: o.type === 'bundle' ? 'Bundle' : 'Promo', nom: o.nom, regle: o.regle || '', canaux: (o.canaux || []).map(c => ({ lib: { comptoir: 'Comptoir', cc: 'Click & collect', liv: 'Livraison', webshop: 'Webshop' }[c] || c, cls: { comptoir: 'c', cc: 'w', liv: 'l', webshop: 'w' }[c] || 'c' })),
-          cells, total: o.pieces ? nf(o.pieces) : fE(o.ca), totalSous: o.pieces ? fE(o.ca) : '', verdicts, mot: Object.keys(o.magasins).length === 1 ? dlt(premier) + (premier.mot || '') : '' };
-      });
-      if (!oc.offres.length) { oc.vide = 'Aucune offre ' + libPer + ' : pas de bundle vendu dans les tickets, pas de promotion posée sur les jours creux.'; }
-      oc.okpi = K;
-    }
-    common.oc = oc;
-  }
   /* --- invendus et poubelle : une lecture réseau sur la période choisie --- */
   ivCharge(force){
     const per = this.state.ivPeriode || 'jour', M = this.state.iv || {}, b = M[per];
@@ -3104,25 +2971,6 @@ class App {
       }
     }
     common.inv = inv;
-  }
-  /* --- gestion de production : la page du dashboard en mode intégré, un magasin, un jour --- */
-  valsGP(common){
-    const S = this.state, ms = this.open();
-    const aujD = new Date(), iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const auj = iso(aujD);
-    const shop = String(S.gpShop || (ms[0] ? ms[0].id : '4'));
-    const onglet = { productionPlan: 'plan', productionSuivi: 'suivi', productionParams: 'params', productionCloture: 'cloture', productionFours: 'fours' }[S.screen] || 'plan';
-    // Le plan et les fours se préparent jusqu'à 7 jours à l'avance ; la validation et la clôture s'arrêtent à aujourd'hui.
-    const max = onglet === 'plan' || onglet === 'fours' ? (() => { const x = new Date(aujD); x.setDate(x.getDate() + 7); return iso(x); })() : auj;
-    // Le jour se choisit dans la page (sa barre des jours) ; le cockpit garde le dernier choisi.
-    const jourDe = () => { let d = /^\d{4}-\d{2}-\d{2}$/.test(this.gpDateVu || '') ? this.gpDateVu : auj; if (d > max) { d = max; } return d; };
-    const date = jourDe();
-    common.gp = { onglet, date,
-      magasins: ms.map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === shop })),
-      setShop: e => this.setState({ gpShop: e.target.value }),
-      src: 'production/?embed=1&shop=' + encodeURIComponent(shop) + '&date=' + date + '&page=' + onglet,
-      // Le jour choisi dans la page depuis le dernier rendu : lu au clic.
-      pleinEcran: () => { window.open('production/?shop=' + encodeURIComponent(shop) + '&date=' + jourDe() + '&page=' + onglet, '_blank', 'noopener'); } };
   }
   valsCreux(common){
     const S = this.state;
@@ -5917,21 +5765,6 @@ class App {
       api: o.type !== 'saisie' }));
     return common;
   }
-  /**
-   * Centrale d'achat — dix écrans, un seul gabarit.
-   *
-   * Chaque écran charge sa route et rend le MÊME objet : des colonnes, des
-   * lignes, un état. Quand la source manque, l'état vaut « attente » et les
-   * colonnes portent, à la place des données, le champ attendu et son API.
-   * Le tableau devient alors la spécification du branchement — on voit d'un
-   * coup d'œil ce qui reste à obtenir, sans rouvrir le document de cadrage.
-   */
-  caRoute(){
-    return { caCampagnes: '/centrale/campagnes', caDemande: '/centrale/demandes',
-      caAchats: '/centrale/achats', caCommandes: '/centrale/commandes',
-      caFacturation: '/centrale/facturation',
-      caReglages: '/centrale/reglages' }[this.state.screen];
-  }
   /* --- fonds marketing & redevances ------------------------------------------ */
 
   /**
@@ -8530,21 +8363,6 @@ class App {
     return null;
   }
 
-  /* Les réclamations matière : lues chez le panel, jamais recalculées. Une
-     seule lecture, gardée — l'écran des fournisseurs y revient souvent. */
-  reclCharge(force){
-    const mois = this.state.reclMois == null ? 3 : this.state.reclMois;
-    const cle = String(mois);
-    if (this._reclEnCours === cle) { return; }
-    if (this.D.recl && this.D.recl.cle === cle && !force) { return; }
-    this._reclEnCours = cle;
-    if (!this.D.recl) { this.setState({ reclChargement: true }); }
-    readOne('/fournisseurs/reclamations?mois=' + mois).then(d => {
-      this._reclEnCours = null; this.D.recl = Object.assign({ cle }, d || { indispo: true });
-      this.setState({ reclChargement: false });
-    }).catch(() => { this._reclEnCours = null; this.D.recl = { cle, indispo: true };
-      this.setState({ reclChargement: false }); });
-  }
 
   /* Le classement des tâches du jour — lu chez le panel, pas recalculé.
      Chargé à part du résultat du jour : il vit sur la même date mais sur une
@@ -9315,37 +9133,6 @@ class App {
       this.pdvCharge(true);
       return r;
     });
-  }
-  /* --- Prospection : le magasin dont on ouvre la liste de démarchage ---------
-   * Les lieux, la liste et la carte sont l'affaire du module Prospection
-   * (prospection.js) ; le cockpit ne fait que choisir le magasin, parmi ceux
-   * pointés sur la carte (/scouting/reseau).
-   */
-  dmMagasins(){
-    const R = this.D.dmReseau || null;
-    return R ? (R.magasins || []).filter(m => m.lat != null && m.lng != null) : [];
-  }
-  dmMagasin(){
-    const ms = this.dmMagasins();
-    return ms.find(m => String(m.id) === String(this.state.dmShop)) || ms.find(m => m.ouvert) || ms[0] || null;
-  }
-  dmCharge(){
-    if (this.D.dmReseau || this._dmReseauEnCours) { return; }
-    this._dmReseauEnCours = true;
-    readOne('/scouting/reseau').then(r => { this._dmReseauEnCours = false; this.D.dmReseau = r || { magasins: [] }; this.setState({}); });
-  }
-  /** Les écrans Prospection et Newsletter magasin : le magasin choisi, le lien mobile. */
-  valsProspection(common){
-    const ms = this.dmMagasins();
-    const m = this.dmMagasin();
-    common.prChargement = !this.D.dmReseau;
-    common.prMagasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: m && String(x.id) === String(m.id) }));
-    common.prSetMagasin = e => this.setState({ dmShop: e.target.value });
-    common.prSansMagasin = !!this.D.dmReseau && !m;
-    common.prMagasin = m ? { id: String(m.id), nom: m.nom } : null;
-    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
-    common.prLienMobile = m ? base + 'prospection/?shop=' + encodeURIComponent(String(m.id)) : '';
-    common.prCopier = () => { try { navigator.clipboard.writeText(common.prLienMobile); this.notify('Lien copié — à ouvrir sur le téléphone du franchisé.'); } catch (e) { this.notify('Copie impossible : sélectionnez le lien.'); } };
   }
 
   /* --- Tablette vendeuses ------------------------------------------------------
@@ -11963,297 +11750,6 @@ class App {
     }
   }
 
-  caCharge(){
-    const S = this.state, ecr = S.screen, r = this.caRoute();
-    if (!r) { return; }
-    const per = S.caPeriode || '30j';
-    this._caEnCours = this._caEnCours || {};
-    const lire = (cle, chemin) => {
-      if ((this.state.caData || {})[cle] || this._caEnCours[cle]) { return; }
-      this._caEnCours[cle] = true;
-      readOne(chemin).then(d => { this._caEnCours[cle] = false;
-        this.setState(s2 => ({ caData: Object.assign({}, s2.caData,
-          { [cle]: d || { etat: 'erreur', motif: 'API injoignable' } }) })); });
-    };
-    lire(ecr + '|' + per, r);
-    // L'écran des commandes tient les DEUX bouts : ce que le franchisé demande
-    // (réquisitions) et ce que le fournisseur doit servir (commandes). Deux
-    // routes, un seul écran — les séparer obligeait à naviguer pour suivre une
-    // même commande.
-    if (ecr === 'caAchats') { lire('caCommandes|' + per, '/centrale/commandes'); }
-  }
-  valsCentrale(common){
-    const S = this.state;
-    // « Commandes franchisés » a rejoint « Commandes » : un
-    // ancien lien ou un signet doit continuer à mener quelque part.
-    // « Commandes franchisés » et « Stock » ont été retirés : un ancien lien ou
-    // un signet doit continuer à mener quelque part.
-    if (S.screen === 'caCommandes' || S.screen === 'caStock') {
-      this.setState({ screen: 'caAchats' }); return;
-    }
-    const ecr = S.screen;
-    const per = S.caPeriode || '30j';
-    this.caCharge();
-    const d = (S.caData || {})[ecr + '|' + per];
-    common.caEcran = ecr;
-    common.caChargement = !d;
-    // Ce que l'écran est en train de lire, dit en clair pendant l'attente.
-    common.caTitre = { caAchats: 'Commandes',
-      caFacturation: 'Facturation magasins', caReglages: 'Réglages de la centrale',
-      caDemande: 'Demandes' }[ecr] || 'Lecture en cours';
-    common.caChargeTxt = ecr === 'caAchats'
-      ? 'Lecture des commandes chez le panel, magasin par magasin — quelques secondes.'
-      : 'Lecture des données de la centrale…';
-    common.caEtat = d ? (d.etat || 'ok') : '';
-    common.caMotif = d && d.motif ? d.motif : '';
-    common.caSource = d && d.source ? d.source : '';
-    common.caTitreSrc = d && d.titre ? d.titre : '';
-    // Le bandeau « Reste à brancher » affiche des phrases ; un endpoint peut
-    // aussi livrer des lacunes structurées {champ, quoi, source} — aplaties ici.
-    common.caManquants = ((d && d.manquants) || []).map(m2 => typeof m2 === 'string' ? m2
-      : ((m2.champ || '') + ' — ' + (m2.quoi || '') + (m2.source ? ' (' + m2.source + ')' : '')));
-    common.caPeriode = per;
-    const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
-      + 'padding:6px 14px;border-radius:8px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.caPerBtns = null;
-
-    // --- écrans sans source : la table est rendue, colonne par colonne
-    common.caAttendu = (d && d.etat === 'attente' && d.colonnes) ? d.colonnes.map(c => ({
-      col: c.col, champ: c.champ, src: c.src, note: c.note || '',
-      // Une colonne déjà servie ailleurs n'est pas un manque : la distinguer
-      // évite de redemander ce que le cockpit possède déjà.
-      dispo: /déjà disponible|déjà connus|déjà|calcul local/i.test(c.src || '') })) : null;
-
-    common.caKpis = null; common.caCols = null; common.caRows = null; common.caParams = null;
-    if (!d || d.etat === 'attente') { return common; }
-
-    // Les branches Cockpit, Catalogue et Analyse des ventes ont été retirées
-    // avec leurs entrées de rail : elles doublaient P&L magasins, le Référentiel
-    // produit et le Tableau des magasins, en rendant moins que ces derniers.
-    if (ecr === 'caReglages') {
-      common.caParams = d.params || null;
-      // Un référentiel vide n'est pas une API manquante : il est vide, et
-      // confondre les deux enverrait chercher une source qui existe déjà.
-      common.caRien = 'Aucun fournisseur au référentiel du cockpit — la table existe, elle n’est pas remplie.';
-      common.caCols = ['Fournisseur', 'Périmètre', 'Courriel', 'RFA %', 'Redevance centrale %'];
-      common.caRows = (d.fournisseurs || []).map(f => ({ cells: [
-        { t: f.nom }, { t: f.perimetre || '', mut: true }, { t: f.email || '', mut: true },
-        { t: 'manque API', vide: true }, { t: 'manque API', vide: true } ] }));
-    } else if (ecr === 'caDemande') {
-      common.caCols = ['Demande', 'Fournisseur', 'Base', 'Période', 'Quantité', 'Prix cible', 'Statut'];
-      common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: '#' + x.id }, { t: x.fournisseur || '' }, { t: x.base, mut: true },
-        { t: (x.du || '') + ' → ' + (x.au || ''), mut: true },
-        { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
-        { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
-      common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
-    } else if (ecr === 'caAchats') {
-      // ── Ce que les franchisés ont demandé, et qui attend leur validation.
-      //    Même écran que le suivi fournisseur : une commande se suit d'un
-      //    bout à l'autre, de la demande du magasin à la livraison.
-      const dc = (S.caData || {})['caCommandes|' + per] || null;
-      const relF = (dc || {}).relancesFranchise || {};
-      const lgsF = ((dc || {}).lignes || []).filter(l => l.statut === 'PENDING');
-      common.caFrChargement = !dc;
-      common.caFrN = lgsF.length;
-      common.caFrValeur = this.fE(lgsF.reduce((a, l) => a + (+l.valeur || 0), 0));
-      common.caFrLignes = lgsF.slice(0, 40).map(l => ({
-        id: l.id, magasin: l.magasin || '',
-        fournisseur: (l.fournisseurs || []).join(' + ') || '',
-        debut: l.debut ? this.fD(l.debut) : '',
-        // Depuis quand ça attend : c'est ce chiffre qui fait agir, pas la date.
-        attente: l.debut ? Math.max(0, Math.round((Date.now() - new Date(l.debut)) / 86400000)) : null,
-        valeur: this.fE(l.valeur || 0), par: l.par || '',
-        relanceLe: (relF[String(l.id)] || {}).quand || '',
-        relancer: () => {
-          if (this.state.caFrRel === l.id) { return; }
-          this.setState({ caFrRel: l.id });
-          this.api('POST', '/centrale/commandes/relance-franchise', { id: l.id }).then(r2 => {
-            this.setState({ caFrRel: null });
-            this.notify(!r2 || r2.ok === false
-              ? ('Rappel refusé — ' + ((r2 && (r2.erreur || r2.error)) || 'notification impossible'))
-              : ('Notification envoyée à ' + (r2.magasin || 'ce magasin')
-                 + (r2.notification ? ' (#' + r2.notification + ')' : '')));
-            if (r2 && r2.ok) {
-              this.setState(s2 => { const cd = Object.assign({}, s2.caData);
-                Object.keys(cd).filter(k => k.startsWith('caCommandes|')).forEach(k => { delete cd[k]; });
-                return { caData: cd }; });
-            }
-          });
-        },
-        enCours: this.state.caFrRel === l.id,
-      }));
-      common.caFrTronque = lgsF.length > 40 ? lgsF.length - 40 : 0;
-
-      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
-      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
-      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
-      const sv = d.suivi || {};
-      const svK = sv.kpis || null;
-      const fSv = S.caSvFiltre || '';
-      const jf = z => !z ? '' : String(z).slice(5).split('-').reverse().join('.');
-      const garde = o => !fSv
-        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
-        || (fSv === 'retard' && o.retardJours != null)
-        || (fSv === 'livre' && o.etape === 4);
-      // L'horodatage vient en SECONDES ; une valeur illisible ne doit pas
-      // s'afficher « Invalid Date » — mieux vaut ne rien dire.
-      const majD = sv.quand ? new Date((+sv.quand || 0) * 1000) : null;
-      const maj = (majD && isFinite(majD.getTime()) && majD.getTime() > 0) ? majD : null;
-      // Le nombre de fournisseurs peut manquer : on le compte alors sur les
-      // groupes affichés plutôt que d'écrire « undefined fournisseur(s) ».
-      const nFourn = svK && svK.fournisseurs != null ? svK.fournisseurs : (sv.groupes || []).length;
-      common.caSvKpis = svK ? [
-        ['Commandes en cours', String(svK.enCours), nFourn + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
-        ['En retard', String(svK.retard), 'livraison prévue dépassée', svK.retard ? '#8D1D2C' : ''],
-        ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
-        ['Lecture', sv.lues ? String(sv.lues) : '', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
-      ] : null;
-      // La fenêtre des courriers : ce qui est parti, à qui, et ce qu'il citait.
-      const sm = S.svMails || null;
-      common.caSvMails = !sm ? null : {
-        fournisseur: sm.fournisseur, commande: sm.cle,
-        chargement: !!sm.chargement,
-        note: (sm.d || {}).note || '',
-        resume: (sm.d && sm.d.envois)
-          ? sm.d.envois + ' rappel(s) · depuis le ' + this.fD(sm.d.depuis)
-            + (sm.d.dernier ? ' · dernier le ' + this.fD(sm.d.dernier) : '')
-          : 'Aucun rappel en cours pour ce fournisseur.',
-        lignes: ((sm.d || {}).courriers || []).map(c2 => ({
-          quand: c2.quand, sujet: c2.sujet || c2.detail || '',
-          vers: c2.destinataire || '', copie: c2.copie || '',
-          reqs: (c2.reqs || []).length ? 'réquisitions ' + c2.reqs.join(', ') : '',
-          echec: c2.type === 'echec', clos: c2.type === 'clos',
-          detail: c2.detail || '',
-        })),
-        vide: !((sm.d || {}).courriers || []).length,
-        fermer: () => this.setState({ svMails: null }),
-      };
-      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
-          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
-        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
-          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
-      // Le clic sur une commande ouvre les COURRIERS envoyés à son fournisseur.
-      const svCourriers = (fournisseur, cle) => () => {
-        this.setState({ svMails: { fournisseur, cle, chargement: true, d: null } });
-        readOne('/centrale/commandes/mail/courriers?fournisseur=' + encodeURIComponent(fournisseur))
-          .then(d2 => this.setState(s2 => (s2.svMails && s2.svMails.cle === cle)
-            ? { svMails: Object.assign({}, s2.svMails, { chargement: false, d: d2 || null }) } : {}));
-      };
-      common.caSvGroupes = (sv.groupes || []).map(g => ({
-        nom: g.fournisseur,
-        // Le rappel au fournisseur part tout seul chaque jour ; ce bouton sert
-        // à le faire partir MAINTENANT, pour ce fournisseur-là.
-        mailer: () => {
-          if (this.state.caSvMail === g.fournisseur) { return; }
-          this.setState({ caSvMail: g.fournisseur });
-          this.api('POST', '/centrale/commandes/mail/envoyer', { fournisseur: g.fournisseur }).then(r2 => {
-            this.setState({ caSvMail: null });
-            this.notify(!r2 || r2.ok === false
-              ? ('Courrier non envoyé — ' + ((r2 && (r2.erreur || r2.error)) || 'échec'))
-              : ('Rappel envoyé à ' + g.fournisseur + (r2.vers ? ' · ' + r2.vers : '')));
-          });
-        },
-        mailEnCours: this.state.caSvMail === g.fournisseur,
-        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
-        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
-        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
-        commandes: (g.commandes || []).filter(garde).map(o => ({
-          magasin: o.magasin, cle: o.cle, date: jf(o.date),
-          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
-          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
-            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
-          libelle: o.libelle,
-          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
-          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
-          geste: o.geste || '', source: o.source || '',
-          courriers: svCourriers(g.fournisseur, o.cle),
-          // Relance : la cloche n'apparaît que si la commande attend encore
-          // le fournisseur. Elle crée une NOTIFICATION dans l'ERP, pas un mail.
-          relancable: o.etape < 4 && !o.bloque,
-          relanceLe: o.relanceLe || '',
-          relanceTitre: o.relanceLe ? 'Relancé le ' + o.relanceLe + ' — relancer à nouveau'
-            : 'Relancer : créer une notification « commande à valider »',
-          relancer: () => {
-            if (this.state.svRelance === o.cle) { return; }
-            this.setState({ svRelance: o.cle });
-            this.api('POST', '/centrale/achats/relance', { id: o.id }).then(r => {
-              this.setState({ svRelance: null });
-              if (r && r.ok) {
-                this.notify('Notification envoyée — ' + (r.fournisseur || '') + (r.notification ? ' (#' + r.notification + ')' : ''));
-                this.log('Centrale', o.cle, 'Relance fournisseur envoyée');
-                // Le cache d'écran est vidé pour cette clé : la ligne
-                // réaffiche « relancé le … » sans recharger la page.
-                this.setState(s2 => {
-                  const cd = Object.assign({}, s2.caData);
-                  Object.keys(cd).filter(k => k.startsWith('caAchats|')).forEach(k => { delete cd[k]; });
-                  return { caData: cd };
-                });
-              } else { this.notify((r && (r.erreur || r.error)) || 'Relance impossible.'); }
-            });
-          },
-          relanceEnCours: S.svRelance === o.cle,
-        })),
-      })).filter(g => g.commandes.length);
-      // Le suivi est mémorisé 5 min ; ce bouton relit l'API sans attendre —
-      // un statut qui vient de changer se voit tout de suite.
-      common.caSvBusy = !!S.caSvBusy;
-      common.caSvMaj = maj ? maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
-      common.caSvRafraichir = () => {
-        if (this.state.caSvBusy) { return; }
-        this.setState({ caSvBusy: true });
-        readOne('/centrale/achats?refresh=1').then(d2 => {
-          this.setState(s2 => {
-            const cle = 'caAchats|' + (s2.caPeriode || '30j');
-            return { caSvBusy: false,
-              caData: d2 ? Object.assign({}, s2.caData, { [cle]: d2 }) : s2.caData };
-          });
-          this.notify(d2 ? 'Suivi actualisé' : 'Actualisation impossible — API injoignable');
-        });
-      };
-      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
-        : 'Aucune commande lisible sur l’API.');
-    } else if (ecr === 'caFacturation') {
-      // Factures de redevances émises aux magasins, l'impayé en tête et en
-      // couleur ; les abonnements TFBuddy en second tableau.
-      const fmtD = v => v ? this.fD(v) : '';
-      common.caCols = ['Facture', 'Magasin', 'Émise', 'Échéance', 'Montant', 'Paiement', 'Relance'];
-      common.caRows = (d.redevances || []).map(x => {
-        const enRetard = x.paiement !== 'paid' && x.echeance && x.echeance < (this.M && this.M.TODAY || '');
-        return { cells: [
-          { t: x.numero }, { t: x.magasin, mut: true },
-          { t: fmtD(x.emise), mut: true },
-          { t: fmtD(x.echeance), col: enRetard ? '#8D1D2C' : '' },
-          { t: this.fU(x.montant), num: true },
-          { t: x.paiement === 'paid' ? 'payée' + (x.payeLe ? ' le ' + this.fD(x.payeLe) : '')
-              : (enRetard ? 'impayée — en retard' : 'impayée'),
-            col: x.paiement === 'paid' ? '#2d7a3e' : (enRetard ? '#8D1D2C' : '#8a5a13') },
-          { t: x.relanceLe ? this.fD(x.relanceLe) : '', mut: true } ] };
-      });
-      common.caRien = 'Aucune facture de redevances émise.';
-      common.caTable2 = (d.abonnements && d.abonnements.length) ? {
-        titre: 'Abonnements TFBuddy par magasin (Stripe)',
-        cols: ['Magasin', 'Offre', 'Montant', 'Payé', 'Statut'],
-        rows: d.abonnements.map(a => ({ cells: [
-          { t: a.magasin || '' }, { t: a.offre || '', mut: true },
-          { t: this.fU(a.montant), num: true }, { t: this.fU(a.paye), num: true },
-          { t: a.statut || '', mut: a.statut === 'paid' } ] })),
-      } : null;
-      // --- CA du réseau, mois par mois avec cumul : l'assiette des redevances.
-      const M3 = (this.M && this.M.MOIS) || [];
-      common.caTable2 = (d.caMensuel && d.caMensuel.length) ? {
-        titre: 'Chiffre d’affaires réseau ' + (d.exercice || '') + ' — cumul par mois',
-        cols: ['Mois', 'CA du mois', 'Cumul année'],
-        rows: d.caMensuel.map(m2 => ({ cells: [
-          { t: (M3[m2.mois - 1] || String(m2.mois)) + (m2.enCours ? ' (en cours)' : ''), mut: !!m2.enCours },
-          { t: m2.ca != null ? this.fE(m2.ca) : '', num: true },
-          { t: this.fE(m2.cumul), num: true } ] })),
-      } : null;
-    }
-    return common;
-  }
   /**
    * Vocabulaire analysable, chargé à l'ouverture de l'écran et une seule fois.
    * Il coûte deux appels amont : hors du chargement général, qui en fait déjà
@@ -13810,7 +13306,6 @@ class App {
                   this.notify((r && r.error) || 'Réclamation refusée'); return;
                 }
                 patch({ busy: false, fait: r.id || true, ouvert: false });
-                this.D.recl = null;   // l'écran fournisseurs se relira
                 this.notify('Réclamation déposée' + (r.id ? ' (#' + r.id + ')' : ''));
               });
             },
@@ -14839,293 +14334,6 @@ class App {
       },
       annuler: () => this.setState({ bgPagesDraft: null, bgMail: null }),
     };
-  }
-
-  /* --- contrôle des posts Facebook -------------------------------------------------- */
-  valsPosts(common){
-    const S = this.state, D = this.D, M = this.M;
-    const FB = M.FB || { seuil: 4, familles: [], regles: [] };
-    const seuil = this.fbSeuil(), etats = this.fbEtats();
-    const posts = this.fbPosts();
-
-    common.fbStore = S.fbStore;
-    common.setFbStore = e => this.setState({ fbStore: e.target.value });
-    common.fbStores = [{ val: 'tous', nom: 'Tous les magasins' }, { val: 'reseau', nom: 'Posts réseau (sans magasin)' }]
-      .concat(D.stores.map(s => ({ val: s.id, nom: s.nom })));
-    const aTraiter = p => p.statut === 'a_controler' || p.statut === 'a_valider';
-    const filtres = { 'À traiter': aTraiter, 'Traités': p => !aTraiter(p), 'Tous': () => true };
-    common.fbEtatBtns = Object.keys(filtres).map(nom => ({ nom, go: () => this.setState({ fbEtat: nom }), st: this.tabBtn(S.fbEtat === nom) }));
-
-    const mine = posts.filter(p => (S.fbStore === 'tous' || (S.fbStore === 'reseau' ? !p.magasinId : p.magasinId === S.fbStore))
-      && filtres[S.fbEtat](p));
-    const nAttente = mine.filter(aTraiter).length;
-    const notes = mine.filter(p => p.decision.note !== null && p.decision.note !== undefined).map(p => p.decision.note);
-    const moy = notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null;
-    const nRefus = mine.filter(p => p.statut === 'refuse').length;
-    // Les désaccords entre l'agent et le CEO : c'est le chiffre qui dit si le
-    // pack de règles est bien calibré. Trop d'écarts, et ce sont les règles
-    // qu'il faut reprendre, pas les franchisés.
-    const nDiverge = mine.filter(p => p.decision.note != null && p.agent.note != null && p.decision.note !== p.agent.note).length;
-    common.fbResume = mine.length + ' post' + (mine.length > 1 ? 's' : '') + ' · ' + nAttente + ' en attente'
-      + (moy !== null ? ' · note moyenne ' + moy.toFixed(1).replace('.', ',') : '')
-      + (nRefus ? ' · ' + nRefus + ' refusé' + (nRefus > 1 ? 's' : '') : '')
-      + (nDiverge ? ' · ' + nDiverge + ' décision' + (nDiverge > 1 ? 's' : '') + ' hors avis de l’agent' : '');
-    common.fbVide = mine.length === 0;
-    common.fbNewOpen = () => this.setState({ fbNew: { magasinId: (D.stores[0] || {}).id || '', auteur: '', format: 'Photo',
-      message: '', lien: '', visuel: '', alt: '', largeur: '1440', publierLe: M.TODAY, heure: '09:00' } });
-
-    const mk = (p, i) => {
-      const ouvert = !!S.openInfo['fb:' + p.id];
-      const [etatNom, etatCoul] = etats[p.statut] || ['—', '#666666'];
-      const an = p.agent.note, al = an != null ? this.fbNiv(an) : null;
-      const dn0 = p.decision.note, dl = dn0 != null ? this.fbNiv(dn0) : null;
-      const ecartsOuverts = (p.ecarts || []).filter(e => e.statut !== 'ignore');
-      const pire = ecartsOuverts.length ? ecartsOuverts.reduce((a, b) => a.gravite >= b.gravite ? a : b) : null;
-      // Le brouillon : la note de l'agent est reprise par défaut — le CEO
-      // contresigne ou corrige, il ne resaisit pas.
-      const d = S.fbVal['fb:' + p.id] || { note: dn0 != null ? dn0 : an,
-        famille: (p.decision.famille || (pire && pire.famille) || ''), type: (p.decision.type || (pire && pire.type) || ''),
-        commentaire: p.decision.commentaire || '' };
-      const dn = d.note, dnl = dn ? this.fbNiv(dn) : null;
-      const fams = FB.familles || [];
-      const famCour = d.famille || (fams[0] || {}).nom || '';
-      const typs = ((fams.find(f => f.nom === famCour) || {}).types) || [];
-      const typCour = d.type || typs[0] || '';
-      const maj = f => this.setState(s2 => ({ fbVal: Object.assign({}, s2.fbVal, { ['fb:' + p.id]: Object.assign({}, d, f) }) }));
-      const pill = (txt, coul) => ({ txt, st: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:' + coul + '1f;color:' + coul });
-      const notePill = (n, l) => 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur;
-      const noteNum = l => 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-style:normal;background:' + l.couleur;
-
-      // Une décision ne se prend que sur un post contrôlé. Sur un post déjà
-      // décidé, elle se reprend : un refus se lève, une validation se retire —
-      // tant que le post n'est pas publié.
-      const decidable = p.statut === 'a_valider' || p.statut === 'valide' || p.statut === 'refuse';
-      const envoyer = (decision) => {
-        if (!dn) { this.notify('Choisissez une note avant de décider'); return; }
-        const motif = decision === 'refuse' || dn < seuil;
-        if (motif && (!famCour || !typCour)) { this.notify('Famille et type obligatoires pour ' + (decision === 'refuse' ? 'refuser' : 'valider sous ' + seuil + '/5')); return; }
-        p.statut = decision === 'valide' ? 'valide' : 'refuse';
-        p.decision = { note: dn, famille: motif ? famCour : null, type: motif ? typCour : null,
-          commentaire: d.commentaire || null, le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), par: 'CEO' };
-        this.api('PATCH', '/marketing/social/posts/' + p.id, { decision, note: dn,
-          famille: motif ? famCour : null, type: motif ? typCour : null, commentaire: d.commentaire || null, par: 'CEO' });
-        this.log(decision === 'valide' ? 'Validation' : 'Refus', p.magasin || '—',
-          'Post « ' + this.fbTitre(p.message) + ' » ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5'
-          + (motif ? ' — ' + famCour + ' · ' + typCour : '')
-          + (an != null && an !== dn ? ' (agent : ' + an + '/5)' : ''));
-        this.setState(s2 => ({ fbVal: Object.assign({}, s2.fbVal, { ['fb:' + p.id]: undefined }) }));
-        this.notify('Post ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5 — ' + dnl.nom);
-      };
-
-      return {
-        id: p.id, ouvert,
-        toggleOpen: () => this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { ['fb:' + p.id]: !s2.openInfo['fb:' + p.id] }) })),
-        rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
-        format: p.format, auteur: p.auteur, magasin: p.magasin || 'Réseau',
-        extrait: this.fbTitre(p.message, 150), message: p.message,
-        etat: etatNom, etatSt: pill(etatNom, etatCoul).st,
-        quand: p.publierLe ? 'Publication ' + this.fD(p.publierLe.slice(0, 10)) + ' à ' + p.publierLe.slice(11, 16) : 'Sans date',
-        quandSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;color:var(--color-text-muted)',
-        chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        // Deux notes, jamais confondues : ce que l'agent propose, ce que le CEO signe.
-        hasAgent: an != null, agentTxt: an != null ? 'Agent · ' + al.nom : '', agentNum: an != null ? String(an) : '',
-        agentSt: an != null ? notePill(an, al) : '', agentNumSt: an != null ? noteNum(al) : '',
-        agentResume: p.agent.resume || 'Post non encore contrôlé.',
-        hasDecision: dn0 != null, decisionTxt: dn0 != null ? 'CEO · ' + dl.nom : '', decisionNum: dn0 != null ? String(dn0) : '',
-        decisionSt: dn0 != null ? notePill(dn0, dl) : '', decisionNumSt: dn0 != null ? noteNum(dl) : '',
-        nEcarts: ecartsOuverts.length,
-        ecartsSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
-        // --- le détail
-        rows: [{ k: 'Magasin', v: p.magasin || 'Réseau — aucun magasin' }, { k: 'Auteur', v: p.auteur },
-          { k: 'Format', v: p.format }, { k: 'Soumis le', v: p.soumisLe ? this.fD(p.soumisLe.slice(0, 10)) + ' à ' + p.soumisLe.slice(11, 16) : '—' },
-          { k: 'Publication prévue', v: p.publierLe ? this.fD(p.publierLe.slice(0, 10)) + ' à ' + p.publierLe.slice(11, 16) : 'Sans date' },
-          { k: 'Lien', v: p.lien || 'Aucun' },
-          { k: 'Contrôles', v: p.agent.passages ? p.agent.passages + ' passage' + (p.agent.passages > 1 ? 's' : '') + (p.agent.le ? ', dernier le ' + this.fD(p.agent.le.slice(0, 10)) : '') : 'Jamais contrôlé' },
-          { k: 'Décision', v: dn0 != null ? dl.nom + ' (' + dn0 + '/5) — ' + p.decision.par + ' le ' + this.fD((p.decision.le || '').slice(0, 10)) : 'En attente' },
-          { k: 'Publication', v: p.publie.le ? 'Publié le ' + this.fD(p.publie.le.slice(0, 10)) + (p.publie.fbId ? ' · id ' + p.publie.fbId : '') : 'Non publié' }],
-        medias: (p.medias || []).map(m2 => ({ nom: m2.nom, dim: (m2.largeur || '?') + '×' + (m2.hauteur || '?') + ' px',
-          alt: m2.alt || 'Texte alternatif absent',
-          altSt: 'font-size:11px;' + (m2.alt ? 'color:var(--color-text-muted)' : 'color:#8D1D2C;font-weight:500') })),
-        sansMedia: !(p.medias || []).length,
-        commentaireDecision: p.decision.commentaire || '',
-        ecarts: (p.ecarts || []).map(e => { const [gn, gc] = this.fbGrav(e.gravite); const off = e.statut === 'ignore';
-          return { type: e.type, famille: e.famille, regle: e.regle, message: e.message, extrait: e.extrait || '',
-            hasExtrait: !!e.extrait, ignore: off,
-            gravTxt: gn, gravSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-radius:999px;padding:2px 7px;white-space:nowrap;background:' + gc + (off ? '14' : '1f') + ';color:' + gc,
-            ligneSt: 'display:flex;flex-direction:column;gap:3px;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);' + (off ? 'opacity:0.55' : ''),
-            toggleTxt: off ? 'Rétablir' : 'Écarter',
-            // Écarter, c'est accorder une dérogation tracée — l'écart reste
-            // visible, il sort seulement du calcul de la note.
-            toggle: () => { const nv = off ? 'ouvert' : 'ignore';
-              e.statut = nv;
-              p.agent.note = this.fbNoteLocale(p.ecarts);
-              this.api('PATCH', '/marketing/social/posts/' + p.id + '/ecarts/' + e.id, { statut: nv, par: 'CEO' });
-              this.log('Contrôle', p.magasin || '—', 'Écart « ' + e.type + ' » ' + (off ? 'rouvert' : 'écarté')
-                + ' sur « ' + this.fbTitre(p.message) + ' » — note de l’agent ' + p.agent.note + '/5');
-              this.notify('Écart ' + (off ? 'rouvert' : 'écarté') + ' — note de l’agent ' + p.agent.note + '/5');
-              this.forceUpdate(); } }; }),
-        // --- panneau de décision
-        vOuvert: decidable,
-        vNote: dn || 0,
-        starSt: n => 'border:0;background:none;padding:0 1px;font-size:25px;line-height:1;cursor:pointer;color:' + (dn && n <= dn ? dnl.couleur : '#d9d2c8'),
-        setNote: n => maj({ note: n === dn ? null : n }),
-        hasLvb: !!dn, lvbTxt: dnl ? dnl.nom : '', lvbNum: dn ? String(dn) : '', lvbAide: dnl ? dnl.aide : '',
-        lvbSt: dnl ? 'margin-top:7px;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:' + dnl.couleur + '1f;color:' + dnl.couleur : '',
-        lvbNumSt: dnl ? 'width:19px;height:19px;border-radius:50%;color:#fff;font-style:normal;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + dnl.couleur : '',
-        motifTxt: 'Motif — obligatoire sous ' + seuil + '/5 et pour tout refus',
-        sousSeuil: !!dn && dn < seuil,
-        fams: fams.map(f => f.nom), famCour,
-        // Changer de famille remet le type à zéro : « Créneau interdit » sous
-        // « Visuel » n'existe pas, et un couple impossible passerait sans bruit.
-        setFam: e => maj({ famille: e.target.value, type: '' }),
-        typs, typCour, setTyp: e => maj({ type: e.target.value }),
-        commentaire: d.commentaire || '', setCom: e => maj({ commentaire: e.target.value }),
-        peutValider: !!dn && (dn >= seuil || (famCour && typCour)),
-        peutRefuser: !!dn && !!famCour && !!typCour,
-        valider: e => { e.stopPropagation(); envoyer('valide'); },
-        refuser: e => { e.stopPropagation(); envoyer('refuse'); },
-        validerTxt: dn && dn < seuil ? 'Valider par dérogation' : 'Valider',
-        // Le contrôle tourne côté serveur : une seule implémentation des règles,
-        // donc rien à faire en mode démonstration — et l'écran le dit.
-        peutControler: p.statut !== 'publie',
-        controler: async e => { e.stopPropagation();
-          if (this.source !== 'api'){ this.notify('L’agent de contrôle tourne côté serveur — indisponible en mode démonstration.'); return; }
-          const r = await this.api('POST', '/marketing/social/posts/' + p.id + '/controle', {});
-          if (!r || !r.ok){ this.notify('Contrôle impossible — API injoignable.'); return; }
-          const j = await r.json();
-          await this.loadData();
-          const c = j.controle || {};
-          this.notify('Post contrôlé — ' + c.note + '/5 · ' + (c.resume || '')); },
-        estValide: p.statut === 'valide',
-        publier: e => { e.stopPropagation();
-          p.statut = 'publie'; p.publie = { le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), fbId: null };
-          this.api('PATCH', '/marketing/social/posts/' + p.id, { statut: 'publie', par: 'CEO' });
-          this.log('Publication', p.magasin || '—', 'Post « ' + this.fbTitre(p.message) + ' » marqué publié');
-          this.notify('Post marqué publié'); this.forceUpdate(); }
-      };
-    };
-
-    const grp = [['À contrôler', '#8a5a13', p => p.statut === 'a_controler'],
-      ['À valider', '#8D1D2C', p => p.statut === 'a_valider'],
-      ['Refusés', '#8D1D2C', p => p.statut === 'refuse'],
-      ['Validés — à publier', '#2d7a3e', p => p.statut === 'valide'],
-      ['Publiés', '#666666', p => p.statut === 'publie'],
-      ['Brouillons', '#666666', p => p.statut === 'brouillon']];
-    common.fbGroups = grp.map(([nom, couleur, f]) => { const items = mine.filter(f);
-      return { nom, couleur, n: items.length, items: items.map((p, i) => mk(p, i)),
-        dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
-
-    // --- le pack de règles, tel qu'il est en service
-    const parFam = {};
-    for (const r of FB.regles || []){ (parFam[r.famille] = parFam[r.famille] || []).push(r); }
-    common.fbSeuilTxt = 'Publiable à partir de ' + seuil + '/5 — en dessous, la validation est une dérogation motivée.';
-    common.fbRegleFams = Object.keys(parFam).map(fam => ({
-      nom: fam, n: parFam[fam].filter(r => r.actif).length + '/' + parFam[fam].length,
-      regles: parFam[fam].map(r => { const [gn, gc] = this.fbGrav(r.gravite);
-        return { nom: r.nom, aide: r.aide || '', gravTxt: gn,
-          gravSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-radius:999px;padding:2px 7px;white-space:nowrap;background:' + gc + '1f;color:' + gc,
-          nomSt: 'font-size:12px;font-weight:500;' + (r.actif ? '' : 'color:var(--color-text-muted);text-decoration:line-through'),
-          actifTxt: r.actif ? 'Active' : 'Inactive',
-          actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
-            + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
-          // Le pack entier repart : le serveur stocke un réglage, pas un delta.
-          toggle: () => { r.actif = !r.actif;
-            this.api('PUT', '/marketing/social/regles', { valeur: FB });
-            this.log('Paramètre', '—', 'Règle de contrôle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée'));
-            this.notify('Règle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée')); this.forceUpdate(); } }; })
-    }));
-    common.fbEchelle = (((M.SIGNAL || {}).niveaux) || []).map(l => ({ n: l.n, nom: l.nom, aide: l.aide,
-      numSt: 'width:17px;height:17px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:' + l.couleur,
-      nomSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }));
-
-    // --- Brand Guard : la charte relue par le modèle, les pages, les chiffres.
-    //     Les chiffres viennent du serveur (/marketing/brand-guard/stats) ;
-    //     rien ne se recalcule ici, le rapport du lundi lit les mêmes.
-    const bgS = D.bgStats, bgP = D.bgPages;
-    const per = bgS && bgS.periodes ? (bgS.periodes[String(S.bgJours)] || bgS.periodes['30']) : null;
-    const sCoul = v => v == null ? '#666666' : v >= 90 ? '#2d7a3e' : v >= 75 ? '#D97706' : '#C0182B';
-    common.bg = {
-      absent: !bgS,
-      version: bgS ? bgS.charteVersion : '—',
-      claude: !!(bgS && bgS.anthropic && bgS.anthropic.configure),
-      meta: !!(bgS && bgS.meta && bgS.meta.configure),
-      etatTxt: !bgS ? 'Brand Guard injoignable.'
-        : (bgS.anthropic && bgS.anthropic.configure ? 'Charte relue par ' + bgS.anthropic.modele : 'Sans clé Anthropic : règles mécaniques seules')
-          + ' · ' + (bgS.meta && bgS.meta.configure ? 'Meta connecté (' + bgS.meta.version + ')' : 'Meta non connecté — META_SYSTEM_TOKEN absent'),
-      periodes: [7, 30, 90].map(j => ({ j, nom: j + ' j', on: S.bgJours === j, go: () => this.setState({ bgJours: j }),
-        st: 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 10px;'
-          + (S.bgJours === j ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)') })),
-      controles: per ? per.controles : 0,
-      taux: per && per.tauxConformite != null ? per.tauxConformite + ' %' : '—', tauxCoul: sCoul(per ? per.tauxConformite : null),
-      score: per && per.scoreMoyen != null ? per.scoreMoyen + '/100' : '—', scoreCoul: sCoul(per ? per.scoreMoyen : null),
-      sauvages: per ? per.sauvages : 0, sauvagesCoul: per && per.sauvages ? '#C0182B' : '#2d7a3e',
-      boutiques: per ? per.boutiques.map(b => ({ nom: b.boutique || '—', n: b.controles,
-        taux: b.tauxConformite != null ? b.tauxConformite + ' %' : '—', tauxCoul: sCoul(b.tauxConformite),
-        score: b.scoreMoyen != null ? b.scoreMoyen : '—', sauvages: b.sauvages,
-        sauvagesSt: 'font-size:11px;font-weight:600;color:' + (b.sauvages ? '#C0182B' : 'var(--color-text-muted)'),
-        top: (b.topRegles || []).map(r => r.libelle + ' (' + r.n + ')').join(' · ') })) : [],
-      topRegles: per ? (per.topRegles || []).map(r => ({ nom: r.libelle, n: r.n })) : [],
-      pages: bgP && bgP.pages ? bgP.pages.map(p => ({ nom: p.boutique, franchise: p.franchise || '', url: p.pageUrl,
-        etat: p.statut === 'connectee' ? 'Connectée' : p.statut === 'erreur' ? 'Erreur' : 'À connecter',
-        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
-          + (p.statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : p.statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
-        detail: p.erreur || (p.derniereSync ? 'lu le ' + p.derniereSync.slice(0, 16) : (p.pageId ? 'id ' + p.pageId : 'URL à saisir')) })) : [],
-      // Résoudre : chaque URL devient un page_id — le serveur fait l'appel, le token ne quitte pas le serveur.
-      resoudre: async () => {
-        this.notify('Résolution des pages en cours…');
-        const r = await this.api('PUT', '/marketing/brand-guard/pages', { resoudre: true });
-        if (r && r.pages) { D.bgPages = r; }
-        const res = r && r.resolution;
-        this.notify(res && res.motif ? res.motif : res ? (res.pages || []).filter(x => x.ok).length + ' page(s) résolue(s) sur ' + (res.pages || []).length : 'Résolution impossible');
-        this.forceUpdate();
-      },
-      resoudreSt: 'border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;padding:5px 11px;border-radius:999px',
-    };
-
-    // --- modale de soumission (un post arrive normalement du magasin ;
-    //     ici, de quoi en soumettre un et voir l'agent travailler)
-    const nw = S.fbNew;
-    common.fbNew = nw && {
-      magasinId: nw.magasinId, format: nw.format, auteur: nw.auteur, message: nw.message, lien: nw.lien,
-      visuel: nw.visuel, alt: nw.alt, largeur: nw.largeur, publierLe: nw.publierLe, heure: nw.heure,
-      stores: D.stores.map(s => ({ val: s.id, nom: s.nom })),
-      formats: ['Photo', 'Carrousel', 'Vidéo', 'Texte', 'Lien', 'Événement'],
-      nbCar: nw.message.trim().length + ' caractères',
-      set: (k, e) => this.setState(s2 => ({ fbNew: Object.assign({}, s2.fbNew, { [k]: e.target.value }) })),
-      close: () => this.setState({ fbNew: null }),
-      peut: nw.message.trim().length > 0,
-      submit: async () => {
-        if (!nw.message.trim()){ this.notify('Le message est vide'); return; }
-        const medias = nw.visuel.trim() ? [{ nom: nw.visuel.trim(), type: 'image', alt: nw.alt.trim() || null, largeur: +nw.largeur || null, hauteur: null }] : [];
-        const mag = D.stores.find(s => s.id === nw.magasinId);
-        const payload = { magasinId: nw.magasinId, auteur: nw.auteur.trim() || (mag ? mag.fr : 'Franchisé'), format: nw.format,
-          message: nw.message.trim(), lien: nw.lien.trim() || null, medias, publierLe: nw.publierLe + ' ' + nw.heure + ':00', statut: 'a_controler' };
-        this.setState({ fbNew: null });
-        this.log('Post Facebook', mag ? mag.nom : '—', 'Post « ' + this.fbTitre(payload.message) + ' » soumis au contrôle');
-        const r = await this.api('POST', '/marketing/social/posts', payload);
-        if (!r || !r.ok){
-          // Mode démonstration : le post entre « à contrôler », sans écart —
-          // l'agent, lui, vit côté serveur.
-          this.fbPosts().unshift({ id: 'fbx' + Date.now(), magasinId: payload.magasinId, magasin: mag ? mag.nom : null,
-            auteur: payload.auteur, format: payload.format, message: payload.message, lien: payload.lien, medias,
-            publierLe: payload.publierLe.slice(0, 16), soumisLe: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5),
-            statut: 'a_controler', agent: { note: null, resume: null, le: null, passages: 0 }, ecarts: [],
-            decision: { note: null, famille: null, type: null, commentaire: null, le: null, par: null }, publie: { le: null, fbId: null } });
-          this.notify('Post soumis — l’agent le contrôlera côté serveur.'); this.forceUpdate(); return;
-        }
-        const j = await r.json();
-        await this.loadData();
-        const c = j.controle || {};
-        this.notify('Post soumis et contrôlé — ' + c.note + '/5 · ' + (c.resume || ''));
-      }
-    };
-  }
-
-  /** Les premiers mots d'un post — pour les lignes repliées et le journal. */
-  fbTitre(message, max){
-    const m = String(message || '').replace(/\s+/g, ' ').trim();
-    const n = max || 60;
-    return m.length > n ? m.slice(0, n) + '…' : m;
   }
 
   /* --- reporting -------------------------------------------------------------------- */
@@ -16164,189 +15372,6 @@ class App {
           this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: !!(r && r.ok),
             msg: (r && (r.message || r.error)) || 'Test impossible.' }) })));
       },
-    };
-
-    // --- relance « commande à valider » : le texte de la notification créée
-    // par la cloche du Suivi fournisseurs (POST /notifications côté ERP).
-    if (!this._rlLu) { this._rlLu = true; readOne('/centrale/achats/relance').then(st => { this.D.rlEtat = st || null; this.setState({}); }); }
-    const rlEt = this.D.rlEtat || {};
-    const rlCf = rlEt.config || {};
-    const rlD = S.rlDraft || {};
-    const rlVal = (k, def) => rlD[k] != null ? rlD[k] : (rlCf[k] != null ? String(rlCf[k]) : def);
-    const rlSet = k => e => { const v = e.target.value; this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { [k]: v }) })); };
-    common.rl = {
-      titre: rlVal('titre', ''), message: rlVal('message', ''),
-      priorite: rlVal('priorite', 'warning'), actionLabel: rlVal('actionLabel', ''),
-      actionUrl: rlVal('actionUrl', ''), jours: rlVal('jours', '7'),
-      variables: (rlEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
-      envoyees: rlEt.envoyees || 0,
-      busy: !!rlD.busy, msg: rlD.msg || '',
-      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (rlD.ok ? '#2d7a3e' : '#8D1D2C'),
-      setTitre: rlSet('titre'), setMessage: rlSet('message'), setPriorite: rlSet('priorite'),
-      setActionLabel: rlSet('actionLabel'), setActionUrl: rlSet('actionUrl'), setJours: rlSet('jours'),
-      save: () => {
-        this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { busy: true, msg: '' }) }));
-        this.api('PUT', '/parametres/caRelanceCommande', { valeur: {
-          titre: rlVal('titre', ''), message: rlVal('message', ''), priorite: rlVal('priorite', 'warning'),
-          actionLabel: rlVal('actionLabel', ''), actionUrl: rlVal('actionUrl', ''),
-          jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
-          const ok = !(r && r.ok === false); this._rlLu = false;
-          this.setState(s2 => ({ rlDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.rlDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
-          if (ok) { this.log('Paramètre', '', 'Template de relance commande mis à jour'); }
-        });
-      },
-    };
-
-    // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
-    // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
-    // Paramètres. L'envoi automatique tourne avec le cron des rapports.
-    if (!this._caMailLu) { this._caMailLu = true; readOne('/centrale/commandes/mail').then(st => { this.D.caMailEtat = st || null; this.setState({}); }); }
-    const cmEt = this.D.caMailEtat || {};
-    const cmCf = cmEt.config || {};
-    const cmD = S.cmDraft || {};
-    const cmVal = (k, def) => cmD[k] != null ? cmD[k] : (cmCf[k] != null ? String(cmCf[k]) : def);
-    const cmSet = k => e => { const v = e.target.value; this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { [k]: v }) })); };
-    const cmActif = cmD.actif != null ? cmD.actif : !!cmCf.actif;
-    common.cm = {
-      actif: cmActif,
-      expediteur: cmVal('expediteur', 'Centrale d’achat <achats@atelierby.be>'),
-      setExpediteur: cmSet('expediteur'),
-      // Le SQUELETTE HTML, éditable comme le reste. Vide = celui d'origine.
-      html: cmVal('html', ''),
-      setHtml: cmSet('html'),
-      htmlOuvert: !!cmD.htmlOuvert,
-      htmlBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { htmlOuvert: !(s2.cmDraft || {}).htmlOuvert }) })),
-      htmlDefaut: cmEt.squelette ? () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft,
-        { html: cmEt.squelette, msg: 'Squelette d’origine repris — enregistrez pour le garder.', ok: true }) })) : null,
-      variablesHtml: (cmEt.variablesHtml || []).map(v => '{{' + v + '}}').join(' · '),
-      // L'aperçu montre le gabarit EN COURS D'ÉDITION, pas celui enregistré :
-      // on regarde ce qu'on vient d'écrire, avant de l'enregistrer.
-      apercuUrl: this.apiBase() + '/centrale/commandes/mail/apercu'
-        + '?sujet=' + encodeURIComponent(cmVal('sujet', ''))
-        + '&corps=' + encodeURIComponent(cmVal('corps', ''))
-        + '&html=' + encodeURIComponent(cmVal('html', '')),
-      apercuOuvert: !!cmD.apercuOuvert,
-      apercuBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { apercuOuvert: !(s2.cmDraft || {}).apercuOuvert }) })),
-      destinataire: cmVal('destinataire', 'achats@atelierby.be'),
-      copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
-      variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
-      smtpPret: !!cmEt.smtpPret,
-      dernier: cmEt.dernier ? ('Dernier passage : ' + (cmEt.dernier.quand || '').replace('T', ' ').slice(0, 16)
-        + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
-        + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
-      journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '',
-        type: { recu: 'Commande reçue', envoye: 'E-mail envoyé', relance: 'Relance envoyée',
-          essai: 'Essai', echec: 'Échec' }[j.type] || (j.type || ''),
-        col: j.type === 'echec' ? '#8D1D2C'
-          : (j.type === 'envoye' || j.type === 'relance') ? '#2d7a3e' : 'var(--color-text)',
-        detail: j.detail || '', destinataire: j.destinataire || '' })),
-      busy: !!cmD.busy, msg: cmD.msg || '',
-      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (cmD.ok ? '#2d7a3e' : '#8D1D2C'),
-      etatTxt: cmActif ? (cmEt.smtpPret ? 'Actif' : 'Actif — SMTP à configurer') : 'Inactif',
-      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
-        + (cmActif && cmEt.smtpPret ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
-      toggle: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { actif: !cmActif }) })),
-      setDestinataire: cmSet('destinataire'), setCopie: cmSet('copie'), setSujet: cmSet('sujet'), setCorps: cmSet('corps'),
-      save: () => {
-        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
-        this.api('PUT', '/parametres/caMailCommande', { valeur: {
-          actif: cmActif, expediteur: cmVal('expediteur', ''),
-          destinataire: cmVal('destinataire', ''), copie: cmVal('copie', ''),
-          sujet: cmVal('sujet', ''), corps: cmVal('corps', ''), html: cmVal('html', ''),
-          // Ce qui ne se règle pas à l'écran doit SURVIVRE à un enregistrement :
-          // la fenêtre de relance et la borne de lignes vivent dans le même
-          // réglage, les omettre les remettrait à zéro.
-          fenetreJours: (cmEt.config || {}).fenetreJours, maxLignes: (cmEt.config || {}).maxLignes } }).then(r => {
-          const ok = !(r && r.ok === false);
-          this._caMailLu = false;
-          this.setState(s2 => ({ cmDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.cmDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
-          if (ok) { this.log('Paramètre', '', 'Template e-mail commande fournisseur mis à jour'); }
-        });
-      },
-      // L'essai part où on veut : l'envoyer à la centrale depuis la centrale
-      // ne prouve pas qu'un fournisseur recevra quoi que ce soit.
-      testVers: cmD.testVers != null ? cmD.testVers : '',
-      setTestVers: cmSet('testVers'),
-      test: () => {
-        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
-        this.api('POST', '/centrale/commandes/mail/test', { vers: (cmD.testVers || '').trim() }).then(r => {
-          this._caMailLu = false;
-          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: false, ok: !!(r && r.ok),
-            msg: r && r.ok ? 'Essai envoyé à ' + (r.destinataire || '') + '.' : (r && (r.erreur || r.error)) || 'Essai impossible.' }) }));
-        });
-      },
-      // Le carnet d'adresses : les fournisseurs qui ont une commande en
-      // attente, et à qui l'on doit donc écrire. Ni le panel ni le référentiel
-      // local ne portent leur adresse — elle se saisit ici.
-      fenetre: (cmEt.fenetreJours || 30) + ' jours',
-      // Classer : dire ICI que ces réquisitions sont traitées, pour que le
-      // rappel automatique cesse de les compter. L'ERP n'est pas touché — le
-      // dire, sinon on croirait la commande acceptée côté fournisseur.
-      classeesN: (cmEt.classees || {}).n || 0,
-      classeesTxt: ((cmEt.classees || {}).n || 0)
-        ? ((cmEt.classees || {}).n + ' réquisition(s) classées'
-           + ((cmEt.classees || {}).quand ? ' le ' + this.fD(String((cmEt.classees || {}).quand).slice(0, 10)) : '')
-           + ((cmEt.classees || {}).par ? ' par ' + (cmEt.classees || {}).par : ''))
-        : '',
-      enAttenteN: (cmEt.fournisseurs || []).reduce((a, f) => a + (f.commandes || 0) + (f.anciennes || 0), 0),
-      classer: () => {
-        const n = (cmEt.fournisseurs || []).reduce((a, f) => a + (f.commandes || 0) + (f.anciennes || 0), 0);
-        if (!window.confirm('Classer toutes les réquisitions en attente ?\n\n'
-          + 'Elles ne seront plus relancées automatiquement. Rien n’est modifié dans l’ERP : '
-          + 'le fournisseur n’est pas averti, et la cloche du Suivi fournisseurs reste disponible '
-          + 'pour relancer à la main. Ce classement se défait.')) { return; }
-        this.api('POST', '/centrale/commandes/mail/classer', {}).then(r => {
-          this._caMailLu = false;
-          this.notify(!r || r.ok === false
-            ? ('Classement refusé — ' + ((r && (r.error || r.erreur)) || 'écriture impossible'))
-            : ((r.classees || 0) + ' réquisition(s) classées — plus de rappel automatique'));
-          this.setState({});
-        });
-      },
-      rouvrir: ((cmEt.classees || {}).n || 0) ? () => {
-        if (!window.confirm('Rouvrir les réquisitions classées ? Elles redeviendront relançables.')) { return; }
-        this.api('POST', '/centrale/commandes/mail/classer', { rouvrir: true }).then(r => {
-          this._caMailLu = false;
-          this.notify(r && r.ok !== false ? 'Classement annulé' : 'Annulation refusée');
-          this.setState({});
-        });
-      } : null,
-      fournisseurs: (cmEt.fournisseurs || []).map(f => ({
-        nom: f.nom, commandes: f.commandes, total: this.fU(f.total || 0),
-        // Ce qui dort dans l'ERP : compté, jamais relancé. Le taire ferait
-        // croire que le fournisseur n'a rien en souffrance.
-        anciennes: f.anciennes
-          ? f.anciennes + ' ancienne(s) · ' + this.fU(f.anciennesTotal || 0)
-            + (f.plusRecenteAncienne ? ' · la plus récente ' + this.fD(f.plusRecenteAncienne) : '')
-          : '',
-        email: (cmD['mail:' + f.cle] != null) ? cmD['mail:' + f.cle] : (f.email || ''),
-        source: f.source === 'panel' ? 'du panel' : '',
-        sans: !f.email,
-        relance: f.dernier ? ('relancé le ' + this.fD(f.dernier) + ' · ' + f.envois + ' rappel(s)') : 'jamais relancé',
-        set: e => { const v = e.target.value;
-          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { ['mail:' + f.cle]: v }) })); },
-        enregistrer: () => {
-          const v = String((this.state.cmDraft || {})['mail:' + f.cle] != null
-            ? (this.state.cmDraft || {})['mail:' + f.cle] : (f.email || '')).trim();
-          this.api('PUT', '/centrale/fournisseurs/mail', { nom: f.nom, email: v }).then(r => {
-            this._caMailLu = false;
-            this.notify(!r || r.ok === false
-              ? ('Adresse refusée — ' + ((r && (r.error || r.erreur)) || 'écriture impossible'))
-              : (v ? f.nom + ' → ' + v : 'Adresse retirée pour ' + f.nom));
-            this.setState({});
-          });
-        },
-      })),
-      sansAdresse: cmEt.sansAdresse || 0,
-      // Un gabarit enregistré avant le regroupement parle de « la » commande
-      // et de « le » magasin : il tient encore, mais il ne dit plus ce que le
-      // courrier fait. On le signale, et on propose de reprendre le nôtre.
-      vieux: !!cmEt.gabaritVieux,
-      restaurer: cmEt.defauts ? () => {
-        const d2 = cmEt.defauts;
-        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft,
-          { sujet: d2.sujet, corps: d2.corps, msg: 'Gabarit d’origine repris — enregistrez pour le garder.', ok: true }) }));
-      } : null,
     };
 
     // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les

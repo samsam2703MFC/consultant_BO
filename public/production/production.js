@@ -14,8 +14,8 @@
  *
  * Lectures : ../api/cockpit/production/flux/{params,plan,suivi,cloture}. Écritures :
  * POST …/params, …/valider, …/cloture — rien ne part au panel.
- * Hors du cockpit, la page Suivi seule (demande du 06/10/2026) : les autres étapes restent dans
- * l'écran Gestion de production du cockpit. Le suivi se lit en trois onglets selon la durée de vie
+ * Hors du cockpit, les cinq pages en onglets (16/10/2026 — la console ne l'intègre plus ; du
+ * 06/10 au 16/10, la page Suivi seule). Le suivi se lit en trois onglets selon la durée de vie
  * des produits : short, medium et long life (maquette C).
  * ?embed=1 : sans en-tête, pour l'écran Gestion de production du cockpit (le magasin et la page
  * viennent du cockpit ; le jour se choisit dans la barre des jours de la page, et le cockpit retient
@@ -43,8 +43,8 @@
   const decale = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() + n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
   const S = {
     shop: q.get('shop') || '4',
-    // Hors du cockpit, la page Suivi seule (demande du 06/10/2026).
-    page: !EMBED ? 'suivi' : (PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan'),
+    // ?page= choisit l'onglet ; sans lui, le Suivi hors du cockpit (la page de la journée), le plan intégré.
+    page: PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : (EMBED ? 'plan' : 'suivi'),
     vie: VIES.includes(q.get('vie')) ? q.get('vie') : 'S', vieRegl: false, vieEnvoi: false,
     date: dateOk(q.get('date')) ? q.get('date') : AUJ,   // ramené à aujourd'hui hors du plan, au départ
     stores: [], data: {}, err: {}, enCours: {},
@@ -112,9 +112,14 @@
   /* --- le cadre --------------------------------------------------------------- */
   function entete() {
     if (EMBED) { return ''; }
-    return `<div class="pf-hd"><img src="../assets/img/logo.png" alt=""><div><div class="pf-titre">Production <small>Suivi</small></div><div class="pf-sous">${esc(nomShop())} · ${esc(fDL(S.date))}${S.date === AUJ ? ' · aujourd’hui' : (S.date === decale(AUJ, 1) ? ' · demain' : '')}</div></div><span class="sp"></span>
+    return `<div class="pf-hd"><img src="../assets/img/logo.png" alt=""><div><div class="pf-titre">Production <small>${esc((PAGES.find(p => p[0] === S.page) || PAGES[2])[1])}</small></div><div class="pf-sous">${esc(nomShop())} · ${esc(fDL(S.date))}${S.date === AUJ ? ' · aujourd’hui' : (S.date === decale(AUJ, 1) ? ' · demain' : '')}</div></div><span class="sp"></span>
       <label class="pf-lab">Magasin <select id="pf-shop">${(S.stores.length ? S.stores : [{ id: S.shop, nom: 'Magasin ' + S.shop }]).map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select></label>
       </div>`;
+  }
+  /** Les cinq pages, dans l'ordre de la journée — hors du cockpit seulement. */
+  function onglets() {
+    if (EMBED) { return ''; }
+    return `<div class="pf-ong">${PAGES.map((p, i) => `<button data-page="${p[0]}" class="${S.page === p[0] ? 'on' : ''}"><b>${i + 1}</b>${esc(p[1])}</button>`).join('')}</div>`;
   }
   /* La barre des jours (demande du 03/10/2026) : le plan se choisit d'hier à J+7, la validation
    * et la clôture sur les sept derniers jours ; une autre date au calendrier. Elle est dans la page,
@@ -145,7 +150,7 @@
 
   function rendre() {
     const k = cle(), d = S.data[k];
-    let h = entete() + message() + barreJours();
+    let h = entete() + onglets() + message() + barreJours();
     if (S.err[k]) { h += `<div class="pf-err">${esc(S.err[k])} <button class="pf-btn" data-relire="1">Relire</button></div>`; }
     else if (!d) { h += `<div class="pf-note">Lecture des ventes et des réglages… la première lecture d’un jour relit les tickets des six dernières semaines.</div>` + attente(8); }
     else if (S.page === 'params') { h += pageParams(d); }
