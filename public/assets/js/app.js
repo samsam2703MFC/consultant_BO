@@ -7376,7 +7376,8 @@ class App {
     app.liste.forEach((e, i) => {
       const L = Object.assign(icone(e), { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
         externe: false, peutRetirer: e.type !== 'target', peutClasser: e.type !== 'target' || e.cle === 'croisees', moyenne: moyDe(e), libLibre: e.type !== 'target',
-        qui: e.cle === 'croisees' ? 'chacune à la cible' : (e.cle === 'objectif' || e.cle === 'google') ? 'chacune au planning' : e.regle === 'seuil' ? 'chacune au seuil' : '1re du magasin',
+        qui: e.cle === 'croisees' ? 'chacune à la cible' : (e.cle === 'objectif' || e.cle === 'google') ? 'chacune au planning' : e.regle === 'seuil' ? 'chacune au seuil'
+          : e.regle === 'magasin' ? 'le magasin, partagée entre ses vendeuses' : e.regle === 'vendeuse' ? 'chacune à son objectif' : '1re du magasin',
         poserActif: ev => { e.actif = !!ev.target.checked; re(); },
         poserClassement: ev => { e.classement = !!ev.target.checked; re(); },
         poserMontant: ev => { const v = num(ev.target.value); if (v != null) { e.montant = Math.max(0, Math.round(v)); } re(); },
@@ -7508,10 +7509,10 @@ class App {
         ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
         fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
-        ['Gagne', W.regle === 'magasin' ? 'chaque vendeuse, si son magasin atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
+        ['Gagne', W.regle === 'magasin' ? 'le magasin, s’il atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '') + ' — partagée entre ses vendeuses'
           : W.regle === 'vendeuse' ? 'chaque vendeuse qui atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
           : W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', (montant || 0) + ' € · payée par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
+        ['Récompense', (montant || 0) + ' €' + (W.regle === 'magasin' ? ' par magasin' : '') + ' · payée par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
       const creer = () => {
         if (W.envoi) { return; }
         // Sur objectif : l'objectif de chaque magasin, ses vendeuses, l'an dernier, le % (le serveur en tire l'objectif par vendeuse).
@@ -7546,7 +7547,9 @@ class App {
         periode: W.periode, du, au, apiDates: !!W.api, magsMode: W.magsMode, mags: (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: W.magsMode === 'tous' || W.mags.includes(m.id),
           basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
         regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
-        plafond: surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
+        // Objectif du magasin : une prime par magasin (16/10/2026) ; par vendeuse : une par vendeuse.
+        plafond: W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
+          : surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
           : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
         magsUn: magsPermis.map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
         ok: ok[W.etape], envoi: W.envoi,
@@ -7557,11 +7560,11 @@ class App {
           choisir: () => { W.periode = v; if (v !== 'libre') { [W.du, W.au] = moisDe(v === 'mois' ? 0 : 1); } reW(); } })),
         poserDu: ev => { W.du = ev.target.value; W.periode = 'libre'; reW(); }, poserAu: ev => { W.au = ev.target.value; W.periode = 'libre'; reW(); },
         tousMags: () => { W.magsMode = 'tous'; W.mags = []; reW(); }, choisirMags: () => { W.magsMode = 'choix'; W.mags = (d.magasins || []).map(m => m.id); reW(); },
-        surObj, tableau, refChargement: W.etape >= 3 && idsSel.length > 0 && refL === undefined, refMotif: refL === null ? 'Les ventes de l’an dernier n’ont pas pu être lues.' : (!idsSel.length ? 'Aucun produit compté : pas de tableau.' : ''),
+        surObj, colVend: W.regle !== 'magasin', tableau, refChargement: W.etape >= 3 && idsSel.length > 0 && refL === undefined, refMotif: refL === null ? 'Les ventes de l’an dernier n’ont pas pu être lues.' : (!idsSel.length ? 'Aucun produit compté : pas de tableau.' : ''),
         refPeriode: refL ? jjmm(refL.du1) + ' → ' + jjmm(refL.au1) : '', refRecent: !!(refL && (refL.magasins || []).some(m => m.source === 'recent')), pct: W.pct,
         poserPct: ev => { W.pct = ev.target.value; reW(); }, effacerObj: () => { W.obj = {}; reW(); }, objTouches: Object.keys(W.obj).some(k => String(W.obj[k]).trim() !== ''),
         objPreview: (() => { const o = shopsRef.map(objDe).filter(v => v != null); return o.length ? (W.regle === 'vendeuse' ? Math.max(1, Math.ceil(o[0] / Math.max(1, vendDe[shopsRef[0]] || 1))) : o[0]) : null; })(),
-        regles: [['magasin', '🏪', 'Objectif du magasin', 'Le magasin atteint son objectif : chacune de ses vendeuses gagne la prime.'],
+        regles: [['magasin', '🏪', 'Objectif du magasin', 'Le magasin atteint son objectif : une prime pour le magasin, partagée entre ses vendeuses du mois.'],
           ['vendeuse', '👤', 'Objectif par vendeuse', 'Chaque vendeuse a son objectif (celui du magasin ÷ ses vendeuses) : celles qui l’atteignent gagnent.'],
           ['premiere', '👑', 'La 1re de chaque magasin', 'La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.'],
           ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,

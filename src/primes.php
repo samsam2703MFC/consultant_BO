@@ -223,8 +223,8 @@ function promosClassement(?array $cr, array $emps, array $promos): array
  * equipe, montant}]. La 1re du magasin gagne la récompense ; la couronne du réseau n'est plus payée (une récompense par
  * prime). Une promo à la règle « seuil » (16/10/2026) : chaque vendeuse qui atteint le nombre de pièces gagne. Sur
  * objectif (16/10/2026, l'assistant : l'an dernier + x %) : « vendeuse », chacune qui atteint SON objectif (celui du
- * magasin partagé entre ses vendeuses) ; « magasin », collective — le magasin atteint le sien, chacune de ses vendeuses
- * du mois gagne.
+ * magasin partagé entre ses vendeuses) ; « magasin », une prime POUR LE MAGASIN — il atteint son objectif, la récompense
+ * est une seule somme, partagée à parts égales entre ses vendeuses du mois (au centime ; « partage » dit entre combien).
  */
 function primesObjectifDe(array $k, string $shop): ?float
 {
@@ -245,7 +245,12 @@ function concoursTitres(array $classements, int $id, array $cfg): array
         if ($regle === 'vendeuse' || $regle === 'magasin') {
             $obj = primesObjectifDe($k, (string) ($cl['shop'] ?? ''));
             $fait = $regle === 'vendeuse' ? (float) ($cl['pieces'] ?? 0) : (float) ($cl['totalMag'] ?? 0);
-            if ($obj !== null && $fait >= $obj) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => $regle === 'vendeuse' ? 'objectif' : 'equipe', 'montant' => (int) $k['magasin']]; }
+            if ($obj !== null && $fait >= $obj) {
+                if ($regle === 'vendeuse') { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'objectif', 'montant' => (int) $k['magasin']]; continue; }
+                $n = count(array_filter($classements[$k['cle']], static fn ($x) => ($x['shop'] ?? null) === ($cl['shop'] ?? '')));
+                $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'equipe', 'montant' => round((int) $k['magasin'] / max(1, $n), 2),
+                    'montantMag' => (int) $k['magasin'], 'partage' => max(1, $n)];
+            }
         } elseif ($regle === 'seuil') {
             if ((float) ($cl['pieces'] ?? 0) > 0 && (float) ($cl['pieces'] ?? 0) >= max(1, (int) $k['minPieces'])) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'seuil', 'montant' => (int) $k['magasin']]; }
         } elseif (($cl['rangMag'] ?? null) === 1) { $out[] = ['cle' => $k['cle'], 'lib' => $k['lib'], 'niveau' => 'magasin', 'montant' => (int) $k['magasin']]; }
@@ -253,10 +258,11 @@ function concoursTitres(array $classements, int $id, array $cfg): array
     return $out;
 }
 
-/** La prime d'une liste de familles pour une personne : la somme de ses titres. */
-function concoursPrime(array $classements, int $id, array $cfg): int
+/** La prime d'une liste de familles pour une personne : la somme de ses titres (au centime : la part d'une prime du magasin). */
+function concoursPrime(array $classements, int $id, array $cfg): int|float
 {
-    return (int) array_sum(array_map(static fn ($t) => $t['montant'], concoursTitres($classements, $id, $cfg)));
+    $s = round((float) array_sum(array_map(static fn ($t) => $t['montant'], concoursTitres($classements, $id, $cfg))), 2);
+    return $s == floor($s) ? (int) $s : $s;
 }
 
 /**
@@ -645,8 +651,8 @@ function primesBriquePieces(int $emp, array $cfg, array $cls, int $tickets): arr
     $liste = [];
     foreach ($cfg['liste'] as $kc) {
         $k = $cls[$kc['cle']][$emp] ?? null;
-        $titre = null;
-        foreach ($titres as $t) { if ($t['cle'] === $kc['cle']) { $titre = $t['niveau']; } }
+        $titre = null; $gainT = 0; $partage = null;
+        foreach ($titres as $t) { if ($t['cle'] === $kc['cle']) { $titre = $t['niveau']; $gainT = $t['montant']; $partage = $t['partage'] ?? null; } }
         $liste[] = ['cle' => $kc['cle'], 'lib' => $kc['lib'], 'motif' => $kc['motif'] ?? null,
             'pieces' => $k !== null ? $k['pieces'] : null, 'tickets' => $k['tickets'] ?? $tickets,
             'par100' => ($k !== null && ($k['tickets'] ?? 0) > 0) ? round(100 * $k['pieces'] / $k['tickets'], 1) : null,
@@ -655,7 +661,7 @@ function primesBriquePieces(int $emp, array $cfg, array $cls, int $tickets): arr
             'montantMag' => (int) $kc['magasin'], 'montantRes' => 0, 'minPieces' => (int) $kc['minPieces'],
             'du' => $kc['du'] ?? null, 'au' => $kc['au'] ?? null, 'regle' => $kc['regle'] ?? 'premiere',
             'objectif' => $k !== null ? primesObjectifDe($kc, (string) ($k['shop'] ?? '')) : null, 'totalMag' => $k['totalMag'] ?? null,
-            'titre' => $titre, 'montant' => $titre !== null ? (int) $kc['magasin'] : 0];
+            'titre' => $titre, 'montant' => $titre !== null ? $gainT : 0, 'partage' => $partage];
     }
     $piecesTot = 0.0; $unCompte = false;
     foreach ($liste as $x) { if ($x['pieces'] !== null) { $unCompte = true; $piecesTot += $x['pieces']; } }

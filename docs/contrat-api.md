@@ -575,8 +575,9 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
 - **Sur objectif** (16/10/2026) : deux règles de plus pour une prime promo, posées par l'assistant. `regle: magasin` —
-  collective : quand le **total du magasin** sur les produits et la période atteint son objectif, **chacune de ses
-  vendeuses du mois** gagne la récompense (niveau `equipe`) ; `regle: vendeuse` — chacune qui atteint **son** objectif
+  une **prime pour le magasin** : quand le **total du magasin** sur les produits et la période atteint son objectif, la
+  récompense est **une seule somme pour le magasin**, partagée à parts égales (au centime) entre ses vendeuses du mois
+  (niveau `equipe`, `montantMag` la somme, `partage` entre combien ; l'app montre la somme « magasin », puis la part) ; `regle: vendeuse` — chacune qui atteint **son** objectif
   (`objVend` : l'objectif du magasin ÷ ses vendeuses, arrondi au-dessus ; niveau `objectif`). L'entrée porte
   `objectifs: {magasin: pièces}`, `vendeuses: {magasin: moyenne}`, `objVend`, `pct` (la hausse demandée), `n1: {magasin:
   pièces l'an dernier}` ; sans objectif, 422. Le classement des promos porte `shop` et `totalMag` ; la carte de l'app

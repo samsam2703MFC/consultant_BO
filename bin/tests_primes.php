@@ -549,12 +549,14 @@ $kO = ['cle' => 'po', 'lib' => 'Cookies', 'magasin' => 20, 'reseau' => 0, 'minPi
 $clsO = promosClassement($crO, $empsO, [$kO]);
 verifie('le classement dit le magasin et son total', ($clsO['po'][1]['shop'] ?? '') === '4' && ($clsO['po'][1]['totalMag'] ?? null) === 125.0 && ($clsO['po'][4]['totalMag'] ?? null) === 50.0, json_encode($clsO['po'][1] ?? null));
 $cfgO = ['actif' => true, 'liste' => [$kO + ['regle' => 'magasin']]];
-verifie('« magasin » : le magasin passe son objectif (125 ≥ 120), chacune de ses vendeuses gagne, même à 0 pièce', concoursPrime($clsO, 1, $cfgO) === 20 && concoursPrime($clsO, 2, $cfgO) === 20 && concoursPrime($clsO, 3, $cfgO) === 20);
+verifie('« magasin » : le magasin passe son objectif (125 ≥ 120) — 20 € pour le magasin, partagés entre ses 3 vendeuses', concoursPrime($clsO, 1, $cfgO) === 6.67 && concoursPrime($clsO, 2, $cfgO) === 6.67 && concoursPrime($clsO, 3, $cfgO) === 6.67);
+$tO = concoursTitres($clsO, 2, $cfgO)[0] ?? [];
+verifie('le titre dit la somme du magasin et entre combien elle se partage', ($tO['niveau'] ?? '') === 'equipe' && ($tO['montantMag'] ?? null) === 20 && ($tO['partage'] ?? null) === 3, json_encode($tO));
 verifie('« magasin » : un magasin sous son objectif (50 < 80), personne', concoursPrime($clsO, 4, $cfgO) === 0);
 $cfgV = ['actif' => true, 'liste' => [$kO + ['regle' => 'vendeuse']]];
 verifie('« vendeuse » : chacune à son objectif (30) — 100 oui, 25 non', concoursPrime($clsO, 1, $cfgV) === 20 && concoursPrime($clsO, 2, $cfgV) === 0 && concoursPrime($clsO, 4, $cfgV) === 20);
 $bO = primesBriquePieces(2, $cfgO, $clsO, 40);
-verifie('la brique porte l’objectif et le total du magasin', ($bO['liste'][0]['objectif'] ?? null) === 120.0 && ($bO['liste'][0]['totalMag'] ?? null) === 125.0, json_encode($bO['liste'][0] ?? null));
+verifie('la brique porte l’objectif, le total du magasin et sa part', ($bO['liste'][0]['objectif'] ?? null) === 120.0 && ($bO['liste'][0]['totalMag'] ?? null) === 125.0 && ($bO['liste'][0]['montant'] ?? null) === 6.67 && ($bO['liste'][0]['montantMag'] ?? null) === 20 && $bO['montant'] === 6.67, json_encode($bO['liste'][0] ?? null));
 $jO = primesCarteJauge(['cle' => 'po', 'type' => 'promo', 'etat' => 'att', 'val' => 60.0, 'minPieces' => 0, 'regle' => 'magasin', 'objPcs' => 120.0, 'premier' => null]);
 verifie('la carte vise l’objectif du magasin', $jO['repereType'] === 'cible' && $jO['repereVal'] === 120.0 && $jO['barre'] === 37.5, json_encode([$jO['repereType'], $jO['repereVal'], $jO['barre']]));
 // La référence de l'assistant : l'an dernier, sinon le rythme récent.

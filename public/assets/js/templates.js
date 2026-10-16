@@ -9442,14 +9442,14 @@ function tplPrWiz(W, x){
       : `<div style="border:.5px solid var(--color-border-secondary);border-radius:var(--radius-md);overflow:hidden" data-prw-tableau><table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr><th style="${thT};text-align:left">Magasin</th><th style="${thT}">L’an dernier<small style="display:block;font-weight:500;text-transform:none;letter-spacing:0">${esc(W.refPeriode)}</small></th>
           ${W.surObj ? `<th style="${thT}">Objectif<small style="display:block;font-weight:500;text-transform:none;letter-spacing:0">${esc(W.pct || '0')} % de plus</small></th>` : ''}
-          <th style="${thT}">Vendeuses<small style="display:block;font-weight:500;text-transform:none;letter-spacing:0">moyenne</small></th>
-          <th style="${thT}">${W.surObj ? 'Par vendeuse' : 'Par vendeuse<small style="display:block;font-weight:500;text-transform:none;letter-spacing:0">l’an dernier</small>'}</th></tr></thead>
+          ${W.colVend ? `<th style="${thT}">Vendeuses<small style="display:block;font-weight:500;text-transform:none;letter-spacing:0">moyenne</small></th>
+          <th style="${thT}">${W.surObj ? 'Par vendeuse' : 'Par vendeuse<small style="display:block;font-weight:500;text-transform:none;letter-spacing:0">l’an dernier</small>'}</th>` : ''}</tr></thead>
         <tbody>${W.tableau.map(t => `<tr>
           <td style="${tdT};text-align:left;font-weight:600">${esc(t.nom)}</td>
           <td style="${tdT}">${esc(t.n1)}${t.source === 'recent' ? `<small style="display:block;font-size:11px;${mu}">${esc(t.recent)} au rythme récent</small>` : ''}</td>
           ${W.surObj ? `<td style="${tdT}"><input type="number" min="1" step="1" value="${esc(t.obj)}" ${x.I(t.poserObj)} id="prw-obj-${esc(t.id)}" placeholder="à saisir" style="${chp};width:84px;text-align:right;padding:6px 8px${t.objTouche ? ';border-color:var(--color-primary)' : ''}${t.obj ? '' : ';border-style:dashed'}"> <span style="${mu}">pcs</span></td>` : ''}
-          <td style="${tdT}">${esc(t.vend)}</td>
-          <td style="${tdT};font-weight:${W.surObj ? 700 : 500}">${W.surObj ? (t.parVend ? esc(t.parVend) + ' pcs' : '—') : esc(t.parVendN1)}</td></tr>`).join('')}</tbody></table></div>
+          ${W.colVend ? `<td style="${tdT}">${esc(t.vend)}</td>
+          <td style="${tdT};font-weight:${W.surObj ? 700 : 500}">${W.surObj ? (t.parVend ? esc(t.parVend) + ' pcs' : '—') : esc(t.parVendN1)}</td>` : ''}</tr>`).join('')}</tbody></table></div>
         ${W.refRecent ? `<div style="font-size:11.5px;${mu};margin-top:6px">Sans ventes l’an dernier : le rythme des 4 dernières semaines, ramené à la période.</div>` : ''}`;
     corps = `<p style="${q}">Qui gagne ?</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px">${W.regles.map(r => `<div ${x.A(r.choisir)} data-prw-regle style="border:1.5px solid ${r.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${r.on ? 'background:#FBF3EE;' : ''}border-radius:var(--radius-lg);padding:12px 14px;cursor:pointer"><span style="font-size:20px">${r.e}</span><b style="display:block;font-size:14px;margin:4px 0 3px">${esc(r.nom)}</b><p style="margin:0;font-size:12.5px;line-height:1.4;${mu}">${esc(r.txt)}</p></div>`).join('')}</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 10px"><b style="font:600 13.5px var(--font-ui)">Les ventes des produits choisis, magasin par magasin</b>
@@ -9457,7 +9457,7 @@ function tplPrWiz(W, x){
       ${tableau}
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;margin-top:16px">
         ${W.surObj ? '' : `<div><span style="${lab}">${W.regle === 'seuil' ? 'Le seuil à atteindre' : 'Minimum de pièces pour être classée'}</span><input id="prw-min" type="number" min="0" step="1" value="${esc(W.minPieces)}" ${x.I(W.poserMin)} style="${chp};width:90px"> <span style="${mu}">pcs</span></div>`}
-        <div><span style="${lab}">Récompense</span><input id="prw-montant" type="number" min="0" step="5" value="${esc(W.montant)}" ${x.I(W.poserMontant)} style="${chp};width:90px"> <span style="${mu}">€ ${W.surObj || W.regle === 'seuil' ? 'par vendeuse' : W.fam ? 'à la 1re' : 'par magasin'}</span></div>
+        <div><span style="${lab}">Récompense</span><input id="prw-montant" type="number" min="0" step="5" value="${esc(W.montant)}" ${x.I(W.poserMontant)} style="${chp};width:90px"> <span style="${mu}">€ ${W.regle === 'magasin' ? 'par magasin, partagés entre ses vendeuses' : W.surObj || W.regle === 'seuil' ? 'par vendeuse' : W.fam ? 'à la 1re' : 'par magasin'}</span></div>
         <div><span style="${lab}">Payée par</span>${W.fam ? `<div style="font-size:13.5px;padding-top:4px"><b>Le magasin</b> <span style="${mu}">— c’est la prime du franchisé</span></div>` : ''}${W.payeurs.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)};margin-right:6px">${esc(o.nom)}</button>`).join('')}${!W.fam && W.payeur === 'sponsor' ? `<input id="prw-sponsor" value="${esc(W.sponsor)}" ${x.I(W.poserSponsor)} placeholder="nom du sponsor" style="${chp};margin-top:8px;width:200px">` : ''}</div>
       </div>`;
   } else {
