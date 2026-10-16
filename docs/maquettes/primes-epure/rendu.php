@@ -94,8 +94,12 @@ $cartes = primesCartes($b, $pm, $classements, true);
 $acquis = round(array_sum(primesMontants($b, $pm)), 2);
 $enJeu = 0.0;
 foreach ($cartes as $c) { $enJeu += max((float) $c['montant'], (float) $c['gain']); }
+// Les briques, la prime du magasin, la journée : le détail des targets les lit (16/10/2026).
+$b['meilleure'] = array_merge($b['meilleure'], ['ca' => 3290, 'caHeure' => 85, 'heures' => 38.5, 'tickets' => 262, 'panier' => 12.56]);
 $fiche = ['emp' => 2, 'm' => $m, 'enCours' => true, 'magasin' => ['id' => '4', 'nom' => 'Atelier by - Halle'],
-    'cartes' => $cartes, 'classements' => $classements, 'acquis' => $acquis, 'enJeu' => max($acquis, $enJeu), 'iconesBase' => 'demo'];
+    'cartes' => $cartes, 'classements' => $classements, 'acquis' => $acquis, 'enJeu' => max($acquis, $enJeu), 'iconesBase' => 'demo',
+    'briques' => $b, 'prime' => $pm, 'google' => $b['google'], 'heures' => ['mois' => 38.5, 'faites' => 30.0],
+    'aujourdhui' => ['tickets' => 19, 'croisees' => 11, 'lignes' => 52, 'taux' => 57.9, 'quand' => '15:40']];
 
 // --- le rendu par la vue de l'app ------------------------------------------------------------
 require $RACINE . '/apps/employee/vendor/autoload.php';
@@ -126,7 +130,6 @@ foreach ([[47, 210, 6150, 41.5, 78], [49, 190, 5660, 40, 74], [52, 230, 7010, 44
 }
 // Une semaine de congé : pas de vente à son nom, un trou dans sa ligne, les moyennes continuent.
 $sem[4] = array_merge($sem[4], ['tickets' => 0, 'croisees' => 0, 'taux' => null, 'ca' => 0.0, 'heures' => 0, 'caHeure' => null, 'panier' => null, 'lignesTicket' => null]);
-$b['meilleure'] = array_merge($b['meilleure'], ['ca' => 3290, 'caHeure' => 85, 'heures' => 38.5, 'tickets' => 262, 'panier' => 12.56]);
 $fiche += ['briques' => $b, 'semaines12' => $sem, 'prime' => $pm, 'aujourdhui' => ['tickets' => 19, 'croisees' => 11, 'lignes' => 52, 'taux' => 57.9, 'quand' => '15:40'],
     'collection' => ['titres' => [['cle' => 'concours:quiches', 'lib' => 'Queen of Quiches', 'n' => 2], ['cle' => 'croisees', 'lib' => 'Ventes croisées', 'n' => 3]],
         'enCours' => [['cle' => 'croisees', 'lib' => 'Ventes croisées']]]];
