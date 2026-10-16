@@ -206,4 +206,21 @@ final class ErpApi
         }
         return $res['data'] ?? $res;
     }
+
+    /**
+     * GET pour qui veut le code autant que le corps (les promotions du panel, 16/10/2026) :
+     * {code, corps, erreur} — un 403 se dit tel quel au lieu de se perdre dans un null.
+     */
+    public static function sondeGet(string $path): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'corps' => null, 'erreur' => self::$lastError ?? 'jeton admin indisponible']; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http('GET', $url, null, $tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok !== null) { [$code, $res] = self::http('GET', $url, null, $tok); }
+        }
+        return ['code' => $code, 'corps' => $res, 'erreur' => $code >= 200 && $code < 300 ? null : ('HTTP ' . $code . (isset($res['message']) && is_string($res['message']) ? ' : ' . $res['message'] : ''))];
+    }
 }

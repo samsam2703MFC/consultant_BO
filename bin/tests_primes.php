@@ -60,6 +60,14 @@ final class PanelApi
     }
     public static function get(string $p): mixed { return null; }
 }
+/** Le compte admin ERP (POST /admin/auth/login) : celui qui lit les promotions (16/10/2026). */
+final class ErpApi
+{
+    public static array $reponses = [];
+    public static bool $dispo = false;
+    public static function disponible(): bool { return self::$dispo; }
+    public static function sondeGet(string $path): array { return self::$reponses[$path] ?? ['code' => 403, 'corps' => ['message' => 'Forbidden'], 'erreur' => 'HTTP 403']; }
+}
 /** Le catalogue : deux bundles, une tarte, une quiche. */
 function svCategories(): array { return [900 => 'Bundle', 901 => 'Bundle', 10 => 'Tartes', 20 => 'Quiches']; }
 function svNomProduit(int|string $cle, string $nomLu): string { return [900 => 'Café + croissant', 901 => '2 Cookies', 10 => 'Tarte aux pommes', 20 => 'Quiche lorraine'][(int) $cle] ?? $nomLu; }
@@ -110,7 +118,7 @@ verifie('un target inconnu refusé', primesAppEntreeValide(['type' => 'target', 
 
 // --- 2. la création d'une promo : depuis la liste du panel, jamais depuis le navigateur ---------------
 echo "Une promo créée depuis la liste du panel\n";
-$GLOBALS['REGLAGES']['primesPromos2'] = ['quand' => time(), 'api' => true, 'erreurs' => [], 'liste' => [
+$GLOBALS['REGLAGES']['primesPromos3'] = ['quand' => time(), 'api' => true, 'erreurs' => [], 'liste' => [
     ['source' => 'api', 'sorte' => 'bundle', 'id' => '900', 'nom' => 'Café + croissant', 'prix' => null, 'du' => null, 'au' => null, 'shops' => [], 'ids' => [900], 'composants' => []]]];
 $GLOBALS['CORPS'] = ['recompense' => 50, 'liste' => [
     ['type' => 'target', 'cle' => 'croisees', 'montant' => 50],
@@ -224,7 +232,7 @@ verifie('une offre X + Y : ses produits', $p['ids'] === [30, 31], json_encode($p
 verifie('une promotion éteinte écartée', primesPromoNormaliser(['id' => 6, 'name' => 'x', 'active' => false], 'bundle', $cat) === null);
 verifie('une promotion finie depuis longtemps écartée', primesPromoNormaliser(['id' => 7, 'name' => 'x', 'end_date' => '2020-01-01'], 'bundle', $cat) === null);
 PanelApi::$configure = true;
-PanelApi::$reponses = ['/admin/promotions/bundles?active=1' => ['code' => 200, 'corps' => ['data' => [['id' => 12, 'name' => 'Café + croissant', 'items' => []]]], 'erreur' => null]];
+PanelApi::$reponses = ['/admin/promotions/bundles?status=ACTIVE&limit=100' => ['code' => 200, 'corps' => ['data' => [['id' => 12, 'name' => 'Café + croissant', 'items' => []]]], 'erreur' => null]];
 $pp = primesPromosPanel(true);
 verifie('l’API promotions seulement : le bundle, aucun bundle du catalogue', array_map(static fn ($x) => $x['source'] . ':' . $x['id'], $pp['liste']) === ['api:12'], json_encode(array_map(static fn ($x) => $x['source'] . ':' . $x['id'], $pp['liste'])));
 verifie('les quatre routes de l’API promotions sont lues (bundles, X + Y, quantité, remises)', count($pp['erreurs']) === 3 && str_contains(json_encode($pp['erreurs']), 'quantity') && str_contains(json_encode($pp['erreurs']), 'scheduled-product-discount'), json_encode($pp['erreurs']));
@@ -234,6 +242,27 @@ $pp = primesPromosPanel(true);
 verifie('l’API promotions refusée (403) : la liste est vide, pas de repli sur le catalogue', $pp['liste'] === [] && $pp['api'] === false && count($pp['erreurs']) === 4, json_encode($pp));
 verifie('une promo « catalogue » d’avant n’est plus gardée', primesAppPromoPropre(['source' => 'catalogue', 'id' => '900', 'ids' => [900]]) === null);
 verifie('une promo par quantité garde sa sorte', (primesAppPromoPropre(['source' => 'api', 'sorte' => 'quantite', 'id' => '7', 'ids' => [5]])['sorte'] ?? null) === 'quantite');
+verifie('le compte consultant lit en repli, et le dit', $pp['compte'] === 'consultant');
+// Le compte admin ERP d'abord : les promotions ne vivent que sous /admin (16/10/2026). Les noms de l'OpenAPI du panel.
+ErpApi::$dispo = true;
+ErpApi::$reponses = [
+    '/admin/promotions/quantity?status=ACTIVE&limit=100' => ['code' => 200, 'erreur' => null, 'corps' => ['items' => [
+        ['id' => 31, 'name' => '3 pour 2 macarons', 'status' => 'ACTIVE', 'shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => [4], 'valid_from' => date('Y-m-01'), 'valid_to' => date('Y-m-t'), 'eligible_product_ids' => [30, 31]],
+        ['id' => 32, 'name' => 'Brouillon', 'status' => 'DRAFT', 'eligible_product_ids' => [30]]], 'pagination' => ['page' => 1, 'limit' => 100, 'total' => 2, 'pages' => 1]]],
+    '/admin/promotions/buy-x-get-y?status=ACTIVE&limit=100' => ['code' => 200, 'erreur' => null, 'corps' => ['items' => [
+        ['id' => 41, 'name' => '5 + 1', 'status' => 'ACTIVE', 'trigger' => ['quantity' => 5, 'product_ids' => [['id_product' => 50]]], 'reward' => ['quantity' => 1, 'product_ids' => [51]]]]]],
+    '/admin/promotions/bundles?status=ACTIVE&limit=100' => ['code' => 200, 'erreur' => null, 'corps' => ['items' => [
+        ['id' => 51, 'name' => 'Menu', 'status' => 'ACTIVE', 'product_id' => 960, 'bundle_promotion' => ['bundle_price' => 9.9]]]]],
+];
+$pp = primesPromosPanel(true);
+$par = []; foreach ($pp['liste'] as $x) { $par[$x['id']] = $x; }
+verifie('le compte admin ERP lit les promotions', $pp['compte'] === 'admin' && $pp['api'] && isset($par['31'], $par['41'], $par['51']), json_encode($pp));
+verifie('un brouillon (status DRAFT) écarté', !isset($par['32']));
+verifie('prix par quantité : eligible_product_ids, magasins, dates', ($par['31']['ids'] ?? null) === [30, 31] && $par['31']['shops'] === ['4'] && $par['31']['au'] === date('Y-m-t'), json_encode($par['31'] ?? null));
+verifie('X + Y : les produits du déclencheur et de la récompense', ($par['41']['ids'] ?? null) === [50, 51], json_encode($par['41'] ?? null));
+verifie('bundle : son produit et son prix (bundle_promotion.bundle_price)', ($par['51']['ids'] ?? null) === [960] && $par['51']['prix'] === 9.9, json_encode($par['51'] ?? null));
+verifie('le 403 du compte admin sur les remises est dit', count($pp['erreurs']) === 1 && str_contains($pp['erreurs'][0]['chemin'], 'scheduled-product-discount'));
+ErpApi::$dispo = false; ErpApi::$reponses = [];
 PanelApi::$configure = false;
 
 // --- 6 bis. l'assistant : une prime promotion créée dans le cockpit (16/10/2026) ---------------------

@@ -436,8 +436,11 @@ function primesPromoChamp(array $x, array $cles)
 function primesPromoProduits(array $x): array
 {
     $ids = [];
-    foreach (['products', 'items', 'lines', 'bundle_items', 'bundle_products', 'buy_products', 'get_products', 'x_products', 'y_products', 'products_x', 'products_y', 'product_ids'] as $k) {
-        foreach ((array) ($x[$k] ?? []) as $l) {
+    // Les noms de l'API promotions (OpenAPI du panel, 16/10/2026) : items (bundle), eligible_product_ids (quantité),
+    // reward_product_ids (remise programmée), trigger/reward.product_ids (X + Y) ; les noms d'usage en plus.
+    foreach (['products', 'items', 'lines', 'bundle_items', 'bundle_products', 'buy_products', 'get_products', 'x_products', 'y_products', 'products_x', 'products_y', 'product_ids',
+              'eligible_product_ids', 'reward_product_ids', 'trigger.product_ids', 'reward.product_ids'] as $k) {
+        foreach ((array) (primesPromoChamp($x, [$k]) ?? []) as $l) {
             if (is_numeric($l)) { $ids[] = (int) $l; continue; }
             if (!is_array($l)) { continue; }
             $v = primesPromoChamp($l, ['id_product', 'product_id', 'product.id', 'id']);
@@ -459,6 +462,8 @@ function primesPromoNormaliser(array $x, string $sorte, array $bundlesCatalogue)
     if (!is_scalar($id) || (string) $id === '') { return null; }
     $actif = primesPromoChamp($x, ['is_active', 'active', 'enabled']);
     if ($actif !== null && !$actif) { return null; }
+    $statut = primesPromoChamp($x, ['status']);
+    if (is_string($statut) && strtoupper($statut) !== 'ACTIVE') { return null; }   // brouillon ou éteinte
     $nom = trim((string) (primesPromoChamp($x, ['name', 'title', 'label', 'nom', 'description']) ?? ''));
     $du = primesAppDate(primesPromoChamp($x, ['starts_at', 'start_date', 'date_start', 'date_from', 'valid_from', 'start', 'from']));
     $au = primesAppDate(primesPromoChamp($x, ['ends_at', 'end_date', 'date_end', 'date_to', 'valid_to', 'valid_until', 'end', 'to']));
@@ -480,7 +485,7 @@ function primesPromoNormaliser(array $x, string $sorte, array $bundlesCatalogue)
     } else {
         $ids = $composants;
     }
-    $prix = primesPromoChamp($x, ['price', 'bundle_price', 'total_price', 'amount', 'prix']);
+    $prix = primesPromoChamp($x, ['price', 'bundle_price', 'bundle_promotion.bundle_price', 'total_price', 'amount', 'prix']);
     return ['source' => 'api', 'sorte' => $sorte, 'id' => (string) $id, 'nom' => $nom !== '' ? $nom : ('Promotion ' . $id),
         'prix' => is_numeric($prix) ? round((float) $prix, 2) : null, 'du' => $du, 'au' => $au,
         'shops' => array_values(array_unique($shops)), 'ids' => $ids, 'composants' => $composants];
@@ -511,30 +516,35 @@ function primesPromosCatalogue(): array
  */
 function primesPromosPanel(bool $frais = false): array
 {
-    $c = setting('primesPromos2');
+    $c = setting('primesPromos3');
     if (!$frais && is_array($c) && isset($c['liste']) && (int) ($c['quand'] ?? 0) > time() - PRIMES_PROMOS_CACHE) { return $c; }
     $catalogue = primesPromosCatalogue();
     $liste = []; $erreurs = []; $api = false;
-    if (class_exists('PanelApi') && PanelApi::configured()) {
-        foreach (['bundle' => '/admin/promotions/bundles?active=1', 'xy' => '/admin/promotions/buy-x-get-y',
+    // Les promotions ne vivent que sous /admin (l'API consultant n'en a aucune) : le compte admin ERP
+    // (Paramètres → Compte admin ERP, POST /admin/auth/login) les lit ; le compte consultant reste en repli,
+    // il se voit répondre 403 (16/10/2026).
+    $compte = class_exists('ErpApi') && ErpApi::disponible() ? 'admin' : (class_exists('PanelApi') && PanelApi::configured() ? 'consultant' : null);
+    if ($compte !== null) {
+        foreach (['bundle' => '/admin/promotions/bundles', 'xy' => '/admin/promotions/buy-x-get-y',
                   'quantite' => '/admin/promotions/quantity', 'remise' => '/admin/promotions/scheduled-product-discount'] as $sorte => $chemin) {
-            $r = PanelApi::sondeGet($chemin, 20);
+            $chemin .= '?status=ACTIVE&limit=100';
+            $r = $compte === 'admin' ? ErpApi::sondeGet($chemin) : PanelApi::sondeGet($chemin, 20);
             if ((int) $r['code'] < 200 || (int) $r['code'] >= 300 || !is_array($r['corps'])) {
                 $erreurs[] = ['chemin' => $chemin, 'code' => (int) $r['code'], 'erreur' => $r['erreur'] ?? null];
                 continue;
             }
             $api = true;
             foreach (PanelApi::liste($r['corps']) as $x) {
-                $p = primesPromoNormaliser($x, $sorte, $catalogue);
+                $p = is_array($x) ? primesPromoNormaliser($x, $sorte, $catalogue) : null;
                 if ($p !== null) { $liste[] = $p; }
             }
         }
     } else {
-        $erreurs[] = ['chemin' => '/admin/promotions', 'code' => 0, 'erreur' => 'compte API non configuré'];
+        $erreurs[] = ['chemin' => '/admin/promotions', 'code' => 0, 'erreur' => 'aucun compte API configuré'];
     }
-    $out = ['quand' => time(), 'api' => $api, 'erreurs' => $erreurs, 'liste' => $liste];
+    $out = ['quand' => time(), 'api' => $api, 'compte' => $compte, 'erreurs' => $erreurs, 'liste' => $liste];
     if ($liste !== [] || $erreurs !== []) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesPromos2', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesPromos3', json_encode($out, JSON_UNESCAPED_UNICODE)]);
     }
     return $out;
 }

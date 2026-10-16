@@ -8458,7 +8458,7 @@ function tplUserPanel(c, x){
         <div style="${sec}">Compte admin ERP (API TFBuddy)</div>
         <span style="${c.erEtatSt}">${esc(c.erEtat)}</span>
       </div>
-      <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.55;text-wrap:pretty">La reprise du catalogue de l\u2019assistant de campagne (gammes saisonni\u00e8res, alias de noms, liens produit \u2194 gamme) passe par l\u2019API de l\u2019ERP d\u00e8s que ce compte est renseign\u00e9 \u2014 m\u00eames identifiants que l\u2019admin TFBuddy. Sans compte, la reprise retombe sur la lecture des tables. Le mot de passe n\u2019est jamais r\u00e9affich\u00e9 ; le laisser vide conserve celui d\u00e9j\u00e0 enregistr\u00e9.</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.55;text-wrap:pretty">La reprise du catalogue de l\u2019assistant de campagne (gammes saisonni\u00e8res, alias de noms, liens produit \u2194 gamme) passe par l\u2019API de l\u2019ERP d\u00e8s que ce compte est renseign\u00e9 \u2014 m\u00eames identifiants que l\u2019admin TFBuddy. C\u2019est aussi lui qui lit les promotions du panel pour les primes de l\u2019app worker (elles ne sont que dans l\u2019API admin). Sans compte, la reprise retombe sur la lecture des tables. Le mot de passe n\u2019est jamais r\u00e9affich\u00e9 ; le laisser vide conserve celui d\u00e9j\u00e0 enregistr\u00e9.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
         <div>
           <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">T\u00e9l\u00e9phone du compte</div>
