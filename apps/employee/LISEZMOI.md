@@ -2,7 +2,8 @@
 
 L'application mobile des employés du réseau (TFB-Employee, livrée en zip le 06/10/2026), servie par
 le cockpit à l'adresse `/consulant_bo/employee/`, et liée depuis le rail du cockpit, ERP franchisé ›
-**App worker ↗**, vers sa page de connexion. Horaire, tâches à faire (avec photo), primes, profil.
+**App worker ↗**, vers sa page de connexion. Horaire, statistiques, primes, profil ; les tâches à faire (avec
+photo) s'ouvrent depuis l'Accueil.
 
 ## Où vit quoi
 
@@ -64,6 +65,24 @@ personne (`langue`, un global Twig). Les lignes de détail des mois payés sont 
 par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
 la ligne depuis les montants.
 
+## L'onglet Primes (16/10/2026) : des carrés deux par ligne, une demi-jauge, le classement dans un menu qui monte du bas
+
+Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
+
+- **trois sections** : les **Targets** (ventes croisées, Bats ton record, objectif magasin, note Google, et la
+  meilleure vendeuse avec son étiquette « Classement »), les **Catégories**, les **Promos** ; chacune dit ce
+  qu'elle peut rapporter (« jusqu'à 500 € ») ;
+- chaque prime est un **carré**, deux par ligne : l'icône, la récompense, le nom, une **demi-jauge**, l'objectif
+  en clair, l'état. Le point rubis sur la jauge, c'est **elle aujourd'hui** (la valeur au centre, avec « Toi »,
+  « magasin » ou « J16 ») ; le repère sombre, c'est **l'objectif à atteindre**, écrit dessous (« ◉ Objectif
+  55 % »). La cible pour un target, le seuil pour la note Google, **52 pcs** pour passer la 1re d'une catégorie
+  (la sienne + 1), « Garder la 1re place » quand elle mène. Pour l'objectif du magasin, la jauge montre
+  **l'atteinte à date** (le CA encaissé ÷ l'objectif du mois), le repère 100 %, et un pointillé **où il faudrait
+  en être au jour J** (le prorata des jours) ; la pastille donne la projection (« ✓ proj. 108 % ») ;
+- le **classement** : un bouton (l'icône, le nom, mon rang « 2e / 6 ») ouvre une **feuille qui monte du bas** :
+  chaque classement avec son icône, son type, la 1re et sa quantité, mon rang, une coche sur celui qu'on
+  regarde. Clavier : flèches, Entrée, Échap. La bascule Mon magasin / Réseau est un sélecteur segmenté.
+
 ## L'onglet Primes (14/10/2026) : une carte par prime, le classement dans un menu déroulant
 
 `/primes` (variante A de `docs/maquettes/primes-epure/`) : rien que des primes, sans texte d'explication.
@@ -92,3 +111,23 @@ fiche l'adresse du cockpit (`iconesBase`, `COCKPIT_API_URL` sans « /api/… »)
 variables de `marque.css`, aux valeurs du design system (`public/assets/ds/global.css`) ; textes :
 `translations/page/{fr,en,it,nl,pl}/primes.json`. Un rendu sur un jeu d'essai, calculé par le moteur du
 cockpit et rendu par cette vue : `php docs/maquettes/primes-epure/rendu.php [fr|en|…]`.
+
+## Statistiques (16/10/2026) : à la place de Tâches dans la barre du bas
+
+`/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
+`translations/page/{fr,en,it,nl,pl}/stats.json`) : ses chiffres à elle, depuis la même fiche que Primes (`GET
+/ventes/moi` du cockpit, rien n'est calculé dans l'app).
+
+- **Aujourd'hui** : ses tickets, ses ventes croisées, le taux face à la cible ;
+- **ce mois-ci, au jour J** : chiffre d'affaires et heures, CA par heure, tickets, panier moyen, ventes
+  croisées (la cible en regard), lignes par ticket (son record en regard), score et place dans le magasin et
+  le réseau ;
+- **12 semaines** : une colonne par semaine, un indicateur à la fois (ventes croisées avec la ligne de la
+  cible, CA par heure, tickets), la semaine en cours en rubis ; toucher une semaine affiche sa valeur. La même
+  série existe en tableau pour les lecteurs d'écran ;
+- **mon magasin** : le CA à date face à l'objectif, où en être au jour J (pointillé), la projection ;
+- **mes titres** des six derniers mois.
+
+Les tâches n'ont plus d'onglet : on y arrive par la tuile « tâches à faire » de l'Accueil (les pages des tâches
+allument « Accueil » dans la barre du bas). Rendu d'essai : `php docs/maquettes/primes-epure/rendu.php` écrit
+aussi `rendu-stats.html`.

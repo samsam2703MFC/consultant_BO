@@ -250,6 +250,16 @@ verifie('objectif : projeté, manque 2 pts', $par['objectif']['etat'] === 'att' 
 verifie('catégorie : 2e, la 1re nommée avec sa quantité', $par['tartes']['etat'] === 'rang' && $par['tartes']['premier']['nom'] === 'Léa' && $par['tartes']['premier']['q'] === 51.0);
 verifie('promo : en tête, la 2e nommée', $par['pc900']['etat'] === 'tete' && $par['pc900']['second']['nom'] === 'Manon');
 verifie('mois clos : en tête devient gagné', array_column(primesCartes($b, $pmC, $clsC, false), null, 'cle')['pc900']['etat'] === 'gagne');
+// La demi-jauge (16/10/2026) : où elle en est aujourd'hui, et l'objectif à atteindre.
+verifie('croisées : 56 % sur 0 → 70 %, objectif la cible 55 %', $par['croisees']['jauge'] === 80.0 && $par['croisees']['repere'] === 78.6 && $par['croisees']['repereType'] === 'cible' && $par['croisees']['repereVal'] === 55.0);
+$jJ = (int) date('j'); $cJ = round(100 * $jJ / (int) date('t'), 1);
+verifie('objectif en cours : l’atteinte à date, l’objectif 100 %, et où en être au jour J', $par['objectif']['repereType'] === 'cible' && $par['objectif']['repereVal'] === 100.0
+    && $par['objectif']['cibleJour'] === $cJ && $par['objectif']['repereJour'] === round(100 * $cJ / 110, 1)
+    && $par['objectif']['aDate'] === 40.0 && $par['objectif']['jauge'] === round(100 * 40 / 110, 1) && $par['objectif']['avance'] === round(40.0 - $cJ, 1), json_encode([$par['objectif']['repereJour'], $cJ]));
+verifie('objectif d’un mois clos : pas de repère du jour', array_column(primesCartes($b, ['clos' => true] + $pmC, $clsC, false), null, 'cle')['objectif']['repereJour'] === null);
+verifie('catégorie, 2e : l’objectif est de passer la 1re (51 + 1)', $par['tartes']['repereType'] === 'passer' && $par['tartes']['repereVal'] === 52.0);
+verifie('promo, 1re : l’objectif est de garder la place devant la 2e (30)', $par['pc900']['repereType'] === 'garder' && $par['pc900']['repereVal'] === 30.0);
+verifie('meilleure vendeuse : passer la 1re du magasin (61 + 1)', $par['meilleure']['repereType'] === 'passer' && $par['meilleure']['repereVal'] === 62.0);
 
 // --- 7 bis. la note Google : 25 € par personne à 4,5 ou mieux (14/10/2026) ----------------------
 echo "La note Google\n";

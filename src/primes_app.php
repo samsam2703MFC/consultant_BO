@@ -804,7 +804,6 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         $cartes[] = ['cle' => 'croisees', 'type' => 'target', 'emo' => '🛍️', 'icone' => $eC['icone'], 'lib' => $eC['lib'], 'categorie' => (string) ($eC['categorie'] ?? ''), 'montant' => (int) $eC['montant'], 'max' => false,
             'gain' => (float) $c['montant'], 'etat' => $c['montant'] > 0 ? 'gagne' : ($val === null ? 'vide' : 'att'),
             'val' => $val, 'unite' => 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
-            'jauge' => primesJauge($val, max(0, $cible - 20), $cible + 10), 'repere' => primesJauge($cible, max(0, $cible - 20), $cible + 10),
             'motif' => $val === null ? 'pas_compte' : (($c['tickets'] < $c['minTickets']) ? 'min_tickets' : null), 'minTickets' => (int) $c['minTickets'],
             'classement' => isset($clDe['croisees'])];
     }
@@ -816,7 +815,6 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'max' => (int) $r['maxDixiemes'] > 1, 'gain' => (float) $r['montant'],
             'etat' => $r['montant'] > 0 ? 'gagne' : (($lt === null || $cible === null) ? 'vide' : 'att'),
             'val' => $lt, 'unite' => 'lpt', 'cible' => $cible, 'record' => $r['record'], 'ecart' => ($lt !== null && $cible !== null) ? round(max(0, $cible - $lt), 2) : null,
-            'jauge' => $cible !== null ? primesJauge($lt, $cible - 0.8, $cible + 0.2) : null, 'repere' => $cible !== null ? primesJauge($cible, $cible - 0.8, $cible + 0.2) : null,
             'motif' => $lt === null ? 'pas_compte' : ($r['record'] === null ? 'pas_record' : null), 'classement' => false];
     }
     $eO = primesAppEntree('objectif');
@@ -824,10 +822,15 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         $pct = (float) $eO['pct'];
         $att = $pm['clos'] ? $pm['atteinte'] : ($pm['atteinteProj'] ?? null);
         $etat = $pm['vous'] > 0 ? 'gagne' : (($att === null || $pm['sousMin']) ? 'vide' : 'att');
+        // Au jour J (16/10/2026) : la jauge montre l'atteinte à date (le CA encaissé ÷ l'objectif du mois), le repère ce
+        // qu'il faudrait avoir atteint aujourd'hui au prorata des jours ; la projection reste à côté, c'est elle qui gagne.
+        $j = $enCours ? (int) date('j') : null;
+        $cibleJour = $j !== null ? round($pct * $j / (int) date('t'), 1) : null;
+        $aDate = $pm['atteinte'] ?? null;
         $cartes[] = ['cle' => 'objectif', 'type' => 'target', 'emo' => '🏪', 'icone' => $eO['icone'], 'lib' => $eO['lib'], 'montant' => (int) $eO['montant'], 'max' => false,
             'gain' => (float) $pm['vous'], 'etat' => $etat, 'val' => $att, 'unite' => 'pct', 'cible' => $pct, 'projete' => !$pm['clos'],
             'ecart' => $att !== null ? round(max(0, $pct - $att), 1) : null,
-            'jauge' => primesJauge($att, max(0, $pct - 30), $pct + 10), 'repere' => primesJauge($pct, max(0, $pct - 30), $pct + 10),
+            'aDate' => $aDate, 'jour' => $j, 'cibleJour' => $cibleJour, 'avance' => ($aDate !== null && $cibleJour !== null) ? round($aDate - $cibleJour, 1) : null,
             'motif' => $pm['objectif'] === null ? 'pas_objectif' : ($pm['sousMin'] ? 'heures' : ($att === null ? 'pas_compte' : null)),
             'heuresMin' => (int) $eO['heuresMin'], 'classement' => false];
     }
@@ -840,7 +843,6 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'gain' => (float) $g['montant'], 'etat' => $g['montant'] > 0 ? 'gagne' : (($note === null || $g['sousMin']) ? 'vide' : 'att'),
             'val' => $note, 'unite' => 'note', 'cible' => $seuil, 'avis' => (int) $g['avis'],
             'ecart' => $note !== null ? round(max(0, $seuil - $note), 1) : null,
-            'jauge' => primesJauge($note, $seuil - 1, 5.0), 'repere' => primesJauge($seuil, $seuil - 1, 5.0),
             'motif' => $note === null ? 'pas_note' : ($g['sousMin'] ? 'heures' : null), 'heuresMin' => (int) $g['heuresMin'], 'classement' => false];
     }
     $v = $b['meilleure'];
@@ -851,7 +853,6 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'val' => $v['score'], 'unite' => 'score', 'rang' => $v['rangMag'], 'sur' => $v['surMag'],
             'premier' => $v['premierNom'] !== null ? ['nom' => $v['premierNom'], 'q' => (float) $v['scorePremier'], 'moi' => $v['rangMag'] === 1] : null,
             'second' => $v['secondNom'] !== null ? ['nom' => $v['secondNom'], 'q' => (float) $v['scoreSecond'], 'moi' => false] : null,
-            'jauge' => ($v['score'] !== null && $v['scorePremier']) ? primesJauge((float) $v['score'], 0, (float) $v['scorePremier']) : null,
             'motif' => $v['score'] === null ? 'pas_classee' : null, 'classement' => false];
     }
     $pieces = array_merge(
@@ -865,11 +866,52 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'gain' => (float) $q['montant'], 'etat' => $etat, 'val' => $p, 'unite' => 'pcs', 'rang' => $q['rangMag'], 'sur' => $q['surMag'],
             'minPieces' => (int) $q['minPieces'], 'ecart' => ($p !== null && $q['rangMag'] === null) ? max(1, (int) ceil($q['minPieces'] - $p)) : null,
             'premier' => $un, 'second' => $deux,
-            'jauge' => ($p !== null && $un !== null && $un['q'] > 0) ? primesJauge($p, 0, $un['q']) : ($p !== null && $q['minPieces'] > 0 ? primesJauge($p, 0, (float) $q['minPieces']) : null),
             'du' => $q['du'] ?? null, 'au' => $q['au'] ?? null,
             'motif' => $p === null ? 'pas_compte' : null, 'classement' => isset($clDe[$q['cle']])];
     }
-    return $cartes;
+    return array_map('primesCarteJauge', $cartes);
+}
+
+/**
+ * La demi-jauge d'une carte (16/10/2026) : où elle en est aujourd'hui (« jauge », en % d'une échelle qui part de
+ * 0) et l'objectif à atteindre (« repere » sur la même échelle, « repereVal » le chiffre à atteindre) :
+ *  - cible : la cible du target (ventes croisées, record, objectif du magasin — 100 % du mois) ;
+ *  - seuil : la note Google à tenir ;
+ *  - passer : les pièces (ou le score) pour passer la 1re du magasin, la sienne + 1 ;
+ *  - garder : elle est 1re, l'objectif est de rester devant la 2e (son chiffre) ;
+ *  - min : personne n'a encore vendu, le minimum de pièces.
+ * L'objectif du magasin en cours de mois porte aussi « repereJour » : où il faudrait en être aujourd'hui.
+ */
+function primesCarteJauge(array $c): array
+{
+    $v = $c['val'] ?? null;
+    [$bas, $haut, $rType, $rVal, $jour] = [0.0, null, null, null, null];
+    if ($c['cle'] === 'croisees') {
+        [$rType, $rVal] = ['cible', (float) $c['cible']];
+        $haut = min(100.0, max($rVal + 15, (float) ($v ?? 0) + 5));
+    } elseif ($c['cle'] === 'record') {
+        if ($c['cible'] !== null) { [$rType, $rVal] = ['cible', (float) $c['cible']]; $haut = max($rVal * 1.15, (float) ($v ?? 0) * 1.05); }
+    } elseif ($c['cle'] === 'objectif') {
+        $v = ($c['jour'] ?? null) !== null ? $c['aDate'] : $v;
+        [$rType, $rVal] = ['cible', (float) $c['cible']];
+        $jour = ($c['jour'] ?? null) !== null ? (float) $c['cibleJour'] : null;
+        $haut = max($rVal + 10, (float) ($v ?? 0) + 5);
+    } elseif ($c['cle'] === 'google') {
+        [$rType, $rVal] = ['seuil', (float) $c['cible']];
+        [$bas, $haut] = [$rVal - 1, 5.0];
+    } else {
+        // Les classements (catégories, promos, meilleure vendeuse) : passer la 1re, garder la place, ou le minimum.
+        $un = $c['premier'] ?? null; $deux = $c['second'] ?? null;
+        if ($un !== null && !$un['moi']) { [$rType, $rVal] = ['passer', floor((float) $un['q']) + 1]; }
+        elseif ($un !== null && $deux !== null) { [$rType, $rVal] = ['garder', (float) $deux['q']]; }
+        elseif ($un === null && ($c['minPieces'] ?? 0) > 0) { [$rType, $rVal] = ['min', (float) $c['minPieces']]; }
+        $haut = max((float) ($rVal ?? 0), (float) ($v ?? 0), (float) ($c['minPieces'] ?? 0)) * 1.15;
+    }
+    $ok = $v !== null && $haut !== null && $haut > $bas;
+    return $c + ['jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
+        'repere' => ($haut !== null && $haut > $bas && $rVal !== null) ? primesJauge($rVal, $bas, $haut) : null,
+        'repereType' => $rVal !== null ? $rType : null, 'repereVal' => $rVal,
+        'repereJour' => ($haut !== null && $jour !== null) ? primesJauge($jour, $bas, $haut) : null];
 }
 
 /* ======================================================================

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Statistics</title>
+    <link rel="stylesheet" href="/public/employee/assets/atelier/app.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/atelier/marque.css?v=1791994366">
+
+    <link rel="manifest" href="/public/employee/manifest.webmanifest">
+    <meta name="theme-color" content="#8D1D2C">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/public/employee/assets/pwa/icon-192.png">
+
+    <style>
+        :root{
+            --emp-tabbar-h: 72px;
+        }
+
+        body{
+            background: var(--la-beige); /* Mazer-ish */
+        }
+
+        /* CONTENT: zawsze nad tabbarem */
+        .emp-content{
+            padding-bottom: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+        }
+        /* Sur un grand écran, l'app garde sa largeur de téléphone au centre. */
+        .emp-content .container, .emp-topbar .container{ max-width: 600px; }
+
+        /* TOP BAR */
+        .emp-topbar{
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding-top: env(safe-area-inset-top, 0px);
+            background: rgba(234,228,220,.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .emp-topbar-inner{
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .emp-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .emp-subtitle{
+            margin: 0;
+            font-size: .85rem;
+            color: var(--la-muet);
+        }
+
+        /* BOTTOM NAV */
+        .emp-bottom-nav{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1030;
+
+            height: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,.06);
+            max-width: 600px;
+            margin: 0 auto;
+
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+        }
+
+        .emp-bottom-item{
+            text-decoration: none;
+            color: var(--la-muet);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .emp-bottom-item i{
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .emp-bottom-item.is-active{
+            color: var(--la-rubis); /* Mazer primary-ish */
+        }
+
+        .emp-bottom-item.is-active i{
+            transform: translateY(-1px);
+        }
+    </style>
+
+    <link rel="stylesheet" href="/public/employee/assets/atelier/primes.css?v=1792145400"><link rel="stylesheet" href="/public/employee/assets/atelier/stats.css?v=1792145520"></head>
+<body>
+
+    <div class="emp-topbar">
+        <div class="container">
+            <div class="emp-topbar-inner">
+                <div>
+                    <p class="emp-title">Statistics</p>
+                    <p class="emp-subtitle">Halle · October 2026, as of 16</p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                                    </div>
+            </div>
+        </div>
+    </div>
+
+<main class="emp-content">
+    <div class="container py-3">
+        
+<div class="titre-section"><h2>Today</h2><small>at 15:40</small></div>
+<div class="st-grille trois">
+  <div class="st"><span class="st-l">Tickets</span><b class="st-v">19</b></div>
+  <div class="st"><span class="st-l">Cross-sales</span><b class="st-v">11</b></div>
+  <div class="st"><span class="st-l">Rate</span><b class="st-v">58<small>%</small></b><span class="st-s">target 55&nbsp;%</span></div>
+</div>
+
+<div class="titre-section"><h2>This month</h2><small>D16</small></div>
+<div class="st-grille">
+  <div class="st"><span class="st-l">Revenue</span><b class="st-v">3 290<small>€</small></b><span class="st-s">38,5&nbsp;h</span></div>
+  <div class="st"><span class="st-l">Revenue per hour</span><b class="st-v">85<small>€/h</small></b></div>
+  <div class="st"><span class="st-l">Tickets</span><b class="st-v">262</b></div>
+  <div class="st"><span class="st-l">Average basket</span><b class="st-v">12,56<small>€</small></b></div>
+  <div class="st"><span class="st-l">Cross-sales</span><b class="st-v">56<small>%</small></b>
+    <span class="st-s ok">✓ target 55&nbsp;%</span></div>
+  <div class="st"><span class="st-l">Lines per ticket</span><b class="st-v">2,74</b>
+    <span class="st-s ">record 2,80</span></div>
+  <div class="st"><span class="st-l">Score</span><b class="st-v">59</b>
+    <span class="st-s">#2 / 4 · My shop</span></div>
+  <div class="st"><span class="st-l">Network</span><b class="st-v">#2<small>/ 4</small></b><span class="st-s">score ranking</span></div>
+</div>
+
+<div class="titre-section"><h2>12 weeks</h2><small>S31 → S42</small></div>
+<div class="cl-carte st-graphe" data-graphe>
+  <div class="seg" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-ind="taux">Cross-sales</button><button type="button" role="tab" class="" aria-selected="false" data-ind="caHeure">Revenue per hour</button><button type="button" role="tab" class="" aria-selected="false" data-ind="tickets">Tickets</button></div>
+            <div class="st-ind on" data-ind-v="taux">
+        <p class="st-cap" data-cap>Week S42 : <b>56 %</b></p>
+    <svg viewBox="0 0 340 150" role="img" aria-label="Cross-sales, 12 weeks">
+      <line class="st-base" x1="6" y1="124" x2="334" y2="124"/>
+      <line class="st-cible" x1="6" y1="34.3" x2="334" y2="34.3"/><text class="st-cible-t" x="8" y="30.3">target 55 %</text>                  <g class="st-col" tabindex="0" data-lib="Week S31" data-val="47 %">
+        <title>S31 : 47 %</title>
+        <rect class="st-hit" x="6" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="11.7" y="47.3" width="16" height="76.7" rx="4"/>
+        <rect class="st-bar" x="11.7" y="120" width="16" height="4"/>                <text class="st-x" x="19.7" y="140" text-anchor="middle">S31</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S32" data-val="49 %">
+        <title>S32 : 49 %</title>
+        <rect class="st-hit" x="33.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="39" y="44" width="16" height="80" rx="4"/>
+        <rect class="st-bar" x="39" y="120" width="16" height="4"/>                <text class="st-x" x="47" y="140" text-anchor="middle">S32</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S33" data-val="52 %">
+        <title>S33 : 52 %</title>
+        <rect class="st-hit" x="60.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="66.3" y="39.1" width="16" height="84.9" rx="4"/>
+        <rect class="st-bar" x="66.3" y="120" width="16" height="4"/>                <text class="st-x" x="74.3" y="140" text-anchor="middle">S33</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S34" data-val="50 %">
+        <title>S34 : 50 %</title>
+        <rect class="st-hit" x="88" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="93.7" y="42.4" width="16" height="81.6" rx="4"/>
+        <rect class="st-bar" x="93.7" y="120" width="16" height="4"/>                <text class="st-x" x="101.7" y="140" text-anchor="middle">S34</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S35" data-val="54 %">
+        <title>S35 : 54 %</title>
+        <rect class="st-hit" x="115.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="121" y="35.9" width="16" height="88.1" rx="4"/>
+        <rect class="st-bar" x="121" y="120" width="16" height="4"/>                <text class="st-x" x="129" y="140" text-anchor="middle">S35</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S36" data-val="51 %">
+        <title>S36 : 51 %</title>
+        <rect class="st-hit" x="142.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="148.3" y="40.8" width="16" height="83.2" rx="4"/>
+        <rect class="st-bar" x="148.3" y="120" width="16" height="4"/>                <text class="st-x" x="156.3" y="140" text-anchor="middle">S36</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S37" data-val="55 %">
+        <title>S37 : 55 %</title>
+        <rect class="st-hit" x="170" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="175.7" y="34.3" width="16" height="89.7" rx="4"/>
+        <rect class="st-bar" x="175.7" y="120" width="16" height="4"/>                <text class="st-x" x="183.7" y="140" text-anchor="middle">S37</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S38" data-val="53 %">
+        <title>S38 : 53 %</title>
+        <rect class="st-hit" x="197.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="203" y="37.5" width="16" height="86.5" rx="4"/>
+        <rect class="st-bar" x="203" y="120" width="16" height="4"/>                <text class="st-x" x="211" y="140" text-anchor="middle">S38</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S39" data-val="57 %">
+        <title>S39 : 57 %</title>
+        <rect class="st-hit" x="224.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="230.3" y="31" width="16" height="93" rx="4"/>
+        <rect class="st-bar" x="230.3" y="120" width="16" height="4"/>                <text class="st-x" x="238.3" y="140" text-anchor="middle">S39</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S40" data-val="56 %">
+        <title>S40 : 56 %</title>
+        <rect class="st-hit" x="252" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="257.7" y="32.6" width="16" height="91.4" rx="4"/>
+        <rect class="st-bar" x="257.7" y="120" width="16" height="4"/>                <text class="st-x" x="265.7" y="140" text-anchor="middle">S40</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S41" data-val="58 %">
+        <title>S41 : 58 %</title>
+        <rect class="st-hit" x="279.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="285" y="29.4" width="16" height="94.6" rx="4"/>
+        <rect class="st-bar" x="285" y="120" width="16" height="4"/>                <text class="st-x" x="293" y="140" text-anchor="middle">S41</text>
+      </g>            <g class="st-col der" tabindex="0" data-lib="Week S42" data-val="56 %">
+        <title>S42 : 56 %</title>
+        <rect class="st-hit" x="306.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="312.3" y="32.6" width="16" height="91.4" rx="4"/>
+        <rect class="st-bar" x="312.3" y="120" width="16" height="4"/>                <text class="st-x" x="320.3" y="140" text-anchor="middle">S42</text>
+      </g>    </svg>
+        <table class="visually-hidden"><caption>Cross-sales</caption><tbody><tr><th>S31</th><td>47 %</td></tr><tr><th>S32</th><td>49 %</td></tr><tr><th>S33</th><td>52 %</td></tr><tr><th>S34</th><td>50 %</td></tr><tr><th>S35</th><td>54 %</td></tr><tr><th>S36</th><td>51 %</td></tr><tr><th>S37</th><td>55 %</td></tr><tr><th>S38</th><td>53 %</td></tr><tr><th>S39</th><td>57 %</td></tr><tr><th>S40</th><td>56 %</td></tr><tr><th>S41</th><td>58 %</td></tr><tr><th>S42</th><td>56 %</td></tr></tbody></table>
+  </div>
+            <div class="st-ind " data-ind-v="caHeure">
+        <p class="st-cap" data-cap>Week S42 : <b>88 €/h</b></p>
+    <svg viewBox="0 0 340 150" role="img" aria-label="Revenue per hour, 12 weeks">
+      <line class="st-base" x1="6" y1="124" x2="334" y2="124"/>
+                        <g class="st-col" tabindex="0" data-lib="Week S31" data-val="78 €/h">
+        <title>S31 : 78 €/h</title>
+        <rect class="st-hit" x="6" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="11.7" y="40.1" width="16" height="83.9" rx="4"/>
+        <rect class="st-bar" x="11.7" y="120" width="16" height="4"/>                <text class="st-x" x="19.7" y="140" text-anchor="middle">S31</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S32" data-val="74 €/h">
+        <title>S32 : 74 €/h</title>
+        <rect class="st-hit" x="33.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="39" y="44.4" width="16" height="79.6" rx="4"/>
+        <rect class="st-bar" x="39" y="120" width="16" height="4"/>                <text class="st-x" x="47" y="140" text-anchor="middle">S32</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S33" data-val="81 €/h">
+        <title>S33 : 81 €/h</title>
+        <rect class="st-hit" x="60.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="66.3" y="36.9" width="16" height="87.1" rx="4"/>
+        <rect class="st-bar" x="66.3" y="120" width="16" height="4"/>                <text class="st-x" x="74.3" y="140" text-anchor="middle">S33</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S34" data-val="79 €/h">
+        <title>S34 : 79 €/h</title>
+        <rect class="st-hit" x="88" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="93.7" y="39" width="16" height="85" rx="4"/>
+        <rect class="st-bar" x="93.7" y="120" width="16" height="4"/>                <text class="st-x" x="101.7" y="140" text-anchor="middle">S34</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S35" data-val="83 €/h">
+        <title>S35 : 83 €/h</title>
+        <rect class="st-hit" x="115.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="121" y="34.7" width="16" height="89.3" rx="4"/>
+        <rect class="st-bar" x="121" y="120" width="16" height="4"/>                <text class="st-x" x="129" y="140" text-anchor="middle">S35</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S36" data-val="80 €/h">
+        <title>S36 : 80 €/h</title>
+        <rect class="st-hit" x="142.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="148.3" y="38" width="16" height="86" rx="4"/>
+        <rect class="st-bar" x="148.3" y="120" width="16" height="4"/>                <text class="st-x" x="156.3" y="140" text-anchor="middle">S36</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S37" data-val="84 €/h">
+        <title>S37 : 84 €/h</title>
+        <rect class="st-hit" x="170" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="175.7" y="33.7" width="16" height="90.3" rx="4"/>
+        <rect class="st-bar" x="175.7" y="120" width="16" height="4"/>                <text class="st-x" x="183.7" y="140" text-anchor="middle">S37</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S38" data-val="82 €/h">
+        <title>S38 : 82 €/h</title>
+        <rect class="st-hit" x="197.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="203" y="35.8" width="16" height="88.2" rx="4"/>
+        <rect class="st-bar" x="203" y="120" width="16" height="4"/>                <text class="st-x" x="211" y="140" text-anchor="middle">S38</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S39" data-val="86 €/h">
+        <title>S39 : 86 €/h</title>
+        <rect class="st-hit" x="224.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="230.3" y="31.5" width="16" height="92.5" rx="4"/>
+        <rect class="st-bar" x="230.3" y="120" width="16" height="4"/>                <text class="st-x" x="238.3" y="140" text-anchor="middle">S39</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S40" data-val="85 €/h">
+        <title>S40 : 85 €/h</title>
+        <rect class="st-hit" x="252" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="257.7" y="32.6" width="16" height="91.4" rx="4"/>
+        <rect class="st-bar" x="257.7" y="120" width="16" height="4"/>                <text class="st-x" x="265.7" y="140" text-anchor="middle">S40</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S41" data-val="87 €/h">
+        <title>S41 : 87 €/h</title>
+        <rect class="st-hit" x="279.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="285" y="30.4" width="16" height="93.6" rx="4"/>
+        <rect class="st-bar" x="285" y="120" width="16" height="4"/>                <text class="st-x" x="293" y="140" text-anchor="middle">S41</text>
+      </g>            <g class="st-col der" tabindex="0" data-lib="Week S42" data-val="88 €/h">
+        <title>S42 : 88 €/h</title>
+        <rect class="st-hit" x="306.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="312.3" y="29.4" width="16" height="94.6" rx="4"/>
+        <rect class="st-bar" x="312.3" y="120" width="16" height="4"/>                <text class="st-x" x="320.3" y="140" text-anchor="middle">S42</text>
+      </g>    </svg>
+        <table class="visually-hidden"><caption>Revenue per hour</caption><tbody><tr><th>S31</th><td>78 €/h</td></tr><tr><th>S32</th><td>74 €/h</td></tr><tr><th>S33</th><td>81 €/h</td></tr><tr><th>S34</th><td>79 €/h</td></tr><tr><th>S35</th><td>83 €/h</td></tr><tr><th>S36</th><td>80 €/h</td></tr><tr><th>S37</th><td>84 €/h</td></tr><tr><th>S38</th><td>82 €/h</td></tr><tr><th>S39</th><td>86 €/h</td></tr><tr><th>S40</th><td>85 €/h</td></tr><tr><th>S41</th><td>87 €/h</td></tr><tr><th>S42</th><td>88 €/h</td></tr></tbody></table>
+  </div>
+            <div class="st-ind " data-ind-v="tickets">
+        <p class="st-cap" data-cap>Week S42 : <b>131</b></p>
+    <svg viewBox="0 0 340 150" role="img" aria-label="Tickets, 12 weeks">
+      <line class="st-base" x1="6" y1="124" x2="334" y2="124"/>
+                        <g class="st-col" tabindex="0" data-lib="Week S31" data-val="210">
+        <title>S31 : 210 </title>
+        <rect class="st-hit" x="6" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="11.7" y="48.1" width="16" height="75.9" rx="4"/>
+        <rect class="st-bar" x="11.7" y="120" width="16" height="4"/>                <text class="st-x" x="19.7" y="140" text-anchor="middle">S31</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S32" data-val="190">
+        <title>S32 : 190 </title>
+        <rect class="st-hit" x="33.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="39" y="55.4" width="16" height="68.6" rx="4"/>
+        <rect class="st-bar" x="39" y="120" width="16" height="4"/>                <text class="st-x" x="47" y="140" text-anchor="middle">S32</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S33" data-val="230">
+        <title>S33 : 230 </title>
+        <rect class="st-hit" x="60.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="66.3" y="40.9" width="16" height="83.1" rx="4"/>
+        <rect class="st-bar" x="66.3" y="120" width="16" height="4"/>                <text class="st-x" x="74.3" y="140" text-anchor="middle">S33</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S34" data-val="205">
+        <title>S34 : 205 </title>
+        <rect class="st-hit" x="88" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="93.7" y="49.9" width="16" height="74.1" rx="4"/>
+        <rect class="st-bar" x="93.7" y="120" width="16" height="4"/>                <text class="st-x" x="101.7" y="140" text-anchor="middle">S34</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S35" data-val="240">
+        <title>S35 : 240 </title>
+        <rect class="st-hit" x="115.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="121" y="37.3" width="16" height="86.7" rx="4"/>
+        <rect class="st-bar" x="121" y="120" width="16" height="4"/>                <text class="st-x" x="129" y="140" text-anchor="middle">S35</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S36" data-val="214">
+        <title>S36 : 214 </title>
+        <rect class="st-hit" x="142.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="148.3" y="46.7" width="16" height="77.3" rx="4"/>
+        <rect class="st-bar" x="148.3" y="120" width="16" height="4"/>                <text class="st-x" x="156.3" y="140" text-anchor="middle">S36</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S37" data-val="251">
+        <title>S37 : 251 </title>
+        <rect class="st-hit" x="170" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="175.7" y="33.3" width="16" height="90.7" rx="4"/>
+        <rect class="st-bar" x="175.7" y="120" width="16" height="4"/>                <text class="st-x" x="183.7" y="140" text-anchor="middle">S37</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S38" data-val="222">
+        <title>S38 : 222 </title>
+        <rect class="st-hit" x="197.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="203" y="43.8" width="16" height="80.2" rx="4"/>
+        <rect class="st-bar" x="203" y="120" width="16" height="4"/>                <text class="st-x" x="211" y="140" text-anchor="middle">S38</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S39" data-val="248">
+        <title>S39 : 248 </title>
+        <rect class="st-hit" x="224.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="230.3" y="34.4" width="16" height="89.6" rx="4"/>
+        <rect class="st-bar" x="230.3" y="120" width="16" height="4"/>                <text class="st-x" x="238.3" y="140" text-anchor="middle">S39</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S40" data-val="236">
+        <title>S40 : 236 </title>
+        <rect class="st-hit" x="252" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="257.7" y="38.7" width="16" height="85.3" rx="4"/>
+        <rect class="st-bar" x="257.7" y="120" width="16" height="4"/>                <text class="st-x" x="265.7" y="140" text-anchor="middle">S40</text>
+      </g>            <g class="st-col" tabindex="0" data-lib="Week S41" data-val="262">
+        <title>S41 : 262 </title>
+        <rect class="st-hit" x="279.3" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="285" y="29.4" width="16" height="94.6" rx="4"/>
+        <rect class="st-bar" x="285" y="120" width="16" height="4"/>                <text class="st-x" x="293" y="140" text-anchor="middle">S41</text>
+      </g>            <g class="st-col der" tabindex="0" data-lib="Week S42" data-val="131">
+        <title>S42 : 131 </title>
+        <rect class="st-hit" x="306.7" y="10" width="27.3" height="130"/>
+                <rect class="st-bar" x="312.3" y="76.7" width="16" height="47.3" rx="4"/>
+        <rect class="st-bar" x="312.3" y="120" width="16" height="4"/>                <text class="st-x" x="320.3" y="140" text-anchor="middle">S42</text>
+      </g>    </svg>
+        <table class="visually-hidden"><caption>Tickets</caption><tbody><tr><th>S31</th><td>210 </td></tr><tr><th>S32</th><td>190 </td></tr><tr><th>S33</th><td>230 </td></tr><tr><th>S34</th><td>205 </td></tr><tr><th>S35</th><td>240 </td></tr><tr><th>S36</th><td>214 </td></tr><tr><th>S37</th><td>251 </td></tr><tr><th>S38</th><td>222 </td></tr><tr><th>S39</th><td>248 </td></tr><tr><th>S40</th><td>236 </td></tr><tr><th>S41</th><td>262 </td></tr><tr><th>S42</th><td>131 </td></tr></tbody></table>
+  </div>
+  </div>
+
+<div class="titre-section"><h2>My shop</h2><small>Goal 61 000&nbsp;€</small></div>
+<div class="cl-carte st-mag">
+  <div class="st-mag-h"><b>55<small>%</small></b><span>33 320&nbsp;€ / 61 000&nbsp;€</span></div>
+  <div class="st-barre" role="img" aria-label="55 % of the goal">
+    <i style="width:49.7%"></i>
+        <span class="st-jr" style="left:46.9%"></span>    <span class="st-obj" style="left:90.9%"></span>
+  </div>
+  <div class="st-mag-l">
+    <span><span class="lg-moi"></span>to date</span>
+    <span><span class="lg-jr"></span>D16 : 52&nbsp;%</span>    <span><span class="lg-obj"></span>Goal 100&nbsp;%</span>
+    <span class="ok">proj. <b>108&nbsp;%</b></span>  </div>
+</div>
+
+<div class="titre-section"><h2>My titles</h2><small>6 months</small></div>
+<div class="st-titres">
+  <span class="st-titre live">🔥 Ventes croisées</span>  <span class="st-titre">👑 Queen of Quiches <b>×2</b></span><span class="st-titre">👑 Ventes croisées <b>×3</b></span></div>
+    </div>
+</main>
+
+
+<nav class="emp-bottom-nav" role="navigation" aria-label="Primary navigation">
+                    <a class="emp-bottom-item "
+           href="/public/employee/dashboard"
+           aria-current="false">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/schedule"
+           aria-current="false">
+            <i class="bi bi-calendar3"></i>
+            <span>Schedule</span>
+        </a>
+                    <a class="emp-bottom-item is-active"
+           href="/public/employee/statistiques"
+           aria-current="page">
+            <i class="bi bi-bar-chart-line"></i>
+            <span>Statistics</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/primes"
+           aria-current="false">
+            <i class="bi bi-trophy"></i>
+            <span>Bonuses</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/me"
+           aria-current="false">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+<script>
+(function () {
+  var g = document.querySelector('[data-graphe]'); if (!g) { return; }
+  // Un indicateur à la fois.
+  g.querySelectorAll('[data-ind]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      g.querySelectorAll('[data-ind]').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      g.querySelectorAll('[data-ind-v]').forEach(function (v) { v.classList.toggle('on', v.dataset.indV === b.dataset.ind); });
+    });
+  });
+  // Toucher une semaine affiche sa valeur au-dessus du graphique.
+  g.querySelectorAll('.st-ind').forEach(function (ind) {
+    var cap = ind.querySelector('[data-cap]');
+    ind.querySelectorAll('.st-col').forEach(function (col) {
+      function montre() {
+        ind.querySelectorAll('.st-col').forEach(function (c) { c.classList.toggle('sel', c === col); });
+        cap.innerHTML = '';
+        cap.appendChild(document.createTextNode(col.dataset.lib + ' : '));
+        var bv = document.createElement('b'); bv.textContent = col.dataset.val; cap.appendChild(bv);
+      }
+      col.addEventListener('click', montre);
+      col.addEventListener('focus', montre);
+    });
+  });
+})();
+</script>
+
+<script>
+    (function () {
+        if (!("serviceWorker" in navigator)) return;
+
+        window.addEventListener("load", async () => {
+            try {
+                const reg = await navigator.serviceWorker.register("/public/employee/sw.js", { scope: "/public/employee/" });
+                // Opcjonalnie log:
+                console.log("SW registered", reg);
+            } catch (e) {
+                console.warn("SW register failed", e);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

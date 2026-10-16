@@ -3,7 +3,8 @@
 **Statut : codé le 14/10/2026, variante A.** L'app : `apps/employee/src/app/Views/primes/primes.twig` ;
 le cockpit : `src/primes.php`, `src/primes_app.php`, Équipe & ventes › Paramètres ; le contrat :
 `docs/contrat-api.md`, « Les primes dans l'app worker ». Captures du code, sur un jeu d'essai calculé par
-le moteur : `code-app.png` (`php rendu.php` → `rendu-app.html`), `code-cockpit.png`.
+le moteur : `code-app.png` (`php rendu.php` → `rendu-app.html`), `code-menu.png` (le menu du classement
+ouvert), `code-stats.png` (`rendu-stats.html`, la page Statistiques), `code-cockpit.png`.
 
 Les choix faits au moment de coder, sans réponse sur les points ouverts :
 
@@ -20,6 +21,15 @@ nommé), réglé dans les paramètres et compté dans les Résultats ; les **ven
 menu déroulant des catégories du catalogue) ; les primes **pas encore gagnées en gris** dans l'app ; le **SMS
 à la réussite** (un interrupteur dans les paramètres), envoyé quand le CEO enregistre les primes du mois,
 par Twilio dès que `config.php › sms` est rempli.
+
+Refonte du 16/10/2026 :
+
+- les primes en **carrés deux par ligne**, les **targets séparés des catégories** (et des promos) ;
+- dans **chaque jauge**, la vendeuse voit **où elle en est** (le point, la valeur au centre) et **l'objectif à
+  atteindre** (le repère, écrit dessous). Pour l'objectif magasin, l'atteinte à date face à 100 %, avec le
+  repère du jour J (le prorata des jours) ;
+- le **menu déroulant du classement** devient une feuille qui monte du bas (la 1re, mon rang, une coche) ;
+- un menu **Statistiques** remplace Tâches dans la barre du bas (les tâches restent sur l'Accueil).
 
 Ajouts du 14/10/2026, troisième demande :
 

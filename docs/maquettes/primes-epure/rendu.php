@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Trois icônes déposées (demo/uploads/primes : la tarte, la quiche, le café) ; les autres primes gardent
  * leur emoji. La note Google de Halle : 4,6, au-dessus du seuil de 4,5.
  *
- *   php docs/maquettes/primes-epure/rendu.php            → rendu-app.html (à servir depuis la racine du dépôt)
+ *   php docs/maquettes/primes-epure/rendu.php            → rendu-app.html et rendu-stats.html (à servir depuis la racine du dépôt)
  */
 
 $RACINE = dirname(__DIR__, 3);
@@ -80,7 +80,7 @@ for ($j = $m . '-01'; $j <= date('Y-m-d'); $j = date('Y-m-d', strtotime($j . ' +
 
 $emps = venteEmployes();
 $nomDe = primesMagasins();
-$moi = ['id' => 2, 'tickets' => 262, 'lignesTicket' => 2.74, 'score' => 59, 'rang' => 9, 'ca' => 3290, 'heures' => 38.5, 'caHeure' => 85, 'classable' => true];
+$moi = ['id' => 2, 'tickets' => 262, 'lignesTicket' => 2.74, 'score' => 59, 'rang' => 2, 'ca' => 3290, 'heures' => 38.5, 'caHeure' => 85, 'classable' => true];
 $lignes = [];
 foreach ([[1, 'Léa', 61], [2, 'Toi', 59], [3, 'Manon', 52], [4, 'Sarah', 50]] as [$id, $nom, $sc]) { $lignes[] = ['id' => $id, 'nom' => $nom, 'shopId' => '4', 'score' => $sc, 'classable' => true]; }
 $avant = date('Y-m', strtotime($m . '-01 -1 month'));
@@ -112,4 +112,23 @@ $html = $twig->render('primes/primes.twig', ['primes' => $fiche, 'primesErreur' 
 // Le service worker ne s'inscrit pas sur la page d'essai.
 $html = preg_replace('#<script>\s*if \("serviceWorker".*?</script>#s', '', $html) ?? $html;
 file_put_contents(__DIR__ . '/rendu-app' . ($lang === 'fr' ? '' : '-' . $lang) . '.html', $html);
+
+// --- « Statistiques » (16/10/2026) : la même fiche, avec ses douze semaines, sa journée et ses titres --------
+$sem = [];
+foreach ([[47, 210, 6150, 41.5, 78], [49, 190, 5660, 40, 74], [52, 230, 7010, 44, 81], [50, 205, 6020, 38.5, 79], [54, 240, 7400, 45, 83], [51, 214, 6390, 41, 80],
+    [55, 251, 7700, 46.5, 84], [53, 222, 6800, 42, 82], [57, 248, 7860, 46, 86], [56, 236, 7210, 44.5, 85], [58, 262, 8090, 47, 87], [56, 131, 3950, 22.5, 88]] as $i => [$tx, $t, $ca, $h, $cah]) {
+    $sem[] = ['lib' => 'S' . (int) date('W', strtotime('monday this week -' . (11 - $i) . ' weeks')), 'tickets' => $t, 'croisees' => (int) round($t * $tx / 100), 'taux' => (float) $tx,
+        'ca' => (float) $ca, 'heures' => $h, 'caHeure' => $cah, 'rang' => null, 'sur' => 0];
+}
+$b['meilleure'] = array_merge($b['meilleure'], ['ca' => 3290, 'caHeure' => 85, 'heures' => 38.5, 'tickets' => 262, 'panier' => 12.56]);
+$fiche += ['briques' => $b, 'semaines12' => $sem, 'prime' => $pm, 'aujourdhui' => ['tickets' => 19, 'croisees' => 11, 'lignes' => 52, 'taux' => 57.9, 'quand' => '15:40'],
+    'collection' => ['titres' => [['cle' => 'concours:quiches', 'lib' => 'Queen of Quiches', 'n' => 2], ['cle' => 'croisees', 'lib' => 'Ventes croisées', 'n' => 3]],
+        'enCours' => [['cle' => 'croisees', 'lib' => 'Ventes croisées']]]];
+$trS = array_merge(
+    json_decode((string) file_get_contents($RACINE . '/apps/employee/src/core/I18n/translations/page/' . $lang . '/components.json'), true) ?: [],
+    json_decode((string) file_get_contents($RACINE . '/apps/employee/src/core/I18n/translations/page/' . $lang . '/stats.json'), true) ?: []);
+$htmlS = $twig->render('stats/statistiques.twig', ['fiche' => $fiche, 'ficheErreur' => null, 'jour' => (int) date('j'),
+    'translations' => $trS, 'ROOT' => ROOT, 'errors' => [], 'information' => [], 'warnings' => [], 'successes' => [], 'permissions' => null]);
+$htmlS = preg_replace('#<script>\s*if \("serviceWorker".*?</script>#s', '', $htmlS) ?? $htmlS;
+file_put_contents(__DIR__ . '/rendu-stats' . ($lang === 'fr' ? '' : '-' . $lang) . '.html', $htmlS);
 echo 'rendu-app' . ($lang === 'fr' ? '' : '-' . $lang) . '.html · ' . count($cartes) . ' cartes · acquis ' . $acquis . ' € · en jeu ' . $fiche['enJeu'] . " €\n";

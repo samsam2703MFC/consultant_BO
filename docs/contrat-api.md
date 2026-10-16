@@ -580,7 +580,8 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   lib, montant (la récompense ; le record : son plafond, max), gain, etat: gagne|tete|rang|att|vide, val,
   unite: pct|pcs|lpt|score|note, cible, ecart, jauge, repere, rang, sur, premier: {nom, q, moi}, second,
   minPieces, avis (la note Google), motif: pas_compte|pas_objectif|pas_note|heures|pas_classee|pas_record|
-  min_tickets|null, classement}], classements: [{cle, lib, type, emo, icone, unite: pieces|taux, magasin[],
+  min_tickets|null, classement, jauge, repere, repereType, repereVal, repereJour}], classements: [{cle, lib, type,
+  emo, icone, unite: pieces|taux, magasin[],
   reseau[], nMag, nRes}] (les dix premières et la personne, avec le nom du panel et la localité : le seul
   endroit qui porte des noms), acquis, enJeu (= aPortee), google: {actif, note, avis, seuil, recompense,
   heuresMin, atteint, sousMin, montant}, montants: {croisees, record, meilleure, concours, promo, magasin,
@@ -588,7 +589,15 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   meilleure, concours, promos, google}, prime: {objectif, ca, atteinte, projection, atteinteProj, paliers: [{pct,
   montant, atteint, manque, parJour, vous, equipe}], palier, sousMin, vous, equipe, personnes},
   collection, semaines12}`. `acquis` = ce que le mois donnerait s'il finissait comme ça (la 1re d'une
-  catégorie ou d'une promo compte), la note Google comprise ; `enJeu` = la récompense de chaque carte. Les
+  catégorie ou d'une promo compte), la note Google comprise ; `enJeu` = la récompense de chaque carte. La
+  **demi-jauge** d'une carte (16/10/2026, `primesCarteJauge`) : `jauge` = où elle en est aujourd'hui, `repere` =
+  l'objectif à atteindre, tous deux en % d'une échelle qui part de 0 (de seuil − 1 à 5 pour la note Google) ;
+  `repereType` : `cible` (target), `seuil` (note Google), `passer` (la 1re du magasin + 1, catégories, promos,
+  meilleure vendeuse), `garder` (elle est 1re : le chiffre de la 2e), `min` (personne n'a vendu : le minimum de
+  pièces) ; `repereVal` le chiffre à atteindre. L'objectif du magasin en cours de mois porte `aDate`
+  (l'atteinte à date), `jour`, `cibleJour` (où en être au jour J, au prorata des jours), `repereJour` (sa
+  position), `avance` (aDate − cibleJour) ; `val` reste la projection. La page **Statistiques** de l'app lit la
+  même fiche (briques, aujourdhui, semaines12, prime, collection). Les
   briques, la collection et les douze semaines nourrissent l'Accueil de l'app. Mis en cache 15 minutes
   (mois en cours) ou un jour (mois clos) par personne ; `&frais=1` recalcule.
 - `GET /ventes/primes-mois?m=` : tout le monde sur un mois (le dernier mois clos par défaut) :
