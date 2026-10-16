@@ -72,7 +72,13 @@ Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 - **trois sections** : les **Targets** (ventes croisées, Bats ton record, objectif magasin, note Google, et la
   meilleure vendeuse avec son étiquette « Classement »), les **Catégories**, les **Promos** ; chacune dit ce
   qu'elle peut rapporter (« jusqu'à 500 € ») ;
-- chaque prime est un **carré**, deux par ligne : l'icône, la récompense, le nom, une **demi-jauge**, l'objectif
+- les **targets** (ventes croisées, record, objectif du magasin, note Google, meilleure vendeuse) sont **une par
+  ligne** (16/10/2026) : la demi-jauge à gauche, le nom, l'objectif et l'état à droite. **Toucher la ligne déroule
+  son détail** (une seule ouverte à la fois, clavier : Entrée ou Espace) : ses chiffres (son taux et ses tickets,
+  aujourd'hui ; ses lignes par ticket, son record et son mois ; le CA du magasin, le jour J, la fin de mois au
+  rythme actuel, chaque palier, ses heures ; la note et les avis ; son score, sa place, la 1re, son CA par heure)
+  et la règle, plus « Voir le classement » quand il y en a un ;
+- les catégories et les promos sont des **carrés**, deux par ligne : l'icône, la récompense, le nom, une **demi-jauge**, l'objectif
   en clair, l'état. Le point rubis sur la jauge, c'est **elle aujourd'hui** (la valeur au centre, avec « Toi »,
   « magasin » ou « J16 ») ; le repère sombre, c'est **l'objectif à atteindre**, écrit dessous (« ◉ Objectif
   55 % »). La cible pour un target, le seuil pour la note Google, **52 pcs** pour passer la 1re d'une promo
