@@ -173,6 +173,42 @@ function fusionne(v, n){
   }
 }
 
+/* L'icône d'une prime faite dans l'assistant (16/10/2026) : un PNG de 128 px, déposé ensuite comme les autres
+   (POST /ventes/primes-icone). Un emoji se dessine ; une photo se recadre au carré (le centre), se réduit et
+   s'arrondit aux coins. */
+const PR_EMOJIS = ['🏷️', '🥐', '🍰', '🥧', '🍪', '🍫', '☕', '🥖', '🥗', '🍓', '🎁', '🎉', '⭐', '🔥'];
+function prIconeEmoji(em){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'); if (!x) { return ''; }
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '100px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  x.fillText(em, 64, 72);
+  return c.toDataURL('image/png');
+}
+function prIconePhoto(fichier){
+  return new Promise((ok, ko) => {
+    const lu = new FileReader();
+    lu.onerror = ko;
+    lu.onload = () => {
+      const img = new Image();
+      img.onerror = ko;
+      img.onload = () => {
+        const cote = Math.min(img.naturalWidth, img.naturalHeight);
+        if (!cote) { ko(new Error('vide')); return; }
+        const c = document.createElement('canvas'); c.width = c.height = 128;
+        const x = c.getContext('2d');
+        const r = 26;
+        x.beginPath(); x.moveTo(r, 0); x.arcTo(128, 0, 128, 128, r); x.arcTo(128, 128, 0, 128, r); x.arcTo(0, 128, 0, 0, r); x.arcTo(0, 0, 128, 0, r); x.closePath(); x.clip();
+        x.imageSmoothingQuality = 'high';
+        x.drawImage(img, (img.naturalWidth - cote) / 2, (img.naturalHeight - cote) / 2, cote, cote, 0, 0, 128, 128);
+        ok(c.toDataURL('image/png'));
+      };
+      img.src = lu.result;
+    };
+    lu.readAsDataURL(fichier);
+  });
+}
+
 class App {
   constructor(root){
     this.root = root;
@@ -7396,7 +7432,7 @@ class App {
     // famille « marque » : la marque ou un sponsor, tout le réseau ou des magasins ; « magasin » : la prime d'un franchisé, un magasin, payée par lui.
     const wizNeuf = (famille, shop, api) => ({ etape: 1, onglet: api ? 'panel' : 'produits', q: '', sel: [], api: api || null, periode: 'suivant', du: suivDu, au: suivAu,
       magsMode: 'tous', mags: [], regle: 'premiere', minPieces: '10', montant: String(app.recompense), payeur: famille === 'magasin' ? 'magasin' : 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false,
-      famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '' });
+      famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null });
     common.prWiz = null;
     if (W) {
       const reW = () => this.setState({ prWiz: W });
@@ -7450,11 +7486,17 @@ class App {
         const e = W.api ? Object.assign(base, { ref: { source: W.api.source, id: W.api.id }, promo: W.api })
           : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
         W.envoi = true; reW();
-        const liste = app.liste.concat([e]);
-        this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
-          if (r && r.ok === false) { W.envoi = false; reW(); return; }
-          this.setState({ prWiz: undefined });
-          finir('Prime « ' + W.nom.trim() + ' » créée');
+        // L'icône choisie (un emoji ou une photo, déjà en PNG) se dépose d'abord : la prime garde son chemin.
+        const icone = W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null);
+        icone.then(ri => {
+          if (W.icone && (!ri || ri.ok === false || !ri.icone)) { W.envoi = false; reW(); return; }
+          if (ri && ri.icone) { e.icone = ri.icone; }
+          const liste = app.liste.concat([e]);
+          this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
+            if (r && r.ok === false) { W.envoi = false; reW(); return; }
+            this.setState({ prWiz: undefined });
+            finir('Prime « ' + W.nom.trim() + ' » créée');
+          });
         });
       };
       common.prWiz = {
@@ -7485,6 +7527,18 @@ class App {
         payeurs: fam ? [] : [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reW(); } })),
         poserSponsor: ev => { W.sponsor = ev.target.value; reW(); },
         poserNom: ev => { W.nom = ev.target.value; W.nomTouche = true; reW(); },
+        // L'icône (16/10/2026) : un emoji dessiné en PNG, ou une photo recadrée au carré, réduite à 128 px, coins arrondis.
+        icone: W.icone ? W.icone.data : '', iconeSorte: W.icone ? W.icone.sorte : '',
+        emojis: PR_EMOJIS.map(em => ({ em, on: !!(W.icone && W.icone.sorte === 'emoji' && W.icone.em === em),
+          choisir: () => { const data = prIconeEmoji(em); if (data) { W.icone = { sorte: 'emoji', em, data }; reW(); } } })),
+        poserPhoto: ev => {
+          const f = ev.target.files && ev.target.files[0];
+          ev.target.value = '';
+          if (!f) { return; }
+          if (!/^image\//.test(f.type)) { this.notify('Une image, s’il te plaît (photo JPEG, PNG, WebP)'); return; }
+          prIconePhoto(f).then(data => { W.icone = { sorte: 'photo', data }; reW(); }).catch(() => this.notify('Cette photo n’a pas pu être lue'));
+        },
+        retirerIcone: () => { W.icone = null; reW(); },
         fermer: () => this.setState({ prWiz: undefined }),
         precedent: () => { W.etape = Math.max(1, W.etape - 1); reW(); },
         suivant: () => { if (ok[W.etape]) { W.etape = Math.min(4, W.etape + 1); reW(); } },

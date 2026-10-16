@@ -574,6 +574,9 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
+- **L'icône dans l'assistant** (16/10/2026) : à l'étape « Nom & aperçu », un emoji (dessiné en PNG de 128 px) ou une
+  photo (recadrée au carré par le centre, réduite à 128 px, coins arrondis), faits dans le navigateur ; à la création,
+  `POST /ventes/primes-icone` d'abord, puis la prime avec le chemin rendu (`icone`).
 - **L'assistant « Nouvelle prime promotion »** (cockpit, Marketing franchisé → Primes de l'app worker, 16/10/2026) enregistre par
   `POST /ventes/primes-app` une entrée `{type: promo, ref: {source: cockpit}, lib, montant, minPieces, regle:
   premiere|seuil, payeur, sponsor, promo: {source: cockpit, sel: [{t: groupe|categorie|produit, v, lib}], du, au,
