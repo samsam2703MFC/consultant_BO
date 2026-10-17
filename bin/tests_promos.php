@@ -54,6 +54,7 @@ final class ErpApi
     public static ?string $refus = null;
     public static bool $perdCreneaux = false;
     public static bool $sansPut = false;
+    public static bool $perdPortion = false;
     public static int $suivant = 30;
     public static function disponible(): bool { return self::$actif; }
     public static function ecrire(string $m, string $path, ?array $b = null): array
@@ -85,6 +86,7 @@ final class ErpApi
     {
         $f = ['id' => $id] + $b;
         if (self::$perdCreneaux) { $f['schedule'] = []; }
+        if (self::$perdPortion) { foreach (['trigger', 'reward'] as $k) { foreach (['category_targets', 'product_targets'] as $c) { if (isset($f[$k][$c])) { $f[$k][$c] = array_map(static fn ($t) => is_array($t) ? array_diff_key($t, ['portion_scope' => 1]) : $t, $f[$k][$c]); } } } }
         return $f;
     }
 }
@@ -293,6 +295,28 @@ $GLOBALS['reglages']['promosMagasin'][] = ['id' => 'pmanciennenv', 'shop' => 4, 
 ErpApi::$appels = [];
 $r = wr_promos_magasin_panel('pmanciennenv');
 verifie('réessayée au panel : la tarte sortie, vérifiée, en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && $r['demande']['auto'] === true && $r['demande']['exclusAuto'] === ['Tarte sans fiche'] && ErpApi::$appels[0] === 'POST /admin/promotions/buy-x-get-y', json_encode($r, JSON_UNESCAPED_UNICODE));
+
+echo "Les portions (½, ¼)\n";
+$d = pmPropre(['x' => ['q' => 4, 'cats' => [['id' => 20]], 'portion' => 'one_quarter'], 'y' => ['q' => 1, 'type' => 'FREE', 'cats' => [['id' => 20]], 'portion' => 'TROIS_QUARTS']], 4);
+verifie('la portion gardée (¼), une inconnue écartée', $d['x']['portion'] === 'ONE_QUARTER' && $d['y']['portion'] === null);
+$q4 = $cote(4, [20]) + ['portion' => 'ONE_QUARTER']; $q1 = $cote(1, [20]) + ['type' => 'FREE', 'valeur' => null, 'portion' => 'ONE_QUARTER'];
+$c = pmCoef($P, $q4, $q1);
+// 4 quarts d'éclair payés (4 × ¼ × 4,00 € = 4,00 €) pour 5 quarts de matière (5 × ¼ × 1,00 € = 1,25 €) : ×3,20 — le coefficient de la pièce ÷ 1,25.
+verifie('4 quarts achetés, le 5e offert : le coefficient de la pièce ÷ 1,25', $c['lot'] === 3.2 && $c['paye'] === 4.0 && $c['cout'] === 1.25, json_encode($c));
+$c = pmCoef($P, $q4, $cote(1, [20]) + ['type' => 'FIXED_PRICE', 'valeur' => 0.53, 'portion' => 'ONE_QUARTER']);
+verifie('un prix fixe s’applique à la part (le quart à 0,53 € TTC = 0,50 € HT)', $c['lot'] === 3.6, json_encode($c));
+ErpApi::$appels = [];
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Quarts 4+1', 'du' => $j(90), 'au' => $j(92), 'x' => ['q' => 4, 'cats' => [['id' => 20]], 'portion' => 'ONE_QUARTER'],
+    'y' => ['q' => 1, 'type' => 'FREE', 'cats' => [['id' => 20]], 'portion' => 'ONE_QUARTER']];
+$r = wr_promos_magasin();
+$pp = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('au panel : chaque cible porte sa portion, comme « 4 Quarts + 1 Gratuit »', ($r['demande']['statut'] ?? '') === 'en_caisse' && ($pp['trigger']['category_targets'] ?? null) === [['id_category' => 20, 'portion_scope' => 'ONE_QUARTER']]
+    && $pp['reward']['category_targets'] === [['id_category' => 20, 'portion_scope' => 'ONE_QUARTER']] && $pp['trigger']['category_ids'] === [20], json_encode([$r['demande'] ?? $r, $pp['trigger'] ?? null], JSON_UNESCAPED_UNICODE));
+ErpApi::$perdPortion = true;
+$GLOBALS['corps']['nom'] = 'Quarts perdus'; $GLOBALS['corps']['du'] = $j(100); $GLOBALS['corps']['au'] = $j(102);
+$r = wr_promos_magasin();
+verifie('le panel ne reprend pas la portion : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'validee' && str_contains((string) $r['demande']['panelErreur'], 'portion'), json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+ErpApi::$perdPortion = false;
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -2335,8 +2335,19 @@ La console (Analyse magasin › Promotions) : **Réessayer au panel** (`POST /pr
 caisse ✓ » quand elle a été créée à la main, « Rendre » au magasin avec un mot. Dans la liste du magasin, une promotion
 écrite au panel ne se montre qu'une fois (les règles du panel dont l'id est un `panelId` sont écartées).
 
+**Les portions (17/10/2026).** Chaque côté (X, Y) peut viser une variante : `portion` = `ONE_HALF` (½) ou `ONE_QUARTER`
+(¼), sinon toutes les variantes. Au panel, chaque cible la porte (`category_targets: [{id_category, portion_scope}]`,
+`product_targets: [{id_product, portion_scope}]`), au format relu sur « 4 Quarts + 1 Gratuit » (n° 2) ; la relecture
+vérifie que la portion est reprise, sinon la promotion reste inactive. Le coefficient compte l'article à sa fraction de la
+pièce (prix et coût proportionnels) : « 4 quarts achetés, le 5e offert » vaut le coefficient de la pièce ÷ 1,25. Une
+récompense à prix fixe ou en euros s'applique à la part. La caisse compte les articles de la portion visée : une ½ n'y
+est pas deux quarts (le panel ne pondère pas les portions entre elles).
+
+Un **verrou par promotion** (fichier, `flock`) empêche deux envois simultanés de la même promotion (double clic, console et
+dashboard en même temps) de créer deux promotions au panel ; le second relit le numéro gardé par le premier.
+
 Tests : `php bin/tests_promos.php` (un panel en doublure : création, relecture, activation, refus, créneaux non repris,
-reprise par PUT, activation par PATCH).
+reprise par PUT, activation par PATCH, portions).
 
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 
