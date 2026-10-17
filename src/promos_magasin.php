@@ -520,7 +520,9 @@ function wr_promos_magasin(): array
         'panelId' => $i !== null ? ($tout[$i]['panelId'] ?? null) : null, 'panelErreur' => null];
     if ($i !== null) { $tout[$i] = $d; } else { $tout[] = $d; $i = count($tout) - 1; }
     // Enregistrée : elle part au panel tout de suite (créée inactive, relue, activée) — en caisse si tout concorde.
-    if ($envoi) { pmPanelRanger($tout, $i); }
+    // Un coefficient non vérifié (un produit sans coût ni prix) ne part pas seul en caisse : la marque décide (console).
+    if ($envoi && $office) { pmPanelRanger($tout, $i); }
+    elseif ($envoi) { $tout[$i]['panelErreur'] = 'pas envoyée au panel : ' . $tout[$i]['motif'] . ' — la marque la met en caisse'; }
     pmEcrire($tout);
     return ['ok' => true, 'demande' => $tout[$i]];
 }

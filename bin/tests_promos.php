@@ -279,6 +279,13 @@ $r = wr_promos_magasin();
 verifie('pas de PUT au panel : activée par PATCH status', ($r['demande']['statut'] ?? '') === 'en_caisse' && ErpApi::$appels === ['POST /admin/promotions/buy-x-get-y', 'PUT /admin/promotions/buy-x-get-y/32', 'PATCH /admin/promotions/buy-x-get-y/32'], json_encode(ErpApi::$appels));
 $r = @wr_promos_magasin_panel($idc);
 verifie('en caisse : ne repart pas au panel', isset($r['error']));
+ErpApi::$sansPut = false; ErpApi::$appels = [];
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Tarte, panel', 'du' => $j(70), 'au' => $j(72),
+    'x' => ['q' => 1, 'prods' => [['id' => 3]]], 'y' => ['q' => 1, 'type' => 'FREE', 'prods' => [['id' => 3]]]];
+$r = wr_promos_magasin();
+verifie('coefficient non vérifié : enregistrée, pas envoyée seule au panel', ($r['demande']['statut'] ?? '') === 'validee' && ErpApi::$appels === [] && str_contains((string) $r['demande']['panelErreur'], 'Tarte sans fiche'), json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+$r = wr_promos_magasin_panel($r['demande']['id']);
+verifie('la marque l’envoie au panel (Réessayer au panel) : en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && ErpApi::$appels[0] === 'POST /admin/promotions/buy-x-get-y', json_encode(ErpApi::$appels));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

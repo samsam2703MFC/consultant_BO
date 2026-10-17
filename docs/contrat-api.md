@@ -2295,7 +2295,8 @@ selection_strategy: "CHEAPEST"} }` (`ErpApi::ecrire`, compte admin du panel). Ri
 2. `GET …/{id}` : la fiche relue est comparée à l'envoi (nom, magasin, dates, répétable, X et Y — quantités, produits,
    catégories, exclusions —, type et valeur, nombre de créneaux) ;
 3. `PUT …/{id}` en **ACTIVE** (sinon `PATCH {status}`), relue ACTIVE → `statut: "en_caisse"`, `panelId`.
-Un refus, un écart, une activation refusée : la promotion reste `validee` (« Pas encore en caisse ») avec
+Seule une promotion au coefficient vérifié (`auto: true` : ×2, chaque produit chiffré) part seule au panel ; les autres
+restent `validee`, `panelErreur` « pas envoyée au panel : coefficient non vérifié … », et la marque décide. Un refus, un écart, une activation refusée : la promotion reste `validee` (« Pas encore en caisse ») avec
 `panelErreur` (l'erreur du panel et ses champs refusés, ou l'écart), inactive au panel si elle y a été créée. Le format
 des créneaux (`schedule`) est déduit du formulaire du panel — la fiche test n'en portait pas — et vérifié à la relecture.
 La console (Analyse magasin › Promotions) : **Réessayer au panel** (`POST /promos-magasin/{id}/panel`), « Mise en

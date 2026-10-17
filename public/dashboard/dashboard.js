@@ -3308,7 +3308,7 @@
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
       ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
-      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${pmDOffice(W.d) ? '' : ' Le coefficient ne se vérifie pas pour chaque produit : elle s’enregistre quand même, signalée.'}</div>`;
+      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${pmDOffice(W.d) ? '' : ' <b>Le coefficient ne se vérifie pas pour chaque produit</b> : elle s’enregistre, mais ne part pas seule en caisse — la marque décide.'}</div>`;
   }
   function pmDureeTxt(d) {
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
