@@ -44,6 +44,51 @@ function ep_analyse_produits_coefficients(): array
     ]];
 }
 
+// Le panel, en doublure : il garde les promotions écrites et les rend relues comme sa fiche (17/10/2026).
+final class ErpApi
+{
+    public static bool $actif = false;
+    public static ?string $lastError = null;
+    public static array $promos = [];
+    public static array $appels = [];
+    public static ?string $refus = null;
+    public static bool $perdCreneaux = false;
+    public static bool $sansPut = false;
+    public static int $suivant = 30;
+    public static function disponible(): bool { return self::$actif; }
+    public static function ecrire(string $m, string $path, ?array $b = null): array
+    {
+        self::$appels[] = $m . ' ' . $path;
+        $ok = static fn ($c = []) => ['code' => 200, 'corps' => $c, 'erreur' => null];
+        if ($m === 'POST' && $path === '/admin/promotions/buy-x-get-y') {
+            if (self::$refus !== null) { return ['code' => 422, 'corps' => null, 'erreur' => self::$refus]; }
+            $id = self::$suivant++;
+            self::$promos[$id] = self::fiche($id, $b);
+            return $ok(['data' => ['id' => $id]]);
+        }
+        if (preg_match('#^/admin/promotions/buy-x-get-y/(\d+)$#', $path, $x) && isset(self::$promos[(int) $x[1]])) {
+            $id = (int) $x[1];
+            if ($m === 'PUT') {
+                if (self::$sansPut) { return ['code' => 405, 'corps' => null, 'erreur' => 'HTTP 405']; }
+                self::$promos[$id] = self::fiche($id, $b);
+                return $ok();
+            }
+            if ($m === 'PATCH') { self::$promos[$id]['status'] = $b['status']; return $ok(); }
+        }
+        return ['code' => 404, 'corps' => null, 'erreur' => 'HTTP 404'];
+    }
+    public static function get(string $path): mixed
+    {
+        return preg_match('#^/admin/promotions/buy-x-get-y/(\d+)$#', $path, $x) ? (self::$promos[(int) $x[1]] ?? null) : null;
+    }
+    private static function fiche(int $id, array $b): array
+    {
+        $f = ['id' => $id] + $b;
+        if (self::$perdCreneaux) { $f['schedule'] = []; }
+        return $f;
+    }
+}
+
 // Le coût du réseau (la moyenne des magasins du compte, sinon la recette locale) : le pain seulement.
 function catalogueCouts(): array { return [6 => ['mat' => 0.50, 'source' => 'panel (products/available)'], 4 => ['mat' => 9.99]]; }
 
@@ -202,6 +247,38 @@ $r = wr_promos_magasin();
 $GLOBALS['corps'] = ['shop' => 5, 'id' => $r['demande']['id'], 'action' => 'brouillon', 'nom' => 'Repris ailleurs'];
 $r2 = @wr_promos_magasin();
 verifie('la promotion d’un autre magasin ne se modifie pas (404)', ($r2['error'] ?? '') === 'promotion introuvable' && pmLire()[4]['nom'] === 'Brouillon de Halle', json_encode($r2, JSON_UNESCAPED_UNICODE));
+
+echo "L'écriture au panel\n";
+ErpApi::$actif = true;
+$pc = static fn (string $nom, int $de, int $a, array $plus = []) => $plus + ['shop' => 4, 'action' => 'envoyer', 'nom' => $nom, 'du' => $j($de, '07:00'), 'au' => $j($a, '19:00'),
+    'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
+$GLOBALS['corps'] = $pc('Panel 3+1', 30, 32);
+$r = wr_promos_magasin();
+$P30 = ErpApi::$promos[30] ?? [];
+verifie('enregistrée → créée au panel, relue, activée : en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && $r['demande']['panelId'] === 30 && $r['demande']['panelErreur'] === null, json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+verifie('créée inactive, puis activée (POST, puis PUT)', ErpApi::$appels === ['POST /admin/promotions/buy-x-get-y', 'PUT /admin/promotions/buy-x-get-y/30'] && ($P30['status'] ?? '') === 'ACTIVE', json_encode(ErpApi::$appels));
+verifie('au format de la fiche du panel', ($P30['promotion_type'] ?? '') === 'BUY_X_GET_Y' && $P30['shop_scope_type'] === 'SELECTED_SHOPS' && $P30['shop_ids'] === [4]
+    && $P30['trigger'] === ['quantity' => 3, 'product_ids' => [2], 'category_ids' => [], 'excluded_product_ids' => []]
+    && $P30['reward']['type'] === 'PERCENTAGE_DISCOUNT' && (float) $P30['reward']['value'] === 30.0 && $P30['reward']['selection_strategy'] === 'CHEAPEST'
+    && $P30['valid_from'] === $j(30, '07:00') . ':00' && $P30['valid_to'] === $j(32, '19:00') . ':00' && $P30['activation_mode'] === 'AUTOMATIC' && $P30['priority'] === 100, json_encode($P30, JSON_UNESCAPED_UNICODE));
+ErpApi::$appels = []; ErpApi::$refus = 'HTTP 422 : The trigger.product ids field is invalid';
+$GLOBALS['corps'] = $pc('Panel refusée', 40, 42);
+$r = wr_promos_magasin();
+verifie('le panel refuse : enregistrée, l’erreur du panel dite, rien de créé', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['panelId'] === null && str_contains((string) $r['demande']['panelErreur'], 'trigger.product ids'), json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+ErpApi::$refus = null; ErpApi::$perdCreneaux = true; ErpApi::$appels = [];
+$GLOBALS['corps'] = $pc('Panel créneaux', 50, 52, ['creneaux' => [['jours' => [6, 7], 'de' => '15:00', 'a' => '18:00']]]);
+$r = wr_promos_magasin();
+$idc = $r['demande']['id'] ?? '';
+verifie('le panel ne reprend pas les créneaux : laissée inactive au panel, l’écart dit', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['panelId'] === 31 && str_contains((string) $r['demande']['panelErreur'], 'créneaux') && ErpApi::$promos[31]['status'] === 'INACTIVE', json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+ErpApi::$perdCreneaux = false; ErpApi::$appels = [];
+$r = wr_promos_magasin_panel($idc);
+verifie('renvoyée par la marque : la même promotion du panel mise à jour (PUT), pas une deuxième', ($r['demande']['statut'] ?? '') === 'en_caisse' && $r['demande']['panelId'] === 31 && ErpApi::$appels === ['PUT /admin/promotions/buy-x-get-y/31', 'PUT /admin/promotions/buy-x-get-y/31'] && count(ErpApi::$promos[31]['schedule']) === 2, json_encode([$r['demande'] ?? $r, ErpApi::$appels], JSON_UNESCAPED_UNICODE));
+ErpApi::$sansPut = true; ErpApi::$appels = [];
+$GLOBALS['corps'] = $pc('Panel sans PUT', 60, 62);
+$r = wr_promos_magasin();
+verifie('pas de PUT au panel : activée par PATCH status', ($r['demande']['statut'] ?? '') === 'en_caisse' && ErpApi::$appels === ['POST /admin/promotions/buy-x-get-y', 'PUT /admin/promotions/buy-x-get-y/32', 'PATCH /admin/promotions/buy-x-get-y/32'], json_encode(ErpApi::$appels));
+$r = @wr_promos_magasin_panel($idc);
+verifie('en caisse : ne repart pas au panel', isset($r['error']));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
