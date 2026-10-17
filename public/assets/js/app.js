@@ -974,7 +974,7 @@ class App {
       marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
-      promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés préparent dans leur dashboard : la marque les valide ou les renvoie avec un mot.'],
+      promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés enregistrent dans leur dashboard, sans validation : la marque les met en caisse, ou les renvoie avec un mot.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
@@ -1023,7 +1023,7 @@ class App {
       common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0,
-        promosMag: (((this._pmL || {}).d || {}).demandes || []).filter(d => d.statut === 'a_valider').length };
+        promosMag: (((this._pmL || {}).d || {}).demandes || []).filter(d => d.statut === 'validee').length };
       common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
@@ -6797,36 +6797,37 @@ class App {
       return meme ? ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + 'e ') + gain(y, yq) + ' · ' + lib(x)
         : ach + ' (' + lib(x) + '), ' + (yq > 1 ? yq + ' × ' : '') + lib(y) + ' ' + gain(y, yq);
     };
-    const ETAT = { a_valider: ['À valider', 'a'], validee: ['Validée · à mettre en caisse', 'ok'], en_caisse: ['En caisse', 'ok'], refusee: ['Renvoyée', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
-    const FILTRES = [['a_valider', 'À valider'], ['validee', 'Validées'], ['refusee', 'Renvoyées'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
-    const f = S.pmFiltre === undefined ? 'a_valider' : S.pmFiltre;
+    // Plus de validation (17/10/2026) : le magasin enregistre, la marque met en caisse (ou renvoie avec un mot).
+    const ETAT = { validee: ['Enregistrée · à mettre en caisse', 'a'], en_caisse: ['En caisse', 'ok'], refusee: ['Renvoyée', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
+    const FILTRES = [['validee', 'À mettre en caisse'], ['en_caisse', 'En caisse'], ['refusee', 'Renvoyées'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
+    const f = S.pmFiltre === undefined ? 'validee' : S.pmFiltre;
     const toutes = L.d.demandes || [];
     common.pmFiltres = FILTRES.map(([k, n]) => ({ nom: n, n: toutes.filter(d => !k || d.statut === k).length, on: f === k, choisir: () => this.setState({ pmFiltre: k }) }));
     const decider = (d, decision) => {
       let message = '';
       if (decision === 'refuser') { message = window.prompt('Renvoyer « ' + d.nom + ' » au magasin : pourquoi ? (le franchisé lira ce mot)', '') || ''; if (!message.trim()) { return; } }
-      else if (!window.confirm('Valider « ' + d.nom + ' » pour ' + d.shops.map(nomMag).join(', ') + ' ?\nElle se met ensuite en caisse au panel.')) { return; }
+      else if (!window.confirm('« ' + d.nom + ' » (' + (d.shops || [d.shop]).map(nomMag).join(', ') + ') est créée au panel ?\nElle passe « En caisse » pour le magasin.')) { return; }
       L.occupe = d.id; this.setState({});
       write(this.source, 'PATCH', '/promos-magasin/' + encodeURIComponent(d.id), { decision, message }).then(r => {
         L.occupe = null;
-        L.msg = r.ok ? (decision === 'valider' ? 'Validée : « ' + d.nom + ' ». À créer au panel pour la mettre en caisse.' : 'Renvoyée au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
+        L.msg = r.ok ? (decision === 'en_caisse' ? 'En caisse : « ' + d.nom + ' ».' : 'Renvoyée au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
         if (r.ok) { L.d = undefined; } this.setState({});
       });
     };
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins, dans chaque magasin couvert. Un lot qui tient ×' + (R.coefMin || 2) + ' avec chaque produit chiffré est validé d’office ; n’arrivent « À valider » que les promotions dont le coefficient ne se vérifie pas (un produit sans coût de recette ou sans prix).';
+    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins (sous ×' + (R.coefMin || 2) + ', l’enregistrement est refusé). Pas de validation : une promotion enregistrée par le magasin attend ici sa mise en caisse.';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
-      const e = d.statut === 'validee' && d.auto ? ['Validée d’office · à mettre en caisse', 'ok'] : (ETAT[d.statut] || [d.statut, 'b']), c = d.coef || {};
+      const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
         periode: (d.du ? jj(d.du) : '…') + ' → ' + (d.au ? jj(d.au) : '…'), creneaux: cren(d.creneaux) + (d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' par ticket' : '') : ''),
         coef: c.lot != null ? '×' + c.lot.toLocaleString('fr-BE', { minimumFractionDigits: 2 }) : '—', coefCls: c.lot == null ? 'mu' : (c.lot >= (R.coefMin || 2) ? 'ok' : 'ko'),
         cas: c.x ? 'cas le plus serré : ' + (d.x.q || 1) + ' × ' + c.x + ' + ' + (d.y.q || 1) + ' × ' + c.y + (c.magasin && d.shops && d.shops.length > 1 ? ' (' + nomMag(c.magasin) + ')' : '') : '',
         sansCout: (c.sansCout || []).length ? 'sans coût de recette : ' + c.sansCout.slice(0, 3).join(', ') + (c.sansCout.length > 3 ? '…' : '') : '',
         envoyee: d.envoyee ? jj(d.envoyee.slice(0, 10)) : '', etat: e[0], etatCls: e[1], message: d.message || '', description: d.description || '',
-        motif: d.statut === 'a_valider' && d.motif ? 'Pourquoi chez vous : ' + d.motif : '',
-        peutDecider: d.statut === 'a_valider', occupe: L.occupe === d.id, href: dash(d.shop),
-        valider: () => decider(d, 'valider'), renvoyer: () => decider(d, 'refuser') };
+        motif: d.statut === 'validee' && d.motif ? d.motif.charAt(0).toUpperCase() + d.motif.slice(1) : '',
+        peutDecider: d.statut === 'validee', occupe: L.occupe === d.id, href: dash(d.shop),
+        enCaisse: () => decider(d, 'en_caisse'), renvoyer: () => decider(d, 'refuser') };
     });
   }
 
