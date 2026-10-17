@@ -37,8 +37,15 @@ function ep_analyse_produits_coefficients(): array
         ['id' => 2, 'nom' => 'Pain au chocolat', 'catId' => 10, 'prixHt' => 1.50, 'cout' => 0.60, 'tva' => 6],
         ['id' => 3, 'nom' => 'Tarte sans fiche', 'catId' => 20, 'prixHt' => 3.00, 'cout' => null, 'tva' => 6],
         ['id' => 4, 'nom' => 'Éclair', 'catId' => 20, 'prixHt' => 4.00, 'cout' => 1.00, 'tva' => 6],
+        // Pain : pas de coût calculé pour le magasin (le panel rend 0), le réseau en a un.
+        ['id' => 6, 'nom' => 'Pain', 'catId' => 30, 'prixHt' => 2.50, 'cout' => 0, 'tva' => 6],
+        ['id' => 7, 'nom' => 'Baguette', 'catId' => 30, 'prixHt' => 1.50, 'cout' => null, 'tva' => 6],
+        ['id' => 8, 'nom' => 'Sans prix', 'catId' => 30, 'prixHt' => null, 'cout' => 0.30, 'tva' => 6],
     ]];
 }
+
+// Le coût du réseau (la moyenne des magasins du compte, sinon la recette locale) : le pain seulement.
+function catalogueCouts(): array { return [6 => ['mat' => 0.50, 'source' => 'panel (products/available)'], 4 => ['mat' => 9.99]]; }
 
 require __DIR__ . '/../src/promos_magasin.php';
 
@@ -49,7 +56,13 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
     if ($cond) { $ok++; echo "  ok  $nom\n"; }
     else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
 }
-$_GET = ['shop' => '4']; $P = ep_analyse_produits_coefficients()['produits']; $_GET = [];
+$P = pmProduits(4);
+$pp = array_column($P, null, 'id');
+verifie('coût du magasin gardé, même quand le réseau en a un autre', $pp[4]['cout'] === 1.0 && $pp[4]['source'] === 'magasin');
+verifie('coût à 0 au magasin : celui du réseau, marqué', $pp[6]['cout'] === 0.5 && $pp[6]['source'] === 'reseau', json_encode($pp[6]));
+verifie('ni magasin ni réseau : pas de coût', $pp[7]['cout'] === null && $pp[7]['source'] === null && $pp[3]['cout'] === null);
+$_GET = ['shop' => '4']; $r = ep_promos_magasin_produits(); $_GET = [];
+verifie('la liste de l’assistant compte les sources', $r['nMagasin'] === 4 && $r['nReseau'] === 1 && $r['nSansCout'] === 2, json_encode(array_diff_key($r, ['produits' => 1])));
 $cote = static fn (int $q, array $cats = [], array $prods = [], array $ex = []) => ['q' => $q, 'cats' => array_map(static fn ($i) => ['id' => $i, 'nom' => ''], $cats),
     'prods' => array_map(static fn ($i) => ['id' => $i, 'nom' => ''], $prods), 'exclus' => array_map(static fn ($i) => ['id' => $i, 'nom' => ''], $ex)];
 
@@ -70,6 +83,11 @@ $c = pmCoef($P, $cote(1, [], [1]), $cote(1, [], [4]) + ['type' => 'FIXED_AMOUNT_
 verifie('remise de 1,06 € TTC', $c['lot'] === 3.33, json_encode($c));
 $c = pmCoef($P, $cote(1, [20]), $cote(1, [20]) + ['type' => 'FREE', 'valeur' => null]);
 verifie('un produit sans coût de recette nommé, pas chiffré', $c['sansCout'] === ['Tarte sans fiche'] && $c['lot'] === 2.0, json_encode($c));
+$c = pmCoef($P, $cote(2, [30]), $cote(1, [30]) + ['type' => 'FREE', 'valeur' => null]);
+// Le pain, chiffré au réseau : 3 pains, le 3e offert — 5,00 € HT pour 1,50 € de matière.
+verifie('chiffré au coût du réseau, nommé ; sans coût et sans prix nommés à part', $c['lot'] === 3.33 && $c['coutReseau'] === ['Pain'] && $c['sansCout'] === ['Baguette'] && $c['sansPrix'] === ['Sans prix'], json_encode($c, JSON_UNESCAPED_UNICODE));
+$c = pmCoef($P, $cote(1, [], [7]), $cote(1, [], [8]) + ['type' => 'FREE', 'valeur' => null]);
+verifie('rien de chiffrable : la raison dit quels produits et pourquoi', $c['lot'] === null && pmManqueTxt($c) === 'sans coût de recette au panel, ni pour le magasin ni pour le réseau — Baguette ; sans prix au panel — Sans prix', pmManqueTxt($c));
 $c = pmCoef($P, $cote(1, [], [3]), $cote(1, [], [3]) + ['type' => 'FREE', 'valeur' => null]);
 verifie('rien de chiffrable : pas de coefficient', $c['lot'] === null && $c['paires'] === 0);
 
@@ -113,7 +131,7 @@ verifie('l’envoi d’un lot à ×1,67 refusé (422), la raison dite', ($r['err
 $GLOBALS['corps']['y'] = ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2, 'nom' => 'Pain au chocolat']]];
 $GLOBALS['corps']['x'] = ['q' => 3, 'prods' => [['id' => 2, 'nom' => 'Pain au chocolat']]];
 $r = wr_promos_magasin();
-verifie('3 achetés + le 4e à −30 % : envoyé à la marque', ($r['demande']['statut'] ?? '') === 'a_valider' && $r['demande']['id'] === $id && $r['demande']['coef']['lot'] >= 2, json_encode($r['demande']['coef'] ?? $r));
+verifie('3 achetés + le 4e à −30 % (×2,31, tout chiffré) : validée d’office, sans la marque', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['auto'] === true && $r['demande']['id'] === $id && $r['demande']['coef']['lot'] >= 2 && $r['demande']['motif'] === null, json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 verifie('une seule demande gardée', count(pmLire()) === 1);
 $_GET = ['shop' => '4'];
 $l = ep_promos_magasin_demandes();
@@ -121,36 +139,55 @@ verifie('la liste du magasin la rend, avec les règles', count($l['demandes']) =
 $_GET = ['shop' => '5']; $l = ep_promos_magasin_demandes();
 verifie('un autre magasin ne la voit pas', $l['demandes'] === []);
 $_GET = [];
-$GLOBALS['corps'] = ['decision' => 'refuser'];
-$r = @wr_promos_magasin_decision($id);
-verifie('un refus sans mot : refusé', isset($r['error']));
-$GLOBALS['corps'] = ['decision' => 'valider'];
-$r = wr_promos_magasin_decision($id);
-verifie('la marque valide', ($r['demande']['statut'] ?? '') === 'validee');
 $GLOBALS['corps'] = ['shop' => 4, 'id' => $id, 'action' => 'brouillon', 'nom' => 'x'];
 $r = @wr_promos_magasin();
 verifie('validée : ne se modifie plus d’ici', str_contains((string) ($r['error'] ?? ''), 'validée'));
 $_GET = ['shop' => '4', 'id' => $id];
 $r = @wr_promos_magasin_retirer();
 verifie('validée : ne se retire plus d’ici', isset($r['error']));
+// Un produit sans coût (la tarte) : le coefficient ne se vérifie pas — la marque la regarde, la raison dite.
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Tarte 1+1', 'du' => $j(1), 'au' => $j(5),
+    'x' => ['q' => 1, 'prods' => [['id' => 3]]], 'y' => ['q' => 1, 'type' => 'FREE', 'prods' => [['id' => 3]]]];
+$r = @wr_promos_magasin();
+$id2 = $r['demande']['id'] ?? '';
+verifie('coefficient incalculable : pas refusée, à valider par la marque, le motif nomme la tarte', ($r['demande']['statut'] ?? '') === 'a_valider' && $r['demande']['auto'] === false && str_contains((string) $r['demande']['motif'], 'Tarte sans fiche'), json_encode($r, JSON_UNESCAPED_UNICODE));
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Pâtisserie 1+1', 'du' => $j(11), 'au' => $j(13),
+    'x' => ['q' => 1, 'cats' => [['id' => 20]]], 'y' => ['q' => 1, 'type' => 'FREE', 'cats' => [['id' => 20]]]];
+$r = @wr_promos_magasin();
+verifie('lot à ×2 mais un produit visé sans coût : à la marque, pas d’office', ($r['demande']['statut'] ?? '') === 'a_valider' && $r['demande']['coef']['lot'] === 2.0, json_encode($r['demande']['coef'] ?? $r, JSON_UNESCAPED_UNICODE));
+$GLOBALS['corps'] = ['decision' => 'refuser'];
+$r = @wr_promos_magasin_decision($id2);
+verifie('un refus sans mot : refusé', isset($r['error']));
+$GLOBALS['corps'] = ['decision' => 'valider'];
+$r = wr_promos_magasin_decision($id2);
+verifie('la marque valide', ($r['demande']['statut'] ?? '') === 'validee');
+$r = @wr_promos_magasin_decision($id);
+verifie('une promotion validée d’office n’attend pas de décision', isset($r['error']));
 $GLOBALS['corps'] = ['shop' => 4, 'action' => 'brouillon', 'nom' => 'Essai'];
 $r = wr_promos_magasin();
 $_GET = ['shop' => '5', 'id' => $r['demande']['id']];
 $r2 = @wr_promos_magasin_retirer();
 verifie('le brouillon d’un autre magasin ne se retire pas', isset($r2['error']));
 $_GET = ['shop' => '4', 'id' => $r['demande']['id']];
-verifie('un brouillon se retire', (wr_promos_magasin_retirer()['ok'] ?? false) === true && count(pmLire()) === 1);
-$GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'envoyer', 'nom' => 'Pains au chocolat, deux magasins', 'du' => $j(1), 'au' => $j(5),
+verifie('un brouillon se retire', (wr_promos_magasin_retirer()['ok'] ?? false) === true && count(pmLire()) === 3);
+$GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'envoyer', 'nom' => 'Pains au chocolat, deux magasins', 'du' => $j(6), 'au' => $j(10),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
 // À Halle, ×2,31 ; au magasin 5 (1,40 € HT), 3 × 1,40 + 0,98 = 5,18 € pour 2,40 € de matière : ×2,16 — le plus serré.
-verifie('deux magasins : le coefficient le plus serré, son magasin nommé', ($r['demande']['coef']['magasin'] ?? 0) === 5 && $r['demande']['coef']['lot'] === 2.16, json_encode($r['demande']['coef'] ?? $r, JSON_UNESCAPED_UNICODE));
+verifie('deux magasins : le coefficient le plus serré, son magasin nommé, validée d’office', ($r['demande']['coef']['magasin'] ?? 0) === 5 && $r['demande']['coef']['lot'] === 2.16 && $r['demande']['statut'] === 'validee', json_encode($r['demande']['coef'] ?? $r, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5']; $l = ep_promos_magasin_demandes();
 verifie('le magasin 5 la voit dans sa liste', count($l['demandes']) === 1 && $l['demandes'][0]['shop'] === 4);
-$GLOBALS['corps']['y']['valeur'] = 60;   // Halle ×2,13 ; magasin 5 : 4,20 + 0,56 = 4,76 € pour 2,40 € — ×1,98
-$GLOBALS['corps']['id'] = $l['demandes'][0]['id']; $GLOBALS['corps']['shop'] = 5;
+// Le magasin 5 seul, la remise à 60 % : 4,20 + 0,56 = 4,76 € pour 2,40 € — ×1,98, refusée.
+$GLOBALS['corps'] = ['shop' => 5, 'action' => 'envoyer', 'nom' => 'Pains au chocolat −60 %', 'du' => $j(6), 'au' => $j(10),
+    'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 60, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
-verifie('modifiée depuis le magasin 5 : refusée sous ×2 là-bas, le magasin qui l’a écrite le reste', isset($r['erreurs']) && str_contains($r['erreurs'][0], 'magasin 5') && pmLire()[1]['shop'] === 4, json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('sous ×2 : refusée (422), jamais à la marque', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], '×1,98') && count(pmLire()) === 4, json_encode($r, JSON_UNESCAPED_UNICODE));
+// Un brouillon de deux magasins, repris depuis le second : le magasin qui l'a écrit le reste.
+$GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'brouillon', 'nom' => 'Brouillon partagé'];
+$r = wr_promos_magasin();
+$GLOBALS['corps'] = ['shop' => 5, 'id' => $r['demande']['id'], 'action' => 'brouillon', 'nom' => 'Brouillon partagé, repris'];
+$r = wr_promos_magasin();
+verifie('repris depuis le magasin 5 : le magasin qui l’a écrit le reste', ($r['demande']['shop'] ?? 0) === 4 && $r['demande']['shops'] === [4, 5] && $r['demande']['nom'] === 'Brouillon partagé, repris', json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

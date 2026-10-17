@@ -5,8 +5,10 @@ declare(strict_types=1);
  * Les promotions du magasin (demande du 17/10/2026).
  *
  * Un franchisé prépare une promotion « X achetés + Y » du panel pour son magasin, dans l'onglet Promotions du
- * dashboard magasin (un assistant en six étapes, calqué sur le formulaire « Buy X Get Y » du panel) ; la marque la
- * valide ; elle part ensuite en caisse. Les champs sont ceux du panel : ce que le client achète (X : quantité,
+ * dashboard magasin (un assistant en six étapes, calqué sur le formulaire « Buy X Get Y » du panel) ; elle part
+ * ensuite en caisse. Pas de validation de la marque quand le lot tient ×2 (demande du 17/10/2026) : l'envoi la
+ * valide d'office si chaque produit visé est chiffré et le coefficient au moins ×2 ; sinon (un produit sans coût ni
+ * prix, le coefficient incalculable) elle attend la marque, avec la raison. Les champs sont ceux du panel : ce que le client achète (X : quantité,
  * catégories ou produits, exclusions), ce qu'il reçoit (Y : quantité, offert / prix fixe / remise € / remise %,
  * catégories ou produits, exclusions, le moins cher d'abord), la période (du … au …, créneaux de la semaine), la
  * règle du ticket (répétable, nombre maximal par ticket). Statut, priorité, exclusivité et mode d'activation
@@ -18,8 +20,8 @@ declare(strict_types=1);
  * Trois règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, 14 jours
  * au plus ; deux promotions du magasin en même temps au plus, magasin par magasin ; le COEFFICIENT DU LOT (prix payé
  * HT ÷ coût matière) à ×2 au moins, pour le cas le plus serré des produits visés, dans chaque magasin couvert (les prix
- * et coûts de recette du magasin, lus par /analyse/produits/coefficients). Un produit sans coût de recette ne se
- * chiffre pas : la marque le voit.
+ * et coûts de recette du magasin, sinon du réseau — pmProduits). Sous ×2, l'envoi est refusé ; un produit qui ne se
+ * chiffre pas renvoie la demande à la marque.
  *
  * Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`). Rien n'est encore écrit au panel : la mise en
  * caisse attend le format d'écriture de l'API, relu sur une promotion test (GET /ventes/promos/sonde-fiche).
@@ -163,14 +165,20 @@ function pmRecompense(array $p, string $type, ?float $valeur): float
  * Le coefficient du lot (prix payé HT ÷ coût matière) dans le cas le plus serré : x pièces d'un produit de X et
  * y pièces d'un produit de Y, la récompense sur la pièce la moins chère (la règle de la caisse) — une paire où
  * le produit de X est aussi dans Y et moins cher que celui de Y ne se présente pas en caisse, elle est écartée.
- * Rend {lot, sans, x, y, paires, sansCout: [noms]} ; lot = null quand rien ne se chiffre.
+ * Rend {lot, sans, x, y, paires, sansCout: [noms], sansPrix: [noms], coutReseau: [noms]} ; lot = null quand rien ne se
+ * chiffre. `coutReseau` : les produits visés chiffrés au coût du réseau, faute de coût calculé pour le magasin.
  */
 function pmCoef(array $produits, array $x, array $y): array
 {
     $chiffre = static fn ($p) => isset($p['prixHt'], $p['cout']) && $p['prixHt'] !== null && $p['cout'] !== null && (float) $p['prixHt'] > 0 && (float) $p['cout'] > 0;
     $X = pmEligibles($produits, $x); $Y = pmEligibles($produits, $y);
-    $sansCout = [];
-    foreach ($X + $Y as $p) { if (!$chiffre($p)) { $sansCout[] = (string) ($p['nom'] ?? ''); } }
+    $sansCout = []; $sansPrix = []; $reseau = [];
+    foreach ($X + $Y as $p) {
+        $nom = (string) ($p['nom'] ?? '');
+        if (($p['prixHt'] ?? null) === null || (float) $p['prixHt'] <= 0) { $sansPrix[] = $nom; }
+        elseif (($p['cout'] ?? null) === null || (float) $p['cout'] <= 0) { $sansCout[] = $nom; }
+        elseif (($p['source'] ?? '') === 'reseau') { $reseau[] = $nom; }
+    }
     $pire = null; $n = 0;
     foreach ($X as $px) {
         if (!$chiffre($px)) { continue; }
@@ -188,10 +196,17 @@ function pmCoef(array $produits, array $x, array $y): array
         }
     }
     return ($pire ?? ['lot' => null, 'sans' => null, 'x' => null, 'y' => null, 'paye' => null, 'cout' => null])
-        + ['paires' => $n, 'nX' => count($X), 'nY' => count($Y), 'sansCout' => array_slice(array_values(array_unique($sansCout)), 0, 12)];
+        + ['paires' => $n, 'nX' => count($X), 'nY' => count($Y), 'sansCout' => array_slice(array_values(array_unique($sansCout)), 0, 12),
+            'sansPrix' => array_slice(array_values(array_unique($sansPrix)), 0, 12), 'coutReseau' => array_slice(array_values(array_unique($reseau)), 0, 12)];
 }
 
-/** Les produits du magasin avec prix et coût de recette, par la lecture de /analyse/produits/coefficients. */
+/**
+ * Les produits du magasin pour le coefficient du lot : prix pratiqué HT et TTC, TVA, catégorie et coût de recette,
+ * lus par /analyse/produits/coefficients. Le panel rend 0 quand il n'a pas encore calculé le coût d'une recette
+ * POUR CE MAGASIN (17/10/2026 : un magasin entier sans coût, « Aucun produit visé n'a de coût de recette ») : le
+ * coût du réseau prend alors la place (catalogueCouts : la moyenne des magasins du compte, sinon la recette de la
+ * copie locale), marqué `source: reseau`. Rend null quand le panel ne rend rien.
+ */
 function pmProduits(int $shop): ?array
 {
     if (!function_exists('ep_analyse_produits_coefficients')) { return null; }
@@ -199,7 +214,37 @@ function pmProduits(int $shop): ?array
     $_GET = ['shop' => (string) $shop];
     try { $r = ep_analyse_produits_coefficients(); } catch (Throwable $e) { $r = null; }
     finally { $_GET = $g; if (is_int($code)) { http_response_code($code); } }
-    return is_array($r) && isset($r['produits']) && is_array($r['produits']) ? $r['produits'] : null;
+    if (!is_array($r) || !isset($r['produits']) || !is_array($r['produits'])) { return null; }
+    $reseau = [];
+    if (function_exists('catalogueCouts')) { try { $reseau = catalogueCouts(); } catch (Throwable $e) { $reseau = []; } }
+    $out = [];
+    foreach ($r['produits'] as $p) {
+        $id = (int) ($p['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $cout = isset($p['cout']) && is_numeric($p['cout']) && (float) $p['cout'] > 0 ? (float) $p['cout'] : null;
+        $src = $cout !== null ? 'magasin' : null;
+        $mat = $reseau[$id]['mat'] ?? null;
+        if ($cout === null && is_numeric($mat) && (float) $mat > 0) { $cout = round((float) $mat, 4); $src = 'reseau'; }
+        $out[] = ['id' => $id, 'nom' => (string) ($p['nom'] ?? ''), 'catId' => (int) ($p['catId'] ?? 0), 'cat' => (string) ($p['cat'] ?? ''),
+            'prixTtc' => $p['prixTtc'] ?? null, 'prixHt' => $p['prixHt'] ?? null, 'tva' => $p['tva'] ?? null, 'cout' => $cout, 'source' => $src];
+    }
+    return $out;
+}
+
+/**
+ * GET /exploitation/promos-magasin/produits?shop=4 — ce que l'assistant chiffre : les produits du magasin, leur prix
+ * et leur coût de recette (du magasin, sinon du réseau). Le navigateur calcule le coefficient avec la même liste que
+ * le serveur à l'envoi.
+ */
+function ep_promos_magasin_produits(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $l = pmProduits($shop);
+    if ($l === null) { http_response_code(502); return ['error' => 'les produits du magasin ne se lisent pas au panel']; }
+    $n = static fn (string $src) => count(array_filter($l, static fn ($p) => $p['source'] === $src));
+    return ['shop' => (string) $shop, 'produits' => $l, 'nMagasin' => $n('magasin'), 'nReseau' => $n('reseau'),
+        'nSansCout' => count(array_filter($l, static fn ($p) => $p['cout'] === null))];
 }
 
 /** Le nom court d'un magasin (« Halle ») pour les messages. */
@@ -215,19 +260,25 @@ function pmNomShop(int $s): string
  */
 function pmCoefMagasins(array $d): array
 {
-    $pire = null; $illisibles = [];
+    $pire = null; $illisibles = []; $listes = ['sansCout' => [], 'sansPrix' => [], 'coutReseau' => []];
     foreach (pmShops($d) as $s) {
         $produits = pmProduits($s);
         if ($produits === null) { $illisibles[] = $s; continue; }
         $c = pmCoef($produits, $d['x'], $d['y']) + ['magasin' => $s];
+        foreach ($listes as $k => $v) { $listes[$k] = array_merge($v, $c[$k]); }
         if ($pire === null || ($c['lot'] !== null && ($pire['lot'] === null || $c['lot'] < $pire['lot']))) { $pire = $c; }
     }
+    // Un produit qui ne se chiffre pas dans UN des magasins compte : la demande ira à la marque.
+    if ($pire !== null) { foreach ($listes as $k => $v) { $pire[$k] = array_slice(array_values(array_unique($v)), 0, 12); } }
     return [$pire, $illisibles];
 }
 
 /* --- les règles du magasin -------------------------------------------------------------------- */
 
-/** Ce qui manque ou dépasse pour envoyer une demande à la marque : une liste de phrases (vide = prête). */
+/**
+ * Ce qui manque ou dépasse pour envoyer une promotion : une liste de phrases (vide = prête). Un coefficient qui ne se
+ * calcule pas n'y est pas : la promotion part alors à la marque (pmDOffice).
+ */
 function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): array
 {
     $e = [];
@@ -255,10 +306,26 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
     if ($coef !== null && $coef['lot'] !== null && $coef['lot'] < PM_COEF_MIN) {
         $e[] = 'Coefficient du lot ×' . number_format($coef['lot'], 2, ',', '') . ' (' . $coef['x'] . ' + ' . $coef['y'] . (isset($coef['magasin']) && count(pmShops($d)) > 1 ? ', ' . pmNomShop((int) $coef['magasin']) : '') . ') : ×' . number_format(PM_COEF_MIN, 0) . ' au moins.';
     }
-    if ($coef !== null && $coef['lot'] === null && ($coef['nX'] + $coef['nY']) > 0 && $coef['paires'] === 0) {
-        $e[] = 'Aucun produit visé n’a de coût de recette : le coefficient ne se calcule pas.';
-    }
     return $e;
+}
+
+/**
+ * La promotion se valide-t-elle d'office ? Oui quand le coefficient du lot est calculé, à ×2 au moins, et que chaque
+ * produit visé est chiffré dans chaque magasin couvert — sinon la marque la regarde.
+ */
+function pmDOffice(?array $coef): bool
+{
+    return $coef !== null && $coef['lot'] !== null && $coef['lot'] >= PM_COEF_MIN && ($coef['sansCout'] ?? []) === [] && ($coef['sansPrix'] ?? []) === [];
+}
+
+/** Pourquoi le coefficient ne se calcule pas, en mots : les produits sans coût de recette, sans prix. */
+function pmManqueTxt(array $c): string
+{
+    $l = static fn (array $n) => implode(', ', array_slice($n, 0, 4)) . (count($n) > 4 ? '…' : '');
+    $m = [];
+    if (($c['sansCout'] ?? []) !== []) { $m[] = 'sans coût de recette au panel, ni pour le magasin ni pour le réseau — ' . $l($c['sansCout']); }
+    if (($c['sansPrix'] ?? []) !== []) { $m[] = 'sans prix au panel — ' . $l($c['sansPrix']); }
+    return $m !== [] ? implode(' ; ', $m) : 'aucune combinaison de X et de Y ne se présente en caisse';
 }
 
 /* --- les promotions du panel qui touchent le magasin --------------------------------------------- */
@@ -298,8 +365,9 @@ function ep_promos_magasin_demandes(): array
 
 /**
  * POST /exploitation/promos-magasin {shop, id?, action: brouillon|envoyer, nom, description, x, y, du, au, creneaux,
- * repetable, maxParTicket} — un brouillon s'enregistre tel quel ; « envoyer » vérifie les règles (422 sinon) et
- * passe la demande « à valider » par la marque. Une demande validée ou en caisse ne se modifie plus d'ici.
+ * repetable, maxParTicket} — un brouillon s'enregistre tel quel ; « envoyer » vérifie les règles (422 sinon) : la
+ * promotion est validée d'office (`auto`) quand le lot tient ×2 et que tout est chiffré, sinon elle passe « à valider »
+ * par la marque, avec le `motif`. Une promotion validée ou en caisse ne se modifie plus d'ici.
  */
 function wr_promos_magasin(): array
 {
@@ -325,8 +393,12 @@ function wr_promos_magasin(): array
         if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     }
     $now = date('Y-m-d H:i:s');
+    $office = $action === 'envoyer' && pmDOffice($coef);
     $d += ['id' => $id ?? ('pm' . base_convert((string) (int) (microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(2))),
-        'statut' => $action === 'envoyer' ? 'a_valider' : 'brouillon', 'coef' => $coef, 'maj' => $now,
+        'statut' => $action === 'envoyer' ? ($office ? 'validee' : 'a_valider') : 'brouillon', 'coef' => $coef, 'maj' => $now,
+        // Validée d'office : le lot tient ×2 et tout est chiffré. Sinon, la raison pour laquelle la marque la regarde.
+        'auto' => $office, 'decidee' => $office ? $now : null,
+        'motif' => $action === 'envoyer' && !$office ? 'coefficient non vérifié : ' . pmManqueTxt($coef ?? []) : null,
         'cree' => $i !== null ? ($tout[$i]['cree'] ?? $now) : $now, 'envoyee' => $action === 'envoyer' ? $now : ($i !== null ? ($tout[$i]['envoyee'] ?? null) : null),
         'message' => $i !== null && $action === 'brouillon' ? ($tout[$i]['message'] ?? null) : null, 'panelId' => null];
     if ($i !== null) { $tout[$i] = $d; } else { $tout[] = $d; }

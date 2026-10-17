@@ -2979,12 +2979,13 @@
    * serré, la pièce la moins chère remisée) se recalcule à chaque changement avec les prix et coûts de recette du
    * magasin ; le serveur refait le calcul à l'envoi, dans chaque magasin couvert, et refuse sous ×2.
    *   ../api/cockpit/exploitation/promos-magasin?shop=       (la liste, les règles)
-   *   ../api/cockpit/analyse/produits/coefficients?shop=     (prix HT, coût de recette, TVA, catégorie)
+   *   ../api/cockpit/exploitation/promos-magasin/produits?shop= (prix HT, TVA, catégorie, coût de recette du magasin,
+   *                                                              sinon du réseau — la liste que le serveur chiffre à l'envoi)
    */
   const clePM = () => 'pm|' + S.shop;
   const cheminPM = () => '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop);
   const clePMP = () => 'pmProd|' + S.shop;
-  const cheminPMP = () => '/analyse/produits/coefficients?shop=' + encodeURIComponent(S.shop);
+  const cheminPMP = () => '/exploitation/promos-magasin/produits?shop=' + encodeURIComponent(S.shop);
   const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
   const PM_ETAT = { brouillon: ['Brouillon', 'b'], refusee: ['Renvoyée par la marque', 'r'], a_valider: ['À valider par la marque', 'a'], validee: ['Validée · à mettre en caisse', 'ok'], en_caisse: ['En caisse', 'ok'],
@@ -3029,8 +3030,10 @@
   /** Le coefficient du lot, le cas le plus serré — le même calcul que le serveur (pmCoef). */
   function pmCoef(prods, x, y) {
     const ch = p => p.prixHt != null && p.cout != null && +p.prixHt > 0 && +p.cout > 0;
-    const X = pmEligibles(prods, x), Y = pmEligibles(prods, y);
-    const sansCout = [...new Set([...X.values(), ...Y.values()].filter(p => !ch(p)).map(p => p.nom))];
+    const X = pmEligibles(prods, x), Y = pmEligibles(prods, y), tous = [...new Map([...X, ...Y]).values()];
+    const sansPrix = [...new Set(tous.filter(p => !(+p.prixHt > 0)).map(p => p.nom))];
+    const sansCout = [...new Set(tous.filter(p => +p.prixHt > 0 && !(+p.cout > 0)).map(p => p.nom))];
+    const coutReseau = [...new Set(tous.filter(p => ch(p) && p.source === 'reseau').map(p => p.nom))];
     let pire = null, n = 0;
     X.forEach(px => { if (!ch(px)) { return; } Y.forEach(py => {
       if (!ch(py)) { return; }
@@ -3040,7 +3043,15 @@
       const c = paye / cout;
       if (!pire || c < pire.lot) { pire = { lot: Math.round(c * 100) / 100, sans: Math.round(sans / cout * 100) / 100, px, py, paye, cout }; }
     }); });
-    return Object.assign(pire || { lot: null, sans: null }, { paires: n, nX: X.size, nY: Y.size, sansCout });
+    return Object.assign(pire || { lot: null, sans: null }, { paires: n, nX: X.size, nY: Y.size, sansCout, sansPrix, coutReseau });
+  }
+  /** Pourquoi le coefficient ne se calcule pas (le même texte que le serveur, pmManqueTxt). */
+  function pmManqueTxt(C) {
+    const l = n => n.slice(0, 4).join(', ') + (n.length > 4 ? '…' : '');
+    const m = [];
+    if (C.sansCout.length) { m.push('sans coût de recette au panel, ni pour ce magasin ni pour le réseau — ' + l(C.sansCout)); }
+    if (C.sansPrix.length) { m.push('sans prix au panel — ' + l(C.sansPrix)); }
+    return m.length ? m.join(' ; ') : 'aucune combinaison de X et de Y ne se présente en caisse';
   }
   const pmNoms = c => [...(c.cats || []).map(o => o.nom), ...(c.prods || []).map(o => o.nom)].filter(Boolean);
   const pmLib = c => { const n = pmNoms(c); return n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : 'à choisir'; };
@@ -3101,7 +3112,7 @@
       h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'} <button class="db-btn" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     } else {
       h += `<div class="pm-large"><table class="pm-tab"><thead><tr><th>Promotion</th><th>Sorte</th><th>Période</th><th>Créneaux</th><th>Statut</th><th class="n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</th><th></th></tr></thead><tbody>${vues.map(l => {
-        const e = PM_ETAT[l.etat] || [l.etat, 'b'];
+        const e = l.etat === 'validee' && l.d && l.d.auto ? ['Validée d’office · à mettre en caisse', 'ok'] : (PM_ETAT[l.etat] || [l.etat, 'b']);
         const per = l.du || l.au ? (l.du ? pmQuand(l.du) : '…') + ' → ' + (l.au ? pmQuand(l.au) : 'sans fin') : 'sans fin';
         const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
         let act = '';
@@ -3110,7 +3121,8 @@
           else if (l.etat === 'a_valider') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Modifier</button><button class="db-btn" data-pmdel="${esc(l.id)}">Retirer</button>`; }
           else { act = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`; }
         } else if (l.sorte === 'xy') { act = `<button class="db-btn" data-pmdup="panel:${esc(l.id)}" title="en faire une promotion du magasin">Dupliquer</button>`; }
-        const msg = l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '';
+        const msg = (l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '')
+          + (l.d && l.d.motif && l.etat === 'a_valider' ? `<div class="db-mini" style="margin-top:3px">À la marque : ${esc(l.d.motif)}</div>` : '');
         return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
           <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
           <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
@@ -3118,7 +3130,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. La marque valide chaque demande avant la caisse.</div></div>`;
+      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Validée d’office quand le lot tient ${fXm(Rg.coefMin || 2)} et que chaque produit visé est chiffré ; sinon la marque la regarde.</div></div>`;
     return h;
   }
 
@@ -3169,6 +3181,11 @@
     if (!prods) { return null; }
     return pmCoef(prods, pmEffectif(d.x), Object.assign(pmEffectif(d.y), { type: d.y.type, valeur: d.y.valeur }));
   }
+  /** Validée d'office à l'envoi ? Le même critère que le serveur (pmDOffice), avec les prix de ce magasin. */
+  function pmDOffice(d) {
+    const C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
+    return !!C && C.lot != null && C.lot >= min && !C.sansCout.length && !C.sansPrix.length;
+  }
   function pmStepper(W) {
     return PM_ETAPES.map((n, i) => { const e = i + 1, fait = e < 6 && !pmManque(W.d, e);
       return `<button class="e${e === W.etape ? ' on' : (fait ? ' fait' : '')}" data-pmet="${e}"><span class="n">${e !== W.etape && fait ? '✓' : e}</span>${n}</button>`; }).join('<span class="sep"></span>');
@@ -3177,7 +3194,7 @@
   function pmFixe(W) {
     const C = pmCoefCourant(W.d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
     if (!C) { return S.err[clePMP()] ? `<div class="pm-fixe ko">Prix et coûts du magasin illisibles : ${esc(S.err[clePMP()])}</div>` : `<div class="pm-fixe">Lecture des prix et coûts de recette du magasin…</div>`; }
-    if (C.lot == null) { return `<div class="pm-fixe">${C.nX + C.nY ? 'Aucun produit visé n’a de coût de recette : le coefficient ne se calcule pas.' : 'Le coefficient se calcule dès que X et Y sont choisis.'}</div>`; }
+    if (C.lot == null) { return C.nX + C.nY ? `<div class="pm-fixe ko"><span>Le coefficient ne se calcule pas : ${esc(pmManqueTxt(C))}. Choisissez d’autres produits, ou faites chiffrer leur recette au panel.</span></div>` : `<div class="pm-fixe">Le coefficient se calcule dès que X et Y sont choisis.</div>`; }
     const ok = C.lot >= min;
     return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit visé.' : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. Baissez l’avantage, montez X, ou retirez ce produit.'}</span></div>`;
   }
@@ -3196,7 +3213,7 @@
       ${ck(C && C.lot != null && C.lot >= min, 'Coefficient du lot ' + fXm(min) + ' au moins')}</div>`;
     h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">${fXm(min)} minimum ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
-    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Aucun produit visé n’a de coût de recette au panel.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
+    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Le coefficient ne se calcule pas : ' + esc(pmManqueTxt(C)) + '.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
     else {
       const pc = v => Math.max(1, Math.min(99, 100 * v / 4.5)), nb = x.q + y.q;
       h += `<div class="pm-cl"><span>Payé pour le lot (${nb} pièces), HT</span><b>${fU(C.paye)}</b></div>
@@ -3205,7 +3222,8 @@
         <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)"><i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
           ${C.sans != null ? `<i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>` : ''}<i class="lot ${C.lot >= min ? 'ok' : 'ko'}" style="left:${pc(C.lot)}%"></i></div>
         <div class="db-mini">Le cas le plus serré : ${x.q} × ${esc(C.px.nom)} + ${y.q} × ${esc(C.py.nom)}, sur ${C.paires} combinaison${C.paires > 1 ? 's' : ''} (${C.nX} produit${C.nX > 1 ? 's' : ''} en X, ${C.nY} en Y). Un seul cas sous ${fXm(min)} bloque l’envoi.${d.shops.length > 1 ? ' Prix de ce magasin ; les autres se vérifient à l’envoi.' : ''}</div>
-        ${C.sansCout.length ? `<div class="pm-warn">Sans coût de recette, pas chiffrés : ${esc(C.sansCout.slice(0, 5).join(', '))}${C.sansCout.length > 5 ? '…' : ''}</div>` : ''}</div>`;
+        ${C.coutReseau.length ? `<div class="db-mini" style="margin-top:6px">Coût du réseau (pas encore calculé pour ce magasin au panel) : ${esc(C.coutReseau.slice(0, 5).join(', '))}${C.coutReseau.length > 5 ? '…' : ''}.</div>` : ''}
+        ${C.sansCout.length + C.sansPrix.length ? `<div class="pm-warn">Pas chiffrés, ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
       // Le ticket du cas le plus serré, aux prix TTC de la caisse.
       const tx = pmTtc(C.px), ty = pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur) * (1 + (+C.py.tva || 0) / 100), rem = y.q * (ty - ry);
       const lg = (a, b, c) => `<div class="l${c ? ' ' + c : ''}"><span>${a}</span><span>${b}</span></div>`;
@@ -3244,7 +3262,7 @@
     if (e === 1) {
       return tete('la promotion', 'Nom') + `<div class="pm-f"><label>Nom</label><input class="pm-in" maxlength="80" placeholder="ex. Cookies 2+1 · Halle" value="${esc(d.nom)}" data-pmf="nom"></div>
         <div class="pm-f" style="margin-top:10px"><label>Description <small class="db-mini">facultatif</small></label><textarea class="pm-in" rows="3" maxlength="500" placeholder="Quand l’utiliser, ce qu’on en attend…" data-pmf="description">${esc(d.description)}</textarea></div>
-        <div class="pm-info"><b>Fixé par la marque</b> · statut brouillon jusqu’à la validation · priorité normale · non exclusive · activation automatique en caisse</div>`;
+        <div class="pm-info"><b>Fixé par la marque</b> · priorité normale · non exclusive · activation automatique en caisse · validée d’office quand le coefficient du lot tient ${fXm(R.coefMin || 2)}</div>`;
     }
     if (e === 2) {
       const dispo = S.stores.filter(s => !d.shops.includes(+s.id));
@@ -3289,11 +3307,11 @@
         ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 4)}
         ${lgn('Période', d.du && d.au ? 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b> · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
         ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 5)}
-        ${lgn('Fixé par la marque', 'statut brouillon jusqu’à la validation · priorité normale · non exclusive · activation automatique', 0)}</table>
+        ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’envoi : ${esc(manque.join(' · '))}</div>` : ''}
       ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
-      <div class="db-mini" style="margin-top:10px">Après l’envoi : la marque reçoit la demande, la valide (ou la renvoie avec un mot), puis la met en caisse à la date prévue. Elle apparaît dans la liste avec son statut.</div>`;
+      <div class="db-mini" style="margin-top:10px">${pmDOffice(W.d) ? 'Le lot tient ' + fXm(((S.aux[clePM()] || {}).regles || {}).coefMin || 2) + ' et chaque produit est chiffré : la promotion est <b>validée d’office</b>, sans attendre la marque, et part en caisse à la date prévue.' : 'Le coefficient ne se vérifie pas pour chaque produit : la promotion part à la marque, qui la valide ou la renvoie avec un mot.'} Elle apparaît dans la liste avec son statut.</div>`;
   }
   function pmDureeTxt(d) {
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
@@ -3305,7 +3323,7 @@
     const W = S.pmW, e = W.etape;
     const prec = e > 1 ? `<button class="db-btn pm-gros" data-pmet="${e - 1}">‹ Retour : ${esc(PM_ETAPES[e - 2].toLowerCase())}</button>` : '<span></span>';
     const suiv = e < 6 ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
-      : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Envoi…' : 'Envoyer à la marque ›'}</button></span>`;
+      : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Envoi…' : (pmDOffice(W.d) ? 'Valider la promotion ›' : 'Envoyer à la marque ›')}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
         <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
         ${e < 6 ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button>` : ''}</div>
@@ -3349,8 +3367,11 @@
       .then(r => r.json().catch(() => ({})).then(j => ({ ok: r.ok, j, code: r.status })))
       .then(({ ok, j, code }) => {
         if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = 6; } return; }
-        S.pmMsg = action === 'envoyer' ? `Envoyée à la marque : « ${esc(j.demande.nom)} ». Elle attend sa validation dans « À valider ».` : `Brouillon enregistré : « ${esc(j.demande.nom || 'sans nom')} ».`;
-        S.pmF = action === 'envoyer' ? 'a_valider' : 'brouillons';
+        const dm = j.demande, office = action === 'envoyer' && dm.statut === 'validee';
+        S.pmMsg = action !== 'envoyer' ? `Brouillon enregistré : « ${esc(dm.nom || 'sans nom')} ».`
+          : (office ? `Validée d’office : « ${esc(dm.nom)} » — coefficient du lot ${fX(dm.coef && dm.coef.lot)}, pas besoin de la marque. Elle part en caisse à la date prévue.`
+            : `Envoyée à la marque : « ${esc(dm.nom)} » (${esc(dm.motif || 'coefficient non vérifié')}). Elle attend sa validation dans « À valider ».`);
+        S.pmF = action !== 'envoyer' ? 'brouillons' : (office ? 'a_venir' : 'a_valider');
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
       })
       .catch(e => { W.erreurs = [e.message]; })

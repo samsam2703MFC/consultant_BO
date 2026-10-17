@@ -6836,15 +6836,16 @@ class App {
     };
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins, dans chaque magasin couvert.';
+    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins, dans chaque magasin couvert. Un lot qui tient ×' + (R.coefMin || 2) + ' avec chaque produit chiffré est validé d’office ; n’arrivent « À valider » que les promotions dont le coefficient ne se vérifie pas (un produit sans coût de recette ou sans prix).';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
-      const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
+      const e = d.statut === 'validee' && d.auto ? ['Validée d’office · à mettre en caisse', 'ok'] : (ETAT[d.statut] || [d.statut, 'b']), c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
         periode: (d.du ? jj(d.du) : '…') + ' → ' + (d.au ? jj(d.au) : '…'), creneaux: cren(d.creneaux) + (d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' par ticket' : '') : ''),
         coef: c.lot != null ? '×' + c.lot.toLocaleString('fr-BE', { minimumFractionDigits: 2 }) : '—', coefCls: c.lot == null ? 'mu' : (c.lot >= (R.coefMin || 2) ? 'ok' : 'ko'),
         cas: c.x ? 'cas le plus serré : ' + (d.x.q || 1) + ' × ' + c.x + ' + ' + (d.y.q || 1) + ' × ' + c.y + (c.magasin && d.shops && d.shops.length > 1 ? ' (' + nomMag(c.magasin) + ')' : '') : '',
         sansCout: (c.sansCout || []).length ? 'sans coût de recette : ' + c.sansCout.slice(0, 3).join(', ') + (c.sansCout.length > 3 ? '…' : '') : '',
         envoyee: d.envoyee ? jj(d.envoyee.slice(0, 10)) : '', etat: e[0], etatCls: e[1], message: d.message || '', description: d.description || '',
+        motif: d.statut === 'a_valider' && d.motif ? 'Pourquoi chez vous : ' + d.motif : '',
         peutDecider: d.statut === 'a_valider', occupe: L.occupe === d.id, href: dash(d.shop),
         valider: () => decider(d, 'valider'), renvoyer: () => decider(d, 'refuser') };
     });

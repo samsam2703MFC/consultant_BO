@@ -8190,7 +8190,7 @@ function tplPromosMag(c, x){
   if (c.pmMotif) { return `<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px;color:var(--color-primary)">${esc(c.pmMotif)}</div>${magasins}</div>`; }
   const L = c.pmLignes || [];
   const lignes = L.map(l => `<tr>
-      <td style="${td};min-width:250px"><b>${esc(l.nom)}</b><div style="${mu};margin-top:2px">${esc(l.regle)}</div>${l.description ? `<div style="${mu};margin-top:2px;font-style:italic">${esc(l.description)}</div>` : ''}${l.message ? `<div style="font-size:11.5px;color:#8D1D2C;margin-top:4px">Mot de la marque : « ${esc(l.message)} »</div>` : ''}</td>
+      <td style="${td};min-width:250px"><b>${esc(l.nom)}</b><div style="${mu};margin-top:2px">${esc(l.regle)}</div>${l.description ? `<div style="${mu};margin-top:2px;font-style:italic">${esc(l.description)}</div>` : ''}${l.message ? `<div style="font-size:11.5px;color:#8D1D2C;margin-top:4px">Mot de la marque : « ${esc(l.message)} »</div>` : ''}${l.motif ? `<div style="font-size:11.5px;color:#8a5a13;margin-top:4px">${esc(l.motif)}</div>` : ''}</td>
       <td style="${td}">${esc(l.magasins)}</td>
       <td style="${td};white-space:nowrap">${esc(l.periode)}<div style="${mu}">${esc(l.creneaux)}</div></td>
       <td style="${td};text-align:right;white-space:nowrap"><b style="font-size:14px;${coefC[l.coefCls] || ''}">${esc(l.coef)}</b>${l.cas ? `<div style="${mu};white-space:normal;max-width:220px;margin-left:auto">${esc(l.cas)}</div>` : ''}${l.sansCout ? `<div style="font-size:11px;color:#8a5a13;white-space:normal;max-width:220px;margin-left:auto">${esc(l.sansCout)}</div>` : ''}</td>
@@ -8202,7 +8202,7 @@ function tplPromosMag(c, x){
   <div style="${carte};overflow:hidden">${tete}
     ${L.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th}">Promotion</th><th style="${th}">Magasins</th><th style="${th}">Période</th><th style="${th};text-align:right">Coef. du lot</th><th style="${th}">Statut</th><th style="${th}"></th></tr></thead><tbody>${lignes}</tbody></table></div>`
       : `<div style="padding:20px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune demande ici. Les franchisés préparent leurs promotions dans l’onglet Promotions de leur dashboard.</div>`}
-    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')} Valider ne met rien en caisse : la promotion se crée ensuite au panel. Renvoyer la rend au magasin avec votre mot.</div>
+    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')} Validée (d’office ou ici), une promotion se crée encore au panel à la main : l’envoi automatique attend le format d’écriture de l’API. Renvoyer la rend au magasin avec votre mot.</div>
   </div>
   ${magasins}
 </div>`;
