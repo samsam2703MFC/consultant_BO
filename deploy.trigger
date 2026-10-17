@@ -821,3 +821,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-17T16:04:36Z promotions du magasin : enregistrées aussitôt, sans validation
 2026-10-17T16:19:27Z promotions du magasin : écrites au panel (inactive, relue, activée)
 2026-10-17T16:40:56Z promotions du magasin : produits non chiffrés sortis d'office
+2026-10-17T19:42:27Z sonde des portions (lecture seule)
