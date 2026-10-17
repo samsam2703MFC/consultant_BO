@@ -7237,11 +7237,12 @@ class App {
         modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }) });
       // Ce qui compte, en clair (le tableau ne s'édite plus).
       const regleTxt = { seuil: (e.minPieces || 0) + ' pcs (seuil)', premiere: e.minPieces ? e.minPieces + ' pcs min.' : '' };
-      L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %) · ' + cr.minTickets + ' tickets min.'
+      const hMin = k => (k.heuresMin ?? 20) > 0 ? ' · ' + (k.heuresMin ?? 20) + ' h min.' : '';
+      L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %)' + (cr.minTickets > 0 ? ' · ' + cr.minTickets + ' tickets min.' : '')
           + (Object.keys(cr.cibles).length ? ' · ' + Object.keys(cr.cibles).length + ' magasin(s) avec sa cible' : '')
-        : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif · ' + (e.heuresMin ?? 20) + ' h min.'
-        : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★ · ' + (e.heuresMin ?? 20) + ' h min.'
-        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' » · ' + (e.minPieces ?? 10) + ' pcs min.'
+        : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif' + hMin(e)
+        : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★' + hMin(e)
+        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' »' + ((e.minPieces ?? 10) > 0 ? ' · ' + (e.minPieces ?? 10) + ' pcs min.' : '')
         : e.type === 'promo' ? [(e.promo || {}).nom, sorte(e.promo || {}), dates(e.promo || {}), mags(e.promo || {}), { api: 'panel', cockpit: 'créée dans le cockpit' }[(e.promo || {}).source]].filter(Boolean).join(' · ')
           + (e.regle === 'magasin' || e.regle === 'vendeuse' ? '' : regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] ? ' · ' + regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] : '')
         : '';
@@ -7554,10 +7555,12 @@ class App {
       const x = ext ? ((app.externes || {})[ext] || {}) : (e || {});
       const nouveau = !e && !ext;
       return { cle: e ? e.cle : '', ext: ext || '', type: ext ? 'ext' : (nouveau ? 'categorie' : (e.type === 'target' ? e.cle : e.type)), nouveau,
-        champs: nouveau ? { lib: '', motif: '', minPieces: '10', montant: String(app.recompense), classement: true, description: '' }
-          : { lib: x.lib || '', motif: x.motif || '', description: x.description || '', minPieces: String(x.minPieces ?? 10), montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
-            categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin ?? 20), seuil: String(x.seuil ?? 4.5),
-            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), du: x.du || '', au: x.au || '' },
+        // Les conditions (17/10/2026) : un interrupteur chacune ; coupée, elle vaut 0 et ne compte plus.
+        champs: nouveau ? { lib: '', motif: '', minPieces: '10', condP: true, montant: String(app.recompense), classement: true, description: '' }
+          : { lib: x.lib || '', motif: x.motif || '', description: x.description || '', minPieces: String(x.minPieces || 10), condP: (x.minPieces ?? 10) > 0,
+            montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
+            categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin || 20), condH: (x.heuresMin ?? 20) > 0, seuil: String(x.seuil ?? 4.5),
+            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets || 30), condT: cr.minTickets > 0, du: x.du || '', au: x.au || '' },
         payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
     };
     const PE = S.prEdit;
@@ -7576,12 +7579,20 @@ class App {
         record: 'Un article de plus par ticket, et ton record tombe', meilleure: 'La vendeuse qui vend le plus du mois' };
       const descCh = ch('description', 'Description dans l’app', 'texte', { indice: DESC_INDICE[PE.ext || PE.type] || '', large: true, max: 160 });
       const champs = { croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
-          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh, descCh),
-        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh, descCh),
-        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh, descCh),
+          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh, descCh),
+        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), montantCh].concat(periodeCh, descCh),
+        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), montantCh].concat(periodeCh, descCh),
         categorie: [ch('lib', 'Nom dans l’app', 'texte', { indice: 'Queen of …' }), ch('motif', 'Les produits dont le nom contient', 'texte', { indice: 'tarte' }),
-          ch('minPieces', 'Minimum de pièces pour être classée', 'nombre', { unite: 'pcs', pas: 1 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh, descCh],
+          ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh, descCh],
         ext: [descCh] }[PE.type] || [];
+      const condH = { cle: 'condH', champ: 'heuresMin', lib: 'Un minimum d’heures au planning dans le mois', unite: 'h', pas: 1 };
+      const conditions = ({ objectif: [condH], google: [condH],
+        croisees: [{ cle: 'condT', champ: 'minTickets', lib: 'Un minimum de tickets dans le mois', unite: 'tickets', pas: 5 }],
+        categorie: [{ cle: 'condP', champ: 'minPieces', lib: 'Un minimum de pièces pour être classée', unite: 'pcs', pas: 1 }] }[PE.type] || [])
+        .map(k => ({ lib: k.lib, unite: k.unite, pas: k.pas, cle: k.champ, on: !!f[k.cle], valeur: String(f[k.champ] ?? ''),
+          basculer: ev => { f[k.cle] = !!ev.target.checked; reE(); }, poser: ev => { f[k.champ] = ev.target.value; reE(); } }));
+      // Une condition allumée garde au moins 1 ; éteinte, 0.
+      const cond = (on, v, defaut) => on ? Math.max(1, Math.round(num(v) ?? defaut)) : 0;
       const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du);
       const entier = v => { const n = num(v); return n == null ? null : n; };
       const enregistrer = () => {
@@ -7601,12 +7612,12 @@ class App {
             if (!e) { PE.envoi = false; reE(); return; }
             Object.assign(e, qui, { icone, montant: Math.max(0, Math.round(entier(f.montant) ?? e.montant ?? app.recompense)) });
             if (['croisees', 'objectif', 'google'].includes(PE.type)) { Object.assign(e, { du: f.du || null, au: f.au || null }); }
-            if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: Math.max(0, Math.round(entier(f.minPieces) ?? 10)), classement: !!f.classement }); }
-            if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
-            if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
+            if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: cond(f.condP, f.minPieces, 10), classement: !!f.classement }); }
+            if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: cond(f.condH, f.heuresMin, 20) }); }
             if (PE.type === 'croisees') {
               Object.assign(e, { categorie: f.categorie || '', classement: !!f.classement });
-              cr.cibleDefaut = entier(f.cibleDefaut) ?? cr.cibleDefaut; cr.minTickets = Math.max(0, Math.round(entier(f.minTickets) ?? cr.minTickets));
+              cr.cibleDefaut = entier(f.cibleDefaut) ?? cr.cibleDefaut; cr.minTickets = cond(f.condT, f.minTickets, 30);
               suite = enregistrerCr();
             }
             if (PE.nouveau) { app.liste.push(e); }
@@ -7623,7 +7634,7 @@ class App {
       };
       const nomE = PE.ext === 'record' ? 'Bats ton record' : PE.ext === 'meilleure' ? 'Meilleure vendeuse' : (f.lib || (app.liste.find(x => x.cle === PE.cle) || {}).lib || '');
       common.prEdit = {
-        titre: PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, ok, envoi: PE.envoi,
+        titre: PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, conditions, ok, envoi: PE.envoi,
         note: PE.ext ? 'Son montant se règle dans Analyse magasin → Équipe & ventes → Targets & primes.' : PE.type === 'croisees' ? 'La cible de chaque magasin se règle plus bas, dans les moyennes par magasin.' : '',
         payeurs: [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: PE.payeur === v, choisir: () => { PE.payeur = v; reE(); } })),
         payeur: PE.payeur, sponsor: PE.sponsor, poserSponsor: ev => { PE.sponsor = ev.target.value; reE(); },

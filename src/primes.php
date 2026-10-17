@@ -308,10 +308,14 @@ function googleDuMagasin(string $shop): array
         'heuresMin' => $reg['heuresMin'], 'atteint' => $reg['actif'] && $note !== null && $note + 1e-9 >= $reg['seuil']];
 }
 
-/** La prime Google d'une personne : la récompense si la note de son magasin tient le seuil et qu'elle a ses heures. */
+/**
+ * La prime Google d'une personne : la récompense si la note de son magasin tient le seuil et qu'elle a ses heures.
+ * Sans condition d'heures (heuresMin à 0, 17/10/2026), le planning n'est pas regardé.
+ */
 function googlePrime(array $g, ?float $heures): float
 {
-    return ($g['atteint'] && $heures !== null && $heures + 1e-9 >= $g['heuresMin']) ? (float) $g['montant'] : 0.0;
+    $heuresOk = $g['heuresMin'] <= 0 || ($heures !== null && $heures + 1e-9 >= $g['heuresMin']);
+    return ($g['atteint'] && $heuresOk) ? (float) $g['montant'] : 0.0;
 }
 
 /**
@@ -462,6 +466,8 @@ function primesMagasinMois(int $sid, string $m, array $reg, ?float $heuresVous, 
     $atteinteProj = ($objectif !== null && $objectif > 0 && $projection !== null) ? round(100 * $projection / $objectif, 1) : null;
     $palier = primeMagasinPalier($atteinteProj, $reg['paliers']);
     $paliers = [];
+    // Sans condition d'heures (heuresMin à 0, 17/10/2026) : chacune du magasin touche sa part, planning ou pas.
+    $sansHeures = (int) $reg['heuresMin'] <= 0;
     foreach ($reg['paliers'] as $p) {
         $cible = $objectif !== null ? $objectif * $p['pct'] / 100 : null;
         $manque = ($cible !== null && $projection !== null) ? max(0.0, $cible - $projection) : null;
@@ -469,10 +475,10 @@ function primesMagasinMois(int $sid, string $m, array $reg, ?float $heuresVous, 
             'atteint' => $atteinteProj !== null && $atteinteProj + 1e-9 >= $p['pct'],
             'manque' => $manque !== null ? round($manque, 2) : null,
             'parJour' => ($manque !== null && $manque > 0 && $joursRestants > 0) ? round($manque / $joursRestants, 2) : null,
-            'vous' => $heuresVous !== null ? (float) $p['montant'] : null,
+            'vous' => ($heuresVous !== null || $sansHeures) ? (float) $p['montant'] : null,
             'equipe' => (float) ($p['montant'] * $personnes)];
     }
-    $sousMin = $heuresVous !== null && $heuresVous < $reg['heuresMin'];
+    $sousMin = !$sansHeures && $heuresVous !== null && $heuresVous < $reg['heuresMin'];
     return ['objectif' => $objectif, 'objectifSource' => $bud['source'] ?? null, 'clos' => $clos,
         'ca' => round($ca, 2), 'atteinte' => $atteinte,
         'projection' => $projection, 'atteinteProj' => $atteinteProj,
@@ -483,7 +489,7 @@ function primesMagasinMois(int $sid, string $m, array $reg, ?float $heuresVous, 
         'heures' => $heuresVous !== null ? round($heuresVous, 1) : null, 'heuresMin' => $reg['heuresMin'], 'sousMin' => $sousMin,
         'heuresEquipe' => round($heuresEquipe, 1), 'personnes' => $personnes,
         'part' => ($heuresVous !== null && $heuresEquipe > 0) ? round(100 * $heuresVous / $heuresEquipe, 1) : null,
-        'vous' => ($palier !== null && $heuresVous !== null && !$sousMin) ? (float) $palier['montant'] : 0.0,
+        'vous' => ($palier !== null && ($sansHeures || ($heuresVous !== null && !$sousMin))) ? (float) $palier['montant'] : 0.0,
         'equipe' => $palier !== null ? (float) ($palier['montant'] * $personnes) : 0.0];
 }
 

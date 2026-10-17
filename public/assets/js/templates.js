@@ -9366,6 +9366,11 @@ function tplPrEdit(E, x){
       <div style="padding:18px 22px 10px">
         ${E.champs.length ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px">${E.champs.map(champ).join('')}</div>` : ''}
         ${E.note ? `<div style="font-size:12px;${mu};margin-top:10px">${esc(E.note)}</div>` : ''}
+        ${(E.conditions || []).length ? `<div data-pre-conditions style="margin-top:16px"><span style="${lab}">Conditions pour toucher la prime</span>
+          ${E.conditions.map(k => `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);margin-bottom:6px;${k.on ? '' : 'background:var(--color-background-secondary)'}">
+            <label style="display:flex;align-items:center;gap:8px;font:600 13px var(--font-ui);cursor:pointer;flex:1;min-width:200px"><input type="checkbox" data-pre-condition="${esc(k.cle)}" ${k.on ? 'checked' : ''} ${x.C(k.basculer)}> ${esc(k.lib)}</label>
+            ${k.on ? `<span><input id="pre-${esc(k.cle)}" type="number" step="${k.pas || 1}" min="1" value="${esc(k.valeur)}" ${x.I(k.poser)} style="${chp};width:90px"> <span style="${mu}">${esc(k.unite)}</span></span>` : `<span style="font-size:12px;${mu}">sans condition</span>`}
+          </div>`).join('')}</div>` : ''}
         <div style="margin-top:16px"><span style="${lab}">Payée par</span>${E.payeurs.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)};margin-right:6px">${esc(o.nom)}</button>`).join('')}${E.payeur === 'sponsor' ? `<input id="pre-sponsor" value="${esc(E.sponsor)}" ${x.I(E.poserSponsor)} placeholder="nom du sponsor" style="${chp};margin-left:6px;width:200px">` : ''}</div>
         <span style="${lab};margin-top:16px">Icône dans l’app</span>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${E.emojis.map(o => `<button ${x.A(o.choisir)} style="width:38px;height:38px;border-radius:10px;font-size:20px;line-height:1;cursor:pointer;border:1.5px solid ${o.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${o.on ? '#FBF3EE' : 'var(--color-surface)'}">${esc(o.em)}</button>`).join('')}</div>
