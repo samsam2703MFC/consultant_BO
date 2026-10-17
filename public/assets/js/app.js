@@ -308,6 +308,8 @@ class App {
       usage: 'usage-catalogue', anaprod: 'analyse-produits', prixvolume: 'prix-volume',
       manque: 'manque-a-gagner',
       ventes: 'target-ventes',
+      // Les promotions demandées par les magasins (17/10/2026) : un onglet d'Analyse magasin.
+      promosMag: 'promotions',
       croisements: 'croisements',
       projets: 'projets', fonds: 'fonds', marketing: 'marketing', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
       bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', scoringTri: 'scoring-trimestre', clientMystere: 'client-mystere',
@@ -972,6 +974,7 @@ class App {
       marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
+      promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés préparent dans leur dashboard : la marque les valide ou les renvoie avec un mot.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
@@ -1004,8 +1007,8 @@ class App {
         [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['clientMystere', 'Client mystère'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
         [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
-      ventes: ['Analyse magasin', 'Un magasin, trois lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
-        [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
+      ventes: ['Analyse magasin', 'Un magasin, quatre lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, ce que Google en dit, et les promotions qu’il demande.',
+        [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation'], ['promosMag', 'Promotions']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
         [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
       catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
@@ -1019,7 +1022,8 @@ class App {
     if (grp) {
       common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
-      const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
+      const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0,
+        promosMag: (((this._pmL || {}).d || {}).demandes || []).filter(d => d.statut === 'a_valider').length };
       common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
@@ -1372,7 +1376,7 @@ class App {
       // Trois questions : comment va ce magasin (équipe, panier, réputation),
       // quel budget il tient, où il va sur trois ans.
       ['Magasins', [
-        ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements']],
+        ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements', 'promosMag']],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
@@ -1463,7 +1467,7 @@ class App {
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', controlesQualite: 'isCQM', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       marketing: 'isMktHub', mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', tablette: 'isTablette', primesApp: 'isPrimesApp' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', tablette: 'isTablette', primesApp: 'isPrimesApp', promosMag: 'isPromosMag' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1858,6 +1862,7 @@ class App {
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
+    if (common.isPromosMag) { this.valsPromosMag(common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
@@ -6751,6 +6756,79 @@ class App {
    * croisées de chaque magasin en face. Bats ton record et la meilleure vendeuse se montrent, réglés
    * dans Targets & primes. Ce qu'on tape reste un brouillon jusqu'à « Enregistrer ».
    */
+  /**
+   * Les promotions des magasins (17/10/2026) : les demandes « X achetés + Y » que les franchisés écrivent dans
+   * l'onglet Promotions de leur dashboard. La marque les valide ou les renvoie avec un mot ; le détail et
+   * l'assistant restent dans le dashboard du magasin (lien ↗). Rien n'est écrit au panel : une demande validée
+   * se met en caisse à la main.
+   */
+  valsPromosMag(common){
+    const S = this.state;
+    if (!this._pmL) { this._pmL = { d: undefined, enCours: false, magasins: null }; }
+    const L = this._pmL;
+    const relire = () => {
+      if (L.enCours) { return; }
+      L.enCours = true;
+      readOne('/promos-magasin').then(x => { L.d = x && !x.error ? x : null; }).catch(() => { L.d = null; })
+        .finally(() => { L.enCours = false; this.setState({}); });
+    };
+    if (L.d === undefined) { relire(); }
+    if (L.magasins === null) { L.magasins = []; readOne('/stores?statut=tous').then(l => { L.magasins = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: String(s.id), nom: String(s.nom || s.name || '') })); this.setState({}); }); }
+    const court = n => String(n || '').replace(/^.* - /, '');
+    const dash = id => 'dashboard/?shop=' + encodeURIComponent(id) + '&vue=promos';
+    common.pmChargement = L.d === undefined;
+    common.pmMotif = L.d === null ? 'Les demandes des magasins n’ont pas pu être lues.' : '';
+    common.pmRelire = () => { L.d = undefined; this.setState({}); };
+    common.pmMagasins = L.magasins.map(m => ({ nom: court(m.nom), href: dash(m.id) }));
+    if (!L.d) { return; }
+    const noms = L.d.noms || {}, R = L.d.regles || {};
+    const nomMag = id => noms[String(id)] || court((L.magasins.find(m => m.id === String(id)) || {}).nom) || 'magasin ' + id;
+    const eur = v => (+v || 0).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const jj = v => v ? v.slice(8, 10) + '/' + v.slice(5, 7) + (v.length > 10 && v.slice(11, 16) !== '00:00' ? ' ' + v.slice(11, 16) : '') : '';
+    const JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+    const cren = l => !l || !l.length ? 'tous les jours' : l.map(c => { const j = c.jours.slice().sort((a, b) => a - b), suite = j.length >= 3 && j.every((v, i) => !i || v === j[i - 1] + 1);
+      return (j.length === 7 ? 'tous les jours' : (suite ? JOURS[j[0] - 1] + '–' + JOURS[j[j.length - 1] - 1] : j.map(v => JOURS[v - 1]).join(', '))) + ' ' + c.de + '–' + c.a; }).join(' · ');
+    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean); return n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : '—'; };
+    const gain = (y, n) => ({ FIXED_PRICE: 'à ' + eur(y.valeur), FIXED_AMOUNT_DISCOUNT: '−' + eur(y.valeur), PERCENTAGE_DISCOUNT: 'à −' + Math.round(+y.valeur || 0) + ' %' }[y.type] || (n > 1 ? 'offerts' : 'offert'));
+    const regle = d => {
+      const x = d.x || {}, y = d.y || {}, xq = x.q || 1, yq = y.q || 1;
+      const meme = JSON.stringify([(x.cats || []).map(o => o.id), (x.prods || []).map(o => o.id)]) === JSON.stringify([(y.cats || []).map(o => o.id), (y.prods || []).map(o => o.id)]);
+      const ach = xq + ' acheté' + (xq > 1 ? 's' : '');
+      return meme ? ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + 'e ') + gain(y, yq) + ' · ' + lib(x)
+        : ach + ' (' + lib(x) + '), ' + (yq > 1 ? yq + ' × ' : '') + lib(y) + ' ' + gain(y, yq);
+    };
+    const ETAT = { a_valider: ['À valider', 'a'], validee: ['Validée · à mettre en caisse', 'ok'], en_caisse: ['En caisse', 'ok'], refusee: ['Renvoyée', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
+    const FILTRES = [['a_valider', 'À valider'], ['validee', 'Validées'], ['refusee', 'Renvoyées'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
+    const f = S.pmFiltre === undefined ? 'a_valider' : S.pmFiltre;
+    const toutes = L.d.demandes || [];
+    common.pmFiltres = FILTRES.map(([k, n]) => ({ nom: n, n: toutes.filter(d => !k || d.statut === k).length, on: f === k, choisir: () => this.setState({ pmFiltre: k }) }));
+    const decider = (d, decision) => {
+      let message = '';
+      if (decision === 'refuser') { message = window.prompt('Renvoyer « ' + d.nom + ' » au magasin : pourquoi ? (le franchisé lira ce mot)', '') || ''; if (!message.trim()) { return; } }
+      else if (!window.confirm('Valider « ' + d.nom + ' » pour ' + d.shops.map(nomMag).join(', ') + ' ?\nElle se met ensuite en caisse au panel.')) { return; }
+      L.occupe = d.id; this.setState({});
+      write(this.source, 'PATCH', '/promos-magasin/' + encodeURIComponent(d.id), { decision, message }).then(r => {
+        L.occupe = null;
+        L.msg = r.ok ? (decision === 'valider' ? 'Validée : « ' + d.nom + ' ». À créer au panel pour la mettre en caisse.' : 'Renvoyée au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
+        if (r.ok) { L.d = undefined; } this.setState({});
+      });
+    };
+    common.pmMsg = L.msg || '';
+    common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
+    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins, dans chaque magasin couvert.';
+    common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
+      const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
+      return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
+        periode: (d.du ? jj(d.du) : '…') + ' → ' + (d.au ? jj(d.au) : '…'), creneaux: cren(d.creneaux) + (d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' par ticket' : '') : ''),
+        coef: c.lot != null ? '×' + c.lot.toLocaleString('fr-BE', { minimumFractionDigits: 2 }) : '—', coefCls: c.lot == null ? 'mu' : (c.lot >= (R.coefMin || 2) ? 'ok' : 'ko'),
+        cas: c.x ? 'cas le plus serré : ' + (d.x.q || 1) + ' × ' + c.x + ' + ' + (d.y.q || 1) + ' × ' + c.y + (c.magasin && d.shops && d.shops.length > 1 ? ' (' + nomMag(c.magasin) + ')' : '') : '',
+        sansCout: (c.sansCout || []).length ? 'sans coût de recette : ' + c.sansCout.slice(0, 3).join(', ') + (c.sansCout.length > 3 ? '…' : '') : '',
+        envoyee: d.envoyee ? jj(d.envoyee.slice(0, 10)) : '', etat: e[0], etatCls: e[1], message: d.message || '', description: d.description || '',
+        peutDecider: d.statut === 'a_valider', occupe: L.occupe === d.id, href: dash(d.shop),
+        valider: () => decider(d, 'valider'), renvoyer: () => decider(d, 'refuser') };
+    });
+  }
+
   valsPrimesParams(common){
     const S = this.state;
     const court = nom => String(nom || '').split(' - ').pop();

@@ -2254,9 +2254,12 @@ la demande `a_valider`, sinon **422** `{ error: "à compléter", erreurs: [phras
 
 `DELETE /exploitation/promos-magasin?shop=4&id=pm…` — un brouillon, une demande renvoyée ou encore à valider.
 
-Côté marque : `GET /promos-magasin[?statut=a_valider]` (toutes les demandes, la plus ancienne d'abord) et
+Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=a_valider]`
+(toutes les demandes, la plus ancienne d'abord, avec `noms` : les noms courts des magasins cités, et `regles`) et
 `PATCH /promos-magasin/{id}` `{ decision: "valider"|"refuser", message }` — un refus dit pourquoi ; la demande revient
-au magasin (« Renvoyée par la marque », avec le mot).
+au magasin (« Renvoyée par la marque », avec le mot). L'écran trie par statut (À valider, Validées, Renvoyées,
+Brouillons, Toutes), montre la règle, les magasins, la période, le coefficient et son cas le plus serré, et ouvre le
+dashboard de chaque magasin sur son onglet Promotions.
 
 Les règles du magasin, imposées au serveur :
 

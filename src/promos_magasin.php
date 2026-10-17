@@ -350,13 +350,16 @@ function wr_promos_magasin_retirer(): array
     return ['error' => 'promotion introuvable'];
 }
 
-/** GET /promos-magasin[?statut=a_valider] — côté marque : les demandes de tous les magasins. */
+/** GET /promos-magasin[?statut=a_valider] — côté marque (console › Analyse magasin › Promotions) : les demandes de tous les magasins. */
 function ep_promos_magasin_marque(): array
 {
     $st = (string) ($_GET['statut'] ?? '');
     $l = array_values(array_filter(pmLire(), static fn ($d) => $st === '' || ($d['statut'] ?? '') === $st));
     usort($l, static fn ($a, $b) => strcmp((string) ($a['envoyee'] ?? $a['maj'] ?? ''), (string) ($b['envoyee'] ?? $b['maj'] ?? '')));
-    return ['demandes' => $l];
+    // Les noms courts des magasins cités, pour la console.
+    $noms = [];
+    foreach ($l as $d) { foreach (pmShops($d) as $sid) { $noms[(string) $sid] ??= pmNomShop($sid); } }
+    return ['demandes' => $l, 'noms' => $noms, 'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
 }
 
 /** PATCH /promos-magasin/{id} {decision: valider|refuser, message} — côté marque. Une refusée revient au magasin avec le mot. */

@@ -147,6 +147,7 @@ export function render(c, x){
       ${c.isPlan ? tplPlan(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
+      ${c.isPromosMag ? tplPromosMag(c, x) : ''}
       ${c.isMktHub ? tplMktHub(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
@@ -8152,6 +8153,46 @@ function tplPrWiz(W, x){
 /* Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes → Paramètres, un écran à elles sous ERP franchisé
    → Marketing franchisé. Les primes de la marque et des sponsors, celles des franchisés, les promotions du panel, les
    moyennes par magasin ; l'assistant « Nouvelle prime » par-dessus. */
+/* Les promotions des magasins (17/10/2026) — Analyse magasin › Promotions : les demandes « X achetés + Y »
+ * écrites dans le dashboard des magasins, à valider ou à renvoyer avec un mot. */
+function tplPromosMag(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const th = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:9px 10px;border-bottom:0.5px solid var(--color-border-secondary);text-align:left;white-space:nowrap';
+  const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:top;font-size:12.5px';
+  const mu = 'font-size:11px;color:var(--color-text-muted)';
+  const bt = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap`;
+  const chip = { a: 'background:#FBF3DC;color:#8a5a13', ok: 'background:rgba(45,122,62,.12);color:#2d7a3e', r: 'background:rgba(141,29,44,.10);color:#8D1D2C', b: 'background:var(--color-background-secondary);color:#555' };
+  const coefC = { ok: 'color:#2d7a3e', ko: 'color:#A61E1E', mu: 'color:var(--color-text-muted)' };
+  const tete = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
+      ${(c.pmFiltres || []).map(o => `<button ${x.A(o.choisir)} style="${pill(o.on)}">${esc(o.nom)} <span style="opacity:.75">${o.n}</span></button>`).join('')}
+      <span style="flex:1"></span><button ${x.A(c.pmRelire)} style="${bt(false)}">↻ Relire</button></div>`;
+  const magasins = (c.pmMagasins || []).length ? `<div style="${carte};padding:14px 16px">
+      <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-bottom:8px">Les promotions d’un magasin, comme il les voit — liste, assistant, coefficient</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${c.pmMagasins.map(m => `<a href="${esc(m.href)}" target="_blank" rel="noopener" style="${pill(false)};text-decoration:none;color:var(--color-text)">${esc(m.nom)} ↗</a>`).join('')}</div></div>` : '';
+  if (c.pmChargement) { return `<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px;color:var(--color-text-muted)">Lecture des demandes des magasins…</div>${magasins}</div>`; }
+  if (c.pmMotif) { return `<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px;color:var(--color-primary)">${esc(c.pmMotif)}</div>${magasins}</div>`; }
+  const L = c.pmLignes || [];
+  const lignes = L.map(l => `<tr>
+      <td style="${td};min-width:250px"><b>${esc(l.nom)}</b><div style="${mu};margin-top:2px">${esc(l.regle)}</div>${l.description ? `<div style="${mu};margin-top:2px;font-style:italic">${esc(l.description)}</div>` : ''}${l.message ? `<div style="font-size:11.5px;color:#8D1D2C;margin-top:4px">Mot de la marque : « ${esc(l.message)} »</div>` : ''}</td>
+      <td style="${td}">${esc(l.magasins)}</td>
+      <td style="${td};white-space:nowrap">${esc(l.periode)}<div style="${mu}">${esc(l.creneaux)}</div></td>
+      <td style="${td};text-align:right;white-space:nowrap"><b style="font-size:14px;${coefC[l.coefCls] || ''}">${esc(l.coef)}</b>${l.cas ? `<div style="${mu};white-space:normal;max-width:220px;margin-left:auto">${esc(l.cas)}</div>` : ''}${l.sansCout ? `<div style="font-size:11px;color:#8a5a13;white-space:normal;max-width:220px;margin-left:auto">${esc(l.sansCout)}</div>` : ''}</td>
+      <td style="${td}"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;${chip[l.etatCls] || chip.b}">${esc(l.etat)}</span>${l.envoyee ? `<div style="${mu};margin-top:3px">envoyée le ${esc(l.envoyee)}</div>` : ''}</td>
+      <td style="${td};text-align:right;white-space:nowrap">${l.peutDecider ? `<button ${x.A(l.renvoyer)} style="${bt(false)}"${l.occupe ? ' disabled' : ''}>Renvoyer</button> <button ${x.A(l.valider)} style="${bt(true)}"${l.occupe ? ' disabled' : ''}>${l.occupe ? '…' : 'Valider'}</button> ` : ''}<a href="${esc(l.href)}" target="_blank" rel="noopener" style="${mu};margin-left:6px">dashboard ↗</a></td></tr>`).join('');
+  return `
+<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+  ${c.pmMsg ? `<div style="display:flex;gap:10px;align-items:center;background:rgba(45,122,62,.08);border:1px solid rgba(45,122,62,.25);color:#2d6a3a;border-radius:9px;padding:9px 12px;font-size:12.5px">${esc(c.pmMsg)}<span style="flex:1"></span><button ${x.A(c.pmFermerMsg)} style="border:0;background:none;cursor:pointer;color:inherit">✕</button></div>` : ''}
+  <div style="${carte};overflow:hidden">${tete}
+    ${L.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th}">Promotion</th><th style="${th}">Magasins</th><th style="${th}">Période</th><th style="${th};text-align:right">Coef. du lot</th><th style="${th}">Statut</th><th style="${th}"></th></tr></thead><tbody>${lignes}</tbody></table></div>`
+      : `<div style="padding:20px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune demande ici. Les franchisés préparent leurs promotions dans l’onglet Promotions de leur dashboard.</div>`}
+    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')} Valider ne met rien en caisse : la promotion se crée ensuite au panel. Renvoyer la rend au magasin avec votre mot.</div>
+  </div>
+  ${magasins}
+</div>`;
+}
+
 function tplPrimesApp(c, x){
   const { esc } = x;
   const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
