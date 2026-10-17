@@ -2086,6 +2086,8 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
+**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : un sélecteur de magasin, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en six étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, un ou plusieurs magasins, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. La demande part à la marque, qui la valide ou la renvoie avec un mot. Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
+
 **Commandes et canaux, au mois (17/10/2026).** Dans le dashboard magasin, vue Mois, la carte « Commandes et canaux » a quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison. Chacune porte la courbe de ses six derniers mois (le mois en cours projeté, en pointillé) et l'écart au mois d'avant aux mêmes dates (« +44 % vs sept. ») ; un clic ouvre son cumul du mois face au mois d'avant, avec la fin de mois au rythme actuel, et un second clic le referme. Lecture : `GET /exploitation/canaux-mois` (ci-dessous). Les vues Jour et Semaine ne changent pas. Tests : `php bin/tests_canaux.php`.
 
 **Les posts au portail social (17/10/2026).** Les posts Facebook, Instagram et LinkedIn se créent, se valident et se publient dans le portail social (`/social`, dépôt `samsam2703MFC/social`). Le portail Marketing perd son circuit des posts : plus de rédacteur (Créer › Post), ni de Valider, ni de Publier, ni des paramètres Publication et Agent de contrôle. Il garde Tableau de bord, **1 · Planifier** (campagnes et newsletters, calendrier), **2 · Newsletter**, **3 · Mesurer** (newsletters, avis Google, posts sauvages) et Paramètres (API et tables, charte, pages, avis) ; le rail, le tableau de bord, les campagnes et le calendrier mènent au portail social (« + Post ↗ », « Préparer un post ↗ »). Les anciennes adresses `onglet=valider|publier|social` et `onglet=creer&vue=post` y mènent (avec `?shop=`, à l'espace franchisé `social/franchisee/?shop=`) ; `onglet=creer` est la newsletter. Dans la console, le hub Marketing : « + Post » ouvre `social/SA Post.dc.html`, la porte « Vue franchisé » l'espace franchisé du magasin, la tuile Posts le portail social ; `#/controle-posts-facebook` mène à `/social/`. Au serveur, `mhAFaire()` (`GET /marketing/hub`, `aFaire`) ne liste plus de post ni de campagne « sans prise de parole » (les posts du portail social ne s'y voient pas) ; le canal `social` du hub reste lu, les routes `/marketing/social/*` et `/marketing/publication/*` restent.
@@ -2220,6 +2222,53 @@ mêmes dates et, au clic sur un canal, son cumul du mois face au mois d'avant.
   (`client-orders` depuis le premier mois, gardée dix minutes) ; une commande à venir ne compte pas.
 - Au dashboard, le mois en cours se projette au rythme des jours lus (`valeur ÷ joursLus × jours` ; le webshop sur
   `joursEcoules`).
+
+### `/exploitation/promos-magasin` — les promotions « X achetés + Y » du magasin, demandées à la marque (17/10/2026)
+
+Pour l'onglet **Promotions** du dashboard magasin (sur ordinateur) : la liste des promotions qui touchent le magasin et
+l'assistant en six étapes (Nom → Magasins → Ce qu'on achète (X) → Ce qu'on reçoit (Y) → Période → Vérifier et
+envoyer), calqué sur le formulaire « Buy X Get Y » du panel. Rien n'est écrit au panel : une demande validée par la
+marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'API soit relu sur une promotion test
+(`GET /ventes/promos/sonde-fiche`). Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`).
+
+`GET /exploitation/promos-magasin?shop=4`
+
+    { shop, erreurPanel, regles: { coefMin: 2, joursMax: 14, enMemeTemps: 2, magasinsMax: 4 },
+      panel: [ { id, nom, type: "buyxgety"|"bundle", texte, statut, etat: "active"|"a_venir"|"terminee"|"inactive",
+                 du, au, reseau, magasins, x, y, recompense } ],     // celles du panel qui touchent le magasin
+      demandes: [ { id: "pm…", shop, shops: [4, 6], statut: "brouillon"|"a_valider"|"refusee"|"validee"|"en_caisse",
+                    nom, description, x: { q, cats: [{id, nom}], prods: [{id, nom}], exclus: [{id, nom}] },
+                    y: { q, type: "FREE"|"FIXED_PRICE"|"FIXED_AMOUNT_DISCOUNT"|"PERCENTAGE_DISCOUNT", valeur, cats, prods, exclus },
+                    du: "2026-10-20 07:00", au, creneaux: [ { jours: [6, 7], de: "15:00", a: "18:00" } ],
+                    repetable, maxParTicket, coef: { lot, sans, x, y, paye, cout, paires, nX, nY, sansCout, magasin },
+                    cree, maj, envoyee, message, panelId } ] }
+
+- `panel` vient de `pvRegles()` (la liste buy-x-get-y du panel et ses fiches, gardée 10 min) ; `x`, `y` et
+  `recompense` sont ceux de `pvNormaliser()` et servent au bouton « Dupliquer ».
+- Une demande se voit dans chaque magasin de `shops` ; `shop` est celui qui l'a écrite.
+
+`POST /exploitation/promos-magasin` `{ shop, id?, action: "brouillon"|"envoyer", nom, description, shops, x, y, du, au,
+creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incomplet ; `envoyer` vérifie les règles et passe
+la demande `a_valider`, sinon **422** `{ error: "à compléter", erreurs: [phrases], coef }`. Une demande `validee` ou
+`en_caisse` ne se modifie plus (409). Les valeurs de l'avantage se saisissent TTC, comme en caisse.
+
+`DELETE /exploitation/promos-magasin?shop=4&id=pm…` — un brouillon, une demande renvoyée ou encore à valider.
+
+Côté marque : `GET /promos-magasin[?statut=a_valider]` (toutes les demandes, la plus ancienne d'abord) et
+`PATCH /promos-magasin/{id}` `{ decision: "valider"|"refuser", message }` — un refus dit pourquoi ; la demande revient
+au magasin (« Renvoyée par la marque », avec le mot).
+
+Les règles du magasin, imposées au serveur :
+
+- une date de fin, **14 jours au plus** ; la fin après le début, pas déjà passée ;
+- **deux promotions à la fois au plus**, magasin par magasin (les demandes `a_valider`, `validee`, `en_caisse`) ;
+- le **coefficient du lot à ×2 au moins** : prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
+  d'un produit de Y, la récompense sur la pièce la moins chère, le cas le plus serré de toutes les paires (une paire où
+  le produit de X est aussi dans Y et moins cher ne se présente pas en caisse), dans chaque magasin couvert, avec ses
+  prix et coûts de recette (`/analyse/produits/coefficients`). Le navigateur fait le même calcul à chaque frappe. Un
+  produit sans coût de recette n'est pas chiffré (`sansCout`) ; si aucun ne l'est, l'envoi est refusé.
+
+Tests : `php bin/tests_promos.php`.
 
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 

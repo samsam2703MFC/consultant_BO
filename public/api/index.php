@@ -88,6 +88,7 @@ require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
+require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/sms.php';
 $tCharge = microtime(true);
 
@@ -233,6 +234,8 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/promos'           => ep_promos_magasin(),
             $path === '/exploitation/canaux'           => ep_exploitation_canaux(),
             $path === '/exploitation/canaux-mois'      => ep_exploitation_canaux_mois(),
+            $path === '/exploitation/promos-magasin'   => ep_promos_magasin_demandes(),
+            $path === '/promos-magasin'                => ep_promos_magasin_marque(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
@@ -491,6 +494,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/production/flux/vie') { return wr_production_flux_vie(); }
     if ($method === 'POST' && $path === '/production/flux/fours/simuler') { return wr_production_flux_fours_simuler(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
+    if ($method === 'POST' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin(); }
+    if ($method === 'DELETE' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin_retirer(); }
+    if ($method === 'PATCH' && preg_match('#^/promos-magasin/(pm[0-9a-z]{6,20})$#', $path, $m)) { return wr_promos_magasin_decision($m[1]); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }
