@@ -562,6 +562,10 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   (`trigger/reward.categories[].name`, « Cookies ») relues dans le catalogue par leur nom (sous-catégorie, sinon
   catégorie). Un bundle de l'API sans produit à lui se compte par ses articles. `shop_ids` de la liste peut être un
   texte (« 4,5 »). `GET /ventes/primes-promos/sonde` (lecture seule) rend la forme brute : clés, 1er élément, sa fiche.
+  `GET /ventes/promos/sonde-fiche?q=test[&sorte=buy-x-get-y]` (17/10/2026, lecture seule) : toutes les promotions de la
+  sorte, **tous statuts** (`promotions: [{id, nom, statut}]`), et pour celles dont le nom contient `q` (trois au plus) la
+  ligne de la liste et la fiche brute (`trouvees: [{item, fiche: {code, corps}}]`) — pour relire une promotion créée à la
+  main dans le panel avant que l'assistant « Nouvelle promotion » du magasin n'en écrive une.
 - **Deux familles de primes** (16/10/2026). `famille: marque` (défaut) : posée par la marque, payée par la marque
   ou un sponsor (`payeur: magasin` demandé sur une prime de la marque revient à la marque), visible de chaque
   franchisé. `famille: magasin` : la prime promo qu'un **franchisé** pose pour **son** magasin — `shop` (un seul), la
