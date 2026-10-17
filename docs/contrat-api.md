@@ -593,6 +593,12 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   chaque ticket qui vient en est une, k ≥ (r·t − c)/(1 − r) (`primesManqueCroisees`) ; `objectif.manqueCa` — le CA qu'il
   manque au magasin pour son objectif du mois (null mois clos ou sans objectif). L'app les montre sous la description,
   dans le détail d'une ligne et dans la fiche : « 💡 Il manque 57 avis 5★ pour atteindre 4,5 ★ ».
+- **Les conditions, un interrupteur chacune** (17/10/2026). La fenêtre « Modifier » range les conditions dans un bloc
+  « Conditions pour toucher la prime » : le minimum d'heures au planning (objectif, Google), le minimum de tickets (ventes
+  croisées, `venteCroisees.minTickets`), le minimum de pièces (catégorie). Coupée, la condition vaut 0 : pour les heures,
+  `heuresMin: 0` paie sans regarder le planning (`googlePrime`, `primesMagasinMois` : plus de « sous le minimum », la
+  part même sans heures au planning). Le tableau et le règlement PDF ne la citent plus. L'app ne montre plus la ligne
+  « Tes heures » dans le détail de l'objectif et de Google ; le motif « sous 20 h » reste quand la condition joue.
 - **La période d'une prime** (16/10/2026) : une catégorie ou un target (ventes croisées, objectif, note Google) porte
   `du` / `au` (AAAA-MM-JJ, l'un ou l'autre ou aucun ; à l'envers, remis dans l'ordre) ; une promo a les dates de sa
   promotion. Une prime compte et s'affiche dans **chaque mois que sa période touche**, nulle part ailleurs : le mois

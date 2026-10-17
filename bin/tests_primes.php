@@ -164,6 +164,10 @@ $pm = primesMagasinMois(4, $m, $reg, 12.0, 604.0, ['montant' => 60000.0, 'source
 verifie('sous le minimum d’heures : rien', $pm['vous'] === 0.0 && $pm['sousMin']);
 $pm = primesMagasinMois(4, $m, $reg, 128.0, 604.0, ['montant' => 65000.0, 'source' => 'budget'], 5);
 verifie('objectif manqué : rien', $pm['vous'] === 0.0 && $pm['palier'] === null);
+$pm = primesMagasinMois(4, $m, ['heuresMin' => 0] + $reg, null, 604.0, ['montant' => 60000.0, 'source' => 'budget'], 5);
+verifie('sans condition d’heures : la récompense, même sans planning ni « sous le minimum »', $pm['vous'] === 50.0 && !$pm['sousMin'], json_encode([$pm['vous'], $pm['sousMin']]));
+$pm = primesMagasinMois(4, $m, ['heuresMin' => 0] + $reg, 2.0, 604.0, ['montant' => 60000.0, 'source' => 'budget'], 5);
+verifie('sans condition d’heures : 2 h suffisent', $pm['vous'] === 50.0);
 
 // --- 4. les pièces d'une promo : ses dates, ses magasins -------------------------------------------
 echo "Les pièces d'une promo\n";
@@ -703,6 +707,15 @@ wr_primes_app();
 verifie('un target garde sa ligne de description (taillée)', primesAppInfosDe('google')['description'] === 'Demande un avis 5★ aux clients contents', json_encode(primesAppInfosDe('google')));
 verifie('Bats ton record garde la sienne ; la meilleure vendeuse, vide', primesAppInfosDe('record')['description'] === 'Un article de plus par ticket' && primesAppInfosDe('meilleure')['description'] === '', json_encode(relire()['externes'] ?? null));
 verifie('une description trop longue : 160 caractères', mb_strlen(primesAppExternes(['record' => ['description' => str_repeat('é', 300)]])['record']['description']) === 160);
+
+// --- 16. les conditions qu'on coupe (17/10/2026) ---------------------------------------------------------
+echo "Conditions\n";
+$gS = ['atteint' => true, 'montant' => 25, 'heuresMin' => 0];
+verifie('Google sans condition d’heures : payée sans planning, et à 3 h', googlePrime($gS, null) === 25.0 && googlePrime($gS, 3.0) === 25.0);
+verifie('Google à 20 h : rien sans planning ni à 3 h, payée à 20 h', googlePrime(['heuresMin' => 20] + $gS, null) === 0.0 && googlePrime(['heuresMin' => 20] + $gS, 3.0) === 0.0 && googlePrime(['heuresMin' => 20] + $gS, 20.0) === 25.0);
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => in_array($e['cle'], ['objectif', 'google'], true) ? array_merge($e, ['heuresMin' => 0]) : $e, relire()['liste'])];
+wr_primes_app();
+verifie('la condition coupée est gardée à 0 (objectif, Google)', primeMagasinReglages()['heuresMin'] === 0 && googleReglages()['heuresMin'] === 0, json_encode([primeMagasinReglages(), googleReglages()]));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -174,13 +174,11 @@
       {% if c.jour ?? null %}<div><dt>{{ T.day_prefix ?? 'J' }}{{ c.jour }}</dt><dd class="{{ c.avance >= 0 ? 'ok' : 'att' }}">{{ c.aDate|number_format(1, ',', ' ') }}&nbsp;%<small>{{ T.d_should_be ?? 'il faudrait' }} {{ c.cibleJour|number_format(1, ',', ' ') }}&nbsp;%</small></dd></div>{% endif %}
       {% if pm.projection ?? null %}<div><dt>{{ T.d_month_end ?? 'Fin de mois, au rythme actuel' }}</dt><dd>{{ pm.projection|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ pm.atteinteProj|number_format(1, ',', ' ') }}&nbsp;%</small></dd></div>{% endif %}
       {% for pal in pm.paliers ?? [] %}<div><dt>{{ pal.pct }}&nbsp;% · {{ pal.vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.d_for_you ?? 'pour toi' }}</dt><dd class="{{ pal.atteint ? 'ok' }}">{% if pal.atteint %}✓ {{ T.reached ?? 'atteint' }}{% else %}{{ T.d_missing ?? 'manque' }} {{ pal.manque|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if pal.parJour %}<small>{{ pal.parJour|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.per_day ?? 'par jour' }}</small>{% endif %}{% endif %}</dd></div>{% endfor %}
-      {% if pm.heuresMin ?? 0 %}<div><dt>{{ T.d_my_hours ?? 'Tes heures' }}</dt><dd class="{{ pm.sousMin ? 'att' }}">{{ (pm.heures ?? 0)|number_format(1, ',', ' ') }}&nbsp;h<small>{{ pm.heuresMin }}&nbsp;h {{ T.d_min_hours ?? 'min. pour toucher la prime' }}</small></dd></div>{% endif %}
     </dl>
     {% elseif c.cle == 'google' %}{% set go = p.google %}
       <div><dt>{{ T.d_shop_rating ?? 'Note du magasin' }}</dt><dd>{{ go.note is not null ? go.note|number_format(1, ',', ' ') ~ ' ★' : '—' }}{% if go.avis %}<small>{{ go.avis }} {{ T.d_reviews ?? 'avis' }}</small>{% endif %}</dd></div>
       <div><dt>{{ T.d_threshold ?? 'Seuil' }}</dt><dd>{{ go.seuil|number_format(1, ',', ' ') }} ★</dd></div>
       <div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{{ go.recompense|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ T.d_per_person ?? 'par personne' }}</small></dd></div>
-      {% if go.heuresMin %}<div><dt>{{ T.d_my_hours ?? 'Tes heures' }}</dt><dd class="{{ go.sousMin ? 'att' }}">{{ (p.heures.mois ?? 0)|number_format(1, ',', ' ') }}&nbsp;h<small>{{ go.heuresMin }}&nbsp;h {{ T.d_min_hours ?? 'min. pour toucher la prime' }}</small></dd></div>{% endif %}
     </dl>
     {% elseif c.cle == 'meilleure' %}{% set mv = b.meilleure %}
       <div><dt>{{ T.d_my_score ?? 'Ton score' }}</dt><dd>{{ mv.score is not null ? mv.score|number_format(0, ',', ' ') : '—' }}{% if mv.rangMag %}<small>{{ mv.rangMag == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : rangPre ~ mv.rangMag ~ rangSuf }} / {{ mv.surMag }} · {{ T.my_shop_short ?? 'magasin' }}</small>{% endif %}</dd></div>

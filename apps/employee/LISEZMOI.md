@@ -79,7 +79,9 @@ sa valeur), la ligne de description, qui l'offre (la marque, le magasin, ou le s
 site), qui gagne, la période et « Voir le classement ». Le détail d'une ligne de target montre aussi « À gagner » et
 « Offerte par ». Sous la description réglée au cockpit, une indication calculée (17/10/2026) : « Il manque N avis 5★
 pour atteindre 4,5 ★ » (Note Google), « Encore N ventes croisées pour atteindre 55 % » (ventes croisées), « Le
-magasin doit encore faire N € de chiffre ce mois » (objectif magasin).
+magasin doit encore faire N € de chiffre ce mois » (objectif magasin). La ligne « Tes heures » n'est plus dans le
+détail de l'objectif ni de Google (17/10/2026) : le minimum d'heures est une condition qu'on allume ou coupe au cockpit ;
+quand elle joue et qu'on est en dessous, la ligne dit seulement « sous 20 h ».
 
 Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 
