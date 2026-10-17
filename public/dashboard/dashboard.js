@@ -3017,14 +3017,17 @@
   }
   const pmTtc = p => p.prixTtc != null ? +p.prixTtc : (p.prixHt != null ? +p.prixHt * (1 + (+p.tva || 0) / 100) : null);
   /** Ce qu'un côté vise vraiment : la catégorie (moins les exclus) ou les produits, selon le mode choisi. */
-  const pmEffectif = c => ({ q: Math.max(1, +c.q || 1), cats: c.mode === 'cats' ? c.cats : [], prods: c.mode === 'prods' ? c.prods : [], exclus: c.mode === 'cats' ? c.exclus : [] });
+  const pmEffectif = c => ({ q: Math.max(1, +c.q || 1), cats: c.mode === 'cats' ? c.cats : [], prods: c.mode === 'prods' ? c.prods : [], exclus: c.mode === 'cats' ? c.exclus : [], portion: c.portion || null });
+  /** Les variantes d'un côté (17/10/2026) : la portion du panel (`portion_scope`), sa fraction, ses mots. Sans : toutes les variantes. */
+  const PM_PORTIONS = { ONE_HALF: { f: 0.5, lib: '½', un: 'demi', des: 'demis' }, ONE_QUARTER: { f: 0.25, lib: '¼', un: 'quart', des: 'quarts' } };
+  const pmFrac = c => (PM_PORTIONS[c.portion] || { f: 1 }).f;
   function pmEligibles(prods, c) {
     const cats = c.cats.map(o => +o.id), ids = c.prods.map(o => +o.id), ex = c.exclus.map(o => +o.id), out = new Map();
     prods.forEach(p => { const id = +p.id; if (id > 0 && !ex.includes(id) && (ids.includes(id) || cats.includes(+p.catId))) { out.set(id, p); } });
     return out;
   }
-  function pmRecompense(p, type, v) {
-    const ht = +p.prixHt, tva = 1 + (+p.tva || 0) / 100, val = +v || 0;
+  function pmRecompense(p, type, v, f) {
+    const ht = +p.prixHt * (f || 1), tva = 1 + (+p.tva || 0) / 100, val = +v || 0;
     if (type === 'FREE') { return 0; }
     if (type === 'FIXED_PRICE') { return Math.max(0, Math.min(ht, val / tva)); }
     if (type === 'FIXED_AMOUNT_DISCOUNT') { return Math.max(0, ht - val / tva); }
@@ -3039,11 +3042,13 @@
     const sansCout = [...new Set(tous.filter(p => +p.prixHt > 0 && !(+p.cout > 0)).map(p => p.nom))];
     const coutReseau = [...new Set(tous.filter(p => ch(p) && p.source === 'reseau').map(p => p.nom))];
     let pire = null, n = 0;
+    // Une portion visée (¼, ½) : l'article est cette part de la pièce — prix et coût à la fraction.
+    const fx = pmFrac(x), fy = pmFrac(y);
     X.forEach(px => { if (!ch(px)) { return; } Y.forEach(py => {
       if (!ch(py)) { return; }
-      if (+px.id !== +py.id && Y.has(+px.id) && +px.prixHt < +py.prixHt) { return; }
+      if (+px.id !== +py.id && Y.has(+px.id) && fx * px.prixHt < fy * py.prixHt) { return; }
       n++;
-      const cout = x.q * px.cout + y.q * py.cout, paye = x.q * px.prixHt + y.q * pmRecompense(py, y.type, y.valeur), sans = x.q * px.prixHt + y.q * py.prixHt;
+      const cout = x.q * fx * px.cout + y.q * fy * py.cout, paye = x.q * fx * px.prixHt + y.q * pmRecompense(py, y.type, y.valeur, fy), sans = x.q * fx * px.prixHt + y.q * fy * py.prixHt;
       const c = paye / cout;
       if (!pire || c < pire.lot) { pire = { lot: Math.round(c * 100) / 100, sans: Math.round(sans / cout * 100) / 100, px, py, paye, cout }; }
     }); });
@@ -3064,9 +3069,10 @@
   function pmPhrase(x, y) {
     const xq = Math.max(1, +x.q || 1), yq = Math.max(1, +y.q || 1), v = y.valeur;
     const gain = { FREE: yq > 1 ? 'offerts' : 'offert', FIXED_PRICE: 'à ' + fU(+v || 0), FIXED_AMOUNT_DISCOUNT: '−' + fU(+v || 0), PERCENTAGE_DISCOUNT: 'à −' + nf(+v || 0, 0) + ' %' }[y.type] || 'remisé';
-    const ach = xq + ' acheté' + (xq > 1 ? 's' : '');
-    if (pmMeme(x, y)) { return ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + '<sup>e</sup> ') + gain; }
-    return ach + ' (' + esc(pmLib(x)) + '), ' + (yq > 1 ? yq + ' × ' : '') + esc(pmLib(y)) + ' ' + gain;
+    const Px = PM_PORTIONS[x.portion], Py = PM_PORTIONS[y.portion];
+    const ach = xq + (Px ? ' ' + (xq > 1 ? Px.des : Px.un) : '') + ' acheté' + (xq > 1 ? 's' : '');
+    if (pmMeme(x, y) && x.portion === y.portion) { return ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + '<sup>e</sup> ') + gain; }
+    return ach + ' (' + esc(pmLib(x)) + '), ' + (yq > 1 ? yq + ' × ' : '') + (Py ? Py.lib + ' ' : '') + esc(pmLib(y)) + ' ' + gain;
   }
   function pmCreneauxTxt(l) {
     if (!l || !l.length) { return 'tous les jours'; }
@@ -3141,7 +3147,7 @@
   }
 
   /* L'assistant : une demande en cours d'écriture (S.pmW = {etape, d, erreurs, envoi}). */
-  const pmCote = (c, y) => Object.assign({ q: Math.max(1, +(c && c.q) || 1), mode: c && !(c.cats || []).length && (c.prods || []).length ? 'prods' : 'cats', cats: (c && c.cats) || [], prods: (c && c.prods) || [], exclus: (c && c.exclus) || [] },
+  const pmCote = (c, y) => Object.assign({ q: Math.max(1, +(c && c.q) || 1), mode: c && !(c.cats || []).length && (c.prods || []).length ? 'prods' : 'cats', cats: (c && c.cats) || [], prods: (c && c.prods) || [], exclus: (c && c.exclus) || [], portion: (c && c.portion) || null },
     y ? { type: (c && c.type) || 'FREE', valeur: c && c.valeur != null ? c.valeur : '' } : {});
   function pmDepuis(d) {
     return { id: d.id || null, nom: d.nom || '', description: d.description || '', shops: (d.shops && d.shops.length ? d.shops : [+S.shop]).map(Number),
@@ -3215,7 +3221,7 @@
       <div class="pm-phrase">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div>
       <div class="db-mini" style="margin-top:4px">${esc(mags.join(', '))} · ${d.du && d.au ? 'du ' + esc(pmQuand(d.du)) + ' au ' + esc(pmQuand(d.au)) : 'période à régler'}${d.creneaux.length ? ' · ' + esc(pmCreneauxTxt(d.creneaux)) : ''}${d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' fois par ticket au plus' : '') : ''}</div>
       ${ck(!pmManque(d, 1), 'Nom')}
-      ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + esc(pmLib(x)) : 'à l’étape 2'))}
+      ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x)) : 'à l’étape 2'))}
       ${ck(!pmManque(d, 3), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 3'))}
       ${ck(!pmManque(d, 4), 'Période : ' + (pmManque(d, 4) ? esc(pmManque(d, 4)) : n + ' jour' + (n > 1 ? 's' : '') + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
       ${ck(C && C.lot != null && C.lot >= min, 'Coefficient du lot ' + fXm(min) + ' au moins')}</div>`;
@@ -3233,7 +3239,9 @@
         ${C.coutReseau.length ? `<div class="db-mini" style="margin-top:6px">Coût du réseau (pas encore calculé pour ce magasin au panel) : ${esc(C.coutReseau.slice(0, 5).join(', '))}${C.coutReseau.length > 5 ? '…' : ''}.</div>` : ''}
         ${pmSortis(C).length ? `<div class="pm-warn">Sortent de la promotion d’office (exclus au panel), ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
       // Le ticket du cas le plus serré, aux prix TTC de la caisse.
-      const tx = pmTtc(C.px), ty = pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur) * (1 + (+C.py.tva || 0) / 100), rem = y.q * (ty - ry);
+      const fx = pmFrac(x), fy = pmFrac(y), Px = PM_PORTIONS[x.portion], Py = PM_PORTIONS[y.portion];
+      const tx = fx * pmTtc(C.px), ty = fy * pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur, fy) * (1 + (+C.py.tva || 0) / 100), rem = y.q * (ty - ry);
+      C.px = Object.assign({}, C.px, { nom: C.px.nom + (Px ? ' ' + Px.lib : '') }); C.py = Object.assign({}, C.py, { nom: C.py.nom + (Py ? ' ' + Py.lib : '') });
       const lg = (a, b, c) => `<div class="l${c ? ' ' + c : ''}"><span>${a}</span><span>${b}</span></div>`;
       h += `<div class="db-card pm-c"><div class="db-lab" style="margin-bottom:8px">Sur le ticket</div><div class="pm-tk">
         ${Array.from({ length: x.q }, () => lg(esc(C.px.nom), nf(tx, 2))).join('')}${Array.from({ length: y.q }, () => lg(esc(C.py.nom), nf(ty, 2))).join('')}
@@ -3249,10 +3257,11 @@
   function pmCible(W, cote) {
     const c = W.d[cote], prods = pmProduits() || [], cats = pmCategories();
     const ex = c.mode === 'cats' && c.cats.length ? prods.filter(p => c.cats.some(o => +o.id === +p.catId) && !c.exclus.some(o => +o.id === +p.id)) : [];
-    let h = `<div class="pm-row" style="grid-template-columns:auto 1fr"><div class="pm-f"><label>Sur</label><span class="pm-seg"><button class="${c.mode === 'cats' ? 'on' : ''}" data-pmmode="${cote}|cats">Catégorie</button><button class="${c.mode === 'prods' ? 'on' : ''}" data-pmmode="${cote}|prods">Produits</button></span></div>`;
+    const variante = `<div class="pm-f"><label>Variante</label><select class="pm-in" data-pmportion="${cote}"><option value="">Toutes les variantes</option>${Object.entries(PM_PORTIONS).map(([k, v]) => `<option value="${k}"${c.portion === k ? ' selected' : ''}>${v.lib} seulement (${v.un})</option>`).join('')}</select></div>`;
+    let h = `<div class="pm-row" style="grid-template-columns:auto 190px 1fr"><div class="pm-f"><label>Sur</label><span class="pm-seg"><button class="${c.mode === 'cats' ? 'on' : ''}" data-pmmode="${cote}|cats">Catégorie</button><button class="${c.mode === 'prods' ? 'on' : ''}" data-pmmode="${cote}|prods">Produits</button></span></div>${variante}`;
     if (c.mode === 'cats') {
       h += `<div class="pm-f"><label>Catégorie</label><select class="pm-in" data-pmaddcat="${cote}"><option value="">${cats.length ? '+ Ajouter une catégorie…' : 'lecture des catégories…'}</option>${cats.filter(o => !c.cats.some(z => +z.id === +o.id)).map(o => `<option value="${o.id}">${esc(o.nom)} (${o.n} produit${o.n > 1 ? 's' : ''})</option>`).join('')}</select></div></div>`;
-      h += `<div class="pm-choix">${c.cats.map(o => { const k = cats.find(z => +z.id === +o.id); return `<span class="pm-tag">${esc(o.nom)} — toutes les variantes${k ? `<small>${k.n} produit${k.n > 1 ? 's' : ''}${k.min != null ? ', de ' + fU(k.min) + ' à ' + fU(k.max) : ''}</small>` : ''}<button data-pmrm="${cote}|cats|${o.id}" aria-label="retirer">✕</button></span>`; }).join('') || '<span class="db-mini">Aucune catégorie choisie.</span>'}</div>`;
+      h += `<div class="pm-choix">${c.cats.map(o => { const k = cats.find(z => +z.id === +o.id); return `<span class="pm-tag">${esc(o.nom)} — ${c.portion ? PM_PORTIONS[c.portion].lib + ' seulement' : 'toutes les variantes'}${k ? `<small>${k.n} produit${k.n > 1 ? 's' : ''}${k.min != null ? ', de ' + fU(k.min) + ' à ' + fU(k.max) : ''}</small>` : ''}<button data-pmrm="${cote}|cats|${o.id}" aria-label="retirer">✕</button></span>`; }).join('') || '<span class="db-mini">Aucune catégorie choisie.</span>'}</div>`;
       if (c.cats.length) {
         h += `<div class="pm-f" style="margin-top:10px"><label>Produits exclus de la catégorie</label><div class="pm-choix">${pmTags(cote, 'exclus', c.exclus)}
           <input class="pm-in pm-cherche" list="pm-dl-ex-${cote}" placeholder="+ Exclure un produit…" data-pmexc="${cote}"></div>
@@ -3301,7 +3310,7 @@
     // 6 · vérifier et envoyer
     const x = pmEffectif(d.x), y = pmEffectif(d.y);
     const lgn = (lab, v, et) => `<tr><td class="db-mini" style="width:170px">${lab}</td><td>${v}</td><td class="r">${et ? `<button class="pm-lien" data-pmet="${et}">modifier</button>` : ''}</td></tr>`;
-    const desc = c => c.cats.length ? 'catégorie ' + c.cats.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + ', toutes les variantes · ' + (c.exclus.length ? 'sauf ' + esc(c.exclus.map(o => o.nom).join(', ')) : 'aucune exclusion') : (c.prods.length ? c.prods.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') : '<span class="ko">à choisir</span>');
+    const desc = c => c.cats.length ? 'catégorie ' + c.cats.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + ', ' + (c.portion ? '<b>' + PM_PORTIONS[c.portion].lib + ' seulement</b>' : 'toutes les variantes') + ' · ' + (c.exclus.length ? 'sauf ' + esc(c.exclus.map(o => o.nom).join(', ')) : 'aucune exclusion') : (c.prods.length ? c.prods.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + (c.portion ? ', <b>' + PM_PORTIONS[c.portion].lib + ' seulement</b>' : '') : '<span class="ko">à choisir</span>');
     const manque = [1, 2, 3, 4].map(i => pmManque(d, i) ? PM_ETAPES[i - 1] + ' : ' + pmManque(d, i) : '').filter(Boolean);
     return tete('', 'Vérifier et enregistrer') + `<div class="pm-phrase g">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div><div class="db-mini">« ${esc(d.nom || 'sans nom')} »</div>
       <table class="pm-recap">${lgn('Magasin', '<b>' + esc(nomShop()) + '</b>', 0)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 2)}
@@ -3416,6 +3425,7 @@
       pmMajDroite();
     });
     on('[data-pmmode]', 'click', el => { const [c, m] = el.dataset.pmmode.split('|'); d[c].mode = m; rendre(); });
+    on('[data-pmportion]', 'change', el => { d[el.dataset.pmportion].portion = el.value || null; rendre(); });
     on('[data-pmaddcat]', 'change', el => { const c = el.dataset.pmaddcat, k = pmCategories().find(o => String(o.id) === el.value); if (k && !d[c].cats.some(o => +o.id === +k.id)) { d[c].cats.push({ id: k.id, nom: k.nom }); } rendre(); });
     on('[data-pmprod]', 'change', el => { const c = el.dataset.pmprod, p = pmProduitDe(el.value); if (p && !d[c].prods.some(o => +o.id === +p.id)) { d[c].prods.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });
     on('[data-pmexc]', 'change', el => { const c = el.dataset.pmexc, p = pmProduitDe(el.value); if (p && !d[c].exclus.some(o => +o.id === +p.id)) { d[c].exclus.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });

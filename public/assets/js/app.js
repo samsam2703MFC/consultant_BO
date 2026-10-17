@@ -6788,7 +6788,7 @@ class App {
     const JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
     const cren = l => !l || !l.length ? 'tous les jours' : l.map(c => { const j = c.jours.slice().sort((a, b) => a - b), suite = j.length >= 3 && j.every((v, i) => !i || v === j[i - 1] + 1);
       return (j.length === 7 ? 'tous les jours' : (suite ? JOURS[j[0] - 1] + '–' + JOURS[j[j.length - 1] - 1] : j.map(v => JOURS[v - 1]).join(', '))) + ' ' + c.de + '–' + c.a; }).join(' · ');
-    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean); return n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : '—'; };
+    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean); return ({ ONE_HALF: '½ ', ONE_QUARTER: '¼ ' }[c.portion] || '') + (n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : '—'); };
     const gain = (y, n) => ({ FIXED_PRICE: 'à ' + eur(y.valeur), FIXED_AMOUNT_DISCOUNT: '−' + eur(y.valeur), PERCENTAGE_DISCOUNT: 'à −' + Math.round(+y.valeur || 0) + ' %' }[y.type] || (n > 1 ? 'offerts' : 'offert'));
     const regle = d => {
       const x = d.x || {}, y = d.y || {}, xq = x.q || 1, yq = y.q || 1;

@@ -34,6 +34,12 @@ const PM_COEF_MIN = 2.0;
 const PM_JOURS_MAX = 14;
 const PM_EN_MEME_TEMPS = 2;
 const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DISCOUNT'];
+/**
+ * Les variantes qu'un côté peut viser (17/10/2026) : la portion du panel (`portion_scope` de ses cibles, relu sur « 4
+ * Quarts + 1 Gratuit » : {id_category: 81125, portion_scope: "ONE_QUARTER"}) et la fraction de la pièce qu'elle est.
+ * Sans portion : toutes les variantes.
+ */
+const PM_PORTIONS = ['ONE_HALF' => 0.5, 'ONE_QUARTER' => 0.25];
 const PM_VIVANTES = ['a_valider', 'validee', 'en_caisse'];
 
 /* --- le stockage ------------------------------------------------------------------------ */
@@ -83,6 +89,8 @@ function pmCote($c, bool $y): array
 {
     $c = is_array($c) ? $c : [];
     $out = ['q' => max(1, min(20, (int) ($c['q'] ?? 1))), 'cats' => pmIds($c['cats'] ?? []), 'prods' => pmIds($c['prods'] ?? []), 'exclus' => pmIds($c['exclus'] ?? [])];
+    $por = strtoupper((string) ($c['portion'] ?? ''));
+    $out['portion'] = isset(PM_PORTIONS[$por]) ? $por : null;
     if ($y) {
         $type = strtoupper((string) ($c['type'] ?? 'FREE'));
         $out['type'] = in_array($type, PM_TYPES, true) ? $type : 'FREE';
@@ -153,10 +161,13 @@ function pmEligibles(array $produits, array $cote): array
     return $out;
 }
 
-/** Le prix HT d'une pièce de Y une fois la récompense appliquée (les valeurs se saisissent TTC, comme en caisse). */
-function pmRecompense(array $p, string $type, ?float $valeur): float
+/**
+ * Le prix HT d'un article de Y une fois la récompense appliquée (les valeurs se saisissent TTC, comme en caisse) ;
+ * $f : la fraction de la pièce quand Y vise une portion (¼ : 0,25 — l'article est le quart).
+ */
+function pmRecompense(array $p, string $type, ?float $valeur, float $f = 1.0): float
 {
-    $ht = (float) $p['prixHt']; $tva = 1 + ((float) ($p['tva'] ?? 0)) / 100;
+    $ht = (float) $p['prixHt'] * $f; $tva = 1 + ((float) ($p['tva'] ?? 0)) / 100;
     return match ($type) {
         'FREE' => 0.0,
         'FIXED_PRICE' => max(0.0, min($ht, (float) $valeur / $tva)),
@@ -185,15 +196,17 @@ function pmCoef(array $produits, array $x, array $y): array
         elseif (($p['source'] ?? '') === 'reseau') { $reseau[] = $nom; }
     }
     $pire = null; $n = 0;
+    // Une portion visée (¼, ½) : l'article est cette part de la pièce — prix et coût à la fraction (proportionnels).
+    $fx = PM_PORTIONS[$x['portion'] ?? ''] ?? 1.0; $fy = PM_PORTIONS[$y['portion'] ?? ''] ?? 1.0;
     foreach ($X as $px) {
         if (!$chiffre($px)) { continue; }
         foreach ($Y as $py) {
             if (!$chiffre($py)) { continue; }
-            if ($px['id'] !== $py['id'] && isset($Y[$px['id']]) && (float) $px['prixHt'] < (float) $py['prixHt']) { continue; }
+            if ($px['id'] !== $py['id'] && isset($Y[$px['id']]) && $fx * (float) $px['prixHt'] < $fy * (float) $py['prixHt']) { continue; }
             $n++;
-            $cout = $x['q'] * (float) $px['cout'] + $y['q'] * (float) $py['cout'];
-            $paye = $x['q'] * (float) $px['prixHt'] + $y['q'] * pmRecompense($py, $y['type'], $y['valeur']);
-            $sans = $x['q'] * (float) $px['prixHt'] + $y['q'] * (float) $py['prixHt'];
+            $cout = $x['q'] * $fx * (float) $px['cout'] + $y['q'] * $fy * (float) $py['cout'];
+            $paye = $x['q'] * $fx * (float) $px['prixHt'] + $y['q'] * pmRecompense($py, $y['type'], $y['valeur'], $fy);
+            $sans = $x['q'] * $fx * (float) $px['prixHt'] + $y['q'] * $fy * (float) $py['prixHt'];
             $c = $paye / $cout;
             if ($pire === null || $c < $pire['lot']) {
                 $pire = ['lot' => round($c, 2), 'sans' => round($sans / $cout, 2), 'x' => (string) $px['nom'], 'y' => (string) $py['nom'], 'paye' => round($paye, 2), 'cout' => round($cout, 2)];
@@ -403,7 +416,15 @@ function pmPanelHoraire(array $creneaux): array
 function pmPanelCorps(array $d, string $statut): array
 {
     $ids = static fn (array $l): array => array_values(array_map(static fn ($o) => (int) $o['id'], $l));
-    $cote = static fn (array $c): array => ['quantity' => (int) $c['q'], 'product_ids' => $ids($c['prods']), 'category_ids' => $ids($c['cats']), 'excluded_product_ids' => $ids($c['exclus'])];
+    $cote = static function (array $c) use ($ids): array {
+        $out = ['quantity' => (int) $c['q'], 'product_ids' => $ids($c['prods']), 'category_ids' => $ids($c['cats']), 'excluded_product_ids' => $ids($c['exclus'])];
+        // Une portion visée : chaque cible la porte (`portion_scope`), comme dans la fiche « 4 Quarts + 1 Gratuit ».
+        if (!empty($c['portion'])) {
+            $out['category_targets'] = array_map(static fn ($id) => ['id_category' => $id, 'portion_scope' => $c['portion']], $out['category_ids']);
+            $out['product_targets'] = array_map(static fn ($id) => ['id_product' => $id, 'portion_scope' => $c['portion']], $out['product_ids']);
+        }
+        return $out;
+    };
     $y = $d['y'];
     return [
         'name' => $d['nom'], 'description' => ($d['description'] ?? '') !== '' ? $d['description'] : null,
@@ -433,6 +454,13 @@ function pmPanelEcarts(array $envoye, array $relu): array
         if ((int) ($b['quantity'] ?? 0) !== $a['quantity']) { $e[] = $mot . ' (quantité)'; }
         foreach (['product_ids' => 'produits', 'category_ids' => 'catégories', 'excluded_product_ids' => 'exclusions'] as $c => $m) {
             if ($ens($b[$c] ?? []) !== $ens($a[$c])) { $e[] = $mot . ' (' . $m . ')'; }
+        }
+        // La portion : chaque cible relue porte la même `portion_scope` que l'envoi (sinon toutes les variantes seraient visées).
+        foreach (['category_targets', 'product_targets'] as $c) {
+            if (!isset($a[$c])) { continue; }
+            $voulu = $a[$c] !== [] ? (string) $a[$c][0]['portion_scope'] : '';
+            $scopes = array_map(static fn ($t) => is_array($t) ? strtoupper((string) ($t['portion_scope'] ?? '')) : '', (array) ($b[$c] ?? []));
+            if (count($scopes) !== count($a[$c]) || array_filter($scopes, static fn ($v) => $v !== $voulu) !== []) { $e[] = $mot . ' (portion)'; break; }
         }
     }
     $r = is_array($relu['reward'] ?? null) ? $relu['reward'] : [];
@@ -475,15 +503,34 @@ function pmPanelEnvoyer(array $d, ?int $panelId): array
     return ['ok' => true, 'id' => $id, 'erreur' => null];
 }
 
-/** Envoie au panel la promotion $k de la liste, et range le résultat : en caisse, ou enregistrée avec l'erreur. */
+/**
+ * Envoie au panel la promotion $k de la liste, et range le résultat : en caisse, ou enregistrée avec l'erreur. Un verrou
+ * par promotion : deux envois en même temps (un double clic, la console et le dashboard) ne créent pas deux promotions
+ * au panel (17/10/2026 : « Test » n° 20 et n° 21) — le second relit le numéro que le premier a gardé.
+ */
 function pmPanelRanger(array &$tout, int $k): void
 {
     $o = $tout[$k];
+    $verrou = @fopen(sys_get_temp_dir() . '/cockpit-promo-' . preg_replace('/[^0-9a-z]/', '', (string) ($o['id'] ?? 'x')) . '.lock', 'c');
+    if ($verrou !== false && !flock($verrou, LOCK_EX | LOCK_NB)) {
+        $tout[$k]['panelErreur'] = 'un envoi au panel de cette promotion est déjà en cours : relisez dans un instant';
+        fclose($verrou);
+        return;
+    }
+    // Le numéro au panel le plus frais : un envoi qui vient de finir l'a peut-être gardé.
+    foreach (pmLire() as $f) {
+        if (($f['id'] ?? '') === ($o['id'] ?? null) && is_numeric($f['panelId'] ?? null) && empty($o['panelId'])) { $o['panelId'] = (int) $f['panelId']; }
+        if (($f['id'] ?? '') === ($o['id'] ?? null) && ($f['statut'] ?? '') === 'en_caisse') { $tout[$k] = $f; if ($verrou !== false) { fclose($verrou); } return; }
+    }
     $r = pmPanelEnvoyer($o, isset($o['panelId']) && is_numeric($o['panelId']) ? (int) $o['panelId'] : null);
     $tout[$k]['panelId'] = $r['id'];
     $tout[$k]['panelErreur'] = $r['erreur'];
     $tout[$k]['panelEssai'] = date('Y-m-d H:i:s');
     if ($r['ok']) { $tout[$k]['statut'] = 'en_caisse'; $tout[$k]['enCaisse'] = $tout[$k]['panelEssai']; }
+    // Le numéro se garde aussitôt, avant de rendre le verrou : un envoi qui attendait le relira.
+    $frais = pmLire();
+    foreach ($frais as $j => $f) { if (($f['id'] ?? '') === ($o['id'] ?? null)) { $frais[$j] = $tout[$k]; pmEcrire($frais); break; } }
+    if ($verrou !== false) { flock($verrou, LOCK_UN); fclose($verrou); }
 }
 
 /* --- les portions (½, ¼ d'une tarte) : la sonde -------------------------------------------------------------- */
