@@ -2111,7 +2111,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
-**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : le magasin du dashboard (`?shop=`), lui seul, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en cinq étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. Un lot qui tient ×2, chaque produit chiffré, est validé d'office ; sinon la marque le valide ou le renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
+**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : le magasin du dashboard (`?shop=`), lui seul, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en cinq étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. Pas de validation : « Enregistrer la promotion » l'enregistre aussitôt (sous ×2, refusé) ; la marque la met en caisse ou la renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
 
 **Commandes et canaux, au mois (17/10/2026).** Dans le dashboard magasin, vue Mois, la carte « Commandes et canaux » a quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison. Chacune porte la courbe de ses six derniers mois (le mois en cours projeté, en pointillé) et l'écart au mois d'avant aux mêmes dates (« +44 % vs sept. ») ; un clic ouvre son cumul du mois face au mois d'avant, avec la fin de mois au rythme actuel, et un second clic le referme. Lecture : `GET /exploitation/canaux-mois` (ci-dessous). Les vues Jour et Semaine ne changent pas. Tests : `php bin/tests_canaux.php`.
 
@@ -2261,7 +2261,7 @@ marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'A
     { shop, erreurPanel, regles: { coefMin: 2, joursMax: 14, enMemeTemps: 2, magasinsMax: 4 },
       panel: [ { id, nom, type: "buyxgety"|"bundle", texte, statut, etat: "active"|"a_venir"|"terminee"|"inactive",
                  du, au, reseau, magasins, x, y, recompense } ],     // celles du panel qui touchent le magasin
-      demandes: [ { id: "pm…", shop, shops: [4], statut: "brouillon"|"a_valider"|"refusee"|"validee"|"en_caisse",
+      demandes: [ { id: "pm…", shop, shops: [4], statut: "brouillon"|"validee"|"en_caisse"|"refusee",
                     nom, description, x: { q, cats: [{id, nom}], prods: [{id, nom}], exclus: [{id, nom}] },
                     y: { q, type: "FREE"|"FIXED_PRICE"|"FIXED_AMOUNT_DISCOUNT"|"PERCENTAGE_DISCOUNT", valeur, cats, prods, exclus },
                     du: "2026-10-20 07:00", au, creneaux: [ { jours: [6, 7], de: "15:00", a: "18:00" } ],
@@ -2275,13 +2275,14 @@ marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'A
 
 `POST /exploitation/promos-magasin` `{ shop, id?, action: "brouillon"|"envoyer", nom, description, shops, x, y, du, au,
 creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incomplet ; `envoyer` vérifie les règles (sinon
-**422** `{ error: "à compléter", erreurs: [phrases], coef }`), puis **valide d'office** (`statut: "validee"`, `auto: true`)
-quand le coefficient du lot tient ×2 et que chaque produit visé est chiffré dans chaque magasin couvert — pas de
-validation de la marque (demande du 17/10/2026). Sinon (un produit sans coût de recette ni prix, le coefficient
-incalculable) la promotion passe `a_valider`, avec `motif` (« coefficient non vérifié : … — Baguette, Pistolet »). Une demande `validee` ou
-`en_caisse` ne se modifie plus (409). Les valeurs de l'avantage se saisissent TTC, comme en caisse.
+**422** `{ error: "à compléter", erreurs: [phrases], coef }`), puis l'**enregistre aussitôt** (`statut: "validee"`) —
+**pas de validation** de la marque (demande du 17/10/2026). `auto: true` quand le coefficient du lot a été vérifié (×2,
+chaque produit visé chiffré) ; sinon (un produit sans coût de recette ni prix) elle s'enregistre quand même, `auto:
+false`, avec `motif` (« coefficient non vérifié : … — Baguette, Pistolet »). Le statut `a_valider` n'existe plus : une
+ancienne promotion « à valider » se lit `validee`. Seule une promotion `en_caisse` ne se modifie plus (409). Les
+valeurs de l'avantage se saisissent TTC, comme en caisse.
 
-`DELETE /exploitation/promos-magasin?shop=4&id=pm…` — un brouillon, une demande renvoyée ou encore à valider.
+`DELETE /exploitation/promos-magasin?shop=4&id=pm…` — toute promotion du magasin qui n'est pas encore en caisse.
 
 `GET /exploitation/promos-magasin/produits?shop=4` — ce que l'assistant chiffre, la liste même que le serveur relit à
 l'envoi : `{ shop, produits: [ { id, nom, catId, cat, prixTtc, prixHt, tva, cout, source: "magasin"|"reseau"|null } ],
@@ -2289,19 +2290,20 @@ nMagasin, nReseau, nSansCout }`. Le coût est celui de la recette **pour ce maga
 le panel rend 0 tant qu'il ne l'a pas calculé pour lui (17/10/2026 : un magasin entier sans coût) — le coût du réseau
 prend alors la place (`catalogueCouts()` : la moyenne des magasins du compte, sinon la recette de la copie locale),
 `source: "reseau"`, et l'assistant le dit. Un produit sans coût nulle part, ou sans prix, n'est pas chiffré et se nomme
-(`sansCout`, `sansPrix`) ; la promotion part alors à la marque avec ces noms (`motif`).
+(`sansCout`, `sansPrix`) ; la promotion s'enregistre alors avec ces noms (`motif`).
 
-Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=a_valider]`
+Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=validee]`
 (toutes les demandes, la plus ancienne d'abord, avec `noms` : les noms courts des magasins cités, et `regles`) et
-`PATCH /promos-magasin/{id}` `{ decision: "valider"|"refuser", message }` — un refus dit pourquoi ; la demande revient
-au magasin (« Renvoyée par la marque », avec le mot). L'écran trie par statut (À valider, Validées, Renvoyées,
-Brouillons, Toutes), montre la règle, les magasins, la période, le coefficient et son cas le plus serré, et ouvre le
+`PATCH /promos-magasin/{id}` `{ decision: "en_caisse"|"refuser", message }` sur une promotion enregistrée —
+`en_caisse` : créée au panel (à la main, en attendant l'écriture automatique), « Mise en caisse ✓ » ; `refuser` : elle
+revient au magasin (« Renvoyée par la marque », avec le mot, obligatoire). L'écran trie par statut (À mettre en
+caisse, En caisse, Renvoyées, Brouillons, Toutes), montre la règle, les magasins, la période, le coefficient et son cas le plus serré, et ouvre le
 dashboard de chaque magasin sur son onglet Promotions.
 
 Les règles du magasin, imposées au serveur :
 
 - une date de fin, **14 jours au plus** ; la fin après le début, pas déjà passée ;
-- **deux promotions à la fois au plus**, magasin par magasin (les demandes `a_valider`, `validee`, `en_caisse`) ;
+- **deux promotions à la fois au plus**, magasin par magasin (les promotions `validee` et `en_caisse`) ;
 - le **coefficient du lot à ×2 au moins** (sous ×2, refusée — jamais envoyée à la marque) : prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
   d'un produit de Y, la récompense sur la pièce la moins chère, le cas le plus serré de toutes les paires (une paire où
   le produit de X est aussi dans Y et moins cher ne se présente pas en caisse), dans chaque magasin couvert, avec ses

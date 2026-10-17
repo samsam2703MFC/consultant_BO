@@ -8195,14 +8195,14 @@ function tplPromosMag(c, x){
       <td style="${td};white-space:nowrap">${esc(l.periode)}<div style="${mu}">${esc(l.creneaux)}</div></td>
       <td style="${td};text-align:right;white-space:nowrap"><b style="font-size:14px;${coefC[l.coefCls] || ''}">${esc(l.coef)}</b>${l.cas ? `<div style="${mu};white-space:normal;max-width:220px;margin-left:auto">${esc(l.cas)}</div>` : ''}${l.sansCout ? `<div style="font-size:11px;color:#8a5a13;white-space:normal;max-width:220px;margin-left:auto">${esc(l.sansCout)}</div>` : ''}</td>
       <td style="${td}"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;${chip[l.etatCls] || chip.b}">${esc(l.etat)}</span>${l.envoyee ? `<div style="${mu};margin-top:3px">envoyée le ${esc(l.envoyee)}</div>` : ''}</td>
-      <td style="${td};text-align:right;white-space:nowrap">${l.peutDecider ? `<button ${x.A(l.renvoyer)} style="${bt(false)}"${l.occupe ? ' disabled' : ''}>Renvoyer</button> <button ${x.A(l.valider)} style="${bt(true)}"${l.occupe ? ' disabled' : ''}>${l.occupe ? '…' : 'Valider'}</button> ` : ''}<a href="${esc(l.href)}" target="_blank" rel="noopener" style="${mu};margin-left:6px">dashboard ↗</a></td></tr>`).join('');
+      <td style="${td};text-align:right;white-space:nowrap">${l.peutDecider ? `<button ${x.A(l.renvoyer)} style="${bt(false)}"${l.occupe ? ' disabled' : ''}>Renvoyer</button> <button ${x.A(l.enCaisse)} style="${bt(true)}"${l.occupe ? ' disabled' : ''} title="la promotion est créée au panel">${l.occupe ? '…' : 'Mise en caisse ✓'}</button> ` : ''}<a href="${esc(l.href)}" target="_blank" rel="noopener" style="${mu};margin-left:6px">dashboard ↗</a></td></tr>`).join('');
   return `
 <div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
   ${c.pmMsg ? `<div style="display:flex;gap:10px;align-items:center;background:rgba(45,122,62,.08);border:1px solid rgba(45,122,62,.25);color:#2d6a3a;border-radius:9px;padding:9px 12px;font-size:12.5px">${esc(c.pmMsg)}<span style="flex:1"></span><button ${x.A(c.pmFermerMsg)} style="border:0;background:none;cursor:pointer;color:inherit">✕</button></div>` : ''}
   <div style="${carte};overflow:hidden">${tete}
     ${L.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th}">Promotion</th><th style="${th}">Magasins</th><th style="${th}">Période</th><th style="${th};text-align:right">Coef. du lot</th><th style="${th}">Statut</th><th style="${th}"></th></tr></thead><tbody>${lignes}</tbody></table></div>`
-      : `<div style="padding:20px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune demande ici. Les franchisés préparent leurs promotions dans l’onglet Promotions de leur dashboard.</div>`}
-    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')} Validée (d’office ou ici), une promotion se crée encore au panel à la main : l’envoi automatique attend le format d’écriture de l’API. Renvoyer la rend au magasin avec votre mot.</div>
+      : `<div style="padding:20px 16px;font-size:12.5px;color:var(--color-text-muted)">Rien ici. Les franchisés enregistrent leurs promotions dans l’onglet Promotions de leur dashboard.</div>`}
+    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')} En attendant l’écriture automatique au panel, la promotion s’y crée à la main, puis « Mise en caisse ✓ ». « Renvoyer » la rend au magasin avec votre mot.</div>
   </div>
   ${magasins}
 </div>`;

@@ -5,10 +5,11 @@ declare(strict_types=1);
  * Les promotions du magasin (demande du 17/10/2026).
  *
  * Un franchisé prépare une promotion « X achetés + Y » du panel pour son magasin, dans l'onglet Promotions du
- * dashboard magasin (un assistant en six étapes, calqué sur le formulaire « Buy X Get Y » du panel) ; elle part
- * ensuite en caisse. Pas de validation de la marque quand le lot tient ×2 (demande du 17/10/2026) : l'envoi la
- * valide d'office si chaque produit visé est chiffré et le coefficient au moins ×2 ; sinon (un produit sans coût ni
- * prix, le coefficient incalculable) elle attend la marque, avec la raison. Les champs sont ceux du panel : ce que le client achète (X : quantité,
+ * dashboard magasin (un assistant en cinq étapes, calqué sur le formulaire « Buy X Get Y » du panel). PAS DE
+ * VALIDATION de la marque (demande du 17/10/2026) : l'envoi l'enregistre aussitôt (`validee`), pourvu que les règles
+ * tiennent ; un coefficient qu'un produit sans coût ni prix empêche de vérifier ne bloque pas, il se signale
+ * (`auto: false`, `motif`). La marque la met en caisse (« Mise en caisse ✓ », en attendant l'écriture au panel) ou la
+ * renvoie au magasin avec un mot. Les champs sont ceux du panel : ce que le client achète (X : quantité,
  * catégories ou produits, exclusions), ce qu'il reçoit (Y : quantité, offert / prix fixe / remise € / remise %,
  * catégories ou produits, exclusions, le moins cher d'abord), la période (du … au …, créneaux de la semaine), la
  * règle du ticket (répétable, nombre maximal par ticket). Statut, priorité, exclusivité et mode d'activation
@@ -21,8 +22,7 @@ declare(strict_types=1);
  * Trois règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, 14 jours
  * au plus ; deux promotions du magasin en même temps au plus, magasin par magasin ; le COEFFICIENT DU LOT (prix payé
  * HT ÷ coût matière) à ×2 au moins, pour le cas le plus serré des produits visés, dans chaque magasin couvert (les prix
- * et coûts de recette du magasin, sinon du réseau — pmProduits). Sous ×2, l'envoi est refusé ; un produit qui ne se
- * chiffre pas renvoie la demande à la marque.
+ * et coûts de recette du magasin, sinon du réseau — pmProduits). Sous ×2, l'envoi est refusé.
  *
  * Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`). Rien n'est encore écrit au panel : la mise en
  * caisse attend le format d'écriture de l'API, relu sur une promotion test (GET /ventes/promos/sonde-fiche).
@@ -42,7 +42,11 @@ function pmLire(): array
 {
     $c = setting(PM_CLE);
     if (is_string($c)) { $c = json_decode($c, true); }
-    return is_array($c) ? array_values(array_filter($c, 'is_array')) : [];
+    $l = is_array($c) ? array_values(array_filter($c, 'is_array')) : [];
+    // Plus de validation (17/10/2026) : une promotion restée « à valider » est enregistrée.
+    foreach ($l as &$d) { if (($d['statut'] ?? '') === 'a_valider') { $d['statut'] = 'validee'; $d['auto'] = false; } }
+    unset($d);
+    return $l;
 }
 
 function pmEcrire(array $l): void
@@ -383,7 +387,7 @@ function wr_promos_magasin(): array
     if ($id !== null) {
         foreach ($tout as $k => $o) { if (($o['id'] ?? '') === $id) { $i = $k; break; } }
         if ($i === null || (int) ($tout[$i]['shop'] ?? 0) !== $shop) { http_response_code(404); return ['error' => 'promotion introuvable']; }
-        if (in_array($tout[$i]['statut'] ?? '', ['validee', 'en_caisse'], true)) { http_response_code(409); return ['error' => 'déjà validée par la marque : elle ne se modifie plus d’ici']; }
+        if (($tout[$i]['statut'] ?? '') === 'en_caisse') { http_response_code(409); return ['error' => 'déjà en caisse : elle ne se modifie plus d’ici']; }
     }
     $autres = array_values(array_filter($tout, static fn ($o) => ($o['id'] ?? '') !== $id));
     [$coef, $illisibles] = pmCoefMagasins($d);
@@ -393,12 +397,13 @@ function wr_promos_magasin(): array
         if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     }
     $now = date('Y-m-d H:i:s');
-    $office = $action === 'envoyer' && pmDOffice($coef);
+    $envoi = $action === 'envoyer';
+    $office = $envoi && pmDOffice($coef);
     $d += ['id' => $id ?? ('pm' . base_convert((string) (int) (microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(2))),
-        'statut' => $action === 'envoyer' ? ($office ? 'validee' : 'a_valider') : 'brouillon', 'coef' => $coef, 'maj' => $now,
-        // Validée d'office : le lot tient ×2 et tout est chiffré. Sinon, la raison pour laquelle la marque la regarde.
-        'auto' => $office, 'decidee' => $office ? $now : null,
-        'motif' => $action === 'envoyer' && !$office ? 'coefficient non vérifié : ' . pmManqueTxt($coef ?? []) : null,
+        // Envoyée = enregistrée, sans validation. `auto` : le coefficient a été vérifié (×2, tout chiffré) ; sinon `motif` dit ce qui manque.
+        'statut' => $envoi ? 'validee' : 'brouillon', 'coef' => $coef, 'maj' => $now,
+        'auto' => $office, 'decidee' => $envoi ? $now : null,
+        'motif' => $envoi && !$office ? 'coefficient non vérifié : ' . pmManqueTxt($coef ?? []) : null,
         'cree' => $i !== null ? ($tout[$i]['cree'] ?? $now) : $now, 'envoyee' => $action === 'envoyer' ? $now : ($i !== null ? ($tout[$i]['envoyee'] ?? null) : null),
         'message' => $i !== null && $action === 'brouillon' ? ($tout[$i]['message'] ?? null) : null, 'panelId' => null];
     if ($i !== null) { $tout[$i] = $d; } else { $tout[] = $d; }
@@ -406,14 +411,14 @@ function wr_promos_magasin(): array
     return ['ok' => true, 'demande' => $d];
 }
 
-/** DELETE /exploitation/promos-magasin?shop=4&id=pm… — un brouillon, une demande refusée ou encore à valider se retire. */
+/** DELETE /exploitation/promos-magasin?shop=4&id=pm… — tant qu'elle n'est pas en caisse, une promotion du magasin se retire. */
 function wr_promos_magasin_retirer(): array
 {
     $shop = (int) ($_GET['shop'] ?? 0); $id = (string) ($_GET['id'] ?? '');
     $tout = pmLire();
     foreach ($tout as $k => $o) {
         if (($o['id'] ?? '') !== $id || !in_array($shop, pmShops($o), true)) { continue; }
-        if (!in_array($o['statut'] ?? '', ['brouillon', 'refusee', 'a_valider'], true)) { http_response_code(409); return ['error' => 'validée par la marque : elle ne se retire plus d’ici']; }
+        if (($o['statut'] ?? '') === 'en_caisse') { http_response_code(409); return ['error' => 'déjà en caisse : elle ne se retire plus d’ici']; }
         array_splice($tout, $k, 1);
         pmEcrire($tout);
         return ['ok' => true];
@@ -422,7 +427,7 @@ function wr_promos_magasin_retirer(): array
     return ['error' => 'promotion introuvable'];
 }
 
-/** GET /promos-magasin[?statut=a_valider] — côté marque (console › Analyse magasin › Promotions) : les demandes de tous les magasins. */
+/** GET /promos-magasin[?statut=validee] — côté marque (console › Analyse magasin › Promotions) : les demandes de tous les magasins. */
 function ep_promos_magasin_marque(): array
 {
     $st = (string) ($_GET['statut'] ?? '');
@@ -434,22 +439,25 @@ function ep_promos_magasin_marque(): array
     return ['demandes' => $l, 'noms' => $noms, 'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
 }
 
-/** PATCH /promos-magasin/{id} {decision: valider|refuser, message} — côté marque. Une refusée revient au magasin avec le mot. */
+/**
+ * PATCH /promos-magasin/{id} {decision: en_caisse|refuser, message} — côté marque. « en_caisse » : la promotion
+ * enregistrée a été créée au panel ; « refuser » : elle revient au magasin avec le mot (« Renvoyée par la marque »).
+ */
 function wr_promos_magasin_decision(string $id): array
 {
     $b = body();
     $dec = (string) ($b['decision'] ?? '');
-    if (!in_array($dec, ['valider', 'refuser'], true)) { http_response_code(422); return ['error' => 'decision : valider ou refuser']; }
+    if (!in_array($dec, ['en_caisse', 'refuser'], true)) { http_response_code(422); return ['error' => 'decision : en_caisse ou refuser']; }
     $msg = mb_substr(trim((string) ($b['message'] ?? '')), 0, 500);
     if ($dec === 'refuser' && $msg === '') { http_response_code(422); return ['error' => 'un refus dit pourquoi']; }
     $tout = pmLire();
     foreach ($tout as $k => $o) {
         if (($o['id'] ?? '') !== $id) { continue; }
-        if (($o['statut'] ?? '') !== 'a_valider') { http_response_code(409); return ['error' => 'cette demande n’attend pas de décision']; }
-        $tout[$k]['statut'] = $dec === 'valider' ? 'validee' : 'refusee';
+        if (($o['statut'] ?? '') !== 'validee') { http_response_code(409); return ['error' => 'seule une promotion enregistrée se met en caisse ou se renvoie']; }
+        $tout[$k]['statut'] = $dec === 'en_caisse' ? 'en_caisse' : 'refusee';
         $tout[$k]['message'] = $msg !== '' ? $msg : null;
-        $tout[$k]['decidee'] = date('Y-m-d H:i:s');
-        $tout[$k]['maj'] = $tout[$k]['decidee'];
+        $tout[$k]['maj'] = date('Y-m-d H:i:s');
+        if ($dec === 'en_caisse') { $tout[$k]['enCaisse'] = $tout[$k]['maj']; }
         pmEcrire($tout);
         return ['ok' => true, 'demande' => $tout[$k]];
     }
