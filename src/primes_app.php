@@ -749,6 +749,34 @@ function ep_primes_promos_sonde(): array
 }
 
 /**
+ * GET /ventes/promos/sonde-fiche?q=test[&sorte=buy-x-get-y] — lecture seule (17/10/2026) : les promotions du panel de cette
+ * sorte, TOUS statuts confondus (un brouillon compris) — leur nom, leur statut — et, pour celles dont le nom contient `q`
+ * (trois au plus), la ligne de la liste et la fiche brute (/admin/promotions/{sorte}/{id}). Sert à relire une promotion
+ * créée à la main dans le panel, pour que l'assistant « Nouvelle promotion » du magasin écrive exactement la même chose.
+ * Rien n'est écrit.
+ */
+function ep_promos_sonde_fiche(): array
+{
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['erreur' => 'compte admin ERP indisponible']; }
+    $sortes = ['buy-x-get-y', 'bundles', 'quantity', 'scheduled-product-discount'];
+    $sorte = in_array($_GET['sorte'] ?? '', $sortes, true) ? (string) $_GET['sorte'] : 'buy-x-get-y';
+    $q = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
+    $l = ErpApi::sondeGet('/admin/promotions/' . $sorte . '?limit=100');
+    $items = is_array($l['corps']) ? PanelApi::liste($l['corps']) : [];
+    $out = ['sorte' => $sorte, 'code' => $l['code'], 'erreur' => $l['erreur'] ?? null, 'cles' => is_array($l['corps']) ? array_keys($l['corps']) : null,
+        'n' => count($items), 'promotions' => [], 'trouvees' => []];
+    foreach ($items as $it) {
+        if (!is_array($it)) { continue; }
+        $nom = (string) ($it['name'] ?? '');
+        $out['promotions'][] = ['id' => $it['id'] ?? null, 'nom' => $nom, 'statut' => $it['status'] ?? null];
+        if ($q === '' || mb_strpos(mb_strtolower($nom), $q) === false || count($out['trouvees']) >= 3) { continue; }
+        $f = isset($it['id']) && is_scalar($it['id']) ? ErpApi::sondeGet('/admin/promotions/' . $sorte . '/' . rawurlencode((string) $it['id'])) : null;
+        $out['trouvees'][] = ['item' => $it, 'fiche' => $f === null ? null : ['code' => $f['code'], 'corps' => $f['corps']]];
+    }
+    return $out;
+}
+
+/**
  * GET /ventes/primes-reference?ids=1,2&du=&au=&shops=4,5 — pour l'assistant (16/10/2026) : ce que chaque magasin a vendu de
  * ces produits sur la même période l'an dernier (`n1`, en pièces ; /shops/{id}/statistics/sales/product-category-groups,
  * gardé par apTranches2), et à défaut au rythme des 28 derniers jours ramené à la période (`recent`). `ref` : n1 s'il y en a,

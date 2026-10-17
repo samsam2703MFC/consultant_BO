@@ -396,6 +396,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/primes-promos'         => ep_primes_promos(),
             $path === '/ventes/primes-catalogue'      => ep_primes_catalogue(),
             $path === '/ventes/primes-promos/sonde'   => ep_primes_promos_sonde(),
+            $path === '/ventes/promos/sonde-fiche'    => ep_promos_sonde_fiche(),
             $path === '/ventes/primes-reference'      => ep_primes_reference(),
             $path === '/ventes/primes-moyennes'       => ep_primes_moyennes(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),
