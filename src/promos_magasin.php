@@ -214,6 +214,14 @@ function pmCoef(array $produits, array $x, array $y): array
  */
 function pmProduits(int $shop): ?array
 {
+    static $memo = [];
+    if (array_key_exists($shop, $memo)) { return $memo[$shop]; }
+    return $memo[$shop] = pmProduitsLus($shop);
+}
+
+/** La lecture elle-même (pmProduits la garde pour la requête : l'exclusion et le coefficient la relisent). */
+function pmProduitsLus(int $shop): ?array
+{
     if (!function_exists('ep_analyse_produits_coefficients')) { return null; }
     $g = $_GET; $code = http_response_code();
     $_GET = ['shop' => (string) $shop];
@@ -257,6 +265,34 @@ function pmNomShop(int $s): string
 {
     try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$s]); } catch (Throwable $e) { $r = null; }
     return $r !== null ? (string) preg_replace('/^.* - /', '', (string) $r['name']) : 'magasin ' . $s;
+}
+
+/**
+ * Les produits visés qui ne se chiffrent pas — sans coût de recette (ni du magasin ni du réseau) ou sans prix au panel —
+ * sortent de la promotion d'office (17/10/2026) : le coefficient ×2 ne se vérifie pas pour eux, et rien ne part en caisse
+ * sans l'avoir été. Choisis par catégorie, ils passent dans les exclusions ; choisis un à un, ils quittent la liste.
+ * Rend [la promotion, les noms sortis].
+ */
+function pmExclureNonChiffres(array $d, array $produits): array
+{
+    $chiffre = static fn ($p) => ($p['prixHt'] ?? null) !== null && (float) $p['prixHt'] > 0 && ($p['cout'] ?? null) !== null && (float) $p['cout'] > 0;
+    $noms = [];
+    foreach (['x', 'y'] as $k) {
+        $c = $d[$k];
+        foreach (pmEligibles($produits, $c) as $pid => $p) {
+            if ($chiffre($p)) { continue; }
+            $noms[] = (string) ($p['nom'] ?? '');
+            if (in_array($pid, array_map('intval', array_column($c['prods'], 'id')), true)) {
+                $c['prods'] = array_values(array_filter($c['prods'], static fn ($o) => (int) $o['id'] !== $pid));
+            }
+            // Visé aussi par sa catégorie : il passe dans les exclusions.
+            if (in_array((int) ($p['catId'] ?? 0), array_map('intval', array_column($c['cats'], 'id')), true)) {
+                $c['exclus'][] = ['id' => $pid, 'nom' => (string) ($p['nom'] ?? '')];
+            }
+        }
+        $d[$k] = $c;
+    }
+    return [$d, array_values(array_unique($noms))];
 }
 
 /**
@@ -500,10 +536,18 @@ function wr_promos_magasin(): array
         if (($tout[$i]['statut'] ?? '') === 'en_caisse') { http_response_code(409); return ['error' => 'déjà en caisse : elle ne se modifie plus d’ici']; }
     }
     $autres = array_values(array_filter($tout, static fn ($o) => ($o['id'] ?? '') !== $id));
+    // À l'enregistrement, ce qui ne se chiffre pas sort de la promotion (pmExclureNonChiffres).
+    $exclusAuto = []; $saisie = $d;
+    if ($action === 'envoyer' && ($produits = pmProduits($shop)) !== null) { [$d, $exclusAuto] = pmExclureNonChiffres($d, $produits); }
     [$coef, $illisibles] = pmCoefMagasins($d);
     if ($action === 'envoyer') {
-        $err = pmErreurs($d, $autres, $coef, date('Y-m-d H:i'));
+        // Les règles sur la saisie (une liste vidée par l'exclusion se dit plus bas, avec les noms sortis).
+        $err = pmErreurs($saisie, $autres, $coef, date('Y-m-d H:i'));
         foreach ($illisibles as $s) { $err[] = 'Les prix et coûts de ' . pmNomShop($s) . ' ne se lisent pas au panel : réessayez dans un instant.'; }
+        if ($err === [] && $coef !== null && $coef['lot'] === null) {
+            $sortis = $exclusAuto !== [] ? ' (sortis, sans coût de recette ou sans prix : ' . implode(', ', array_slice($exclusAuto, 0, 6)) . (count($exclusAuto) > 6 ? '…' : '') . ')' : '';
+            $err[] = ($coef['nX'] === 0 ? 'Rien de ce que le client achète ne se chiffre' : ($coef['nY'] === 0 ? 'Rien de ce que le client reçoit ne se chiffre' : 'Aucune combinaison ne se chiffre')) . $sortis . ' : choisissez d’autres produits.';
+        }
         if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     }
     $now = date('Y-m-d H:i:s');
@@ -514,13 +558,15 @@ function wr_promos_magasin(): array
         'statut' => $envoi ? 'validee' : 'brouillon', 'coef' => $coef, 'maj' => $now,
         'auto' => $office, 'decidee' => $envoi ? $now : null,
         'motif' => $envoi && !$office ? 'coefficient non vérifié : ' . pmManqueTxt($coef ?? []) : null,
+        // Les produits sortis d'office, faute de coût de recette ou de prix.
+        'exclusAuto' => $exclusAuto,
         'cree' => $i !== null ? ($tout[$i]['cree'] ?? $now) : $now, 'envoyee' => $action === 'envoyer' ? $now : ($i !== null ? ($tout[$i]['envoyee'] ?? null) : null),
         'message' => $i !== null && $action === 'brouillon' ? ($tout[$i]['message'] ?? null) : null,
         // Le numéro au panel d'un premier envoi (resté inactif) : le suivant le met à jour au lieu d'en créer un autre.
         'panelId' => $i !== null ? ($tout[$i]['panelId'] ?? null) : null, 'panelErreur' => null];
     if ($i !== null) { $tout[$i] = $d; } else { $tout[] = $d; $i = count($tout) - 1; }
     // Enregistrée : elle part au panel tout de suite (créée inactive, relue, activée) — en caisse si tout concorde.
-    // Un coefficient non vérifié (un produit sans coût ni prix) ne part pas seul en caisse : la marque décide (console).
+    // Ce qui ne se chiffre pas étant sorti, le coefficient est vérifié : seule une ancienne promotion peut ne pas l'être.
     if ($envoi && $office) { pmPanelRanger($tout, $i); }
     elseif ($envoi) { $tout[$i]['panelErreur'] = 'pas envoyée au panel : ' . $tout[$i]['motif'] . ' — la marque la met en caisse'; }
     pmEcrire($tout);
@@ -550,6 +596,16 @@ function wr_promos_magasin_panel(string $id): array
     foreach ($tout as $k => $o) {
         if (($o['id'] ?? '') !== $id) { continue; }
         if (($o['statut'] ?? '') !== 'validee') { http_response_code(409); return ['error' => 'seule une promotion enregistrée part au panel']; }
+        // Comme à l'enregistrement : ce qui ne se chiffre pas sort, et rien ne part sous ×2.
+        if (($produits = pmProduits((int) $o['shop'])) !== null) {
+            [$o, $sortis] = pmExclureNonChiffres($o, $produits);
+            [$coef] = pmCoefMagasins($o);
+            if ($coef === null || $coef['lot'] === null || $coef['lot'] < PM_COEF_MIN) {
+                http_response_code(422);
+                return ['error' => $coef !== null && $coef['lot'] !== null ? 'coefficient du lot ×' . number_format($coef['lot'], 2, ',', '') . ' : sous ×' . number_format(PM_COEF_MIN, 0) : 'rien ne se chiffre : ' . pmManqueTxt($coef ?? [])];
+            }
+            $tout[$k] = array_merge($o, ['coef' => $coef, 'auto' => true, 'motif' => null, 'exclusAuto' => array_values(array_unique(array_merge((array) ($o['exclusAuto'] ?? []), $sortis)))]);
+        }
         pmPanelRanger($tout, $k);
         pmEcrire($tout);
         return ['ok' => true, 'demande' => $tout[$k]];
