@@ -371,8 +371,8 @@ class App {
     return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=suivi',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
       prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
-      // Posts et newsletters : le portail Marketing (marketing/), qui les tient déjà.
-      'controle-posts-facebook': 'marketing/?onglet=valider', newsletter: 'marketing/', 'newsletter-magasin': 'marketing/' };
+      // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le portail Marketing.
+      'controle-posts-facebook': '../social/', newsletter: 'marketing/', 'newsletter-magasin': 'marketing/' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -996,7 +996,7 @@ class App {
       // Le marketing réuni (C1, 16/10/2026) : campagnes, réseaux sociaux et newsletters. La console
       // montre ce qui demande un geste ; le travail se fait dans l'espace marque (le portail
       // marketing/) ou se regarde comme le franchisé le voit (marketing/?shop=).
-      marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit. La console montre ce qui demande un geste ; le travail se fait dans l’espace marque, ou se regarde comme le franchisé le voit.',
+      marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit. La console montre ce qui demande un geste ; les posts se font dans le portail social, les campagnes et les newsletters dans le portail Marketing.',
         [['marketing', 'Aujourd’hui'], ['mktCampagnes', 'Campagnes'], ['mktCalendrier', 'Calendrier'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
@@ -1403,7 +1403,7 @@ class App {
       // est retiré, comme la Centrale d'achat.
       ['Marque & marketing', [
         // Une seule entrée (16/10/2026) : le hub, ses deux portes vers le portail, et les onglets de campagne.
-        ['marketing', 'Marketing', ((((this.state.mh || {}).d || {}).social || {}).chiffres || {}).aTraiter || 0, ['mktCampagnes', 'mktCalendrier', 'bxcampagnes', 'mesure']],
+        ['marketing', 'Marketing', ((((this.state.mh || {}).d || {}).aFaire) || []).filter(a => a.niveau === 'urgent' && a.canal !== 'social').length, ['mktCampagnes', 'mktCalendrier', 'bxcampagnes', 'mesure']],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
@@ -2597,7 +2597,9 @@ class App {
   /* --- Marketing : le hub ---------------------------------------------------
    * Une seule lecture, celle du tableau de bord du portail (/marketing/hub) : ses
    * chiffres par canal et sa liste « à faire ». Chaque ligne ouvre l'élément dans
-   * l'espace marque ; la vue franchisé est le même portail avec ?shop=.
+   * le portail Marketing (campagnes, newsletters). Les posts, eux, vivent dans le
+   * portail social (/social, 17/10/2026) : « + Post » y mène, et la vue franchisé
+   * est son espace boutique (franchisee/?shop=).
    */
   mhCharge(force){
     const b = this.state.mh || {};
@@ -2614,38 +2616,40 @@ class App {
     const b = S.mh || {}, d = b.d && !b.d.error ? b.d : null;
     const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
     const portail = q => base + 'marketing/' + (q ? '?' + q : '');
+    const social = new URL('../social/', base).href;
     const mags = d && (d.magasins || []).length ? d.magasins : this.open().map(s => ({ id: String(s.id), nom: s.nom }));
     const shop = String(S.mhShop || (mags[0] || {}).id || '');
     const canal = k => (d && d[k] && d[k].dispo) ? d[k] : null;
-    const so = canal('social'), em = canal('emailing'), ca = canal('campagnes');
-    const cs = (so && so.chiffres) || {}, ce = (em && em.chiffres) || {}, cc = (ca && ca.chiffres) || {};
+    const em = canal('emailing'), ca = canal('campagnes');
+    const ce = (em && em.chiffres) || {}, cc = (ca && ca.chiffres) || {};
     const n = v => v == null ? '—' : String(v);
-    const vue = shop ? portail('shop=' + encodeURIComponent(shop)) : '';
+    const vue = shop ? social + 'franchisee/?shop=' + encodeURIComponent(shop) : '';
     const etats = [];
-    if (so && so.publication && !so.publication.reelle) { etats.push('Publication automatique éteinte : un post validé se publie à la main, depuis Publier.'); }
     if (em && em.test) { etats.push('Newsletter en mode test : aucun envoi ne part tant que l’envoi réel n’est pas activé.'); }
-    const NOMS = { social: 'post', emailing: 'newsletter', campagnes: 'campagne', charte: 'charte', avis: 'avis' };
+    const NOMS = { emailing: 'newsletter', email: 'newsletter', campagnes: 'campagne', charte: 'charte', avis: 'avis' };
+    // Sans les posts : ils ont leurs alertes dans le portail social.
+    const faire = ((d && d.aFaire) || []).filter(a => a.canal !== 'social');
     common.mh = {
       chargement: !d && !(b.d && b.d.error),
       indispo: b.d && b.d.error ? 'La lecture de /marketing/hub a échoué — voir Diagnostic API.' : '',
       relire: () => this.mhCharge(true),
-      marque: { ouvrir: portail(''), campagne: base + 'assistant/', post: portail('onglet=creer'), newsletter: portail('onglet=creer&vue=newsletter') },
+      marque: { ouvrir: portail(''), social, campagne: base + 'assistant/', post: social + 'SA%20Post.dc.html', newsletter: portail('onglet=creer') },
       magasins: mags.map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === shop })),
       setShop: e => this.setState({ mhShop: e.target.value }),
       vueFranchise: vue,
-      copier: () => { try { navigator.clipboard.writeText(vue); this.notify('Lien copié — la vue marketing du magasin.'); } catch (e) { this.notify('Copie impossible : ouvrez la vue et copiez l’adresse.'); } },
+      copier: () => { try { navigator.clipboard.writeText(vue); this.notify('Lien copié — l’espace franchisé du magasin.'); } catch (e) { this.notify('Copie impossible : ouvrez l’espace et copiez l’adresse.'); } },
       chiffres: [
-        { k: 'Posts à traiter', v: n(so ? cs.aTraiter : null), s: so ? (cs.aPublier || 0) + ' validé(s) à publier' : 'canal indisponible', fort: (cs.aTraiter || 0) > 0, lien: portail('onglet=valider') },
-        { k: 'Newsletters programmées', v: n(em ? ce.programmees : null), s: em ? (em.test ? 'mode test' : (ce.envoyeesMois || 0) + ' envoyée(s) ce mois') : 'canal indisponible', lien: portail('onglet=publier') },
+        { k: 'Posts', v: 'Portail social', s: 'créer, valider, publier', lien: social },
+        { k: 'Newsletters programmées', v: n(em ? ce.programmees : null), s: em ? (em.test ? 'mode test' : (ce.envoyeesMois || 0) + ' envoyée(s) ce mois') : 'canal indisponible', lien: portail('onglet=creer') },
         { k: 'Campagnes en cours', v: n(ca ? cc.enCours : null), s: ca ? (cc.aVenir || 0) + ' à venir · ' + (cc.brouillons || 0) + ' brouillon(s)' : 'canal indisponible', lien: portail('onglet=plan') },
         { k: 'Budget engagé', v: ca && cc.budget ? this.fE(cc.depense || 0) : '—', s: ca && cc.budget ? 'sur ' + this.fE(cc.budget) + ' des campagnes vivantes' : 'aucun budget posé', lien: portail('onglet=plan') }],
       etats,
-      aFaire: ((d && d.aFaire) || []).slice(0, 12).map(a => {
+      aFaire: faire.slice(0, 12).map(a => {
         const c = a.cible || {};
         return { canal: NOMS[a.canal] || a.canal, titre: a.titre, detail: a.detail || '', urgent: a.niveau === 'urgent',
           lien: portail('onglet=' + encodeURIComponent(c.onglet || 'vue') + (c.vue ? '&vue=' + encodeURIComponent(c.vue) : '')) };
       }),
-      plus: Math.max(0, ((d && d.aFaire) || []).length - 12),
+      plus: Math.max(0, faire.length - 12),
     };
   }
   /* --- invendus et poubelle : une lecture réseau sur la période choisie --- */

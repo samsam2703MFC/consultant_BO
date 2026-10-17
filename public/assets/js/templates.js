@@ -5491,22 +5491,23 @@ function tplMktHub(c, x){
     <section style="background:var(--color-primary);color:#fff;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
       <div style="${cap};color:rgba(255,255,255,.75)">Espace marque · franchiseur</div>
       <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Créer, valider, publier</div>
-      <div style="font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.9)">Nouvelle campagne (assistant), posts Facebook, Instagram et LinkedIn, newsletters, validation par la charte, publication.</div>
+      <div style="font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.9)">Les posts Facebook, Instagram et LinkedIn dans le portail social ; la campagne (assistant) et la newsletter dans le portail Marketing.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <a href="${esc(h.marque.campagne)}" ${ext} style="${blanc}">+ Campagne</a>
         <a href="${esc(h.marque.post)}" ${ext} style="${blanc}">+ Post</a>
         <a href="${esc(h.marque.newsletter)}" ${ext} style="${blanc}">+ Newsletter</a>
-        <a href="${esc(h.marque.ouvrir)}" ${ext} style="${ligne}">Ouvrir l’espace marque ↗</a>
+        <a href="${esc(h.marque.social)}" ${ext} style="${ligne}">Portail social ↗</a>
+        <a href="${esc(h.marque.ouvrir)}" ${ext} style="${ligne}">Portail Marketing ↗</a>
       </div>
     </section>
     <section style="${card};padding:20px 22px;display:flex;flex-direction:column;gap:10px">
       <div style="${cap}">Vue franchisé</div>
       <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Voir comme le magasin</div>
-      <div style="font-size:12.5px;line-height:1.6;color:var(--color-text-muted)">Le portail tel que le franchisé l’ouvre : les campagnes qui le couvrent, ses posts, sa newsletter, ce qu’il doit faire.</div>
+      <div style="font-size:12.5px;line-height:1.6;color:var(--color-text-muted)">L’espace franchisé du portail social, tel que la boutique l’ouvre : ses posts, les modèles de la marque, ses commentaires et ses avis.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <label style="display:flex;align-items:center;gap:8px"><span style="${cap}">Magasin</span>
           <select ${x.C(h.setShop)} style="${sel}">${h.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
-        ${h.vueFranchise ? `<a href="${esc(h.vueFranchise)}" ${ext} style="${plein}">Ouvrir la vue franchisé ↗</a><button ${x.A(h.copier)} style="${vide}">Copier son lien</button>` : ''}
+        ${h.vueFranchise ? `<a href="${esc(h.vueFranchise)}" ${ext} style="${plein}">Ouvrir l’espace franchisé ↗</a><button ${x.A(h.copier)} style="${vide}">Copier son lien</button>` : ''}
       </div>
     </section>
   </div>`;
@@ -5521,12 +5522,12 @@ function tplMktHub(c, x){
   const tag = a => a.urgent ? 'background:rgba(141,29,44,.10);color:#8D1D2C' : 'background:var(--color-background-secondary);color:#444';
   const faire = `<section style="${card};padding:14px 18px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px"><div style="font-size:14px;font-weight:500">Ce qui demande un geste</div>
-      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre l’élément dans l’espace marque</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre l’élément dans le portail Marketing</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
     ${h.aFaire.length ? h.aFaire.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12.5px">
       <span style="display:inline-block;min-width:78px;text-align:center;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:500;${tag(a)}">${esc(a.canal)}</span>
       <span style="flex:1;min-width:0"><span style="font-weight:500">${esc(a.titre)}</span>${a.detail ? `<span style="display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(a.detail)}</span>` : ''}</span>
       <a href="${esc(a.lien)}" ${ext} style="font-size:12px;font-weight:500;white-space:nowrap">Ouvrir ›</a></div>`).join('')
-      : '<div style="font-size:12.5px;color:var(--color-text-muted);padding:10px 0">Rien n’attend : aucun post à valider, aucune publication en échec.</div>'}
+      : '<div style="font-size:12.5px;color:var(--color-text-muted);padding:10px 0">Rien n’attend : aucune newsletter en souffrance, aucune campagne en brouillon qui approche.</div>'}
     ${h.plus ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding-top:8px">… et ${h.plus} autre(s) dans <a href="${esc(h.marque.ouvrir)}" ${ext}>le tableau de bord du portail ↗</a></div>` : ''}
   </section>`;
   return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}${chiffres}${etats}${faire}</div>`;

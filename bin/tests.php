@@ -194,17 +194,12 @@ $post = static fn (string $statut, string $quand) => ['id' => 'p', 'statut' => $
 $soc = static fn (array $l) => ['dispo' => true, 'liste' => $l];
 $mail = ['dispo' => true, 'test' => false, 'liste' => []];
 $off = ['dispo' => false];
-$muette = static fn (array $af) => (bool) array_filter($af, static fn ($a) => str_starts_with($a['titre'], 'Aucune prise de parole'));
-verifie('campagne en cours sans post ni mail ⇒ signalée', $muette(mhAFaire($camp, $mail, $soc([]), $off, null, $auj)));
-verifie('un post prévu dans la période ⇒ plus signalée', !$muette(mhAFaire($camp, $mail, $soc([$post('a_valider', '2026-10-20 10:00')]), $off, null, $auj)));
-verifie('un post refusé ne compte pas', $muette(mhAFaire($camp, $mail, $soc([$post('refuse', '2026-10-20 10:00')]), $off, null, $auj)));
-verifie('un post hors période ne compte pas', $muette(mhAFaire($camp, $mail, $soc([$post('valide', '2026-11-05 10:00')]), $off, null, $auj)));
-$mailP = ['dispo' => true, 'test' => false, 'liste' => [['nom' => 'L', 'exemple' => false, 'statut' => 'sched', 'mode' => 'manual', 'envoiLe' => '2026-10-15 09:00', 'testEnvoye' => true]]];
-verifie('une newsletter dans la période ⇒ plus signalée', !$muette(mhAFaire($camp, $mailP, $soc([]), $off, null, $auj)));
-$af = mhAFaire($camp, $mail, $soc([$post('valide', '2026-10-12 10:00')]), $off, null, $auj);
-verifie('validé, date passée, pas marqué publié ⇒ urgent', ($af[0]['niveau'] ?? '') === 'urgent' && str_starts_with($af[0]['titre'], 'Post validé'), json_encode($af[0] ?? null));
-$af = mhAFaire(['dispo' => false], $mail, $soc([$post('a_valider', '2026-10-14 10:00')]), $off, '4', $auj);
-verifie('vue magasin : la décision n’est pas à faire chez lui', !array_filter($af, static fn ($a) => str_starts_with($a['titre'], 'Post à valider')));
+$af = mhAFaire($camp, $mail, $soc([$post('a_valider', '2026-10-14 10:00'), $post('valide', '2026-10-12 10:00'), $post('a_controler', '2026-10-20 10:00')]), $off, null, $auj);
+verifie('les posts vivent dans le portail social : aucun « à faire » de post', !array_filter($af, static fn ($a) => $a['canal'] === 'social'), json_encode($af));
+verifie('campagne en cours sans newsletter ⇒ pas dite muette (ses posts sont dans le portail social)', !array_filter($af, static fn ($a) => str_starts_with($a['titre'], 'Aucune prise de parole')));
+$campB = ['dispo' => true, 'liste' => [['id' => 2, 'nom' => 'Noël', 'phase' => 'brouillon', 'debut' => '2026-10-20', 'fin' => '2026-12-24']]];
+$af = mhAFaire($campB, $mail, $soc([]), $off, null, $auj);
+verifie('campagne en brouillon qui démarre sous 14 jours ⇒ urgent', ($af[0]['niveau'] ?? '') === 'urgent' && str_starts_with($af[0]['titre'], 'Campagne encore en brouillon'), json_encode($af[0] ?? null));
 
 // --- 9. les règles de l'agent : un enregistrement sans paramètres ne les efface pas -----------
 echo "Règles de l'agent\n";
