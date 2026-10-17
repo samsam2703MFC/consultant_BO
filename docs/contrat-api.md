@@ -2086,7 +2086,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
-**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : un sélecteur de magasin, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en six étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, un ou plusieurs magasins, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. Un lot qui tient ×2, chaque produit chiffré, est validé d'office ; sinon la marque le valide ou le renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
+**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : le magasin du dashboard (`?shop=`), lui seul, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en cinq étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. Un lot qui tient ×2, chaque produit chiffré, est validé d'office ; sinon la marque le valide ou le renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
 
 **Commandes et canaux, au mois (17/10/2026).** Dans le dashboard magasin, vue Mois, la carte « Commandes et canaux » a quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison. Chacune porte la courbe de ses six derniers mois (le mois en cours projeté, en pointillé) et l'écart au mois d'avant aux mêmes dates (« +44 % vs sept. ») ; un clic ouvre son cumul du mois face au mois d'avant, avec la fin de mois au rythme actuel, et un second clic le referme. Lecture : `GET /exploitation/canaux-mois` (ci-dessous). Les vues Jour et Semaine ne changent pas. Tests : `php bin/tests_canaux.php`.
 
@@ -2226,7 +2226,7 @@ mêmes dates et, au clic sur un canal, son cumul du mois face au mois d'avant.
 ### `/exploitation/promos-magasin` — les promotions « X achetés + Y » du magasin, demandées à la marque (17/10/2026)
 
 Pour l'onglet **Promotions** du dashboard magasin (sur ordinateur) : la liste des promotions qui touchent le magasin et
-l'assistant en six étapes (Nom → Magasins → Ce qu'on achète (X) → Ce qu'on reçoit (Y) → Période → Vérifier et
+l'assistant en cinq étapes (Nom → Ce qu'on achète (X) → Ce qu'on reçoit (Y) → Période → Vérifier et
 envoyer), calqué sur le formulaire « Buy X Get Y » du panel. Rien n'est écrit au panel : une demande validée par la
 marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'API soit relu sur une promotion test
 (`GET /ventes/promos/sonde-fiche`). Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`).
@@ -2236,7 +2236,7 @@ marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'A
     { shop, erreurPanel, regles: { coefMin: 2, joursMax: 14, enMemeTemps: 2, magasinsMax: 4 },
       panel: [ { id, nom, type: "buyxgety"|"bundle", texte, statut, etat: "active"|"a_venir"|"terminee"|"inactive",
                  du, au, reseau, magasins, x, y, recompense } ],     // celles du panel qui touchent le magasin
-      demandes: [ { id: "pm…", shop, shops: [4, 6], statut: "brouillon"|"a_valider"|"refusee"|"validee"|"en_caisse",
+      demandes: [ { id: "pm…", shop, shops: [4], statut: "brouillon"|"a_valider"|"refusee"|"validee"|"en_caisse",
                     nom, description, x: { q, cats: [{id, nom}], prods: [{id, nom}], exclus: [{id, nom}] },
                     y: { q, type: "FREE"|"FIXED_PRICE"|"FIXED_AMOUNT_DISCOUNT"|"PERCENTAGE_DISCOUNT", valeur, cats, prods, exclus },
                     du: "2026-10-20 07:00", au, creneaux: [ { jours: [6, 7], de: "15:00", a: "18:00" } ],
@@ -2245,7 +2245,8 @@ marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'A
 
 - `panel` vient de `pvRegles()` (la liste buy-x-get-y du panel et ses fiches, gardée 10 min) ; `x`, `y` et
   `recompense` sont ceux de `pvNormaliser()` et servent au bouton « Dupliquer ».
-- Une demande se voit dans chaque magasin de `shops` ; `shop` est celui qui l'a écrite.
+- Une promotion vaut pour le magasin qui l'écrit, lui seul (17/10/2026) : `shops` vaut `[shop]`, un `shops` envoyé est ignoré,
+  et une promotion ne se modifie que depuis son magasin (404 sinon).
 
 `POST /exploitation/promos-magasin` `{ shop, id?, action: "brouillon"|"envoyer", nom, description, shops, x, y, du, au,
 creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incomplet ; `envoyer` vérifie les règles (sinon

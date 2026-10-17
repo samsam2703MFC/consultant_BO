@@ -2992,7 +2992,9 @@
     active: ['En caisse', 'ok'], a_venir: ['À venir', 'a'], terminee: ['Terminée', 'b'], inactive: ['Inactive au panel', 'b'] };
   const PM_FILTRES = [['actives', 'Actives', e => e === 'active' || e === 'en_caisse'], ['a_venir', 'À venir', e => e === 'a_venir' || e === 'validee'], ['a_valider', 'À valider', e => e === 'a_valider'],
     ['brouillons', 'Brouillons', e => e === 'brouillon' || e === 'refusee'], ['terminees', 'Terminées', e => e === 'terminee' || e === 'inactive'], ['toutes', 'Toutes', () => true]];
-  const PM_ETAPES = ['Nom', 'Magasins', 'Ce qu’on achète (X)', 'Ce qu’on reçoit (Y)', 'Période', 'Vérifier et envoyer'];
+  // Le magasin est celui du dashboard (?shop=), lui seul (17/10/2026) : plus d'étape « Magasins ».
+  const PM_ETAPES = ['Nom', 'Ce qu’on achète (X)', 'Ce qu’on reçoit (Y)', 'Période', 'Vérifier et envoyer'];
+  const PM_FIN = PM_ETAPES.length;
   const fX = v => v == null ? '—' : '×' + nf(v, 2);
   const fXm = v => '×' + nf(v, Number.isInteger(+v) ? 0 : 2);
   /** L'avantage en mots : « offerte », « à 1,00 € », « −1,40 € », « à −30 % ». */
@@ -3092,9 +3094,8 @@
   function rendPromos() {
     if (S.pmW) { return rendPmAssistant(); }
     const P = S.aux[clePM()], k = clePM();
-    const magOpts = (S.stores.length ? S.stores : [{ id: S.shop, nom: nomShop() }]).map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('');
     let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div></div><span style="flex:1"></span>
-      <label class="pm-f"><span class="db-lab">Magasin</span><select class="pm-in pm-mag" data-pmshop="1">${magOpts}</select></label>
+      <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
       <button class="db-btn prim pm-gros" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
     if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
@@ -3159,15 +3160,14 @@
   function pmManque(d, i) {
     const x = pmEffectif(d.x), y = pmEffectif(d.y);
     if (i === 1) { return d.nom.trim() ? '' : 'un nom'; }
-    if (i === 2) { return d.shops.length ? '' : 'un magasin'; }
-    if (i === 3) { return x.cats.length || x.prods.length ? '' : d.x.mode === 'cats' ? 'une catégorie' : 'des produits'; }
-    if (i === 4) {
+    if (i === 2) { return x.cats.length || x.prods.length ? '' : d.x.mode === 'cats' ? 'une catégorie' : 'des produits'; }
+    if (i === 3) {
       if (!y.cats.length && !y.prods.length) { return d.y.mode === 'cats' ? 'une catégorie' : 'des produits'; }
       if (d.y.type !== 'FREE' && !(+d.y.valeur > 0)) { return 'la valeur de l’avantage'; }
       if (d.y.type === 'PERCENTAGE_DISCOUNT' && +d.y.valeur > 100) { return 'une remise de 100 % au plus'; }
       return '';
     }
-    if (i === 5) {
+    if (i === 4) {
       const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
       if (!d.du || !d.au) { return 'les dates'; }
       if (d.au <= d.du) { return 'une fin après le début'; }
@@ -3187,7 +3187,7 @@
     return !!C && C.lot != null && C.lot >= min && !C.sansCout.length && !C.sansPrix.length;
   }
   function pmStepper(W) {
-    return PM_ETAPES.map((n, i) => { const e = i + 1, fait = e < 6 && !pmManque(W.d, e);
+    return PM_ETAPES.map((n, i) => { const e = i + 1, fait = e < PM_FIN && !pmManque(W.d, e);
       return `<button class="e${e === W.etape ? ' on' : (fait ? ' fait' : '')}" data-pmet="${e}"><span class="n">${e !== W.etape && fait ? '✓' : e}</span>${n}</button>`; }).join('<span class="sep"></span>');
   }
   /** Le coefficient en une ligne, sous les étapes X et Y. */
@@ -3206,10 +3206,10 @@
     let h = `<div class="db-card pm-c"><div class="db-lab">Récapitulatif</div>
       <div class="pm-phrase">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div>
       <div class="db-mini" style="margin-top:4px">${esc(mags.join(', '))} · ${d.du && d.au ? 'du ' + esc(pmQuand(d.du)) + ' au ' + esc(pmQuand(d.au)) : 'période à régler'}${d.creneaux.length ? ' · ' + esc(pmCreneauxTxt(d.creneaux)) : ''}${d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' fois par ticket au plus' : '') : ''}</div>
-      ${ck(!pmManque(d, 1) && !pmManque(d, 2), 'Nom et magasin' + (d.shops.length > 1 ? 's' : ''))}
-      ${ck(!pmManque(d, 3), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + esc(pmLib(x)) : 'à l’étape 3'))}
-      ${ck(!pmManque(d, 4), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 4'))}
-      ${ck(!pmManque(d, 5), 'Période : ' + (pmManque(d, 5) ? esc(pmManque(d, 5)) : n + ' jour' + (n > 1 ? 's' : '') + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
+      ${ck(!pmManque(d, 1), 'Nom')}
+      ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + esc(pmLib(x)) : 'à l’étape 2'))}
+      ${ck(!pmManque(d, 3), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 3'))}
+      ${ck(!pmManque(d, 4), 'Période : ' + (pmManque(d, 4) ? esc(pmManque(d, 4)) : n + ' jour' + (n > 1 ? 's' : '') + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
       ${ck(C && C.lot != null && C.lot >= min, 'Coefficient du lot ' + fXm(min) + ' au moins')}</div>`;
     h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">${fXm(min)} minimum ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
@@ -3260,29 +3260,23 @@
     const d = W.d, e = W.etape, R = (S.aux[clePM()] || {}).regles || {};
     const tete = (lab, t) => `<div class="pm-sh"><span class="n">${e}</span><div><div class="db-lab">Étape ${e}${lab ? ' · ' + lab : ''}</div><div class="pm-h2">${t}</div></div></div>`;
     if (e === 1) {
-      return tete('la promotion', 'Nom') + `<div class="pm-f"><label>Nom</label><input class="pm-in" maxlength="80" placeholder="ex. Cookies 2+1 · Halle" value="${esc(d.nom)}" data-pmf="nom"></div>
+      return tete('la promotion', 'Nom') + `<div class="pm-f" style="margin-bottom:10px"><label>Magasin</label><div class="pm-in ro"><b>${esc(nomShop())}</b></div><span class="db-mini">la promotion vaut pour ce magasin seulement</span></div>
+        <div class="pm-f"><label>Nom</label><input class="pm-in" maxlength="80" placeholder="ex. Cookies 2+1 · Halle" value="${esc(d.nom)}" data-pmf="nom"></div>
         <div class="pm-f" style="margin-top:10px"><label>Description <small class="db-mini">facultatif</small></label><textarea class="pm-in" rows="3" maxlength="500" placeholder="Quand l’utiliser, ce qu’on en attend…" data-pmf="description">${esc(d.description)}</textarea></div>
         <div class="pm-info"><b>Fixé par la marque</b> · priorité normale · non exclusive · activation automatique en caisse · validée d’office quand le coefficient du lot tient ${fXm(R.coefMin || 2)}</div>`;
     }
     if (e === 2) {
-      const dispo = S.stores.filter(s => !d.shops.includes(+s.id));
-      return tete('le périmètre', 'Magasins') + `<div class="pm-row" style="grid-template-columns:1fr 1fr"><div class="pm-f"><label>Périmètre</label><div class="pm-in ro">Mes magasins sélectionnés</div><span class="db-mini">« Tout le réseau » : la marque seulement</span></div>
-        <div class="pm-f"><label>Magasins <small class="db-mini">${R.magasinsMax || 4} au plus</small></label><div class="pm-choix">${d.shops.map((s, i) => { const o = S.stores.find(z => +z.id === +s); return `<span class="pm-tag">${esc(o ? o.nom : 'Magasin ' + s)}${i ? `<button data-pmrmshop="${s}" aria-label="retirer">✕</button>` : ''}</span>`; }).join('')}</div>
-        ${d.shops.length < (R.magasinsMax || 4) && dispo.length ? `<select class="pm-in" data-pmaddshop="1"><option value="">+ Ajouter un magasin…</option>${dispo.map(s => `<option value="${esc(s.id)}">${esc(s.nom)}</option>`).join('')}</select>` : ''}</div></div>
-        <div class="db-mini" style="margin-top:10px">La demande part du magasin ${esc(nomShop())}. Chaque magasin ajouté la verra dans sa liste ; le coefficient s’y vérifie avec ses propres prix.</div>`;
-    }
-    if (e === 3) {
       return tete('ce que le client achète', 'Déclencheur (X)') + `<div class="pm-row" style="grid-template-columns:110px 1fr"><div class="pm-f"><label>Quantité X</label><input class="pm-in c" type="number" min="1" max="20" value="${esc(d.x.q)}" data-pmf="x.q"></div><div></div></div>`
         + pmCible(W, 'x') + `<div class="db-mini" style="margin-top:10px">Une catégorie OU des produits : la règle « OU » du panel. Le coefficient se calcule pour chaque produit visé.</div>`;
     }
-    if (e === 4) {
+    if (e === 3) {
       return tete('ce que le client reçoit', 'Avantage (Y)') + `<div class="pm-row" style="grid-template-columns:110px repeat(4,1fr)"><div class="pm-f"><label>Quantité Y</label><input class="pm-in c" type="number" min="1" max="20" value="${esc(d.y.q)}" data-pmf="y.q"></div>
         ${PM_TYPES.map(t => `<button class="pm-opt${d.y.type === t[0] ? ' on' : ''}" data-pmtype="${t[0]}"><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div>
         ${d.y.type === 'FREE' ? '' : `<div class="pm-row" style="grid-template-columns:200px 1fr;margin-top:10px"><div class="pm-f"><label>${d.y.type === 'PERCENTAGE_DISCOUNT' ? 'Remise, en %' : (d.y.type === 'FIXED_PRICE' ? 'Prix de la pièce, TTC' : 'Remise, en € TTC')}</label><input class="pm-in c" type="number" min="0" step="${d.y.type === 'PERCENTAGE_DISCOUNT' ? '1' : '0.05'}" value="${esc(d.y.valeur)}" data-pmf="y.valeur"></div><div></div></div>`}
         <div style="margin-top:12px">${pmCible(W, 'y')}</div>
         <div class="pm-f" style="margin-top:10px"><label>Stratégie de sélection</label><div class="pm-in ro">Produit le moins cher</div><span class="db-mini">la caisse remise la moins chère des pièces éligibles</span></div>`;
     }
-    if (e === 5) {
+    if (e === 4) {
       const n = pmJours(d), dl = v => v ? v.replace(' ', 'T') : '';
       const autres = ((S.aux[clePM()] || {}).demandes || []).filter(o => o.id !== d.id && ['a_valider', 'validee', 'en_caisse'].includes(o.statut) && d.du && d.au && o.du < d.au && o.au > d.du);
       return tete('règles d’application et période de validité', 'Période') + `<div class="pm-row" style="grid-template-columns:1fr 1fr"><div class="pm-f"><label>Active à partir du</label><input class="pm-in" type="datetime-local" value="${dl(d.du)}" data-pmf="du"></div>
@@ -3298,15 +3292,14 @@
     }
     // 6 · vérifier et envoyer
     const x = pmEffectif(d.x), y = pmEffectif(d.y);
-    const mags = d.shops.map(s => { const o = S.stores.find(z => +z.id === +s); return esc(o ? o.nom : 'Magasin ' + s); }).join(', ');
     const lgn = (lab, v, et) => `<tr><td class="db-mini" style="width:170px">${lab}</td><td>${v}</td><td class="r">${et ? `<button class="pm-lien" data-pmet="${et}">modifier</button>` : ''}</td></tr>`;
     const desc = c => c.cats.length ? 'catégorie ' + c.cats.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + ', toutes les variantes · ' + (c.exclus.length ? 'sauf ' + esc(c.exclus.map(o => o.nom).join(', ')) : 'aucune exclusion') : (c.prods.length ? c.prods.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') : '<span class="ko">à choisir</span>');
-    const manque = [1, 2, 3, 4, 5].map(i => pmManque(d, i) ? PM_ETAPES[i - 1] + ' : ' + pmManque(d, i) : '').filter(Boolean);
+    const manque = [1, 2, 3, 4].map(i => pmManque(d, i) ? PM_ETAPES[i - 1] + ' : ' + pmManque(d, i) : '').filter(Boolean);
     return tete('', 'Vérifier et envoyer') + `<div class="pm-phrase g">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div><div class="db-mini">« ${esc(d.nom || 'sans nom')} »</div>
-      <table class="pm-recap">${lgn('Magasin' + (d.shops.length > 1 ? 's' : ''), mags, 2)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 3)}
-        ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 4)}
-        ${lgn('Période', d.du && d.au ? 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b> · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
-        ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 5)}
+      <table class="pm-recap">${lgn('Magasin', '<b>' + esc(nomShop()) + '</b>', 0)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 2)}
+        ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 3)}
+        ${lgn('Période', d.du && d.au ? 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b> · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 4)}
+        ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 4)}
         ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’envoi : ${esc(manque.join(' · '))}</div>` : ''}
@@ -3322,13 +3315,13 @@
   function rendPmAssistant() {
     const W = S.pmW, e = W.etape;
     const prec = e > 1 ? `<button class="db-btn pm-gros" data-pmet="${e - 1}">‹ Retour : ${esc(PM_ETAPES[e - 2].toLowerCase())}</button>` : '<span></span>';
-    const suiv = e < 6 ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
+    const suiv = e < PM_FIN ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
       : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Envoi…' : (pmDOffice(W.d) ? 'Valider la promotion ›' : 'Envoyer à la marque ›')}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
         <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
-        ${e < 6 ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button>` : ''}</div>
+        ${e < PM_FIN ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button>` : ''}</div>
       <div class="pm-wz" id="pm-wz">${pmStepper(W)}</div>
-      <div class="pm-grille"><div class="db-card pm-etape"><div class="pm-step">${pmEtape(W)}</div>${e === 3 || e === 4 ? `<div style="padding:0 20px 16px" id="pm-fixe">${pmFixe(W)}</div>` : ''}<div class="pm-piedw">${prec}${suiv}</div></div>
+      <div class="pm-grille"><div class="db-card pm-etape"><div class="pm-step">${pmEtape(W)}</div>${e === 2 || e === 3 ? `<div style="padding:0 20px 16px" id="pm-fixe">${pmFixe(W)}</div>` : ''}<div class="pm-piedw">${prec}${suiv}</div></div>
       <div class="pm-droite" id="pm-droite">${pmDroite(W)}</div></div>
       <datalist id="pm-dl-prod">${(pmProduits() || []).map(p => `<option value="${esc(pmLabel(p))}"></option>`).join('')}</datalist>`;
   }
@@ -3337,7 +3330,7 @@
     const W = S.pmW; if (!W) { return; }
     const set = (id, h) => { const el = document.getElementById(id); if (el) { el.innerHTML = h; } };
     set('pm-wz', pmStepper(W)); set('pm-droite', pmDroite(W)); set('pm-fixe', pmFixe(W));
-    if (W.etape === 5) { set('pm-duree', pmDureeTxt(W.d)); }
+    if (W.etape === 4) { set('pm-duree', pmDureeTxt(W.d)); }
     const wz = document.getElementById('pm-wz'); if (wz) { pmBrancherEtapes(wz); }
   }
   /** Les boutons qui changent d'étape (le fil des étapes se redessine à chaque frappe : on les rebranche). */
@@ -3357,7 +3350,7 @@
   }
   function pmCorps(action) {
     const d = S.pmW.d, x = pmEffectif(d.x), y = pmEffectif(d.y);
-    return { shop: +S.shop, id: d.id, action, nom: d.nom, description: d.description, shops: d.shops, x, y: Object.assign(y, { type: d.y.type, valeur: d.y.type === 'FREE' ? null : d.y.valeur }),
+    return { shop: +S.shop, id: d.id, action, nom: d.nom, description: d.description, x, y: Object.assign(y, { type: d.y.type, valeur: d.y.type === 'FREE' ? null : d.y.valeur }),
       du: d.du, au: d.au, creneaux: d.creneaux, repetable: d.repetable, maxParTicket: d.repetable ? d.maxParTicket : null };
   }
   function pmEnregistrer(action) {
@@ -3366,7 +3359,7 @@
     fetch(API + '/exploitation/promos-magasin', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(pmCorps(action)) })
       .then(r => r.json().catch(() => ({})).then(j => ({ ok: r.ok, j, code: r.status })))
       .then(({ ok, j, code }) => {
-        if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = 6; } return; }
+        if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = PM_FIN; } return; }
         const dm = j.demande, office = action === 'envoyer' && dm.statut === 'validee';
         S.pmMsg = action !== 'envoyer' ? `Brouillon enregistré : « ${esc(dm.nom || 'sans nom')} ».`
           : (office ? `Validée d’office : « ${esc(dm.nom)} » — coefficient du lot ${fX(dm.coef && dm.coef.lot)}, pas besoin de la marque. Elle part en caisse à la date prévue.`
@@ -3389,13 +3382,12 @@
   function pmProduitDe(v) { const m = /#(\d+)$/.exec(v || ''); const id = m ? +m[1] : 0; return (pmProduits() || []).find(p => +p.id === id) || null; }
   function pmBrancher() {
     const on = (sel, ev, fn) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => fn(el, e)));
-    on('[data-pmshop]', 'change', el => { S.shop = el.value; S.pmMsg = null; urlMaj(); charger(false); });
     on('[data-pmf-st]', 'click', el => { S.pmF = el.dataset.pmfSt; rendre(); });
     on('[data-pmsorte]', 'change', el => { S.pmSorte = el.value; rendre(); });
     on('[data-pmq]', 'input', el => { S.pmQ = el.value; rendre(); });
     on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
-    on('[data-pmedit]', 'click', el => { const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit); if (d) { pmOuvrir(pmDepuis(d), 6); } });
+    on('[data-pmedit]', 'click', el => { const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit); if (d) { pmOuvrir(pmDepuis(d), PM_FIN); } });
     on('[data-pmdup]', 'click', el => {
       const [src, id] = el.dataset.pmdup.split(':'), P = S.aux[clePM()] || {};
       if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(d); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
@@ -3421,8 +3413,6 @@
     on('[data-pmexc]', 'change', el => { const c = el.dataset.pmexc, p = pmProduitDe(el.value); if (p && !d[c].exclus.some(o => +o.id === +p.id)) { d[c].exclus.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });
     on('[data-pmrm]', 'click', el => { const [c, ch, id] = el.dataset.pmrm.split('|'); d[c][ch] = d[c][ch].filter(o => String(o.id) !== id); rendre(); });
     on('[data-pmtype]', 'click', el => { d.y.type = el.dataset.pmtype; if (d.y.type === 'FREE') { d.y.valeur = ''; } rendre(); });
-    on('[data-pmaddshop]', 'change', el => { const s = +el.value; if (s && !d.shops.includes(s)) { d.shops.push(s); } rendre(); });
-    on('[data-pmrmshop]', 'click', el => { d.shops = d.shops.filter(s => s !== +el.dataset.pmrmshop); rendre(); });
     on('[data-pmcradd]', 'click', () => { d.creneaux.push({ jours: [6, 7], de: '15:00', a: '18:00' }); rendre(); });
     on('[data-pmcrdel]', 'click', el => { d.creneaux.splice(+el.dataset.pmcrdel, 1); rendre(); });
     on('[data-pmj]', 'click', el => { const [i, j] = el.dataset.pmj.split('|').map(Number), c = d.creneaux[i]; c.jours = c.jours.includes(j) ? c.jours.filter(v => v !== j) : c.jours.concat(j).sort((a, b) => a - b); rendre(); });
