@@ -37,8 +37,15 @@ function ep_analyse_produits_coefficients(): array
         ['id' => 2, 'nom' => 'Pain au chocolat', 'catId' => 10, 'prixHt' => 1.50, 'cout' => 0.60, 'tva' => 6],
         ['id' => 3, 'nom' => 'Tarte sans fiche', 'catId' => 20, 'prixHt' => 3.00, 'cout' => null, 'tva' => 6],
         ['id' => 4, 'nom' => 'Éclair', 'catId' => 20, 'prixHt' => 4.00, 'cout' => 1.00, 'tva' => 6],
+        // Pain : pas de coût calculé pour le magasin (le panel rend 0), le réseau en a un.
+        ['id' => 6, 'nom' => 'Pain', 'catId' => 30, 'prixHt' => 2.50, 'cout' => 0, 'tva' => 6],
+        ['id' => 7, 'nom' => 'Baguette', 'catId' => 30, 'prixHt' => 1.50, 'cout' => null, 'tva' => 6],
+        ['id' => 8, 'nom' => 'Sans prix', 'catId' => 30, 'prixHt' => null, 'cout' => 0.30, 'tva' => 6],
     ]];
 }
+
+// Le coût du réseau (la moyenne des magasins du compte, sinon la recette locale) : le pain seulement.
+function catalogueCouts(): array { return [6 => ['mat' => 0.50, 'source' => 'panel (products/available)'], 4 => ['mat' => 9.99]]; }
 
 require __DIR__ . '/../src/promos_magasin.php';
 
@@ -49,7 +56,13 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
     if ($cond) { $ok++; echo "  ok  $nom\n"; }
     else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
 }
-$_GET = ['shop' => '4']; $P = ep_analyse_produits_coefficients()['produits']; $_GET = [];
+$P = pmProduits(4);
+$pp = array_column($P, null, 'id');
+verifie('coût du magasin gardé, même quand le réseau en a un autre', $pp[4]['cout'] === 1.0 && $pp[4]['source'] === 'magasin');
+verifie('coût à 0 au magasin : celui du réseau, marqué', $pp[6]['cout'] === 0.5 && $pp[6]['source'] === 'reseau', json_encode($pp[6]));
+verifie('ni magasin ni réseau : pas de coût', $pp[7]['cout'] === null && $pp[7]['source'] === null && $pp[3]['cout'] === null);
+$_GET = ['shop' => '4']; $r = ep_promos_magasin_produits(); $_GET = [];
+verifie('la liste de l’assistant compte les sources', $r['nMagasin'] === 4 && $r['nReseau'] === 1 && $r['nSansCout'] === 2, json_encode(array_diff_key($r, ['produits' => 1])));
 $cote = static fn (int $q, array $cats = [], array $prods = [], array $ex = []) => ['q' => $q, 'cats' => array_map(static fn ($i) => ['id' => $i, 'nom' => ''], $cats),
     'prods' => array_map(static fn ($i) => ['id' => $i, 'nom' => ''], $prods), 'exclus' => array_map(static fn ($i) => ['id' => $i, 'nom' => ''], $ex)];
 
@@ -70,6 +83,11 @@ $c = pmCoef($P, $cote(1, [], [1]), $cote(1, [], [4]) + ['type' => 'FIXED_AMOUNT_
 verifie('remise de 1,06 € TTC', $c['lot'] === 3.33, json_encode($c));
 $c = pmCoef($P, $cote(1, [20]), $cote(1, [20]) + ['type' => 'FREE', 'valeur' => null]);
 verifie('un produit sans coût de recette nommé, pas chiffré', $c['sansCout'] === ['Tarte sans fiche'] && $c['lot'] === 2.0, json_encode($c));
+$c = pmCoef($P, $cote(2, [30]), $cote(1, [30]) + ['type' => 'FREE', 'valeur' => null]);
+// Le pain, chiffré au réseau : 3 pains, le 3e offert — 5,00 € HT pour 1,50 € de matière.
+verifie('chiffré au coût du réseau, nommé ; sans coût et sans prix nommés à part', $c['lot'] === 3.33 && $c['coutReseau'] === ['Pain'] && $c['sansCout'] === ['Baguette'] && $c['sansPrix'] === ['Sans prix'], json_encode($c, JSON_UNESCAPED_UNICODE));
+$c = pmCoef($P, $cote(1, [], [7]), $cote(1, [], [8]) + ['type' => 'FREE', 'valeur' => null]);
+verifie('rien de chiffrable : la raison dit quels produits et pourquoi', $c['lot'] === null && pmManqueTxt($c) === 'sans coût de recette au panel, ni pour le magasin ni pour le réseau — Baguette ; sans prix au panel — Sans prix', pmManqueTxt($c));
 $c = pmCoef($P, $cote(1, [], [3]), $cote(1, [], [3]) + ['type' => 'FREE', 'valeur' => null]);
 verifie('rien de chiffrable : pas de coefficient', $c['lot'] === null && $c['paires'] === 0);
 

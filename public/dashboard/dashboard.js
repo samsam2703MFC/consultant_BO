@@ -2979,12 +2979,13 @@
    * serré, la pièce la moins chère remisée) se recalcule à chaque changement avec les prix et coûts de recette du
    * magasin ; le serveur refait le calcul à l'envoi, dans chaque magasin couvert, et refuse sous ×2.
    *   ../api/cockpit/exploitation/promos-magasin?shop=       (la liste, les règles)
-   *   ../api/cockpit/analyse/produits/coefficients?shop=     (prix HT, coût de recette, TVA, catégorie)
+   *   ../api/cockpit/exploitation/promos-magasin/produits?shop= (prix HT, TVA, catégorie, coût de recette du magasin,
+   *                                                              sinon du réseau — la liste que le serveur chiffre à l'envoi)
    */
   const clePM = () => 'pm|' + S.shop;
   const cheminPM = () => '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop);
   const clePMP = () => 'pmProd|' + S.shop;
-  const cheminPMP = () => '/analyse/produits/coefficients?shop=' + encodeURIComponent(S.shop);
+  const cheminPMP = () => '/exploitation/promos-magasin/produits?shop=' + encodeURIComponent(S.shop);
   const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
   const PM_ETAT = { brouillon: ['Brouillon', 'b'], refusee: ['Renvoyée par la marque', 'r'], a_valider: ['À valider par la marque', 'a'], validee: ['Validée · à mettre en caisse', 'ok'], en_caisse: ['En caisse', 'ok'],
@@ -3029,8 +3030,10 @@
   /** Le coefficient du lot, le cas le plus serré — le même calcul que le serveur (pmCoef). */
   function pmCoef(prods, x, y) {
     const ch = p => p.prixHt != null && p.cout != null && +p.prixHt > 0 && +p.cout > 0;
-    const X = pmEligibles(prods, x), Y = pmEligibles(prods, y);
-    const sansCout = [...new Set([...X.values(), ...Y.values()].filter(p => !ch(p)).map(p => p.nom))];
+    const X = pmEligibles(prods, x), Y = pmEligibles(prods, y), tous = [...new Map([...X, ...Y]).values()];
+    const sansPrix = [...new Set(tous.filter(p => !(+p.prixHt > 0)).map(p => p.nom))];
+    const sansCout = [...new Set(tous.filter(p => +p.prixHt > 0 && !(+p.cout > 0)).map(p => p.nom))];
+    const coutReseau = [...new Set(tous.filter(p => ch(p) && p.source === 'reseau').map(p => p.nom))];
     let pire = null, n = 0;
     X.forEach(px => { if (!ch(px)) { return; } Y.forEach(py => {
       if (!ch(py)) { return; }
@@ -3040,7 +3043,15 @@
       const c = paye / cout;
       if (!pire || c < pire.lot) { pire = { lot: Math.round(c * 100) / 100, sans: Math.round(sans / cout * 100) / 100, px, py, paye, cout }; }
     }); });
-    return Object.assign(pire || { lot: null, sans: null }, { paires: n, nX: X.size, nY: Y.size, sansCout });
+    return Object.assign(pire || { lot: null, sans: null }, { paires: n, nX: X.size, nY: Y.size, sansCout, sansPrix, coutReseau });
+  }
+  /** Pourquoi le coefficient ne se calcule pas (le même texte que le serveur, pmManqueTxt). */
+  function pmManqueTxt(C) {
+    const l = n => n.slice(0, 4).join(', ') + (n.length > 4 ? '…' : '');
+    const m = [];
+    if (C.sansCout.length) { m.push('sans coût de recette au panel, ni pour ce magasin ni pour le réseau — ' + l(C.sansCout)); }
+    if (C.sansPrix.length) { m.push('sans prix au panel — ' + l(C.sansPrix)); }
+    return m.length ? m.join(' ; ') : 'aucune combinaison de X et de Y ne se présente en caisse';
   }
   const pmNoms = c => [...(c.cats || []).map(o => o.nom), ...(c.prods || []).map(o => o.nom)].filter(Boolean);
   const pmLib = c => { const n = pmNoms(c); return n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : 'à choisir'; };
@@ -3177,7 +3188,7 @@
   function pmFixe(W) {
     const C = pmCoefCourant(W.d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
     if (!C) { return S.err[clePMP()] ? `<div class="pm-fixe ko">Prix et coûts du magasin illisibles : ${esc(S.err[clePMP()])}</div>` : `<div class="pm-fixe">Lecture des prix et coûts de recette du magasin…</div>`; }
-    if (C.lot == null) { return `<div class="pm-fixe">${C.nX + C.nY ? 'Aucun produit visé n’a de coût de recette : le coefficient ne se calcule pas.' : 'Le coefficient se calcule dès que X et Y sont choisis.'}</div>`; }
+    if (C.lot == null) { return C.nX + C.nY ? `<div class="pm-fixe ko"><span>Le coefficient ne se calcule pas : ${esc(pmManqueTxt(C))}. Choisissez d’autres produits, ou faites chiffrer leur recette au panel.</span></div>` : `<div class="pm-fixe">Le coefficient se calcule dès que X et Y sont choisis.</div>`; }
     const ok = C.lot >= min;
     return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit visé.' : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. Baissez l’avantage, montez X, ou retirez ce produit.'}</span></div>`;
   }
@@ -3196,7 +3207,7 @@
       ${ck(C && C.lot != null && C.lot >= min, 'Coefficient du lot ' + fXm(min) + ' au moins')}</div>`;
     h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">${fXm(min)} minimum ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
-    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Aucun produit visé n’a de coût de recette au panel.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
+    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Le coefficient ne se calcule pas : ' + esc(pmManqueTxt(C)) + '.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
     else {
       const pc = v => Math.max(1, Math.min(99, 100 * v / 4.5)), nb = x.q + y.q;
       h += `<div class="pm-cl"><span>Payé pour le lot (${nb} pièces), HT</span><b>${fU(C.paye)}</b></div>
@@ -3205,7 +3216,8 @@
         <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)"><i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
           ${C.sans != null ? `<i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>` : ''}<i class="lot ${C.lot >= min ? 'ok' : 'ko'}" style="left:${pc(C.lot)}%"></i></div>
         <div class="db-mini">Le cas le plus serré : ${x.q} × ${esc(C.px.nom)} + ${y.q} × ${esc(C.py.nom)}, sur ${C.paires} combinaison${C.paires > 1 ? 's' : ''} (${C.nX} produit${C.nX > 1 ? 's' : ''} en X, ${C.nY} en Y). Un seul cas sous ${fXm(min)} bloque l’envoi.${d.shops.length > 1 ? ' Prix de ce magasin ; les autres se vérifient à l’envoi.' : ''}</div>
-        ${C.sansCout.length ? `<div class="pm-warn">Sans coût de recette, pas chiffrés : ${esc(C.sansCout.slice(0, 5).join(', '))}${C.sansCout.length > 5 ? '…' : ''}</div>` : ''}</div>`;
+        ${C.coutReseau.length ? `<div class="db-mini" style="margin-top:6px">Coût du réseau (pas encore calculé pour ce magasin au panel) : ${esc(C.coutReseau.slice(0, 5).join(', '))}${C.coutReseau.length > 5 ? '…' : ''}.</div>` : ''}
+        ${C.sansCout.length + C.sansPrix.length ? `<div class="pm-warn">Pas chiffrés, ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
       // Le ticket du cas le plus serré, aux prix TTC de la caisse.
       const tx = pmTtc(C.px), ty = pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur) * (1 + (+C.py.tva || 0) / 100), rem = y.q * (ty - ry);
       const lg = (a, b, c) => `<div class="l${c ? ' ' + c : ''}"><span>${a}</span><span>${b}</span></div>`;

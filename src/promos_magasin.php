@@ -163,14 +163,20 @@ function pmRecompense(array $p, string $type, ?float $valeur): float
  * Le coefficient du lot (prix payé HT ÷ coût matière) dans le cas le plus serré : x pièces d'un produit de X et
  * y pièces d'un produit de Y, la récompense sur la pièce la moins chère (la règle de la caisse) — une paire où
  * le produit de X est aussi dans Y et moins cher que celui de Y ne se présente pas en caisse, elle est écartée.
- * Rend {lot, sans, x, y, paires, sansCout: [noms]} ; lot = null quand rien ne se chiffre.
+ * Rend {lot, sans, x, y, paires, sansCout: [noms], sansPrix: [noms], coutReseau: [noms]} ; lot = null quand rien ne se
+ * chiffre. `coutReseau` : les produits visés chiffrés au coût du réseau, faute de coût calculé pour le magasin.
  */
 function pmCoef(array $produits, array $x, array $y): array
 {
     $chiffre = static fn ($p) => isset($p['prixHt'], $p['cout']) && $p['prixHt'] !== null && $p['cout'] !== null && (float) $p['prixHt'] > 0 && (float) $p['cout'] > 0;
     $X = pmEligibles($produits, $x); $Y = pmEligibles($produits, $y);
-    $sansCout = [];
-    foreach ($X + $Y as $p) { if (!$chiffre($p)) { $sansCout[] = (string) ($p['nom'] ?? ''); } }
+    $sansCout = []; $sansPrix = []; $reseau = [];
+    foreach ($X + $Y as $p) {
+        $nom = (string) ($p['nom'] ?? '');
+        if (($p['prixHt'] ?? null) === null || (float) $p['prixHt'] <= 0) { $sansPrix[] = $nom; }
+        elseif (($p['cout'] ?? null) === null || (float) $p['cout'] <= 0) { $sansCout[] = $nom; }
+        elseif (($p['source'] ?? '') === 'reseau') { $reseau[] = $nom; }
+    }
     $pire = null; $n = 0;
     foreach ($X as $px) {
         if (!$chiffre($px)) { continue; }
@@ -188,10 +194,17 @@ function pmCoef(array $produits, array $x, array $y): array
         }
     }
     return ($pire ?? ['lot' => null, 'sans' => null, 'x' => null, 'y' => null, 'paye' => null, 'cout' => null])
-        + ['paires' => $n, 'nX' => count($X), 'nY' => count($Y), 'sansCout' => array_slice(array_values(array_unique($sansCout)), 0, 12)];
+        + ['paires' => $n, 'nX' => count($X), 'nY' => count($Y), 'sansCout' => array_slice(array_values(array_unique($sansCout)), 0, 12),
+            'sansPrix' => array_slice(array_values(array_unique($sansPrix)), 0, 12), 'coutReseau' => array_slice(array_values(array_unique($reseau)), 0, 12)];
 }
 
-/** Les produits du magasin avec prix et coût de recette, par la lecture de /analyse/produits/coefficients. */
+/**
+ * Les produits du magasin pour le coefficient du lot : prix pratiqué HT et TTC, TVA, catégorie et coût de recette,
+ * lus par /analyse/produits/coefficients. Le panel rend 0 quand il n'a pas encore calculé le coût d'une recette
+ * POUR CE MAGASIN (17/10/2026 : un magasin entier sans coût, « Aucun produit visé n'a de coût de recette ») : le
+ * coût du réseau prend alors la place (catalogueCouts : la moyenne des magasins du compte, sinon la recette de la
+ * copie locale), marqué `source: reseau`. Rend null quand le panel ne rend rien.
+ */
 function pmProduits(int $shop): ?array
 {
     if (!function_exists('ep_analyse_produits_coefficients')) { return null; }
@@ -199,7 +212,37 @@ function pmProduits(int $shop): ?array
     $_GET = ['shop' => (string) $shop];
     try { $r = ep_analyse_produits_coefficients(); } catch (Throwable $e) { $r = null; }
     finally { $_GET = $g; if (is_int($code)) { http_response_code($code); } }
-    return is_array($r) && isset($r['produits']) && is_array($r['produits']) ? $r['produits'] : null;
+    if (!is_array($r) || !isset($r['produits']) || !is_array($r['produits'])) { return null; }
+    $reseau = [];
+    if (function_exists('catalogueCouts')) { try { $reseau = catalogueCouts(); } catch (Throwable $e) { $reseau = []; } }
+    $out = [];
+    foreach ($r['produits'] as $p) {
+        $id = (int) ($p['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $cout = isset($p['cout']) && is_numeric($p['cout']) && (float) $p['cout'] > 0 ? (float) $p['cout'] : null;
+        $src = $cout !== null ? 'magasin' : null;
+        $mat = $reseau[$id]['mat'] ?? null;
+        if ($cout === null && is_numeric($mat) && (float) $mat > 0) { $cout = round((float) $mat, 4); $src = 'reseau'; }
+        $out[] = ['id' => $id, 'nom' => (string) ($p['nom'] ?? ''), 'catId' => (int) ($p['catId'] ?? 0), 'cat' => (string) ($p['cat'] ?? ''),
+            'prixTtc' => $p['prixTtc'] ?? null, 'prixHt' => $p['prixHt'] ?? null, 'tva' => $p['tva'] ?? null, 'cout' => $cout, 'source' => $src];
+    }
+    return $out;
+}
+
+/**
+ * GET /exploitation/promos-magasin/produits?shop=4 — ce que l'assistant chiffre : les produits du magasin, leur prix
+ * et leur coût de recette (du magasin, sinon du réseau). Le navigateur calcule le coefficient avec la même liste que
+ * le serveur à l'envoi.
+ */
+function ep_promos_magasin_produits(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $l = pmProduits($shop);
+    if ($l === null) { http_response_code(502); return ['error' => 'les produits du magasin ne se lisent pas au panel']; }
+    $n = static fn (string $src) => count(array_filter($l, static fn ($p) => $p['source'] === $src));
+    return ['shop' => (string) $shop, 'produits' => $l, 'nMagasin' => $n('magasin'), 'nReseau' => $n('reseau'),
+        'nSansCout' => count(array_filter($l, static fn ($p) => $p['cout'] === null))];
 }
 
 /** Le nom court d'un magasin (« Halle ») pour les messages. */
@@ -256,9 +299,19 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
         $e[] = 'Coefficient du lot ×' . number_format($coef['lot'], 2, ',', '') . ' (' . $coef['x'] . ' + ' . $coef['y'] . (isset($coef['magasin']) && count(pmShops($d)) > 1 ? ', ' . pmNomShop((int) $coef['magasin']) : '') . ') : ×' . number_format(PM_COEF_MIN, 0) . ' au moins.';
     }
     if ($coef !== null && $coef['lot'] === null && ($coef['nX'] + $coef['nY']) > 0 && $coef['paires'] === 0) {
-        $e[] = 'Aucun produit visé n’a de coût de recette : le coefficient ne se calcule pas.';
+        $e[] = 'Le coefficient ne se calcule pas : ' . pmManqueTxt($coef) . '.';
     }
     return $e;
+}
+
+/** Pourquoi le coefficient ne se calcule pas, en mots : les produits sans coût de recette, sans prix. */
+function pmManqueTxt(array $c): string
+{
+    $l = static fn (array $n) => implode(', ', array_slice($n, 0, 4)) . (count($n) > 4 ? '…' : '');
+    $m = [];
+    if (($c['sansCout'] ?? []) !== []) { $m[] = 'sans coût de recette au panel, ni pour le magasin ni pour le réseau — ' . $l($c['sansCout']); }
+    if (($c['sansPrix'] ?? []) !== []) { $m[] = 'sans prix au panel — ' . $l($c['sansPrix']); }
+    return $m !== [] ? implode(' ; ', $m) : 'aucune combinaison de X et de Y ne se présente en caisse';
 }
 
 /* --- les promotions du panel qui touchent le magasin --------------------------------------------- */

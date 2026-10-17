@@ -2254,6 +2254,14 @@ la demande `a_valider`, sinon **422** `{ error: "à compléter", erreurs: [phras
 
 `DELETE /exploitation/promos-magasin?shop=4&id=pm…` — un brouillon, une demande renvoyée ou encore à valider.
 
+`GET /exploitation/promos-magasin/produits?shop=4` — ce que l'assistant chiffre, la liste même que le serveur relit à
+l'envoi : `{ shop, produits: [ { id, nom, catId, cat, prixTtc, prixHt, tva, cout, source: "magasin"|"reseau"|null } ],
+nMagasin, nReseau, nSansCout }`. Le coût est celui de la recette **pour ce magasin** (`/analyse/produits/coefficients`) ;
+le panel rend 0 tant qu'il ne l'a pas calculé pour lui (17/10/2026 : un magasin entier sans coût) — le coût du réseau
+prend alors la place (`catalogueCouts()` : la moyenne des magasins du compte, sinon la recette de la copie locale),
+`source: "reseau"`, et l'assistant le dit. Un produit sans coût nulle part, ou sans prix, n'est pas chiffré et se nomme
+(`sansCout`, `sansPrix`) ; quand plus rien ne se chiffre, l'envoi est refusé avec ces noms.
+
 Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=a_valider]`
 (toutes les demandes, la plus ancienne d'abord, avec `noms` : les noms courts des magasins cités, et `regles`) et
 `PATCH /promos-magasin/{id}` `{ decision: "valider"|"refuser", message }` — un refus dit pourquoi ; la demande revient
