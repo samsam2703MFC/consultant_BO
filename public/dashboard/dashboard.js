@@ -26,7 +26,7 @@
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
-    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
+    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false, coCanal: null,
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
@@ -175,6 +175,7 @@
     else if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
     if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
+    if (S.vue === 'mois') { lireAux(cleCanM(), cheminCanM(), force); }
     if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
     // Les commandes clients et les livraisons : une seule lecture, elle porte
     // les deux et ne dépend pas de la période regardée.
@@ -1361,6 +1362,7 @@
    * sous le même déclencheur.
    */
   function canauxCarte(m, C) {
+    if (S.vue === 'mois') { return canauxMoisCarte(m, C); }
     const per = coPer(), J = per ? C.periode : C.jour, P = per ? null : proData(), PJ = P ? P.jour : null;
     const ouvert = !per && !!S.proOuvert, lue = J.joursLus > 0;
     const comptoir = lue ? J.comptoir : null, cc = J.cc, liv = J.liv, total = (comptoir || 0) + J.webshop;
@@ -1384,6 +1386,142 @@
       <div class="db-split-g co3"><div class="c"><div class="k">Comptoir</div><div class="v">${comptoir != null ? fK(comptoir) : '—'}</div><div class="s">${sC}</div></div>
       <div class="w"><div class="k">Click &amp; collect</div><div class="v">${fK(cc.ca)}</div><div class="s">${sW}</div></div>
       <div class="l"><div class="k">Livraison</div><div class="v">${fK(liv.ca)}</div><div class="s">${sL}</div></div></div>${canauxCorps(C)}${deplie}</div>`;
+  }
+  /* --- le mois : quatre canaux, le niveau et l'évolution de chacun (demande du 17/10/2026) ---
+   * Les clients pro sortent du comptoir et ont leur tuile. Chaque tuile porte sa courbe des six
+   * derniers mois (le mois en cours projeté au rythme des jours lus) et l'écart au mois d'avant
+   * aux mêmes dates ; un clic ouvre le cumul du mois face au mois d'avant. Lecture :
+   * /exploitation/canaux-mois (src/canaux_offres.php). */
+  function cleCanM() { return 'canM|' + S.shop + '|' + S.date.slice(0, 7); }
+  function cheminCanM() { return '/exploitation/canaux-mois?shop=' + encodeURIComponent(S.shop) + '&mois=' + S.date.slice(0, 7) + '&n=6'; }
+  function canMData() { const H = S.aux[cleCanM()]; return H && !H.error && Array.isArray(H.historique) ? H : null; }
+  const CANAUX_M = [['c', 'Comptoir', '#b8ad9f', 'c'], ['p', 'Clients pro — B2B', '#2d7a3e', 'b'], ['w', 'Click &amp; collect', '#1f5f8b', 'w'], ['l', 'Livraison', '#0f3b5c', 'l']];
+  const MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const moisNom = ym => MOIS_FR[+ym.slice(5, 7) - 1];
+  const moisCourt = ym => { const n = moisNom(ym); return n.length > 5 ? n.slice(0, 4) + '.' : n; };
+  /** Un canal sur un mois de l'historique : le comptoir sans les clients pro (inconnu tant que le pro ne se lit pas). */
+  function valMois(k, h) {
+    if (k === 'c') { return h.comptoir == null || h.pro == null ? null : h.comptoir - h.pro; }
+    return k === 'p' ? h.pro : (k === 'w' ? h.cc : h.liv);
+  }
+  /** Un canal sur un jour : un jour sans tickets pro gravés compte son comptoir entier. */
+  function valJour(k, x) {
+    if (k === 'c') { return x.comptoir == null ? null : x.comptoir - (x.pro || 0); }
+    return k === 'p' ? x.pro : (k === 'w' ? x.cc : x.liv);
+  }
+  /** Le cumul d'un canal jour après jour : [jour du mois, cumul] sur les jours lus (le webshop : jusqu'à aujourd'hui). */
+  function cumulCanal(k, L) {
+    const out = []; let t = 0;
+    (L || []).forEach(x => {
+      const v = valJour(k, x);
+      if (v == null || x.j > AUJ) { return; }
+      t += v; out.push([+x.j.slice(8, 10), t]);
+    });
+    return out;
+  }
+  /** L'écart au mois d'avant aux mêmes dates (mois en cours) ou mois entier contre mois entier. */
+  function ecartCanal(k, H) {
+    const c = cumulCanal(k, H.jours.courant), p = cumulCanal(k, H.jours.precedent);
+    if (!c.length || !p.length) { return null; }
+    const d = c[c.length - 1][0], cour = c[c.length - 1][1];
+    const enCours = (H.historique[H.historique.length - 1] || {}).enCours;
+    const avant = enCours ? (p.filter(x => x[0] <= d).pop() || [0, 0])[1] : p[p.length - 1][1];
+    return { jour: d, cour, avant, pct: avant > 0 ? 100 * (cour / avant - 1) : null, enCours };
+  }
+  /** La petite courbe d'une tuile : les mois clos en trait plein, le mois en cours projeté en pointillé. */
+  function sparkCanal(k, H, coul) {
+    const P = H.historique.map(h => {
+      let v = valMois(k, h);
+      const lus = k === 'w' || k === 'l' ? h.joursEcoules : h.joursLus;
+      if (v != null && h.enCours && lus > 0) { v = v / lus * h.jours; }
+      return { m: h.m, v, proj: h.enCours };
+    });
+    const vals = P.filter(x => x.v != null).map(x => x.v);
+    if (vals.length < 2) { return ''; }
+    const mx = Math.max(...vals), mn = Math.min(...vals), et = mx - mn || 1;
+    const X = i => 4 + i * 88 / (P.length - 1), Y = v => 30 - 24 * (v - mn) / et;
+    const pts = P.map((x, i) => x.v == null ? null : [X(i), Y(x.v), x]);
+    const pleins = pts.filter(x => x && !x[2].proj).map(x => x[0].toFixed(1) + ',' + x[1].toFixed(1)).join(' ');
+    const der = pts[pts.length - 1], avd = pts.slice(0, -1).filter(Boolean).pop();
+    const titre = P.map(x => moisNom(x.m) + ' ' + (x.v == null ? '—' : fK(x.v)) + (x.proj ? ' (projeté)' : '')).join(' · ');
+    return `<svg class="co-spk" width="96" height="34" viewBox="0 0 96 34" role="img" aria-label="${esc(titre)}"><title>${esc(titre)}</title>
+      <polyline fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" points="${pleins}"/>
+      ${der && der[2].proj && avd ? `<line x1="${avd[0].toFixed(1)}" y1="${avd[1].toFixed(1)}" x2="${der[0].toFixed(1)}" y2="${der[1].toFixed(1)}" stroke="${coul}" stroke-width="2" stroke-dasharray="3 3"/>` : ''}
+      ${pts.filter(Boolean).map(x => `<circle cx="${x[0].toFixed(1)}" cy="${x[1].toFixed(1)}" r="${x === der ? 3 : 1.6}" fill="${x === der && x[2].proj ? '#fff' : coul}"${x === der && x[2].proj ? ` stroke="${coul}" stroke-width="1.6"` : ''}/>`).join('')}</svg>`;
+  }
+  /** Le cumul du mois du canal ouvert face au mois d'avant, et la fin de mois au rythme actuel. */
+  function grapheCanal(k, H, coul, nom) {
+    const c = cumulCanal(k, H.jours.courant), p = cumulCanal(k, H.jours.precedent);
+    const hC = H.historique[H.historique.length - 1], hP = H.historique[H.historique.length - 2];
+    if (!c.length) { return `<div class="co-graphe" style="--cc:${coul}"><span class="db-lab" style="color:${coul}">${nom} — le cumul du mois</span><div class="db-mini" style="margin-top:8px">${k === 'p' || k === 'c' ? 'Les tickets pro de ce mois ne sont pas encore lus.' : 'Rien sur ce mois.'}</div></div>`; }
+    const nM = hC.jours, nP = hP.jours, nX = Math.max(nM, nP);
+    const dern = c[c.length - 1], proj = hC.enCours ? dern[1] / dern[0] * nM : null;
+    const mx = Math.max(1, dern[1], proj || 0, p.length ? p[p.length - 1][1] : 0) * 1.08;
+    const W = 1340, Hh = 180, g = { l: 52, r: 14, t: 24, b: 24 }, iw = W - g.l - g.r, ih = Hh - g.t - g.b;
+    const X = d => g.l + (d - 1) * iw / (nX - 1), Y = v => g.t + ih - ih * v / mx;
+    const pas = [1, 2, 2.5, 5].map(f => f * Math.pow(10, Math.floor(Math.log10(mx / 3)))).find(s => mx / s <= 4.5) || mx / 3;
+    let axes = ''; for (let v = 0; v <= mx; v += pas) { axes += `<line x1="${g.l}" x2="${W - g.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#ebe5dd"/><text x="${g.l - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${fK(v)}</text>`; }
+    const jx = [1, 5, 10, 15, 20, 25, nX].filter((d, i, a) => a.indexOf(d) === i && d <= nX);
+    if (hC.enCours && !jx.includes(dern[0])) { jx.push(dern[0]); }
+    const xs = jx.map(d => `<text x="${X(d).toFixed(1)}" y="${Hh - 6}" text-anchor="middle"${d === dern[0] && hC.enCours ? ' class="fort"' : ''}>${d}</text>`).join('');
+    const ligne = L => L.map(x => X(x[0]).toFixed(1) + ',' + Y(x[1]).toFixed(1)).join(' ');
+    const E = ecartCanal(k, H);
+    const avantMeme = E ? E.avant : null;
+    const yA = avantMeme != null ? Y(avantMeme) : null, xD = X(dern[0]);
+    const ecart = E && E.pct != null ? `<line x1="${xD.toFixed(1)}" x2="${xD.toFixed(1)}" y1="${Y(dern[1]).toFixed(1)}" y2="${yA.toFixed(1)}" stroke="${E.cour >= E.avant ? '#2d7a3e' : '#A61E1E'}" stroke-width="2"/>
+      <circle cx="${xD.toFixed(1)}" cy="${yA.toFixed(1)}" r="3.5" fill="#fff" stroke="#b8ad9f" stroke-width="2"/>
+      <text x="${(xD + 8).toFixed(1)}" y="${((Y(dern[1]) + yA) / 2 + 4).toFixed(1)}" class="ecart ${E.cour >= E.avant ? 'ok' : 'ko'}">${E.cour >= E.avant ? '+' : '−'}${fE(Math.abs(E.cour - E.avant))}${E.enCours ? ' au ' + E.jour : ''}</text>` : '';
+    const projL = proj != null && dern[0] < nM ? `<line x1="${xD.toFixed(1)}" y1="${Y(dern[1]).toFixed(1)}" x2="${X(nM).toFixed(1)}" y2="${Y(proj).toFixed(1)}" stroke="${coul}" stroke-width="2" stroke-dasharray="2 4" opacity=".75"/>
+      <text x="${X(nM).toFixed(1)}" y="${(Y(proj) - 8).toFixed(1)}" text-anchor="end" class="proj" style="fill:${coul}">fin ${moisNom(hC.m)} au rythme : ${fE(proj)}</text>` : '';
+    const finP = p.length ? `<text x="${(X(p[p.length - 1][0]) - 4).toFixed(1)}" y="${(Y(p[p.length - 1][1]) + (proj != null && Y(proj) < Y(p[p.length - 1][1]) ? 17 : -8)).toFixed(1)}" text-anchor="end" class="mu">${moisNom(hP.m)} ${fE(p[p.length - 1][1])}</text>` : '';
+    const svg = `<svg class="co-cumul" viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${esc(nom + ' : cumul de ' + moisNom(hC.m) + ' face à ' + moisNom(hP.m))}">${axes}
+      ${p.length ? `<polyline fill="none" stroke="#b8ad9f" stroke-width="2" stroke-dasharray="5 4" points="${ligne(p)}"/>` : ''}
+      <polyline fill="none" stroke="${coul}" stroke-width="3" stroke-linejoin="round" points="${ligne(c)}"/>${projL}
+      <circle cx="${xD.toFixed(1)}" cy="${Y(dern[1]).toFixed(1)}" r="5" fill="${coul}"/>${ecart}${finP}${xs}</svg>`;
+    // La ligne de pied : à date, le nombre, le panier, la part du CA face au mois d'avant.
+    const part = h => { const v = valMois(k, h), t = h.total; return v != null && t ? 100 * v / t : null; };
+    const nb = { c: h => h.tickets != null && h.ticketsPro != null ? h.tickets - h.ticketsPro : null, p: h => h.ticketsPro, w: h => h.ccN, l: h => h.livN }[k];
+    const unite = { c: ['ticket', 'tickets'], p: ['ticket pro', 'tickets pro'], w: ['commande', 'commandes'], l: ['commande', 'commandes'] }[k];
+    const nC = nb(hC), vC = valMois(k, hC);
+    const pied = [E ? `${E.enCours ? 'Au ' + E.jour : 'Sur le mois'} : <b>${fE(E.cour)}</b> contre ${fE(E.avant)} ${E.enCours ? 'au ' + E.jour + ' ' + moisNom(hP.m) : 'en ' + moisNom(hP.m)}${E.pct != null ? ` (<b class="${E.pct >= 0 ? 'ok' : 'ko'}">${E.pct >= 0 ? '+' : '−'}${nf(Math.abs(E.pct), 0)} %</b>)` : ''}` : '',
+      nC ? fN(nC) + ' ' + unite[nC > 1 ? 1 : 0] + (vC != null ? ' · panier ' + fU(vC / nC) : '') : '',
+      part(hC) != null ? fP(part(hC)) + ' du CA' + (part(hP) != null ? ' (' + moisNom(hP.m) + ' ' + fP(part(hP)) + ')' : '') : ''].filter(Boolean).join(' · ');
+    const leg = `trait plein : ${moisNom(hC.m)} jour après jour · pointillé gris : ${moisNom(hP.m)} aux mêmes dates${proj != null ? ' · pointillé : la fin du mois au rythme actuel' : ''}${k === 'c' || k === 'p' ? ' · le pro se lit depuis le ' + fD(H.proDepuis || '') : ''}`;
+    return `<div class="co-graphe" style="--cc:${coul}"><div class="hd"><span class="db-lab" style="color:${coul}">${nom} — le cumul du mois face à ${moisNom(hP.m)}</span><span class="db-mini">${esc(leg)}</span></div>${svg}
+      <div class="db-mini pied">${pied}</div></div>`;
+  }
+  /** La carte du mois : la barre des quatre canaux, leurs tuiles, le graphique du canal ouvert, puis les jours et les semaines. */
+  function canauxMoisCarte(m, C) {
+    const J = C.periode, H = canMData(), lue = J.joursLus > 0;
+    const hC = H ? H.historique[H.historique.length - 1] : null;
+    const caPro = m && m.caPro != null ? m.caPro : (hC ? hC.pro : null), tkPro = m && m.ticketsPro != null ? m.ticketsPro : (hC ? hC.ticketsPro : null);
+    const comptoir = lue ? J.comptoir - (caPro || 0) : null, tkC = lue && J.tickets != null ? J.tickets - (tkPro || 0) : null;
+    const total = (lue ? J.comptoir : 0) + J.webshop;
+    const pct = v => total > 0 && v != null ? 100 * v / total : 0;
+    const V = { c: comptoir, p: caPro, w: J.cc.ca, l: J.liv.ca };
+    const sous = {
+      c: lue ? [fP(pct(comptoir)) + ' du CA', fN(tkC) + ' ticket' + (tkC > 1 ? 's' : ''), tkC ? 'panier ' + fU(comptoir / tkC) : ''].filter(Boolean).join(' · ') : 'caisse pas encore lue',
+      p: caPro != null ? [fP(pct(caPro)) + ' du CA', fN(tkPro) + ' ticket' + (tkPro > 1 ? 's' : ''), tkPro ? 'panier ' + fU(caPro / tkPro) : ''].filter(Boolean).join(' · ') : 'tickets pro pas encore lus',
+      w: J.cc.n ? [fP(pct(J.cc.ca)) + ' du CA', J.cc.n + ' commande' + (J.cc.n > 1 ? 's' : ''), 'panier ' + fU(J.cc.ca / J.cc.n)].join(' · ') : 'aucune commande sur le mois',
+      l: J.liv.n ? [fP(pct(J.liv.ca)) + ' du CA', J.liv.n + ' commande' + (J.liv.n > 1 ? 's' : ''), 'panier ' + fU(J.liv.ca / J.liv.n)].join(' · ') : 'aucune livraison sur le mois',
+    };
+    const prec = H ? moisCourt(H.precedent) : '';
+    const tuiles = CANAUX_M.map(([k, nom, coul, cls]) => {
+      const on = S.coCanal === k, E = H ? ecartCanal(k, H) : null;
+      const badge = E && E.pct != null ? `<span class="co-delta ${E.pct >= 0 ? 'ok' : 'ko'}" title="${esc((E.enCours ? 'au ' + E.jour + ', ' : 'sur le mois, ') + fE(E.cour) + ' contre ' + fE(E.avant))}">${E.pct >= 0 ? '+' : '−'}${nf(Math.abs(E.pct), 0)} % vs ${esc(prec)}</span>` : '';
+      return `<div class="${cls} co-tuile${on ? ' on' : ''}" style="--cc:${coul}" data-coc="${k}" role="button" tabindex="0" aria-expanded="${on}">
+        <div class="hd"><div style="flex:1;min-width:0"><div class="k">${nom}</div><div class="v">${V[k] != null ? (k === 'c' ? fK(V[k]) : fE(V[k])) : '—'}${badge}</div></div>${H ? sparkCanal(k, H, coul) : ''}</div>
+        <div class="s">${sous[k]}</div><div class="co-voir">${on ? 'graphique ouvert ▴' : 'voir l’évolution ▾'}</div></div>`;
+    }).join('');
+    const bar = lue && total > 0 ? `<div class="db-split-bar" title="comptoir ${fP(pct(comptoir))} · clients pro ${fP(pct(caPro))} · click & collect ${fP(pct(J.cc.ca))} · livraison ${fP(pct(J.liv.ca))}">${CANAUX_M.map(([k, , coul]) => `<i style="background:${coul};width:${pct(V[k]).toFixed(1)}%"></i>`).join('')}</div>` : '';
+    const ouvert = CANAUX_M.find(x => x[0] === S.coCanal);
+    const err = S.err[cleCanM()] || (S.aux[cleCanM()] || {}).error;
+    const graphe = !ouvert ? '' : (H ? grapheCanal(ouvert[0], H, ouvert[2], ouvert[1])
+      : `<div class="co-graphe" style="--cc:${ouvert[2]}"><div class="db-mini">${err ? 'Lecture de l’historique impossible : ' + esc(err) : 'Lecture des six derniers mois…'}</div></div>`);
+    const mini = 'comptoir = tickets caisse hors clients pro · clients pro = tickets des sociétés (TVA valide) · click & collect = webshop retiré en boutique · livraison = webshop livré · un clic sur un canal ouvre son évolution'
+      + (J.joursEcoules && J.joursLus < J.joursEcoules ? ' · caisse lue sur ' + J.joursLus + ' jour' + (J.joursLus > 1 ? 's' : '') + ' sur ' + J.joursEcoules : '');
+    return `<div class="db-card db-split co${caPro ? ' on' : ''}"><div class="ct"><span class="db-lab">Commandes et canaux — le mois</span><span class="db-mini">${esc(mini)}</span></div>${bar}
+      <div class="db-split-g co4">${tuiles}</div>${graphe}${canauxCorps(C)}</div>`;
   }
   const CO_SEUIL_MARGE = 50;
   const OFFRE_VERDICT = { tot: ['Trop tôt', 'tot'], garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'] };
@@ -5926,6 +6064,12 @@
     $.querySelectorAll('[data-objdrop]').forEach(b => b.addEventListener('click', () => { S.objOuvert = !S.objOuvert; rendre(); }));
     $.querySelectorAll('[data-promodrop]').forEach(b => b.addEventListener('click', () => { S.promoOuvert = !S.promoOuvert; rendre(); }));
     $.querySelectorAll('[data-prodrop]').forEach(b => b.addEventListener('click', () => { S.proOuvert = !S.proOuvert; rendre(); }));
+    // Commandes et canaux, au mois : un canal s'ouvre (son évolution) et se referme d'un second clic.
+    $.querySelectorAll('[data-coc]').forEach(b => {
+      const bascule = () => { S.coCanal = S.coCanal === b.dataset.coc ? null : b.dataset.coc; rendre(); };
+      b.addEventListener('click', bascule);
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(); } });
+    });
     $.querySelectorAll('[data-note-texte]').forEach(t => t.addEventListener('input', () => {
       S.noteBrouillon = { cle: cleNote(), texte: t.value };
       const N = S.aux[cleNote()], lu = N && N.note ? N.note.texte : '';

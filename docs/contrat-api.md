@@ -2107,6 +2107,8 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
+**Commandes et canaux, au mois (17/10/2026).** Dans le dashboard magasin, vue Mois, la carte « Commandes et canaux » a quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison. Chacune porte la courbe de ses six derniers mois (le mois en cours projeté, en pointillé) et l'écart au mois d'avant aux mêmes dates (« +44 % vs sept. ») ; un clic ouvre son cumul du mois face au mois d'avant, avec la fin de mois au rythme actuel, et un second clic le referme. Lecture : `GET /exploitation/canaux-mois` (ci-dessous). Les vues Jour et Semaine ne changent pas. Tests : `php bin/tests_canaux.php`.
+
 **Les posts au portail social (17/10/2026).** Les posts Facebook, Instagram et LinkedIn se créent, se valident et se publient dans le portail social (`/social`, dépôt `samsam2703MFC/social`). Le portail Marketing perd son circuit des posts : plus de rédacteur (Créer › Post), ni de Valider, ni de Publier, ni des paramètres Publication et Agent de contrôle. Il garde Tableau de bord, **1 · Planifier** (campagnes et newsletters, calendrier), **2 · Newsletter**, **3 · Mesurer** (newsletters, avis Google, posts sauvages) et Paramètres (API et tables, charte, pages, avis) ; le rail, le tableau de bord, les campagnes et le calendrier mènent au portail social (« + Post ↗ », « Préparer un post ↗ »). Les anciennes adresses `onglet=valider|publier|social` et `onglet=creer&vue=post` y mènent (avec `?shop=`, à l'espace franchisé `social/franchisee/?shop=`) ; `onglet=creer` est la newsletter. Dans la console, le hub Marketing : « + Post » ouvre `social/SA Post.dc.html`, la porte « Vue franchisé » l'espace franchisé du magasin, la tuile Posts le portail social ; `#/controle-posts-facebook` mène à `/social/`. Au serveur, `mhAFaire()` (`GET /marketing/hub`, `aFaire`) ne liste plus de post ni de campagne « sans prise de parole » (les posts du portail social ne s'y voient pas) ; le canal `social` du hub reste lu, les routes `/marketing/social/*` et `/marketing/publication/*` restent.
 
 **Fiche & scoring allégée (16/10/2026).** La fiche n'a plus que deux lectures, Ce magasin et Le réseau. Retirés : le parcours de visite (Agenda, Checklist, Fin de visite · météo et l'habillage tablette), les tuiles Dernière visite, Prochaine visite, Plans d'action, Client mystère et Météo du franchisé, les colonnes Dernière visite et Plans ouverts du réseau, et le lien « Visites ↗ » du rail. La console ne lit plus `/consultants/checklists` ni `/franchises/meteo` (les routes restent au serveur). Le poste Client mystère reste dans le scoring : il s'encode dans Paramètres › Client mystère (`#/client-mystere`, le formulaire de l'ancien écran) ; « modifier » sur le poste du bandeau y mène, le magasin choisi. Remarques opérateurs est retiré (`#/remarques-operateurs` mène à la fiche, dont la tuile Remarques · 30 j garde le détail par opérateur).
@@ -2215,6 +2217,30 @@ caisse seule, le dashboard garde alors la carte « Comptoir et clients pro ».
 Le réseau rend `magasins[]` (le même bloc sans `serie`, plus `shop`, `nom`)
 et `reseau` (comptoir, cc, liv, webshop, total, part, `livrent` et `vendent`
 = combien de magasins livrent, vendent en ligne).
+
+### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
+
+`?shop=4&mois=2026-10&n=6` (`n` de 2 à 12, 6 par défaut ; un mois futur est ramené au mois en cours). Pour la carte
+« Commandes et canaux » du dashboard magasin en vue Mois : quatre canaux (le comptoir hors clients pro, les clients
+pro — B2B, le click & collect, la livraison), la courbe des six derniers mois de chacun, l'écart au mois d'avant aux
+mêmes dates et, au clic sur un canal, son cumul du mois face au mois d'avant.
+
+    { shop, mois, precedent: "2026-09", proDepuis: "2026-08-01", indispo, source,
+      historique: [ { m: "2026-05", jours, enCours, joursLus, joursEcoules, comptoir, tickets, pro, proJours, ticketsPro,
+                      cc, ccN, liv, livN, total } × n ],          // du plus ancien au mois choisi
+      jours: { courant:   [ { j, lu, comptoir, tickets, pro, ticketsPro, cc, ccN, liv, livN } ],   // jusqu'à aujourd'hui
+               precedent: [ … le mois d'avant entier … ] } }
+
+- `comptoir` = la caisse moins les commandes webshop encaissées en caisse, **clients pro compris** (comme
+  `/exploitation/canaux`) : le comptoir hors pro, c'est `comptoir − pro`.
+- `pro` = les tickets des sociétés à TVA valide, gravés depuis `SV_DEBUT` (01/08/2026) ; `null` quand aucun jour du
+  mois n'est gravé (avant août, notamment) — inconnu, pas zéro. `proJours` dit combien de jours sont gravés.
+- Le mois choisi et celui d'avant se lisent jour par jour (la caisse heure par heure, gravée ; les tickets pro gravés,
+  10 jours au plus relus au panel) ; les mois plus anciens prennent la caisse du mois (`statistics/sales/kpis`, gardée
+  une fois le mois clos) et le pro des seuls jours déjà gravés. Une seule lecture des commandes du panel
+  (`client-orders` depuis le premier mois, gardée dix minutes) ; une commande à venir ne compte pas.
+- Au dashboard, le mois en cours se projette au rythme des jours lus (`valeur ÷ joursLus × jours` ; le webshop sur
+  `joursEcoules`).
 
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 
