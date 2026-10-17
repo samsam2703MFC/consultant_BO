@@ -286,5 +286,9 @@
   "the_brand": "la marque",
   "d_period": "Période",
   "d_rule": "Qui gagne",
-  "details": "Détails de la prime"
+  "details": "Détails de la prime",
+  "hint_google": "Il manque {n} avis 5★ pour atteindre {s} ★",
+  "hint_google_ok": "Le magasin tient {s} ★ : chaque avis 5★ le garde au-dessus",
+  "hint_cross": "Encore {n} ventes croisées pour atteindre {s} % : un article de plus sur chaque ticket",
+  "hint_target": "Le magasin doit encore faire {n} € de chiffre ce mois"
 }

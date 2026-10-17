@@ -286,5 +286,9 @@
   "the_brand": "the brand",
   "d_period": "Period",
   "d_rule": "Who wins",
-  "details": "Bonus details"
+  "details": "Bonus details",
+  "hint_google": "{n} more 5★ reviews to reach {s} ★",
+  "hint_google_ok": "The shop holds {s} ★: every 5★ review keeps it there",
+  "hint_cross": "{n} more cross-sales to reach {s} %: one more item on every ticket",
+  "hint_target": "The shop still needs {n} € of sales this month"
 }

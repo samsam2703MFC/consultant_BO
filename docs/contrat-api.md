@@ -584,6 +584,15 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   de description. App : toucher un carré (ou une ligne d'un mois à venir) ouvre la fiche de la prime — à gagner, la
   description, qui l'offre (logo, site), qui gagne, la période, « Voir le classement » ; le détail d'une ligne de target
   montre aussi « à gagner » et « offerte par ».
+- **La ligne de description de chaque prime et les indications** (17/10/2026). Les targets (ventes croisées, objectif,
+  Google) gardent leur `description` comme toute prime ; `externes.record` et `externes.meilleure` aussi (une ligne,
+  160 caractères). Le cockpit la règle dans la fenêtre « Modifier » (« Description dans l'app », avec un exemple par prime :
+  « Toujours proposer un produit en plus », « Demande un avis 5★ aux clients contents »…). Fiche v10, sur les cartes :
+  `google.avis5` — les avis 5★ qu'il manque pour que la moyenne atteigne le seuil, k ≥ n(s − a)/(5 − s), 0 si tenu, null
+  sans note ou pour un seuil de 5 (`primesAvis5Manquants`) ; `croisees.manque` — les ventes croisées qu'il lui manque si
+  chaque ticket qui vient en est une, k ≥ (r·t − c)/(1 − r) (`primesManqueCroisees`) ; `objectif.manqueCa` — le CA qu'il
+  manque au magasin pour son objectif du mois (null mois clos ou sans objectif). L'app les montre sous la description,
+  dans le détail d'une ligne et dans la fiche : « 💡 Il manque 57 avis 5★ pour atteindre 4,5 ★ ».
 - **La période d'une prime** (16/10/2026) : une catégorie ou un target (ventes croisées, objectif, note Google) porte
   `du` / `au` (AAAA-MM-JJ, l'un ou l'autre ou aucun ; à l'envers, remis dans l'ordre) ; une promo a les dates de sa
   promotion. Une prime compte et s'affiche dans **chaque mois que sa période touche**, nulle part ailleurs : le mois

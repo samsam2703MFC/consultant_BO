@@ -689,5 +689,20 @@ verifie('la 1re gagne le cadeau : un titre sans euros, qui nomme le cadeau', cou
 $inf = primesAppInfosDe($kC['cle']);
 verifie('les détails pour l’app : description, sponsor (nom, site), cadeau', $inf['description'] === 'La 1re du magasin part à Paris' && $inf['sponsor']['nom'] === 'Lavazza' && $inf['sponsor']['site'] === 'https://lavazza.be' && $inf['cadeau']['valeur'] === 400.0, json_encode($inf));
 
+// --- 15. la ligne de description et les indications de la fiche (17/10/2026) ---------------------------------
+echo "Description et indications\n";
+primesAppMois(null, true);
+verifie('Google : 4,3 sur 400 avis, seuil 4,5 → 160 avis 5★ (400·0,2/0,5)', primesAvis5Manquants(4.3, 400, 4.5) === 160);
+verifie('Google : seuil tenu → 0 ; sans note → null ; seuil 5 → null', primesAvis5Manquants(4.6, 10, 4.5) === 0 && primesAvis5Manquants(null, 10, 4.5) === null && primesAvis5Manquants(4.9, 10, 5.0) === null);
+verifie('Google : la moyenne avec les avis manquants atteint bien le seuil', (4.37 * 120 + 5 * primesAvis5Manquants(4.37, 120, 4.5)) / (120 + primesAvis5Manquants(4.37, 120, 4.5)) >= 4.5);
+verifie('ventes croisées : 20 sur 100 tickets, cible 30 % → 15 de plus ((30−20)/0,7)', primesManqueCroisees(20, 100, 30) === 15);
+verifie('ventes croisées : cible tenue → 0 ; sans ticket → null', primesManqueCroisees(30, 100, 30) === 0 && primesManqueCroisees(0, 0, 30) === null);
+$GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => $e['cle'] === 'google' ? array_merge($e, ['description' => ' Demande un avis 5★ aux clients contents ']) : $e, relire()['liste']),
+    'externes' => ['record' => ['description' => 'Un article de plus par ticket'], 'meilleure' => ['payeur' => 'marque']]];
+wr_primes_app();
+verifie('un target garde sa ligne de description (taillée)', primesAppInfosDe('google')['description'] === 'Demande un avis 5★ aux clients contents', json_encode(primesAppInfosDe('google')));
+verifie('Bats ton record garde la sienne ; la meilleure vendeuse, vide', primesAppInfosDe('record')['description'] === 'Un article de plus par ticket' && primesAppInfosDe('meilleure')['description'] === '', json_encode(relire()['externes'] ?? null));
+verifie('une description trop longue : 160 caractères', mb_strlen(primesAppExternes(['record' => ['description' => str_repeat('é', 300)]])['record']['description']) === 160);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

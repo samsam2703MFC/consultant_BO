@@ -286,5 +286,9 @@
   "the_brand": "het merk",
   "d_period": "Periode",
   "d_rule": "Wie wint",
-  "details": "Details van de premie"
+  "details": "Details van de premie",
+  "hint_google": "Nog {n} reviews van 5★ om {s} ★ te halen",
+  "hint_google_ok": "De winkel houdt {s} ★: elke 5★-review houdt hem erboven",
+  "hint_cross": "Nog {n} kruisverkopen om {s} % te halen: één artikel meer op elk ticket",
+  "hint_target": "De winkel moet deze maand nog {n} € omzet maken"
 }
