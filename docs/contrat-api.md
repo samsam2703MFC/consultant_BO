@@ -562,6 +562,9 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   (`trigger/reward.categories[].name`, « Cookies ») relues dans le catalogue par leur nom (sous-catégorie, sinon
   catégorie). Un bundle de l'API sans produit à lui se compte par ses articles. `shop_ids` de la liste peut être un
   texte (« 4,5 »). `GET /ventes/primes-promos/sonde` (lecture seule) rend la forme brute : clés, 1er élément, sa fiche.
+  `GET /ventes/promos/sonde-portions?shop=4[&q=tarte]` (17/10/2026, lecture seule) : où le panel décrit les portions
+  d'un produit — les clés « portion » de /shops/{id}/products/available, les fiches produit plausibles de l'API
+  (consultant et admin), la table `product_portion` de la base. Pour l'assistant des promotions « sur une part ».
   `GET /ventes/promos/sonde-fiche?q=test[&sorte=buy-x-get-y]` (17/10/2026, lecture seule) : toutes les promotions de la
   sorte, **tous statuts** (`promotions: [{id, nom, statut}]`), et pour celles dont le nom contient `q` (trois au plus) la
   ligne de la liste et la fiche brute (`trouvees: [{item, fiche: {code, corps}}]`) — pour relire une promotion créée à la

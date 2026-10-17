@@ -486,6 +486,56 @@ function pmPanelRanger(array &$tout, int $k): void
     if ($r['ok']) { $tout[$k]['statut'] = 'en_caisse'; $tout[$k]['enCaisse'] = $tout[$k]['panelEssai']; }
 }
 
+/* --- les portions (½, ¼ d'une tarte) : la sonde -------------------------------------------------------------- */
+
+/**
+ * GET /ventes/promos/sonde-portions?shop=4[&q=tarte] — lecture seule (17/10/2026) : où le panel décrit les portions d'un
+ * produit, avant de les proposer dans l'assistant (une promotion « sur une part », son coefficient à son prix et à son
+ * coût). Trois endroits relus d'un coup : les lignes de /shops/{id}/products/available (les clés « portion »), les
+ * chemins plausibles d'une fiche produit à l'API (consultant et admin), la table `product_portion` de la base.
+ */
+function ep_promos_sonde_portions(): array
+{
+    $shop = max(1, (int) ($_GET['shop'] ?? 4));
+    $q = mb_strtolower(trim((string) ($_GET['q'] ?? 'tarte')));
+    $nom = static fn (array $l): string => (string) ($l['base_name'] ?? $l['name'] ?? $l['product_name'] ?? '');
+    $out = ['shop' => $shop, 'q' => $q];
+    $lignes = class_exists('PanelApi') && PanelApi::configured() ? PanelApi::produitsDisponibles($shop) : [];
+    $vises = array_values(array_filter($lignes, static fn ($l) => $q !== '' ? str_contains(mb_strtolower($nom($l)), $q) : (int) ($l['is_divisible'] ?? 0) === 1));
+    $cles = [];
+    foreach ($lignes as $l) { foreach (array_keys($l) as $k) { if (preg_match('/portion|divisib|variant|size|unit|piece/i', (string) $k)) { $cles[$k] = true; } } }
+    $out['available'] = ['n' => count($lignes), 'nVises' => count($vises), 'clesPortion' => array_keys($cles),
+        'vises' => array_map(static function ($l) use ($nom) {
+            $garde = ['id' => $l['id'] ?? $l['id_product'] ?? null, 'nom' => $nom($l)];
+            foreach ($l as $k => $v) { if (preg_match('/portion|divisib|variant|size|unit|piece|price|recipe_cost/i', (string) $k)) { $garde[$k] = $v; } }
+            return $garde;
+        }, array_slice($vises, 0, 6))];
+    $pid = (int) ($vises[0]['id'] ?? $vises[0]['id_product'] ?? 0);
+    $out['pid'] = $pid;
+    $extrait = static fn ($c) => is_array($c) ? mb_substr((string) json_encode($c, JSON_UNESCAPED_UNICODE), 0, 2500) : null;
+    if ($pid > 0) {
+        $api = [];
+        foreach (['/products/' . $pid, '/products/' . $pid . '/portions', '/shops/' . $shop . '/products/' . $pid, '/product-portions?product_id=' . $pid] as $c) {
+            $r = PanelApi::sondeGet($c, 8);
+            $api[$c] = ['code' => $r['code'] ?? null, 'extrait' => $extrait($r['corps'] ?? null)];
+        }
+        $out['apiConsultant'] = $api;
+        if (class_exists('ErpApi') && ErpApi::disponible()) {
+            $adm = [];
+            foreach (['/admin/products/' . $pid, '/admin/products/' . $pid . '/portions', '/admin/product-portions?product_id=' . $pid] as $c) {
+                $r = ErpApi::sondeGet($c);
+                $adm[$c] = ['code' => $r['code'], 'extrait' => $extrait($r['corps'])];
+            }
+            $out['apiAdmin'] = $adm;
+        }
+    }
+    try {
+        $out['base'] = ['colonnes' => array_column(Db::rows('SHOW COLUMNS FROM product_portion'), 'Field'),
+            'n' => (int) (Db::row('SELECT COUNT(*) n FROM product_portion')['n'] ?? 0), 'exemples' => Db::rows('SELECT * FROM product_portion LIMIT 8')];
+    } catch (Throwable $e) { $out['base'] = ['erreur' => mb_substr($e->getMessage(), 0, 200)]; }
+    return $out;
+}
+
 /* --- les routes --------------------------------------------------------------------------------- */
 
 /** GET /exploitation/promos-magasin?shop=4 — les demandes du magasin, les promotions du panel qui le touchent, les règles. */
