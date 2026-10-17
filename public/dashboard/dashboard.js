@@ -3127,7 +3127,8 @@
         const msg = (l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '')
           + (l.d && l.d.motif && (l.etat === 'validee' || l.etat === 'en_caisse') ? `<div class="db-mini" style="margin-top:3px">${esc(l.d.motif.charAt(0).toUpperCase() + l.d.motif.slice(1))}</div>` : '')
           + (l.d && l.d.panelErreur && l.etat === 'validee' ? `<div class="pm-msg">Pas encore en caisse : ${esc(l.d.panelErreur)}</div>` : '')
-          + (l.d && l.d.panelId && l.etat === 'en_caisse' ? `<div class="db-mini" style="margin-top:3px">au panel : promotion n° ${esc(l.d.panelId)}</div>` : '');
+          + (l.d && l.d.panelId && l.etat === 'en_caisse' ? `<div class="db-mini" style="margin-top:3px">au panel : promotion n° ${esc(l.d.panelId)}</div>` : '')
+          + (l.d && (l.d.exclusAuto || []).length ? `<div class="db-mini" style="margin-top:3px">sortis d’office (sans coût ou sans prix) : ${esc(l.d.exclusAuto.slice(0, 4).join(', '))}${l.d.exclusAuto.length > 4 ? '…' : ''}</div>` : '');
         return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
           <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
           <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
@@ -3188,8 +3189,11 @@
   /** Validée d'office à l'envoi ? Le même critère que le serveur (pmDOffice), avec les prix de ce magasin. */
   function pmDOffice(d) {
     const C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
-    return !!C && C.lot != null && C.lot >= min && !C.sansCout.length && !C.sansPrix.length;
+    return !!C && C.lot != null && C.lot >= min;
   }
+  /** Les produits visés qui sortiront d'office à l'enregistrement : sans coût de recette ou sans prix (pmExclureNonChiffres). */
+  const pmSortis = C => C ? [...C.sansCout, ...C.sansPrix] : [];
+  const pmSortisTxt = C => { const n = pmSortis(C); return n.slice(0, 5).join(', ') + (n.length > 5 ? '… (' + n.length + ')' : ''); };
   function pmStepper(W) {
     return PM_ETAPES.map((n, i) => { const e = i + 1, fait = e < PM_FIN && !pmManque(W.d, e);
       return `<button class="e${e === W.etape ? ' on' : (fait ? ' fait' : '')}" data-pmet="${e}"><span class="n">${e !== W.etape && fait ? '✓' : e}</span>${n}</button>`; }).join('<span class="sep"></span>');
@@ -3198,9 +3202,9 @@
   function pmFixe(W) {
     const C = pmCoefCourant(W.d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
     if (!C) { return S.err[clePMP()] ? `<div class="pm-fixe ko">Prix et coûts du magasin illisibles : ${esc(S.err[clePMP()])}</div>` : `<div class="pm-fixe">Lecture des prix et coûts de recette du magasin…</div>`; }
-    if (C.lot == null) { return C.nX + C.nY ? `<div class="pm-fixe ko"><span>Le coefficient ne se calcule pas : ${esc(pmManqueTxt(C))}. Choisissez d’autres produits, ou faites chiffrer leur recette au panel.</span></div>` : `<div class="pm-fixe">Le coefficient se calcule dès que X et Y sont choisis.</div>`; }
-    const ok = C.lot >= min;
-    return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit visé.' : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. Baissez l’avantage, montez X, ou retirez ce produit.'}</span></div>`;
+    if (C.lot == null) { return C.nX + C.nY ? `<div class="pm-fixe ko"><span>Rien ne se chiffre : ${esc(pmManqueTxt(C))}. Choisissez d’autres produits.</span></div>` : `<div class="pm-fixe">Le coefficient se calcule dès que X et Y sont choisis.</div>`; }
+    const ok = C.lot >= min, sortis = pmSortis(C).length ? ` Sortent d’office, sans coût de recette ou sans prix : ${esc(pmSortisTxt(C))}.` : '';
+    return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit chiffré.' + sortis : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. Baissez l’avantage, montez X, ou retirez ce produit.'}</span></div>`;
   }
   function pmDroite(W) {
     const d = W.d, C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
@@ -3217,7 +3221,7 @@
       ${ck(C && C.lot != null && C.lot >= min, 'Coefficient du lot ' + fXm(min) + ' au moins')}</div>`;
     h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">${fXm(min)} minimum ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
-    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Le coefficient ne se calcule pas : ' + esc(pmManqueTxt(C)) + '.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
+    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Rien ne se chiffre : ' + esc(pmManqueTxt(C)) + '.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
     else {
       const pc = v => Math.max(1, Math.min(99, 100 * v / 4.5)), nb = x.q + y.q;
       h += `<div class="pm-cl"><span>Payé pour le lot (${nb} pièces), HT</span><b>${fU(C.paye)}</b></div>
@@ -3227,7 +3231,7 @@
           ${C.sans != null ? `<i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>` : ''}<i class="lot ${C.lot >= min ? 'ok' : 'ko'}" style="left:${pc(C.lot)}%"></i></div>
         <div class="db-mini">Le cas le plus serré : ${x.q} × ${esc(C.px.nom)} + ${y.q} × ${esc(C.py.nom)}, sur ${C.paires} combinaison${C.paires > 1 ? 's' : ''} (${C.nX} produit${C.nX > 1 ? 's' : ''} en X, ${C.nY} en Y). Un seul cas sous ${fXm(min)} bloque l’envoi.${d.shops.length > 1 ? ' Prix de ce magasin ; les autres se vérifient à l’envoi.' : ''}</div>
         ${C.coutReseau.length ? `<div class="db-mini" style="margin-top:6px">Coût du réseau (pas encore calculé pour ce magasin au panel) : ${esc(C.coutReseau.slice(0, 5).join(', '))}${C.coutReseau.length > 5 ? '…' : ''}.</div>` : ''}
-        ${C.sansCout.length + C.sansPrix.length ? `<div class="pm-warn">Pas chiffrés, ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
+        ${pmSortis(C).length ? `<div class="pm-warn">Sortent de la promotion d’office (exclus au panel), ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
       // Le ticket du cas le plus serré, aux prix TTC de la caisse.
       const tx = pmTtc(C.px), ty = pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur) * (1 + (+C.py.tva || 0) / 100), rem = y.q * (ty - ry);
       const lg = (a, b, c) => `<div class="l${c ? ' ' + c : ''}"><span>${a}</span><span>${b}</span></div>`;
@@ -3308,7 +3312,7 @@
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
       ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
-      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${pmDOffice(W.d) ? '' : ' <b>Le coefficient ne se vérifie pas pour chaque produit</b> : elle s’enregistre, mais ne part pas seule en caisse — la marque décide.'}</div>`;
+      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${pmSortis(pmCoefCourant(W.d)).length ? ' <b>Sortent d’office</b> (sans coût de recette ou sans prix, leur coefficient ne se vérifie pas) : ' + esc(pmSortisTxt(pmCoefCourant(W.d))) + '.' : ''}</div>`;
   }
   function pmDureeTxt(d) {
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
@@ -3366,7 +3370,7 @@
         if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = PM_FIN; } return; }
         const dm = j.demande;
         S.pmMsg = action !== 'envoyer' ? `Brouillon gardé : « ${esc(dm.nom || 'sans nom')} ».`
-          : (dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — créée au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.`
+          : (dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — créée au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.${(dm.exclusAuto || []).length ? ' Sortis d’office : ' + esc(dm.exclusAuto.slice(0, 5).join(', ')) + (dm.exclusAuto.length > 5 ? '…' : '') + '.' : ''}`
             : `Enregistrée : « ${esc(dm.nom)} », mais pas encore en caisse — ${esc(dm.panelErreur || 'le panel ne l’a pas prise')}. La marque la reprend.`);
         S.pmF = action !== 'envoyer' ? 'brouillons' : (dm.statut === 'en_caisse' ? 'actives' : 'enregistrees');
         S.pmW = null; lireAux(clePM(), cheminPM(), true);

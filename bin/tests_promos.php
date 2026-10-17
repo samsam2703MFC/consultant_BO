@@ -194,12 +194,13 @@ verifie('et la renvoie : enregistrée de nouveau', ($r['demande']['statut'] ?? '
 $GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Tarte 1+1', 'du' => $j(1), 'au' => $j(5),
     'x' => ['q' => 1, 'prods' => [['id' => 3]]], 'y' => ['q' => 1, 'type' => 'FREE', 'prods' => [['id' => 3]]]];
 $r = @wr_promos_magasin();
-$id2 = $r['demande']['id'] ?? '';
-verifie('coefficient incalculable : enregistrée sans validation, signalée, le motif nomme la tarte', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['auto'] === false && str_contains((string) $r['demande']['motif'], 'Tarte sans fiche'), json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('rien ne se chiffre (la tarte seule, sans coût) : refusée, la tarte nommée', ($r['error'] ?? '') === 'à compléter' && count($r['erreurs']) === 1 && str_contains($r['erreurs'][0], 'ne se chiffre') && str_contains($r['erreurs'][0], 'Tarte sans fiche'), json_encode($r, JSON_UNESCAPED_UNICODE));
 $GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Pâtisserie 1+1', 'du' => $j(11), 'au' => $j(13),
     'x' => ['q' => 1, 'cats' => [['id' => 20]]], 'y' => ['q' => 1, 'type' => 'FREE', 'cats' => [['id' => 20]]]];
 $r = @wr_promos_magasin();
-verifie('lot à ×2 mais un produit visé sans coût : enregistrée, signalée', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['auto'] === false && $r['demande']['coef']['lot'] === 2.0, json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+$id2 = $r['demande']['id'] ?? '';
+verifie('la catégorie : la tarte sans coût sort d’office (exclusion), l’éclair tient ×2 — vérifiée', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['auto'] === true && $r['demande']['coef']['lot'] === 2.0
+    && $r['demande']['exclusAuto'] === ['Tarte sans fiche'] && array_column($r['demande']['x']['exclus'], 'id') === [3] && array_column($r['demande']['y']['exclus'], 'id') === [3], json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 // Une promotion « à valider » d'avant (17/10/2026) se lit enregistrée.
 $GLOBALS['reglages']['promosMagasin'][] = ['id' => 'pmancienne01', 'shop' => 4, 'shops' => [4], 'statut' => 'a_valider', 'nom' => 'Ancienne', 'du' => $j(20), 'au' => $j(22)];
 $tmp = pmLire();
@@ -229,7 +230,7 @@ $_GET = ['shop' => '5', 'id' => $r['demande']['id']];
 $r2 = @wr_promos_magasin_retirer();
 verifie('le brouillon d’un autre magasin ne se retire pas', isset($r2['error']));
 $_GET = ['shop' => '4', 'id' => $r['demande']['id']];
-verifie('un brouillon se retire', (wr_promos_magasin_retirer()['ok'] ?? false) === true && count(pmLire()) === 3, (string) count(pmLire()));
+verifie('un brouillon se retire', (wr_promos_magasin_retirer()['ok'] ?? false) === true && count(pmLire()) === 2, (string) count(pmLire()));
 $GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'envoyer', 'nom' => 'Pains au chocolat, Halle', 'du' => $j(6), 'au' => $j(10),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
@@ -240,13 +241,13 @@ verifie('le magasin 5 ne la voit pas', $l['demandes'] === []);
 $GLOBALS['corps'] = ['shop' => 5, 'action' => 'envoyer', 'nom' => 'Pains au chocolat −60 %', 'du' => $j(6), 'au' => $j(10),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 60, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
-verifie('sous ×2 : refusée (422), jamais à la marque', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], '×1,98') && count(pmLire()) === 4, json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('sous ×2 : refusée (422), jamais à la marque', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], '×1,98') && count(pmLire()) === 3, json_encode($r, JSON_UNESCAPED_UNICODE));
 // Le brouillon de Halle, repris depuis le magasin 5 : introuvable, il n'est pas le sien.
 $GLOBALS['corps'] = ['shop' => 4, 'action' => 'brouillon', 'nom' => 'Brouillon de Halle'];
 $r = wr_promos_magasin();
 $GLOBALS['corps'] = ['shop' => 5, 'id' => $r['demande']['id'], 'action' => 'brouillon', 'nom' => 'Repris ailleurs'];
 $r2 = @wr_promos_magasin();
-verifie('la promotion d’un autre magasin ne se modifie pas (404)', ($r2['error'] ?? '') === 'promotion introuvable' && pmLire()[4]['nom'] === 'Brouillon de Halle', json_encode($r2, JSON_UNESCAPED_UNICODE));
+verifie('la promotion d’un autre magasin ne se modifie pas (404)', ($r2['error'] ?? '') === 'promotion introuvable' && pmLire()[3]['nom'] === 'Brouillon de Halle', json_encode($r2, JSON_UNESCAPED_UNICODE));
 
 echo "L'écriture au panel\n";
 ErpApi::$actif = true;
@@ -280,12 +281,18 @@ verifie('pas de PUT au panel : activée par PATCH status', ($r['demande']['statu
 $r = @wr_promos_magasin_panel($idc);
 verifie('en caisse : ne repart pas au panel', isset($r['error']));
 ErpApi::$sansPut = false; ErpApi::$appels = [];
-$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Tarte, panel', 'du' => $j(70), 'au' => $j(72),
-    'x' => ['q' => 1, 'prods' => [['id' => 3]]], 'y' => ['q' => 1, 'type' => 'FREE', 'prods' => [['id' => 3]]]];
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Pâtisserie, panel', 'du' => $j(70), 'au' => $j(72),
+    'x' => ['q' => 1, 'cats' => [['id' => 20]]], 'y' => ['q' => 1, 'type' => 'FREE', 'cats' => [['id' => 20]]]];
 $r = wr_promos_magasin();
-verifie('coefficient non vérifié : enregistrée, pas envoyée seule au panel', ($r['demande']['statut'] ?? '') === 'validee' && ErpApi::$appels === [] && str_contains((string) $r['demande']['panelErreur'], 'Tarte sans fiche'), json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
-$r = wr_promos_magasin_panel($r['demande']['id']);
-verifie('la marque l’envoie au panel (Réessayer au panel) : en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && ErpApi::$appels[0] === 'POST /admin/promotions/buy-x-get-y', json_encode(ErpApi::$appels));
+$pid = $r['demande']['panelId'] ?? 0;
+verifie('la tarte sortie d’office part au panel dans les exclusions : en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && (ErpApi::$promos[$pid]['trigger']['excluded_product_ids'] ?? null) === [3] && ErpApi::$promos[$pid]['reward']['excluded_product_ids'] === [3], json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+// Une promotion enregistrée avant (coefficient non vérifié) : « Réessayer au panel » sort la tarte et la met en caisse.
+$GLOBALS['reglages']['promosMagasin'][] = ['id' => 'pmanciennenv', 'shop' => 4, 'shops' => [4], 'statut' => 'validee', 'auto' => false, 'motif' => 'coefficient non vérifié', 'nom' => 'Ancienne pâtisserie',
+    'description' => '', 'du' => $j(80, '07:00'), 'au' => $j(82, '19:00'), 'creneaux' => [], 'repetable' => false, 'maxParTicket' => null,
+    'x' => ['q' => 1, 'cats' => [['id' => 20, 'nom' => '']], 'prods' => [], 'exclus' => []], 'y' => ['q' => 1, 'type' => 'FREE', 'valeur' => null, 'cats' => [['id' => 20, 'nom' => '']], 'prods' => [], 'exclus' => []]];
+ErpApi::$appels = [];
+$r = wr_promos_magasin_panel('pmanciennenv');
+verifie('réessayée au panel : la tarte sortie, vérifiée, en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && $r['demande']['auto'] === true && $r['demande']['exclusAuto'] === ['Tarte sans fiche'] && ErpApi::$appels[0] === 'POST /admin/promotions/buy-x-get-y', json_encode($r, JSON_UNESCAPED_UNICODE));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
