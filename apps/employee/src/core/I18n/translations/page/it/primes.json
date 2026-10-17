@@ -286,5 +286,9 @@
   "the_brand": "il marchio",
   "d_period": "Periodo",
   "d_rule": "Chi vince",
-  "details": "Dettagli del premio"
+  "details": "Dettagli del premio",
+  "hint_google": "Mancano {n} recensioni 5★ per arrivare a {s} ★",
+  "hint_google_ok": "Il negozio tiene {s} ★: ogni recensione 5★ lo mantiene",
+  "hint_cross": "Ancora {n} vendite incrociate per arrivare al {s} %: un articolo in più su ogni scontrino",
+  "hint_target": "Il negozio deve ancora fare {n} € di fatturato questo mese"
 }

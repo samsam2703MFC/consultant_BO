@@ -7206,8 +7206,8 @@ class App {
       const x = ext ? ((app.externes || {})[ext] || {}) : (e || {});
       const nouveau = !e && !ext;
       return { cle: e ? e.cle : '', ext: ext || '', type: ext ? 'ext' : (nouveau ? 'categorie' : (e.type === 'target' ? e.cle : e.type)), nouveau,
-        champs: nouveau ? { lib: '', motif: '', minPieces: '10', montant: String(app.recompense), classement: true }
-          : { lib: x.lib || '', motif: x.motif || '', minPieces: String(x.minPieces ?? 10), montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
+        champs: nouveau ? { lib: '', motif: '', minPieces: '10', montant: String(app.recompense), classement: true, description: '' }
+          : { lib: x.lib || '', motif: x.motif || '', description: x.description || '', minPieces: String(x.minPieces ?? 10), montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
             categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin ?? 20), seuil: String(x.seuil ?? 4.5),
             cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), du: x.du || '', au: x.au || '' },
         payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
@@ -7222,13 +7222,18 @@ class App {
       const montantCh = ch('montant', 'Récompense', 'nombre', { unite: '€', pas: 5 });
       // La période (16/10/2026) : vide, sans début ni fin — la prime tourne tous les mois.
       const periodeCh = [ch('du', 'Du (vide : sans début)', 'date'), ch('au', 'Au (vide : sans fin)', 'date')];
+      // La ligne de description (17/10/2026) : le conseil que la vendeuse lit dans la fiche de la prime, dans l'app.
+      const DESC_INDICE = { croisees: 'Toujours proposer un produit en plus', objectif: 'Chaque vente compte : le magasin gagne ensemble',
+        google: 'Demande un avis 5★ aux clients contents', categorie: 'Mets-les en avant au comptoir',
+        record: 'Un article de plus par ticket, et ton record tombe', meilleure: 'La vendeuse qui vend le plus du mois' };
+      const descCh = ch('description', 'Description dans l’app', 'texte', { indice: DESC_INDICE[PE.ext || PE.type] || '', large: true, max: 160 });
       const champs = { croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
-          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh),
-        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh),
-        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh),
+          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh, descCh),
+        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh, descCh),
+        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh, descCh),
         categorie: [ch('lib', 'Nom dans l’app', 'texte', { indice: 'Queen of …' }), ch('motif', 'Les produits dont le nom contient', 'texte', { indice: 'tarte' }),
-          ch('minPieces', 'Minimum de pièces pour être classée', 'nombre', { unite: 'pcs', pas: 1 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh],
-        ext: [] }[PE.type] || [];
+          ch('minPieces', 'Minimum de pièces pour être classée', 'nombre', { unite: 'pcs', pas: 1 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh, descCh],
+        ext: [descCh] }[PE.type] || [];
       const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du);
       const entier = v => { const n = num(v); return n == null ? null : n; };
       const enregistrer = () => {
@@ -7238,7 +7243,7 @@ class App {
         ic.then(ri => {
           if (PE.icone && (!ri || ri.ok === false || !ri.icone)) { PE.envoi = false; reE(); return; }
           const icone = ri && ri.icone ? ri.icone : PE.iconeExist;
-          const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '' };
+          const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '', description: String(f.description || '').trim().slice(0, 160) };
           let suite = Promise.resolve({ ok: true });
           if (PE.ext) {
             app.externes = app.externes || {};

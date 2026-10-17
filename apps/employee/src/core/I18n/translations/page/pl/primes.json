@@ -286,5 +286,9 @@
   "the_brand": "marka",
   "d_period": "Okres",
   "d_rule": "Kto wygrywa",
-  "details": "Szczegóły premii"
+  "details": "Szczegóły premii",
+  "hint_google": "Brakuje {n} opinii 5★, by osiągnąć {s} ★",
+  "hint_google_ok": "Sklep utrzymuje {s} ★: każda opinia 5★ go podtrzymuje",
+  "hint_cross": "Jeszcze {n} sprzedaży krzyżowych do {s} %: jeden produkt więcej na każdym paragonie",
+  "hint_target": "Sklep musi jeszcze zrobić {n} € obrotu w tym miesiącu"
 }

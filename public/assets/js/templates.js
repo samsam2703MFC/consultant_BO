@@ -7998,10 +7998,10 @@ function tplPrEdit(E, x){
   const mu = 'color:var(--color-text-muted)';
   const champ = f => f.sorte === 'case'
     ? `<label style="display:flex;align-items:center;gap:8px;font:600 13px var(--font-ui);padding-top:20px;cursor:pointer"><input type="checkbox" ${f.coche ? 'checked' : ''} ${x.C(f.poser)}> ${esc(f.lib)}</label>`
-    : `<div><span style="${lab}">${esc(f.lib)}</span>${f.sorte === 'choix'
+    : `<div${f.large ? ' style="grid-column:1/-1"' : ''}><span style="${lab}">${esc(f.lib)}</span>${f.sorte === 'choix'
       ? `<select ${x.C(f.poser)} id="pre-${esc(f.cle)}" style="${chp};width:100%">${f.options.map(([v, t]) => `<option value="${esc(v)}"${v === f.valeur ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`
       : f.sorte === 'date' ? `<input id="pre-${esc(f.cle)}" type="date" value="${esc(f.valeur)}" ${x.C(f.poser)} style="${chp}">`
-      : `<input id="pre-${esc(f.cle)}" ${f.sorte === 'nombre' ? `type="number" step="${f.pas || 1}"` : ''} value="${esc(f.valeur)}" placeholder="${esc(f.indice || '')}" ${x.I(f.poser)} style="${chp};width:${f.sorte === 'nombre' ? '110px' : '100%'};box-sizing:border-box"> ${f.unite ? `<span style="${mu}">${esc(f.unite)}</span>` : ''}`}</div>`;
+      : `<input id="pre-${esc(f.cle)}" ${f.sorte === 'nombre' ? `type="number" step="${f.pas || 1}"` : ''} value="${esc(f.valeur)}" placeholder="${esc(f.indice || '')}"${f.max ? ` maxlength="${f.max}"` : ''} ${x.I(f.poser)} style="${chp};width:${f.sorte === 'nombre' ? '110px' : '100%'};box-sizing:border-box"> ${f.unite ? `<span style="${mu}">${esc(f.unite)}</span>` : ''}`}</div>`;
   return `
   <div ${x.A(E.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
   <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;pointer-events:none">

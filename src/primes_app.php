@@ -379,7 +379,8 @@ function primesAppReglages(bool $relire = false): array
 function primesAppExternes($x): array
 {
     $x = is_array($x) ? $x : [];
-    $un = static fn ($e) => primesAppPayeur((array) $e) + ['icone' => primesAppIcone(((array) $e)['icone'] ?? null)];
+    $un = static fn ($e) => primesAppPayeur((array) $e) + ['icone' => primesAppIcone(((array) $e)['icone'] ?? null),
+        'description' => mb_substr(trim((string) (((array) $e)['description'] ?? '')), 0, 160)];
     return ['record' => $un($x['record'] ?? []), 'meilleure' => $un($x['meilleure'] ?? [])];
 }
 
@@ -1204,6 +1205,8 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'gain' => (float) $c['montant'], 'etat' => $c['montant'] > 0 ? 'gagne' : ($val === null ? 'vide' : 'att'),
             'val' => $val, 'unite' => 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
             'motif' => $val === null ? $vide('pas_compte') : (($c['tickets'] < $c['minTickets']) ? 'min_tickets' : null), 'minTickets' => (int) $c['minTickets'],
+            // L'indication de la fiche (17/10/2026) : les ventes croisées qu'il lui manque, si les tickets qui viennent l'étaient tous.
+            'manque' => primesManqueCroisees((int) ($c['croisees'] ?? 0), (int) ($c['tickets'] ?? 0), $cible),
             'classement' => isset($clDe['croisees'])];
     }
     $r = $b['record'];
@@ -1231,7 +1234,9 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'ecart' => $att !== null ? round(max(0, $pct - $att), 1) : null,
             'aDate' => $aDate, 'jour' => $j, 'cibleJour' => $cibleJour, 'avance' => ($aDate !== null && $cibleJour !== null) ? round($aDate - $cibleJour, 1) : null,
             'motif' => $pm['objectif'] === null ? 'pas_objectif' : ($pm['sousMin'] ? 'heures' : ($att === null ? 'pas_compte' : null)),
-            'heuresMin' => (int) $eO['heuresMin'], 'classement' => false];
+            'heuresMin' => (int) $eO['heuresMin'], 'classement' => false,
+            // Le CA qu'il manque au magasin pour son objectif du mois (17/10/2026).
+            'manqueCa' => ($pm['objectif'] ?? null) !== null && !$pm['clos'] ? max(0, (int) ceil((float) $pm['objectif'] * $pct / 100 - (float) ($pm['ca'] ?? 0))) : null];
     }
     // La note Google : la note du magasin face au seuil ; la récompense pour chacune au planning, au-dessus du minimum d'heures.
     $g = $b['google'] ?? null;
@@ -1242,7 +1247,9 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'gain' => (float) $g['montant'], 'etat' => $g['montant'] > 0 ? 'gagne' : (($note === null || $g['sousMin']) ? 'vide' : 'att'),
             'val' => $note, 'unite' => 'note', 'cible' => $seuil, 'avis' => (int) $g['avis'],
             'ecart' => $note !== null ? round(max(0, $seuil - $note), 1) : null,
-            'motif' => $note === null ? 'pas_note' : ($g['sousMin'] ? 'heures' : null), 'heuresMin' => (int) $g['heuresMin'], 'classement' => false];
+            'motif' => $note === null ? 'pas_note' : ($g['sousMin'] ? 'heures' : null), 'heuresMin' => (int) $g['heuresMin'], 'classement' => false,
+            // Les avis 5★ qu'il manque pour atteindre le seuil (17/10/2026).
+            'avis5' => primesAvis5Manquants($note, (int) $g['avis'], $seuil)];
     }
     $v = $b['meilleure'];
     if (($v['montantMag'] ?? 0) > 0) {
@@ -1332,6 +1339,31 @@ function primesAVenir(int $emp, string $m): array
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => [], 'collection' => [],
         'heures' => null, 'aujourdhui' => null, 'acquis' => 0.0, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => null, 'montants' => [],
         'briques' => [], 'prime' => [], 'semaines12' => [], 'motif' => null];
+}
+
+/**
+ * Les avis 5★ qu'il faut encore pour que la moyenne atteigne le seuil (17/10/2026) : k tel que (a·n + 5k)/(n + k) ≥ s,
+ * soit k ≥ n(s − a)/(5 − s). 0 si le seuil est tenu ; null sans note, ou pour un seuil de 5 (inatteignable sans 5 partout).
+ */
+function primesAvis5Manquants(?float $note, int $avis, float $seuil): ?int
+{
+    if ($note === null || $avis <= 0) { return null; }
+    if ($note + 1e-9 >= $seuil) { return 0; }
+    if ($seuil >= 5.0) { return null; }
+    return (int) ceil($avis * ($seuil - $note) / (5.0 - $seuil) - 1e-9);
+}
+
+/**
+ * Les ventes croisées qu'il manque pour atteindre la cible (17/10/2026), si chaque ticket qui vient en est une :
+ * (c + k)/(t + k) ≥ r, soit k ≥ (r·t − c)/(1 − r). 0 si la cible est tenue ; null sans ticket.
+ */
+function primesManqueCroisees(int $croisees, int $tickets, float $ciblePct): ?int
+{
+    if ($tickets <= 0) { return null; }
+    $r = $ciblePct / 100;
+    if ($croisees >= $r * $tickets - 1e-9) { return 0; }
+    if ($r >= 1.0) { return null; }
+    return (int) ceil(($r * $tickets - $croisees) / (1 - $r) - 1e-9);
 }
 
 /**

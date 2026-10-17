@@ -77,7 +77,9 @@ objectif), son objectif et ses dates ; rien de compté, pas de détail ni de cla
 un carré de promo (ou une ligne d'un mois à venir) ouvre une feuille — ce qu'on gagne (de l'argent, ou un cadeau 🎁 avec
 sa valeur), la ligne de description, qui l'offre (la marque, le magasin, ou le sponsor avec son logo, une ligne et son
 site), qui gagne, la période et « Voir le classement ». Le détail d'une ligne de target montre aussi « À gagner » et
-« Offerte par ».
+« Offerte par ». Sous la description réglée au cockpit, une indication calculée (17/10/2026) : « Il manque N avis 5★
+pour atteindre 4,5 ★ » (Note Google), « Encore N ventes croisées pour atteindre 55 % » (ventes croisées), « Le
+magasin doit encore faire N € de chiffre ce mois » (objectif magasin).
 
 Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 
