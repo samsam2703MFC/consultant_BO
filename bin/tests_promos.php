@@ -110,7 +110,7 @@ verifie('une promotion d’un autre magasin qui couvre aussi celui-ci compte', c
 $e = pmErreurs(['shops' => [4, 7]] + $base, [$autres[1], $autres[3], ['shop' => 7, 'nom' => 'F', 'statut' => 'a_valider', 'du' => $j(1), 'au' => $j(3)]], $coefOk, $now);
 verifie('deux magasins : la règle des deux à la fois tenue magasin par magasin', count($e) === 1 && str_contains($e[0], '« D », « F »'), json_encode($e, JSON_UNESCAPED_UNICODE));
 $d = pmPropre(['shops' => [5, 4, 6, 7, 8, 9]], 4);
-verifie('le magasin qui écrit d’abord, quatre magasins au plus', $d['shops'] === [4, 5, 6, 7]);
+verifie('le magasin qui écrit, lui seul : les autres magasins envoyés sont ignorés', $d['shops'] === [4]);
 $e = pmErreurs($base, [], ['lot' => 1.67, 'x' => 'Pain au chocolat', 'y' => 'Pain au chocolat'] + $coefOk, $now);
 verifie('coefficient sous ×2 : refusée, le cas nommé', count($e) === 1 && str_contains($e[0], '×1,67') && str_contains($e[0], 'Pain au chocolat'), json_encode($e, JSON_UNESCAPED_UNICODE));
 $e = pmErreurs(pmPropre(['y' => ['type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 120]], 4), [], null, $now);
@@ -170,24 +170,23 @@ $r2 = @wr_promos_magasin_retirer();
 verifie('le brouillon d’un autre magasin ne se retire pas', isset($r2['error']));
 $_GET = ['shop' => '4', 'id' => $r['demande']['id']];
 verifie('un brouillon se retire', (wr_promos_magasin_retirer()['ok'] ?? false) === true && count(pmLire()) === 3);
-$GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'envoyer', 'nom' => 'Pains au chocolat, deux magasins', 'du' => $j(6), 'au' => $j(10),
+$GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'envoyer', 'nom' => 'Pains au chocolat, Halle', 'du' => $j(6), 'au' => $j(10),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
-// À Halle, ×2,31 ; au magasin 5 (1,40 € HT), 3 × 1,40 + 0,98 = 5,18 € pour 2,40 € de matière : ×2,16 — le plus serré.
-verifie('deux magasins : le coefficient le plus serré, son magasin nommé, validée d’office', ($r['demande']['coef']['magasin'] ?? 0) === 5 && $r['demande']['coef']['lot'] === 2.16 && $r['demande']['statut'] === 'validee', json_encode($r['demande']['coef'] ?? $r, JSON_UNESCAPED_UNICODE));
+verifie('un autre magasin demandé : ignoré, la promotion ne vaut que pour Halle (×2,31, ses prix)', ($r['demande']['shops'] ?? null) === [4] && $r['demande']['coef']['lot'] === 2.31 && $r['demande']['coef']['magasin'] === 4, json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5']; $l = ep_promos_magasin_demandes();
-verifie('le magasin 5 la voit dans sa liste', count($l['demandes']) === 1 && $l['demandes'][0]['shop'] === 4);
+verifie('le magasin 5 ne la voit pas', $l['demandes'] === []);
 // Le magasin 5 seul, la remise à 60 % : 4,20 + 0,56 = 4,76 € pour 2,40 € — ×1,98, refusée.
 $GLOBALS['corps'] = ['shop' => 5, 'action' => 'envoyer', 'nom' => 'Pains au chocolat −60 %', 'du' => $j(6), 'au' => $j(10),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 60, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
 verifie('sous ×2 : refusée (422), jamais à la marque', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], '×1,98') && count(pmLire()) === 4, json_encode($r, JSON_UNESCAPED_UNICODE));
-// Un brouillon de deux magasins, repris depuis le second : le magasin qui l'a écrit le reste.
-$GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'brouillon', 'nom' => 'Brouillon partagé'];
+// Le brouillon de Halle, repris depuis le magasin 5 : introuvable, il n'est pas le sien.
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'brouillon', 'nom' => 'Brouillon de Halle'];
 $r = wr_promos_magasin();
-$GLOBALS['corps'] = ['shop' => 5, 'id' => $r['demande']['id'], 'action' => 'brouillon', 'nom' => 'Brouillon partagé, repris'];
-$r = wr_promos_magasin();
-verifie('repris depuis le magasin 5 : le magasin qui l’a écrit le reste', ($r['demande']['shop'] ?? 0) === 4 && $r['demande']['shops'] === [4, 5] && $r['demande']['nom'] === 'Brouillon partagé, repris', json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
+$GLOBALS['corps'] = ['shop' => 5, 'id' => $r['demande']['id'], 'action' => 'brouillon', 'nom' => 'Repris ailleurs'];
+$r2 = @wr_promos_magasin();
+verifie('la promotion d’un autre magasin ne se modifie pas (404)', ($r2['error'] ?? '') === 'promotion introuvable' && pmLire()[4]['nom'] === 'Brouillon de Halle', json_encode($r2, JSON_UNESCAPED_UNICODE));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -14,8 +14,9 @@ declare(strict_types=1);
  * règle du ticket (répétable, nombre maximal par ticket). Statut, priorité, exclusivité et mode d'activation
  * restent à la marque.
  *
- * Une demande vaut pour un ou plusieurs magasins (quatre au plus, le périmètre « magasins sélectionnés » du panel) :
- * `shop` est le magasin qui l'a écrite, `shops` tous ceux qu'elle couvre.
+ * Une promotion vaut pour le magasin qui l'écrit, lui seul — celui du dashboard (?shop=), demande du 17/10/2026 :
+ * `shops` vaut toujours [shop] (la forme du périmètre « magasins sélectionnés » du panel). Les règles se lisent encore
+ * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
  * Trois règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, 14 jours
  * au plus ; deux promotions du magasin en même temps au plus, magasin par magasin ; le COEFFICIENT DU LOT (prix payé
@@ -32,7 +33,6 @@ const PM_CLE = 'promosMagasin';
 const PM_COEF_MIN = 2.0;
 const PM_JOURS_MAX = 14;
 const PM_EN_MEME_TEMPS = 2;
-const PM_MAGASINS_MAX = 4;
 const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DISCOUNT'];
 const PM_VIVANTES = ['a_valider', 'validee', 'en_caisse'];
 
@@ -120,7 +120,8 @@ function pmPropre(array $b, int $shop): array
     $max = $b['maxParTicket'] ?? null;
     return [
         'shop' => $shop,
-        'shops' => array_slice(array_values(array_unique(array_merge([$shop], array_filter(array_map('intval', (array) ($b['shops'] ?? [])), static fn ($s) => $s > 0)))), 0, PM_MAGASINS_MAX),
+        // Le magasin qui l'écrit, lui seul : un `shops` envoyé par le navigateur est ignoré.
+        'shops' => [$shop],
         'nom' => mb_substr(trim((string) ($b['nom'] ?? '')), 0, 80),
         'description' => mb_substr(trim((string) ($b['description'] ?? '')), 0, 500),
         'x' => pmCote($b['x'] ?? [], false),
@@ -360,7 +361,7 @@ function ep_promos_magasin_demandes(): array
         }
     }
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err,
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS, 'magasinsMax' => PM_MAGASINS_MAX]];
+        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
 }
 
 /**
@@ -381,10 +382,9 @@ function wr_promos_magasin(): array
     $i = null;
     if ($id !== null) {
         foreach ($tout as $k => $o) { if (($o['id'] ?? '') === $id) { $i = $k; break; } }
-        if ($i === null || !in_array($shop, pmShops($tout[$i]), true)) { http_response_code(404); return ['error' => 'promotion introuvable']; }
+        if ($i === null || (int) ($tout[$i]['shop'] ?? 0) !== $shop) { http_response_code(404); return ['error' => 'promotion introuvable']; }
         if (in_array($tout[$i]['statut'] ?? '', ['validee', 'en_caisse'], true)) { http_response_code(409); return ['error' => 'déjà validée par la marque : elle ne se modifie plus d’ici']; }
     }
-    if ($i !== null) { $d['shop'] = (int) $tout[$i]['shop']; $d['shops'] = array_slice(array_values(array_unique(array_merge([$d['shop']], $d['shops']))), 0, PM_MAGASINS_MAX); }
     $autres = array_values(array_filter($tout, static fn ($o) => ($o['id'] ?? '') !== $id));
     [$coef, $illisibles] = pmCoefMagasins($d);
     if ($action === 'envoyer') {
