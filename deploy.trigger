@@ -818,3 +818,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-17T14:30:37Z promotions du magasin : onglet du dashboard (assistant X + Y, coefficient ×2) et Analyse magasin › Promotions dans la console
 2026-10-17T15:35:00Z promotions du magasin : coût du réseau quand le magasin n'en a pas, validées d'office quand le lot tient ×2
 2026-10-17T15:48:37Z promotions du magasin : le magasin du dashboard seul, assistant en cinq étapes
+2026-10-17T16:04:36Z promotions du magasin : enregistrées aussitôt, sans validation
