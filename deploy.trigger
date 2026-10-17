@@ -814,3 +814,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-17T05:26:46Z posts au portail social, Marketing sans Créer › Post, Valider, Publier
 2026-10-17T06:00:01Z primes : conditions à interrupteur, plus de « Tes heures » dans l'app
 2026-10-17T08:13:59Z commandes et canaux du mois : quatre canaux, leur évolution au clic
+2026-10-17T14:03:32Z sonde lecture seule d'une promotion du panel (promo test)
