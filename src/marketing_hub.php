@@ -382,11 +382,11 @@ function mhAFaireAvis(array $avis, string $auj): array
 /**
  * La liste « à faire » : ce qui attend quelqu'un, du plus pressé au moins pressé.
  *
- * La seule règle qui demande les trois canaux à la fois est la dernière : une
- * campagne en cours ou qui démarre sous sept jours sans aucun post ni aucune
- * newsletter sur sa période. Les tables ne relient pas un post à sa campagne ;
- * on rapproche donc par les DATES — un post prévu ou publié entre le début et
- * la fin, un envoi programmé ou parti dans la même fenêtre.
+ * Les posts n'y figurent plus (17/10/2026) : ils se créent, se valident et se
+ * publient dans le portail social (/social, dépôt à part), qui a ses propres
+ * alertes. Pour la même raison, une campagne n'est plus dite « sans prise de
+ * parole » : ses posts vivent là-bas, la console ne les voit pas. $soc reste
+ * dans la signature pour les appelants.
  */
 function mhAFaire(array $camp, array $mail, array $soc, array $charte, ?string $shop, string $auj): array
 {
@@ -396,35 +396,6 @@ function mhAFaire(array $camp, array $mail, array $soc, array $charte, ?string $
         $out[] = ['canal' => $canal, 'niveau' => $niveau, 'titre' => $titre, 'detail' => $detail, 'cible' => $cible];
     };
 
-    $reelle = !empty($soc['publication']['reelle']);
-    if ($soc['dispo'] ?? false) {
-        foreach ($soc['liste'] as $p) {
-            $quand = $p['publierLe'] ?? null;
-            $titre = mhExtrait((string) $p['message']);
-            $mag = $p['magasin'] ?? 'Réseau';
-            if ($p['statut'] === 'a_valider' && $shop === null) {
-                $item('social', $dans($quand, 2) ? 'urgent' : 'normal', 'Post à valider — ' . $mag,
-                    '« ' . $titre . ' »' . ($p['agent']['note'] !== null ? ' · agent ' . $p['agent']['note'] . '/5' : '') . ($quand ? ' · prévu le ' . mhJour($quand) : ''),
-                    ['onglet' => 'valider', 'post' => $p['id']]);
-            } elseif ($p['statut'] === 'a_controler') {
-                $item('social', 'normal', 'Post en attente du contrôle — ' . $mag, '« ' . $titre . ' » : relancer l’agent', ['onglet' => 'valider', 'post' => $p['id']]);
-            } elseif ($p['statut'] === 'valide') {
-                $pubs = $p['publications'] ?? [];
-                $enErreur = array_values(array_filter($pubs, static fn ($x) => $x['statut'] === 'erreur'));
-                if ($enErreur) {
-                    $item('social', 'urgent', 'Publication en échec — ' . $mag, '« ' . $titre . ' » · ' . implode(' ; ', array_map(static fn ($x) => (SP_RESEAUX[$x['reseau']] ?? $x['reseau']) . ' : ' . $x['erreur'], $enErreur)),
-                        ['onglet' => 'publier', 'post' => $p['id']]);
-                } elseif (!$pubs && $quand !== null && substr($quand, 0, 10) <= $auj) {
-                    $item('social', 'urgent', 'Post validé, pas encore publié — ' . $mag,
-                        '« ' . $titre . ' » devait sortir le ' . mhJour($quand) . ($reelle ? '. Publiez-le ou programmez-le.' : '. Publié à la main, marquez-le avec son id Facebook : Brand Guard ne le comptera pas comme sauvage.'),
-                        ['onglet' => 'publier', 'post' => $p['id']]);
-                }
-            } elseif ($p['statut'] === 'refuse' && $shop !== null && ($p['decision']['le'] ?? '') >= date('Y-m-d', strtotime($auj . ' -14 days'))) {
-                $item('social', 'normal', 'Post refusé — à corriger', '« ' . $titre . ' » · ' . trim(($p['decision']['famille'] ?? '') . ' · ' . ($p['decision']['type'] ?? ''), ' ·'),
-                    ['onglet' => 'valider', 'post' => $p['id']]);
-            }
-        }
-    }
     if (($charte['dispo'] ?? false) && $charte['sauvages']) {
         $n = count($charte['sauvages']);
         $item('charte', 'urgent', $n . ' post' . ($n > 1 ? 's' : '') . ' sauvage' . ($n > 1 ? 's' : '') . ' sur 30 jours',
@@ -442,34 +413,14 @@ function mhAFaire(array $camp, array $mail, array $soc, array $charte, ?string $
         }
     }
     if ($camp['dispo'] ?? false) {
-        $posts = ($soc['dispo'] ?? false) ? $soc['liste'] : [];
-        $mails = ($mail['dispo'] ?? false) ? array_filter($mail['liste'], static fn ($c) => !$c['exemple']) : [];
         foreach ($camp['liste'] as $c) {
             if ($c['phase'] === 'brouillon' && $c['debut'] !== null && $c['debut'] >= $auj && $dans($c['debut'], 14)) {
                 $item('campagne', 'urgent', 'Campagne encore en brouillon — ' . $c['nom'], 'Elle démarre le ' . mhJour($c['debut']) . '.', ['onglet' => 'plan', 'campagne' => $c['id']]);
-            }
-            $proche = $c['phase'] === 'en_cours' || ($c['phase'] === 'a_venir' && $dans($c['debut'], 7));
-            if (!$proche || $c['debut'] === null) { continue; }
-            $fin = $c['fin'] ?? $c['debut'];
-            $danz = static fn (?string $d): bool => $d !== null && substr($d, 0, 10) >= $c['debut'] && substr($d, 0, 10) <= $fin;
-            // Rattaché à la campagne, ou daté dans sa période pour un contenu qui n'est rattaché à rien.
-            $nPosts = count(array_filter($posts, static fn ($p) => $p['statut'] !== 'refuse'
-                && (($p['campagneId'] ?? null) === $c['id'] || (($p['campagneId'] ?? null) === null && $danz($p['publie']['le'] ?? $p['publierLe'] ?? null)))));
-            $nMails = count(array_filter($mails, static fn ($m) => ($m['campagneId'] ?? null) === $c['id'] || (($m['campagneId'] ?? null) === null && $danz($m['envoiLe']))));
-            if ($nPosts === 0 && $nMails === 0) {
-                $item('campagne', 'normal', 'Aucune prise de parole pour « ' . $c['nom'] . ' »',
-                    'Ni post ni newsletter entre le ' . mhJour($c['debut']) . ' et le ' . mhJour($fin) . '.', ['onglet' => 'plan', 'campagne' => $c['id']]);
             }
         }
     }
     usort($out, static fn ($a, $b) => ($a['niveau'] === 'urgent' ? 0 : 1) <=> ($b['niveau'] === 'urgent' ? 0 : 1));
     return array_slice($out, 0, 40);
-}
-
-function mhExtrait(string $t): string
-{
-    $t = trim((string) preg_replace('/\s+/u', ' ', $t));
-    return mb_strlen($t) > 70 ? mb_substr($t, 0, 70) . '…' : $t;
 }
 
 function mhJour(?string $d): string

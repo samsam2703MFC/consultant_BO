@@ -189,6 +189,7 @@ select,.mk-in{font:400 12px var(--font-ui);padding:6px 10px;border:.5px solid va
 .mk-notes button{width:30px;height:28px;border-radius:7px;border:.5px solid var(--mk-trait2);background:#fff;font:600 12px var(--font-ui);cursor:pointer}
 .mk-notes button.on{color:#fff;border-color:transparent}
 .mk-aide{font-size:10.5px;color:#777;line-height:1.45}
+.mk-aide a,.mk-mini a{color:var(--mk-camp)}
 textarea.mk-in{font:300 12.5px/1.5 var(--font-ui);resize:vertical;min-height:120px}
 
 /* Le rédacteur de post */
