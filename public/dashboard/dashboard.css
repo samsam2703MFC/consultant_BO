@@ -832,6 +832,29 @@ em.bdl{font-style:normal;font:700 8px var(--font-ui);letter-spacing:.06em;text-t
 .db-split-g>div.w{border-left-color:#1f5f8b}.db-split-g>div.l{border-left-color:#0f3b5c}
 .db-split-g .w .v{color:#1f5f8b}.db-split-g .l .v{color:#0f3b5c}
 .db-split-g .s b{font-weight:600;color:var(--color-text)}
+.db-split-g.co4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.db-split-g>div.b{border-left-color:#2d7a3e}.db-split-g .b .v{color:#2d7a3e}
+/* Commandes et canaux, au mois : chaque tuile s'ouvre sur l'évolution de son canal. */
+.co-tuile{cursor:pointer;border-left-color:var(--cc)!important}
+.co-tuile:hover{background:#faf7f3}
+.co-tuile:focus-visible{outline:2px solid var(--cc);outline-offset:2px}
+.co-tuile.on{background:#fff;box-shadow:inset 0 0 0 1.5px var(--cc)}
+.co-tuile .hd{display:flex;align-items:flex-start;gap:8px}
+.co-tuile .co-spk{flex:none;margin-top:2px}
+.co-delta{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;font:600 10.5px var(--font-ui);vertical-align:middle;white-space:nowrap}
+.co-delta.ok{background:rgba(45,122,62,.12);color:#2d7a3e}.co-delta.ko{background:rgba(166,30,30,.10);color:#A61E1E}
+.co-voir{font:600 10.5px var(--font-ui);color:var(--color-text-muted);margin-top:5px}
+.co-tuile.on .co-voir{color:var(--cc)}
+.co-graphe{margin:0 16px 14px;padding:12px 16px 10px;border-radius:12px;background:#fff;border:1.5px solid var(--cc)}
+.co-graphe .hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.co-graphe .hd .db-mini{margin-left:auto}
+.co-graphe .pied{padding-top:8px;border-top:.5px solid var(--color-border-tertiary)}
+.co-graphe .pied b.ok,.co-cumul .ok{color:#2d7a3e;fill:#2d7a3e}.co-graphe .pied b.ko,.co-cumul .ko{color:#A61E1E;fill:#A61E1E}
+.co-cumul{display:block;margin:6px 0 4px;font-family:var(--font-ui)}
+.co-cumul text{font-size:11px;fill:#8a837b}.co-cumul text.fort{fill:var(--color-text);font-weight:700}
+.co-cumul text.ecart{font-size:12px;font-weight:700}.co-cumul text.proj{font-size:11.5px;font-weight:600}
+.co-cumul text.ecart,.co-cumul text.proj,.co-cumul text.mu{paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+@media (max-width:1200px){.db-split-g.co4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.db-split-g.co4{grid-template-columns:1fr}}
 .co-corps{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);border-top:.5px solid var(--color-border-tertiary)}
 .co-corps>div{padding:12px 16px 14px;min-width:0}.co-corps>div+div{border-left:.5px solid var(--color-border-tertiary)}
 .co-corps.un{grid-template-columns:1fr}
