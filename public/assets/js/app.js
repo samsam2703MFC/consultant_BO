@@ -995,7 +995,7 @@ class App {
       marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
-      promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés enregistrent dans leur dashboard, sans validation : la marque les met en caisse, ou les renvoie avec un mot.'],
+      promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés enregistrent dans leur dashboard, sans validation : elles partent au panel aussitôt. Ici, celles que le panel n’a pas prises, et l’historique.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
@@ -6818,26 +6818,37 @@ class App {
       return meme ? ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + 'e ') + gain(y, yq) + ' · ' + lib(x)
         : ach + ' (' + lib(x) + '), ' + (yq > 1 ? yq + ' × ' : '') + lib(y) + ' ' + gain(y, yq);
     };
-    // Plus de validation (17/10/2026) : le magasin enregistre, la marque met en caisse (ou renvoie avec un mot).
-    const ETAT = { validee: ['Enregistrée · à mettre en caisse', 'a'], en_caisse: ['En caisse', 'ok'], refusee: ['Renvoyée', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
-    const FILTRES = [['validee', 'À mettre en caisse'], ['en_caisse', 'En caisse'], ['refusee', 'Renvoyées'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
+    // Plus de validation (17/10/2026) : le magasin enregistre, la promotion part au panel aussitôt. N'attendent ici que
+    // celles que le panel n'a pas prises (l'erreur dite) : réessayer, la créer à la main, ou la rendre au magasin.
+    const ETAT = { validee: ['Pas encore en caisse', 'a'], en_caisse: ['En caisse', 'ok'], refusee: ['Rendue au magasin', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
+    const FILTRES = [['validee', 'Pas encore en caisse'], ['en_caisse', 'En caisse'], ['refusee', 'Rendues'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
     const f = S.pmFiltre === undefined ? 'validee' : S.pmFiltre;
     const toutes = L.d.demandes || [];
     common.pmFiltres = FILTRES.map(([k, n]) => ({ nom: n, n: toutes.filter(d => !k || d.statut === k).length, on: f === k, choisir: () => this.setState({ pmFiltre: k }) }));
     const decider = (d, decision) => {
       let message = '';
-      if (decision === 'refuser') { message = window.prompt('Renvoyer « ' + d.nom + ' » au magasin : pourquoi ? (le franchisé lira ce mot)', '') || ''; if (!message.trim()) { return; } }
-      else if (!window.confirm('« ' + d.nom + ' » (' + (d.shops || [d.shop]).map(nomMag).join(', ') + ') est créée au panel ?\nElle passe « En caisse » pour le magasin.')) { return; }
+      if (decision === 'panel') {
+        L.occupe = d.id; this.setState({});
+        write(this.source, 'POST', '/promos-magasin/' + encodeURIComponent(d.id) + '/panel', {}).then(r => {
+          L.occupe = null;
+          const dm = r.demande || {};
+          L.msg = !r.ok ? 'Pas envoyée : ' + (r.error || 'erreur') : (dm.statut === 'en_caisse' ? 'En caisse : « ' + d.nom + ' » (promotion n° ' + dm.panelId + ' au panel).' : 'Le panel ne la prend toujours pas : ' + (dm.panelErreur || '?'));
+          L.d = undefined; this.setState({});
+        });
+        return;
+      }
+      if (decision === 'refuser') { message = window.prompt('Rendre « ' + d.nom + ' » au magasin : pourquoi ? (le franchisé lira ce mot)', '') || ''; if (!message.trim()) { return; } }
+      else if (!window.confirm('« ' + d.nom + ' » (' + (d.shops || [d.shop]).map(nomMag).join(', ') + ') est créée au panel à la main ?\nElle passe « En caisse » pour le magasin.')) { return; }
       L.occupe = d.id; this.setState({});
       write(this.source, 'PATCH', '/promos-magasin/' + encodeURIComponent(d.id), { decision, message }).then(r => {
         L.occupe = null;
-        L.msg = r.ok ? (decision === 'en_caisse' ? 'En caisse : « ' + d.nom + ' ».' : 'Renvoyée au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
+        L.msg = r.ok ? (decision === 'en_caisse' ? 'En caisse : « ' + d.nom + ' ».' : 'Rendue au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
         if (r.ok) { L.d = undefined; } this.setState({});
       });
     };
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins (sous ×' + (R.coefMin || 2) + ', l’enregistrement est refusé). Pas de validation : une promotion enregistrée par le magasin attend ici sa mise en caisse.';
+    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins (sous ×' + (R.coefMin || 2) + ', l’enregistrement est refusé). Pas de validation : une promotion enregistrée part au panel aussitôt — créée inactive, relue, puis activée. N’attendent ici que celles que le panel n’a pas prises, avec son erreur.';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
       const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
@@ -6846,9 +6857,10 @@ class App {
         cas: c.x ? 'cas le plus serré : ' + (d.x.q || 1) + ' × ' + c.x + ' + ' + (d.y.q || 1) + ' × ' + c.y + (c.magasin && d.shops && d.shops.length > 1 ? ' (' + nomMag(c.magasin) + ')' : '') : '',
         sansCout: (c.sansCout || []).length ? 'sans coût de recette : ' + c.sansCout.slice(0, 3).join(', ') + (c.sansCout.length > 3 ? '…' : '') : '',
         envoyee: d.envoyee ? jj(d.envoyee.slice(0, 10)) : '', etat: e[0], etatCls: e[1], message: d.message || '', description: d.description || '',
-        motif: d.statut === 'validee' && d.motif ? d.motif.charAt(0).toUpperCase() + d.motif.slice(1) : '',
+        motif: [d.motif ? d.motif.charAt(0).toUpperCase() + d.motif.slice(1) : '', d.statut === 'validee' && d.panelErreur ? 'Panel : ' + d.panelErreur : '',
+          d.statut === 'en_caisse' && d.panelId ? 'Au panel : promotion n° ' + d.panelId : ''].filter(Boolean).join(' · '),
         peutDecider: d.statut === 'validee', occupe: L.occupe === d.id, href: dash(d.shop),
-        enCaisse: () => decider(d, 'en_caisse'), renvoyer: () => decider(d, 'refuser') };
+        auPanel: () => decider(d, 'panel'), enCaisse: () => decider(d, 'en_caisse'), renvoyer: () => decider(d, 'refuser') };
     });
   }
 

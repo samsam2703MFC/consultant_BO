@@ -208,6 +208,34 @@ final class ErpApi
     }
 
     /**
+     * Une écriture (POST, PUT, PATCH, DELETE) : {code, corps, erreur}. Les promotions des magasins (17/10/2026)
+     * s'écrivent au panel par là ; l'erreur reprend le message du panel et le détail de ses champs refusés.
+     */
+    public static function ecrire(string $method, string $path, ?array $body = null): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'corps' => null, 'erreur' => self::$lastError ?? 'jeton admin indisponible']; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($method, $url, $body, $tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok !== null) { [$code, $res] = self::http($method, $url, $body, $tok); }
+        }
+        if ($code >= 200 && $code < 300) { return ['code' => $code, 'corps' => $res, 'erreur' => null]; }
+        $det = '';
+        foreach (['description', 'message', 'detail', 'error'] as $k) {
+            if (!empty($res[$k]) && is_string($res[$k])) { $det = $res[$k]; break; }
+        }
+        // Les champs refusés : {errors: {champ: [messages]}} ou une liste.
+        $champs = [];
+        foreach ((array) ($res['errors'] ?? $res['data']['errors'] ?? []) as $k => $v) {
+            $champs[] = (is_string($k) ? $k . ' : ' : '') . (is_array($v) ? implode(', ', array_map('strval', array_filter($v, 'is_scalar'))) : (string) $v);
+        }
+        return ['code' => $code, 'corps' => $res, 'erreur' => 'HTTP ' . $code . ($det !== '' ? ' : ' . substr($det, 0, 300) : '')
+            . ($champs !== [] ? ' — ' . substr(implode(' ; ', $champs), 0, 400) : '')];
+    }
+
+    /**
      * GET pour qui veut le code autant que le corps (les promotions du panel, 16/10/2026) :
      * {code, corps, erreur} — un 403 se dit tel quel au lieu de se perdre dans un null.
      */

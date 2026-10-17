@@ -2988,8 +2988,9 @@
   const cheminPMP = () => '/exploitation/promos-magasin/produits?shop=' + encodeURIComponent(S.shop);
   const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
-  // Plus de validation (17/10/2026) : envoyée = enregistrée (`validee`), la marque la met en caisse.
-  const PM_ETAT = { brouillon: ['Brouillon', 'b'], refusee: ['Renvoyée par la marque', 'r'], validee: ['Enregistrée', 'ok'], en_caisse: ['En caisse', 'ok'],
+  // Plus de validation (17/10/2026) : enregistrée, elle part au panel aussitôt (`en_caisse`) ; `validee` = enregistrée,
+  // le panel ne l'a pas encore prise (l'erreur est dite, la marque la reprend).
+  const PM_ETAT = { brouillon: ['Brouillon', 'b'], refusee: ['Renvoyée par la marque', 'r'], validee: ['Enregistrée · pas encore en caisse', 'a'], en_caisse: ['En caisse', 'ok'],
     active: ['En caisse', 'ok'], a_venir: ['À venir', 'a'], terminee: ['Terminée', 'b'], inactive: ['Inactive au panel', 'b'] };
   const PM_FILTRES = [['actives', 'Actives', e => e === 'active' || e === 'en_caisse'], ['enregistrees', 'Enregistrées', e => e === 'validee'], ['a_venir', 'À venir', e => e === 'a_venir'],
     ['brouillons', 'Brouillons', e => e === 'brouillon' || e === 'refusee'], ['terminees', 'Terminées', e => e === 'terminee' || e === 'inactive'], ['toutes', 'Toutes', () => true]];
@@ -3114,7 +3115,7 @@
       h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'} <button class="db-btn" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     } else {
       h += `<div class="pm-large"><table class="pm-tab"><thead><tr><th>Promotion</th><th>Sorte</th><th>Période</th><th>Créneaux</th><th>Statut</th><th class="n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</th><th></th></tr></thead><tbody>${vues.map(l => {
-        const e = l.etat === 'validee' && l.d && l.d.auto === false ? ['Enregistrée · coefficient non vérifié', 'a'] : (PM_ETAT[l.etat] || [l.etat, 'b']);
+        const e = PM_ETAT[l.etat] || [l.etat, 'b'];
         const per = l.du || l.au ? (l.du ? pmQuand(l.du) : '…') + ' → ' + (l.au ? pmQuand(l.au) : 'sans fin') : 'sans fin';
         const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
         let act = '';
@@ -3124,7 +3125,9 @@
           else { act = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`; }
         } else if (l.sorte === 'xy') { act = `<button class="db-btn" data-pmdup="panel:${esc(l.id)}" title="en faire une promotion du magasin">Dupliquer</button>`; }
         const msg = (l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '')
-          + (l.d && l.d.motif && l.etat === 'validee' ? `<div class="db-mini" style="margin-top:3px">${esc(l.d.motif.charAt(0).toUpperCase() + l.d.motif.slice(1))}</div>` : '');
+          + (l.d && l.d.motif && (l.etat === 'validee' || l.etat === 'en_caisse') ? `<div class="db-mini" style="margin-top:3px">${esc(l.d.motif.charAt(0).toUpperCase() + l.d.motif.slice(1))}</div>` : '')
+          + (l.d && l.d.panelErreur && l.etat === 'validee' ? `<div class="pm-msg">Pas encore en caisse : ${esc(l.d.panelErreur)}</div>` : '')
+          + (l.d && l.d.panelId && l.etat === 'en_caisse' ? `<div class="db-mini" style="margin-top:3px">au panel : promotion n° ${esc(l.d.panelId)}</div>` : '');
         return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
           <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
           <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
@@ -3132,7 +3135,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Pas de validation : une promotion envoyée est enregistrée aussitôt, la marque la met en caisse.</div></div>`;
+      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.</div></div>`;
     return h;
   }
 
@@ -3305,7 +3308,7 @@
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
       ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
-      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre aussitôt, <b>sans validation</b> : la marque la met en caisse pour la date prévue.${pmDOffice(W.d) ? '' : ' Le coefficient ne se vérifie pas pour chaque produit : elle s’enregistre quand même, signalée.'}</div>`;
+      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${pmDOffice(W.d) ? '' : ' <b>Le coefficient ne se vérifie pas pour chaque produit</b> : elle s’enregistre, mais ne part pas seule en caisse — la marque décide.'}</div>`;
   }
   function pmDureeTxt(d) {
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
@@ -3363,8 +3366,9 @@
         if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = PM_FIN; } return; }
         const dm = j.demande;
         S.pmMsg = action !== 'envoyer' ? `Brouillon gardé : « ${esc(dm.nom || 'sans nom')} ».`
-          : `Enregistrée : « ${esc(dm.nom)} »${dm.auto ? ' — coefficient du lot ' + fX(dm.coef && dm.coef.lot) : ' — ' + esc(dm.motif || 'coefficient non vérifié')}. La marque la met en caisse pour la date prévue.`;
-        S.pmF = action !== 'envoyer' ? 'brouillons' : 'enregistrees';
+          : (dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — créée au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.`
+            : `Enregistrée : « ${esc(dm.nom)} », mais pas encore en caisse — ${esc(dm.panelErreur || 'le panel ne l’a pas prise')}. La marque la reprend.`);
+        S.pmF = action !== 'envoyer' ? 'brouillons' : (dm.statut === 'en_caisse' ? 'actives' : 'enregistrees');
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
       })
       .catch(e => { W.erreurs = [e.message]; })

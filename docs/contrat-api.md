@@ -2252,9 +2252,8 @@ mêmes dates et, au clic sur un canal, son cumul du mois face au mois d'avant.
 
 Pour l'onglet **Promotions** du dashboard magasin (sur ordinateur) : la liste des promotions qui touchent le magasin et
 l'assistant en cinq étapes (Nom → Ce qu'on achète (X) → Ce qu'on reçoit (Y) → Période → Vérifier et
-envoyer), calqué sur le formulaire « Buy X Get Y » du panel. Rien n'est écrit au panel : une demande validée par la
-marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'API soit relu sur une promotion test
-(`GET /ventes/promos/sonde-fiche`). Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`).
+enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotions vivent dans `ceo_app_setting` (clé
+`promosMagasin`) et **s'écrivent au panel** dès l'enregistrement (ci-dessous, « L'écriture au panel »).
 
 `GET /exploitation/promos-magasin?shop=4`
 
@@ -2310,7 +2309,27 @@ Les règles du magasin, imposées au serveur :
   prix et coûts de recette (`/analyse/produits/coefficients`). Le navigateur fait le même calcul à chaque frappe. Un
   produit sans coût de recette n'est pas chiffré (`sansCout`) : la promotion va alors à la marque.
 
-Tests : `php bin/tests_promos.php`.
+**L'écriture au panel (17/10/2026).** Le format est celui de la fiche relue sur la promotion test « 10 + 2 »
+(`GET /admin/promotions/buy-x-get-y/19`) : `{ name, description, promotion_type: "BUY_X_GET_Y", status, priority: 100,
+is_exclusive: false, valid_from, valid_to ("AAAA-MM-JJ HH:MM:SS"), is_repeatable, max_applications_per_transaction,
+shop_scope_type: "SELECTED_SHOPS", activation_mode: "AUTOMATIC", shop_ids: [shop], schedule: [{day_of_week, start_time,
+end_time}], trigger: {quantity, product_ids, category_ids, excluded_product_ids}, reward: {…, type, value,
+selection_strategy: "CHEAPEST"} }` (`ErpApi::ecrire`, compte admin du panel). Rien ne part en caisse sans avoir été relu :
+1. `POST /admin/promotions/buy-x-get-y` en **INACTIVE** (ou `PUT …/{id}` quand un premier envoi l'a déjà créée,
+   `panelId`) ;
+2. `GET …/{id}` : la fiche relue est comparée à l'envoi (nom, magasin, dates, répétable, X et Y — quantités, produits,
+   catégories, exclusions —, type et valeur, nombre de créneaux) ;
+3. `PUT …/{id}` en **ACTIVE** (sinon `PATCH {status}`), relue ACTIVE → `statut: "en_caisse"`, `panelId`.
+Seule une promotion au coefficient vérifié (`auto: true` : ×2, chaque produit chiffré) part seule au panel ; les autres
+restent `validee`, `panelErreur` « pas envoyée au panel : coefficient non vérifié … », et la marque décide. Un refus, un écart, une activation refusée : la promotion reste `validee` (« Pas encore en caisse ») avec
+`panelErreur` (l'erreur du panel et ses champs refusés, ou l'écart), inactive au panel si elle y a été créée. Le format
+des créneaux (`schedule`) est déduit du formulaire du panel — la fiche test n'en portait pas — et vérifié à la relecture.
+La console (Analyse magasin › Promotions) : **Réessayer au panel** (`POST /promos-magasin/{id}/panel`), « Mise en
+caisse ✓ » quand elle a été créée à la main, « Rendre » au magasin avec un mot. Dans la liste du magasin, une promotion
+écrite au panel ne se montre qu'une fois (les règles du panel dont l'id est un `panelId` sont écartées).
+
+Tests : `php bin/tests_promos.php` (un panel en doublure : création, relecture, activation, refus, créneaux non repris,
+reprise par PUT, activation par PATCH).
 
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 
