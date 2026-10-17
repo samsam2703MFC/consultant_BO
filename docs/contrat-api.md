@@ -2086,7 +2086,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
-**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : un sélecteur de magasin, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en six étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, un ou plusieurs magasins, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. La demande part à la marque, qui la valide ou la renvoie avec un mot. Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
+**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : un sélecteur de magasin, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en six étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, un ou plusieurs magasins, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. Un lot qui tient ×2, chaque produit chiffré, est validé d'office ; sinon la marque le valide ou le renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
 
 **Commandes et canaux, au mois (17/10/2026).** Dans le dashboard magasin, vue Mois, la carte « Commandes et canaux » a quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison. Chacune porte la courbe de ses six derniers mois (le mois en cours projeté, en pointillé) et l'écart au mois d'avant aux mêmes dates (« +44 % vs sept. ») ; un clic ouvre son cumul du mois face au mois d'avant, avec la fin de mois au rythme actuel, et un second clic le referme. Lecture : `GET /exploitation/canaux-mois` (ci-dessous). Les vues Jour et Semaine ne changent pas. Tests : `php bin/tests_canaux.php`.
 
@@ -2248,8 +2248,11 @@ marque se met en caisse à la main, jusqu'à ce que le format d'écriture de l'A
 - Une demande se voit dans chaque magasin de `shops` ; `shop` est celui qui l'a écrite.
 
 `POST /exploitation/promos-magasin` `{ shop, id?, action: "brouillon"|"envoyer", nom, description, shops, x, y, du, au,
-creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incomplet ; `envoyer` vérifie les règles et passe
-la demande `a_valider`, sinon **422** `{ error: "à compléter", erreurs: [phrases], coef }`. Une demande `validee` ou
+creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incomplet ; `envoyer` vérifie les règles (sinon
+**422** `{ error: "à compléter", erreurs: [phrases], coef }`), puis **valide d'office** (`statut: "validee"`, `auto: true`)
+quand le coefficient du lot tient ×2 et que chaque produit visé est chiffré dans chaque magasin couvert — pas de
+validation de la marque (demande du 17/10/2026). Sinon (un produit sans coût de recette ni prix, le coefficient
+incalculable) la promotion passe `a_valider`, avec `motif` (« coefficient non vérifié : … — Baguette, Pistolet »). Une demande `validee` ou
 `en_caisse` ne se modifie plus (409). Les valeurs de l'avantage se saisissent TTC, comme en caisse.
 
 `DELETE /exploitation/promos-magasin?shop=4&id=pm…` — un brouillon, une demande renvoyée ou encore à valider.
@@ -2260,7 +2263,7 @@ nMagasin, nReseau, nSansCout }`. Le coût est celui de la recette **pour ce maga
 le panel rend 0 tant qu'il ne l'a pas calculé pour lui (17/10/2026 : un magasin entier sans coût) — le coût du réseau
 prend alors la place (`catalogueCouts()` : la moyenne des magasins du compte, sinon la recette de la copie locale),
 `source: "reseau"`, et l'assistant le dit. Un produit sans coût nulle part, ou sans prix, n'est pas chiffré et se nomme
-(`sansCout`, `sansPrix`) ; quand plus rien ne se chiffre, l'envoi est refusé avec ces noms.
+(`sansCout`, `sansPrix`) ; la promotion part alors à la marque avec ces noms (`motif`).
 
 Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=a_valider]`
 (toutes les demandes, la plus ancienne d'abord, avec `noms` : les noms courts des magasins cités, et `regles`) et
@@ -2273,11 +2276,11 @@ Les règles du magasin, imposées au serveur :
 
 - une date de fin, **14 jours au plus** ; la fin après le début, pas déjà passée ;
 - **deux promotions à la fois au plus**, magasin par magasin (les demandes `a_valider`, `validee`, `en_caisse`) ;
-- le **coefficient du lot à ×2 au moins** : prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
+- le **coefficient du lot à ×2 au moins** (sous ×2, refusée — jamais envoyée à la marque) : prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
   d'un produit de Y, la récompense sur la pièce la moins chère, le cas le plus serré de toutes les paires (une paire où
   le produit de X est aussi dans Y et moins cher ne se présente pas en caisse), dans chaque magasin couvert, avec ses
   prix et coûts de recette (`/analyse/produits/coefficients`). Le navigateur fait le même calcul à chaque frappe. Un
-  produit sans coût de recette n'est pas chiffré (`sansCout`) ; si aucun ne l'est, l'envoi est refusé.
+  produit sans coût de recette n'est pas chiffré (`sansCout`) : la promotion va alors à la marque.
 
 Tests : `php bin/tests_promos.php`.
 

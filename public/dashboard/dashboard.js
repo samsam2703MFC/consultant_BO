@@ -3112,7 +3112,7 @@
       h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'} <button class="db-btn" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     } else {
       h += `<div class="pm-large"><table class="pm-tab"><thead><tr><th>Promotion</th><th>Sorte</th><th>Période</th><th>Créneaux</th><th>Statut</th><th class="n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</th><th></th></tr></thead><tbody>${vues.map(l => {
-        const e = PM_ETAT[l.etat] || [l.etat, 'b'];
+        const e = l.etat === 'validee' && l.d && l.d.auto ? ['Validée d’office · à mettre en caisse', 'ok'] : (PM_ETAT[l.etat] || [l.etat, 'b']);
         const per = l.du || l.au ? (l.du ? pmQuand(l.du) : '…') + ' → ' + (l.au ? pmQuand(l.au) : 'sans fin') : 'sans fin';
         const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
         let act = '';
@@ -3121,7 +3121,8 @@
           else if (l.etat === 'a_valider') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Modifier</button><button class="db-btn" data-pmdel="${esc(l.id)}">Retirer</button>`; }
           else { act = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`; }
         } else if (l.sorte === 'xy') { act = `<button class="db-btn" data-pmdup="panel:${esc(l.id)}" title="en faire une promotion du magasin">Dupliquer</button>`; }
-        const msg = l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '';
+        const msg = (l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '')
+          + (l.d && l.d.motif && l.etat === 'a_valider' ? `<div class="db-mini" style="margin-top:3px">À la marque : ${esc(l.d.motif)}</div>` : '');
         return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
           <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
           <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
@@ -3129,7 +3130,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. La marque valide chaque demande avant la caisse.</div></div>`;
+      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Validée d’office quand le lot tient ${fXm(Rg.coefMin || 2)} et que chaque produit visé est chiffré ; sinon la marque la regarde.</div></div>`;
     return h;
   }
 
@@ -3179,6 +3180,11 @@
     const prods = pmProduits();
     if (!prods) { return null; }
     return pmCoef(prods, pmEffectif(d.x), Object.assign(pmEffectif(d.y), { type: d.y.type, valeur: d.y.valeur }));
+  }
+  /** Validée d'office à l'envoi ? Le même critère que le serveur (pmDOffice), avec les prix de ce magasin. */
+  function pmDOffice(d) {
+    const C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
+    return !!C && C.lot != null && C.lot >= min && !C.sansCout.length && !C.sansPrix.length;
   }
   function pmStepper(W) {
     return PM_ETAPES.map((n, i) => { const e = i + 1, fait = e < 6 && !pmManque(W.d, e);
@@ -3256,7 +3262,7 @@
     if (e === 1) {
       return tete('la promotion', 'Nom') + `<div class="pm-f"><label>Nom</label><input class="pm-in" maxlength="80" placeholder="ex. Cookies 2+1 · Halle" value="${esc(d.nom)}" data-pmf="nom"></div>
         <div class="pm-f" style="margin-top:10px"><label>Description <small class="db-mini">facultatif</small></label><textarea class="pm-in" rows="3" maxlength="500" placeholder="Quand l’utiliser, ce qu’on en attend…" data-pmf="description">${esc(d.description)}</textarea></div>
-        <div class="pm-info"><b>Fixé par la marque</b> · statut brouillon jusqu’à la validation · priorité normale · non exclusive · activation automatique en caisse</div>`;
+        <div class="pm-info"><b>Fixé par la marque</b> · priorité normale · non exclusive · activation automatique en caisse · validée d’office quand le coefficient du lot tient ${fXm(R.coefMin || 2)}</div>`;
     }
     if (e === 2) {
       const dispo = S.stores.filter(s => !d.shops.includes(+s.id));
@@ -3301,11 +3307,11 @@
         ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 4)}
         ${lgn('Période', d.du && d.au ? 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b> · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
         ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 5)}
-        ${lgn('Fixé par la marque', 'statut brouillon jusqu’à la validation · priorité normale · non exclusive · activation automatique', 0)}</table>
+        ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’envoi : ${esc(manque.join(' · '))}</div>` : ''}
       ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
-      <div class="db-mini" style="margin-top:10px">Après l’envoi : la marque reçoit la demande, la valide (ou la renvoie avec un mot), puis la met en caisse à la date prévue. Elle apparaît dans la liste avec son statut.</div>`;
+      <div class="db-mini" style="margin-top:10px">${pmDOffice(W.d) ? 'Le lot tient ' + fXm(((S.aux[clePM()] || {}).regles || {}).coefMin || 2) + ' et chaque produit est chiffré : la promotion est <b>validée d’office</b>, sans attendre la marque, et part en caisse à la date prévue.' : 'Le coefficient ne se vérifie pas pour chaque produit : la promotion part à la marque, qui la valide ou la renvoie avec un mot.'} Elle apparaît dans la liste avec son statut.</div>`;
   }
   function pmDureeTxt(d) {
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
@@ -3317,7 +3323,7 @@
     const W = S.pmW, e = W.etape;
     const prec = e > 1 ? `<button class="db-btn pm-gros" data-pmet="${e - 1}">‹ Retour : ${esc(PM_ETAPES[e - 2].toLowerCase())}</button>` : '<span></span>';
     const suiv = e < 6 ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
-      : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Envoi…' : 'Envoyer à la marque ›'}</button></span>`;
+      : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Envoi…' : (pmDOffice(W.d) ? 'Valider la promotion ›' : 'Envoyer à la marque ›')}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
         <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
         ${e < 6 ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Enregistrer en brouillon</button>` : ''}</div>
@@ -3361,8 +3367,11 @@
       .then(r => r.json().catch(() => ({})).then(j => ({ ok: r.ok, j, code: r.status })))
       .then(({ ok, j, code }) => {
         if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = 6; } return; }
-        S.pmMsg = action === 'envoyer' ? `Envoyée à la marque : « ${esc(j.demande.nom)} ». Elle attend sa validation dans « À valider ».` : `Brouillon enregistré : « ${esc(j.demande.nom || 'sans nom')} ».`;
-        S.pmF = action === 'envoyer' ? 'a_valider' : 'brouillons';
+        const dm = j.demande, office = action === 'envoyer' && dm.statut === 'validee';
+        S.pmMsg = action !== 'envoyer' ? `Brouillon enregistré : « ${esc(dm.nom || 'sans nom')} ».`
+          : (office ? `Validée d’office : « ${esc(dm.nom)} » — coefficient du lot ${fX(dm.coef && dm.coef.lot)}, pas besoin de la marque. Elle part en caisse à la date prévue.`
+            : `Envoyée à la marque : « ${esc(dm.nom)} » (${esc(dm.motif || 'coefficient non vérifié')}). Elle attend sa validation dans « À valider ».`);
+        S.pmF = action !== 'envoyer' ? 'brouillons' : (office ? 'a_venir' : 'a_valider');
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
       })
       .catch(e => { W.erreurs = [e.message]; })
