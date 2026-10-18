@@ -85,14 +85,17 @@ verifie('la saisonnière déjà du 20/80 n’est pas reproposée pour sa saison'
 $P6 = array_column(ppPropositions($gamme, $saisons, $PC), null, 'cat');
 verifie('6 classiques par défaut : les places sans classique vendue restent libres', count($P6['Viennoiseries']['classiques']) === 3 && $P6['Viennoiseries']['manque'] === 3);
 $doc3 = ppDoc(['periode' => 'septembre 2026', 'caTotal' => 11200, 'totalRefs' => 6, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'saisons' => $saisons, 'saisonsLues' => true]);
-verifie('le document : le 20/80 par catégorie, puis l’assortiment proposé', str_contains($doc3, 'Le 20/80, catégorie par catégorie') && str_contains($doc3, 'L’assortiment proposé : le 20/80, 6 classiques et 2 de saison par catégorie')
-    && strpos($doc3, 'catégorie par catégorie') < strpos($doc3, 'L’assortiment proposé') && str_contains($doc3, 'Sans vente sur la période : Sans catégorie'));
-verifie('les tuiles : 14 aujourd’hui, 7 toute l’année (4 du 20/80 + 3 classiques), 3 saisonnières, sur 2 saisons',
-    str_contains($doc3, '>14<') && str_contains($doc3, '4 du 20/80 + 3 classiques') && str_contains($doc3, 'saisonnières, sur 2 saisons') && str_contains($doc3, 'aucune obligatoire'), '');
-verifie('la classique retenue que le score dit « Effacer » : à remplacer ; les places libres dites ; les saisons datées',
-    str_contains($doc3, '<span class="ko">Chausson</span>') && str_contains($doc3, 'à remplacer') && str_contains($doc3, '3 places libres') && str_contains($doc3, 'du 01/12 au 31/12') && str_contains($doc3, '+ 2 autres de la gamme'));
+verifie('le document : le 20/80 par catégorie, puis l’assortiment proposé', str_contains($doc3, 'Le 20/80, catégorie par catégorie') && str_contains($doc3, 'L’assortiment proposé, catégorie par catégorie')
+    && strpos($doc3, 'Le 20/80, catégorie par catégorie') < strpos($doc3, 'L’assortiment proposé') && str_contains($doc3, 'Sans vente sur la période : Sans catégorie'));
+verifie('le total en clair : 14 aujourd’hui, 7 toute l’année (4 à garder + 3 classiques), 3 de saison, 4 à retirer',
+    str_contains($doc3, '<b>14 produits</b> aujourd’hui') && str_contains($doc3, '<b>7 toute l’année</b> (4 à garder + 3 classiques)') && str_contains($doc3, '<b>3 de saison</b>') && str_contains($doc3, '<b>4 à retirer</b>'), '');
+verifie('une fiche par catégorie, en quatre colonnes : à garder, classiques, saison, à retirer', str_contains($doc3, '1</span><b>À garder') && str_contains($doc3, '2</span><b>Les 6 classiques') && str_contains($doc3, '3</span><b>2 produits par saison') && str_contains($doc3, '4</span><b>À retirer')
+    && str_contains($doc3, '— aujourd’hui 11 produits → 5 toute l’année + 2 par saison, 3 à retirer'));
+verifie('le classique au score faible à remplacer ; les classiques qui manquent dits ; les saisons datées, sans emoji',
+    str_contains($doc3, 'Chausson<div style="font-size:8.8pt;margin-top:0.2mm"><span class="ko">⚠ score faible') && str_contains($doc3, 'Il manque 3 classiques') && str_contains($doc3, '<b>Noël</b> <span class="mu">du 01/12 au 31/12</span>') && !str_contains($doc3, '🎄'));
+verifie('à retirer : jamais vendu, de saison pas dans les 2 meilleurs', str_contains($doc3, 'Bûche nouvelle<div style="font-size:8.8pt;margin-top:0.2mm"><span class="mu">jamais vendu') && str_contains($doc3, 'Bûche mini<div style="font-size:8.8pt;margin-top:0.2mm"><span class="mu">de saison, pas dans les 2 meilleurs'));
 $doc4 = ppDoc(['periode' => 'x', 'caTotal' => 100, 'totalRefs' => 1, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'saisons' => []]);
-verifie('sans les saisons du panel : dit, sans tableau des saisons', str_contains($doc4, 'Les saisons du panel n’ont pas pu être lues') && !str_contains($doc4, 'saison par saison'));
+verifie('sans les saisons du panel : dit, pas de produit de saison', str_contains($doc4, 'Les saisons du panel n’ont pas pu être lues') && str_contains($doc4, 'Pas de produit de saison dans cette catégorie.'));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
