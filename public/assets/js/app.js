@@ -1013,16 +1013,20 @@ class App {
         [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation'], ['promosMag', 'Promotions']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
         [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
-      catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
-        [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
-      produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
-        [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
-      anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte. Prix × volume : le prix que chaque magasin encaisse, face à ce qu’il vend.',
-        [['anaprod', 'Par référence'], ['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner'], ['prixvolume', 'Prix × volume']]],
-      analyse: ['Dans le temps', titles.analyse[1], null] };
+      // Le catalogue réunit les lectures d'une référence (18/10/2026, demande de Sam) : le scoring de la gamme et son
+      // seuil, sa jauge par magasin (Par référence), son prix face au volume et son évolution (Dans le temps) y
+      // deviennent des onglets. Un onglet peut porter sa propre phrase d'explication (3e élément) : celle de son
+      // ancien écran, qui ne se perd pas dans la phrase commune.
+      catalogue: ['Catalogue', 'Une seule liste, ses lectures : la fiche et ses deux marges, le score de chaque référence, où elle se vend et à quel prix, comment elle évolue, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
+        [['catalogue', 'Fiches'], ['produits', 'Scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.'], ['seuil', 'Sous seuil', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.'],
+          ['anaprod', 'Par référence', titles.anaprod[1]], ['prixvolume', 'Prix × volume', titles.prixvolume[1]], ['analyse', 'Dans le temps', titles.analyse[1]],
+          ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
+      usage: ['Où ça se vend', 'Chaque magasin face au catalogue. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte.',
+        [['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner']]] };
     const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
     if (grp) {
-      common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
+      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === S.screen);
+      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0,
         promosMag: (((this._pmL || {}).d || {}).demandes || []).filter(d => d.statut === 'validee').length };
@@ -1385,17 +1389,17 @@ class App {
         // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
         ['inventaires', 'Inventaires', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
-      // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
-      // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
-      // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
-      // (scoring, dont le seuil est un filtre), où il se vend (par référence,
-      // par magasin, en euros), et comment il évolue. Les anciens écrans
-      // restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
+      // Deux entrées (18/10/2026) : le Catalogue réunit tout ce qui se lit d'une
+      // référence — la fiche, son score et le seuil, sa jauge par magasin, son
+      // prix face au volume, son évolution, l'assortiment et le comptoir ; Où ça
+      // se vend garde la lecture par magasin et le manque à gagner. Les anciens
+      // écrans restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
+      // Le badge du Catalogue : les obligatoires sans place au comptoir, plus les
+      // références que le scoring propose d'effacer.
       ['Produits', [
-        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'planogramme']],
-        ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
-        ['anaprod', 'Où ça se vend', 0, ['usage', 'manque', 'prixvolume']],
-        ['analyse', 'Dans le temps', 0]]],
+        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length + ((this._pdDcs || {}).effacer || 0),
+          ['produits', 'seuil', 'anaprod', 'prixvolume', 'analyse', 'assortiment', 'planogramme']],
+        ['usage', 'Où ça se vend', 0, ['manque']]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
@@ -4522,10 +4526,10 @@ class App {
 
     common.refLignes = lignes.slice(0, 400).map(p => ({
       ref: String(p.ref), nom: p.nom, categorie: p.categorie || '',
-      // Voir aussi : la même référence dans le scoring, dans « où ça se vend », au comptoir.
+      // Voir aussi : la même référence dans le scoring, dans « par référence », au comptoir — des onglets du Catalogue (18/10/2026).
       voir: [
-        { nom: 'gamme', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
-        { nom: 'où ça se vend', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
+        { nom: 'scoring', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
+        { nom: 'par référence', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
         { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : la poser sur le comptoir standard', go: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }) }],
       groupe: p.groupe || '',
       gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
@@ -8082,6 +8086,16 @@ class App {
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
       else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub)); }
     }));
+    // Les écrans tenus en onglets d'une entrée (Scoring, Prix × volume, Dans le temps dans le Catalogue, 18/10/2026) :
+    // trouvables par leur nom, sous l'entrée qui les tient — une fois chacun.
+    const vus = new Set();
+    navDef.forEach(g => (g[1] || []).forEach(it => (Array.isArray(it) ? [it] : (it.children || [])).forEach(c => vus.add(c[0]))));
+    navDef.forEach(g => (g[1] || []).forEach(it => (Array.isArray(it) ? [it] : (it.children || [])).forEach(c => (c[3] || []).forEach(id => {
+      if (vus.has(id) || !(titles || {})[id]) { return; }
+      vus.add(id);
+      const aide = titles[id][1] || '';
+      if (trouve(colle(titles[id][0], g[0], c[1], aide))) { ecrans.push({ titre: titles[id][0], detail: g[0] + ' · ' + c[1], aller: goTo(id) }); }
+    }))));
     ajoute('Écrans', coupe(ecrans));
 
     // 2. Références du catalogue produit.
