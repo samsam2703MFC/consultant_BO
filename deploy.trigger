@@ -826,3 +826,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T09:34:39Z promotions : coefficient de marge au clic, promotions par canal (comptoir, webshop)
 2026-10-18T12:05:15Z promotions : le coefficient du lot ne bloque plus
 2026-10-18T12:11:25Z promotions : à la semaine, au mois, à l'année
+2026-10-18T12:18:40Z promotions : remplir un exemple
