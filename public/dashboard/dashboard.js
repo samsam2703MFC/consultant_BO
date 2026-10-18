@@ -3371,6 +3371,34 @@
     const rc = r.recompense || {};
     return pmDepuis({ nom: r.nom + ' · ' + nomShop().replace(/^.* - /, ''), x: cote(r.x), y: Object.assign(cote(r.y), { type: rc.type || 'FREE', valeur: rc.valeur }) });
   }
+  /**
+   * Un exemple complet, pour tester (18/10/2026) : la catégorie du magasin qui a le plus de produits chiffrés, « 2 achetés
+   * + le 3e » avec le premier avantage qui garde le repère de marge (offert, −50 %, −30 %, −20 %), sur la durée choisie
+   * (1 semaine, 1 mois, 1 an). Rien ne part avant « Enregistrer » : l'assistant s'ouvre sur l'étape Vérifier. Null quand
+   * aucune catégorie n'a deux produits chiffrés.
+   */
+  function pmExemple(k) {
+    const prods = pmProduits();
+    if (!prods) { return null; }
+    const parCat = new Map();
+    prods.forEach(p => { if (p.catId && +p.prixHt > 0 && +p.cout > 0) { const c = parCat.get(+p.catId) || { id: +p.catId, nom: p.cat || ('Catégorie ' + p.catId), n: 0 }; c.n++; parCat.set(+p.catId, c); } });
+    const cats = [...parCat.values()].filter(c => c.n >= 2).sort((a, b) => b.n - a.n || a.nom.localeCompare(b.nom, 'fr'));
+    if (!cats.length) { return null; }
+    const min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2, essais = [['FREE', ''], ['PERCENTAGE_DISCOUNT', 50], ['PERCENTAGE_DISCOUNT', 30], ['PERCENTAGE_DISCOUNT', 20]];
+    let choix = null;
+    for (const c of cats.slice(0, 6)) {
+      const x = { q: 2, cats: [{ id: c.id, nom: c.nom }], prods: [], exclus: [], portion: null };
+      const t = essais.find(([type, valeur]) => { const C = pmCoef(prods, x, Object.assign({}, x, { q: 1, type, valeur })); return C.lot != null && C.lot >= min; });
+      if (t) { choix = { c, type: t[0], valeur: t[1] }; break; }
+    }
+    choix = choix || { c: cats[0], type: 'PERCENTAGE_DISCOUNT', valeur: 20 };
+    const dur = (PM_DUREES.find(o => o[0] === k) || PM_DUREES[0])[1], cat = [{ id: choix.c.id, nom: choix.c.nom }];
+    const d = pmDepuis({ nom: 'Test · ' + choix.c.nom + ' 2 + 1 ' + (choix.type === 'FREE' ? 'offert' : 'à −' + choix.valeur + ' %') + ' · ' + dur,
+      description: 'Exemple rempli automatiquement pour tester : relisez avant d’enregistrer.',
+      x: { q: 2, cats: cat }, y: { q: 1, type: choix.type, valeur: choix.valeur, cats: cat } });
+    const r = pmDuree(d, k); d.du = r.du; d.au = r.au;
+    return d;
+  }
   function pmOuvrir(d, etape) { S.pmW = { etape: etape || 1, d, erreurs: null, envoi: false }; S.pmMsg = null; rendre(); window.scrollTo(0, 0); }
   /** Ce que chaque étape demande encore (vide = faite). */
   function pmManque(d, i) {
@@ -3435,7 +3463,7 @@
         <div class="pm-cl big"><span>Coefficient du lot<br><small class="db-mini">prix payé HT ÷ coût matière</small></span><b class="${C.lot >= min ? 'ok' : 'ko'}">${fX(C.lot)}</b></div>
         <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)"><i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
           ${C.sans != null ? `<i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>` : ''}<i class="lot ${C.lot >= min ? 'ok' : 'ko'}" style="left:${pc(C.lot)}%"></i></div>
-        <div class="db-mini">Le cas le plus serré : ${x.q} × ${esc(C.px.nom)} + ${y.q} × ${esc(C.py.nom)}, sur ${C.paires} combinaison${C.paires > 1 ? 's' : ''} (${C.nX} produit${C.nX > 1 ? 's' : ''} en X, ${C.nY} en Y). Un seul cas sous ${fXm(min)} bloque l’envoi.${d.shops.length > 1 ? ' Prix de ce magasin ; les autres se vérifient à l’envoi.' : ''}</div>
+        <div class="db-mini">Le cas le plus serré : ${x.q} × ${esc(C.px.nom)} + ${y.q} × ${esc(C.py.nom)}, sur ${C.paires} combinaison${C.paires > 1 ? 's' : ''} (${C.nX} produit${C.nX > 1 ? 's' : ''} en X, ${C.nY} en Y). Sous ${fXm(min)}, la promotion s’enregistre quand même, le coefficient en rouge.${d.shops.length > 1 ? ' Prix de ce magasin ; les autres se vérifient à l’envoi.' : ''}</div>
         ${C.coutReseau.length ? `<div class="db-mini" style="margin-top:6px">Coût du réseau (pas encore calculé pour ce magasin au panel) : ${esc(C.coutReseau.slice(0, 5).join(', '))}${C.coutReseau.length > 5 ? '…' : ''}.</div>` : ''}
         ${pmSortis(C).length ? `<div class="pm-warn">Sortent de la promotion d’office (exclus au panel), ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
       // Le ticket du cas le plus serré, aux prix TTC de la caisse.
@@ -3536,8 +3564,10 @@
     const suiv = e < PM_FIN ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
       : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : 'Enregistrer la promotion ›'}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
+        ${W.d.id ? '' : `<div class="pm-f"><span class="db-lab">Remplir un exemple</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => `<button type="button" data-pmexemple="${k}"${pmProduits() ? '' : ' disabled title="lecture des produits du magasin…"'}>${lib}</button>`).join('')}</span></div>`}
         <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
         ${e < PM_FIN ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button>` : ''}</div>
+      ${W.exempleErr ? `<div class="pm-warn" style="margin-bottom:10px">${esc(W.exempleErr)}</div>` : ''}
       <div class="pm-wz" id="pm-wz">${pmStepper(W)}</div>
       <div class="pm-grille"><div class="db-card pm-etape"><div class="pm-step">${pmEtape(W)}</div>${e === 2 || e === 3 ? `<div style="padding:0 20px 16px" id="pm-fixe">${pmFixe(W)}</div>` : ''}<div class="pm-piedw">${prec}${suiv}</div></div>
       <div class="pm-droite" id="pm-droite">${pmDroite(W)}</div></div>
@@ -3641,6 +3671,10 @@
     on('[data-pmcradd]', 'click', () => { d.creneaux.push({ jours: [6, 7], de: '15:00', a: '18:00' }); rendre(); });
     on('[data-pmcrdel]', 'click', el => { d.creneaux.splice(+el.dataset.pmcrdel, 1); rendre(); });
     on('[data-pmj]', 'click', el => { const [i, j] = el.dataset.pmj.split('|').map(Number), c = d.creneaux[i]; c.jours = c.jours.includes(j) ? c.jours.filter(v => v !== j) : c.jours.concat(j).sort((a, b) => a - b); rendre(); });
+    on('[data-pmexemple]', 'click', el => {
+      const x = pmExemple(el.dataset.pmexemple);
+      if (x) { pmOuvrir(x, PM_FIN); } else { W.exempleErr = 'Pas d’exemple possible : aucune catégorie du magasin n’a deux produits avec un prix et un coût de recette.'; rendre(); }
+    });
     on('[data-pmduree]', 'click', el => { const r = pmDuree(d, el.dataset.pmduree); d.du = r.du; d.au = r.au; rendre(); });
     on('[data-pmcr]', 'change', el => { const [i, k] = el.dataset.pmcr.split('|'); d.creneaux[+i][k] = el.value; pmMajDroite(); });
     on('[data-pmrep]', 'change', el => { d.repetable = el.checked; rendre(); });
