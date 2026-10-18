@@ -1168,6 +1168,190 @@ function wr_prod_categorie_pdf(): array
 }
 
 /**
+ * Le 20/80 du catalogue, à imprimer (18/10/2026, demande de Sam : « les 20 % de produits qui font 80 % du CA, et
+ * l'analyse du prix et du volume par magasin »). L'écran envoie ses lignes — les références qui font ensemble 80 % du
+ * chiffre du réseau sur la période du score, la plus grosse d'abord, avec le prix encaissé et les pièces de chaque magasin
+ * (/analyse/prix-volume, même étendue) — et le serveur met en page : le papier dit ce que dit l'écran.
+ */
+
+/**
+ * Par magasin, sur les références du 20/80 : combien il en vend, son prix face au prix réseau (écart moyen, plus cher /
+ * moins cher), son volume à taille égale face aux autres, ce qu'un alignement sur le prix réseau changerait (€/mois), et
+ * celles qu'il ne vend pas. Rend [sid => {...}].
+ */
+function ppSynthese(array $lignes, array $mags): array
+{
+    $out = [];
+    foreach ($mags as $m) {
+        $sid = (string) ($m['id'] ?? '');
+        $o = ['nom' => (string) ($m['nom'] ?? $sid), 'vendues' => 0, 'absentes' => [], 'ecarts' => [], 'rels' => [], 'cher' => 0, 'moinsCher' => 0, 'auMed' => 0.0];
+        foreach ($lignes as $l) {
+            $x = is_array($l['mag'][$sid] ?? null) ? $l['mag'][$sid] : null;
+            if ($x === null || (float) ($x['q'] ?? 0) <= 0) { $o['absentes'][] = (string) ($l['nom'] ?? ''); continue; }
+            $o['vendues']++;
+            $p = isset($x['p']) ? (float) $x['p'] : null; $med = isset($l['med']) ? (float) $l['med'] : null;
+            if ($p !== null && $p > 0 && $med !== null && $med > 0) {
+                $o['ecarts'][] = 100 * ($p / $med - 1);
+                // La règle des prix différents : 2 % ET 5 centimes au moins (en dessous, le bruit des remises).
+                if ($p >= $med * 1.02 && $p - $med >= 0.05) { $o['cher']++; }
+                elseif ($p <= $med * 0.98 && $med - $p >= 0.05) { $o['moinsCher']++; }
+            }
+            if (isset($x['rel']) && is_numeric($x['rel'])) { $o['rels'][] = (float) $x['rel']; }
+            if (isset($x['auMed']) && is_numeric($x['auMed'])) { $o['auMed'] += (float) $x['auMed']; }
+        }
+        $moy = static fn (array $v) => $v === [] ? null : array_sum($v) / count($v);
+        $o['prixIndice'] = $moy($o['ecarts']);
+        $o['volIndice'] = $moy($o['rels']);
+        unset($o['ecarts'], $o['rels']);
+        $out[$sid] = $o;
+    }
+    return $out;
+}
+
+/** Le document HTML du 20/80 (sans le PDF) : séparé de la route pour se tester sans moteur PDF. */
+function ppDoc(array $b): string
+{
+    $lignes = array_values(array_filter((array) ($b['lignes'] ?? []), 'is_array'));
+    $mags = array_values(array_filter((array) ($b['magasins'] ?? []), static fn ($m) => is_array($m) && ($m['id'] ?? '') !== ''));
+    $caTot = (float) ($b['caTotal'] ?? 0);
+    $nTot = (int) ($b['totalRefs'] ?? 0);
+    $seuil = (int) ($b['seuil'] ?? 80);
+    $per = mb_substr(trim((string) ($b['periode'] ?? '')), 0, 80);
+    $perPx = mb_substr(trim((string) ($b['periodePrix'] ?? '')), 0, 80);
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $num = static fn ($v, int $d = 0) => $v === null || $v === '' ? '' : number_format((float) $v, $d, ',', ' ');
+    $eur = static fn ($v, int $d = 2) => $v === null || $v === '' ? '' : number_format((float) $v, $d, ',', ' ') . ' €';
+    // Le signe se lit sur la valeur ARRONDIE : un écart de −0,02 % s'écrit « 0,0 % », pas « −0,0 % ».
+    $pc = static function ($v, int $d = 0): string {
+        if ($v === null) { return '—'; }
+        $r = round((float) $v, $d);
+        return ($r > 0 ? '+' : ($r < 0 ? '−' : '')) . number_format(abs($r), $d, ',', ' ') . ' %';
+    };
+    usort($lignes, static fn ($u, $v) => (float) ($v['ca'] ?? 0) <=> (float) ($u['ca'] ?? 0));
+    $caPar = array_sum(array_map(static fn ($l) => (float) ($l['ca'] ?? 0), $lignes));
+    $mgPond = 0.0; $caMg = 0.0;
+    foreach ($lignes as $l) { if (isset($l['mn']) && is_numeric($l['mn'])) { $mgPond += (float) $l['mn'] * (float) ($l['ca'] ?? 0); $caMg += (float) ($l['ca'] ?? 0); } }
+    $css = '<style>
+      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
+      h2{font-family:Georgia,serif;font-weight:normal;font-size:14pt;margin:5mm 0 1mm}
+      table.t{border-collapse:collapse;width:100%;font-size:7.4pt}
+      table.t thead{display:table-header-group}
+      table.t th{font-size:6.2pt;text-transform:uppercase;letter-spacing:0.04em;color:#8b8177;text-align:right;padding:1mm 1.2mm;border-bottom:0.5pt solid #E5E0D8;vertical-align:bottom}
+      table.t td{padding:1mm 1.2mm;border-bottom:0.4pt solid #F0EDE7;text-align:right;vertical-align:middle}
+      table.t th.l,table.t td.l{text-align:left}
+      table.t th.c,table.t td.c{text-align:center}
+      table.t tr{page-break-inside:avoid}
+      .mu{color:#8b8177}.bas{color:#2F5D8A;font-weight:bold}.haut{color:#b8671a;font-weight:bold}.ok{color:#2d7a3e}.ko{color:#A61E1E}
+      .saut{page-break-before:always}
+    </style>';
+    $logo = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
+    $h = $css . '<div class="doc">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:3mm"><tr>'
+        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:30px">' : '<b>L’Atelier by</b>') . '</td>'
+        . '<td align="right" style="font-size:8pt;color:#7a736a;line-height:1.5"><b style="color:#221E1A;font-size:10pt">Catalogue : le 20/80 du réseau</b><br>' . $e($per) . '</td></tr></table>'
+        . '<div style="font-family:Georgia,serif;font-size:18pt;margin:0 0 0.5mm">Les références qui font ' . $seuil . ' % du chiffre</div>'
+        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2.5mm">Le chiffre d’affaires de chaque référence sur la période du score (' . $e($per) . '), la plus grosse d’abord, jusqu’à '
+        . $seuil . ' % du chiffre du réseau. Puis, pour elles, le prix encaissé et le volume de chaque magasin (' . $e($perPx ?: $per) . ').</div>';
+    $tuile = static fn (string $cap, string $val, string $sous) => '<td style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2mm;text-align:center">'
+        . '<div style="font-size:6.8pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
+        . '<div style="font-family:Georgia,serif;font-size:13pt;color:#221E1A">' . $val . '</div>'
+        . '<div style="font-size:6.5pt;color:#5d564e">' . $sous . '</div></td>';
+    $h .= '<table width="100%" cellpadding="0" cellspacing="3"><tr>'
+        . $tuile('RÉFÉRENCES', count($lignes) . ($nTot > 0 ? ' / ' . $nTot : ''), $nTot > 0 ? $e($num(100 * count($lignes) / $nTot, 0) . ' % des références vendues') : '')
+        . $tuile('LEUR CHIFFRE', $e($eur($caPar, 0)), $caTot > 0 ? $e($num(100 * $caPar / $caTot, 1) . ' % du chiffre du réseau (' . $eur($caTot, 0) . ')') : '')
+        . $tuile('MARGE NETTE', $caMg > 0 ? $e($num($mgPond / $caMg, 0) . ' %') : 'n.d.', 'moyenne pondérée par le chiffre (prix moyen − matière)')
+        . $tuile('MAGASINS', (string) count($mags), 'lus pour le prix et le volume')
+        . '</tr></table>';
+    // La courbe de Pareto : la part cumulée du chiffre selon la part des références (toute la gamme vendue).
+    $cum = array_values(array_filter((array) ($b['courbe'] ?? []), 'is_numeric'));
+    if (count($cum) >= 2) {
+        $W = 250; $H = 70; $n = count($cum) - 1;
+        $pts = implode(' ', array_map(static fn ($v, $i) => round($i * $W / $n, 1) . ',' . round($H - $H * max(0, min(100, (float) $v)) / 100, 1), $cum, array_keys($cum)));
+        $xs = $nTot > 0 ? round($W * count($lignes) / $nTot, 1) : null;
+        $h .= '<table width="100%" style="margin-top:2mm"><tr><td style="width:95mm"><svg width="95mm" height="30mm" viewBox="-2 -4 254 80">'
+            . '<line x1="0" y1="' . round($H - $H * $seuil / 100, 1) . '" x2="250" y2="' . round($H - $H * $seuil / 100, 1) . '" stroke="#E8C9A0" stroke-width="0.8" stroke-dasharray="3,2"/>'
+            . ($xs !== null ? '<line x1="' . $xs . '" y1="0" x2="' . $xs . '" y2="70" stroke="#E8C9A0" stroke-width="0.8" stroke-dasharray="3,2"/>' : '')
+            . '<polyline points="' . $pts . '" fill="none" stroke="#8D1D2C" stroke-width="1.6"/>'
+            . '<line x1="0" y1="70" x2="250" y2="70" stroke="#DED6C9" stroke-width="0.6"/></svg></td>'
+            . '<td style="font-size:7.5pt;color:#5d564e;vertical-align:middle;padding-left:4mm">La courbe : la part cumulée du chiffre (en hauteur) selon la part des références (en largeur), de la plus vendue à la moins vendue. '
+            . ($nTot > 0 ? '<b>' . $num(100 * count($lignes) / $nTot, 0) . ' % des références</b> font ' . $seuil . ' % du chiffre.' : '') . '</td></tr></table>';
+    }
+    // Le tableau du 20/80.
+    $h .= '<table class="t" style="margin-top:2mm"><thead><tr><th>#</th><th class="l">Référence</th><th class="l">Catégorie</th><th>Chiffre</th><th>Part</th><th>Cumul</th><th>Volume</th><th>Prix moyen</th><th>Marge nette</th><th>Score</th><th class="c">Décision</th><th class="c">Oblig.</th></tr></thead><tbody>';
+    $cumul = 0.0; $i = 0;
+    foreach ($lignes as $l) {
+        $i++; $ca = (float) ($l['ca'] ?? 0); $cumul += $ca;
+        $h .= '<tr><td class="mu">' . $i . '</td><td class="l"><b>' . $e($l['nom'] ?? '') . '</b></td><td class="l mu">' . $e($l['cat'] ?? '') . '</td>'
+            . '<td>' . $eur($ca, 0) . '</td><td>' . ($caTot > 0 ? $num(100 * $ca / $caTot, 1) . ' %' : '') . '</td><td class="mu">' . ($caTot > 0 ? $num(100 * $cumul / $caTot, 0) . ' %' : '') . '</td>'
+            . '<td>' . $num($l['vol'] ?? null) . '</td><td>' . $eur($l['prix'] ?? null) . '</td><td>' . (isset($l['mn']) && $l['mn'] !== null ? $num($l['mn']) . ' %' : '—') . '</td>'
+            . '<td>' . $num($l['score'] ?? null) . '</td><td class="c">' . $e($l['decision'] ?? '') . '</td><td class="c">' . (!empty($l['oblig']) ? '✓' : '') . '</td></tr>';
+    }
+    $h .= '</tbody></table>';
+
+    // Le prix et le volume par magasin.
+    if ($mags !== []) {
+        $S = ppSynthese($lignes, $mags);
+        $h .= '<div class="saut"></div><h2>Le prix et le volume, magasin par magasin</h2>'
+            . '<div style="font-size:7.8pt;color:#5d564e;margin-bottom:2mm">Sur les ' . count($lignes) . ' références du 20/80 (' . $e($perPx ?: $per) . '). <b>Prix</b> : le prix encaissé (remises comprises) face au prix réseau, la médiane des magasins. '
+            . '<b>Volume</b> : les pièces vendues pour 10 000 € de chiffre du magasin, face aux autres magasins qui la vendent — à taille égale. <b>Alignement</b> : ce qu’un prix réseau changerait, en € par mois, à volume constant (positif : le magasin vend sous le réseau).</div>'
+            . '<table class="t"><thead><tr><th class="l">Magasin</th><th>Vendues</th><th>Prix face au réseau</th><th>Plus cher · moins cher</th><th>Volume à taille égale</th><th>Alignement</th><th class="l">Ne vend pas</th></tr></thead><tbody>';
+        foreach ($S as $o) {
+            $abs = $o['absentes'];
+            $h .= '<tr><td class="l"><b>' . $e($o['nom']) . '</b></td><td>' . $o['vendues'] . ' / ' . count($lignes) . '</td>'
+                . '<td class="' . ($o['prixIndice'] === null ? 'mu' : ($o['prixIndice'] > 1 ? 'haut' : ($o['prixIndice'] < -1 ? 'bas' : ''))) . '">' . $pc($o['prixIndice'], 1) . '</td>'
+                . '<td>' . $o['cher'] . ' · ' . $o['moinsCher'] . '</td>'
+                . '<td class="' . ($o['volIndice'] === null ? 'mu' : ($o['volIndice'] >= 0 ? 'ok' : 'ko')) . '">' . $pc($o['volIndice']) . '</td>'
+                . '<td>' . ($o['auMed'] != 0.0 ? ($o['auMed'] > 0 ? '+' : '−') . $num(abs($o['auMed'])) . ' €/mois' : '—') . '</td>'
+                . '<td class="l mu" style="font-size:6.8pt">' . ($abs === [] ? '—' : $e(implode(', ', array_slice($abs, 0, 6)) . (count($abs) > 6 ? ' + ' . (count($abs) - 6) : ''))) . '</td></tr>';
+        }
+        $h .= '</tbody></table>';
+        // La grille : une ligne par référence, une colonne par magasin — le prix, puis les pièces et le volume à taille égale.
+        $court = static fn ($m) => (string) ($m['nom'] ?? '');
+        $h .= '<div class="saut"></div><h2>Référence par référence</h2>'
+            . '<div style="font-size:7.8pt;color:#5d564e;margin-bottom:2mm">Dans chaque case : le prix encaissé (<span class="bas">bleu</span> sous le prix réseau, <span class="haut">abricot</span> au-dessus), puis les pièces et le volume à taille égale face aux autres. « — » : pas vendue.</div>'
+            . '<table class="t"><thead><tr><th class="l">Référence</th><th>Prix réseau</th><th>Écart</th>';
+        foreach ($mags as $m) { $h .= '<th class="c">' . $e($court($m)) . '</th>'; }
+        $h .= '</tr></thead><tbody>';
+        foreach ($lignes as $l) {
+            $med = isset($l['med']) ? (float) $l['med'] : null;
+            $h .= '<tr><td class="l"><b>' . $e($l['nom'] ?? '') . '</b></td><td>' . ($med ? $eur($med) : '—') . '</td><td class="mu">' . (isset($l['ecart']) && $l['ecart'] !== null ? $num($l['ecart']) . ' %' : '—') . '</td>';
+            foreach ($mags as $m) {
+                $x = is_array($l['mag'][(string) $m['id']] ?? null) ? $l['mag'][(string) $m['id']] : null;
+                if ($x === null || (float) ($x['q'] ?? 0) <= 0) { $h .= '<td class="c mu">—</td>'; continue; }
+                $p = isset($x['p']) ? (float) $x['p'] : null;
+                $cls = $p !== null && $med ? ($p >= $med * 1.02 && $p - $med >= 0.05 ? 'haut' : ($p <= $med * 0.98 && $med - $p >= 0.05 ? 'bas' : '')) : '';
+                $rel = isset($x['rel']) && is_numeric($x['rel']) ? (float) $x['rel'] : null;
+                $h .= '<td class="c"><span class="' . $cls . '">' . ($p !== null ? $eur($p) : '') . '</span><br><span class="mu" style="font-size:6.4pt">' . $num($x['q']) . ' pcs'
+                    . ($rel !== null ? ' · <span class="' . ($rel >= 0 ? 'ok' : 'ko') . '">' . ($rel >= 0 ? '▲' : '▼') . $num(abs($rel)) . ' %</span>' : '') . '</span></td>';
+            }
+            $h .= '</tr>';
+        }
+        $h .= '</tbody></table>';
+    } else {
+        $h .= '<div style="margin-top:4mm;font-size:8pt;color:#8b8177">Le prix et le volume par magasin n’ont pas pu être lus : seule la liste du 20/80 est imprimée.</div>';
+    }
+    $h .= '</div>';
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Catalogue 20/80</title></head><body>' . $h . '</body></html>';
+}
+
+/**
+ * POST /products/pareto.pdf {periode, periodePrix, seuil, caTotal, totalRefs, courbe: [part cumulée %], magasins: [{id, nom}],
+ * lignes: [{nom, cat, ca, vol, prix, mn, score, decision, oblig, med, ecart, mag: {sid: {p, q, rel, auMed}}}]} — le 20/80.
+ */
+function wr_prod_pareto_pdf(): array
+{
+    $b = body();
+    if (!is_array($b['lignes'] ?? null) || $b['lignes'] === []) { http_response_code(422); return ['error' => 'aucune référence à imprimer']; }
+    $pdf = rapPdfRendu(ppDoc($b), ['magasin' => 'Réseau', 'rapport' => 'Catalogue · le 20/80 · ' . mb_substr(trim((string) ($b['periode'] ?? '')), 0, 60),
+        'genere' => date('d/m/Y à H:i'), 'envoye' => '', 'paysage' => true]);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="catalogue-20-80-' . date('Y-m-d') . '.pdf"');
+    echo $pdf;
+    exit;
+}
+
+/**
  * La deuxième page de la fiche de catégorie : les douze derniers mois clos,
  * une colonne par mois. D'abord le graphique (barres empilées par magasin,
  * total au-dessus), puis le tableau : chaque référence, mois par mois, le

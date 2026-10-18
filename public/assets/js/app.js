@@ -4745,6 +4745,37 @@ class App {
       this.aoPoser(String(p.ref), on ? { must: true, saison: null, qmin: p.qmin || 0 } : { must: false },
         '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
     };
+    // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
+    // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
+    // même étendue (mois clos, trimestre, 12 mois). Le serveur met en page (POST /products/pareto.pdf).
+    common.catPareto = () => {
+      const mPx = { mois: 1, trimestre: 3, annee: 12 }[S.pdFenetre || 'mois'] || 1;
+      const vendues = L.filter(l => l.s && !l.sansVente && (l.s.ca || 0) > 0).sort((a, b) => b.s.ca - a.s.ca);
+      const caT = vendues.reduce((a, l) => a + l.s.ca, 0), n = vendues.length;
+      if (!caT) { this.notify('Aucune vente sur la période : rien à imprimer.'); return; }
+      const top = []; let cum = 0;
+      for (const l of vendues) { top.push(l); cum += l.s.ca; if (cum >= 0.8 * caT) { break; } }
+      let c3 = 0; const cumuls = vendues.map(l => (c3 += l.s.ca) / caT * 100);
+      const courbe = Array.from({ length: 101 }, (_, k) => { const i = Math.round(k / 100 * n) - 1; return i < 0 ? 0 : Math.round(cumuls[Math.min(n - 1, i)] * 10) / 10; });
+      const envoyer = px => {
+        const refs = new Map(((px && px.refs) || []).map(r => [String(r.pid), r]));
+        const corps = { periode: c2.periode || '', periodePrix: px && px.periode ? px.periode : '', seuil: 80, caTotal: caT, totalRefs: n, courbe,
+          magasins: ((px && px.magasins) || []).map(m => ({ id: String(m.id), nom: m.court || court(m.nom) })),
+          lignes: top.map(l => { const r = l.pid ? refs.get(String(l.pid)) : null;
+            return { nom: l.nom, cat: l.catNom, ca: Math.round(l.s.ca), vol: Math.round(l.vol), prix: l.prix, mn: l.mnPct == null ? null : Math.round(l.mnPct),
+              score: l.score == null ? null : Math.round(l.score), decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
+              med: r ? r.med : null, ecart: r ? r.ecart : null, mag: r ? r.mag : {} }; }) };
+        fetch(this.apiBase() + '/products/pareto.pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(corps) })
+          .then(r => { if (!r.ok) { return r.json().catch(() => ({})).then(j => { throw new Error(j.error || ('HTTP ' + r.status)); }); } return r.blob(); })
+          .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
+          .catch(err => this.notify('PDF indisponible : ' + err.message));
+      };
+      const px = (D.pxv || {})[mPx];
+      if (px) { envoyer(px.indispo ? null : px); return; }
+      this.notify('Lecture des prix par magasin…');
+      readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } envoyer(d && !d.indispo ? d : null); })
+        .catch(() => envoyer(null));
+    };
     common.catLignes = F.slice(0, 250).map(l => ({
       k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
       prix: eur(l.prix), mn: l.mnPct == null ? '—' : Math.round(l.mnPct) + ' %', mnCls: l.mnPct == null ? 'mu' : (l.mnPct < 40 ? 'ko' : ''),
