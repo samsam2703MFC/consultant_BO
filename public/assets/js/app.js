@@ -824,7 +824,7 @@ class App {
   fD(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : ''; }
   fDA(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : ''; }   // année RÉELLE de la date, jamais figée
   fDY(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(2, 4) : ''; }
-  pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+  pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:500;';
     if (pct == null || !isFinite(pct)) return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)';
     if (pct >= 1) return base + 'background:rgba(45,122,62,0.12);color:#2d7a3e';
     if (pct >= 0.92) return base + 'background:rgba(193,122,42,0.16);color:#8a5a13';
@@ -834,7 +834,7 @@ class App {
     return { txt: (up ? '▲ +' : '▼ ') + (v * 100).toFixed(1).replace('.', ',') + ' %' + (suffix || ''), st: 'font-size:12px;font-weight:500;color:' + (up ? '#2d7a3e' : '#8D1D2C') }; }
   mix(a, b, t){ const h = x => [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)]; const A = h(a), B = h(b); return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',') + ')'; }
   statutStyle(s){ const m = { 'À lancer': ['#EAE4DC', '#666666'], 'En cours': ['#F2C9A0', '#6b4420'], 'En retard': ['#8D1D2C', '#ffffff'], 'En pause': ['#F4EFE8', '#666666'], 'Terminé': ['#2d7a3e', '#ffffff'], 'Abandonné': ['#666666', '#ffffff'] }[s] || ['#F4EFE8', '#666666'];
-    return 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + m[0] + ';color:' + m[1]; }
+    return 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;background:' + m[0] + ';color:' + m[1]; }
   pStatut(p){ return this.state.statutOv[p.id] || p.statut; }
   pFamille(p){ return this.state.familleOv[p.id] || p.famille || 'Organisation & coûts'; }
   open(){ return this.D.stores.filter(s => s.status === 'Ouvert'); }
@@ -869,7 +869,7 @@ class App {
   taskState(t){ if (t.done) return t.done <= t.due ? 'Livrée à temps' : 'Livrée en retard';
     return t.due < this.M.TODAY ? 'En retard' : 'En cours'; }
   taskPillSt(st){ const m = { 'Livrée à temps': ['rgba(45,122,62,0.12)', '#2d7a3e'], 'Livrée en retard': ['rgba(193,122,42,0.16)', '#8a5a13'], 'En retard': ['rgba(141,29,44,0.12)', '#8D1D2C'], 'En cours': ['var(--color-background-secondary)', '#666666'] }[st];
-    return 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + m[0] + ';color:' + m[1]; }
+    return 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + m[0] + ';color:' + m[1]; }
   tasksFlat(){ const out = []; for (const p of this.D.projects) for (const t of p.taches) out.push({ t, p, st: this.taskState(t), o: this.ownerOf(t) }); return out; }
   ownerStats(){ const map = {}; for (const x of this.tasksFlat()){ const k = x.t.owner.t + ':' + x.t.owner.id; map[k] = map[k] || { done: 0, onTime: 0, lateNow: [], lateEver: 0 };
     if (x.t.done){ map[k].done++; if (x.t.done <= x.t.due) map[k].onTime++; else map[k].lateEver++; }
@@ -1155,7 +1155,7 @@ class App {
       common.ntWho = e => set('who', e.target.value);
       common.ntDue = e => set('due', e.target.value);
       common.ntObjectif = (D.crm[proj.id] && D.crm[proj.id].objectif) || proj.valeurTxt;
-      const cb = act => 'border:0.5px solid ' + (act ? 'var(--color-primary)' : 'var(--color-border-secondary)') + ';cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 16px;border-radius:999px;background:' + (act ? 'var(--color-primary)' : 'transparent') + ';color:' + (act ? '#fff' : 'var(--color-text)');
+      const cb = act => 'border:0.5px solid ' + (act ? 'var(--color-primary)' : 'var(--color-border-secondary)') + ';cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 16px;border-radius:8px;background:' + (act ? 'var(--color-primary)' : 'transparent') + ';color:' + (act ? '#fff' : 'var(--color-text)');
       common.ntCols = ['À faire', 'En cours', 'En retard'].map(c => ({ nom: c, pick: () => set('col', c), st: cb(f.col === c) }));
       const ch = own && own.charge != null ? own.nom + ' est chargé à ' + own.charge + ' % ce trimestre.' : '';
       const nOpen = this.tasksFlat().filter(x => (x.t.owner.t + ':' + x.t.owner.id) === f.who && !x.t.done).length;
@@ -1205,7 +1205,7 @@ class App {
     common.npLevChips = (M.LEVIERS || []).map(l => { const on = S.np && S.np.lev === l.slug;
       return { slug: l.slug, nom: l.nom, desc: l.desc || '', couleur: l.color || '#666',
         st: 'display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:var(--font-ui);'
-          + 'font-size:12.5px;padding:7px 13px;border-radius:999px;'
+          + 'font-size:12.5px;padding:7px 13px;border-radius:8px;'
           + (on ? 'border:1px solid ' + (l.color || '#666') + ';background:' + (l.color || '#666') + '1f;font-weight:500;color:var(--color-text)'
                 : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'),
         dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + (l.color || '#666'),
@@ -1223,7 +1223,7 @@ class App {
         return { np: Object.assign({}, f2, { axe: ax, jalons: jal }) }; }); };
     common.npValeur = npSet('valeur'); common.npValeurTxt = npSet('valeurTxt'); common.npKpi = npSet('kpi');
     const npPrio = p => () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { prio: p }) }));
-    const npPrioSt = p => 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;border-radius:999px;' + (S.np && S.np.prio === p ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)');
+    const npPrioSt = p => 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;border-radius:8px;' + (S.np && S.np.prio === p ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)');
     common.npPrioH = npPrio('Haute'); common.npPrioM = npPrio('Moyenne'); common.npPrioB = npPrio('Basse');
     common.npPrioHSt = npPrioSt('Haute'); common.npPrioMSt = npPrioSt('Moyenne'); common.npPrioBSt = npPrioSt('Basse');
     const npRow = (list, i, k) => e => this.setState(s2 => { const arr = s2.np[list].slice(); arr[i] = Object.assign({}, arr[i], { [k]: e.target.value }); return { np: Object.assign({}, s2.np, { [list]: arr }) }; });
@@ -2115,7 +2115,7 @@ class App {
         mq: mq ? this.fK(mq) : '',
         mqPct: mq && t7 ? this.fP(mq / t7, 1) + ' du théorique' : '',
         mqSt: 'padding:9px 6px 9px 14px;text-align:right;white-space:nowrap;font-weight:500;border-left:0.5px solid var(--color-border-tertiary);color:' + (mq ? 'var(--pkg-abricot)' : 'var(--color-text-muted)'),
-        barSt: 'display:block;height:5px;border-radius:999px;background:var(--pkg-abricot);width:' + (t7 ? Math.min(100, Math.round(100 * mq / t7)) : 0) + '%',
+        barSt: 'display:block;height:5px;border-radius:8px;background:var(--pkg-abricot);width:' + (t7 ? Math.min(100, Math.round(100 * mq / t7)) : 0) + '%',
         select: () => this.setState({ bStore: x2.s.id }) }; });
     common.bResReal = resTheo ? this.fP(resReel / resTheo, 0) : '';
     common.bResRealSt = 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (resTheo ? col(resReel - resTheo) : 'var(--color-text-muted)');
@@ -2385,7 +2385,7 @@ class App {
         attAtt: attAtt == null ? '' : attAtt + ' %',
         attAttSt: attAtt == null ? 'color:var(--color-text-muted)'
           : (attAtt >= 100 ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C')
-            + ';font-weight:600;padding:2px 9px;border-radius:999px;font-size:10.5px',
+            + ';font-weight:600;padding:2px 9px;border-radius:8px;font-size:10.5px',
         source: l.source === 'theorique' ? 'théorique' : (l.source === 'budget' ? '' : 'non encodé'),
         objectif: saisi != null ? saisi : (l.objectif != null ? Math.round(l.objectif) : ''),
         setObjectif: e => { const v = e.target.value;
@@ -4544,7 +4544,7 @@ class App {
       scoreSt: (() => { const s = scores && scores[String(p.ref)];
         if (!s || !common.refVerdict) { return 'color:var(--color-text-muted)'; }
         const v = common.refVerdict(s.score);
-        return 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        return 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:11.5px;font-weight:500;'
           + 'background:' + v[2] + ';color:' + v[1];
       })(),
       must: !!p.must, qmin: p.qmin || 0,
@@ -5676,7 +5676,7 @@ class App {
       return {
         nom: c2.nom, quoi: c2.quoi,
         etat: txt,
-        etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+        etatSt: 'font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;white-space:nowrap;background:'
           + coul + '1f;color:' + coul,
         succes: c2.dernierSucces ? this.fD(c2.dernierSucces.slice(0, 10)) + ' à ' + c2.dernierSucces.slice(11, 16) : '',
         appel: c2.dernierAppel ? this.fD(c2.dernierAppel.slice(0, 10)) + ' à ' + c2.dernierAppel.slice(11, 16) : '',
@@ -6524,7 +6524,7 @@ class App {
         journal: (D2.journal || []).map(e2 => ({
           quand: e2.quand, type: e2.type,
           etat: e2.type === 'envoye' ? 'Envoyée' : 'Échec',
-          etatSt: 'font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;'
+          etatSt: 'font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:8px;'
             + (e2.type === 'envoye' ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C'),
           destinataire: e2.destinataire || '', detail: e2.detail || '', sujet: e2.sujet || '',
         })),
@@ -6612,7 +6612,7 @@ class App {
       // recopié.
       iconePath: t.iconePath || (t.icone && parIcone[t.icone] ? parIcone[t.icone].path : null),
       levier: t.levier || '', levierCouleur: t.levierCouleur || null,
-      levierSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+      levierSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;white-space:nowrap;background:'
         + (t.levierCouleur || '#78746e') + '1f;color:' + (t.levierCouleur || '#666666'),
       actif: t.actif, nCampagnes: t.nCampagnes,
       premier: i === 0, dernier: i === (mk.types || []).length - 1,
@@ -10772,7 +10772,7 @@ class App {
             pct: lus ? (part * 100).toFixed(0) + ' %' : '',
             // Une part non nulle garde au moins un filet visible : à 1 % sur
             // 200 avis, une barre à 1 px se confond avec l'absence de barre.
-            jaugeSt: 'height:7px;border-radius:999px;background:' + this.COUL_ETOILE[l.note]
+            jaugeSt: 'height:7px;border-radius:8px;background:' + this.COUL_ETOILE[l.note]
               + ';width:' + (l.n === 0 ? 0 : Math.max(2, part * 100)) + '%',
             etoileSt: 'font-size:11px;color:' + this.COUL_ETOILE[l.note] + ';line-height:1',
           };
@@ -10823,7 +10823,7 @@ class App {
         synchro: m.synchro ? 'maj ' + this.fD(m.synchro.slice(0, 10)) : '',
         hasUrl: !!m.url, url: m.url || '#',
         badge: sans ? 'Sans note' : (ok ? 'À la cible' : (m.ecart > 0 ? '+' : '') + fN(m.ecart)),
-        badgeSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+        badgeSt: 'font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;white-space:nowrap;background:'
           + (sans ? 'var(--color-background-secondary);color:var(--color-text-muted)'
             : (ok ? 'rgba(45,122,62,.12);color:#2d7a3e' : 'rgba(141,29,44,.10);color:#8D1D2C')),
         // La phrase que le CEO cherche : combien d'avis parfaits pour revenir à
@@ -10857,7 +10857,7 @@ class App {
           // ne rend pas les réponses du magasin — écrire « Sans réponse »
           // partout serait une affirmation fausse, pas une information.
           repondu: a.repondu === true,
-          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:1px 7px;white-space:nowrap;background:rgba(45,122,62,.10);color:#2d7a3e',
+          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:8px;padding:1px 7px;white-space:nowrap;background:rgba(45,122,62,.10);color:#2d7a3e',
           reponduTxt: 'Répondu',
         })),
       };
@@ -11829,7 +11829,7 @@ class App {
       return c2 !== 0 ? c2 * sdir : b.score - a.score;
     });
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
-    const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
+    const bar = (v, col) => 'display:block;height:5px;border-radius:8px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
     const eur = v => v == null ? '' : v.toFixed(2).replace('.', ',') + ' €';
     // La ligne, à plat : une seule ligne par référence, aucun graphique — la
     // couleur ne reste que sur trois signaux (taux de marge, perte, score).
@@ -12070,7 +12070,7 @@ class App {
             : (m.taux >= 0.10 ? 'color:#8D1D2C;font-weight:600' : m.taux >= 0.05 ? 'color:#8a5a13;font-weight:600' : 'color:#2d7a3e;font-weight:500'),
           detail: m.taux == null ? 'Référence non proposée ici' : ((m.jete || 0).toLocaleString('fr-BE') + ' jeté(s) / ' + (m.vendu || 0).toLocaleString('fr-BE') + ' vendu(s)'),
           motif: m.motif || '', caPerdu: m.caPerdu != null ? this.fE(m.caPerdu) : '',
-          barSt: 'display:block;height:5px;border-radius:999px;background:' + (m.taux == null ? 'var(--color-border-secondary)' : m.taux >= 0.10 ? '#8D1D2C' : m.taux >= 0.05 ? '#C17A2A' : '#2d7a3e')
+          barSt: 'display:block;height:5px;border-radius:8px;background:' + (m.taux == null ? 'var(--color-border-secondary)' : m.taux >= 0.10 ? '#8D1D2C' : m.taux >= 0.05 ? '#C17A2A' : '#2d7a3e')
             + ';width:' + Math.max(m.taux ? 3 : 0, Math.min(100, (m.taux || 0) * 100 * 5)) + '%',
         })),
         note: avecTaux.length > 1
@@ -12098,12 +12098,12 @@ class App {
     // « null % » : le mot « null » n'est pas une valeur, et une pastille verte
     // sur une donnée manquante se lit comme une performance.
     const pct = v => (v == null || !isFinite(v)) ? '' : String(v).replace('.', ',') + ' %';
-    const rat = (v, seuil) => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+    const rat = (v, seuil) => { const base = 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:500;';
       if (v == null || !isFinite(v)) { return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
       return v > seuil ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v > seuil - 1.5 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
     const seuilEtp = this.seuilCaEtp();
     common.mgSeuilEtp = this.fE(seuilEtp);
-    const caEtpPill = v => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+    const caEtpPill = v => { const base = 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:500;';
       return v < seuilEtp ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v < seuilEtp * 1.08 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
     const rows = this.open().map(st => { const r = st.perf[E][MI], n1 = st.perf[E - 1][MI];
       const mp26 = r.marge / r.ca, mp25 = n1.marge / n1.ca; const tv = this.trend(mp26, mp25);
@@ -12117,7 +12117,7 @@ class App {
         food: pct(r.food), foodSt: rat(r.food, s.f), labour: pct(r.labour), labourSt: rat(r.labour, s.l), ov: pct(r.overhead), ovSt: rat(r.overhead, s.o),
         caEtp: caEtp == null ? '' : this.fE(caEtp),
         etp: etp == null ? 'ETP inconnu' : (etp.toFixed(1).replace('.', ',') + ' ETP' + (r.heures != null ? ' · ' + Math.round(r.heures) + ' h' : '')),
-        caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),
+        caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),
         statut: nAl === 0 ? 'OK' : nAl + (nAl > 1 ? ' leviers à traiter' : ' levier à traiter') + (st.risk ? ' · sous-perf. 3 mois consécutifs' : '') }; });
     rows.sort((a, b) => b._mp - a._mp);
     common.mgRows = rows;
@@ -12707,7 +12707,7 @@ class App {
     const mkRep = r => ({ nom: r.nom, aide: r.aide || '', nb: String(r.nb),
       pct: r.pct + ' %', txt: r.nb + ' · ' + r.pct + ' %',
       dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + r.couleur,
-      barSt: 'display:block;height:5px;border-radius:999px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
+      barSt: 'display:block;height:5px;border-radius:8px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
     // Le filtre d'état, le même pour la liste et pour les photos.
     const garde = t =>
         common.ctrlOnly === 'tous' ? true
@@ -12745,7 +12745,7 @@ class App {
                  + (t.faitePar ? ' · ' + t.faitePar : ''))
               : '',
             btnLabel: t.valide ? 'Renoter' : 'Noter',
-            btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
+            btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
             toggle: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
             open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
           }));
@@ -12837,7 +12837,7 @@ class App {
             pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: lv.n }) })) }; }),
         verdict: (() => { const n2 = dt.note || this.ctrlNoteDeduite(dt.rep);
           return n2 == null ? '' : (n2 >= ((M.SIGNAL || {}).seuil || 4) ? 'Conforme' : 'Non conforme'); })(),
-        verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
           + (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
         commentRequis: (dt.note || this.ctrlNoteDeduite(dt.rep) || 99) < ((M.SIGNAL || {}).seuil || 4),
         produit: d.produit || '', photoRef: d.photoRef || null,
@@ -13721,7 +13721,7 @@ class App {
         .concat(p.taches.map(t => ({ k: p.id + ':' + t.id, type: 'Tâche', nom: t.nom, due: t.due, done: t.done, obj: t })))
         .sort((a, b) => a.due < b.due ? -1 : 1);
       const nReste = steps.filter(e => !e.done).length;
-      return { nom: p.nom, levs: p.leviers, fin: this.fD(p.fin), av: Math.round(av * 100) + ' %', avSt: 'height:100%;border-radius:999px;background:var(--color-primary);width:' + (av * 100) + '%',
+      return { nom: p.nom, levs: p.leviers, fin: this.fD(p.fin), av: Math.round(av * 100) + ' %', avSt: 'height:100%;border-radius:8px;background:var(--color-primary);width:' + (av * 100) + '%',
         statut: st, statutSt: this.statutStyle(st),
         alerte: st === 'En retard' ? 'échéance dépassée' : (lateT ? lateT + ' tâche(s) en retard' : false),
         ouvert, rienReste: ouvert && steps.length === 0,
@@ -13785,7 +13785,7 @@ class App {
       st: 'border:0.5px solid ' + (S.suiviPeriode === v ? 'var(--color-primary)' : 'var(--color-border-secondary)')
         + ';background:' + (S.suiviPeriode === v ? 'var(--color-primary)' : 'transparent')
         + ';color:' + (S.suiviPeriode === v ? '#fff' : 'var(--color-text)')
-        + ';border-radius:999px;padding:5px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer' }));
+        + ';border-radius:8px;padding:5px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer' }));
 
     const d = S.suiviData;
     if (d === null) { this.chargerSuivi(S.suiviPeriode); common.suChargement = true; return; }
@@ -13804,7 +13804,7 @@ class App {
     const tot = Object.values(d.repartition).reduce((a, b) => a + b, 0) || 1;
     common.suBarres = [5, 4, 3, 2, 1].map(n => { const l = niv(n), v = d.repartition[n] || 0;
       return { nom: l.nom, n: String(v), pct: Math.round(v / tot * 100),
-        barSt: 'height:7px;border-radius:999px;background:' + l.couleur + ';width:' + Math.round(v / tot * 100) + '%',
+        barSt: 'height:7px;border-radius:8px;background:' + l.couleur + ';width:' + Math.round(v / tot * 100) + '%',
         libSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }; });
 
     common.suGens = d.parIntervenant.map(x => ({
@@ -13840,9 +13840,9 @@ class App {
         aCommentaire: (g.comment || '').trim() !== '',
         age: jours(g.creeLe), ouvert: g.ouvert,
         lvlTxt: l.nom, lvlNum: String(g.note),
-        lvlSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur,
+        lvlSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur,
         lvlNumSt: 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;background:' + l.couleur,
-        etat, etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;background:' + etatC + '1f;color:' + etatC,
+        etat, etatSt: 'font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;background:' + etatC + '1f;color:' + etatC,
         rowSt: 'display:flex;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary)'
           + (g.ouvert ? ';border-left:3px solid ' + l.couleur : ''),
         note: brouillon, majNote,
@@ -13918,7 +13918,7 @@ class App {
         gravSt: 'font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-background-secondary);font-family:var(--font-ui);color:' + gc(r.gravite) + ';font-weight:600',
         rowSt: 'border-top:0.5px solid var(--color-border-tertiary);vertical-align:top' + (r.actif ? '' : ';opacity:0.55'),
         actifTxt: r.actif ? 'Active' : 'Inactive',
-        actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;border:none;font-family:var(--font-ui);'
+        actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:8px;padding:3px 9px;white-space:nowrap;border:none;font-family:var(--font-ui);'
           + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         set: k => e => setDraft(d => { d[r.i][k] = e.target.value; }),
         toggle: () => setDraft(d => { d[r.i].actif = !d[r.i].actif; }),
@@ -13961,7 +13961,7 @@ class App {
         url, placeholder: 'https://www.facebook.com/…', setUrl: setP(cle, 'pageUrl'), setFranchise: setP(cle, 'franchise'),
         modifie: !!pDraft[cle],
         etat: statut === 'connectee' ? 'Connectée' : statut === 'erreur' ? 'Erreur' : statut === 'absente' ? 'Pas de page' : 'À connecter',
-        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;'
+        etatSt: 'font-size:10px;font-weight:500;border-radius:8px;padding:3px 9px;white-space:nowrap;'
           + (statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         detail: base ? (base.erreur || (base.pageId ? 'id ' + base.pageId + (base.derniereSync ? ' · lue le ' + String(base.derniereSync).slice(0, 16) : '') : '')) : '' };
     };
@@ -14033,7 +14033,7 @@ class App {
     const motRun = s3 => ({ envoye: 'envoyé', vide: 'sans matière', erreur: 'erreur' })[s3] || (s3 ? 'généré' : '');
     // « 2026-08-21 17:28 » → « 21/08 à 17:28 », l'écriture du reste du cockpit.
     const dateRun = t => t ? (this.fD(String(t).slice(0, 10)) + ' à ' + String(t).slice(11, 16)) : '';
-    const stRun = s3 => 'display:inline-block;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:600;'
+    const stRun = s3 => 'display:inline-block;padding:1px 8px;border-radius:8px;font-size:10.5px;font-weight:600;'
       + (s3 === 'envoye' ? 'background:rgba(45,122,62,0.10);color:#2d7a3e'
         : s3 === 'vide' ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
         : s3 === 'erreur' ? 'background:rgba(141,29,44,0.12);color:#8D1D2C'
@@ -14052,7 +14052,7 @@ class App {
           freq: freqLabel(r) + (r.parMagasin ? ' · un chapitre par magasin' : '')
             + (r.envoiMode === 'par-magasin' ? ' · un email par magasin' : ''),
           actifTxt: r.actif ? 'Actif' : 'Inactif',
-          actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;'
+          actifSt: 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;'
             + (r.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
           toggleActif: () => this.api('PUT', '/rapports/' + r.id, { actif: !r.actif }).then(() => this.rapCharge(true)),
           dernier: r.dernier ? ('Dernier : ' + dateRun(r.dernier.le)) : 'Jamais généré',
@@ -14634,7 +14634,7 @@ class App {
     common.logTout = logTout;
     common.logPlier = rows.length > LOG_N ? () => this.setState({ logTout: !logTout }) : null;
     common.logRows = visibles.map(l => { const c = tCl[l.type] || ['var(--color-background-secondary)', '#666666'];
-      return { ts: l.ts, qui: l.qui, type: l.type, projet: l.projet, msg: l.msg, typeSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;background:' + c[0] + ';color:' + c[1] }; });
+      return { ts: l.ts, qui: l.qui, type: l.type, projet: l.projet, msg: l.msg, typeSt: 'display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;background:' + c[0] + ';color:' + c[1] }; });
 
     // --- e-mails partis du cockpit : rapports et commandes fournisseur,
     //     réunis par /journal/mails. Chargé à l'ouverture de l'écran.
@@ -14660,9 +14660,9 @@ class App {
       dest: m2.dest || '', detail: m2.detail || '',
       // Le sort de l'envoi d'abord : un e-mail en échec se voit sans lire.
       etat: m2.ok ? 'Envoyé' : 'Échec',
-      etatSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
+      etatSt: 'display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;'
         + (m2.ok ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
-      srcSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
+      srcSt: 'display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;'
         + (m2.source === 'Achat' ? 'background:rgba(193,122,42,0.16);color:#8a5a13' : 'background:rgba(99,102,241,0.12);color:#4649c4'),
     }));
     common.exportCsv = () => { const csv = 'horodatage;auteur;type;projet;evenement\n' + rows.map(l => [l.ts, l.qui, l.type, l.projet, '"' + l.msg.replace(/"/g, '""') + '"'].join(';')).join('\n');
@@ -14684,7 +14684,7 @@ class App {
     common.paPassPlaceholder = paSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte';
     common.paEtat = paSt.configure ? 'Compte configuré' : 'Compte non configuré';
     common.paEtatCourt = paSt.configure ? '' : 'compte API à configurer';
-    common.paEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+    common.paEtatSt = 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
       + (paSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
     common.paMsg = pa.msg || '';
     common.paMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (pa.ok ? '#2d7a3e' : '#8D1D2C');
@@ -14723,7 +14723,7 @@ class App {
     common.erPass = er.password || '';
     common.erPassPlaceholder = erSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte admin';
     common.erEtat = erSt.configure ? 'Compte configuré' : 'Compte non configuré';
-    common.erEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+    common.erEtatSt = 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
       + (erSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
     common.erMsg = er.msg || '';
     common.erMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (er.ok ? '#2d7a3e' : '#8D1D2C');
@@ -15004,7 +15004,7 @@ class App {
         ? (smSt.source === 'crm' ? 'Réglages repris du CRM candidat · ' : 'Configuré · ') + (smSt.hote || '')
           + (smSt.motDePasseDefini ? ' · mot de passe en place' : ' · sans authentification')
         : 'Non configuré',
-      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+      etatSt: 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
         + (smSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
       setHote: smSet('hote'), setPort: smSet('port'), setSecurite: smSet('securite'),
       setUtilisateur: smSet('utilisateur'), setMdp: smSet('motDePasse'),
@@ -15057,7 +15057,7 @@ class App {
         sortie: k.sortie || 'tableau',
         setSortie: e => kMaj(k.id, { sortie: e.target.value }, 'Sortie de « ' + k.nom + ' » : ' + e.target.value),
         actif: !!k.actif, actifTxt: k.actif ? 'Actif' : 'Inactif',
-        actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap;'
+        actifSt: 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap;'
           + (k.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         toggle: () => kMaj(k.id, { actif: !k.actif }, '« ' + k.nom + ' » ' + (k.actif ? 'désactivé' : 'activé')),
         supprimable: !!k.supprimable,
@@ -15107,7 +15107,7 @@ class App {
     common.cad = {
       chargement: !cdD,
       actifTxt: cdReg.actif === false ? 'Désactivée' : 'Activée',
-      actifSt: 'display:inline-block;padding:3px 11px;border-radius:999px;font-size:11.5px;font-weight:500;cursor:pointer;'
+      actifSt: 'display:inline-block;padding:3px 11px;border-radius:8px;font-size:11.5px;font-weight:500;cursor:pointer;'
         + (cdReg.actif === false ? 'background:var(--color-background-secondary);color:var(--color-text-muted)' : 'background:rgba(45,122,62,0.12);color:#2d7a3e'),
       toggle: () => cdMaj({ actif: cdReg.actif === false }, 'Cadence dynamique ' + (cdReg.actif === false ? 'activée' : 'désactivée')),
       serie: cdReg.serie != null ? String(cdReg.serie) : '5',
@@ -15145,7 +15145,7 @@ class App {
             : l.serieEnCours ? ' · série ' + l.serieEnCours + '/' + (cdReg.serie || 5) : ''),
           prochain: cdDate(l.prochain) + (l.du ? ' — dû' : ''), du: !!l.du,
           mouvTxt: mTxt + (l.mouvementDate ? ' (' + cdDate(l.mouvementDate) + ')' : ''),
-          mouvSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;' + mSt };
+          mouvSt: 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:10.5px;font-weight:600;white-space:nowrap;' + mSt };
       }),
       apiNote: (cdD && cdD.apiPost && cdD.apiPost.note) || '',
       apiPre: cdD && cdD.apiPost
