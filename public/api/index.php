@@ -403,6 +403,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/primes-promos/sonde'   => ep_primes_promos_sonde(),
             $path === '/ventes/promos/sonde-fiche'    => ep_promos_sonde_fiche(),
             $path === '/ventes/promos/sonde-portions' => ep_promos_sonde_portions(),
+            $path === '/ventes/promos/sonde-commandes' => ep_promos_sonde_commandes(),
             $path === '/ventes/primes-reference'      => ep_primes_reference(),
             $path === '/ventes/primes-moyennes'       => ep_primes_moyennes(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),

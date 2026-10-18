@@ -2291,6 +2291,10 @@ enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotio
   ticket est du webshop quand une commande du panel (`coCommandes`, ligne `tx` = `id_transaction`) porte sa transaction :
   click & collect ou livraison selon la commande ; sinon comptoir. Une commande payée en ligne n'a pas de ticket :
   comptée dans `enLigne`, ses promotions ne se lisent pas encore. `commandes: false` = commandes illisibles, tout au comptoir.
+- La sonde des commandes payées en ligne (18/10/2026, lecture seule) : `GET /ventes/promos/sonde-commandes?shop=4[&jours=14]`
+  rend les comptes (commandes, webshop, payées en ligne, encaissées au magasin), les clés d'une commande et de ses lignes,
+  les chemins des remises et du paiement, deux commandes payées en ligne en exemple et ce que rendent les routes de détail
+  d'une commande (consultant, admin) — rien de nominatif (noms, e-mails, téléphones, adresses, notes retirés, `pmSondePropre`).
 - Le dashboard (onglet Promotions, « Où les promotions sont utilisées ») : une barre par promotion, en nombre ou en
   remise €, son coefficient de marge (le bouton de la liste), et le jour par jour, comptoir en bas, webshop au-dessus.
 - Une promotion vaut pour le magasin qui l'écrit, lui seul (17/10/2026) : `shops` vaut `[shop]`, un `shops` envoyé est ignoré,
