@@ -2974,11 +2974,12 @@
   }
 
   /* --- Promotions du magasin (17/10/2026) -----------------------------------------------------------------
-   * L'onglet Promotions : la liste (celles du panel qui touchent le magasin, marque comprise, et les demandes du
-   * magasin), un sélecteur de statut et de sorte, et l'assistant « X achetés + Y » en six étapes, calqué sur le
-   * formulaire « Buy X Get Y » du panel. Le coefficient du lot (prix payé HT ÷ coût matière, le cas le plus
-   * serré, la pièce la moins chère remisée) se recalcule à chaque changement avec les prix et coûts de recette du
-   * magasin ; le serveur refait le calcul à l'envoi, dans chaque magasin couvert, et refuse sous ×2.
+   * L'onglet Promotions : la liste, toute lue au panel (18/10/2026, plus de copie au cockpit) — celles de la marque
+   * qui touchent le magasin, et celles du magasin (les promotions du panel réservées à lui seul : actives = en caisse,
+   * inactives = brouillons) —, un sélecteur de statut et de sorte, et l'assistant « X achetés + Y », calqué sur le
+   * formulaire « Buy X Get Y » du panel, qui écrit au panel. Le coefficient du lot (prix payé HT ÷ coût matière, le cas
+   * le plus serré, la pièce la moins chère remisée) se recalcule à chaque changement avec les prix et coûts de recette
+   * du magasin ; le serveur refait le calcul à l'envoi ; ×2 est un repère, il ne bloque pas.
    *   ../api/cockpit/exploitation/promos-magasin?shop=       (la liste, les règles)
    *   ../api/cockpit/exploitation/promos-magasin/produits?shop= (prix HT, TVA, catégorie, coût de recette du magasin,
    *                                                              sinon du réseau — la liste que le serveur chiffre à l'envoi)
@@ -2991,12 +2992,12 @@
   const cheminPMC = () => '/exploitation/promos-magasin/canaux?shop=' + encodeURIComponent(S.shop) + '&jours=' + S.pmCanJ;
   const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
-  // Plus de validation (17/10/2026) : enregistrée, elle part au panel aussitôt (`en_caisse`) ; `validee` = enregistrée,
-  // le panel ne l'a pas encore prise (l'erreur est dite, la marque la reprend).
-  const PM_ETAT = { brouillon: ['Brouillon', 'b'], refusee: ['Renvoyée par la marque', 'r'], validee: ['Enregistrée · pas encore en caisse', 'a'], en_caisse: ['En caisse', 'ok'],
+  // Le panel seul (18/10/2026) : une promotion du magasin est une promotion du panel réservée au magasin — active, elle est
+  // en caisse (`en_caisse`) ; inactive, c'est un brouillon. Le cockpit n'en garde rien.
+  const PM_ETAT = { brouillon: ['Brouillon · inactive au panel', 'b'], en_caisse: ['En caisse', 'ok'],
     active: ['En caisse', 'ok'], a_venir: ['À venir', 'a'], terminee: ['Terminée', 'b'], inactive: ['Inactive au panel', 'b'] };
-  const PM_FILTRES = [['actives', 'Actives', e => e === 'active' || e === 'en_caisse'], ['enregistrees', 'Enregistrées', e => e === 'validee'], ['a_venir', 'À venir', e => e === 'a_venir'],
-    ['brouillons', 'Brouillons', e => e === 'brouillon' || e === 'refusee'], ['terminees', 'Terminées', e => e === 'terminee' || e === 'inactive'], ['toutes', 'Toutes', () => true]];
+  const PM_FILTRES = [['actives', 'Actives', e => e === 'active' || e === 'en_caisse'], ['a_venir', 'À venir', e => e === 'a_venir'],
+    ['brouillons', 'Brouillons', e => e === 'brouillon'], ['terminees', 'Terminées', e => e === 'terminee' || e === 'inactive'], ['toutes', 'Toutes', () => true]];
   // Le magasin est celui du dashboard (?shop=), lui seul (17/10/2026) : plus d'étape « Magasins ».
   const PM_ETAPES = ['Nom', 'Ce qu’on achète (X)', 'Ce qu’on reçoit (Y)', 'Période', 'Vérifier et enregistrer'];
   const PM_FIN = PM_ETAPES.length;
@@ -3118,19 +3119,29 @@
   }
   const pmJours = d => d.du && d.au ? Math.round((new Date(d.au.slice(0, 10) + 'T12:00:00') - new Date(d.du.slice(0, 10) + 'T12:00:00')) / 86400000) + 1 : null;
 
-  /* La liste : les promotions du panel et les demandes du magasin, rangées par état. */
+  /**
+   * Une promotion du magasin relue au panel porte les numéros de ses produits et catégories, pas toujours leurs noms :
+   * ceux de la liste du magasin les complètent.
+   */
+  function pmNommer(d) {
+    const prods = pmProduits() || [], np = new Map(prods.map(p => [+p.id, p.nom])), nc = new Map(pmCategories().map(c => [+c.id, c.nom]));
+    const cote = c => c && Object.assign({}, c, { cats: (c.cats || []).map(o => ({ id: o.id, nom: o.nom || nc.get(+o.id) || '' })),
+      prods: (c.prods || []).map(o => ({ id: o.id, nom: o.nom || np.get(+o.id) || '' })), exclus: (c.exclus || []).map(o => ({ id: o.id, nom: o.nom || np.get(+o.id) || '' })) });
+    return Object.assign({}, d, { x: cote(d.x), y: cote(d.y) });
+  }
+  /* La liste : les promotions de la marque et celles du magasin, toutes lues au panel, rangées par état. */
   function pmLignes() {
     const P = S.aux[clePM()];
     if (!P) { return []; }
     const m = pmMaint(), L = [];
     (P.panel || []).forEach(r => L.push({ src: 'panel', id: r.id, nom: r.nom, texte: esc(r.texte || ''), sorte: r.type === 'bundle' ? 'bundle' : 'xy', du: r.du, au: r.au, cren: '—', etat: r.etat,
       qui: r.reseau ? 'marque · tout le réseau' : 'marque' + (r.magasins > 1 ? ' · ' + r.magasins + ' magasins' : ''), coef: null, r }));
-    (P.demandes || []).forEach(d => {
-      const fini = d.au && d.au < m && d.statut !== 'brouillon' && d.statut !== 'refusee';
+    (P.demandes || []).map(pmNommer).forEach(d => {
+      const fini = d.au && d.au < m && d.statut !== 'brouillon';
       L.push({ src: 'mag', id: d.id, nom: d.nom || 'Sans nom', texte: pmPhrase(pmEffectif(pmDepuis(d).x), Object.assign(pmEffectif(pmDepuis(d).y), { type: d.y.type, valeur: d.y.valeur })), sorte: 'xy', du: d.du, au: d.au,
-        cren: pmCreneauxTxt(d.creneaux), etat: fini ? 'terminee' : d.statut, qui: 'magasin' + ((d.shops || []).length > 1 ? ' · ' + d.shops.length + ' magasins' : ''), coef: d.coef ? d.coef.lot : null, d });
+        cren: pmCreneauxTxt(d.creneaux), etat: fini ? 'terminee' : d.statut, qui: 'magasin', coef: null, d });
     });
-    const rang = { active: 0, en_caisse: 0, validee: 1, a_venir: 2, refusee: 3, brouillon: 4, inactive: 5, terminee: 6 };
+    const rang = { active: 0, en_caisse: 0, a_venir: 2, brouillon: 4, inactive: 5, terminee: 6 };
     return L.sort((a, b) => (rang[a.etat] ?? 9) - (rang[b.etat] ?? 9) || String(a.du || '').localeCompare(String(b.du || '')));
   }
   function rendPromos() {
@@ -3163,24 +3174,19 @@
         if (l.src === 'mag') {
           // Modifier et dupliquer partout où c'est possible (18/10/2026) : en caisse, les changements partent au panel.
           const dup = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`;
-          if (l.etat === 'brouillon' || l.etat === 'refusee') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Reprendre</button>${dup}<button class="db-btn" data-pmdel="${esc(l.id)}">Supprimer</button>`; }
-          else if (l.etat === 'validee') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Modifier</button>${dup}<button class="db-btn" data-pmdel="${esc(l.id)}">Retirer</button>`; }
+          if (l.etat === 'brouillon') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Reprendre</button>${dup}<button class="db-btn" data-pmdel="${esc(l.id)}">Supprimer</button>`; }
           else if (l.etat === 'en_caisse') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}" title="les changements partent au panel, sur la même promotion">Modifier</button>${dup}`; }
           else { act = dup; }
         } else if (l.sorte === 'xy') { act = `<button class="db-btn" data-pmdup="panel:${esc(l.id)}" title="en faire une promotion du magasin">Dupliquer</button>`; }
-        const msg = (l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '')
-          + (l.d && l.d.motif && (l.etat === 'validee' || l.etat === 'en_caisse') ? `<div class="db-mini" style="margin-top:3px">${esc(l.d.motif.charAt(0).toUpperCase() + l.d.motif.slice(1))}</div>` : '')
-          + (l.d && l.d.panelErreur && l.etat === 'validee' ? `<div class="pm-msg">Pas encore en caisse : ${esc(l.d.panelErreur)}</div>` : '')
-          + (l.d && l.d.panelId && l.etat === 'en_caisse' ? `<div class="db-mini" style="margin-top:3px">au panel : promotion n° ${esc(l.d.panelId)}</div>` : '')
-          + (l.d && (l.d.exclusAuto || []).length ? `<div class="db-mini" style="margin-top:3px">sortis d’office (sans coût ou sans prix) : ${esc(l.d.exclusAuto.slice(0, 4).join(', '))}${l.d.exclusAuto.length > 4 ? '…' : ''}</div>` : '');
+        const msg = l.d && l.d.panelId ? `<div class="db-mini" style="margin-top:3px">au panel : promotion n° ${esc(l.d.panelId)}${l.etat === 'brouillon' ? ', inactive' : ''}</div>` : '';
         return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
           <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
           <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
           <td class="n">${pmCoefCellule(l, Rg.coefMin || 2)}</td><td class="pm-act">${act}</td></tr>`;
       }).join('')}</tbody></table></div>`;
     }
-    h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
+    h += `<div class="pm-pied db-mini">Tout se lit au panel, rien n’est gardé ailleurs${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''} : les promotions du magasin sont celles du panel réservées à ce seul magasin, les autres sont celles de la marque (elles se dupliquent pour en faire une du magasin). « Actives » : en caisse aujourd’hui.
+      Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.</div></div>`;
     return h;
   }
@@ -3526,7 +3532,7 @@
     }
     if (e === 4) {
       const n = pmJours(d), dl = v => v ? v.replace(' ', 'T') : '';
-      const autres = ((S.aux[clePM()] || {}).demandes || []).filter(o => o.id !== d.id && ['a_valider', 'validee', 'en_caisse'].includes(o.statut) && d.du && d.au && o.du < d.au && o.au > d.du);
+      const autres = ((S.aux[clePM()] || {}).demandes || []).filter(o => o.id !== d.id && o.statut === 'en_caisse' && d.du && d.au && o.du < d.au && o.au > d.du);
       return tete('règles d’application et période de validité', 'Période') + `<div class="pm-row" style="grid-template-columns:1fr 1fr"><div class="pm-f"><label>Active à partir du</label><input class="pm-in" type="datetime-local" value="${dl(d.du)}" data-pmf="du"></div>
         <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire, ${pmMaxTxt(R.joursMax)} au plus</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
         <div class="pm-durees"><span class="db-lab">Durée rapide</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => { const r = pmDuree(d, k); return `<button type="button" class="${r.du === d.du && r.au === d.au ? 'on' : ''}" data-pmduree="${k}" title="du ${esc(pmQuand(r.du))} au ${esc(pmQuand(r.au))}">${lib}</button>`; }).join('')}</span><span class="db-mini">à partir du début choisi, demain sinon</span></div>
@@ -3565,11 +3571,11 @@
     const W = S.pmW, e = W.etape;
     const prec = e > 1 ? `<button class="db-btn pm-gros" data-pmet="${e - 1}">‹ Retour : ${esc(PM_ETAPES[e - 2].toLowerCase())}</button>` : '<span></span>';
     const suiv = e < PM_FIN ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
-      : `<span class="pm-boutons">${W.enCaisse ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : 'Enregistrer la promotion ›')}</button></span>`;
+      : `<span class="pm-boutons">${W.enCaisse ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : 'Enregistrer la promotion ›')}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
         ${W.d.id ? '' : `<div class="pm-f"><span class="db-lab">Remplir un exemple</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => `<button type="button" data-pmexemple="${k}"${pmProduits() ? '' : ' disabled title="lecture des produits du magasin…"'}>${lib}</button>`).join('')}</span></div>`}
         <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
-        ${e < PM_FIN && !W.enCaisse ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button>` : ''}</div>
+        ${e < PM_FIN && !W.enCaisse ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>` : ''}</div>
       ${W.enCaisse ? `<div class="pm-warn" style="margin-bottom:10px">En caisse${W.enCaisse !== true ? ' (promotion n° ' + esc(W.enCaisse) + ' au panel)' : ''} : les changements partent au panel sur la même promotion — mise inactive le temps de la relecture, puis réactivée. Pour garder l’actuelle telle quelle, dupliquez-la plutôt.</div>` : ''}
       ${W.exempleErr ? `<div class="pm-warn" style="margin-bottom:10px">${esc(W.exempleErr)}</div>` : ''}
       <div class="pm-wz" id="pm-wz">${pmStepper(W)}</div>
@@ -3611,12 +3617,12 @@
     fetch(API + '/exploitation/promos-magasin', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(pmCorps(action)) })
       .then(r => r.json().catch(() => ({})).then(j => ({ ok: r.ok, j, code: r.status })))
       .then(({ ok, j, code }) => {
-        if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = PM_FIN; } return; }
-        const dm = j.demande;
-        S.pmMsg = action !== 'envoyer' ? `Brouillon gardé : « ${esc(dm.nom || 'sans nom')} ».`
-          : (dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.${(dm.exclusAuto || []).length ? ' Sortis d’office : ' + esc(dm.exclusAuto.slice(0, 5).join(', ')) + (dm.exclusAuto.length > 5 ? '…' : '') + '.' : ''}`
-            : `Enregistrée : « ${esc(dm.nom)} », mais pas encore en caisse — ${esc(dm.panelErreur || 'le panel ne l’a pas prise')}. La marque la reprend.`);
-        S.pmF = action !== 'envoyer' ? 'brouillons' : (dm.statut === 'en_caisse' ? 'actives' : 'enregistrees');
+        if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer' || W.etape === PM_FIN) { W.etape = PM_FIN; } return; }
+        const dm = j.demande || {}, sortis = j.exclusAuto || [];
+        S.pmMsg = action !== 'envoyer' ? `Brouillon gardé au panel, inactif : « ${esc(dm.nom || 'sans nom')} » (promotion n° ${esc(dm.panelId)}).`
+          : (!j.panelErreur && dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.${sortis.length ? ' Sortis d’office : ' + esc(sortis.slice(0, 5).join(', ')) + (sortis.length > 5 ? '…' : '') + '.' : ''}`
+            : `Pas en caisse : « ${esc(dm.nom)} » est au panel (promotion n° ${esc(dm.panelId)}), inactive — ${esc(j.panelErreur || 'le panel ne l’a pas activée')}. Reprenez-la dans les brouillons.`);
+        S.pmF = action === 'envoyer' && !j.panelErreur && dm.statut === 'en_caisse' ? 'actives' : 'brouillons';
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
       })
       .catch(e => { W.erreurs = [e.message]; })
@@ -3624,18 +3630,18 @@
   }
   function pmSupprimer(id) {
     const l = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === id);
-    if (!l || !window.confirm((l.statut === 'validee' ? 'Retirer la promotion « ' : 'Supprimer le brouillon « ') + (l.nom || 'sans nom') + ' » ?')) { return; }
+    if (!l || !window.confirm('Supprimer le brouillon « ' + (l.nom || 'sans nom') + ' » ? Il est supprimé du panel.')) { return; }
     fetch(API + '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop) + '&id=' + encodeURIComponent(id), { method: 'DELETE', headers: { Accept: 'application/json' }, credentials: 'same-origin' })
       .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) { throw new Error(j.error || ('HTTP ' + r.status)); } }))
-      .then(() => { S.pmMsg = 'Retirée : « ' + esc(l.nom || 'sans nom') + ' ».'; lireAux(clePM(), cheminPM(), true); })
-      .catch(e => { S.pmMsg = 'Pas retirée : ' + esc(e.message); rendre(); });
+      .then(() => { S.pmMsg = 'Supprimée du panel : « ' + esc(l.nom || 'sans nom') + ' ».'; lireAux(clePM(), cheminPM(), true); })
+      .catch(e => { S.pmMsg = 'Pas supprimée : ' + esc(e.message); rendre(); });
   }
   /** Le produit choisi dans une liste de suggestions : son identifiant est au bout de l'étiquette (« · #123 »). */
   function pmProduitDe(v) { const m = /#(\d+)$/.exec(v || ''); const id = m ? +m[1] : 0; return (pmProduits() || []).find(p => +p.id === id) || null; }
   /** Dupliquer une promotion (« mag:<id> » du magasin, « panel:<id> » de la marque) : l'assistant s'ouvre sur la copie. */
   function pmDupliquer(cle) {
     const i = cle.indexOf(':'), src = cle.slice(0, i), id = cle.slice(i + 1), P = S.aux[clePM()] || {};
-    if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(d); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
+    if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(pmNommer(d)); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
     else { const r = (P.panel || []).find(o => String(o.id) === id); if (r) { pmOuvrir(pmDuPanel(r), 1); } }
   }
   function pmBrancher() {
@@ -3647,7 +3653,7 @@
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
     on('[data-pmedit]', 'click', el => {
       const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
-      if (d) { pmOuvrir(pmDepuis(d), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; rendre(); }
+      if (d) { pmOuvrir(pmDepuis(pmNommer(d)), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; rendre(); }
     });
     on('[data-pmdup]', 'click', el => pmDupliquer(el.dataset.pmdup));
     on('[data-pmcoef]', 'click', el => pmCoefOuvrir(el.dataset.pmcoef));

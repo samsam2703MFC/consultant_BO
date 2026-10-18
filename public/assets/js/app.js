@@ -6757,10 +6757,10 @@ class App {
    * dans Targets & primes. Ce qu'on tape reste un brouillon jusqu'à « Enregistrer ».
    */
   /**
-   * Les promotions des magasins (17/10/2026) : les demandes « X achetés + Y » que les franchisés écrivent dans
-   * l'onglet Promotions de leur dashboard. La marque les valide ou les renvoie avec un mot ; le détail et
-   * l'assistant restent dans le dashboard du magasin (lien ↗). Rien n'est écrit au panel : une demande validée
-   * se met en caisse à la main.
+   * Les promotions des magasins (17/10/2026) : les « X achetés + Y » que les franchisés écrivent dans l'onglet
+   * Promotions de leur dashboard. Lues au panel, et seulement là (18/10/2026) : une promotion du panel réservée à un
+   * seul magasin, active (en caisse) ou inactive (brouillon). Lecture seule : le détail et l'assistant restent dans le
+   * dashboard du magasin (lien ↗).
    */
   valsPromosMag(common){
     const S = this.state;
@@ -6777,7 +6777,7 @@ class App {
     const court = n => String(n || '').replace(/^.* - /, '');
     const dash = id => 'dashboard/?shop=' + encodeURIComponent(id) + '&vue=promos';
     common.pmChargement = L.d === undefined;
-    common.pmMotif = L.d === null ? 'Les demandes des magasins n’ont pas pu être lues.' : '';
+    common.pmMotif = L.d === null ? 'Les promotions des magasins n’ont pas pu être lues au panel.' : '';
     common.pmRelire = () => { L.d = undefined; this.setState({}); };
     common.pmMagasins = L.magasins.map(m => ({ nom: court(m.nom), href: dash(m.id) }));
     if (!L.d) { return; }
@@ -6788,7 +6788,9 @@ class App {
     const JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
     const cren = l => !l || !l.length ? 'tous les jours' : l.map(c => { const j = c.jours.slice().sort((a, b) => a - b), suite = j.length >= 3 && j.every((v, i) => !i || v === j[i - 1] + 1);
       return (j.length === 7 ? 'tous les jours' : (suite ? JOURS[j[0] - 1] + '–' + JOURS[j[j.length - 1] - 1] : j.map(v => JOURS[v - 1]).join(', '))) + ' ' + c.de + '–' + c.a; }).join(' · ');
-    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean); return ({ ONE_HALF: '½ ', ONE_QUARTER: '¼ ' }[c.portion] || '') + (n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : '—'); };
+    // Le panel ne rend pas toujours les noms : le nombre de produits ou de catégories visés, alors.
+    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean), nc = (c.cats || []).length, np = (c.prods || []).length;
+      return ({ ONE_HALF: '½ ', ONE_QUARTER: '¼ ' }[c.portion] || '') + (n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : (nc ? nc + ' catégorie' + (nc > 1 ? 's' : '') : (np ? np + ' produit' + (np > 1 ? 's' : '') : '—'))); };
     const gain = (y, n) => ({ FIXED_PRICE: 'à ' + eur(y.valeur), FIXED_AMOUNT_DISCOUNT: '−' + eur(y.valeur), PERCENTAGE_DISCOUNT: 'à −' + Math.round(+y.valeur || 0) + ' %' }[y.type] || (n > 1 ? 'offerts' : 'offert'));
     const regle = d => {
       const x = d.x || {}, y = d.y || {}, xq = x.q || 1, yq = y.q || 1;
@@ -6797,37 +6799,15 @@ class App {
       return meme ? ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + 'e ') + gain(y, yq) + ' · ' + lib(x)
         : ach + ' (' + lib(x) + '), ' + (yq > 1 ? yq + ' × ' : '') + lib(y) + ' ' + gain(y, yq);
     };
-    // Plus de validation (17/10/2026) : le magasin enregistre, la promotion part au panel aussitôt. N'attendent ici que
-    // celles que le panel n'a pas prises (l'erreur dite) : réessayer, la créer à la main, ou la rendre au magasin.
-    const ETAT = { validee: ['Pas encore en caisse', 'a'], en_caisse: ['En caisse', 'ok'], refusee: ['Rendue au magasin', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
-    const FILTRES = [['validee', 'Pas encore en caisse'], ['en_caisse', 'En caisse'], ['refusee', 'Rendues'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
-    const f = S.pmFiltre === undefined ? 'validee' : S.pmFiltre;
+    // Le panel seul (18/10/2026) : en caisse (active au panel) ou brouillon (inactive). Rien à décider ici.
+    const ETAT = { en_caisse: ['En caisse', 'ok'], brouillon: ['Brouillon · inactive au panel', 'b'] };
+    const FILTRES = [['en_caisse', 'En caisse'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
+    const f = S.pmFiltre === undefined || !FILTRES.some(o => o[0] === S.pmFiltre) ? '' : S.pmFiltre;
     const toutes = L.d.demandes || [];
     common.pmFiltres = FILTRES.map(([k, n]) => ({ nom: n, n: toutes.filter(d => !k || d.statut === k).length, on: f === k, choisir: () => this.setState({ pmFiltre: k }) }));
-    const decider = (d, decision) => {
-      let message = '';
-      if (decision === 'panel') {
-        L.occupe = d.id; this.setState({});
-        write(this.source, 'POST', '/promos-magasin/' + encodeURIComponent(d.id) + '/panel', {}).then(r => {
-          L.occupe = null;
-          const dm = r.demande || {};
-          L.msg = !r.ok ? 'Pas envoyée : ' + (r.error || 'erreur') : (dm.statut === 'en_caisse' ? 'En caisse : « ' + d.nom + ' » (promotion n° ' + dm.panelId + ' au panel).' : 'Le panel ne la prend toujours pas : ' + (dm.panelErreur || '?'));
-          L.d = undefined; this.setState({});
-        });
-        return;
-      }
-      if (decision === 'refuser') { message = window.prompt('Rendre « ' + d.nom + ' » au magasin : pourquoi ? (le franchisé lira ce mot)', '') || ''; if (!message.trim()) { return; } }
-      else if (!window.confirm('« ' + d.nom + ' » (' + (d.shops || [d.shop]).map(nomMag).join(', ') + ') est créée au panel à la main ?\nElle passe « En caisse » pour le magasin.')) { return; }
-      L.occupe = d.id; this.setState({});
-      write(this.source, 'PATCH', '/promos-magasin/' + encodeURIComponent(d.id), { decision, message }).then(r => {
-        L.occupe = null;
-        L.msg = r.ok ? (decision === 'en_caisse' ? 'En caisse : « ' + d.nom + ' ».' : 'Rendue au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
-        if (r.ok) { L.d = undefined; } this.setState({});
-      });
-    };
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + ((R.joursMax || 366) >= 365 ? 'un an' : R.joursMax + ' jours') + ' au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot affiché, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque plus l’enregistrement). Pas de validation : une promotion enregistrée part au panel aussitôt — créée inactive, relue, puis activée. N’attendent ici que celles que le panel n’a pas prises, avec son erreur.';
+    common.pmRegles = 'Lues au panel, rien n’est gardé au cockpit' + (L.d.erreurPanel ? ' (' + L.d.erreurPanel + ')' : '') + ' : les promotions du panel réservées à un seul magasin. Règles imposées au magasin : une date de fin, ' + ((R.joursMax || 366) >= 365 ? 'un an' : R.joursMax + ' jours') + ' au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot aux prix et coûts d’aujourd’hui, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque pas). Le magasin les écrit dans son dashboard : créées inactives, relues, puis activées.';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
       const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
@@ -6835,11 +6815,8 @@ class App {
         coef: c.lot != null ? '×' + c.lot.toLocaleString('fr-BE', { minimumFractionDigits: 2 }) : '—', coefCls: c.lot == null ? 'mu' : (c.lot >= (R.coefMin || 2) ? 'ok' : 'ko'),
         cas: c.x ? 'cas le plus serré : ' + (d.x.q || 1) + ' × ' + c.x + ' + ' + (d.y.q || 1) + ' × ' + c.y + (c.magasin && d.shops && d.shops.length > 1 ? ' (' + nomMag(c.magasin) + ')' : '') : '',
         sansCout: (c.sansCout || []).length ? 'sans coût de recette : ' + c.sansCout.slice(0, 3).join(', ') + (c.sansCout.length > 3 ? '…' : '') : '',
-        envoyee: d.envoyee ? jj(d.envoyee.slice(0, 10)) : '', etat: e[0], etatCls: e[1], message: d.message || '', description: d.description || '',
-        motif: [d.motif ? d.motif.charAt(0).toUpperCase() + d.motif.slice(1) : '', d.statut === 'validee' && d.panelErreur ? 'Panel : ' + d.panelErreur : '',
-          d.statut === 'en_caisse' && d.panelId ? 'Au panel : promotion n° ' + d.panelId : ''].filter(Boolean).join(' · '),
-        peutDecider: d.statut === 'validee', occupe: L.occupe === d.id, href: dash(d.shop),
-        auPanel: () => decider(d, 'panel'), enCaisse: () => decider(d, 'en_caisse'), renvoyer: () => decider(d, 'refuser') };
+        etat: e[0], etatCls: e[1], description: d.description || '',
+        motif: d.panelId ? 'Au panel : promotion n° ' + d.panelId + (d.statut === 'brouillon' ? ', inactive' : '') : '', href: dash(d.shop) };
     });
   }
 

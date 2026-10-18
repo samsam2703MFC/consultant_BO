@@ -8125,8 +8125,8 @@ function tplPrWiz(W, x){
 /* Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes → Paramètres, un écran à elles sous ERP franchisé
    → Marketing franchisé. Les primes de la marque et des sponsors, celles des franchisés, les promotions du panel, les
    moyennes par magasin ; l'assistant « Nouvelle prime » par-dessus. */
-/* Les promotions des magasins (17/10/2026) — Analyse magasin › Promotions : les demandes « X achetés + Y »
- * écrites dans le dashboard des magasins, à valider ou à renvoyer avec un mot. */
+/* Les promotions des magasins (17/10/2026) — Analyse magasin › Promotions : les « X achetés + Y » écrites dans le
+ * dashboard des magasins, lues au panel (18/10/2026, plus de copie au cockpit). Lecture seule. */
 function tplPromosMag(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -8143,23 +8143,23 @@ function tplPromosMag(c, x){
   const magasins = (c.pmMagasins || []).length ? `<div style="${carte};padding:14px 16px">
       <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-bottom:8px">Les promotions d’un magasin, comme il les voit — liste, assistant, coefficient</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${c.pmMagasins.map(m => `<a href="${esc(m.href)}" target="_blank" rel="noopener" style="${pill(false)};text-decoration:none;color:var(--color-text)">${esc(m.nom)} ↗</a>`).join('')}</div></div>` : '';
-  if (c.pmChargement) { return `<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px;color:var(--color-text-muted)">Lecture des demandes des magasins…</div>${magasins}</div>`; }
+  if (c.pmChargement) { return `<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px;color:var(--color-text-muted)">Lecture des promotions des magasins au panel…</div>${magasins}</div>`; }
   if (c.pmMotif) { return `<div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px;color:var(--color-primary)">${esc(c.pmMotif)}</div>${magasins}</div>`; }
   const L = c.pmLignes || [];
   const lignes = L.map(l => `<tr>
-      <td style="${td};min-width:250px"><b>${esc(l.nom)}</b><div style="${mu};margin-top:2px">${esc(l.regle)}</div>${l.description ? `<div style="${mu};margin-top:2px;font-style:italic">${esc(l.description)}</div>` : ''}${l.message ? `<div style="font-size:11.5px;color:#8D1D2C;margin-top:4px">Mot de la marque : « ${esc(l.message)} »</div>` : ''}${l.motif ? `<div style="font-size:11.5px;color:#8a5a13;margin-top:4px">${esc(l.motif)}</div>` : ''}</td>
+      <td style="${td};min-width:250px"><b>${esc(l.nom)}</b><div style="${mu};margin-top:2px">${esc(l.regle)}</div>${l.description ? `<div style="${mu};margin-top:2px;font-style:italic">${esc(l.description)}</div>` : ''}${l.motif ? `<div style="${mu};margin-top:4px">${esc(l.motif)}</div>` : ''}</td>
       <td style="${td}">${esc(l.magasins)}</td>
       <td style="${td};white-space:nowrap">${esc(l.periode)}<div style="${mu}">${esc(l.creneaux)}</div></td>
       <td style="${td};text-align:right;white-space:nowrap"><b style="font-size:14px;${coefC[l.coefCls] || ''}">${esc(l.coef)}</b>${l.cas ? `<div style="${mu};white-space:normal;max-width:220px;margin-left:auto">${esc(l.cas)}</div>` : ''}${l.sansCout ? `<div style="font-size:11px;color:#8a5a13;white-space:normal;max-width:220px;margin-left:auto">${esc(l.sansCout)}</div>` : ''}</td>
-      <td style="${td}"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;${chip[l.etatCls] || chip.b}">${esc(l.etat)}</span>${l.envoyee ? `<div style="${mu};margin-top:3px">envoyée le ${esc(l.envoyee)}</div>` : ''}</td>
-      <td style="${td};text-align:right;white-space:nowrap">${l.peutDecider ? `<button ${x.A(l.renvoyer)} style="${bt(false)}"${l.occupe ? ' disabled' : ''} title="la rendre au magasin, avec un mot">Rendre</button> <button ${x.A(l.enCaisse)} style="${bt(false)}"${l.occupe ? ' disabled' : ''} title="créée au panel à la main">Mise en caisse ✓</button> <button ${x.A(l.auPanel)} style="${bt(true)}"${l.occupe ? ' disabled' : ''} title="la créer au panel : inactive, relue, puis activée">${l.occupe ? '…' : 'Réessayer au panel'}</button> ` : ''}<a href="${esc(l.href)}" target="_blank" rel="noopener" style="${mu};margin-left:6px">dashboard ↗</a></td></tr>`).join('');
+      <td style="${td}"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;${chip[l.etatCls] || chip.b}">${esc(l.etat)}</span></td>
+      <td style="${td};text-align:right;white-space:nowrap"><a href="${esc(l.href)}" target="_blank" rel="noopener" style="${mu};margin-left:6px">dashboard ↗</a></td></tr>`).join('');
   return `
 <div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
   ${c.pmMsg ? `<div style="display:flex;gap:10px;align-items:center;background:rgba(45,122,62,.08);border:1px solid rgba(45,122,62,.25);color:#2d6a3a;border-radius:9px;padding:9px 12px;font-size:12.5px">${esc(c.pmMsg)}<span style="flex:1"></span><button ${x.A(c.pmFermerMsg)} style="border:0;background:none;cursor:pointer;color:inherit">✕</button></div>` : ''}
   <div style="${carte};overflow:hidden">${tete}
     ${L.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th}">Promotion</th><th style="${th}">Magasins</th><th style="${th}">Période</th><th style="${th};text-align:right">Coef. du lot</th><th style="${th}">Statut</th><th style="${th}"></th></tr></thead><tbody>${lignes}</tbody></table></div>`
-      : `<div style="padding:20px 16px;font-size:12.5px;color:var(--color-text-muted)">Rien ici. Les franchisés enregistrent leurs promotions dans l’onglet Promotions de leur dashboard.</div>`}
-    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')} « Réessayer au panel » la renvoie au panel ; « Mise en caisse ✓ » si vous l’y avez créée à la main ; « Rendre » la rend au magasin avec votre mot.</div>
+      : `<div style="padding:20px 16px;font-size:12.5px;color:var(--color-text-muted)">Rien ici. Les franchisés écrivent leurs promotions dans l’onglet Promotions de leur dashboard ; elles vivent au panel.</div>`}
+    <div style="padding:10px 16px 14px;${mu};line-height:1.5">${esc(c.pmRegles || '')}</div>
   </div>
   ${magasins}
 </div>`;

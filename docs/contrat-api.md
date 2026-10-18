@@ -2089,6 +2089,8 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
+**Promotions du magasin : le panel seul (18/10/2026, demande de Sam : « API seule, plus de copie »).** Le cockpit ne garde plus rien des promotions du magasin : la liste `promosMagasin` de `ceo_app_setting` n'est plus lue ni écrite (ce qui y reste n'est plus utilisé). Une promotion du magasin est une « Buy X Get Y » du panel réservée à ce seul magasin (`SELECTED_SHOPS`, `shop_ids: [magasin]`) : active, elle est **en caisse** ; inactive, c'est un **brouillon**. Le dashboard la lit au panel (`pvRegles()`, la liste gardée 10 minutes et mise à jour à chaque écriture du cockpit) ; « Enregistrer » l'écrit au panel (POST pour créer, PUT pour modifier — créée inactive, relue, activée), « Garder en brouillon » fait la même écriture laissée INACTIVE, « Supprimer » un brouillon est un `DELETE` au panel. Plus d'états « Enregistrée · pas encore en caisse » ni « Renvoyée par la marque » : un panel qui refuse ne crée rien (502, l'assistant reste ouvert avec l'erreur) ; créée mais pas activée, elle reste au panel comme brouillon (`panelErreur`). Le numéro d'une promotion du magasin est celui du panel (`id: "p21"`, `panelId: 21`). La console (Analyse magasin › Promotions) lit au panel les promotions réservées à un seul magasin, en lecture seule, avec le coefficient du lot d'aujourd'hui : plus de « Réessayer au panel », « Mise en caisse ✓ » ni « Rendre » (les routes `POST /promos-magasin/{id}/panel` et `PATCH /promos-magasin/{id}` sont retirées). La liste du panel se lit **page après page** puis aux numéros qui suivent le plus grand, jusqu'à trois absents de suite (`pvListe()`) : « Test » n° 21 et « Test 2 » n° 22, en caisse, manquaient à la liste lue d'un coup — et donc à la reconnaissance des promotions dans les tickets. La sonde `GET /ventes/promos/sonde-fiche` rend `numerosLus`, tous les numéros que le cockpit lit.
+
 **Contrôle des tâches : plus de contrôle par exception (18/10/2026, demande de Sam).** Toute photo rendue est à noter, une photo obligatoire comprise, quelle que soit la moyenne des contrôles passés : plus de tâche « maîtrisée » masquée. `GET /pwa/tasks` ne porte plus `taches[].maitrise` ni `totals.masquees`, et `totals.aControler` / `aValider` comptent toutes les photos non notées. Retirés : `PUT /taches/maitrise` (Rouvrir, contrôle permanent), `maitriseReglages()` et `maitriseEtats()`, la création de `ceo_task_maitrise` et du réglage `maitrise` à l'installation (la table et le réglage déjà en base restent, plus lus). À l'écran (`#/controle-taches`) : plus de badge ni de filtre « Maîtrisées », plus de bandeau « contrôle(s) maîtrisé(s) » ni de bouton Rouvrir ; l'application visites montre toutes les tâches du jour, et la loupe photo du dashboard magasin perd sa ligne « Tenue ».
 
 **Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : le magasin du dashboard (`?shop=`), lui seul, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en cinq étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 en repère, non bloquant, le cas le plus serré nommé) et le ticket de ce cas. Pas de validation : « Enregistrer la promotion » l'enregistre aussitôt (sous ×2 aussi, depuis le 18/10/2026) ; la marque la met en caisse ou la renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
@@ -2228,24 +2230,24 @@ mêmes dates et, au clic sur un canal, son cumul du mois face au mois d'avant.
 - Au dashboard, le mois en cours se projette au rythme des jours lus (`valeur ÷ joursLus × jours` ; le webshop sur
   `joursEcoules`).
 
-### `/exploitation/promos-magasin` — les promotions « X achetés + Y » du magasin, demandées à la marque (17/10/2026)
+### `/exploitation/promos-magasin` — les promotions « X achetés + Y » du magasin, au panel (17/10/2026 ; panel seul depuis le 18/10/2026)
 
 Pour l'onglet **Promotions** du dashboard magasin (sur ordinateur) : la liste des promotions qui touchent le magasin et
 l'assistant en cinq étapes (Nom → Ce qu'on achète (X) → Ce qu'on reçoit (Y) → Période → Vérifier et
-enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotions vivent dans `ceo_app_setting` (clé
-`promosMagasin`) et **s'écrivent au panel** dès l'enregistrement (ci-dessous, « L'écriture au panel »).
+enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotions du magasin **vivent au panel, et
+seulement là** (18/10/2026) : une « Buy X Get Y » réservée à ce seul magasin (`SELECTED_SHOPS`, `shop_ids: [magasin]`),
+active = en caisse, inactive = brouillon. Le cockpit n'en garde rien (ci-dessous, « L'écriture au panel »).
 
 `GET /exploitation/promos-magasin?shop=4`
 
-    { shop, erreurPanel, regles: { coefMin: 2, joursMax: 14, enMemeTemps: 2, magasinsMax: 4 },
+    { shop, erreurPanel, source: "panel", regles: { coefMin: 2, joursMax: 366, enMemeTemps: 2 },
       panel: [ { id, nom, type: "buyxgety"|"bundle", texte, statut, etat: "active"|"a_venir"|"terminee"|"inactive",
-                 du, au, reseau, magasins, x, y, recompense } ],     // celles du panel qui touchent le magasin
-      demandes: [ { id: "pm…", shop, shops: [4], statut: "brouillon"|"validee"|"en_caisse"|"refusee",
+                 du, au, reseau, magasins, x, y, recompense } ],     // celles de la marque qui touchent le magasin
+      demandes: [ { id: "p21", panelId: 21, shop, shops: [4], statut: "brouillon"|"en_caisse",   // celles du magasin, relues au panel
                     nom, description, x: { q, cats: [{id, nom}], prods: [{id, nom}], exclus: [{id, nom}] },
                     y: { q, type: "FREE"|"FIXED_PRICE"|"FIXED_AMOUNT_DISCOUNT"|"PERCENTAGE_DISCOUNT", valeur, cats, prods, exclus },
                     du: "2026-10-20 07:00", au, creneaux: [ { jours: [6, 7], de: "15:00", a: "18:00" } ],
-                    repetable, maxParTicket, coef: { lot, sans, x, y, paye, cout, paires, nX, nY, sansCout, magasin },
-                    cree, maj, envoyee, message, panelId } ] }
+                    repetable, maxParTicket } ] }
 
 - `panel` vient de `pvRegles()` (la liste buy-x-get-y du panel et ses fiches, gardée 10 min) ; `x`, `y` et
   `recompense` sont ceux de `pvNormaliser()` (`{q, p, c, x, portion}` — `portion` : ONE_HALF | ONE_QUARTER quand toutes
@@ -2253,8 +2255,11 @@ enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotio
 - Le coefficient de marge (18/10/2026) : la colonne « Coef. du lot » et sa modale se recalculent dans le navigateur
   avec `/exploitation/promos-magasin/produits` (prix HT et coûts de recette d'aujourd'hui), pour les promotions du
   magasin comme pour celles de la marque (X achetés + Y ; pas les bundles). La modale montre le cas le plus serré, puis
-  « produit par produit » le pire lot de chaque produit visé ; `coef.lot` d'une demande reste celui de l'enregistrement,
-  rappelé quand il diffère.
+  « produit par produit » le pire lot de chaque produit visé. Rien n'est gardé de l'enregistrement : le coefficient est
+  toujours celui d'aujourd'hui.
+- `demandes` vient des mêmes règles (`pvNormaliser()` porte aussi `description`, `duH`/`auH` à la minute, `creneaux`
+  regroupés depuis `schedule`, `repetable`, `maxParTicket`) ; les noms des produits et catégories manquent quand le panel
+  ne les rend pas — le dashboard les complète avec la liste du magasin.
 
 `GET /exploitation/promos-magasin/canaux?shop=4&jours=30` (7 | 30) — où les promotions s'appliquent (18/10/2026) :
 
@@ -2278,17 +2283,19 @@ enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotio
   et une promotion ne se modifie que depuis son magasin (404 sinon).
 
 `POST /exploitation/promos-magasin` `{ shop, id?, action: "brouillon"|"envoyer", nom, description, shops, x, y, du, au,
-creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incomplet ; `envoyer` vérifie les règles (sinon
-**422** `{ error: "à compléter", erreurs: [phrases], coef }`), puis l'**enregistre aussitôt** (`statut: "validee"`) —
-**pas de validation** de la marque (demande du 17/10/2026). `auto: true` quand le coefficient du lot a été vérifié (×2,
-chaque produit visé chiffré) ; sinon (un produit sans coût de recette ni prix) elle s'enregistre quand même, `auto:
-false`, avec `motif` (« coefficient non vérifié : … — Baguette, Pistolet »). Le statut `a_valider` n'existe plus : une
-ancienne promotion « à valider » se lit `validee`. Une promotion `en_caisse` se modifie aussi (18/10/2026) : `envoyer`
-met à jour la même promotion au panel (`PUT …/{panelId}` : inactive le temps de la relecture, puis réactivée) ; un
-`brouillon` lui est refusé (409). Le dashboard propose Modifier et Dupliquer sur chaque ligne du magasin. Les
-valeurs de l'avantage se saisissent TTC, comme en caisse.
+creneaux, repetable, maxParTicket }` — `id` : « p21 », la promotion n° 21 du panel (une autre que celle du magasin :
+404). Rien ne s'écrit sans le compte admin du panel (503). `envoyer` vérifie les règles (sinon **422** `{ error: "à
+compléter", erreurs: [phrases], coef }`), sort ce qui ne se chiffre pas, puis écrit au panel : créée (POST) ou modifiée
+(PUT …/{panelId}) INACTIVE, relue, activée → `{ ok, demande: {…, statut: "en_caisse"}, coef, exclusAuto, panelErreur:
+null }`. **Pas de validation** de la marque. `brouillon` : la même écriture laissée INACTIVE (ce que le panel exige —
+nom, X, Y, dates — est demandé ; un brouillon ne compte pas dans les deux à la fois) ; refusé à une promotion en caisse
+(409). Le panel refuse : **502** `{ error }`, rien n'est créé ; créée mais pas activée (un écart à la relecture, une
+activation refusée) : 200 avec `panelErreur`, `statut: "brouillon"` (inactive au panel). Un envoi à la fois par magasin
+(verrou : un double clic ne crée pas deux promotions, 409 sinon). Le dashboard propose Reprendre, Dupliquer et Supprimer
+sur un brouillon, Modifier et Dupliquer en caisse. Les valeurs de l'avantage se saisissent TTC, comme en caisse.
 
-`DELETE /exploitation/promos-magasin?shop=4&id=pm…` — toute promotion du magasin qui n'est pas encore en caisse.
+`DELETE /exploitation/promos-magasin?shop=4&id=p21` — un brouillon du magasin se supprime au panel (`DELETE
+/admin/promotions/buy-x-get-y/21`) ; en caisse, 409 ; un panel qui ne supprime pas (405) : 409, elle y reste inactive.
 
 `GET /exploitation/promos-magasin/produits?shop=4` — ce que l'assistant chiffre, la liste même que le serveur relit à
 l'envoi : `{ shop, produits: [ { id, nom, catId, cat, prixTtc, prixHt, tva, cout, source: "magasin"|"reseau"|null } ],
@@ -2296,27 +2303,25 @@ nMagasin, nReseau, nSansCout }`. Le coût est celui de la recette **pour ce maga
 le panel rend 0 tant qu'il ne l'a pas calculé pour lui (17/10/2026 : un magasin entier sans coût) — le coût du réseau
 prend alors la place (`catalogueCouts()` : la moyenne des magasins du compte, sinon la recette de la copie locale),
 `source: "reseau"`, et l'assistant le dit. Un produit sans coût nulle part, ou sans prix, n'est pas chiffré et se nomme
-(`sansCout`, `sansPrix`) ; la promotion s'enregistre alors avec ces noms (`motif`).
+(`sansCout`, `sansPrix`) ; à l'enregistrement, il sort de la promotion (`exclusAuto`).
 
-Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=validee]`
-(toutes les demandes, la plus ancienne d'abord, avec `noms` : les noms courts des magasins cités, et `regles`) et
-`PATCH /promos-magasin/{id}` `{ decision: "en_caisse"|"refuser", message }` sur une promotion enregistrée —
-`en_caisse` : créée au panel (à la main, en attendant l'écriture automatique), « Mise en caisse ✓ » ; `refuser` : elle
-revient au magasin (« Renvoyée par la marque », avec le mot, obligatoire). L'écran trie par statut (À mettre en
-caisse, En caisse, Renvoyées, Brouillons, Toutes), montre la règle, les magasins, la période, le coefficient et son cas le plus serré, et ouvre le
-dashboard de chaque magasin sur son onglet Promotions.
+Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=en_caisse|brouillon]`
+— lecture seule, au panel : les promotions réservées à un seul magasin (même forme que `demandes`, la plus récente
+d'abord, avec `coef` : le coefficient du lot aux prix et coûts d'aujourd'hui), `noms` (les noms courts des magasins),
+`erreurPanel` et `regles`. L'écran trie par statut (En caisse, Brouillons, Toutes), montre la règle, le magasin, la
+période, le coefficient et son cas le plus serré, et ouvre le dashboard de chaque magasin sur son onglet Promotions.
 
 Les règles du magasin, imposées au serveur :
 
 - une date de fin, **un an au plus** (366 jours ; 14 jours jusqu'au 18/10/2026) ; la fin après le début, pas déjà passée.
   L'étape Période de l'assistant a des durées rapides — 1 semaine, 1 mois, 1 an — qui remplissent les deux dates ;
-- **deux promotions à la fois au plus**, magasin par magasin (les promotions `validee` et `en_caisse`) ;
+- **deux promotions à la fois au plus**, magasin par magasin (les promotions en caisse — actives au panel) ;
 - le **coefficient du lot**, affiché avec ×2 en repère — il **ne bloque plus** (18/10/2026) : sous ×2, la promotion
   s'enregistre et part au panel, en rouge dans la liste et la modale. Prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
   d'un produit de Y, la récompense sur la pièce la moins chère, le cas le plus serré de toutes les paires (une paire où
   le produit de X est aussi dans Y et moins cher ne se présente pas en caisse), dans chaque magasin couvert, avec ses
   prix et coûts de recette (`/analyse/produits/coefficients`). Le navigateur fait le même calcul à chaque frappe. Un
-  produit sans coût de recette n'est pas chiffré (`sansCout`) : la promotion va alors à la marque.
+  produit sans coût de recette n'est pas chiffré (`sansCout`) : il sort de la promotion à l'enregistrement.
 
 **L'écriture au panel (17/10/2026).** Le format est celui de la fiche relue sur la promotion test « 10 + 2 »
 (`GET /admin/promotions/buy-x-get-y/19`) : `{ name, description, promotion_type: "BUY_X_GET_Y", status, priority: 100,
@@ -2330,18 +2335,15 @@ l'heure avec secondes, sans si le panel refuse le format. Rien ne part en caisse
    `panelId`) ;
 2. `GET …/{id}` : la fiche relue est comparée à l'envoi (nom, magasin, dates, répétable, X et Y — quantités, produits,
    catégories, exclusions —, type et valeur, nombre de créneaux) ;
-3. `PUT …/{id}` en **ACTIVE** (sinon `PATCH {status}`), relue ACTIVE → `statut: "en_caisse"`, `panelId`.
+3. `PUT …/{id}` en **ACTIVE** (sinon `PATCH {status}`), relue ACTIVE → `statut: "en_caisse"`, `panelId`. Un brouillon
+   s'arrête à l'étape 2. La fiche relue remplace la promotion dans les règles gardées (`pvRetenir()`).
 **Les produits qui ne se chiffrent pas sortent d'office** (17/10/2026, `pmExclureNonChiffres`) : à l'enregistrement, un
 produit visé sans coût de recette (ni du magasin ni du réseau) ou sans prix au panel quitte la promotion — choisi par sa
 catégorie, il passe dans les exclusions (`excluded_product_ids` au panel) ; choisi un à un, il quitte la liste —, et
 `exclusAuto` les nomme. Le coefficient se calcule sur le reste ; si plus rien ne se chiffre (une liste vidée),
-l'enregistrement est refusé (422, les noms sortis dits). Depuis le 18/10/2026, le coefficient ne retient plus l'envoi au panel. « Réessayer au panel » applique la même
-sortie à une promotion enregistrée avant. Un refus, un écart, une activation refusée : la promotion reste `validee` (« Pas encore en caisse ») avec
-`panelErreur` (l'erreur du panel et ses champs refusés, ou l'écart), inactive au panel si elle y a été créée. Le format
-des créneaux (`schedule`) est déduit du formulaire du panel — la fiche test n'en portait pas — et vérifié à la relecture.
-La console (Analyse magasin › Promotions) : **Réessayer au panel** (`POST /promos-magasin/{id}/panel`), « Mise en
-caisse ✓ » quand elle a été créée à la main, « Rendre » au magasin avec un mot. Dans la liste du magasin, une promotion
-écrite au panel ne se montre qu'une fois (les règles du panel dont l'id est un `panelId` sont écartées).
+l'enregistrement est refusé (422, les noms sortis dits). Depuis le 18/10/2026, le coefficient ne retient plus l'envoi au panel. Un refus : rien n'est
+créé (502). Un écart, une activation refusée : la promotion reste inactive au panel (un brouillon) et `panelErreur` dit
+l'erreur du panel et ses champs refusés, ou l'écart. Le format des créneaux (`schedule`) est vérifié à la relecture.
 
 **Les portions (17/10/2026).** Chaque côté (X, Y) peut viser une variante : `portion` = `ONE_HALF` (½) ou `ONE_QUARTER`
 (¼), sinon toutes les variantes. Au panel, chaque cible la porte (`category_targets: [{id_category, portion_scope}]`,
