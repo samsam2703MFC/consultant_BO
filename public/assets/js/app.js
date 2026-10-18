@@ -4705,7 +4705,7 @@ class App {
     // Le tri d'une colonne (18/10/2026) : la flèche de l'en-tête — un clic trie, un second inverse ; une question le remet
     // à son ordre. Les cases vides restent en bas, dans les deux sens.
     const TRI = { nom: [l => l.nom.toLowerCase(), 1], saison: [l => l.saisonsTxt || null, 1], prix: [l => l.prix, -1], mn: [l => l.mnPct, -1],
-      vol: [l => l.sansVente ? null : l.vol, -1], part: [l => l.sansVente ? null : l.part, -1], rang: [l => l.rangG, 1], score: [l => l.score, -1],
+      vol: [l => l.sansVente ? null : l.vol, -1], part: [l => l.sansVente ? null : l.part, -1], rang: [l => l.rangG, 1], rangCat: [l => l.rangC == null ? null : l.rangC + (l.rangG || 0) / 1e6, 1], score: [l => l.score, -1],
       mags: [l => l.s ? l.mags : null, -1], tend: [l => l.tend, -1], extra: [l => vue === 'manque' ? l.mqMois : (l.px ? l.px.ecart : null), -1],
       dec: [l => l.dec ? { garder: 0, modifier: 1, effacer: 2 }[l.dec] : null, 1], oblig: [l => l.p ? (l.p.must ? 0 : 1) : null, 1] };
     const tri = S.catTri && TRI[S.catTri.col] ? S.catTri : null;
@@ -4721,12 +4721,16 @@ class App {
     common.catCols = [colonne('nom', 'Référence'), colonne('saison', 'Saison', 'La gamme saisonnière du panel où elle est vendue'),
       colonne('prix', 'Prix', 'Prix de vente moyen encaissé', true), colonne('mn', 'Marge nette', '(prix de vente moyen − coût matière première) ÷ prix de vente moyen', true),
       colonne('vol', 'Volume', c2.periode, true), colonne('part', 'Part des ventes', 'Sa part du chiffre d’affaires de toutes les références du réseau, sur la période', true),
-      colonne('rang', 'Rang', 'Au chiffre d’affaires : sur toute la gamme, puis dans sa catégorie', true),
+      colonne('rang', 'Rang', 'Au chiffre d’affaires, sur toute la gamme', true),
+      colonne('rangCat', 'Rang catégorie', 'Au chiffre d’affaires, dans sa catégorie', true),
       colonne('score', 'Score', 'Le score du réseau : volume, marge, perte, comptoir, revue', true), colonne('mags', 'Magasins', 'Magasins qui l’ont vendue sur la période', true),
       colonne('tend', 'Tendance', 'La 2e moitié de la période face à la 1re, réseau entier', true)]
       .concat(vue === 'manque' || vue === 'prix' ? [colonne('extra', vue === 'manque' ? 'Manque / mois' : 'Prix min – max', '', true)] : [])
       .concat([colonne('dec', 'Décision'), colonne('oblig', 'Obligatoire', 'Imposée en boutique (l’assortiment) et gardée au score — un clic suffit')]);
     common.catCompte = F.length + ' / ' + L.length + ' références';
+    // Remettre tous les filtres d'un clic (18/10/2026) : recherche, catégorie, saison, question, tri.
+    common.catFiltre = !!(q || catSel || saisSel || vue !== 'tout' || tri);
+    common.catReinit = () => this.setState({ catQ: '', catCat: '', pdCat: 'Toutes les catégories', catSaison: '', catVue: 'tout', catTri: null, catFiche: null });
     common.catColExtra = vue === 'manque' ? 'Manque / mois' : (vue === 'prix' ? 'Prix min – max' : '');
     common.catPeriode = c2.periode || '';
     common.catFenetres = [['mois', 'Mois clos'], ['trimestre', 'Trimestre'], ['annee', '12 mois']]
@@ -4749,7 +4753,7 @@ class App {
       scoreCls: l.score == null ? 'mu' : (l.dec === 'garder' ? 'ok' : (l.dec === 'modifier' ? 'am' : 'ko')),
       mags: l.s ? l.mags + '/' + nbOuv : '—', tend: pct(l.tend), tendCls: l.tend == null ? 'mu' : (l.tend >= 0 ? 'ok' : 'ko'),
       dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
-      rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '' : l.rangC + ' / ' + l.nbC + ' en catégorie',
+      rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '—' : l.rangC + ' / ' + l.nbC, rangCatNom: l.rangC == null ? '' : l.catNom,
       saison: l.saisonsTxt || (l.saisons.length ? 'saison du panel' : ''), saisonSeule: l.saisonnier,
       oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
       basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,

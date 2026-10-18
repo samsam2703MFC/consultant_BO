@@ -278,6 +278,7 @@ function tplCatalogue(c, x){
       <select ${x.C(c.catPoserCat)} style="${inp}">${(c.catCats || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
       <select ${x.C(c.catPoserSaison)} style="${inp}">${(c.catSaisons || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
       <span style="display:inline-flex;gap:4px">${(c.catFenetres || []).map(f => `<button ${x.A(f.choisir)} style="${pill(f.on)}">${esc(f.nom)}</button>`).join('')}</span>
+      ${c.catFiltre ? `<button ${x.A(c.catReinit)} style="${pill(false)}" title="Recherche, catégorie, saison, question et tri remis à zéro">↺ Réinitialiser</button>` : ''}
       <span style="font-size:11.5px;${mu}">${esc(c.catCompte)}</span><span style="flex:1"></span>
       <span style="display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap">
       <span style="font-size:12px;${mu};white-space:nowrap" title="Les seuils de décision du score, enregistrés pour tout le réseau">Garder &gt; <input type="number" min="0" max="100" value="${esc(c.catSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="${inp};width:62px;padding:5px 8px"> · Modifier ≥ <input type="number" min="0" max="100" value="${esc(c.catSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="${inp};width:62px;padding:5px 8px"></span>
@@ -290,7 +291,7 @@ function tplCatalogue(c, x){
     <tbody>${L.map(l => `<tr ${x.A(l.ouvrir)} style="cursor:pointer;${l.on ? 'background:#f7ecec' : ''}">
       <td style="${TD};min-width:170px"><b>${esc(l.nom)}</b>${l.sous ? `<div style="font-size:11px;${mu}">${esc(l.sous)}</div>` : ''}</td>
       <td style="${TD};font-size:12px">${l.saison ? esc(l.saison) + (l.saisonSeule ? `<div style="font-size:10px;${mu}">seulement en saison</div>` : '') : `<span style="${mu}">—</span>`}</td>
-      <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td><td style="${TD};${n}">${esc(l.part)}</td><td style="${TD};${n}">${esc(l.rang)}${l.rangCat ? `<div style="font-size:10.5px;${mu}">${esc(l.rangCat)}</div>` : ''}</td>
+      <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td><td style="${TD};${n}">${esc(l.part)}</td><td style="${TD};${n}">${esc(l.rang)}</td><td style="${TD};${n}">${esc(l.rangCat)}${l.rangCatNom ? `<div style="font-size:10.5px;${mu}">${esc(l.rangCatNom)}</div>` : ''}</td>
       <td style="${TD};${n};font-weight:700;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
       <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
       <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
