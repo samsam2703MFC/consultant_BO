@@ -477,15 +477,18 @@ function pmEtatPanel(array $r, string $auj): string
 /* --- l'écriture au panel ----------------------------------------------------------------------------------- */
 
 /**
- * Les créneaux de la semaine au format du panel (`schedule`) : une ligne par jour et par créneau. La fiche relue le
- * 17/10/2026 (« 10 + 2 ») n'en portait aucun : le format est déduit du formulaire du panel (jour, de, à) et VÉRIFIÉ à la
- * relecture — un panel qui ne reprend pas les créneaux laisse la promotion inactive.
+ * Les créneaux de la semaine au format du panel (`schedule`) : une ligne par jour et par créneau, `day_of_week`,
+ * `time_from`, `time_to` — les noms que le panel exige (18/10/2026, son refus : « schedule.0.time_from is required » ;
+ * `start_time`/`end_time`, déduits du formulaire, étaient ignorés). L'heure avec secondes (« 15:00:00 ») ou sans
+ * (« 15:00 ») : pmPanelEnvoyer essaie l'autre quand le panel refuse le format. Vérifiés à la relecture : un panel qui ne
+ * reprend pas les créneaux laisse la promotion inactive.
  */
-function pmPanelHoraire(array $creneaux): array
+function pmPanelHoraire(array $creneaux, bool $secondes = true): array
 {
+    $h = static fn (string $v): string => $secondes ? $v . ':00' : $v;
     $out = [];
     foreach ($creneaux as $c) {
-        foreach ($c['jours'] as $j) { $out[] = ['day_of_week' => (int) $j, 'start_time' => $c['de'] . ':00', 'end_time' => $c['a'] . ':00']; }
+        foreach ($c['jours'] as $j) { $out[] = ['day_of_week' => (int) $j, 'time_from' => $h($c['de']), 'time_to' => $h($c['a'])]; }
     }
     return $out;
 }
@@ -495,7 +498,7 @@ function pmPanelHoraire(array $creneaux): array
  * relue le 17/10/2026 sur « 10 + 2 ») : le magasin seul (SELECTED_SHOPS), priorité 100, non exclusive, activation
  * automatique, la pièce la moins chère récompensée (CHEAPEST). Les valeurs de l'avantage sont celles de la caisse (TTC).
  */
-function pmPanelCorps(array $d, string $statut): array
+function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
 {
     $ids = static fn (array $l): array => array_values(array_map(static fn ($o) => (int) $o['id'], $l));
     $cote = static function (array $c) use ($ids): array {
@@ -514,7 +517,7 @@ function pmPanelCorps(array $d, string $statut): array
         'valid_from' => $d['du'] !== null ? $d['du'] . ':00' : null, 'valid_to' => $d['au'] !== null ? $d['au'] . ':00' : null,
         'is_repeatable' => (bool) $d['repetable'], 'max_applications_per_transaction' => $d['repetable'] ? $d['maxParTicket'] : null,
         'shop_scope_type' => 'SELECTED_SHOPS', 'activation_mode' => 'AUTOMATIC', 'shop_ids' => [(int) $d['shop']],
-        'schedule' => pmPanelHoraire($d['creneaux'] ?? []),
+        'schedule' => pmPanelHoraire($d['creneaux'] ?? [], $secondes),
         'trigger' => $cote($d['x']),
         'reward' => $cote($y) + ['type' => $y['type'], 'value' => $y['type'] === 'FREE' ? null : $y['valeur'], 'selection_strategy' => 'CHEAPEST'],
     ];
@@ -563,8 +566,15 @@ function pmPanelEnvoyer(array $d, ?int $panelId): array
 {
     if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['ok' => false, 'id' => $panelId, 'erreur' => 'compte admin du panel indisponible']; }
     $base = '/admin/promotions/buy-x-get-y';
-    $corps = pmPanelCorps($d, 'INACTIVE');
+    $sec = true;
+    $corps = pmPanelCorps($d, 'INACTIVE', $sec);
     $w = $panelId !== null ? ErpApi::ecrire('PUT', $base . '/' . $panelId, $corps) : ErpApi::ecrire('POST', $base, $corps);
+    // L'heure des créneaux refusée pour son format (pas pour son absence) : une fois l'autre, avec ou sans secondes.
+    if ($w['erreur'] !== null && ($d['creneaux'] ?? []) !== [] && preg_match('/time_(from|to)/', (string) $w['erreur']) === 1 && preg_match('/time_(from|to) is required/', (string) $w['erreur']) !== 1) {
+        $sec = false;
+        $corps = pmPanelCorps($d, 'INACTIVE', $sec);
+        $w = $panelId !== null ? ErpApi::ecrire('PUT', $base . '/' . $panelId, $corps) : ErpApi::ecrire('POST', $base, $corps);
+    }
     if ($w['erreur'] !== null) { return ['ok' => false, 'id' => $panelId, 'erreur' => 'le panel refuse la promotion : ' . $w['erreur']]; }
     $c = is_array($w['corps']) ? $w['corps'] : [];
     $id = $panelId ?? (int) ($c['id'] ?? $c['data']['id'] ?? $c['promotion']['id'] ?? $c['data']['promotion']['id'] ?? 0);
@@ -577,7 +587,7 @@ function pmPanelEnvoyer(array $d, ?int $panelId): array
     if ($relu === null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), relecture impossible : ' . (ErpApi::$lastError ?? '')]; }
     $ecarts = pmPanelEcarts($corps, $relu);
     if ($ecarts !== []) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . ') : le panel ne reprend pas ' . implode(', ', $ecarts)]; }
-    $a = ErpApi::ecrire('PUT', $base . '/' . $id, pmPanelCorps($d, 'ACTIVE'));
+    $a = ErpApi::ecrire('PUT', $base . '/' . $id, pmPanelCorps($d, 'ACTIVE', $sec));
     if ($a['erreur'] !== null && in_array($a['code'], [404, 405], true)) { $a = ErpApi::ecrire('PATCH', $base . '/' . $id, ['status' => 'ACTIVE']); }
     if ($a['erreur'] !== null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), activation refusée : ' . $a['erreur']]; }
     $relu = $lire();
@@ -602,7 +612,9 @@ function pmPanelRanger(array &$tout, int $k): void
     // Le numéro au panel le plus frais : un envoi qui vient de finir l'a peut-être gardé.
     foreach (pmLire() as $f) {
         if (($f['id'] ?? '') === ($o['id'] ?? null) && is_numeric($f['panelId'] ?? null) && empty($o['panelId'])) { $o['panelId'] = (int) $f['panelId']; }
-        if (($f['id'] ?? '') === ($o['id'] ?? null) && ($f['statut'] ?? '') === 'en_caisse') { $tout[$k] = $f; if ($verrou !== false) { fclose($verrou); } return; }
+        // Déjà en caisse avec le même contenu (un double clic) : rien à refaire. Une modification d'une promotion en caisse
+        // change le corps envoyé au panel : elle part.
+        if (($f['id'] ?? '') === ($o['id'] ?? null) && ($f['statut'] ?? '') === 'en_caisse' && pmPanelCorps($f, 'ACTIVE') === pmPanelCorps($o, 'ACTIVE')) { $tout[$k] = $f; if ($verrou !== false) { fclose($verrou); } return; }
     }
     $r = pmPanelEnvoyer($o, isset($o['panelId']) && is_numeric($o['panelId']) ? (int) $o['panelId'] : null);
     $tout[$k]['panelId'] = $r['id'];
@@ -818,7 +830,8 @@ function wr_promos_magasin(): array
     if ($id !== null) {
         foreach ($tout as $k => $o) { if (($o['id'] ?? '') === $id) { $i = $k; break; } }
         if ($i === null || (int) ($tout[$i]['shop'] ?? 0) !== $shop) { http_response_code(404); return ['error' => 'promotion introuvable']; }
-        if (($tout[$i]['statut'] ?? '') === 'en_caisse') { http_response_code(409); return ['error' => 'déjà en caisse : elle ne se modifie plus d’ici']; }
+        // En caisse, elle se modifie aussi (18/10/2026) : les changements partent au panel sur la même promotion (PUT), pas en brouillon.
+        if (($tout[$i]['statut'] ?? '') === 'en_caisse' && $action === 'brouillon') { http_response_code(409); return ['error' => 'déjà en caisse : enregistrez les changements, ils partent au panel (pas de brouillon)']; }
     }
     $autres = array_values(array_filter($tout, static fn ($o) => ($o['id'] ?? '') !== $id));
     // À l'enregistrement, ce qui ne se chiffre pas sort de la promotion (pmExclureNonChiffres).

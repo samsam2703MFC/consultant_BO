@@ -2281,7 +2281,9 @@ creneaux, repetable, maxParTicket }` — un brouillon s'enregistre même incompl
 **pas de validation** de la marque (demande du 17/10/2026). `auto: true` quand le coefficient du lot a été vérifié (×2,
 chaque produit visé chiffré) ; sinon (un produit sans coût de recette ni prix) elle s'enregistre quand même, `auto:
 false`, avec `motif` (« coefficient non vérifié : … — Baguette, Pistolet »). Le statut `a_valider` n'existe plus : une
-ancienne promotion « à valider » se lit `validee`. Seule une promotion `en_caisse` ne se modifie plus (409). Les
+ancienne promotion « à valider » se lit `validee`. Une promotion `en_caisse` se modifie aussi (18/10/2026) : `envoyer`
+met à jour la même promotion au panel (`PUT …/{panelId}` : inactive le temps de la relecture, puis réactivée) ; un
+`brouillon` lui est refusé (409). Le dashboard propose Modifier et Dupliquer sur chaque ligne du magasin. Les
 valeurs de l'avantage se saisissent TTC, comme en caisse.
 
 `DELETE /exploitation/promos-magasin?shop=4&id=pm…` — toute promotion du magasin qui n'est pas encore en caisse.
@@ -2319,7 +2321,9 @@ Les règles du magasin, imposées au serveur :
 is_exclusive: false, valid_from, valid_to ("AAAA-MM-JJ HH:MM:SS"), is_repeatable, max_applications_per_transaction,
 shop_scope_type: "SELECTED_SHOPS", activation_mode: "AUTOMATIC", shop_ids: [shop], schedule: [{day_of_week, start_time,
 end_time}], trigger: {quantity, product_ids, category_ids, excluded_product_ids}, reward: {…, type, value,
-selection_strategy: "CHEAPEST"} }` (`ErpApi::ecrire`, compte admin du panel). Rien ne part en caisse sans avoir été relu :
+selection_strategy: "CHEAPEST"} }` (`ErpApi::ecrire`, compte admin du panel). Les créneaux : `schedule: [{day_of_week,
+time_from, time_to}]` (18/10/2026 — le panel refusait `start_time`/`end_time` : « schedule.0.time_from is required ») ;
+l'heure avec secondes, sans si le panel refuse le format. Rien ne part en caisse sans avoir été relu :
 1. `POST /admin/promotions/buy-x-get-y` en **INACTIVE** (ou `PUT …/{id}` quand un premier envoi l'a déjà créée,
    `panelId`) ;
 2. `GET …/{id}` : la fiche relue est comparée à l'envoi (nom, magasin, dates, répétable, X et Y — quantités, produits,
