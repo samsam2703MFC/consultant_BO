@@ -66,7 +66,11 @@ function pvNormaliser(array $d): array
         foreach ((array) ($c['category_ids'] ?? []) as $cid) { if ((int) $cid > 0 && !isset($cats[(string) (int) $cid])) { $cats[(string) (int) $cid] = ''; } }
         $exc = [];
         foreach ((array) ($c['excluded_product_ids'] ?? []) as $pid) { if ((int) $pid > 0) { $exc[] = (int) $pid; } }
-        return ['q' => (float) ($c['quantity'] ?? 1) ?: 1.0, 'p' => $p, 'c' => $cats, 'x' => $exc];
+        // La portion visée (« 4 Quarts + 1 Gratuit » : portion_scope ONE_QUARTER sur chaque cible), quand toutes les cibles la partagent.
+        $scopes = [];
+        foreach (['category_targets', 'product_targets'] as $t) { foreach ((array) ($c[$t] ?? []) as $x) { if (is_array($x)) { $scopes[strtoupper((string) ($x['portion_scope'] ?? ''))] = true; } } }
+        $portion = count($scopes) === 1 && in_array(array_key_first($scopes), ['ONE_HALF', 'ONE_QUARTER'], true) ? array_key_first($scopes) : null;
+        return ['q' => (float) ($c['quantity'] ?? 1) ?: 1.0, 'p' => $p, 'c' => $cats, 'x' => $exc, 'portion' => $portion];
     };
     $bundle = ($d['promotion_type'] ?? '') === 'BUNDLE_PROMOTION';
     $items = [];

@@ -2146,3 +2146,34 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-recap td{padding:7px 8px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:top}.pm-recap .r{text-align:right}
 @media (max-width:1100px){.pm-grille{grid-template-columns:1fr}}
 @media (max-width:700px){.pm-row{grid-template-columns:1fr !important}.pm-mag{min-width:0}}
+/* Le coefficient de marge d'une promotion (18/10/2026, maquette A, le tableau de B derrière un bouton). */
+.pm-coefb{border:none;background:none;padding:2px 4px;margin:-2px -4px;border-radius:6px;font:700 12.5px var(--font-ui);font-variant-numeric:tabular-nums;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;white-space:nowrap}
+.pm-coefb:hover{background:var(--color-background-secondary)}.pm-coefb:focus-visible{outline:2px solid #2a78d6;outline-offset:1px}
+.pm-coefb.ok{color:#2d7a3e}.pm-coefb.ko{color:#A61E1E}.pm-coefb.mu{color:var(--color-text-muted);font-weight:500}
+#db-pmc .fi-voile{position:fixed;inset:0;background:rgba(34,30,26,.48);z-index:900}
+#db-pmc .fi-modale{position:fixed;z-index:901;left:50%;top:40px;transform:translateX(-50%);width:980px;max-width:calc(100% - 32px);max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.28);font-family:var(--font-ui);color:var(--color-text,#222)}
+#db-pmc .fi-modale.pmc-etroite{width:660px}
+.pmc-hero{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}
+.pmc-hero>div:first-child{flex:1;min-width:180px}
+.pmc-big{font:400 48px/1 var(--font-display);margin:4px 0 2px}.pmc-big.ok{color:#2d7a3e}.pmc-big.ko{color:#A61E1E}
+.pmc-cmp b{display:block;font:400 24px/1.1 var(--font-display);margin:3px 0 1px}.pmc-cmp b.ok{color:#2d7a3e}.pmc-cmp b.ko{color:#A61E1E}
+.pm-jauge span.pmc-g{transform:translateX(calc(-100% + 6px))}.pm-jauge span.pmc-d{transform:translateX(-6px)}
+.pmc-cas{border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;background:#fcfaf7}
+.pmc-phr{font:400 17px/1.3 var(--font-display);margin-bottom:6px}
+.pmc-l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px}.pmc-l:last-child{border-bottom:none}
+.pmc-l small{font-weight:500;margin-left:6px}
+.pmc-ko{background:rgba(166,30,30,.08);color:#8D1D2C}
+.pmc-pied{display:flex;gap:8px;flex-wrap:wrap;padding:12px 22px;border-top:.5px solid var(--color-border-tertiary);background:#faf7f2;position:sticky;bottom:0}
+.pmc-tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}.pmc-tuiles .db-tui{min-height:92px}.pmc-tuiles .v small{font:500 13px var(--font-ui)}
+.pmc-st td{padding:9px 6px;vertical-align:middle}.pmc-st td b{font-size:13px}.pmc-st td.nm{white-space:nowrap}.pmc-st td.db-mini{max-width:260px}
+.pmc-bar{position:relative;height:8px;border-radius:4px;width:170px}
+.pmc-bar i{position:absolute;top:-4px;width:3px;height:16px;border-radius:2px;margin-left:-1px}.pmc-bar i.m,.pmc-leg i.m{background:#A61E1E}.pmc-bar i.s,.pmc-leg i.s{background:#b8ad9f}.pmc-bar i.l,.pmc-leg i.l{background:#2d7a3e}.pmc-bar i.l.ko{background:#A61E1E}
+.pmc-bar u{position:absolute;top:3px;height:2px;background:#b8ad9f;opacity:.7}
+.pmc-leg{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;align-items:center}.pmc-leg i{display:inline-block;width:3px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.pmc-legn{margin-left:auto}
+@media (max-width:760px){
+  #db-pmc .fi-modale,#db-pmc .fi-modale.pmc-etroite{left:0;top:0;transform:none;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0}
+  .pmc-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pmc-st th:nth-child(2),.pmc-st td:nth-child(2),.pmc-st th:nth-child(3),.pmc-st td:nth-child(3),.pmc-st .pmc-gr{display:none}
+  .pmc-legn{margin-left:0}
+}

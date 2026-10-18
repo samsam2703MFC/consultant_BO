@@ -2246,7 +2246,13 @@ enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotio
                     cree, maj, envoyee, message, panelId } ] }
 
 - `panel` vient de `pvRegles()` (la liste buy-x-get-y du panel et ses fiches, gardée 10 min) ; `x`, `y` et
-  `recompense` sont ceux de `pvNormaliser()` et servent au bouton « Dupliquer ».
+  `recompense` sont ceux de `pvNormaliser()` (`{q, p, c, x, portion}` — `portion` : ONE_HALF | ONE_QUARTER quand toutes
+  les cibles du côté portent cette `portion_scope`, sinon null) et servent au bouton « Dupliquer » et au coefficient.
+- Le coefficient de marge (18/10/2026) : la colonne « Coef. du lot » et sa modale se recalculent dans le navigateur
+  avec `/exploitation/promos-magasin/produits` (prix HT et coûts de recette d'aujourd'hui), pour les promotions du
+  magasin comme pour celles de la marque (X achetés + Y ; pas les bundles). La modale montre le cas le plus serré, puis
+  « produit par produit » le pire lot de chaque produit visé ; `coef.lot` d'une demande reste celui de l'enregistrement,
+  rappelé quand il diffère.
 - Une promotion vaut pour le magasin qui l'écrit, lui seul (17/10/2026) : `shops` vaut `[shop]`, un `shops` envoyé est ignoré,
   et une promotion ne se modifie que depuis son magasin (404 sinon).
 
