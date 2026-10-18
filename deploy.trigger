@@ -838,3 +838,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T14:21:36Z catalogue : rang de catégorie en colonne, Réinitialiser
 2026-10-18T14:47:45Z catalogue : le 20/80 à imprimer, prix et volume par magasin
 2026-10-18T15:01:16Z PDF 20/80 : par catégorie, assortiment proposé par saison
+2026-10-18T15:12:43Z boutons et listes en rectangles aux coins arrondis

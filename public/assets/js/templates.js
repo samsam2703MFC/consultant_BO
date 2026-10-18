@@ -12,7 +12,7 @@ import { tplFF, tplCQM } from './franchises-tpl.js';
 function tplOngletsEcran(c, x){
   const { esc } = x;
   return `<div class="no-print" style="display:inline-flex;flex-wrap:wrap;max-width:100%;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px">
-    ${c.ongletsEcran.map(o => `<button ${x.A(o.go)} style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text)'}">${esc(o.nom)}${o.badge ? `<span style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 6px;background:${o.on ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.08)'}">${o.badge}</span>` : ''}</button>`).join('')}
+    ${c.ongletsEcran.map(o => `<button ${x.A(o.go)} style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text)'}">${esc(o.nom)}${o.badge ? `<span style="font-size:10px;font-weight:600;border-radius:8px;padding:1px 6px;background:${o.on ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.08)'}">${o.badge}</span>` : ''}</button>`).join('')}
   </div>`;
 }
 function navBtn(n, x){
@@ -105,8 +105,8 @@ export function render(c, x){
         </div>
         <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.metaDate)}</span>
-          <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-secondary);color:var(--color-on-abricot)">${esc(c.metaPeriode)}</span>
-          ${(c.lacunes && c.lacunes.length) ? `<button ${x.A(c.lacToggle)} title="${c.lacOuvert ? 'Replier' : 'Ce que cet écran ne peut pas afficher, et pourquoi'}" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;cursor:pointer">⚠ ${c.lacunes.length} limite${c.lacunes.length > 1 ? 's' : ''} API ${c.lacOuvert ? '▴' : '▾'}</button>` : ''}
+          <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;background:var(--color-secondary);color:var(--color-on-abricot)">${esc(c.metaPeriode)}</span>
+          ${(c.lacunes && c.lacunes.length) ? `<button ${x.A(c.lacToggle)} title="${c.lacOuvert ? 'Replier' : 'Ce que cet écran ne peut pas afficher, et pourquoi'}" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;cursor:pointer">⚠ ${c.lacunes.length} limite${c.lacunes.length > 1 ? 's' : ''} API ${c.lacOuvert ? '▴' : '▾'}</button>` : ''}
         </div>
       </header>`}
 
@@ -115,7 +115,7 @@ export function render(c, x){
       ${(c.lacunes && c.lacunes.length && c.lacOuvert) ? `<div class="no-print" style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Ce que cet écran ne peut pas afficher</div>
         ${c.lacunes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;flex-wrap:wrap">
-          <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;${l.api
+          <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:8px;white-space:nowrap;${l.api
             ? 'background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0'
             : 'background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary)'}">${esc(l.etiquette)}</span>
           <span style="font-size:12.5px;font-weight:500">${esc(l.champ)}</span>
@@ -202,7 +202,7 @@ function tplGate(g, x){
     <input id="gate-pass" type="password" autocomplete="${g.mode === 'setup' ? 'new-password' : 'current-password'}" autofocus
       style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:11px 13px;font-family:var(--font-ui);font-size:14px;background:var(--color-background-secondary);color:var(--color-text)">
     ${g.err ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(g.err)}</div>` : ''}
-    <button type="submit" class="hv-fade" style="width:100%;margin-top:16px;border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:13.5px;font-weight:500;padding:12px 0;border-radius:999px">${esc(g.bouton)}</button>
+    <button type="submit" class="hv-fade" style="width:100%;margin-top:16px;border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:13.5px;font-weight:500;padding:12px 0;border-radius:8px">${esc(g.bouton)}</button>
   </form>
 </div>`;
 }
@@ -265,8 +265,8 @@ function tplCatalogue(c, x){
   const TH = 'font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:9px 10px;border-bottom:0.5px solid var(--color-border-secondary);text-align:left;white-space:nowrap';
   const TD = 'padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle;font-size:12.5px';
   const n = 'text-align:right;white-space:nowrap';
-  const pill = on => `border:0.5px solid ${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:6px 12px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap`;
-  const inp = 'border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:7px 13px;background:var(--color-surface);font-family:var(--font-ui);font-size:12.5px;color:var(--color-text)';
+  const pill = on => `border:0.5px solid ${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};border-radius:8px;padding:6px 12px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap`;
+  const inp = 'border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 13px;background:var(--color-surface);font-family:var(--font-ui);font-size:12.5px;color:var(--color-text)';
   if (c.catVide) { return `<div style="${carte};padding:18px">Le catalogue est vide : rien n’a été lu au panel.</div>${c.refEdit ? tplRefEdit(c, x) : ''}`; }
   const tuiles = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px">${(c.catTuiles || []).map(t => `
     <button ${x.A(t.choisir)} style="${carte};text-align:left;padding:13px 15px;cursor:pointer;font-family:var(--font-ui);${t.on ? 'border:1.5px solid var(--color-primary);box-shadow:0 1px 0 var(--color-primary)' : ''}">
@@ -295,7 +295,7 @@ function tplCatalogue(c, x){
       <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td><td style="${TD};${n}">${esc(l.part)}</td><td style="${TD};${n}">${esc(l.rang)}</td><td style="${TD};${n}">${esc(l.rangCat)}${l.rangCatNom ? `<div style="font-size:10.5px;${mu}">${esc(l.rangCatNom)}</div>` : ''}</td>
       <td style="${TD};${n};font-weight:700;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
       <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
-      <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
+      <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:600;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
       <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.basculerOblig)} role="switch" aria-checked="${l.oblig}" aria-label="Obligatoire" title="${l.oblig ? (l.obligSaison ? 'Obligatoire pendant une saison — un clic la retire' : 'Obligatoire — un clic la retire') : 'Un clic la rend obligatoire, toute l’année'}" style="width:38px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;vertical-align:middle;background:${l.oblig ? '#2d7a3e' : 'rgba(0,0,0,.18)'}"><i style="position:absolute;top:3px;${l.oblig ? 'left:19px' : 'left:3px'};width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></i></button>${l.obligSaison ? `<div style="font-size:9.5px;${mu}">saison</div>` : ''}`}</td></tr>`).join('')
       || `<tr><td colspan="${(c.catCols || []).length}" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
     ${c.catTronque ? `<div style="padding:9px 12px;font-size:11.5px;${mu}">… et ${c.catTronque} autres : affinez la recherche ou la catégorie.</div>` : ''}</div>`;
@@ -306,7 +306,7 @@ function tplCatalogue(c, x){
   if (f && f.onglet === 'magasins') {
     corps = `${(f.magasins || []).map(m => `<div style="display:grid;grid-template-columns:86px minmax(0,1fr) 58px;gap:8px;align-items:center;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">
         <b style="font-size:12px">${esc(m.nom)}</b>
-        <div><div style="height:6px;border-radius:999px;background:var(--color-background-secondary);position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${m.w}%;border-radius:999px;background:${col[m.barCls] || '#bbb'}"></i></div>
+        <div><div style="height:6px;border-radius:8px;background:var(--color-background-secondary);position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${m.w}%;border-radius:8px;background:${col[m.barCls] || '#bbb'}"></i></div>
           <div style="font-size:10.5px;${mu};margin-top:2px">${esc([m.vol, m.prix].filter(Boolean).join(' · '))}${m.manque ? ` · <span style="color:#A61E1E">manque ${esc(m.manque)}</span>` : ''}</div></div>
         <span style="text-align:right;font-size:12px;font-weight:600;color:${col[m.barCls] || 'inherit'}">${esc(m.ecart)}</span></div>`).join('') || `<div style="font-size:12px;${mu}">Pas de vente par magasin sur la période.</div>`}
       <div style="font-size:11px;${mu};margin-top:8px">${esc(f.magasinsNote)}</div>
@@ -316,7 +316,7 @@ function tplCatalogue(c, x){
       ${f.perte ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span style="${mu}">Taux de perte</span><span><b>${esc(f.perte)}</b> ${lien(f.versPerte, 'par magasin ›')}</span></div>` : ''}
       ${(f.criteres || []).length ? `<div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;${mu};margin:14px 0 6px">Ce qui fait le score</div>
         ${f.criteres.map(k => `<div style="display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;padding:4px 0"><div><div style="font-size:12px">${esc(k.nom)} <span style="${mu};font-size:11px">· poids ${esc(k.poids)}</span></div>
-          <div style="height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:3px;overflow:hidden"><i style="display:block;height:100%;width:${k.w}%;background:#2F5D8A"></i></div></div><span style="text-align:right;font-size:12px;${k.mu ? mu : 'font-weight:600'}">${esc(k.note)}</span></div>`).join('')}` : ''}`;
+          <div style="height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:3px;overflow:hidden"><i style="display:block;height:100%;width:${k.w}%;background:#2F5D8A"></i></div></div><span style="text-align:right;font-size:12px;${k.mu ? mu : 'font-weight:600'}">${esc(k.note)}</span></div>`).join('')}` : ''}`;
   } else if (f && f.onglet === 'temps') {
     corps = `${f.courbe ? `<svg viewBox="0 0 330 90" style="width:100%;height:110px;display:block"><polyline points="${f.courbe}" fill="none" stroke="#8D1D2C" stroke-width="2"/></svg>
         <div style="display:flex;justify-content:space-between;font-size:10.5px;${mu}"><span>${esc(f.courbeDe)}</span><span>max ${esc(f.courbeMax)}</span><span>${esc(f.courbeA)}</span></div>` : `<div style="font-size:12px;${mu}">Pas de série lue pour cette référence.</div>`}
@@ -327,7 +327,7 @@ function tplCatalogue(c, x){
   }
   const fiche = f ? `<aside style="${carte};width:390px;flex:0 0 auto;align-self:flex-start;position:sticky;top:12px;box-shadow:-8px 0 32px #2222221f">
     <div style="padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="display:flex;gap:8px;align-items:center"><b style="font-size:15px">${esc(f.nom)}</b>${f.dec ? `<span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;${chip[f.decCls] || ''}">${esc(f.dec)}</span>` : ''}<span style="flex:1"></span>
+      <div style="display:flex;gap:8px;align-items:center"><b style="font-size:15px">${esc(f.nom)}</b>${f.dec ? `<span style="padding:3px 10px;border-radius:8px;font-size:11px;font-weight:600;${chip[f.decCls] || ''}">${esc(f.dec)}</span>` : ''}<span style="flex:1"></span>
         <button ${x.A(f.fermer)} aria-label="fermer" style="border:none;background:none;cursor:pointer;font-size:16px;${mu}">✕</button></div>
       <div style="font-size:12px;${mu};margin-top:2px">${esc(f.sous)}</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:9px">
@@ -408,7 +408,7 @@ function tplAnaprod(c, x){
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
   const num = 'font-variant-numeric:tabular-nums';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
   const mini = cells => `<span style="display:inline-flex;align-items:flex-end;gap:1.5px;height:20px">${cells.map(v => `<i style="width:4px;background:${v.top ? 'var(--color-primary)' : '#D9BCBF'};height:${v.w}px;border-radius:1px"></i>`).join('')}</span>`;
 
   const entete = `
@@ -440,7 +440,7 @@ function tplAnaprod(c, x){
   if (c.apFiche) {
     const F = c.apFiche;
     // Les choix de la fiche : un magasin seul face au réseau, courbe ou tableau, total ou moyenne par jour.
-    const seg = (liste) => `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">${liste.map(o2 => `<button ${x.A(o2.choisir)} style="border:0;padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;background:${o2.on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${o2.on ? '#fff' : 'var(--color-text-muted)'}">${esc(o2.lib)}</button>`).join('')}</span>`;
+    const seg = (liste) => `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">${liste.map(o2 => `<button ${x.A(o2.choisir)} style="border:0;padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;background:${o2.on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${o2.on ? '#fff' : 'var(--color-text-muted)'}">${esc(o2.lib)}</button>`).join('')}</span>`;
     const puce = k => k.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${k.coul};margin-right:5px;vertical-align:-1px"></i>` : '';
     const thT = 'font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);font-weight:500;padding:6px 7px;border-bottom:0.5px solid var(--color-border-secondary);text-align:right;white-space:nowrap';
     const tdT = 'padding:6px 7px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;' + num;
@@ -527,9 +527,9 @@ function tplAnaprod(c, x){
           ${l.cells.map(c2 => c2.jamais
             ? `<td style="${td};text-align:center;background:var(--color-background-secondary)"><span style="font-size:10px;color:var(--color-text-muted)">jamais vendu</span></td>`
             : `<td style="${td};text-align:center${c2.dort ? ';background:#FDF3F0' : ''}" title="${esc(c2.titre)}">
-                 <div style="position:relative;width:110px;height:10px;margin:0 auto;background:var(--color-background-secondary);border-radius:999px">
+                 <div style="position:relative;width:110px;height:10px;margin:0 auto;background:var(--color-background-secondary);border-radius:8px">
                    <i style="position:absolute;left:calc(50% - 1px);top:-2px;height:14px;width:2px;background:var(--color-border-secondary)"></i>
-                   <i style="position:absolute;top:1px;height:8px;border-radius:999px;${c2.pos
+                   <i style="position:absolute;top:1px;height:8px;border-radius:8px;${c2.pos
                      ? `left:50%;width:${c2.w}%;background:#2d7a3e`
                      : `right:50%;width:${c2.w}%;background:#C0182B`}"></i>
                  </div>
@@ -550,7 +550,7 @@ function tplPxv(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;white-space:nowrap`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;white-space:nowrap`;
   const champ = 'font-family:var(--font-ui);font-size:12px;padding:8px 12px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface)';
   const entete = `
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -861,11 +861,11 @@ function tplHeatmapCorps(c, x){
   const cell = cc => `<div ${x.EN(cc.enter)} ${x.A(cc.clic)} style="${cc.st};cursor:pointer">${cc.txt}</div>`;
   return `
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
         <button ${x.A(c.hmMetricCa)} style="${c.hmBtnCaSt}">CA du mois</button>
         <button ${x.A(c.hmMetricPct)} style="${c.hmBtnPctSt}">% d'atteinte de l'objectif</button>
       </div>
-      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
         <button ${x.A(c.hmY25)} style="${c.hmBtn25St}">${c.hmYearPrev}</button>
         <button ${x.A(c.hmY26)} style="${c.hmBtn26St}">${c.hmYearCur}</button>
       </div>
@@ -929,7 +929,7 @@ function tplObjectifs(c, x){
   const { esc } = x;
   return `
   <div data-screen="objectifs" style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;align-self:flex-start">
+    <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;align-self:flex-start">
       <button ${x.A(c.hz1)} style="${c.hz1St}">${c.hzLabel1}</button>
       <button ${x.A(c.hz3)} style="${c.hz3St}">${c.hzLabel3}</button>
       <button ${x.A(c.hz5)} style="${c.hz5St}">${c.hzLabel5}</button>
@@ -1114,7 +1114,7 @@ function tplBudget(c, x){
           <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Chiffre d'affaires — budget contre réel</div>
           <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(c.bScopeNom)} · budget encodé une fois par le consultant, réel encodé chaque mois par le franchisé</div>
         </div>
-        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
           <button ${x.A(c.bScopeShop)} style="${c.bScopeShopSt}">Ce magasin</button>
           <button ${x.A(c.bScopeRes)} style="${c.bScopeResSt}">Réseau</button>
         </div>
@@ -1246,7 +1246,7 @@ function tplBudget(c, x){
                 <td style="${m.realSt}">${m.real}</td>
                 <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${m.theo}</td>
                 <td style="${m.ecTSt}">${m.ecT}<div style="font-size:11px;font-weight:400">${m.ecTP}</div></td>
-                <td style="${m.mqSt}">${m.mq}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${m.mqPct}</div><span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:4px"><span style="${m.barSt}"></span></span></td>
+                <td style="${m.mqSt}">${m.mq}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${m.mqPct}</div><span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:4px"><span style="${m.barSt}"></span></span></td>
               </tr>`).join('')}
             <tr style="border-top:0.5px solid var(--color-border-secondary)">
               <td style="padding:10px 10px 10px 0;font-weight:500">Réseau</td>
@@ -1291,7 +1291,7 @@ function tplBudgetNote(c, x){
           <div style="font-size:17px;font-weight:500;margin-top:3px">${esc(c.bNoteTitre)}</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(c.bNoteSous)}</div>
         </div>
-        <button ${x.A(c.bNoteFermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+        <button ${x.A(c.bNoteFermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px">
         ${c.bNoteChamps.map(f => `<label style="display:block">
@@ -1329,7 +1329,7 @@ function tplBudgetImprModale(c, x){
           <div style="${lbl}">Imprimer</div>
           <div style="font-size:17px;font-weight:500;margin-top:3px">${esc(c.bImprTitre)}</div>
         </div>
-        <button ${x.A(c.bImprFermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+        <button ${x.A(c.bImprFermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:15px">
         ${c.bImprCases.map(k => `<div ${x.A(k.bascule)} style="${k.labelSt}">
@@ -1481,7 +1481,7 @@ function tplMargeTrimestres(c, x){
   const { esc } = x;
   const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
   const sv = c.mgtSvg;
-  const pill = r => `<button ${x.A(r.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;${r.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(r.nom)}</button>`;
+  const pill = r => `<button ${x.A(r.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;${r.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(r.nom)}</button>`;
   return `
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px">
@@ -1489,7 +1489,7 @@ function tplMargeTrimestres(c, x){
           <div style="font-size:13px;font-weight:500">${esc(c.mgtNom)} par trimestre, magasin par magasin${c.mgtSeuil ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-text-muted)">· ${esc(c.mgtSeuil)}</span>` : ''}</div>
           <div style="font-size:11.5px;color:var(--color-text-muted)">L’évolution sur les trimestres des deux exercices, et le pas d’un trimestre à l’autre.</div>
         </div>
-        <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.mgtRatios.map(pill).join('')}</div>
+        <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px">${c.mgtRatios.map(pill).join('')}</div>
       </div>
       ${c.mgtVide ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Aucun trimestre avec un P&L mensuel encodé.</div>` : `
       <div style="display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:16px;align-items:start">
@@ -1635,8 +1635,8 @@ function tplEncodage(c, x){
           </div>
         </div>
         <div style="display:flex;gap:10px">
-          <button ${x.A(c.encReset)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);padding:9px 16px;border-radius:999px">Réinitialiser</button>
-          <button ${x.A(c.encSave)} style="border:none;background:var(--color-primary);cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:#fff;padding:9px 20px;border-radius:999px">Enregistrer le budget</button>
+          <button ${x.A(c.encReset)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);padding:9px 16px;border-radius:8px">Réinitialiser</button>
+          <button ${x.A(c.encSave)} style="border:none;background:var(--color-primary);cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:#fff;padding:9px 20px;border-radius:8px">Enregistrer le budget</button>
           <!-- L'état de l'enregistrement AUTOMATIQUE : chaque saisie part en
                base après une pause de frappe, le bouton ne sert plus qu'à
                confirmer et à laisser une ligne de journal. -->
@@ -1665,7 +1665,7 @@ function tplMesureComp(c, x){
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px';
   const lbl = 'font-size:9.5px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--color-text-muted)';
   const seg = o => `<button ${x.A(o.go)} style="border:none;padding:6px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
-  const grp = l => `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">${l.map(seg).join('')}</span>`;
+  const grp = l => `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">${l.map(seg).join('')}</span>`;
 
   const barre = `
     <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:13px">
@@ -1691,7 +1691,7 @@ function tplMesureComp(c, x){
     <div style="${carte};padding:12px 14px;margin-bottom:8px;${temoin ? 'background:var(--color-background-secondary);border-style:dashed' : ''}">
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
         <div style="min-width:206px;flex:0 0 auto">
-          <div style="font-size:13px;font-weight:600;${temoin ? 'color:var(--color-text-muted)' : ''}">${esc(m.nom)}${m.faible && !temoin ? ` <span style="font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0;vertical-align:1px">à confirmer</span>` : ''}</div>
+          <div style="font-size:13px;font-weight:600;${temoin ? 'color:var(--color-text-muted)' : ''}">${esc(m.nom)}${m.faible && !temoin ? ` <span style="font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:8px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0;vertical-align:1px">à confirmer</span>` : ''}</div>
           ${temoin ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${m.magasins} magasin(s) qui n’ont rien lancé</div>` : ''}
           <div style="margin-top:7px">${m.courbe}</div>
         </div>
@@ -1848,8 +1848,8 @@ function tplMesure(c, x){
         <div style="font-size:12px;color:${c.mesTemoinDilue ? '#C17A2A' : 'var(--color-text-muted)'};margin-bottom:9px">${esc(c.mesTemoinNote)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${(c.mesMagasins || []).map(m => m.enCampagne
-            ? `<span style="font-size:12px;padding:6px 11px;border-radius:999px;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">${esc(m.nom)} · en campagne${m.temoin ? ' + témoin' : ''}</span>`
-            : `<button ${x.A(m.bascule)} style="font-size:12px;padding:6px 11px;border-radius:999px;cursor:${m.fige ? 'default' : 'pointer'};font-family:var(--font-ui);border:0.5px solid ${m.temoin ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${m.temoin ? 'var(--color-text)' : 'var(--color-surface)'};color:${m.temoin ? '#fff' : 'var(--color-text-muted)'}">${esc(m.nom)}${m.temoin ? ' · témoin' : ''}</button>`).join('')}
+            ? `<span style="font-size:12px;padding:6px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">${esc(m.nom)} · en campagne${m.temoin ? ' + témoin' : ''}</span>`
+            : `<button ${x.A(m.bascule)} style="font-size:12px;padding:6px 11px;border-radius:8px;cursor:${m.fige ? 'default' : 'pointer'};font-family:var(--font-ui);border:0.5px solid ${m.temoin ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${m.temoin ? 'var(--color-text)' : 'var(--color-surface)'};color:${m.temoin ? '#fff' : 'var(--color-text-muted)'}">${esc(m.nom)}${m.temoin ? ' · témoin' : ''}</button>`).join('')}
         </div>
       </div>
 
@@ -1917,7 +1917,7 @@ function tplMesure(c, x){
         <div style="font-size:12px;color:var(--color-text-muted)">Référence ${esc(jf(c.mesRef.du))} → ${esc(jf(c.mesRef.au))} · témoin : ${esc(c.mesTemoinNoms)}</div>
         <div style="text-align:right">
           <div style="${lbl}">Verdict</div>
-          <div style="margin-top:4px"><span style="display:inline-block;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;${c.mesVerdict.st}">${esc(c.mesVerdict.libelle)}${c.mesVerdict.valeur ? ' · ' + esc(c.mesVerdict.valeur) : ''}</span></div>
+          <div style="margin-top:4px"><span style="display:inline-block;font-size:13px;font-weight:600;padding:6px 14px;border-radius:8px;${c.mesVerdict.st}">${esc(c.mesVerdict.libelle)}${c.mesVerdict.valeur ? ' · ' + esc(c.mesVerdict.valeur) : ''}</span></div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px;font-style:italic">${esc(c.mesVerdict.txt)}</div>
         </div>
       </div>
@@ -1928,8 +1928,8 @@ function tplMesure(c, x){
           <div style="font-family:var(--font-display);font-size:23px;margin-top:6px;letter-spacing:-0.4px">${esc(t.val)}</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(t.avant)}${t.d !== '' ? ' · <b style="color:' + t.dCol + '">' + esc(t.d) + '</b>' : ''}</div>
           ${(t.temoin || t.net) ? `<div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
-            ${t.temoin ? `<span style="font-size:10.5px;padding:3px 8px;border-radius:999px;background:#EDEAE5;color:var(--color-text-muted)">${esc(t.temoin)}</span>` : ''}
-            ${t.net ? `<span style="font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--color-surface);color:${t.netCol}">${esc(t.net)}</span>` : ''}
+            ${t.temoin ? `<span style="font-size:10.5px;padding:3px 8px;border-radius:8px;background:#EDEAE5;color:var(--color-text-muted)">${esc(t.temoin)}</span>` : ''}
+            ${t.net ? `<span style="font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:8px;background:var(--color-surface);color:${t.netCol}">${esc(t.net)}</span>` : ''}
           </div>` : ''}
           ${t.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;font-style:italic">${esc(t.note)}</div>` : ''}
         </div>`).join('')}
@@ -2008,7 +2008,7 @@ function tplMesure(c, x){
           <td style="${td};color:${p.reponseCol};font-weight:600">${esc(p.reponse)}</td>
           <td style="${td}">${esc(p.n1Var)}</td>
           <td style="${td};color:${p.remanenceCol}">${esc(p.remanence)}</td>
-          <td style="${td};text-align:left"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${p.score.st}">${esc(p.score.t)}</span></td>
+          <td style="${td};text-align:left"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;${p.score.st}">${esc(p.score.t)}</span></td>
         </tr>`).join('')}
       </table>
       <div>
@@ -2359,7 +2359,7 @@ function tplBudgetParam(c, x){
             <div style="font-size:22px;font-weight:500;margin-top:3px;color:var(--pkg-abricot)">${c.encTheoExercice}</div>
             <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.encCoef)}</div>
           </div>
-          <button ${x.A(c.encLisser)} class="hv-apr" style="border:0.5px solid var(--pkg-abricot);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--pkg-abricot);padding:8px 15px;border-radius:999px">Lisser sur les 12 mois</button>
+          <button ${x.A(c.encLisser)} class="hv-apr" style="border:0.5px solid var(--pkg-abricot);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--pkg-abricot);padding:8px 15px;border-radius:8px">Lisser sur les 12 mois</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
           ${c.encProjLignes.map(l => `
@@ -2385,8 +2385,8 @@ function tplBudgetParam(c, x){
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
           <span style="flex:1;min-width:240px;font-size:11px;color:${c.encSaisSource === 'magasin' ? 'var(--color-text-muted)' : '#8a5a13'}">${esc(c.encSaisSourceTxt)}</span>
-          <button ${x.A(c.encSaisReseauSave)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">En faire la courbe du réseau</button>
-          <button ${x.A(c.encSaisPousser)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer" title="${esc(c.encSaisAutres)}">Appliquer aux autres magasins</button>
+          <button ${x.A(c.encSaisReseauSave)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">En faire la courbe du réseau</button>
+          <button ${x.A(c.encSaisPousser)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer" title="${esc(c.encSaisAutres)}">Appliquer aux autres magasins</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
           <label style="display:flex;flex-direction:column;gap:5px">
@@ -2405,7 +2405,7 @@ function tplBudgetParam(c, x){
         <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:13px">
           <div style="${lbl};margin-bottom:9px">Annexe — document de l'étude</div>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <label class="hv-apr-line" style="display:inline-flex;align-items:center;gap:8px;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;cursor:pointer;font-size:12px;font-weight:500">
+            <label class="hv-apr-line" style="display:inline-flex;align-items:center;gap:8px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;cursor:pointer;font-size:12px;font-weight:500">
               Joindre un fichier
               <input type="file" accept=".pdf,.xlsx,.xls,.docx,.csv" ${x.C(c.encAnxPick)} style="display:none" />
             </label>
@@ -2429,7 +2429,7 @@ function tplBudgetParam(c, x){
             ${c.encProjFait ? `<div style="margin-top:4px;color:var(--pkg-abricot);font-weight:500">Théorique écrit — ${esc(c.encProjFait)}</div>` : ''}
           </div>
           <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.encEtudeEtat || '')}</span>
-          <button ${x.A(c.encEtudeSave)} style="border:none;background:var(--pkg-abricot);color:#fff;border-radius:999px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer l'étude et projeter</button>
+          <button ${x.A(c.encEtudeSave)} style="border:none;background:var(--pkg-abricot);color:#fff;border-radius:8px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer l'étude et projeter</button>
         </div>
       </div>
     </div>
@@ -2449,7 +2449,7 @@ function tplBudgetParam(c, x){
       <!-- Les taux sont communs : le dire à l'endroit où on les modifie évite
            de croire qu'on ajuste seulement le magasin qu'on regarde. -->
       <div style="display:flex;gap:9px;align-items:flex-start;background:rgba(141,29,44,0.05);border:0.5px solid rgba(141,29,44,0.2);border-radius:9px;padding:10px 13px;margin:11px 0 12px">
-        <span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--color-primary);color:#fff;white-space:nowrap;flex:0 0 auto">réseau</span>
+        <span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:8px;background:var(--color-primary);color:#fff;white-space:nowrap;flex:0 0 auto">réseau</span>
         <div style="font-size:11.5px;line-height:1.5">${esc(c.encReseauNote)}${c.encChargesModifie ? ' <span style="font-weight:600;color:var(--color-primary)">Modifications non enregistrées.</span>' : ''}</div>
       </div>
       <div style="font-size:11.5px;color:var(--color-text-muted);margin:0 0 14px">${esc(c.encReelNote)}</div>
@@ -2480,8 +2480,8 @@ function tplBudgetParam(c, x){
                 <button ${x.A(cat.descendre)} title="Descendre cette catégorie" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:${cat.descendre ? 'var(--color-text-muted)' : 'var(--color-border-tertiary)'};border-radius:6px;width:22px;height:22px;font-size:11px;cursor:${cat.descendre ? 'pointer' : 'not-allowed'};padding:0;line-height:1">↓</button>
                 <input value="${esc(cat.nom)}" ${x.C(cat.renommer)} style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:180px">
                 <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA · ${esc(cat.totalE)}</span>
-                <button ${x.A(cat.ajouter)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ poste</button>
-                <button ${x.A(cat.ajouterPalier)} title="Poser un résultat intermédiaire après cette catégorie — marge brute, marge sur coûts fixes…" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ étape</button>
+                <button ${x.A(cat.ajouter)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ poste</button>
+                <button ${x.A(cat.ajouterPalier)} title="Poser un résultat intermédiaire après cette catégorie — marge brute, marge sur coûts fixes…" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ étape</button>
               </div>
             </td></tr>
             ${cat.lignes.map(ch => `
@@ -2525,8 +2525,8 @@ function tplBudgetParam(c, x){
             <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">Part de chaque jour de la semaine dans le chiffre d'affaires, calculée sur l'historique réel du réseau. Elle répartit le budget mensuel en objectifs du jour et de la semaine — identique pour tous les magasins.</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <button ${x.A(c.pjRecalculer)} ${c.pjEtat === 'chargement' ? 'disabled' : ''} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">${c.pjEtat === 'chargement' ? 'Calcul en cours…' : 'Recalculer'}</button>
-            ${c.pjAdoptable ? `<button ${x.A(c.pjAdopter)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Adopter cette pondération</button>` : ''}
+            <button ${x.A(c.pjRecalculer)} ${c.pjEtat === 'chargement' ? 'disabled' : ''} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">${c.pjEtat === 'chargement' ? 'Calcul en cours…' : 'Recalculer'}</button>
+            ${c.pjAdoptable ? `<button ${x.A(c.pjAdopter)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Adopter cette pondération</button>` : ''}
           </div>
         </div>
         ${c.pjMotif ? `<div style="margin-top:14px;font-size:12.5px;color:var(--color-text-muted);padding:10px 12px;border:0.5px dashed var(--color-border-secondary);border-radius:8px">${esc(c.pjMotif)}</div>` : ''}
@@ -2603,7 +2603,7 @@ function tplControle(c, x){
                 <span style="font-size:12.5px;flex:1">${esc(r.nom)}</span>
                 <span style="font-size:12.5px;font-weight:600;white-space:nowrap">${esc(r.txt)}</span>
               </div>
-              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
+              <span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
             </div>`).join('')}
         </div>
         <div>
@@ -2615,7 +2615,7 @@ function tplControle(c, x){
                 <span style="font-size:12.5px;flex:1">${esc(r.nom)}</span>
                 <span style="font-size:12.5px;font-weight:600;white-space:nowrap">${esc(r.txt)}</span>
               </div>
-              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
+              <span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
             </div>`).join('')}
         </div>
       </div>
@@ -2783,7 +2783,7 @@ function tplKpiT(c, x){
           <option value="">choisir…</option>
           ${F.endpoints.map(e => `<option value="${esc(e.val)}"${e.sel ? ' selected' : ''}>${esc(e.nom)}</option>`).join('')}
         </select></label>
-      <button ${x.A(F.tester)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(F.testerTxt)}</button>
+      <button ${x.A(F.tester)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(F.testerTxt)}</button>
       ${F.listes.length ? `<label style="${TH10}">Liste<br><select ${x.C(F.setListe)} style="${inp};margin-top:4px">${F.listes.map(l => `<option value="${esc(l.val)}"${l.sel ? ' selected' : ''}>${esc(l.val)}[]</option>`).join('')}</select></label>` : ''}
       ${F.champs.length ? `<label style="${TH10}">Champ à lire<br><select ${x.C(F.setChamp)} style="${inp};margin-top:4px"><option value="">choisir…</option>${F.champs.map(ch => `<option value="${esc(ch.val)}"${ch.sel ? ' selected' : ''}>${esc(ch.val)}</option>`).join('')}</select></label>` : ''}
     </div>
@@ -2805,7 +2805,7 @@ function tplKpiT(c, x){
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
-      <button ${x.A(F.enregistrer)} style="border:none;border-radius:999px;padding:9px 18px;background:${F.pret ? 'var(--color-primary)' : 'var(--color-border-secondary)'};color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${F.pret ? 'pointer' : 'default'}">${esc(F.enregistrerTxt)}</button>
+      <button ${x.A(F.enregistrer)} style="border:none;border-radius:8px;padding:9px 18px;background:${F.pret ? 'var(--color-primary)' : 'var(--color-border-secondary)'};color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${F.pret ? 'pointer' : 'default'}">${esc(F.enregistrerTxt)}</button>
       <span style="font-size:11px;color:var(--color-text-muted)">Dès l'enregistrement : collecte au prochain battement du cron, historique au fil des jours, repris dans le bloc « Table KPI » des rapports.</span>
     </div>
   </div>`;
@@ -2828,8 +2828,8 @@ function tplKpiT(c, x){
     </div>
     <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
       <input id="kt-attr-neuf" placeholder="Nouvel attribut — ex. Surface de vente (m²)" style="${inp};min-width:260px">
-      <button ${x.A(FI.ajouter)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">+ Ajouter</button>
-      <button ${x.A(FI.enregistrer)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${esc(FI.enregistrerTxt)}</button>
+      <button ${x.A(FI.ajouter)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">+ Ajouter</button>
+      <button ${x.A(FI.enregistrer)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${esc(FI.enregistrerTxt)}</button>
     </div>
   </div>`;
   return `
@@ -2841,8 +2841,8 @@ function tplKpiT(c, x){
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Chaque KPI déclare sa source (un endpoint, ou une formule sur d'autres KPI) ; le cron le collecte chaque heure et range les valeurs par magasin + réseau. Les rapports lisent cette table telle quelle (bloc « Table KPI »).</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button ${x.A(c.ktCollecte)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(c.ktCollecteTxt)}</button>
-          <button ${x.A(F.ouvrir)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau KPI</button>
+          <button ${x.A(c.ktCollecte)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(c.ktCollecteTxt)}</button>
+          <button ${x.A(F.ouvrir)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau KPI</button>
         </div>
       </div>
       ${c.ktVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucun KPI encodé — « + Nouveau KPI » pour commencer.</div>` : ''}
@@ -2887,7 +2887,7 @@ function tplCtrlHeat(c, x, card){
       ${[['rgba(141,29,44,0.75)', '&lt; 60 %'], ['rgba(217,119,6,0.45)', '60\u201370 %'], ['rgba(201,162,39,0.40)', '70\u201380 %'], ['rgba(45,122,62,0.45)', '80\u201390 %'], ['#2d7a3e', '&#8805; 90 %']]
         .map(([cl, tx]) => `<span><i style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${cl};margin-right:5px;vertical-align:-2px"></i>${tx}</span>`).join('')}
       <span style="margin-left:auto">${esc(c.hmNote)}</span>
-      ${c.hmCompleter ? `<button ${x.A(c.hmCompleter)} style="border:none;border-radius:999px;padding:6px 13px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">${esc(c.hmCompleterTxt)}</button>` : ''}
+      ${c.hmCompleter ? `<button ${x.A(c.hmCompleter)} style="border:none;border-radius:8px;padding:6px 13px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">${esc(c.hmCompleterTxt)}</button>` : ''}
     </div>`;
   const det = !c.hmDetail ? '' : c.hmDetail.chargement
     ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--color-text-muted)">Lecture du d\u00e9tail\u2026</div>`
@@ -3007,7 +3007,7 @@ function tplCtrlHeat(c, x, card){
         <div style="font-size:13.5px;font-weight:600">Suivi mensuel \u2014 faites / pas faites${c.hmVue === 'jours' ? ' \u00b7 ' + esc(c.hmMoisTitre) : ' \u00b7 12 mois glissants'}</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Faite = rendue dans le panel ce jour-l\u00e0 (not\u00e9e, photographi\u00e9e ou au statut fait) \u00b7 Pas faite = attendue et rest\u00e9e sans rendu. La note des contr\u00f4les est une autre affaire \u2014 ici on mesure si le travail est fait.</div>
       </div>
-      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
         ${c.hmToggle.map(t => `<span ${x.A(t.clic)} style="padding:7px 15px;font-size:12px;font-weight:500;cursor:pointer;${t.on ? 'background:var(--color-primary);color:#fff' : 'color:var(--color-text-muted)'}">${esc(t.txt)}</span>`).join('')}
       </div>
     </div>
@@ -3027,7 +3027,7 @@ function tplProjets(c, x){
            troisième question ne se lit pas dans un kanban. -->
       ${(c.pjVueBtns || []).map(v => `<button ${x.A(v.go)} style="border-radius:9px;height:32px;padding:0 14px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer;${v.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(v.nom)}</button>`).join('')}
       <div style="flex:1"></div>
-      <button ${x.A(c.npOpen)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouveau projet</button>
+      <button ${x.A(c.npOpen)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px">+ Nouveau projet</button>
     </div>
     ${c.pjBudgets ? tplProjetsBudgets(c, x) : ''}
     ${c.pjFranchise ? tplProjetsFranchise(c, x) : ''}
@@ -3051,7 +3051,7 @@ function tplProjets(c, x){
                   ${p.levs.map(l => `<span class="levier-dot" data-lev="${l}" title="${l}"></span>`).join('')}
                   <span style="font-size:11px;color:var(--color-text-muted);margin-left:auto;white-space:nowrap">Échéance ${p.fin}</span>
                 </div>
-                <div style="height:4px;border-radius:999px;background:var(--color-background-secondary);margin-top:10px;overflow:hidden"><div style="${p.avSt}"></div></div>
+                <div style="height:4px;border-radius:8px;background:var(--color-background-secondary);margin-top:10px;overflow:hidden"><div style="${p.avSt}"></div></div>
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:11px;color:var(--color-text-muted)">
                   <span style="white-space:nowrap">${p.av} avancé · ${p.resteTxt}</span>
                   ${p.alerte ? `<span style="color:var(--color-primary);font-weight:500;white-space:nowrap">${p.alerte}</span>` : ''}
@@ -3077,7 +3077,7 @@ function tplProjets(c, x){
                           </div>` : ''}
                       </div>`).join('')}
                     ${p.rienReste ? `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucune étape enregistrée.</div>` : ''}
-                    <button ${x.A(p.open)} class="hv-line" style="align-self:flex-start;margin-top:2px;border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:500;color:var(--color-text);padding:5px 12px;border-radius:999px">Ouvrir la fiche projet</button>
+                    <button ${x.A(p.open)} class="hv-line" style="align-self:flex-start;margin-top:2px;border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:500;color:var(--color-text);padding:5px 12px;border-radius:8px">Ouvrir la fiche projet</button>
                   </div>` : ''}
               </div>`).join('')}
           </div>
@@ -3112,15 +3112,15 @@ function tplScoringDetail(c, x){
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <div style="text-align:right"><div style="font-size:30px;font-weight:600;line-height:1;color:${d.col}">${esc(d.score)}</div>
-            <span style="display:inline-block;margin-top:4px;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:500;background:${d.fond};color:${d.col}">${esc(d.verdict)}</span></div>
-          <button ${x.A(d.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+            <span style="display:inline-block;margin-top:4px;padding:2px 10px;border-radius:8px;font-size:11px;font-weight:500;background:${d.fond};color:${d.col}">${esc(d.verdict)}</span></div>
+          <button ${x.A(d.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
         </div>
       </div>
 
       <div style="margin-top:14px">
         ${d.criteres.map(cr => `<div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
           <span style="width:190px;font-size:12.5px">${esc(cr.nom)} <span style="color:var(--color-text-muted);font-size:10.5px">· poids ${esc(cr.poids)}</span></span>
-          <div style="flex:1;height:8px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${cr.barre}%;background:${cr.col}"></i></div>
+          <div style="flex:1;height:8px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${cr.barre}%;background:${cr.col}"></i></div>
           <span style="width:66px;text-align:right;font-size:12px;font-weight:600;${cr.absent ? 'color:var(--color-text-muted);font-weight:400' : ''}">${esc(cr.note)}</span>
           <span style="width:170px;text-align:right;font-size:11px;color:var(--color-text-muted)">${esc(cr.brut)}</span>
         </div>`).join('')}
@@ -3132,7 +3132,7 @@ function tplScoringDetail(c, x){
         <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;font-weight:600">Volume par magasin</span><span style="font-size:11px;color:var(--color-text-muted)">${esc(d.periode)} · ${esc(d.parMagasinTotal)} pièces au total</span></div>
         ${d.parMagasin.map(m => `<div style="display:flex;align-items:center;gap:11px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">
           <span style="width:230px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.nom)}</span>
-          <div style="flex:1;height:8px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${m.barre}%;background:#8D1D2C"></i></div>
+          <div style="flex:1;height:8px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${m.barre}%;background:#8D1D2C"></i></div>
           <span style="width:70px;text-align:right;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">${esc(m.vol)}</span>
           <span style="width:46px;text-align:right;font-size:11px;color:var(--color-text-muted)">${esc(m.part)}</span>
         </div>`).join('')}
@@ -3167,15 +3167,15 @@ function tplScoringDetail(c, x){
           <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Crée une ligne dans Projets de développement, rattachée à la référence, avec l’adaptation demandée.</div>
           <select ${x.C(d.setAdaptation)} style="${inp};margin-bottom:8px">${d.adaptations.map(a => `<option${a === d.adaptation ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>
           <input id="pdd-prec" value="${esc(d.precision)}" ${x.I(d.setPrecision)} placeholder="Précision (facultatif)" style="${inp};margin-bottom:10px">
-          <button ${x.A(d.envoyerProjet)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer la ligne projet</button>
+          <button ${x.A(d.envoyerProjet)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer la ligne projet</button>
         </div>
         <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px">
           <div style="font-size:13px;font-weight:600">⏹ Arrêter le produit</div>
           <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Programme la fin de la référence et l’annonce au réseau — bandeau au Catalogue et à l’Assortiment.</div>
           <input type="date" value="${esc(d.finDate)}" ${x.C(d.setFinDate)} style="${inp};margin-bottom:8px">
           <input id="pdd-fin" value="${esc(d.finTexte)}" ${x.I(d.setFinTexte)} placeholder="Note au réseau — ex. remplacé par… dès octobre" style="${inp};margin-bottom:10px">
-          <button ${x.A(d.arreter)} style="border:none;background:#666;color:#fff;border-radius:999px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Programmer l’arrêt et informer</button>
-          ${d.annulerFin ? `<button ${x.A(d.annulerFin)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:999px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;margin-left:7px">Annuler l’arrêt</button>` : ''}
+          <button ${x.A(d.arreter)} style="border:none;background:#666;color:#fff;border-radius:8px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Programmer l’arrêt et informer</button>
+          ${d.annulerFin ? `<button ${x.A(d.annulerFin)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:8px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;margin-left:7px">Annuler l’arrêt</button>` : ''}
           ${d.finNote ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Note actuelle : ${esc(d.finNote)}</div>` : ''}
         </div>
       </div>
@@ -3219,7 +3219,7 @@ function tplEncPalier(p, x){
 function tplMktGarde(c){
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   if (c.mkChargement) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des campagnes…</div>`; }
-  if (c.mkIndispo) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;line-height:1.6"><span style="font-size:10px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">indisponible</span><div style="margin-top:8px">${c.mkRaison}</div></div>`; }
+  if (c.mkIndispo) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;line-height:1.6"><span style="font-size:10px;font-weight:500;padding:2px 9px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">indisponible</span><div style="margin-top:8px">${c.mkRaison}</div></div>`; }
   return '';
 }
 
@@ -3229,12 +3229,12 @@ function tplMktForm(c, x){
   const f = c.mkEdit;
   const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
   const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
-  const puce = b => `<button ${x.A(b.pick)} style="border-radius:999px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
+  const puce = b => `<button ${x.A(b.pick)} style="border-radius:8px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
   return `
   <div style="background:var(--color-surface);border:1px solid var(--color-primary);border-radius:12px;padding:15px 17px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
       <span style="font-size:13.5px;font-weight:500">${esc(f.titre)}</span>
-      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:11px 13px">
       <div><span style="${k}">Nom</span><input id="mk-nom" value="${esc(f.nom)}" ${x.I(f.setNom)} placeholder="Saint-Nicolas, Rentrée…" style="${inp}"></div>
@@ -3250,8 +3250,8 @@ function tplMktForm(c, x){
       <div style="display:flex;gap:6px;flex-wrap:wrap">${f.statuts.map(puce).join('')}</div></div>
     ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(f.err)}</div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:13px">
-      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
-      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:33px;padding:0 18px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger' : 'Créer la campagne')}</button>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:33px;padding:0 18px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger' : 'Créer la campagne')}</button>
     </div>
   </div>`;
 }
@@ -3283,8 +3283,8 @@ function tplMktCalendrier(c, x){
               <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.type)} · ${esc(l.debut)} → ${esc(l.fin)}</div>
             </div>
             <div style="grid-column:2 / span 12;display:grid;grid-template-columns:repeat(12,1fr);align-items:center;border-bottom:0.5px solid var(--color-border-tertiary)">
-              <button ${x.A(l.ouvrir)} title="${esc(l.nom)} — ${esc(l.statutNom)}" style="grid-column:${l.col1} / ${l.col2};height:22px;border:none;border-radius:999px;cursor:pointer;background:${l.couleur}33;border-left:4px solid ${l.couleur};display:flex;align-items:center;padding:0 9px;overflow:hidden">
-                <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;background:${l.statutFond};color:${l.statutTexte};white-space:nowrap">${esc(l.statutNom)}</span>
+              <button ${x.A(l.ouvrir)} title="${esc(l.nom)} — ${esc(l.statutNom)}" style="grid-column:${l.col1} / ${l.col2};height:22px;border:none;border-radius:8px;cursor:pointer;background:${l.couleur}33;border-left:4px solid ${l.couleur};display:flex;align-items:center;padding:0 9px;overflow:hidden">
+                <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:8px;background:${l.statutFond};color:${l.statutTexte};white-space:nowrap">${esc(l.statutNom)}</span>
               </button>
             </div>`).join('')}
         </div>
@@ -3304,7 +3304,7 @@ function tplMktCampagnes(c, x){
   <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;justify-content:flex-end;gap:9px;align-items:center">
       <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">Toute campagne se crée dans l’assistant complet (cadrage, offre, objectifs, prix, photos, budget, communication, planning, leads) : elle apparaît ici, où elle se corrige et se reprend.</span>
-      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle campagne</button>
+      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px">+ Nouvelle campagne</button>
     </div>
     ${c.mkEdit ? tplMktForm(c, x) : ''}
     ${c.mkAttente && c.mkAttente.length ? `
@@ -3315,16 +3315,16 @@ function tplMktCampagnes(c, x){
         <div ${x.A(v.ouvrir)} class="hv-fade" style="${carte};padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui);overflow:hidden;display:flex;flex-direction:column;aspect-ratio:1/1">
           <div style="flex:1;min-height:0;background:${v.couleur}1f ${v.image ? `url('${esc(v.image)}') center/cover no-repeat` : ''};border-bottom:0.5px solid var(--color-border-tertiary);position:relative">
             ${v.image ? '' : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:${v.couleur}">${esc((v.nom || '?').trim().charAt(0).toUpperCase())}</span>`}
-            <span style="position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:${v.statutFond};color:${v.statutTexte}">${esc(v.statutNom)}</span>
+            <span style="position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:${v.statutFond};color:${v.statutTexte}">${esc(v.statutNom)}</span>
           </div>
           <div style="padding:11px 13px;display:flex;flex-direction:column;gap:6px">
             <span style="font-size:13px;font-weight:600;color:var(--color-text);line-height:1.35">${esc(v.nom)}</span>
             <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:${v.couleur}"></span>${esc(v.type)}</span>
-            <span><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:${v.couleur}1f;color:${v.couleur}">${esc(v.levier)}</span></span>
+            <span><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:8px;background:${v.couleur}1f;color:${v.couleur}">${esc(v.levier)}</span></span>
             <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(v.periode)}</span>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
-              <button ${x.A(v.note)} class="hv-fade" title="La note pour les franchisés — à imprimer ou à envoyer" style="border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text);cursor:pointer">Note aux franchisés</button>
-              <button ${x.A(v.corriger)} class="hv-fade" title="Corriger nom, dates, budget et statut sans passer par l’assistant" style="border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text-muted);cursor:pointer">Corriger</button>
+              <button ${x.A(v.note)} class="hv-fade" title="La note pour les franchisés — à imprimer ou à envoyer" style="border:1px solid var(--color-border-tertiary);background:#fff;border-radius:8px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text);cursor:pointer">Note aux franchisés</button>
+              <button ${x.A(v.corriger)} class="hv-fade" title="Corriger nom, dates, budget et statut sans passer par l’assistant" style="border:1px solid var(--color-border-tertiary);background:#fff;border-radius:8px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text-muted);cursor:pointer">Corriger</button>
             </div>
           </div>
         </div>`).join('')}
@@ -3343,7 +3343,7 @@ function tplMktCampagnes(c, x){
           <td style="${td};padding-left:17px"><button ${x.A(l.editer)} class="hv-line" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left">${esc(l.nom)}</button></td>
           <td style="${td}"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:${l.typeCouleur}"></span>${esc(l.type)}</span></td>
           <td style="${td};color:var(--color-text-muted)">${esc(l.scope)}</td>
-          <td style="${td}"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:${l.statutFond};color:${l.statutTexte}">${esc(l.statutNom)}</span></td>
+          <td style="${td}"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:8px;background:${l.statutFond};color:${l.statutTexte}">${esc(l.statutNom)}</span></td>
           <td style="${td};white-space:nowrap;color:var(--color-text-muted)">${esc(l.periode)}</td>
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(l.budget)}</td>
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.depense)}</td>
@@ -3433,8 +3433,8 @@ function tplMktNote(c, x){
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-bottom:5px">Agence</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px">
             ${n.copiesAgence.map(cc => cc.sansAdresse
-              ? `<span title="Renseignez son adresse dans « Expéditeur et gabarit », plus bas" style="display:inline-flex;align-items:center;gap:7px;border:0.5px dashed var(--color-border-secondary);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--color-text-muted)">${esc(cc.nom)} · adresse à renseigner</span>`
-              : `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:999px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
+              ? `<span title="Renseignez son adresse dans « Expéditeur et gabarit », plus bas" style="display:inline-flex;align-items:center;gap:7px;border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--color-text-muted)">${esc(cc.nom)} · adresse à renseigner</span>`
+              : `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:8px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
                 <input type="checkbox" ${cc.on ? 'checked' : ''} ${x.C(cc.basculer)} />
                 <span>${esc(cc.nom)}<span style="color:var(--color-text-muted)"> · ${esc(cc.role)}</span></span>
               </label>`).join('')}
@@ -3442,7 +3442,7 @@ function tplMktNote(c, x){
           ${!n.copiesConsultants.length ? '' : `
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-bottom:5px">Consultants</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
-            ${n.copiesConsultants.map(cc => `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:999px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
+            ${n.copiesConsultants.map(cc => `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:8px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
               <input type="checkbox" ${cc.on ? 'checked' : ''} ${x.C(cc.basculer)} />
               <span>${esc(cc.nom)}<span style="color:var(--color-text-muted)"> · ${esc(cc.role)}</span></span>
             </label>`).join('')}
@@ -3574,7 +3574,7 @@ function tplMktTypes(c, x){
     <div style="${carte};padding:15px 17px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
         <span style="font-size:13px;font-weight:500">Types de campagne</span>
-        <button ${x.A(c.mkTypeNouveau)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:31px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau type</button>
+        <button ${x.A(c.mkTypeNouveau)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:31px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau type</button>
       </div>
       <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque type ouvre la première étape de l’assistant : sa carte y porte son icône, sa couleur et son levier. L’ordre ci-dessous est celui de la grille. Un type porté par des campagnes ne se supprime pas — il se désactive, et l’historique garde son étiquette.</div>
 
@@ -3607,8 +3607,8 @@ function tplMktTypes(c, x){
           </div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-          <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
-          <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${f.edition ? 'Enregistrer' : 'Créer le type'}</button>
+          <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
+          <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:30px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${f.edition ? 'Enregistrer' : 'Créer le type'}</button>
         </div>
       </div>` : ''}
 
@@ -3638,8 +3638,8 @@ function tplMktTypes(c, x){
           <td style="padding:8px 0;text-align:right;white-space:nowrap">
             <button ${x.A(t.monter)} title="Monter" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.premier ? 'default' : 'pointer'};padding:0 3px;${t.premier ? 'opacity:.3' : ''}">▲</button>
             <button ${x.A(t.descendre)} title="Descendre" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.dernier ? 'default' : 'pointer'};padding:0 3px;${t.dernier ? 'opacity:.3' : ''}">▼</button>
-            <button ${x.A(t.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-left:6px">Modifier</button>
-            <button ${x.A(t.basculer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-left:3px">${t.actif ? 'Désactiver' : 'Réactiver'}</button>
+            <button ${x.A(t.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-left:6px">Modifier</button>
+            <button ${x.A(t.basculer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-left:3px">${t.actif ? 'Désactiver' : 'Réactiver'}</button>
             <button ${x.A(t.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:3px">✕</button>
           </td>
         </tr>`).join('')}</tbody>
@@ -3692,12 +3692,12 @@ function tplProPastille(l, esc){
   if (!l || l.proPart == null || !l.proPartTxt) { return ''; }
   const coul = { ok: 'background:#e3f0e6;color:#1f5a2c', att: 'background:#fbecd8;color:#8a4e05', ko: 'background:#f8e0e3;color:#8c1020' }[l.proNiv]
     || 'background:var(--color-background-secondary);color:var(--color-text-muted)';
-  return `<div style="margin-top:3px"><span title="${esc(l.proRegle || '')}" style="display:inline-block;font-size:10px;font-weight:600;line-height:1.5;padding:0 7px;border-radius:999px;white-space:nowrap;${coul}">${esc(l.proPartTxt)}</span></div>`;
+  return `<div style="margin-top:3px"><span title="${esc(l.proRegle || '')}" style="display:inline-block;font-size:10px;font-weight:600;line-height:1.5;padding:0 7px;border-radius:8px;white-space:nowrap;${coul}">${esc(l.proPartTxt)}</span></div>`;
 }
 function tplResultat(c, x){
   const { esc } = x;
   // Chaque onglet dit où en est sa lecture : anneau qui tourne, puis coche.
-  const ong = o => `<button ${x.A(o.go)} class="${o.on ? 'rj-on' : ''}" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.etat === 'lecture' ? '<i class="rj-ring"></i>' : '<i class="rj-ok">✓</i>'}${esc(o.nom)}</button>`;
+  const ong = o => `<button ${x.A(o.go)} class="${o.on ? 'rj-on' : ''}" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:8px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.etat === 'lecture' ? '<i class="rj-ring"></i>' : '<i class="rj-ok">✓</i>'}${esc(o.nom)}</button>`;
   // Tout le réseau au-dessus de son objectif : la nouvelle mérite mieux qu'une
   // colonne verte. L'onglet ouvert décide — la journée et la période ne se
   // gagnent pas ensemble.
@@ -3708,7 +3708,7 @@ function tplResultat(c, x){
     ${tous ? `<div class="rj-tous">${eclat(17, 'rj-feu')}Tous les magasins ont passé leur objectif ${esc(c.rjOnglet === 'jour' ? 'du jour' : (c.rjOnglet === 'mois' ? 'du mois' : 'de la semaine'))}.</div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
       <div></div>
-      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.rjOnglets.map(ong).join('')}</div>
+      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px">${c.rjOnglets.map(ong).join('')}</div>
     </div>
     ${c.rjChargeEnCours ? `
     <div style="margin:-6px 0 -4px">
@@ -3742,7 +3742,7 @@ function tplResultatSquelette(vue){
   const hauteurs = [100, 60, 75, 85, 100, 40, 55];
   return `
     <div style="${carte};padding:17px 19px" aria-busy="true">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">${sk('31px', 31, 'border-radius:8px')}${sk('230px', 15)}${sk('31px', 31, 'border-radius:8px')}${sk('96px', 31, 'border-radius:999px')}${sk('260px', 9, 'margin-left:8px')}</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">${sk('31px', 31, 'border-radius:8px')}${sk('230px', 15)}${sk('31px', 31, 'border-radius:8px')}${sk('96px', 31, 'border-radius:8px')}${sk('260px', 9, 'margin-left:8px')}</div>
       ${vue === 'jour' ? '' : `
       <div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(240px,1.4fr);gap:10px;margin-bottom:14px">
         ${tuile('55%', '80%')}${tuile('35%', '70%')}${tuile('30%', '60%')}${tuile('50%', '65%')}
@@ -3780,7 +3780,7 @@ function tplResultatMois(c, d, x){
       <div class="rm-3${M.profil ? '' : ' deux'}">
         ${bloc(M.semaine ? 'La cascade de la semaine' : 'La cascade du mois', `<table style="width:100%;border-collapse:collapse;font-size:12.5px">${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
               <td style="padding:6px 0;${bord};width:120px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
-              <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul}"></i></span></td>
+              <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul}"></i></span></td>
               <td style="padding:6px 0;${bord};text-align:right;${num};width:82px">${esc(l.v)}</td>
               <td style="padding:6px 0 6px 10px;${bord};text-align:right;${num};width:54px;color:${l.coul}">${esc(l.p)}</td></tr>`).join('')}</table>${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
         ${!M.profil ? '' : bloc('Le profil des jours — moyenne par jour de la semaine', `${M.profil.map(p => `<div class="rm-bar"><span class="l">${esc(p.nom)}</span><span class="b"><i style="width:${p.w}%;background:${p.ok ? '#8D1D2C' : '#c9c2b8'}"></i>${p.wo != null ? `<em style="left:${p.wo}%"></em>` : ''}</span><span class="v">${esc(p.ca)}</span><span class="c" style="color:${p.ok == null ? 'var(--color-text-muted)' : (p.ok ? '#2d7a3e' : '#C0182B')}">${esc(p.att)}</span></div>`).join('')}
@@ -3881,7 +3881,7 @@ function tplPeriodes(g, x){
     <div style="margin-top:18px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
         <span style="${cap}">Les périodes — matin, midi, après-midi</span>
-        ${g.chargement || g.erreur ? '' : `<div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin-left:4px">
+        ${g.chargement || g.erreur ? '' : `<div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;margin-left:4px">
           ${g.cols.map(c => `<button ${x.A(c.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 11px;${c.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">${c.nom}</button>`).join('')}
         </div>`}
         <span style="font-size:11px;color:var(--color-text-muted);margin-left:auto;text-align:right">${g.chargement ? 'Lecture des heures ' + (g.mois ? 'du mois' : 'de la semaine') + '…' : (g.erreur ? esc(g.erreur) : esc(g.resume))}</span>
@@ -3965,7 +3965,7 @@ function tplResultatPeriode(c, x){
             <table style="width:100%;border-collapse:collapse;font-size:12.5px">
               ${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
                 <td style="padding:6px 0;${bord};width:140px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
-                <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:999px;background:var(--color-surface);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;border-radius:999px;background:${l.coul}"></i></span></td>
+                <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:8px;background:var(--color-surface);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;border-radius:8px;background:${l.coul}"></i></span></td>
                 <td style="padding:6px 0;${bord};text-align:right;${num};width:96px">${esc(l.v)}</td>
                 <td style="padding:6px 0 6px 12px;${bord};text-align:right;${num};width:64px;color:${l.coul}">${esc(l.p)}</td>
               </tr>`).join('')}
@@ -4010,15 +4010,15 @@ function tplResultatPeriode(c, x){
           <button ${x.A(c.rpPrec)} title="Période précédente" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text)">◂</button>
           <span style="font-family:var(--font-display);font-size:17px">${esc(c.rpTitre)}</span>
           <button ${x.A(c.rpSuiv)} title="Période suivante" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rpSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rpSuiv ? '1' : '.35'}">▸</button>
-          ${c.rpAuj ? `<button ${x.A(c.rpAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(c.rpAujTxt)}</button>` : ''}
+          ${c.rpAuj ? `<button ${x.A(c.rpAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(c.rpAujTxt)}</button>` : ''}
           <button ${x.A(c.rpRefresh)} title="Relire la période" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">⟳</button>
           ${c.rpMaj ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpMaj)}</span>` : ''}
           <span style="font-size:11.5px;color:var(--color-text-muted);margin-left:6px">${esc(c.rpSousTitre)}</span>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           ${c.rpPjTxt ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpPjTxt)}</span>` : ''}
-          <button ${x.A(c.rpRegler)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Régler la pondération des jours</button>
-          ${c.rpPdfHref ? `<a href="${esc(c.rpPdfHref)}" target="_blank" rel="noopener" title="Une page réseau, puis une page par magasin : budget, écart en clients, compte de résultat, jour par jour" style="display:inline-flex;align-items:center;height:29px;padding:0 14px;border-radius:999px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;text-decoration:none">PDF du mois</a>` : ''}
+          <button ${x.A(c.rpRegler)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Régler la pondération des jours</button>
+          ${c.rpPdfHref ? `<a href="${esc(c.rpPdfHref)}" target="_blank" rel="noopener" title="Une page réseau, puis une page par magasin : budget, écart en clients, compte de résultat, jour par jour" style="display:inline-flex;align-items:center;height:29px;padding:0 14px;border-radius:8px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;text-decoration:none">PDF du mois</a>` : ''}
         </div>
       </div>
       ${c.rpPjMotif ? `<div style="font-size:12px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:8px 12px;border-radius:8px;margin-bottom:12px">${esc(c.rpPjMotif)}</div>` : ''}
@@ -4130,7 +4130,7 @@ function tplResultatJour(c, x){
             <button ${x.A(c.rjSuiv)} title="Jour suivant" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rjSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rjSuiv ? '1' : '.35'}">▸</button>
             <button ${x.A(c.rjRefresh)} title="Relire la journée" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted);margin-left:4px">⟳</button>
             ${c.rjMaj ? `<span style="font-size:10.5px;color:var(--color-text-muted);margin-left:2px">${esc(c.rjMaj)}</span>` : ''}
-            ${c.rjAuj ? `<button ${x.A(c.rjAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Aujourd’hui</button>` : ''}
+            ${c.rjAuj ? `<button ${x.A(c.rjAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Aujourd’hui</button>` : ''}
           </div>
           <div style="text-align:right">
             <div style="${cap}">CA réseau</div>
@@ -4208,13 +4208,13 @@ function tplResultatJour(c, x){
                 <div style="display:flex;align-items:center;gap:11px">
                   <span style="width:15px;flex:none;font-size:11px;color:var(--color-text-muted);text-align:right">${l.rang}</span>
                   <span style="width:230px;flex:none;font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nom)}</span>
-                  <span style="flex:1;min-width:90px;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
-                    <i style="display:block;height:100%;width:${l.barre}%;border-radius:999px;background:${l.tauxCol}"></i></span>
+                  <span style="flex:1;min-width:90px;height:8px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+                    <i style="display:block;height:100%;width:${l.barre}%;border-radius:8px;background:${l.tauxCol}"></i></span>
                   <span style="width:58px;flex:none;text-align:right;font-size:12.5px;font-weight:600;color:${l.tauxCol};${num}">${esc(l.taux)}</span>
                   <span style="width:190px;flex:none;font-size:11px;color:var(--color-text-muted);${num}">${esc(l.detail)}</span>
                   <span style="flex:none;display:flex;gap:6px">
-                    ${l.manque ? `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:#F7E4E6;color:var(--color-primary)">${esc(l.manque)}</span>` : ''}
-                    ${l.clos ? `<span style="font-size:10px;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">${esc(l.clos)}</span>` : ''}
+                    ${l.manque ? `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:#F7E4E6;color:var(--color-primary)">${esc(l.manque)}</span>` : ''}
+                    ${l.clos ? `<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:#E6F2E9;color:#2d7a3e">${esc(l.clos)}</span>` : ''}
                   </span>
                 </div>`).join('')}
             </div>`)}
@@ -4240,9 +4240,9 @@ function tplResultatJour(c, x){
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 13px;border-radius:10px;background:var(--color-background-secondary);flex-wrap:wrap">
         <span style="${cap}">Objectif du jour</span>
         <span style="font-size:14px;font-weight:600;${num}">${esc(c.rjDetail.objectif.montant)}</span>
-        <span style="position:relative;flex:1;min-width:120px;height:10px;border-radius:999px;background:var(--color-surface);overflow:hidden">
-          ${c.rjDetail.objectif.proj ? `<i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.proj.w}%;border-radius:999px;background:#C9A227;opacity:.45"></i>` : ''}
-          <i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.w}%;border-radius:999px;background:${c.rjDetail.objectif.coul}"></i></span>
+        <span style="position:relative;flex:1;min-width:120px;height:10px;border-radius:8px;background:var(--color-surface);overflow:hidden">
+          ${c.rjDetail.objectif.proj ? `<i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.proj.w}%;border-radius:8px;background:#C9A227;opacity:.45"></i>` : ''}
+          <i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.w}%;border-radius:8px;background:${c.rjDetail.objectif.coul}"></i></span>
         <span style="font-size:14px;font-weight:700;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.pct)}</span>
         <span style="font-size:11.5px;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.ecart)}</span>
         ${c.rjDetail.objectif.proj ? `<span style="width:100%;font-size:11.5px;font-weight:600;color:#8a6d12">
@@ -4278,7 +4278,7 @@ function tplResultatJour(c, x){
         <table style="width:100%;border-collapse:separate;border-spacing:0 5px;font-size:12px">
           ${c.rjDetail.planning.lignes.map(p => `
           <tr>
-            <td style="padding:0 10px 0 0;white-space:nowrap;width:170px"><span style="font-weight:500">${esc(p.nom)}</span>${p.franchise ? ` <span style="font-size:9.5px;color:#C17A2A;border:1px solid #E5C9A4;border-radius:999px;padding:0 6px;vertical-align:1px">franchisé</span>` : ''}
+            <td style="padding:0 10px 0 0;white-space:nowrap;width:170px"><span style="font-weight:500">${esc(p.nom)}</span>${p.franchise ? ` <span style="font-size:9.5px;color:#C17A2A;border:1px solid #E5C9A4;border-radius:8px;padding:0 6px;vertical-align:1px">franchisé</span>` : ''}
               <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(p.creneau)} · ${esc(p.h)} h${p.tauxTxt ? ` · ${esc(p.tauxTxt)}` : ''}</div></td>
             <td style="padding:0"><div style="position:relative;height:22px;background:var(--color-surface);border-radius:6px">
               <div style="position:absolute;left:${p.g}%;width:${p.w}%;top:0;height:22px;background:#E8C9A0;border:1px solid #D9B489;border-radius:6px"></div></div></td>
@@ -4298,8 +4298,8 @@ function tplResultatJour(c, x){
               <tr style="${l.fort ? 'font-weight:500' : ''}">
                 <td style="padding:7px 0;${bord};width:150px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
                 <td style="padding:7px 8px;${bord}">
-                  <span style="display:block;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
-                    <i style="display:block;height:100%;width:${l.w}%;border-radius:999px;background:${l.coul}"></i></span></td>
+                  <span style="display:block;height:8px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+                    <i style="display:block;height:100%;width:${l.w}%;border-radius:8px;background:${l.coul}"></i></span></td>
                 <td style="padding:7px 0;${bord};text-align:right;${num};width:96px">${esc(l.v)}</td>
                 <td style="padding:7px 0 7px 12px;${bord};text-align:right;${num};width:64px;color:${l.coul}">${esc(l.p)}</td>
                 <td style="padding:7px 0 7px 10px;${bord};text-align:right;${num};width:74px;font-weight:400;font-size:11px;color:${l.dCoul || 'var(--color-text-muted)'}">${esc(l.d)}</td>
@@ -4363,8 +4363,8 @@ function tplResultatJour(c, x){
           ${c.rjHeures.lignes.map(h2 => `
           <tr>
             <td style="padding:5px 0;width:74px;white-space:nowrap;${num};color:${h2.top ? 'var(--color-primary)' : 'var(--color-text)'};font-weight:${h2.top ? '700' : '400'}">${esc(h2.h)}</td>
-            <td style="padding:5px 8px"><span style="display:block;height:9px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
-              <i style="display:block;height:100%;width:${h2.w}%;border-radius:999px;background:${h2.top ? 'var(--color-primary)' : '#D9BCBF'}"></i></span></td>
+            <td style="padding:5px 8px"><span style="display:block;height:9px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+              <i style="display:block;height:100%;width:${h2.w}%;border-radius:8px;background:${h2.top ? 'var(--color-primary)' : '#D9BCBF'}"></i></span></td>
             <td style="padding:5px 0;width:76px;text-align:right;${num};font-weight:${h2.top ? '700' : '500'}">${esc(h2.ca)}</td>
             <td style="padding:5px 0 5px 10px;width:52px;text-align:right;${num};font-size:10.5px;color:var(--color-text-muted)">${esc(h2.part)}</td>
           </tr>`).join('')}
@@ -4400,7 +4400,7 @@ function tplReputation(c, x){
       ${j.barres.map(b2 => `
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
           <span style="width:26px;text-align:right;font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.note}<i style="${b2.etoileSt};font-style:normal">★</i></span>
-          <span style="flex:1;min-width:0;height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
+          <span style="flex:1;min-width:0;height:7px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
             <span style="display:block;${b2.jaugeSt}"></span>
           </span>
           <span style="width:34px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums">${b2.n}</span>
@@ -4433,7 +4433,7 @@ function tplReputation(c, x){
         <div style="${cap};margin-bottom:6px">Connecteur Google</div>
         ${c.repConfigure
           ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${c.repRaccordes} fiche${c.repRaccordes > 1 ? 's' : ''} raccordée${c.repRaccordes > 1 ? 's' : ''}<br>${esc(c.repSynchroTxt)}</div>
-             <button ${x.A(c.repSync)} class="hv-fade" style="margin-top:8px;border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:29px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.repBusy ? 'opacity:.6;cursor:default' : ''}">${c.repBusy ? 'Synchronisation…' : 'Synchroniser'}</button>`
+             <button ${x.A(c.repSync)} class="hv-fade" style="margin-top:8px;border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:29px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.repBusy ? 'opacity:.6;cursor:default' : ''}">${c.repBusy ? 'Synchronisation…' : 'Synchroniser'}</button>`
           : `<div style="font-size:11.5px;color:#8D1D2C;font-weight:500;line-height:1.5">Aucune clé Google</div>
              <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45">Renseignez-la dans Paramètres pour rapatrier les notes et les avis.</div>`}
       </div>
@@ -4477,15 +4477,15 @@ function tplReputation(c, x){
           ${m.jauges && !m.jauges.vide ? jauges(m.jauges, true) : ''}
 
           ${!m.raccorde ? `
-            <button ${x.A(m.ouvrirRech)} style="margin-top:9px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:999px;height:28px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Raccorder la fiche Google</button>` : ''}
+            <button ${x.A(m.ouvrirRech)} style="margin-top:9px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:8px;height:28px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Raccorder la fiche Google</button>` : ''}
 
           ${m.rechOuverte && c.repRech ? `
             <div style="margin-top:10px;border:1px solid var(--color-primary);border-radius:10px;padding:11px 13px">
               <div style="${cap};margin-bottom:7px">Chercher la fiche</div>
               <div style="display:flex;gap:7px">
                 <input id="rep-q" value="${esc(c.repRech.q)}" ${x.I(c.repRech.setQ)} placeholder="Nom du magasin et ville" style="flex:1;min-width:0;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:30px;padding:0 10px;font-family:var(--font-ui);font-size:12px">
-                <button ${x.A(c.repRech.chercher)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.repRech.busy ? 'opacity:.6;cursor:default' : ''}">${c.repRech.busy ? '…' : 'Chercher'}</button>
-                <button ${x.A(c.repRech.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Fermer</button>
+                <button ${x.A(c.repRech.chercher)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.repRech.busy ? 'opacity:.6;cursor:default' : ''}">${c.repRech.busy ? '…' : 'Chercher'}</button>
+                <button ${x.A(c.repRech.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Fermer</button>
               </div>
               ${c.repRech.err ? `<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;font-weight:500">${esc(c.repRech.err)}</div>` : ''}
               ${c.repRech.aucun ? `<div style="margin-top:8px;font-size:11.5px;color:var(--color-text-muted)">Aucune fiche trouvée pour cette recherche.</div>` : ''}
@@ -4534,10 +4534,10 @@ function tplFondsForm(c, x){
   <div style="${carte};padding:15px 17px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
       <span style="font-size:13.5px;font-weight:500">${esc(f.titre)}</span>
-      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
     </div>
     <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
-      ${f.sensBtns.map(b => `<button ${x.A(b.pick)} style="border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`).join('')}
+      ${f.sensBtns.map(b => `<button ${x.A(b.pick)} style="border-radius:8px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`).join('')}
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px 13px">
       <div style="grid-column:span 2"><span style="${k}">Libellé</span>
@@ -4548,7 +4548,7 @@ function tplFondsForm(c, x){
         <input id="fo-mnt" value="${esc(f.champs.montant)}" ${x.I(f.set('montant'))} inputmode="decimal" placeholder="0,00" style="${inp};text-align:right;font-variant-numeric:tabular-nums"></div>
       <div><span style="${k}">Nature</span>
         <select ${x.C(f.set('source'))} style="${inp}">${(c.foSources || []).map(o => `<option value="${esc(o)}"${f.champs.source === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
-      ${f.investBascule ? `<div style="grid-column:span 2"><button ${x.A(f.investBascule)} style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${f.invest ? 'border:1px solid #E8C9A0;background:#FBF3DC;color:var(--color-on-abricot)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
+      ${f.investBascule ? `<div style="grid-column:span 2"><button ${x.A(f.investBascule)} style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${f.invest ? 'border:1px solid #E8C9A0;background:#FBF3DC;color:var(--color-on-abricot)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
         <span style="width:13px;height:13px;border-radius:4px;border:1.5px solid ${f.invest ? 'var(--color-on-abricot)' : 'var(--color-border-secondary)'};display:inline-flex;align-items:center;justify-content:center;font-size:9px;line-height:1">${f.invest ? '✓' : ''}</span>
         Investissement — équipe plutôt qu’il ne consomme</button>
         <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Le grand livre le badge et le sous-totalise par mois et par an.</div></div>` : ''}
@@ -4565,8 +4565,8 @@ function tplFondsForm(c, x){
     ${f.avert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:11px;line-height:1.45">${esc(f.avert)}</div>` : ''}
     ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
-      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
-      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger l’écriture' : 'Enregistrer au fonds')}</button>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger l’écriture' : 'Enregistrer au fonds')}</button>
     </div>
   </div>`;
 }
@@ -4578,7 +4578,7 @@ function tplFondsRecForm(c, x){
   const carte = 'background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:12px';
   const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
   const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
-  const puce = b => `<button ${x.A(b.pick)} style="border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
+  const puce = b => `<button ${x.A(b.pick)} style="border-radius:8px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
   const sel = (nom, val, opts, vide) => `<select ${x.C(f.set(nom))} style="${inp}">
     <option value=""${val ? '' : ' selected'}>${esc(vide)}</option>
     ${opts.map(o => `<option value="${esc(o.id)}"${String(val) === String(o.id) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
@@ -4587,7 +4587,7 @@ function tplFondsRecForm(c, x){
   <div style="${carte};padding:15px 17px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
       <span style="font-size:13.5px;font-weight:500">Un frais qui revient</span>
-      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
     </div>
     <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
       ${f.sensBtns.map(puce).join('')}
@@ -4618,8 +4618,8 @@ function tplFondsRecForm(c, x){
     <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un frais récurrent est borné : les échéances sont écrites au grand livre dès l’enregistrement, du début à la fin. Sans fin, il ne se budgète pas.${f.estSemaines ? ' En semaines, les échéances s’écrivent comme des mouvements datés : elles se corrigent ensuite ligne à ligne.' : ''}</div>
     ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
-      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
-      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Écriture…' : 'Écrire les échéances'}</button>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Écriture…' : 'Écrire les échéances'}</button>
     </div>
   </div>`;
 }
@@ -4700,7 +4700,7 @@ function tplFonds(c, x){
             <span style="font-size:11px;font-weight:500;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.nom)}">${esc(l.nom)}</span>
           </div>
           <div style="font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:6px;line-height:1.1">${esc(l.depense)}</div>
-          <div style="height:4px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden;margin-top:6px"><i style="display:block;height:100%;border-radius:999px;width:${l.barre.toFixed(1)}%;background:${l.couleur}"></i></div>
+          <div style="height:4px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden;margin-top:6px"><i style="display:block;height:100%;border-radius:8px;width:${l.barre.toFixed(1)}%;background:${l.couleur}"></i></div>
           <div style="font-size:10px;color:var(--color-text-muted);margin-top:5px;line-height:1.35">${esc(l.part || 'aucune dépense')}</div>
           <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">ROI ${esc(l.roi)}</div>
         </div>`).join('')}
@@ -4726,7 +4726,7 @@ function tplFonds(c, x){
         ${fo.ouvert ? fo.mvts.map(m => `
           <div style="display:flex;align-items:baseline;gap:10px;padding:4px 10px 4px 31px;font-size:11.5px">
             <span style="color:var(--color-text-muted);white-space:nowrap">${esc(m.date)}</span>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.libelle)}${m.invest ? ` <span style="display:inline-block;font-size:9px;font-weight:600;padding:0 6px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0">investissement</span>` : ''}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.libelle)}${m.invest ? ` <span style="display:inline-block;font-size:9px;font-weight:600;padding:0 6px;border-radius:8px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0">investissement</span>` : ''}</span>
             <span style="color:${m.col};font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(m.montant)}</span>
           </div>`).join('') : ''}`).join('')}
       ${c.foFournSans ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.45">${esc(c.foFournSans)}</div>` : ''}
@@ -4736,14 +4736,14 @@ function tplFonds(c, x){
       <div style="${carte};overflow:hidden">
         <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:13px;font-weight:500">Grand livre du fonds</span>
-          ${(c.foOrdreBtns || []).length && !c.foVide ? `<span style="display:inline-flex;border:0.5px solid rgba(34,34,34,0.14);border-radius:999px;overflow:hidden">
+          ${(c.foOrdreBtns || []).length && !c.foVide ? `<span style="display:inline-flex;border:0.5px solid rgba(34,34,34,0.14);border-radius:8px;overflow:hidden">
             ${c.foOrdreBtns.map(o => `<button ${x.A(o.go)} title="Ordre des mois" style="border:none;padding:5px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}
           </span>` : ''}
           <span style="flex:1"></span>
           <span style="font-size:11px;color:var(--color-text-muted)">Un bloc par mois — entrées, sorties, solde · cliquez une ligne pour la corriger</span>
         </div>
         ${(c.foMoisBadges || []).length > 1 ? `<div style="padding:9px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          ${c.foMoisBadges.map(m => `<button ${x.A(m.go)} title="${m.on ? 'Revoir tous les mois' : 'Ne montrer que ' + esc(m.nom)}" style="border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${m.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(m.nom)}</button>`).join('')}
+          ${c.foMoisBadges.map(m => `<button ${x.A(m.go)} title="${m.on ? 'Revoir tous les mois' : 'Ne montrer que ' + esc(m.nom)}" style="border-radius:8px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${m.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(m.nom)}</button>`).join('')}
         </div>` : ''}
         ${(c.foAnnees || []).length ? `<div style="padding:8px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:18px;flex-wrap:wrap;background:var(--color-background-secondary)">
           ${c.foAnnees.map(a => `<span style="font-size:11px;font-variant-numeric:tabular-nums"><b style="font-weight:600">${esc(a.an)}</b>
@@ -4774,9 +4774,9 @@ function tplFonds(c, x){
             </td></tr>
             ${g.entrees.concat(g.sorties).map(l => `<tr>
             <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
-            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span>${l.invest ? ` <span style="display:inline-block;font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0;vertical-align:1px">investissement</span>` : ''}<div style="font-size:10.5px;color:${l.col}">${esc(l.sens)}${l.source ? ` <span style="color:var(--color-text-muted)">· ${esc(l.source)}</span>` : ''}</div></td>
+            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span>${l.invest ? ` <span style="display:inline-block;font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:8px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0;vertical-align:1px">investissement</span>` : ''}<div style="font-size:10.5px;color:${l.col}">${esc(l.sens)}${l.source ? ` <span style="color:var(--color-text-muted)">· ${esc(l.source)}</span>` : ''}</div></td>
             <td style="${td}">${l.levier
-              ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</span>`
+              ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:500;padding:1px 8px;border-radius:8px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</span>`
               : (l.sens === 'sortie' ? `<span style="font-size:11px;color:var(--color-on-abricot)">aucun levier</span>` : '')}</td>
             <td style="${td};font-size:11.5px">${l.reseau
               ? `<span style="font-weight:500">Tout le réseau</span>`
@@ -4819,8 +4819,8 @@ function tplFonds(c, x){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px">
           <span style="font-size:11.5px;color:var(--color-text-muted)">${c.foRoyPlan.vide ? 'Tout est déjà écrit pour ce mois.' : `À écrire : <b style="color:var(--color-text)">${esc(c.foRoyPlan.total)}</b>${c.foRoyPlan.nDeja ? ' · ' + c.foRoyPlan.nDeja + ' ligne(s) déjà en place' : ''}`}</span>
           <span style="display:flex;gap:8px">
-            <button ${x.A(c.foRoyPlan.fermer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
-            ${c.foRoyPlan.vide ? '' : `<button ${x.A(c.foRoyPlan.confirmer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Confirmer l’écriture</button>`}
+            <button ${x.A(c.foRoyPlan.fermer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
+            ${c.foRoyPlan.vide ? '' : `<button ${x.A(c.foRoyPlan.confirmer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:30px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Confirmer l’écriture</button>`}
           </span>
         </div>`}`}
       </div>`}
@@ -4851,7 +4851,7 @@ function tplFonds(c, x){
       <!-- Ce que le cockpit ne peut pas encore piloter, dit à l'endroit où on
            le cherche — et pourquoi, avec les routes exactes. -->
       ${(c.foManque || []).map(m => `<div style="padding:13px 17px;border-top:0.5px solid var(--color-border-tertiary);display:flex;gap:9px;align-items:flex-start">
-        <span style="font-size:10px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
+        <span style="font-size:10px;font-weight:500;padding:2px 9px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
         <div><div style="font-size:12.5px;font-weight:500">${esc(m.champ)}</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5">${esc(m.quoi)}</div>
           <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(m.source)}</div></div>
@@ -4889,8 +4889,8 @@ function tplProjetsFonds(c, x){
       <div><div style="${k}">Solde disponible</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums;color:${f.verdictCol}">${esc(f.solde)}</div></div>
       <div><div style="${k}">Engagé par les projets</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.engage)}</div></div>
     </div>
-    <div style="height:9px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden;margin-top:12px">
-      <i style="display:block;height:100%;border-radius:999px;width:${f.couvre.toFixed(1)}%;background:${f.verdictCol}"></i>
+    <div style="height:9px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden;margin-top:12px">
+      <i style="display:block;height:100%;border-radius:8px;width:${f.couvre.toFixed(1)}%;background:${f.verdictCol}"></i>
     </div>
     <div style="font-size:12px;color:${f.verdictCol};margin-top:7px;font-weight:500">${esc(f.verdict)}</div>
     <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">${esc(f.note)}</div>
@@ -4938,9 +4938,9 @@ function tplProjetsPeriodes(c, x){
         <td style="${td};${num};color:${l.ecartCol}">${esc(l.ecart)}</td>
         <td style="${td};padding-right:18px">
           <div style="display:flex;flex-direction:column;gap:3px">
-            <div style="height:5px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${l.bFonds.toFixed(1)}%;background:${FONDS}"></i></div>
-            <div style="height:5px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${l.bPrev.toFixed(1)}%;background:${GRIS}"></i></div>
-            <div style="height:5px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${l.bReel.toFixed(1)}%;background:${NOIR}"></i></div>
+            <div style="height:5px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${l.bFonds.toFixed(1)}%;background:${FONDS}"></i></div>
+            <div style="height:5px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${l.bPrev.toFixed(1)}%;background:${GRIS}"></i></div>
+            <div style="height:5px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${l.bReel.toFixed(1)}%;background:${NOIR}"></i></div>
           </div>
         </td>
       </tr>`).join('')}</tbody>
@@ -4971,7 +4971,7 @@ function tplProjetsBudgets(c, x){
     ${b.tuiles.map(t => `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px">
       <div style="${k}">${esc(t.k)}</div>
       <div style="font-size:25px;font-weight:500;line-height:1.05;margin-top:3px">${esc(t.v)}</div>
-      ${t.barre != null ? `<div style="height:8px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden;margin-top:7px"><i style="display:block;height:100%;border-radius:999px;width:${t.barre.toFixed(1)}%;background:${t.col}"></i></div>` : ''}
+      ${t.barre != null ? `<div style="height:8px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden;margin-top:7px"><i style="display:block;height:100%;border-radius:8px;width:${t.barre.toFixed(1)}%;background:${t.col}"></i></div>` : ''}
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
     </div>`).join('')}
   </div>
@@ -4997,7 +4997,7 @@ function tplProjetsBudgets(c, x){
       <tbody>${b.lignes.map(l => `<tr ${x.A(l.ouvrir)} title="Voir la fiche franchisé" style="cursor:pointer">
         <td style="${td};padding-left:18px">
           <span style="font-weight:500">${esc(l.nom)}</span>
-          ${l.leviers.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${l.leviers.map(lv => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>` : ''}
+          ${l.leviers.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${l.leviers.map(lv => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:8px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>` : ''}
         </td>
         <td style="${td};color:var(--color-text-muted)">${esc(l.famille)}<div style="font-size:10.5px">${esc(l.statut)}</div></td>
         <td style="${td};${num}">${esc(l.vote)}</td>
@@ -5024,7 +5024,7 @@ function tplProjetsFranchise(c, x){
   }
   return `
   <div style="display:flex;gap:7px;flex-wrap:wrap">
-    ${f.choix.map(o => `<button ${x.A(o.go)} style="border-radius:999px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.nom)}</button>`).join('')}
+    ${f.choix.map(o => `<button ${x.A(o.go)} style="border-radius:8px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.nom)}</button>`).join('')}
   </div>
 
   <div style="${carte}">
@@ -5032,7 +5032,7 @@ function tplProjetsFranchise(c, x){
       <div>
         <div style="${k}">Ce que ce projet développe</div>
         ${f.leviers.length
-          ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">${f.leviers.map(lv => `<span title="${esc(lv.desc)}" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 11px;border-radius:999px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:9px;height:9px;border-radius:3px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>
+          ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">${f.leviers.map(lv => `<span title="${esc(lv.desc)}" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 11px;border-radius:8px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:9px;height:9px;border-radius:3px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>
              ${f.leviers[0].desc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">${esc(f.leviers[0].desc)}</div>` : ''}`
           : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Aucun levier choisi sur ce projet.</div>`}
       </div>
@@ -5075,7 +5075,7 @@ function tplProjetsFranchise(c, x){
     <div style="${carte}">
       <div style="font-size:13px;font-weight:500;margin-bottom:9px">Ce que cette fiche ne peut pas encore dire</div>
       ${f.manque.map(m => `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:9px">
-        <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque</span>
+        <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque</span>
         <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b><div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
       </div>`).join('')}
     </div>
@@ -5097,7 +5097,7 @@ function tplMktHub(c, x){
   const { esc } = x, h = c.mh;
   const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   const cap = 'font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
-  const btn = 'display:inline-flex;align-items:center;min-height:38px;padding:0 15px;border-radius:999px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-decoration:none;cursor:pointer;white-space:nowrap';
+  const btn = 'display:inline-flex;align-items:center;min-height:38px;padding:0 15px;border-radius:8px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-decoration:none;cursor:pointer;white-space:nowrap';
   const blanc = btn + ';background:#fff;border:none;color:var(--color-primary)';
   const ligne = btn + ';background:transparent;border:0.5px solid rgba(255,255,255,.55);color:#fff';
   const plein = btn + ';background:var(--color-primary);border:none;color:#fff';
@@ -5141,7 +5141,7 @@ function tplMktHub(c, x){
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px"><div style="font-size:14px;font-weight:500">Ce qui demande un geste</div>
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre l’élément dans le portail Marketing</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
     ${h.aFaire.length ? h.aFaire.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12.5px">
-      <span style="display:inline-block;min-width:78px;text-align:center;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:500;${tag(a)}">${esc(a.canal)}</span>
+      <span style="display:inline-block;min-width:78px;text-align:center;padding:3px 8px;border-radius:8px;font-size:10.5px;font-weight:500;${tag(a)}">${esc(a.canal)}</span>
       <span style="flex:1;min-width:0"><span style="font-weight:500">${esc(a.titre)}</span>${a.detail ? `<span style="display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(a.detail)}</span>` : ''}</span>
       <a href="${esc(a.lien)}" ${ext} style="font-size:12px;font-weight:500;white-space:nowrap">Ouvrir ›</a></div>`).join('')
       : '<div style="font-size:12.5px;color:var(--color-text-muted);padding:10px 0">Rien n’attend : aucune newsletter en souffrance, aucune campagne en brouillon qui approche.</div>'}
@@ -5235,14 +5235,14 @@ function tplBrandGuard(c, x){
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div style="font-size:13px;font-weight:500">La charte de marque</div>
         <span style="font-size:11px;color:var(--color-text-muted)">version ${esc(P.version)} · ${P.nActives} règle${P.nActives > 1 ? 's' : ''} active${P.nActives > 1 ? 's' : ''} sur ${P.n}</span>
-        ${P.modifie ? `<span style="font-size:10.5px;font-weight:500;border-radius:999px;padding:2px 9px;background:rgba(217,119,6,0.14);color:#D97706">modifications non enregistrées</span>` : ''}
+        ${P.modifie ? `<span style="font-size:10.5px;font-weight:500;border-radius:8px;padding:2px 9px;background:rgba(217,119,6,0.14);color:#D97706">modifications non enregistrées</span>` : ''}
         <span style="flex:1"></span>
         ${P.modifie ? `<button ${x.A(P.annuler)} style="${P.btnS}">Annuler</button>` : ''}
         <button ${x.A(P.enregistrer)} style="${P.btnP}${P.modifie ? '' : ';opacity:0.45'}">Enregistrer la charte</button>
       </div>
       <div style="font-size:12px;color:var(--color-text-muted);margin:4px 0 14px;line-height:1.45;text-wrap:pretty">Le contrôle des posts relit ces règles telles quelles, texte et visuels. Une règle <b>bloquante</b> arrête un post ; une <b>majeure</b> le renvoie à corriger ; une <b>mineure</b> est signalée. Chaque enregistrement fait une nouvelle version, et chaque verdict garde la sienne.</div>
       ${P.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la charte…</div>` : P.erreur ? `<div style="font-size:12px;color:#8D1D2C">${esc(P.erreur)}</div>` : `
-      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin-bottom:12px">
+      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;margin-bottom:12px">
         ${P.familles.map(f => `<button ${x.A(f.go)} style="${P.famBtn(f.on)}">${esc(f.nom)}</button>`).join('')}
       </div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
@@ -5272,7 +5272,7 @@ function tplBrandGuard(c, x){
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div style="font-size:13px;font-weight:500">La page Facebook de chaque magasin</div>
-        ${G.modifie ? `<span style="font-size:10.5px;font-weight:500;border-radius:999px;padding:2px 9px;background:rgba(217,119,6,0.14);color:#D97706">modifications non enregistrées</span>` : ''}
+        ${G.modifie ? `<span style="font-size:10.5px;font-weight:500;border-radius:8px;padding:2px 9px;background:rgba(217,119,6,0.14);color:#D97706">modifications non enregistrées</span>` : ''}
         <span style="flex:1"></span>
         ${G.modifie ? `<button ${x.A(G.annuler)} style="${P.btnS}">Annuler</button>` : ''}
         <button ${x.A(() => G.enregistrer(false))} style="${P.btnS}">Enregistrer</button>
@@ -5321,8 +5321,8 @@ function tplReporting(c, x){
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : une ligne crontab horaire sur ${c.rapGen.cronUrl ? `<code>${esc(c.rapGen.cronUrl)}</code>` : `l'URL de cron (se génère au premier chargement)`}.</div>
         </div>
         ${c.rapComposeOn
-          ? `<button ${x.A(c.rapComposeFermer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">← Retour à la liste</button>`
-          : `<button ${x.A(c.rapComposeOuvrir)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">+ Nouveau rapport</button>`}
+          ? `<button ${x.A(c.rapComposeFermer)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">← Retour à la liste</button>`
+          : `<button ${x.A(c.rapComposeOuvrir)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">+ Nouveau rapport</button>`}
       </div>
       ${c.rapComposeOn ? `
       <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
@@ -5342,7 +5342,7 @@ function tplReporting(c, x){
                 <div style="display:flex;align-items:center;gap:8px;border:${it.on ? '1.5px solid var(--color-primary)' : '0.5px solid var(--color-border-tertiary)'};border-radius:9px;padding:7px 10px;background:${it.on ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
                   <span ${x.A(it.toggle)} style="width:15px;height:15px;border-radius:4px;flex:none;cursor:pointer;border:1.5px solid ${it.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${it.on ? 'var(--color-primary)' : 'transparent'};color:#fff;font-size:10px;line-height:14px;text-align:center">${it.on ? '✓' : ''}</span>
                   <span ${x.A(it.toggle)} style="flex:1;font-size:12px;font-weight:500;cursor:pointer">${esc(it.nom)}</span>
-                  ${it.on ? `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:9.5px;font-weight:600">
+                  ${it.on ? `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:9.5px;font-weight:600">
                     <button ${x.A(it.setModeComplet)} style="border:none;cursor:pointer;padding:2px 7px;font-family:var(--font-ui);${it.mode === 'complet' ? 'background:var(--color-text);color:var(--color-surface)' : 'background:transparent;color:var(--color-text-muted)'}">Complet</button>
                     <button ${x.A(it.setModeDep)} style="border:none;cursor:pointer;padding:2px 7px;font-family:var(--font-ui);${it.mode !== 'complet' ? 'background:var(--color-text);color:var(--color-surface)' : 'background:transparent;color:var(--color-text-muted)'}">Dépass.</button>
                   </span>` : ''}
@@ -5352,8 +5352,8 @@ function tplReporting(c, x){
         <div>
           <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">2 · Les magasins</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <span ${x.A(c.rapCompo.toutLeReseau)} style="display:inline-block;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${c.rapCompo.tous ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">Tout le réseau</span>
-            ${c.rapCompo.magasins.map(mg => `<span ${x.A(mg.toggle)} style="display:inline-block;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${mg.on ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">${esc(mg.nom)}</span>`).join('')}
+            <span ${x.A(c.rapCompo.toutLeReseau)} style="display:inline-block;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${c.rapCompo.tous ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">Tout le réseau</span>
+            ${c.rapCompo.magasins.map(mg => `<span ${x.A(mg.toggle)} style="display:inline-block;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${mg.on ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">${esc(mg.nom)}</span>`).join('')}
           </div>
         </div>
         ${c.rapCompo.plan.length ? `
@@ -5362,9 +5362,9 @@ function tplReporting(c, x){
             <span style="font-size:12.5px;font-weight:600">3 · L'ordre et les pages</span>
             <span style="font-size:11px;color:var(--color-text-muted)">Les blocs sortent dans cet ordre ; sans saut, ils s'enchaînent et remplissent la feuille.</span>
             <span style="margin-left:auto;display:flex;gap:6px">
-              <button ${x.A(c.rapCompo.pageParLevier)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 13px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer">Une page par levier</button>
-              <button ${x.A(c.rapCompo.sansSaut)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Aucun saut</button>
-              <button ${x.A(c.rapCompo.ordreParLevier)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Ordre du cockpit</button>
+              <button ${x.A(c.rapCompo.pageParLevier)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 13px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer">Une page par levier</button>
+              <button ${x.A(c.rapCompo.sansSaut)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Aucun saut</button>
+              <button ${x.A(c.rapCompo.ordreParLevier)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Ordre du cockpit</button>
             </span>
           </div>
           ${c.rapCompo.plan.map(pl => `
@@ -5377,10 +5377,10 @@ function tplReporting(c, x){
               <span style="font-size:10px;font-weight:600;color:var(--color-text-muted);background:var(--color-surface);border-radius:6px;padding:3px 7px;min-width:34px;text-align:center">P. ${pl.page}</span>
               <i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${pl.couleur};flex:none"></i>
               <span style="flex:1;font-size:12px;font-weight:500">${esc(pl.nom)}</span>
-              <span style="font-size:9.5px;font-weight:600;color:var(--color-text-muted);border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:2px 8px">${esc(pl.mode)}</span>
+              <span style="font-size:9.5px;font-weight:600;color:var(--color-text-muted);border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:2px 8px">${esc(pl.mode)}</span>
               ${pl.premier ? '<span style="font-size:10px;color:var(--color-text-muted);padding:3px 10px">1ʳᵉ page</span>'
-                : pl.force ? '<span style="font-size:10px;font-weight:600;color:var(--color-text-muted);border:0.5px dashed var(--color-border-secondary);border-radius:999px;padding:3px 10px" title="Ce bloc ouvre toujours une page">saut imposé</span>'
-                : `<button ${x.A(pl.basculerSaut)} style="border:${pl.saut ? 'none' : '0.5px solid var(--color-border-secondary)'};border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:600;cursor:pointer;${pl.saut ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">saut de page${pl.saut ? ' ✓' : ''}</button>`}
+                : pl.force ? '<span style="font-size:10px;font-weight:600;color:var(--color-text-muted);border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:3px 10px" title="Ce bloc ouvre toujours une page">saut imposé</span>'
+                : `<button ${x.A(pl.basculerSaut)} style="border:${pl.saut ? 'none' : '0.5px solid var(--color-border-secondary)'};border-radius:8px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:600;cursor:pointer;${pl.saut ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">saut de page${pl.saut ? ' ✓' : ''}</button>`}
             </div>`).join('')}
           <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">« P. 2 » est l'intention : un bloc plus long que la feuille déborde sur la suivante. Le bilan des tâches et les photos ouvrent toujours leur page, et restent l'un derrière l'autre.</div>
         </div>` : ''}
@@ -5405,8 +5405,8 @@ function tplReporting(c, x){
         <div style="background:var(--color-background-secondary);border-radius:10px;padding:13px 15px">
           <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">5 · Générer, envoyer, ou enregistrer${c.rapCompo.edit ? ` <span style="font-weight:500;color:var(--color-primary)">— modification de « ${esc(c.rapCompo.editNom)} »</span>` : ''}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
-            <button ${x.A(c.rapCompo.apercu)} style="border:none;border-radius:999px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer;${c.rapCompo.busy ? 'opacity:.6' : ''}">${c.rapCompo.busy ? 'En cours…' : 'Générer l’aperçu →'}</button>
-            <button ${x.A(c.rapCompo.envoyer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Envoyer par email</button>
+            <button ${x.A(c.rapCompo.apercu)} style="border:none;border-radius:8px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer;${c.rapCompo.busy ? 'opacity:.6' : ''}">${c.rapCompo.busy ? 'En cours…' : 'Générer l’aperçu →'}</button>
+            <button ${x.A(c.rapCompo.envoyer)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Envoyer par email</button>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
             <input value="${esc(c.rapCompo.nom)}" ${x.C(c.rapCompo.setNom)} placeholder="Nom du rapport" style="flex:2;min-width:180px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
@@ -5417,7 +5417,7 @@ function tplReporting(c, x){
                franchi. « Cadence » garde le comportement d'avant. -->
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);width:110px">Période observée</span>
-            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600">
+            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:600">
               ${c.rapCompo.periodes.map(pe => `<button ${x.A(pe.choisir)} title="${esc(pe.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${pe.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(pe.nom)}</button>`).join('')}
             </span>
             ${c.rapCompo.perLibre ? `
@@ -5432,7 +5432,7 @@ function tplReporting(c, x){
                saison, M-1 et S-1 servent à suivre une action récente. -->
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Comparer à</span>
-            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600">
+            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:600">
               ${c.rapCompo.comparaisons.map(cp => `<button ${x.A(cp.choisir)} title="${esc(cp.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${cp.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(cp.code)}</button>`).join('')}
             </span>
             <span style="font-size:10.5px;color:var(--color-text-muted)">${esc((c.rapCompo.comparaisons.find(cp => cp.on) || {}).aide || '')} — pour le passage clients et le ticket moyen</span>
@@ -5444,7 +5444,7 @@ function tplReporting(c, x){
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Mode d'envoi</span>
-            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600">
+            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:600">
               <button ${x.A(c.rapCompo.envoiGroupe)} style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${c.rapCompo.envoiMode === 'groupe' ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">Groupé</button>
               <button ${x.A(c.rapCompo.envoiParMagasin)} style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${c.rapCompo.envoiMode === 'par-magasin' ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">Un email par magasin</button>
             </span>
@@ -5461,11 +5461,11 @@ function tplReporting(c, x){
           ${c.rapCompo.annuaire.length ? `
           <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:7px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Annuaire</span>
-            ${c.rapCompo.annuaire.map(a2 => `<span ${x.A(a2.toggle)} title="${esc(a2.email)}${a2.poste ? ' · ' + esc(a2.poste) : ''}" style="display:inline-block;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:500;cursor:pointer;${a2.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text)'}">${esc(a2.nom)}</span>`).join('')}
+            ${c.rapCompo.annuaire.map(a2 => `<span ${x.A(a2.toggle)} title="${esc(a2.email)}${a2.poste ? ' · ' + esc(a2.poste) : ''}" style="display:inline-block;border-radius:8px;padding:4px 11px;font-size:11px;font-weight:500;cursor:pointer;${a2.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text)'}">${esc(a2.nom)}</span>`).join('')}
           </div>` : ''}
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input value="${esc(c.rapCompo.dest)}" ${x.C(c.rapCompo.setDest)} placeholder="${c.rapCompo.envoiMode === 'par-magasin' ? 'destinataires réseau — la version complète (consultant)' : 'destinataires (emails, virgules — ou cliquez l’annuaire)'}" style="flex:1;min-width:240px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
-            <button ${x.A(c.rapCompo.enregistrer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">${c.rapCompo.edit ? 'Enregistrer les modifications' : 'Enregistrer comme rapport récurrent'}</button>
+            <button ${x.A(c.rapCompo.enregistrer)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">${c.rapCompo.edit ? 'Enregistrer les modifications' : 'Enregistrer comme rapport récurrent'}</button>
           </div>
         </div>
       </div>` : `
@@ -5488,7 +5488,7 @@ function tplReporting(c, x){
             </div>
             ${r.resume ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(r.resume)}</div>` : ''}
             <div style="display:flex;gap:5px;flex-wrap:wrap">
-              ${r.blocs.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;border:0.5px solid var(--color-border-tertiary);border-radius:999px;padding:2px 8px;color:var(--color-text-muted)"><i style="width:7px;height:7px;border-radius:2px;background:${b.c};display:inline-block"></i>${esc(b.nom)}</span>`).join('')}
+              ${r.blocs.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:2px 8px;color:var(--color-text-muted)"><i style="width:7px;height:7px;border-radius:2px;background:${b.c};display:inline-block"></i>${esc(b.nom)}</span>`).join('')}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">À</span>
@@ -5551,7 +5551,7 @@ function tplSuivi(c, x){
           ${c.suBarres.map(b => `
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
               <span style="${b.libSt};width:170px;flex:0 0 auto">${esc(b.nom)}</span>
-              <span style="flex:1;min-width:0;background:var(--color-background-secondary);border-radius:999px;height:7px">
+              <span style="flex:1;min-width:0;background:var(--color-background-secondary);border-radius:8px;height:7px">
                 <span style="display:block;${b.barSt}"></span></span>
               <span style="font-size:11.5px;color:var(--color-text-muted);width:44px;text-align:right;flex:0 0 auto">${b.n} · ${b.pct}%</span>
             </div>`).join('')}
@@ -5587,7 +5587,7 @@ function tplSuivi(c, x){
               <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px">
                 <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.qui)} · ${esc(g.projet)}</span>
                 <span style="${g.lvlSt}"><i style="${g.lvlNumSt};font-style:normal">${g.lvlNum}</i>${esc(g.lvlTxt)}</span>
-                <span style="font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary)">${esc(g.quoi)}</span>
+                <span style="font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary)">${esc(g.quoi)}</span>
                 <span style="${g.etatSt}">${esc(g.etat)}</span>
                 <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.age)}</span>
               </div>
@@ -5598,10 +5598,10 @@ function tplSuivi(c, x){
                 <textarea ${x.C(g.majNote)} rows="2" placeholder="Ce qui a été fait — obligatoire pour clore"
                   style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 8px;font-size:11.5px;font-family:var(--font-ui);color:var(--color-text);resize:vertical;box-sizing:border-box">${esc(g.note)}</textarea>
                 <div style="display:flex;gap:6px">
-                  <button ${x.A(g.vu)} style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Marquer vu</button>
-                  <button ${x.A(g.traiter)} class="hv-fade" style="flex:1;border:none;border-radius:999px;padding:6px 12px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Traiter</button>
+                  <button ${x.A(g.vu)} style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Marquer vu</button>
+                  <button ${x.A(g.traiter)} class="hv-fade" style="flex:1;border:none;border-radius:8px;padding:6px 12px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Traiter</button>
                 </div>`
-              : `<button ${x.A(g.rouvrir)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>`}
+              : `<button ${x.A(g.rouvrir)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>`}
             </div>
           </div>`).join('')}
       </div>
@@ -5793,7 +5793,7 @@ function tplJournal(c, x){
           </tr></thead>
           <tbody>
             ${c.vuesLignes.map(l => `<tr${l.horsTop ? ' style="background:var(--color-background-secondary)"' : ''}>
-              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.horsTop ? ' <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:999px;background:var(--color-surface);color:var(--color-text-muted)">hors top 5</span>' : ''}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.horsTop ? ' <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--color-surface);color:var(--color-text-muted)">hors top 5</span>' : ''}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
               <td style="padding:3px 10px 3px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${l.total}</td>
               ${l.cases.map(k2 => `<td style="padding:2px 1px" title="${esc(k2.jour)} — ${k2.n} ouverture(s)"><i style="${k2.st}"></i></td>`).join('')}
             </tr>`).join('')}
@@ -5980,7 +5980,7 @@ function tplParams(c, x){
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
           <span style="font-size:11.5px;color:${c.gCleDefinie ? '#2d7a3e' : 'var(--color-text-muted)'};font-weight:500">${c.gCleDefinie ? 'Clé en place · ' + esc(c.gEmpreinte) : 'Aucune clé'}</span>
-          ${c.gCleDefinie ? `<button ${x.A(c.gEffacer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:26px;padding:0 11px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Effacer</button>` : ''}
+          ${c.gCleDefinie ? `<button ${x.A(c.gEffacer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:26px;padding:0 11px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Effacer</button>` : ''}
         </div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Elle sert à la réputation des magasins et aux notes Google du scouting commercial. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
       </div>
@@ -6015,9 +6015,9 @@ function tplParams(c, x){
           <input value="${esc(c.sm.expediteur)}" ${x.C(c.sm.setExpediteur)} placeholder="Cockpit L’Atelier By &lt;rapports@atelierby.be&gt;" style="${inputCss}">
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
-          <button ${x.A(c.sm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.sm.busy ? 'opacity:.6' : ''}">${c.sm.busy ? 'En cours…' : 'Enregistrer'}</button>
+          <button ${x.A(c.sm.save)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.sm.busy ? 'opacity:.6' : ''}">${c.sm.busy ? 'En cours…' : 'Enregistrer'}</button>
           <input value="${esc(c.sm.testA)}" ${x.C(c.sm.setTestA)} placeholder="adresse de test" style="flex:1;min-width:180px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
-          <button ${x.A(c.sm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un test</button>
+          <button ${x.A(c.sm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un test</button>
         </div>
         ${c.sm.msg ? `<div style="${c.sm.msgSt}">${esc(c.sm.msg)}</div>` : ''}
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Le mot de passe ne quitte pas le serveur (ceo_app_setting.smtp) — l’écran ne le relit jamais. Sans SMTP configuré, l’envoi des rapports retombe sur mail() du serveur. Gmail : créez un « mot de passe d’application », hôte smtp.gmail.com, port 587, STARTTLS.</div>
@@ -6079,7 +6079,7 @@ function tplParams(c, x){
             <select ${x.C(c.kpiCat.set.sortie)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
               ${c.kpiCat.sorties.map(so => `<option value="${so.val}"${c.kpiCat.d.sortie === so.val ? ' selected' : ''}>Sortie : ${esc(so.nom)}</option>`).join('')}
             </select>
-            <button ${x.A(c.kpiCat.creer)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer le KPI</button>
+            <button ${x.A(c.kpiCat.creer)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer le KPI</button>
           </div>
           <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;text-wrap:pretty">Évalué par magasin sur le mois en cours, dès le prochain rapport (bloc « KPI personnalisés »). Un KPI qui exige une nouvelle source API reste un ajout de code — sa fiche portera « source à câbler ».</div>
         </div>`}
@@ -6161,11 +6161,11 @@ function tplFicheProjet(c, x){
         <button ${x.A(c.closeProj)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap">
-        <select ${x.C(op.setStatut)} style="font-size:12px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 10px;background:var(--color-surface);color:var(--color-text)">
+        <select ${x.C(op.setStatut)} style="font-size:12px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 10px;background:var(--color-surface);color:var(--color-text)">
           ${opts(['À lancer', 'En cours', 'En retard', 'En pause', 'Terminé', 'Abandonné'], op.statut)}
         </select>
         ${op.levs.map(l => `<span class="levier-badge" data-lev="${l.slug}"><span class="levier-dot"></span>${esc(l.nom)}</span>`).join('')}
-        <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted)">${esc(op.axes)}</span>
+        <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)">${esc(op.axes)}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px">
         <div><div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Début</div><div style="font-size:13px;font-weight:500;margin-top:2px">${op.debut}</div></div>
@@ -6275,7 +6275,7 @@ function tplRepPrev(c, x){
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:500">${esc(rp.nom)}</div>
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
           <button ${x.A(c.repPrevTabPdf)} style="${rp.tabPdfSt}">Aperçu PDF</button>
           <button ${x.A(c.repPrevTabCode)} style="${rp.tabCodeSt}">Générateur HTML</button>
         </div>
@@ -6502,7 +6502,7 @@ function tplWizardProjet(c, x){
                Les jalons s'AJOUTENT, ils ne remplacent pas. -->
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
             <span style="font-size:11px;color:var(--color-text-muted);align-self:center">Modèles :</span>
-            ${(c.npJalonModeles || []).map(m2 => `<button ${x.A(m2.charger)} title="Ajoute les ${m2.n} jalons du modèle « ${esc(m2.axe)} », datés depuis l’échéance" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">+ ${esc(m2.axe)} <span style="color:var(--color-text-muted)">(${m2.n})</span></button>`).join('')}
+            ${(c.npJalonModeles || []).map(m2 => `<button ${x.A(m2.charger)} title="Ajoute les ${m2.n} jalons du modèle « ${esc(m2.axe)} », datés depuis l’échéance" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">+ ${esc(m2.axe)} <span style="color:var(--color-text-muted)">(${m2.n})</span></button>`).join('')}
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             ${c.npJalons.map(jl => `
@@ -6533,7 +6533,7 @@ function tplWizardProjet(c, x){
         <div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
             <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Coût de développement — postes budgétés</div>
-            <button ${x.A(c.npLoadCouts)} title="Postes types de l'axe. Modifiables dans Paramètres." style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Charger le template de l'axe</button>
+            <button ${x.A(c.npLoadCouts)} title="Postes types de l'axe. Modifiables dans Paramètres." style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Charger le template de l'axe</button>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             ${c.npCouts.map(ct => `
@@ -6564,9 +6564,9 @@ function tplWizardProjet(c, x){
       <button ${x.A(c.npClose)} style="border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 0;color:var(--color-text-muted)">Annuler</button>
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:12px;color:${c.npWarnCol}">${c.npWarn}</span>
-        ${c.npCanPrev ? `<button ${x.A(c.npPrev)} style="border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;color:var(--color-text)">Précédent</button>` : ''}
-        ${c.npCanNext ? `<button ${x.A(c.npNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:999px">Suivant</button>` : ''}
-        ${c.npS4 ? `<button ${x.A(c.npCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:999px">Créer le projet</button>` : ''}
+        ${c.npCanPrev ? `<button ${x.A(c.npPrev)} style="border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px;color:var(--color-text)">Précédent</button>` : ''}
+        ${c.npCanNext ? `<button ${x.A(c.npNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:8px">Suivant</button>` : ''}
+        ${c.npS4 ? `<button ${x.A(c.npCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:8px">Créer le projet</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -6649,9 +6649,9 @@ function tplWizardTache(c, x){
       <button ${x.A(c.ntClose)} style="border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 0;color:var(--color-text-muted)">Annuler</button>
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:12px;color:${c.ntWarnCol}">${c.ntWarn}</span>
-        ${c.ntCanPrev ? `<button ${x.A(c.ntPrev)} style="border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;color:var(--color-text)">Précédent</button>` : ''}
-        ${c.ntCanNext ? `<button ${x.A(c.ntNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:999px">Suivant</button>` : ''}
-        ${c.ntS3 ? `<button ${x.A(c.ntCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:999px">Créer la tâche</button>` : ''}
+        ${c.ntCanPrev ? `<button ${x.A(c.ntPrev)} style="border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px;color:var(--color-text)">Précédent</button>` : ''}
+        ${c.ntCanNext ? `<button ${x.A(c.ntNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:8px">Suivant</button>` : ''}
+        ${c.ntS3 ? `<button ${x.A(c.ntCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:8px">Créer la tâche</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -6679,7 +6679,7 @@ function tplCtrlDetail(c, x){
           <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Photo en boutique</div>
           ${d.photo
             ? `<button ${x.A(d.zoomGo)} title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block">
-                <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:3px 9px;border-radius:999px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
+                <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:3px 9px;border-radius:8px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
                ${d.faitMeta ? `<div style="margin-top:5px;font-size:11px;color:var(--color-text)">${esc(d.faitMeta)}</div>` : ''}
                <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
@@ -6703,8 +6703,8 @@ function tplCtrlDetail(c, x){
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="${'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};flex:1;min-width:150px">Assistance à la notation</div>
           ${d.iaDispo
-            ? `<button ${x.A(d.iaGo)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${d.iaBusy ? 'wait' : 'pointer'};opacity:${d.iaBusy ? '0.6' : '1'};color:var(--color-text)">${d.iaBusy ? 'Analyse de la photo…' : (d.iaFait ? 'Réanalyser' : 'Proposer une évaluation')}</button>`
-            : `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>`}
+            ? `<button ${x.A(d.iaGo)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${d.iaBusy ? 'wait' : 'pointer'};opacity:${d.iaBusy ? '0.6' : '1'};color:var(--color-text)">${d.iaBusy ? 'Analyse de la photo…' : (d.iaFait ? 'Réanalyser' : 'Proposer une évaluation')}</button>`
+            : `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>`}
         </div>
         ${!d.iaDispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.5">Aucune clé Anthropic enregistrée. Paramètres → Assistance IA. La clé reste sur le serveur ; le navigateur ne reçoit que la proposition.</div>` : ''}
         ${d.iaMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaMotif)}</div>` : ''}
@@ -6713,7 +6713,7 @@ function tplCtrlDetail(c, x){
           ${(d.iaConstats || []).length ? `<ul style="margin:6px 0 0;padding-left:17px;font-size:12px;color:var(--color-text-muted);line-height:1.55">${d.iaConstats.map(k => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
           ${d.iaAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaAvert)}</div>` : ''}
           <div style="display:flex;gap:9px;margin-top:10px;flex-wrap:wrap">
-            <button ${x.A(d.iaAppliquer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Reprendre cette proposition</button>
+            <button ${x.A(d.iaAppliquer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Reprendre cette proposition</button>
             <span style="font-size:11px;color:var(--color-text-muted);align-self:center">rien n’est enregistré tant que vous n’envoyez pas la note</span>
           </div>
         </div>` : ''}
@@ -6750,11 +6750,11 @@ function tplCtrlDetail(c, x){
         </div>
         <textarea id="cn-note" ${x.I(d.cn.setTexte)} rows="3" placeholder="Ce que le consultant doit reprendre, rappeler ou savoir" style="width:100%;box-sizing:border-box;margin-top:9px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-family:var(--font-ui);font-size:12px;line-height:1.5;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(d.cn.texte)}</textarea>
         <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px">
-          ${d.cn.commeBtns.map(b2 => `<button ${x.A(b2.pick)} style="border-radius:999px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${b2.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'}">${esc(b2.nom)}</button>`).join('')}
+          ${d.cn.commeBtns.map(b2 => `<button ${x.A(b2.pick)} style="border-radius:8px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${b2.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'}">${esc(b2.nom)}</button>`).join('')}
           ${d.cn.comme === 'tache' ? `<span style="font-size:10.5px;color:var(--color-text-muted)">échéance</span>
             <input type="date" value="${esc(d.cn.due)}" ${x.C(d.cn.setDue)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;height:30px;padding:0 8px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">` : ''}
           <div style="flex:1"></div>
-          <button ${x.A(d.cn.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:31px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:${d.cn.busy ? 'wait' : 'pointer'}">${d.cn.busy ? 'Envoi…' : 'Envoyer'}</button>
+          <button ${x.A(d.cn.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:31px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:${d.cn.busy ? 'wait' : 'pointer'}">${d.cn.busy ? 'Envoi…' : 'Envoyer'}</button>
         </div>
         <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Envoyée comme tâche, la note vit dans le projet « Suivi consultants » et suit le circuit normal — échéance, relance, validation. L’API du panel n’expose pas de dépôt de tâche consultant (manque API) : la tâche vit dans le cockpit.</div>
         ` : ''}
@@ -6764,7 +6764,7 @@ function tplCtrlDetail(c, x){
       <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:11px">
         <button ${x.A(d.rc.basculer)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--color-primary)">
           ${d.rc.ouvert ? '− Réclamation fournisseur' : '+ Ouvrir une réclamation fournisseur'}</button>
-        ${d.rc.fait ? `<span style="margin-left:9px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">déposée${typeof d.rc.fait === 'number' ? ' #' + d.rc.fait : ''}</span>` : ''}
+        ${d.rc.fait ? `<span style="margin-left:9px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:8px;background:#E6F2E9;color:#2d7a3e">déposée${typeof d.rc.fait === 'number' ? ' #' + d.rc.fait : ''}</span>` : ''}
         ${d.rc.ouvert ? `
           ${d.rc.chargement ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px">Lecture du catalogue fournisseur…</div>`
             : (d.rc.indispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px">${esc(d.rc.indispo)}</div>` : `
@@ -6796,15 +6796,15 @@ function tplCtrlDetail(c, x){
           ${d.rc.err ? `<div style="margin-top:8px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px">${esc(d.rc.err)}</div>` : ''}
           <div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
             <span style="font-size:10.5px;color:var(--color-text-muted);flex:1;min-width:220px;line-height:1.45">${esc(d.rc.note)}</span>
-            <button ${x.A(d.rc.envoyer)} style="border:none;background:${d.rc.peut ? 'var(--color-primary)' : '#c9beb4'};color:#fff;border-radius:999px;height:31px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:${d.rc.busy ? 'wait' : 'pointer'}">${d.rc.busy ? 'Envoi…' : 'Déposer la réclamation'}</button>
+            <button ${x.A(d.rc.envoyer)} style="border:none;background:${d.rc.peut ? 'var(--color-primary)' : '#c9beb4'};color:#fff;border-radius:8px;height:31px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:${d.rc.busy ? 'wait' : 'pointer'}">${d.rc.busy ? 'Envoi…' : 'Déposer la réclamation'}</button>
           </div>
           <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">La réclamation part chez le fournisseur et apparaît dans Suivi fournisseurs. Les repères posés sur la photo sont recopiés dans le texte — la pièce jointe, elle, attend l'identifiant que l'API ne rend pas encore.</div>
           `)}` : ''}
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
-        <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
-        ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
+        <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
+        ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
     </div>
@@ -6837,7 +6837,7 @@ function tplAnalyseDetail(c, x){
         <div style="display:flex;gap:7px;align-items:center;flex:0 0 auto">
           <button ${x.A(a.prec)} title="Période précédente" style="${nav(!!a.prec)}">←</button>
           <button ${x.A(a.suiv)} title="Période suivante" style="${nav(!!a.suiv)}">→</button>
-          <button ${x.A(a.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+          <button ${x.A(a.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
         </div>
       </div>
 
@@ -6862,7 +6862,7 @@ function tplAnalyseDetail(c, x){
               <tbody>${a.mags.map(m => `<tr ${x.A(m.choisir)} title="Suivre ${esc(m.nom)}" style="cursor:pointer;${m.on ? 'background:rgba(141,29,44,0.05)' : ''}">
                 <td style="${td};padding-left:0">
                   <span style="font-weight:500">${esc(m.nom)}</span>
-                  <div style="height:4px;border-radius:999px;background:var(--color-border-tertiary);margin-top:4px;max-width:220px"><i style="display:block;height:100%;border-radius:999px;width:${m.partPct.toFixed(1)}%;background:${m.on ? 'var(--color-primary)' : 'var(--color-secondary)'}"></i></div>
+                  <div style="height:4px;border-radius:8px;background:var(--color-border-tertiary);margin-top:4px;max-width:220px"><i style="display:block;height:100%;border-radius:8px;width:${m.partPct.toFixed(1)}%;background:${m.on ? 'var(--color-primary)' : 'var(--color-secondary)'}"></i></div>
                 </td>
                 <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(m.valeur)}</td>
                 <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(m.part)}</td>
@@ -6920,7 +6920,7 @@ function tplCtrlZoom(c, x){
           <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(z.nom)}</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(z.sous)}</div>
         </div>
-        <button ${x.A(z.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
+        <button ${x.A(z.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
       </div>
 
       <div style="display:flex;min-height:0">
@@ -6932,7 +6932,7 @@ function tplCtrlZoom(c, x){
             <div ${x.PD(z.down)} data-zsurf style="position:relative;display:inline-block;line-height:0;touch-action:none;cursor:${z.imgErr ? 'not-allowed' : 'crosshair'};flex:0 1 auto;${z.imgErr ? 'min-width:380px;min-height:280px;background:#211c1a;border-radius:8px' : ''}">
               <img data-zimg src="${z.photo}" alt="Photo de réalisation" style="display:block;max-width:100%;max-height:70vh;border-radius:2px${z.imgErr ? ';display:none' : ''}">
               ${z.imgErr ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center">
-                <span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">photo indisponible</span>
+                <span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">photo indisponible</span>
                 <div style="font-size:12px;color:#c9bfb8;line-height:1.55;max-width:320px">${esc(z.imgErrTxt)}</div>
               </div>` : ''}
               ${z.cadres.map(k => `<div ${x.A(k.pick)} data-zbox style="${k.boxSt}">
@@ -6944,7 +6944,7 @@ function tplCtrlZoom(c, x){
               <div style="${lbl};color:#c9bfb8">Référence attendue${z.produit ? ' — ' + esc(z.produit) : ''}</div>
               ${z.refManque
                 ? `<div style="flex:1;background:#211c1a;border-radius:8px;padding:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px">
-                    <span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>
+                    <span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>
                     <div style="font-size:12px;color:#c9bfb8;line-height:1.55;max-width:290px">${esc(z.refTxt)}</div>
                     <div style="font-size:11px;color:#8f857e;line-height:1.5;max-width:290px">${esc(z.refBesoin)}</div>
                   </div>`
@@ -6954,7 +6954,7 @@ function tplCtrlZoom(c, x){
 
           <div style="display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
             <span style="${lbl}">Gravité du prochain repère</span>
-            ${z.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:29px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
+            ${z.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:6px;border-radius:8px;height:29px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
               <span style="width:10px;height:10px;border-radius:3px;background:${lv.couleur};flex:0 0 auto"></span>${esc(lv.nom)}</button>`).join('')}
             <div style="width:1px;height:22px;background:var(--color-border-tertiary);margin:0 3px"></div>
             <button ${x.A(z.compareGo)} style="${tool(z.compare, true)}">◫ Comparer</button>
@@ -6971,7 +6971,7 @@ function tplCtrlZoom(c, x){
             <span style="font-size:11px;color:var(--color-text-muted)">${z.n}</span>
           </div>
           ${z.bilan.length ? `<div style="padding:9px 13px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:6px;flex-wrap:wrap">
-            ${z.bilan.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:999px;background:${b.couleur}1f;color:var(--color-text)">
+            ${z.bilan.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:8px;background:${b.couleur}1f;color:var(--color-text)">
               <span style="width:8px;height:8px;border-radius:2px;background:${b.couleur}"></span>${b.n} ${esc(b.nom.toLowerCase())}</span>`).join('')}
           </div>` : ''}
           ${z.n === 0
@@ -6982,7 +6982,7 @@ function tplCtrlZoom(c, x){
                   ${l.actif
                     ? `<textarea id="zrep-txt" ${x.I(l.setTxt)} rows="3" placeholder="Ce qui est à reprendre, en une phrase" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 9px;font-family:var(--font-ui);font-size:11.5px;line-height:1.45;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(l.txt)}</textarea>
                       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
-                        ${l.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 8px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
+                        ${l.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:4px;border-radius:8px;padding:3px 8px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
                           <span style="width:8px;height:8px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</button>`).join('')}
                       </div>`
                     : `<div style="font-size:11.5px;line-height:1.45;${l.vide ? 'color:var(--color-text-muted);font-style:italic' : ''}">${l.vide ? 'Sans remarque — cliquez pour l’écrire' : esc(l.txt)}</div>
@@ -7055,7 +7055,7 @@ function tplUserPanel(c, x){
              <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">Aucun r\u00e9f\u00e9rentiel de r\u00f4les dans la base partag\u00e9e : saisie libre.</div>`}
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:12px">
-        <button ${x.A(u.saveIdent)} style="border:none;border-radius:999px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer mon identit\u00e9</button>
+        <button ${x.A(u.saveIdent)} style="border:none;border-radius:8px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer mon identit\u00e9</button>
       </div>
       ${u.identMsg ? `<div style="${u.identMsgSt}">${esc(u.identMsg)}</div>` : ''}
 
@@ -7082,8 +7082,8 @@ function tplUserPanel(c, x){
       </div>
       ${c.paMsg ? `<div style="${c.paMsgSt}">${esc(c.paMsg)}</div>` : ''}
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
-        <button ${x.A(c.paTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
-        <button ${x.A(c.paSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
+        <button ${x.A(c.paTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+        <button ${x.A(c.paSave)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
       </div>
 
       <div style="border-top:0.5px solid var(--color-border-tertiary);margin:26px 0 0"></div>
@@ -7109,12 +7109,12 @@ function tplUserPanel(c, x){
       </div>
       ${c.erMsg ? `<div style="${c.erMsgSt}">${esc(c.erMsg)}</div>` : ''}
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
-        <button ${x.A(c.erTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.erBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
-        <button ${x.A(c.erSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.erBusy ? 'wait' : 'pointer'};opacity:${c.erBusy ? '0.6' : '1'}">${c.erBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
+        <button ${x.A(c.erTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.erBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+        <button ${x.A(c.erSave)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.erBusy ? 'wait' : 'pointer'};opacity:${c.erBusy ? '0.6' : '1'}">${c.erBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
       </div>
 
       ${u.canLogout ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:26px;padding-top:16px;display:flex;justify-content:flex-end">
-        <button ${x.A(u.logout)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Se d\u00e9connecter</button>
+        <button ${x.A(u.logout)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 16px;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Se d\u00e9connecter</button>
       </div>` : ''}
     </div>
   </div>`;
@@ -7170,9 +7170,9 @@ function tplScoring(c, x){
     ${c.scAlerte ? `<div style="padding:11px 14px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12.5px;font-weight:500">${esc(c.scAlerte)}</div>` : ''}
     ${c.scMsg ? `<div style="${c.scMsgSt}">${esc(c.scMsg)}</div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:10px">
-      <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
       <span style="font-size:11.5px;color:var(--color-text-muted);align-self:center">${esc(c.scAuto || '')}</span>
-      <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
+      <button ${x.A(c.scSave)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
     </div>
   </div>`;
 }
@@ -7208,7 +7208,7 @@ function tplPerteMagasins(c, x){
             <span style="font-size:13px;font-weight:500">${esc(r.magasin)}</span>
             <span style="${r.tauxSt};font-size:14px">${esc(r.taux)}</span>
           </div>
-          <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:6px"><span style="${r.barSt}"></span></span>
+          <span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:6px"><span style="${r.barSt}"></span></span>
           <div style="display:flex;justify-content:space-between;gap:10px;margin-top:4px;font-size:11.5px;color:var(--color-text-muted)">
             <span>${esc(r.detail)}${r.motif ? ' \u00b7 ' + esc(r.motif) : ''}</span>
             ${r.caPerdu ? `<span>${esc(r.caPerdu)} perdu</span>` : ''}
@@ -7217,7 +7217,7 @@ function tplPerteMagasins(c, x){
     </div>
     ${w.note ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5;text-wrap:pretty">${esc(w.note)}</div>` : ''}` : ''}
     <div style="display:flex;justify-content:flex-end;margin-top:16px">
-      <button ${x.A(w.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
+      <button ${x.A(w.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
     </div>
   </div>`;
 }
@@ -7238,8 +7238,8 @@ function tplDiagnostic(c, x){
   const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
   const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap';
   const TD = 'padding:8px 12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
-  const MANQUE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap';
-  const SAISIE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap';
+  const MANQUE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap';
+  const SAISIE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap';
   const MONO = 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px';
 
   return `
@@ -7274,7 +7274,7 @@ function tplDiagnostic(c, x){
           <td style="${TD};white-space:nowrap;color:var(--color-text-muted)">${esc(l.appel)}</td>
           <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.passages)}</td>
           <td style="${TD};text-align:right;white-space:nowrap">
-            <button ${x.A(l.tester)} title="Un vrai appel, maintenant" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer"${l.essai && l.essai.encours ? ' disabled' : ''}>${l.essai && l.essai.encours ? 'appel…' : '↻ Tester'}</button>
+            <button ${x.A(l.tester)} title="Un vrai appel, maintenant" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer"${l.essai && l.essai.encours ? ' disabled' : ''}>${l.essai && l.essai.encours ? 'appel…' : '↻ Tester'}</button>
             ${l.essai && !l.essai.encours ? `<div style="font-size:10.5px;line-height:1.35;margin-top:4px;max-width:230px;text-wrap:pretty;color:${l.essai.ok ? '#2d7a3e' : '#8D1D2C'}">${l.essai.ok ? '✓' : '✗'} ${esc(l.essai.message)}${l.essai.ms != null && l.essai.appele ? ` · ${l.essai.ms} ms` : ''}</div>` : ''}
           </td>
         </tr>`).join('')}</tbody>
@@ -7323,7 +7323,7 @@ function tplDiagnostic(c, x){
           ${c.marNet.dejaFait ? ' Déjà fait : ' + esc(c.marNet.dejaFait) + '.' : ''}
         </div>
       </div>
-      ${c.marNet.executer ? `<button ${x.A(c.marNet.executer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:34px;padding:0 17px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.marNet.busy ? 'wait' : 'pointer'}">${c.marNet.busy ? 'Suppression…' : 'Supprimer ' + c.marNet.tombe.length + ' table(s) inutilisée(s)'}</button>`
+      ${c.marNet.executer ? `<button ${x.A(c.marNet.executer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:34px;padding:0 17px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.marNet.busy ? 'wait' : 'pointer'}">${c.marNet.busy ? 'Suppression…' : 'Supprimer ' + c.marNet.tombe.length + ' table(s) inutilisée(s)'}</button>`
         : `<span style="font-size:12px;color:#2d7a3e;font-weight:500">Rien à supprimer — la base ne porte que le nécessaire.</span>`}
     </div>
     ${c.marNet.tombe.length ? `<div style="margin-top:10px;font-size:11px;color:var(--color-text-muted);line-height:1.6">Tomberaient : ${c.marNet.tombe.map(t => `<span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:1px 7px;margin:1px 3px 1px 0;font-family:ui-monospace,Menlo,monospace;font-size:10.5px">${esc(t.nom)}${t.lignes ? ' · ' + t.lignes + ' l.' : ''}</span>`).join('')}</div>` : ''}
@@ -7452,7 +7452,7 @@ function tplCrois(c, x){
   const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
   const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
   const td = 'padding:9px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
   const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:280px';
   const spark = vals => {
     const max = Math.max(1, ...vals.filter(v => v != null));
@@ -7486,7 +7486,7 @@ function tplCrois(c, x){
         <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
           <span style="${lbl}">Vendeuse par vendeuse — ${esc(c.crMoisDetail)}</span>
           <span style="flex:1"></span>
-          ${dt.feuille ? `<a href="${esc(dt.feuille)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:4px 11px">↓ Feuille de ce magasin</a>` : ''}
+          ${dt.feuille ? `<a href="${esc(dt.feuille)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:8px;padding:4px 11px">↓ Feuille de ce magasin</a>` : ''}
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr><th style="${th};text-align:left">Vendeur·se</th><th style="${th}">Tickets A</th>
@@ -7527,9 +7527,9 @@ function tplCrois(c, x){
       ${!c.crCombos.length ? '' : `
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="${lbl};margin-right:2px">Combos enregistrés</span>
-        ${!c.crRapportHref ? '' : `<a href="${esc(c.crRapportHref)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:4px 11px;order:99;margin-left:auto">↓ Rapport de tous les combos — réseau + par magasin</a>`}
+        ${!c.crRapportHref ? '' : `<a href="${esc(c.crRapportHref)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:8px;padding:4px 11px;order:99;margin-left:auto">↓ Rapport de tous les combos — réseau + par magasin</a>`}
         ${c.crCombos.map(cb => `
-        <span style="display:inline-flex;align-items:center;gap:7px;background:${cb.on ? 'rgba(141,29,44,.06)' : '#FBF8F4'};border:0.5px solid ${cb.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:999px;padding:5px 6px 5px 13px;font-size:12px;font-weight:500;${cb.on ? 'color:var(--color-primary)' : ''}">
+        <span style="display:inline-flex;align-items:center;gap:7px;background:${cb.on ? 'rgba(141,29,44,.06)' : '#FBF8F4'};border:0.5px solid ${cb.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:8px;padding:5px 6px 5px 13px;font-size:12px;font-weight:500;${cb.on ? 'color:var(--color-primary)' : ''}">
           <span ${x.A(cb.choisir)} style="cursor:pointer">${esc(cb.nom)}${cb.surnom ? ` <i style="font-style:normal;color:var(--color-text-muted);font-weight:400;font-size:10.5px">${esc(cb.surnom)}</i>` : ''}</span>
           <span ${x.A(cb.cibler)} title="Poser ou changer la target d’attache" style="cursor:pointer;font-size:10.5px;color:${cb.target ? '#8a5a1c' : 'var(--color-text-muted)'}">🎯${cb.target ? ' ' + esc(cb.target) : ''}</span>
           <button ${x.A(cb.retirer)} title="Retirer ce combo — l’historique en cache est gardé" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 4px">✕</button>
@@ -7547,7 +7547,7 @@ function tplCrois(c, x){
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.crSousTitre)}</div>
         </div>
         <span style="flex:1"></span>
-        <a href="${esc(c.crPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Feuille PDF</a>
+        <a href="${esc(c.crPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:8px;padding:5px 13px">↓ Feuille PDF</a>
       </div>
       <div style="overflow-x:auto;padding-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
         <thead><tr>
@@ -7740,7 +7740,7 @@ function tplPrWiz(W, x){
       <div><span style="${lab}">Aperçu dans l’app</span><div style="background:#EAE4DC;border-radius:var(--radius-lg);padding:14px">
         <div style="background:#fff;border-radius:18px;padding:11px 14px 10px;box-shadow:0 6px 18px rgba(50,30,20,.05)">
           <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:8px;background:#F4EFE8;display:flex;align-items:center;justify-content:center;overflow:hidden">${W.icone ? `<img src="${esc(W.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : '🏷️'}</span><b style="flex:1;font:600 14px var(--font-ui)">${esc(W.nom)}</b><span style="font:400 21px/1 var(--font-display);color:#8D1D2C">0<small style="font:600 12px var(--font-ui);color:#666;margin-left:3px">pcs</small></span></div>
-          <div style="position:relative;height:10px;margin-top:30px;border-radius:999px;background:#EAE4DC"><span style="position:absolute;left:75%;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#222"></span><span style="position:absolute;left:75%;bottom:calc(100% + 7px);transform:translateX(-50%);font:700 11px var(--font-ui);padding:3px 8px;border-radius:999px;background:#222;color:#fff;white-space:nowrap">${W.estCadeau ? '🎁 ' + esc(W.cadeauNom || 'cadeau') : esc(W.montant || '0') + ' €'}</span></div>
+          <div style="position:relative;height:10px;margin-top:30px;border-radius:8px;background:#EAE4DC"><span style="position:absolute;left:75%;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#222"></span><span style="position:absolute;left:75%;bottom:calc(100% + 7px);transform:translateX(-50%);font:700 11px var(--font-ui);padding:3px 8px;border-radius:999px;background:#222;color:#fff;white-space:nowrap">${W.estCadeau ? '🎁 ' + esc(W.cadeauNom || 'cadeau') : esc(W.montant || '0') + ' €'}</span></div>
           ${W.description ? `<div style="font:500 11.5px var(--font-ui);color:#555;margin-top:8px">${esc(W.description)}</div>` : ''}
           <div style="display:flex;justify-content:space-between;font:500 11px var(--font-ui);color:#666;margin-top:8px"><span>${W.regle === 'magasin' ? 'le magasin : 0 pcs' : W.regle === 'vendeuse' ? 'encore ' + esc(W.objPreview || '…') + ' pcs' : W.regle === 'seuil' ? 'encore ' + esc(W.minPieces || '0') + ' pcs' : 'la 1re du magasin gagne'}</span><span>${W.surObj ? 'objectif ' + esc(W.objPreview || '…') + ' pcs' : W.regle === 'seuil' ? 'objectif ' + esc(W.minPieces || '0') + ' pcs' : ''}</span></div></div></div>
         <p style="font-size:12px;${mu};margin:8px 2px 0">Elle apparaît dans Mes primes pendant sa période, avec son classement.</p></div></div>`;
@@ -7774,11 +7774,11 @@ function tplPrWiz(W, x){
 function tplPromosMag(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
   const th = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:9px 10px;border-bottom:0.5px solid var(--color-border-secondary);text-align:left;white-space:nowrap';
   const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:top;font-size:12.5px';
   const mu = 'font-size:11px;color:var(--color-text-muted)';
-  const bt = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap`;
+  const bt = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text)'};border-radius:8px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap`;
   const chip = { a: 'background:#FBF3DC;color:#8a5a13', ok: 'background:rgba(45,122,62,.12);color:#2d7a3e', r: 'background:rgba(141,29,44,.10);color:#8D1D2C', b: 'background:var(--color-background-secondary);color:#555' };
   const coefC = { ok: 'color:#2d7a3e', ko: 'color:#A61E1E', mu: 'color:var(--color-text-muted)' };
   const tete = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
@@ -7795,7 +7795,7 @@ function tplPromosMag(c, x){
       <td style="${td}">${esc(l.magasins)}</td>
       <td style="${td};white-space:nowrap">${esc(l.periode)}<div style="${mu}">${esc(l.creneaux)}</div></td>
       <td style="${td};text-align:right;white-space:nowrap"><b style="font-size:14px;${coefC[l.coefCls] || ''}">${esc(l.coef)}</b>${l.cas ? `<div style="${mu};white-space:normal;max-width:220px;margin-left:auto">${esc(l.cas)}</div>` : ''}${l.sansCout ? `<div style="font-size:11px;color:#8a5a13;white-space:normal;max-width:220px;margin-left:auto">${esc(l.sansCout)}</div>` : ''}</td>
-      <td style="${td}"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;${chip[l.etatCls] || chip.b}">${esc(l.etat)}</span></td>
+      <td style="${td}"><span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:10.5px;font-weight:600;white-space:nowrap;${chip[l.etatCls] || chip.b}">${esc(l.etat)}</span></td>
       <td style="${td};text-align:right;white-space:nowrap"><a href="${esc(l.href)}" target="_blank" rel="noopener" style="${mu};margin-left:6px">dashboard ↗</a></td></tr>`).join('');
   return `
 <div data-screen="promosMag" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
@@ -7811,7 +7811,7 @@ function tplPromosMag(c, x){
 
 function tplPrimesApp(c, x){
   const { esc } = x;
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
   const carte2 = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   const lbl2 = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)';
   const inp = w => `width:${w}px;font-family:var(--font-ui);font-size:12.5px;padding:5px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right`;
@@ -7843,7 +7843,7 @@ function tplPrimesApp(c, x){
     ? `vendus pendant la promo · <select ${x.C(l.poserRegle)} style="${inp(150)};text-align:left">${l.regles.map(([v, t]) => `<option value="${v}"${l.regle === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.surObjectif ? `<span style="${sm};margin-top:3px;color:var(--color-text)">objectifs : ${esc(l.objectifsTxt)}</span>` : ` · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(48)}"> ${l.regle === 'seuil' ? 'pcs (seuil)' : 'min.'}`}<span style="${sm};color:var(--color-text-muted)">${esc(l.promoNom)} · ${esc(l.promoSorte)} · ${esc(l.promoDates)} · ${esc(l.promoMags)} · ${esc(l.promoSource)}${l.promoVide ? ' · <b style="color:var(--color-primary)">produit introuvable</b>' : ''}</span>`
     : esc(l.texte || '');
   // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint, et « Modifier » qui rouvre l'assistant.
-  const inter = l => `<label title="${l.actif ? 'Active — cliquer pour l’éteindre' : 'Éteinte — cliquer pour l’activer'}" data-pr-actif style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;vertical-align:middle"><input type="checkbox" ${l.actif ? 'checked' : ''} ${x.C(l.basculer)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:999px;background:${l.actif ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${l.actif ? 18 : 2}px;width:16px;height:16px;border-radius:50%;background:var(--color-surface);box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></label>`;
+  const inter = l => `<label title="${l.actif ? 'Active — cliquer pour l’éteindre' : 'Éteinte — cliquer pour l’activer'}" data-pr-actif style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;vertical-align:middle"><input type="checkbox" ${l.actif ? 'checked' : ''} ${x.C(l.basculer)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:8px;background:${l.actif ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${l.actif ? 18 : 2}px;width:16px;height:16px;border-radius:50%;background:var(--color-surface);box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></label>`;
   const tuileFixe = l => `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);overflow:hidden">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}</span>`;
   const modif = l => `<button ${x.A(l.modifier)} data-pr-modifier style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:var(--radius-pill);padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;cursor:pointer">Modifier</button>`;
   const tr = l => `<tr data-pr-prime="${esc(l.type)}" style="${l.externe || l.actif ? '' : 'opacity:.55'}">
@@ -7965,9 +7965,9 @@ function tplVentes(c, x){
   const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
   const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
   const td = 'padding:9px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
-  const primeOr = `background:#FFF7E0;border:0.5px solid #E8C9A0;color:#8a5a1c;border-radius:999px;padding:2px 10px;font-size:10.5px;font-weight:600;white-space:nowrap`;
-  const primeR = `background:var(--color-primary);color:#fff;border-radius:999px;padding:2px 10px;font-size:10.5px;font-weight:600;white-space:nowrap`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const primeOr = `background:#FFF7E0;border:0.5px solid #E8C9A0;color:#8a5a1c;border-radius:8px;padding:2px 10px;font-size:10.5px;font-weight:600;white-space:nowrap`;
+  const primeR = `background:var(--color-primary);color:#fff;border-radius:8px;padding:2px 10px;font-size:10.5px;font-weight:600;white-space:nowrap`;
   const avatar = ini => `<span style="display:inline-flex;width:24px;height:24px;border-radius:50%;background:#EFE3D5;color:#8a5a1c;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:8px;vertical-align:middle">${esc(ini)}</span>`;
 
   const filtres = `
@@ -8186,8 +8186,8 @@ function tplVentes(c, x){
         ${c.tvPrime.fait
           ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.tvPrime.txt)}</span>`
           : `<button ${x.A(c.tvPrime.agir)} style="${pill(true)}">🏆 ${esc(c.tvPrime.txt)}</button>`}
-        <a href="${esc(c.tvPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Rapport PDF</a>
-        <a href="${esc(c.tvAfficheHref)}" target="_blank" rel="noreferrer" title="Une page par magasin, à épingler en réserve : le système de primes du mois et les montants à gagner" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Affiche primes</a>
+        <a href="${esc(c.tvPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:8px;padding:5px 13px">↓ Rapport PDF</a>
+        <a href="${esc(c.tvAfficheHref)}" target="_blank" rel="noreferrer" title="Une page par magasin, à épingler en réserve : le système de primes du mois et les montants à gagner" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:8px;padding:5px 13px">↓ Affiche primes</a>
       </div>
       ${filtres}
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
@@ -8214,7 +8214,7 @@ function tplVentes(c, x){
             <td style="${td};color:var(--color-text-muted)">${esc(l.coef)}</td>
             <td style="${td};color:var(--color-text-muted)" title="${esc(l.creneauTitre)}">${esc(l.coefCreneau)}</td>
             <td style="${td};font-weight:600${l.classable ? ';color:var(--color-primary)' : ''}">${esc(l.score)}</td>
-            <td style="${td};text-align:left;padding-left:18px"><span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:96px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${l.barre}%;background:${l.classable ? 'var(--color-primary)' : '#CFC7BA'};border-radius:999px"></i></span></td>
+            <td style="${td};text-align:left;padding-left:18px"><span style="position:relative;display:inline-block;height:8px;border-radius:8px;background:rgba(34,34,34,.06);width:96px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${l.barre}%;background:${l.classable ? 'var(--color-primary)' : '#CFC7BA'};border-radius:8px"></i></span></td>
             <td style="${td}">${esc(l.panier)}</td>
             <td style="${td};font-weight:600">${esc(l.lignesTicket)}</td>
             <td style="${td};padding-right:18px">${esc(l.tickets)}</td>
@@ -8273,8 +8273,8 @@ function tplManque(c, x){
   const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
   const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
   const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
-  const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:120px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:999px"></i></span>`;
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:8px;background:rgba(34,34,34,.06);width:120px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:8px"></i></span>`;
 
   if (c.mqChargement) {
     return `<div data-screen="manque"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Calcul du manque à gagner…</div></div>`;
@@ -8376,7 +8376,7 @@ function tplManque(c, x){
             ${l.mois.map(m => `<td style="${td};${m.st}">${esc(m.v)}${m.sub ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(m.sub)}</div>` : ''}</td>`).join('')}
             <td style="${td}"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">${jauge(l.barre, 'var(--color-primary)')}<b style="color:var(--color-primary)">${esc(l.total)}</b></span></td>
             <td style="${td};${l.fort ? 'color:var(--color-primary);font-weight:600' : 'color:var(--color-text-muted)'}">${esc(l.part)}</td>
-            <td style="${td};padding-right:18px"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${l.refs}</span></td>
+            <td style="${td};padding-right:18px"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:8px;background:rgba(141,29,44,.10);color:var(--color-primary)">${l.refs}</span></td>
           </tr>
           ${l.ouvert ? detail(l.detail) : ''}`).join('')}
         </tbody>
@@ -8434,7 +8434,7 @@ function tplTablette(c, x){
         <button class="ps-btn${T.photosEnCours ? '' : ' p'}" ${x.A(T.photos)}>${T.photosEnCours ? 'Arrêter la récupération' : 'Récupérer les photos manquantes'}</button>
       </div>
       ${T.photosTxt ? `<div style="display:flex;flex-direction:column;gap:6px">
-        ${T.photosPct != null ? `<div style="height:6px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><div style="height:100%;width:${T.photosPct}%;background:${T.photosKo ? '#C17A2A' : 'var(--color-primary)'};transition:width .3s"></div></div>` : ''}
+        ${T.photosPct != null ? `<div style="height:6px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden"><div style="height:100%;width:${T.photosPct}%;background:${T.photosKo ? '#C17A2A' : 'var(--color-primary)'};transition:width .3s"></div></div>` : ''}
         <div style="${mu};${T.photosKo ? 'color:#8a5a13' : ''}">${esc(T.photosTxt)}</div>
       </div>` : ''}`;
   }
