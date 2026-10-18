@@ -831,3 +831,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T12:31:41Z promotions : créneaux time_from/time_to, modifier et dupliquer
 2026-10-18T12:41:05Z contrôle des tâches : toute photo est à noter, plus de maîtrise
 2026-10-18T13:04:27Z promotions au panel seul, Catalogue à onglets, Gestion consultant et Plan de développement retirés
+2026-10-18T13:14:27Z catalogue : où ça se vend en onglets, comptoir en entrée
