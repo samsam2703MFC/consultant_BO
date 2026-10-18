@@ -11,7 +11,7 @@ import { tplGC, tplFF, tplCQM } from './franchises-tpl.js';
 /* Les onglets d'un écran regroupé : une même question, plusieurs lectures. */
 function tplOngletsEcran(c, x){
   const { esc } = x;
-  return `<div class="no-print" style="display:inline-flex;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px">
+  return `<div class="no-print" style="display:inline-flex;flex-wrap:wrap;max-width:100%;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px">
     ${c.ongletsEcran.map(o => `<button ${x.A(o.go)} style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text)'}">${esc(o.nom)}${o.badge ? `<span style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 6px;background:${o.on ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.08)'}">${o.badge}</span>` : ''}</button>`).join('')}
   </div>`;
 }
@@ -548,7 +548,7 @@ function tplAnaprod(c, x){
   </div>`;
 }
 
-/* Prix × volume — Produits › Où ça se vend. La grille référence × magasin
+/* Prix × volume — Produits › Catalogue (Où ça se vend jusqu'au 18/10/2026). La grille référence × magasin
    (le prix encaissé teinté face au réseau, les pièces, le volume à taille
    égale), et la fiche d'une référence : le nuage prix contre volume. */
 function tplPxv(c, x){
