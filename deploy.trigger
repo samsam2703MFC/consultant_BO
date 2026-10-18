@@ -833,3 +833,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T13:04:27Z promotions au panel seul, Catalogue à onglets, Gestion consultant et Plan de développement retirés
 2026-10-18T13:14:27Z catalogue : où ça se vend en onglets, comptoir en entrée
 2026-10-18T13:43:24Z catalogue refondu : quatre questions, une liste, une fiche
+2026-10-18T14:08:05Z nécessaire fondu dans obligatoire, marge nette, part des ventes, interrupteur obligatoire
