@@ -3005,7 +3005,8 @@
   /** L'avantage en mots : « offerte », « à 1,00 € », « −1,40 € », « à −30 % ». */
   const pmGain = (type, v, n) => type === 'FIXED_PRICE' ? 'à ' + fU(+v || 0) : (type === 'FIXED_AMOUNT_DISCOUNT' ? '−' + fU(+v || 0) : (type === 'PERCENTAGE_DISCOUNT' ? 'à −' + nf(+v || 0, 0) + ' %' : (n > 1 ? 'offertes' : 'offerte')));
   const pmMaint = () => { const t = new Date(), p = n => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) + ' ' + p(t.getHours()) + ':' + p(t.getMinutes()); };
-  const pmQuand = v => !v ? '' : (fD(v.slice(0, 10)) + (v.length > 10 && v.slice(11, 16) !== '00:00' ? ' ' + v.slice(11, 16) : ''));
+  // L'année quand ce n'est pas celle en cours (une promotion d'un an : « du 19/10 au 18/10/2027 »).
+  const pmQuand = v => !v ? '' : (fD(v.slice(0, 10)) + (v.slice(0, 4) !== String(new Date().getFullYear()) ? '/' + v.slice(0, 4) : '') + (v.length > 10 && v.slice(11, 16) !== '00:00' ? ' ' + v.slice(11, 16) : ''));
   function pmProduits() { const P = S.aux[clePMP()]; return P && Array.isArray(P.produits) ? P.produits : null; }
   /** Les catégories vendues au magasin, depuis ses produits : {id, nom, n, min, max} (prix TTC). */
   function pmCategories() {
@@ -3093,6 +3094,28 @@
       return (j.length === 7 ? 'tous les jours' : (suite ? PM_JOURS[j[0] - 1] + '–' + PM_JOURS[j[j.length - 1] - 1] : j.map(v => PM_JOURS[v - 1]).join(', '))) + ' ' + h(c.de, c.a);
     }).join(' · ');
   }
+  /** La durée maximale en mots : « un an » (366 jours, depuis le 18/10/2026), sinon « N jours ». */
+  const pmMaxTxt = m => (m || 366) >= 365 ? 'un an' : m + ' jours';
+  /**
+   * Les durées rapides de l'étape Période (18/10/2026) : une semaine, un mois, un an, à partir du début choisi s'il n'est
+   * pas passé, demain sinon ; la fin la veille du même jour, à 23:59 (le 31 janvier + un mois : le dernier jour de février).
+   */
+  const PM_DUREES = [['7j', '1 semaine'], ['1m', '1 mois'], ['1a', '1 an']];
+  function pmDuree(d, k) {
+    const p = n => String(n).padStart(2, '0'), loc = t => t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    const dem = new Date(); dem.setDate(dem.getDate() + 1);
+    const du = d.du && d.du.slice(0, 10) >= loc(new Date()) ? d.du : loc(dem) + ' 00:00';
+    const t = new Date(du.slice(0, 10) + 'T12:00:00'), y = t.getFullYear(), m = t.getMonth(), j = t.getDate();
+    let fin;
+    if (k === '7j') { fin = new Date(y, m, j + 6, 12); }
+    else {
+      const [yy, mm] = k === '1m' ? [y, m + 1] : [y + 1, m];
+      fin = new Date(yy, mm, j, 12);
+      // Le même jour n'existe pas (31 → février, 29 février) : le dernier jour du mois visé ; sinon la veille.
+      if (fin.getMonth() !== ((mm % 12) + 12) % 12) { fin = new Date(yy, mm + 1, 0, 12); } else { fin.setDate(fin.getDate() - 1); }
+    }
+    return { du, au: loc(fin) + ' 23:59' };
+  }
   const pmJours = d => d.du && d.au ? Math.round((new Date(d.au.slice(0, 10) + 'T12:00:00') - new Date(d.du.slice(0, 10) + 'T12:00:00')) / 86400000) + 1 : null;
 
   /* La liste : les promotions du panel et les demandes du magasin, rangées par état. */
@@ -3154,7 +3177,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
+      Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.</div></div>`;
     return h;
   }
@@ -3364,7 +3387,7 @@
       const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
       if (!d.du || !d.au) { return 'les dates'; }
       if (d.au <= d.du) { return 'une fin après le début'; }
-      if (n > (R.joursMax || 14)) { return n + ' jours, ' + (R.joursMax || 14) + ' au plus'; }
+      if (n > (R.joursMax || 366)) { return n + ' jours, ' + pmMaxTxt(R.joursMax) + ' au plus'; }
       return '';
     }
     return '';
@@ -3474,7 +3497,8 @@
       const n = pmJours(d), dl = v => v ? v.replace(' ', 'T') : '';
       const autres = ((S.aux[clePM()] || {}).demandes || []).filter(o => o.id !== d.id && ['a_valider', 'validee', 'en_caisse'].includes(o.statut) && d.du && d.au && o.du < d.au && o.au > d.du);
       return tete('règles d’application et période de validité', 'Période') + `<div class="pm-row" style="grid-template-columns:1fr 1fr"><div class="pm-f"><label>Active à partir du</label><input class="pm-in" type="datetime-local" value="${dl(d.du)}" data-pmf="du"></div>
-        <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire, ${R.joursMax || 14} jours au plus</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
+        <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire, ${pmMaxTxt(R.joursMax)} au plus</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
+        <div class="pm-durees"><span class="db-lab">Durée rapide</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => { const r = pmDuree(d, k); return `<button type="button" class="${r.du === d.du && r.au === d.au ? 'on' : ''}" data-pmduree="${k}" title="du ${esc(pmQuand(r.du))} au ${esc(pmQuand(r.au))}">${lib}</button>`; }).join('')}</span><span class="db-mini">à partir du début choisi, demain sinon</span></div>
         <div class="db-mini" id="pm-duree" style="margin-top:6px">${pmDureeTxt(d)}</div>
         ${autres.length ? `<div class="pm-warn">Déjà sur ces dates dans ce magasin : ${autres.map(o => '« ' + esc(o.nom) + ' »').join(', ')}${autres.length >= (R.enMemeTemps || 2) ? ' — ' + (R.enMemeTemps || 2) + ' à la fois au plus : l’envoi sera refusé.' : '.'}</div>` : ''}
         <div class="pm-f" style="margin-top:14px"><label>Créneaux hebdomadaires <small class="db-mini">aucun = toute la journée, tous les jours</small></label>
@@ -3504,7 +3528,7 @@
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
     if (!d.du || !d.au) { return 'Donnez le début et la fin.'; }
     if (d.au <= d.du) { return '<span class="ko">La fin vient après le début.</span>'; }
-    return n > (R.joursMax || 14) ? `<span class="ko">${n} jours : ${R.joursMax || 14} au plus.</span>` : `${n} jour${n > 1 ? 's' : ''}.`;
+    return n > (R.joursMax || 366) ? `<span class="ko">${n} jours : ${pmMaxTxt(R.joursMax)} au plus.</span>` : `${n} jour${n > 1 ? 's' : ''}.`;
   }
   function rendPmAssistant() {
     const W = S.pmW, e = W.etape;
@@ -3617,6 +3641,7 @@
     on('[data-pmcradd]', 'click', () => { d.creneaux.push({ jours: [6, 7], de: '15:00', a: '18:00' }); rendre(); });
     on('[data-pmcrdel]', 'click', el => { d.creneaux.splice(+el.dataset.pmcrdel, 1); rendre(); });
     on('[data-pmj]', 'click', el => { const [i, j] = el.dataset.pmj.split('|').map(Number), c = d.creneaux[i]; c.jours = c.jours.includes(j) ? c.jours.filter(v => v !== j) : c.jours.concat(j).sort((a, b) => a - b); rendre(); });
+    on('[data-pmduree]', 'click', el => { const r = pmDuree(d, el.dataset.pmduree); d.du = r.du; d.au = r.au; rendre(); });
     on('[data-pmcr]', 'change', el => { const [i, k] = el.dataset.pmcr.split('|'); d.creneaux[+i][k] = el.value; pmMajDroite(); });
     on('[data-pmrep]', 'change', el => { d.repetable = el.checked; rendre(); });
   }

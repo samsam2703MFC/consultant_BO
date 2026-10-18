@@ -19,8 +19,8 @@ declare(strict_types=1);
  * `shops` vaut toujours [shop] (la forme du périmètre « magasins sélectionnés » du panel). Les règles se lisent encore
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
- * Deux règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, 14 jours
- * au plus ; deux promotions du magasin en même temps au plus, magasin par magasin. Le COEFFICIENT DU LOT (prix payé
+ * Deux règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, un an au
+ * plus (14 jours jusqu'au 18/10/2026 : une promotion se fait aussi à la semaine, au mois, à l'année) ; deux promotions du magasin en même temps au plus, magasin par magasin. Le COEFFICIENT DU LOT (prix payé
  * HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
  * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).
  *
@@ -31,7 +31,7 @@ declare(strict_types=1);
 
 const PM_CLE = 'promosMagasin';
 const PM_COEF_MIN = 2.0;
-const PM_JOURS_MAX = 14;
+const PM_JOURS_MAX = 366;   // un an au plus, une année bissextile comprise (18/10/2026 ; 14 jours avant)
 const PM_EN_MEME_TEMPS = 2;
 const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DISCOUNT'];
 /**
@@ -432,7 +432,7 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
     if ($d['au'] === null) { $e[] = 'Donnez la date de fin : au magasin, une promotion a toujours une fin.'; }
     if ($d['du'] !== null && $d['au'] !== null) {
         if ($d['au'] <= $d['du']) { $e[] = 'La fin vient après le début.'; }
-        elseif (($nj = (int) round((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400) + 1) > PM_JOURS_MAX) { $e[] = 'Période de ' . $nj . ' jours : ' . PM_JOURS_MAX . ' au plus, raccourcissez-la.'; }
+        elseif (($nj = (int) round((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400) + 1) > PM_JOURS_MAX) { $e[] = 'Période de ' . $nj . ' jours : ' . (PM_JOURS_MAX >= 365 ? 'un an' : PM_JOURS_MAX . ' jours') . ' au plus, raccourcissez-la.'; }
         if ($d['au'] <= $maintenant) { $e[] = 'La période est déjà passée.'; }
         foreach (pmShops($d) as $s) {
             $chev = array_filter($autres, static fn ($o) => in_array($s, pmShops($o), true) && in_array($o['statut'] ?? '', PM_VIVANTES, true) && ($o['du'] ?? '') < $d['au'] && ($o['au'] ?? '') > $d['du']);

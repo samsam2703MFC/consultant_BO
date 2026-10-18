@@ -2300,7 +2300,8 @@ dashboard de chaque magasin sur son onglet Promotions.
 
 Les règles du magasin, imposées au serveur :
 
-- une date de fin, **14 jours au plus** ; la fin après le début, pas déjà passée ;
+- une date de fin, **un an au plus** (366 jours ; 14 jours jusqu'au 18/10/2026) ; la fin après le début, pas déjà passée.
+  L'étape Période de l'assistant a des durées rapides — 1 semaine, 1 mois, 1 an — qui remplissent les deux dates ;
 - **deux promotions à la fois au plus**, magasin par magasin (les promotions `validee` et `en_caisse`) ;
 - le **coefficient du lot**, affiché avec ×2 en repère — il **ne bloque plus** (18/10/2026) : sous ×2, la promotion
   s'enregistre et part au panel, en rouge dans la liste et la modale. Prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces

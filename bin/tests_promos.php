@@ -146,8 +146,10 @@ $base = pmPropre(['nom' => 'Viennoiseries 2+1', 'x' => ['q' => 2, 'cats' => [['i
 $coefOk = ['lot' => 2.4, 'x' => 'a', 'y' => 'b', 'paires' => 1, 'nX' => 1, 'nY' => 1];
 verifie('une demande complète passe', pmErreurs($base, [], $coefOk, $now) === [], json_encode(pmErreurs($base, [], $coefOk, $now), JSON_UNESCAPED_UNICODE));
 verifie('sans fin : refusée', count(pmErreurs(['au' => null] + $base, [], $coefOk, $now)) === 1);
-verifie('15 jours : refusée', count(pmErreurs(['au' => $j(15)] + $base, [], $coefOk, $now)) === 1);
-verifie('14 jours : acceptée', pmErreurs(['au' => $j(14, '23:59')] + $base, [], $coefOk, $now) === []);
+verifie('15 jours : acceptée (plus de limite à 14 jours, 18/10/2026)', pmErreurs(['au' => $j(15)] + $base, [], $coefOk, $now) === []);
+verifie('un an (366 jours) : acceptée', pmErreurs(['au' => $j(366, '23:59')] + $base, [], $coefOk, $now) === []);
+$e = pmErreurs(['au' => $j(367)] + $base, [], $coefOk, $now);
+verifie('367 jours : refusée, la durée dite', count($e) === 1 && str_contains($e[0], '367 jours') && str_contains($e[0], 'un an'), json_encode($e, JSON_UNESCAPED_UNICODE));
 $autres = [['shop' => 4, 'nom' => 'A', 'statut' => 'validee', 'du' => $j(0), 'au' => $j(3)], ['shop' => 4, 'nom' => 'B', 'statut' => 'a_valider', 'du' => $j(2), 'au' => $j(9)], ['shop' => 4, 'nom' => 'C', 'statut' => 'brouillon', 'du' => $j(1), 'au' => $j(5)],
     ['shop' => 7, 'nom' => 'D', 'statut' => 'validee', 'du' => $j(1), 'au' => $j(5)]];
 $e = pmErreurs($base, $autres, $coefOk, $now);
