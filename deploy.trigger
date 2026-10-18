@@ -829,3 +829,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T12:18:40Z promotions : remplir un exemple
 2026-10-18T12:27:12Z sonde des commandes webshop payées en ligne (lecture seule)
 2026-10-18T12:31:41Z promotions : créneaux time_from/time_to, modifier et dupliquer
+2026-10-18T12:41:05Z contrôle des tâches : toute photo est à noter, plus de maîtrise
