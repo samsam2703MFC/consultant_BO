@@ -835,3 +835,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T13:43:24Z catalogue refondu : quatre questions, une liste, une fiche
 2026-10-18T14:08:05Z nécessaire fondu dans obligatoire, marge nette, part des ventes, interrupteur obligatoire
 2026-10-18T14:17:04Z catalogue : rang, saison, tri par colonne
+2026-10-18T14:21:36Z catalogue : rang de catégorie en colonne, Réinitialiser
