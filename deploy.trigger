@@ -840,3 +840,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T15:01:16Z PDF 20/80 : par catégorie, assortiment proposé par saison
 2026-10-18T15:12:43Z boutons et listes en rectangles aux coins arrondis
 2026-10-18T15:13:05Z boutons et listes en rectangles aux coins arrondis
+2026-10-18T15:32:30Z PDF 20/80 : assortiment en fiches lisibles
