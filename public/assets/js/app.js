@@ -304,8 +304,8 @@ class App {
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
-      planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
-      usage: 'usage-catalogue', anaprod: 'analyse-produits', prixvolume: 'prix-volume',
+      planogramme: 'planogramme', analyse: 'analyse',
+      anaprod: 'analyse-produits', prixvolume: 'prix-volume',
       manque: 'manque-a-gagner',
       ventes: 'target-ventes',
       // Les promotions demandées par les magasins (17/10/2026) : un onglet d'Analyse magasin.
@@ -365,6 +365,8 @@ class App {
       // Gestion consultant et Plan de développement, retirés (18/10/2026, demande de Sam) : la fiche, l'accueil.
       'gestion-consultant': 'ficheFranchise', gestionConsultant: 'ficheFranchise',
       'plan-developpement': 'resultatJour', plan: 'resultatJour',
+      // Scoring, Sous seuil et Par magasin : le Catalogue les reprend (18/10/2026, une liste et sa fiche).
+      scoring: 'catalogue', produits: 'catalogue', 'sous-seuil': 'catalogue', seuil: 'catalogue', 'usage-catalogue': 'catalogue', usage: 'catalogue',
       'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
     };
   }
@@ -972,7 +974,7 @@ class App {
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
-      catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
+      catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
@@ -1013,16 +1015,10 @@ class App {
         [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation'], ['promosMag', 'Promotions']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
         [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
-      // Le catalogue réunit les lectures d'une référence (18/10/2026, demande de Sam) : le scoring de la gamme et son
-      // seuil, sa jauge par magasin (Par référence), son prix face au volume et son évolution (Dans le temps) y
-      // deviennent des onglets ; Où ça se vend aussi (Par magasin, Manque à gagner), le même jour. Un onglet peut porter
-      // sa propre phrase d'explication (3e élément) : celle de son ancien écran, qui ne se perd pas dans la phrase commune.
-      // Le comptoir (planogramme) en ressort le même jour : une entrée à lui, sous Produits.
-      catalogue: ['Catalogue', 'Une seule liste, ses lectures : la fiche et ses deux marges, le score de chaque référence, où elle se vend et à quel prix, ce que chaque magasin en vend et ce qui lui manque, comment elle évolue, et ce qui est obligatoire en boutique.',
-        [['catalogue', 'Fiches'], ['produits', 'Scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.'], ['seuil', 'Sous seuil', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.'],
-          ['anaprod', 'Par référence', titles.anaprod[1]], ['usage', 'Par magasin', titles.usage[1]], ['manque', 'Manque à gagner', titles.manque[1]],
-          ['prixvolume', 'Prix × volume', titles.prixvolume[1]], ['analyse', 'Dans le temps', titles.analyse[1]],
-          ['assortiment', 'Assortiment obligatoire']]] };
+      // Le Catalogue n'a plus d'onglets (18/10/2026, maquette « A + D ») : une liste et sa fiche (valsCatalogue). Le
+      // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
+      planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
+        [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
     const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
     if (grp) {
       const onglet = (GROUPES[grp][2] || []).find(o => o[0] === S.screen);
@@ -1031,6 +1027,11 @@ class App {
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
       common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
+    }
+    // Les lectures détaillées, ouvertes depuis la fiche d'une référence du Catalogue (18/10/2026) : un retour, pas d'onglets.
+    const DETAIL_CAT = { anaprod: 'Une référence, magasin par magasin', prixvolume: 'Prix × volume', analyse: 'Dans le temps', manque: 'Manque à gagner' };
+    if (DETAIL_CAT[S.screen]) {
+      common.ongletsEcran = [{ nom: '‹ Catalogue', on: false, go: goTo('catalogue'), badge: 0 }, { nom: DETAIL_CAT[S.screen], on: true, go: goTo(S.screen), badge: 0 }];
     }
     // Les limites API se replient en une puce : les chiffres passent devant.
     common.lacOuvert = !!S.lacOuvert;
@@ -1388,18 +1389,17 @@ class App {
         // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
         ['inventaires', 'Inventaires', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
-      // Deux entrées (18/10/2026) : le Catalogue réunit tout ce qui se lit d'une
-      // référence — la fiche, son score et le seuil, sa jauge par magasin, ce que
-      // chaque magasin vend du catalogue et son manque à gagner, son prix face au
-      // volume, son évolution, l'assortiment obligatoire ; le Comptoir
-      // (planogramme) a son entrée. Les anciens écrans restent à leur adresse :
-      // l'entrée qui les couvre s'allume pour eux.
+      // Deux entrées (18/10/2026) : le Catalogue — quatre questions, une liste,
+      // une fiche ; ses lectures détaillées (une référence magasin par magasin,
+      // prix × volume, dans le temps, manque à gagner) s'ouvrent de la fiche — et
+      // le Comptoir, avec l'assortiment obligatoire. L'entrée qui couvre un écran
+      // s'allume pour lui.
       // Les badges : au Catalogue, les références que le scoring propose
       // d'effacer ; au Comptoir, les obligatoires qui n'y ont pas encore de place.
       ['Produits', [
         ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
-          ['produits', 'seuil', 'anaprod', 'usage', 'manque', 'prixvolume', 'analyse', 'assortiment']],
-        ['planogramme', 'Comptoir · planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length]]],
+          ['anaprod', 'manque', 'prixvolume', 'analyse']],
+        ['planogramme', 'Comptoir · planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment']]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
@@ -1816,6 +1816,8 @@ class App {
 
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso) this.valsReferentiel(common);
+    // Le Catalogue (18/10/2026) : la liste et sa fiche, avec les gestes du scoring (seuils, PDF, revue, détail du score).
+    if (common.isCat) { this.valsProduits(common); this.catCharge(); this.valsCatalogue(common); }
     if (common.isAsso) this.valsAssortiment(common);
     // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
     // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
@@ -1828,7 +1830,6 @@ class App {
     if (common.isPxv) { this.pxvCharge(false); this.valsPxv(common); }
     this.valsLacunes(common);
     if (common.isDiag) { this.coCharge(); this.valsDiag(common); }
-    if (common.isSeuil) this.valsSeuil(common);
     // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
     if (common.isReput) { this.repCharge(); this.valsReputation(common); }
     // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
@@ -1861,7 +1862,6 @@ class App {
     if (common.isScoringTri) this.valsScoring(common);
     // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
     if (common.isCltMyst) { if (S.sqVue !== 'msp') { this.state.sqVue = 'msp'; } this.valsScoring(common); }
-    if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
@@ -1874,7 +1874,6 @@ class App {
       else { this.valsMesure(common); common.mesRetour = () => this.setState({ mesSimple: true }); }
     }
     // --- scoring produits
-    if (common.isProduits) this.valsProduits(common);
     // --- marge
     if (common.isMarge) this.valsMarge(common);
     // --- projets
@@ -4599,6 +4598,209 @@ class App {
     common.refSansMarge = cat.filter(p => p.margePct == null).length;
     return common;
   }
+  /**
+   * Le Catalogue (18/10/2026, maquette « A + D » choisie par Sam : « plus concis, le moins redondant possible »). Quatre
+   * questions en tête, une seule liste, une seule fiche — à la place de neuf onglets qui montraient plusieurs fois la même
+   * chose (le score trois fois, le volume par magasin cinq fois, ce qu'un magasin ne vend pas trois fois). Chaque chiffre
+   * a UNE source : le score et la décision de pdCalcule (le même calcul que partout), la marge nette après commission du
+   * catalogue, le manque à gagner de /produits/manque, le prix encaissé de /analyse/prix-volume, la tendance de
+   * /analyse/produits. La fiche garde toutes les écritures d'avant : fiche de production, revue ★, nécessaire, détail du
+   * score (projets, arrêt du produit), perte par magasin ; les seuils et les PDF sont dans la barre d'outils.
+   */
+  catCharge(){ this.manqueCharge(); this.pxvCharge(false); this.apCharge(false); }
+  valsCatalogue(common){
+    const S = this.state, D = this.D;
+    const c2 = this.pdCalcule(), SC = this.scoringCfg();
+    const cat = D.prodCatalogue || [];
+    const catDe = new Map(cat.map(p => [String(p.ref), p]));
+    const eur = v => v == null ? '—' : (+v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const eur0 = v => v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €';
+    const pct = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(Math.round(v)) + ' %';
+    const nb = v => Math.round(v || 0).toLocaleString('fr-BE');
+    const court = n2 => String(n2 || '').split(' - ').pop().trim();
+    // --- les sources des questions, lues en tâche de fond (null = pas encore lu, false = illisible)
+    const pxv = (D.pxv || {})[S.pxMois || 1];
+    const pxOk = pxv && !pxv.indispo && Array.isArray(pxv.refs);
+    const pxDe = new Map(); if (pxOk) { pxv.refs.forEach(r => pxDe.set(String(r.pid), r)); }
+    const moisMq = S.mqMois || 6;
+    const mq = (this._manque || {})[moisMq + '|' + (S.mqGroupe || '')];
+    const mqOk = mq && !mq.motif && mq.reseau;
+    const mqDe = new Map(); if (mq) { (mq.references || []).forEach(r => mqDe.set(String(r.ref), r)); }
+    const ap = (D.aprod || {})[S.apMois || 3];
+    const apOk = ap && !ap.indispo && Array.isArray(ap.produits);
+    const apDe = new Map(); if (apOk) { ap.produits.forEach(p => apDe.set(String(p.pid), p)); }
+    const nT = apOk ? (ap.tranches || []).length : 0;
+    const joursAp = apOk && Array.isArray(ap.jours) && ap.jours.length === nT ? ap.jours : Array(nT).fill(ap && ap.pas === 'semaine' ? 7 : 30);
+    // La série réseau d'une référence, en pièces par jour, tranche par tranche.
+    const serieDe = pid => { const p = apDe.get(String(pid)); if (!p) { return null; }
+      return Array.from({ length: nT }, (_, i) => Object.values(p.parShop || {}).reduce((a, s) => a + ((s || [])[i] || 0), 0) / Math.max(1, joursAp[i])); };
+    // La tendance : la moyenne par jour de la seconde moitié de la période face à la première (réseau entier). Sous 30
+    // pièces sur la période, pas de tendance : quelques pièces ne font pas une pente.
+    const tendDe = pid => {
+      const p = apDe.get(String(pid)); const s = serieDe(pid);
+      if (!p || !s || nT < 4 || (p.total || 0) < 30) { return null; }
+      const h = Math.floor(nT / 2), m = arr => arr.reduce((a, v) => a + v, 0) / Math.max(1, arr.length);
+      const avant = m(s.slice(0, h)), apres = m(s.slice(nT - h));
+      return avant > 0 ? 100 * (apres / avant - 1) : null;
+    };
+    const decCle = s => s.necessaire ? 'garder' : (Math.round(s.score) > SC.garder ? 'garder' : (Math.round(s.score) >= SC.modifier ? 'modifier' : 'effacer'));
+    // --- une ligne par référence : celles qui ont un score, puis celles du catalogue sans vente sur la période
+    const ligne = (k, s, p) => {
+      const pid = p && p.pwaId != null ? String(p.pwaId) : null;
+      const px = pid ? pxDe.get(pid) : null, mqr = mqDe.get(k) || null;
+      return { k, s, p, pid, nom: (s && s.nom) || (p && p.nom) || k, catNom: (p && p.categorie) || (s && s.cat) || '',
+        prix: s && s.prix != null ? s.prix : (p ? p.prix : null),
+        mnPct: p && p.margeNettePct != null ? p.margeNettePct : null,
+        vol: s ? s.vol || 0 : 0, score: s ? s.score : null, dec: s ? decCle(s) : null,
+        mags: s ? s.mags || 0 : 0, sansVente: !s || !!s.sansVente,
+        tend: pid ? tendDe(pid) : null, px, mq: mqr, mqMois: mqr ? mqr.eur / moisMq : null };
+    };
+    const vus = new Set(), L = [];
+    (c2.base || []).forEach(s => { const k = String(s.id); vus.add(k); L.push(ligne(k, s, catDe.get(k))); });
+    cat.forEach(p => { const k = String(p.ref); if (!vus.has(k)) { vus.add(k); L.push(ligne(k, null, p)); } });
+
+    // --- les quatre questions
+    const vue = ['retirer', 'manque', 'prix', 'baisse'].includes(S.catVue) ? S.catVue : 'tout';
+    const effacer = L.filter(l => l.dec === 'effacer'), sansV = effacer.filter(l => l.sansVente).length;
+    const prixEcart = L.filter(l => l.px && l.px.ecart >= 10);
+    const baisse = L.filter(l => l.tend != null && l.tend <= -15);
+    const lu = (ok, src) => ok ? null : (src === undefined || src === null ? 'lecture…' : 'indisponible');
+    common.catTuiles = [
+      { k: 'retirer', q: 'Que retirer de la gamme ?', v: effacer.length + ' référence' + (effacer.length > 1 ? 's' : ''), cls: effacer.length ? 'ko' : 'ok',
+        s: 'décision « Effacer » : score sous ' + Math.round(SC.modifier) + (sansV ? ' · dont ' + sansV + ' sans vente' : '') },
+      { k: 'manque', q: 'Où vend-on moins que le réseau ?', v: lu(mqOk, mq) || eur0(mq.reseau.parMois) + '/mois', cls: '',
+        s: mqOk ? 'manque à gagner : ' + nb(mq.reseau.refs) + ' références absentes quelque part · ' + moisMq + ' mois' : ((mq && mq.motif) || 'les références que d’autres magasins vendent') },
+      { k: 'prix', q: 'Les prix sont-ils tenus ?', v: lu(pxOk, pxv) || prixEcart.length + ' écart' + (prixEcart.length > 1 ? 's' : ''), cls: prixEcart.length ? 'am' : 'ok',
+        s: pxOk ? 'prix encaissé : 10 % ou plus entre magasins · ' + (pxv.periode || '') : 'le prix encaissé de chaque magasin' },
+      { k: 'baisse', q: 'Qu’est-ce qui décroche ?', v: lu(apOk, ap) || baisse.length + ' en baisse', cls: baisse.length ? 'ko' : 'ok',
+        s: apOk ? '−15 % ou pire : les ' + (S.apMois || 3) + ' derniers mois, la 2e moitié face à la 1re' : 'la tendance de chaque référence' },
+    ].map(t => Object.assign(t, { on: vue === t.k, choisir: () => this.setState({ catVue: vue === t.k ? 'tout' : t.k, catFiche: null }) }));
+    common.catVue = vue;
+    // La lecture détaillée de la question choisie : un lien, pas un onglet.
+    common.catLienVue = { manque: ['Le manque à gagner, magasin par magasin ›', 'manque'], prix: ['Le prix encaissé, magasin par magasin ›', 'prixvolume'],
+      baisse: ['Groupes et catégories dans le temps, face à l’an dernier ›', 'analyse'] }[vue] || null;
+    if (common.catLienVue) { const ecr = common.catLienVue[1]; common.catLienVue = { txt: common.catLienVue[0], go: () => this.setState({ screen: ecr, catFiche: null }) }; }
+
+    // --- filtres, tri, colonnes
+    const q = (S.catQ || '').trim().toLowerCase();
+    const cats = [...new Set(L.map(l => l.catNom).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+    const catSel = cats.includes(S.catCat) ? S.catCat : '';
+    common.catQ = S.catQ || '';
+    common.catPoserQ = e => this.setState({ catQ: e.target.value });
+    common.catCats = [{ v: '', lib: 'Toutes les catégories', on: !catSel }].concat(cats.map(c3 => ({ v: c3, lib: c3, on: c3 === catSel })));
+    // La catégorie choisie vaut aussi pour le PDF de la catégorie (le même menu que l'ancien écran de scoring).
+    common.catPoserCat = e => this.setState({ catCat: e.target.value, pdCat: e.target.value || 'Toutes les catégories' });
+    let F = L.filter(l => (!catSel || l.catNom === catSel) && (!q || l.nom.toLowerCase().includes(q) || l.k.includes(q)));
+    if (vue === 'retirer') { F = F.filter(l => l.dec === 'effacer').sort((a, b) => (a.score || 0) - (b.score || 0)); }
+    else if (vue === 'manque') { F = F.filter(l => l.mq).sort((a, b) => b.mq.eur - a.mq.eur); }
+    else if (vue === 'prix') { F = F.filter(l => l.px && l.px.ecart >= 10).sort((a, b) => b.px.ecart - a.px.ecart); }
+    else if (vue === 'baisse') { F = F.filter(l => l.tend != null && l.tend <= -15).sort((a, b) => a.tend - b.tend); }
+    else { F.sort((a, b) => (b.score == null ? -1 : b.score) - (a.score == null ? -1 : a.score) || a.nom.localeCompare(b.nom, 'fr')); }
+    common.catCompte = F.length + ' / ' + L.length + ' références';
+    common.catColExtra = vue === 'manque' ? 'Manque / mois' : (vue === 'prix' ? 'Prix min – max' : '');
+    common.catPeriode = c2.periode || '';
+    common.catFenetres = [['mois', 'Mois clos'], ['trimestre', 'Trimestre'], ['annee', '12 mois']]
+      .map(f => ({ nom: f[1], on: (S.pdFenetre || 'mois') === f[0], choisir: () => this.pdChoisirFenetre(f[0]) }));
+    const DEC = { garder: ['Garder', 'ok'], modifier: ['Modifier', 'a'], effacer: ['Effacer', 'ko'] };
+    const nbOuv = c2.nbOuv || 1;
+    common.catLignes = F.slice(0, 250).map(l => ({
+      k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.must ? 'obligatoire' : '', l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
+      prix: eur(l.prix), mn: l.mnPct == null ? '—' : Math.round(l.mnPct) + ' %', mnCls: l.mnPct == null ? 'mu' : (l.mnPct < 40 ? 'ko' : ''),
+      vol: l.sansVente ? '0' : nb(l.vol), score: l.score == null ? '—' : String(Math.round(l.score)),
+      scoreCls: l.score == null ? 'mu' : (l.dec === 'garder' ? 'ok' : (l.dec === 'modifier' ? 'am' : 'ko')),
+      mags: l.s ? l.mags + '/' + nbOuv : '—', tend: pct(l.tend), tendCls: l.tend == null ? 'mu' : (l.tend >= 0 ? 'ok' : 'ko'),
+      dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
+      extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
+      on: S.catFiche === l.k,
+      ouvrir: () => this.setState({ catFiche: S.catFiche === l.k ? null : l.k, catOnglet: S.catOnglet || 'magasins' }) }));
+    common.catTronque = F.length > 250 ? F.length - 250 : 0;
+    common.catVide = !L.length;
+    // Les seuils de décision et les PDF : ceux de l'ancien écran de scoring (valsProduits), au même endroit pour tous.
+    common.catSeuilGarder = String(Math.round(SC.garder));
+    common.catSeuilModifier = String(Math.round(SC.modifier));
+    common.catExporter = () => {
+      const sep = ';', cel = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const t = [['Référence', 'Catégorie', 'Prix', 'Marge nette %', 'Volume', 'Score', 'Magasins', 'Tendance %', 'Décision', 'Manque €/mois', 'Écart de prix %'].map(cel).join(sep)]
+        .concat(F.map(l => [l.nom, l.catNom, l.prix == null ? '' : String(l.prix).replace('.', ','), l.mnPct == null ? '' : Math.round(l.mnPct), Math.round(l.vol),
+          l.score == null ? '' : Math.round(l.score), l.mags, l.tend == null ? '' : Math.round(l.tend), l.dec ? DEC[l.dec][0] : '',
+          l.mqMois == null ? '' : Math.round(l.mqMois), l.px ? Math.round(l.px.ecart) : ''].map(cel).join(sep)));
+      const bl = new Blob(['﻿' + t.join('\r\n')], { type: 'text/csv;charset=utf-8' }), u = URL.createObjectURL(bl), a = document.createElement('a');
+      a.href = u; a.download = 'catalogue.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 30000);
+    };
+
+    // --- la fiche d'une référence
+    const l = S.catFiche ? L.find(x => x.k === S.catFiche) : null;
+    if (!l) { common.catFiche = null; return; }
+    const s = l.s, p = l.p, onglet = ['magasins', 'marges', 'temps', 'fiche'].includes(S.catOnglet) ? S.catOnglet : 'magasins';
+    const mqShop = {}; ((mq && mq.magasins) || []).forEach(m => { const t = (m.top || []).find(x => String(x.ref) === l.k); if (t) { mqShop[String(m.id)] = t; } });
+    const pm = (s && s.parMagasin) || [];
+    const vols = pm.map(m => m.vol || 0).filter(v => v > 0), moyV = vols.length ? vols.reduce((a, v) => a + v, 0) / vols.length : 0;
+    const fiche = {
+      nom: l.nom, sous: [l.catNom, eur(l.prix), l.score == null ? '' : 'score ' + Math.round(l.score)].filter(Boolean).join(' · '),
+      dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
+      fermer: () => this.setState({ catFiche: null }),
+      onglets: [['magasins', 'Magasins'], ['marges', 'Marges'], ['temps', 'Dans le temps'], ['fiche', 'Fiche']]
+        .map(([k2, n2]) => ({ nom: n2, on: onglet === k2, choisir: () => this.setState({ catOnglet: k2 }) })),
+      onglet,
+      // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
+      revue: s ? [1, 2, 3, 4, 5].map(n2 => ({ n: n2, pleine: s.revue != null && n2 <= s.revue, poser: () => this.pdPoserRevue(s.id, s.revue === n2 ? null : n2) })) : null,
+      necessaire: s ? !!s.necessaire : null,
+      basculerNecessaire: s ? () => this.pdPoserNecessaire(s.id, !s.necessaire) : null,
+      detailScore: s ? () => this.pdOpenDetail(s.id) : null,
+      ouvrirProduction: p ? () => this.refOpen(p, 'fiche') : null,
+      comptoir: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(l.nom), psLibres: false, psSel: null }),
+    };
+    if (onglet === 'magasins') {
+      const ids = new Set(pm.map(m => String(m.sid)));
+      ((pxv && pxv.magasins) || []).forEach(m => ids.add(String(m.id)));
+      const nomDe = {}; pm.forEach(m => { nomDe[String(m.sid)] = court(m.nom); }); ((pxv && pxv.magasins) || []).forEach(m => { nomDe[String(m.id)] ||= m.court || court(m.nom); });
+      fiche.magasins = [...ids].map(sid => {
+        const m = pm.find(x => String(x.sid) === sid), v = m ? m.vol || 0 : 0;
+        const e = moyV > 0 && v > 0 ? 100 * (v / moyV - 1) : null;
+        const pxm = l.px && l.px.mag ? l.px.mag[sid] : null, mqm = mqShop[sid];
+        return { nom: nomDe[sid] || ('magasin ' + sid), vol: v ? nb(v) + ' pcs' : (mqm ? 'jamais vendue' : '—'), volCls: v ? '' : 'ko',
+          w: moyV > 0 && v > 0 ? Math.max(4, Math.min(100, 50 * v / moyV)) : 0, barCls: e == null ? '' : (e >= 0 ? 'ok' : 'ko'), ecart: e == null ? '' : pct(e),
+          prix: pxm && pxm.p != null ? eur(pxm.p) + (l.px.med ? ' · ' + pct(100 * (pxm.p / l.px.med - 1)) : '') : '',
+          manque: mqm ? eur0(mqm.eur / Math.max(1, mqm.mois || 1)) + '/mois' : '', v };
+      }).sort((a, b) => b.v - a.v);
+      fiche.magasinsNote = (moyV ? 'Pièces sur la période du score face à la moyenne des magasins qui la vendent' : 'Pas de volume par magasin sur cette période')
+        + (l.px ? ' · prix encaissé, face au prix réseau (' + eur(l.px.med) + ')' : '') + (Object.keys(mqShop).length ? ' · manque à gagner là où elle manque' : '') + '.';
+      fiche.versVie = l.pid ? () => { this.apChargeAd(+l.pid); this.setState({ screen: 'anaprod', apFiche: +l.pid, apQ: '', catFiche: null }); } : null;
+      fiche.versPrix = l.px ? () => this.setState({ screen: 'prixvolume', pxFiche: l.px.pid, catFiche: null }) : null;
+    } else if (onglet === 'marges') {
+      const W = c2.W, wt = W.v + W.m + W.perte + W.comptoir + W.rev || 1, w = x => Math.round(100 * x / wt) + ' %';
+      fiche.lignesMarge = [
+        ['Prix de vente (catalogue)', p && p.prix != null ? eur(p.prix) : '—'], ['Prix encaissé (réseau)', s && s.prix != null ? eur(s.prix) : '—'],
+        ['Coût matière', p && p.mat != null ? eur(p.mat) : (s && s.mu != null ? eur(s.prix - s.mu) : '—')],
+        ['Marge brute', p && p.margePct != null ? Math.round(p.margePct) + ' %' : '—'],
+        ['Commission de marque', p && p.commission != null ? eur(p.commission) : '—'],
+        ['Marge nette (après commission)', p && p.margeNettePct != null ? Math.round(p.margeNettePct) + ' %' + (p.margeNette != null ? ' · ' + eur(p.margeNette) : '') : '—'],
+        ['Chiffre et marge brute sur la période', s ? eur0(s.ca) + (s.mg != null ? ' · ' + eur0(s.mg) : '') : '—'],
+      ].map(([k2, v2]) => ({ k: k2, v: v2 }));
+      fiche.criteres = s ? [['Volume vendu', s.sVol, w(W.v)], ['Marge (prix encaissé − coût matière)', s.sMg, w(W.m)], ['Taux de perte', s.sPerte, w(W.perte)],
+        ['Présence au comptoir', s.sComptoir, w(W.comptoir)], ['Revue ★', s.sRev, w(W.rev)]]
+        .map(([n2, v2, p2]) => ({ nom: n2, poids: p2, note: v2 == null ? 'pas de donnée' : Math.round(v2) + ' / 100', w: v2 == null ? 0 : Math.max(2, Math.round(v2)), mu: v2 == null })) : [];
+      fiche.perte = s && s.perte != null ? this.fP(s.perte, 1) : '';
+      fiche.versPerte = s && s.perte != null ? () => this.pdOpenWaste(s.id, s.nom) : null;
+    } else if (onglet === 'temps') {
+      const se = l.pid ? serieDe(l.pid) : null;
+      if (se && se.length) {
+        const max = Math.max(...se, 0.01), W2 = 330, H2 = 90, dx = W2 / Math.max(1, se.length - 1);
+        fiche.courbe = se.map((v, i) => (i * dx).toFixed(1) + ',' + (H2 - 6 - (v / max) * (H2 - 14)).toFixed(1)).join(' ');
+        fiche.courbeMax = (Math.round(max * 10) / 10).toLocaleString('fr-BE') + ' pcs/j';
+        fiche.courbeDe = (ap.tranches || [])[0] || ''; fiche.courbeA = (ap.tranches || [])[nT - 1] || '';
+      }
+      fiche.tendance = l.tend == null ? 'pas assez de ventes pour une tendance' : pct(l.tend) + ' : la 2e moitié des ' + (S.apMois || 3) + ' derniers mois face à la 1re';
+      fiche.versAnalyse = () => this.setState({ screen: 'analyse', catFiche: null });
+    } else {
+      fiche.prod = p ? [['Obligatoire', p.must ? 'oui' + (p.qmin ? ' · ' + p.qmin + ' minimum' : '') : 'non'], ['DLV', p.dlv ? p.dlv + ' h' : '—'],
+        ['Préparation · cuisson · finition', [p.prep, p.cuisson, p.fin].map(v2 => (v2 || 0) + ' min').join(' · ')],
+        ['Batch minimum · multiple', (p.bmin || 0) + ' · ' + (p.bmult || 1)], ['Four', p.four ? String(p.four) : '—'], ['Profil de vente', p.profil || '—'],
+        ['Fin de gamme', p.finLe ? this.fD(p.finLe) + '/' + String(p.finLe).slice(0, 4) : '—'],
+        ['Comptoir', p.zone ? [p.zone, p.meuble, p.niveau].filter(Boolean).join(' · ') : 'pas encore placée']].map(([k2, v2]) => ({ k: k2, v: v2 })) : null;
+    }
+    common.catFiche = fiche;
+  }
   /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
   refOpen(p, mode){
     const sa = p.must && p.saison != null ? ((this.D.prodSaisons || {}).saisons || []).find(s => s.id === p.saison) : null;
@@ -6390,41 +6592,6 @@ class App {
       },
     };
   }
-  /* --- usage du catalogue ------------------------------------------------ */
-
-  /**
-   * Lit l'usage du catalogue — et le détail d'un magasin quand il est ouvert.
-   *
-   * Deux routes, deux chargements : le tableau tient en une requête, le détail
-   * pèse sept cents lignes par magasin et n'est demandé qu'au clic. Les
-   * réponses sont mises en cache par clé de filtre — rouvrir le même magasin
-   * ne relit pas.
-   */
-  usageCharge(){
-    const S = this.state;
-    const cle = (S.usMois || 6) + '|' + (S.usGroupe || '');
-    if (!this._usage) { this._usage = {}; }
-    if (this._usage[cle] === undefined && !this._usageEnCours) {
-      this._usageEnCours = true;
-      readOne('/produits/utilisation?mois=' + (S.usMois || 6)
-        + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''))
-        .then(d => { this._usageEnCours = false; this._usage[cle] = (d && !d.error) ? d : null; this.setState({}); })
-        .catch(() => { this._usageEnCours = false; this._usage[cle] = null; this.setState({}); });
-    }
-    const sid = S.usShop;
-    if (!sid) { return; }
-    const cleD = sid + '|' + cle;
-    if (!this._usageDet) { this._usageDet = {}; }
-    if (this._usageDet[cleD] === undefined && !this._usageDetEnCours) {
-      this._usageDetEnCours = true;
-      readOne('/produits/utilisation/magasin?shop=' + encodeURIComponent(sid)
-        + '&mois=' + (S.usMois || 6)
-        + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''))
-        .then(d => { this._usageDetEnCours = false; this._usageDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
-        .catch(() => { this._usageDetEnCours = false; this._usageDet[cleD] = null; this.setState({}); });
-    }
-  }
-
   /** Le classement des ventes : une lecture par mois, la fiche au clic. */
   ventesCharge(){
     const S = this.state;
@@ -7687,126 +7854,6 @@ class App {
     common.mqGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
       + ' référence(s) de gammes saisonnières fermées sur la période sont écartées : '
       + Object.keys(d.gammesEcartees || {}).slice(0, 4).join(', ') + '.');
-  }
-
-  valsUsage(common){
-    const S = this.state;
-    const mois = S.usMois || 6;
-    const cle = mois + '|' + (S.usGroupe || '');
-    const d = (this._usage || {})[cle];
-    const court = nom => String(nom || '').split(' - ').pop();
-    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
-    // Vert au-dessus de 60 %, ambre au-dessus de 40, bordeaux en dessous : les
-    // mêmes paliers que le reste du cockpit.
-    const teinte = p => p == null ? 'var(--color-text-muted)' : (p >= 60 ? '#2d7a3e' : (p >= 40 ? '#C17A2A' : '#8D1D2C'));
-
-    common.usChargement = d === undefined;
-    common.usMotif = d === null ? 'L’usage du catalogue n’a pas pu être lu.' : ((d && d.motif) || '');
-    common.usDurees = [3, 6, 12].map(v => ({ v, nom: v + ' mois', on: v === mois,
-      choisir: () => this.setState({ usMois: v }) }));
-    common.usGroupes = [{ nom: 'Tous groupes', v: '', on: !S.usGroupe, choisir: () => this.setState({ usGroupe: '' }) }]
-      .concat(((d && d.groupes) || []).map(g => ({ nom: g, v: g, on: S.usGroupe === g,
-        choisir: () => this.setState({ usGroupe: g }) })));
-
-    if (!d) { common.usMois = []; common.usLignes = []; return; }
-
-    common.usSource = d.source || '';
-    // Une bûche non vendue en juillet n'est pas une bûche délaissée : sa gamme
-    // était fermée. On l'écarte du calcul, et on dit laquelle — un chiffre
-    // corrigé sans être expliqué se lit comme un chiffre faux.
-    common.usGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
-      + ' référence(s) de gammes saisonnières fermées sur ces ' + mois + ' mois sont écartées du calcul : '
-      + Object.keys(d.gammesEcartees || {}).slice(0, 5).join(', ')
-      + '. Ne pas les avoir vendues n’est pas un manque du magasin.');
-    common.usKpis = [
-      { lbl: 'Catalogue', v: nb(d.catalogue), sub: 'références ouvertes sur la période'
-        + (d.groupe ? ' — groupe ' + d.groupe : '') },
-      { lbl: 'Vendues par le réseau', v: nb((d.reseau || {}).refs), sub: pc((d.reseau || {}).taux) + ' du catalogue' },
-      { lbl: 'Jamais vendues', v: nb((d.reseau || {}).jamais), sub: 'par aucun magasin, sur ' + mois + ' mois', accent: true,
-        // La tuile donne le compte ; la liste, elle, se traite. Elle part en
-        // réunion catalogue : chaque référence est à relancer ou à sortir.
-        lien: API_BASE + '/produits/utilisation/jamais.pdf?mois=' + mois
-          + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''),
-        lienNom: 'Liste PDF' },
-      { lbl: 'Meilleur magasin', v: pc(Math.max.apply(null, (d.magasins || []).map(m => m.tauxPeriode || 0))),
-        sub: court((d.magasins || []).reduce((a, b) => (b.tauxPeriode || 0) > (a.tauxPeriode || 0) ? b : a, {}).nom) },
-    ];
-    common.usEntetes = (d.mois || []).map(m => m.lib);
-    common.usLignes = (d.magasins || []).map(m => ({
-      id: m.id, nom: court(m.nom), complet: m.nom,
-      ouvert: S.usShop === m.id,
-      basculer: () => this.setState({ usShop: S.usShop === m.id ? null : m.id }),
-      mois: (m.mois || []).map(x => ({
-        // Un mois en cours SANS ligne de ticket n'est pas un mois à zéro : la
-        // caisse ne l'a pas encore chargé, et l'écran le dit.
-        v: (x.encours && !x.refs) ? '' : nb(x.refs),
-        sub: (x.encours && !x.refs) ? 'non chargé' : pc(x.taux),
-        st: (x.encours && !x.refs) ? 'color:#b8b2a8' : '',
-      })),
-      refs: nb(m.refsPeriode), taux: pc(m.tauxPeriode),
-      tauxCol: teinte(m.tauxPeriode), barre: Math.max(2, Math.min(100, m.tauxPeriode || 0)),
-      manquantes: m.manquantes,
-    }));
-
-    // --- le détail du magasin ouvert.
-    const sid = S.usShop;
-    const det = sid ? (this._usageDet || {})[sid + '|' + cle] : undefined;
-    // Le même tri aux deux niveaux : trier les groupes par « à rattraper » et
-    // leurs catégories par ordre alphabétique ne se lirait pas.
-    const t = S.usTri || 'rattraper';
-    const ordre = (a, b) => t === 'catalogue' ? b.catalogue - a.catalogue
-      : t === 'nom' ? a.nom.localeCompare(b.nom, 'fr')
-      : (b.aRattraper - a.aRattraper || b.catalogue - a.catalogue);
-    common.usDetail = !sid ? null : {
-      chargement: det === undefined,
-      err: det === null ? 'Le détail de ce magasin n’a pas pu être lu.' : ((det && det.motif) || ''),
-      nom: det ? det.nom : '',
-      resume: det ? (nb(det.vendues) + ' vendues · ' + nb(det.aRattraper) + ' à rattraper · '
-        + nb(det.orphelines) + ' que personne ne vend') : '',
-      tri: S.usTri || 'rattraper',
-      tris: [['rattraper', 'À rattraper'], ['catalogue', 'Catalogue'], ['nom', 'A → Z']].map(([v, nom]) => ({
-        v, nom, on: (S.usTri || 'rattraper') === v, choisir: () => this.setState({ usTri: v }) })),
-      groupes: !det ? [] : (det.groupes || []).slice().sort(ordre).map(g => ({
-        nom: g.nom,
-        catalogue: nb(g.catalogue), vendues: nb(g.nVendues), taux: pc(g.taux),
-        col: teinte(g.taux), barre: Math.max(2, Math.min(100, g.taux || 0)),
-        aRattraper: g.aRattraper,
-        sous: g.nCategories + (g.nCategories > 1 ? ' sous-catégories' : ' sous-catégorie'),
-        ouvert: S.usGrp === g.nom,
-        basculer: () => this.setState({ usGrp: S.usGrp === g.nom ? null : g.nom, usCat: null }),
-        categories: (g.categories || []).slice().sort(ordre).map(c => this.usageCategorie(c, g.nom, nb, pc, teinte)),
-      })),
-    };
-  }
-
-  /**
-   * Une sous-catégorie du détail magasin : la ligne, et ses deux colonnes.
-   *
-   * La clé d'ouverture porte le groupe : deux groupes peuvent contenir une
-   * catégorie du même nom, et l'ouvrir dans l'un déplierait l'autre.
-   */
-  usageCategorie(c, groupe, nb, pc, teinte){
-    const S = this.state;
-    const cle = groupe + ' ¦ ' + c.nom;
-    return {
-      nom: c.nom, groupe,
-      catalogue: nb(c.catalogue), vendues: nb(c.nVendues), taux: pc(c.taux),
-      col: teinte(c.taux), barre: Math.max(2, Math.min(100, c.taux || 0)),
-      aRattraper: c.aRattraper,
-      ouverte: S.usCat === cle,
-      basculer: () => this.setState({ usCat: S.usCat === cle ? null : cle }),
-      nVendues: nb(c.nVendues), nAbsentes: nb(c.nNonVendues), orphelines: nb(c.orphelines),
-      // Douze lignes de chaque côté : au-delà, on ne lit plus, on fait
-      // défiler. Le compte complet reste dans l'en-tête de la colonne.
-      listeVendues: (c.vendues || []).slice(0, 12).map(x => ({ nom: x.nom, droite: nb(x.quantite) + ' u' })),
-      listeAbsentes: (c.nonVendues || []).slice(0, 12).map(x => ({
-        nom: x.nom,
-        droite: x.ailleurs ? 'vendue par ' + x.ailleurs : 'personne',
-        st: x.ailleurs ? 'color:var(--color-primary)' : 'color:var(--color-text-muted)' })),
-      resteVendues: Math.max(0, c.nVendues - 12),
-      resteAbsentes: Math.max(0, c.nNonVendues - 12),
-    };
   }
 
   /**
@@ -11549,93 +11596,6 @@ class App {
       verdict: s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)']
         : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
         : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'] };
-  }
-  /**
-   * Extraction sous seuil — arbitrer une gamme entière, pas une référence.
-   *
-   * L'écran de scoring trie ; celui-ci COUPE. On fixe un seuil, on obtient la
-   * liste de tout ce qui passe dessous, avec de quoi comprendre pourquoi :
-   * le critère le plus faible de chaque référence est nommé. Sans lui, on sait
-   * qu'une référence est mauvaise sans savoir sur quoi agir — baisser un coût,
-   * corriger une perte ou la déréférencer ne sont pas la même décision.
-   */
-  valsSeuil(common){
-    const S = this.state;
-    const _c = this.pdCalcule();
-    const { base, SC, verdict } = _c;
-    // Défaut : le seuil « à conforter » du réglage de scoring. Reprendre le
-    // barème existant évite d'introduire un troisième seuil concurrent.
-    const seuil = S.sqSeuil != null ? +S.sqSeuil : Math.round(SC.conforter);
-    common.sqSeuil = seuil;
-    common.sqSetSeuil = e => { const v = Math.max(0, Math.min(100, +e.target.value || 0));
-      this.setState({ sqSeuil: v }); };
-    common.sqPond = _c.pond;
-    common.sqRepere = 'seuils du réglage : à conforter ' + Math.round(SC.conforter)
-      + ' · moteur de gamme ' + Math.round(SC.moteur);
-    common.sqTotal = base.length;
-
-    const cats = [...new Set(base.map(p => p.cat).filter(Boolean))].sort();
-    common.sqCat = S.sqCat || 'Toutes les catégories';
-    common.sqCatOptions = ['Toutes les catégories'].concat(cats);
-    common.sqSetCat = e => this.setState({ sqCat: e.target.value });
-
-    const tris = [['score', 'Score croissant'], ['scoreDesc', 'Score décroissant'],
-      ['ca', 'CA réseau décroissant'], ['vol', 'Volume décroissant'],
-      ['perte', 'Taux de perte décroissant'], ['cat', 'Catégorie']];
-    common.sqTri = S.sqTri || 'score';
-    common.sqTriOptions = tris.map(t => ({ val: t[0], nom: t[1] }));
-    common.sqSetTri = e => this.setState({ sqTri: e.target.value });
-
-    let l = base.filter(p => p.score < seuil
-      && (common.sqCat === 'Toutes les catégories' || p.cat === common.sqCat));
-    const tri = common.sqTri;
-    l.sort((a, b) => tri === 'scoreDesc' ? b.score - a.score
-      : tri === 'ca' ? b.ca - a.ca
-      : tri === 'vol' ? b.vol - a.vol
-      : tri === 'perte' ? ((b.perte == null ? -1 : b.perte) - (a.perte == null ? -1 : a.perte))
-      : tri === 'cat' ? (String(a.cat).localeCompare(String(b.cat)) || a.score - b.score)
-      : a.score - b.score);
-
-    // Le critère le PLUS FAIBLE, parmi ceux qui sont réellement mesurés. Un
-    // critère absent ne peut pas être le point faible : il n'entre pas au score.
-    const faible = p => {
-      const c = [['volume', p.sVol], ['marge nette', p.sMg], ['perte', p.sPerte], ['comptoir', p.sComptoir], ['revue', p.sRev]]
-        .filter(x => x[1] != null);
-      if (!c.length) { return ''; }
-      c.sort((a, b) => a[1] - b[1]);
-      return c[0][0] + ' (' + Math.round(c[0][1]) + '/100)';
-    };
-    const caTot = base.reduce((a, p) => a + p.ca, 0) || 1;
-    common.sqCaPart = this.fP(l.reduce((a, p) => a + p.ca, 0) / caTot, 1);
-    common.sqNb = l.length;
-    common.sqLignes = l.map(p => { const v = verdict(p.score);
-      return { nom: p.nom, cat: p.cat || '',
-        score: Math.round(p.score),
-        scoreCol: p.score < SC.conforter ? 'var(--color-primary)' : '#B87512',
-        verdict: v[0], vFond: v[2], vCol: v[1],
-        vol: Math.round(p.vol).toLocaleString('fr-BE'),
-        ca: this.fK(p.ca),
-        marge: p.mp == null ? 'manque API' : this.fP(p.mp, 0),
-        margeVide: p.mp == null,
-        perte: p.perte == null ? 'manque API' : this.fP(p.perte, 1),
-        perteVide: p.perte == null,
-        mags: p.mags + ' / ' + Math.round(p.mags / (p.pen || 1)),
-        faible: faible(p) }; });
-    // Exporter est le geste attendu : on arbitre une gamme sur un tableur, pas
-    // dans un navigateur. Point-virgule et BOM pour qu'Excel FR ouvre droit.
-    common.sqExport = () => {
-      const t = [['Référence', 'Catégorie', 'Score', 'Verdict', 'Volume', 'CA réseau',
-        'Taux de marge', 'Taux de perte', 'Critère le plus faible']];
-      common.sqLignes.forEach(r => t.push([r.nom, r.cat, r.score, r.verdict, r.vol, r.ca,
-        r.margeVide ? '' : r.marge, r.perteVide ? '' : r.perte, r.faible]));
-      const csv = '﻿' + t.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-      a.download = 'references-sous-' + seuil + '.csv';
-      document.body.appendChild(a); a.click(); a.remove();
-      this.log('Export', '', 'Références sous seuil ' + seuil + ' — ' + common.sqLignes.length + ' ligne(s)');
-    };
-    return common;
   }
   /**
    * Ce que le tableau des produits va chercher en tâche de fond, une fois :

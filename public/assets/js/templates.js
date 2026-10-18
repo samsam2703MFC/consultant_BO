@@ -122,12 +122,10 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
         </div>`).join('')}
       </div>` : ''}
-      ${c.isCat ? tplReferentiel(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
+      ${c.isCat ? tplCatalogue(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
-      ${c.isSeuil ? tplSeuil(c, x) : ''}
-      ${c.isUsage ? tplUsage(c, x) : ''}
       ${c.isManque ? tplManque(c, x) : ''}
       ${c.isPxv ? tplPxv(c, x) : ''}
       ${c.isVentes ? tplVentes(c, x) : ''}
@@ -153,7 +151,6 @@ export function render(c, x){
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
       ${c.isCltMyst ? tplCltMyst(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
-      ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
@@ -256,95 +253,91 @@ function tplExploitRentModal(d, x){
 /* Catalogue / assortiment / planogramme — une seule liste, trois lectures.
    Les colonnes changent avec l'écran ; les filtres, eux, sont partagés :
    travailler sur un sous-ensemble puis changer d'onglet est le geste normal. */
-function tplReferentiel(c, x){
+/* Le Catalogue (18/10/2026, maquette « A + D ») : quatre questions en tête, une liste, une fiche. Les questions filtrent
+   la liste ; un clic sur une ligne ouvre la fiche à droite (Magasins, Marges, Dans le temps, Fiche) ; la fiche de
+   production, le détail du score et la perte par magasin restent les fenêtres d'avant. */
+function tplCatalogue(c, x){
   const { esc } = x;
-  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:0';
-  const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px';
-  const TD = 'padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
-  const num = 'text-align:right;font-variant-numeric:tabular-nums';
-  return `
-  ${c.refVide ? `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Catalogue indisponible — l’API et la base partagée n’ont rien rendu.</div>` : `
-  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <input id="ref-search" value="${esc(c.refQ)}" ${x.I(c.refSetQ)} placeholder="Rechercher une référence…" style="${SEL};flex:1;min-width:190px">
-    <select ${x.C(c.refSetG)} style="${SEL}">${c.refGroupes.map(g => `<option${g === c.refG ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
-    <select ${x.C(c.refSetC)} style="${SEL}">${c.refCategories.map(g => `<option${g === c.refC ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
-    <select ${x.C(c.refSetP)} style="${SEL}">${c.refGammes.map(g => `<option${g === c.refP ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
-    ${c.isCat ? '' : `<button ${x.A(c.refBascule)} style="border:0.5px solid var(--color-border-secondary);background:${c.refToutes ? 'var(--color-primary)' : 'transparent'};color:${c.refToutes ? '#fff' : 'var(--color-text-muted)'};cursor:pointer;font-family:var(--font-ui);font-size:12px;padding:7px 12px;border-radius:8px;white-space:nowrap">Afficher tout le catalogue</button>`}
-    <span style="font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${c.refFiltres} / ${c.refTotal}</span>
-  </div>
-
-  ${c.isCat && c.refScoresTxt ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${esc(c.refScoresTxt)}${c.refScorePond ? ' · pondération : ' + esc(c.refScorePond) : ''}</div>` : ''}
-  ${(c.refFins || []).length ? `<div style="background:var(--color-surface);border:0.5px solid rgba(141,29,44,0.3);border-left:3px solid var(--color-primary);border-radius:10px;padding:12px 16px;margin-bottom:12px">
-    <div style="font-size:12.5px;font-weight:600">Fins de gamme annoncées</div>
-    ${c.refFins.map(f2 => `<div style="font-size:12px;margin-top:5px"><span style="font-weight:500">${esc(f2.nom)}</span>
-      <span style="color:var(--color-text-muted)">(${esc(f2.ref)})</span> — fin le <span style="font-weight:600;color:var(--color-primary)">${esc(f2.date)}</span>${f2.note ? ` · <span style="color:var(--color-text-muted)">${esc(f2.note)}</span>` : ''}</div>`).join('')}
-  </div>` : ''}
-  ${c.isAsso ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refMust} référence(s) déclarée(s) obligatoire(s) sur ${c.refTotal}. ${c.refMust === 0 ? 'Aucune pour l’instant : affichez le catalogue et cochez celles que toute boutique doit tenir.' : ''}</div>` : ''}
-
-  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;min-width:640px">
-      <thead><tr>
-        <th style="${TH}">Référence</th>
-        <th style="${TH}">Catégorie</th>
-        ${c.isCat ? `<th style="${TH};${num}" title="Même calcul que l’écran Scoring produits — volume, marge nette, perte, présence au comptoir">Score</th><th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
-        ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}" title="Quantité minimale à tenir. Le bouton « batch » reprend la fournée minimale de la fiche produit.">Qté min. · batch</th><th style="${TH}" title="Où la référence est présentée au comptoir. « Attribuer » ouvre le planogramme sur le plan actuel.">Emplacement au comptoir</th>` : ''}
-        ${c.isCat ? `<th style="${TH}">Voir aussi</th>` : ''}
-        <th style="${TH};text-align:right">Fiche</th>
-      </tr></thead>
-      <tbody>
-        ${c.refLignes.map(l => `<tr ${l.prendre ? 'draggable="true" ' + x.DS(l.prendre) : ''}${l.prendre ? ' title="Glissez cette référence sur un emplacement du comptoir" style="cursor:grab"' : ''}>
-          <td style="${TD}">
-            <button ${x.A(l.ouvrir)} style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(l.nom)}</button>
-            ${l.finLe ? `<span style="display:inline-block;margin-left:7px;font-size:10px;font-weight:600;padding:1px 8px;border-radius:999px;background:rgba(141,29,44,0.09);color:var(--color-primary)">fin le ${esc(l.finLe)}</span>` : ''}
-            <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.ref)}${l.gamme !== '' ? ' · ' + esc(l.gamme) : ''}</div>
-          </td>
-          <td style="${TD};color:var(--color-text-muted)">${esc(l.categorie)}<div style="font-size:10.5px">${esc(l.groupe)}</div></td>
-          ${c.isCat ? `<td style="${TD};${num}"><span style="${l.scoreSt}">${esc(l.scoreTxt)}</span>${l.scoreVerdict ? `<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted);margin-top:2px">${esc(l.scoreVerdict)}</div>` : ''}</td>
-            <td style="${TD};${num}">${esc(l.prix)}</td>
-            <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.cout)}</td>
-            <td style="${TD};${num};color:${l.margeC}">${esc(l.marge)}</td>
-            <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.commission)}</td>
-            <td style="${TD};${num};color:${l.margeNetteC}">${esc(l.margeNette)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(l.margeNetteEur)}</div></td>
-            <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.dlv)}</td>` : ''}
-          ${c.isAsso ? `<td style="${TD};text-align:center">
-            <label title="${l.must ? 'Retirer de l’assortiment obligatoire' : 'Imposer cette référence à tout le réseau'}" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">
-              <input type="checkbox" ${l.must ? 'checked' : ''} ${x.C(l.mustSet)}
-                style="width:17px;height:17px;cursor:pointer;accent-color:var(--color-primary);margin:0">
-            </label></td>
-            <td style="${TD};${num}">
-              <div style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end">
-                <input type="number" min="0" step="1" value="${l.qmin || ''}" ${x.C(l.qminSet)}
-                  title="Quantité minimale à tenir en boutique"
-                  style="width:62px;text-align:right;font-family:var(--font-ui);font-size:12.5px;padding:5px 7px;border-radius:7px;border:0.5px solid ${l.qminSousBatch ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">
-                ${l.qminBatch ? `<button ${x.A(l.qminBatch)} title="Reprendre le batch de la fiche produit : ${esc(l.batchTxt)}"
-                  style="border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-muted);border-radius:999px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap">batch ${esc(l.batchTxt)}</button>` : ''}
-              </div>
-              ${l.qminSousBatch ? `<div style="font-size:10px;color:var(--color-primary);margin-top:3px">sous le batch (${esc(l.batchTxt)})</div>` : ''}
-            </td>
-            <!-- Une obligation sans place au comptoir ne peut pas être tenue :
-                 la colonne le dit, et le bouton mène au plan pour y remédier
-                 sans changer d'écran. -->
-            <td style="${TD}">
-              <div style="display:flex;align-items:center;gap:9px;justify-content:space-between">
-                <span style="font-size:12px;${l.place ? '' : 'color:var(--color-text-muted)'}">${l.place ? esc(l.emplacement) : (l.must ? 'pas de place au comptoir' : '')}</span>
-                <button ${x.A(l.planoGo)} title="Ouvrir le planogramme actuel pour cette référence"
-                  style="flex:0 0 auto;border:0.5px solid ${l.place ? 'var(--color-border-secondary)' : 'var(--color-primary)'};background:transparent;color:${l.place ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap">${esc(l.planoBtn)}</button>
-              </div>
-            </td>` : ''}
-          ${c.isCat ? `<td style="${TD};white-space:nowrap"><span style="display:inline-flex;gap:4px">${(l.voir || []).map(v => `<button ${x.A(v.go)} title="${esc(v.titre)}" style="font-family:var(--font-ui);font-size:10px;font-weight:600;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:2px 7px;background:var(--color-surface);color:var(--color-text);cursor:pointer">${esc(v.nom)}</button>`).join('')}</span></td>` : ''}
-          <td style="${TD};text-align:right">${l.parametre ? '<span style="font-size:11px;color:#2d7a3e">remplie</span>' : '<span style="font-size:11px;color:var(--color-text-muted)">vide</span>'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>
-  ${c.isCat ? `<div style="margin-top:11px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:10.5px;color:var(--color-text-muted)">
-    <span style="font-weight:500">Marge</span>
-    ${c.refEchelle.map(e => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${e.c};vertical-align:-1px"></i> ${esc(e.l)}</span>`).join('')}
-    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#C9C2B8;vertical-align:-1px"></i> inconnue (${c.refSansMarge})</span>
-  </div>` : ''}
-  ${c.refTronque ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">${c.refTronque} référence(s) au-delà des 400 affichées — affinez les filtres.</div>` : ''}
-  ${c.refEdit ? tplRefEdit(c, x) : ''}`}`;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const mu = 'color:var(--color-text-muted)';
+  const col = { ok: '#2d7a3e', ko: '#A61E1E', am: '#8a5a13', a: '#8a5a13', mu: 'var(--color-text-muted)' };
+  const chip = { ok: 'background:rgba(45,122,62,.12);color:#2d7a3e', a: 'background:#FBF3DC;color:#8a5a13', ko: 'background:rgba(141,29,44,.10);color:#8D1D2C' };
+  const TH = 'font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:9px 10px;border-bottom:0.5px solid var(--color-border-secondary);text-align:left;white-space:nowrap';
+  const TD = 'padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle;font-size:12.5px';
+  const n = 'text-align:right;white-space:nowrap';
+  const pill = on => `border:0.5px solid ${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:6px 12px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap`;
+  const inp = 'border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:7px 13px;background:var(--color-surface);font-family:var(--font-ui);font-size:12.5px;color:var(--color-text)';
+  if (c.catVide) { return `<div style="${carte};padding:18px">Le catalogue est vide : rien n’a été lu au panel.</div>${c.refEdit ? tplRefEdit(c, x) : ''}`; }
+  const tuiles = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px">${(c.catTuiles || []).map(t => `
+    <button ${x.A(t.choisir)} style="${carte};text-align:left;padding:13px 15px;cursor:pointer;font-family:var(--font-ui);${t.on ? 'border:1.5px solid var(--color-primary);box-shadow:0 1px 0 var(--color-primary)' : ''}">
+      <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;${mu}">${esc(t.q)}</div>
+      <div style="font-family:var(--font-display);font-size:24px;line-height:1.15;margin:3px 0;color:${col[t.cls] || 'var(--color-text)'}">${esc(t.v)}</div>
+      <div style="font-size:11.5px;${mu};line-height:1.35">${esc(t.s)}</div></button>`).join('')}</div>`;
+  const outils = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <input type="search" placeholder="Chercher une référence…" value="${esc(c.catQ)}" ${x.I(c.catPoserQ)} style="${inp};width:200px">
+      <select ${x.C(c.catPoserCat)} style="${inp}">${(c.catCats || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
+      <span style="display:inline-flex;gap:4px">${(c.catFenetres || []).map(f => `<button ${x.A(f.choisir)} style="${pill(f.on)}">${esc(f.nom)}</button>`).join('')}</span>
+      <span style="font-size:11.5px;${mu}">${esc(c.catCompte)}</span><span style="flex:1"></span>
+      <span style="display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap">
+      <span style="font-size:12px;${mu};white-space:nowrap" title="Les seuils de décision du score, enregistrés pour tout le réseau">Garder &gt; <input type="number" min="0" max="100" value="${esc(c.catSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="${inp};width:62px;padding:5px 8px"> · Modifier ≥ <input type="number" min="0" max="100" value="${esc(c.catSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="${inp};width:62px;padding:5px 8px"></span>
+      <button ${x.A(c.pdPdf)} style="${pill(false)}" title="Toutes les références, leur score et leur décision">⎙ PDF d’arbitrage</button>
+      ${c.pdCatChoisie ? `<button ${x.A(c.pdPdfCategorie)} style="${pill(false)}" title="La catégorie choisie, volume par magasin compris">⎙ PDF de la catégorie</button>` : ''}
+      <button ${x.A(c.catExporter)} style="${pill(false)}">Exporter</button></span></div>`;
+  const L = c.catLignes || [];
+  const tableau = `<div style="${carte};overflow:auto;flex:1;min-width:0"><table style="width:100%;border-collapse:collapse">
+    <thead><tr><th style="${TH}">Référence</th><th style="${TH};${n}">Prix</th><th style="${TH};${n}" title="Après commission de marque, au prix du catalogue">Marge nette</th>
+      <th style="${TH};${n}" title="${esc(c.catPeriode)}">Volume</th><th style="${TH};${n}" title="Le score du réseau : volume, marge, perte, comptoir, revue">Score</th><th style="${TH};${n}" title="Magasins qui l’ont vendue sur la période">Magasins</th>
+      <th style="${TH};${n}" title="La 2e moitié de la période face à la 1re, réseau entier">Tendance</th>${c.catColExtra ? `<th style="${TH};${n}">${esc(c.catColExtra)}</th>` : ''}<th style="${TH}">Décision</th></tr></thead>
+    <tbody>${L.map(l => `<tr ${x.A(l.ouvrir)} style="cursor:pointer;${l.on ? 'background:#f7ecec' : ''}">
+      <td style="${TD}"><b>${esc(l.nom)}</b>${l.sous ? `<div style="font-size:11px;${mu}">${esc(l.sous)}</div>` : ''}</td>
+      <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td>
+      <td style="${TD};${n};font-weight:700;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
+      <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
+      <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td></tr>`).join('')
+      || `<tr><td colspan="9" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
+    ${c.catTronque ? `<div style="padding:9px 12px;font-size:11.5px;${mu}">… et ${c.catTronque} autres : affinez la recherche ou la catégorie.</div>` : ''}</div>`;
+  const f = c.catFiche;
+  const lien = (fn, t) => fn ? `<button ${x.A(fn)} style="border:none;background:none;padding:0;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;text-align:left">${esc(t)}</button>` : '';
+  const kv = l => `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span style="${mu}">${esc(l.k)}</span><b style="text-align:right">${esc(l.v)}</b></div>`;
+  let corps = '';
+  if (f && f.onglet === 'magasins') {
+    corps = `${(f.magasins || []).map(m => `<div style="display:grid;grid-template-columns:86px minmax(0,1fr) 58px;gap:8px;align-items:center;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">
+        <b style="font-size:12px">${esc(m.nom)}</b>
+        <div><div style="height:6px;border-radius:999px;background:var(--color-background-secondary);position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${m.w}%;border-radius:999px;background:${col[m.barCls] || '#bbb'}"></i></div>
+          <div style="font-size:10.5px;${mu};margin-top:2px">${esc([m.vol, m.prix].filter(Boolean).join(' · '))}${m.manque ? ` · <span style="color:#A61E1E">manque ${esc(m.manque)}</span>` : ''}</div></div>
+        <span style="text-align:right;font-size:12px;font-weight:600;color:${col[m.barCls] || 'inherit'}">${esc(m.ecart)}</span></div>`).join('') || `<div style="font-size:12px;${mu}">Pas de vente par magasin sur la période.</div>`}
+      <div style="font-size:11px;${mu};margin-top:8px">${esc(f.magasinsNote)}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${lien(f.versVie, 'La courbe jour par jour et l’effet des promotions ›')}${lien(f.versPrix, 'Le prix magasin par magasin, face au volume ›')}</div>`;
+  } else if (f && f.onglet === 'marges') {
+    corps = `${(f.lignesMarge || []).map(kv).join('')}
+      ${f.perte ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px"><span style="${mu}">Taux de perte</span><span><b>${esc(f.perte)}</b> ${lien(f.versPerte, 'par magasin ›')}</span></div>` : ''}
+      ${(f.criteres || []).length ? `<div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;${mu};margin:14px 0 6px">Ce qui fait le score</div>
+        ${f.criteres.map(k => `<div style="display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;padding:4px 0"><div><div style="font-size:12px">${esc(k.nom)} <span style="${mu};font-size:11px">· poids ${esc(k.poids)}</span></div>
+          <div style="height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:3px;overflow:hidden"><i style="display:block;height:100%;width:${k.w}%;background:#2F5D8A"></i></div></div><span style="text-align:right;font-size:12px;${k.mu ? mu : 'font-weight:600'}">${esc(k.note)}</span></div>`).join('')}` : ''}`;
+  } else if (f && f.onglet === 'temps') {
+    corps = `${f.courbe ? `<svg viewBox="0 0 330 90" style="width:100%;height:110px;display:block"><polyline points="${f.courbe}" fill="none" stroke="#8D1D2C" stroke-width="2"/></svg>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;${mu}"><span>${esc(f.courbeDe)}</span><span>max ${esc(f.courbeMax)}</span><span>${esc(f.courbeA)}</span></div>` : `<div style="font-size:12px;${mu}">Pas de série lue pour cette référence.</div>`}
+      <div style="font-size:12.5px;margin-top:10px"><b>Tendance</b> : ${esc(f.tendance)}</div>
+      <div style="margin-top:10px">${lien(f.versAnalyse, 'Groupes et catégories, magasin par magasin, face à l’an dernier ›')}</div>`;
+  } else if (f) {
+    corps = f.prod ? f.prod.map(kv).join('') + `<div style="font-size:11px;${mu};margin-top:8px">L’assortiment obligatoire se règle dans Comptoir · planogramme.</div>` : `<div style="font-size:12px;${mu}">Pas de fiche au catalogue pour cette référence.</div>`;
+  }
+  const fiche = f ? `<aside style="${carte};width:390px;flex:0 0 auto;align-self:flex-start;position:sticky;top:12px;box-shadow:-8px 0 32px #2222221f">
+    <div style="padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
+      <div style="display:flex;gap:8px;align-items:center"><b style="font-size:15px">${esc(f.nom)}</b>${f.dec ? `<span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;${chip[f.decCls] || ''}">${esc(f.dec)}</span>` : ''}<span style="flex:1"></span>
+        <button ${x.A(f.fermer)} aria-label="fermer" style="border:none;background:none;cursor:pointer;font-size:16px;${mu}">✕</button></div>
+      <div style="font-size:12px;${mu};margin-top:2px">${esc(f.sous)}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:9px">
+        ${f.revue ? `<span title="La revue franchiseur : un clic sur l’étoile posée la retire" style="white-space:nowrap">${f.revue.map(e => `<button ${x.A(e.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;color:${e.pleine ? '#c17a2a' : '#ccc'}">★</button>`).join('')}</span>` : ''}
+        ${f.necessaire != null ? `<label style="font-size:12px;display:inline-flex;gap:5px;align-items:center;cursor:pointer" title="Gardée quoi qu’en disent la marge et le score"><input type="checkbox" ${f.necessaire ? 'checked' : ''} ${x.C(f.basculerNecessaire)}> Nécessaire</label>` : ''}
+        ${lien(f.detailScore, 'Score en détail · projets · arrêt ›')}${lien(f.ouvrirProduction, 'Fiche de production ›')}${lien(f.comptoir, 'Au comptoir ›')}</div></div>
+    <div style="padding:12px 16px 16px"><div style="display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">${f.onglets.map(o => `<button ${x.A(o.choisir)} style="border:none;border-radius:8px;padding:6px 10px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;background:${o.on ? 'var(--color-primary)' : 'transparent'};color:${o.on ? '#fff' : 'var(--color-text)'}">${esc(o.nom)}</button>`).join('')}</div>
+      ${corps}</div></aside>` : '';
+  return `<div data-screen="catalogue">${tuiles}${c.catLienVue ? `<div style="margin:-6px 0 10px">${lien(c.catLienVue.go, c.catLienVue.txt)}</div>` : ''}${outils}<div style="display:flex;gap:14px;align-items:flex-start">${tableau}${fiche}</div>
+    <div style="font-size:11.5px;${mu};margin-top:10px">${esc(c.catPeriode)} · le score et la décision sont ceux du réseau (volume, marge, perte, comptoir, revue) ; une question filtre la liste, un second clic la retire.</div>
+    ${c.refEdit ? tplRefEdit(c, x) : ''}</div>`;
 }
+
 
 /* Édition d'une référence. Deux formulaires selon l'écran d'où l'on vient :
    poser une référence au comptoir et chiffrer sa production sont deux gestes
@@ -2573,110 +2566,6 @@ function tplBudgetParam(c, x){
 
 
 
-/* --- Scoring produits -------------------------------------------------------- */
-function tplProduits(c, x){
-  const { esc } = x;
-  // Étiquettes des mini-colonnes PV / Achat / Marge de la cellule de marge.
-  const MLAB = 'font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);font-weight:500';
-  return `
-  <div data-screen="produits" style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
-      ${c.pdKpis.map(k => `
-        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
-          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k.k)}</div>
-          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">${k.v}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(k.s)}</div>
-        </div>`).join('')}
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <!-- La fenêtre des ventes : trois boutons, le tableau se recharge. -->
-      <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">${c.pdFenetres.map(f => `<button ${x.A(f.cliquer)} style="border:none;padding:6px 12px;font-family:var(--font-ui);font-size:12px;cursor:pointer;background:${f.actif ? 'var(--color-text)' : 'var(--color-surface)'};color:${f.actif ? 'var(--color-surface)' : 'var(--color-text)'}">${esc(f.nom)}</button>`).join('')}</span>
-      ${c.pdChargement ? `<span style="font-size:11.5px;color:var(--color-text-muted)">Lecture des ventes…</span>` : ''}
-      <input id="pd-q" type="search" value="${esc(c.pdQ)}" ${x.I(c.setPdQ)} placeholder="Rechercher une référence…" style="${selCss};font-family:var(--font-ui);width:230px">
-      <select ${x.C(c.setPdCat)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdCatOptions, c.pdCat)}</select>
-      <!-- Le fournisseur, lu sur la recette de chaque référence : un filtre
-           comme la catégorie. Tant que la carte se construit, l'état le dit. -->
-      <select ${x.C(c.setPdFourn)} title="Filtrer par fournisseur (celui de la recette)" style="${selCss};font-family:var(--font-ui)">${opts(c.pdFournOptions, c.pdFourn)}</select>
-      ${c.pdFournEtat ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.pdFournEtat)}</span>` : ''}
-      <button ${x.A(c.pdBasculerSansVente)} title="${c.pdSansVente} référence(s) au catalogue sans aucune vente sur la période" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:${c.pdMasquerSansVente ? 'var(--color-text)' : 'var(--color-surface)'};color:${c.pdMasquerSansVente ? 'var(--color-surface)' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12px;cursor:pointer">${c.pdMasquerSansVente ? 'Sans vente masquées' : 'Masquer les sans vente'} (${c.pdSansVente})</button>
-      <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.pdAffichees)} références · pondération ${c.pdPond}</span>
-    </div>
-    <!-- Les seuils d'arbitrage, modifiables ici : garder au-dessus, effacer en
-         dessous, modifier entre les deux. Ils s'enregistrent avec le réglage
-         de scoring. Le PDF envoie les lignes de l'écran, score compris. -->
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 12px;padding:10px 14px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px">
-      <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Seuils de décision</span>
-      <label style="font-size:12.5px;display:flex;align-items:center;gap:6px">Garder si score &gt; <input type="number" min="0" max="100" step="1" value="${esc(c.pdSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="width:58px;font-size:13px;font-weight:600;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 6px;background:var(--color-surface);color:var(--color-text)"></label>
-      <label style="font-size:12.5px;display:flex;align-items:center;gap:6px">Modifier si score ≥ <input type="number" min="0" max="100" step="1" value="${esc(c.pdSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="width:58px;font-size:13px;font-weight:600;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 6px;background:var(--color-surface);color:var(--color-text)"></label>
-      <span style="font-size:12px;color:var(--color-text-muted)">Effacer en dessous ·</span>
-      <!-- Les badges de décision, cliquables : chacun filtre le tableau sur
-           sa liste, un second clic rend tout. -->
-      ${c.pdChips.map(ch => `<button ${x.A(ch.cliquer)} title="${ch.actif ? 'Cliquer pour tout afficher' : 'Ne montrer que les références à ' + ch.nom.toLowerCase()}" style="border:${ch.actif ? '2px' : '1px'} solid ${ch.col};border-radius:999px;padding:3px 11px;background:${ch.fond};color:${ch.col};font-family:var(--font-ui);font-size:11.5px;font-weight:600;cursor:pointer;${ch.actif ? 'box-shadow:0 0 0 2px ' + ch.fond : ''}">${esc(ch.nom)} ${ch.n}</button>`).join('')}
-      <!-- Le PDF d'une catégorie complète : actif dès qu'une catégorie est
-           choisie dans le menu déroulant, toutes ses références en paysage. -->
-      <button ${x.A(c.pdPdfCategorie)} title="${c.pdCatChoisie ? 'Toutes les références de « ' + esc(c.pdCatChoisie) + ' » : volume par magasin, marge, perte, score, revue, nécessaire et décision, en A4 paysage' : 'Choisissez une catégorie dans le menu déroulant pour imprimer sa fiche complète'}" style="margin-left:auto;border:0.5px solid ${c.pdCatChoisie ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:999px;padding:8px 16px;background:var(--color-surface);color:${c.pdCatChoisie ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">⎙ PDF de la catégorie${c.pdCatChoisie ? ' « ' + esc(c.pdCatChoisie) + ' »' : ''}</button>
-      <button ${x.A(c.pdPdf)} title="Les trois listes garder / modifier / effacer, avec la revue, en A4" style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">⎙ PDF d’arbitrage de gamme</button>
-    </div>
-    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge nette, taux de perte et présence au comptoir · ${c.pdPeriode || ''}</div>
-      <!-- Le tableau PLAT : une seule ligne par référence, aucun graphique.
-           La couleur ne reste que sur trois signaux — taux de marge (puce à
-           l'échelle du réseau), perte, score. Tendance, pénétration, CA,
-           marge brute, profil V·M·P·C et verdict vivent dans la fiche, au
-           clic sur le nom. -->
-      <div style="overflow-x:auto">
-      <table style="width:100%;min-width:1020px;border-collapse:collapse;font-size:12.5px">
-        <!-- Chaque en-tête TRIE : un clic trie la colonne, un second inverse.
-             La flèche dit la colonne et le sens en cours. -->
-        <thead><tr>
-          ${c.pdCols.map((col, i2) => `<th ${x.A(col.sort)} title="${esc(col.titre)}" style="${i2 === 0 ? TH : TH2 + ';text-align:' + col.align};cursor:pointer;user-select:none;white-space:nowrap">${esc(col.label)}${col.arrow}</th>`).join('')}
-        </tr></thead>
-        <tbody>
-          ${c.pdRows.map(r => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:11px 6px 11px 14px;white-space:nowrap;font-size:11.5px;color:var(--color-text-muted)">${esc(r.cat)}</td>
-              <td style="padding:11px 12px;white-space:nowrap">
-                <button ${x.A(r.ouvrirDetail)} title="La fiche : score décomposé, CA et marge par période, suites possibles" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(r.nom)}</button>
-                ${r.sansVente ? '<span title="Au catalogue, mais aucune vente sur la période" style="margin-left:6px;font-size:9.5px;color:var(--color-text-muted);border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:1px 6px;vertical-align:1px">sans vente</span>' : ''}
-              </td>
-              <td style="padding:11px 10px;white-space:nowrap;font-size:11.5px;color:var(--color-text-muted)" title="${esc(r.fournTitre)}">${r.fournInconnu ? '<span style="opacity:.5">…</span>' : esc(r.fourn || '')}</td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500">${r.vol}</td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${r.prix}</td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${r.achat}</td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500">${r.mu}</td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap" title="Taux de marge — couleur à l'échelle du réseau">
-                <span style="display:inline-block;width:7px;height:7px;border-radius:999px;background:${r.margeCol};margin-right:6px;vertical-align:1px"></span><span style="font-weight:600;color:${r.margeCol}">${r.margeTxt}</span>
-              </td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap">
-                <button ${x.A(r.openWaste)} title="${esc(r.perteDetail || 'Voir la perte magasin par magasin')}" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;${r.perteSt};text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${r.perteTxt}</button>
-              </td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${r.rangGlobal}</td>
-              <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)" title="${r.part} du CA catégorie">${r.rang}</td>
-              <td style="padding:11px 14px;text-align:right;white-space:nowrap" title="${esc(r.verdict)}">
-                <span style="font-size:14px;font-weight:600;color:${r.scoreCol}">${r.score}</span>
-              </td>
-              <!-- La revue franchiseur : cinq étoiles cliquables, la note posée
-                   pèse dans le score. Cliquer l'étoile déjà posée la retire. -->
-              <td style="padding:11px 8px;text-align:center;white-space:nowrap;font-size:15px;letter-spacing:1px" title="${esc(r.revueTitre)}">
-                ${r.etoiles.map(s => `<button ${x.A(s.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;line-height:1;color:${s.pleine ? '#C9A227' : 'var(--color-border-secondary)'}">${s.pleine ? '★' : '☆'}</button>`).join('')}
-              </td>
-              <!-- « Nécessaire » : cochée, la référence se garde quoi qu'en
-                   disent la marge et le score. -->
-              <td style="padding:11px 10px;text-align:center;white-space:nowrap">
-                <button ${x.A(r.basculerNecessaire)} title="${r.necessaire ? 'Nécessaire — cliquer pour décocher' : 'Cocher : à garder quoi qu’en disent la marge et le score'}" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${r.necessaire ? '#2d7a3e' : 'var(--color-border-secondary)'};background:${r.necessaire ? '#2d7a3e' : 'var(--color-surface)'};color:#fff;font-size:12px;line-height:15px;padding:0;cursor:pointer;vertical-align:middle">${r.necessaire ? '✓' : ''}</button>
-              </td>
-              <td style="padding:11px 12px;text-align:center;white-space:nowrap" title="${esc(r.dcTitre)}">
-                <span style="display:inline-block;background:${r.dcFond};color:${r.dcCol};border:${r.dcNec ? '1.5px' : '1px'} solid ${r.dcBord};border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600">${esc(r.decision)}${r.dcNec ? ' ✓' : ''}</span>
-              </td>
-            </tr>`).join('')}
-          ${c.pdRows.length ? '' : `<tr><td colspan="15" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
-        </tbody>
-      </table>
-      </div>
-      <div style="padding:12px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.pdNote)}</div>
-    </div>
-  </div>`;
-}
 
 /* --- Contrôle des tâches (checklists consultants du panel) -------------------- */
 function tplControle(c, x){
@@ -7524,21 +7413,6 @@ function tplDiagnostic(c, x){
 
 
 /**
- * Références sous seuil — l'écran de scoring trie, celui-ci coupe.
- *
- * Le curseur fixe la ligne, le tableau rend tout ce qui passe dessous, et la
- * dernière colonne nomme le critère le plus faible : c'est elle qui transforme
- * « cette référence est mauvaise » en « ce coût est à renégocier ». Sans elle
- * la liste ne dit pas sur quoi agir.
- */
-/**
- * Usage du catalogue : ce que chaque magasin vend des références du réseau.
- *
- * Un tableau magasins × mois, et deux dépliants imbriqués — le magasin, puis
- * la catégorie. Le détail n'est demandé au serveur qu'à l'ouverture : sept
- * cents lignes par magasin n'ont rien à faire dans l'écran d'entrée.
- */
-/**
  * Manque à gagner — ce que l'assortiment absent coûte, en euros.
  *
  * Une seule mesure, trois façons de la lire : le tableau magasins × mois, le
@@ -8500,191 +8374,7 @@ function tplManque(c, x){
   </div>`;
 }
 
-function tplUsage(c, x){
-  const { esc } = x;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
-  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px 10px 9px;border-bottom:0.5px solid var(--color-border-tertiary)';
-  const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
-  const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:80px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:999px"></i></span>`;
-  // Une seule grille pour les trois niveaux : les colonnes du groupe et celles
-  // de ses sous-catégories doivent tomber l'une sous l'autre, sinon les taux ne
-  // se comparent plus d'un coup d'œil.
-  const GRILLE = 'display:grid;grid-template-columns:230px 92px 1fr 116px 96px;gap:0 12px;align-items:center';
-  const badge = n => n ? `<span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${n}</span>`
-    : `<span style="color:#2d7a3e;font-size:11px">à jour</span>`;
 
-  if (c.usChargement) {
-    return `<div data-screen="usage"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des lignes de ticket…</div></div>`;
-  }
-  if (c.usMotif) {
-    return `<div data-screen="usage"><div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.usMotif)}</div></div>`;
-  }
-
-  const detail = d => !d ? '' : `
-    <tr><td colspan="${c.usEntetes.length + 4}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
-      <div style="padding:14px 18px 16px">
-        ${d.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du détail…</div>`
-        : d.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(d.err)}</div>` : `
-        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">
-          <span style="${lbl}">${esc(d.nom)} — détail par groupe et sous-catégorie</span>
-          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.resume)}</span>
-          <span style="flex:1"></span>
-          ${d.tris.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
-        </div>
-        <div style="${GRILLE};font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
-          <span>Groupe · sous-catégorie</span><span style="text-align:right">Catalogue</span><span></span>
-          <span style="text-align:right">Vendues</span><span style="text-align:right">À rattraper</span>
-        </div>
-        ${d.groupes.map(g => `
-          <div ${x.A(g.basculer)} style="${GRILLE};font-size:12.5px;padding:9px 0;border-bottom:0.5px solid var(--color-border-secondary);cursor:pointer${g.ouvert ? ';background:rgba(34,34,34,.025)' : ''}">
-            <span style="font-weight:600"><span style="color:var(--color-text-muted);font-size:11px">${g.ouvert ? '▾' : '▸'}</span> ${esc(g.nom)}
-              <span style="display:block;font-size:10.5px;font-weight:400;color:var(--color-text-muted);padding-left:14px">${esc(g.sous)}</span></span>
-            <span style="text-align:right;color:var(--color-text-muted)">${esc(g.catalogue)}</span>
-            <span>${jauge(g.barre, g.col)}</span>
-            <span style="text-align:right;color:${g.col};font-weight:600">${esc(g.taux)}</span>
-            <span style="text-align:right">${badge(g.aRattraper)}</span>
-          </div>
-          ${!g.ouvert ? '' : g.categories.map(k => `
-          <div ${x.A(k.basculer)} style="${GRILLE};font-size:12px;padding:7px 0 7px 16px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;background:${k.ouverte ? 'rgba(141,29,44,.035)' : 'transparent'}">
-            <span><span style="color:var(--color-text-muted);font-size:11px">${k.ouverte ? '▾' : '▸'}</span> ${esc(k.nom)}</span>
-            <span style="text-align:right;color:var(--color-text-muted)">${esc(k.catalogue)}</span>
-            <span>${jauge(k.barre, k.col)}</span>
-            <span style="text-align:right;color:${k.col};font-weight:600">${esc(k.taux)}</span>
-            <span style="text-align:right">${badge(k.aRattraper)}</span>
-          </div>
-          ${!k.ouverte ? '' : `
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:10px 0 12px 16px;background:rgba(141,29,44,.035);border-bottom:0.5px solid var(--color-border-tertiary)">
-            <div>
-              <div style="${lbl};margin-bottom:6px">Vendues ici (${esc(k.nVendues)})</div>
-              ${k.listeVendues.length ? k.listeVendues.map(r => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(r.nom)}</span><span style="color:var(--color-text-muted)">${esc(r.droite)}</span></div>`).join('')
-                : `<div style="font-size:12px;color:var(--color-text-muted);padding:5px 0">Aucune référence vendue dans cette catégorie.</div>`}
-              ${k.resteVendues ? `<div style="font-size:11px;color:var(--color-text-muted);padding:6px 0">+ ${k.resteVendues} autres</div>` : ''}
-            </div>
-            <div>
-              <div style="${lbl};margin-bottom:6px">Absentes (${esc(k.nAbsentes)}) — dont ${esc(k.orphelines)} que personne ne vend</div>
-              ${k.listeAbsentes.map(r => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(r.nom)}</span><span style="${r.st}">${esc(r.droite)}</span></div>`).join('')}
-              ${k.resteAbsentes ? `<div style="font-size:11px;color:var(--color-text-muted);padding:6px 0">+ ${k.resteAbsentes} autres</div>` : ''}
-            </div>
-          </div>`}`).join('')}`).join('')}
-        <div style="font-size:11px;color:var(--color-text-muted);padding:12px 0 0;line-height:1.55">Chaque groupe est le cumul de ses sous-catégories : ouvrir ne change jamais le chiffre du dessus. Une référence que <strong>personne</strong> ne vend n’est pas un manque du magasin : c’est une question de catalogue, et elle est comptée à part.</div>`}
-      </div>
-    </td></tr>`;
-
-  return `
-  <div data-screen="usage" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
-    <div style="${carte}">
-      <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px 16px">
-        ${c.usKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
-          <b style="display:block;font-size:20px;font-weight:600;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
-          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span>
-          ${!k.lien ? '' : `<a href="${esc(k.lien)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:5px;font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:3px 11px">↓ ${esc(k.lienNom)}</a>`}</div>`).join('')}
-      </div>
-    </div>
-
-    <div style="${carte}">
-      <div style="padding:16px 18px 0">
-        <div style="${lbl}">Références vendues, mois par mois</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez un magasin, puis un groupe, puis une sous-catégorie : la liste des références vendues et absentes.</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
-        ${c.usDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
-        <span style="width:12px"></span>
-        ${c.usGroupes.map(g => `<button ${x.A(g.choisir)} style="${pill(g.on)}">${esc(g.nom)}</button>`).join('')}
-      </div>
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
-        <thead><tr>
-          <th style="${th};text-align:left;padding-left:18px">Magasin</th>
-          ${c.usEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
-          <th style="${th}">Sur la période</th><th style="${th}">Taux</th><th style="${th};padding-right:18px">Manquantes</th>
-        </tr></thead>
-        <tbody>
-          ${c.usLignes.map(l => `
-          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouvert ? ';background:#FBF8F4' : ''}">
-            <td style="${td};text-align:left;padding-left:18px;font-weight:500" title="${esc(l.complet)}"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
-            ${l.mois.map(m => `<td style="${td};${m.st}">${esc(m.v)}<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(m.sub)}</div></td>`).join('')}
-            <td style="${td};font-weight:600">${esc(l.refs)}</td>
-            <td style="${td}"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">${jauge(l.barre, l.tauxCol)}<span style="color:${l.tauxCol};font-weight:600">${esc(l.taux)}</span></span></td>
-            <td style="${td};padding-right:18px"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${l.manquantes}</span></td>
-          </tr>
-          ${l.ouvert ? detail(c.usDetail) : ''}`).join('')}
-        </tbody>
-      </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        « Sur la période » compte les références vendues au moins une fois — un magasin peut tourner sa gamme sans jamais en vendre beaucoup le même mois.
-        « Manquantes » : les références vendues par au moins deux magasins et jamais par celui-ci. Le mois en cours n’est pas encore chargé en caisse : il reste vide plutôt que compté à zéro.
-        ${!c.usGammes ? '' : `<br>${esc(c.usGammes)}`}
-        <br>${esc(c.usSource || '')}
-      </div>
-    </div>
-  </div>`;
-}
-
-function tplSeuil(c, x){
-  const { esc } = x;
-  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
-  const TH = 'text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap';
-  const TD = 'padding:8px 12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
-  const NUM = ';text-align:right;font-variant-numeric:tabular-nums';
-  const MANQUE = 'font-size:10.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap';
-  const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
-
-  return `
-  <div style="${CARD};margin-bottom:14px;display:flex;flex-direction:column;gap:12px">
-    <div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap">
-      <div style="flex:1;min-width:240px">
-        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Seuil de score</label>
-        <div style="display:flex;align-items:center;gap:12px">
-          <input id="sq-seuil" type="range" min="0" max="100" step="1" value="${c.sqSeuil}" ${x.I(c.sqSetSeuil)} style="flex:1;min-width:140px;accent-color:var(--color-primary)">
-          <span style="font-family:var(--font-display);font-size:26px;line-height:1;min-width:44px;text-align:right">${c.sqSeuil}</span>
-        </div>
-        <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px">${esc(c.sqRepere)}</div>
-      </div>
-      <div>
-        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Catégorie</label>
-        <select ${x.C(c.sqSetCat)} style="${SEL};min-width:190px">${(c.sqCatOptions || []).map(o => `<option value="${esc(o)}"${o === c.sqCat ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>
-      </div>
-      <div>
-        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Tri</label>
-        <select ${x.C(c.sqSetTri)} style="${SEL};min-width:190px">${(c.sqTriOptions || []).map(o => `<option value="${esc(o.val)}"${o.val === c.sqTri ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
-      </div>
-      ${c.sqNb ? `<button ${x.A(c.sqExport)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">Exporter en CSV</button>` : ''}
-    </div>
-    <div style="font-size:12px;color:var(--color-text-muted)">
-      <strong style="font-weight:700;color:var(--color-text)">${c.sqNb}</strong> référence${c.sqNb > 1 ? 's' : ''} sous ${c.sqSeuil} sur ${c.sqTotal} — elles pèsent <strong style="font-weight:700;color:var(--color-text)">${esc(c.sqCaPart)}</strong> du CA réseau. Pondération : ${esc(c.sqPond)}.
-    </div>
-  </div>
-
-  <div style="${CARD}">
-    ${!c.sqNb ? `<div style="padding:22px 0;font-size:13px;color:#2d7a3e">Aucune référence sous ce seuil${c.sqCat !== 'Toutes les catégories' ? ' dans ' + esc(c.sqCat) : ''}. Relevez le curseur pour élargir.</div>` : `
-    <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;min-width:880px">
-      <thead><tr>
-        <th style="${TH}">Référence</th>
-        <th style="${TH}">Catégorie</th>
-        <th style="${TH}${NUM}">Score</th>
-        <th style="${TH}">Verdict</th>
-        <th style="${TH}${NUM}">Volume</th>
-        <th style="${TH}${NUM}">CA réseau</th>
-        <th style="${TH}${NUM}">Marge</th>
-        <th style="${TH}${NUM}">Perte</th>
-        <th style="${TH}">Critère le plus faible</th>
-      </tr></thead>
-      <tbody>${c.sqLignes.map(r => `<tr>
-        <td style="${TD};font-weight:500">${esc(r.nom)}</td>
-        <td style="${TD};color:var(--color-text-muted)">${esc(r.cat)}</td>
-        <td style="${TD}${NUM};font-weight:700;color:${r.scoreCol}">${r.score}</td>
-        <td style="${TD}"><span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;background:${r.vFond};color:${r.vCol};white-space:nowrap">${esc(r.verdict)}</span></td>
-        <td style="${TD}${NUM}">${esc(r.vol)}</td>
-        <td style="${TD}${NUM}">${esc(r.ca)}</td>
-        <td style="${TD}${NUM}">${r.margeVide ? `<span style="${MANQUE}">manque API</span>` : esc(r.marge)}</td>
-        <td style="${TD}${NUM}">${r.perteVide ? `<span style="${MANQUE}">manque API</span>` : esc(r.perte)}</td>
-        <td style="${TD};color:var(--color-text-muted)">${esc(r.faible)}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>`}
-  </div>`;
-}
 
 
 /* --- Tablette vendeuses : le lien de chaque magasin, l'état des données, un aperçu ---
