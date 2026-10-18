@@ -500,8 +500,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'POST' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin(); }
     if ($method === 'DELETE' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin_retirer(); }
-    if ($method === 'PATCH' && preg_match('#^/promos-magasin/(pm[0-9a-z]{6,20})$#', $path, $m)) { return wr_promos_magasin_decision($m[1]); }
-    if ($method === 'POST' && preg_match('#^/promos-magasin/(pm[0-9a-z]{6,20})/panel$#', $path, $m)) { return wr_promos_magasin_panel($m[1]); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }

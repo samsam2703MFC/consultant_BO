@@ -21,32 +21,113 @@ declare(strict_types=1);
 
 const PV_CACHE_REGLES = 600;   // les règles relues toutes les 10 minutes
 
-/** Les règles de promotion du panel, normalisées. Gardées 10 minutes ; si le panel se tait, la dernière lecture ressert. */
-function pvRegles(): array
+/**
+ * Les règles de promotion du panel, normalisées. Gardées 10 minutes ; si le panel se tait, la dernière lecture ressert.
+ * `$frais` : relues tout de suite. Une écriture du cockpit met sa promotion à jour dans la garde (pvRetenir) : les
+ * promotions du magasin vivent au panel seul (18/10/2026), la liste du dashboard se lit ici.
+ */
+function pvRegles(bool $frais = false): array
 {
-    static $memo = null;
-    if ($memo !== null) { return $memo; }
+    if (!$frais && isset($GLOBALS['pvReglesMemo'])) { return $GLOBALS['pvReglesMemo']; }
     $c = setting('pvRegles');
     if (is_string($c)) { $c = json_decode($c, true); }
-    if (is_array($c) && isset($c['ts'], $c['r']) && time() - (int) $c['ts'] < PV_CACHE_REGLES) { return $memo = ['regles' => (array) $c['r'], 'erreur' => null]; }
+    if (!$frais && is_array($c) && isset($c['ts'], $c['r']) && time() - (int) $c['ts'] < PV_CACHE_REGLES) { return $GLOBALS['pvReglesMemo'] = ['regles' => (array) $c['r'], 'erreur' => null]; }
     if (!class_exists('ErpApi') || !ErpApi::disponible()) {
-        return $memo = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => 'compte admin du panel non configuré'];
+        return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => 'compte admin du panel non configuré'];
     }
     ErpApi::$lastError = null;
-    $liste = ErpApi::get('/admin/promotions/buy-x-get-y?limit=100');
-    $l = is_array($liste) ? (array_is_list($liste) ? $liste : ($liste['items'] ?? $liste['data'] ?? [])) : null;
-    if (!is_array($l)) { return $memo = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => ErpApi::$lastError ?: 'règles illisibles']; }
+    $L = pvListe();
+    if ($L === null) { return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => ErpApi::$lastError ?: 'règles illisibles']; }
     $out = [];
-    foreach ($l as $x) {
-        $id = (int) ($x['id'] ?? 0);
-        if ($id <= 0) { continue; }
-        $bundle = ($x['promotion_type'] ?? '') === 'BUNDLE_PROMOTION';
-        $d = ErpApi::get('/admin/promotions/' . ($bundle ? 'bundles/' : 'buy-x-get-y/') . $id);
-        if (!is_array($d)) { continue; }
+    foreach ($L['ids'] as $id => $type) {
+        $bundle = $type === 'BUNDLE_PROMOTION';
+        $d = $L['fiches'][$id] ?? ErpApi::get('/admin/promotions/' . ($bundle ? 'bundles/' : 'buy-x-get-y/') . $id);
+        if (!is_array($d) || (int) ($d['id'] ?? 0) <= 0) { continue; }
         $out[] = pvNormaliser($d);
     }
     try { svGrave('pvRegles', ['ts' => time(), 'r' => $out]); } catch (Throwable $e) { /* sans mémo */ }
-    return $memo = ['regles' => $out, 'erreur' => null];
+    return $GLOBALS['pvReglesMemo'] = ['regles' => $out, 'erreur' => null];
+}
+
+/** Les lignes d'une réponse de liste du panel : une liste, ou sous `data` / `items` (une page de Laravel comprise). */
+function pvItems($corps): array
+{
+    if (!is_array($corps)) { return []; }
+    if (array_is_list($corps)) { return array_values(array_filter($corps, 'is_array')); }
+    foreach (['data', 'items'] as $k) { if (isset($corps[$k]) && is_array($corps[$k])) { return pvItems($corps[$k]); } }
+    return [];
+}
+
+/**
+ * Les numéros des promotions « X achetés + Y » du panel (avec les bundles qu'elle rend) : [ids => [id => type],
+ * fiches => [id => fiche déjà lue]], null si la liste ne se lit pas. Toutes les pages de la liste (18/10/2026 : « Test »
+ * n° 21 et « Test 2 » n° 22, en caisse, manquaient à la liste lue d'un coup), puis les numéros qui suivent le plus grand,
+ * jusqu'à trois absents de suite : une promotion qui vient d'être créée se lit même si la liste ne la rend pas encore.
+ */
+function pvListe(): ?array
+{
+    $base = '/admin/promotions/buy-x-get-y?limit=100';
+    $r = ErpApi::sondeGet($base);
+    if ((int) $r['code'] < 200 || (int) $r['code'] >= 300 || !is_array($r['corps'])) { ErpApi::$lastError = $r['erreur'] ?? 'liste des promotions illisible'; return null; }
+    $ids = []; $fiches = [];
+    $prendre = static function ($corps) use (&$ids): int {
+        $n = 0;
+        foreach (pvItems($corps) as $x) {
+            $id = (int) ($x['id'] ?? 0);
+            if ($id > 0 && !isset($ids[$id])) { $ids[$id] = (string) ($x['promotion_type'] ?? ''); $n++; }
+        }
+        return $n;
+    };
+    $prendre($r['corps']);
+    $c = $r['corps'];
+    $der = (int) ($c['last_page'] ?? $c['meta']['last_page'] ?? $c['pagination']['last_page'] ?? $c['data']['last_page'] ?? 0);
+    // Les pages suivantes : jusqu'à la dernière annoncée, sinon tant qu'une page apporte des numéros nouveaux.
+    for ($p = 2; $p <= 20 && $ids !== []; $p++) {
+        if ($der > 0 && $p > $der) { break; }
+        $rp = ErpApi::sondeGet($base . '&page=' . $p);
+        if ((int) $rp['code'] !== 200 || $prendre($rp['corps']) === 0) { break; }
+    }
+    $max = $ids !== [] ? max(array_keys($ids)) : 0;
+    for ($id = $max + 1, $absents = 0; $id <= $max + 30 && $absents < 3; $id++) {
+        $f = ErpApi::get('/admin/promotions/buy-x-get-y/' . $id);
+        if (is_array($f) && (int) ($f['id'] ?? 0) === $id) { $ids[$id] = (string) ($f['promotion_type'] ?? 'BUY_X_GET_Y'); $fiches[$id] = $f; $absents = 0; }
+        else { $absents++; }
+    }
+    ErpApi::$lastError = null;
+    ksort($ids);
+    return ['ids' => $ids, 'fiches' => $fiches];
+}
+
+/**
+ * Une promotion que le cockpit vient d'écrire au panel (sa fiche relue), ou de retirer (null) : remise à jour dans les
+ * règles gardées, sans relire tout le panel. Une modification faite au panel lui-même se lit à la relecture suivante.
+ */
+function pvRetenir(int $id, ?array $fiche): void
+{
+    $R = pvRegles();
+    $l = array_values(array_filter($R['regles'], static fn ($r) => (int) ($r['id'] ?? 0) !== $id));
+    if ($fiche !== null) { $l[] = pvNormaliser($fiche); }
+    usort($l, static fn ($a, $b) => (int) $a['id'] <=> (int) $b['id']);
+    $GLOBALS['pvReglesMemo'] = ['regles' => $l, 'erreur' => $R['erreur']];
+    $c = setting('pvRegles');
+    if (is_string($c)) { $c = json_decode($c, true); }
+    try { svGrave('pvRegles', ['ts' => is_array($c) && isset($c['ts']) ? (int) $c['ts'] : time(), 'r' => $l]); } catch (Throwable $e) { /* sans mémo */ }
+}
+
+/** Les créneaux du panel (`schedule` : une ligne par jour) regroupés comme l'assistant : [{jours, de, a}]. */
+function pvCreneaux($schedule): array
+{
+    $g = [];
+    foreach (is_array($schedule) ? $schedule : [] as $c) {
+        if (!is_array($c)) { continue; }
+        $j = (int) ($c['day_of_week'] ?? 0);
+        $de = substr((string) ($c['time_from'] ?? $c['start_time'] ?? ''), 0, 5); $a = substr((string) ($c['time_to'] ?? $c['end_time'] ?? ''), 0, 5);
+        if ($j < 1 || $j > 7 || !preg_match('/^\d\d:\d\d$/', $de) || !preg_match('/^\d\d:\d\d$/', $a)) { continue; }
+        $g[$de . '|' . $a][] = $j;
+    }
+    $out = [];
+    foreach ($g as $k => $jours) { $jours = array_values(array_unique($jours)); sort($jours); [$de, $a] = explode('|', $k); $out[] = ['jours' => $jours, 'de' => $de, 'a' => $a]; }
+    return $out;
 }
 
 /** Une règle du panel ramenée à ce que la reconnaissance utilise. */
@@ -91,6 +172,13 @@ function pvNormaliser(array $d): array
         'declenche' => $bundle ? null : $cible($d['trigger'] ?? []), 'recoit' => $bundle ? null : $cible($rw),
         'recompense' => $bundle ? null : ['type' => strtoupper((string) ($rw['type'] ?? '')), 'valeur' => isset($rw['value']) ? (float) $rw['value'] : null],
         'bundle' => $bundle ? ['prix' => isset($d['bundle_promotion']['bundle_price']) ? (float) $d['bundle_promotion']['bundle_price'] : null, 'items' => $items] : null,
+        // Ce que l'assistant du magasin relit pour modifier une promotion (18/10/2026, plus de copie au cockpit).
+        'description' => trim((string) ($d['description'] ?? '')) ?: null,
+        'duH' => isset($d['valid_from']) ? substr(str_replace('T', ' ', (string) $d['valid_from']), 0, 16) : null,
+        'auH' => isset($d['valid_to']) ? substr(str_replace('T', ' ', (string) $d['valid_to']), 0, 16) : null,
+        'creneaux' => pvCreneaux($d['schedule'] ?? []),
+        'repetable' => !empty($d['is_repeatable']),
+        'maxParTicket' => isset($d['max_applications_per_transaction']) && (int) $d['max_applications_per_transaction'] > 0 ? (int) $d['max_applications_per_transaction'] : null,
     ];
 }
 

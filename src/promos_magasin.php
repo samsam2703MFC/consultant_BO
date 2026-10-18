@@ -24,12 +24,14 @@ declare(strict_types=1);
  * HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
  * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).
  *
- * Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`). Rien n'est encore écrit au panel : la mise en
- * caisse attend le format d'écriture de l'API, relu sur une promotion test (GET /ventes/promos/sonde-fiche).
- * Les promotions du panel qui touchent le magasin (toutes, marque comprise) se lisent par pvRegles().
+ * LE PANEL SEUL (18/10/2026, demande de Sam : « API seule, plus de copie ») : une promotion du magasin n'existe qu'au
+ * panel, le cockpit n'en garde rien (l'ancienne liste `promosMagasin` de `ceo_app_setting` n'est plus lue). Une
+ * promotion du magasin = une « Buy X Get Y » du panel réservée à ce seul magasin (`SELECTED_SHOPS`, `shop_ids` =
+ * [magasin]) ; active, elle est en caisse ; inactive, c'est un brouillon. Enregistrer = POST (créer) ou PUT (modifier)
+ * à /admin/promotions/buy-x-get-y, garder en brouillon = la même écriture laissée INACTIVE, supprimer un brouillon =
+ * DELETE. Les promotions du panel se lisent par pvRegles() (gardées 10 minutes, mises à jour à chaque écriture).
  */
 
-const PM_CLE = 'promosMagasin';
 const PM_COEF_MIN = 2.0;
 const PM_JOURS_MAX = 366;   // un an au plus, une année bissextile comprise (18/10/2026 ; 14 jours avant)
 const PM_EN_MEME_TEMPS = 2;
@@ -41,25 +43,6 @@ const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DI
  */
 const PM_PORTIONS = ['ONE_HALF' => 0.5, 'ONE_QUARTER' => 0.25];
 const PM_VIVANTES = ['a_valider', 'validee', 'en_caisse'];
-
-/* --- le stockage ------------------------------------------------------------------------ */
-
-function pmLire(): array
-{
-    $c = setting(PM_CLE);
-    if (is_string($c)) { $c = json_decode($c, true); }
-    $l = is_array($c) ? array_values(array_filter($c, 'is_array')) : [];
-    // Plus de validation (17/10/2026) : une promotion restée « à valider » est enregistrée.
-    foreach ($l as &$d) { if (($d['statut'] ?? '') === 'a_valider') { $d['statut'] = 'validee'; $d['auto'] = false; } }
-    unset($d);
-    return $l;
-}
-
-function pmEcrire(array $l): void
-{
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        [PM_CLE, json_encode(array_values($l), JSON_UNESCAPED_UNICODE)]);
-}
 
 /** Les magasins qu'une demande couvre (les anciennes n'ont que `shop`). */
 function pmShops(array $d): array
@@ -560,9 +543,9 @@ function pmPanelEcarts(array $envoye, array $relu): array
  * 1. créée INACTIVE (POST /admin/promotions/buy-x-get-y ; ou mise à jour, PUT …/{id}, quand un premier envoi l'a
  *    déjà créée) ; 2. relue (GET …/{id}) et comparée à ce qui a été envoyé ; 3. activée (PUT …/{id} status ACTIVE,
  *    sinon PATCH) et relue ACTIVE. Un écart, un refus : elle reste inactive au panel, et l'erreur se dit.
- * Rend {ok, id, erreur}.
+ * `$activer` faux (un brouillon) : écrite INACTIVE et relue, sans l'étape 3. Rend {ok, id, erreur}.
  */
-function pmPanelEnvoyer(array $d, ?int $panelId): array
+function pmPanelEnvoyer(array $d, ?int $panelId, bool $activer = true): array
 {
     if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['ok' => false, 'id' => $panelId, 'erreur' => 'compte admin du panel indisponible']; }
     $base = '/admin/promotions/buy-x-get-y';
@@ -587,6 +570,8 @@ function pmPanelEnvoyer(array $d, ?int $panelId): array
     if ($relu === null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), relecture impossible : ' . (ErpApi::$lastError ?? '')]; }
     $ecarts = pmPanelEcarts($corps, $relu);
     if ($ecarts !== []) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . ') : le panel ne reprend pas ' . implode(', ', $ecarts)]; }
+    // Un brouillon : écrit et relu, il reste inactif.
+    if (!$activer) { return ['ok' => true, 'id' => $id, 'erreur' => null]; }
     $a = ErpApi::ecrire('PUT', $base . '/' . $id, pmPanelCorps($d, 'ACTIVE', $sec));
     if ($a['erreur'] !== null && in_array($a['code'], [404, 405], true)) { $a = ErpApi::ecrire('PATCH', $base . '/' . $id, ['status' => 'ACTIVE']); }
     if ($a['erreur'] !== null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), activation refusée : ' . $a['erreur']]; }
@@ -595,36 +580,81 @@ function pmPanelEnvoyer(array $d, ?int $panelId): array
     return ['ok' => true, 'id' => $id, 'erreur' => null];
 }
 
-/**
- * Envoie au panel la promotion $k de la liste, et range le résultat : en caisse, ou enregistrée avec l'erreur. Un verrou
- * par promotion : deux envois en même temps (un double clic, la console et le dashboard) ne créent pas deux promotions
- * au panel (17/10/2026 : « Test » n° 20 et n° 21) — le second relit le numéro que le premier a gardé.
- */
-function pmPanelRanger(array &$tout, int $k): void
+/* --- les promotions du magasin, lues au panel -------------------------------------------------------------- */
+
+/** Le numéro au panel d'une promotion du magasin, tel que le navigateur l'envoie (« p21 », « 21 », 21), ou null. */
+function pmNumero($v): ?int
 {
-    $o = $tout[$k];
-    $verrou = @fopen(sys_get_temp_dir() . '/cockpit-promo-' . preg_replace('/[^0-9a-z]/', '', (string) ($o['id'] ?? 'x')) . '.lock', 'c');
-    if ($verrou !== false && !flock($verrou, LOCK_EX | LOCK_NB)) {
-        $tout[$k]['panelErreur'] = 'un envoi au panel de cette promotion est déjà en cours : relisez dans un instant';
-        fclose($verrou);
-        return;
-    }
-    // Le numéro au panel le plus frais : un envoi qui vient de finir l'a peut-être gardé.
-    foreach (pmLire() as $f) {
-        if (($f['id'] ?? '') === ($o['id'] ?? null) && is_numeric($f['panelId'] ?? null) && empty($o['panelId'])) { $o['panelId'] = (int) $f['panelId']; }
-        // Déjà en caisse avec le même contenu (un double clic) : rien à refaire. Une modification d'une promotion en caisse
-        // change le corps envoyé au panel : elle part.
-        if (($f['id'] ?? '') === ($o['id'] ?? null) && ($f['statut'] ?? '') === 'en_caisse' && pmPanelCorps($f, 'ACTIVE') === pmPanelCorps($o, 'ACTIVE')) { $tout[$k] = $f; if ($verrou !== false) { fclose($verrou); } return; }
-    }
-    $r = pmPanelEnvoyer($o, isset($o['panelId']) && is_numeric($o['panelId']) ? (int) $o['panelId'] : null);
-    $tout[$k]['panelId'] = $r['id'];
-    $tout[$k]['panelErreur'] = $r['erreur'];
-    $tout[$k]['panelEssai'] = date('Y-m-d H:i:s');
-    if ($r['ok']) { $tout[$k]['statut'] = 'en_caisse'; $tout[$k]['enCaisse'] = $tout[$k]['panelEssai']; }
-    // Le numéro se garde aussitôt, avant de rendre le verrou : un envoi qui attendait le relira.
-    $frais = pmLire();
-    foreach ($frais as $j => $f) { if (($f['id'] ?? '') === ($o['id'] ?? null)) { $frais[$j] = $tout[$k]; pmEcrire($frais); break; } }
-    if ($verrou !== false) { flock($verrou, LOCK_UN); fclose($verrou); }
+    $v = is_int($v) ? (string) $v : trim((string) $v);
+    return preg_match('/^p?([1-9]\d{0,9})$/', $v, $m) ? (int) $m[1] : null;
+}
+
+/** Une règle du panel est-elle une promotion du magasin : « X achetés + Y » réservée à lui seul ? */
+function pmEstDuMagasin(array $r, int $shop): bool
+{
+    return ($r['type'] ?? '') === 'buyxgety' && is_array($r['shops'] ?? null) && array_map('intval', $r['shops']) === [$shop];
+}
+
+/**
+ * Une promotion du magasin relue au panel (une règle de pvRegles), dans la forme de l'assistant : {id: "p21", panelId,
+ * shop, nom, description, x, y, du, au, creneaux, repetable, maxParTicket, statut: en_caisse (active au panel) |
+ * brouillon (inactive)}. Les noms des produits et des catégories : ceux que le panel rend, sinon vides (le dashboard les
+ * complète avec la liste du magasin).
+ */
+function pmDemande(array $r): array
+{
+    $cote = static function ($c): array {
+        $c = is_array($c) ? $c : [];
+        $prods = []; foreach ((array) ($c['p'] ?? []) as $k => $n) { $pid = (int) $k; if ($pid > 0) { $prods[$pid] = ['id' => $pid, 'nom' => (string) $n]; } }
+        $cats = []; foreach ((array) ($c['c'] ?? []) as $k => $n) { if ((int) $k > 0) { $cats[] = ['id' => (int) $k, 'nom' => (string) $n]; } }
+        return ['q' => max(1, (int) round((float) ($c['q'] ?? 1))), 'cats' => $cats, 'prods' => array_values($prods),
+            'exclus' => array_map(static fn ($id) => ['id' => (int) $id, 'nom' => ''], array_values((array) ($c['x'] ?? []))),
+            'portion' => isset(PM_PORTIONS[(string) ($c['portion'] ?? '')]) ? (string) $c['portion'] : null];
+    };
+    $rc = (array) ($r['recompense'] ?? []);
+    $shop = (int) (((array) ($r['shops'] ?? []))[0] ?? 0);
+    $type = in_array($rc['type'] ?? '', PM_TYPES, true) ? (string) $rc['type'] : 'FREE';
+    return ['id' => 'p' . (int) $r['id'], 'panelId' => (int) $r['id'], 'shop' => $shop, 'shops' => [$shop],
+        'nom' => (string) ($r['nom'] ?? ''), 'description' => (string) ($r['description'] ?? ''),
+        'x' => $cote($r['declenche'] ?? []), 'y' => $cote($r['recoit'] ?? []) + ['type' => $type, 'valeur' => $type === 'FREE' ? null : ($rc['valeur'] ?? null)],
+        'du' => $r['duH'] ?? (($r['du'] ?? null) !== null ? $r['du'] . ' 00:00' : null),
+        'au' => $r['auH'] ?? (($r['au'] ?? null) !== null ? $r['au'] . ' 23:59' : null),
+        'creneaux' => (array) ($r['creneaux'] ?? []), 'repetable' => !empty($r['repetable']), 'maxParTicket' => $r['maxParTicket'] ?? null,
+        'statut' => strtoupper((string) ($r['statut'] ?? '')) === 'ACTIVE' ? 'en_caisse' : 'brouillon'];
+}
+
+/** Les promotions du magasin au panel (les plus récentes d'abord), et l'erreur de lecture du panel. */
+function pmMiennes(int $shop): array
+{
+    $R = function_exists('pvRegles') ? pvRegles() : ['regles' => [], 'erreur' => 'lecture des promotions du panel indisponible'];
+    $l = [];
+    foreach ($R['regles'] as $r) { if (pmEstDuMagasin($r, $shop)) { $l[] = pmDemande($r); } }
+    usort($l, static fn ($a, $b) => $b['panelId'] <=> $a['panelId']);
+    return [$l, $R['erreur']];
+}
+
+/**
+ * La promotion du magasin n° $id : dans les règles gardées, sinon relue au panel (créée il y a un instant ailleurs).
+ * Null quand elle n'existe pas ou n'est pas celle de ce magasin.
+ */
+function pmMienne(int $shop, int $id): ?array
+{
+    [$l] = pmMiennes($shop);
+    foreach ($l as $d) { if ($d['panelId'] === $id) { return $d; } }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
+    $f = ErpApi::get('/admin/promotions/buy-x-get-y/' . $id);
+    if (!is_array($f) || (int) ($f['id'] ?? 0) !== $id || !function_exists('pvNormaliser')) { return null; }
+    $r = pvNormaliser($f);
+    return pmEstDuMagasin($r, $shop) ? pmDemande($r) : null;
+}
+
+/** Relit au panel la promotion n° $id après une écriture, la garde à jour dans les règles, et la rend (forme de l'assistant). */
+function pmRelue(int $id): ?array
+{
+    $f = ErpApi::get('/admin/promotions/buy-x-get-y/' . $id);
+    if (!is_array($f) || (int) ($f['id'] ?? 0) !== $id) { return null; }
+    if (function_exists('pvRetenir')) { pvRetenir($id, $f); }
+    return function_exists('pvNormaliser') ? pmDemande(pvNormaliser($f)) : null;
 }
 
 /* --- les portions (½, ¼ d'une tarte) : la sonde -------------------------------------------------------------- */
@@ -785,21 +815,20 @@ function ep_promos_sonde_commandes(): array
 
 /* --- les routes --------------------------------------------------------------------------------- */
 
-/** GET /exploitation/promos-magasin?shop=4 — les demandes du magasin, les promotions du panel qui le touchent, les règles. */
+/**
+ * GET /exploitation/promos-magasin?shop=4 — les promotions du magasin (lues au panel : celles réservées à lui seul), les
+ * autres promotions du panel qui le touchent (la marque), les règles.
+ */
 function ep_promos_magasin_demandes(): array
 {
     $shop = (int) ($_GET['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $auj = date('Y-m-d');
-    $demandes = array_values(array_filter(pmLire(), static fn ($d) => in_array($shop, pmShops($d), true)));
-    usort($demandes, static fn ($a, $b) => strcmp((string) ($b['maj'] ?? ''), (string) ($a['maj'] ?? '')));
-    $panel = []; $err = null;
-    // Une promotion du magasin écrite au panel s'y relit aussi : elle ne se montre qu'une fois, comme promotion du magasin.
-    $nos = array_map('intval', array_filter(array_column(pmLire(), 'panelId')));
+    [$demandes, $err] = pmMiennes($shop);
+    $panel = [];
     if (function_exists('pvRegles')) {
-        $R = pvRegles(); $err = $R['erreur'];
-        foreach ($R['regles'] as $r) {
-            if (in_array((int) $r['id'], $nos, true)) { continue; }
+        foreach (pvRegles()['regles'] as $r) {
+            if (pmEstDuMagasin($r, $shop)) { continue; }
             if (($r['shops'] ?? null) !== null && !in_array($shop, (array) $r['shops'], true)) { continue; }
             $panel[] = ['id' => $r['id'], 'nom' => $r['nom'], 'type' => $r['type'], 'texte' => function_exists('pvTexte') ? pvTexte($r) : '', 'statut' => $r['statut'],
                 'etat' => pmEtatPanel($r, $auj), 'du' => $r['du'], 'au' => $r['au'], 'reseau' => ($r['shops'] ?? null) === null, 'magasins' => $r['shops'] === null ? null : count($r['shops']),
@@ -807,15 +836,17 @@ function ep_promos_magasin_demandes(): array
                 'x' => $r['declenche'], 'y' => $r['recoit'], 'recompense' => $r['recompense']];
         }
     }
-    return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err,
+    return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
         'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
 }
 
 /**
- * POST /exploitation/promos-magasin {shop, id?, action: brouillon|envoyer, nom, description, x, y, du, au, creneaux,
- * repetable, maxParTicket} — un brouillon s'enregistre tel quel ; « envoyer » vérifie les règles (422 sinon) : la
- * promotion est validée d'office (`auto`) quand le lot tient ×2 et que tout est chiffré, sinon elle passe « à valider »
- * par la marque, avec le `motif`. Une promotion validée ou en caisse ne se modifie plus d'ici.
+ * POST /exploitation/promos-magasin {shop, id? (« p21 » : la promotion n° 21 du panel), action: brouillon|envoyer, nom,
+ * description, x, y, du, au, creneaux, repetable, maxParTicket} — écrit au panel, et rien ailleurs (18/10/2026).
+ * « envoyer » : les règles du magasin (422 sinon), ce qui ne se chiffre pas sort d'office, puis créée (POST) ou modifiée
+ * (PUT) INACTIVE, relue, activée : en caisse. « brouillon » : la même écriture laissée INACTIVE (une promotion en caisse
+ * ne repasse pas en brouillon : 409). Le panel refuse : 502, rien n'est créé. Créée mais pas activée : 200 avec
+ * `panelErreur`, elle reste inactive au panel (un brouillon).
  */
 function wr_promos_magasin(): array
 {
@@ -823,129 +854,96 @@ function wr_promos_magasin(): array
     $shop = (int) ($b['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $action = ($b['action'] ?? 'brouillon') === 'envoyer' ? 'envoyer' : 'brouillon';
+    $envoi = $action === 'envoyer';
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { http_response_code(503); return ['error' => 'compte admin du panel indisponible : rien ne s’enregistre sans lui']; }
     $d = pmPropre($b, $shop);
-    $tout = pmLire();
-    $id = preg_match('/^pm[0-9a-z]{6,20}$/', (string) ($b['id'] ?? '')) ? (string) $b['id'] : null;
-    $i = null;
-    if ($id !== null) {
-        foreach ($tout as $k => $o) { if (($o['id'] ?? '') === $id) { $i = $k; break; } }
-        if ($i === null || (int) ($tout[$i]['shop'] ?? 0) !== $shop) { http_response_code(404); return ['error' => 'promotion introuvable']; }
-        // En caisse, elle se modifie aussi (18/10/2026) : les changements partent au panel sur la même promotion (PUT), pas en brouillon.
-        if (($tout[$i]['statut'] ?? '') === 'en_caisse' && $action === 'brouillon') { http_response_code(409); return ['error' => 'déjà en caisse : enregistrez les changements, ils partent au panel (pas de brouillon)']; }
+    $panelId = pmNumero($b['id'] ?? null);
+    if (($b['id'] ?? null) !== null && ($b['id'] ?? '') !== '' && $panelId === null) { http_response_code(404); return ['error' => 'promotion introuvable']; }
+    if ($panelId !== null) {
+        $actuelle = pmMienne($shop, $panelId);
+        if ($actuelle === null) { http_response_code(404); return ['error' => 'promotion introuvable']; }
+        // En caisse, elle se modifie (les changements partent au panel sur la même promotion), elle ne repasse pas en brouillon.
+        if ($actuelle['statut'] === 'en_caisse' && !$envoi) { http_response_code(409); return ['error' => 'déjà en caisse : enregistrez les changements, ils partent au panel (pas de brouillon)']; }
     }
-    $autres = array_values(array_filter($tout, static fn ($o) => ($o['id'] ?? '') !== $id));
+    [$miennes] = pmMiennes($shop);
+    $autres = array_values(array_filter($miennes, static fn ($o) => $o['panelId'] !== $panelId));
     // À l'enregistrement, ce qui ne se chiffre pas sort de la promotion (pmExclureNonChiffres).
     $exclusAuto = []; $saisie = $d;
-    if ($action === 'envoyer' && ($produits = pmProduits($shop)) !== null) { [$d, $exclusAuto] = pmExclureNonChiffres($d, $produits); }
+    if ($envoi && ($produits = pmProduits($shop)) !== null) { [$d, $exclusAuto] = pmExclureNonChiffres($d, $produits); }
     [$coef, $illisibles] = pmCoefMagasins($d);
-    if ($action === 'envoyer') {
-        // Les règles sur la saisie (une liste vidée par l'exclusion se dit plus bas, avec les noms sortis).
+    if ($envoi) {
         $err = pmErreurs($saisie, $autres, $coef, date('Y-m-d H:i'));
         foreach ($illisibles as $s) { $err[] = 'Les prix et coûts de ' . pmNomShop($s) . ' ne se lisent pas au panel : réessayez dans un instant.'; }
         if ($err === [] && $coef !== null && $coef['lot'] === null) {
             $sortis = $exclusAuto !== [] ? ' (sortis, sans coût de recette ou sans prix : ' . implode(', ', array_slice($exclusAuto, 0, 6)) . (count($exclusAuto) > 6 ? '…' : '') . ')' : '';
             $err[] = ($coef['nX'] === 0 ? 'Rien de ce que le client achète ne se chiffre' : ($coef['nY'] === 0 ? 'Rien de ce que le client reçoit ne se chiffre' : 'Aucune combinaison ne se chiffre')) . $sortis . ' : choisissez d’autres produits.';
         }
-        if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
+    } else {
+        // Un brouillon est déjà une promotion du panel (inactive) : ce que le panel exige y est (nom, X, Y, dates) ; il
+        // ne compte pas dans les deux à la fois, et une période passée se corrige plus tard.
+        $err = pmErreurs($saisie, [], null, '0000-00-00 00:00');
     }
-    $now = date('Y-m-d H:i:s');
-    $envoi = $action === 'envoyer';
-    $office = $envoi && pmDOffice($coef);
-    $d += ['id' => $id ?? ('pm' . base_convert((string) (int) (microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(2))),
-        // Envoyée = enregistrée, sans validation. `auto` : le coefficient a été vérifié (tout chiffré) ; sinon `motif` dit ce qui manque.
-        'statut' => $envoi ? 'validee' : 'brouillon', 'coef' => $coef, 'maj' => $now,
-        'auto' => $office, 'decidee' => $envoi ? $now : null,
-        'motif' => $envoi && !$office ? 'coefficient non vérifié : ' . pmManqueTxt($coef ?? []) : null,
-        // Les produits sortis d'office, faute de coût de recette ou de prix.
-        'exclusAuto' => $exclusAuto,
-        'cree' => $i !== null ? ($tout[$i]['cree'] ?? $now) : $now, 'envoyee' => $action === 'envoyer' ? $now : ($i !== null ? ($tout[$i]['envoyee'] ?? null) : null),
-        'message' => $i !== null && $action === 'brouillon' ? ($tout[$i]['message'] ?? null) : null,
-        // Le numéro au panel d'un premier envoi (resté inactif) : le suivant le met à jour au lieu d'en créer un autre.
-        'panelId' => $i !== null ? ($tout[$i]['panelId'] ?? null) : null, 'panelErreur' => null];
-    if ($i !== null) { $tout[$i] = $d; } else { $tout[] = $d; $i = count($tout) - 1; }
-    // Enregistrée : elle part au panel tout de suite (créée inactive, relue, activée) — en caisse si tout concorde.
-    // Le coefficient ne la retient plus (18/10/2026), qu'il soit sous ×2 ou non vérifié.
-    if ($envoi) { pmPanelRanger($tout, $i); }
-    pmEcrire($tout);
-    return ['ok' => true, 'demande' => $tout[$i]];
-}
-
-/** DELETE /exploitation/promos-magasin?shop=4&id=pm… — tant qu'elle n'est pas en caisse, une promotion du magasin se retire. */
-function wr_promos_magasin_retirer(): array
-{
-    $shop = (int) ($_GET['shop'] ?? 0); $id = (string) ($_GET['id'] ?? '');
-    $tout = pmLire();
-    foreach ($tout as $k => $o) {
-        if (($o['id'] ?? '') !== $id || !in_array($shop, pmShops($o), true)) { continue; }
-        if (($o['statut'] ?? '') === 'en_caisse') { http_response_code(409); return ['error' => 'déjà en caisse : elle ne se retire plus d’ici']; }
-        array_splice($tout, $k, 1);
-        pmEcrire($tout);
-        return ['ok' => true];
+    if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
+    // Un envoi à la fois par magasin : un double clic ne crée pas deux promotions au panel (17/10/2026 : « Test » n° 20 et 21).
+    $verrou = @fopen(sys_get_temp_dir() . '/cockpit-promo-magasin-' . $shop . '.lock', 'c');
+    if ($verrou !== false && !flock($verrou, LOCK_EX | LOCK_NB)) {
+        fclose($verrou);
+        http_response_code(409);
+        return ['error' => 'un envoi au panel est déjà en cours pour ce magasin : relisez dans un instant'];
     }
-    http_response_code(404);
-    return ['error' => 'promotion introuvable'];
-}
-
-/** POST /promos-magasin/{id}/panel — côté marque : renvoyer au panel une promotion enregistrée que le panel a refusée. */
-function wr_promos_magasin_panel(string $id): array
-{
-    $tout = pmLire();
-    foreach ($tout as $k => $o) {
-        if (($o['id'] ?? '') !== $id) { continue; }
-        if (($o['statut'] ?? '') !== 'validee') { http_response_code(409); return ['error' => 'seule une promotion enregistrée part au panel']; }
-        // Comme à l'enregistrement : ce qui ne se chiffre pas sort ; le coefficient ne retient plus rien (18/10/2026),
-        // seule une promotion vidée par l'exclusion ne part pas.
-        if (($produits = pmProduits((int) $o['shop'])) !== null) {
-            [$o, $sortis] = pmExclureNonChiffres($o, $produits);
-            [$coef] = pmCoefMagasins($o);
-            if ($coef === null || $coef['lot'] === null) {
-                http_response_code(422);
-                return ['error' => 'rien ne se chiffre : ' . pmManqueTxt($coef ?? [])];
-            }
-            $tout[$k] = array_merge($o, ['coef' => $coef, 'auto' => true, 'motif' => null, 'exclusAuto' => array_values(array_unique(array_merge((array) ($o['exclusAuto'] ?? []), $sortis)))]);
-        }
-        pmPanelRanger($tout, $k);
-        pmEcrire($tout);
-        return ['ok' => true, 'demande' => $tout[$k]];
+    try {
+        $r = pmPanelEnvoyer($d, $panelId, $envoi);
+        $dem = $r['id'] !== null ? pmRelue((int) $r['id']) : null;
+    } finally {
+        if ($verrou !== false) { flock($verrou, LOCK_UN); fclose($verrou); }
     }
-    http_response_code(404);
-    return ['error' => 'promotion introuvable'];
-}
-
-/** GET /promos-magasin[?statut=validee] — côté marque (console › Analyse magasin › Promotions) : les demandes de tous les magasins. */
-function ep_promos_magasin_marque(): array
-{
-    $st = (string) ($_GET['statut'] ?? '');
-    $l = array_values(array_filter(pmLire(), static fn ($d) => $st === '' || ($d['statut'] ?? '') === $st));
-    usort($l, static fn ($a, $b) => strcmp((string) ($a['envoyee'] ?? $a['maj'] ?? ''), (string) ($b['envoyee'] ?? $b['maj'] ?? '')));
-    // Les noms courts des magasins cités, pour la console.
-    $noms = [];
-    foreach ($l as $d) { foreach (pmShops($d) as $sid) { $noms[(string) $sid] ??= pmNomShop($sid); } }
-    return ['demandes' => $l, 'noms' => $noms, 'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
+    if ($r['id'] === null) { http_response_code(502); return ['error' => $r['erreur'] ?? 'le panel refuse la promotion', 'coef' => $coef]; }
+    $dem = $dem ?? ($d + ['id' => 'p' . $r['id'], 'panelId' => (int) $r['id'], 'statut' => $r['ok'] && $envoi ? 'en_caisse' : 'brouillon']);
+    return ['ok' => true, 'demande' => $dem, 'coef' => $coef, 'exclusAuto' => $exclusAuto, 'panelErreur' => $r['ok'] ? null : $r['erreur']];
 }
 
 /**
- * PATCH /promos-magasin/{id} {decision: en_caisse|refuser, message} — côté marque. « en_caisse » : la promotion
- * enregistrée a été créée au panel ; « refuser » : elle revient au magasin avec le mot (« Renvoyée par la marque »).
+ * DELETE /exploitation/promos-magasin?shop=4&id=p21 — un brouillon du magasin (inactif au panel) se supprime au panel.
+ * En caisse, elle ne se retire pas d'ici (409) : on la modifie, ou on avance sa fin.
  */
-function wr_promos_magasin_decision(string $id): array
+function wr_promos_magasin_retirer(): array
 {
-    $b = body();
-    $dec = (string) ($b['decision'] ?? '');
-    if (!in_array($dec, ['en_caisse', 'refuser'], true)) { http_response_code(422); return ['error' => 'decision : en_caisse ou refuser']; }
-    $msg = mb_substr(trim((string) ($b['message'] ?? '')), 0, 500);
-    if ($dec === 'refuser' && $msg === '') { http_response_code(422); return ['error' => 'un refus dit pourquoi']; }
-    $tout = pmLire();
-    foreach ($tout as $k => $o) {
-        if (($o['id'] ?? '') !== $id) { continue; }
-        if (($o['statut'] ?? '') !== 'validee') { http_response_code(409); return ['error' => 'seule une promotion enregistrée se met en caisse ou se renvoie']; }
-        $tout[$k]['statut'] = $dec === 'en_caisse' ? 'en_caisse' : 'refusee';
-        $tout[$k]['message'] = $msg !== '' ? $msg : null;
-        $tout[$k]['maj'] = date('Y-m-d H:i:s');
-        if ($dec === 'en_caisse') { $tout[$k]['enCaisse'] = $tout[$k]['maj']; }
-        pmEcrire($tout);
-        return ['ok' => true, 'demande' => $tout[$k]];
+    $shop = (int) ($_GET['shop'] ?? 0);
+    $id = pmNumero($_GET['id'] ?? '');
+    if ($shop <= 0 || $id === null) { http_response_code(404); return ['error' => 'promotion introuvable']; }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { http_response_code(503); return ['error' => 'compte admin du panel indisponible']; }
+    $d = pmMienne($shop, $id);
+    if ($d === null) { http_response_code(404); return ['error' => 'promotion introuvable']; }
+    if ($d['statut'] === 'en_caisse') { http_response_code(409); return ['error' => 'déjà en caisse : elle ne se retire plus d’ici'];  }
+    $w = ErpApi::ecrire('DELETE', '/admin/promotions/buy-x-get-y/' . $id);
+    if ($w['erreur'] !== null && (int) $w['code'] !== 404) {
+        http_response_code(in_array((int) $w['code'], [405, 501], true) ? 409 : 502);
+        return ['error' => in_array((int) $w['code'], [405, 501], true) ? 'le panel ne supprime pas ses promotions : elle y reste inactive' : 'le panel refuse : ' . $w['erreur']];
     }
-    http_response_code(404);
-    return ['error' => 'demande introuvable'];
+    if (function_exists('pvRetenir')) { pvRetenir($id, null); }
+    return ['ok' => true];
+}
+
+/**
+ * GET /promos-magasin[?statut=en_caisse|brouillon] — côté marque (console › Analyse magasin › Promotions) : les
+ * promotions de chaque magasin, lues au panel (celles réservées à un seul magasin), avec le coefficient du lot aux prix
+ * et coûts d'aujourd'hui. Lecture seule : le magasin les écrit dans son dashboard, le panel les garde.
+ */
+function ep_promos_magasin_marque(): array
+{
+    $st = (string) ($_GET['statut'] ?? '');
+    $R = function_exists('pvRegles') ? pvRegles() : ['regles' => [], 'erreur' => 'lecture des promotions du panel indisponible'];
+    $l = [];
+    foreach ($R['regles'] as $r) {
+        if (($r['type'] ?? '') !== 'buyxgety' || !is_array($r['shops'] ?? null) || count($r['shops']) !== 1) { continue; }
+        $d = pmDemande($r);
+        if ($st !== '' && $d['statut'] !== $st) { continue; }
+        [$d['coef']] = pmCoefMagasins($d);
+        $l[] = $d;
+    }
+    usort($l, static fn ($a, $b) => strcmp((string) $b['du'], (string) $a['du']));
+    $noms = [];
+    foreach ($l as $d) { $noms[(string) $d['shop']] ??= pmNomShop($d['shop']); }
+    return ['demandes' => $l, 'noms' => $noms, 'erreurPanel' => $R['erreur'], 'source' => 'panel',
+        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
 }

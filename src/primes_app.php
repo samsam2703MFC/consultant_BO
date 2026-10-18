@@ -773,6 +773,8 @@ function ep_promos_sonde_fiche(): array
         $f = isset($it['id']) && is_scalar($it['id']) ? ErpApi::sondeGet('/admin/promotions/' . $sorte . '/' . rawurlencode((string) $it['id'])) : null;
         $out['trouvees'][] = ['item' => $it, 'fiche' => $f === null ? null : ['code' => $f['code'], 'corps' => $f['corps']]];
     }
+    // Tous les numéros que lit le cockpit (18/10/2026) : toutes les pages de la liste, puis les numéros qui suivent.
+    if ($sorte === 'buy-x-get-y' && function_exists('pvListe')) { $tous = pvListe(); $out['numerosLus'] = $tous === null ? null : array_keys($tous['ids']); }
     return $out;
 }
 

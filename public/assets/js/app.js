@@ -6,7 +6,7 @@
  */
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender, tplPsImpression } from './templates.js';
-import { valsGC, valsFF, valsCQM } from './franchises-vals.js';
+import { valsFF, valsCQM } from './franchises-vals.js';
 import { Scouting } from './scouting.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
@@ -324,7 +324,7 @@ class App {
       resultatJour: 'resultat',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
-      budgetparam: 'budget-parametres', plan: 'plan-developpement', catalogue: 'catalogue', assortiment: 'assortiment',
+      budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
       usage: 'usage-catalogue', anaprod: 'analyse-produits', prixvolume: 'prix-volume',
       manque: 'manque-a-gagner',
@@ -350,7 +350,7 @@ class App {
       primesApp: 'primes-app-worker',
       brandGuard: 'brand-guard', invendus: 'invendus-poubelle', inventaires: 'inventaires',
       // Franchisés · évaluation et suivi (09/10/2026)
-      gestionConsultant: 'gestion-consultant', ficheFranchise: 'fiche-franchise', controlesQualite: 'controles-qualite',
+      ficheFranchise: 'fiche-franchise', controlesQualite: 'controles-qualite',
     };
   }
   /**
@@ -382,7 +382,10 @@ class App {
       // ouvre désormais le premier onglet restant, Équipe & ventes.
       'analyse-magasin': 'ventes', analysemag: 'ventes',
       // Écrans sans entrée, retirés (16/10/2026) : leur contenu vit ailleurs.
-      'taches-consultants': 'gestionConsultant', taches: 'gestionConsultant',
+      'taches-consultants': 'ficheFranchise', taches: 'ficheFranchise',
+      // Gestion consultant et Plan de développement, retirés (18/10/2026, demande de Sam) : la fiche, l'accueil.
+      'gestion-consultant': 'ficheFranchise', gestionConsultant: 'ficheFranchise',
+      'plan-developpement': 'resultatJour', plan: 'resultatJour',
       'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
     };
   }
@@ -1003,7 +1006,6 @@ class App {
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       clientMystere: ['Client mystère', 'Le rapport client mystère reçu, magasin par magasin et par trimestre : « obtenu / maximum », ramené sur 5 pour le poste Client mystère du scoring, avec son PDF.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
-      gestionConsultant: ['Gestion consultant', 'Le planning du consultant tous magasins, ses tâches de toutes sources (visites, plans d’action, panel, helpdesk, perso), le réseau consultants × magasins, et le cadre de visite : par magasin, combien de visites, de quel type, par quel profil, avec quelle checklist. Chaque type de visite porte sa checklist et ses tâches à faire ; l’agenda Google suit par flux ICS et invitations.'],
       ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
@@ -1012,7 +1014,7 @@ class App {
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], plan: ['Plan de développement', 'Comment chaque franchisé va développer son chiffre : la rampe à 5 ans de l’étude, l’engagement de l’année déposé par le franchisé et validé par le consultant, les actions pour y arriver, puis le rituel trimestriel — constat, annotations du franchisé, du consultant et de la marque, et ce qui est mis en route. Le PDF reprend l’ensemble.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
@@ -1032,16 +1034,20 @@ class App {
         [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation'], ['promosMag', 'Promotions']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
         [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
-      catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
-        [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
-      produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
-        [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
-      anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte. Prix × volume : le prix que chaque magasin encaisse, face à ce qu’il vend.',
-        [['anaprod', 'Par référence'], ['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner'], ['prixvolume', 'Prix × volume']]],
-      analyse: ['Dans le temps', titles.analyse[1], null] };
+      // Le catalogue réunit les lectures d'une référence (18/10/2026, demande de Sam) : le scoring de la gamme et son
+      // seuil, sa jauge par magasin (Par référence), son prix face au volume et son évolution (Dans le temps) y
+      // deviennent des onglets. Un onglet peut porter sa propre phrase d'explication (3e élément) : celle de son
+      // ancien écran, qui ne se perd pas dans la phrase commune.
+      catalogue: ['Catalogue', 'Une seule liste, ses lectures : la fiche et ses deux marges, le score de chaque référence, où elle se vend et à quel prix, comment elle évolue, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
+        [['catalogue', 'Fiches'], ['produits', 'Scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.'], ['seuil', 'Sous seuil', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.'],
+          ['anaprod', 'Par référence', titles.anaprod[1]], ['prixvolume', 'Prix × volume', titles.prixvolume[1]], ['analyse', 'Dans le temps', titles.analyse[1]],
+          ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
+      usage: ['Où ça se vend', 'Chaque magasin face au catalogue. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte.',
+        [['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner']]] };
     const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
     if (grp) {
-      common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
+      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === S.screen);
+      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0,
         promosMag: (((this._pmL || {}).d || {}).demandes || []).filter(d => d.statut === 'validee').length };
@@ -1390,7 +1396,6 @@ class App {
           ['reputation', 'Note Google et avis', 0],
           ['reporting', 'Reporting automatisé', 0]] },
         { sub: 'Suivi de terrain', children: [
-          ['gestionConsultant', 'Gestion consultant', 0],
           ['assortiment', 'Conformité du comptoir', 0]] }]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
@@ -1404,19 +1409,18 @@ class App {
         ['invendus', 'Invendus et poubelle', 0],
         // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
         ['inventaires', 'Inventaires', 0],
-        ['plan', 'Plan de développement', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
-      // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
-      // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
-      // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
-      // (scoring, dont le seuil est un filtre), où il se vend (par référence,
-      // par magasin, en euros), et comment il évolue. Les anciens écrans
-      // restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
+      // Deux entrées (18/10/2026) : le Catalogue réunit tout ce qui se lit d'une
+      // référence — la fiche, son score et le seuil, sa jauge par magasin, son
+      // prix face au volume, son évolution, l'assortiment et le comptoir ; Où ça
+      // se vend garde la lecture par magasin et le manque à gagner. Les anciens
+      // écrans restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
+      // Le badge du Catalogue : les obligatoires sans place au comptoir, plus les
+      // références que le scoring propose d'effacer.
       ['Produits', [
-        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'planogramme']],
-        ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
-        ['anaprod', 'Où ça se vend', 0, ['usage', 'manque', 'prixvolume']],
-        ['analyse', 'Dans le temps', 0]]],
+        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length + ((this._pdDcs || {}).effacer || 0),
+          ['produits', 'seuil', 'anaprod', 'prixvolume', 'analyse', 'assortiment', 'planogramme']],
+        ['usage', 'Où ça se vend', 0, ['manque']]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
@@ -1484,11 +1488,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktHub', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', gestionConsultant: 'isGC', ficheFranchise: 'isFF', controlesQualite: 'isCQM', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktHub', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       marketing: 'isMktHub', mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', tablette: 'isTablette', primesApp: 'isPrimesApp', promosMag: 'isPromosMag' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', primesApp: 'isPrimesApp', promosMag: 'isPromosMag' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1871,7 +1875,6 @@ class App {
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
-    if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isMktHub) this.valsMktHub(common);
     if (common.isBxc) this.valsBxc(common);
@@ -1905,7 +1908,6 @@ class App {
     if (common.isBrandGuard) this.valsBrandGuard(common);
     if (common.isInvendus) this.valsInvendus(common);
     if (common.isInventaires) this.valsInventaires(common);
-    if (common.isGC) valsGC(this, common);
     if (common.isFF) valsFF(this, common);
     if (common.isCQM) valsCQM(this, common);
     // --- reporting
@@ -4545,10 +4547,10 @@ class App {
 
     common.refLignes = lignes.slice(0, 400).map(p => ({
       ref: String(p.ref), nom: p.nom, categorie: p.categorie || '',
-      // Voir aussi : la même référence dans le scoring, dans « où ça se vend », au comptoir.
+      // Voir aussi : la même référence dans le scoring, dans « par référence », au comptoir — des onglets du Catalogue (18/10/2026).
       voir: [
-        { nom: 'gamme', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
-        { nom: 'où ça se vend', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
+        { nom: 'scoring', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
+        { nom: 'par référence', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
         { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : la poser sur le comptoir standard', go: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }) }],
       groupe: p.groupe || '',
       gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
@@ -6778,10 +6780,10 @@ class App {
    * dans Targets & primes. Ce qu'on tape reste un brouillon jusqu'à « Enregistrer ».
    */
   /**
-   * Les promotions des magasins (17/10/2026) : les demandes « X achetés + Y » que les franchisés écrivent dans
-   * l'onglet Promotions de leur dashboard. La marque les valide ou les renvoie avec un mot ; le détail et
-   * l'assistant restent dans le dashboard du magasin (lien ↗). Rien n'est écrit au panel : une demande validée
-   * se met en caisse à la main.
+   * Les promotions des magasins (17/10/2026) : les « X achetés + Y » que les franchisés écrivent dans l'onglet
+   * Promotions de leur dashboard. Lues au panel, et seulement là (18/10/2026) : une promotion du panel réservée à un
+   * seul magasin, active (en caisse) ou inactive (brouillon). Lecture seule : le détail et l'assistant restent dans le
+   * dashboard du magasin (lien ↗).
    */
   valsPromosMag(common){
     const S = this.state;
@@ -6798,7 +6800,7 @@ class App {
     const court = n => String(n || '').replace(/^.* - /, '');
     const dash = id => 'dashboard/?shop=' + encodeURIComponent(id) + '&vue=promos';
     common.pmChargement = L.d === undefined;
-    common.pmMotif = L.d === null ? 'Les demandes des magasins n’ont pas pu être lues.' : '';
+    common.pmMotif = L.d === null ? 'Les promotions des magasins n’ont pas pu être lues au panel.' : '';
     common.pmRelire = () => { L.d = undefined; this.setState({}); };
     common.pmMagasins = L.magasins.map(m => ({ nom: court(m.nom), href: dash(m.id) }));
     if (!L.d) { return; }
@@ -6809,7 +6811,9 @@ class App {
     const JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
     const cren = l => !l || !l.length ? 'tous les jours' : l.map(c => { const j = c.jours.slice().sort((a, b) => a - b), suite = j.length >= 3 && j.every((v, i) => !i || v === j[i - 1] + 1);
       return (j.length === 7 ? 'tous les jours' : (suite ? JOURS[j[0] - 1] + '–' + JOURS[j[j.length - 1] - 1] : j.map(v => JOURS[v - 1]).join(', '))) + ' ' + c.de + '–' + c.a; }).join(' · ');
-    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean); return ({ ONE_HALF: '½ ', ONE_QUARTER: '¼ ' }[c.portion] || '') + (n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : '—'); };
+    // Le panel ne rend pas toujours les noms : le nombre de produits ou de catégories visés, alors.
+    const lib = c => { const n = [].concat((c.cats || []).map(o => o.nom), (c.prods || []).map(o => o.nom)).filter(Boolean), nc = (c.cats || []).length, np = (c.prods || []).length;
+      return ({ ONE_HALF: '½ ', ONE_QUARTER: '¼ ' }[c.portion] || '') + (n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : (nc ? nc + ' catégorie' + (nc > 1 ? 's' : '') : (np ? np + ' produit' + (np > 1 ? 's' : '') : '—'))); };
     const gain = (y, n) => ({ FIXED_PRICE: 'à ' + eur(y.valeur), FIXED_AMOUNT_DISCOUNT: '−' + eur(y.valeur), PERCENTAGE_DISCOUNT: 'à −' + Math.round(+y.valeur || 0) + ' %' }[y.type] || (n > 1 ? 'offerts' : 'offert'));
     const regle = d => {
       const x = d.x || {}, y = d.y || {}, xq = x.q || 1, yq = y.q || 1;
@@ -6818,37 +6822,15 @@ class App {
       return meme ? ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + 'e ') + gain(y, yq) + ' · ' + lib(x)
         : ach + ' (' + lib(x) + '), ' + (yq > 1 ? yq + ' × ' : '') + lib(y) + ' ' + gain(y, yq);
     };
-    // Plus de validation (17/10/2026) : le magasin enregistre, la promotion part au panel aussitôt. N'attendent ici que
-    // celles que le panel n'a pas prises (l'erreur dite) : réessayer, la créer à la main, ou la rendre au magasin.
-    const ETAT = { validee: ['Pas encore en caisse', 'a'], en_caisse: ['En caisse', 'ok'], refusee: ['Rendue au magasin', 'r'], brouillon: ['Brouillon du magasin', 'b'] };
-    const FILTRES = [['validee', 'Pas encore en caisse'], ['en_caisse', 'En caisse'], ['refusee', 'Rendues'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
-    const f = S.pmFiltre === undefined ? 'validee' : S.pmFiltre;
+    // Le panel seul (18/10/2026) : en caisse (active au panel) ou brouillon (inactive). Rien à décider ici.
+    const ETAT = { en_caisse: ['En caisse', 'ok'], brouillon: ['Brouillon · inactive au panel', 'b'] };
+    const FILTRES = [['en_caisse', 'En caisse'], ['brouillon', 'Brouillons'], ['', 'Toutes']];
+    const f = S.pmFiltre === undefined || !FILTRES.some(o => o[0] === S.pmFiltre) ? '' : S.pmFiltre;
     const toutes = L.d.demandes || [];
     common.pmFiltres = FILTRES.map(([k, n]) => ({ nom: n, n: toutes.filter(d => !k || d.statut === k).length, on: f === k, choisir: () => this.setState({ pmFiltre: k }) }));
-    const decider = (d, decision) => {
-      let message = '';
-      if (decision === 'panel') {
-        L.occupe = d.id; this.setState({});
-        write(this.source, 'POST', '/promos-magasin/' + encodeURIComponent(d.id) + '/panel', {}).then(r => {
-          L.occupe = null;
-          const dm = r.demande || {};
-          L.msg = !r.ok ? 'Pas envoyée : ' + (r.error || 'erreur') : (dm.statut === 'en_caisse' ? 'En caisse : « ' + d.nom + ' » (promotion n° ' + dm.panelId + ' au panel).' : 'Le panel ne la prend toujours pas : ' + (dm.panelErreur || '?'));
-          L.d = undefined; this.setState({});
-        });
-        return;
-      }
-      if (decision === 'refuser') { message = window.prompt('Rendre « ' + d.nom + ' » au magasin : pourquoi ? (le franchisé lira ce mot)', '') || ''; if (!message.trim()) { return; } }
-      else if (!window.confirm('« ' + d.nom + ' » (' + (d.shops || [d.shop]).map(nomMag).join(', ') + ') est créée au panel à la main ?\nElle passe « En caisse » pour le magasin.')) { return; }
-      L.occupe = d.id; this.setState({});
-      write(this.source, 'PATCH', '/promos-magasin/' + encodeURIComponent(d.id), { decision, message }).then(r => {
-        L.occupe = null;
-        L.msg = r.ok ? (decision === 'en_caisse' ? 'En caisse : « ' + d.nom + ' ».' : 'Rendue au magasin : « ' + d.nom + ' ».') : 'Pas enregistré : ' + (r.error || 'erreur');
-        if (r.ok) { L.d = undefined; } this.setState({});
-      });
-    };
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + ((R.joursMax || 366) >= 365 ? 'un an' : R.joursMax + ' jours') + ' au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot affiché, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque plus l’enregistrement). Pas de validation : une promotion enregistrée part au panel aussitôt — créée inactive, relue, puis activée. N’attendent ici que celles que le panel n’a pas prises, avec son erreur.';
+    common.pmRegles = 'Lues au panel, rien n’est gardé au cockpit' + (L.d.erreurPanel ? ' (' + L.d.erreurPanel + ')' : '') + ' : les promotions du panel réservées à un seul magasin. Règles imposées au magasin : une date de fin, ' + ((R.joursMax || 366) >= 365 ? 'un an' : R.joursMax + ' jours') + ' au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot aux prix et coûts d’aujourd’hui, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque pas). Le magasin les écrit dans son dashboard : créées inactives, relues, puis activées.';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
       const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
@@ -6856,11 +6838,8 @@ class App {
         coef: c.lot != null ? '×' + c.lot.toLocaleString('fr-BE', { minimumFractionDigits: 2 }) : '—', coefCls: c.lot == null ? 'mu' : (c.lot >= (R.coefMin || 2) ? 'ok' : 'ko'),
         cas: c.x ? 'cas le plus serré : ' + (d.x.q || 1) + ' × ' + c.x + ' + ' + (d.y.q || 1) + ' × ' + c.y + (c.magasin && d.shops && d.shops.length > 1 ? ' (' + nomMag(c.magasin) + ')' : '') : '',
         sansCout: (c.sansCout || []).length ? 'sans coût de recette : ' + c.sansCout.slice(0, 3).join(', ') + (c.sansCout.length > 3 ? '…' : '') : '',
-        envoyee: d.envoyee ? jj(d.envoyee.slice(0, 10)) : '', etat: e[0], etatCls: e[1], message: d.message || '', description: d.description || '',
-        motif: [d.motif ? d.motif.charAt(0).toUpperCase() + d.motif.slice(1) : '', d.statut === 'validee' && d.panelErreur ? 'Panel : ' + d.panelErreur : '',
-          d.statut === 'en_caisse' && d.panelId ? 'Au panel : promotion n° ' + d.panelId : ''].filter(Boolean).join(' · '),
-        peutDecider: d.statut === 'validee', occupe: L.occupe === d.id, href: dash(d.shop),
-        auPanel: () => decider(d, 'panel'), enCaisse: () => decider(d, 'en_caisse'), renvoyer: () => decider(d, 'refuser') };
+        etat: e[0], etatCls: e[1], description: d.description || '',
+        motif: d.panelId ? 'Au panel : promotion n° ' + d.panelId + (d.statut === 'brouillon' ? ', inactive' : '') : '', href: dash(d.shop) };
     });
   }
 
@@ -8171,6 +8150,16 @@ class App {
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
       else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub)); }
     }));
+    // Les écrans tenus en onglets d'une entrée (Scoring, Prix × volume, Dans le temps dans le Catalogue, 18/10/2026) :
+    // trouvables par leur nom, sous l'entrée qui les tient — une fois chacun.
+    const vus = new Set();
+    navDef.forEach(g => (g[1] || []).forEach(it => (Array.isArray(it) ? [it] : (it.children || [])).forEach(c => vus.add(c[0]))));
+    navDef.forEach(g => (g[1] || []).forEach(it => (Array.isArray(it) ? [it] : (it.children || [])).forEach(c => (c[3] || []).forEach(id => {
+      if (vus.has(id) || !(titles || {})[id]) { return; }
+      vus.add(id);
+      const aide = titles[id][1] || '';
+      if (trouve(colle(titles[id][0], g[0], c[1], aide))) { ecrans.push({ titre: titles[id][0], detail: g[0] + ' · ' + c[1], aller: goTo(id) }); }
+    }))));
     ajoute('Écrans', coupe(ecrans));
 
     // 2. Références du catalogue produit.
@@ -9047,39 +9036,6 @@ class App {
       }
     }
   }
-  /* --- Plan de développement : l'engagement annuel, le rituel trimestriel ---- */
-  pdvCle(){
-    const shops = this.open();
-    const st = shops.find(x => x.id === (this.state.pdvShop || this.state.bStore)) || shops[0];
-    return (st ? st.id : '') + '|' + (this.state.pdvAn || this.exo());
-  }
-  pdvCharge(force){
-    const cle = this.pdvCle();
-    const [shop, an] = cle.split('|');
-    if (!shop) { return; }
-    if (!this.D.plan) { this.D.plan = {}; }
-    if (!this._pdvEnCours) { this._pdvEnCours = {}; }
-    if (this._pdvEnCours[cle]) { return; }
-    if (this.D.plan[cle] && !force) { return; }
-    this._pdvEnCours[cle] = true;
-    readOne('/plan?shop=' + encodeURIComponent(shop) + '&exercice=' + encodeURIComponent(an)).then(d => {
-      this._pdvEnCours[cle] = false;
-      this.D.plan[cle] = d || { erreur: true };
-      this.setState({});
-    });
-  }
-  /** Une écriture du plan, puis la relecture : l'écran ne devine jamais l'état du serveur. */
-  pdvEcrire(path, body){
-    const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
-    this.setState({ pdvBusy: true, pdvErr: '' });
-    return this.api('POST', path, Object.assign({ par: qui }, body)).then(r => {
-      if (!r || r.ok === false) { this.setState({ pdvBusy: false, pdvErr: (r && r.error) || 'refus du serveur' }); return null; }
-      this.setState({ pdvBusy: false });
-      this.pdvCharge(true);
-      return r;
-    });
-  }
-
   /* --- Tablette vendeuses ------------------------------------------------------
    * Le book des vendeuses est une application à part, servie depuis tablette/
    * (compilée dans le dépôt pwa_sales_tablet, puis copiée ici). L'écran donne
@@ -9528,203 +9484,6 @@ class App {
     if (m && rv && rv.mois && rv.mois.parTicket != null) {
       ob.repere = 'Repère : le réseau fait ' + art(rv.mois.parTicket, 2) + ' articles par ticket ce mois'
         + (rv.semaine && rv.semaine.parTicket != null ? ' (' + art(rv.semaine.parTicket, 2) + ' cette semaine)' : '') + '.';
-    }
-  }
-
-  valsPlan(common){
-    const S = this.state, D = this.D;
-    const shops = this.open();
-    const st = shops.find(x => x.id === (S.pdvShop || S.bStore)) || shops[0];
-    const an = +(S.pdvAn || this.exo());
-    common.pdvStore = st ? st.id : ''; common.pdvStoreOpts = shops.map(x => ({ id: x.id, nom: x.nom }));
-    common.setPlStore = e => this.setState({ pdvShop: e.target.value, pdvRituel: null, pdvActEdit: null, pdvDraft: {} });
-    common.pdvAn = String(an);
-    common.pdvAnOpts = [an - 1, an, an + 1].map(a => ({ v: String(a), nom: String(a) }));
-    common.setPlAn = e => this.setState({ pdvAn: +e.target.value, pdvRituel: null, pdvActEdit: null, pdvDraft: {} });
-    common.pdvMeta = st ? (st.code + ' · ' + st.zone + ' · franchisé ' + st.fr) : '';
-    common.pdvBusy = !!S.pdvBusy; common.pdvErr = S.pdvErr || '';
-    const d = (D.plan || {})[this.pdvCle()];
-    common.pdvChargement = !d; common.pdvErreur = !!(d && (d.erreur || d.error));
-    common.pdvErreurTxt = d && d.error ? d.error : 'La lecture de /plan a échoué — voir Diagnostic API.';
-    common.pdvRampe = []; common.pdvEng = null; common.pdvAnnee = null; common.pdvActions = null; common.pdvTrims = []; common.pdvRituel = null; common.pdvActEdit = null;
-    if (!d || common.pdvErreur) { return; }
-    const fK = n => this.fK(n), fE = n => this.fE(n);
-    const fS = n => n == null ? '' : ((n >= 0 ? '+' : '−') + fK(Math.abs(n)));
-    const fPct1 = n => n == null ? '' : ((n >= 0 ? '+' : '−') + Math.abs(n).toFixed(1).replace('.', ',') + ' %');
-    const fCl = n => n == null ? '' : ((n > 0 ? '−' : '+') + Math.abs(n).toLocaleString('fr-BE'));
-    const coul = n => n == null ? 'var(--color-text-muted)' : (n >= 0 ? '#2d7a3e' : '#C0182B');
-    const draft = S.pdvDraft || {};
-    const engs = d.engagements || {};
-    const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
-    common.pdvPdfHref = API_BASE + '/plan.pdf?shop=' + encodeURIComponent(st.id) + '&exercice=' + an + '&trimestre=' + ((S.pdvRituel && S.pdvRituel.t) || S.pdvSel || d.trimestreCourant);
-    common.pdvMagasin = d.magasin;
-    common.pdvSansEtude = !(d.rampe && d.rampe.potentiel);
-    common.pdvGoEtude = () => this.setState({ screen: 'budgetparam', encStore: st.id });
-
-    // ── La rampe : cinq années, chacune avec son engagement.
-    common.pdvRampe = (d.rampe.annees || []).map(a => {
-      const en = engs[String(a.an)] || null;
-      const cur = a.an === an;
-      return { an: String(a.an), cur, ca: fK(a.ca),
-        lib: a.maturite ? 'maturité' : 'année ' + a.anneeExploitation + ' · ' + a.coef + ' %',
-        eng: en && en.objectif ? fK(en.objectif) + (en.statut === 'brouillon' ? ' (brouillon)' : ' engagé') : '',
-        sous: cur ? 'réalisé ' + fK(d.annee.realise) + (d.annee.projection ? ' · proj. ' + fK(d.annee.projection) : '') : '',
-        signe: !en || en.statut === 'brouillon' ? (a.an > an ? 'à engager en janvier ' + a.an : (a.an === an ? 'à engager' : '')) : (en.statut === 'valide' ? '✓ engagé le ' + this.fD(en.engageLe) + ' · validé le ' + this.fD(en.valideLe) : '✓ engagé le ' + this.fD(en.engageLe) + ' — à valider'),
-        signeCol: !en || en.statut === 'brouillon' ? 'var(--color-primary)' : '#2d7a3e',
-        go: () => this.setState({ pdvAn: a.an, pdvRituel: null, pdvActEdit: null, pdvDraft: {} }) };
-    });
-
-    // ── L'engagement de l'année : ce qui est enregistré, ou le brouillon en cours.
-    const en = engs[String(an)] || { objectif: null, rampe: null, motif: '', statut: 'brouillon' };
-    const rampeAn = d.annee.rampe;
-    const objDraft = draft.objectif != null ? draft.objectif : (en.objectif != null ? Math.round(en.objectif) : (rampeAn != null ? Math.round(rampeAn) : ''));
-    const motifDraft = draft.motif != null ? draft.motif : (en.motif || '');
-    const setD = k => e => { const v = e.target.value; this.setState(s2 => ({ pdvDraft: Object.assign({}, s2.pdvDraft, { [k]: v }) })); };
-    const sauverEng = statut => () => {
-      if (S.pdvBusy) { return; }
-      this.pdvEcrire('/plan/engagement', { shop: st.id, exercice: an, objectif: objDraft === '' ? '' : +objDraft, rampe: rampeAn, motif: motifDraft, statut })
-        .then(r => { if (r) { this.setState({ pdvDraft: {} }); this.notify(statut !== en.statut ? (statut === 'valide' ? 'Engagement validé' : 'Engagement déposé') : (statut === 'brouillon' ? 'Brouillon enregistré' : 'Engagement mis à jour')); } });
-    };
-    const ecartRampe = (rampeAn != null && objDraft !== '' && +objDraft > 0) ? +objDraft - rampeAn : null;
-    common.pdvEng = {
-      objectif: objDraft, rampe: rampeAn != null ? fE(rampeAn) : '—', motif: motifDraft,
-      setObjectif: setD('objectif'), setMotif: setD('motif'),
-      ecartRampe: ecartRampe == null ? '' : (Math.abs(ecartRampe) < 500 ? 'sur la rampe' : (ecartRampe > 0 ? '+' : '−') + fK(Math.abs(ecartRampe)) + (ecartRampe > 0 ? ' au-dessus de la rampe' : ' sous la rampe')),
-      statut: en.statut, statutTxt: { brouillon: 'Brouillon — pas encore déposé', engage: 'Déposé par le franchisé, à valider par le consultant', valide: 'Engagé et validé' }[en.statut],
-      statutCol: en.statut === 'valide' ? '#2d7a3e' : (en.statut === 'engage' ? '#B26A00' : 'var(--color-text-muted)'),
-      signes: [en.engageLe ? 'déposé le ' + this.fDA(en.engageLe) + (en.engagePar ? ' par ' + en.engagePar : '') : '', en.valideLe ? 'validé le ' + this.fDA(en.valideLe) + (en.validePar ? ' par ' + en.validePar : '') : ''].filter(Boolean).join(' · '),
-      modifie: draft.objectif != null || draft.motif != null,
-      // « Enregistrer » garde le statut acquis : un engagement validé ne redevient pas brouillon.
-      brouillon: sauverEng(en.statut || 'brouillon'), deposer: sauverEng('engage'), valider: sauverEng('valide'),
-      peutDeposer: objDraft !== '' && +objDraft > 0,
-    };
-    // ── Où en est l'engagement.
-    const A = d.annee;
-    const objA = A.objectif;
-    common.pdvAnnee = {
-      objectif: objA != null ? fK(objA) : '—', realise: fK(A.realise),
-      attendu: (A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : '') + (A.attendu != null ? (A.objectifSource === 'rampe' ? ' · ' : '') + fK(A.attendu) + ' attendus à ce jour' : (A.budgetMensuelTotal ? 'budgets mensuels : ' + fK(A.budgetMensuelTotal) : '')),
-      ecart: A.ecart != null ? fS(A.ecart) : '—', ecartCol: coul(A.ecart),
-      projection: A.projection != null ? fK(A.projection) : '—',
-      projSous: (A.projection != null && objA != null) ? fS(A.projection - objA) + (A.objectifSource === 'rampe' ? ' sur la rampe' : ' sur l’engagement') : 'au rythme actuel',
-      projCol: (A.projection != null && objA != null) ? coul(A.projection - objA) : 'var(--color-text-muted)',
-      wReel: objA ? Math.max(0, Math.min(100, 100 * A.realise / objA)).toFixed(1) : '0',
-      wAtt: (objA && A.attendu != null) ? Math.max(0, Math.min(100, 100 * A.attendu / objA)).toFixed(1) : '0',
-      partEcoulee: A.partEcoulee != null ? String(A.partEcoulee).replace('.', ',') + ' % de l’année écoulée' : '',
-    };
-
-    // ── Les actions, en trois colonnes.
-    const stNom = { alancer: 'à lancer', encours: 'en cours', fait: 'fait', abandonne: 'abandonné' };
-    const stSt = { alancer: 'background:var(--color-background-secondary);color:var(--color-text-muted)', encours: 'background:#FBEFE0;color:#8a5a1c', fait: 'background:#E3EFE6;color:#2d7a3e', abandonne: 'background:#F6E4E7;color:var(--color-primary)' };
-    const acts = d.actions || [];
-    const ligneAct = a => ({ id: a.id, libelle: a.libelle, effet: a.effetAn != null ? '+ ' + fK(a.effetAn) : '', trimestre: a.trimestre ? 'T' + a.trimestre : (a.dateLancement ? this.fD(a.dateLancement) : ''),
-      statut: a.statut, statutTxt: stNom[a.statut] || a.statut, statutSt: stSt[a.statut] || '', responsable: a.responsable || '', mesure: a.mesure || '', constate: a.effetConstate || '',
-      editer: () => this.setState({ pdvActEdit: Object.assign({}, a) }) });
-    const effetTotal = acts.filter(a => a.statut !== 'abandonne').reduce((s2, a) => s2 + (a.effetAn || 0), 0);
-    common.pdvActions = {
-      alancer: acts.filter(a => a.statut === 'alancer').map(ligneAct), encours: acts.filter(a => a.statut === 'encours').map(ligneAct),
-      fait: acts.filter(a => a.statut === 'fait').map(ligneAct), abandonne: acts.filter(a => a.statut === 'abandonne').map(ligneAct),
-      effetTotal: '+ ' + fK(effetTotal), n: acts.length,
-      ajouter: () => this.setState({ pdvActEdit: { id: 0, libelle: '', effetAn: '', trimestre: d.trimestreCourant, statut: 'alancer', responsable: 'franchisé', dateLancement: '', mesure: '', effetConstate: '' } }),
-    };
-    // La fiche d'une action (modale) : chaque champ écrit dans le brouillon, le bouton enregistre.
-    const ae = S.pdvActEdit;
-    if (ae) {
-      const setA = k => e => { const v = e.target.value; this.setState(s2 => ({ pdvActEdit: Object.assign({}, s2.pdvActEdit, { [k]: v }) })); };
-      common.pdvActEdit = {
-        titre: ae.id ? 'Modifier l’action' : 'Nouvelle action',
-        libelle: ae.libelle || '', effetAn: ae.effetAn == null ? '' : ae.effetAn, trimestre: String(ae.trimestre || ''), statut: ae.statut || 'alancer',
-        responsable: ae.responsable || '', dateLancement: ae.dateLancement || '', mesure: ae.mesure || '', effetConstate: ae.effetConstate || '',
-        setLibelle: setA('libelle'), setEffet: setA('effetAn'), setTrimestre: setA('trimestre'), setStatut: setA('statut'), setResponsable: setA('responsable'), setDate: setA('dateLancement'), setMesure: setA('mesure'), setConstate: setA('effetConstate'),
-        statuts: Object.keys(stNom).map(k => ({ v: k, nom: stNom[k], on: k === (ae.statut || 'alancer') })),
-        trimestres: [['', '—'], ['1', 'T1'], ['2', 'T2'], ['3', 'T3'], ['4', 'T4']].map(t => ({ v: t[0], nom: t[1], on: String(ae.trimestre || '') === t[0] })),
-        fermer: () => this.setState({ pdvActEdit: null }), rien: () => {},
-        enregistrer: () => { if (S.pdvBusy) { return; }
-          this.pdvEcrire('/plan/action', { shop: st.id, exercice: an, id: ae.id || 0, libelle: ae.libelle, effetAn: ae.effetAn, trimestre: ae.trimestre, statut: ae.statut, responsable: ae.responsable, dateLancement: ae.dateLancement, mesure: ae.mesure, effetConstate: ae.effetConstate })
-            .then(r => { if (r) { this.setState({ pdvActEdit: null }); } }); },
-        supprimer: ae.id ? () => { if (S.pdvBusy) { return; } this.pdvEcrire('/plan/action', { shop: st.id, exercice: an, id: ae.id, supprimer: true }).then(r => { if (r) { this.setState({ pdvActEdit: null }); } }); } : null,
-        peut: String(ae.libelle || '').trim() !== '',
-      };
-    }
-
-    // ── Les trimestres : constat, voix, état du rituel.
-    const VOIX = [['franchise', 'Franchisé', 'var(--color-primary)'], ['consultant', 'Consultant', '#B26A00'], ['marque', 'Marque', '#2d7a3e']];
-    const periode = { 1: 'jan – mar', 2: 'avr – juin', 3: 'juil – sep', 4: 'oct – déc' };
-    const sel = S.pdvSel || d.trimestreCourant;
-    common.pdvTrims = (d.trimestres || []).map(t => {
-      const notes = t.notes || {};
-      const nVoix = VOIX.filter(v => notes[v[0]] && notes[v[0]].texte).length;
-      const rv = t.revue || { etape: 1 };
-      return { t: t.t, label: t.label, periode: periode[t.t], ouvert: t.t === sel,
-        etat: t.clos ? 'clos' : (t.enCours ? 'en cours' : 'à venir'), futur: t.futur,
-        kpi: t.ecartPct != null ? fPct1(t.ecartPct) : (t.objectif != null ? 'objectif ' + fK(t.objectif) : '—'), kpiCol: t.ecartPct != null ? coul(t.ecartPct) : 'var(--color-text-muted)',
-        sous: t.realise != null ? fK(t.realise) + (t.attendu != null ? ' / ' + fK(t.attendu) : '') + (t.clients != null ? ' · ' + fCl(t.clients) + ' clients' : '') : (t.objectif != null ? '' : 'pas de budget'),
-        ratios: [t.food != null ? 'food ' + String(t.food).replace('.', ',') + ' %' : '', t.labour != null ? 'labour ' + String(t.labour).replace('.', ',') + ' %' : '', t.netPct != null ? 'résultat ' + String(t.netPct).replace('.', ',') + ' %' : ''].filter(Boolean).join(' · '),
-        voix: VOIX.map(v => ({ cle: v[0], nom: v[1], coul: v[2], texte: notes[v[0]] ? notes[v[0]].texte : '', signe: notes[v[0]] && notes[v[0]].le ? (notes[v[0]].par ? notes[v[0]].par + ' · ' : '') + this.fD(notes[v[0]].le) : '' })),
-        suite: notes.suite ? notes.suite.texte : '',
-        revueTxt: rv.valideLe ? 'revue validée le ' + this.fD(rv.valideLe) + (rv.validePar ? ' par ' + rv.validePar : '') : (nVoix || rv.etape > 1 ? 'revue en cours — étape ' + rv.etape + ' / 5 · ' + nVoix + ' voix sur 3' : (t.futur ? '' : 'revue à faire')),
-        revueCol: rv.valideLe ? '#2d7a3e' : (t.futur ? 'var(--color-text-muted)' : '#B26A00'),
-        ouvrir: () => this.setState({ pdvSel: t.t === sel ? 0 : t.t }),
-        rituel: t.futur ? null : () => this.setState({ pdvRituel: { t: t.t, etape: Math.min(5, Math.max(1, rv.etape || 1)) }, pdvDraft: {} }),
-        pdf: API_BASE + '/plan.pdf?shop=' + encodeURIComponent(st.id) + '&exercice=' + an + '&trimestre=' + t.t };
-    });
-
-    // ── Le rituel : cinq étapes sur le trimestre choisi.
-    const R = S.pdvRituel;
-    if (R) {
-      const t = (d.trimestres || []).find(x => x.t === R.t);
-      if (t) {
-        const notes = t.notes || {};
-        const etape = R.etape || 1;
-        const draftVoix = k => draft['voix.' + k] != null ? draft['voix.' + k] : (notes[k] ? notes[k].texte : '');
-        const sauverVoix = () => {
-          const ecr = ['franchise', 'consultant', 'marque', 'suite'].filter(k => draft['voix.' + k] != null && draft['voix.' + k] !== (notes[k] ? notes[k].texte : ''));
-          return ecr.reduce((p, k) => p.then(() => this.api('POST', '/plan/trimestre', { shop: st.id, exercice: an, trimestre: t.t, auteur: k, texte: draft['voix.' + k], par: qui })), Promise.resolve());
-        };
-        const aller = n => () => { if (S.pdvBusy) { return; }
-          this.setState({ pdvBusy: true, pdvErr: '' });
-          sauverVoix().then(() => this.api('POST', '/plan/revue', { shop: st.id, exercice: an, trimestre: t.t, etape: n, par: qui }))
-            .then(() => { this.setState({ pdvBusy: false, pdvRituel: { t: t.t, etape: n }, pdvDraft: {} }); this.pdvCharge(true); })
-            .catch(e => this.setState({ pdvBusy: false, pdvErr: 'Enregistrement refusé — ' + (e && e.message ? e.message : e) })); };
-        const actsT = acts.filter(a => a.statut !== 'abandonne' || a.trimestre === t.t);
-        const manque = ['franchise', 'consultant', 'marque', 'suite'].filter(k => !String(draftVoix(k)).trim());
-        common.pdvRituel = {
-          t: t.t, label: t.label + ' · ' + periode[t.t], etape,
-          etapes: [[1, 'Constat'], [2, 'Actions du trimestre'], [3, 'Annotations'], [4, 'Prochain trimestre'], [5, 'Validation & PDF']].map(e2 => ({ n: e2[0], nom: e2[1], on: e2[0] === etape, ok: e2[0] < etape })),
-          fermer: () => this.setState({ pdvRituel: null, pdvDraft: {} }), rien: () => {},
-          precedent: etape > 1 ? aller(etape - 1) : null, suivant: etape < 5 ? aller(etape + 1) : null,
-          suivantTxt: etape < 5 ? 'Étape ' + (etape + 1) + ' : ' + ['', 'constat', 'actions du trimestre', 'annotations', 'prochain trimestre', 'validation'][etape + 1] + ' ›' : '',
-          constat: [
-            { l: 'Objectif ' + t.label.split(' ')[0], v: t.objectif != null ? fK(t.objectif) : '—', s: t.attendu != null && t.enCours ? 'attendu ' + fK(t.attendu) + ' à ce jour' : 'budget mensuel réparti' },
-            { l: 'Réalisé', v: t.realise != null ? fK(t.realise) : '—', s: t.ecart != null ? fS(t.ecart) + ' · ' + fPct1(t.ecartPct) : (t.moisRealises + ' mois de chiffre'), col: coul(t.ecart) },
-            { l: 'Clients manquants', v: t.clients != null ? fCl(t.clients) : '—', s: t.panier != null ? 'écart ÷ panier ' + this.fU(t.panier) : '', col: coul(t.ecart), vif: t.clients != null && t.clients > 0 },
-            { l: 'Ratios', v: t.food != null ? String(t.food).replace('.', ',') + ' %' : '—', s: 'food cost' + (t.labour != null ? ' · labour ' + String(t.labour).replace('.', ',') + ' %' : '') + (t.netPct != null ? ' · résultat ' + String(t.netPct).replace('.', ',') + ' %' : '') },
-          ],
-          // Étape 2 : chaque action se met à jour sur place — statut et effet constaté.
-          actions: actsT.map(a => ({ id: a.id, libelle: a.libelle, effet: a.effetAn != null ? '+ ' + fK(a.effetAn) + '/an' : '', trimestre: a.trimestre ? 'T' + a.trimestre : '',
-            statut: a.statut, statuts: Object.keys(stNom).map(k => ({ v: k, nom: stNom[k], on: k === a.statut })), statutSt: stSt[a.statut] || '',
-            setStatut: e => { const v = e.target.value; this.pdvEcrire('/plan/action', Object.assign({}, a, { shop: st.id, exercice: an, statut: v })); },
-            constate: a.effetConstate || '',
-            setConstate: e => { const v = e.target.value; if (v === (a.effetConstate || '')) { return; } this.pdvEcrire('/plan/action', Object.assign({}, a, { shop: st.id, exercice: an, effetConstate: v })); },
-          })),
-          ajouterAction: common.pdvActions.ajouter,
-          // Étape 3 : les trois voix. Étape 4 : la suite.
-          voix: VOIX.map(v => ({ cle: v[0], nom: v[1], coul: v[2], val: draftVoix(v[0]), set: setD('voix.' + v[0]), signe: notes[v[0]] && notes[v[0]].le ? (notes[v[0]].par ? notes[v[0]].par + ' · ' : '') + this.fD(notes[v[0]].le) : '' })),
-          suite: draftVoix('suite'), setSuite: setD('voix.suite'),
-          suivantes: acts.filter(a => a.statut === 'alancer' || a.statut === 'encours').map(ligneAct),
-          suivantLabel: t.t < 4 ? 'T' + (t.t + 1) + ' ' + an : 'T1 ' + (an + 1),
-          // Étape 5 : ce qui manque, la validation, le PDF.
-          manque: manque.map(k => ({ franchise: 'la voix du franchisé', consultant: 'la voix du consultant', marque: 'la voix de la marque', suite: 'ce qui est mis en route au prochain trimestre' }[k])),
-          valide: !!(t.revue && t.revue.valideLe), valideTxt: t.revue && t.revue.valideLe ? 'Revue validée le ' + this.fDA(t.revue.valideLe) + (t.revue.validePar ? ' par ' + t.revue.validePar : '') : '',
-          valider: () => { if (S.pdvBusy) { return; }
-            this.setState({ pdvBusy: true, pdvErr: '' });
-            sauverVoix().then(() => this.api('POST', '/plan/revue', { shop: st.id, exercice: an, trimestre: t.t, valider: true, par: qui }))
-              .then(r => { if (r && r.ok !== false) { this.notify('Revue ' + t.label + ' validée'); this.setState({ pdvBusy: false, pdvDraft: {} }); this.pdvCharge(true); } else { this.setState({ pdvBusy: false, pdvErr: (r && r.error) || 'refus du serveur' }); } })
-              .catch(e => this.setState({ pdvBusy: false, pdvErr: 'Validation refusée — ' + (e && e.message ? e.message : e) })); },
-          pdf: API_BASE + '/plan.pdf?shop=' + encodeURIComponent(st.id) + '&exercice=' + an + '&trimestre=' + t.t,
-          brouillon: Object.keys(draft).some(k => k.startsWith('voix.')) ? 'modifications non enregistrées — elles partent à l’étape suivante' : '',
-        };
-      }
     }
   }
 
