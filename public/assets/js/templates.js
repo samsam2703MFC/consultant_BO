@@ -276,6 +276,7 @@ function tplCatalogue(c, x){
   const outils = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
       <input type="search" placeholder="Chercher une référence…" value="${esc(c.catQ)}" ${x.I(c.catPoserQ)} style="${inp};width:200px">
       <select ${x.C(c.catPoserCat)} style="${inp}">${(c.catCats || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
+      <select ${x.C(c.catPoserSaison)} style="${inp}">${(c.catSaisons || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
       <span style="display:inline-flex;gap:4px">${(c.catFenetres || []).map(f => `<button ${x.A(f.choisir)} style="${pill(f.on)}">${esc(f.nom)}</button>`).join('')}</span>
       <span style="font-size:11.5px;${mu}">${esc(c.catCompte)}</span><span style="flex:1"></span>
       <span style="display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap">
@@ -285,17 +286,16 @@ function tplCatalogue(c, x){
       <button ${x.A(c.catExporter)} style="${pill(false)}">Exporter</button></span></div>`;
   const L = c.catLignes || [];
   const tableau = `<div style="${carte};overflow:auto;flex:1;min-width:0"><table style="width:100%;border-collapse:collapse">
-    <thead><tr><th style="${TH}">Référence</th><th style="${TH};${n}">Prix</th><th style="${TH};${n}" title="(prix de vente moyen − coût matière première) ÷ prix de vente moyen">Marge nette</th>
-      <th style="${TH};${n}" title="${esc(c.catPeriode)}">Volume</th><th style="${TH};${n}" title="Sa part du chiffre d’affaires de toutes les références du réseau, sur la période">Part des ventes</th><th style="${TH};${n}" title="Le score du réseau : volume, marge, perte, comptoir, revue">Score</th><th style="${TH};${n}" title="Magasins qui l’ont vendue sur la période">Magasins</th>
-      <th style="${TH};${n}" title="La 2e moitié de la période face à la 1re, réseau entier">Tendance</th>${c.catColExtra ? `<th style="${TH};${n}">${esc(c.catColExtra)}</th>` : ''}<th style="${TH}">Décision</th><th style="${TH};text-align:center" title="Imposée en boutique (l’assortiment) et gardée au score — un clic suffit">Obligatoire</th></tr></thead>
+    <thead><tr>${(c.catCols || []).map(h => `<th style="${TH};${h.num ? n : ''};${h.k === 'oblig' ? 'text-align:center' : ''}" title="${esc(h.titre)}"><button ${x.A(h.trier)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit;color:${h.on ? 'var(--color-primary)' : 'inherit'};white-space:nowrap">${esc(h.lib)} <span style="font-size:9px;opacity:${h.on ? 1 : 0.45}">${h.fleche}</span></button></th>`).join('')}</tr></thead>
     <tbody>${L.map(l => `<tr ${x.A(l.ouvrir)} style="cursor:pointer;${l.on ? 'background:#f7ecec' : ''}">
-      <td style="${TD}"><b>${esc(l.nom)}</b>${l.sous ? `<div style="font-size:11px;${mu}">${esc(l.sous)}</div>` : ''}</td>
-      <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td><td style="${TD};${n}">${esc(l.part)}</td>
+      <td style="${TD};min-width:170px"><b>${esc(l.nom)}</b>${l.sous ? `<div style="font-size:11px;${mu}">${esc(l.sous)}</div>` : ''}</td>
+      <td style="${TD};font-size:12px">${l.saison ? esc(l.saison) + (l.saisonSeule ? `<div style="font-size:10px;${mu}">seulement en saison</div>` : '') : `<span style="${mu}">—</span>`}</td>
+      <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td><td style="${TD};${n}">${esc(l.part)}</td><td style="${TD};${n}">${esc(l.rang)}${l.rangCat ? `<div style="font-size:10.5px;${mu}">${esc(l.rangCat)}</div>` : ''}</td>
       <td style="${TD};${n};font-weight:700;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
       <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
       <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
       <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.basculerOblig)} role="switch" aria-checked="${l.oblig}" aria-label="Obligatoire" title="${l.oblig ? (l.obligSaison ? 'Obligatoire pendant une saison — un clic la retire' : 'Obligatoire — un clic la retire') : 'Un clic la rend obligatoire, toute l’année'}" style="width:38px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;vertical-align:middle;background:${l.oblig ? '#2d7a3e' : 'rgba(0,0,0,.18)'}"><i style="position:absolute;top:3px;${l.oblig ? 'left:19px' : 'left:3px'};width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></i></button>${l.obligSaison ? `<div style="font-size:9.5px;${mu}">saison</div>` : ''}`}</td></tr>`).join('')
-      || `<tr><td colspan="11" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
+      || `<tr><td colspan="${(c.catCols || []).length}" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
     ${c.catTronque ? `<div style="padding:9px 12px;font-size:11.5px;${mu}">… et ${c.catTronque} autres : affinez la recherche ou la catégorie.</div>` : ''}</div>`;
   const f = c.catFiche;
   const lien = (fn, t) => fn ? `<button ${x.A(fn)} style="border:none;background:none;padding:0;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;text-align:left">${esc(t)}</button>` : '';
