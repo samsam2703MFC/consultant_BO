@@ -12432,28 +12432,6 @@ class App {
   }
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
-  /**
-   * Ramène un contrôle masqué dans la liste du jour.
-   *
-   * Le calcul propose, l'humain dispose : un nouveau gérant, des travaux, une
-   * réclamation — aucune moyenne ne les voit venir. La réouverture tient une
-   * cadence complète, sinon le prochain rendu l'effacerait.
-   */
-  ctrlRouvrir(shopId, taskId, nom){
-    if (!window.confirm('Remettre « ' + nom + ' » dans les contrôles du jour ?')) { return; }
-    write(this.source, 'PUT', '/taches/maitrise', { shopId: +shopId, taskId: +taskId, action: 'rouvrir' })
-      .then(r => {
-        if (!r || r.ok === false) { this.notify('Non rouvert — ' + ((r && r.error) || 'refusé')); return; }
-        this.notify('Contrôle rouvert — « ' + nom + ' »');
-        // Relecture de la MÊME journée : la liste doit montrer la tâche
-        // revenue, pas attendre un changement de date.
-        const d = (this.D.pwaTasks || {}).date || '';
-        readOne('/pwa/tasks' + (d ? '?date=' + encodeURIComponent(d) : '')).then(pt => {
-          if (pt) { this.D.pwaTasks = pt; }
-          this.setState({});
-        });
-      });
-  }
   ctrlOpenTask(shopId, taskId, date, tacheNom){
     this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
@@ -12798,35 +12776,33 @@ class App {
   /**
    * Les cartes d'une boutique : l'état de chaque tâche, sa photo et ses
    * repères, dans l'ordre du dashboard — les écarts d'abord, les non rendues
-   * en fin de piste. Les tâches maîtrisées restent sous leur bandeau.
+   * en fin de piste. Toute photo rendue est à noter (18/10/2026 : plus de
+   * contrôle par exception, une tâche ne sort plus de la liste).
    */
   ctrlCartes(s, pt, garde, seuil, nomNiveau){
     const S = this.state;
     const P = this.ctrlPhotosLire(s.shopId, pt.date);
     const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
-    const RANG = { nc: 0, ctl: 1, ok: 2, mai: 3, ko: 4, mu: 5 };
+    const RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
     const hh = v => v ? String(v).slice(11, 16) : '';
     const etat = t => {
       if (t.note != null) {
         if (t.note >= seuil && t.accepte !== false) { return { c: 'ok', bd: t.note + '/5' }; }
         return { c: 'nc', bd: t.note + '/5 · ' + String(nomNiveau(t.note)).split(/[—–-]/).pop().trim().toLowerCase() };
       }
-      // Maîtrisée (contrôle par exception) : sa photo reste dans le rail (10/10/2026), marquée, sans être à noter.
-      if (t.maitrise && t.maitrise.masquee && t.statut !== 'nonRendue') { return { c: 'mai', bd: 'maîtrisée' }; }
       if (t.statut === 'aControler' || t.statut === 'aValider') { return { c: 'ctl', bd: 'à contrôler' }; }
       if (t.statut === 'sansPhoto') { return { c: 'mu', bd: 'sans photo' }; }
       return { c: 'ko', bd: 'non rendue' };
     };
     const nom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
     const cl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
-    // Toutes les photos du jour, celles des tâches maîtrisées comprises (10/10/2026) : la liste « à noter » les écarte, le rail non.
-    const L = (s.taches || []).filter(garde).filter(t => !(t.maitrise && t.maitrise.masquee) || t.statut !== 'nonRendue')
+    const L = (s.taches || []).filter(garde)
       .map(t => Object.assign({ e: etat(t), p: ph[String(t.taskId)] || null }, t))
       .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || nom(a).localeCompare(nom(b)));
     const nb = c => L.filter(t => t.e.c === c).length;
     const choix = (S.ctrlPuce || {})[String(s.shopId)] || 'tout';
     const puceSel = choix !== 'tout' && !nb(choix) ? 'tout' : choix;
-    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['mai', 'Maîtrisées', '#5b6b78', nb('mai')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
+    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
       .filter(f => f[3]).map(f => ({ nom: f[1], coul: f[2], nb: f[3], on: puceSel === f[0],
         pick: () => this.setState(s2 => ({ ctrlPuce: Object.assign({}, s2.ctrlPuce, { [String(s.shopId)]: f[0] }) })) }));
     const F = puceSel === 'tout' ? L : L.filter(t => t.e.c === puceSel);
@@ -12849,7 +12825,6 @@ class App {
       const constat = t.e.c === 'nc' ? (reps.map(r => r.txt).filter(Boolean).join(', ') || t.comment || 'écart relevé') + note
         : t.e.c === 'ok' ? 'conforme' + note
         : t.e.c === 'ctl' ? 'photo déposée, pas encore notée'
-        : t.e.c === 'mai' ? 'maîtrisée' + (t.maitrise && t.maitrise.moyenne != null ? ' · ' + String(t.maitrise.moyenne).replace('.', ',') + ' / 5' : '') + (t.maitrise && t.maitrise.recontrole ? ' · re-contrôle le ' + this.fD(t.maitrise.recontrole) : '')
         : t.e.c === 'mu' ? 'rendue sans photo' : (cl(t) || 'non rendue');
       return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe),
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
@@ -12957,24 +12932,10 @@ class App {
             btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
             toggle: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
             open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
-            // Contrôle par exception : maîtrisée, la tâche sort de la liste du
-            // jour — sans disparaître. Le motif et la date de re-contrôle
-            // restent lisibles, et un bouton la ramène tout de suite.
-            maitrisee: !!(t.maitrise && t.maitrise.masquee),
-            maitriseMotif: (t.maitrise && t.maitrise.motif) || '',
-            maitriseMoy: (t.maitrise && t.maitrise.moyenne != null)
-              ? String(t.maitrise.moyenne).replace('.', ',') + ' / 5 sur ' + t.maitrise.nb + ' contrôles' : '',
-            recontrole: (t.maitrise && t.maitrise.recontrole) ? 'Re-contrôle le ' + this.fD(t.maitrise.recontrole) : '',
-            rouvrir: () => this.ctrlRouvrir(s.shopId, t.taskId, t.tache),
           }));
-        const aFaire = taches.filter(t => !t.maitrisee);
-        const masquees = taches.filter(t => t.maitrisee);
         return { shop: s.shop, shopId: s.shopId, nTaches: (s.taches || []).length,
           nValid: (s.taches || []).filter(x => x.valide).length,
-          taches: aFaire, masquees, nMasquees: masquees.length,
-          // Une boutique dont TOUT est maîtrisé n'est pas vide : elle est au
-          // vert. Le dire vaut mieux que de la faire disparaître de l'écran.
-          vide: aFaire.length === 0 && masquees.length === 0 };
+          taches, vide: taches.length === 0 };
       }).filter(s => !(common.ctrlOnly !== 'tous' && s.vide));
     common.ctrlShops = shops;
     common.ctrlEmpty = shops.length === 0;
@@ -12987,9 +12948,6 @@ class App {
       const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
       shops.forEach(s2 => { s2.cq = this.ctrlCartes(brut[String(s2.shopId)] || { shopId: s2.shopId, taches: [] }, pt, garde, seuilC, nomNiveau); });
     }
-    common.ctrlMasqTout = !!S.ctrlMasqTout;
-    common.ctrlMasqPlier = () => this.setState({ ctrlMasqTout: !S.ctrlMasqTout });
-    common.ctrlMasqTotal = shops.reduce((a, s2) => a + s2.nMasquees, 0);
 
     common.ctrlConsultants = (pt.consultants || []).map(c => ({
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),

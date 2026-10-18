@@ -2784,11 +2784,6 @@ function tplControle(c, x){
               </tbody>
             </table>
             </div>
-            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
-                 jour sans disparaître. Le motif reste lisible et un bouton
-                 ramène la tâche tout de suite — un contrôle qui s'efface sans
-                 dire pourquoi ressemble à un oubli. -->
-            ${tplCtrlMasquees(s, c, x)}
           </div>`).join('')}
       </div>`)}
     ${c.ctrlConsultants && c.ctrlConsultants.length ? `
@@ -2817,28 +2812,6 @@ function tplControle(c, x){
         </div>
       </div>` : ''}
   </div>`;
-}
-
-/* Les contrôles maîtrisés d'une boutique : sous la liste comme sous les photos.
-   CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du jour sans
-   disparaître — le motif reste lisible et un bouton ramène la tâche. */
-function tplCtrlMasquees(s, c, x){
-  const { esc } = x;
-  return `${s.nMasquees ? `<div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
-              <button ${x.A(c.ctrlMasqPlier)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
-                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">${s.nMasquees} contrôle(s) maîtrisé(s)</span>
-                <span style="font-size:11px;color:var(--color-text-muted)">${c.ctrlMasqTout ? '— masquer le détail' : '— afficher'}</span>
-              </button>
-              ${c.ctrlMasqTout ? `<div style="padding:0 18px 12px">
-                ${s.masquees.map(t => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
-                  <span style="flex:1;min-width:0">
-                    <span style="font-size:12.5px;font-weight:500">${esc(t.tache)}</span>
-                    <span style="display:block;font-size:11px;color:var(--color-text-muted)">${esc(t.maitriseMoy || t.maitriseMotif)}${t.recontrole ? ' · ' + esc(t.recontrole) : ''}</span>
-                  </span>
-                  <button ${x.A(t.rouvrir)} title="Remettre ce contrôle dans la liste du jour" style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>
-                </div>`).join('')}
-              </div>` : ''}
-            </div>` : ''}`;
 }
 
 /* Une boutique en photos : l'en-tête avec ses filtres, le rail, le pied. Les
@@ -2872,7 +2845,6 @@ function tplCtrlPhotos(s, c, x, card){
             ${q.sansPhoto ? `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.sansPhotoTxt)}</div>`
             : q.cartes.length ? `<div class="db-cqrail"><button type="button" class="db-cqfl g" ${x.A(q.gauche)} aria-label="précédentes">‹</button><div class="db-cqpiste">${q.cartes.map(carte).join('')}</div><button type="button" class="db-cqfl d" ${x.A(q.droite)} aria-label="suivantes">›</button></div><div class="db-cqpied">${esc(q.pied)}</div>`
             : `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.vide)}</div>`}
-            ${tplCtrlMasquees(s, c, x)}
           </div>`;
 }
 

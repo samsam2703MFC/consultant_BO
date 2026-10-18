@@ -5569,8 +5569,7 @@
    * que le consultant en a dit : une bande de photos sous les tâches du jour,
    * les écarts d'abord, puis ce qui attend encore le consultant, puis le
    * conforme ; les contrôles jamais rendus y tiennent leur place en case
-   * vide. Un clic ouvre la photo en grand, avec les repères, le constat et la
-   * tenue de la tâche sur ses derniers contrôles.
+   * vide. Un clic ouvre la photo en grand, avec les repères et le constat.
    *
    * Deux lectures : la journée (`/pwa/tasks`, déjà lue pour les tâches) et
    * ses photos (`/pwa/tasks/photos`, une seule volée). L'URL signée d'une
@@ -5700,7 +5699,7 @@
         <button type="button" class="db-cqfl d" data-cqpas="1" aria-label="suivantes">›</button></div>
       <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}</div></div>`;
   }
-  /** La photo en grand : repères, constat, tenue de la tâche ; ‹ › et Échap. */
+  /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {
     if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops')) { return ''; }
     const L = cqListe();
@@ -5710,16 +5709,13 @@
     const x = F[i];
     const note = x.note != null ? `${x.note}/5${x.valideeLe ? ' ' + (String(x.valideeLe).slice(0, 10) === S.date ? 'à ' : '') + cqQuand(x.valideeLe) : ''}${(x.valideePar || x.consultant) ? ' par ' + esc(x.valideePar || x.consultant) : ''}`
       : (x.e.c === 'ctl' ? 'pas encore notée' : '—');
-    const M = x.maitrise || {};
-    const tenue = M.moyenne != null ? `${nf(M.moyenne, 1)} / 5 sur ${M.nb} contrôle${M.nb > 1 ? 's' : ''}${M.masquee && M.recontrole ? ` · maîtrisée, recontrôlée le ${esc(fD(M.recontrole))}` : ''}`
-      : (M.nb === 0 ? 'pas encore d’historique' : '');
     const reps = x.reperes.filter(r => r.txt);
     const constat = x.comment && !/^auto/i.test(x.comment) ? x.comment : '';
     const q = reps.length || constat ? `<q class="${x.e.c}">${reps.map(r => `<b>${r.n}. ${esc(r.txt)}</b>`).join('<br>')}${constat && (!reps.length || !reps.some(r => constat.indexOf(r.txt) >= 0)) ? (reps.length ? '<br>' : '') + esc(constat) : ''}</q>` : '';
     const rendu = x.e.c === 'ko' ? (S.date === AUJ ? 'pas encore rendue' : 'pas rendue ce jour')
       : (x.faitLe ? (String(x.faitLe).slice(0, 10) === S.date ? 'à ' : '') + cqQuand(x.faitLe) + (x.faitePar ? ' par ' + esc(x.faitePar) : '') + (x.e.c === 'mu' ? ', sans photo' : '') : 'rendue');
     const fiche = `<div class="fi"><em class="cqbd ${x.e.c}">${esc(x.e.bd)}</em><h3>${esc(cqNom(x))}</h3>${x.cl ? `<div class="q">${esc(cqCl(x.cl))}</div>` : ''}${q}
-      <dl><dt>Rendue</dt><dd>${rendu}</dd><dt>Notée</dt><dd>${note}</dd>${tenue ? `<dt>Tenue</dt><dd>${tenue}</dd>` : ''}</dl>
+      <dl><dt>Rendue</dt><dd>${rendu}</dd><dt>Notée</dt><dd>${note}</dd></dl>
       ${x.ph ? `<a class="db-lien" href="${esc(x.ph.photo)}" target="_blank" rel="noopener">Ouvrir la photo seule ↗</a>` : ''}</div>`;
     const nav = `${i + 1} / ${F.length}${S.cqFiltre !== 'tout' ? ' · ' + esc((CQ_FILTRES.find(f => f[0] === S.cqFiltre) || [])[1] || '').toLowerCase() : ''}`;
     if (mobile) {
