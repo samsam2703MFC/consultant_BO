@@ -282,6 +282,7 @@ function tplCatalogue(c, x){
       <span style="font-size:11.5px;${mu}">${esc(c.catCompte)}</span><span style="flex:1"></span>
       <span style="display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap">
       <span style="font-size:12px;${mu};white-space:nowrap" title="Les seuils de décision du score, enregistrés pour tout le réseau">Garder &gt; <input type="number" min="0" max="100" value="${esc(c.catSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="${inp};width:62px;padding:5px 8px"> · Modifier ≥ <input type="number" min="0" max="100" value="${esc(c.catSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="${inp};width:62px;padding:5px 8px"></span>
+      <button ${x.A(c.catPareto)} style="${pill(false)}" title="Les références qui font 80 % du chiffre, avec le prix et le volume de chaque magasin">⎙ PDF 20/80</button>
       <button ${x.A(c.pdPdf)} style="${pill(false)}" title="Toutes les références, leur score et leur décision">⎙ PDF d’arbitrage</button>
       ${c.pdCatChoisie ? `<button ${x.A(c.pdPdfCategorie)} style="${pill(false)}" title="La catégorie choisie, volume par magasin compris">⎙ PDF de la catégorie</button>` : ''}
       <button ${x.A(c.catExporter)} style="${pill(false)}">Exporter</button></span></div>`;
