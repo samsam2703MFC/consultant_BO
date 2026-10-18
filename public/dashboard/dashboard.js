@@ -3161,9 +3161,12 @@
         const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
         let act = '';
         if (l.src === 'mag') {
-          if (l.etat === 'brouillon' || l.etat === 'refusee') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Reprendre</button><button class="db-btn" data-pmdel="${esc(l.id)}">Supprimer</button>`; }
-          else if (l.etat === 'validee') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Modifier</button><button class="db-btn" data-pmdel="${esc(l.id)}">Retirer</button>`; }
-          else { act = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`; }
+          // Modifier et dupliquer partout où c'est possible (18/10/2026) : en caisse, les changements partent au panel.
+          const dup = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`;
+          if (l.etat === 'brouillon' || l.etat === 'refusee') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Reprendre</button>${dup}<button class="db-btn" data-pmdel="${esc(l.id)}">Supprimer</button>`; }
+          else if (l.etat === 'validee') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Modifier</button>${dup}<button class="db-btn" data-pmdel="${esc(l.id)}">Retirer</button>`; }
+          else if (l.etat === 'en_caisse') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}" title="les changements partent au panel, sur la même promotion">Modifier</button>${dup}`; }
+          else { act = dup; }
         } else if (l.sorte === 'xy') { act = `<button class="db-btn" data-pmdup="panel:${esc(l.id)}" title="en faire une promotion du magasin">Dupliquer</button>`; }
         const msg = (l.d && l.d.message ? `<div class="pm-msg">${l.etat === 'refusee' ? 'Renvoyée' : 'La marque'} : « ${esc(l.d.message)} »</div>` : '')
           + (l.d && l.d.motif && (l.etat === 'validee' || l.etat === 'en_caisse') ? `<div class="db-mini" style="margin-top:3px">${esc(l.d.motif.charAt(0).toUpperCase() + l.d.motif.slice(1))}</div>` : '')
@@ -3562,11 +3565,12 @@
     const W = S.pmW, e = W.etape;
     const prec = e > 1 ? `<button class="db-btn pm-gros" data-pmet="${e - 1}">‹ Retour : ${esc(PM_ETAPES[e - 2].toLowerCase())}</button>` : '<span></span>';
     const suiv = e < PM_FIN ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
-      : `<span class="pm-boutons"><button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button><button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : 'Enregistrer la promotion ›'}</button></span>`;
+      : `<span class="pm-boutons">${W.enCaisse ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : 'Enregistrer la promotion ›')}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
         ${W.d.id ? '' : `<div class="pm-f"><span class="db-lab">Remplir un exemple</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => `<button type="button" data-pmexemple="${k}"${pmProduits() ? '' : ' disabled title="lecture des produits du magasin…"'}>${lib}</button>`).join('')}</span></div>`}
         <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
-        ${e < PM_FIN ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button>` : ''}</div>
+        ${e < PM_FIN && !W.enCaisse ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''}>Garder en brouillon</button>` : ''}</div>
+      ${W.enCaisse ? `<div class="pm-warn" style="margin-bottom:10px">En caisse${W.enCaisse !== true ? ' (promotion n° ' + esc(W.enCaisse) + ' au panel)' : ''} : les changements partent au panel sur la même promotion — mise inactive le temps de la relecture, puis réactivée. Pour garder l’actuelle telle quelle, dupliquez-la plutôt.</div>` : ''}
       ${W.exempleErr ? `<div class="pm-warn" style="margin-bottom:10px">${esc(W.exempleErr)}</div>` : ''}
       <div class="pm-wz" id="pm-wz">${pmStepper(W)}</div>
       <div class="pm-grille"><div class="db-card pm-etape"><div class="pm-step">${pmEtape(W)}</div>${e === 2 || e === 3 ? `<div style="padding:0 20px 16px" id="pm-fixe">${pmFixe(W)}</div>` : ''}<div class="pm-piedw">${prec}${suiv}</div></div>
@@ -3610,7 +3614,7 @@
         if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer') { W.etape = PM_FIN; } return; }
         const dm = j.demande;
         S.pmMsg = action !== 'envoyer' ? `Brouillon gardé : « ${esc(dm.nom || 'sans nom')} ».`
-          : (dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — créée au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.${(dm.exclusAuto || []).length ? ' Sortis d’office : ' + esc(dm.exclusAuto.slice(0, 5).join(', ')) + (dm.exclusAuto.length > 5 ? '…' : '') + '.' : ''}`
+          : (dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.${(dm.exclusAuto || []).length ? ' Sortis d’office : ' + esc(dm.exclusAuto.slice(0, 5).join(', ')) + (dm.exclusAuto.length > 5 ? '…' : '') + '.' : ''}`
             : `Enregistrée : « ${esc(dm.nom)} », mais pas encore en caisse — ${esc(dm.panelErreur || 'le panel ne l’a pas prise')}. La marque la reprend.`);
         S.pmF = action !== 'envoyer' ? 'brouillons' : (dm.statut === 'en_caisse' ? 'actives' : 'enregistrees');
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
@@ -3641,7 +3645,10 @@
     on('[data-pmq]', 'input', el => { S.pmQ = el.value; rendre(); });
     on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
-    on('[data-pmedit]', 'click', el => { const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit); if (d) { pmOuvrir(pmDepuis(d), PM_FIN); } });
+    on('[data-pmedit]', 'click', el => {
+      const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
+      if (d) { pmOuvrir(pmDepuis(d), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; rendre(); }
+    });
     on('[data-pmdup]', 'click', el => pmDupliquer(el.dataset.pmdup));
     on('[data-pmcoef]', 'click', el => pmCoefOuvrir(el.dataset.pmcoef));
     on('[data-pmcanm]', 'click', el => { S.pmCanM = el.dataset.pmcanm; rendre(); });
