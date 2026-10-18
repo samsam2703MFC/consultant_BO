@@ -514,7 +514,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/stats-moisson') { return wr_stats_ventes_moisson(); }
     if ($method === 'POST' && $path === '/ventes/crois-moisson') { return wr_pv_crois_moisson(); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
-    if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
     if ($method === 'POST' && $path === '/products/categorie.pdf') { return wr_prod_categorie_pdf(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }

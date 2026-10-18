@@ -807,25 +807,6 @@ function wr_prod_revue(string $id): array
 }
 
 /**
- * PUT /products/{id}/necessaire {necessaire} — cocher ou décocher « nécessaire » :
- * une référence à garder quoi qu'en disent la marge et le score (un produit
- * d'appel, une pièce de gamme, une obligation d'enseigne). La revue posée
- * reste intacte dans les deux sens.
- */
-function wr_prod_necessaire(string $id): array
-{
-    $b = body();
-    $id = mb_substr(trim($id), 0, 24);
-    if ($id === '') { http_response_code(422); return ['error' => 'référence manquante']; }
-    $on = filter_var($b['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
-    Db::exec('INSERT INTO ceo_prod_revue (id_produit, note, necessaire, auteur, maj) VALUES (?,NULL,?,?,?)
-              ON DUPLICATE KEY UPDATE necessaire = VALUES(necessaire), maj = VALUES(maj)',
-        [$id, $on, mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 80) ?: null, date('Y-m-d H:i:s')]);
-    Db::exec('DELETE FROM ceo_prod_revue WHERE id_produit = ? AND note IS NULL AND necessaire = 0', [$id]);
-    return ['ok' => true, 'id' => $id, 'necessaire' => $on === 1];
-}
-
-/**
  * POST /products/arbitrage.pdf — le PDF « garder / modifier / effacer ».
  *
  * L'écran envoie SES lignes, score compris : le score est calculé une seule
@@ -881,7 +862,7 @@ function wr_prod_arbitrage_pdf(): array
         . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . ($pond !== '' ? 'Score : ' . $e($pond) . '. ' : '')
         . 'Revue : la note franchiseur de 1 à 5 étoiles, posée sur l’écran Scoring, qui pèse dans le score.'
         . ($nSans > 0 ? ' <b>Sans vente</b> (' . $nSans . ') : au catalogue, mais rien de vendu sur la période.' : '')
-        . ($nNec > 0 ? ' <b>Nécessaire</b> (' . $nNec . ') : gardée quoi qu’en disent la marge et le score.' : '')
+        . ($nNec > 0 ? ' <b>Obligatoire</b> (' . $nNec . ') : imposée en boutique, gardée quoi qu’en disent la marge et le score.' : '')
         . ' La case « Validé » se coche en réunion.</div>';
     $tuile = fn (string $cap, int $n, string $coul, string $crit) => '<td width="33%" style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2.6mm 2mm;text-align:center">'
         . '<div style="font-size:7.5pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
@@ -907,7 +888,7 @@ function wr_prod_arbitrage_pdf(): array
             $necL = filter_var($r['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $sansV = filter_var($r['sansVente'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $h .= '<tr><td class="l" style="font-weight:bold">' . $e($r['nom'] ?? '')
-                . ($necL ? ' <span style="font-size:6.5pt;font-weight:normal;color:#2d7a3e;border:0.6pt solid #bfdcc5;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">nécessaire</span>' : '')
+                . ($necL ? ' <span style="font-size:6.5pt;font-weight:normal;color:#2d7a3e;border:0.6pt solid #bfdcc5;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">obligatoire</span>' : '')
                 . ($sansV ? ' <span style="font-size:6.5pt;font-weight:normal;color:#8b8177;border:0.6pt solid #d9d2c6;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">sans vente</span>' : '')
                 . '</td><td class="l" style="color:#8b8177">' . $e($r['cat'] ?? '') . '</td>'
                 . '<td class="l" style="color:#8b8177">' . $e($r['fourn'] ?? '') . '</td>'
@@ -1068,7 +1049,7 @@ function ep_products_couverture(): array
  * POST /products/categorie.pdf — UNE catégorie, complète, en paysage :
  * chaque référence avec tout ce que l'écran sait d'elle (fournisseur,
  * volume et sa ventilation par magasin, prix, achat, marge, taux, perte,
- * positions, score, revue, nécessaire, décision). L'écran envoie ses lignes,
+ * positions, score, revue, obligatoire, décision). L'écran envoie ses lignes,
  * le serveur met en page : le papier ne peut pas dire autre chose que lui.
  */
 function wr_prod_categorie_pdf(): array
@@ -1127,7 +1108,7 @@ function wr_prod_categorie_pdf(): array
         . '<div style="font-family:Georgia,serif;font-size:18pt;margin:0 0 0.5mm">' . $e($cat) . '</div>'
         . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2.5mm">' . count($lignes) . ' référence(s), toutes les informations de l’écran Scoring.'
         . ($pond !== '' ? ' Score : ' . $e($pond) . '.' : '')
-        . ' Décision : garder au-dessus de ' . $num($garder) . ', modifier à partir de ' . $num($modifier) . ', effacer en dessous ; « nécessaire » prime.'
+        . ' Décision : garder au-dessus de ' . $num($garder) . ', modifier à partir de ' . $num($modifier) . ', effacer en dessous ; « obligatoire » prime.'
         . ($nSans > 0 ? ' <b>Sans vente</b> (' . $nSans . ') : au catalogue, rien de vendu sur la période.' : '') . '</div>';
     // Les tuiles : ce que pèse la catégorie.
     $tuile = fn (string $cap, string $val, string $sous) => '<td style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2mm 2mm;text-align:center">'
@@ -1135,7 +1116,7 @@ function wr_prod_categorie_pdf(): array
         . '<div style="font-family:Georgia,serif;font-size:13pt;color:#221E1A">' . $val . '</div>'
         . '<div style="font-size:6.5pt;color:#5d564e">' . $e($sous) . '</div></td>';
     $h .= '<table width="100%" cellpadding="0" cellspacing="3"><tr>'
-        . $tuile('RÉFÉRENCES', (string) count($lignes), ($nNec ? $nNec . ' nécessaire(s) · ' : '') . $nSans . ' sans vente')
+        . $tuile('RÉFÉRENCES', (string) count($lignes), ($nNec ? $nNec . ' obligatoire(s) · ' : '') . $nSans . ' sans vente')
         . $tuile('VOLUME', $num($volTot), 'pièces vendues sur la période')
         . $tuile('CHIFFRE D’AFFAIRES', $eur($caTot), $volTot > 0 ? 'prix moyen ' . $eur($caTot / $volTot) : '')
         . $tuile('MARGE BRUTE', $mgOk ? $eur($mgTot) : 'n.d.', $mgOk && $caTot > 0 ? $pct($mgTot / $caTot, 1) . ' du CA' : 'coût matière absent')
@@ -1157,7 +1138,7 @@ function wr_prod_categorie_pdf(): array
     foreach ($lignes as $l) {
         $d = (string) ($l['decision'] ?? '');
         $h .= '<tr><td class="l" style="font-weight:bold">' . $e($l['nom'] ?? '')
-            . (!empty($l['necessaire']) ? ' <span class="etq" style="color:#2d7a3e;border-color:#bfdcc5">nécessaire</span>' : '')
+            . (!empty($l['necessaire']) ? ' <span class="etq" style="color:#2d7a3e;border-color:#bfdcc5">obligatoire</span>' : '')
             . (!empty($l['sansVente']) ? ' <span class="etq">sans vente</span>' : '')
             . '<div style="font-size:6pt;color:#8b8177;font-weight:normal">' . $e($l['id'] ?? '') . ((string) ($l['motifPerte'] ?? '') !== '' ? ' · rebut : ' . $e($l['motifPerte']) : '') . '</div></td>'
             . '<td class="l" style="color:#8b8177">' . $e($l['fourn'] ?? '') . '</td>'
