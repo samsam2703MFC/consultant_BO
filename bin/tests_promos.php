@@ -95,6 +95,7 @@ final class ErpApi
 function catalogueCouts(): array { return [6 => ['mat' => 0.50, 'source' => 'panel (products/available)'], 4 => ['mat' => 9.99]]; }
 
 require __DIR__ . '/../src/promos_magasin.php';
+require __DIR__ . '/../src/promos_ventes.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -317,6 +318,25 @@ $GLOBALS['corps']['nom'] = 'Quarts perdus'; $GLOBALS['corps']['du'] = $j(100); $
 $r = wr_promos_magasin();
 verifie('le panel ne reprend pas la portion : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'validee' && str_contains((string) $r['demande']['panelErreur'], 'portion'), json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 ErpApi::$perdPortion = false;
+
+echo "Les promotions par canal\n";
+$regle = pvNormaliser(['id' => 11, 'name' => "Cookie's !", 'promotion_type' => 'BUY_X_GET_Y', 'status' => 'ACTIVE', 'priority' => 100, 'shop_scope_type' => 'ALL_SHOPS',
+    'trigger' => ['quantity' => 2, 'category_ids' => [10]], 'reward' => ['quantity' => 1, 'category_ids' => [10], 'type' => 'FIXED_AMOUNT_DISCOUNT', 'value' => 1.40]]);
+// Une ligne de ticket : [clé, pid, q, prix unitaire, remise, total] ; le produit 9 n'est dans aucune promotion.
+$tk = static fn (int $t, float $rem, int $q = 3, int $pid = 1) => ['t' => $t, 'mn' => '10:00', 'l' => [[(string) $pid, $pid, $q, 2.40, $rem, $q * 2.40 - $rem]]];
+$jours = ['2026-10-10' => [$tk(501, 1.40), $tk(502, 1.40), $tk(503, 2.80, 6), $tk(504, 0.99, 1, 9)], '2026-10-11' => [$tk(505, 1.40)], '2026-10-12' => null];
+// 501 : une précommande au comptoir ; 502 : click & collect encaissé au magasin ; 505 : livraison ; une commande payée en ligne, sans ticket.
+$cmd = [['canal' => 'compt', 'tx' => 501, 'statut' => 'remise'], ['canal' => 'cc', 'tx' => 502, 'statut' => 'remise'], ['canal' => 'liv', 'tx' => 505, 'statut' => 'livrée'], ['canal' => 'cc', 'tx' => 0, 'statut' => 'à préparer']];
+$r = pmCanaux($jours, [$regle], $cmd, [1 => 10], [], 4);
+$p = array_column($r['promos'], null, 'id');
+verifie('au comptoir : 3 fois sur 2 tickets (6 cookies = 2 fois), 4,20 € de remise', ($p[11]['compt'] ?? null) === ['n' => 3, 'r' => 4.2, 't' => 2], json_encode($p[11] ?? $r));
+verifie('le ticket d’une commande webshop : dans son canal (click & collect, livraison)', $p[11]['cc']['n'] === 1 && $p[11]['liv']['n'] === 1 && $p[11]['cc']['r'] === 1.4);
+verifie('une remise qu’aucune promotion n’explique : à part, en dernier', $r['promos'][1]['id'] === 'x' && $r['promos'][1]['compt']['n'] === 1 && $r['promos'][1]['compt']['r'] === 0.99, json_encode($r['promos']));
+verifie('jour par jour : comptoir et web, le jour pas lu marqué', $r['parJour'][0]['compt']['n'] === 4 && $r['parJour'][0]['web']['n'] === 1 && $r['parJour'][1]['web']['n'] === 1
+    && $r['parJour'][2]['lu'] === false && $r['joursSans'] === ['2026-10-12'], json_encode($r['parJour']));
+verifie('les commandes payées en ligne comptées à part', $r['enLigne'] === ['cc' => 1, 'liv' => 0] && $r['commandes'] === true && $r['total']['compt']['n'] === 4, json_encode([$r['enLigne'], $r['total']]));
+$r = pmCanaux($jours, [$regle], null, [1 => 10], [], 4);
+verifie('sans les commandes du panel : tout au comptoir, dit', $r['commandes'] === false && $r['total']['cc']['n'] === 0 && $r['total']['compt']['n'] === 6, json_encode($r['total']));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

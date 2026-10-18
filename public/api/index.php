@@ -236,6 +236,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/canaux-mois'      => ep_exploitation_canaux_mois(),
             $path === '/exploitation/promos-magasin'   => ep_promos_magasin_demandes(),
             $path === '/exploitation/promos-magasin/produits' => ep_promos_magasin_produits(),
+            $path === '/exploitation/promos-magasin/canaux' => ep_promos_magasin_canaux(),
             $path === '/promos-magasin'                => ep_promos_magasin_marque(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),

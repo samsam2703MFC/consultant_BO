@@ -30,7 +30,7 @@
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
-    pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null,
+    pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -98,7 +98,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -120,7 +120,8 @@
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
-    if (S.vue === 'promos') { lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); rendre(); return; }
+    // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
+    if (S.vue === 'promos') { lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
@@ -2986,6 +2987,8 @@
   const cheminPM = () => '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop);
   const clePMP = () => 'pmProd|' + S.shop;
   const cheminPMP = () => '/exploitation/promos-magasin/produits?shop=' + encodeURIComponent(S.shop);
+  const clePMC = () => 'pmCan|' + S.shop + '|' + S.pmCanJ;
+  const cheminPMC = () => '/exploitation/promos-magasin/canaux?shop=' + encodeURIComponent(S.shop) + '&jours=' + S.pmCanJ;
   const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
   // Plus de validation (17/10/2026) : enregistrée, elle part au panel aussitôt (`en_caisse`) ; `validee` = enregistrée,
@@ -3034,25 +3037,33 @@
     if (type === 'PERCENTAGE_DISCOUNT') { return Math.max(0, ht * (1 - Math.min(100, Math.max(0, val)) / 100)); }
     return ht;
   }
-  /** Le coefficient du lot, le cas le plus serré — le même calcul que le serveur (pmCoef). */
-  function pmCoef(prods, x, y) {
+  /**
+   * Toutes les combinaisons de X et de Y qui se présentent en caisse, chacune chiffrée : {px, py, paye, cout, lot, sans}
+   * (lot et sans non arrondis), avec les produits visés et ceux qui ne se chiffrent pas. pmCoef en garde la plus serrée.
+   */
+  function pmPaires(prods, x, y) {
     const ch = p => p.prixHt != null && p.cout != null && +p.prixHt > 0 && +p.cout > 0;
     const X = pmEligibles(prods, x), Y = pmEligibles(prods, y), tous = [...new Map([...X, ...Y]).values()];
     const sansPrix = [...new Set(tous.filter(p => !(+p.prixHt > 0)).map(p => p.nom))];
     const sansCout = [...new Set(tous.filter(p => +p.prixHt > 0 && !(+p.cout > 0)).map(p => p.nom))];
     const coutReseau = [...new Set(tous.filter(p => ch(p) && p.source === 'reseau').map(p => p.nom))];
-    let pire = null, n = 0;
+    const L = [];
     // Une portion visée (¼, ½) : l'article est cette part de la pièce — prix et coût à la fraction.
     const fx = pmFrac(x), fy = pmFrac(y);
     X.forEach(px => { if (!ch(px)) { return; } Y.forEach(py => {
       if (!ch(py)) { return; }
       if (+px.id !== +py.id && Y.has(+px.id) && fx * px.prixHt < fy * py.prixHt) { return; }
-      n++;
       const cout = x.q * fx * px.cout + y.q * fy * py.cout, paye = x.q * fx * px.prixHt + y.q * pmRecompense(py, y.type, y.valeur, fy), sans = x.q * fx * px.prixHt + y.q * fy * py.prixHt;
-      const c = paye / cout;
-      if (!pire || c < pire.lot) { pire = { lot: Math.round(c * 100) / 100, sans: Math.round(sans / cout * 100) / 100, px, py, paye, cout }; }
+      L.push({ px, py, paye, cout, lot: paye / cout, sans: sans / cout });
     }); });
-    return Object.assign(pire || { lot: null, sans: null }, { paires: n, nX: X.size, nY: Y.size, sansCout, sansPrix, coutReseau });
+    return { L, X, Y, sansCout, sansPrix, coutReseau };
+  }
+  /** Le coefficient du lot, le cas le plus serré — le même calcul que le serveur (pmCoef). */
+  function pmCoef(prods, x, y) {
+    const P = pmPaires(prods, x, y);
+    let pire = null;
+    P.L.forEach(q => { if (!pire || q.lot < pire.lot) { pire = { lot: Math.round(q.lot * 100) / 100, sans: Math.round(q.sans * 100) / 100, px: q.px, py: q.py, paye: q.paye, cout: q.cout }; } });
+    return Object.assign(pire || { lot: null, sans: null }, { paires: P.L.length, nX: P.X.size, nY: P.Y.size, sansCout: P.sansCout, sansPrix: P.sansPrix, coutReseau: P.coutReseau });
   }
   /** Pourquoi le coefficient ne se calcule pas (le même texte que le serveur, pmManqueTxt). */
   function pmManqueTxt(C) {
@@ -3113,6 +3124,7 @@
     const q = (S.pmQ || '').trim().toLowerCase();
     const f = PM_FILTRES.find(x => x[0] === S.pmF) || PM_FILTRES[0];
     const vues = parSorte.filter(l => f[2](l.etat) && (!q || (l.nom + ' ' + l.texte).toLowerCase().includes(q)));
+    h += rendPmCanaux();
     h += `<div class="db-card pm-liste"><div class="pm-filtres">
       <div class="db-ong">${PM_FILTRES.map(x => { const n = parSorte.filter(l => x[2](l.etat)).length; return `<button data-pmf-st="${x[0]}" class="${x[0] === f[0] ? 'on' : ''}">${x[1]} <small>${n}</small></button>`; }).join('')}</div>
       <select class="pm-in" data-pmsorte="1">${[['tout', 'Toutes les sortes'], ['xy', 'X achetés + Y'], ['bundle', 'Bundles']].map(o => `<option value="${o[0]}"${S.pmSorte === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
@@ -3138,12 +3150,181 @@
         return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
           <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
           <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
-          <td class="n ${l.coef == null ? 'mu' : (l.coef >= (Rg.coefMin || 2) ? 'ok' : 'ko')}">${fX(l.coef)}</td><td class="pm-act">${act}</td></tr>`;
+          <td class="n">${pmCoefCellule(l, Rg.coefMin || 2)}</td><td class="pm-act">${act}</td></tr>`;
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.</div></div>`;
+      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
+      Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.</div></div>`;
     return h;
+  }
+
+  /* --- Où les promotions sont utilisées (18/10/2026, maquette C, le coefficient en plus) ---------------------------
+   * Les promotions reconnues dans les tickets, par canal : comptoir, click & collect, livraison (le ticket d'une
+   * commande webshop encaissée au magasin compte dans son canal). Une barre par promotion avec son coefficient de
+   * marge (le bouton de la liste), et le jour par jour, comptoir en bas, webshop au-dessus. En nombre ou en remise €. */
+  const PM_CAN = [['compt', 'Comptoir', 'c'], ['cc', 'Click & collect', 'w'], ['liv', 'Livraison', 'l']];
+  function rendPmCanaux() {
+    const k = clePMC(), D = S.aux[k], M = S.pmCanM, J = S.pmCanJ;
+    let h = `<div class="db-card cn-card"><div class="ct"><span class="cn-h">Où les promotions sont utilisées</span>
+      <span class="fi-seg">${[['n', 'En nombre'], ['r', 'En remise €']].map(o => `<button type="button" class="${M === o[0] ? 'on' : ''}" data-pmcanm="${o[0]}">${o[1]}</button>`).join('')}</span>
+      <span class="fi-seg">${[7, 30].map(v => `<button type="button" class="${J === v ? 'on' : ''}" data-pmcanj="${v}">${v} jours</button>`).join('')}</span>`;
+    if (S.err[k]) { return h + `</div><div class="db-err" style="margin:12px 16px">Promotions par canal : ${esc(S.err[k])}</div></div>`; }
+    if (!D) { return h + `</div><div style="padding:12px 16px">${squelette(2)}</div></div>`; }
+    const v = c => M === 'r' ? +c.r || 0 : +c.n || 0, tot = p => v(p.compt) + v(p.cc) + v(p.liv), web = p => v(p.cc) + v(p.liv);
+    const fv = x => M === 'r' ? fU(x) : nf(x, 0), part = p => tot(p) ? Math.round(100 * web(p) / tot(p)) : 0;
+    const P = D.promos || [], T = D.total || { compt: {}, cc: {}, liv: {} }, nT = tot(T);
+    h += `<span class="db-mini">${nT ? part(T) + ' % sur le webshop · ' + (M === 'r' ? fU(nT) + ' de remise' : nf(nT, 0) + ' utilisation' + (nT > 1 ? 's' : '')) : ''}</span></div>`;
+    const enL = (D.enLigne || {}).cc + (D.enLigne || {}).liv || 0, sans = (D.joursSans || []).length;
+    const notes = [`<span class="cn-leg">${PM_CAN.map(c => `<span><i class="${c[2]}"></i>${c[1]}</span>`).join('')}</span>`,
+      `<span class="cn-note">Une utilisation : une fois où une promotion s’applique sur un ticket. Le ticket d’une commande webshop encaissée au magasin compte dans son canal.${enL ? ` ${enL} commande${enL > 1 ? 's' : ''} webshop payée${enL > 1 ? 's' : ''} en ligne sur la période : leurs promotions ne se lisent pas encore.` : ''}${D.commandes === false ? ' Commandes du webshop illisibles : tout est compté au comptoir.' : ''}${sans ? ` ${sans} jour${sans > 1 ? 's' : ''} pas encore lu${sans > 1 ? 's' : ''}.` : ''}${D.erreur ? ' Panel : ' + esc(D.erreur) + '.' : ''}</span>`].join('');
+    if (!P.length) { return h + `<div class="pm-vide">Aucune promotion reconnue dans les tickets sur ${J} jours.</div><div class="cn-pied db-mini">${notes}</div></div>`; }
+    const max = Math.max(1, ...P.map(tot)), Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, L = pmLignes();
+    const ligne = p => {
+      // La ligne de la liste qui porte le coefficient : une promotion du magasin (son n° au panel) ou de la marque.
+      const l = p.id === 'x' ? null : (L.find(o => o.src === 'mag' && o.d && +o.d.panelId === +p.id) || L.find(o => o.src === 'panel' && +o.id === +p.id));
+      const n = tot(p), w = Math.max(3, 100 * n / max);
+      const seg = PM_CAN.map(([c, lib, cl]) => { const x = v(p[c]), pc = n ? 100 * x / n : 0; return x ? `<i class="${cl}" style="width:${pc}%" title="${lib} : ${fv(x)}"><em>${pc * w / 100 >= (M === 'r' ? 11 : 5) ? fv(x) : ''}</em></i>` : ''; }).join('');
+      return `<div class="cn-r${p.id === 'x' ? ' mu' : ''}"><div class="cn-rn"><b>${esc(p.nom)}</b><span class="db-mini">${M === 'r' ? fU(n) + ' de remise' : nf(n, 0) + ' fois'} · ${part(p)} % web</span></div>
+        <div class="cn-rb"><span class="cn-bar big" style="width:${w}%">${seg}</span></div>
+        <div class="cn-rc n">${l && l.sorte === 'xy' ? pmCoefCellule(l, min) : '<span class="mu">—</span>'}</div></div>`;
+    };
+    // Le jour par jour : comptoir en bas, webshop au-dessus ; un jour pas encore lu reste vide, marqué.
+    const PJ = D.parJour || [], W = 520, H = 160, mx = Math.max(1, ...PJ.map(j => v(j.compt) + v(j.web))), bw = (W - 32) / Math.max(1, PJ.length);
+    const pas = mx <= 4 ? 1 : (mx <= 10 ? 2 : (mx <= 25 ? 5 : (mx <= 60 ? 10 : Math.ceil(mx / 5 / 10) * 10))), y = x => H - x / mx * (H - 12);
+    const grad = []; for (let g = 0; g <= mx; g += pas) { grad.push(g); }
+    const svg = `<svg class="cn-svg" viewBox="0 0 ${W} ${H + 22}" role="img" aria-label="Utilisations des promotions jour par jour, comptoir et webshop">
+      ${grad.map(g => `<line x1="28" x2="${W}" y1="${y(g)}" y2="${y(g)}" stroke="#eee7de"/><text x="22" y="${y(g) + 3}" text-anchor="end" font-size="9.5" fill="#8a8178">${M === 'r' ? nf(g, 0) + ' €' : g}</text>`).join('')}
+      ${PJ.map((j, i) => { const X = 32 + i * bw, c = v(j.compt), w = v(j.web), hc = H - y(c), hw = H - y(w), dt = j.j.slice(8, 10) + '/' + j.j.slice(5, 7);
+        const bord = X + bw / 2 + 16 > W, lab = PJ.length <= 7 || i % 7 === (PJ.length - 1) % 7 ? `<text x="${bord ? X + bw - 1 : X + bw / 2}" y="${H + 15}" text-anchor="${bord ? 'end' : 'middle'}" font-size="9.5" fill="#8a8178">${dt}</text>` : '';
+        if (j.lu === false) { return `<rect x="${X + 1}" y="${H - 3}" width="${Math.max(2, bw - 4)}" height="3" fill="#e2dbd1"><title>${dt} : pas encore lu</title></rect>` + lab; }
+        return `<g><title>${dt} : comptoir ${fv(c)} · webshop ${fv(w)}</title><rect x="${X + 1}" y="${H - hc}" width="${Math.max(2, bw - 4)}" height="${hc}" fill="#b8ad9f" rx="1.5"/><rect x="${X + 1}" y="${H - hc - hw - (w ? 1 : 0)}" width="${Math.max(2, bw - 4)}" height="${hw}" fill="#1f5f8b" rx="1.5"/></g>` + lab; }).join('')}</svg>`;
+    return h + `<div class="cn-deux"><div><div class="cn-r cn-th"><span class="db-lab">Promotion</span><span class="db-lab">Par canal</span><span class="db-lab n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</span></div>${P.map(ligne).join('')}</div>
+      <div><div class="db-lab">Jour par jour · toutes promotions</div><div class="db-mini">comptoir en bas, webshop au-dessus</div>${svg}</div></div>
+      <div class="cn-pied db-mini">${notes}</div></div>`;
+  }
+
+  /* --- Le coefficient de marge d'une promotion (18/10/2026, maquette A, le tableau de B derrière un bouton) ---------
+   * Au clic sur le coefficient d'une ligne : le coefficient du lot dans le cas le plus serré, la jauge (minimum,
+   * avec et sans la promotion), le panier qui le fixe, puis « produit par produit » : le pire lot de chaque produit
+   * visé. Recalculé aux prix HT et coûts de recette d'aujourd'hui (/promos-magasin/produits) — pour les promotions
+   * du magasin comme pour celles de la marque (X achetés + Y ; pas les bundles). */
+  /** Le coefficient d'une ligne, aux prix et coûts d'aujourd'hui : {d, x, y, P, C}, ou null (bundle, prix pas encore lus). */
+  function pmCoefDe(l) {
+    const prods = pmProduits();
+    if (!prods || l.sorte !== 'xy' || (l.src === 'panel' && !(l.r && l.r.x && l.r.y))) { return null; }
+    const d = l.src === 'mag' ? pmDepuis(l.d) : pmDuPanel(l.r);
+    const x = pmEffectif(d.x), y = Object.assign(pmEffectif(d.y), { type: d.y.type, valeur: d.y.valeur });
+    return { d, x, y, P: pmPaires(prods, x, y), C: pmCoef(prods, x, y) };
+  }
+  /** La cellule « Coef. du lot » : le coefficient d'aujourd'hui (sinon celui de l'enregistrement), un bouton qui ouvre le détail. */
+  function pmCoefCellule(l, min) {
+    if (l.sorte !== 'xy') { return '<span class="mu">—</span>'; }
+    const K = pmCoefDe(l), v = K && K.C.lot != null ? K.C.lot : (K ? null : l.coef);
+    if (!K && v == null) { return `<span class="mu" title="lecture des prix et coûts du magasin">${pmProduits() || S.err[clePMP()] ? '—' : '…'}</span>`; }
+    return `<button type="button" class="pm-coefb ${v == null ? 'mu' : (v >= min ? 'ok' : 'ko')}" data-pmcoef="${esc(l.src + ':' + l.id)}" title="le coefficient de marge en détail">${v == null ? 'non chiffré' : fX(v)} <span aria-hidden="true">ⓘ</span></button>`;
+  }
+  function pmCoefOuvrir(cle) { S.pmC = { cle, vue: 'lot', retour: document.activeElement }; pmCoefRendre(); }
+  function pmCoefFermer() {
+    const r = S.pmC && S.pmC.retour; S.pmC = null; pmCoefRendre();
+    if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } }
+  }
+  /** Le nom d'un produit avec sa portion (« Tarte Tatin ¼ »). */
+  const pmNomP = (p, c) => esc(p.nom) + (PM_PORTIONS[c.portion] ? ' ' + PM_PORTIONS[c.portion].lib : '');
+  /** Ce que reçoit le client, accordé à l'article : « offert », « à −50 % », « −1,40 € ». */
+  const pmGainArt = y => y.type === 'FREE' ? (y.q > 1 ? 'offerts' : 'offert') : pmGain(y.type, y.valeur, y.q);
+  function pmCoefRendre() {
+    let box = document.getElementById('db-pmc');
+    const l = S.pmC ? pmLignes().find(o => o.src + ':' + o.id === S.pmC.cle) : null;
+    if (!S.pmC || !l) {
+      S.pmC = null;
+      if (box) { box.innerHTML = ''; }
+      if (!S.fiche && !S.invModale && !S.stk) { document.documentElement.classList.remove('db-fiche-ouverte'); }
+      return;
+    }
+    if (!box) { box = document.createElement('div'); box.id = 'db-pmc'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, e = PM_ETAT[l.etat] || [l.etat, 'b'];
+    const K = pmCoefDe(l), C = K && K.C, vue = S.pmC.vue;
+    const num = l.src === 'mag' ? (l.d.panelId ? 'promotion n° ' + l.d.panelId : 'promotion du magasin') : 'promotion de la marque n° ' + l.id;
+    const regle = l.src === 'mag' ? (l.d.repetable ? ' · répétable' + (l.d.maxParTicket ? ', ' + l.d.maxParTicket + ' fois au plus par ticket' : '') : ' · une fois par ticket') : '';
+    const nProd = K ? new Set([...K.P.X.keys(), ...K.P.Y.keys()]).size : 0;
+    const chips = [`<span class="fi-chip"><b>${esc(e[0])}</b>${l.au ? ' jusqu’au ' + esc(pmQuand(l.au)) : ''}</span>`, `<span class="fi-chip">${esc(nomShop())}</span>`,
+      l.src === 'panel' ? `<span class="fi-chip">${esc(l.qui)}</span>` : '', K ? `<span class="fi-chip">${esc(pmLib(K.x))} · ${nProd} produit${nProd > 1 ? 's' : ''}</span>` : '',
+      `<span class="fi-chip">minimum <b>${fXm(min)}</b></span>`].join('');
+    const ok = v => v >= min ? 'ok' : 'ko';
+    let corps = '', pied = '';
+    if (!K) { corps = `<div class="db-mini" style="padding:14px 0">${S.err[clePMP()] ? 'Prix et coûts du magasin illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div>`; }
+    else if (C.lot == null) { corps = `<div class="pm-warn">Rien ne se chiffre : ${esc(pmManqueTxt(C))}.</div>`; }
+    else if (vue === 'produits') { corps = pmCoefProduits(K, min); }
+    else {
+      const x = K.x, y = K.y, pc = v => Math.max(1, Math.min(99, 100 * v / 4.5));
+      const lots = K.P.L.map(q => Math.round(q.lot * 100) / 100).sort((a, b) => a - b), autres = lots.slice(1);
+      const marge = C.paye - C.cout, margeSans = x.q * pmFrac(x) * C.px.prixHt + y.q * pmFrac(y) * C.py.prixHt - C.cout, nb = x.q + y.q, ecart = C.lot - min;
+      const enr = l.src === 'mag' && l.d.coef && l.d.coef.lot != null ? +l.d.coef.lot : null;
+      const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
+      corps = `<div class="pmc-hero"><div><div class="db-lab">Coefficient du lot · le cas le plus serré</div><div class="pmc-big ${ok(C.lot)}">${fX(C.lot)}</div><div class="db-mini">prix payé HT ÷ coût matière</div></div>
+          <div class="pmc-cmp"><div class="db-lab">Sans la promotion</div><b>${fX(C.sans)}</b><div class="db-mini">−${nf(C.sans - C.lot, 2)} avec la promotion</div></div>
+          <div class="pmc-cmp"><div class="db-lab">Écart au minimum</div><b class="${ok(C.lot)}">${ecart >= 0 ? '+' : '−'}${nf(Math.abs(ecart), 2)}</b><div class="db-mini">${ecart >= 0 ? 'au-dessus de' : 'sous'} ${fXm(min)}</div></div></div>
+        <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)">
+          <i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
+          <i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut pmc-d" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>
+          <i class="lot ${ok(C.lot)}" style="left:${pc(C.lot)}%"></i><span class="haut pmc-g" style="left:${pc(C.lot)}%;color:${C.lot >= min ? '#2d7a3e' : '#A61E1E'}">avec la promo ${fX(C.lot)}</span></div>
+        <div class="pmc-cas"><div class="db-lab" style="margin-bottom:6px">Ce qui fixe le chiffre</div>
+          <div class="pmc-phr">${x.q} × <b>${pmNomP(C.px, x)}</b> acheté${x.q > 1 ? 's' : ''} + ${y.q} × <b>${pmNomP(C.py, y)}</b> ${pmGainArt(y)}</div>
+          <div class="pmc-l"><span>Payé par le client, HT</span><b>${fU(C.paye)}</b></div>
+          <div class="pmc-l"><span>Coût matière des ${nb} article${nb > 1 ? 's' : ''}</span><b>${fU(C.cout)}</b></div>
+          <div class="pmc-l"><span>Marge brute du lot</span><b>${fU(marge)} <small class="mu">au lieu de ${fU(margeSans)}</small></b></div></div>
+        ${C.lot < min ? `<div class="pm-warn pmc-ko">Sous ${fXm(min)} avec les prix et coûts d’aujourd’hui. ${l.src === 'mag' ? 'Retirez-la, ou dupliquez-la avec un avantage plus petit.' : 'Promotion de la marque : à lui signaler.'}</div>` : ''}
+        ${enr != null && Math.abs(enr - C.lot) >= 0.01 ? `<div class="pm-warn">À l’enregistrement : ${fX(enr)}. Les prix ou les coûts de recette ont changé depuis.</div>` : ''}
+        <div class="fi-note" style="margin-top:10px">${autres.length ? (autres[0] === autres[autres.length - 1] ? `L${autres.length > 1 ? 'es ' + autres.length + ' autres combinaisons' : '’autre combinaison'} possible${autres.length > 1 ? 's' : ''} en caisse : ${fX(autres[0])}.` : `Les ${autres.length} autres combinaisons possibles en caisse sont plus confortables : de ${fX(autres[0])} à ${fX(autres[autres.length - 1])}.`) + ' ' : ''}Prix HT de la caisse et coûts de recette du magasin, aujourd’hui.
+          ${C.coutReseau.length ? ` Coût du réseau, faute de coût calculé pour le magasin : ${esc(C.coutReseau.slice(0, 4).join(', '))}${C.coutReseau.length > 4 ? '…' : ''}.` : ''}
+          ${sortis.length ? ` Hors calcul : ${esc(sortis.slice(0, 4).join(', '))}${sortis.length > 4 ? '…' : ''}.` : ''}</div>`;
+    }
+    if (K && C.lot != null) {
+      pied = `<div class="pmc-pied">${vue === 'produits' ? '<button type="button" class="db-btn" data-pmcvue="lot">← L’essentiel</button>' : (nProd > 1 ? `<button type="button" class="db-btn" data-pmcvue="produits">Voir produit par produit (${nProd})</button>` : '')}
+        <button type="button" class="db-btn" data-pmcdup="${esc((l.src === 'mag' ? 'mag:' : 'panel:') + l.id)}">Dupliquer</button><span style="flex:1"></span><button type="button" class="db-btn prim" data-pmcfermer="1">Fermer</button></div>`;
+    }
+    const ancienne = box.querySelector('.fi-modale'), defil = ancienne && ancienne.dataset.vue === vue ? ancienne.scrollTop : 0;
+    box.innerHTML = `<div class="fi-voile" data-pmcfermer="1"></div><div class="fi-modale${vue === 'produits' ? '' : ' pmc-etroite'}" data-vue="${vue}" role="dialog" aria-modal="true" aria-label="Coefficient de marge — ${esc(l.nom)}">
+      <div class="fi-hd"><div class="t"><div class="db-lab">Coefficient de marge · ${esc(num)}</div><h2>${esc(l.nom)}</h2><div class="s">${l.texte}${regle}</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-pmcfermer="1" aria-label="Fermer">✕</button></div>
+      <div class="fi-bd">${corps}</div>${pied}</div>`;
+    if (defil) { const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = defil; } }
+    box.querySelectorAll('[data-pmcfermer]').forEach(b => b.addEventListener('click', pmCoefFermer));
+    box.querySelectorAll('[data-pmcvue]').forEach(b => b.addEventListener('click', () => { S.pmC.vue = b.dataset.pmcvue; pmCoefRendre(); const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = 0; } }));
+    box.querySelectorAll('[data-pmcdup]').forEach(b => b.addEventListener('click', () => { const c = b.dataset.pmcdup; S.pmC = null; pmCoefRendre(); pmDupliquer(c); }));
+    if (!box.contains(document.activeElement)) { const x = box.querySelector('.fi-x'); if (x) { x.focus(); } }
+  }
+  /** Produit par produit : le pire lot de chaque produit visé (acheté en X, sinon reçu en Y), le plus serré d'abord. */
+  function pmCoefProduits(K, min) {
+    const { x, y, P, C } = K, pc = v => Math.max(1, Math.min(99, 100 * v / 4.5)), r2 = v => Math.round(v * 100) / 100;
+    const lignes = [];
+    new Map([...P.X, ...P.Y]).forEach((p, id) => {
+      const mes = P.L.filter(q => P.X.has(id) ? +q.px.id === id : +q.py.id === id);
+      if (!mes.length) { return; }
+      const w = mes.reduce((a, b) => b.lot < a.lot ? b : a);
+      lignes.push({ p, w, normal: +p.prixHt / +p.cout, lot: r2(w.lot) });
+    });
+    lignes.sort((a, b) => a.lot - b.lot || a.p.nom.localeCompare(b.p.nom, 'fr'));
+    const lots = P.L.map(q => r2(q.lot)).sort((a, b) => a - b), med = lots[Math.floor((lots.length - 1) / 2)];
+    const cedes = P.L.map(q => q.sans * q.cout - q.paye), sous = lignes.filter(r => r.lot < min).length;
+    const nomC = (p, c) => pmNomP(p, c);
+    const etat = v => v < min ? '<span class="pm-chip r">sous le minimum</span>' : (v < min * 1.1 ? '<span class="pm-chip a">à surveiller</span>' : '<span class="pm-chip ok">ok</span>');
+    const barre = (n, v) => `<div class="pmc-bar" style="background:linear-gradient(90deg,rgba(166,30,30,.16) 0 ${pc(min)}%,rgba(45,122,62,.12) ${pc(min)}% 100%)"><i class="m" style="left:${pc(min)}%"></i><u style="left:${pc(v)}%;width:${Math.max(0, pc(n) - pc(v))}%"></u><i class="s" style="left:${pc(n)}%"></i><i class="l ${v >= min ? '' : 'ko'}" style="left:${pc(v)}%"></i></div>`;
+    const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
+    return `<div class="db-tuiles pmc-tuiles">
+        <div class="db-tui ${C.lot >= min ? 'bon' : 'vif'}"><div class="k">Coef. le plus bas</div><div class="v">${fX(C.lot)}</div><div class="s">${pmNomP(C.px, x)}${+C.px.id === +C.py.id ? ', acheté et remisé' : ' + ' + pmNomP(C.py, y)}</div></div>
+        <div class="db-tui"><div class="k">Coef. d’un lot type</div><div class="v">${fX(med)}</div><div class="s">la moitié des ${lots.length} combinaisons font au moins autant</div></div>
+        <div class="db-tui ${sous ? 'vif' : ''}"><div class="k">Sous le minimum</div><div class="v">${sous} <small class="mu">sur ${lignes.length}</small></div><div class="s">minimum ${fXm(min)}, règle du magasin</div></div>
+        <div class="db-tui"><div class="k">Marge cédée par lot</div><div class="v">${Math.abs(Math.max(...cedes) - Math.min(...cedes)) < 0.005 ? fU(cedes[0]) : fU(Math.min(...cedes)) + ' – ' + fU(Math.max(...cedes))}</div><div class="s">ce que coûte l’avantage, HT</div></div></div>
+      <div class="pm-large"><table class="fi-st pmc-st"><thead><tr><th>Produit</th><th class="n">Prix HT</th><th class="n">Coût recette</th><th class="n">Coef. normal</th><th class="n">Coef. dans la promo</th><th class="pmc-gr">×1 → ×4,5</th><th>Le pire lot</th><th></th></tr></thead><tbody>
+      ${lignes.map(r => `<tr><td class="nm">${esc(r.p.nom)}${P.X.has(+r.p.id) ? '' : ' <small class="mu">reçu</small>'}</td><td class="n">${fU(+r.p.prixHt)}</td><td class="n">${fU(+r.p.cout)}${r.p.source === 'reseau' ? ' <small class="mu" title="coût du réseau, pas encore calculé pour ce magasin">r</small>' : ''}</td>
+        <td class="n mu">${fX(r.normal)}</td><td class="n"><b class="${r.lot < min ? 'ko' : (r.lot < min * 1.1 ? 'wa' : 'ok')}">${fX(r.lot)}</b></td><td class="pmc-gr">${barre(r.normal, r.lot)}</td>
+        <td class="db-mini">${x.q} × ${nomC(r.w.px, x)} + ${y.q} × ${nomC(r.w.py, y)} ${pmGainArt(y)}</td><td>${etat(r.lot)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="pmc-leg db-mini"><span><i class="m"></i>minimum ${fXm(min)}</span><span><i class="s"></i>sans promo</span><span><i class="l"></i>avec la promo</span>
+        <span class="pmc-legn">« à surveiller » : moins de 10 % au-dessus du minimum. Pour chaque produit, le lot le plus serré où il est acheté (ou reçu).</span></div>
+      ${sortis.length ? `<div class="pm-warn">Hors calcul, sortis de la promotion au panel : ${esc(sortis.join(', '))}.</div>` : ''}`;
   }
 
   /* L'assistant : une demande en cours d'écriture (S.pmW = {etape, d, erreurs, envoi}). */
@@ -3162,7 +3343,8 @@
   function pmDuPanel(r) {
     const prods = pmProduits() || [], nom = id => { const p = prods.find(x => +x.id === +id); return p ? p.nom : ''; };
     const cote = c => ({ q: Math.round((c && c.q) || 1), cats: Object.entries((c && c.c) || {}).map(([id, n]) => ({ id: +id, nom: n })),
-      prods: Object.entries((c && c.p) || {}).map(([k, n]) => ({ id: parseInt(k, 10), nom: n || nom(parseInt(k, 10)) })), exclus: ((c && c.x) || []).map(id => ({ id: +id, nom: nom(id) })) });
+      prods: Object.entries((c && c.p) || {}).map(([k, n]) => ({ id: parseInt(k, 10), nom: n || nom(parseInt(k, 10)) })), exclus: ((c && c.x) || []).map(id => ({ id: +id, nom: nom(id) })),
+      portion: (c && PM_PORTIONS[c.portion] && c.portion) || null });
     const rc = r.recompense || {};
     return pmDepuis({ nom: r.nom + ' · ' + nomShop().replace(/^.* - /, ''), x: cote(r.x), y: Object.assign(cote(r.y), { type: rc.type || 'FREE', valeur: rc.valeur }) });
   }
@@ -3397,6 +3579,12 @@
   }
   /** Le produit choisi dans une liste de suggestions : son identifiant est au bout de l'étiquette (« · #123 »). */
   function pmProduitDe(v) { const m = /#(\d+)$/.exec(v || ''); const id = m ? +m[1] : 0; return (pmProduits() || []).find(p => +p.id === id) || null; }
+  /** Dupliquer une promotion (« mag:<id> » du magasin, « panel:<id> » de la marque) : l'assistant s'ouvre sur la copie. */
+  function pmDupliquer(cle) {
+    const i = cle.indexOf(':'), src = cle.slice(0, i), id = cle.slice(i + 1), P = S.aux[clePM()] || {};
+    if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(d); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
+    else { const r = (P.panel || []).find(o => String(o.id) === id); if (r) { pmOuvrir(pmDuPanel(r), 1); } }
+  }
   function pmBrancher() {
     const on = (sel, ev, fn) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => fn(el, e)));
     on('[data-pmf-st]', 'click', el => { S.pmF = el.dataset.pmfSt; rendre(); });
@@ -3405,11 +3593,11 @@
     on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
     on('[data-pmedit]', 'click', el => { const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit); if (d) { pmOuvrir(pmDepuis(d), PM_FIN); } });
-    on('[data-pmdup]', 'click', el => {
-      const [src, id] = el.dataset.pmdup.split(':'), P = S.aux[clePM()] || {};
-      if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(d); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
-      else { const r = (P.panel || []).find(o => String(o.id) === id); if (r) { pmOuvrir(pmDuPanel(r), 1); } }
-    });
+    on('[data-pmdup]', 'click', el => pmDupliquer(el.dataset.pmdup));
+    on('[data-pmcoef]', 'click', el => pmCoefOuvrir(el.dataset.pmcoef));
+    on('[data-pmcanm]', 'click', el => { S.pmCanM = el.dataset.pmcanm; rendre(); });
+    on('[data-pmcanj]', 'click', el => { S.pmCanJ = +el.dataset.pmcanj; lireAux(clePMC(), cheminPMC(), false); rendre(); });
+    if (S.pmC) { pmCoefRendre(); }
     on('[data-pmdel]', 'click', el => pmSupprimer(el.dataset.pmdel));
     if (!S.pmW) { return; }
     const W = S.pmW, d = W.d;
@@ -6607,7 +6795,7 @@
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
-  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } });
+  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } else if (S.pmC && e.key === 'Escape') { pmCoefFermer(); } });
   document.addEventListener('keydown', e => {
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
