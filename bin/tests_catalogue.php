@@ -8,7 +8,8 @@ declare(strict_types=1);
  *   php bin/tests_catalogue.php
  *
  * La synthèse par magasin (vendues, prix face au réseau, plus cher / moins cher, volume à taille égale, alignement,
- * absentes) et le document : le tableau du 20/80, la page des magasins, la grille référence × magasin.
+ * absentes) et le document : le tableau du 20/80, la page des magasins, la grille référence × magasin. Le 20/80 de
+ * chaque catégorie et l'assortiment proposé (le 20/80 de la catégorie, 6 classiques, 2 saisonnières par saison).
  */
 function body(): array { return []; }
 function setting(string $k, mixed $d = null): mixed { return $d; }
@@ -53,6 +54,45 @@ verifie('la courbe de Pareto dessinée', str_contains($doc, '<polyline points="0
 $doc2 = ppDoc(['periode' => 'x', 'caTotal' => 100, 'totalRefs' => 1, 'magasins' => [], 'lignes' => [$lignes[0]]]);
 verifie('sans les prix par magasin : la liste seule, dite', str_contains($doc2, 'n’ont pas pu être lus') && !str_contains($doc2, 'Référence par référence'));
 verifie('les noms échappés', !str_contains(ppDoc(['lignes' => [['nom' => '<b>x</b>', 'ca' => 1]], 'magasins' => []]), '<b>x</b>'));
+
+echo "Le 20/80 par catégorie et l'assortiment proposé\n";
+$R = static fn (string $k, string $nom, string $cat, float $ca, ?float $score, array $x = []) => array_merge(['k' => $k, 'nom' => $nom, 'cat' => $cat, 'ca' => $ca, 'score' => $score,
+    'decision' => $score === null ? '' : ($score > 60 ? 'Garder' : ($score >= 55 ? 'Modifier' : 'Effacer')), 'oblig' => false, 'saisonnier' => false, 'saisons' => [], 'scoreAn' => null, 'caAn' => 0], $x);
+$gamme = [
+    $R('1', 'Croissant', 'Viennoiseries', 5000, 96), $R('2', 'Pain au chocolat', 'Viennoiseries', 3000, 90), $R('3', 'Brioche', 'Viennoiseries', 1000, 70),
+    $R('4', 'Chausson', 'Viennoiseries', 600, 50, ['oblig' => true]), $R('5', 'Pain aux raisins', 'Viennoiseries', 400, 60), $R('6', 'Kouign', 'Viennoiseries', 0, null),
+    $R('7', 'Galette', 'Viennoiseries', 0, null, ['saisonnier' => true, 'saisons' => ['7'], 'caAn' => 900, 'scoreAn' => 80]),
+    $R('8', 'Bûche', 'Viennoiseries', 0, null, ['saisonnier' => true, 'saisons' => ['8'], 'caAn' => 1200, 'scoreAn' => 75]),
+    $R('9', 'Bûche mini', 'Viennoiseries', 0, null, ['saisonnier' => true, 'saisons' => ['8'], 'caAn' => 300, 'scoreAn' => 40]),
+    $R('10', 'Bûche chocolat', 'Viennoiseries', 0, null, ['saisonnier' => true, 'saisons' => ['8', '7'], 'caAn' => 500, 'scoreAn' => 60]),
+    $R('11', 'Bûche nouvelle', 'Viennoiseries', 0, null, ['saisonnier' => true, 'saisons' => ['8']]),
+    $R('12', 'Cookie', 'Cookies', 900, 82), $R('13', 'Cookie Halloween', 'Cookies', 300, 64, ['saisonnier' => true, 'saisons' => ['9'], 'caAn' => 300, 'scoreAn' => 70]),
+    $R('14', 'Sablé', '', 0, null),
+];
+$PC = ppParCategorie($gamme, 80);
+$parNom = array_column($PC, null, 'cat');
+verifie('le 20/80 d’une catégorie : jusqu’à 80 % de SON chiffre, la plus grosse d’abord', array_column($parNom['Viennoiseries']['top'], 'nom') === ['Croissant', 'Pain au chocolat'] && $parNom['Viennoiseries']['vendues'] === 5 && $parNom['Viennoiseries']['refs'] === 11, json_encode(array_column($parNom['Viennoiseries']['top'], 'nom')));
+verifie('une saisonnière vendue sur la période peut être du 20/80 ; la catégorie au plus gros chiffre en tête ; sans catégorie rangée à part', array_column($parNom['Cookies']['top'], 'nom') === ['Cookie', 'Cookie Halloween']
+    && $PC[0]['cat'] === 'Viennoiseries' && isset($parNom['Sans catégorie']) && $parNom['Sans catégorie']['top'] === []);
+$saisons = [['id' => '8', 'nom' => '🎄 Noël', 'du' => '2026-12-01', 'au' => '2026-12-31'], ['id' => '7', 'nom' => '👑 Épiphanie', 'du' => '2027-01-02', 'au' => '2027-01-20'], ['id' => '9', 'nom' => '🎃 Halloween', 'du' => '2026-10-20', 'au' => '2026-10-31']];
+$PR = array_column(ppPropositions($gamme, $saisons, $PC, 2, 2), null, 'cat');
+$V = $PR['Viennoiseries'];
+verifie('les classiques : au meilleur score, hors 20/80 et hors saisonnières, vendues sur la période', array_column($V['classiques'], 'nom') === ['Brioche', 'Pain aux raisins'] && $V['manque'] === 0, json_encode(array_column($V['classiques'], 'nom')));
+verifie('les saisonnières : les 2 au meilleur score sur 12 mois, le reste compté', array_column($V['saisons']['8']['retenues'], 'nom') === ['Bûche', 'Bûche chocolat'] && $V['saisons']['8']['autres'] === 2, json_encode($V['saisons']['8']));
+verifie('une saisonnière de deux gammes sert les deux saisons', array_column($V['saisons']['7']['retenues'], 'nom') === ['Galette', 'Bûche chocolat'] && !isset($V['saisons']['9']));
+verifie('ce qui sort : la classique de trop (même obligatoire), la jamais vendue, les saisonnières non retenues', array_column($V['sortent'], 'nom') === ['Chausson', 'Bûche mini', 'Bûche nouvelle', 'Kouign'], json_encode(array_column($V['sortent'], 'nom'), JSON_UNESCAPED_UNICODE));
+verifie('la saisonnière déjà du 20/80 n’est pas reproposée pour sa saison', !isset($PR['Cookies']['saisons']['9']) && $PR['Cookies']['sortent'] === [] && $PR['Cookies']['classiques'] === []);
+$P6 = array_column(ppPropositions($gamme, $saisons, $PC), null, 'cat');
+verifie('6 classiques par défaut : les places sans classique vendue restent libres', count($P6['Viennoiseries']['classiques']) === 3 && $P6['Viennoiseries']['manque'] === 3);
+$doc3 = ppDoc(['periode' => 'septembre 2026', 'caTotal' => 11200, 'totalRefs' => 6, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'saisons' => $saisons, 'saisonsLues' => true]);
+verifie('le document : le 20/80 par catégorie, puis l’assortiment proposé', str_contains($doc3, 'Le 20/80, catégorie par catégorie') && str_contains($doc3, 'L’assortiment proposé : le 20/80, 6 classiques et 2 de saison par catégorie')
+    && strpos($doc3, 'catégorie par catégorie') < strpos($doc3, 'L’assortiment proposé') && str_contains($doc3, 'Sans vente sur la période : Sans catégorie'));
+verifie('les tuiles : 14 aujourd’hui, 7 toute l’année (4 du 20/80 + 3 classiques), 3 saisonnières, sur 2 saisons',
+    str_contains($doc3, '>14<') && str_contains($doc3, '4 du 20/80 + 3 classiques') && str_contains($doc3, 'saisonnières, sur 2 saisons') && str_contains($doc3, 'aucune obligatoire'), '');
+verifie('la classique retenue que le score dit « Effacer » : à remplacer ; les places libres dites ; les saisons datées',
+    str_contains($doc3, '<span class="ko">Chausson</span>') && str_contains($doc3, 'à remplacer') && str_contains($doc3, '3 places libres') && str_contains($doc3, 'du 01/12 au 31/12') && str_contains($doc3, '+ 2 autres de la gamme'));
+$doc4 = ppDoc(['periode' => 'x', 'caTotal' => 100, 'totalRefs' => 1, 'magasins' => [], 'lignes' => [$lignes[0]], 'refs' => $gamme, 'saisons' => []]);
+verifie('sans les saisons du panel : dit, sans tableau des saisons', str_contains($doc4, 'Les saisons du panel n’ont pas pu être lues') && !str_contains($doc4, 'saison par saison'));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

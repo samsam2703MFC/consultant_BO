@@ -4747,7 +4747,8 @@ class App {
     };
     // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
     // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
-    // même étendue (mois clos, trimestre, 12 mois). Le serveur met en page (POST /products/pareto.pdf).
+    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé. Le serveur
+    // met en page (POST /products/pareto.pdf).
     common.catPareto = () => {
       const mPx = { mois: 1, trimestre: 3, annee: 12 }[S.pdFenetre || 'mois'] || 1;
       const vendues = L.filter(l => l.s && !l.sansVente && (l.s.ca || 0) > 0).sort((a, b) => b.s.ca - a.s.ca);
@@ -4757,9 +4758,23 @@ class App {
       for (const l of vendues) { top.push(l); cum += l.s.ca; if (cum >= 0.8 * caT) { break; } }
       let c3 = 0; const cumuls = vendues.map(l => (c3 += l.s.ca) / caT * 100);
       const courbe = Array.from({ length: 101 }, (_, k) => { const i = Math.round(k / 100 * n) - 1; return i < 0 ? 0 : Math.round(cumuls[Math.min(n - 1, i)] * 10) / 10; });
-      const envoyer = px => {
+      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie et l'assortiment
+      // proposé — le 20/80 de la catégorie, 6 classiques au score de la période, 2 saisonnières par saison au score des
+      // 12 derniers mois (`an` : leur saison y est, quelle que soit la période de l'écran).
+      const gamme = an => { const de = new Map(((an && an.base) || []).map(x => [String(x.id), x]));
+        return L.map(l => { const y = de.get(l.k), vend = y && !y.sansVente && (y.ca || 0) > 0;
+          return { k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0, mn: l.mnPct == null ? null : Math.round(l.mnPct),
+            score: l.score == null ? null : Math.round(l.score * 10) / 10, decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
+            saisonnier: !!l.saisonnier, saisons: l.saisons, scoreAn: vend ? Math.round(y.score * 10) / 10 : null, caAn: vend ? Math.round(y.ca) : 0 }; }); };
+      const saisons = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim(),
+        du: g.fenetre ? g.fenetre.du : null, au: g.fenetre ? g.fenetre.au : null }));
+      const douzeMois = () => (S.pdFenetre || 'mois') === 'annee' ? Promise.resolve(c2)
+        : (this._pdAnnee && Date.now() - this._pdAnnee.le < 3600000 ? Promise.resolve(this._pdAnnee.c)
+          : readOne('/products/scoring?fenetre=annee').then(d => { if (!Array.isArray(d)) { return null; } const c = this.pdCalcule(d); this._pdAnnee = { le: Date.now(), c }; return c; }).catch(() => null));
+      const envoyer = (px, an) => {
         const refs = new Map(((px && px.refs) || []).map(r => [String(r.pid), r]));
         const corps = { periode: c2.periode || '', periodePrix: px && px.periode ? px.periode : '', seuil: 80, caTotal: caT, totalRefs: n, courbe,
+          refs: gamme(an), saisons, saisonsLues: !!an, classiques: 6, parSaison: 2,
           magasins: ((px && px.magasins) || []).map(m => ({ id: String(m.id), nom: m.court || court(m.nom) })),
           lignes: top.map(l => { const r = l.pid ? refs.get(String(l.pid)) : null;
             return { nom: l.nom, cat: l.catNom, ca: Math.round(l.s.ca), vol: Math.round(l.vol), prix: l.prix, mn: l.mnPct == null ? null : Math.round(l.mnPct),
@@ -4770,11 +4785,11 @@ class App {
           .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
           .catch(err => this.notify('PDF indisponible : ' + err.message));
       };
-      const px = (D.pxv || {})[mPx];
-      if (px) { envoyer(px.indispo ? null : px); return; }
-      this.notify('Lecture des prix par magasin…');
-      readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } envoyer(d && !d.indispo ? d : null); })
-        .catch(() => envoyer(null));
+      const px0 = (D.pxv || {})[mPx];
+      const prix = px0 ? Promise.resolve(px0.indispo ? null : px0)
+        : readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } return d && !d.indispo ? d : null; }).catch(() => null);
+      if (!px0 || ((S.pdFenetre || 'mois') !== 'annee' && !this._pdAnnee)) { this.notify('Lecture des prix par magasin et des 12 derniers mois…'); }
+      Promise.all([prix, douzeMois()]).then(([px, an]) => envoyer(px, an));
     };
     common.catLignes = F.slice(0, 250).map(l => ({
       k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
@@ -11590,7 +11605,8 @@ class App {
    * dériver : deux écrans annonçant deux scores pour la même référence
    * ne se contredisent pas franchement, ils se contredisent discrètement.
    */
-  pdCalcule(){
+  pdCalcule(produits){
+    // `produits` : une autre fenêtre de ventes que celle de l'écran (les 12 mois des saisonnières du PDF 20/80).
     const D = this.D;
     const W = this.poids();
     const wtTot = (W.v + W.m + W.perte + W.comptoir + W.rev) || 1;
@@ -11612,7 +11628,7 @@ class App {
     // « Obligatoire » (18/10/2026 : « nécessaire » y est fondu) : une référence de l'assortiment obligatoire se garde
     // quoi qu'en disent la marge et le score. Le drapeau garde son nom, `necessaire`, dans le calcul et les PDF.
     const oblig = {}; (D.prodCatalogue || []).forEach(c => { if (c.must) { oblig[String(c.ref)] = true; } });
-    const base = (D.products || []).map(p => {
+    const base = (produits || D.products || []).map(p => {
       const _id = p.id;
       // Sans prix (référence au catalogue mais sans vente sur la période), pas
       // de marge calculable : null, jamais un « prix zéro moins le coût ».
