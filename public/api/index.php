@@ -506,7 +506,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }
     if ($method === 'POST' && $path === '/plan/revue') { return wr_plan_revue(); }
-    if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
     if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }
     if ($method === 'POST' && $path === '/kpi-table/collecte') { return wr_kpi_collecte(); }

@@ -709,7 +709,7 @@
       } catch (e) { this.T[shop] = Object.assign({}, T, { enCours: false, erreur: true, lu: Date.now() - 14 * 60 * 1000 }); this.rendre(); return; }
       const sh = ((pt && pt.shops) || []).find(x => String(x.shopId) === String(shop));
       const photos = {}; ((ph && ph.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { photos[String(p.taskId)] = p; } });
-      const taches = ((sh && sh.taches) || []).filter(t => !(t.maitrise && t.maitrise.masquee)).map(t => {
+      const taches = ((sh && sh.taches) || []).map(t => {
         const p = photos[String(t.taskId)] || null;
         return Object.assign({}, t, { photoUrl: p ? p.photo : null, reperes: p && Array.isArray(p.reperes) ? p.reperes : [], checklistId: p ? p.checklistId : null, completionId: p ? p.completionId : null });
       });
