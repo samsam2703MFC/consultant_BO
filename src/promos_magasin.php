@@ -19,10 +19,10 @@ declare(strict_types=1);
  * `shops` vaut toujours [shop] (la forme du périmètre « magasins sélectionnés » du panel). Les règles se lisent encore
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
- * Trois règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, 14 jours
- * au plus ; deux promotions du magasin en même temps au plus, magasin par magasin ; le COEFFICIENT DU LOT (prix payé
- * HT ÷ coût matière) à ×2 au moins, pour le cas le plus serré des produits visés, dans chaque magasin couvert (les prix
- * et coûts de recette du magasin, sinon du réseau — pmProduits). Sous ×2, l'envoi est refusé.
+ * Deux règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, 14 jours
+ * au plus ; deux promotions du magasin en même temps au plus, magasin par magasin. Le COEFFICIENT DU LOT (prix payé
+ * HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
+ * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).
  *
  * Les demandes vivent dans `ceo_app_setting` (clé `promosMagasin`). Rien n'est encore écrit au panel : la mise en
  * caisse attend le format d'écriture de l'API, relu sur une promotion test (GET /ventes/promos/sonde-fiche).
@@ -432,7 +432,7 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
     if ($d['au'] === null) { $e[] = 'Donnez la date de fin : au magasin, une promotion a toujours une fin.'; }
     if ($d['du'] !== null && $d['au'] !== null) {
         if ($d['au'] <= $d['du']) { $e[] = 'La fin vient après le début.'; }
-        elseif ((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400 + 1 > PM_JOURS_MAX) { $e[] = PM_JOURS_MAX . ' jours au plus.'; }
+        elseif (($nj = (int) round((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400) + 1) > PM_JOURS_MAX) { $e[] = 'Période de ' . $nj . ' jours : ' . PM_JOURS_MAX . ' au plus, raccourcissez-la.'; }
         if ($d['au'] <= $maintenant) { $e[] = 'La période est déjà passée.'; }
         foreach (pmShops($d) as $s) {
             $chev = array_filter($autres, static fn ($o) => in_array($s, pmShops($o), true) && in_array($o['statut'] ?? '', PM_VIVANTES, true) && ($o['du'] ?? '') < $d['au'] && ($o['au'] ?? '') > $d['du']);
@@ -441,19 +441,17 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
             }
         }
     }
-    if ($coef !== null && $coef['lot'] !== null && $coef['lot'] < PM_COEF_MIN) {
-        $e[] = 'Coefficient du lot ×' . number_format($coef['lot'], 2, ',', '') . ' (' . $coef['x'] . ' + ' . $coef['y'] . (isset($coef['magasin']) && count(pmShops($d)) > 1 ? ', ' . pmNomShop((int) $coef['magasin']) : '') . ') : ×' . number_format(PM_COEF_MIN, 0) . ' au moins.';
-    }
+    // Le coefficient du lot ne bloque plus (18/10/2026) : il se calcule, s'affiche (en rouge sous ×2), et la promotion part.
     return $e;
 }
 
 /**
- * La promotion se valide-t-elle d'office ? Oui quand le coefficient du lot est calculé, à ×2 au moins, et que chaque
- * produit visé est chiffré dans chaque magasin couvert — sinon la marque la regarde.
+ * Le coefficient est-il vérifié ? Oui quand il se calcule et que chaque produit visé est chiffré dans chaque magasin
+ * couvert. Depuis le 18/10/2026, rien n'en dépend pour l'envoi : `auto` le dit, la promotion part au panel de toute façon.
  */
 function pmDOffice(?array $coef): bool
 {
-    return $coef !== null && $coef['lot'] !== null && $coef['lot'] >= PM_COEF_MIN && ($coef['sansCout'] ?? []) === [] && ($coef['sansPrix'] ?? []) === [];
+    return $coef !== null && $coef['lot'] !== null && ($coef['sansCout'] ?? []) === [] && ($coef['sansPrix'] ?? []) === [];
 }
 
 /** Pourquoi le coefficient ne se calcule pas, en mots : les produits sans coût de recette, sans prix. */
@@ -735,7 +733,7 @@ function wr_promos_magasin(): array
     $envoi = $action === 'envoyer';
     $office = $envoi && pmDOffice($coef);
     $d += ['id' => $id ?? ('pm' . base_convert((string) (int) (microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(2))),
-        // Envoyée = enregistrée, sans validation. `auto` : le coefficient a été vérifié (×2, tout chiffré) ; sinon `motif` dit ce qui manque.
+        // Envoyée = enregistrée, sans validation. `auto` : le coefficient a été vérifié (tout chiffré) ; sinon `motif` dit ce qui manque.
         'statut' => $envoi ? 'validee' : 'brouillon', 'coef' => $coef, 'maj' => $now,
         'auto' => $office, 'decidee' => $envoi ? $now : null,
         'motif' => $envoi && !$office ? 'coefficient non vérifié : ' . pmManqueTxt($coef ?? []) : null,
@@ -747,9 +745,8 @@ function wr_promos_magasin(): array
         'panelId' => $i !== null ? ($tout[$i]['panelId'] ?? null) : null, 'panelErreur' => null];
     if ($i !== null) { $tout[$i] = $d; } else { $tout[] = $d; $i = count($tout) - 1; }
     // Enregistrée : elle part au panel tout de suite (créée inactive, relue, activée) — en caisse si tout concorde.
-    // Ce qui ne se chiffre pas étant sorti, le coefficient est vérifié : seule une ancienne promotion peut ne pas l'être.
-    if ($envoi && $office) { pmPanelRanger($tout, $i); }
-    elseif ($envoi) { $tout[$i]['panelErreur'] = 'pas envoyée au panel : ' . $tout[$i]['motif'] . ' — la marque la met en caisse'; }
+    // Le coefficient ne la retient plus (18/10/2026), qu'il soit sous ×2 ou non vérifié.
+    if ($envoi) { pmPanelRanger($tout, $i); }
     pmEcrire($tout);
     return ['ok' => true, 'demande' => $tout[$i]];
 }
@@ -777,13 +774,14 @@ function wr_promos_magasin_panel(string $id): array
     foreach ($tout as $k => $o) {
         if (($o['id'] ?? '') !== $id) { continue; }
         if (($o['statut'] ?? '') !== 'validee') { http_response_code(409); return ['error' => 'seule une promotion enregistrée part au panel']; }
-        // Comme à l'enregistrement : ce qui ne se chiffre pas sort, et rien ne part sous ×2.
+        // Comme à l'enregistrement : ce qui ne se chiffre pas sort ; le coefficient ne retient plus rien (18/10/2026),
+        // seule une promotion vidée par l'exclusion ne part pas.
         if (($produits = pmProduits((int) $o['shop'])) !== null) {
             [$o, $sortis] = pmExclureNonChiffres($o, $produits);
             [$coef] = pmCoefMagasins($o);
-            if ($coef === null || $coef['lot'] === null || $coef['lot'] < PM_COEF_MIN) {
+            if ($coef === null || $coef['lot'] === null) {
                 http_response_code(422);
-                return ['error' => $coef !== null && $coef['lot'] !== null ? 'coefficient du lot ×' . number_format($coef['lot'], 2, ',', '') . ' : sous ×' . number_format(PM_COEF_MIN, 0) : 'rien ne se chiffre : ' . pmManqueTxt($coef ?? [])];
+                return ['error' => 'rien ne se chiffre : ' . pmManqueTxt($coef ?? [])];
             }
             $tout[$k] = array_merge($o, ['coef' => $coef, 'auto' => true, 'motif' => null, 'exclusAuto' => array_values(array_unique(array_merge((array) ($o['exclusAuto'] ?? []), $sortis)))]);
         }

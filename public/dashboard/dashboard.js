@@ -3154,7 +3154,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">« Actives » : en caisse aujourd’hui dans ce magasin, celles de la marque comprises (lues au panel${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''}). Celles de la marque se dupliquent pour en faire une du magasin.
-      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
+      Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.</div></div>`;
     return h;
   }
@@ -3251,7 +3251,7 @@
     const nProd = K ? new Set([...K.P.X.keys(), ...K.P.Y.keys()]).size : 0;
     const chips = [`<span class="fi-chip"><b>${esc(e[0])}</b>${l.au ? ' jusqu’au ' + esc(pmQuand(l.au)) : ''}</span>`, `<span class="fi-chip">${esc(nomShop())}</span>`,
       l.src === 'panel' ? `<span class="fi-chip">${esc(l.qui)}</span>` : '', K ? `<span class="fi-chip">${esc(pmLib(K.x))} · ${nProd} produit${nProd > 1 ? 's' : ''}</span>` : '',
-      `<span class="fi-chip">minimum <b>${fXm(min)}</b></span>`].join('');
+      `<span class="fi-chip">repère <b>${fXm(min)}</b></span>`].join('');
     const ok = v => v >= min ? 'ok' : 'ko';
     let corps = '', pied = '';
     if (!K) { corps = `<div class="db-mini" style="padding:14px 0">${S.err[clePMP()] ? 'Prix et coûts du magasin illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div>`; }
@@ -3265,7 +3265,7 @@
       const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
       corps = `<div class="pmc-hero"><div><div class="db-lab">Coefficient du lot · le cas le plus serré</div><div class="pmc-big ${ok(C.lot)}">${fX(C.lot)}</div><div class="db-mini">prix payé HT ÷ coût matière</div></div>
           <div class="pmc-cmp"><div class="db-lab">Sans la promotion</div><b>${fX(C.sans)}</b><div class="db-mini">−${nf(C.sans - C.lot, 2)} avec la promotion</div></div>
-          <div class="pmc-cmp"><div class="db-lab">Écart au minimum</div><b class="${ok(C.lot)}">${ecart >= 0 ? '+' : '−'}${nf(Math.abs(ecart), 2)}</b><div class="db-mini">${ecart >= 0 ? 'au-dessus de' : 'sous'} ${fXm(min)}</div></div></div>
+          <div class="pmc-cmp"><div class="db-lab">Écart au repère</div><b class="${ok(C.lot)}">${ecart >= 0 ? '+' : '−'}${nf(Math.abs(ecart), 2)}</b><div class="db-mini">${ecart >= 0 ? 'au-dessus de' : 'sous'} ${fXm(min)}</div></div></div>
         <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)">
           <i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
           <i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut pmc-d" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>
@@ -3309,21 +3309,21 @@
     const lots = P.L.map(q => r2(q.lot)).sort((a, b) => a - b), med = lots[Math.floor((lots.length - 1) / 2)];
     const cedes = P.L.map(q => q.sans * q.cout - q.paye), sous = lignes.filter(r => r.lot < min).length;
     const nomC = (p, c) => pmNomP(p, c);
-    const etat = v => v < min ? '<span class="pm-chip r">sous le minimum</span>' : (v < min * 1.1 ? '<span class="pm-chip a">à surveiller</span>' : '<span class="pm-chip ok">ok</span>');
+    const etat = v => v < min ? `<span class="pm-chip r">sous ${fXm(min)}</span>` : (v < min * 1.1 ? '<span class="pm-chip a">à surveiller</span>' : '<span class="pm-chip ok">ok</span>');
     const barre = (n, v) => `<div class="pmc-bar" style="background:linear-gradient(90deg,rgba(166,30,30,.16) 0 ${pc(min)}%,rgba(45,122,62,.12) ${pc(min)}% 100%)"><i class="m" style="left:${pc(min)}%"></i><u style="left:${pc(v)}%;width:${Math.max(0, pc(n) - pc(v))}%"></u><i class="s" style="left:${pc(n)}%"></i><i class="l ${v >= min ? '' : 'ko'}" style="left:${pc(v)}%"></i></div>`;
     const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
     return `<div class="db-tuiles pmc-tuiles">
         <div class="db-tui ${C.lot >= min ? 'bon' : 'vif'}"><div class="k">Coef. le plus bas</div><div class="v">${fX(C.lot)}</div><div class="s">${pmNomP(C.px, x)}${+C.px.id === +C.py.id ? ', acheté et remisé' : ' + ' + pmNomP(C.py, y)}</div></div>
         <div class="db-tui"><div class="k">Coef. d’un lot type</div><div class="v">${fX(med)}</div><div class="s">la moitié des ${lots.length} combinaisons font au moins autant</div></div>
-        <div class="db-tui ${sous ? 'vif' : ''}"><div class="k">Sous le minimum</div><div class="v">${sous} <small class="mu">sur ${lignes.length}</small></div><div class="s">minimum ${fXm(min)}, règle du magasin</div></div>
+        <div class="db-tui ${sous ? 'vif' : ''}"><div class="k">Sous ${fXm(min)}</div><div class="v">${sous} <small class="mu">sur ${lignes.length}</small></div><div class="s">le repère de marge, il ne bloque pas</div></div>
         <div class="db-tui"><div class="k">Marge cédée par lot</div><div class="v">${Math.abs(Math.max(...cedes) - Math.min(...cedes)) < 0.005 ? fU(cedes[0]) : fU(Math.min(...cedes)) + ' – ' + fU(Math.max(...cedes))}</div><div class="s">ce que coûte l’avantage, HT</div></div></div>
       <div class="pm-large"><table class="fi-st pmc-st"><thead><tr><th>Produit</th><th class="n">Prix HT</th><th class="n">Coût recette</th><th class="n">Coef. normal</th><th class="n">Coef. dans la promo</th><th class="pmc-gr">×1 → ×4,5</th><th>Le pire lot</th><th></th></tr></thead><tbody>
       ${lignes.map(r => `<tr><td class="nm">${esc(r.p.nom)}${P.X.has(+r.p.id) ? '' : ' <small class="mu">reçu</small>'}</td><td class="n">${fU(+r.p.prixHt)}</td><td class="n">${fU(+r.p.cout)}${r.p.source === 'reseau' ? ' <small class="mu" title="coût du réseau, pas encore calculé pour ce magasin">r</small>' : ''}</td>
         <td class="n mu">${fX(r.normal)}</td><td class="n"><b class="${r.lot < min ? 'ko' : (r.lot < min * 1.1 ? 'wa' : 'ok')}">${fX(r.lot)}</b></td><td class="pmc-gr">${barre(r.normal, r.lot)}</td>
         <td class="db-mini">${x.q} × ${nomC(r.w.px, x)} + ${y.q} × ${nomC(r.w.py, y)} ${pmGainArt(y)}</td><td>${etat(r.lot)}</td></tr>`).join('')}
       </tbody></table></div>
-      <div class="pmc-leg db-mini"><span><i class="m"></i>minimum ${fXm(min)}</span><span><i class="s"></i>sans promo</span><span><i class="l"></i>avec la promo</span>
-        <span class="pmc-legn">« à surveiller » : moins de 10 % au-dessus du minimum. Pour chaque produit, le lot le plus serré où il est acheté (ou reçu).</span></div>
+      <div class="pmc-leg db-mini"><span><i class="m"></i>repère ${fXm(min)}</span><span><i class="s"></i>sans promo</span><span><i class="l"></i>avec la promo</span>
+        <span class="pmc-legn">« à surveiller » : moins de 10 % au-dessus de ${fXm(min)}. Pour chaque produit, le lot le plus serré où il est acheté (ou reçu).</span></div>
       ${sortis.length ? `<div class="pm-warn">Hors calcul, sortis de la promotion au panel : ${esc(sortis.join(', '))}.</div>` : ''}`;
   }
 
@@ -3364,7 +3364,7 @@
       const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
       if (!d.du || !d.au) { return 'les dates'; }
       if (d.au <= d.du) { return 'une fin après le début'; }
-      if (n > (R.joursMax || 14)) { return (R.joursMax || 14) + ' jours au plus'; }
+      if (n > (R.joursMax || 14)) { return n + ' jours, ' + (R.joursMax || 14) + ' au plus'; }
       return '';
     }
     return '';
@@ -3373,11 +3373,6 @@
     const prods = pmProduits();
     if (!prods) { return null; }
     return pmCoef(prods, pmEffectif(d.x), Object.assign(pmEffectif(d.y), { type: d.y.type, valeur: d.y.valeur }));
-  }
-  /** Validée d'office à l'envoi ? Le même critère que le serveur (pmDOffice), avec les prix de ce magasin. */
-  function pmDOffice(d) {
-    const C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
-    return !!C && C.lot != null && C.lot >= min;
   }
   /** Les produits visés qui sortiront d'office à l'enregistrement : sans coût de recette ou sans prix (pmExclureNonChiffres). */
   const pmSortis = C => C ? [...C.sansCout, ...C.sansPrix] : [];
@@ -3392,7 +3387,7 @@
     if (!C) { return S.err[clePMP()] ? `<div class="pm-fixe ko">Prix et coûts du magasin illisibles : ${esc(S.err[clePMP()])}</div>` : `<div class="pm-fixe">Lecture des prix et coûts de recette du magasin…</div>`; }
     if (C.lot == null) { return C.nX + C.nY ? `<div class="pm-fixe ko"><span>Rien ne se chiffre : ${esc(pmManqueTxt(C))}. Choisissez d’autres produits.</span></div>` : `<div class="pm-fixe">Le coefficient se calcule dès que X et Y sont choisis.</div>`; }
     const ok = C.lot >= min, sortis = pmSortis(C).length ? ` Sortent d’office, sans coût de recette ou sans prix : ${esc(pmSortisTxt(C))}.` : '';
-    return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit chiffré.' + sortis : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. Baissez l’avantage, montez X, ou retirez ce produit.'}</span></div>`;
+    return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit chiffré.' + sortis : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. La promotion s’enregistre quand même ; pour la marge, baissez l’avantage, montez X ou retirez ce produit.'}</span></div>`;
   }
   function pmDroite(W) {
     const d = W.d, C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
@@ -3406,8 +3401,8 @@
       ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x)) : 'à l’étape 2'))}
       ${ck(!pmManque(d, 3), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 3'))}
       ${ck(!pmManque(d, 4), 'Période : ' + (pmManque(d, 4) ? esc(pmManque(d, 4)) : n + ' jour' + (n > 1 ? 's' : '') + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
-      ${ck(C && C.lot != null && C.lot >= min, 'Coefficient du lot ' + fXm(min) + ' au moins')}</div>`;
-    h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">${fXm(min)} minimum ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
+      ${C && C.lot != null ? `<div class="pm-ck${C.lot >= min ? '' : ' wa'}">${C.lot >= min ? '✓' : '!'} Coefficient du lot ${fX(C.lot)}${C.lot >= min ? '' : ' : sous ' + fXm(min) + ', n’empêche pas l’enregistrement'}</div>` : ck(false, 'Coefficient du lot : se calcule avec X et Y')}</div>`;
+    h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">repère ${fXm(min)} ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
     else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Rien ne se chiffre : ' + esc(pmManqueTxt(C)) + '.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
     else {
