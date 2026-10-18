@@ -4596,7 +4596,7 @@ class App {
    * /analyse/produits. La fiche garde toutes les écritures d'avant : fiche de production, revue ★, nécessaire, détail du
    * score (projets, arrêt du produit), perte par magasin ; les seuils et les PDF sont dans la barre d'outils.
    */
-  catCharge(){ this.manqueCharge(); this.pxvCharge(false); this.apCharge(false); }
+  catCharge(){ this.manqueCharge(); this.pxvCharge(false); this.apCharge(false); this.aoSaisonsCharge(); }
   valsCatalogue(common){
     const S = this.state, D = this.D;
     const c2 = this.pdCalcule(), SC = this.scoringCfg();
@@ -4646,7 +4646,11 @@ class App {
         mnPct: s && s.mp != null ? s.mp * 100 : null,
         vol: s ? s.vol || 0 : 0, part: s && caTot > 0 ? 100 * (s.ca || 0) / caTot : null, score: s ? s.score : null, dec: s ? decCle(s) : null,
         mags: s ? s.mags || 0 : 0, sansVente: !s || !!s.sansVente,
-        tend: pid ? tendDe(pid) : null, px, mq: mqr, mqMois: mqr ? mqr.eur / moisMq : null };
+        tend: pid ? tendDe(pid) : null, px, mq: mqr, mqMois: mqr ? mqr.eur / moisMq : null,
+        // Le rang (18/10/2026) : celui du score, au chiffre d'affaires — sur toute la gamme, et dans sa catégorie.
+        rangG: s && !s.sansVente ? s.rangGlobal : null, rangC: s && !s.sansVente ? s.rang : null, nbC: s ? s.nbCat : null,
+        // Les saisons du panel (gammes saisonnières, /production/saisons) ; `saisonnier` : dans aucune gamme permanente.
+        saisons: p && Array.isArray(p.saisons) ? p.saisons.map(String) : [], saisonnier: !!(p && p.saisonnier) };
     };
     const vus = new Set(), L = [];
     (c2.base || []).forEach(s => { const k = String(s.id); vus.add(k); L.push(ligne(k, s, catDe.get(k))); });
@@ -4667,7 +4671,7 @@ class App {
         s: pxOk ? 'prix encaissé : 10 % ou plus entre magasins · ' + (pxv.periode || '') : 'le prix encaissé de chaque magasin' },
       { k: 'baisse', q: 'Qu’est-ce qui décroche ?', v: lu(apOk, ap) || baisse.length + ' en baisse', cls: baisse.length ? 'ko' : 'ok',
         s: apOk ? '−15 % ou pire : les ' + (S.apMois || 3) + ' derniers mois, la 2e moitié face à la 1re' : 'la tendance de chaque référence' },
-    ].map(t => Object.assign(t, { on: vue === t.k, choisir: () => this.setState({ catVue: vue === t.k ? 'tout' : t.k, catFiche: null }) }));
+    ].map(t => Object.assign(t, { on: vue === t.k, choisir: () => this.setState({ catVue: vue === t.k ? 'tout' : t.k, catFiche: null, catTri: null }) }));
     common.catVue = vue;
     // La lecture détaillée de la question choisie : un lien, pas un onglet.
     common.catLienVue = { manque: ['Le manque à gagner, magasin par magasin ›', 'manque'], prix: ['Le prix encaissé, magasin par magasin ›', 'prixvolume'],
@@ -4683,12 +4687,45 @@ class App {
     common.catCats = [{ v: '', lib: 'Toutes les catégories', on: !catSel }].concat(cats.map(c3 => ({ v: c3, lib: c3, on: c3 === catSel })));
     // La catégorie choisie vaut aussi pour le PDF de la catégorie (le même menu que l'ancien écran de scoring).
     common.catPoserCat = e => this.setState({ catCat: e.target.value, pdCat: e.target.value || 'Toutes les catégories' });
-    let F = L.filter(l => (!catSel || l.catNom === catSel) && (!q || l.nom.toLowerCase().includes(q) || l.k.includes(q)));
+    // Les saisons du panel : leurs noms (emoji compris), et le filtre « une saison » ou « hors saison ».
+    const sais = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim() }));
+    const nomSais = new Map(sais.map(g => [g.id, g.nom]));
+    L.forEach(l => { l.saisonsTxt = l.saisons.map(id => nomSais.get(id)).filter(Boolean).join(', '); });
+    const saisSel = S.catSaison === 'hors' || sais.some(g => g.id === S.catSaison) ? S.catSaison : '';
+    common.catSaisons = [{ v: '', lib: 'Toutes les saisons', on: !saisSel }, { v: 'hors', lib: 'Hors saison (toute l’année)', on: saisSel === 'hors' }]
+      .concat(sais.map(g => ({ v: g.id, lib: g.nom, on: g.id === saisSel })));
+    common.catPoserSaison = e => this.setState({ catSaison: e.target.value });
+    let F = L.filter(l => (!catSel || l.catNom === catSel) && (!q || l.nom.toLowerCase().includes(q) || l.k.includes(q))
+      && (!saisSel || (saisSel === 'hors' ? !l.saisons.length : l.saisons.includes(saisSel))));
     if (vue === 'retirer') { F = F.filter(l => l.dec === 'effacer').sort((a, b) => (a.score || 0) - (b.score || 0)); }
     else if (vue === 'manque') { F = F.filter(l => l.mq).sort((a, b) => b.mq.eur - a.mq.eur); }
     else if (vue === 'prix') { F = F.filter(l => l.px && l.px.ecart >= 10).sort((a, b) => b.px.ecart - a.px.ecart); }
     else if (vue === 'baisse') { F = F.filter(l => l.tend != null && l.tend <= -15).sort((a, b) => a.tend - b.tend); }
     else { F.sort((a, b) => (b.score == null ? -1 : b.score) - (a.score == null ? -1 : a.score) || a.nom.localeCompare(b.nom, 'fr')); }
+    // Le tri d'une colonne (18/10/2026) : la flèche de l'en-tête — un clic trie, un second inverse ; une question le remet
+    // à son ordre. Les cases vides restent en bas, dans les deux sens.
+    const TRI = { nom: [l => l.nom.toLowerCase(), 1], saison: [l => l.saisonsTxt || null, 1], prix: [l => l.prix, -1], mn: [l => l.mnPct, -1],
+      vol: [l => l.sansVente ? null : l.vol, -1], part: [l => l.sansVente ? null : l.part, -1], rang: [l => l.rangG, 1], score: [l => l.score, -1],
+      mags: [l => l.s ? l.mags : null, -1], tend: [l => l.tend, -1], extra: [l => vue === 'manque' ? l.mqMois : (l.px ? l.px.ecart : null), -1],
+      dec: [l => l.dec ? { garder: 0, modifier: 1, effacer: 2 }[l.dec] : null, 1], oblig: [l => l.p ? (l.p.must ? 0 : 1) : null, 1] };
+    const tri = S.catTri && TRI[S.catTri.col] ? S.catTri : null;
+    if (tri) {
+      const [cle, sens0] = TRI[tri.col], sens = tri.inv ? -sens0 : sens0;
+      F.sort((a, b) => { const va = cle(a), vb = cle(b);
+        if (va == null || va === '') { return vb == null || vb === '' ? 0 : 1; } if (vb == null || vb === '') { return -1; }
+        return (typeof va === 'string' ? va.localeCompare(vb, 'fr') : va - vb) * sens; });
+    }
+    const colonne = (k, lib, titre, num) => ({ k, lib, titre: titre || '', num: !!num,
+      fleche: tri && tri.col === k ? ((TRI[k][1] === 1) !== !!tri.inv ? '▲' : '▼') : '↕', on: !!(tri && tri.col === k),
+      trier: () => this.setState({ catTri: tri && tri.col === k ? { col: k, inv: !tri.inv } : { col: k, inv: false } }) });
+    common.catCols = [colonne('nom', 'Référence'), colonne('saison', 'Saison', 'La gamme saisonnière du panel où elle est vendue'),
+      colonne('prix', 'Prix', 'Prix de vente moyen encaissé', true), colonne('mn', 'Marge nette', '(prix de vente moyen − coût matière première) ÷ prix de vente moyen', true),
+      colonne('vol', 'Volume', c2.periode, true), colonne('part', 'Part des ventes', 'Sa part du chiffre d’affaires de toutes les références du réseau, sur la période', true),
+      colonne('rang', 'Rang', 'Au chiffre d’affaires : sur toute la gamme, puis dans sa catégorie', true),
+      colonne('score', 'Score', 'Le score du réseau : volume, marge, perte, comptoir, revue', true), colonne('mags', 'Magasins', 'Magasins qui l’ont vendue sur la période', true),
+      colonne('tend', 'Tendance', 'La 2e moitié de la période face à la 1re, réseau entier', true)]
+      .concat(vue === 'manque' || vue === 'prix' ? [colonne('extra', vue === 'manque' ? 'Manque / mois' : 'Prix min – max', '', true)] : [])
+      .concat([colonne('dec', 'Décision'), colonne('oblig', 'Obligatoire', 'Imposée en boutique (l’assortiment) et gardée au score — un clic suffit')]);
     common.catCompte = F.length + ' / ' + L.length + ' références';
     common.catColExtra = vue === 'manque' ? 'Manque / mois' : (vue === 'prix' ? 'Prix min – max' : '');
     common.catPeriode = c2.periode || '';
@@ -4705,13 +4742,15 @@ class App {
         '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
     };
     common.catLignes = F.slice(0, 250).map(l => ({
-      k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.must ? 'obligatoire' : '', l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
+      k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
       prix: eur(l.prix), mn: l.mnPct == null ? '—' : Math.round(l.mnPct) + ' %', mnCls: l.mnPct == null ? 'mu' : (l.mnPct < 40 ? 'ko' : ''),
       vol: l.sansVente ? '0' : nb(l.vol),
       part: l.part == null || l.sansVente ? '—' : (l.part < 0.1 ? '< 0,1 %' : l.part.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %'), score: l.score == null ? '—' : String(Math.round(l.score)),
       scoreCls: l.score == null ? 'mu' : (l.dec === 'garder' ? 'ok' : (l.dec === 'modifier' ? 'am' : 'ko')),
       mags: l.s ? l.mags + '/' + nbOuv : '—', tend: pct(l.tend), tendCls: l.tend == null ? 'mu' : (l.tend >= 0 ? 'ok' : 'ko'),
       dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
+      rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '' : l.rangC + ' / ' + l.nbC + ' en catégorie',
+      saison: l.saisonsTxt || (l.saisons.length ? 'saison du panel' : ''), saisonSeule: l.saisonnier,
       oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
       basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,
       extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
@@ -4724,8 +4763,9 @@ class App {
     common.catSeuilModifier = String(Math.round(SC.modifier));
     common.catExporter = () => {
       const sep = ';', cel = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-      const t = [['Référence', 'Catégorie', 'Prix', 'Marge nette %', 'Volume', 'Part des ventes %', 'Score', 'Magasins', 'Tendance %', 'Décision', 'Manque €/mois', 'Écart de prix %'].map(cel).join(sep)]
-        .concat(F.map(l => [l.nom, l.catNom, l.prix == null ? '' : String(l.prix).replace('.', ','), l.mnPct == null ? '' : Math.round(l.mnPct), Math.round(l.vol), l.part == null ? '' : String(Math.round(l.part * 10) / 10).replace('.', ','),
+      const t = [['Référence', 'Catégorie', 'Saison', 'Prix', 'Marge nette %', 'Volume', 'Part des ventes %', 'Rang', 'Rang en catégorie', 'Score', 'Magasins', 'Tendance %', 'Décision', 'Manque €/mois', 'Écart de prix %'].map(cel).join(sep)]
+        .concat(F.map(l => [l.nom, l.catNom, l.saisonsTxt || '', l.prix == null ? '' : String(l.prix).replace('.', ','), l.mnPct == null ? '' : Math.round(l.mnPct), Math.round(l.vol), l.part == null ? '' : String(Math.round(l.part * 10) / 10).replace('.', ','),
+          l.rangG == null ? '' : l.rangG, l.rangC == null ? '' : l.rangC + ' / ' + l.nbC,
           l.score == null ? '' : Math.round(l.score), l.mags, l.tend == null ? '' : Math.round(l.tend), l.dec ? DEC[l.dec][0] : '',
           l.mqMois == null ? '' : Math.round(l.mqMois), l.px ? Math.round(l.px.ecart) : ''].map(cel).join(sep)));
       const bl = new Blob(['﻿' + t.join('\r\n')], { type: 'text/csv;charset=utf-8' }), u = URL.createObjectURL(bl), a = document.createElement('a');
