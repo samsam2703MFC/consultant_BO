@@ -347,5 +347,16 @@ verifie('les commandes payées en ligne comptées à part', $r['enLigne'] === ['
 $r = pmCanaux($jours, [$regle], null, [1 => 10], [], 4);
 verifie('sans les commandes du panel : tout au comptoir, dit', $r['commandes'] === false && $r['total']['cc']['n'] === 0 && $r['total']['compt']['n'] === 6, json_encode($r['total']));
 
+echo "La sonde des commandes payées en ligne\n";
+$cmd = ['id' => 812, 'name' => 'Marie Dupont', 'customer_email' => 'marie@example.com', 'phone' => '0470', 'delivery_address' => ['street' => 'Rue X 1', 'city' => 'Halle'],
+    'note' => 'sonner deux fois', 'is_webshop' => true, 'total_value' => 18.4, 'id_transaction' => null,
+    'products' => [['id_product' => 101, 'name' => 'Cookie chocolat', 'quantity' => 3, 'unit_price' => 2.4, 'discount_value' => 1.4, 'customer_note' => 'sans noix']]];
+$p = pmSondePropre($cmd);
+verifie('rien de nominatif : nom, e-mail, téléphone, adresse, note retirés (la clé reste)', $p['name'] === '[retiré]' && $p['customer_email'] === '[retiré]' && $p['phone'] === '[retiré]'
+    && $p['delivery_address'] === '[retiré]' && $p['note'] === '[retiré]' && !str_contains(json_encode($p, JSON_UNESCAPED_UNICODE), 'Marie') && !str_contains(json_encode($p), 'example.com'), json_encode($p, JSON_UNESCAPED_UNICODE));
+verifie('dans les lignes, le nom du produit reste, la note du client part', $p['products'][0]['name'] === 'Cookie chocolat' && $p['products'][0]['customer_note'] === '[retiré]' && $p['total_value'] === 18.4);
+$ch = pmSondeChemins($p, '/discount|promo/i');
+verifie('les chemins des remises', $ch === ['products.0.discount_value' => 1.4], json_encode($ch));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

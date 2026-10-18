@@ -665,6 +665,112 @@ function ep_promos_sonde_portions(): array
     return $out;
 }
 
+/* --- les commandes webshop payées en ligne : la sonde ---------------------------------------------------------- */
+
+/** Ce qui identifie une personne, dans une clé : retiré de tout ce que la sonde rend. */
+const PM_SONDE_PERSO = '/e?mail|phone|mobile|gsm|address|adresse|street|city|ville|zip|postal|first.?name|last.?name|full.?name|customer|client|user|note|comment|message|instruction|vat.?number|iban|card|token|password|secret|birth|gender/i';
+
+/**
+ * Une commande du panel sans rien de nominatif : une clé personnelle garde sa place, sa valeur devient « [retiré] ».
+ * Au niveau de la commande, `name`, `title`, `label` sont retirés aussi (le nom du client) ; dans les lignes (products,
+ * items, lines), le nom du produit reste.
+ */
+function pmSondePropre($x, bool $ligne = false)
+{
+    if (!is_array($x)) { return $x; }
+    $o = [];
+    foreach ($x as $k => $v) {
+        if (is_string($k) && (preg_match(PM_SONDE_PERSO, $k) === 1 || (!$ligne && in_array(strtolower($k), ['name', 'nom', 'title', 'label'], true)))) { $o[$k] = '[retiré]'; continue; }
+        $o[$k] = pmSondePropre($v, $ligne || (is_string($k) && preg_match('/^(products|items|lines|order_lines|articles|order_items)$/i', $k) === 1));
+    }
+    return $o;
+}
+
+/** Les chemins (« products.0.discount_value ») des clés qui répondent au motif, avec leur valeur quand elle est simple. */
+function pmSondeChemins($x, string $motif, string $base = '', int $max = 40): array
+{
+    $out = [];
+    if (!is_array($x)) { return $out; }
+    foreach ($x as $k => $v) {
+        $ch = $base === '' ? (string) $k : $base . '.' . $k;
+        if (is_string($k) && preg_match($motif, $k) === 1) { $out[$ch] = is_array($v) ? '[' . count($v) . ']' : $v; }
+        if (is_array($v)) { $out += pmSondeChemins($v, $motif, $ch, $max); }
+        if (count($out) >= $max) { break; }
+    }
+    return array_slice($out, 0, $max, true);
+}
+
+/**
+ * GET /ventes/promos/sonde-commandes?shop=4[&jours=14] — lecture seule (18/10/2026) : ce que le panel dit d'une commande
+ * webshop payée en ligne (sans `id_transaction`, donc sans ticket de caisse), pour en compter les promotions comme celles
+ * des tickets. Rend : les comptes (commandes, webshop, payées en ligne, encaissées au magasin), les clés d'une commande et
+ * de ses lignes, où sont les remises et le paiement, deux commandes payées en ligne en exemple, et ce que rendent les
+ * routes de détail plausibles d'une commande (compte consultant, puis admin). Rien de nominatif : noms, e-mails,
+ * téléphones, adresses, notes sont retirés (pmSondePropre).
+ */
+function ep_promos_sonde_commandes(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API du panel non configuré']; }
+    $jours = max(1, min(60, (int) ($_GET['jours'] ?? 14)));
+    $depuis = date('Y-m-d', strtotime('-' . $jours . ' day'));
+    $r = PanelApi::sondeGet('/shops/' . $shop . '/client-orders?date_from=' . $depuis, 25);
+    $corps = is_array($r['corps'] ?? null) ? $r['corps'] : [];
+    $L = function_exists('analyseListe') ? analyseListe($corps) : PanelApi::liste($corps);
+    $out = ['shop' => $shop, 'depuis' => $depuis, 'liste' => ['chemin' => '/shops/' . $shop . '/client-orders?date_from=' . $depuis, 'code' => $r['code'] ?? null, 'erreur' => $r['erreur'] ?? null,
+        'clesEnveloppe' => array_keys(array_diff_key($corps, array_flip(['data', 'items', 'results'])))]];
+    $web = static function (array $c): bool {
+        if (function_exists('coCanal')) { return coCanal($c) !== 'compt'; }
+        return !empty($c['is_webshop']) || preg_match('/deliv|livr|ship/i', (string) ($c['fulfilment_mode'] ?? '')) === 1;
+    };
+    $enLigne = []; $nWeb = 0; $nEnc = 0; $clesC = []; $clesL = [];
+    foreach ($L as $c) {
+        if (!is_array($c) || !$web($c)) { continue; }
+        $nWeb++;
+        if ((int) ($c['id_transaction'] ?? 0) > 0) { $nEnc++; } else { $enLigne[] = $c; }
+        foreach (array_keys($c) as $k) { $clesC[$k] = true; }
+        foreach ((array) ($c['products'] ?? $c['items'] ?? $c['lines'] ?? []) as $l) { if (is_array($l)) { foreach (array_keys($l) as $k) { $clesL[$k] = true; } } }
+    }
+    $remise = '/discount|promo|remise|reduc|coupon|voucher|offer|reward|bundle|gift/i';
+    $paie = '/pay|paid|transaction|stripe|mollie|amount|total|price|value/i';
+    $out['comptes'] = ['commandes' => count($L), 'webshop' => $nWeb, 'payeesEnLigne' => count($enLigne), 'encaisseesAuMagasin' => $nEnc];
+    $out['clesCommande'] = array_keys($clesC);
+    $out['clesLigne'] = array_keys($clesL);
+    $ex = array_slice($enLigne, 0, 3);
+    $out['remises'] = pmSondeChemins(pmSondePropre($ex), $remise);
+    $out['paiement'] = pmSondeChemins(pmSondePropre($ex), $paie);
+    // Deux exemples entiers, nettoyés ; dix lignes au plus chacun.
+    $out['exemples'] = array_map(static function ($c) {
+        $p = pmSondePropre($c);
+        foreach (['products', 'items', 'lines'] as $k) { if (isset($p[$k]) && is_array($p[$k])) { $p[$k] = array_slice($p[$k], 0, 10); } }
+        return $p;
+    }, array_slice($enLigne, 0, 2));
+    // Le détail d'une commande payée en ligne : ses lignes portent-elles prix et remise ?
+    $id = (int) ($enLigne[0]['id'] ?? $enLigne[0]['id_client_order'] ?? 0);
+    $out['id'] = $id ?: null;
+    if ($id > 0) {
+        $resume = static function (array $r) use ($remise): array {
+            $c = is_array($r['corps'] ?? null) ? $r['corps'] : null;
+            $x = is_array($c['data'] ?? null) ? $c['data'] : $c;
+            $lignes = is_array($x) ? (array) ($x['products'] ?? $x['items'] ?? $x['lines'] ?? []) : [];
+            return ['code' => $r['code'] ?? null, 'erreur' => $r['erreur'] ?? null, 'cles' => is_array($x) ? array_slice(array_keys($x), 0, 60) : null,
+                'remises' => is_array($x) ? pmSondeChemins(pmSondePropre($x), $remise) : [], 'lignes' => array_slice(pmSondePropre($lignes, true), 0, 4)];
+        };
+        $det = [];
+        foreach (['/client-orders/' . $id, '/client-orders/' . $id . '?include=products', '/shops/' . $shop . '/client-orders/' . $id, '/shops/' . $shop . '/client-orders/' . $id . '?include=products,discounts'] as $ch) {
+            $det[$ch] = $resume(PanelApi::sondeGet($ch, 10));
+        }
+        $out['detailConsultant'] = $det;
+        if (class_exists('ErpApi') && ErpApi::disponible()) {
+            $adm = [];
+            foreach (['/admin/client-orders/' . $id, '/admin/orders/' . $id, '/admin/webshop/orders/' . $id] as $ch) { $adm[$ch] = $resume(ErpApi::sondeGet($ch)); }
+            $out['detailAdmin'] = $adm;
+        }
+    }
+    return $out;
+}
+
 /* --- les routes --------------------------------------------------------------------------------- */
 
 /** GET /exploitation/promos-magasin?shop=4 — les demandes du magasin, les promotions du panel qui le touchent, les règles. */
