@@ -823,3 +823,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-17T16:40:56Z promotions du magasin : produits non chiffrés sortis d'office
 2026-10-17T19:42:27Z sonde des portions (lecture seule)
 2026-10-17T19:47:44Z promotions : portions ½ ¼, un envoi au panel à la fois
+2026-10-18T09:34:39Z promotions : coefficient de marge au clic, promotions par canal (comptoir, webshop)
