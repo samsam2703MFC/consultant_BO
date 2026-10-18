@@ -160,7 +160,7 @@ verifie('deux magasins : la règle des deux à la fois tenue magasin par magasin
 $d = pmPropre(['shops' => [5, 4, 6, 7, 8, 9]], 4);
 verifie('le magasin qui écrit, lui seul : les autres magasins envoyés sont ignorés', $d['shops'] === [4]);
 $e = pmErreurs($base, [], ['lot' => 1.67, 'x' => 'Pain au chocolat', 'y' => 'Pain au chocolat'] + $coefOk, $now);
-verifie('coefficient sous ×2 : refusée, le cas nommé', count($e) === 1 && str_contains($e[0], '×1,67') && str_contains($e[0], 'Pain au chocolat'), json_encode($e, JSON_UNESCAPED_UNICODE));
+verifie('coefficient sous ×2 : plus de refus, il ne bloque plus (18/10/2026)', $e === [], json_encode($e, JSON_UNESCAPED_UNICODE));
 $e = pmErreurs(pmPropre(['y' => ['type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 120]], 4), [], null, $now);
 verifie('vide : nom, X, Y, valeur, dates demandés', count($e) === 6, json_encode($e, JSON_UNESCAPED_UNICODE));
 $d = pmPropre(['creneaux' => [['jours' => [5, 1, 9], 'de' => '07:00', 'a' => '10:00'], ['jours' => [2], 'de' => '12:00', 'a' => '11:00']], 'maxParTicket' => '3', 'du' => '2026-10-20T08:30'], 4);
@@ -175,7 +175,7 @@ verifie('un brouillon s’enregistre même incomplet, coefficient calculé', ($r
 $id = $r['demande']['id'];
 $GLOBALS['corps'] = ['id' => $id, 'action' => 'envoyer', 'du' => $j(1), 'au' => $j(5)] + $GLOBALS['corps'];
 $r = @wr_promos_magasin();
-verifie('l’envoi d’un lot à ×1,67 refusé (422), la raison dite', ($r['error'] ?? '') === 'à compléter' && count($r['erreurs']) === 1, json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('l’envoi d’un lot à ×1,67 : enregistré quand même, le coefficient gardé', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['coef']['lot'] === 1.67 && $r['demande']['auto'] === true, json_encode($r, JSON_UNESCAPED_UNICODE));
 $GLOBALS['corps']['y'] = ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2, 'nom' => 'Pain au chocolat']]];
 $GLOBALS['corps']['x'] = ['q' => 3, 'prods' => [['id' => 2, 'nom' => 'Pain au chocolat']]];
 $r = wr_promos_magasin();
@@ -240,17 +240,17 @@ $r = @wr_promos_magasin();
 verifie('un autre magasin demandé : ignoré, la promotion ne vaut que pour Halle (×2,31, ses prix)', ($r['demande']['shops'] ?? null) === [4] && $r['demande']['coef']['lot'] === 2.31 && $r['demande']['coef']['magasin'] === 4, json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5']; $l = ep_promos_magasin_demandes();
 verifie('le magasin 5 ne la voit pas', $l['demandes'] === []);
-// Le magasin 5 seul, la remise à 60 % : 4,20 + 0,56 = 4,76 € pour 2,40 € — ×1,98, refusée.
+// Le magasin 5 seul, la remise à 60 % : 4,20 + 0,56 = 4,76 € pour 2,40 € — ×1,98, enregistrée quand même.
 $GLOBALS['corps'] = ['shop' => 5, 'action' => 'envoyer', 'nom' => 'Pains au chocolat −60 %', 'du' => $j(6), 'au' => $j(10),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 60, 'prods' => [['id' => 2]]]];
 $r = @wr_promos_magasin();
-verifie('sous ×2 : refusée (422), jamais à la marque', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], '×1,98') && count(pmLire()) === 3, json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('sous ×2 (×1,98) : enregistrée quand même', ($r['demande']['statut'] ?? '') === 'validee' && $r['demande']['coef']['lot'] === 1.98 && count(pmLire()) === 4, json_encode($r, JSON_UNESCAPED_UNICODE));
 // Le brouillon de Halle, repris depuis le magasin 5 : introuvable, il n'est pas le sien.
 $GLOBALS['corps'] = ['shop' => 4, 'action' => 'brouillon', 'nom' => 'Brouillon de Halle'];
 $r = wr_promos_magasin();
 $GLOBALS['corps'] = ['shop' => 5, 'id' => $r['demande']['id'], 'action' => 'brouillon', 'nom' => 'Repris ailleurs'];
 $r2 = @wr_promos_magasin();
-verifie('la promotion d’un autre magasin ne se modifie pas (404)', ($r2['error'] ?? '') === 'promotion introuvable' && pmLire()[3]['nom'] === 'Brouillon de Halle', json_encode($r2, JSON_UNESCAPED_UNICODE));
+verifie('la promotion d’un autre magasin ne se modifie pas (404)', ($r2['error'] ?? '') === 'promotion introuvable' && pmLire()[4]['nom'] === 'Brouillon de Halle', json_encode($r2, JSON_UNESCAPED_UNICODE));
 
 echo "L'écriture au panel\n";
 ErpApi::$actif = true;
@@ -318,6 +318,13 @@ $GLOBALS['corps']['nom'] = 'Quarts perdus'; $GLOBALS['corps']['du'] = $j(100); $
 $r = wr_promos_magasin();
 verifie('le panel ne reprend pas la portion : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'validee' && str_contains((string) $r['demande']['panelErreur'], 'portion'), json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 ErpApi::$perdPortion = false;
+
+echo "Le coefficient ne bloque plus (18/10/2026)\n";
+ErpApi::$actif = true;
+$GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Sous ×2 au panel', 'du' => $j(110), 'au' => $j(112),
+    'x' => ['q' => 2, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'FREE', 'prods' => [['id' => 2]]]];
+$r = wr_promos_magasin();
+verifie('un lot à ×1,67 part au panel et passe en caisse', ($r['demande']['statut'] ?? '') === 'en_caisse' && $r['demande']['coef']['lot'] === 1.67, json_encode($r['demande'] ?? $r, JSON_UNESCAPED_UNICODE));
 
 echo "Les promotions par canal\n";
 $regle = pvNormaliser(['id' => 11, 'name' => "Cookie's !", 'promotion_type' => 'BUY_X_GET_Y', 'status' => 'ACTIVE', 'priority' => 100, 'shop_scope_type' => 'ALL_SHOPS',

@@ -2114,7 +2114,7 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
-**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : le magasin du dashboard (`?shop=`), lui seul, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en cinq étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 au moins, le cas le plus serré nommé) et le ticket de ce cas. Pas de validation : « Enregistrer la promotion » l'enregistre aussitôt (sous ×2, refusé) ; la marque la met en caisse ou la renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
+**Les promotions du magasin (17/10/2026).** Le dashboard magasin a un onglet **Promotions** (sur ordinateur) : le magasin du dashboard (`?shop=`), lui seul, la liste des promotions qui touchent le magasin (celles de la marque, lues au panel, et les demandes du magasin) rangée par statut — Actives, À venir, À valider, Brouillons, Terminées, Toutes — et par sorte, avec une recherche ; « + Nouvelle promotion » ouvre l'assistant « X achetés + Y » en cinq étapes (une catégorie ou des produits, des exclusions, offert / prix fixe / remise € / remise %, le moins cher d'abord, du … au …, créneaux de la semaine, répétable et nombre maximal par ticket), avec le récapitulatif, le **calculateur de coefficient du lot** (×2 en repère, non bloquant, le cas le plus serré nommé) et le ticket de ce cas. Pas de validation : « Enregistrer la promotion » l'enregistre aussitôt (sous ×2 aussi, depuis le 18/10/2026) ; la marque la met en caisse ou la renvoie avec un mot (console, Analyse magasin › Promotions). Lecture et écriture : `/exploitation/promos-magasin` (ci-dessous).
 
 **Commandes et canaux, au mois (17/10/2026).** Dans le dashboard magasin, vue Mois, la carte « Commandes et canaux » a quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison. Chacune porte la courbe de ses six derniers mois (le mois en cours projeté, en pointillé) et l'écart au mois d'avant aux mêmes dates (« +44 % vs sept. ») ; un clic ouvre son cumul du mois face au mois d'avant, avec la fin de mois au rythme actuel, et un second clic le referme. Lecture : `GET /exploitation/canaux-mois` (ci-dessous). Les vues Jour et Semaine ne changent pas. Tests : `php bin/tests_canaux.php`.
 
@@ -2327,7 +2327,8 @@ Les règles du magasin, imposées au serveur :
 
 - une date de fin, **14 jours au plus** ; la fin après le début, pas déjà passée ;
 - **deux promotions à la fois au plus**, magasin par magasin (les promotions `validee` et `en_caisse`) ;
-- le **coefficient du lot à ×2 au moins** (sous ×2, refusée — jamais envoyée à la marque) : prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
+- le **coefficient du lot**, affiché avec ×2 en repère — il **ne bloque plus** (18/10/2026) : sous ×2, la promotion
+  s'enregistre et part au panel, en rouge dans la liste et la modale. Prix payé HT ÷ coût matière pour x pièces d'un produit de X et y pièces
   d'un produit de Y, la récompense sur la pièce la moins chère, le cas le plus serré de toutes les paires (une paire où
   le produit de X est aussi dans Y et moins cher ne se présente pas en caisse), dans chaque magasin couvert, avec ses
   prix et coûts de recette (`/analyse/produits/coefficients`). Le navigateur fait le même calcul à chaque frappe. Un
@@ -2347,8 +2348,8 @@ selection_strategy: "CHEAPEST"} }` (`ErpApi::ecrire`, compte admin du panel). Ri
 **Les produits qui ne se chiffrent pas sortent d'office** (17/10/2026, `pmExclureNonChiffres`) : à l'enregistrement, un
 produit visé sans coût de recette (ni du magasin ni du réseau) ou sans prix au panel quitte la promotion — choisi par sa
 catégorie, il passe dans les exclusions (`excluded_product_ids` au panel) ; choisi un à un, il quitte la liste —, et
-`exclusAuto` les nomme. Le ×2 se vérifie sur le reste ; si plus rien ne se chiffre, l'enregistrement est refusé (422,
-les noms sortis dits). Rien ne part donc au panel sans coefficient vérifié. « Réessayer au panel » applique la même
+`exclusAuto` les nomme. Le coefficient se calcule sur le reste ; si plus rien ne se chiffre (une liste vidée),
+l'enregistrement est refusé (422, les noms sortis dits). Depuis le 18/10/2026, le coefficient ne retient plus l'envoi au panel. « Réessayer au panel » applique la même
 sortie à une promotion enregistrée avant. Un refus, un écart, une activation refusée : la promotion reste `validee` (« Pas encore en caisse ») avec
 `panelErreur` (l'erreur du panel et ses champs refusés, ou l'écart), inactive au panel si elle y a été créée. Le format
 des créneaux (`schedule`) est déduit du formulaire du panel — la fiche test n'en portait pas — et vérifié à la relecture.

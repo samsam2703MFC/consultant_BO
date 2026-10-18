@@ -6848,7 +6848,7 @@ class App {
     };
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot ×' + (R.coefMin || 2) + ' au moins (sous ×' + (R.coefMin || 2) + ', l’enregistrement est refusé). Pas de validation : une promotion enregistrée part au panel aussitôt — créée inactive, relue, puis activée. N’attendent ici que celles que le panel n’a pas prises, avec son erreur.';
+    common.pmRegles = 'Règles imposées au magasin : une date de fin, ' + (R.joursMax || 14) + ' jours au plus · ' + (R.enMemeTemps || 2) + ' promotions à la fois au plus · coefficient du lot affiché, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque plus l’enregistrement). Pas de validation : une promotion enregistrée part au panel aussitôt — créée inactive, relue, puis activée. N’attendent ici que celles que le panel n’a pas prises, avec son erreur.';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
       const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),
