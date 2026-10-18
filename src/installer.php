@@ -65,6 +65,11 @@ function ensureInstalled(): void
     ensureReputation();
     ensureReglageLarge();
     ensureRevue();
+    // « Nécessaire » fondu dans « Obligatoire » (18/10/2026) : une fois, après la revue et le catalogue de production.
+    if (function_exists('aoFusionNecessaire')) {
+        try { aoFusionNecessaire(); }
+        catch (Throwable $e) { try { journalAdd('Installation', 'Erreur', 'Assortiment', 'Fusion « nécessaire » → « obligatoire » impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ } }
+    }
     connecteurTable();
     ensureScouting();
     ensureNewsletter();

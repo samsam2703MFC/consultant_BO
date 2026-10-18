@@ -3930,17 +3930,6 @@ class App {
         this.setState({});
       });
   }
-  /* « Nécessaire » : la référence se garde quoi qu'en disent la marge et le
-     score. Un clic bascule, l'enregistrement part tout de suite. */
-  pdPoserNecessaire(id, on){
-    return this.api('PUT', '/products/' + encodeURIComponent(String(id)) + '/necessaire', { necessaire: !!on })
-      .then(r => {
-        if (r && r.ok === false) { this.notify(r.error || 'Non enregistré'); return; }
-        const p = (this.D.products || []).find(x => String(x.id) === String(id));
-        if (p) { p.necessaire = !!on; }
-        this.setState({});
-      });
-  }
   pdOpenDetail(id){
     this.setState({ pdDet: { id } });
     if (!this._pdPer) { this._pdPer = {}; }
@@ -4664,6 +4653,8 @@ class App {
       const avant = m(s.slice(0, h)), apres = m(s.slice(nT - h));
       return avant > 0 ? 100 * (apres / avant - 1) : null;
     };
+    // La part de chaque référence dans les ventes du réseau (18/10/2026, demande de Sam) : son chiffre ÷ celui de toutes.
+    const caTot = (c2.base || []).reduce((a, x) => a + (x.ca || 0), 0);
     const decCle = s => s.necessaire ? 'garder' : (Math.round(s.score) > SC.garder ? 'garder' : (Math.round(s.score) >= SC.modifier ? 'modifier' : 'effacer'));
     // --- une ligne par référence : celles qui ont un score, puis celles du catalogue sans vente sur la période
     const ligne = (k, s, p) => {
@@ -4671,8 +4662,10 @@ class App {
       const px = pid ? pxDe.get(pid) : null, mqr = mqDe.get(k) || null;
       return { k, s, p, pid, nom: (s && s.nom) || (p && p.nom) || k, catNom: (p && p.categorie) || (s && s.cat) || '',
         prix: s && s.prix != null ? s.prix : (p ? p.prix : null),
-        mnPct: p && p.margeNettePct != null ? p.margeNettePct : null,
-        vol: s ? s.vol || 0 : 0, score: s ? s.score : null, dec: s ? decCle(s) : null,
+        // La marge nette (18/10/2026, définition de Sam) : (prix de vente moyen − coût matière première) ÷ prix de vente
+        // moyen — celle du score (pdCalcule, `mp`). Sans vente sur la période, pas de prix moyen : pas de marge.
+        mnPct: s && s.mp != null ? s.mp * 100 : null,
+        vol: s ? s.vol || 0 : 0, part: s && caTot > 0 ? 100 * (s.ca || 0) / caTot : null, score: s ? s.score : null, dec: s ? decCle(s) : null,
         mags: s ? s.mags || 0 : 0, sansVente: !s || !!s.sansVente,
         tend: pid ? tendDe(pid) : null, px, mq: mqr, mqMois: mqr ? mqr.eur / moisMq : null };
     };
@@ -4724,13 +4717,24 @@ class App {
       .map(f => ({ nom: f[1], on: (S.pdFenetre || 'mois') === f[0], choisir: () => this.pdChoisirFenetre(f[0]) }));
     const DEC = { garder: ['Garder', 'ok'], modifier: ['Modifier', 'a'], effacer: ['Effacer', 'ko'] };
     const nbOuv = c2.nbOuv || 1;
+    // Obligatoire ou pas, d'un geste (18/10/2026) : l'interrupteur de la ligne et la case de la fiche écrivent l'assortiment
+    // (toute l'année, le minimum gardé) ; retirer une obligatoire se confirme.
+    const basculerOblig = (p, nom) => () => {
+      const on = !p.must;
+      if (!on && !window.confirm('Retirer « ' + nom + ' » de l’assortiment obligatoire ?' + (p.saison != null ? ' Elle l’est pendant une saison.' : ''))) { this.setState({}); return; }
+      this.aoPoser(String(p.ref), on ? { must: true, saison: null, qmin: p.qmin || 0 } : { must: false },
+        '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
+    };
     common.catLignes = F.slice(0, 250).map(l => ({
       k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.must ? 'obligatoire' : '', l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
       prix: eur(l.prix), mn: l.mnPct == null ? '—' : Math.round(l.mnPct) + ' %', mnCls: l.mnPct == null ? 'mu' : (l.mnPct < 40 ? 'ko' : ''),
-      vol: l.sansVente ? '0' : nb(l.vol), score: l.score == null ? '—' : String(Math.round(l.score)),
+      vol: l.sansVente ? '0' : nb(l.vol),
+      part: l.part == null || l.sansVente ? '—' : (l.part < 0.1 ? '< 0,1 %' : l.part.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %'), score: l.score == null ? '—' : String(Math.round(l.score)),
       scoreCls: l.score == null ? 'mu' : (l.dec === 'garder' ? 'ok' : (l.dec === 'modifier' ? 'am' : 'ko')),
       mags: l.s ? l.mags + '/' + nbOuv : '—', tend: pct(l.tend), tendCls: l.tend == null ? 'mu' : (l.tend >= 0 ? 'ok' : 'ko'),
       dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
+      oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
+      basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,
       extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
       on: S.catFiche === l.k,
       ouvrir: () => this.setState({ catFiche: S.catFiche === l.k ? null : l.k, catOnglet: S.catOnglet || 'magasins' }) }));
@@ -4741,8 +4745,8 @@ class App {
     common.catSeuilModifier = String(Math.round(SC.modifier));
     common.catExporter = () => {
       const sep = ';', cel = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-      const t = [['Référence', 'Catégorie', 'Prix', 'Marge nette %', 'Volume', 'Score', 'Magasins', 'Tendance %', 'Décision', 'Manque €/mois', 'Écart de prix %'].map(cel).join(sep)]
-        .concat(F.map(l => [l.nom, l.catNom, l.prix == null ? '' : String(l.prix).replace('.', ','), l.mnPct == null ? '' : Math.round(l.mnPct), Math.round(l.vol),
+      const t = [['Référence', 'Catégorie', 'Prix', 'Marge nette %', 'Volume', 'Part des ventes %', 'Score', 'Magasins', 'Tendance %', 'Décision', 'Manque €/mois', 'Écart de prix %'].map(cel).join(sep)]
+        .concat(F.map(l => [l.nom, l.catNom, l.prix == null ? '' : String(l.prix).replace('.', ','), l.mnPct == null ? '' : Math.round(l.mnPct), Math.round(l.vol), l.part == null ? '' : String(Math.round(l.part * 10) / 10).replace('.', ','),
           l.score == null ? '' : Math.round(l.score), l.mags, l.tend == null ? '' : Math.round(l.tend), l.dec ? DEC[l.dec][0] : '',
           l.mqMois == null ? '' : Math.round(l.mqMois), l.px ? Math.round(l.px.ecart) : ''].map(cel).join(sep)));
       const bl = new Blob(['﻿' + t.join('\r\n')], { type: 'text/csv;charset=utf-8' }), u = URL.createObjectURL(bl), a = document.createElement('a');
@@ -4765,8 +4769,9 @@ class App {
       onglet,
       // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
       revue: s ? [1, 2, 3, 4, 5].map(n2 => ({ n: n2, pleine: s.revue != null && n2 <= s.revue, poser: () => this.pdPoserRevue(s.id, s.revue === n2 ? null : n2) })) : null,
-      necessaire: s ? !!s.necessaire : null,
-      basculerNecessaire: s ? () => this.pdPoserNecessaire(s.id, !s.necessaire) : null,
+      // Une seule case (18/10/2026) : « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score.
+      obligatoire: p ? !!p.must : null,
+      basculerObligatoire: p ? basculerOblig(p, l.nom) : null,
       detailScore: s ? () => this.pdOpenDetail(s.id) : null,
       ouvrirProduction: p ? () => this.refOpen(p, 'fiche') : null,
       comptoir: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(l.nom), psLibres: false, psSel: null }),
@@ -4791,14 +4796,13 @@ class App {
     } else if (onglet === 'marges') {
       const W = c2.W, wt = W.v + W.m + W.perte + W.comptoir + W.rev || 1, w = x => Math.round(100 * x / wt) + ' %';
       fiche.lignesMarge = [
-        ['Prix de vente (catalogue)', p && p.prix != null ? eur(p.prix) : '—'], ['Prix encaissé (réseau)', s && s.prix != null ? eur(s.prix) : '—'],
-        ['Coût matière', p && p.mat != null ? eur(p.mat) : (s && s.mu != null ? eur(s.prix - s.mu) : '—')],
-        ['Marge brute', p && p.margePct != null ? Math.round(p.margePct) + ' %' : '—'],
-        ['Commission de marque', p && p.commission != null ? eur(p.commission) : '—'],
-        ['Marge nette (après commission)', p && p.margeNettePct != null ? Math.round(p.margeNettePct) + ' %' + (p.margeNette != null ? ' · ' + eur(p.margeNette) : '') : '—'],
-        ['Chiffre et marge brute sur la période', s ? eur0(s.ca) + (s.mg != null ? ' · ' + eur0(s.mg) : '') : '—'],
+        ['Prix de vente moyen (encaissé)', s && s.prix != null ? eur(s.prix) : '—'], ['Prix au catalogue', p && p.prix != null ? eur(p.prix) : '—'],
+        ['Coût matière première', s && s.mu != null ? eur(s.prix - s.mu) : (p && p.mat != null ? eur(p.mat) : '—')],
+        ['Marge nette (prix moyen − matière)', s && s.mp != null ? Math.round(s.mp * 100) + ' % · ' + eur(s.mu) + ' la pièce' : '—'],
+        ['Commission de marque', p && p.commission != null ? eur(p.commission) + ' la pièce' : '—'],
+        ['Chiffre et marge sur la période', s ? eur0(s.ca) + (s.mg != null ? ' · ' + eur0(s.mg) : '') : '—'],
       ].map(([k2, v2]) => ({ k: k2, v: v2 }));
-      fiche.criteres = s ? [['Volume vendu', s.sVol, w(W.v)], ['Marge (prix encaissé − coût matière)', s.sMg, w(W.m)], ['Taux de perte', s.sPerte, w(W.perte)],
+      fiche.criteres = s ? [['Volume vendu', s.sVol, w(W.v)], ['Marge nette (prix moyen − matière)', s.sMg, w(W.m)], ['Taux de perte', s.sPerte, w(W.perte)],
         ['Présence au comptoir', s.sComptoir, w(W.comptoir)], ['Revue ★', s.sRev, w(W.rev)]]
         .map(([n2, v2, p2]) => ({ nom: n2, poids: p2, note: v2 == null ? 'pas de donnée' : Math.round(v2) + ' / 100', w: v2 == null ? 0 : Math.max(2, Math.round(v2)), mu: v2 == null })) : [];
       fiche.perte = s && s.perte != null ? this.fP(s.perte, 1) : '';
@@ -11594,6 +11598,9 @@ class App {
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
     // restent à null et n'entrent pas dans le score (recalculé sur volume + position).
+    // « Obligatoire » (18/10/2026 : « nécessaire » y est fondu) : une référence de l'assortiment obligatoire se garde
+    // quoi qu'en disent la marge et le score. Le drapeau garde son nom, `necessaire`, dans le calcul et les PDF.
+    const oblig = {}; (D.prodCatalogue || []).forEach(c => { if (c.must) { oblig[String(c.ref)] = true; } });
     const base = (D.products || []).map(p => {
       const _id = p.id;
       // Sans prix (référence au catalogue mais sans vente sur la période), pas
@@ -11612,7 +11619,7 @@ class App {
         jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
         revue: p.revue != null ? +p.revue : null, revuePar: p.revuePar || '', revueLe: p.revueLe || '',
-        necessaire: !!p.necessaire,
+        necessaire: !!p.necessaire || !!oblig[String(_id)],
         ca: (p.volume || 0) * (p.prix || 0), mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
     const mps = base.map(p => p.mp).filter(v => v != null);
@@ -11651,7 +11658,7 @@ class App {
       // sous le seuil bas, modifier entre les deux.
       // Décidé sur le score ARRONDI — celui qu'on lit : un 49,6 affiché « 50 »
       // ne peut pas être « à effacer » à l'écran et « à modifier » sur le PDF.
-      // « Nécessaire » prime : la référence se garde quoi qu'en disent la
+      // « Obligatoire » prime : la référence se garde quoi qu'en disent la
       // marge et le score — le cinquième champ le dit pour l'affichage.
       decision: (s, nec) => nec ? ['Garder', '#2d7a3e', '#e6f2e8', '#2d7a3e', true]
         : Math.round(s) > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5', false]
@@ -11737,7 +11744,7 @@ class App {
       ['posC',  'Pos. catégorie', 'right', 1, 'Rang par CA dans la catégorie'],
       ['score', 'Score',          'right', -1],
       ['revue', 'Revue ★',        'center', -1, 'Votre revue franchiseur, 1 à 5 étoiles — un clic pose la note, un second clic sur la même l’enlève. Elle pèse dans le score.'],
-      ['necessaire', 'Nécessaire', 'center', -1, 'Cochée : la référence se garde quoi qu’en disent la marge et le score (produit d’appel, pièce de gamme, obligation d’enseigne)'],
+      ['necessaire', 'Obligatoire', 'center', -1, 'L’assortiment obligatoire : la référence se garde quoi qu’en disent la marge et le score'],
       ['decision', 'Décision',    'center', -1, 'Garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux — « nécessaire » prime'],
     ];
     common.pdCols = colDefs.map(c2 => ({
@@ -11904,7 +11911,6 @@ class App {
         // « Nécessaire » : une case, cochée = gardée quoi qu'en disent la
         // marge et le score. Enregistrée aussitôt, comme la revue.
         necessaire: !!p.necessaire,
-        basculerNecessaire: () => this.pdPoserNecessaire(p.id, !p.necessaire),
         decision: dc[0], dcCol: dc[1], dcFond: dc[2], dcBord: dc[3], dcNec: !!dc[4],
         dcTitre: dc[4] ? 'Nécessaire : gardée quoi qu’en disent la marge et le score' : 'Décision selon le score et vos seuils' }; });
     // --- détail d'une référence : le score décomposé, et les deux suites
