@@ -2177,3 +2177,17 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
   .pmc-st th:nth-child(2),.pmc-st td:nth-child(2),.pmc-st th:nth-child(3),.pmc-st td:nth-child(3),.pmc-st .pmc-gr{display:none}
   .pmc-legn{margin-left:0}
 }
+/* Où les promotions sont utilisées (18/10/2026, maquette C) : comptoir, click & collect, livraison, et le coefficient. */
+.cn-card .ct{gap:12px}.cn-card .ct>.db-mini{margin-left:auto}.cn-h{font-family:var(--font-display);font-size:19px}
+.cn-bar{display:inline-flex;height:8px;border-radius:4px;overflow:hidden;background:var(--color-background-secondary);vertical-align:middle}
+.cn-bar i{display:block;height:100%;min-width:2px}.cn-bar i.c,.cn-leg i.c{background:#b8ad9f}.cn-bar i.w,.cn-leg i.w{background:#1f5f8b}.cn-bar i.l,.cn-leg i.l{background:#0f3b5c}
+.cn-bar.big{height:22px;border-radius:6px}.cn-bar.big em{font:700 11px var(--font-ui);font-style:normal;color:#fff;display:block;padding:4px 7px;white-space:nowrap;overflow:hidden}.cn-bar.big i.c em{color:#3b342c}
+.cn-leg{display:inline-flex;gap:14px;flex-wrap:wrap}.cn-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cn-deux{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:28px;padding:12px 16px 14px}
+.cn-r{display:grid;grid-template-columns:220px minmax(0,1fr) 92px;gap:12px;align-items:center;padding:7px 0;border-bottom:.5px dashed var(--color-border-tertiary)}
+.cn-r.cn-th{padding:0 0 6px;border-bottom:.5px solid var(--color-border-tertiary)}.cn-r .n{text-align:right}
+.cn-r.mu b{color:var(--color-text-muted)}.cn-rn{display:flex;flex-direction:column;min-width:0}.cn-rn b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cn-svg{display:block;width:100%;height:auto;margin-top:8px}
+.cn-pied{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;padding:4px 16px 14px}.cn-note{flex:1;min-width:280px}
+@media (max-width:1180px){.cn-deux{grid-template-columns:1fr}.cn-deux>div:last-child{max-width:600px}}
+@media (max-width:700px){.cn-r{grid-template-columns:minmax(0,1fr) 80px}.cn-rb{grid-column:1 / -1;order:3}}

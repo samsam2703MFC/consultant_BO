@@ -64,7 +64,8 @@ function coStatut(array $c, string $canal): string
  */
 function coCommandes(int $sid, string $depuis): ?array
 {
-    $cle = 'coCmd:' . $sid . ':' . $depuis;
+    // `coCmd2` (18/10/2026) : la ligne porte la transaction de caisse (`tx`), pour ranger les tickets du webshop.
+    $cle = 'coCmd2:' . $sid . ':' . $depuis;
     $memo = setting($cle);
     if (is_array($memo) && isset($memo['le'], $memo['v']) && (time() - (int) $memo['le']) < CO_CACHE_MIN * 60) { return $memo['v']; }
     if (!PanelApi::configured()) { return null; }
@@ -86,7 +87,7 @@ function coCommandes(int $sid, string $depuis): ?array
             $articles = $aQte ? round($q, 1) : (float) count($prods);
         }
         $out[] = ['quand' => substr($quand, 0, 16), 'canal' => $canal, 'montant' => round((float) ($c['total_value'] ?? 0), 2),
-            'articles' => $articles, 'statut' => $statut, 'encaissee' => (int) ($c['id_transaction'] ?? 0) > 0];
+            'articles' => $articles, 'statut' => $statut, 'encaissee' => (int) ($c['id_transaction'] ?? 0) > 0, 'tx' => (int) ($c['id_transaction'] ?? 0)];
     }
     usort($out, static fn ($a, $b) => strcmp($a['quand'], $b['quand']));
     try {

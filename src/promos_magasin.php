@@ -273,6 +273,90 @@ function ep_promos_magasin_produits(): array
         'nSansCout' => count(array_filter($l, static fn ($p) => $p['cout'] === null))];
 }
 
+/* --- les promotions par canal (18/10/2026, maquette C) ------------------------------------------------------------ */
+
+/**
+ * GET /exploitation/promos-magasin/canaux?shop=4&jours=30 (7 | 30) — où les promotions s'appliquent : au comptoir, en
+ * click & collect, en livraison, promotion par promotion et jour par jour. Les tickets à remise gravés (`svP…`, `r`)
+ * passent par la reconnaissance des promotions du panel (pvTicket) ; un ticket est du webshop quand une commande du panel
+ * porte sa transaction (`id_transaction`), dans le canal de la commande (coCommandes). Une commande payée en ligne n'a
+ * pas de ticket : comptée à part (`enLigne`), ses promotions ne se lisent pas encore. Lecture seule.
+ */
+function ep_promos_magasin_canaux(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $n = (int) ($_GET['jours'] ?? 30) === 7 ? 7 : 30;
+    $jours = [];
+    for ($i = $n - 1; $i >= 0; $i--) { $jours[] = date('Y-m-d', strtotime('-' . $i . ' day')); }
+    $out = ['shop' => (string) $shop, 'jours' => $n, 'du' => $jours[0], 'au' => $jours[$n - 1]];
+    if (!function_exists('pvRegles') || !function_exists('pvTicket')) { return $out + ['erreur' => 'la reconnaissance des promotions n’est pas chargée']; }
+    $R = pvRegles();
+    $catId = []; $catNom = function_exists('svCategories') ? svCategories() : [];
+    if (function_exists('panelCatalogue')) { foreach ((array) (panelCatalogue()['produits'] ?? []) as $pid => $x) { if (!empty($x['catId'])) { $catId[(int) $pid] = (int) $x['catId']; } } }
+    $cmd = function_exists('coCommandes') ? coCommandes($shop, $jours[0]) : null;
+    $tickets = [];
+    foreach ($jours as $j) { $g = setting('svP' . $shop . ':' . $j); $tickets[$j] = is_array($g) && array_key_exists('r', $g) ? (array) $g['r'] : null; }
+    return $out + pmCanaux($tickets, $R['regles'], $cmd, $catId, $catNom, $shop) + ['erreur' => $R['erreur']];
+}
+
+/**
+ * Le compte, sans lecture : $tickets {jour: [ticket à remise {t, mn, l}] | null (jour pas encore lu)}, les règles du panel
+ * normalisées (pvNormaliser), les commandes du panel (coCommandes : canal, tx, statut ; null = pas lues).
+ * Rend {promos: [{id, nom, type, texte, compt, cc, liv: {n, r, t}}], parJour: [{j, compt, web: {n, r}}], total,
+ * joursSans, commandes, enLigne: {cc, liv}} — n = fois appliquée, r = remise, t = tickets.
+ */
+function pmCanaux(array $tickets, array $regles, ?array $cmd, array $catId, array $catNom, int $sid): array
+{
+    $tx = []; $enLigne = ['cc' => 0, 'liv' => 0];
+    foreach ((array) $cmd as $c) {
+        if (!is_array($c) || !in_array($c['canal'] ?? '', ['cc', 'liv'], true)) { continue; }
+        if ((int) ($c['tx'] ?? 0) > 0) { $tx[(int) $c['tx']] = $c['canal']; } else { $enLigne[$c['canal']]++; }
+    }
+    $parId = [];
+    foreach ($regles as $r) { $parId[$r['id']] = $r; }
+    $zero = ['n' => 0, 'r' => 0.0, 't' => 0];
+    $agg = []; $parJour = []; $sans = [];
+    foreach ($tickets as $j => $L) {
+        $J = ['j' => (string) $j, 'compt' => ['n' => 0, 'r' => 0.0], 'web' => ['n' => 0, 'r' => 0.0]];
+        if ($L === null) { $sans[] = (string) $j; $parJour[] = $J + ['lu' => false]; continue; }
+        $regJ = array_values(array_filter($regles, static fn ($r) => pvApplicable($r, $sid, (string) $j)));
+        foreach ($L as $t) {
+            if (!is_array($t) || !is_array($t['l'] ?? null)) { continue; }
+            $res = pvTicket($t['l'], $regJ, $catId, $catNom);
+            if ($res === []) { continue; }
+            $canal = $tx[(int) ($t['t'] ?? 0)] ?? 'compt';
+            foreach ($res as $rid => $x) {
+                $rem = 0.0;
+                foreach ((array) ($x['l'] ?? []) as $l) { $rem += (float) $l[2]; }
+                $n = max(1, (int) ($x['fois'] ?? 0));
+                $a =& $agg[(string) $rid];
+                $a = $a ?? ['compt' => $zero, 'cc' => $zero, 'liv' => $zero];
+                $a[$canal]['n'] += $n; $a[$canal]['r'] += $rem; $a[$canal]['t']++;
+                unset($a);
+                $w = $canal === 'compt' ? 'compt' : 'web';
+                $J[$w]['n'] += $n; $J[$w]['r'] += $rem;
+            }
+        }
+        $J['compt']['r'] = round($J['compt']['r'], 2); $J['web']['r'] = round($J['web']['r'], 2);
+        $parJour[] = $J + ['lu' => true];
+    }
+    $promos = []; $total = ['compt' => $zero, 'cc' => $zero, 'liv' => $zero];
+    foreach ($agg as $rid => $a) {
+        $r = $parId[$rid] ?? $parId[(int) $rid] ?? null;
+        foreach (['compt', 'cc', 'liv'] as $c) {
+            $a[$c]['r'] = round($a[$c]['r'], 2);
+            $total[$c]['n'] += $a[$c]['n']; $total[$c]['r'] += $a[$c]['r']; $total[$c]['t'] += $a[$c]['t'];
+        }
+        $promos[] = ['id' => $rid === 'x' ? 'x' : (int) $rid, 'nom' => $r['nom'] ?? 'Remise non reconnue', 'type' => $r['type'] ?? 'remise',
+            'texte' => $r ? pvTexte($r) : 'remise sur la ligne qu’aucune promotion du panel n’explique'] + $a;
+    }
+    $somme = static fn ($p) => $p['compt']['n'] + $p['cc']['n'] + $p['liv']['n'];
+    usort($promos, static fn ($a, $b) => (($a['id'] === 'x') <=> ($b['id'] === 'x')) ?: $somme($b) <=> $somme($a));
+    foreach ($total as $c => $v) { $total[$c]['r'] = round($v['r'], 2); }
+    return ['promos' => $promos, 'parJour' => $parJour, 'total' => $total, 'joursSans' => $sans, 'commandes' => $cmd !== null, 'enLigne' => $enLigne];
+}
+
 /** Le nom court d'un magasin (« Halle ») pour les messages. */
 function pmNomShop(int $s): string
 {

@@ -2253,6 +2253,21 @@ enregistrer), calqué sur le formulaire « Buy X Get Y » du panel. Les promotio
   magasin comme pour celles de la marque (X achetés + Y ; pas les bundles). La modale montre le cas le plus serré, puis
   « produit par produit » le pire lot de chaque produit visé ; `coef.lot` d'une demande reste celui de l'enregistrement,
   rappelé quand il diffère.
+
+`GET /exploitation/promos-magasin/canaux?shop=4&jours=30` (7 | 30) — où les promotions s'appliquent (18/10/2026) :
+
+    { shop, jours, du, au, erreur,
+      promos: [ { id (n° au panel | "x" = remise non reconnue), nom, type, texte,
+                  compt: { n, r, t }, cc: { n, r, t }, liv: { n, r, t } } ],      // n = fois, r = remise, t = tickets
+      parJour: [ { j, lu, compt: { n, r }, web: { n, r } } ], total: { compt, cc, liv },
+      joursSans: [jours pas encore lus], commandes: bool, enLigne: { cc, liv } }
+
+- Les tickets à remise gravés (`svP<shop>:<jour>`, `r`) passent par la reconnaissance des promotions (`pvTicket`). Un
+  ticket est du webshop quand une commande du panel (`coCommandes`, ligne `tx` = `id_transaction`) porte sa transaction :
+  click & collect ou livraison selon la commande ; sinon comptoir. Une commande payée en ligne n'a pas de ticket :
+  comptée dans `enLigne`, ses promotions ne se lisent pas encore. `commandes: false` = commandes illisibles, tout au comptoir.
+- Le dashboard (onglet Promotions, « Où les promotions sont utilisées ») : une barre par promotion, en nombre ou en
+  remise €, son coefficient de marge (le bouton de la liste), et le jour par jour, comptoir en bas, webshop au-dessus.
 - Une promotion vaut pour le magasin qui l'écrit, lui seul (17/10/2026) : `shops` vaut `[shop]`, un `shops` envoyé est ignoré,
   et une promotion ne se modifie que depuis son magasin (404 sinon).
 

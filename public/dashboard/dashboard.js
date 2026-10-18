@@ -30,7 +30,7 @@
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
-    pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null,
+    pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -98,7 +98,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -120,7 +120,8 @@
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
-    if (S.vue === 'promos') { lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); rendre(); return; }
+    // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
+    if (S.vue === 'promos') { lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
@@ -2986,6 +2987,8 @@
   const cheminPM = () => '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop);
   const clePMP = () => 'pmProd|' + S.shop;
   const cheminPMP = () => '/exploitation/promos-magasin/produits?shop=' + encodeURIComponent(S.shop);
+  const clePMC = () => 'pmCan|' + S.shop + '|' + S.pmCanJ;
+  const cheminPMC = () => '/exploitation/promos-magasin/canaux?shop=' + encodeURIComponent(S.shop) + '&jours=' + S.pmCanJ;
   const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
   // Plus de validation (17/10/2026) : enregistrée, elle part au panel aussitôt (`en_caisse`) ; `validee` = enregistrée,
@@ -3121,6 +3124,7 @@
     const q = (S.pmQ || '').trim().toLowerCase();
     const f = PM_FILTRES.find(x => x[0] === S.pmF) || PM_FILTRES[0];
     const vues = parSorte.filter(l => f[2](l.etat) && (!q || (l.nom + ' ' + l.texte).toLowerCase().includes(q)));
+    h += rendPmCanaux();
     h += `<div class="db-card pm-liste"><div class="pm-filtres">
       <div class="db-ong">${PM_FILTRES.map(x => { const n = parSorte.filter(l => x[2](l.etat)).length; return `<button data-pmf-st="${x[0]}" class="${x[0] === f[0] ? 'on' : ''}">${x[1]} <small>${n}</small></button>`; }).join('')}</div>
       <select class="pm-in" data-pmsorte="1">${[['tout', 'Toutes les sortes'], ['xy', 'X achetés + Y'], ['bundle', 'Bundles']].map(o => `<option value="${o[0]}"${S.pmSorte === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
@@ -3153,6 +3157,51 @@
       Règles du magasin : une date de fin, ${Rg.joursMax || 14} jours au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot ${fXm(Rg.coefMin || 2)} au moins. Pas de validation : une promotion enregistrée part au panel aussitôt (créée inactive, relue, puis activée) et passe en caisse pour ses dates.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.</div></div>`;
     return h;
+  }
+
+  /* --- Où les promotions sont utilisées (18/10/2026, maquette C, le coefficient en plus) ---------------------------
+   * Les promotions reconnues dans les tickets, par canal : comptoir, click & collect, livraison (le ticket d'une
+   * commande webshop encaissée au magasin compte dans son canal). Une barre par promotion avec son coefficient de
+   * marge (le bouton de la liste), et le jour par jour, comptoir en bas, webshop au-dessus. En nombre ou en remise €. */
+  const PM_CAN = [['compt', 'Comptoir', 'c'], ['cc', 'Click & collect', 'w'], ['liv', 'Livraison', 'l']];
+  function rendPmCanaux() {
+    const k = clePMC(), D = S.aux[k], M = S.pmCanM, J = S.pmCanJ;
+    let h = `<div class="db-card cn-card"><div class="ct"><span class="cn-h">Où les promotions sont utilisées</span>
+      <span class="fi-seg">${[['n', 'En nombre'], ['r', 'En remise €']].map(o => `<button type="button" class="${M === o[0] ? 'on' : ''}" data-pmcanm="${o[0]}">${o[1]}</button>`).join('')}</span>
+      <span class="fi-seg">${[7, 30].map(v => `<button type="button" class="${J === v ? 'on' : ''}" data-pmcanj="${v}">${v} jours</button>`).join('')}</span>`;
+    if (S.err[k]) { return h + `</div><div class="db-err" style="margin:12px 16px">Promotions par canal : ${esc(S.err[k])}</div></div>`; }
+    if (!D) { return h + `</div><div style="padding:12px 16px">${squelette(2)}</div></div>`; }
+    const v = c => M === 'r' ? +c.r || 0 : +c.n || 0, tot = p => v(p.compt) + v(p.cc) + v(p.liv), web = p => v(p.cc) + v(p.liv);
+    const fv = x => M === 'r' ? fU(x) : nf(x, 0), part = p => tot(p) ? Math.round(100 * web(p) / tot(p)) : 0;
+    const P = D.promos || [], T = D.total || { compt: {}, cc: {}, liv: {} }, nT = tot(T);
+    h += `<span class="db-mini">${nT ? part(T) + ' % sur le webshop · ' + (M === 'r' ? fU(nT) + ' de remise' : nf(nT, 0) + ' utilisation' + (nT > 1 ? 's' : '')) : ''}</span></div>`;
+    const enL = (D.enLigne || {}).cc + (D.enLigne || {}).liv || 0, sans = (D.joursSans || []).length;
+    const notes = [`<span class="cn-leg">${PM_CAN.map(c => `<span><i class="${c[2]}"></i>${c[1]}</span>`).join('')}</span>`,
+      `<span class="cn-note">Une utilisation : une fois où une promotion s’applique sur un ticket. Le ticket d’une commande webshop encaissée au magasin compte dans son canal.${enL ? ` ${enL} commande${enL > 1 ? 's' : ''} webshop payée${enL > 1 ? 's' : ''} en ligne sur la période : leurs promotions ne se lisent pas encore.` : ''}${D.commandes === false ? ' Commandes du webshop illisibles : tout est compté au comptoir.' : ''}${sans ? ` ${sans} jour${sans > 1 ? 's' : ''} pas encore lu${sans > 1 ? 's' : ''}.` : ''}${D.erreur ? ' Panel : ' + esc(D.erreur) + '.' : ''}</span>`].join('');
+    if (!P.length) { return h + `<div class="pm-vide">Aucune promotion reconnue dans les tickets sur ${J} jours.</div><div class="cn-pied db-mini">${notes}</div></div>`; }
+    const max = Math.max(1, ...P.map(tot)), Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, L = pmLignes();
+    const ligne = p => {
+      // La ligne de la liste qui porte le coefficient : une promotion du magasin (son n° au panel) ou de la marque.
+      const l = p.id === 'x' ? null : (L.find(o => o.src === 'mag' && o.d && +o.d.panelId === +p.id) || L.find(o => o.src === 'panel' && +o.id === +p.id));
+      const n = tot(p), w = Math.max(3, 100 * n / max);
+      const seg = PM_CAN.map(([c, lib, cl]) => { const x = v(p[c]), pc = n ? 100 * x / n : 0; return x ? `<i class="${cl}" style="width:${pc}%" title="${lib} : ${fv(x)}"><em>${pc * w / 100 >= (M === 'r' ? 11 : 5) ? fv(x) : ''}</em></i>` : ''; }).join('');
+      return `<div class="cn-r${p.id === 'x' ? ' mu' : ''}"><div class="cn-rn"><b>${esc(p.nom)}</b><span class="db-mini">${M === 'r' ? fU(n) + ' de remise' : nf(n, 0) + ' fois'} · ${part(p)} % web</span></div>
+        <div class="cn-rb"><span class="cn-bar big" style="width:${w}%">${seg}</span></div>
+        <div class="cn-rc n">${l && l.sorte === 'xy' ? pmCoefCellule(l, min) : '<span class="mu">—</span>'}</div></div>`;
+    };
+    // Le jour par jour : comptoir en bas, webshop au-dessus ; un jour pas encore lu reste vide, marqué.
+    const PJ = D.parJour || [], W = 520, H = 160, mx = Math.max(1, ...PJ.map(j => v(j.compt) + v(j.web))), bw = (W - 32) / Math.max(1, PJ.length);
+    const pas = mx <= 4 ? 1 : (mx <= 10 ? 2 : (mx <= 25 ? 5 : (mx <= 60 ? 10 : Math.ceil(mx / 5 / 10) * 10))), y = x => H - x / mx * (H - 12);
+    const grad = []; for (let g = 0; g <= mx; g += pas) { grad.push(g); }
+    const svg = `<svg class="cn-svg" viewBox="0 0 ${W} ${H + 22}" role="img" aria-label="Utilisations des promotions jour par jour, comptoir et webshop">
+      ${grad.map(g => `<line x1="28" x2="${W}" y1="${y(g)}" y2="${y(g)}" stroke="#eee7de"/><text x="22" y="${y(g) + 3}" text-anchor="end" font-size="9.5" fill="#8a8178">${M === 'r' ? nf(g, 0) + ' €' : g}</text>`).join('')}
+      ${PJ.map((j, i) => { const X = 32 + i * bw, c = v(j.compt), w = v(j.web), hc = H - y(c), hw = H - y(w), dt = j.j.slice(8, 10) + '/' + j.j.slice(5, 7);
+        const bord = X + bw / 2 + 16 > W, lab = PJ.length <= 7 || i % 7 === (PJ.length - 1) % 7 ? `<text x="${bord ? X + bw - 1 : X + bw / 2}" y="${H + 15}" text-anchor="${bord ? 'end' : 'middle'}" font-size="9.5" fill="#8a8178">${dt}</text>` : '';
+        if (j.lu === false) { return `<rect x="${X + 1}" y="${H - 3}" width="${Math.max(2, bw - 4)}" height="3" fill="#e2dbd1"><title>${dt} : pas encore lu</title></rect>` + lab; }
+        return `<g><title>${dt} : comptoir ${fv(c)} · webshop ${fv(w)}</title><rect x="${X + 1}" y="${H - hc}" width="${Math.max(2, bw - 4)}" height="${hc}" fill="#b8ad9f" rx="1.5"/><rect x="${X + 1}" y="${H - hc - hw - (w ? 1 : 0)}" width="${Math.max(2, bw - 4)}" height="${hw}" fill="#1f5f8b" rx="1.5"/></g>` + lab; }).join('')}</svg>`;
+    return h + `<div class="cn-deux"><div><div class="cn-r cn-th"><span class="db-lab">Promotion</span><span class="db-lab">Par canal</span><span class="db-lab n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</span></div>${P.map(ligne).join('')}</div>
+      <div><div class="db-lab">Jour par jour · toutes promotions</div><div class="db-mini">comptoir en bas, webshop au-dessus</div>${svg}</div></div>
+      <div class="cn-pied db-mini">${notes}</div></div>`;
   }
 
   /* --- Le coefficient de marge d'une promotion (18/10/2026, maquette A, le tableau de B derrière un bouton) ---------
@@ -3546,6 +3595,8 @@
     on('[data-pmedit]', 'click', el => { const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit); if (d) { pmOuvrir(pmDepuis(d), PM_FIN); } });
     on('[data-pmdup]', 'click', el => pmDupliquer(el.dataset.pmdup));
     on('[data-pmcoef]', 'click', el => pmCoefOuvrir(el.dataset.pmcoef));
+    on('[data-pmcanm]', 'click', el => { S.pmCanM = el.dataset.pmcanm; rendre(); });
+    on('[data-pmcanj]', 'click', el => { S.pmCanJ = +el.dataset.pmcanj; lireAux(clePMC(), cheminPMC(), false); rendre(); });
     if (S.pmC) { pmCoefRendre(); }
     on('[data-pmdel]', 'click', el => pmSupprimer(el.dataset.pmdel));
     if (!S.pmW) { return; }
