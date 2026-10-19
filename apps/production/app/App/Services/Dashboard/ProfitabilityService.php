@@ -52,6 +52,7 @@ final class ProfitabilityService
         $data = $this->compute($spec, $sales, $open, $rate);
         $data['trend'] = $this->trend($today, $rate);
         $data['options'] = $this->periodOptions($today);
+        $data['period_table'] = $this->periodTable($today, $rate);
         $data['last_sale'] = $this->repo->lastSaleDate();
         return $data;
     }
@@ -78,6 +79,29 @@ final class ProfitabilityService
             ];
         }
         return $out;
+    }
+
+    /**
+     * Liste des périodes du sélecteur, en tableau : ventes, personnel / ventes face à l'objectif et
+     * résultat de chaque période (mois en cours au prorata des jours, comme la page).
+     */
+    public function periodTable(DateTimeImmutable $today, float $rate): array
+    {
+        $first = $today->modify('first day of this month')->modify('-11 months');
+        $start = min($first->format('Y-m-d'), $today->format('Y-01-01'));
+        $sales = $this->repo->sales($start, $today->format('Y-m-d'), $rate);
+        $rows = [];
+        foreach ($this->periodOptions($today) as $key => $label) {
+            $spec = $this->period($key, $today);
+            $m = $this->compute($spec, array_values(array_filter($sales, fn($r) => isset($spec['months'][$r['ym']]))), [], $rate);
+            $t = $m['totals'];
+            $rows[] = [
+                'key' => $key, 'label' => $label, 'current' => $spec['current'],
+                'revenue' => $t['revenue'], 'staff_pct' => $t['staff_pct'], 'staff_target' => $t['staff_target'], 'staff_ok' => $t['staff_ok'],
+                'margin_pct' => $t['margin_pct'], 'margin_ok' => $t['margin_ok'], 'estimated' => $m['estimated_months'] !== [],
+            ];
+        }
+        return $rows;
     }
 
     /** Objectifs d'un groupe ; une valeur vide revient au paramètre général. */
