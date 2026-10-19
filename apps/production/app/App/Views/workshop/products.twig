@@ -5,7 +5,7 @@
 {% block content %}
 <section class="section tfb">
     {# Application du module atelier : tout passe par l'API, rien n'est lu en base ici. #}
-    <div id="tfbProducts" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-labels="workshop" aria-live="polite">
+    <div id="tfbProducts" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="workshop" aria-live="polite">
         <p class="text-muted">Wczytywanie… / Chargement…</p>
     </div>
 </section>

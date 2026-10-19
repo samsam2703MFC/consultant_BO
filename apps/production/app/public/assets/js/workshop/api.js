@@ -8,6 +8,7 @@
     'use strict';
 
     const LANG_KEY = 'tfb.lang';
+    const TOKEN_KEY = 'tfb.token';
     const NETWORK_ERROR = {
         pl: 'Brak połączenia z serwerem — sprawdź sieć i spróbuj ponownie.',
         fr: 'Pas de connexion au serveur — vérifiez le réseau et réessayez.',
@@ -24,8 +25,19 @@
             this.root = (el.dataset.root || '').replace(/\/$/, '');
             this.base = (el.dataset.apiBase || '').replace(/\/$/, '');
             this.labelsFile = el.dataset.labels || 'workshop';
+            this.user = el.dataset.user || '';
             this.token = null;
             this.tokenExpires = 0;
+            this.tokenPending = null;
+            // Jeton gardé pour l'onglet (sessionStorage) : pas de nouvelle demande à chaque page tant qu'il est
+            // valable, et seulement pour la même personne connectée.
+            try {
+                const saved = JSON.parse(window.sessionStorage.getItem(TOKEN_KEY) || 'null');
+                if (saved && saved.user === this.user && this.user !== '' && saved.expires > Date.now() + 30000) {
+                    this.token = saved.token;
+                    this.tokenExpires = saved.expires;
+                }
+            } catch (e) { /* stockage indisponible */ }
             this.labels = {};
             let stored = null;
             try { stored = window.localStorage.getItem(LANG_KEY); } catch (e) { /* stockage indisponible */ }
@@ -80,20 +92,30 @@
 
         async ensureToken(force) {
             if (!force && this.token && Date.now() < this.tokenExpires - 30000) return this.token;
-            // Jeton : sans effet de bord, rejouable.
-            const res = await this.send(`${this.root}/ajax/workshop/token?lang=${this.lang}`, {
-                method: 'POST', credentials: 'same-origin', headers: {'Accept': 'application/json'},
-            }, true);
-            const body = await res.json().catch(() => ({}));
-            if (!res.ok || !body.data) {
-                const err = new Error(body.message || this.t('error_session'));
-                err.status = res.status;
-                err.body = body;
-                throw err;
+            // Une seule demande à la fois : les appels lancés ensemble attendent le même jeton.
+            if (this.tokenPending) return this.tokenPending;
+            this.tokenPending = (async () => {
+                // Jeton : sans effet de bord, rejouable.
+                const res = await this.send(`${this.root}/ajax/workshop/token?lang=${this.lang}`, {
+                    method: 'POST', credentials: 'same-origin', headers: {'Accept': 'application/json'},
+                }, true);
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok || !body.data) {
+                    const err = new Error(body.message || this.t('error_session'));
+                    err.status = res.status;
+                    err.body = body;
+                    throw err;
+                }
+                this.token = body.data.access_token;
+                this.tokenExpires = Date.now() + body.data.expires_in * 1000;
+                try { window.sessionStorage.setItem(TOKEN_KEY, JSON.stringify({user: this.user, token: this.token, expires: this.tokenExpires})); } catch (e) { /* stockage indisponible */ }
+                return this.token;
+            })();
+            try {
+                return await this.tokenPending;
+            } finally {
+                this.tokenPending = null;
             }
-            this.token = body.data.access_token;
-            this.tokenExpires = Date.now() + body.data.expires_in * 1000;
-            return this.token;
         }
 
         /** Appel de l'API ; renvoie data (et meta) ou lève une erreur portant le corps de réponse. */

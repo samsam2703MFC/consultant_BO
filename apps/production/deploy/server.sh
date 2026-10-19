@@ -352,6 +352,16 @@ else
   ACCESS="    Require all granted"
 fi
 newconf="$(mktemp)"
+# Fichiers statiques (CSS, JS, polices, images, libellés JSON) gardés par le navigateur : une page en
+# charge ~33, et chacun redemandé à chaque page repasse par le contrôle du mot de passe (bcrypt) —
+# mesuré : 12 à 16 s par page, appels coupés (« Failed to fetch »). 5 min sans requête, puis la copie
+# locale sert tout de suite pendant que le navigateur vérifie en arrière-plan.
+a2enmod headers >/dev/null 2>&1 || true
+CACHE="    <IfModule mod_headers.c>
+        <FilesMatch \"\\.(css|js|mjs|json|woff2?|ttf|otf|eot|svg|png|jpe?g|gif|webp|ico)\$\">
+            Header set Cache-Control \"private, max-age=300, stale-while-revalidate=86400\"
+        </FilesMatch>
+    </IfModule>"
 cat > "$newconf" <<APACHE
 # ERP (apps/production de consultant_BO) — écrit par apps/production/deploy/server.sh
 Alias ${ERP_ALIAS} ${ERP_TARGET}/app/public
@@ -359,6 +369,7 @@ Alias ${ERP_ALIAS} ${ERP_TARGET}/app/public
     Options -Indexes +FollowSymLinks
     AllowOverride None
 ${ACCESS}
+${CACHE}
     RewriteEngine On
     RewriteBase ${ERP_ALIAS}/
     RewriteRule ^api/(.*)$ api.php [QSA,L]

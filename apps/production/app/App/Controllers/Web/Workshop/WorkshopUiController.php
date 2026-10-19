@@ -21,28 +21,28 @@ class WorkshopUiController extends BaseController
 
     public function products()
     {
-        $this->view('workshop/products', ['api_base' => $this->apiBase()]);
+        $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
     public function planning()
     {
-        $this->view('workshop/planning', ['api_base' => $this->apiBase()]);
+        $this->view('workshop/planning', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
     public function gantt()
     {
-        $this->view('workshop/gantt', ['api_base' => $this->apiBase()]);
+        $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
     public function optimizer()
     {
-        $this->view('workshop/optimizer', ['api_base' => $this->apiBase()]);
+        $this->view('workshop/optimizer', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
     /** Hala : tablety, identyfikatory, godziny pracy, wskaźniki (kierownik). */
     public function execution()
     {
-        $this->view('workshop/execution', ['api_base' => $this->apiBase()]);
+        $this->view('workshop/execution', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
     /** Ekran tabletu (bez logowania do ERP : tablet ma własny token, osoba identyfikator + PIN). */

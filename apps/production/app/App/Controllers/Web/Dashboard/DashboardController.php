@@ -107,7 +107,13 @@ class DashboardController extends BaseController
         } catch (\Throwable $e) {
             $data = null;
         }
-        $_SESSION['tfb_profit_badge'] = ['at' => time(), 'data' => $data];
+        // Liczniki (/ajax/rail-counters) działają z zamkniętą sesją : na chwilę ją otwieramy, by zapisać wynik.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $_SESSION['tfb_profit_badge'] = ['at' => time(), 'data' => $data];
+        } elseif (!headers_sent() && session_start()) {
+            $_SESSION['tfb_profit_badge'] = ['at' => time(), 'data' => $data];
+            session_write_close();
+        }
         return $data;
     }
 

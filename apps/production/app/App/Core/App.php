@@ -38,6 +38,13 @@ class App
             return;
         }
 
+        // Wywołania w tle, które sesję tylko czytają (dzwonek, liczniki, wyszukiwarka, token pracowni) :
+        // blokada pliku sesji zwalniana od razu — inaczej równoległe wywołania strony czekają jedno na drugie.
+        if (in_array($uri, ['/ajax/app-notifications', '/ajax/rail-counters', '/ajax/search', '/ajax/workshop/token'], true)
+            && session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $dispatcher = \FastRoute\simpleDispatcher(
             require __DIR__ . '/Routes/routes.php'
         );

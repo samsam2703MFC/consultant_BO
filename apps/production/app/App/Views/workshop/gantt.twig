@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="section tfb">
-    <div id="tfbGantt" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-labels="gantt" aria-live="polite">
+    <div id="tfbGantt" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="gantt" aria-live="polite">
         <p class="text-muted">Wczytywanie… / Chargement…</p>
     </div>
 </section>
