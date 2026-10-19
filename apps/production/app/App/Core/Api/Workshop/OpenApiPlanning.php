@@ -23,6 +23,13 @@ final class OpenApiPlanning
             'GET /planning/plans/{id:\d+}' => ['tag' => $t, 'id' => 'getPlan', 'summary' => 'Plan z pozycjami i zleceniami / Plan, lignes et OF', 'response' => 'Plan', 'errors' => [404]],
             'PATCH /planning/plans/{id:\d+}/lines/{lineId:\d+}' => ['tag' => $t, 'id' => 'adjustPlanLine', 'summary' => 'Zmień ilość / Ajuster une ligne', 'body' => 'PlanLineInput', 'response' => 'Plan', 'errors' => [400, 404, 409, 422],
                 'description' => 'Plan proposé uniquement. Jamais sous les commandes et semi-finis (BELOW_ORDERS), jamais au-delà du stock max pour un MTS (MTS_ABOVE_STOCK_MAX). Motif obligatoire si la quantité change.'],
+            'POST /planning/plans/{id:\d+}/schedule' => ['tag' => $t, 'id' => 'schedulePlan', 'summary' => 'Uszereguj zlecenia planu / Ordonnancer les OF du plan', 'response' => 'ScheduleResult', 'errors' => [404, 409],
+                'description' => "À rebours depuis l'échéance, au plus tard possible. Fenêtres = shifts actifs où le poste est disponible ; la nuit : robots autonomes, attentes passives, groupes avec équipe de nuit. Chambres à capacité cumulée (1 unité = 1 passage de l'étape). "
+                    . "Gros OF découpés en lots (scheduling.max_operation_min). Un OF qui ne tient pas avant son échéance n'est jamais placé après : il est rendu en conflit. Les opérations verrouillées sont conservées."],
+            'GET /planning/operations' => ['tag' => $t, 'id' => 'listOperations', 'summary' => 'Operacje (Gantt) / Opérations planifiées (Gantt)', 'response' => 'Operation', 'list' => true, 'errors' => [422],
+                'query' => $period + ['group_id' => ['type' => 'integer']]],
+            'GET /planning/load' => ['tag' => $t, 'id' => 'getLoad', 'summary' => 'Obciążenie zespołów / Charge des équipes par groupe, jour et shift', 'response' => 'Load', 'list' => true, 'errors' => [422], 'query' => $period,
+                'description' => 'Heures planifiées (opérateurs × durée, nettoyage compris) ÷ effectif prévu des équipes × durée du shift. Vert entre load.green_min_pct et load.green_max_pct.'],
             'POST /planning/plans/{id:\d+}/validate' => ['tag' => $t, 'id' => 'validatePlan', 'summary' => 'Zatwierdź plan i utwórz zlecenia / Valider et créer les OF', 'response' => 'Plan', 'errors' => [404, 409],
                 'description' => 'Un seul plan validé par période (409 PLAN_OVERLAP). OF MTO reliés aux commandes clients, OF SEMI reliés à leur OF parent et dus à son démarrage au plus tard.'],
         ];
@@ -70,6 +77,28 @@ final class OpenApiPlanning
                     'due_at' => ['type' => 'string'], 'priority' => $int, 'status' => ['type' => 'string'], 'customer_orders' => $int,
                 ]]],
                 'warnings' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true], 'description' => 'après création'],
+            ]],
+            'ScheduleResult' => ['type' => 'object', 'properties' => [
+                'plan_id' => $int, 'operations' => ['type' => 'integer', 'description' => 'opérations posées'],
+                'conflicts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'order_id' => $int, 'code' => ['type' => 'string'], 'name' => ['type' => 'string'], 'due_at' => ['type' => 'string'], 'step_id' => $nInt,
+                    'reason' => ['type' => 'string', 'enum' => ['NO_CAPACITY_BEFORE_DUE', 'NO_ROUTING', 'DUE_IN_PAST', 'PARENT_NOT_SCHEDULED']], 'message' => ['type' => 'string'],
+                ]]],
+                'load' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/Load']],
+            ]],
+            'Operation' => ['type' => 'object', 'properties' => [
+                'id' => $int, 'order_id' => $int, 'order_code' => ['type' => 'string'], 'origin' => ['type' => 'string'], 'parent_order_id' => $nInt,
+                'item_id' => $int, 'item' => ['type' => 'string'], 'quantity' => $num, 'unit' => ['type' => 'string'],
+                'kind' => ['type' => 'string', 'enum' => ['work', 'cleaning', 'delay']], 'step_no' => $nInt, 'step' => ['type' => 'string', 'nullable' => true],
+                'workstation_id' => $int, 'workstation' => ['type' => 'string'], 'workstation_name' => ['type' => 'string'], 'workstation_type' => ['type' => 'string'],
+                'group_id' => $int, 'team' => ['type' => 'string', 'nullable' => true], 'operators' => $num,
+                'start' => ['type' => 'string'], 'end' => ['type' => 'string'], 'due_at' => ['type' => 'string'], 'status' => ['type' => 'string'], 'locked' => ['type' => 'boolean'],
+            ]],
+            'Load' => ['type' => 'object', 'properties' => [
+                'group_id' => $int, 'group' => ['type' => 'string'], 'color' => ['type' => 'string'], 'date' => ['type' => 'string', 'format' => 'date'],
+                'shift' => ['type' => 'string'], 'shift_id' => $int, 'night' => ['type' => 'boolean'], 'start' => ['type' => 'string'], 'end' => ['type' => 'string'],
+                'headcount' => $int, 'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'target_pct' => $num,
+                'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team']],
             ]],
             'PlanInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [
                 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date', 'description' => 'au plus planning.max_period_days jours'],

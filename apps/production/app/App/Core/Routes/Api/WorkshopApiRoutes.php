@@ -10,6 +10,7 @@ use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\OpenApiController;
 use App\Controllers\Api\Workshop\ParamController;
 use App\Controllers\Api\Workshop\PlanningController;
+use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
 use App\Controllers\Api\Workshop\TimeStudyController;
@@ -86,6 +87,9 @@ final class WorkshopApiRoutes
             ['GET', '/planning/plans/{id:\d+}', PlanningController::class, 'get', 'prod.plan.read'],
             ['PATCH', '/planning/plans/{id:\d+}/lines/{lineId:\d+}', PlanningController::class, 'adjustLine', 'prod.plan.validate'],
             ['POST', '/planning/plans/{id:\d+}/validate', PlanningController::class, 'validate', 'prod.plan.validate'],
+            ['POST', '/planning/plans/{id:\d+}/schedule', SchedulingController::class, 'schedule', 'prod.plan.validate'],
+            ['GET', '/planning/operations', SchedulingController::class, 'operations', 'prod.plan.read'],
+            ['GET', '/planning/load', SchedulingController::class, 'load', 'prod.plan.read'],
         ];
     }
 

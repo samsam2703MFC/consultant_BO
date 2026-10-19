@@ -26,7 +26,12 @@
     "PLAN_WARNING_FREEZER_CAPACITY_NOT_SET": "Capacité du surgélateur non renseignée (cold.freezer_capacity_cartons) : aucune limite appliquée.",
     "PLAN_WARNING_FREEZER_CAPACITY_LIMITED": "MTS réduit à la capacité du surgélateur ({free_cartons} cartons libres).",
     "PLAN_WARNING_NO_ROUTING": "L'article {item_id} n'a pas de gamme : pas de temps standard.",
-    "PLAN_WARNING_SHEET_NOT_VALIDATED": "La fiche de l'article {item_id} n'est pas validée."
+    "PLAN_WARNING_SHEET_NOT_VALIDATED": "La fiche de l'article {item_id} n'est pas validée.",
+    "PLAN_NOT_VALIDATED": "Le plan est « {status} » : seul un plan validé s'ordonnance.",
+    "SCHEDULE_NO_CAPACITY_BEFORE_DUE": "{code} ({name}) : pas de capacité avant l'échéance {due_at} — rien n'est placé après.",
+    "SCHEDULE_NO_ROUTING": "{code} ({name}) : pas de gamme.",
+    "SCHEDULE_DUE_IN_PAST": "{code} ({name}) : l'échéance {due_at} est déjà passée.",
+    "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}) : l'OF parent n'a pas pu être ordonnancé."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",

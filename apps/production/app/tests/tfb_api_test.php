@@ -402,6 +402,35 @@ check($mtsAgain === null || $mtsAgain['projected'] >= 160, 'released MTS orders 
 [$s, $b] = $call('GET', '/planning/plans?status=validated', null, $dir);
 check($s === 200 && array_column($b['data'], 'id') === [$planId], 'direction reads validated plans');
 
+// --- P4 : ordonnancement du plan validé, opérations, charge
+[$s, $b] = $call('POST', "/planning/plans/{$plan2['data']['id']}/schedule", null, $access);
+check($s === 409 && $b['description'] === 'PLAN_NOT_VALIDATED', 'only a validated plan is scheduled');
+// Échéances décalées d'un jour : le test ne dépend pas de l'heure à laquelle il tourne (shift de jour 06:00–14:00).
+$pdo->exec("UPDATE tfb_prod_order SET due_at = due_at + INTERVAL 1 DAY WHERE id_plan = {$planId}");
+[$s, $b] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
+check($s === 200 && $b['data']['operations'] > 0, 'plan scheduled');
+$conflicts = array_column($b['data']['conflicts'], 'reason', 'code');
+check(($conflicts[$orders['MTO']['code']] ?? '') === 'NO_ROUTING', 'an order without routing is reported, not placed');
+$late = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_operation op JOIN tfb_prod_order o ON o.id = op.id_order WHERE op.planned_end > o.due_at")->fetchColumn();
+check($late === 0, 'acceptance: no operation ends after its order is due (truck departure)');
+$outsideShift = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_operation WHERE kind <> 'delay' AND (TIME(planned_start) < '06:00' OR TIME(planned_end) > '14:00' OR DATE(planned_end) <> DATE(planned_start))")->fetchColumn();
+check($outsideShift === 0, 'work only on the staffed day shift (no afternoon or night team in this group)');
+$semiEnd = $pdo->query("SELECT MAX(planned_end) FROM tfb_prod_operation WHERE id_order = {$orders['SEMI']['id']}")->fetchColumn();
+$parentStart = $pdo->query("SELECT MIN(planned_start) FROM tfb_prod_operation WHERE id_order = {$orders['MTS']['id']}")->fetchColumn();
+check($semiEnd !== null && $parentStart !== null && $semiEnd <= $parentStart, 'semi-finished ends before its parent starts');
+check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_operation WHERE kind <> 'delay' AND id_team IS NULL")->fetchColumn() === 0, 'each operation has its team');
+$from = date('Y-m-d', strtotime('-1 day'));
+$to = date('Y-m-d', strtotime('+6 days'));
+[$s, $ops] = $call('GET', "/planning/operations?from={$from}&to={$to}&group_id=1", null, $lead);
+check($s === 200 && count($ops['data']) === $b['data']['operations'] && $ops['data'][0]['team'] === 'T1', 'operations listed for the Gantt');
+[$s, $load] = $call('GET', "/planning/load?from={$from}&to={$to}", null, $dir);
+$busy = array_values(array_filter($load['data'], fn($l) => $l['required_h'] > 0));
+check($s === 200 && $busy && $busy[0]['shift'] === 'JOUR' && $busy[0]['available_h'] == 16 && in_array($busy[0]['status'], ['under', 'ok', 'over'], true), 'load = planned hours ÷ (team T1: 2 people × 8 h)');
+$pdo->exec("UPDATE tfb_prod_operation SET locked = 1 WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM tfb_prod_operation) x)");
+$lockedBefore = $pdo->query("SELECT planned_start FROM tfb_prod_operation WHERE locked = 1")->fetchColumn();
+[$s, $b2] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
+check($s === 200 && $pdo->query("SELECT planned_start FROM tfb_prod_operation WHERE locked = 1")->fetchColumn() === $lockedBefore, 'a locked operation stays where it is when rescheduling');
+
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');
 [$s, $b] = $call('POST', '/referentiels/groups', null, $access);

@@ -156,7 +156,7 @@ final class OpenApiSpec
         $nullableInt = ['type' => 'integer', 'nullable' => true];
         $errorResponses = [];
         foreach ([400 => 'INVALID_JSON', 401 => 'UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID', 403 => 'FORBIDDEN / NO_PRODUCTION_ROLE',
-                  404 => 'NOT_FOUND / ROUTE_NOT_FOUND', 409 => 'DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP', 422 => 'VALIDATION_FAILED', 429 => 'TOO_MANY_ATTEMPTS',
+                  404 => 'NOT_FOUND / ROUTE_NOT_FOUND', 409 => 'DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED', 422 => 'VALIDATION_FAILED', 429 => 'TOO_MANY_ATTEMPTS',
                   500 => 'INTERNAL_ERROR', 503 => 'AUTH_NOT_CONFIGURED'] as $status => $codes) {
             $errorResponses['Error' . $status] = ['description' => $codes, 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Error']]]];
         }

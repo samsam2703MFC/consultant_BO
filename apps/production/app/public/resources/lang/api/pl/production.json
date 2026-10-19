@@ -26,7 +26,12 @@
     "PLAN_WARNING_FREEZER_CAPACITY_NOT_SET": "Pojemność mroźni nie jest ustawiona (cold.freezer_capacity_cartons) — limit nie jest sprawdzany.",
     "PLAN_WARNING_FREEZER_CAPACITY_LIMITED": "MTS zmniejszone do pojemności mroźni (wolne: {free_cartons} kartonów).",
     "PLAN_WARNING_NO_ROUTING": "Artykuł {item_id} nie ma marszruty — brak czasów standardowych.",
-    "PLAN_WARNING_SHEET_NOT_VALIDATED": "Karta artykułu {item_id} nie jest zatwierdzona."
+    "PLAN_WARNING_SHEET_NOT_VALIDATED": "Karta artykułu {item_id} nie jest zatwierdzona.",
+    "PLAN_NOT_VALIDATED": "Plan ma status „{status}” — uszeregować można tylko plan zatwierdzony.",
+    "SCHEDULE_NO_CAPACITY_BEFORE_DUE": "{code} ({name}): brak wolnej zdolności przed terminem {due_at} — nie zaplanowano po terminie.",
+    "SCHEDULE_NO_ROUTING": "{code} ({name}): brak marszruty.",
+    "SCHEDULE_DUE_IN_PAST": "{code} ({name}): termin {due_at} już minął.",
+    "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}): zlecenie nadrzędne nie zostało uszeregowane."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",

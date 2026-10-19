@@ -19,6 +19,7 @@ use App\Services\Workshop\Migration\MigrationRunner;
 use App\Services\Workshop\Planning\DemandCalculator;
 use App\Services\Workshop\Planning\PlanningService;
 use App\Services\Workshop\Product\StandardTime;
+use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
 function check(bool $condition, string $message): void
@@ -133,6 +134,58 @@ $cap = DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, '
 check($cap['limited'] && ($cap['lines']['a'] / 60 + $cap['lines']['b'] / 24) <= 10, 'freezer: proposed cartons fit the free space');
 check(DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => null]], 0, 99999)['limited'] === false, 'freezer capacity not set: no limit');
 check(PlanningService::convert(4800, 'g', 'kg') === 4.8 && PlanningService::convert(3, 'szt', 'kg') === 3.0, 'unit conversion');
+
+// --- Ordonnancement (P4) : échéance camion, chambre de pousse, nuit, semi-finis, lots
+$h = fn(string $t) => strtotime('2026-11-02 ' . $t);           // lundi
+$day = [[$h('06:00'), $h('22:00')], [$h('06:00') + 86400, $h('22:00') + 86400]];
+$night = [[$h('22:00') - 86400, $h('06:00')], [$h('22:00'), $h('06:00') + 86400]];
+$mk = function (?int $earliest = null) use ($h, $day, $night): Scheduler {
+    $sch = new Scheduler($earliest ?? $h('06:00'), 4 * 3600);
+    $sch->addResource(1, $day, array_merge($day, $night), false, 1);        // façonneuse
+    $sch->addResource(2, $day, array_merge($day, $night), false, 1);        // four
+    $sch->addResource(3, array_merge($day, $night), array_merge($day, $night), true, 12); // chambre de pousse 12 unités
+    $sch->addResource(4, $day, array_merge($day, $night), false, 1);        // robot autonome
+    return $sch;
+};
+$step = fn(int $id, int $ws, int $fixed, float $var, float $cap, array $extra = []) => $extra + ['id' => $id, 'workstation_id' => $ws, 'fixed_time_s' => $fixed,
+    'variable_time_s' => $var, 'capacity_per_pass' => $cap, 'operators_required' => 1, 'delay_after_s' => 0, 'delay_workstation_id' => null, 'cleaning_time_s' => 0, 'night_ok' => false, 'alternatives' => []];
+$routing = [$step(1, 1, 600, 3, 100, ['delay_after_s' => 3600, 'delay_workstation_id' => 3]), $step(2, 2, 1200, 0, 100)];
+$due = $h('19:00');
+$sch = $mk();
+$r = $sch->schedule([['id' => 1, 'due' => $due, 'qty' => 800, 'parent' => null, 'steps' => $routing], ['id' => 2, 'due' => $due, 'qty' => 800, 'parent' => null, 'steps' => $routing]]);
+check($r['conflicts'] === [] && $r['operations'] !== [], 'two orders scheduled');
+check(max(array_map(fn($o) => $o['end'], array_filter($r['operations'], fn($o) => $o['kind'] !== 'delay' || true))) <= $due, 'acceptance: nothing ends after the truck departure');
+check(Scheduler::peakUnits($r['operations'], 3) <= 12, 'acceptance: proofing room capacity never exceeded (16 units wanted)');
+$byOrderStep = [];
+foreach ($r['operations'] as $o) if ($o['kind'] === 'work') $byOrderStep[$o['order_id']][$o['chunk']][$o['step_id']] = $o;
+foreach ($byOrderStep as $chunks) foreach ($chunks as $c) check($c[1]['end'] + 3600 <= $c[2]['start'], 'proofing time respected between shaping and baking');
+$overlap = false;
+foreach ($r['operations'] as $a) foreach ($r['operations'] as $b) {
+    if ($a !== $b && $a['kind'] !== 'delay' && $b['kind'] !== 'delay' && $a['workstation_id'] === $b['workstation_id'] && $a['start'] < $b['end'] && $b['start'] < $a['end']) $overlap = true;
+}
+check(!$overlap, 'one operation at a time per workstation');
+
+// Nuit : interdite sans autorisation, même si le poste est libre la nuit
+$sch = $mk($h('22:00'));
+$r = $sch->schedule([['id' => 3, 'due' => $h('05:00') + 86400, 'qty' => 100, 'parent' => null, 'steps' => [$step(5, 1, 3600, 0, 100)]]]);
+check($r['operations'] === [] && $r['conflicts'][0]['reason'] === 'NO_CAPACITY_BEFORE_DUE', 'acceptance: no night work without the night rule; not placed after the due time either');
+$sch = $mk();
+$r = $sch->schedule([['id' => 4, 'due' => $h('05:00') + 86400, 'qty' => 100, 'parent' => null, 'steps' => [$step(6, 4, 3600, 0, 100, ['night_ok' => true])]]]);
+check($r['conflicts'] === [] && $r['operations'][0]['end'] <= $h('05:00') + 86400 && $r['operations'][0]['start'] >= $h('22:00'), 'autonomous robot runs at night, just in time');
+
+// Semi-fini avant son parent ; gros OF en lots
+$sch = $mk();
+$r = $sch->schedule([
+    ['id' => 10, 'due' => $due, 'qty' => 100, 'parent' => null, 'steps' => [$step(7, 2, 1800, 0, 100)]],
+    ['id' => 11, 'due' => $due, 'qty' => 50, 'parent' => 10, 'steps' => [$step(8, 1, 1200, 0, 100)]],
+]);
+check($r['conflicts'] === [] && $r['starts'][11] < $r['starts'][10] && max(array_map(fn($o) => $o['order_id'] === 11 ? $o['end'] : 0, $r['operations'])) <= $r['starts'][10], 'semi-finished done before its parent starts');
+$sch = $mk();
+$r = $sch->schedule([['id' => 20, 'due' => $h('21:00') + 86400, 'qty' => 6000, 'parent' => null, 'steps' => [$step(9, 1, 300, 6, 200)]]]);
+$works = array_filter($r['operations'], fn($o) => $o['kind'] === 'work');
+check($r['conflicts'] === [] && count($works) >= 3 && max(array_map(fn($o) => $o['end'] - $o['start'], $works)) <= 4 * 3600, 'big order split in lots of at most 4 h');
+check(array_sum(array_map(fn($o) => $o['qty'], $works)) == 6000, 'lots add up to the order');
+check(Scheduler::merge([[1, 5], [5, 9], [12, 14]]) === [[1, 9], [12, 14]], 'contiguous shifts merge');
 
 // --- Chaque route est documentée dans OpenAPI
 $spec = OpenApiSpec::build('https://erp.test');
