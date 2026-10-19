@@ -21,7 +21,7 @@
  * dit, il ne montre pas un zéro.
  */
 
-/** GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 */
+/** GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 (2 à 13 semaines) */
 function ep_ventes_semaines(): array
 {
     $sid = (int) ($_GET['shop'] ?? 0);
@@ -87,7 +87,8 @@ function vsParams(): array
     $vue = in_array($_GET['vue'] ?? '', ['semaine', 'mois', 'annee'], true) ? (string) $_GET['vue'] : 'semaine';
     $date = (string) ($_GET['date'] ?? $auj);
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
-    $n = max(2, min(12, (int) ($_GET['n'] ?? 6)));
+    // 13 au plus : douze semaines closes et celle en cours (Résultat › Trafic clients, 19/10/2026).
+    $n = max(2, min(13, (int) ($_GET['n'] ?? 6)));
     return [$vue, $date, $n];
 }
 
