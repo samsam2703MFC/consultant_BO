@@ -30,31 +30,34 @@
                             </h3>
                         </div>
                         <div class="col-12 mt-4">
-                            <table class="table table-striped">
+                            <table class="table table-striped" data-at-table>
                                 <thead>
                                 <th>Nazwa</th>
                                 <th>Obecny dostawca</th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
+                                <th class="text-end">Akcje</th>
                                 </thead>
                                 <tbody>
                                 <?php if(!empty($rows)): ?>
                                     <?php foreach($rows as $row): ?>
                                         <tr>
-                                            <td><?= $row['name'] ?></td>
-                                            <td><?= $row['supplier_name'] ?></td>
-                                            <td>
-                                                <button
-                                                        type="button"
-                                                        class="btn btn-outline-secondary"
-                                                        onclick="openAllergensModal(<?= (int)$row['id'] ?>, '<?= htmlspecialchars($row['name'] ?? '', ENT_QUOTES) ?>')"
-                                                >
-                                                    Alergeny
-                                                </button>
+                                            <td><?= esc($row['name'] ?? '') ?></td>
+                                            <td><?= esc($row['supplier_name'] ?? '') ?></td>
+                                            <td class="text-end">
+                                                <div class="at-actions">
+                                                    <a href="<?=ROOT?>/materials/<?=$row['id']?>/edit" class="btn btn-sm btn-primary">Edytuj</a>
+                                                    <div class="at-more">
+                                                        <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
+                                                        <div class="at-more-menu" role="menu" hidden>
+                                                            <button type="button" role="menuitem"
+                                                                    onclick="openAllergensModal(<?= (int)$row['id'] ?>, '<?= htmlspecialchars($row['name'] ?? '', ENT_QUOTES) ?>')">
+                                                                <i class="bi bi-exclamation-diamond"></i>Alergeny
+                                                            </button>
+                                                            <hr>
+                                                            <a role="menuitem" class="at-more-danger" href="<?=ROOT?>/materials/<?=$row['id']?>/delete"><i class="bi bi-trash"></i>Usuń…</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td><a href="<?=ROOT?>/materials/<?=$row['id']?>/edit" class="btn btn-warning">Edytuj</a></td>
-                                            <td><a href="<?=ROOT?>/materials/<?=$row['id']?>/delete" class="btn btn-danger">Usuń</a></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>

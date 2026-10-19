@@ -489,3 +489,63 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-chip { padding: 5px 11px; border: 1px solid var(--at-line-2); border-radius: 999px; background: var(--at-surface); color: var(--at-text); font-size: 12px; }
 .at-chip:hover { border-color: var(--at-primary); color: var(--at-primary); }
 .at-chip.is-used { background: var(--at-primary-soft); border-color: var(--at-primary); color: var(--at-primary); }
+
+/* --- Longues listes : recherche et pages (assets/js/atelier-table.js) ------------- */
+.at-table-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 0 0 12px; }
+.at-table-bar[hidden], .at-table-pager[hidden] { display: none; }
+.at-table-search { position: relative; flex: 0 1 320px; margin: 0; }
+.at-table-search .bi { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--at-muted); font-size: 13px; pointer-events: none; }
+.at-table-search .form-control { padding-left: 32px; }
+.at-table-info { color: var(--at-muted); font-size: 12px; }
+.at-table-size { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 auto; color: var(--at-muted); font-size: 12px; font-weight: 400; }
+.at-table-size .form-select { width: auto; padding-top: 4px; padding-bottom: 4px; }
+.at-row-off { display: none !important; }
+.table td.at-table-none { padding: 22px 10px; text-align: center; color: var(--at-muted); }
+.at-table-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 14px 0 0; }
+.at-table-pager button {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  border: 1px solid var(--at-line-2); border-radius: var(--at-radius-sm);
+  background: var(--at-surface); color: var(--at-text); font-size: 12.5px; font-weight: 500;
+}
+.at-table-pager button:hover:not(:disabled) { border-color: var(--at-primary); color: var(--at-primary); }
+.at-table-pager button.active { background: var(--at-primary); border-color: var(--at-primary); color: #fff; }
+.at-table-pager button:disabled { opacity: .4; }
+.at-table-gap { padding: 0 4px; color: var(--at-muted); }
+.at-table-pages { margin-left: auto; color: var(--at-muted); font-size: 12px; }
+/* Tableau collé aux bords de la carte (card-body px-0) : la barre garde une marge. */
+.at-table-pad > .at-table-bar, .at-table-pad > .at-table-pager { padding: 0 16px; }
+.at-table-pad > .at-table-bar { padding-top: 14px; }
+.at-table-pad > .at-table-pager { padding-bottom: 14px; }
+
+/* --- Actions de ligne : une principale + menu « ⋯ » -------------------------------- */
+.at-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+.at-more { display: inline-block; position: relative; }
+.at-more-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 28px; padding: 0;
+  border: 1px solid var(--at-line-2); border-radius: var(--at-radius-sm);
+  background: var(--at-surface); color: var(--at-text); font-size: 16px; line-height: 1;
+}
+.at-more-toggle:hover, .at-more.is-open .at-more-toggle { border-color: var(--at-primary); color: var(--at-primary); }
+.at-more-toggle:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(141, 29, 44, 0.18); }
+.at-more-menu {
+  position: fixed; z-index: 1060; min-width: 210px; max-width: 320px; padding: 6px;
+  background: var(--at-surface); border: 1px solid var(--at-line); border-radius: var(--at-radius-lg);
+  box-shadow: 0 10px 30px rgba(34, 34, 34, 0.12); text-align: left; white-space: normal;
+}
+.at-more-menu[hidden] { display: none; }
+.at-more-menu > a, .at-more-menu > button {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px;
+  border: 0; border-radius: var(--at-radius-sm); background: transparent;
+  color: var(--at-text); font-size: 12.5px; font-weight: 400; text-align: left; text-decoration: none;
+}
+.at-more-menu > a:hover, .at-more-menu > a:focus, .at-more-menu > button:hover:not(:disabled), .at-more-menu > button:focus {
+  background: var(--at-bg-2); color: var(--at-primary); outline: 0;
+}
+.at-more-menu > button:disabled { color: var(--at-muted); opacity: .65; }
+.at-more-menu .bi { flex: none; width: 16px; color: var(--at-muted); font-size: 13px; }
+.at-more-menu > a:hover .bi, .at-more-menu > button:hover:not(:disabled) .bi { color: var(--at-primary); }
+.at-more-menu > hr { height: 0; margin: 5px 4px; border: 0; border-top: 1px solid var(--at-line); background: none; opacity: 1; }
+.at-more-head { padding: 6px 10px 2px; font-size: 10px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--at-muted); }
+.at-more-menu > .at-more-danger, .at-more-menu > .at-more-danger .bi { color: var(--at-danger); }
+.at-more-menu > .at-more-danger:hover, .at-more-menu > .at-more-danger:focus { background: rgba(196, 30, 58, 0.08); color: var(--at-danger); }

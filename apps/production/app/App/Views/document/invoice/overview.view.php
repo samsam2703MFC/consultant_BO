@@ -27,7 +27,7 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-12">
-                        <table class="table table-hover">
+                        <table class="table table-hover" data-at-table>
                             <thead>
                             <th>Faktura</th>
                             <th>Klient</th>

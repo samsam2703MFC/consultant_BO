@@ -22,22 +22,16 @@
             </div>
         <?php endif; ?>
 
-        <div class="row">
-            <div class="col-4">
-                <input class="form-control" type="text" placeholder="Wyszukaj po nazwie..."
-                       onkeyup="searchInTable(this.value, 'id_product_table')">
-            </div>
-        </div>
-        <div class="row mt-4">
+        <div class="row mt-2">
             <div class="col-12">
-                <table class="table table-striped">
+                <table class="table table-striped" data-at-table>
                     <thead>
                     <th>Nazwa</th>
                     <th>Pracochłonność (1–5)</th>
                     <th>Aktywny</th>
                     <th>Waga</th>
                     <th>Minimalny magazyn</th>
-                    <th></th>
+                    <th class="text-end">Akcje</th>
                     </thead>
                     <tbody id="id_product_table">
                     <?php if (!empty($rows)): ?>
@@ -45,7 +39,7 @@
                             <tr>
                                 <td>
                                     <div class="fw-semibold text-dark" style="font-size: 1.05rem;">
-                                        <?= $row['name'] ?>
+                                        <?= esc($row['name'] ?? '') ?>
                                     </div>
                                     <div class="text-muted small">ID: <?= $row['id'] ?></div>
                                 </td>
@@ -74,25 +68,22 @@
                                 </td>
                                 <td><?= $row['weight'] ?></td>
                                 <td><?= $row['stock_minimum'] ?></td>
-                                <td>
-                                    <div class="btn btn-group">
-                                        <a href="<?= ROOT ?>/products/<?= $row['id'] ?>/edit"
-                                           class="btn btn-warning btn-sm">Edytuj</a>
-
-                                        <?php if (!empty($row['id_recipe'])): ?>
-                                        <button class="btn btn-info product-card-btn btn-sm"
-                                                data-id-product="<?= $row['id'] ?>">
-                                            Karta produktu
-                                        </button>
-                                        <?php else: ?>
-                                        <button class="btn btn-secondary btn-sm" disabled
-                                                title="Produkt nie ma przypisanej receptury">
-                                            Brak receptury
-                                        </button>
-                                        <?php endif; ?>
-
-                                        <a href="<?= ROOT ?>/products/<?= $row['id'] ?>/delete"
-                                           class="btn btn-danger btn-sm">Usuń</a>
+                                <td class="text-end">
+                                    <div class="at-actions">
+                                        <a href="<?= ROOT ?>/products/<?= $row['id'] ?>/edit" class="btn btn-sm btn-primary">Edytuj</a>
+                                        <div class="at-more">
+                                            <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
+                                            <div class="at-more-menu" role="menu" hidden>
+                                                <?php if (!empty($row['id_recipe'])): ?>
+                                                    <a role="menuitem" href="<?= ROOT ?>/recipes/<?= (int) $row['id_recipe'] ?>/calculation"><i class="bi bi-journal-text"></i>Receptura</a>
+                                                    <button type="button" role="menuitem" class="product-card-btn" data-id-product="<?= $row['id'] ?>"><i class="bi bi-file-earmark-arrow-down"></i>Karta produktu (PDF)</button>
+                                                <?php else: ?>
+                                                    <button type="button" role="menuitem" disabled title="Produkt nie ma przypisanej receptury"><i class="bi bi-file-earmark-arrow-down"></i>Karta — brak receptury</button>
+                                                <?php endif; ?>
+                                                <hr>
+                                                <a role="menuitem" class="at-more-danger" href="<?= ROOT ?>/products/<?= $row['id'] ?>/delete"><i class="bi bi-trash"></i>Usuń…</a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -196,27 +187,6 @@
             })
             .catch(error => console.error('Error:', error));
 
-    }
-
-    function searchInTable(input_value) {
-        // Declare variables
-        var filter, table, tr, td, i, txtValue;
-        filter = input_value.toUpperCase();
-        table = document.getElementById("id_product_table");
-        tr = table.getElementsByTagName("tr");
-
-        // Loop through all table rows, and hide those who don't match the search query
-        for (i = 0; i < tr.length; i++) {
-            td = tr[i].getElementsByTagName("td")[0];
-            if (td) {
-                txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
-            }
-        }
     }
 
     const workloadModalEl = document.getElementById('workloadModal');

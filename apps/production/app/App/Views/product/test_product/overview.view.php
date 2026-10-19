@@ -32,17 +32,14 @@
                 </div>
                 <div class="row">
                     <div class="col-12">
-                        <table class="table table-striped">
+                        <table class="table table-striped" data-at-table>
                             <thead>
                             <th style="width: 20%">Kategoria</th>
-                            <th style="width: 20%">Nazwa</th>
-                            <th style="width: 10%">Typ</th>
-                            <th style="width: 10%">Status</th>
+                            <th style="width: 22%">Nazwa</th>
+                            <th style="width: 12%">Typ</th>
+                            <th style="width: 18%">Status</th>
                             <th style="width: 15%">Termin następnego etapu</th>
-                            <th style="width: 5%"></th>
-                            <th style="width: 5%"></th>
-                            <th style="width: 10%"></th>
-                            <th style="width: 5%"></th>
+                            <th style="width: 13%" class="text-end">Akcje</th>
                             </thead>
                             <tbody>
                             <?php if(!empty($rows)): ?>
@@ -62,14 +59,22 @@
                                             </select>
                                         </td>
                                         <td><?= $row['closest_deadline'] ?></td>
-                                        <?php if($row['closest_deadline'] != null): ?>
-                                            <td><a href="<?=ROOT?>/TestProductChangelog/getPDF/<?=$row['id']?>" class="btn btn-info" target="_blank">PDF</a></td>
-                                        <?php else: ?>
-                                            <td></td>
-                                        <?php endif; ?>
-                                        <td><a href="<?=ROOT?>/test-products/<?=$row['id']?>/edit" class="btn btn-warning">Edytuj</a></td>
-                                        <td><a href="<?=ROOT?>/test-products/<?=$row['id']?>/changelogs" class="btn btn-secondary">Dziennik zmian</a></td>
-                                        <td><a href="<?=ROOT?>/test-products/<?=$row['id']?>/delete" class="btn btn-danger">Usuń</a></td>
+                                        <td class="text-end">
+                                            <div class="at-actions">
+                                                <a href="<?=ROOT?>/test-products/<?=$row['id']?>/edit" class="btn btn-sm btn-primary">Edytuj</a>
+                                                <div class="at-more">
+                                                    <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
+                                                    <div class="at-more-menu" role="menu" hidden>
+                                                        <a role="menuitem" href="<?=ROOT?>/test-products/<?=$row['id']?>/changelogs"><i class="bi bi-clock-history"></i>Dziennik zmian</a>
+                                                        <?php if($row['closest_deadline'] != null): ?>
+                                                            <a role="menuitem" href="<?=ROOT?>/TestProductChangelog/getPDF/<?=$row['id']?>" target="_blank"><i class="bi bi-file-earmark-arrow-down"></i>PDF</a>
+                                                        <?php endif; ?>
+                                                        <hr>
+                                                        <a role="menuitem" class="at-more-danger" href="<?=ROOT?>/test-products/<?=$row['id']?>/delete"><i class="bi bi-trash"></i>Usuń…</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
