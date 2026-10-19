@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Mazer Admin Dashboard</title>
+    <title>Connexion · Production · L'Atelier</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/bootstrap.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/bootstrap-icons/bootstrap-icons.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/app.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/pages/auth.css">
+    <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css">
 </head>
 
 <body>
@@ -17,7 +18,7 @@
         <div class="col-lg-5 col-12">
             <div id="auth-left">
                 <div class="auth-logo">
-                    <a href="index.html"><img src="" alt="Logo"></a>
+                    <img src="<?=ROOT?>/assets/images/atelier-logo.png" alt="L'Atelier">
                 </div>
                 <h1 class="auth-title">Zaloguj się</h1>
                 <p class="auth-subtitle mb-5"></p>

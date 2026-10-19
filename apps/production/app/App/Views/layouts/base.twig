@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ pageTitle|default('Default Title') }}{% endblock %}</title>
+    <title>{% block title %}{{ pageTitle|default('Production · L\'Atelier') }}{% endblock %}</title>
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="{{ root }}/assets/css/custom.css">
 
     <link rel="stylesheet" type="text/css" href="{{ root }}/assets/css/tree_graph/ECOTree.css">
+    <link rel="stylesheet" href="{{ root }}/assets/css/atelier.css">
 
     <script src="{{ root }}/assets/js/functions.js" type="text/javascript"></script>
     <script src="{{ root }}/assets/js/tree_graph/ECOTree.js" type="text/javascript" ></script>
@@ -86,11 +87,7 @@
 <footer>
     <div class="footer clearfix mb-0 text-muted">
         <div class="float-start">
-            <p>2021 &copy; Mazer</p>
-        </div>
-        <div class="float-end">
-            <p>Crafted with <span class="text-danger"><i class="bi bi-heart-fill icon-mid"></i></span>
-                by <a href="https://ahmadsaugi.com">Saugi</a></p>
+            <p>L'Atelier By &middot; Production</p>
         </div>
     </div>
 </footer>

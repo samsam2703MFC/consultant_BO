@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($pageTitle) ? $pageTitle : "Default Title"?></title>
+    <title><?= isset($pageTitle) ? $pageTitle : "Production · L'Atelier"?></title>
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/custom.css">
 
     <link rel="stylesheet" type="text/css" href="<?=ROOT?>/assets/css/tree_graph/ECOTree.css">
+    <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css">
 
     <script src="<?=ROOT?>/assets/js/functions.js" type="text/javascript"></script>
     <script src="<?=ROOT?>/assets/js/tree_graph/ECOTree.js" type="text/javascript" ></script>

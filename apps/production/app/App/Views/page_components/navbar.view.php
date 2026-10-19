@@ -54,7 +54,7 @@
                         </div>
                         <div class="user-img d-flex align-items-center">
                             <div class="avatar avatar-md">
-                                <img src="assets/images/faces/1.jpg">
+                                <i class="bi bi-person-circle"></i>
                             </div>
                         </div>
                     </div>
