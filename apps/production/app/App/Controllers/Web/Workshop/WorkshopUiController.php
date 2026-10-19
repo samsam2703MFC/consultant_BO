@@ -91,9 +91,19 @@ class WorkshopUiController extends BaseController
         }
     }
 
+    /**
+     * Adresse de l'API pour les pages de l'ERP. Même hôte que l'ERP : on reprend ROOT, qui suit le schéma
+     * de la requête (http / https) — une API restée en http derrière une page en https serait bloquée par
+     * le navigateur (« Failed to fetch »). Autre hôte (API séparée) : API_BASE_URL tel quel.
+     */
     private function apiBase(): string
     {
         $base = rtrim($this->config->apiBaseUrl(), '/');
-        return ($base !== '' ? $base : rtrim(ROOT, '/')) . WorkshopApiRoutes::PREFIX;
+        $root = rtrim(ROOT, '/');
+        if ($base === '' || strcasecmp((string) parse_url($base, PHP_URL_HOST), (string) parse_url($root, PHP_URL_HOST)) === 0
+            && (string) parse_url($base, PHP_URL_PATH) === (string) parse_url($root, PHP_URL_PATH)) {
+            $base = $root;
+        }
+        return $base . WorkshopApiRoutes::PREFIX;
     }
 }

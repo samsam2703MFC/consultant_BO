@@ -159,8 +159,8 @@ final class WorkshopApiKernel
         }
         $response->headers->set('Access-Control-Allow-Origin', $origin);
         $response->headers->set('Vary', 'Origin');
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, X-Access-Token, X-Device-Token, X-Employee-Token, Content-Type, Accept-Language');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, X-Access-Token, X-Device-Token, X-Employee-Token, X-Qr-Token, X-Phone-Token, Content-Type, Accept-Language');
         $response->headers->set('Access-Control-Expose-Headers', 'X-Request-Id, Content-Language');
         $response->headers->set('Access-Control-Max-Age', '600');
     }

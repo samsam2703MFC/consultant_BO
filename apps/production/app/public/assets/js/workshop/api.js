@@ -8,6 +8,16 @@
     'use strict';
 
     const LANG_KEY = 'tfb.lang';
+    const NETWORK_ERROR = {
+        pl: 'Brak połączenia z serwerem — sprawdź sieć i spróbuj ponownie.',
+        fr: 'Pas de connexion au serveur — vérifiez le réseau et réessayez.',
+    };
+    // Page en cours de fermeture / navigation : les appels interrompus ne sont pas des erreurs à afficher.
+    let leaving = false;
+    window.addEventListener('pagehide', () => { leaving = true; });
+    window.addEventListener('beforeunload', () => { leaving = true; });
+    window.addEventListener('pageshow', () => { leaving = false; });
+    const wait = (ms) => new Promise(resolve => window.setTimeout(resolve, ms));
 
     class WorkshopApi {
         constructor(el) {
@@ -46,11 +56,34 @@
             return text;
         }
 
+        /**
+         * fetch avec reprise : une coupure réseau (« Failed to fetch ») sur une lecture est retentée encore
+         * une fois après 1,5 s (en plus de la reprise du fetch de la page) ; une écriture n'est jamais
+         * rejouée à l'aveugle. L'erreur levée porte un message compréhensible (err.network).
+         */
+        async send(url, init, safe) {
+            const delays = safe ? [1500] : [];
+            for (let attempt = 0; ; attempt++) {
+                try {
+                    return await fetch(url, init);
+                } catch (e) {
+                    if (e && e.name === 'AbortError') throw e;
+                    if (!leaving && attempt < delays.length) { await wait(delays[attempt]); continue; }
+                    const err = new Error(NETWORK_ERROR[this.lang] || NETWORK_ERROR.pl);
+                    err.network = true;
+                    err.leaving = leaving;
+                    err.cause = e;
+                    throw err;
+                }
+            }
+        }
+
         async ensureToken(force) {
             if (!force && this.token && Date.now() < this.tokenExpires - 30000) return this.token;
-            const res = await fetch(`${this.root}/ajax/workshop/token?lang=${this.lang}`, {
+            // Jeton : sans effet de bord, rejouable.
+            const res = await this.send(`${this.root}/ajax/workshop/token?lang=${this.lang}`, {
                 method: 'POST', credentials: 'same-origin', headers: {'Accept': 'application/json'},
-            });
+            }, true);
             const body = await res.json().catch(() => ({}));
             if (!res.ok || !body.data) {
                 const err = new Error(body.message || this.t('error_session'));
@@ -67,8 +100,9 @@
         async request(method, path, body, retried) {
             const token = await this.ensureToken(false);
             const sep = path.includes('?') ? '&' : '?';
-            const res = await fetch(`${this.base}${path}${sep}lang=${this.lang}`, {
+            const res = await this.send(`${this.base}${path}${sep}lang=${this.lang}`, {
                 method,
+                credentials: 'same-origin',
                 headers: {
                     'Accept': 'application/json',
                     'Accept-Language': this.lang,
@@ -76,7 +110,7 @@
                     ...(body !== undefined ? {'Content-Type': 'application/json'} : {}),
                 },
                 body: body !== undefined ? JSON.stringify(body) : undefined,
-            });
+            }, method === 'GET');
             const payload = await res.json().catch(() => ({status: 'error', message: this.t('error_generic')}));
             if (res.status === 401 && !retried && ['TOKEN_EXPIRED', 'TOKEN_INVALID'].includes(payload.description)) {
                 await this.ensureToken(true);
@@ -102,7 +136,10 @@
     /** Petits outils d'affichage communs aux pages du module. */
     const ui = {
         esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])); },
-        notify(ok, message) { (typeof window.showSnack === 'function') ? window.showSnack(ok, message) : window.alert(message); },
+        notify(ok, message) {
+            if (!ok && leaving) return;
+            (typeof window.showSnack === 'function') ? window.showSnack(ok, message) : window.alert(message);
+        },
         /** Erreurs de champ de l'API posées sous les champs [data-field="chemin"] ; renvoie celles sans champ. */
         fieldErrors(container, err) {
             container.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
