@@ -18,7 +18,15 @@
     "DUPLICATE_CODE": "Le code {code} existe déjà.",
     "INTERNAL_ERROR": "Erreur serveur. Référence : {request_id}.",
     "ITEM_EXISTS": "Cet article a déjà une fiche de production (id {id}).",
-    "NOT_ENOUGH_MEASUREMENTS": "Pas assez de mesures pour une nouvelle norme : {count} sur {min} requises."
+    "NOT_ENOUGH_MEASUREMENTS": "Pas assez de mesures pour une nouvelle norme : {count} sur {min} requises.",
+    "PLAN_NOT_EDITABLE": "Le plan est « {status} » : seul un plan proposé se modifie.",
+    "PLAN_OVERLAP": "Un plan validé couvre déjà cette période (id {id}).",
+    "PLAN_WARNING_UNPLANNED_PRODUCTS": "{count} produits commandés n'ont pas de fiche de production : ils ne sont pas planifiés.",
+    "PLAN_WARNING_MTS_WITHOUT_MAX": "L'article {item_id} est MTS sans stock maximum : ignoré.",
+    "PLAN_WARNING_FREEZER_CAPACITY_NOT_SET": "Capacité du surgélateur non renseignée (cold.freezer_capacity_cartons) : aucune limite appliquée.",
+    "PLAN_WARNING_FREEZER_CAPACITY_LIMITED": "MTS réduit à la capacité du surgélateur ({free_cartons} cartons libres).",
+    "PLAN_WARNING_NO_ROUTING": "L'article {item_id} n'a pas de gamme : pas de temps standard.",
+    "PLAN_WARNING_SHEET_NOT_VALIDATED": "La fiche de l'article {item_id} n'est pas validée."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -64,7 +72,10 @@
     "NOT_STEP_WORKSTATION": "Ce poste n'appartient pas à l'étape (ni comme alternative).",
     "IN_FUTURE": "Le champ « {field} » ne peut pas être dans le futur.",
     "PRODUCT_REQUIRED": "Choisissez un produit du groupe ou saisissez le nom d'un nouveau produit.",
-    "PRODUCT_NOT_IN_GROUP": "Ce produit appartient à un autre groupe."
+    "PRODUCT_NOT_IN_GROUP": "Ce produit appartient à un autre groupe.",
+    "BELOW_ORDERS": "La quantité ne peut pas être inférieure aux commandes et semi-finis ({min}).",
+    "MTS_ABOVE_STOCK_MAX": "Stock maximum dépassé : {max} au plus.",
+    "PERIOD_TOO_LONG": "La période d'un plan est limitée à {max} jours."
   },
   "fields": {
     "code": "code",
@@ -182,7 +193,11 @@
     "selling_price_eur": "Prix de vente (€ / pièce)",
     "target_margin_pct": "Marge cible (%)",
     "investment_eur": "Investissement (€)",
-    "start_month": "Début (mois)"
+    "start_month": "Début (mois)",
+    "from": "Du",
+    "to": "Au",
+    "qty_final": "Quantité à produire",
+    "adjust_reason": "Motif de la modification"
   },
   "entities": {
     "group": "groupe",
@@ -193,6 +208,8 @@
     "param": "paramètre",
     "item": "article",
     "routing_step": "étape de gamme",
-    "time_study": "chronométrage"
+    "time_study": "chronométrage",
+    "plan": "plan",
+    "plan_line": "ligne de plan"
   }
 }

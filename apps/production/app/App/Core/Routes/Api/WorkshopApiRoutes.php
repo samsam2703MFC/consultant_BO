@@ -9,6 +9,7 @@ use App\Controllers\Api\Workshop\GroupController;
 use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\OpenApiController;
 use App\Controllers\Api\Workshop\ParamController;
+use App\Controllers\Api\Workshop\PlanningController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
 use App\Controllers\Api\Workshop\TimeStudyController;
@@ -78,6 +79,13 @@ final class WorkshopApiRoutes
             ['POST', '/produits/routing-steps/{id:\d+}/time-studies', TimeStudyController::class, 'record', 'prod.execution.write'],
             ['PATCH', '/produits/time-studies/{id:\d+}', TimeStudyController::class, 'setExcluded', 'prod.execution.write'],
             ['POST', '/produits/routing-steps/{id:\d+}/apply-standard', TimeStudyController::class, 'applyStandard', 'prod.products.write'],
+
+            ['GET', '/planning/demand', PlanningController::class, 'demand', 'prod.plan.read'],
+            ['GET', '/planning/plans', PlanningController::class, 'list', 'prod.plan.read'],
+            ['POST', '/planning/plans', PlanningController::class, 'create', 'prod.plan.validate'],
+            ['GET', '/planning/plans/{id:\d+}', PlanningController::class, 'get', 'prod.plan.read'],
+            ['PATCH', '/planning/plans/{id:\d+}/lines/{lineId:\d+}', PlanningController::class, 'adjustLine', 'prod.plan.validate'],
+            ['POST', '/planning/plans/{id:\d+}/validate', PlanningController::class, 'validate', 'prod.plan.validate'],
         ];
     }
 

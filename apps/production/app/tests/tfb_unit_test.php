@@ -16,6 +16,8 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\Routes\Api\WorkshopApiRoutes;
 use App\Services\Workshop\Auth\AuthService;
 use App\Services\Workshop\Migration\MigrationRunner;
+use App\Services\Workshop\Planning\DemandCalculator;
+use App\Services\Workshop\Planning\PlanningService;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
@@ -112,6 +114,25 @@ check(abs(StandardTime::unitTime('fixed', $oven, 120, 2, 2400) - 1200) < 1e-9, '
 check(StandardTime::unitTime('variable', $shaping, 100, 1, 200) === 0.0, 'never negative');
 check(StandardTime::movingAverage([10, 20, 30, 40, 50, 60], 5) === 30.0, 'moving average of the 5 latest');
 check(StandardTime::defaultComponent($oven) === 'fixed' && StandardTime::defaultComponent($shaping) === 'variable', 'default component');
+
+// --- Besoins (P3) : lots, MTS plafonné au stock max, surgélateur, semi-finis
+check(DemandCalculator::roundBatch(50, 240, 24) === 240.0 && DemandCalculator::roundBatch(250, 240, 24) === 264.0, 'batch: at least the minimum, in multiples');
+check(DemandCalculator::roundBatch(0, 240, 24) === 0.0 && DemandCalculator::roundBatch(7, null, null) === 7.0, 'no batch rules, no rounding');
+$mts = DemandCalculator::mts(60, 7, 60, 600, 180, 0, 180, null, null);
+check($mts['projected'] === 0.0 && $mts['target'] === 420.0 && $mts['qty'] === 420.0, 'MTS: back to coverage × consumption');
+$mts = DemandCalculator::mts(60, 7, 60, 300, 0, 0, 0, null, null);
+check($mts['target'] === 300.0 && $mts['qty'] === 300.0, 'MTS target capped at the max stock');
+$mts = DemandCalculator::mts(60, 7, 60, 300, 0, 0, 0, null, 160);
+check($mts['qty'] === 160.0 && $mts['capped'] && $mts['qty'] <= 300, 'MTS: the max stock wins over batch rounding (acceptance)');
+foreach ([[0, 0, 0], [100, 50, 20], [250, 0, 400], [599, 1, 0]] as [$free, $open, $committed]) {
+    $r = DemandCalculator::mts(80, 10, 50, 600, $free, $open, $committed, 100, 48);
+    check($r['projected'] + $r['qty'] <= 600 + 1e-9, "MTS never above max stock (free {$free}, open {$open}, committed {$committed})");
+}
+check(DemandCalculator::mts(10, 7, 60, 600, 100, 0, 0, null, null)['qty'] === 0.0, 'MTS: nothing while the projected stock is above the minimum');
+$cap = DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => 60], ['key' => 'b', 'qty' => 240, 'ppc' => 24, 'multiple' => 24]], 1010, 1000);
+check($cap['limited'] && ($cap['lines']['a'] / 60 + $cap['lines']['b'] / 24) <= 10, 'freezer: proposed cartons fit the free space');
+check(DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => null]], 0, 99999)['limited'] === false, 'freezer capacity not set: no limit');
+check(PlanningService::convert(4800, 'g', 'kg') === 4.8 && PlanningService::convert(3, 'szt', 'kg') === 3.0, 'unit conversion');
 
 // --- Chaque route est documentée dans OpenAPI
 $spec = OpenApiSpec::build('https://erp.test');

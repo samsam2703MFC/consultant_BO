@@ -38,7 +38,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'communication_template'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -316,6 +316,91 @@ check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE id_routi
     && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE id_routing_step = {$step2}")->fetchColumn() === 1, 'measurements follow their step');
 [$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [['id' => 99999, 'name_pl' => 'X', 'workstation_id' => 91, 'fixed_time_s' => 1]]], $access);
 check($s === 422 && $codes($b) === ['steps.0.id:REFERENCE_NOT_FOUND'], 'a step of another item cannot be reused');
+
+// --- P3 : besoins MTO / MTS / semi-finis, plan proposé, ajusté, validé
+$pdo->exec("UPDATE unit SET name = 'g' WHERE id = 1");
+$pdo->exec("INSERT IGNORE INTO unit (id, name) VALUES (3, 'g'), (5, 'szt')");
+$pdo->exec("UPDATE product_recipe SET id_unit = 5, yield_quantity = 1 WHERE id = 700");
+$pdo->exec("UPDATE product_recipe SET id_unit = 3, yield_quantity = 1000 WHERE id = 701");
+[$s, $semi] = $call('POST', '/produits/items', ['item_type' => 'semi', 'recipe_id' => 701], $access);
+check($s === 201, 'semi-finished sheet');
+$semiId = $semi['data']['id'];
+$call('PATCH', "/produits/items/{$semiId}/settings", ['primary_group_id' => 1, 'batch_multiple' => 5], $access);
+$call('PUT', "/produits/items/{$semiId}/routing", ['steps' => [['name_pl' => 'Laminowanie', 'workstation_id' => 90, 'fixed_time_s' => 600, 'variable_time_s' => 30]]], $access);
+$pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 60, stock_max = 300, batch_min = NULL, batch_multiple = 160, coverage_days = NULL WHERE id_item = {$itemId}");
+$d1 = date('Y-m-d', strtotime('+2 days'));
+$cutoff = date('Y-m-d', strtotime('+0 days')) . ' 13:00:00';
+$pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shipping_date, create_order_date, id_wdt) VALUES
+    (901, 1, 1, '{$d1}', NOW() - INTERVAL 3 DAY, NULL), (902, 2, 1, '{$d1}', '" . date('Y-m-d', strtotime('+1 day')) . " 09:00:00', NULL),
+    (903, 1, 1, '{$d1}', NOW() - INTERVAL 3 DAY, NULL), (904, 1, 5, '{$d1}', NOW(), NULL)");
+$pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton, purchase_price) VALUES
+    (901, 500, 10, 30), (902, 500, 5, 30), (903, 501, 3, 40), (904, 500, 99, 30)");
+$pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status) VALUES (1, 1, 501, 1), (2, 1, 501, 1), (3, 1, 501, 1), (4, 1, 501, 3)");
+$pdo->exec("INSERT INTO document_wdt (id, doc_num, id_customer, established_date, currency) VALUES (1, 'W/1', 1, CURDATE() - INTERVAL 10 DAY, 'eur')");
+$pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (1, 501, 'Croissant test', 42, 40)");
+$period = '?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days'));
+
+[$s, $b] = $call('GET', '/planning/demand' . $period, null, $lead);
+check($s === 200, 'team lead reads the demand');
+$byItem = [];
+foreach ($b['data']['lines'] as $l) $byItem[$l['item_id']] = $l;
+check($byItem[1]['mode'] === 'MTO' && $byItem[1]['qty_mto'] == 270.0 && $byItem[1]['qty_mts'] == 0.0 && $byItem[1]['customer_orders'] === 2,
+    'MTO: 15 cartons × 18 pieces from 2 open orders (archived order ignored); never-frozen product never MTS');
+check($byItem[1]['late_orders'] === 1, 'order placed after the cut-off is flagged');
+check($byItem[1]['due_at'] === $d1 . ' 19:00:00', 'due before the truck leaves (20:00 − 60 min loading)');
+$m = $byItem[$itemId]['mts'];
+check($m['free_stock'] == 180.0 && $m['projected'] == 0.0 && $m['target'] == 300.0 && $byItem[$itemId]['qty_mts'] == 160.0 && $m['capped'],
+    'MTS: free stock 3 cartons − 3 ordered = 0; target capped at max 300; batch 160 fits, 320 would not');
+check($m['projected'] + $byItem[$itemId]['qty_mts'] <= 300, 'acceptance: MTS stays within the max stock');
+check(abs($byItem[$semiId]['qty_semi'] - 160 / 60 * 2.0 * 1.01) < 0.001 && $byItem[$semiId]['qty_proposed'] == 10.0 && $byItem[$semiId]['parents'][0]['item_id'] === $itemId,
+    'semi-finished from the BOM: 2.67 cartons × 2 kg + 1 % loss (P2) = 5.39 kg, rounded to a 5 kg batch multiple');
+check(in_array('FREEZER_CAPACITY_NOT_SET', array_column($b['data']['warnings'], 'code'), true), 'freezer capacity not set is reported');
+
+// Surgélateur : 1 carton libre au-delà des 3 cartons présents
+[$s] = $call('PATCH', '/referentiels/params/cold.freezer_capacity_cartons', ['value' => 4], $access);
+check($s === 200, 'freezer capacity set');
+[$s, $b] = $call('GET', '/planning/demand' . $period, null, $access);
+$capped = array_values(array_filter($b['data']['lines'], fn($l) => $l['item_id'] === $itemId))[0] ?? null;
+check($capped === null && in_array('FREEZER_CAPACITY_LIMITED', array_column($b['data']['warnings'], 'code'), true), 'acceptance: MTS reduced to the freezer capacity (no full batch fits)');
+$call('PATCH', '/referentiels/params/cold.freezer_capacity_cartons', ['value' => 0], $access);
+
+[$s] = $call('POST', '/planning/plans', ['from' => date('Y-m-d'), 'to' => date('Y-m-d', strtotime('+6 days'))], $lead);
+check($s === 403, 'a team lead cannot create a plan');
+[$s, $b] = $call('POST', '/planning/plans', ['from' => date('Y-m-d'), 'to' => date('Y-m-d', strtotime('+40 days'))], $access);
+check($s === 422 && $codes($b) === ['to:PERIOD_TOO_LONG'], 'plan period limited');
+[$s, $plan] = $call('POST', '/planning/plans', ['from' => date('Y-m-d'), 'to' => date('Y-m-d', strtotime('+6 days')), 'notes' => 'Tydzień testowy'], $access);
+check($s === 201 && $plan['data']['status'] === 'proposed' && count($plan['data']['lines']) === 3 && $plan['data']['orders'] === [], 'plan proposed with its lines');
+$planId = $plan['data']['id'];
+$lines = [];
+foreach ($plan['data']['lines'] as $l) $lines[$l['item_id']] = $l;
+[$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 200, 'adjust_reason' => 'x'], $access);
+check($s === 422 && $codes($b) === ['qty_final:BELOW_ORDERS'], 'never below the customer orders');
+[$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 288], $access);
+check($s === 422 && $codes($b) === ['adjust_reason:REQUIRED'], 'a change needs a reason');
+[$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[$itemId]['id']}", ['qty_final' => 320, 'adjust_reason' => 'więcej'], $access);
+check($s === 422 && $codes($b) === ['qty_final:MTS_ABOVE_STOCK_MAX'], 'acceptance: an MTS adjustment cannot exceed the max stock');
+[$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 288, 'adjust_reason' => 'pełna blacha'], $access);
+check($s === 200 && array_values(array_filter($b['data']['lines'], fn($l) => $l['item_id'] === 1))[0]['qty_final'] == 288.0, 'MTO line adjusted with a reason');
+
+[$s, $b] = $call('POST', "/planning/plans/{$planId}/validate", null, $access);
+check($s === 200 && $b['data']['status'] === 'validated' && count($b['data']['orders']) === 3, 'plan validated, 3 production orders');
+$orders = [];
+foreach ($b['data']['orders'] as $o) $orders[$o['origin']] = $o;
+check($orders['MTO']['quantity'] == 288.0 && $orders['MTO']['customer_orders'] === 2 && $orders['MTO']['due_at'] === $d1 . ' 19:00:00', 'MTO order linked to its 2 customer orders, due before departure');
+check($orders['MTS']['quantity'] == 160.0 && $orders['MTS']['priority'] > $orders['MTO']['priority'], 'MTS order after MTO in priority');
+check($orders['SEMI']['parent_order_id'] === $orders['MTS']['id'] && $orders['SEMI']['due_at'] < $orders['MTS']['due_at'], 'semi-finished order tied to its parent and due before it starts');
+check(preg_match('/^OF-\d{8}-\d{3}$/', $orders['MTO']['code']) === 1, 'order codes');
+[$s, $b] = $call('POST', "/planning/plans/{$planId}/validate", null, $access);
+check($s === 409 && $b['description'] === 'PLAN_NOT_EDITABLE', 'a validated plan is not validated twice');
+[$s, $plan2] = $call('POST', '/planning/plans', ['from' => date('Y-m-d', strtotime('+3 days')), 'to' => date('Y-m-d', strtotime('+9 days'))], $access);
+check($plan2['data']['version'] === 1, 'another period starts at version 1');
+[$s, $b] = $call('POST', "/planning/plans/{$plan2['data']['id']}/validate", null, $access);
+check($s === 409 && $b['description'] === 'PLAN_OVERLAP', 'one validated plan per day');
+[$s, $b] = $call('GET', '/planning/demand' . $period, null, $access);
+$mtsAgain = array_values(array_filter($b['data']['lines'], fn($l) => $l['item_id'] === $itemId))[0]['mts'] ?? null;
+check($mtsAgain === null || $mtsAgain['projected'] >= 160, 'released MTS orders count in the projected stock');
+[$s, $b] = $call('GET', '/planning/plans?status=validated', null, $dir);
+check($s === 200 && array_column($b['data'], 'id') === [$planId], 'direction reads validated plans');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

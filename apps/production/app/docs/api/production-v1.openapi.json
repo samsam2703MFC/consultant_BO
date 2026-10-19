@@ -30,6 +30,10 @@
             "description": "Karty produkcyjne, marszruty, czasy standardowe, pomiary / Fiches de production, gammes, temps standards, chronométrage"
         },
         {
+            "name": "planning",
+            "description": "Zapotrzebowanie i plan produkcji / Besoins et plan de production"
+        },
+        {
             "name": "docs",
             "description": "OpenAPI"
         }
@@ -3416,6 +3420,493 @@
                 ],
                 "x-permission": "prod.products.write"
             }
+        },
+        "/planning/demand": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Zapotrzebowanie MTO / MTS / półprodukty / Besoins MTO, MTS et semi-finis",
+                "operationId": "getDemand",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Demand"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "MTO : commandes non expédiées (cartons × colisage), dues au départ du camion (jour d'expédition à planning.default_departure_time − planning.loading_time_min).\nMTS : stock projeté = stock libre + OF MTS en cours − commandes servies sur stock ; cible = consommation (WDT des planning.consumption_weeks dernières semaines) × couverture, bornée par stock min/max ; jamais au-delà du stock max ; plafond cold.freezer_capacity_cartons.\nSemi-finis : nomenclature des lignes (grammes par carton × (1 + perte)).",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
+        "/planning/plans": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Plany / Plans",
+                "operationId": "listPlans",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PlanSummary"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "proposed",
+                                "validated",
+                                "frozen",
+                                "closed"
+                            ]
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            },
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Zaproponuj plan / Proposer un plan",
+                "operationId": "createPlan",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PlanInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
+        "/planning/plans/{id}": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Plan z pozycjami i zleceniami / Plan, lignes et OF",
+                "operationId": "getPlan",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
+        "/planning/plans/{id}/lines/{lineId}": {
+            "patch": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Zmień ilość / Ajuster une ligne",
+                "operationId": "adjustPlanLine",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Plan proposé uniquement. Jamais sous les commandes et semi-finis (BELOW_ORDERS), jamais au-delà du stock max pour un MTS (MTS_ABOVE_STOCK_MAX). Motif obligatoire si la quantité change.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "lineId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PlanLineInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
+        "/planning/plans/{id}/validate": {
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Zatwierdź plan i utwórz zlecenia / Valider et créer les OF",
+                "operationId": "validatePlan",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Un seul plan validé par période (409 PLAN_OVERLAP). OF MTO reliés aux commandes clients, OF SEMI reliés à leur OF parent et dus à son démarrage au plus tard.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
         }
     },
     "components": {
@@ -3488,7 +3979,7 @@
                 }
             },
             "Error409": {
-                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS",
+                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -4368,6 +4859,435 @@
                             "variable",
                             "fixed"
                         ]
+                    }
+                }
+            },
+            "Demand": {
+                "type": "object",
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "item_type": {
+                                    "type": "string"
+                                },
+                                "mode": {
+                                    "type": "string"
+                                },
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "due_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "due_at": {
+                                    "type": "string",
+                                    "description": "départ du camion moins le chargement"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "customer_orders": {
+                                    "type": "integer"
+                                },
+                                "late_orders": {
+                                    "type": "integer",
+                                    "description": "passées après la clôture"
+                                },
+                                "mts": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "projected": {
+                                            "type": "number"
+                                        },
+                                        "target": {
+                                            "type": "number"
+                                        },
+                                        "need": {
+                                            "type": "number"
+                                        },
+                                        "qty": {
+                                            "type": "number"
+                                        },
+                                        "capped": {
+                                            "type": "boolean"
+                                        },
+                                        "below_batch_min": {
+                                            "type": "boolean"
+                                        },
+                                        "daily": {
+                                            "type": "number"
+                                        },
+                                        "coverage_days": {
+                                            "type": "number"
+                                        },
+                                        "free_stock": {
+                                            "type": "number"
+                                        },
+                                        "reason": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "parents": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "item_id": {
+                                                "type": "integer"
+                                            },
+                                            "due_date": {
+                                                "type": "string"
+                                            },
+                                            "qty": {
+                                                "type": "number"
+                                            }
+                                        }
+                                    }
+                                },
+                                "qty_mto": {
+                                    "type": "number"
+                                },
+                                "qty_mts": {
+                                    "type": "number"
+                                },
+                                "qty_semi": {
+                                    "type": "number"
+                                },
+                                "qty_proposed": {
+                                    "type": "number"
+                                },
+                                "batches": {
+                                    "type": "integer"
+                                },
+                                "standard_hours": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            },
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "PlanSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "period_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "period_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "proposed",
+                            "validated",
+                            "frozen",
+                            "closed"
+                        ]
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "validated_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "validated_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "line_count": {
+                        "type": "integer"
+                    },
+                    "standard_hours": {
+                        "type": "number"
+                    }
+                }
+            },
+            "Plan": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "period_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "period_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "proposed",
+                            "validated",
+                            "frozen",
+                            "closed"
+                        ]
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "validated_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "validated_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "line_count": {
+                        "type": "integer"
+                    },
+                    "standard_hours": {
+                        "type": "number"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "item_type": {
+                                    "type": "string"
+                                },
+                                "mode": {
+                                    "type": "string"
+                                },
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "due_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "ppc": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "qty_final": {
+                                    "type": "number"
+                                },
+                                "adjusted": {
+                                    "type": "boolean"
+                                },
+                                "adjust_reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "qty_mto": {
+                                    "type": "number"
+                                },
+                                "qty_mts": {
+                                    "type": "number"
+                                },
+                                "qty_semi": {
+                                    "type": "number"
+                                },
+                                "qty_proposed": {
+                                    "type": "number"
+                                },
+                                "batches": {
+                                    "type": "integer"
+                                },
+                                "standard_hours": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "hours_by_group": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "standard_hours": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "OF-20261020-001"
+                                },
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "origin": {
+                                    "type": "string",
+                                    "enum": [
+                                        "MTO",
+                                        "MTS",
+                                        "SEMI"
+                                    ]
+                                },
+                                "parent_order_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "due_at": {
+                                    "type": "string"
+                                },
+                                "priority": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "customer_orders": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "description": "après création"
+                    }
+                }
+            },
+            "PlanInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "from",
+                    "to"
+                ],
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "au plus planning.max_period_days jours"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
+                    }
+                }
+            },
+            "PlanLineInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "qty_final"
+                ],
+                "properties": {
+                    "qty_final": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "adjust_reason": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
                     }
                 }
             },

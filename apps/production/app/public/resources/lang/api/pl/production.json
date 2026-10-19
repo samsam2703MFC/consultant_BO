@@ -18,7 +18,15 @@
     "DUPLICATE_CODE": "Kod {code} już istnieje.",
     "INTERNAL_ERROR": "Błąd serwera. Numer zgłoszenia: {request_id}.",
     "ITEM_EXISTS": "Ten artykuł ma już kartę produkcyjną (id {id}).",
-    "NOT_ENOUGH_MEASUREMENTS": "Za mało pomiarów do nowej normy: {count} z wymaganych {min}."
+    "NOT_ENOUGH_MEASUREMENTS": "Za mało pomiarów do nowej normy: {count} z wymaganych {min}.",
+    "PLAN_NOT_EDITABLE": "Plan ma status „{status}” — można zmieniać tylko plan proponowany.",
+    "PLAN_OVERLAP": "Na ten okres jest już zatwierdzony plan (id {id}).",
+    "PLAN_WARNING_UNPLANNED_PRODUCTS": "{count} zamówionych produktów nie ma karty produkcyjnej — nie są planowane.",
+    "PLAN_WARNING_MTS_WITHOUT_MAX": "Artykuł {item_id} jest MTS bez stanu maksymalnego — pominięty.",
+    "PLAN_WARNING_FREEZER_CAPACITY_NOT_SET": "Pojemność mroźni nie jest ustawiona (cold.freezer_capacity_cartons) — limit nie jest sprawdzany.",
+    "PLAN_WARNING_FREEZER_CAPACITY_LIMITED": "MTS zmniejszone do pojemności mroźni (wolne: {free_cartons} kartonów).",
+    "PLAN_WARNING_NO_ROUTING": "Artykuł {item_id} nie ma marszruty — brak czasów standardowych.",
+    "PLAN_WARNING_SHEET_NOT_VALIDATED": "Karta artykułu {item_id} nie jest zatwierdzona."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -64,7 +72,10 @@
     "NOT_STEP_WORKSTATION": "To stanowisko nie należy do etapu (ani jako alternatywa).",
     "IN_FUTURE": "Pole „{field}” nie może być w przyszłości.",
     "PRODUCT_REQUIRED": "Wybierz produkt z grupy albo wpisz nazwę nowego produktu.",
-    "PRODUCT_NOT_IN_GROUP": "Ten produkt należy do innej grupy."
+    "PRODUCT_NOT_IN_GROUP": "Ten produkt należy do innej grupy.",
+    "BELOW_ORDERS": "Ilość nie może być mniejsza niż zamówienia i półprodukty ({min}).",
+    "MTS_ABOVE_STOCK_MAX": "Przekroczony stan maksymalny: najwyżej {max}.",
+    "PERIOD_TOO_LONG": "Okres planu może mieć najwyżej {max} dni."
   },
   "fields": {
     "code": "kod",
@@ -182,7 +193,11 @@
     "selling_price_eur": "Cena sprzedaży (€ / szt.)",
     "target_margin_pct": "Marża docelowa (%)",
     "investment_eur": "Inwestycja (€)",
-    "start_month": "Start (miesiąc)"
+    "start_month": "Start (miesiąc)",
+    "from": "Od",
+    "to": "Do",
+    "qty_final": "Ilość do produkcji",
+    "adjust_reason": "Powód zmiany"
   },
   "entities": {
     "group": "grupa",
@@ -193,6 +208,8 @@
     "param": "parametr",
     "item": "artykuł",
     "routing_step": "etap marszruty",
-    "time_study": "pomiar czasu"
+    "time_study": "pomiar czasu",
+    "plan": "plan",
+    "plan_line": "pozycja planu"
   }
 }

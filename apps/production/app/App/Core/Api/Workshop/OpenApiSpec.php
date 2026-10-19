@@ -17,7 +17,7 @@ final class OpenApiSpec
     {
         $paths = [];
         foreach (WorkshopApiRoutes::routes() as [$method, $path, , , $permission]) {
-            $doc = (self::operations() + OpenApiProducts::operations())[$method . ' ' . $path] ?? null;
+            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations())[$method . ' ' . $path] ?? null;
             if ($doc === null) {
                 throw new \LogicException("Undocumented route {$method} {$path}");
             }
@@ -71,6 +71,7 @@ final class OpenApiSpec
                 ['name' => 'auth', 'description' => 'Logowanie / Connexion'],
                 ['name' => 'referentiels', 'description' => 'Grupy, stanowiska, zmiany, zespoły, pracownicy, parametry / Groupes, postes, shifts, équipes, employés, paramètres'],
                 ['name' => 'produits', 'description' => 'Karty produkcyjne, marszruty, czasy standardowe, pomiary / Fiches de production, gammes, temps standards, chronométrage'],
+                ['name' => 'planning', 'description' => 'Zapotrzebowanie i plan produkcji / Besoins et plan de production'],
                 ['name' => 'docs', 'description' => 'OpenAPI'],
             ],
             'paths' => $paths,
@@ -155,7 +156,7 @@ final class OpenApiSpec
         $nullableInt = ['type' => 'integer', 'nullable' => true];
         $errorResponses = [];
         foreach ([400 => 'INVALID_JSON', 401 => 'UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID', 403 => 'FORBIDDEN / NO_PRODUCTION_ROLE',
-                  404 => 'NOT_FOUND / ROUTE_NOT_FOUND', 409 => 'DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS', 422 => 'VALIDATION_FAILED', 429 => 'TOO_MANY_ATTEMPTS',
+                  404 => 'NOT_FOUND / ROUTE_NOT_FOUND', 409 => 'DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP', 422 => 'VALIDATION_FAILED', 429 => 'TOO_MANY_ATTEMPTS',
                   500 => 'INTERNAL_ERROR', 503 => 'AUTH_NOT_CONFIGURED'] as $status => $codes) {
             $errorResponses['Error' . $status] = ['description' => $codes, 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Error']]]];
         }
@@ -169,7 +170,7 @@ final class OpenApiSpec
                 'Lang' => ['name' => 'lang', 'in' => 'query', 'required' => false, 'description' => 'Język komunikatów / Langue des messages (sinon Accept-Language)', 'schema' => ['type' => 'string', 'enum' => ['pl', 'fr']]],
             ],
             'responses' => $errorResponses,
-            'schemas' => OpenApiProducts::schemas() + [
+            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + [
                 'Error' => ['type' => 'object', 'required' => ['status', 'description', 'message', 'request_id'], 'properties' => [
                     'status' => ['type' => 'string', 'enum' => ['error']],
                     'description' => ['type' => 'string', 'example' => 'VALIDATION_FAILED'],
