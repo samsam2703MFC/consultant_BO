@@ -26,13 +26,18 @@ class AppNotificationService
         ]);
     }
 
-    public function active(): array
+    public function active(int $limit = 3): array
     {
         return array_map(static function (array $notification): array {
             $notification['payload'] = json_decode($notification['payload_json'] ?? '{}', true) ?: [];
             unset($notification['payload_json']);
             return $notification;
-        }, $this->repository->getActive());
+        }, $this->repository->getActive($limit));
+    }
+
+    public function countActive(): int
+    {
+        return $this->repository->countActive();
     }
 
     public function acknowledge(int $id, string $via): void

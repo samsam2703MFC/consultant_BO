@@ -13,7 +13,11 @@ class AppNotificationController extends BaseController
 
     public function active()
     {
-        return $this->json(['data' => $this->service->active()]);
+        $limit = (int) ($_GET['limit'] ?? 3);
+        return $this->json([
+            'data' => $this->service->active($limit),
+            'total' => $this->service->countActive(),
+        ]);
     }
 
     public function acknowledge($id)

@@ -69,10 +69,10 @@
 
     <div id="main" class='layout-navbar'>
         <header class='mb-3'>
-            {% include "page_components/navbar.twig" ignore missing %}
-            {% include "page_components/navbar.view.php" ignore missing %}
+            {% include "page_components/navbar.twig" %}
         </header>
 
+        <div id="appNotificationBanner" class="px-3 px-md-4" aria-live="polite"></div>
         {% include "page_components/app_notifications.twig" %}
 
         <div id="main-content">

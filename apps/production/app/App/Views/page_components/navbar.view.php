@@ -32,17 +32,19 @@
 
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
 
-                <li class="nav-item dropdown me-3">
-                    <a class="nav-link active dropdown-toggle" href="#" data-bs-toggle="dropdown"
-                       aria-expanded="false">
-                        <i class='bi bi-bell bi-sub fs-4 text-gray-600'></i>
+                <li class="nav-item dropdown me-3" id="atBell" data-root="<?=esc(ROOT)?>">
+                    <a class="nav-link at-bell-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                       aria-expanded="false" aria-label="Powiadomienia">
+                        <i class="bi bi-bell"></i>
+                        <span class="at-bell-count" hidden></span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                        <li>
-                            <h6 class="dropdown-header">Notifications</h6>
-                        </li>
-                        <li><a class="dropdown-item">No notification available</a></li>
-                    </ul>
+                    <div class="dropdown-menu dropdown-menu-end at-bell-menu">
+                        <div class="at-bell-head">
+                            <span>Powiadomienia</span>
+                            <button type="button" class="at-bell-readall" data-notifications-read-all hidden>Oznacz wszystkie jako odczytane</button>
+                        </div>
+                        <div class="at-bell-list"><p class="at-bell-empty">Brak nowych powiadomień</p></div>
+                    </div>
                 </li>
             </ul>
             <div class="dropdown">

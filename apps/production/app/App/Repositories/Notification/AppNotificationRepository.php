@@ -19,7 +19,7 @@ class AppNotificationRepository extends BaseRepository
 
     public function getActive(int $limit = 3): array
     {
-        $limit = max(1, min(3, $limit));
+        $limit = max(1, min(20, $limit));
         return $this->query(
             "SELECT id, type, severity, title, body, link_url, payload_json, created_at
              FROM app_notification
@@ -28,6 +28,17 @@ class AppNotificationRepository extends BaseRepository
              ORDER BY FIELD(severity, 'danger', 'warning', 'info'), created_at ASC
              LIMIT {$limit}"
         ) ?: [];
+    }
+
+    public function countActive(): int
+    {
+        $rows = $this->query(
+            "SELECT COUNT(*) AS total
+             FROM app_notification
+             WHERE acknowledged_at IS NULL
+               AND (expires_at IS NULL OR expires_at > NOW())"
+        );
+        return (int) ($rows[0]['total'] ?? 0);
     }
 
     public function acknowledge(int $id, string $via): bool
