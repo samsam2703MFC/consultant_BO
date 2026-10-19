@@ -8,6 +8,7 @@
         <td class="text-end"><div class="at-actions"><button class="btn btn-sm btn-primary" onclick="getGrouped(<?= (int)$row['id'] ?>)" type="button">Dokumenty (PDF)</button><div class="at-more"><button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button><div class="at-more-menu" role="menu" hidden>
             <button type="button" role="menuitem" onclick="getCMR(<?= (int)$row['id_cmr'] ?>)"><i class="bi bi-truck"></i>CMR (PDF)</button>
             <button type="button" role="menuitem" onclick="getWDT(<?= (int)$row['id_wdt'] ?>)"><i class="bi bi-receipt"></i>WDT (PDF)</button>
+            <a role="menuitem" href="<?= ROOT ?>/communication/compose/wdt/<?= (int)$row['id_wdt'] ?>"><i class="bi bi-envelope"></i>Przygotuj e-mail z WDT</a>
             <?php if ((int)$row['id_diff'] !== 0): ?><button type="button" role="menuitem" onclick="getDiff(<?= (int)$row['id_diff'] ?>)"><i class="bi bi-arrow-left-right"></i>Różnice (PDF)</button><?php endif; ?>
             <?php if (($row['ksef_status'] ?? null) !== 'accepted'): ?><a role="menuitem" href="<?= ROOT ?>/wdt-documents/<?= (int)$row['id_wdt'] ?>/products" data-ksef-edit-prices="<?= (int)$row['id'] ?>"><i class="bi bi-pencil"></i>Edytuj ceny WDT</a><?php endif; ?>
             <hr>
