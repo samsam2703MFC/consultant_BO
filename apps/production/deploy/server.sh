@@ -190,9 +190,24 @@ chmod 700 "$ERP_IMPORT_DIR"
 TKEY="$ERP_IMPORT_DIR/cle_transfert.pem"
 INCOMING="$SRC/deploy/incoming"
 
+# Un import n'est réputé fait qu'une fois ce repère écrit : une base remplie à
+# moitié (import interrompu) est vidée puis réimportée.
+IMPORT_OK="$ERP_IMPORT_DIR/IMPORT_OK"
 dumps=()
 tables="$("${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${ERP_DB_NAME}'")"
-if [[ "$tables" -eq 0 ]]; then
+dbver="$("${ADMIN[@]}" -N -e 'SELECT VERSION()')"
+if [[ "$dbver" == *MariaDB* ]]; then IS_MYSQL=0; else IS_MYSQL=1; fi
+
+# Sur MySQL, l'ERP garde le mode SQL de MariaDB 10.3, sous lequel il a été écrit
+# (sans ONLY_FULL_GROUP_BY : /test-products casse sinon).
+if [[ "$IS_MYSQL" == "1" && -z "$(envget DB_SQL_MODE)" ]]; then
+  set_env DB_SQL_MODE "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+  log "MySQL ${dbver} : mode SQL de MariaDB 10.3 pour l'ERP (DB_SQL_MODE)."
+fi
+
+if [[ "$tables" -gt 0 && -f "$IMPORT_OK" ]]; then
+  log "Base ${ERP_DB_NAME} déjà remplie (${tables} tables) : aucun import."
+else
   if [[ -f "$INCOMING/erp.zip.enc" && ! -f "$TKEY" ]]; then
     warn "Dump chiffré présent dans le dépôt, mais pour une clé que ce serveur n'a plus (déjà importé ?) : ignoré."
   elif [[ -f "$INCOMING/erp.zip.enc" && -f "$INCOMING/erp.key.enc" && -f "$INCOMING/erp.zip.sha256" ]]; then
@@ -213,17 +228,27 @@ if [[ "$tables" -eq 0 ]]; then
     if [[ ! -f "$TKEY" ]]; then
       ( umask 077; openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "$TKEY" 2>/dev/null )
     fi
-    warn "Base ${ERP_DB_NAME} vide : déposez le dump dans ${ERP_IMPORT_DIR} sur le serveur, ou envoyez-le chiffré pour la clé publique ci-dessous."
+    if [[ "$tables" -gt 0 ]]; then
+      warn "Base ${ERP_DB_NAME} incomplète (import interrompu) et aucun dump disponible : renvoyez-le."
+    else
+      warn "Base ${ERP_DB_NAME} vide : déposez le dump dans ${ERP_IMPORT_DIR} sur le serveur, ou envoyez-le chiffré pour la clé publique ci-dessous."
+    fi
     echo "=== CLE PUBLIQUE DE TRANSFERT ERP ==="
     openssl pkey -in "$TKEY" -pubout
     echo "=== FIN CLE PUBLIQUE ==="
   else
     dump="$(ls -t "${dumps[@]}" | head -1)"
-    log "Import de $(basename "$dump") dans ${ERP_DB_NAME}…"
+    if [[ "$tables" -gt 0 ]]; then
+      log "Import précédent incomplet (${tables} tables) : base ${ERP_DB_NAME} vidée avant réimport."
+      "${ADMIN[@]}" -e "DROP DATABASE \`${ERP_DB_NAME}\`; CREATE DATABASE \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+    fi
+    # Dump MariaDB vers MySQL : deux syntaxes de valeurs par défaut à convertir.
+    if [[ "$IS_MYSQL" == "1" ]]; then convert=(perl -p "$SRC/deploy/mariadb_vers_mysql.pl"); else convert=(cat); fi
+    log "Import de $(basename "$dump") dans ${ERP_DB_NAME} (${dbver})…"
     case "$dump" in
-      *.zip) unzip -p "$dump" '*.sql' | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
-      *.gz)  zcat "$dump" | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
-      *)     "${ADMIN[@]}" "$ERP_DB_NAME" < "$dump" ;;
+      *.zip) unzip -p "$dump" '*.sql' | "${convert[@]}" | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
+      *.gz)  zcat "$dump" | "${convert[@]}" | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
+      *)     "${convert[@]}" < "$dump" | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
     esac
     log "Import terminé : $("${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${ERP_DB_NAME}'") tables."
 
@@ -250,6 +275,7 @@ SQL
     done < <("${ADMIN[@]}" -N "$ERP_DB_NAME" -e "SELECT id, login FROM user")
     log "Comptes de la copie : nouveaux mots de passe dans ${pwfile} (sur le serveur)."
 
+    date -u +%FT%TZ > "$IMPORT_OK"
     mkdir -p "$ERP_IMPORT_DIR/importe"
     chmod 600 "$dump"
     mv "$dump" "$ERP_IMPORT_DIR/importe/"
@@ -259,8 +285,6 @@ SQL
       log "Clé de transfert détruite."
     fi
   fi
-else
-  log "Base ${ERP_DB_NAME} déjà remplie (${tables} tables) : aucun import."
 fi
 
 # --- 6. Apache : Alias /production --------------------------------------
@@ -305,8 +329,8 @@ fi
 # --- 7. Recette locale ---------------------------------------------------
 body="$(mktemp)"
 code="$(curl -s -o "$body" -w '%{http_code}' "http://127.0.0.1${ERP_ALIAS}/" || true)"
-if [[ "$tables" -eq 0 && ${#dumps[@]} -eq 0 ]]; then
-  log "Recette sautée : la base est encore vide."
+if [[ ! -f "$IMPORT_OK" ]]; then
+  log "Recette sautée : la base n'est pas encore importée."
 elif [[ "$code" == "200" ]] && grep -q 'name="password"' "$body"; then
   code2="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${ERP_ALIAS}/client-orders" || true)"
   [[ "$code2" == "302" ]] || fail "${ERP_ALIAS}/client-orders sans session répond HTTP ${code2} (302 attendu)."

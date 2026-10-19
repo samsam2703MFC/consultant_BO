@@ -34,4 +34,9 @@ avec `deploy/server.sh`, sur le même serveur que le cockpit :
   Discord vides dans le `.env` ;
 - les comptes de la copie reçoivent des mots de passe aléatoires, écrits dans
   `/root/erp_import/MOTS_DE_PASSE_ERP.txt` (lisible par root seulement, jamais dans les logs) ;
-- PHP 8.1 suffit : `composer.lock` est figé sur `config.platform.php = 8.1.2`.
+- PHP 8.1 suffit : `composer.lock` est figé sur `config.platform.php = 8.1.2` ;
+- **MySQL** (le serveur) et non MariaDB (l'ERP d'origine) : l'import convertit deux syntaxes
+  de valeurs par défaut (`deploy/mariadb_vers_mysql.pl`) et le `.env` reçoit `DB_SQL_MODE`, le
+  mode SQL de MariaDB 10.3 (sans `ONLY_FULL_GROUP_BY`, sinon `/test-products` casse) ;
+- un import n'est réputé fait qu'avec `/root/erp_import/IMPORT_OK` : une base remplie à moitié
+  est vidée et réimportée au déploiement suivant.
