@@ -33,14 +33,24 @@ env:
   SRC_DIR: "/opt/consulant_bo_src"
   PWA_BASE: "http://185.180.206.46/pwa_consultant"
   APP_BASE: "http://185.180.206.46/consulant_bo"
+  ERP_URL: "http://185.180.206.46/production"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20 et non 15 : le premier passage de l'ERP importe sa base (~110 Mo).
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # L'ERP (apps/production) livre ses dépendances : vendor/ n'est pas dans
+      # Git et le serveur n'a pas forcément composer. Le composer.lock est figé
+      # pour PHP 8.1 (config.platform), la version du serveur.
+      - name: Préparer l'ERP (composer install)
+        run: |
+          composer install --working-dir=apps/production/app/public \
+            --no-dev --no-interaction --no-progress --optimize-autoloader
 
       # Un script de déploiement mal quoté part sur le serveur sans que rien
       # ne l'arrête : le transfert réussit, et c'est l'exécution distante qui
@@ -135,6 +145,20 @@ jobs:
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "rm -f ${SRC_DIR}/.deployenv" || true
+
+      # ERP servi sous /production, base séparée (copie importée une fois depuis
+      # /root/erp_import). Détail : apps/production/deploy/server.sh.
+      - name: Déployer l'ERP (/production)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "ERP_URL='${ERP_URL}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "${ERP_URL}/")
+          if [ "$code" != "200" ]; then
+            echo "::error title=ERP::${ERP_URL}/ répond HTTP ${code} depuis l'extérieur (200 attendu)"; exit 1
+          fi
+          echo "OK  ${ERP_URL}/ répond depuis l'extérieur"
 
       - name: Recette publique (endpoints depuis le runner)
         run: |

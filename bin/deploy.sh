@@ -154,6 +154,7 @@ rsync -a --delete \
   --exclude 'node_modules' --exclude '.deployenv' \
   --exclude 'public/uploads' \
   --exclude 'public/assistant/uploads' \
+  --exclude 'apps/production' \
   "$REPO_SRC/" "$TARGET_DIR/"
 
 # Photos annexées au planogramme : elles vivent HORS du dépôt et doivent
