@@ -494,3 +494,58 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-mail .at-days-input { width: 64px; padding: 2px 6px; }
 .at-mail select[data-field="language"] { min-width: 104px; }
 .at-mail-body { white-space: pre-wrap; font-family: var(--at-font-ui); font-size: 12.5px; background: var(--at-bg-2); border-radius: var(--at-radius); padding: 10px 12px; max-height: 320px; overflow: auto; }
+
+/* --- Rentowność produkcji (strona startowa) ----------------------------------- */
+.at-profit-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.at-profit-period .form-select { min-width: 260px; }
+.at-profit-warn { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.at-profit-hero { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+@media (max-width: 1199px) { .at-profit-hero { grid-template-columns: 1fr; } }
+.at-profit-tile { gap: 8px; padding: 18px 20px; }
+.at-profit-tile .at-tile-value { font-size: 30px; }
+.at-profit-tile .at-tile-value small { font-size: 16px; color: var(--at-muted); margin-left: 6px; }
+.at-profit-gap { font-size: 14px; padding: 8px 10px; border-radius: var(--at-radius); background: rgba(196, 30, 58, 0.07); color: var(--at-text); }
+.at-profit-gap strong { color: var(--at-danger); font-size: 16px; }
+.at-profit-gap-ok { background: rgba(46, 125, 79, 0.08); }
+.at-profit-gap-info { background: var(--at-bg-2); }
+.at-profit-gap-info strong { color: var(--at-text); }
+.at-profit-badge { display: inline-block; padding: 1px 7px; margin: 0 2px; border-radius: 10px; background: var(--at-danger); color: #fff; font-size: 12px; font-weight: 500; }
+.at-progress { position: relative; height: 8px; border-radius: 4px; background: var(--at-bg-2); overflow: visible; }
+.at-progress-bar { display: block; height: 100%; border-radius: 4px; background: var(--at-warning); }
+.at-progress-bar.ok { background: var(--at-success); }
+.at-progress-now { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--at-text); }
+.at-profit-table td, .at-profit-table th { vertical-align: middle; }
+.at-profit-table tbody tr.at-profit-bad td:first-child { box-shadow: inset 3px 0 0 var(--at-danger); }
+.at-profit-table tbody tr.at-profit-ok td:first-child { box-shadow: inset 3px 0 0 var(--at-success); }
+.at-profit-table .at-sub, .at-profit .at-sub { color: var(--at-muted); font-size: 11.5px; }
+.at-profit-ratio { min-width: 190px; }
+.at-ratio { position: relative; height: 8px; border-radius: 4px; background: var(--at-bg-2); margin-bottom: 4px; }
+.at-ratio-sm { height: 6px; max-width: 160px; }
+.at-ratio-bar { display: block; height: 100%; border-radius: 4px; background: var(--at-danger); }
+.at-profit-ok .at-ratio-bar, .at-ratio-bar.ok { background: var(--at-success); }
+.at-ratio-target { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--at-text); opacity: .55; }
+.at-ratio-sm .at-ratio-target { height: 12px; }
+.at-ratio-value { font-weight: 500; margin-right: 6px; white-space: nowrap; }
+.at-profit-shared td { background: var(--at-bg-2); }
+.at-profit-total td { border-top: 2px solid var(--at-line-2); }
+.at-profit-note { font-size: 12px; color: var(--at-muted); margin: 12px 0 0; }
+.at-profit-targets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 12px; align-items: end; }
+.at-profit-targets label { font-size: 12.5px; color: var(--at-muted); display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 991px) { .at-profit-targets { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 575px) { .at-profit-targets { grid-template-columns: 1fr; } .at-profit-period .form-select { min-width: 0; width: 100%; } .at-profit-period { width: 100%; } }
+.at-profit-input { max-width: 130px; }
+.at-profit-pill { white-space: nowrap; }
+.at-profit-pill [data-profit-value] { font-weight: 600; }
+.at-profit-pill.ok [data-profit-value] { color: var(--at-success); }
+.at-profit-pill.bad [data-profit-value] { color: var(--at-danger); }
+.at-profit td.text-end, .at-profit th.text-end { white-space: nowrap; }
+.at-profit-trend td:first-child { white-space: nowrap; }
+.at-profit-cards { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.at-profit-cards li { padding: 12px 12px 12px 14px; border: 1px solid var(--at-line); border-radius: var(--at-radius); display: flex; flex-direction: column; gap: 6px; }
+.at-profit-cards li.at-profit-bad { box-shadow: inset 3px 0 0 var(--at-danger); }
+.at-profit-cards li.at-profit-ok { box-shadow: inset 3px 0 0 var(--at-success); }
+.at-profit-card-total { background: var(--at-bg-2); }
+.at-profit-card-head { display: flex; justify-content: space-between; gap: 8px; }
+.at-profit-card-gap { font-size: 14px; }
+.at-profit-card-gap strong { color: var(--at-danger); }
+.at-profit-card-gap.ok { color: var(--at-success); }

@@ -15,7 +15,6 @@
 <script src="<?=ROOT?>/assets/vendors/perfect-scrollbar/perfect-scrollbar.min.js"></script>
 <script src="<?=ROOT?>/assets/js/bootstrap.bundle.min.js"></script>
 <script src="<?=ROOT?>/assets/vendors/choices.js/choices.min.js"></script>
-<script src="<?=ROOT?>/assets/js/main.js"></script>
 <script src="<?=ROOT?>/assets/js/mazer.js"></script>
 <script src="<?=ROOT?>/assets/vendors/sweetalert2/sweetalert2.all.min.js"></script>
 <script type="module" src="<?=ROOT?>/assets/js/modules.js"></script>

@@ -14,6 +14,9 @@
             <div class="navbar-center flex-grow-1 d-flex justify-content-center">
 
                 <div class="quick-tags d-flex align-items-center">
+                    <a href="<?=ROOT?>/dashboard" class="badge bg-dark me-2 py-2 px-3 at-profit-pill" data-profit title="Koszt personelu / sprzedaż w bieżącym miesiącu">
+                        <i class="icon bi bi-graph-up"></i> Rentowność <span data-profit-value></span>
+                    </a>
                     <a href="<?=ROOT?>/shipping-documents/create" class="badge bg-primary me-2 py-2 px-3">
                         <i class="icon bi bi-truck"></i> Wysyłka
                     </a>

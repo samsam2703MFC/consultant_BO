@@ -36,6 +36,8 @@ class AppExtension extends AbstractExtension
             new \Twig\TwigFilter('currency', [ $this, 'formatCurrency' ]),
             new \Twig\TwigFilter('plural_pl', [ $this, 'pluralPl' ]),
             new \Twig\TwigFilter('day_pl', 'day_label_pl'),
+            new \Twig\TwigFilter('eur', [ $this, 'formatEur' ]),
+            new \Twig\TwigFilter('pct', [ $this, 'formatPct' ]),
         ];
     }
 
@@ -48,6 +50,18 @@ class AppExtension extends AbstractExtension
     public function formatCurrency($amount, int $decimals = 2): string
     {
         return number_format((float)$amount, $decimals, ',', ' ') . ' zł';
+    }
+
+    /** Kwota w euro bez groszy: 12 345 € (null → —). */
+    public function formatEur($amount, int $decimals = 0): string
+    {
+        return $amount === null ? '—' : number_format((float) $amount, $decimals, ',', ' ') . ' €';
+    }
+
+    /** Procent z jednym miejscem po przecinku: 49,1 % (null → —). */
+    public function formatPct($value, int $decimals = 1): string
+    {
+        return $value === null ? '—' : number_format((float) $value, $decimals, ',', ' ') . ' %';
     }
 
     /**

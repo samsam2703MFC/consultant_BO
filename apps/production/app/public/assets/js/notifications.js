@@ -131,14 +131,24 @@
     });
 
     // Liczniki przy pozycjach menu i skrótach górnego paska: <span data-count="complaints">.
+    // Skrót „Rentowność” w górnym pasku: koszt personelu / sprzedaż bieżącego miesiąca wobec celu.
     function counters() {
-        if (!document.querySelector('[data-count]')) return;
+        if (!document.querySelector('[data-count], [data-profit]')) return;
         request(root + '/ajax/rail-counters').then(function (r) {
             if (!r.ok) return;
             document.querySelectorAll('[data-count]').forEach(function (el) {
                 var n = parseInt(r[el.dataset.count], 10) || 0;
                 el.textContent = n > 99 ? '99+' : String(n);
                 el.hidden = n === 0;
+            });
+            var p = r.profit;
+            document.querySelectorAll('[data-profit]').forEach(function (el) {
+                var value = el.querySelector('[data-profit-value]');
+                el.classList.remove('ok', 'bad');
+                if (!p || !value) return;
+                value.textContent = String(p.staff_pct).replace('.', ',') + ' % / cel ' + String(p.target).replace('.', ',') + ' %';
+                el.classList.add(p.ok ? 'ok' : 'bad');
+                el.title = p.ok ? 'Koszt personelu w celu' : 'Brakuje ' + Number(p.missing).toLocaleString('pl-PL') + ' € sprzedaży do celu';
             });
         }).catch(function () {});
     }
