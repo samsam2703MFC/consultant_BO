@@ -6,7 +6,18 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/../../', null, false);
 $dotenv->load();
 
 /** Adresy z .env (APP_URL, APIPREFIXE, ATELIER_RESOURCES_PREFIXE) mają pierwszeństwo przed wartościami poniżej **/
-if (($_ENV['APP_URL'] ?? '') !== '') define('ROOT', rtrim($_ENV['APP_URL'], '/'));
+if (($_ENV['APP_URL'] ?? '') !== '') {
+    $appUrl = rtrim($_ENV['APP_URL'], '/');
+    // Schemat jak w bieżącym żądaniu: strona otwarta przez https nie może ładować CSS/JS przez http
+    // (przeglądarka blokuje „mixed content” i strona wyświetla się bez stylów).
+    if (PHP_SAPI !== 'cli') {
+        $https = ($_SERVER['HTTPS'] ?? '') === 'on'
+            || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
+            || (string) ($_SERVER['SERVER_PORT'] ?? '') === '443';
+        $appUrl = preg_replace('#^https?://#', $https ? 'https://' : 'http://', $appUrl);
+    }
+    define('ROOT', $appUrl);
+}
 if (($_ENV['APIPREFIXE'] ?? '') !== '') define('APIPREFIXE', $_ENV['APIPREFIXE']);
 if (($_ENV['ATELIER_RESOURCES_PREFIXE'] ?? '') !== '') define('ATELIER_RESOURCES_PREFIXE', $_ENV['ATELIER_RESOURCES_PREFIXE']);
 
