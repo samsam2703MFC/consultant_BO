@@ -9755,7 +9755,7 @@ class App {
     const fE = n => this.fE(n);
     const fK = n => Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fE(n);
     const pc = (a, b) => b ? 100 * a / b : 0;
-    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
+    const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
     // Bleu au-dessus du N-1, orange en dessous (lisibles par les daltoniens), gris autour de zéro.
     const col = v => v >= 3 ? '#2E6DB4' : (v <= -3 ? '#C0632B' : '#8b8177');
     const dd = j => j.slice(8, 10) + '/' + j.slice(5, 7);
