@@ -5,8 +5,8 @@ use App\Repositories\Workshop\WorkshopRepository;
 
 /**
  * Logistyka : pojazdy przewoźników ERP (carrier_vehicle) z pojemnością (tfb_vehicle), zamówienia
- * dnia wysyłki z danymi paletowymi produktów, palety już zeskanowane (palets_delivery), stała trasa
- * klienta i przydział na dzień.
+ * dnia wysyłki z danymi paletowymi produktów (rodzaj kartonu z karty opakowań, kategoria), palety
+ * już zeskanowane (palets_delivery), stała trasa klienta i przydział na dzień.
  */
 final class LogisticsRepository extends WorkshopRepository
 {
@@ -80,11 +80,18 @@ final class LogisticsRepository extends WorkshopRepository
                     COALESCE(NULLIF(TRIM(cu.company), ''), TRIM(CONCAT(cu.name, ' ', cu.surname))) AS customer,
                     cu.fac_town AS town, cu.fac_country AS country,
                     cop.id_product AS product_id, fp.name AS product, cop.quantity_carton AS cartons,
-                    fp.cpp, fp.cpl, fp.lpp, fp.ppc, fp.weight AS weight_g
+                    fp.cpp, fp.cpl, fp.lpp, fp.ppc, fp.weight AS weight_g,
+                    sp.id_outer_raw_material AS carton_type_id,
+                    COALESCE(CONCAT('Karton ', cd.length, ' × ', cd.width, ' × ', cd.height), rm.name) AS carton_type,
+                    cat.name AS category
              FROM customer_order co
              JOIN customer cu ON cu.id = co.id_customer
              JOIN customer_order_product cop ON cop.id_order = co.id
              JOIN final_product fp ON fp.id = cop.id_product
+             LEFT JOIN final_product_ppwr_sales_packaging sp ON sp.id_final_product = fp.id
+             LEFT JOIN carton_dimension cd ON cd.id = sp.id_outer_raw_material
+             LEFT JOIN raw_material rm ON rm.id = sp.id_outer_raw_material
+             LEFT JOIN category_product cat ON cat.id = fp.id_category
              WHERE DATE(co.expected_shipping_date) = ? AND co.status < 5 AND COALESCE(co.is_freebie, 0) = 0 AND cop.quantity_carton > 0
              ORDER BY customer, co.id, fp.name",
             [$date]

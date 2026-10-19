@@ -10,7 +10,8 @@ use App\Repositories\Workshop\ParamRepository;
  *
  * Pojazd klienta na dany dzień : przydział tego dnia, inaczej stała trasa klienta, inaczej pojazd
  * z ostatniego CMR klienta (podpowiedź), inaczej brak. Przydział można zapamiętać jako stałą trasę.
- * Zapełnienie : palety klientów ÷ miejsca paletowe, waga ÷ ładowność. Wyjazd : godzina pojazdu
+ * Zapełnienie : palety klientów ÷ miejsca paletowe, waga ÷ ładowność. Palety klienta rozpisane po
+ * kolei według rodzaju kartonu (palety mieszane tylko w jednym formacie), potem kategorii produktów. Wyjazd : godzina pojazdu
  * (lub planning.default_departure_time), załadunek od wyjazdu − planning.loading_time_min.
  */
 final class LogisticsService
@@ -38,6 +39,7 @@ final class LogisticsService
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) throw new CustomException('Nieprawidłowa data.', 'errors', 422);
         $mixed = $this->params->get('logistics.mixed_pallets', '1') === '1';
         $tare = (float) $this->params->get('logistics.pallet_tare_kg', '25');
+        $leftoverMax = max(0.0, min(1.0, (float) $this->params->get('logistics.leftover_fill_max', '0.5')));
         $defaultDeparture = $this->params->get('planning.default_departure_time', '20:00');
         $loadingMin = (int) $this->params->get('planning.loading_time_min', '60');
 
@@ -77,11 +79,13 @@ final class LogisticsService
                 $merged[$pid] = $l;
             }
             $c['lines'] = array_values($merged);
-            $calc = PalletCalculator::compute(array_map(fn($l) => ['cartons' => $l['cartons'], 'cpp' => $l['cpp'], 'ppc' => $l['ppc'], 'weight_g' => $l['weight_g']], $c['lines']), $mixed, $tare);
+            $calc = PalletCalculator::compute(array_map(fn($l) => ['cartons' => $l['cartons'], 'cpp' => $l['cpp'], 'ppc' => $l['ppc'], 'weight_g' => $l['weight_g'],
+                'product' => $l['product'], 'carton_type_id' => $l['carton_type_id'] !== null ? (int) $l['carton_type_id'] : null,
+                'carton_type' => $l['carton_type'], 'category' => $l['category']], $c['lines']), $mixed, $tare, $leftoverMax);
             [$vehicleId, $source, $stop] = match (true) {
                 isset($assignments[$id]) => [$assignments[$id]['vehicle'], 'day', $assignments[$id]['stop']],
                 isset($routes[$id]) && $routes[$id]['vehicle'] !== null => [$routes[$id]['vehicle'], 'route', $routes[$id]['stop']],
-                isset($last[$id]) => [$last[$id], 'last_cmr', null],
+                isset($last[$id]) && (int) ($vehicles[$last[$id]]['active'] ?? 0) === 1 => [$last[$id], 'last_cmr', null],
                 default => [null, null, null],
             };
             if ($vehicleId !== null && !isset($vehicles[$vehicleId])) [$vehicleId, $source] = [null, null];
@@ -126,6 +130,21 @@ final class LogisticsService
         usort($fleet, fn($a, $b) => [!$a['customers'], $a['departure'], $a['label']] <=> [!$b['customers'], $b['departure'], $b['label']]);
 
         $unassigned = array_values(array_filter($customers, fn($c) => $c['vehicle_id'] === null));
+        // Rodzaje kartonów dnia : kartony i palety (materiał opakowaniowy, miejsce na rampie).
+        $cartonTypes = [];
+        foreach ($customers as $c) {
+            foreach ($c['carton_types'] as $type) {
+                if ($type['id'] === 'formats') continue;
+                $key = $type['id'] ?? 'none';
+                $cartonTypes[$key] ??= ['id' => $type['id'], 'name' => $type['name'], 'cartons' => 0.0, 'pallets' => 0, 'full' => 0, 'mixed' => 0, 'customers' => 0];
+                $cartonTypes[$key]['cartons'] += $type['cartons'];
+                $cartonTypes[$key]['pallets'] += count($type['pallets']);
+                $cartonTypes[$key]['full'] += count(array_filter($type['pallets'], fn($p) => $p['kind'] === 'full'));
+                $cartonTypes[$key]['mixed'] += count(array_filter($type['pallets'], fn($p) => $p['kind'] !== 'full'));
+                $cartonTypes[$key]['customers']++;
+            }
+        }
+        uasort($cartonTypes, fn($a, $b) => [$a['id'] === null, -$a['pallets']] <=> [$b['id'] === null, -$b['pallets']]);
         $warnings = [];
         foreach ($fleet as $t) {
             $kg = fn(float $v) => number_format($v, 0, ',', ' ') . ' kg';
@@ -144,6 +163,7 @@ final class LogisticsService
             'fleet' => $fleet,
             'unassigned' => $unassigned,
             'products' => array_values($products),
+            'carton_types' => array_values($cartonTypes),
             'warnings' => $warnings,
             'totals' => [
                 'customers' => count($customers),
@@ -154,8 +174,10 @@ final class LogisticsService
                 'scanned' => array_sum(array_column($customers, 'scanned')),
                 'places' => array_sum(array_map(fn($t) => $t['customers'] ? (int) $t['places'] : 0, $fleet)),
             ],
-            'settings' => ['mixed' => $mixed, 'tare_kg' => $tare, 'default_departure' => $defaultDeparture, 'loading_min' => $loadingMin],
-            'vehicles' => array_values(array_filter($vehicles, fn($v) => (int) $v['active'] || (int) $v['carrier_active'])),
+            'settings' => ['mixed' => $mixed, 'tare_kg' => $tare, 'leftover_max' => $leftoverMax, 'default_departure' => $defaultDeparture, 'loading_min' => $loadingMin],
+            // Lista wyboru : tylko pojazdy w użyciu ; pojazd nieaktywny już przydzielony pokazuje się tylko u tego klienta.
+            'vehicles' => array_values(array_filter($vehicles, fn($v) => (int) $v['active'] === 1)),
+            'all_vehicles' => $vehicles,
         ];
     }
 

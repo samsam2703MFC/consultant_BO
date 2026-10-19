@@ -33,6 +33,26 @@ expectLogi($p['pallets'] === 3, 'bez palet mieszanych : osobna paleta na każdą
 $p = PalletCalculator::compute([['cartons' => 120, 'cpp' => 60], ['cartons' => 5, 'cpp' => null]], true, 25);
 expectLogi($p['pallets'] === 2 && $p['mixed_pallets'] === 0 && $p['missing_cpp'] === 1, 'pełne palety bez reszty ; produkt bez cpp sygnalizowany');
 expectLogi(PalletCalculator::compute([], true, 25)['pallets'] === 0, 'brak pozycji : 0 palet');
+// Paleta mieszana tylko z kartonami jednego formatu : dwie reszty w różnych kartonach = dwie palety
+$p = PalletCalculator::compute([['cartons' => 70, 'cpp' => 60, 'product' => 'Croissant', 'carton_type_id' => 1, 'carton_type' => 'Karton 590 × 390 × 210', 'category' => 'Viennoiserie'],
+    ['cartons' => 30, 'cpp' => 40, 'product' => 'Bagietka', 'carton_type_id' => 2, 'carton_type' => 'Karton 390 × 195 × 120', 'category' => 'Boulangerie']], true, 25);
+expectLogi($p['pallets'] === 3 && $p['mixed_pallets'] === 2 && count($p['carton_types']) === 2, 'reszty w różnych kartonach nie mieszają się');
+$p = PalletCalculator::compute([['cartons' => 70, 'cpp' => 60, 'product' => 'A', 'carton_type_id' => 1, 'category' => 'X'], ['cartons' => 45, 'cpp' => 60, 'product' => 'B', 'carton_type_id' => 1, 'category' => 'Y'],
+    ['cartons' => 25, 'cpp' => 60, 'product' => 'C', 'carton_type_id' => 1, 'category' => 'X']], true, 25);
+$type = $p['carton_types'][0];
+$mixedPallets = array_values(array_filter($type['pallets'], fn($x) => $x['kind'] === 'mixed'));
+expectLogi(count($type['pallets']) === 3 && $mixedPallets[0]['items'][0] == ['product' => 'B', 'cartons' => 45.0] && $mixedPallets[0]['fill'] == 1.0
+    && $mixedPallets[1]['items'][0]['product'] === 'C' && array_sum(array_map(fn($x) => array_sum(array_column($x['items'], 'cartons')), $mixedPallets)) == 80.0,
+    'paleta mieszana wypełniana po kolei : 45 B + 10 C pełna, potem reszta C + 10 A');
+expectLogi(array_column($type['categories'], 'name') === ['X', 'Y'] && $type['categories'][0]['cartons'] == 95.0, 'w rodzaju kartonu : kategorie od największej');
+// Resztki różnych formatów poniżej 50 % : razem na jednej palecie
+$leftover = [['cartons' => 6, 'cpp' => 60, 'product' => 'A', 'carton_type_id' => 1, 'carton_type' => 'K1'], ['cartons' => 10, 'cpp' => 40, 'product' => 'B', 'carton_type_id' => 2, 'carton_type' => 'K2'],
+    ['cartons' => 30, 'cpp' => 40, 'product' => 'C', 'carton_type_id' => 3, 'carton_type' => 'K3']];
+expectLogi(PalletCalculator::compute($leftover, true, 25)['pallets'] === 3, 'bez łączenia resztek : 3 palety');
+$p = PalletCalculator::compute($leftover, true, 25, 0.5);
+$formats = array_values(array_filter($p['carton_types'], fn($t) => $t['id'] === 'formats'))[0] ?? null;
+expectLogi($p['pallets'] === 2 && $formats && count($formats['pallets']) === 1 && abs($formats['pallets'][0]['fill'] - 0.35) < 0.001
+    && array_column($formats['pallets'][0]['items'], 'format') === ['K2', 'K1'], 'resztki 10 % + 25 % różnych formatów razem ; 75 % zostaje w swoim formacie');
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
 $source = getenv('TFB_TEST_SOURCE_DB') ?: 'erp';
@@ -50,7 +70,8 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['tfb_prod_param', 'carrier', 'carrier_vehicle', 'tfb_vehicle', 'tfb_customer_route', 'tfb_shipping_assignment', 'customer', 'customer_order',
-                 'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr'] as $table) {
+                 'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'raw_material',
+                 'category_product'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -65,6 +86,11 @@ try {
         (1, '', '', 'Sklep A', 'Wrocław', 'PL'), (2, '', '', 'Sklep B', 'Berlin', 'DE'), (3, 'Jan', 'Kowalski', '', 'Opole', 'PL'), (4, '', '', 'Sklep D', 'Łódź', 'PL')");
     $pdo->exec("INSERT INTO final_product (id, name, cpp, cpl, lpp, ppc, weight, active) VALUES
         (10, 'Croissant', 60, 10, 6, 64, 75, 1), (11, 'Bagietka', 40, 8, 5, 20, 250, 1), (12, 'Tarta', 0, 0, 0, 0, 0, 1), (13, 'Ciasto', 50, 10, 6, 10, 100, 1)");
+    $pdo->exec("INSERT INTO carton_dimension (id, length, width, height, name) VALUES (4006, 590, 390, 210, 'Karton 590 x 390 x 210')");
+    $pdo->exec("INSERT INTO final_product_ppwr_sales_packaging (id_final_product, id_outer_raw_material) VALUES (10, 4006), (11, 4006), (13, 4006)");
+    $pdo->exec("INSERT INTO category_product (id, name) VALUES (1, 'Viennoiserie'), (2, 'Boulangerie')");
+    $pdo->exec("UPDATE final_product SET id_category = 1 WHERE id IN (10, 13)");
+    $pdo->exec("UPDATE final_product SET id_category = 2 WHERE id = 11");
     $d = '2026-10-20';
     $pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shipping_date) VALUES
         (1, 1, 1, '{$d}'), (2, 1, 2, '{$d}'), (3, 2, 1, '{$d}'), (4, 3, 3, '{$d}'), (5, 4, 5, '{$d}'), (6, 4, 1, '2026-10-21')");
@@ -84,6 +110,9 @@ try {
     expectLogi($c[1]['full_pallets'] === 2 && $c[1]['mixed_pallets'] === 1 && $c[1]['pallets'] === 3,
         'klient A : Croissant 70 + 50 = 120 → 2 pełne ; reszty 30/40 + 10/50 → 1 mieszana');
     expectLogi(abs($c[1]['weight_kg'] - (120 * 64 * 0.075 + 30 * 20 * 0.25 + 10 * 10 * 0.1 + 3 * 25)) < 0.01, 'waga klienta A');
+    $types = $c[1]['carton_types'];
+    expectLogi(count($types) === 1 && $types[0]['name'] === 'Karton 590 × 390 × 210' && array_column($types[0]['categories'], 'name') === ['Viennoiserie', 'Boulangerie'],
+        'klient A : jeden rodzaj kartonu, kategorie Viennoiserie (130 kart.) i Boulangerie (30)');
     expectLogi($c[1]['vehicle_id'] === 1 && $c[1]['vehicle_source'] === 'day' && $c[1]['stop'] === 2, 'A : przydział na ten dzień');
     expectLogi($c[2]['pallets'] === 10 && $c[2]['scanned'] === 2 && $c[2]['vehicle_source'] === 'route', 'B : 10 pełnych palet, 2 zeskanowane, stała trasa');
     expectLogi($c[3]['name'] === 'Jan Kowalski' && $c[3]['vehicle_id'] === 2 && $c[3]['vehicle_source'] === 'last_cmr', 'klient bez firmy : imię i nazwisko ; pojazd z ostatniego CMR');
@@ -100,6 +129,12 @@ try {
     ksort($issues);
     expectLogi($issues === ['Ciasto' => 'layers', 'Tarta' => 'missing'], 'produkty do uzupełnienia : brak cpp (Tarta) i niezgodność warstw (Ciasto 10 × 6 ≠ 50)');
     expectLogi($day['totals']['pallets'] === 14 && $day['totals']['scanned'] === 2, 'razem palet dnia');
+
+    // Lista pojazdów : tylko w użyciu ; podpowiedź z CMR tylko dla pojazdu w użyciu
+    $pdo->exec('UPDATE tfb_vehicle SET active = 0 WHERE id_carrier_vehicle = 2');
+    $off = $new()->day($d);
+    expectLogi(array_column($off['vehicles'], 'id') === [1] && $off['by_id'][3]['vehicle_id'] === null, 'pojazd nieaktywny : nie na liście i nie podpowiadany');
+    $pdo->exec('UPDATE tfb_vehicle SET active = 1 WHERE id_carrier_vehicle = 2');
 
     // Bez palet mieszanych
     (new ParamRepository($pdo))->setValue('logistics.mixed_pallets', '0', 1);
