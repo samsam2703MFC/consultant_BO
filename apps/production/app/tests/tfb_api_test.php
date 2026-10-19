@@ -38,7 +38,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'customer_order', 'communication_template'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'communication_template'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -203,6 +203,119 @@ check($s === 422 && $codes($b) === ['value:OUT_OF_RANGE'], 'percentage above 200
 check($s === 200 && $b['data']['value'] === 94.5 && $b['data']['is_default'] === false, 'parameter updated');
 [$s, $b] = $call('PATCH', '/referentiels/params/workstation.capacity_units', ['value' => ['plaque', 'Bad Unit']], $access);
 check($s === 422, 'capacity unit list is checked');
+
+// --- P2 : fiche produit, gamme, temps standards, chronométrage
+$pdo->exec("INSERT INTO unit (id, name) VALUES (1, 'g') ON DUPLICATE KEY UPDATE name = name");
+$pdo->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'STRICT_TRANS_TABLES', '')");
+$pdo->exec("INSERT INTO raw_material (id, name, id_unit, price_per_unit) VALUES (900, 'Mąka T65', 1, 0.004), (901, 'Masło', 1, 0.03)");
+$pdo->exec("INSERT INTO product_recipe (id, name, id_type, is_subrecipe, id_unit) VALUES (700, 'Croissant — receptura', 3, 0, 1), (701, 'Ciasto francuskie', 2, 1, 1)");
+$pdo->exec("INSERT INTO product_recipe_connection (parent_recipe_id, child_recipe_id, child_ingredient_id, quantity) VALUES (700, 701, NULL, 2000), (700, NULL, 901, 300)");
+$pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, bpc, cpl, lpp, cpp, id_section, id_recipe, active) VALUES (501, 'Croissant test', 1, 70, 60, 1, 60, 8, 6, 48, 1, 700, 1)");
+$pdo->exec("INSERT INTO tfb_prod_workstation (id, code, id_group, name_pl, name_fr, type, capacity_per_pass) VALUES
+    (90, 'STOL_P2', 1, 'Stół', 'Table', 'manuel', 200), (91, 'PIEC_P2', 1, 'Piec', 'Four', 'four', 60),
+    (92, 'PIEC_P2B', 1, 'Piec 2', 'Four 2', 'four', 40), (93, 'KOMORA_P2', 1, 'Komora', 'Chambre de pousse', 'fermentation', 400)");
+[$s, $teamLead] = $call('POST', '/auth/login', ['login' => 'legacy', 'password' => 'plain-pass']);
+$lead = $teamLead['data']['access_token'];
+$dir = $direction['data']['access_token'];
+
+[$s, $b] = $call('GET', '/produits/candidates?item_type=product&search=test', null, $access);
+check($s === 200 && array_column($b['data'], 'id') === [501], 'candidates: ERP products without a sheet (500 already has one)');
+[$s, $b] = $call('POST', '/produits/items', ['item_type' => 'product', 'recipe_id' => 701], $access);
+check($s === 422 && $codes($b) === ['final_product_id:REQUIRED', 'recipe_id:NOT_ALLOWED_FOR_TYPE'], 'product sheet needs a final product, not a recipe');
+[$s, $b] = $call('POST', '/produits/items', ['item_type' => 'product', 'final_product_id' => 501], $dir);
+check($s === 403, 'direction cannot create sheets');
+[$s, $item] = $call('POST', '/produits/items', ['item_type' => 'product', 'final_product_id' => 501], $access);
+check($s === 201 && $item['data']['name'] === 'Croissant test' && $item['data']['settings']['status'] === 'draft'
+    && $item['data']['settings']['primary_group_id'] === 1 && $item['data']['recipe_id'] === 700, 'sheet created from the ERP product, group from its section');
+$itemId = $item['data']['id'];
+check(count($item['data']['bom']) === 2 && $item['data']['bom'][0]['child_kind'] === 'recipe', 'BOM read from the ERP recipe');
+[$s, $b] = $call('POST', '/produits/items', ['item_type' => 'product', 'final_product_id' => 501], $access);
+check($s === 409 && $b['description'] === 'ITEM_EXISTS', 'one sheet per ERP product');
+
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['never_frozen' => true, 'mode' => 'MTS'], $access);
+check($s === 422 && $codes($b) === ['mode:NEVER_FROZEN_MTS', 'stock_max:REQUIRED_FOR_MTS'], 'never frozen ⇒ never MTS, MTS needs a max stock');
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['mode' => 'MTS', 'stock_min' => 100, 'stock_max' => 50], $access);
+check($s === 422 && $codes($b) === ['stock_max:STOCK_MAX_BELOW_MIN'], 'max stock below min refused');
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['mode' => 'MTS', 'stock_min' => 60, 'stock_max' => 600, 'shelf_life_shop_days' => 2, 'wizard_step' => 4], $access);
+check($s === 200 && $b['data']['settings']['mode'] === 'MTS' && $b['data']['settings']['stock_max'] === 600.0, 'MTS with stocks saved');
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['never_frozen' => true], $access);
+check($s === 422 && $codes($b) === ['mode:NEVER_FROZEN_MTS'], 'an MTS item cannot become never frozen');
+
+[$s, $b] = $call('POST', "/produits/items/{$itemId}/validate", null, $access);
+check($s === 422 && $codes($b) === ['routing:ROUTING_EMPTY'], 'no validation without a routing');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [
+    ['name_pl' => 'Formowanie', 'workstation_id' => 90, 'delay_after_s' => 0, 'delay_workstation_id' => 91],
+    ['name_pl' => 'Pieczenie', 'workstation_id' => 91, 'fixed_time_s' => 1080, 'cleaning_time_s' => 300, 'alternatives' => [['workstation_id' => 91]]],
+]], $access);
+check($s === 422 && $codes($b) === ['steps.0.delay_workstation_id:DELAY_WORKSTATION_TYPE', 'steps.0.delay_after_s:REQUIRED_WITH_DELAY_WORKSTATION',
+    'steps.0.variable_time_s:NO_TIME', 'steps.1.cleaning_time_s:CLEANING_NOT_REQUIRED', 'steps.1.alternatives.0.workstation_id:SAME_AS_MAIN_WORKSTATION'], 'routing errors located step by step');
+check(str_contains($b['errors'][0]['message'], 'komorą fermentacyjną'), 'step errors are translated');
+$routing = ['steps' => [
+    ['name_pl' => 'Formowanie', 'name_fr' => 'Façonnage', 'workstation_id' => 90, 'fixed_time_s' => 300, 'variable_time_s' => 4.5, 'operators_required' => 2,
+        'delay_after_s' => 3600, 'delay_workstation_id' => 93],
+    ['name_pl' => 'Pieczenie', 'workstation_id' => 91, 'fixed_time_s' => 1080, 'cleaning_required' => true, 'cleaning_time_s' => 300,
+        'alternatives' => [['workstation_id' => 92, 'capacity_per_pass' => 40]]],
+]];
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", $routing, $access);
+check($s === 200 && count($b['data']['routing']) === 2 && $b['data']['routing'][1]['capacity_per_pass'] === 60.0
+    && $b['data']['routing'][1]['alternatives'][0]['fixed_time_s'] === 1080 && $b['data']['routing'][0]['name_fr'] === 'Façonnage', 'routing saved, oven capacity and times inherited');
+$step1 = $b['data']['routing'][0]['id'];
+$step2 = $b['data']['routing'][1]['id'];
+
+// Test d'acceptation : même temps fixe pour 10 et 60 pièces dans un passage
+[$s, $d10] = $call('GET', "/produits/items/{$itemId}/duration?quantity=10", null, $dir);
+[$s, $d60] = $call('GET', "/produits/items/{$itemId}/duration?quantity=60", null, $dir);
+check($d10['data']['steps'][1]['work_s'] === $d60['data']['steps'][1]['work_s'] && $d60['data']['steps'][1]['passes'] === 1, 'oven: same time for 10 and 60 pieces in one pass');
+[$s, $d61] = $call('GET', "/produits/items/{$itemId}/duration?quantity=61", null, $dir);
+check($d61['data']['steps'][1]['passes'] === 2 && $d61['data']['steps'][1]['work_s'] === 2160.0, '61 pieces need a second pass');
+check($d60['data']['elapsed_s'] === (300 + 4.5 * 60 + 3600) + (1080 + 300) && $d60['data']['labour_s'] === (300 + 270) * 2 + 1380.0, 'elapsed and labour time');
+[$s, $b] = $call('GET', "/produits/items/{$itemId}/duration?quantity=abc", null, $dir);
+check($s === 422, 'quantity must be a number');
+
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'material', 'child_id' => 900, 'loss_pct' => 2]]], $access);
+check($s === 422 && $codes($b) === ['losses.0.child_id:NOT_IN_BOM'], 'loss only on a BOM line');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'material', 'child_id' => 901, 'loss_pct' => 3.5], ['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1]]], $access);
+check($s === 200 && array_column($b['data']['bom'], 'loss_pct') === [1.0, 3.5], 'BOM losses saved');
+
+[$s, $b] = $call('POST', "/produits/items/{$itemId}/validate", null, $access);
+check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 7, 'sheet validated');
+[$s, $b] = $call('GET', '/produits/items?status=validated&mode=MTS', null, $dir);
+check($s === 200 && array_column($b['data'], 'id') === [$itemId], 'list filters');
+
+// Chronométrage : moyenne glissante, alerte d'écart, application de la norme
+foreach ([[100, 850], [100, 900], [100, 800]] as [$qty, $dur]) {
+    [$s, $b] = $call('POST', "/produits/routing-steps/{$step1}/time-studies", ['quantity' => $qty, 'duration_s' => $dur, 'production_employee_id' => 10], $lead);
+    check($s === 201, 'team lead records a measurement');
+}
+$variable = $b['data']['proposals'][0];
+check($variable['count'] === 3 && $variable['ready'] && abs($variable['proposed_s'] - 5.5) < 1e-9 && $variable['alert'] && $variable['deviation_pct'] === 22.2, 'per-piece time = (duration − fixed) / quantity, averaged, deviation flagged');
+check($b['data']['measurements'][0]['employee'] === 'Jan Kowalski', 'measured operator kept');
+[$s, $b] = $call('POST', "/produits/routing-steps/{$step1}/time-studies", ['quantity' => 0, 'duration_s' => 10, 'workstation_id' => 91, 'measured_at' => '2099-01-01 08:00'], $lead);
+check($s === 422 && $codes($b) === ['quantity:OUT_OF_RANGE', 'workstation_id:NOT_STEP_WORKSTATION', 'measured_at:IN_FUTURE'], 'measurement checks');
+[$s, $b] = $call('POST', "/produits/routing-steps/{$step1}/apply-standard", ['component' => 'variable'], $lead);
+check($s === 403, 'a team lead measures but does not change standards');
+[$s, $b] = $call('POST', "/produits/routing-steps/{$step2}/apply-standard", ['component' => 'fixed'], $access);
+check($s === 409 && $b['description'] === 'NOT_ENOUGH_MEASUREMENTS', 'no standard without enough measurements');
+$firstId = $b === null ? 0 : (int) $pdo->query("SELECT MIN(id) FROM tfb_prod_time_study")->fetchColumn();
+[$s, $b] = $call('PATCH', "/produits/time-studies/{$firstId}", ['excluded' => true, 'note' => 'awaria'], $lead);
+check($s === 200 && $b['data']['proposals'][0]['count'] === 2 && !$b['data']['proposals'][0]['ready'], 'an excluded measurement leaves the average');
+$call('PATCH', "/produits/time-studies/{$firstId}", ['excluded' => false], $lead);
+[$s, $b] = $call('POST', "/produits/routing-steps/{$step1}/apply-standard", ['component' => 'variable'], $access);
+check($s === 200 && $b['data']['step']['variable_time_s'] === 5.5 && $b['data']['proposals'][0]['deviation_pct'] === 0.0, 'proposed standard applied to the routing');
+check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE applied_at IS NOT NULL")->fetchColumn() === 3, 'measurements marked as used');
+check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'routing_step' AND action = 'apply_standard'")->fetchColumn() === 1, 'standard change audited');
+[$s, $b] = $call('POST', "/produits/routing-steps/{$step2}/time-studies", ['quantity' => 120, 'duration_s' => 2400], $lead, 'fr');
+check($s === 201 && $b['data']['measurements'][0]['component'] === 'fixed' && $b['data']['measurements'][0]['passes'] === 2
+    && $b['data']['measurements'][0]['unit_time_s'] === 1200.0 && $b['data']['step']['name'] === 'Pieczenie', 'oven measured per pass (2 passes for 120 pieces)');
+
+// Gamme remplacée : l'étape retirée part avec ses mesures
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [['id' => $step2, 'name_pl' => 'Pieczenie', 'workstation_id' => 91, 'fixed_time_s' => 1100]]], $access);
+check($s === 200 && count($b['data']['routing']) === 1 && $b['data']['routing'][0]['id'] === $step2 && $b['data']['routing'][0]['step_no'] === 1
+    && $b['data']['routing'][0]['alternatives'] === [], 'kept step renumbered, removed step deleted');
+check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE id_routing_step = {$step1}")->fetchColumn() === 0
+    && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE id_routing_step = {$step2}")->fetchColumn() === 1, 'measurements follow their step');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [['id' => 99999, 'name_pl' => 'X', 'workstation_id' => 91, 'fixed_time_s' => 1]]], $access);
+check($s === 422 && $codes($b) === ['steps.0.id:REFERENCE_NOT_FOUND'], 'a step of another item cannot be reused');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

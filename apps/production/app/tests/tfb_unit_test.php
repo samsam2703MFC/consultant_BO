@@ -16,6 +16,7 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\Routes\Api\WorkshopApiRoutes;
 use App\Services\Workshop\Auth\AuthService;
 use App\Services\Workshop\Migration\MigrationRunner;
+use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
 function check(bool $condition, string $message): void
@@ -92,6 +93,25 @@ foreach (['errors', 'field_errors', 'fields', 'entities'] as $section) {
 }
 check(Translator::negotiate(null, 'fr-BE,fr;q=0.9', 'pl') === 'fr' && Translator::negotiate('xx', 'de', 'pl') === 'pl', 'language negotiation');
 check((new Translator('fr'))->fieldError('robot_mode', 'ROBOT_MODE_REQUIRED') !== 'ROBOT_MODE_REQUIRED', 'field error is translated');
+
+// --- Temps standards (P2) : durée = temps fixe × passages + temps par pièce × quantité
+$oven = ['fixed_time_s' => 1080, 'variable_time_s' => 0, 'capacity_per_pass' => 60, 'operators_required' => 1];
+check(StandardTime::step($oven, 10)['work_s'] === StandardTime::step($oven, 60)['work_s'], 'fixed time identical for 10 and 60 pieces in one pass');
+check(StandardTime::step($oven, 60)['passes'] === 1 && StandardTime::step($oven, 61)['passes'] === 2, 'a 61st piece needs a second pass');
+check(StandardTime::step($oven, 61)['work_s'] === 2160.0, 'two passes, twice the fixed time');
+check(StandardTime::passes(0.3 * 3, 0.3) === 3, 'no extra pass from floating point (0.9 / 0.3)');
+check(StandardTime::step($oven, 0)['passes'] === 0 && StandardTime::step($oven, 0)['elapsed_s'] === 0.0, 'nothing to make, no time');
+$shaping = ['fixed_time_s' => 300, 'variable_time_s' => 4.5, 'capacity_per_pass' => 200, 'operators_required' => 2, 'cleaning_time_s' => 600, 'delay_after_s' => 3600];
+$s = StandardTime::step($shaping, 100);
+check($s['work_s'] === 750.0 && $s['cleaning_s'] === 600.0 && $s['elapsed_s'] === 4950.0, 'work + cleaning + delay');
+check($s['labour_s'] === 2700.0, 'labour = (work + cleaning) × operators, the delay does not occupy the team');
+$r = StandardTime::routing([$shaping + ['step_no' => 1], $oven + ['step_no' => 2]], 100);
+check($r['totals']['work_s'] === 750.0 + 2160.0 && abs($r['labour_s_per_unit'] - (2700 + 2160) / 100) < 1e-9, 'routing totals and labour per unit');
+check(abs(StandardTime::unitTime('variable', $shaping, 100, 1, 850) - 5.5) < 1e-9, 'measured per-piece time removes the fixed part');
+check(abs(StandardTime::unitTime('fixed', $oven, 120, 2, 2400) - 1200) < 1e-9, 'measured per-pass time');
+check(StandardTime::unitTime('variable', $shaping, 100, 1, 200) === 0.0, 'never negative');
+check(StandardTime::movingAverage([10, 20, 30, 40, 50, 60], 5) === 30.0, 'moving average of the 5 latest');
+check(StandardTime::defaultComponent($oven) === 'fixed' && StandardTime::defaultComponent($shaping) === 'variable', 'default component');
 
 // --- Chaque route est documentée dans OpenAPI
 $spec = OpenApiSpec::build('https://erp.test');

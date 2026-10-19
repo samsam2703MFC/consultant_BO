@@ -6,10 +6,12 @@ namespace App\Core\Routes\Api;
 use App\Controllers\Api\Workshop\AuthController;
 use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\GroupController;
+use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\OpenApiController;
 use App\Controllers\Api\Workshop\ParamController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
+use App\Controllers\Api\Workshop\TimeStudyController;
 use App\Controllers\Api\Workshop\WorkstationController;
 
 /**
@@ -61,6 +63,21 @@ final class WorkshopApiRoutes
             ['GET', '/referentiels/params', ParamController::class, 'list', $read],
             ['GET', '/referentiels/params/{code:[a-z0-9_.]+}', ParamController::class, 'get', $read],
             ['PATCH', '/referentiels/params/{code:[a-z0-9_.]+}', ParamController::class, 'update', 'prod.params.write'],
+
+            ['GET', '/produits/items', ItemController::class, 'list', 'prod.products.read'],
+            ['POST', '/produits/items', ItemController::class, 'create', 'prod.products.write'],
+            ['GET', '/produits/candidates', ItemController::class, 'candidates', 'prod.products.read'],
+            ['GET', '/produits/items/{id:\d+}', ItemController::class, 'get', 'prod.products.read'],
+            ['PATCH', '/produits/items/{id:\d+}/settings', ItemController::class, 'updateSettings', 'prod.products.write'],
+            ['PUT', '/produits/items/{id:\d+}/routing', ItemController::class, 'replaceRouting', 'prod.products.write'],
+            ['PUT', '/produits/items/{id:\d+}/bom-losses', ItemController::class, 'saveBomLosses', 'prod.products.write'],
+            ['POST', '/produits/items/{id:\d+}/validate', ItemController::class, 'validate', 'prod.products.write'],
+            ['GET', '/produits/items/{id:\d+}/duration', ItemController::class, 'duration', 'prod.products.read'],
+
+            ['GET', '/produits/routing-steps/{id:\d+}/time-studies', TimeStudyController::class, 'list', 'prod.products.read'],
+            ['POST', '/produits/routing-steps/{id:\d+}/time-studies', TimeStudyController::class, 'record', 'prod.execution.write'],
+            ['PATCH', '/produits/time-studies/{id:\d+}', TimeStudyController::class, 'setExcluded', 'prod.execution.write'],
+            ['POST', '/produits/routing-steps/{id:\d+}/apply-standard', TimeStudyController::class, 'applyStandard', 'prod.products.write'],
         ];
     }
 

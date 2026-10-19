@@ -16,7 +16,9 @@
     "REFRESH_INVALID": "Le jeton de renouvellement est invalide ou expiré : reconnectez-vous.",
     "AUTH_NOT_CONFIGURED": "L'authentification de l'API n'est pas configurée sur le serveur.",
     "DUPLICATE_CODE": "Le code {code} existe déjà.",
-    "INTERNAL_ERROR": "Erreur serveur. Référence : {request_id}."
+    "INTERNAL_ERROR": "Erreur serveur. Référence : {request_id}.",
+    "ITEM_EXISTS": "Cet article a déjà une fiche de production (id {id}).",
+    "NOT_ENOUGH_MEASUREMENTS": "Pas assez de mesures pour une nouvelle norme : {count} sur {min} requises."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -47,7 +49,20 @@
     "DUPLICATE_IN_LIST": "Le champ « {field} » contient un doublon ({id}).",
     "INVALID_JSON_VALUE": "Le champ « {field} » doit contenir un JSON valide.",
     "NEVER_FROZEN_MTS": "Un produit « jamais congelé » ne peut pas être produit pour le stock (MTS).",
-    "INVALID_EMAIL": "{field} : adresse e-mail invalide ({id})"
+    "INVALID_EMAIL": "{field} : adresse e-mail invalide ({id})",
+    "NOT_ALLOWED_FOR_TYPE": "Le champ « {field} » ne correspond pas à ce type d'article.",
+    "REQUIRED_FOR_MTS": "Le champ « {field} » est obligatoire pour une production sur stock (MTS).",
+    "STOCK_MAX_BELOW_MIN": "Le stock maximum ne peut pas être inférieur au stock minimum.",
+    "DELAY_WORKSTATION_TYPE": "Le poste d'attente doit être une chambre de pousse, un froid ou un surgélateur.",
+    "REQUIRED_WITH_DELAY_WORKSTATION": "Indiquez la durée d'attente pour le poste d'attente.",
+    "NO_TIME": "L'étape doit avoir un temps fixe ou un temps par pièce.",
+    "CLEANING_NOT_REQUIRED": "Temps de nettoyage indiqué mais le nettoyage n'est pas coché.",
+    "SAME_AS_MAIN_WORKSTATION": "Le poste alternatif ne peut pas être le poste principal.",
+    "TOO_MANY": "Champ « {field} » : {max} éléments au maximum.",
+    "NOT_IN_BOM": "L'élément {id} ne fait pas partie de la nomenclature de l'article.",
+    "ROUTING_EMPTY": "La gamme ne contient aucune étape.",
+    "NOT_STEP_WORKSTATION": "Ce poste n'appartient pas à l'étape (ni comme alternative).",
+    "IN_FUTURE": "Le champ « {field} » ne peut pas être dans le futur."
   },
   "fields": {
     "code": "code",
@@ -123,7 +138,42 @@
     "position_id": "Poste",
     "since": "Depuis",
     "note": "Note",
-    "price": "Prix"
+    "price": "Prix",
+    "item_type": "Type d'article",
+    "final_product_id": "Produit fini",
+    "recipe_id": "Semi-fini",
+    "never_frozen": "Jamais congelé",
+    "stock_min": "Stock minimum",
+    "stock_max": "Stock maximum",
+    "coverage_days": "Couverture (jours)",
+    "batch_min": "Lot minimum",
+    "batch_multiple": "Multiple de lot",
+    "shelf_life_workshop_days": "Durée de vie atelier (jours)",
+    "shelf_life_shop_days": "Durée de vie boutique (jours)",
+    "wizard_step": "Étape de l'assistant",
+    "steps": "Étapes",
+    "workstation_id": "Poste",
+    "fixed_time_s": "Temps fixe (s / passage)",
+    "variable_time_s": "Temps par pièce (s)",
+    "operators_required": "Nombre d'opérateurs",
+    "min_level_order": "Niveau minimum",
+    "delay_after_s": "Attente après l'étape (s)",
+    "delay_workstation_id": "Poste d'attente",
+    "cleaning_required": "Nettoyage",
+    "cleaning_time_s": "Temps de nettoyage (s)",
+    "alternatives": "Postes alternatifs",
+    "priority": "Priorité",
+    "losses": "Pertes",
+    "child_kind": "Type de composant",
+    "child_id": "Composant",
+    "loss_pct": "Perte (%)",
+    "routing": "Gamme",
+    "duration_s": "Durée (s)",
+    "passes": "Passages",
+    "component": "Composante de temps",
+    "measured_at": "Date de mesure",
+    "excluded": "Écartée",
+    "search": "Recherche"
   },
   "entities": {
     "group": "groupe",
@@ -131,6 +181,9 @@
     "shift_template": "shift",
     "team": "équipe",
     "employee": "employé",
-    "param": "paramètre"
+    "param": "paramètre",
+    "item": "article",
+    "routing_step": "étape de gamme",
+    "time_study": "chronométrage"
   }
 }

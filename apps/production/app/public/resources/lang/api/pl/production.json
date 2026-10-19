@@ -16,7 +16,9 @@
     "REFRESH_INVALID": "Token odświeżania jest nieważny lub wygasł — zaloguj się ponownie.",
     "AUTH_NOT_CONFIGURED": "Uwierzytelnianie API nie jest skonfigurowane na serwerze.",
     "DUPLICATE_CODE": "Kod {code} już istnieje.",
-    "INTERNAL_ERROR": "Błąd serwera. Numer zgłoszenia: {request_id}."
+    "INTERNAL_ERROR": "Błąd serwera. Numer zgłoszenia: {request_id}.",
+    "ITEM_EXISTS": "Ten artykuł ma już kartę produkcyjną (id {id}).",
+    "NOT_ENOUGH_MEASUREMENTS": "Za mało pomiarów do nowej normy: {count} z wymaganych {min}."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -47,7 +49,20 @@
     "DUPLICATE_IN_LIST": "Pole „{field}” zawiera powtórzony element ({id}).",
     "INVALID_JSON_VALUE": "Pole „{field}” musi zawierać poprawny JSON.",
     "NEVER_FROZEN_MTS": "Produkt „nigdy nie mrożony” nie może być produkowany na zapas (MTS).",
-    "INVALID_EMAIL": "{field}: nieprawidłowy adres e-mail ({id})"
+    "INVALID_EMAIL": "{field}: nieprawidłowy adres e-mail ({id})",
+    "NOT_ALLOWED_FOR_TYPE": "Pole „{field}” nie pasuje do tego typu artykułu.",
+    "REQUIRED_FOR_MTS": "Pole „{field}” jest wymagane dla produkcji na magazyn (MTS).",
+    "STOCK_MAX_BELOW_MIN": "Stan maksymalny nie może być niższy niż minimalny.",
+    "DELAY_WORKSTATION_TYPE": "Stanowisko oczekiwania musi być komorą fermentacyjną, chłodnią lub mroźnią.",
+    "REQUIRED_WITH_DELAY_WORKSTATION": "Podaj czas oczekiwania dla stanowiska oczekiwania.",
+    "NO_TIME": "Etap musi mieć czas stały lub czas na sztukę.",
+    "CLEANING_NOT_REQUIRED": "Czas mycia podany, ale mycie nie jest zaznaczone.",
+    "SAME_AS_MAIN_WORKSTATION": "Stanowisko alternatywne nie może być stanowiskiem głównym.",
+    "TOO_MANY": "Pole „{field}”: najwyżej {max} pozycji.",
+    "NOT_IN_BOM": "Pozycja {id} nie należy do receptury artykułu.",
+    "ROUTING_EMPTY": "Marszruta nie ma żadnego etapu.",
+    "NOT_STEP_WORKSTATION": "To stanowisko nie należy do etapu (ani jako alternatywa).",
+    "IN_FUTURE": "Pole „{field}” nie może być w przyszłości."
   },
   "fields": {
     "code": "kod",
@@ -123,7 +138,42 @@
     "position_id": "Stanowisko",
     "since": "Od",
     "note": "Notatka",
-    "price": "Cena"
+    "price": "Cena",
+    "item_type": "Typ artykułu",
+    "final_product_id": "Produkt gotowy",
+    "recipe_id": "Półprodukt",
+    "never_frozen": "Nigdy mrożony",
+    "stock_min": "Stan minimalny",
+    "stock_max": "Stan maksymalny",
+    "coverage_days": "Pokrycie (dni)",
+    "batch_min": "Partia minimalna",
+    "batch_multiple": "Wielokrotność partii",
+    "shelf_life_workshop_days": "Trwałość w pracowni (dni)",
+    "shelf_life_shop_days": "Trwałość w sklepie (dni)",
+    "wizard_step": "Krok kreatora",
+    "steps": "Etapy",
+    "workstation_id": "Stanowisko",
+    "fixed_time_s": "Czas stały (s / przejście)",
+    "variable_time_s": "Czas na sztukę (s)",
+    "operators_required": "Liczba operatorów",
+    "min_level_order": "Minimalny poziom",
+    "delay_after_s": "Czas oczekiwania po etapie (s)",
+    "delay_workstation_id": "Stanowisko oczekiwania",
+    "cleaning_required": "Mycie",
+    "cleaning_time_s": "Czas mycia (s)",
+    "alternatives": "Stanowiska alternatywne",
+    "priority": "Priorytet",
+    "losses": "Straty",
+    "child_kind": "Rodzaj składnika",
+    "child_id": "Składnik",
+    "loss_pct": "Strata (%)",
+    "routing": "Marszruta",
+    "duration_s": "Czas trwania (s)",
+    "passes": "Przejścia",
+    "component": "Składowa czasu",
+    "measured_at": "Data pomiaru",
+    "excluded": "Wykluczony",
+    "search": "Szukaj"
   },
   "entities": {
     "group": "grupa",
@@ -131,6 +181,9 @@
     "shift_template": "zmiana",
     "team": "zespół",
     "employee": "pracownik",
-    "param": "parametr"
+    "param": "parametr",
+    "item": "artykuł",
+    "routing_step": "etap marszruty",
+    "time_study": "pomiar czasu"
   }
 }

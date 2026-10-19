@@ -26,6 +26,10 @@
             "description": "Grupy, stanowiska, zmiany, zespoły, pracownicy, parametry / Groupes, postes, shifts, équipes, employés, paramètres"
         },
         {
+            "name": "produits",
+            "description": "Karty produkcyjne, marszruty, czasy standardowe, pomiary / Fiches de production, gammes, temps standards, chronométrage"
+        },
+        {
             "name": "docs",
             "description": "OpenAPI"
         }
@@ -2287,6 +2291,1131 @@
                 ],
                 "x-permission": "prod.params.write"
             }
+        },
+        "/produits/items": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Artykuły planowane / Articles planifiables",
+                "operationId": "listItems",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ItemSummary"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "item_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "product",
+                                "semi"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "validated"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "mode",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "MTO",
+                                "MTS"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            },
+            "post": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Nowa karta z produktu ERP / Nouvelle fiche depuis un article de l'ERP (étape 1)",
+                "operationId": "createItem",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Le produit fini (final_product) ou le semi-fini (product_recipe) existe déjà dans l'ERP ; rien n'est recopié. 409 ITEM_EXISTS si l'article a déjà une fiche.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
+        "/produits/candidates": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Produkty ERP bez karty / Articles de l'ERP sans fiche",
+                "operationId": "listItemCandidates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ItemCandidate"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "item_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "product",
+                                "semi"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
+        "/produits/items/{id}": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Karta produkcyjna / Fiche de production complète",
+                "operationId": "getItem",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
+        "/produits/items/{id}/settings": {
+            "patch": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Tryb, zapasy, grupa, trwałość / Mode, stocks, groupe, durées de vie (étapes 2–3)",
+                "operationId": "updateItemSettings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Jamais congelé ⇒ jamais MTS (NEVER_FROZEN_MTS) ; MTS ⇒ stock_max obligatoire ; stock_max ≥ stock_min.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemSettingsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
+        "/produits/items/{id}/routing": {
+            "put": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Marszruta / Gamme opératoire (étape 5)",
+                "operationId": "replaceItemRouting",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Remplace la gamme : étapes avec id mises à jour, sans id créées, absentes supprimées (avec leurs chronométrages). Durée d'une étape = temps fixe × ⌈quantité ÷ capacité⌉ + temps par pièce × quantité.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoutingInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
+        "/produits/items/{id}/bom-losses": {
+            "put": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Straty składników / Pertes de la nomenclature (étape 4)",
+                "operationId": "saveItemBomLosses",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BomLossesInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
+        "/produits/items/{id}/validate": {
+            "post": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Zatwierdź kartę / Valider la fiche (étape 7)",
+                "operationId": "validateItem",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Refusé (422) tant que la liste de contrôle n'est pas complète : groupe, mode cohérent, stock max en MTS, au moins une étape, un temps par étape.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
+        "/produits/items/{id}/duration": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Czas standardowy dla ilości / Temps standard pour une quantité (étape 6)",
+                "operationId": "getItemDuration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Duration"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "quantity",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "exclusiveMinimum": true,
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
+        "/produits/routing-steps/{id}/time-studies": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Pomiary czasu i propozycja normy / Chronométrages et norme proposée",
+                "operationId": "listTimeStudies",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TimeStudies"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            },
+            "post": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Zapisz pomiar / Enregistrer un chronométrage",
+                "operationId": "recordTimeStudy",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TimeStudies"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Temps unitaire déduit : par pièce = (durée − temps fixe × passages) ÷ quantité ; par passage = (durée − temps par pièce × quantité) ÷ passages.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TimeStudyInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.execution.write"
+            }
+        },
+        "/produits/time-studies/{id}": {
+            "patch": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Wyklucz / przywróć pomiar / Écarter ou reprendre une mesure",
+                "operationId": "updateTimeStudy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TimeStudies"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TimeStudyUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.execution.write"
+            }
+        },
+        "/produits/routing-steps/{id}/apply-standard": {
+            "post": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Nowa norma ze średniej pomiarów / Appliquer la norme proposée",
+                "operationId": "applyStandard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TimeStudies"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Moyenne des timing.moving_average_n dernières mesures retenues ; 409 NOT_ENOUGH_MEASUREMENTS sous timing.min_measurements.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ApplyStandardInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
         }
     },
     "components": {
@@ -2359,7 +3488,7 @@
                 }
             },
             "Error409": {
-                "description": "DUPLICATE_CODE",
+                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -2410,6 +3539,838 @@
             }
         },
         "schemas": {
+            "ItemSettings": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "MTO",
+                            "MTS"
+                        ]
+                    },
+                    "never_frozen": {
+                        "type": "boolean"
+                    },
+                    "stock_min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "stock_max": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "coverage_days": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "batch_min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "batch_multiple": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "shelf_life_workshop_days": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "shelf_life_shop_days": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "primary_group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "validated"
+                        ]
+                    },
+                    "wizard_step": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                    },
+                    "validated_at": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "ItemSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "item_type": {
+                        "type": "string",
+                        "enum": [
+                            "product",
+                            "semi"
+                        ]
+                    },
+                    "final_product_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "recipe_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "nom dans l'ERP"
+                    },
+                    "base_unit": {
+                        "type": "string",
+                        "example": "szt"
+                    },
+                    "erp": {
+                        "type": "object",
+                        "properties": {
+                            "ppc": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "weight": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "section_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "active": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "settings": {
+                        "$ref": "#/components/schemas/ItemSettings"
+                    },
+                    "step_count": {
+                        "type": "integer"
+                    },
+                    "can_edit": {
+                        "type": "boolean",
+                        "description": "prod.products.write dans le groupe de l'article"
+                    }
+                }
+            },
+            "Item": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/ItemSummary"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "routing": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/RoutingStep"
+                                }
+                            },
+                            "bom": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "child_kind": {
+                                            "type": "string",
+                                            "enum": [
+                                                "material",
+                                                "recipe"
+                                            ]
+                                        },
+                                        "child_id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "quantity": {
+                                            "type": "number"
+                                        },
+                                        "unit": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "loss_pct": {
+                                            "type": "number"
+                                        }
+                                    }
+                                }
+                            },
+                            "durations": {
+                                "type": "array",
+                                "description": "quantités de timing.sample_quantities",
+                                "items": {
+                                    "$ref": "#/components/schemas/Duration"
+                                }
+                            },
+                            "checklist": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "field": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "ok": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "RoutingStep": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "step_no": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "name_pl": {
+                        "type": "string"
+                    },
+                    "name_fr": {
+                        "type": "string"
+                    },
+                    "workstation_id": {
+                        "type": "integer"
+                    },
+                    "workstation": {
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "operators_required": {
+                        "type": "number"
+                    },
+                    "min_level_order": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "delay_after_s": {
+                        "type": "integer"
+                    },
+                    "delay_workstation_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "cleaning_required": {
+                        "type": "boolean"
+                    },
+                    "cleaning_time_s": {
+                        "type": "integer"
+                    },
+                    "alternatives": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "workstation_id": {
+                                    "type": "integer"
+                                },
+                                "priority": {
+                                    "type": "integer"
+                                },
+                                "fixed_time_s": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "description": "par passage"
+                                },
+                                "variable_time_s": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "description": "par pièce"
+                                },
+                                "capacity_per_pass": {
+                                    "type": "number",
+                                    "exclusiveMinimum": true,
+                                    "minimum": 0,
+                                    "description": "défaut : capacité du poste"
+                                }
+                            }
+                        }
+                    },
+                    "fixed_time_s": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "par passage"
+                    },
+                    "variable_time_s": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "par pièce"
+                    },
+                    "capacity_per_pass": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "défaut : capacité du poste"
+                    }
+                }
+            },
+            "ItemCandidate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "ppc": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "weight": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "section_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "ItemInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "item_type"
+                ],
+                "properties": {
+                    "item_type": {
+                        "type": "string",
+                        "enum": [
+                            "product",
+                            "semi"
+                        ]
+                    },
+                    "final_product_id": {
+                        "type": "integer",
+                        "description": "si item_type = product"
+                    },
+                    "recipe_id": {
+                        "type": "integer",
+                        "description": "si item_type = semi"
+                    }
+                }
+            },
+            "ItemSettingsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "MTO",
+                            "MTS"
+                        ]
+                    },
+                    "never_frozen": {
+                        "type": "boolean"
+                    },
+                    "stock_min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "stock_max": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "coverage_days": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "batch_min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "batch_multiple": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "shelf_life_workshop_days": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "shelf_life_shop_days": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "primary_group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "wizard_step": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                    }
+                }
+            },
+            "RoutingInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "steps"
+                ],
+                "properties": {
+                    "steps": {
+                        "type": "array",
+                        "maxItems": 30,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "name_pl",
+                                "workstation_id"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "description": "étape existante à conserver"
+                                },
+                                "name_pl": {
+                                    "type": "string",
+                                    "maxLength": 100
+                                },
+                                "name_fr": {
+                                    "type": "string",
+                                    "maxLength": 100,
+                                    "description": "défaut : name_pl"
+                                },
+                                "workstation_id": {
+                                    "type": "integer"
+                                },
+                                "operators_required": {
+                                    "type": "number",
+                                    "minimum": 0
+                                },
+                                "min_level_order": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "delay_after_s": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "delay_workstation_id": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "description": "poste de type fermentation, froid ou surgelation"
+                                },
+                                "cleaning_required": {
+                                    "type": "boolean"
+                                },
+                                "cleaning_time_s": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "alternatives": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "required": [
+                                            "workstation_id"
+                                        ],
+                                        "properties": {
+                                            "workstation_id": {
+                                                "type": "integer"
+                                            },
+                                            "priority": {
+                                                "type": "integer",
+                                                "minimum": 1
+                                            },
+                                            "fixed_time_s": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "description": "par passage"
+                                            },
+                                            "variable_time_s": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "par pièce"
+                                            },
+                                            "capacity_per_pass": {
+                                                "type": "number",
+                                                "exclusiveMinimum": true,
+                                                "minimum": 0,
+                                                "description": "défaut : capacité du poste"
+                                            }
+                                        }
+                                    }
+                                },
+                                "fixed_time_s": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "description": "par passage"
+                                },
+                                "variable_time_s": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "description": "par pièce"
+                                },
+                                "capacity_per_pass": {
+                                    "type": "number",
+                                    "exclusiveMinimum": true,
+                                    "minimum": 0,
+                                    "description": "défaut : capacité du poste"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "BomLossesInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "losses"
+                ],
+                "properties": {
+                    "losses": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "child_kind",
+                                "child_id",
+                                "loss_pct"
+                            ],
+                            "properties": {
+                                "child_kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "material",
+                                        "recipe"
+                                    ]
+                                },
+                                "child_id": {
+                                    "type": "integer"
+                                },
+                                "loss_pct": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 99.99
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "Duration": {
+                "type": "object",
+                "properties": {
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "step_no": {
+                                    "type": "integer"
+                                },
+                                "passes": {
+                                    "type": "integer"
+                                },
+                                "work_s": {
+                                    "type": "number"
+                                },
+                                "cleaning_s": {
+                                    "type": "number"
+                                },
+                                "delay_s": {
+                                    "type": "number"
+                                },
+                                "labour_s": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "work_s": {
+                        "type": "number"
+                    },
+                    "elapsed_s": {
+                        "type": "number",
+                        "description": "travail + nettoyage + attentes"
+                    },
+                    "labour_s": {
+                        "type": "number",
+                        "description": "heures-personne (opérateurs × temps)"
+                    },
+                    "labour_s_per_unit": {
+                        "type": "number",
+                        "nullable": true
+                    }
+                }
+            },
+            "TimeStudies": {
+                "type": "object",
+                "properties": {
+                    "step": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "item_id": {
+                                "type": "integer"
+                            },
+                            "step_no": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "workstation_id": {
+                                "type": "integer"
+                            },
+                            "fixed_time_s": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "par passage"
+                            },
+                            "variable_time_s": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "par pièce"
+                            },
+                            "capacity_per_pass": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "défaut : capacité du poste"
+                            }
+                        }
+                    },
+                    "proposals": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "component": {
+                                    "type": "string",
+                                    "enum": [
+                                        "variable",
+                                        "fixed"
+                                    ]
+                                },
+                                "current_s": {
+                                    "type": "number"
+                                },
+                                "proposed_s": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "count": {
+                                    "type": "integer"
+                                },
+                                "window": {
+                                    "type": "integer"
+                                },
+                                "min_measurements": {
+                                    "type": "integer"
+                                },
+                                "ready": {
+                                    "type": "boolean"
+                                },
+                                "deviation_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "alert": {
+                                    "type": "boolean"
+                                },
+                                "measurement_ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "measurements": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "component": {
+                                    "type": "string"
+                                },
+                                "workstation_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "passes": {
+                                    "type": "integer"
+                                },
+                                "duration_s": {
+                                    "type": "integer"
+                                },
+                                "unit_time_s": {
+                                    "type": "number"
+                                },
+                                "measured_at": {
+                                    "type": "string"
+                                },
+                                "production_employee_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "measured_by": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "note": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "excluded": {
+                                    "type": "boolean"
+                                },
+                                "applied_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "created_id": {
+                        "type": "integer",
+                        "description": "après POST"
+                    }
+                }
+            },
+            "TimeStudyInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "quantity",
+                    "duration_s"
+                ],
+                "properties": {
+                    "quantity": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                    },
+                    "duration_s": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "passes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "défaut : ⌈quantité ÷ capacité⌉"
+                    },
+                    "component": {
+                        "type": "string",
+                        "enum": [
+                            "variable",
+                            "fixed"
+                        ],
+                        "description": "défaut : variable si l'étape a un temps par pièce"
+                    },
+                    "workstation_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "poste mesuré si alternative"
+                    },
+                    "measured_at": {
+                        "type": "string",
+                        "example": "2026-10-19 06:40"
+                    },
+                    "production_employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    }
+                }
+            },
+            "TimeStudyUpdateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "excluded"
+                ],
+                "properties": {
+                    "excluded": {
+                        "type": "boolean"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    }
+                }
+            },
+            "ApplyStandardInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "component"
+                ],
+                "properties": {
+                    "component": {
+                        "type": "string",
+                        "enum": [
+                            "variable",
+                            "fixed"
+                        ]
+                    }
+                }
+            },
             "Error": {
                 "type": "object",
                 "required": [
