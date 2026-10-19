@@ -866,3 +866,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T19:05:33Z atelier P7 (tablettes, pointage, signatures, heures, KPIs) ; Rentowność : tableau des périodes
 2026-10-19T19:30:08Z logistyka : palety według rodzaju kartonu i kategorii, trasy z pojazdami i klientami
 2026-10-19T19:40:07Z atelier P7 : wejście / wyjście telefonem przez kod QR z tabletu
+2026-10-19T20:45:18Z audit serwera : pliki statyczne z pamięci przeglądarki, mniej wywołań, ponowienia po zerwanym połączeniu
