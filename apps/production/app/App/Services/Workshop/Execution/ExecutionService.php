@@ -55,6 +55,20 @@ final class ExecutionService
         ];
     }
 
+    /** État du pointage (téléphone) : présence en cours, heures, signature demandée à la sortie. */
+    public function clockState(ApiContext $context, ?int $now = null): array
+    {
+        $now ??= time();
+        $employee = $this->repo->employee((int) $context->employeeId);
+        $open = $this->repo->openClock((int) $context->employeeId);
+        return [
+            'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
+            'clocked_in' => $open !== null,
+            'clock' => $open ? $this->clockRow($open, $now) : null,
+            'signature_on_clock_out' => $this->params->get('kiosk.signature_on_clock_out', '1') === '1',
+        ];
+    }
+
     /** Opérations du jour et des 24 h à venir (et en cours) des groupes de la personne et de la tablette. */
     public function operations(ApiContext $context, ?int $now = null): array
     {

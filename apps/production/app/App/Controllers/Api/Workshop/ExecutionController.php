@@ -10,7 +10,7 @@ use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KpiService;
 use App\Services\Workshop\Execution\TimesheetService;
 
-/** P7 : tablettes (appairage, identification, pointage, opérations, signatures), heures, KPIs, cockpit. */
+/** P7 : tablettes (appairage, identification, pointage, opérations, signatures), pointage au téléphone par QR code, heures, KPIs, cockpit. */
 final class ExecutionController
 {
     use QueryFilters;
@@ -49,12 +49,24 @@ final class ExecutionController
     }
 
     public function cockpit(ApiRequest $request): ApiResult { return new ApiResult($this->kpis->cockpit($request->context)); }
+    public function revokePhones(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->revokePhones($request->id(), $request->context)); }
 
     // Tablette
     public function pair(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->pair($request->body())); }
     public function people(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->people($request->context)); }
     public function identify(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->identify($request->body(), $request->context)); }
     public function me(ApiRequest $request): ApiResult { return new ApiResult($this->execution->me($request->context)); }
+    public function qr(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->qr($request->context, (string) $request->query('base', ''))); }
+
+    // Téléphone (pointage par QR code)
+    public function phonePeople(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->phonePeople($request->context)); }
+    public function phoneMe(ApiRequest $request): ApiResult { return new ApiResult($this->execution->clockState($request->context)); }
+
+    public function enrollPhone(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->kiosk->enrollPhone($request->body(), $request->context, $request->http->headers->get('User-Agent')), 201);
+    }
+
     public function clock(ApiRequest $request): ApiResult { return new ApiResult($this->execution->clock($request->body(), $request->context)); }
     public function start(ApiRequest $request): ApiResult { return new ApiResult($this->execution->start($request->id(), $request->body(), $request->context)); }
     public function pause(ApiRequest $request): ApiResult { return new ApiResult($this->execution->pause($request->id(), $request->context)); }

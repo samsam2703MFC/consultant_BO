@@ -51,6 +51,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/kiosk', ['api_base' => $this->apiBase()]);
     }
 
+    /** Telefon : wejście / wyjście po zeskanowaniu kodu QR z tabletu (strona publiczna, dane przez API). */
+    public function kioskScan()
+    {
+        $this->view('workshop/kiosk_scan', ['api_base' => $this->apiBase()]);
+    }
+
     /** Karta czasu pracy do druku, z podpisami z tabletu. */
     public function timesheet()
     {

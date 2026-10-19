@@ -70,7 +70,7 @@ final class TimesheetService
             $out[] = ['employee_id' => (int) $p['id'], 'name' => $p['name'], 'group_id' => $p['id_primary_group'] !== null ? (int) $p['id_primary_group'] : null] + $m['totals']
                 + ['month_signed' => $m['month_signature'] !== null, 'clocked_in' => $p['clocked_in_at'] !== null,
                     'has_badge' => (bool) $p['has_badge'], 'has_pin' => (bool) $p['has_pin'], 'biometric_consent' => (bool) $p['biometric_consent'],
-                    'locked' => $p['locked_until'] !== null && $p['locked_until'] > date('Y-m-d H:i:s')];
+                    'locked' => $p['locked_until'] !== null && $p['locked_until'] > date('Y-m-d H:i:s'), 'phones' => (int) $p['phones']];
         }
         return $out;
     }

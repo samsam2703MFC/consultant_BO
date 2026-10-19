@@ -62,5 +62,16 @@
   "sign": "Signer",
   "sign_first": "Signez du doigt dans le cadre.",
   "signed": "Signature enregistrée.",
-  "signed_bye": "Signature enregistrée. À bientôt !"
+  "signed_bye": "Signature enregistrée. À bientôt !",
+  "qr_title": "Entrée / sortie au téléphone",
+  "qr_help": "Scannez le code avec l'appareil photo du téléphone puis touchez ENTRÉE ou SORTIE. Le code change régulièrement.",
+  "phone_title": "Entrée / sortie",
+  "scan_help": "Scannez avec le téléphone le QR code affiché sur la tablette à l'entrée.",
+  "who_are_you": "Qui êtes-vous ? Choisissez votre nom et saisissez votre PIN — seulement la première fois.",
+  "search": "Rechercher un nom",
+  "phone_saved": "Téléphone enregistré : {name}.",
+  "registered_as": "Ce téléphone : {name}",
+  "not_me": "Ce n'est pas moi",
+  "forgotten": "Téléphone oublié — au prochain scan, choisissez votre nom.",
+  "done": "Terminé — vous pouvez fermer la page."
 }

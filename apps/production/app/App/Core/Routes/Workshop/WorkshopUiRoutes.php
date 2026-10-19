@@ -10,5 +10,6 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/workshop/timesheet', ['controller' => $c, 'method' => 'timesheet']);
     $r->addRoute('GET', '/kiosk', ['controller' => $c, 'method' => 'kiosk']);
+    $r->addRoute('GET', '/kiosk/scan', ['controller' => $c, 'method' => 'kioskScan']);
     $r->addRoute('POST', '/ajax/workshop/token', ['controller' => $c, 'method' => 'token']);
 };

@@ -34,6 +34,18 @@
             "description": "Zapotrzebowanie i plan produkcji / Besoins et plan de production"
         },
         {
+            "name": "execution",
+            "description": "Tablety, godziny pracy, wskaźniki / Tablettes, heures, KPIs"
+        },
+        {
+            "name": "kiosk",
+            "description": "Tablet na hali / Tablette de l'atelier"
+        },
+        {
+            "name": "phone",
+            "description": "Wejście / wyjście telefonem (kod QR tabletu) / Pointage au téléphone (QR code de la tablette)"
+        },
+        {
             "name": "docs",
             "description": "OpenAPI"
         }
@@ -6030,6 +6042,494 @@
                     }
                 ]
             }
+        },
+        "/kiosk/qr": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Kod QR wejścia / wyjścia / QR code d'entrée / sortie",
+                "operationId": "clockQr",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockQr"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "QR changeant affiché par la tablette : {base}/kiosk/scan#t=<jeton> (kiosk.qr_ttl_s, renouvelé toutes les kiosk.qr_refresh_s). rows = matrice (1 = noir).",
+                "parameters": [
+                    {
+                        "name": "base",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "https://erp.example/production"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/people": {
+            "get": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Osoby (pierwsze skanowanie) / Personnes (premier scan)",
+                "operationId": "phonePeople",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PhonePerson"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/enroll": {
+            "post": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Zarejestruj telefon: osoba + PIN / Enregistrer le téléphone : personne + PIN",
+                "operationId": "enrollPhone",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PhoneToken"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "QR frais obligatoire (présence sur place). Jeton du téléphone (kiosk.phone_token_days) rendu une fois, seul son condensé est stocké. Mêmes blocages PIN que la tablette.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IdentifyInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/me": {
+            "get": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Stan wejścia / État du pointage",
+                "operationId": "phoneMe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockState"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/clock": {
+            "post": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Wejście / wyjście telefonem / Entrée / sortie au téléphone",
+                "operationId": "phoneClock",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Comme POST /kiosk/clock ; la tablette du QR est enregistrée comme lieu du pointage.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClockInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/signatures": {
+            "post": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Podpis palcem na telefonie / Signature au doigt sur le téléphone",
+                "operationId": "phoneSign",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Signature"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignatureInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/employees/{id}/phones": {
+            "delete": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Odwołaj telefony osoby / Révoquer les téléphones d'une personne",
+                "operationId": "revokePhones",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PhonesRevoked"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Les téléphones enregistrés de la personne ne peuvent plus pointer ; un nouvel enregistrement demande le PIN.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
         }
     },
     "components": {
@@ -6055,6 +6555,18 @@
                 "in": "header",
                 "name": "X-Employee-Token",
                 "description": "Jeton court de la personne identifiée (POST /kiosk/identify)"
+            },
+            "qrToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Qr-Token",
+                "description": "Jeton du QR code affiché par la tablette (GET /kiosk/qr), valable kiosk.qr_ttl_s"
+            },
+            "phoneToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Phone-Token",
+                "description": "Jeton du téléphone enregistré (POST /kiosk/phone/enroll)"
             }
         },
         "parameters": {
@@ -8494,6 +9006,107 @@
                     }
                 }
             },
+            "ClockQr": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    },
+                    "refresh_s": {
+                        "type": "integer"
+                    },
+                    "size": {
+                        "type": "integer"
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "example": "1111111010…"
+                        }
+                    }
+                }
+            },
+            "PhonePerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PhoneToken": {
+                "type": "object",
+                "properties": {
+                    "phone_token": {
+                        "type": "string"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "expires_in_days": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "ClockState": {
+                "type": "object",
+                "properties": {
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    },
+                    "clock": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Clock"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "signature_on_clock_out": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PhonesRevoked": {
+                "type": "object",
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "revoked": {
+                        "type": "integer"
+                    }
+                }
+            },
             "Signature": {
                 "type": "object",
                 "properties": {
@@ -8556,6 +9169,9 @@
                     },
                     "locked": {
                         "type": "boolean"
+                    },
+                    "phones": {
+                        "type": "integer"
                     }
                 }
             },

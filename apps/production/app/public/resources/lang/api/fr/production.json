@@ -46,7 +46,11 @@
     "NOT_CLOCKED_IN": "Enregistrez d'abord votre entrée.",
     "OPERATION_NOT_STARTABLE": "Une opération « {status} » ne peut pas démarrer.",
     "OPERATION_NOT_IN_PROGRESS": "L'opération n'est pas en cours (« {status} »).",
-    "OPERATION_NOT_IN_YOUR_GROUPS": "Cette opération n'est pas de votre groupe."
+    "OPERATION_NOT_IN_YOUR_GROUPS": "Cette opération n'est pas de votre groupe.",
+    "QR_EXPIRED": "QR code expiré — scannez à nouveau le code de la tablette.",
+    "QR_INVALID": "QR code invalide — scannez le code affiché sur la tablette.",
+    "PHONE_UNAUTHENTICATED": "Téléphone non enregistré — choisissez votre nom et saisissez votre PIN.",
+    "PHONE_REVOKED": "Enregistrement du téléphone expiré ou révoqué — enregistrez à nouveau le téléphone."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -253,7 +257,8 @@
     "clock_out": "Sortie",
     "employee_id": "Salarié",
     "month": "Mois",
-    "unlock": "Débloquer"
+    "unlock": "Débloquer",
+    "base": "adresse de la page"
   },
   "entities": {
     "group": "groupe",

@@ -66,7 +66,7 @@
   "badge_scan": "zeskanuj lub wpisz numer",
   "pin_none": "brak",
   "consent_confirm": "Potwierdzasz, że pracownik podpisał dobrowolną, pisemną zgodę na przetwarzanie danych biometrycznych (art. 22¹b KP)? Identyfikator + PIN pozostaje zawsze dostępny.",
-  "people_help": "Numer identyfikatora i PIN są przechowywane wyłącznie jako skróty. Odcisk palca tylko za pisemną zgodą i nigdy jako jedyna metoda.",
+  "people_help": "Numer identyfikatora i PIN są przechowywane wyłącznie jako skróty. Odcisk palca tylko za pisemną zgodą i nigdy jako jedyna metoda. Telefon : osoba skanuje kod QR na tablecie, raz podaje PIN, potem wchodzi i wychodzi jednym dotknięciem.",
   "month": "Miesiąc",
   "all_groups": "Wszystkie grupy",
   "hours": "Godziny",
@@ -80,5 +80,9 @@
   "clock_out": "Wyjście",
   "reason": "Powód",
   "add_entry": "Dodaj wpis",
-  "manual_help": "Każdy wpis ręczny i korekta trafiają do dziennika zmian."
+  "manual_help": "Każdy wpis ręczny i korekta trafiają do dziennika zmian.",
+  "phones": "Telefon (QR)",
+  "revoke_phones": "odwołaj",
+  "revoke_confirm": "Odwołać zarejestrowane telefony tej osoby? Przy następnym skanowaniu kodu QR będzie musiała podać PIN.",
+  "revoked": "Telefony odwołane."
 }

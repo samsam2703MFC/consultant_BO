@@ -22,12 +22,15 @@ use App\Services\Workshop\Referentiel\AuditTrail;
  * et reçoit un jeton d'appareil ; seuls des condensés SHA-256 sont stockés. Une personne s'identifie
  * par badge (NFC / QR) ou en touchant son nom, puis son code PIN (bcrypt) ; après kiosk.pin_max_attempts
  * erreurs elle est bloquée kiosk.lock_minutes. Elle reçoit un jeton court (kiosk.employee_token_ttl_s)
- * lié à la tablette, pour ses actions. Biométrie : seulement avec consentement écrit enregistré, et
- * jamais seule (le badge + PIN reste toujours possible).
+ * lié à la tablette, pour ses actions. Pointage par QR code : la tablette affiche un QR changeant
+ * (kiosk.qr_ttl_s) ; la personne le scanne avec son téléphone, enregistré une fois (nom + PIN), puis
+ * entre ou sort d'un geste — sans QR frais, pas de pointage. Biométrie : seulement avec consentement
+ * écrit enregistré, et jamais seule (le badge + PIN reste toujours possible).
  */
 final class KioskAuthService
 {
     public const AUDIENCE = 'tfb-kiosk';
+    public const QR_AUDIENCE = 'tfb-clock-qr';
     private const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
     public function __construct(
@@ -175,6 +178,107 @@ final class KioskAuthService
 
     public function identify(array $body, ApiContext $context): array
     {
+        $employee = $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        $now = time();
+        $ttl = max(30, (int) $this->params->get('kiosk.employee_token_ttl_s', '120'));
+        return [
+            'employee_token' => $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $employee['id'], 'dev' => (int) $context->deviceId,
+                'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))]),
+            'expires_in' => $ttl,
+            'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
+        ];
+    }
+
+    // --- Pointage par QR code scanné avec son téléphone ---------------------------------------------
+
+    /**
+     * QR code affiché par la tablette : jeton signé de la tablette, court (kiosk.qr_ttl_s) ; l'adresse
+     * encodée est {base}/kiosk/scan#t=… (le fragment n'est jamais envoyé au serveur ni journalisé).
+     */
+    public function qr(ApiContext $context, string $base): array
+    {
+        $base = rtrim(trim($base), '/');
+        if (!preg_match('#^https?://[^\s"<>]{1,200}$#', $base)) throw ApiException::validation([['field' => 'base', 'code' => 'INVALID_URL', 'params' => []]]);
+        $now = time();
+        $ttl = max(20, (int) $this->params->get('kiosk.qr_ttl_s', '90'));
+        $token = $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::QR_AUDIENCE, 'dev' => (int) $context->deviceId, 'iat' => $now, 'nbf' => $now - 5, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(6))]);
+        $url = $base . '/kiosk/scan#t=' . $token;
+        $code = new \TCPDF2DBarcode($url, 'QRCODE,M');
+        $matrix = $code->getBarcodeArray();
+        return [
+            'url' => $url, 'expires_in' => $ttl, 'refresh_s' => max(5, min($ttl - 10, (int) $this->params->get('kiosk.qr_refresh_s', '20'))),
+            'size' => (int) $matrix['num_cols'], 'rows' => array_map(fn($row) => implode('', array_map(fn($v) => $v ? '1' : '0', $row)), $matrix['bcode']),
+        ];
+    }
+
+    /** Contexte d'un appel avec un QR frais de la tablette (preuve de présence sur place). */
+    public function qrContext(string $qr, string $requestId, Translator $translator): ApiContext
+    {
+        $device = $this->deviceFromQr($qr);
+        return new ApiContext($requestId, $translator, null, [], ['prod.kiosk' => true], [],
+            deviceId: (int) $device['id'], deviceGroupId: $device['id_group'] !== null ? (int) $device['id_group'] : null);
+    }
+
+    /** Appel d'un téléphone enregistré, avec un QR frais de la tablette. */
+    public function phoneContext(string $phoneToken, string $qr, string $requestId, Translator $translator): ApiContext
+    {
+        if ($phoneToken === '') throw new ApiException('PHONE_UNAUTHENTICATED', 401);
+        $phone = $this->repo->phoneByHash(hash('sha256', $phoneToken)) ?? throw new ApiException('PHONE_UNAUTHENTICATED', 401);
+        $days = max(1, (int) $this->params->get('kiosk.phone_token_days', '180'));
+        if ($phone['revoked_at'] !== null || strtotime($phone['created_at']) < time() - $days * 86400) throw new ApiException('PHONE_REVOKED', 401);
+        $employee = $this->repo->employee((int) $phone['id_employee']);
+        if ($employee === null || !(int) $employee['active']) throw new ApiException('PHONE_REVOKED', 401);
+        $context = $this->qrContext($qr, $requestId, $translator);
+        $this->repo->touchPhone((int) $phone['id']);
+        return new ApiContext($requestId, $translator, null, [], ['prod.kiosk' => true], [],
+            deviceId: $context->deviceId, employeeId: (int) $employee['id'], deviceGroupId: $context->deviceGroupId);
+    }
+
+    /** Personnes proposées au premier scan (groupe de la tablette qui affiche le QR). */
+    public function phonePeople(ApiContext $context): array
+    {
+        return array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name'], 'has_pin' => (bool) $p['has_pin']], $this->repo->people($context->deviceGroupId));
+    }
+
+    /** Premier scan : la personne choisit son nom (ou badge) et donne son PIN ; le téléphone reçoit son jeton. */
+    public function enrollPhone(array $body, ApiContext $context, ?string $userAgent): array
+    {
+        $employee = $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        $token = bin2hex(random_bytes(32));
+        $label = $userAgent ? mb_substr(trim(preg_replace('/\s+/', ' ', $userAgent)), 0, 120) : null;
+        $id = $this->tx->execute(function () use ($employee, $token, $label, $context) {
+            $id = $this->repo->insertPhone((int) $employee['id'], hash('sha256', $token), $label);
+            $this->audit->record($context, 'phone_enrolled', 'employee', (int) $employee['id'], null, ['phone_id' => $id, 'device_id' => (int) $context->deviceId]);
+            return $id;
+        });
+        return ['phone_token' => $token, 'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
+            'expires_in_days' => max(1, (int) $this->params->get('kiosk.phone_token_days', '180'))];
+    }
+
+    public function revokePhones(int $employeeId, ApiContext $context): array
+    {
+        if ($this->repo->employee($employeeId) === null) throw ApiException::notFound('employee', $employeeId);
+        $count = $this->repo->revokePhones($employeeId);
+        $this->audit->record($context, 'phones_revoked', 'employee', $employeeId, null, ['count' => $count]);
+        return ['employee_id' => $employeeId, 'revoked' => $count];
+    }
+
+    private function deviceFromQr(string $qr): array
+    {
+        if ($qr === '') throw new ApiException('QR_INVALID', 401);
+        try {
+            $claims = $this->jwt()->decode($qr, self::QR_AUDIENCE);
+        } catch (JwtException $e) {
+            throw new ApiException($e->getMessage() === 'expired' ? 'QR_EXPIRED' : 'QR_INVALID', 401);
+        }
+        $device = $this->repo->find((int) ($claims['dev'] ?? 0));
+        if ($device === null || !(int) $device['active'] || $device['token_hash'] === null) throw new ApiException('QR_INVALID', 401);
+        return $device;
+    }
+
+    /** Badge ou personne + PIN, avec blocage après kiosk.pin_max_attempts erreurs. */
+    private function authenticateEmployee(array $body, int $deviceId, ApiContext $context): array
+    {
         $v = (new Validator($body))->only(['badge', 'employee_id', 'pin'])
             ->string('badge', 64, false)->integer('employee_id', false, 1)->string('pin', 6, true, false, '/^\d{4,6}$/', 'INVALID_PIN');
         $v->throwIfInvalid();
@@ -194,18 +298,11 @@ final class KioskAuthService
             $max = max(1, (int) $this->params->get('kiosk.pin_max_attempts', '5'));
             $lock = $failed >= $max ? date('Y-m-d H:i:s', time() + max(1, (int) $this->params->get('kiosk.lock_minutes', '15')) * 60) : null;
             $this->repo->saveCredential($employeeId, ['failed_attempts' => $lock ? 0 : $failed, 'locked_until' => $lock]);
-            $this->audit->record($context, 'pin_failed', 'employee', $employeeId, null, ['device_id' => $context->deviceId, 'locked' => $lock !== null]);
+            $this->audit->record($context, 'pin_failed', 'employee', $employeeId, null, ['device_id' => $deviceId, 'locked' => $lock !== null]);
             throw $lock ? new ApiException('EMPLOYEE_LOCKED', 423, [], ['until' => substr($lock, 11, 5)]) : new ApiException('PIN_INVALID', 401, [], ['left' => $max - $failed]);
         }
         if ((int) $cred['failed_attempts'] > 0) $this->repo->saveCredential($employeeId, ['failed_attempts' => 0, 'locked_until' => null]);
-        $now = time();
-        $ttl = max(30, (int) $this->params->get('kiosk.employee_token_ttl_s', '120'));
-        return [
-            'employee_token' => $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $employeeId, 'dev' => (int) $context->deviceId,
-                'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))]),
-            'expires_in' => $ttl,
-            'employee' => ['id' => $employeeId, 'name' => $employee['name']],
-        ];
+        return $employee;
     }
 
     public function badgeHash(string $badge): string

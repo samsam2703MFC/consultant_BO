@@ -81,6 +81,12 @@ final class WorkshopApiKernel
                 $permission === 'kiosk_employee' ? trim((string) $request->headers->get('X-Employee-Token', '')) : null,
                 $context->requestId, $context->translator
             );
+        } elseif ($permission === 'qr' || $permission === 'phone') {
+            // Téléphone personnel (pointage par QR code) : QR frais de la tablette, et pour pointer le jeton du téléphone.
+            $qr = trim((string) $request->headers->get('X-Qr-Token', ''));
+            $context = $permission === 'phone'
+                ? $this->kiosk->phoneContext(trim((string) $request->headers->get('X-Phone-Token', '')), $qr, $context->requestId, $context->translator)
+                : $this->kiosk->qrContext($qr, $context->requestId, $context->translator);
         } elseif ($permission !== null) {
             $context = $this->auth->authenticate($this->accessToken($request), $context->requestId, $context->translator);
             if ($permission !== 'auth' && !$context->canSomewhere($permission)) {

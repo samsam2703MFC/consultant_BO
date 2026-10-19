@@ -13,8 +13,10 @@ declare(strict_types=1);
  */
 require_once __DIR__ . '/../public/vendor/autoload.php';
 
+use App\Core\Api\Workshop\Jwt;
 use App\Core\Api\Workshop\WorkshopApiKernel;
 use App\Core\Api\Workshop\WorkshopConfig;
+use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Migration\MigrationRunner;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -650,6 +652,58 @@ $row = array_values(array_filter($list['data'], fn($r) => $r['employee_id'] === 
 check($s === 200 && $row && $row['hours'] == 2.0 && $row['month_signed'], 'monthly summary per person');
 [$s, $b] = $call('GET', "/kiosk/employees/{$jan}/timesheet?month=2026-13", null, $access);
 check($s === 422, 'month checked');
+
+// Téléphone : QR changeant de la tablette, enregistrement nom + PIN, entrée / sortie en un geste
+$phone = function (string $method, string $path, ?array $body, string $qr, ?string $phoneToken = null) use ($kernel): array {
+    $server = ['HTTP_ACCEPT_LANGUAGE' => 'pl', 'CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '10.0.0.9', 'HTTP_X_QR_TOKEN' => $qr, 'HTTP_USER_AGENT' => 'Mozilla/5.0 (Linux; Android 14; Pixel 8)'];
+    if ($phoneToken !== null) $server['HTTP_X_PHONE_TOKEN'] = $phoneToken;
+    $request = Request::create('/api/v1/production' . $path, $method, [], [], [], $server, $body === null ? null : json_encode($body));
+    $response = $kernel->handle($request, parse_url('/api/v1/production' . $path, PHP_URL_PATH));
+    return [$response->getStatusCode(), json_decode((string) $response->getContent(), true)];
+};
+[$s, $b] = $kiosk('GET', '/kiosk/qr?base=' . rawurlencode('javascript:alert(1)'), null, $device);
+check($s === 422 && $codes($b) === ['base:INVALID_URL'], 'QR address must be http(s)');
+[$s, $q] = $kiosk('GET', '/kiosk/qr?base=' . rawurlencode('https://erp.example/production/'), null, $device);
+$qr = substr($q['data']['url'], strpos($q['data']['url'], '#t=') + 3);
+check($s === 200 && str_starts_with($q['data']['url'], 'https://erp.example/production/kiosk/scan#t=') && $q['data']['expires_in'] === 90 && $q['data']['refresh_s'] === 20
+    && $q['data']['size'] >= 21 && count($q['data']['rows']) === $q['data']['size'] && strlen($q['data']['rows'][0]) === $q['data']['size'], 'tablet shows a QR of the scan page (matrix) with a short token');
+[$s, $b] = $phone('GET', '/kiosk/phone/people', null, 'nonsense');
+check($s === 401 && $b['description'] === 'QR_INVALID', 'invalid QR refused');
+$expired = (new Jwt(str_repeat('s', 48)))->encode(['aud' => KioskAuthService::QR_AUDIENCE, 'dev' => $dev['data']['id'], 'iat' => time() - 200, 'nbf' => time() - 200, 'exp' => time() - 100]);
+[$s, $b] = $phone('GET', '/kiosk/phone/people', null, $expired);
+check($s === 401 && $b['description'] === 'QR_EXPIRED', 'a photo of an old QR does not work');
+[$s, $b] = $phone('GET', '/kiosk/phone/people', null, $emp);
+check($s === 401 && $b['description'] === 'QR_INVALID', 'a person token is not a QR');
+[$s, $pp] = $phone('GET', '/kiosk/phone/people', null, $qr);
+check($s === 200 && in_array($jan, array_column($pp['data'], 'id'), true) && !array_key_exists('clocked_in', $pp['data'][0]), 'first scan: people of the tablet group, presence not shown');
+[$s, $b] = $phone('GET', '/kiosk/phone/me', null, $qr);
+check($s === 401 && $b['description'] === 'PHONE_UNAUTHENTICATED', 'clocking needs a registered phone');
+[$s, $b] = $phone('POST', '/kiosk/phone/enroll', ['employee_id' => $jan, 'pin' => '9999'], $qr);
+check($s === 401 && $b['description'] === 'PIN_INVALID', 'phone registration checks the PIN');
+[$s, $en] = $phone('POST', '/kiosk/phone/enroll', ['employee_id' => $jan, 'pin' => '2468'], $qr);
+$phoneToken = $en['data']['phone_token'] ?? '';
+check($s === 201 && strlen($phoneToken) === 64 && $en['data']['employee']['id'] === $jan && $en['data']['expires_in_days'] === 180, 'phone registered with name + PIN');
+$storedPhone = $pdo->query("SELECT token_hash, label FROM tfb_prod_phone WHERE id_employee = {$jan}")->fetch();
+check($storedPhone['token_hash'] === hash('sha256', $phoneToken) && str_contains($storedPhone['label'], 'Android'), 'phone token stored only as a hash, with the device description');
+[$s, $pm] = $phone('GET', '/kiosk/phone/me', null, $qr, $phoneToken);
+check($s === 200 && !$pm['data']['clocked_in'] && $pm['data']['employee']['id'] === $jan && !isset($pm['data']['operations']), 'phone: my clock state only');
+[$s, $b] = $phone('GET', '/kiosk/phone/me', null, '', $phoneToken);
+check($s === 401 && $b['description'] === 'QR_INVALID', 'no clocking from home: a fresh QR of the tablet is needed');
+[$s, $pin] = $phone('POST', '/kiosk/phone/clock', ['client_uuid' => '8e9f0c2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f'], $qr, $phoneToken);
+check($s === 200 && $pin['data']['clock']['clock_out'] === null
+    && (int) $pdo->query("SELECT id_device FROM tfb_prod_clock WHERE id = {$pin['data']['clock']['id']}")->fetchColumn() === $dev['data']['id'], 'one tap on the phone: clock in, recorded at the tablet of the QR');
+[$s, $pout] = $phone('POST', '/kiosk/phone/clock', [], $qr, $phoneToken);
+check($s === 200 && $pout['data']['clock']['clock_out'] !== null && $pout['data']['signature_required'], 'second tap: clock out, signature asked');
+[$s] = $phone('POST', '/kiosk/phone/signatures', ['purpose' => 'clock_out', 'ref' => (string) $pout['data']['clock']['id'], 'image' => 'data:image/png;base64,' . base64_encode($png)], $qr, $phoneToken);
+check($s === 201, 'finger signature on the phone');
+[$s, $list] = $call('GET', "/kiosk/employees?month={$month}&group_id=1", null, $access);
+check((array_values(array_filter($list['data'], fn($r) => $r['employee_id'] === $jan))[0]['phones'] ?? null) === 1, 'manager sees the registered phone');
+[$s, $r] = $call('DELETE', "/kiosk/employees/{$jan}/phones", null, $dir);
+check($s === 403, 'direction cannot revoke phones');
+[$s, $r] = $call('DELETE', "/kiosk/employees/{$jan}/phones", null, $access);
+check($s === 200 && $r['data']['revoked'] === 1, 'manager revokes the phone');
+[$s, $b] = $phone('POST', '/kiosk/phone/clock', [], $qr, $phoneToken);
+check($s === 401 && $b['description'] === 'PHONE_REVOKED', 'revoked phone cannot clock');
 
 [$s, $k] = $call('GET', '/execution/kpis?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days')), null, $dir);
 check($s === 200 && $k['data']['totals']['operations_done'] >= 1 && $k['data']['totals']['qty_scrap'] == 2.0 && abs($k['data']['totals']['scrap_pct'] - 2 / 92 * 100) < 0.1, 'KPIs: done operations, scrap rate');

@@ -68,7 +68,8 @@ final class ExecutionRepository extends WorkshopRepository
         return $this->all(
             "SELECT e.id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id_primary_group,
                     c.pin_hash IS NOT NULL AS has_pin, c.badge_hash IS NOT NULL AS has_badge, COALESCE(c.biometric_consent, 0) AS biometric_consent,
-                    c.locked_until, (SELECT k.clock_in FROM tfb_prod_clock k WHERE k.id_employee = e.id AND k.clock_out IS NULL ORDER BY k.clock_in DESC LIMIT 1) AS clocked_in_at
+                    c.locked_until, (SELECT k.clock_in FROM tfb_prod_clock k WHERE k.id_employee = e.id AND k.clock_out IS NULL ORDER BY k.clock_in DESC LIMIT 1) AS clocked_in_at,
+                    (SELECT COUNT(*) FROM tfb_prod_phone p WHERE p.id_employee = e.id AND p.revoked_at IS NULL) AS phones
              FROM tfb_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee
              LEFT JOIN tfb_prod_employee_credential c ON c.id_employee = e.id
              WHERE e.active = 1{$where} ORDER BY pe.surname, pe.name",
@@ -99,6 +100,31 @@ final class ExecutionRepository extends WorkshopRepository
             implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))
         );
         $this->db->prepare($sql)->execute(['id' => $employeeId] + $data);
+    }
+
+    // --- Téléphones (pointage par QR code) ----------------------------------------------------------
+
+    public function insertPhone(int $employeeId, string $hash, ?string $label): int
+    {
+        $this->db->prepare('INSERT INTO tfb_prod_phone (id_employee, token_hash, label, last_used_at) VALUES (?, ?, ?, NOW())')->execute([$employeeId, $hash, $label]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function phoneByHash(string $hash): ?array
+    {
+        return $this->all('SELECT * FROM tfb_prod_phone WHERE token_hash = ?', [$hash])[0] ?? null;
+    }
+
+    public function touchPhone(int $id): void
+    {
+        $this->db->prepare('UPDATE tfb_prod_phone SET last_used_at = NOW() WHERE id = ?')->execute([$id]);
+    }
+
+    public function revokePhones(int $employeeId): int
+    {
+        $stmt = $this->db->prepare('UPDATE tfb_prod_phone SET revoked_at = NOW() WHERE id_employee = ? AND revoked_at IS NULL');
+        $stmt->execute([$employeeId]);
+        return $stmt->rowCount();
     }
 
     // --- Pointage ------------------------------------------------------------------------------------

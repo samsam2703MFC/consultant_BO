@@ -48,9 +48,11 @@ final class OpenApiSpec
                 null => [],
                 'kiosk' => [['deviceToken' => []]],
                 'kiosk_employee' => [['deviceToken' => [], 'employeeToken' => []]],
+                'qr' => [['qrToken' => []]],
+                'phone' => [['phoneToken' => [], 'qrToken' => []]],
                 default => [['bearerAuth' => []], ['accessTokenHeader' => []]],
             };
-            if ($permission !== null && $permission !== 'auth' && !str_starts_with($permission, 'kiosk')) {
+            if ($permission !== null && !in_array($permission, ['auth', 'kiosk', 'kiosk_employee', 'qr', 'phone'], true)) {
                 $operation['x-permission'] = $permission;
             }
             $paths[$openPath][strtolower($method)] = $operation;
@@ -77,6 +79,9 @@ final class OpenApiSpec
                 ['name' => 'referentiels', 'description' => 'Grupy, stanowiska, zmiany, zespoły, pracownicy, parametry / Groupes, postes, shifts, équipes, employés, paramètres'],
                 ['name' => 'produits', 'description' => 'Karty produkcyjne, marszruty, czasy standardowe, pomiary / Fiches de production, gammes, temps standards, chronométrage'],
                 ['name' => 'planning', 'description' => 'Zapotrzebowanie i plan produkcji / Besoins et plan de production'],
+                ['name' => 'execution', 'description' => 'Tablety, godziny pracy, wskaźniki / Tablettes, heures, KPIs'],
+                ['name' => 'kiosk', 'description' => 'Tablet na hali / Tablette de l\'atelier'],
+                ['name' => 'phone', 'description' => 'Wejście / wyjście telefonem (kod QR tabletu) / Pointage au téléphone (QR code de la tablette)'],
                 ['name' => 'docs', 'description' => 'OpenAPI'],
             ],
             'paths' => $paths,
@@ -174,6 +179,8 @@ final class OpenApiSpec
                 'accessTokenHeader' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Access-Token'],
                 'deviceToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Device-Token', 'description' => 'Jeton de la tablette (POST /kiosk/pair)'],
                 'employeeToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Employee-Token', 'description' => 'Jeton court de la personne identifiée (POST /kiosk/identify)'],
+                'qrToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Qr-Token', 'description' => 'Jeton du QR code affiché par la tablette (GET /kiosk/qr), valable kiosk.qr_ttl_s'],
+                'phoneToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Phone-Token', 'description' => 'Jeton du téléphone enregistré (POST /kiosk/phone/enroll)'],
             ],
             'parameters' => [
                 'Lang' => ['name' => 'lang', 'in' => 'query', 'required' => false, 'description' => 'Język komunikatów / Langue des messages (sinon Accept-Language)', 'schema' => ['type' => 'string', 'enum' => ['pl', 'fr']]],

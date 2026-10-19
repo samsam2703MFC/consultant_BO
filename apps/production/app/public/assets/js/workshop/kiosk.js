@@ -3,7 +3,8 @@
  * Parowanie kodem od kierownika (token tabletu w pamięci przeglądarki), identyfikacja osoby :
  * identyfikator NFC / QR (czytnik działający jak klawiatura albo Web NFC) lub dotknięcie nazwiska,
  * potem PIN ; wejście / wyjście jednym dotknięciem, operacje (start, pauza, koniec z ilościami),
- * podpis odręczny (wyjście, karta miesiąca). Wylogowanie po bezczynności. Wszystko przez API.
+ * podpis odręczny (wyjście, karta miesiąca). Wylogowanie po bezczynności. Na ekranie głównym kod QR
+ * (zmieniany co chwilę) do wejścia / wyjścia własnym telefonem. Wszystko przez API.
  */
 (function () {
     'use strict';
@@ -24,6 +25,7 @@
     let idleTimer = null;
     let idleSeconds = 45;
     let pending = null; // {uuid, direction} : dernier pointage à rejouer après une coupure réseau
+    let qrTimer = null;
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
@@ -117,6 +119,8 @@
         el.innerHTML = header() + `<section class="kiosk-card"><div class="kiosk-badge-hint"><span aria-hidden="true">🪪</span><strong>${esc(t('badge_hint'))}</strong>
                 ${'NDEFReader' in window ? `<button type="button" class="kiosk-btn is-small" data-nfc>${esc(t('nfc'))}</button>` : ''}</div>
                 <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></section>
+            <section class="kiosk-card kiosk-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
+                <div class="kiosk-qr-text"><h2>${esc(t('qr_title'))}</h2><p class="kiosk-muted">${esc(t('qr_help'))}</p></div></section>
             <section class="kiosk-card"><h2>${esc(t('or_name'))}</h2><div class="kiosk-people" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>`;
         const badge = el.querySelector('[data-badge]');
         const focusBadge = () => { if (document.activeElement !== badge && !el.querySelector('input:not([data-badge])')) badge.focus({preventScroll: true}); };
@@ -132,6 +136,7 @@
                 reader.addEventListener('reading', (ev) => { if (!session) renderPin({badge: ev.serialNumber}); }, {once: true});
             } catch (e) { toast(t('nfc_error'), true); }
         });
+        drawQr();
         try {
             const people = await api('GET', '/kiosk/people');
             const box = el.querySelector('[data-people]');
@@ -140,6 +145,29 @@
                 ${esc(p.name)}<small>${esc(p.clocked_in ? t('present') : (p.has_pin ? t('absent') : t('no_pin')))}</small></button>`).join('') : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`;
             box.addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name}); });
         } catch (err) { if (!err.code) toast(err.message, true); }
+    }
+
+    // Kod QR wejścia / wyjścia telefonem : nowy co refresh_s sekund, tylko na ekranie głównym.
+    async function drawQr() {
+        const canvas = el.querySelector('[data-qr]');
+        if (!canvas) { window.clearInterval(qrTimer); qrTimer = null; return; }
+        try {
+            // root : adresse absolue ou chemin de l'application → adresse absolue de la page du téléphone.
+            const q = await api('GET', '/kiosk/qr?base=' + encodeURIComponent(new URL(root + '/', window.location.href).href.replace(/\/$/, '')));
+            const quiet = 4;
+            const total = q.size + 2 * quiet;
+            const scale = Math.max(2, Math.floor(440 / total));
+            canvas.width = canvas.height = total * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000';
+            q.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] === '1') ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale); });
+            canvas.closest('[data-qr-card]').hidden = false;
+            if (!qrTimer) qrTimer = window.setInterval(drawQr, Math.max(5, q.refresh_s) * 1000);
+        } catch (err) {
+            const card = el.querySelector('[data-qr-card]');
+            if (card) card.hidden = true;
+        }
     }
 
     // --- PIN -------------------------------------------------------------------------------------------

@@ -96,6 +96,7 @@
         post(path, body) { return this.request('POST', path, body ?? {}).then(p => p.data); }
         patch(path, body) { return this.request('PATCH', path, body).then(p => p.data); }
         put(path, body) { return this.request('PUT', path, body).then(p => p.data); }
+        del(path) { return this.request('DELETE', path).then(p => p.data); }
     }
 
     /** Petits outils d'affichage communs aux pages du module. */

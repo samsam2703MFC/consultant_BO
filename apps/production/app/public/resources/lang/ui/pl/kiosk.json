@@ -62,5 +62,16 @@
   "sign": "Podpisz",
   "sign_first": "Złóż podpis palcem w ramce.",
   "signed": "Podpis zapisany.",
-  "signed_bye": "Podpis zapisany. Do zobaczenia!"
+  "signed_bye": "Podpis zapisany. Do zobaczenia!",
+  "qr_title": "Wejście / wyjście telefonem",
+  "qr_help": "Zeskanuj kod aparatem telefonu i dotknij WEJŚCIE albo WYJŚCIE. Kod zmienia się co chwilę.",
+  "phone_title": "Wejście / wyjście",
+  "scan_help": "Zeskanuj telefonem kod QR wyświetlany na tablecie przy wejściu.",
+  "who_are_you": "Kim jesteś? Wybierz nazwisko i podaj PIN — tylko za pierwszym razem.",
+  "search": "Szukaj nazwiska",
+  "phone_saved": "Telefon zapisany: {name}.",
+  "registered_as": "Ten telefon: {name}",
+  "not_me": "To nie ja",
+  "forgotten": "Telefon zapomniany — przy następnym skanowaniu wybierz nazwisko.",
+  "done": "Gotowe — możesz zamknąć stronę."
 }

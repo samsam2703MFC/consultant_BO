@@ -135,17 +135,23 @@
         const list = (await api.list(`/kiosk/employees?month=${iso(new Date()).slice(0, 7)}`)).data;
         const body = el.querySelector('[data-body]');
         body.innerHTML = `<div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm tfb-exec-people">
-            <thead><tr><th>${esc(t('person'))}</th><th>${esc(t('badge'))}</th><th>${esc(t('pin'))}</th><th class="text-center">${esc(t('consent'))}</th><th></th></tr></thead>
+            <thead><tr><th>${esc(t('person'))}</th><th>${esc(t('badge'))}</th><th>${esc(t('pin'))}</th><th class="text-center">${esc(t('consent'))}</th><th>${esc(t('phones'))}</th><th></th></tr></thead>
             <tbody>${list.map(p => `<tr data-person="${p.employee_id}"><td><strong>${esc(p.name)}</strong><div class="small text-muted">${esc((groups.find(g => g.id === p.group_id) || {}).name || '')}${p.clocked_in ? ' · ' + esc(t('present')) : ''}${p.locked ? ' · <span class="text-danger">' + esc(t('locked')) + '</span>' : ''}</div></td>
                 <td><input class="form-control form-control-sm" name="badge" data-field="badge" placeholder="${esc(p.has_badge ? t('badge_set') : t('badge_scan'))}" autocomplete="off"></td>
                 <td><input class="form-control form-control-sm tfb-opt-num" name="pin" data-field="pin" inputmode="numeric" maxlength="6" placeholder="${esc(p.has_pin ? '••••' : t('pin_none'))}" autocomplete="new-password"></td>
                 <td class="text-center"><input type="checkbox" class="form-check-input" name="biometric_consent" ${p.biometric_consent ? 'checked' : ''} aria-label="${esc(t('consent'))}"></td>
+                <td class="text-nowrap">${p.phones ? `<i class="bi bi-phone"></i> ${p.phones} <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" data-revoke>${esc(t('revoke_phones'))}</button>` : `<span class="text-muted">—</span>`}</td>
                 <td class="text-end text-nowrap"><button type="button" class="btn btn-sm btn-primary" data-save>${esc(t('save'))}</button>
                     ${p.locked ? `<button type="button" class="btn btn-sm btn-outline-danger" data-unlock>${esc(t('unlock'))}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
             <p class="at-profit-note">${esc(t('people_help'))}</p></div></div>`;
         body.querySelectorAll('[data-person]').forEach(row => row.addEventListener('click', async (e) => {
             const id = Number(row.dataset.person);
             const payload = {};
+            if (e.target.closest('[data-revoke]')) {
+                if (!window.confirm(t('revoke_confirm'))) return;
+                try { await api.del(`/kiosk/employees/${id}/phones`); ui.notify(true, t('revoked')); people(); } catch (err) { fail(err, row); }
+                return;
+            }
             if (e.target.closest('[data-unlock]')) payload.unlock = true;
             else if (e.target.closest('[data-save]')) {
                 if (row.querySelector('[name=badge]').value.trim()) payload.badge = row.querySelector('[name=badge]').value.trim();

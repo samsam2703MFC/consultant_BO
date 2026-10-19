@@ -116,6 +116,13 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/operations/{id:\d+}/pause', ExecutionController::class, 'pause', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/finish', ExecutionController::class, 'finish', 'kiosk_employee'],
             ['POST', '/kiosk/signatures', ExecutionController::class, 'sign', 'kiosk_employee'],
+            ['GET', '/kiosk/qr', ExecutionController::class, 'qr', 'kiosk'],
+            ['GET', '/kiosk/phone/people', ExecutionController::class, 'phonePeople', 'qr'],
+            ['POST', '/kiosk/phone/enroll', ExecutionController::class, 'enrollPhone', 'qr'],
+            ['GET', '/kiosk/phone/me', ExecutionController::class, 'phoneMe', 'phone'],
+            ['POST', '/kiosk/phone/clock', ExecutionController::class, 'clock', 'phone'],
+            ['POST', '/kiosk/phone/signatures', ExecutionController::class, 'sign', 'phone'],
+            ['DELETE', '/kiosk/employees/{id:\d+}/phones', ExecutionController::class, 'revokePhones', 'prod.employees.write'],
         ];
     }
 

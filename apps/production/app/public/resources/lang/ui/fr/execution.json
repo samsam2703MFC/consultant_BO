@@ -66,7 +66,7 @@
   "badge_scan": "scannez ou saisissez le numéro",
   "pin_none": "aucun",
   "consent_confirm": "Confirmez-vous que le salarié a signé un consentement écrit et libre au traitement biométrique (art. 22¹b du code du travail polonais) ? Le badge + PIN reste toujours possible.",
-  "people_help": "Le numéro de badge et le PIN ne sont stockés que sous forme de condensés. Empreinte digitale seulement avec consentement écrit et jamais comme seul moyen.",
+  "people_help": "Le numéro de badge et le PIN ne sont stockés que sous forme de condensés. Empreinte digitale seulement avec consentement écrit et jamais comme seul moyen. Téléphone : la personne scanne le QR code de la tablette, donne son PIN une fois, puis entre et sort en un geste.",
   "month": "Mois",
   "all_groups": "Tous les groupes",
   "hours": "Heures",
@@ -80,5 +80,9 @@
   "clock_out": "Sortie",
   "reason": "Motif",
   "add_entry": "Ajouter",
-  "manual_help": "Chaque ajout manuel et chaque correction vont au journal."
+  "manual_help": "Chaque ajout manuel et chaque correction vont au journal.",
+  "phones": "Téléphone (QR)",
+  "revoke_phones": "révoquer",
+  "revoke_confirm": "Révoquer les téléphones enregistrés de cette personne ? Au prochain scan du QR code, elle devra saisir son PIN.",
+  "revoked": "Téléphones révoqués."
 }

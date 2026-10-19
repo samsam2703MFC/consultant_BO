@@ -46,7 +46,11 @@
     "NOT_CLOCKED_IN": "Najpierw zarejestruj wejście.",
     "OPERATION_NOT_STARTABLE": "Operacji o statusie „{status}” nie można rozpocząć.",
     "OPERATION_NOT_IN_PROGRESS": "Operacja nie jest w toku (status „{status}”).",
-    "OPERATION_NOT_IN_YOUR_GROUPS": "Ta operacja nie należy do Twojej grupy."
+    "OPERATION_NOT_IN_YOUR_GROUPS": "Ta operacja nie należy do Twojej grupy.",
+    "QR_EXPIRED": "Kod QR wygasł — zeskanuj ponownie kod na tablecie.",
+    "QR_INVALID": "Nieprawidłowy kod QR — zeskanuj kod wyświetlany na tablecie.",
+    "PHONE_UNAUTHENTICATED": "Telefon nie jest zarejestrowany — wybierz swoje nazwisko i podaj PIN.",
+    "PHONE_REVOKED": "Rejestracja telefonu wygasła lub została odwołana — zarejestruj telefon ponownie."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -253,7 +257,8 @@
     "clock_out": "Wyjście",
     "employee_id": "Pracownik",
     "month": "Miesiąc",
-    "unlock": "Odblokuj"
+    "unlock": "Odblokuj",
+    "base": "adres strony"
   },
   "entities": {
     "group": "grupa",
