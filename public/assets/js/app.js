@@ -9640,7 +9640,7 @@ class App {
     pret.reseau = !!((D.rres || {})[this.rrCle()]);
     if (on === 'reseau') { this.rrCharge(false); common.rr = this.rrVals(); }
     pret.annee = pret.horizons = pret.marge = true;   // lus au chargement (/stores/perf, budgets, cibles)
-    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['horizons', '3 et 5 ans'], ['marge', 'Marge & coûts'], ['reseau', 'Analyse réseau']].map(o => ({
+    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['horizons', '3 et 5 ans'], ['marge', 'Marge & coûts'], ['reseau', 'Trafic clients']].map(o => ({
       cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
     // Le fil de progression : une lecture = un tiers. Le chrono tourne tant
@@ -9665,7 +9665,9 @@ class App {
     if (rj && rj.estAujourdhui && this._rjLuA && Date.now() - this._rjLuA > 600000 && !this._rjEnCours) { this.rjCharge(true); }
     if (!this._rjTick60) { this._rjTick60 = setInterval(() => { if (this.state.screen === 'resultatJour') { this.setState({}); } }, 60000); }
   }
-  /* --- Analyse réseau : les clients du réseau face au N-1, trois étendues --- */
+  /* --- Trafic clients (ex-Analyse réseau) : les clients du réseau face au N-1, trois étendues. Depuis le 19/10/2026
+     (maquettes A + B choisies par Sam) : douze semaines, la bande d'écart entre les courbes, la carte des écarts magasin
+     × période et la courbe d'un magasin au clic. --- */
   rrCle(){ return (this.state.rrVue || 'semaine'); }
   rrCharge(force){
     const cle = this.rrCle();
@@ -9673,7 +9675,7 @@ class App {
     if (!this._rrEnCours) { this._rrEnCours = {}; }
     if (this._rrEnCours[cle] || (this.D.rres[cle] && !force)) { return; }
     this._rrEnCours[cle] = true;
-    readOne('/ventes/reseau?vue=' + cle).then(d => {
+    readOne('/ventes/reseau?vue=' + cle + (cle === 'semaine' ? '&n=13' : '')).then(d => {
       this.D.rres[cle] = (d && d.periodes) ? d : { erreur: (d && d.error) || 'lecture impossible' };
     }).catch(e => { this.D.rres[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
       .finally(() => { this._rrEnCours[cle] = false; this.setState({}); });
@@ -9700,7 +9702,14 @@ class App {
       if (w.n1 != null) { pts1.push({ x: X(i), y: Y(w.n1), v: fI(w.n1), dy: up ? 16 : -9 }); }
       if (!mini) { labels.push({ x: X(i), t: w.lab + (w.enCours ? ' · en cours' : ''), cur: !!w.enCours }); }
     });
-    return { Wd, Hh, ml, mr, grad, pts, pts1, labels, hb: Hh - 8, mini: !!mini };
+    // La bande entre les deux courbes, semaine par semaine : bleue au-dessus du N-1, orange en dessous.
+    const bande = [];
+    for (let i = 0; i < W.length - 1; i++) {
+      const a = W[i], b = W[i + 1];
+      if (a.n == null || b.n == null || a.n1 == null || b.n1 == null) { continue; }
+      bande.push({ p: X(i) + ',' + Y(a.n) + ' ' + X(i + 1) + ',' + Y(b.n) + ' ' + X(i + 1) + ',' + Y(b.n1) + ' ' + X(i) + ',' + Y(a.n1), up: a.n + b.n >= a.n1 + b.n1 });
+    }
+    return { Wd, Hh, ml, mr, grad, pts, pts1, labels, bande, hb: Hh - 8, mini: !!mini };
   }
   /** Les barres jumelles d'une année : chaque mois de N à côté du même mois de N-1. */
   rrBarres(W){
@@ -9728,22 +9737,36 @@ class App {
   }
   rrVals(){
     const S = this.state, vue = this.rrCle();
-    const D = (this.D.rres || {})[vue];
-    const NOMV = { semaine: 'Semaine', mois: 'Mois', annee: 'Année' };
+    const D0 = (this.D.rres || {})[vue];
+    const NOMV = { semaine: '12 semaines', mois: '6 mois', annee: 'Année' };
     const out = { vue, onglets: ['semaine', 'mois', 'annee'].map(k => ({ cle: k, nom: NOMV[k], on: k === vue, go: () => this.setState({ rrVue: k }) })),
-      chargement: !D, erreur: D && D.erreur ? D.erreur : '' };
-    if (!D || D.erreur) { return out; }
+      chargement: !D0, erreur: D0 && D0.erreur ? D0.erreur : '' };
+    if (!D0 || D0.erreur) { return out; }
+    // Les douze semaines closes (19/10/2026) : la semaine en cours, servie un jour ou deux, ferait plonger la courbe et
+    // fausserait les cumuls — elle reste dans l'onglet Semaine. On la retire ici, magasins et totaux compris.
+    let D = D0;
+    if (vue === 'semaine' && D0.periodes.some(p => p.enCours)) {
+      const k = D0.periodes.map(p => !p.enCours);
+      const somme = (ps, f) => ps.reduce((a, p) => { const v = f(p); return v ? { ca: a.ca + (v.ca || 0), tickets: a.tickets + (v.tickets || 0), jours: a.jours + (v.jours || 0) } : a; }, { ca: 0, tickets: 0, jours: 0 });
+      D = Object.assign({}, D0, { periodes: D0.periodes.filter((p, i) => k[i]), magasins: D0.magasins.map(m => { const ps = m.periodes.filter((p, i) => k[i]);
+        return Object.assign({}, m, { periodes: ps, total: somme(ps, p => p.source ? p : null), totalN1: m.totalN1 && ps.some(p => p.n1) ? somme(ps, p => p.n1) : null }); }) });
+    }
     const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
     const fE = n => this.fE(n);
     const fK = n => Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fE(n);
     const pc = (a, b) => b ? 100 * a / b : 0;
     const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
-    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
+    // Bleu au-dessus du N-1, orange en dessous (lisibles par les daltoniens), gris autour de zéro.
+    const col = v => v >= 3 ? '#2E6DB4' : (v <= -3 ? '#C0632B' : '#8b8177');
     const dd = j => j.slice(8, 10) + '/' + j.slice(5, 7);
     const unite = vue === 'semaine' ? 'semaines' : 'mois';
     const P = D.periodes.filter(p => !p.futur);
     const lus = P.filter(p => p.tickets > 0 || p.n1);
-    const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: p.tickets > 0 ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
+    // La courbe compare des magasins comparables : 2026 = les magasins qui ont un N-1, pour que la bande et les écarts
+    // disent la même chose (un magasin de moins d'un an gonflerait 2026 sans rien en face).
+    const avecComp = P.some(p => p.n1);
+    const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: avecComp ? (p.n1 && p.n1.ticketsComp > 0 ? p.n1.ticketsComp : null) : (p.tickets > 0 ? p.tickets : null),
+      n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
     const MOISL = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : dd(p.du) + '→' + dd(p.enCours ? D.aujourdhui : p.au);
     // Les totaux du réseau et à périmètre comparable.
@@ -9763,7 +9786,7 @@ class App {
       { k: 'Clients · ' + nP + ' ' + (vue === 'semaine' ? 'semaines' : 'mois'), v: fI(n), s: mags.length + ' magasins · ' + fK(ca) + ' de CA', cls: '' },
       eT != null ? { k: 'Clients vs N-1', v: sg(eT) + ' %', s: fI(nC) + ' contre ' + fI(n1) + ' · ' + comp.length + ' magasin' + (comp.length > 1 ? 's' : '') + ' comparable' + (comp.length > 1 ? 's' : ''), cls: eT >= 0 ? 'good' : 'bad' }
         : { k: 'Clients vs N-1', v: '—', s: 'aucun magasin comparable', cls: '' },
-      cur ? { k: (vue === 'semaine' ? 'Semaine' : 'Mois') + (cur.enCours ? ' en cours' : ' · dernier'), v: fI(cur.tickets), s: (eP != null ? sg(eP) + ' % vs ' + prev.lab : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jours servis' : ''), cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
+      cur ? { k: cur.enCours ? (vue === 'semaine' ? 'Semaine en cours' : 'Mois en cours') : (vue === 'semaine' ? 'Dernière semaine' : 'Dernier mois'), v: fI(cur.tickets), s: (eP != null ? sg(eP) + ' % vs ' + prev.lab : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jours servis' : ''), cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
       { k: 'Panier moyen', v: n ? (ca / n).toFixed(2).replace('.', ',') + ' €' : '—', s: n1 ? 'N-1 : ' + (ca1 / n1).toFixed(2).replace('.', ',') + ' €' : '', cls: '' },
       eCa != null ? { k: 'CA vs N-1', v: sg(eCa) + ' %', s: fK(caC) + ' contre ' + fK(ca1) + ' · périmètre comparable', cls: eCa >= 0 ? 'good' : 'bad' } : { k: 'CA vs N-1', v: '—', s: '', cls: '' },
       { k: 'Magasins en hausse', v: comp.length ? hausse.length + ' / ' + comp.length : '—', s: hausse.length ? hausse.map(m => this.rrCourt(m.nom)).join(', ') + ' au-dessus du N-1' : (comp.length ? 'aucun au-dessus du N-1' : ''), cls: comp.length ? (hausse.length * 2 >= comp.length ? 'good' : 'bad') : '' },
@@ -9792,11 +9815,39 @@ class App {
       const mini = this.rrCourbe(m.periodes.filter(p => !p.futur).map(p => ({ n: p.source ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null })), true);
       return { nom: m.nom, t, clients: fI(t), n1: t1 ? fI(t1) : '—', eco: e == null ? '' : sg(e) + ' %', coul: e == null ? '' : col(e), sansN1: !t1,
         cur: pCur && pCur.source ? fI(pCur.tickets) : '—', ecoCur: eC == null ? '' : sg(eC) + ' %', coulCur: eC == null ? '' : col(eC),
-        ca: fK(m.total.ca), part: n ? Math.round(100 * t / n) + ' %' : '—', mini };
-    }).sort((a, b) => b.t - a.t).map((l, i) => Object.assign(l, { rang: i + 1 }));
+        ca: fK(m.total.ca), part: n ? Math.round(100 * t / n) + ' %' : '—', mini, e };
+    }).sort((a, b) => (a.e == null ? 1e9 : a.e) - (b.e == null ? 1e9 : b.e) || b.t - a.t).map((l, i) => Object.assign(l, { rang: i + 1 }));
     out.totalLigne = { clients: fI(n), n1: n1 ? fI(n1) : '—', eco: eT == null ? '' : sg(eT) + ' %', coul: eT == null ? '' : col(eT),
       cur: cur ? fI(cur.tickets) : '—', ecoCur: cur && cur.n1 ? sg(pc(cur.n1.ticketsComp - cur.n1.tickets, cur.n1.tickets)) + ' %' : '', coulCur: cur && cur.n1 ? col(pc(cur.n1.ticketsComp - cur.n1.tickets, cur.n1.tickets)) : '', ca: fK(ca) };
     out.curLab = cur ? cur.lab : '';
+    // La carte des écarts (maquette B, 19/10/2026) : chaque magasin, chaque période, face au N-1 — le chiffre toujours
+    // écrit, la couleur pour repérer ; celui qui décroche le plus en tête, le réseau au-dessus. Un clic ouvre sa courbe.
+    const fond = e => { if (e == null) { return '#F4EFE8'; } const a = 0.08 + Math.min(1, Math.abs(e) / 12) * 0.55;
+      return (e >= 0 ? 'rgba(46,109,180,' : 'rgba(192,99,43,') + a.toFixed(2) + ')'; };
+    const sg1 = v => (v > 0.05 ? '+' : v < -0.05 ? '−' : '') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
+    const cel = (e, futur, titre) => futur ? { txt: '', fond: 'transparent', encre: '', titre: '' }
+      : { txt: e == null ? '—' : sg1(e), fond: fond(e), encre: e != null && Math.abs(e) >= 8 ? '#fff' : 'var(--color-text)', titre: titre || '' };
+    const perC = D.periodes.map(p => ({ lab: p.lab, dates: vue === 'semaine' ? dd(p.du) : (vue === 'annee' ? '' : p.du.slice(0, 4)), enCours: p.enCours, futur: p.futur }));
+    const lmag = mags.map(m => {
+      const tC = m.periodes.reduce((a, p) => a + (p.n1 && p.source ? p.tickets : 0), 0), t1 = m.totalN1 ? m.totalN1.tickets : null;
+      const e = t1 ? pc(tC - t1, t1) : null;
+      return { id: m.id, nom: this.rrCourt(m.nom), clients: fI(m.total.tickets) + ' clients', e, on: S.rrMag === m.id,
+        cases: m.periodes.map((p, i) => { const f = D.periodes[i].futur; const v = p.n1 && p.source && p.n1.tickets ? pc(p.tickets - p.n1.tickets, p.n1.tickets) : null;
+          return cel(v, f, p.source ? fI(p.tickets) + ' clients' + (p.n1 ? ' · N-1 : ' + fI(p.n1.tickets) : ' · pas de N-1') : 'pas de vente lue'); }),
+        total: cel(e, false), ouvrir: () => this.setState({ rrMag: S.rrMag === m.id ? null : m.id }) };
+    }).sort((a, b) => (a.e == null ? 1e9 : a.e) - (b.e == null ? 1e9 : b.e));
+    out.carte = { cols: perC, lignes: lmag,
+      reseau: { nom: 'Réseau', clients: fI(n) + ' clients', cases: D.periodes.map(p => cel(p.n1 && p.n1.tickets ? pc(p.n1.ticketsComp - p.n1.tickets, p.n1.tickets) : null, p.futur,
+        p.n1 ? fI(p.n1.ticketsComp) + ' clients (magasins comparables) · N-1 : ' + fI(p.n1.tickets) : '')), total: cel(eT, false) },
+      echelle: [-12, -8, -4, 0, 4, 8, 12].map(e => e === 0 ? '#EEE9E2' : fond(e)), unite: vue === 'semaine' ? 'semaine' : 'mois' };
+    const mSel = S.rrMag ? mags.find(m => m.id === S.rrMag) : null;
+    if (mSel) {
+      const Wm = mSel.periodes.map((p, i) => ({ lab: D.periodes[i].lab, enCours: D.periodes[i].enCours, futur: D.periodes[i].futur, n: p.source && p.tickets > 0 ? p.tickets : null,
+        n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 && p.source ? p.tickets : null })).filter(w => vue === 'annee' || !w.futur);
+      const lm = lmag.find(l => l.id === mSel.id);
+      out.magCourbe = { nom: this.rrCourt(mSel.nom), e: lm && lm.e != null ? sg1(lm.e) + ' sur l’étendue' : (mSel.n1Motif || 'pas de N-1'),
+        annee: vue === 'annee', svg: vue === 'annee' ? this.rrBarres(Wm) : this.rrCourbe(Wm, false), fermer: () => this.setState({ rrMag: null }) };
+    }
     // Qui fait l'écart : les clients gagnés ou perdus face au N-1, sur la
     // période en cours et sur l'étendue — magasins comparables seulement.
     const ecarts = (f) => { const rows = comp.map(m => ({ nom: this.rrCourt(m.nom), v: f(m) })).filter(r => r.v != null).sort((a, b) => a.v - b.v);
@@ -9807,6 +9858,8 @@ class App {
     out.ecartCurLab = cur ? cur.lab : '';
     out.ecartTotLab = vue === 'annee' ? 'cumul de l’année' : nP + ' ' + unite + ' cumulé' + (vue === 'semaine' ? 'es' : 's');
     out.sousTitre = mags.length + ' magasins · ' + (vue === 'annee' ? D.du.slice(0, 4) + ' face à ' + (D.du.slice(0, 4) - 1) : lus[0].lab + ' → ' + (cur ? cur.lab : '')) + ' · clients face au N-1';
+    out.comparables = avecComp && sans.length > 0;
+    out.nPer = nP;
     out.source = D.source || '';
     out.n1Motif = out.avecN1 ? '' : 'aucun magasin n’a de N-1 sur cette étendue';
     return out;
