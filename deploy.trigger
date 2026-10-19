@@ -869,3 +869,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T20:45:18Z audit serwera : pliki statyczne z pamięci przeglądarki, mniej wywołań, ponowienia po zerwanym połączeniu
 2026-10-19T21:00:24Z audit serwera : cache szablonów Twig, Server-Timing
 2026-10-19T21:12:28Z audit serwera : jedno sprawdzenie hasła na żądanie
+2026-10-19T21:27:14Z audit serwera : brakujące pliki (ikona, generator PDF KSeF)
