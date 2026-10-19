@@ -620,3 +620,17 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-wizard .table td { vertical-align: middle; }
 .at-wizard select[data-field="id_carrier"], .at-wizard select[data-field="id_carrier_sec"] { min-width: 190px; }
 .at-wizard select[data-field="id_vehicle"], .at-wizard select[data-field="id_sec_vehicle"] { min-width: 135px; }
+.at-wizard .table td.at-group-cell { background: var(--at-bg-2); font-size: 12px; }
+.at-wizard .at-col-hot { background: var(--at-primary-soft); }
+.at-wizard .at-tiles { margin-bottom: 16px; }
+.at-wizard .at-tile { cursor: default; }
+/* Cartes de téléchargement (PDF) */
+.at-pdfs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.at-pdf { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--at-line); border-radius: var(--at-radius); }
+.at-pdf > .bi { flex: none; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--at-radius); background: var(--at-primary-soft); color: var(--at-primary); font-size: 16px; }
+.at-pdf > div { flex: 1; min-width: 0; }
+.at-pdf strong { display: block; font-size: 13px; font-weight: 500; }
+.at-pdf small { display: block; color: var(--at-muted); font-size: 12px; }
+.at-pdf .at-pdf-state { display: block; margin-top: 6px; font-size: 12px; overflow-wrap: anywhere; }
+.at-pdf .at-pdf-state .bi, .at-pdf .at-pdf-state .spinner-border { margin-right: 4px; vertical-align: -2px; }
+.at-pdf .btn { flex: none; }
