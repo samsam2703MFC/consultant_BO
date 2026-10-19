@@ -62,7 +62,9 @@
     "NOT_IN_BOM": "Pozycja {id} nie należy do receptury artykułu.",
     "ROUTING_EMPTY": "Marszruta nie ma żadnego etapu.",
     "NOT_STEP_WORKSTATION": "To stanowisko nie należy do etapu (ani jako alternatywa).",
-    "IN_FUTURE": "Pole „{field}” nie może być w przyszłości."
+    "IN_FUTURE": "Pole „{field}” nie może być w przyszłości.",
+    "PRODUCT_REQUIRED": "Wybierz produkt z grupy albo wpisz nazwę nowego produktu.",
+    "PRODUCT_NOT_IN_GROUP": "Ten produkt należy do innej grupy."
   },
   "fields": {
     "code": "kod",
@@ -173,7 +175,14 @@
     "component": "Składowa czasu",
     "measured_at": "Data pomiaru",
     "excluded": "Wykluczony",
-    "search": "Szukaj"
+    "search": "Szukaj",
+    "product_name": "Nowy produkt",
+    "pieces_per_shop_month": "Sztuk / sklep / miesiąc",
+    "shops": "Liczba sklepów",
+    "selling_price_eur": "Cena sprzedaży (€ / szt.)",
+    "target_margin_pct": "Marża docelowa (%)",
+    "investment_eur": "Inwestycja (€)",
+    "start_month": "Start (miesiąc)"
   },
   "entities": {
     "group": "grupa",

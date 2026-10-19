@@ -62,7 +62,9 @@
     "NOT_IN_BOM": "L'élément {id} ne fait pas partie de la nomenclature de l'article.",
     "ROUTING_EMPTY": "La gamme ne contient aucune étape.",
     "NOT_STEP_WORKSTATION": "Ce poste n'appartient pas à l'étape (ni comme alternative).",
-    "IN_FUTURE": "Le champ « {field} » ne peut pas être dans le futur."
+    "IN_FUTURE": "Le champ « {field} » ne peut pas être dans le futur.",
+    "PRODUCT_REQUIRED": "Choisissez un produit du groupe ou saisissez le nom d'un nouveau produit.",
+    "PRODUCT_NOT_IN_GROUP": "Ce produit appartient à un autre groupe."
   },
   "fields": {
     "code": "code",
@@ -173,7 +175,14 @@
     "component": "Composante de temps",
     "measured_at": "Date de mesure",
     "excluded": "Écartée",
-    "search": "Recherche"
+    "search": "Recherche",
+    "product_name": "Nouveau produit",
+    "pieces_per_shop_month": "Pièces / magasin / mois",
+    "shops": "Nombre de magasins",
+    "selling_price_eur": "Prix de vente (€ / pièce)",
+    "target_margin_pct": "Marge cible (%)",
+    "investment_eur": "Investissement (€)",
+    "start_month": "Début (mois)"
   },
   "entities": {
     "group": "groupe",

@@ -23,4 +23,16 @@ return function(RouteCollector $r) {
         'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
         'method'     => 'saveSectionTarget'
     ]);
+    $r->addRoute('GET', '/ajax/growth/sections/{id:\d+}', [
+        'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
+        'method'     => 'growthGroup'
+    ]);
+    $r->addRoute('POST', '/ajax/growth/actions', [
+        'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
+        'method'     => 'saveGrowth'
+    ]);
+    $r->addRoute('PATCH', '/ajax/growth/actions/{id:\d+}', [
+        'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
+        'method'     => 'saveGrowth'
+    ]);
 };

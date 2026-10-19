@@ -2,13 +2,17 @@
 namespace App\Controllers\Web\Dashboard;
 
 use App\Core\Web\BaseController;
+use App\Core\Web\JsonErrors;
+use App\Services\Dashboard\GrowthActionService;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Services\Dashboard\TodayService;
 use Symfony\Component\HttpFoundation\Request;
 
 class DashboardController extends BaseController
 {
-    public function __construct(private TodayService $today, private ProfitabilityService $profitability) {}
+    use JsonErrors;
+
+    public function __construct(private TodayService $today, private ProfitabilityService $profitability, private GrowthActionService $growth) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
     public function index()
@@ -18,7 +22,7 @@ class DashboardController extends BaseController
         // view() nadpisuje „warnings” (komunikaty kontrolera) : ostrzeżenia o danych idą jako „notices”.
         $data['notices'] = $data['warnings'];
         unset($data['warnings']);
-        $this->view('dashboard/profitability', $data + ['selected' => $data['period']['key']]);
+        $this->view('dashboard/profitability', $data + ['selected' => $data['period']['key'], 'growth' => $this->growth->summaryBySection()]);
     }
 
     /** „Dzisiaj”: wysyłki, braki produkcji, reklamacje, proformy. */
@@ -52,6 +56,26 @@ class DashboardController extends BaseController
             return $this->json(['message' => 'Zapisano cel działu.']);
         } catch (\Throwable $e) {
             return $this->json(['message' => $e->getMessage()], $e->getCode() >= 400 && $e->getCode() < 500 ? $e->getCode() : 422);
+        }
+    }
+
+    /** Okno grupy : sytuacja miesięczna, działania rozwoju sprzedaży, produkty grupy. */
+    public function growthGroup($id)
+    {
+        try {
+            return $this->json(['data' => $this->growth->group((int) $id, (string) ($_GET['period'] ?? 'month'))]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function saveGrowth($id = null)
+    {
+        try {
+            $action = $this->growth->save($this->getJson(Request::createFromGlobals()), $id === null ? null : (int) $id, $this->userId());
+            return $this->json(['message' => 'Zapisano działanie.', 'data' => $action]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
         }
     }
 

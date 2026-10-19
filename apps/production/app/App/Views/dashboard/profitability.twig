@@ -114,7 +114,8 @@
                 {% for g in groups %}
                     {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
                     <li class="{{ g.ok ? 'at-profit-ok' : 'at-profit-bad' }}">
-                        <div class="at-profit-card-head"><strong>{{ g.name }}</strong><span class="at-ratio-value">{{ g.staff_pct|pct }}</span></div>
+                        <div class="at-profit-card-head"><button type="button" class="at-growth-link" data-growth="{{ g.id }}" data-growth-name="{{ g.name }}">{{ g.name }} <i class="bi bi-chevron-right"></i></button><span class="at-ratio-value">{{ g.staff_pct|pct }}</span></div>
+                        {% if growth[g.id] is defined %}<div class="at-sub">{{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} · +{{ growth[g.id].revenue_month|eur }}/mies.</div>{% endif %}
                         <div class="at-ratio"><span class="at-ratio-bar" style="width: {{ width|round(1) }}%"></span><span class="at-ratio-target" style="left: 50%"></span></div>
                         <div class="at-sub">sprzedaż {{ g.revenue|eur }} · personel {{ g.staff|eur }} · cel ≤ {{ g.staff_target|pct(0) }}</div>
                         {% if g.missing > 0 %}
@@ -150,7 +151,10 @@
                     {% for g in groups %}
                         {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
                         <tr class="{{ g.ok ? 'at-profit-ok' : 'at-profit-bad' }}">
-                            <td><strong>{{ g.name }}</strong><div class="at-sub">{{ g.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</div></td>
+                            <td>
+                                <button type="button" class="at-growth-link" data-growth="{{ g.id }}" data-growth-name="{{ g.name }}" title="Rozwój sprzedaży grupy">{{ g.name }} <i class="bi bi-chevron-right"></i></button>
+                                <div class="at-sub">{{ g.cartons|plural_pl('karton', 'kartony', 'kartonów') }}{% if growth[g.id] is defined %} · {{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} +{{ growth[g.id].revenue_month|eur }}/mies.{% endif %}</div>
+                            </td>
                             <td class="text-end">{{ g.revenue|eur }}</td>
                             <td class="text-end">{{ g.staff|eur }}</td>
                             <td class="at-profit-ratio">
@@ -210,6 +214,7 @@
                 <strong>Brakuje</strong> = ile więcej sprzedaży potrzeba, żeby koszt personelu zmieścił się w celu (sprzedaż do celu = koszt personelu ÷ cel).
                 {% if current %}Okres bieżący: wskaźnik liczony od kosztu personelu proporcjonalnego do upływu dni, brakująca sprzedaż na cały okres (do {{ until }}).{% endif %}
                 * cel ogólny ({{ targets['profit.staff_target_pct']|pct(0) }}).
+                Kliknij grupę, żeby zobaczyć i dodać działania rozwoju sprzedaży (produkt, ilość na sklep, cena, marża, inwestycja, zwrot).
             </p>
             {% else %}
                 <p class="at-empty">Brak sprzedaży i kosztów personelu w tym okresie.</p>
@@ -312,6 +317,18 @@
         </div>
     </div>
 
+    <div class="modal fade" id="growthModal" tabindex="-1" aria-labelledby="growthModalTitle" aria-hidden="true" data-period="{{ selected }}">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="growthModalTitle" data-growth-title>Rozwój sprzedaży</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                </div>
+                <div class="modal-body" data-growth-body></div>
+            </div>
+        </div>
+    </div>
+
     <p class="at-profit-note">
         Sprzedaż: dokumenty WDT według daty wystawienia (EUR). Personel, media, amortyzacja i koszty stałe: <a href="{{ root }}/cost-calculator">kalkulator kosztów</a> (miesięcznie, PLN, kurs {{ rate|number_format(2, ',', ' ') }} z ustawień firmy).
         Surowce: koszt surowców kartonu z receptury. Szczegóły: <a href="{{ root }}/finances/section-dashboard">dashboard finansowy działów</a>, <a href="{{ root }}/finances/cost-analysis/section">koszt produktów</a>.
@@ -320,6 +337,8 @@
 {% endblock %}
 
 {% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/growth.js" defer></script>
 <script>
 (() => {
     const root = {{ root|json_encode|raw }};

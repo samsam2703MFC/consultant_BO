@@ -875,3 +875,19 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
   .navbar .quick-tags .badge.badge { font-size: 0 !important; padding-left: 8px !important; padding-right: 8px !important; }
   .navbar .quick-tags .badge i, .navbar .quick-tags .at-count, .navbar .quick-tags [data-profit-value] { font-size: 12px; }
 }
+
+/* --- Rozwój sprzedaży grupy (okno na stronie Rentowność) ------------------------------ */
+.at-growth-link { border: 0; background: none; padding: 0; font-weight: 600; color: var(--at-primary); text-align: left; }
+.at-growth-link:hover { text-decoration: underline; }
+.at-growth-link .bi { font-size: 11px; }
+.at-growth-situation td, .at-growth-situation th { white-space: nowrap; }
+.at-growth-actions td { vertical-align: middle; }
+.at-growth-actions .form-select { min-width: 130px; }
+.at-growth-wizard { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
+@media (max-width: 991px) { .at-growth-wizard { grid-template-columns: 1fr; } }
+.at-growth-wizard .at-purch-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 575px) { .at-growth-wizard .at-purch-form { grid-template-columns: 1fr; } }
+.at-growth-live { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: var(--at-radius); background: var(--at-bg-2); }
+.at-growth-live > div { display: flex; flex-direction: column; gap: 2px; }
+.at-growth-live strong { font-size: 18px; font-weight: 500; }
+.at-growth-actions td:nth-child(2) { min-width: 280px; }
