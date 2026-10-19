@@ -856,3 +856,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T16:36:01Z Résultat : Trafic clients, 12 semaines et carte des écarts
 2026-10-19T16:48:53Z Dashboard magasin : douze semaines face au N-1
 2026-10-19T16:49:14Z ERP : achats MP (coûts, offres, appels d'offres par mail, NC), postes et tâches, utilisateur connecté
+2026-10-19T16:56:30Z Dashboard magasin : clients, panier moyen, articles par client

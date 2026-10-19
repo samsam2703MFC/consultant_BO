@@ -21,7 +21,11 @@
  * dit, il ne montre pas un zéro.
  */
 
-/** GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 (2 à 13 semaines) */
+/**
+ * GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 (2 à 13 semaines)[&articles=1] — avec
+ * `articles=1`, chaque période (et son N-1) porte aussi `articles`, les pièces vendues (dashboard magasin, articles par
+ * client, 19/10/2026).
+ */
 function ep_ventes_semaines(): array
 {
     $sid = (int) ($_GET['shop'] ?? 0);
@@ -30,6 +34,17 @@ function ep_ventes_semaines(): array
     $periodes = vsPeriodes($vue, $date, $n);
     $lu = vsLireMagasin($sid, $periodes);
     $m = vsMagasin($sid, $periodes, $lu);
+    if (!empty($_GET['articles'])) {
+        $fen = [];
+        foreach ($periodes as $p) { if (!$p['futur']) { $fen[] = [$p['du'], $p['jusqua']]; $fen[] = [$p['du1'], $p['au1']]; } }
+        $A = vsArticles($fen);
+        foreach ($m['periodes'] as $i => $l) {
+            $p = $periodes[$i];
+            if ($p['futur']) { continue; }
+            $m['periodes'][$i]['articles'] = $A[$p['du'] . '|' . $p['jusqua']][(string) $sid] ?? null;
+            if ($l['n1'] !== null) { $m['periodes'][$i]['n1']['articles'] = $A[$p['du1'] . '|' . $p['au1']][(string) $sid] ?? null; }
+        }
+    }
     return ['shop' => (string) $sid, 'vue' => $vue, 'n' => count($periodes), 'du' => $periodes[0]['du'], 'au' => end($periodes)['au'],
         'aujourdhui' => date('Y-m-d'), 'semaines' => $m['periodes'], 'total' => $m['total'], 'totalN1' => $m['totalN1'],
         'n1Motif' => $m['n1Motif'], 'source' => vsSourceTexte($m['sources'], $vue)];
@@ -79,6 +94,38 @@ function ep_ventes_reseau(): array
     }
     return ['vue' => $vue, 'date' => $date, 'aujourdhui' => date('Y-m-d'), 'du' => $periodes[0]['du'], 'au' => end($periodes)['au'],
         'periodes' => $out, 'magasins' => $magasins, 'source' => vsSourceTexte($sources, $vue)];
+}
+
+/**
+ * Les pièces vendues de chaque fenêtre, magasin par magasin : `/consultant/shops/sales-kpis` (`products`, les produits
+ * vendus — la même source que les articles par ticket de l'année), un appel par fenêtre pour tout le réseau. Une fenêtre
+ * finie avant aujourd'hui se grave : lue un jour plus tard, elle est close. Rend ['du|au' => [magasin => pièces]].
+ */
+function vsArticles(array $fenetres): array
+{
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return []; }
+    $auj = date('Y-m-d'); $out = []; $paths = [];
+    foreach ($fenetres as [$d1, $d2]) {
+        $k = $d1 . '|' . $d2;
+        if (isset($out[$k]) || isset($paths[$k])) { continue; }
+        if ($d2 < $auj) { $c = setting('vsA:' . $k); if (is_array($c) && $c !== []) { $out[$k] = $c; continue; } }
+        $paths[$k] = '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $d1, 'date_to' => $d2]);
+    }
+    if ($paths === []) { return $out; }
+    try { $res = PanelApi::getParallele($paths, 6); } catch (Throwable $e) { return $out; }
+    foreach ($paths as $k => $ch) {
+        $par = [];
+        foreach (analyseListe($res[$k] ?? null) as $x) {
+            if (!is_array($x)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) { if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; } }
+            $pr = nombreOuNull($x, ['products', 'items', 'product_count']);
+            if ($id > 0 && $pr !== null) { $par[(string) $id] = (int) round($pr); }
+        }
+        $out[$k] = $par;
+        if ($par !== [] && explode('|', $k)[1] < $auj && function_exists('svGrave')) { try { svGrave('vsA:' . $k, $par); } catch (Throwable $e) { /* sans cache */ } }
+    }
+    return $out;
 }
 
 function vsParams(): array
