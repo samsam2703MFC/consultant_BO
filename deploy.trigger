@@ -850,3 +850,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T13:50:43Z ERP : style L'Atelier et menu Produkcja / Produkt / Zamówienia
 2026-10-19T13:59:37Z ERP : liens en https quand la page est en https
 2026-10-19T15:17:25Z ERP : tableau Dzisiaj, cloche, formulaires, réclamations ; module atelier P1 (schéma tfb_, API référentiels, démo)
+2026-10-19T15:45:11Z ERP : page de commande sans connexion franchise
