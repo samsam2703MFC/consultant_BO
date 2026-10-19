@@ -44,6 +44,12 @@ return function(RouteCollector $r) {
     ]);
 
 
+    // Koszt surowców szkicu receptury (kreator „Nowy produkt z recepturą”), tylko odczyt
+    $r->addRoute('POST', '/ajax/recipes/draft-cost', [
+        'controller' => App\Controllers\Web\Product\ProductRecipeWizardController::class,
+        'method'     => 'ajaxDraftCost'
+    ]);
+
     $r->addRoute('GET', '/ajax/recipes/final-recipes/costs/csv', [
         'controller' => App\Controllers\Web\Recipe\RecipeController::class,
         'method'     => 'ajaxGetRecipeFinalCostsCsv'

@@ -6,6 +6,8 @@
             <?php if (isset($category['id'])): ?>
                 <a href="<?= ROOT ?>/product-categories/<?= $category['id'] ?>/products/new" class="btn btn-primary"
                    role="button">Dodaj nowy</a>
+                <a href="<?= ROOT ?>/products/new-with-recipe?category=<?= (int) $category['id'] ?>" class="btn btn-outline-primary"
+                   role="button">Nowy produkt z recepturą</a>
             <?php else: ?>
                 <a href="<?= ROOT ?>/products/new" class="btn btn-primary"
                    role="button">Dodaj nowy</a>

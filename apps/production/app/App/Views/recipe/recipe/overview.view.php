@@ -28,6 +28,9 @@
             </div>
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                    <a href="<?=ROOT?>/products/new-with-recipe" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Nowy produkt z recepturą
+                    </a>
                     <button class="btn btn-outline-warning btn-sm" onclick="getProductsWithoutRecipePdf(this)">
                         <i class="bi bi-file-earmark-pdf me-1"></i>Produkty bez receptury (PDF)
                     </button>

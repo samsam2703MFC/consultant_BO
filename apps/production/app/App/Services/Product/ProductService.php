@@ -12,6 +12,15 @@ class ProductService {
 
     public function validate($data)
     {
+        return empty($this->validationErrors($data));
+    }
+
+    /**
+     * Błędy danych produktu: [pole => komunikat]; pusta tablica = dane poprawne.
+     * Te same reguły co validate() (używa ich też kreator „Nowy produkt z recepturą”).
+     */
+    public function validationErrors($data): array
+    {
         $errors = [];
 
         if (empty($data['name'])) {
@@ -51,14 +60,10 @@ class ProductService {
         }
 
         if (empty($data['id_section']) || $data['id_section'] === "-1") {
-            $errors['id_category'] = "Wybierz dział produkcyjny";
+            $errors['id_section'] = "Wybierz dział produkcyjny";
         }
 
-        if (empty($errors)) {
-            return true;
-        }
-
-        return false;
+        return $errors;
     }
 
     public function insert($data)
