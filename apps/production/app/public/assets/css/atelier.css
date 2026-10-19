@@ -157,6 +157,7 @@ a:hover { color: var(--at-primary-dark); }
 }
 .navbar .quick-tags .badge.badge:hover { background: var(--at-primary) !important; color: #fff !important; }
 .navbar .quick-tags .badge i { font-size: 13px; }
+@media (max-width: 991px) { .navbar .quick-tags { display: none !important; } }
 .user-menu .user-name h6, .user-menu .user-name .user-dropdown-name { color: var(--at-text); font-size: 13px; font-weight: 500; }
 .user-menu .user-name p, .user-menu .user-name .user-dropdown-status { color: var(--at-muted); font-size: 11px; }
 .user-menu .user-img .bi-person-circle { font-size: 30px; color: var(--at-primary); line-height: 1; }
@@ -423,3 +424,47 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-bell-empty, .at-bell-more { margin: 0; padding: 18px 14px; text-align: center; color: var(--at-muted); font-size: 12.5px; }
 .at-bell-more { padding: 10px 14px; border-top: 1px solid var(--at-line); }
 .alert.at-urgent { margin-bottom: 8px; padding: 9px 14px; font-size: 13px; }
+
+/* --- Pastylki d'état (réutilisées par plusieurs pages) ------------------------- */
+.at-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: var(--at-bg-2); color: var(--at-text); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.at-pill-ok { background: rgba(46, 125, 79, 0.10); color: var(--at-success); }
+.at-pill-warn { background: rgba(242, 201, 160, 0.45); color: var(--at-on-abricot); }
+.at-pill-danger { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
+.at-pill-muted { background: var(--at-bg-2); color: var(--at-muted); }
+.at-empty { margin: 0; padding: 14px 0; color: var(--at-muted); font-size: 13px; }
+.at-link { font-size: 12.5px; font-weight: 500; }
+
+/* --- Page « Dzisiaj » -------------------------------------------------------------- */
+.at-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+@media (max-width: 1199px) { .at-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) { .at-tiles { grid-template-columns: 1fr; } }
+.at-tile {
+  display: flex; flex-direction: column; gap: 6px; padding: 16px 18px;
+  background: var(--at-surface); border: 1px solid var(--at-line); border-left: 3px solid var(--at-line-2);
+  border-radius: var(--at-radius-lg); color: var(--at-text); text-decoration: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.at-tile:hover { color: var(--at-text); border-color: var(--at-line-2); box-shadow: 0 6px 18px rgba(34, 34, 34, 0.06); }
+.at-tile-label { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--at-muted); }
+.at-tile-label .bi { margin-right: 4px; }
+.at-tile-value { font-size: 22px; font-weight: 500; line-height: 1.2; }
+.at-tile-meta { font-size: 12.5px; color: var(--at-muted); }
+.at-tile-ok { border-left-color: var(--at-success); }
+.at-tile-warn { border-left-color: var(--at-abricot); }
+.at-tile-danger { border-left-color: var(--at-danger); }
+.at-tile-danger .at-tile-value { color: var(--at-danger); }
+.at-days td { vertical-align: middle; }
+.at-days .at-sub { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--at-muted); font-size: 11.5px; }
+.at-days tr.at-overdue strong { color: var(--at-danger); }
+.at-todo { list-style: none; margin: 0; padding: 0; }
+.at-todo li + li { border-top: 1px solid var(--at-line); }
+.at-todo a { display: flex; align-items: center; gap: 12px; padding: 11px 4px; color: var(--at-text); text-decoration: none; }
+.at-todo a:hover { color: var(--at-primary); }
+.at-todo a > .bi:first-child { flex: none; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--at-radius); background: var(--at-bg-2); font-size: 14px; }
+.at-todo-danger a > .bi:first-child { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
+.at-todo-warning a > .bi:first-child { background: rgba(242, 201, 160, 0.45); color: var(--at-on-abricot); }
+.at-todo-info a > .bi:first-child { color: var(--at-muted); }
+.at-todo span { flex: 1; min-width: 0; }
+.at-todo strong { display: block; font-size: 13px; font-weight: 500; }
+.at-todo small { display: block; color: var(--at-muted); font-size: 11.5px; }
+.at-todo .at-todo-go { color: var(--at-muted); font-size: 12px; }

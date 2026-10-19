@@ -34,6 +34,8 @@ class AppExtension extends AbstractExtension
     {
         return [
             new \Twig\TwigFilter('currency', [ $this, 'formatCurrency' ]),
+            new \Twig\TwigFilter('plural_pl', [ $this, 'pluralPl' ]),
+            new \Twig\TwigFilter('day_pl', 'day_label_pl'),
         ];
     }
 
@@ -46,6 +48,17 @@ class AppExtension extends AbstractExtension
     public function formatCurrency($amount, int $decimals = 2): string
     {
         return number_format((float)$amount, $decimals, ',', ' ') . ' zł';
+    }
+
+    /**
+     * Liczba z polską odmianą: {{ n|plural_pl('zamówienie', 'zamówienia', 'zamówień') }}
+     */
+    public function pluralPl($count, string $one, string $few, string $many): string
+    {
+        $n = abs((int) $count);
+        $word = $n === 1 ? $one
+            : (($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 12 || $n % 100 > 14)) ? $few : $many);
+        return number_format((int) $count, 0, ',', ' ') . ' ' . $word;
     }
 
     public function getOld(string $key, $default = '')

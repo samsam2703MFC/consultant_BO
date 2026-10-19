@@ -1,0 +1,177 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Dzisiaj{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Dzisiaj</h3>
+            <p class="text-subtitle text-muted">{{ today|day_pl }}</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-today">
+
+    {# --- Cztery liczby dnia -------------------------------------------------- #}
+    <div class="at-tiles">
+        <a class="at-tile" href="{{ root }}/client-orders">
+            <span class="at-tile-label"><i class="bi bi-calendar-event"></i> Najbliższa wysyłka</span>
+            {% if next %}
+                <strong class="at-tile-value">{{ next.day|day_pl|split(',')|first }}, {{ next.day|date('d.m') }}</strong>
+                <span class="at-tile-meta">{{ next.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ next.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</span>
+            {% else %}
+                <strong class="at-tile-value">—</strong>
+                <span class="at-tile-meta">Brak otwartych zamówień</span>
+            {% endif %}
+        </a>
+
+        <a class="at-tile {{ missing.products ? 'at-tile-warn' : 'at-tile-ok' }}" href="{{ root }}/production/planning">
+            <span class="at-tile-label"><i class="bi bi-gear"></i> Do wyprodukowania</span>
+            {% if not next %}
+                <strong class="at-tile-value">—</strong>
+                <span class="at-tile-meta">Nic nie jest zamówione</span>
+            {% elseif missing.products %}
+                <strong class="at-tile-value">{{ missing.products|plural_pl('produkt', 'produkty', 'produktów') }}</strong>
+                <span class="at-tile-meta">{{ missing.cartons|plural_pl('karton', 'kartony', 'kartonów') }} na {{ next.day|date('d.m') }}</span>
+            {% else %}
+                <strong class="at-tile-value">Wszystko na stanie</strong>
+                <span class="at-tile-meta">na {{ next.day|date('d.m') }}</span>
+            {% endif %}
+        </a>
+
+        {% set open_complaints = complaints.new + complaints.review %}
+        <a class="at-tile {{ open_complaints ? (complaints.oldest_days is not null and complaints.oldest_days > 7 ? 'at-tile-danger' : 'at-tile-warn') : 'at-tile-ok' }}" href="{{ root }}/franchise-complaints">
+            <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Reklamacje do decyzji</span>
+            <strong class="at-tile-value">{{ open_complaints }}</strong>
+            <span class="at-tile-meta">
+                {% if complaints.oldest_days is not null %}najstarsza czeka {{ complaints.oldest_days }} {{ complaints.oldest_days == 1 ? 'dzień' : 'dni' }}{% else %}Nic nie czeka{% endif %}
+            </span>
+        </a>
+
+        <a class="at-tile {{ proformas.unpaid ? '' : 'at-tile-ok' }}" href="{{ root }}/proforma-documents">
+            <span class="at-tile-label"><i class="bi bi-receipt"></i> Proformy nieopłacone</span>
+            <strong class="at-tile-value">{{ proformas.unpaid }}</strong>
+            <span class="at-tile-meta">z {{ proformas.orders|plural_pl('otwartego zamówienia', 'otwartych zamówień', 'otwartych zamówień') }}</span>
+        </a>
+    </div>
+
+    <div class="row">
+        {# --- Plan wysyłek ------------------------------------------------------ #}
+        <div class="col-12 col-xl-8">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Plan wysyłek</h4></div>
+                <div class="card-body pt-0">
+                    {% if days %}
+                    <div class="table-responsive">
+                        <table class="table mb-0 at-days">
+                            <thead>
+                                <tr><th>Dzień</th><th>Ilość</th><th>Etap</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                            {% for d in days %}
+                                <tr class="{{ d.overdue ? 'at-overdue' : '' }}">
+                                    <td>
+                                        <strong>{{ d.day|day_pl }}</strong>
+                                        <div class="at-sub" title="{{ d.client_names }}">{{ d.client_names }}</div>
+                                    </td>
+                                    <td>
+                                        {{ d.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }}
+                                        <div class="at-sub">{{ d.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</div>
+                                    </td>
+                                    <td>
+                                        {% if d.overdue %}
+                                            <span class="at-pill at-pill-danger">Po terminie</span>
+                                        {% elseif d.ready %}
+                                            <span class="at-pill at-pill-warn">Gotowe do dokumentów</span>
+                                        {% elseif d.scanning %}
+                                            <span class="at-pill">Kompletowanie · {{ d.scanning }}/{{ d.clients }}</span>
+                                        {% elseif d.shipped >= d.clients %}
+                                            <span class="at-pill at-pill-ok">Wysłane</span>
+                                        {% else %}
+                                            <span class="at-pill at-pill-muted">Produkcja</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if d.ready %}
+                                            <a class="btn btn-sm btn-primary" href="{{ root }}/shipping-documents/create">Wyślij</a>
+                                        {% else %}
+                                            <a class="btn btn-sm btn-outline-dark" href="{{ root }}/production/planning">Planuj</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="at-empty">Brak otwartych zamówień.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# --- Do zrobienia ------------------------------------------------------ #}
+        <div class="col-12 col-xl-4">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Do zrobienia</h4></div>
+                <div class="card-body pt-0">
+                    {% if todo %}
+                    <ul class="at-todo">
+                        {% for t in todo %}
+                            <li class="at-todo-{{ t.tone }}">
+                                <a href="{{ root }}{{ t.url }}">
+                                    <i class="bi {{ t.icon }}"></i>
+                                    <span>
+                                        <strong>{{ t.count|plural_pl(t.one, t.few, t.many) }}</strong>
+                                        {% if t.note %}<small>{{ t.note }}</small>{% endif %}
+                                    </span>
+                                    <i class="bi bi-chevron-right at-todo-go"></i>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                        <p class="at-empty"><i class="bi bi-check2-circle"></i> Wszystko załatwione.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# --- Ostatnie zamówienia --------------------------------------------------- #}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0">Ostatnie zamówienia</h4>
+            <a class="at-link" href="{{ root }}/client-orders">Wszystkie zamówienia</a>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr><th>Nr</th><th>Klient</th><th>Wpłynęło</th><th>Wysyłka</th><th class="text-end">Kartony</th><th>Proforma</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for o in latest %}
+                        <tr>
+                            <td><a href="{{ root }}/client-orders/{{ o.id }}/edit">#{{ o.id }}</a></td>
+                            <td>{{ o.company }}</td>
+                            <td>{{ o.create_order_date }}</td>
+                            <td>{{ o.expected_shipping_date }}</td>
+                            <td class="text-end">{{ o.cartons|number_format(0, ',', ' ') }}</td>
+                            <td>
+                                {% if o.proforma_status == 'paid' %}<span class="at-pill at-pill-ok">Opłacona</span>
+                                {% elseif o.proforma_status == 'issued' %}<span class="at-pill at-pill-warn">Nieopłacona</span>
+                                {% elseif o.proforma_status == 'cancelled' %}<span class="at-pill at-pill-muted">Anulowana</span>
+                                {% else %}<span class="at-pill at-pill-muted">Brak</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

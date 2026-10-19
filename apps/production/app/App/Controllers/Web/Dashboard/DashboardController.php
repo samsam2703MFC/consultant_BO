@@ -1,19 +1,15 @@
 <?php
-namespace App\Controllers\Web\Dashboard;;
+namespace App\Controllers\Web\Dashboard;
 
 use App\Core\Web\BaseController;
-use App\Services\Auth\LoginService;
+use App\Services\Dashboard\TodayService;
 
-/**
- * login class
- */
 class DashboardController extends BaseController
 {
+    public function __construct(private TodayService $today) {}
 
     public function index()
     {
-        $this->view('dashboard/dashboard', []);
+        $this->view('dashboard/dashboard', $this->today->overview());
     }
-
-
 }
