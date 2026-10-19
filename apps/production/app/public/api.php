@@ -28,6 +28,12 @@ if ($scriptName !== '' && str_starts_with($uri, $scriptName)) {
     $uri = $uri === '' ? '/' : $uri;
 }
 
+// 3b) aplikacja w podkatalogu (np. Alias /production): utnij ten prefiks
+$basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+if ($basePath !== '' && str_starts_with($uri, $basePath . '/')) {
+    $uri = substr($uri, strlen($basePath));
+}
+
 // 4) kosmetyka
 $uri = '/' . ltrim($uri, '/');
 

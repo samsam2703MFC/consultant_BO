@@ -77,9 +77,7 @@ class App
 
             case Dispatcher::NOT_FOUND:
             default:
-            $uri = $_SERVER['REQUEST_URI'] ?? '';
-
-            // Jeśli to żądanie AJAX / API — zwróć 404 w JSON
+            // Jeśli to żądanie AJAX / API — zwróć 404 w JSON ($uri bez podkatalogu aplikacji)
             if (str_starts_with($uri, '/ajax/')) {
                 http_response_code(404);
                 header('Content-Type: application/json');

@@ -2,17 +2,24 @@
 require_once __DIR__ . '/../../public/vendor/autoload.php'; // Wczytaj autoloader Composera
 use Dotenv\Dotenv;
 
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../../', null, false);
+$dotenv->load();
+
+/** Adresy z .env (APP_URL, APIPREFIXE, ATELIER_RESOURCES_PREFIXE) mają pierwszeństwo przed wartościami poniżej **/
+if (($_ENV['APP_URL'] ?? '') !== '') define('ROOT', rtrim($_ENV['APP_URL'], '/'));
+if (($_ENV['APIPREFIXE'] ?? '') !== '') define('APIPREFIXE', $_ENV['APIPREFIXE']);
+if (($_ENV['ATELIER_RESOURCES_PREFIXE'] ?? '') !== '') define('ATELIER_RESOURCES_PREFIXE', $_ENV['ATELIER_RESOURCES_PREFIXE']);
 
 /** Baza danych: DB_HOST / DB_NAME / DB_USER / DB_PASS w pliku .env (App/Core/Database.php) **/
 if($_SERVER['SERVER_NAME'] == 'slfood.local')
 {
     //define('APIPREFIXE', 'https://franchiseatelier.com/api/public/Production/');
-    define('APIPREFIXE', 'http://localhost/Intranet/api/public/Production/');
+    defined('APIPREFIXE') || define('APIPREFIXE', 'http://localhost/Intranet/api/public/Production/');
 //    define('APIPREFIXE', 'https://franchiseatelier.com/api/public/Production/');
 
-    define('ATELIER_RESOURCES_PREFIXE', 'http://localhost/Intranet/resources/');
+    defined('ATELIER_RESOURCES_PREFIXE') || define('ATELIER_RESOURCES_PREFIXE', 'http://localhost/Intranet/resources/');
 
-    define('ROOT',
+    defined('ROOT') || define('ROOT',
         (((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
             (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'))
             ? 'https://'
@@ -20,15 +27,12 @@ if($_SERVER['SERVER_NAME'] == 'slfood.local')
 
 }else
 {
-    define('APIPREFIXE', 'https://franchiseatelier.com/api/public/Production/');
-    define('ATELIER_RESOURCES_PREFIXE', 'https://franchiseatelier.com/resources/');
+    defined('APIPREFIXE') || define('APIPREFIXE', 'https://franchiseatelier.com/api/public/Production/');
+    defined('ATELIER_RESOURCES_PREFIXE') || define('ATELIER_RESOURCES_PREFIXE', 'https://franchiseatelier.com/resources/');
     //define('APIPREFIXE', 'http://localhost/Intranet/api/public/Production/');
 
-    define('ROOT', 'http://192.168.1.150/erp');
+    defined('ROOT') || define('ROOT', 'http://192.168.1.150/erp');
 }
-
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../../', null, false);
-$dotenv->load();
 
 define('APP_NAME', "My Webiste");
 define('APP_DESC', "Best website on the planet");

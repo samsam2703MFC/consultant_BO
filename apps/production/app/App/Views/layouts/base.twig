@@ -31,6 +31,18 @@
     <script>
         window.API_BASE_URL = `{{ root }}`; // baza = /minierp/
 
+        // Aplikacja w podkatalogu (np. /production): wywołania zapisane na sztywno
+        // jako '/ajax/...' lub '/api/...' kierujemy pod ten katalog.
+        (function () {
+            const base = new URL(window.API_BASE_URL, window.location.origin).pathname.replace(/\/+$/, '');
+            if (!base) return;
+            const fix = (u) => (typeof u === 'string' && /^\/(ajax|api)\//.test(u)) ? base + u : u;
+            const nativeFetch = window.fetch;
+            window.fetch = function (input, init) { return nativeFetch.call(window, fix(input), init); };
+            const nativeOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function (method, url, ...rest) { return nativeOpen.call(this, method, fix(url), ...rest); };
+        })();
+
         window.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.keyCode === 13) {
                 if (e.target.closest('.choices')) return; // allow in choices
