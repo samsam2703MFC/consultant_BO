@@ -864,3 +864,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T18:31:32Z atelier P5 (Gantt), logistyka (pojazdy, palety, załadunek)
 2026-10-19T18:47:01Z atelier P6 (optimiseur de shifts, obsada du jour, simulation)
 2026-10-19T19:05:33Z atelier P7 (tablettes, pointage, signatures, heures, KPIs) ; Rentowność : tableau des périodes
+2026-10-19T19:30:08Z logistyka : palety według rodzaju kartonu i kategorii, trasy z pojazdami i klientami
