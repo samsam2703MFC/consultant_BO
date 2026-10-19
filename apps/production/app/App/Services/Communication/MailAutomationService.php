@@ -3,8 +3,6 @@ namespace App\Services\Communication;
 
 use App\Core\TransactionManager;
 use App\Exceptions\CustomException;
-use App\Repositories\Communication\CommunicationMessageAttachmentRepository;
-use App\Repositories\Communication\CommunicationMessageRepository;
 use App\Repositories\Communication\CommunicationTemplateRepository;
 use App\Repositories\Communication\MailRuleRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -29,8 +27,7 @@ final class MailAutomationService
         private MailRuleRepository $rules,
         private MailEventSource $events,
         private CommunicationTemplateRepository $templates,
-        private CommunicationMessageRepository $messages,
-        private CommunicationMessageAttachmentRepository $attachments,
+        private OutgoingMessageService $outgoing,
         private TemplateRenderer $renderer,
         private EmailAccountService $accounts,
         private MailDeliveryPolicy $policy,
@@ -200,36 +197,7 @@ final class MailAutomationService
 
     private function queueMessage(array $rule, array $prepared): int
     {
-        $account = $this->accounts->active();
-        $domain = $account !== [] && str_contains($account['from_email'], '@') ? substr(strrchr($account['from_email'], '@'), 1) : 'localhost';
-        $links = $prepared['context']['links'];
-        $now = date('Y-m-d H:i:s');
-        $id = (int) $this->messages->insert([
-            'message_type' => $rule['template_type'],
-            'template_id' => $prepared['template']['id'],
-            'template_version' => $prepared['template']['version'],
-            'id_customer' => $prepared['context']['id_customer'],
-            'id_proforma' => $links['id_proforma'] ?? null,
-            'id_invoice' => $links['id_invoice'] ?? null,
-            'id_wdt' => $links['id_wdt'] ?? null,
-            'id_email_account' => $account['id'] ?? null,
-            'recipient_email' => $prepared['recipient'],
-            'sender_email' => $account['from_email'] ?? null,
-            'reply_to_email' => $account['reply_to_email'] ?? null,
-            'subject_text' => $prepared['subject'],
-            'body_text' => $prepared['body'],
-            'variables_json' => json_encode($prepared['context']['variables'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-            'was_edited' => false,
-            'status' => 'queued',
-            'message_id_header' => '<slfood-' . bin2hex(random_bytes(16)) . '@' . $domain . '>',
-            'created_by' => 'automat:' . $rule['code'],
-            'queued_at' => $now,
-            'next_try_at' => $now,
-        ]);
-        if ($id <= 0) {
-            throw new \RuntimeException('Nie udało się zapisać wiadomości.');
-        }
-
+        $files = [];
         if ($prepared['attachment'] !== null) {
             $pdf = match ($prepared['attachment']['source']) {
                 'proforma' => $this->proformas->generateDocumentPDF($prepared['attachment']['id']),
@@ -241,14 +209,18 @@ final class MailAutomationService
             if (!str_starts_with(ltrim($content), '%PDF')) {
                 throw new \RuntimeException('Generator dokumentu nie zwrócił pliku PDF.');
             }
-            $this->attachments->insert([
-                'id_message' => $id,
-                'filename' => (string) ($pdf['filename'] ?? 'dokument.pdf'),
-                'mime_type' => 'application/pdf',
-                'content_sha256' => hash('sha256', $content),
-                'content' => $content,
-            ]);
+            $files[] = ['filename' => (string) ($pdf['filename'] ?? 'dokument.pdf'), 'mime_type' => 'application/pdf', 'content' => $content];
         }
-        return $id;
+        return $this->outgoing->queue([
+            'message_type' => $rule['template_type'],
+            'template' => $prepared['template'],
+            'recipient' => $prepared['recipient'],
+            'subject' => $prepared['subject'],
+            'body' => $prepared['body'],
+            'variables' => $prepared['context']['variables'],
+            'id_customer' => $prepared['context']['id_customer'],
+            'links' => $prepared['context']['links'],
+            'created_by' => 'automat:' . $rule['code'],
+        ], $files);
     }
 }
