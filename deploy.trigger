@@ -852,3 +852,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T15:17:25Z ERP : tableau Dzisiaj, cloche, formulaires, réclamations ; module atelier P1 (schéma tfb_, API référentiels, démo)
 2026-10-19T15:45:11Z ERP : page de commande sans connexion franchise
 2026-10-19T16:10:43Z ERP : e-mails automatiques (log_only sur la copie), étiquettes avec allergènes
+2026-10-19T16:33:53Z ERP : page d'accueil Rentowność (ventes vs coût du personnel par groupe, CA manquant au target), base achats
