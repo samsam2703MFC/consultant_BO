@@ -28,6 +28,7 @@ class ComplaintController extends BaseController
     public function overview()
     {
         $data['complaints'] = $this->complaintService->getComplaints();
+        $data['next_shipping'] = $this->complaintService->getNextShippingDates();
 
         $this->view('/client/complaint/overview', $data);
     }

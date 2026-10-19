@@ -376,6 +376,11 @@ class ComplaintService
         }
     }
 
+    public function getNextShippingDates(): array
+    {
+        return $this->complaintRepository->getNextShippingDates();
+    }
+
     public function getComplaints()
     {
         $res = $this->complaintRepository->getAll();

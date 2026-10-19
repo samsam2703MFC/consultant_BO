@@ -12,4 +12,10 @@ class DashboardController extends BaseController
     {
         $this->view('dashboard/dashboard', $this->today->overview());
     }
+
+    /** Liczniki przy pozycjach menu (odświeżane przez assets/js/notifications.js). */
+    public function ajaxCounters()
+    {
+        return $this->json($this->today->counters());
+    }
 }

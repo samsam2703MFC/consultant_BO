@@ -7,6 +7,8 @@ $compensationLabels = [
     'REPLACEMENT' => 'Wymiana produktu',
     'CREDIT'      => 'Kredyt na konto',
 ];
+$statusCounts = array_count_values(array_map(fn($c) => $c['acceptance_status'] ?: 'NEW', $complaints ?? []));
+$nextShipping = $next_shipping ?? [];
 ?>
 
 <div class="page-heading">
@@ -54,26 +56,14 @@ $compensationLabels = [
                     </div>
                 <?php endif; ?>
 
-                <div class="row g-3 align-items-end mt-2">
-                    <div class="col-12 col-md-4">
-                        <label for="status-select" class="form-label">Filtruj po statusie</label>
-                        <select class="form-select" id="status-select" onchange="applyStatusFilter(this.value)">
-                            <option value="ALL">Wszystkie</option>
-                            <option value="NEW" selected>Nowe</option>
-                            <option value="IN_REVIEW">W trakcie (IN_REVIEW)</option>
-                            <option value="ACCEPTED">Przyjęte (archiwum)</option>
-                            <option value="REJECTED">Odrzucone (archiwum)</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-md-8 d-flex justify-content-md-end">
-                        <?php if (!empty($status)): ?>
-                            <div class="text-center text-md-end">
-                                <div class="text-muted">Status:</div>
-                                <div class="h5 mb-0"><?= $status->status_name ?></div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                <div class="at-tabs mt-2" id="status-tabs" role="tablist" aria-label="Filtruj po statusie">
+                    <?php foreach (['NEW' => 'Nowe', 'IN_REVIEW' => 'W weryfikacji', 'ACCEPTED' => 'Przyjęte', 'REJECTED' => 'Odrzucone', 'ALL' => 'Wszystkie'] as $code => $label): ?>
+                        <?php $n = $code === 'ALL' ? count($complaints ?? []) : ($statusCounts[$code] ?? 0); ?>
+                        <button type="button" role="tab" data-status="<?= $code ?>" onclick="applyStatusFilter('<?= $code ?>')">
+                            <?= $label ?>
+                            <span class="at-tab-count<?= in_array($code, ['NEW', 'IN_REVIEW'], true) && $n ? ' at-tab-count-hot' : '' ?>"><?= $n ?></span>
+                        </button>
+                    <?php endforeach; ?>
                 </div>
 
                 <hr class="my-4">
@@ -102,6 +92,8 @@ $compensationLabels = [
                             $reason       = ComplaintReasonTranslator::translate($complaint['complaint_reason'] ?? null);
                             $productName  = $complaint['product_name'] ?? '-';
                             $qty          = $complaint['product_quantity'] ?? '-';
+                            // 40.000 z bazy to 40 sztuk — bez zbędnych zer i z przecinkiem dziesiętnym.
+                            $fmtQty = fn($v) => is_numeric($v) ? rtrim(rtrim(number_format((float) $v, 3, ',', ' '), '0'), ',') : (string) $v;
                             $comment      = $complaint['client_comment'] ?? '';
                             $incidentAt   = $complaint['acceptance_timestamp'] ?? '-';
                             $reportedAt   = $complaint['reported_at'] ?? '-';
@@ -131,6 +123,23 @@ $compensationLabels = [
                             elseif ($accStatus === 'ACCEPTED') { $badgeClass = 'bg-success'; $badgeText = 'Przyjęta'; }
 
                             $shortComment = mb_strlen($comment) > 90 ? (mb_substr($comment, 0, 90) . '…') : $comment;
+
+                            // Ile dni czeka na decyzję: > 7 dni na czerwono, od 3 dni na pomarańczowo.
+                            $isOpen = in_array($accStatus ?: 'NEW', ['NEW', 'IN_REVIEW'], true);
+                            $waitDays = $isOpen && strtotime((string) $incidentAt) ? (int) floor((time() - strtotime($incidentAt)) / 86400) : null;
+                            $waitClass = $waitDays === null ? '' : ($waitDays > 7 ? 'at-pill-danger' : ($waitDays >= 3 ? 'at-pill-warn' : 'at-pill-muted'));
+
+                            $nextShip = $nextShipping[$complaint['id_customer'] ?? 0] ?? null;
+                            $quick = [
+                                'id' => $cid,
+                                'status' => $accStatus ?: 'NEW',
+                                'qty' => (int) ($qty ?: 0),
+                                'nonProduct' => $isNonProduct,
+                                'requested' => $requestedAction,
+                                'product' => $productName,
+                                'customer' => $customerName,
+                                'nextShip' => $nextShip ? date('d/m/Y', strtotime($nextShip)) : null,
+                            ];
                             ?>
 
                             <div class="accordion-item mb-2 border rounded-3 complaint-item"
@@ -152,6 +161,9 @@ $compensationLabels = [
                                                     <span class="fw-semibold fs-6"><?= htmlspecialchars($customerName) ?></span>
                                                     <span class="badge <?= $badgeClass ?>"><?= $badgeText ?></span>
                                                     <span class="badge <?= $typeBadgeClass ?>"><?= $typeBadgeText ?></span>
+                                                    <?php if ($waitDays !== null): ?>
+                                                        <span class="at-pill <?= $waitClass ?>"><i class="bi bi-clock"></i> czeka <?= $waitDays ?> <?= $waitDays === 1 ? 'dzień' : 'dni' ?></span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div class="text-muted small">
                                                     <i class="bi bi-calendar-event me-1"></i>
@@ -179,7 +191,7 @@ $compensationLabels = [
                                                 <?php if (!$isNonProduct): ?>
                                                     <span class="small">
                                                         <span class="text-muted">Ilość reklamowana:</span>
-                                                        <span class="ms-1 fw-semibold badge bg-secondary"><?= htmlspecialchars($qty) ?></span>
+                                                        <span class="ms-1 fw-semibold badge bg-secondary"><?= htmlspecialchars($fmtQty($qty)) ?></span>
                                                         <span class="ms-1 text-muted">szt.</span>
                                                     </span>
                                                 <?php endif; ?>
@@ -203,7 +215,7 @@ $compensationLabels = [
                                                     <?php if ($acceptedQty !== null): ?>
                                                         <span class="small">
                                                             <span class="text-muted">Uznana ilość:</span>
-                                                            <span class="ms-1 fw-semibold badge bg-secondary"><?= htmlspecialchars((string)$acceptedQty) ?></span>
+                                                            <span class="ms-1 fw-semibold badge bg-secondary"><?= htmlspecialchars($fmtQty($acceptedQty)) ?></span>
                                                             <span class="ms-1 text-muted">szt.</span>
                                                         </span>
                                                     <?php endif; ?>
@@ -232,6 +244,23 @@ $compensationLabels = [
                                     </button>
                                 </h2>
 
+                                <?php if ($isOpen): ?>
+                                    <div class="at-quick" data-complaint="<?= htmlspecialchars(json_encode($quick, JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>">
+                                        <button class="btn btn-sm btn-primary" type="button" data-quick="accept">
+                                            <i class="bi bi-check2"></i> Uznaj
+                                        </button>
+                                        <?php if (($accStatus ?: 'NEW') === 'NEW'): ?>
+                                            <button class="btn btn-sm btn-outline-dark" type="button" data-quick="review">
+                                                <i class="bi bi-hourglass-split"></i> Do weryfikacji
+                                            </button>
+                                        <?php endif; ?>
+                                        <button class="btn btn-sm btn-outline-danger" type="button" data-quick="reject">
+                                            <i class="bi bi-x"></i> Odrzuć
+                                        </button>
+                                        <span class="at-quick-hint">Decyzja trafia do systemu franczyzy.</span>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div id="collapse-<?= $cid ?>"
                                      class="accordion-collapse collapse"
                                      aria-labelledby="heading-<?= $cid ?>"
@@ -258,7 +287,7 @@ $compensationLabels = [
 
                                                                 <dt class="col-sm-5 text-muted fw-normal">Ilość reklamowana</dt>
                                                                 <dd class="col-sm-7">
-                                                                    <span class="badge bg-secondary me-1"><?= htmlspecialchars($qty) ?></span> szt.
+                                                                    <span class="badge bg-secondary me-1"><?= htmlspecialchars($fmtQty($qty)) ?></span> szt.
                                                                 </dd>
                                                             <?php endif; ?>
 
@@ -331,7 +360,7 @@ $compensationLabels = [
                                                                 <dt class="col-sm-5 text-muted fw-normal">Ilość uznana</dt>
                                                                 <dd class="col-sm-7">
                                                                     <?php if ($acceptedQty !== null): ?>
-                                                                        <span class="badge bg-secondary me-1"><?= htmlspecialchars((string)$acceptedQty) ?></span> szt.
+                                                                        <span class="badge bg-secondary me-1"><?= htmlspecialchars($fmtQty($acceptedQty)) ?></span> szt.
                                                                     <?php else: ?>
                                                                         <span class="text-muted fst-italic">—</span>
                                                                     <?php endif; ?>
@@ -410,7 +439,7 @@ $compensationLabels = [
                                                                 <button class="btn btn-outline-danger"
                                                                         type="button"
                                                                         onclick="rejectComplaint(<?= $cid ?>, this)">
-                                                                    <i class="bi bi-x-circle"></i> REJECT
+                                                                    <i class="bi bi-x-circle"></i> Odrzuć reklamację
                                                                 </button>
                                                             </div>
 
@@ -451,6 +480,105 @@ $compensationLabels = [
 </div>
 
 <script>
+    // Gotowe odpowiedzi: etykieta po polsku, treść po francusku (trafia do franczyzobiorcy).
+    const REJECT_REASONS = [
+        ['Brak zdjęć', "Aucune photo jointe : nous ne pouvons pas constater l'anomalie."],
+        ['Brak opisu', "La description ne permet pas d'identifier l'anomalie constatée."],
+        ['Po terminie', "La réclamation a été déposée après le délai prévu."],
+        ['Szkoda po dostawie', "Le dommage est survenu après la livraison (transport ou stockage)."],
+        ['Ilość zgodna z WZ', "La quantité livrée correspond au bon de livraison."],
+        ['Zgodny ze specyfikacją', "Le produit livré est conforme à sa fiche technique."],
+    ];
+
+    // Domyślna odpowiedź przy uznaniu, zależnie od formy rekompensaty.
+    function acceptAnswer(method, nextShip) {
+        if (method === 'REPLACEMENT') return nextShip ? `Expédition le ${nextShip}` : 'Remplacement lors de la prochaine expédition.';
+        if (method === 'REFUND') return 'Remboursement accordé.';
+        if (method === 'CREDIT') return 'Avoir accordé sur votre compte.';
+        return '';
+    }
+
+    function patchComplaint(id, payload) {
+        return api(`/ajax/franchise-complaints/${id}`, { method: 'PATCH', data: payload }).then(result => {
+            if (!result.ok) throw new Error(result.description || result.message || 'Błąd aktualizacji');
+            return result;
+        });
+    }
+
+    // „Uznaj” jednym oknem: ilość i forma rekompensaty są już wypełnione.
+    // Nowa reklamacja przechodzi przez „W weryfikacji”, tak jak dotąd widzi to franczyza.
+    function quickAccept(c, btn) {
+        const method = ['REFUND', 'REPLACEMENT', 'CREDIT'].includes(c.requested) ? c.requested : 'REPLACEMENT';
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
+        const fields = c.nonProduct ? `
+                <label class="form-label" for="production_response">Odpowiedź dla franczyzy</label>
+                <textarea id="production_response" class="form-control" rows="3"></textarea>
+            ` : `
+                <p class="mb-3"><strong>${esc(c.product)}</strong><br><span class="text-muted">${esc(c.customer)} · zgłoszono ${c.qty} szt.</span></p>
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label" for="compensation_method">Rekompensata</label>
+                        <select id="compensation_method" class="form-select">
+                            ${Object.entries({REPLACEMENT: 'Wymiana produktu', REFUND: 'Zwrot pieniędzy', CREDIT: 'Kredyt na konto'}).map(([k, l]) => `<option value="${k}" ${k === method ? 'selected' : ''}>${l}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label" for="accepted_qty">Ilość uznana</label>
+                        <input id="accepted_qty" type="number" class="form-control" min="0" max="${c.qty}" step="1" value="${c.qty}">
+                    </div>
+                </div>
+                <label class="form-label" for="production_response">Odpowiedź dla franczyzy</label>
+                <textarea id="production_response" class="form-control" rows="2">${esc(acceptAnswer(method, c.nextShip))}</textarea>
+            `;
+        Swal.fire({
+            title: 'Uznanie reklamacji',
+            html: `<div class="text-start">${fields}</div>`,
+            showCancelButton: true,
+            confirmButtonText: 'Uznaj',
+            cancelButtonText: 'Anuluj',
+            focusConfirm: true,
+            didOpen: (popup) => {
+                const select = popup.querySelector('#compensation_method');
+                const area = popup.querySelector('#production_response');
+                if (!select) return;
+                let auto = area.value;
+                select.addEventListener('change', () => {
+                    if (area.value === auto) area.value = auto = acceptAnswer(select.value, c.nextShip);
+                });
+            },
+            preConfirm: () => {
+                const comment = (document.getElementById('production_response')?.value ?? '').trim();
+                if (comment.length > 2000) { Swal.showValidationMessage('Odpowiedź jest za długa (max 2000 znaków).'); return false; }
+                if (c.nonProduct) return { acceptance_status: 'ACCEPTED', production_response: comment };
+                const qty = parseInt(document.getElementById('accepted_qty')?.value ?? '', 10);
+                if (Number.isNaN(qty) || qty < 0) { Swal.showValidationMessage('Podaj poprawną ilość (>= 0).'); return false; }
+                if (qty > c.qty) { Swal.showValidationMessage('Nie możesz uznać więcej niż zgłoszono.'); return false; }
+                return {
+                    acceptance_status: 'ACCEPTED',
+                    accepted_quantity: qty,
+                    production_response: comment,
+                    compensation_method: document.getElementById('compensation_method').value,
+                };
+            }
+        }).then(res => {
+            if (!res.isConfirmed) return;
+            if (btn) btn.disabled = true;
+            const first = c.status === 'NEW' ? patchComplaint(c.id, { acceptance_status: 'IN_REVIEW' }) : Promise.resolve();
+            first.then(() => patchComplaint(c.id, res.value))
+                .then(() => { showSnack(true, 'Reklamacja uznana'); setTimeout(() => location.reload(), 800); })
+                .catch(err => { showSnack(false, err.message || 'Błąd komunikacji'); if (btn) btn.disabled = false; });
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-quick]');
+        if (!btn) return;
+        const c = JSON.parse(btn.closest('[data-complaint]').dataset.complaint);
+        if (btn.dataset.quick === 'accept') quickAccept(c, btn);
+        if (btn.dataset.quick === 'review') acceptComplaint(c.id, btn);
+        if (btn.dataset.quick === 'reject') rejectComplaint(c.id, btn);
+    });
+
     function acceptComplaint(id, btn) {
         updateComplaint(id, { acceptance_status: 'IN_REVIEW' }, btn, 'Reklamacja przyjęta do weryfikacji');
     }
@@ -460,14 +588,27 @@ $compensationLabels = [
             title: 'Odrzucenie reklamacji',
             html: `
                 <div class="text-start">
-                    <label class="form-label">Uzasadnienie odrzucenia</label>
+                    <label class="form-label">Gotowe odpowiedzi</label>
+                    <div class="at-chips mb-3">
+                        ${REJECT_REASONS.map(([label], i) => `<button type="button" class="at-chip" data-reason="${i}">${label}</button>`).join('')}
+                    </div>
+                    <label class="form-label" for="production_response">Uzasadnienie odrzucenia</label>
                     <textarea id="production_response" class="form-control" rows="5"
-                        placeholder="Wpisz powód odrzucenia..."></textarea>
+                        placeholder="Wpisz powód odrzucenia albo wybierz gotową odpowiedź..."></textarea>
                     <div class="form-text">
-                        Ta informacja zostanie wysłana do systemu franczyzowego.
+                        Ta informacja zostanie wysłana do systemu franczyzowego (odpowiedzi po francusku, jak dotychczas).
                     </div>
                 </div>
             `,
+            didOpen: (popup) => {
+                popup.querySelectorAll('[data-reason]').forEach(chip => chip.addEventListener('click', () => {
+                    const area = popup.querySelector('#production_response');
+                    const text = REJECT_REASONS[chip.dataset.reason][1];
+                    area.value = area.value.trim() ? area.value.trim() + '\n' + text : text;
+                    chip.classList.add('is-used');
+                    area.focus();
+                }));
+            },
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Odrzuć',
@@ -699,15 +840,19 @@ $compensationLabels = [
         const cnt = document.getElementById('complaints-visible-count');
         if (cnt) cnt.textContent = String(visible);
 
-        // zapamiętaj wybór (MVP)
-        localStorage.setItem('complaints_status_filter', status);
+        document.querySelectorAll('#status-tabs [data-status]').forEach(tab => {
+            const active = tab.dataset.status === status;
+            tab.classList.toggle('active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+
+        // zapamiętaj wybór
+        try { localStorage.setItem('complaints_status_filter', status); } catch (_) {}
     }
 
     (function initStatusFilter(){
-        const saved = localStorage.getItem('complaints_status_filter') || 'NEW';
-        const select = document.getElementById('status-select');
-        if (select) select.value = saved;
-
+        let saved = 'NEW';
+        try { saved = localStorage.getItem('complaints_status_filter') || 'NEW'; } catch (_) {}
         applyStatusFilter(saved);
     })();
 

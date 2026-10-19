@@ -60,6 +60,14 @@ class TodayService
         ];
     }
 
+    public function counters(): array
+    {
+        $complaints = $this->repository->getOpenComplaints();
+        return [
+            'complaints' => (int) ($complaints['new_count'] ?? 0) + (int) ($complaints['review_count'] ?? 0),
+        ];
+    }
+
     /** Lista „Do zrobienia”: tylko to, co wymaga ruchu; każda pozycja prowadzi do właściwej strony. */
     private function todo(array $days, array $complaints, array $proformas, int $readyPallets, int $belowMinimum, int $withoutRecipe, ?int $complaintAgeDays): array
     {

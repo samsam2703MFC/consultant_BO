@@ -130,6 +130,21 @@
         request(root + '/ajax/app-notifications/acknowledge-all', { method: 'POST' }).then(refresh);
     });
 
+    // Liczniki przy pozycjach menu i skrótach górnego paska: <span data-count="complaints">.
+    function counters() {
+        if (!document.querySelector('[data-count]')) return;
+        request(root + '/ajax/rail-counters').then(function (r) {
+            if (!r.ok) return;
+            document.querySelectorAll('[data-count]').forEach(function (el) {
+                var n = parseInt(r[el.dataset.count], 10) || 0;
+                el.textContent = n > 99 ? '99+' : String(n);
+                el.hidden = n === 0;
+            });
+        }).catch(function () {});
+    }
+
     refresh();
+    counters();
     window.setInterval(refresh, 20000);
+    window.setInterval(counters, 60000);
 })();

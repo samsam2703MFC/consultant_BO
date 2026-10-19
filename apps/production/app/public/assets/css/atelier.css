@@ -468,3 +468,24 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-todo strong { display: block; font-size: 13px; font-weight: 500; }
 .at-todo small { display: block; color: var(--at-muted); font-size: 11.5px; }
 .at-todo .at-todo-go { color: var(--at-muted); font-size: 12px; }
+
+/* --- Compteurs du menu ------------------------------------------------------------ */
+.at-count { display: inline-block; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 9px; background: var(--at-primary); color: #fff; font-size: 10.5px; font-weight: 500; line-height: 18px; text-align: center; vertical-align: 1px; }
+.sidebar-wrapper .menu .sidebar-link .at-count, .sidebar-wrapper .menu .submenu .submenu-item a .at-count { color: #fff !important; font-weight: 500; }
+.navbar .quick-tags .badge.badge:hover .at-count { background: #fff; color: var(--at-primary); }
+
+/* --- Onglets à compteur (réclamations, listes) ------------------------------------ */
+.at-tabs { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--at-bg-2); border-radius: var(--at-radius); }
+.at-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 0; border-radius: var(--at-radius); background: transparent; color: var(--at-muted); font-size: 12.5px; font-weight: 500; }
+.at-tabs button:hover { color: var(--at-text); }
+.at-tabs button.active { background: var(--at-surface); color: var(--at-text); box-shadow: 0 1px 3px rgba(34, 34, 34, 0.08); }
+.at-tab-count { min-width: 20px; padding: 1px 6px; border-radius: 9px; background: rgba(34, 34, 34, 0.06); font-size: 11px; text-align: center; }
+.at-tab-count-hot { background: var(--at-primary); color: #fff; }
+
+/* --- Réclamations : actions rapides ----------------------------------------------- */
+.at-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 20px 14px; }
+.at-quick-hint { margin-left: auto; color: var(--at-muted); font-size: 11.5px; }
+.at-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.at-chip { padding: 5px 11px; border: 1px solid var(--at-line-2); border-radius: 999px; background: var(--at-surface); color: var(--at-text); font-size: 12px; }
+.at-chip:hover { border-color: var(--at-primary); color: var(--at-primary); }
+.at-chip.is-used { background: var(--at-primary-soft); border-color: var(--at-primary); color: var(--at-primary); }

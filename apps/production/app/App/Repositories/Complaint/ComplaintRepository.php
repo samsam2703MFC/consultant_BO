@@ -79,6 +79,18 @@ class ComplaintRepository extends BaseRepository
         return false;
     }
 
+    /** Najbliższy dzień wysyłki otwartego zamówienia każdego klienta (do odpowiedzi „Expédition le …”). */
+    public function getNextShippingDates(): array
+    {
+        $rows = $this->query(
+            "SELECT id_customer, MIN(expected_shipping_date) AS day
+             FROM customer_order
+             WHERE status = 1 AND expected_shipping_date >= CURDATE()
+             GROUP BY id_customer"
+        ) ?: [];
+        return array_column($rows, 'day', 'id_customer');
+    }
+
     public function getAll()
     {
         $sql = "SELECT
