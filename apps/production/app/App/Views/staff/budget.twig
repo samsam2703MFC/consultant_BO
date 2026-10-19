@@ -1,0 +1,229 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Budżet personelu i premie{% endblock %}
+
+{% set t = totals %}
+{% set current = period.current %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Budżet personelu i premie</h3>
+            <p class="text-subtitle text-muted">
+                {{ period.label }}{% if current %} · stan na {{ period.to|date('d.m') }} ({{ (period.elapsed * 100)|round }} % okresu){% endif %}
+            </p>
+        </div>
+        <form method="get" action="{{ root }}/staff/budget" class="at-profit-period">
+            <label for="budgetPeriod" class="visually-hidden">Okres</label>
+            <select id="budgetPeriod" name="period" class="form-select" onchange="this.form.submit()">
+                {% for key, label in options %}
+                    <option value="{{ key }}" {{ key == selected ? 'selected' : '' }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button class="btn btn-primary">Pokaż</button></noscript>
+        </form>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-profit at-staff">
+
+    {% for w in notices %}
+        <div class="alert alert-warning at-profit-warn"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>
+    {% endfor %}
+
+    <div class="at-staff-rule">
+        <div>
+            <strong>Wynagrodzenie = minimum + premia.</strong>
+            Pula premii działu = <strong>% sprzedaży działu</strong>; premia na osobę = pula ÷ aktywne osoby z prawem do premii.
+            Budżet personelu działu = suma minimów + pula premii.
+        </div>
+        <form id="bonusDefault" class="at-staff-pct">
+            <label for="bonusDefaultPct">Pula premii (wszystkie działy)</label>
+            <span class="input-group input-group-sm">
+                <input id="bonusDefaultPct" class="form-control" name="value" inputmode="decimal" value="{{ default_pct }}" required>
+                <span class="input-group-text">% sprzedaży</span>
+            </span>
+            <button class="btn btn-sm btn-primary">Zapisz</button>
+        </form>
+    </div>
+
+    <div class="at-profit-hero">
+        <div class="at-tile at-profit-tile">
+            <span class="at-tile-label"><i class="bi bi-wallet2"></i> Budżet personelu (model)</span>
+            <strong class="at-tile-value">{{ t.budget|eur }} <small>{{ t.budget_pct|pct }}</small></strong>
+            <span class="at-tile-meta">minimum {{ t.base|eur }} + premie {{ t.pool|eur }} · sprzedaż {{ t.revenue|eur }}</span>
+            <div class="at-profit-gap at-profit-gap-info">Dziś (koszty miesięczne): <strong>{{ t.actual|eur }}</strong> · {{ t.actual_pct|pct }} sprzedaży</div>
+        </div>
+        <div class="at-tile at-profit-tile">
+            <span class="at-tile-label"><i class="bi bi-cash-stack"></i> Pula premii</span>
+            <strong class="at-tile-value">{{ t.pool|eur }}</strong>
+            <span class="at-tile-meta">{{ t.active|plural_pl('aktywna osoba', 'aktywne osoby', 'aktywnych osób') }} z {{ t.people }}</span>
+        </div>
+        <div class="at-tile at-profit-tile">
+            <span class="at-tile-label"><i class="bi bi-people"></i> Wynagrodzenia minimalne</span>
+            <strong class="at-tile-value">{{ t.base|eur }}</strong>
+            <span class="at-tile-meta">stała część, niezależna od sprzedaży{{ current ? ' (proporcjonalnie do dni)' : '' }}</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Działy: minimum, pula premii, premia na osobę</h4></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table mb-0 at-profit-table at-staff-table">
+                    <thead>
+                        <tr>
+                            <th>Dział</th>
+                            <th class="text-end">Sprzedaż</th>
+                            <th>Premie, % sprzedaży</th>
+                            <th class="text-end">Pula premii</th>
+                            <th class="text-end">Premia / osobę</th>
+                            <th class="text-end">Minimum</th>
+                            <th class="text-end">Budżet personelu</th>
+                            <th class="text-end">Sprzedaż do celu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for s in sections %}
+                        <tr data-section="{{ s.id }}" class="{{ s.shared ? 'at-profit-shared' : '' }}">
+                            <td>
+                                <a href="#staff-{{ s.id }}" class="at-growth-link">{{ s.name }}</a>
+                                <div class="at-sub">{{ s.active }}/{{ s.people }} aktywnych · {{ s.eligible|plural_pl('osoba', 'osoby', 'osób') }} z premią{% if s.no_base %} · <span class="text-danger">{{ s.no_base }} bez minimum</span>{% endif %}</div>
+                            </td>
+                            <td class="text-end">{{ s.shared ? '—' : s.revenue|eur }}{% if s.shared %}<div class="at-sub">dział wspólny{{ s.average ? ': średnia premia działów' : ': % całej sprzedaży ' ~ s.basis|eur }}</div>{% endif %}</td>
+                            <td>
+                                <span class="input-group input-group-sm at-profit-input">
+                                    <input class="form-control" data-field="bonus_pct" inputmode="decimal" value="{{ s.pct_custom ? s.pct : '' }}" placeholder="{{ s.shared ? 'średnia' : default_pct }}" aria-label="% premii {{ s.name }}">
+                                    <span class="input-group-text">%</span>
+                                </span>
+                            </td>
+                            <td class="text-end"><strong>{{ s.pool|eur }}</strong>{% if s.pool_projection %}<div class="at-sub">tempo: {{ s.pool_projection|eur }}</div>{% endif %}</td>
+                            <td class="text-end">
+                                <strong>{{ s.per_person_pln|pln }}</strong>
+                                {% if s.per_person_projection_pln %}<div class="at-sub">na koniec okresu ok. {{ s.per_person_projection_pln|pln }}</div>{% endif %}
+                            </td>
+                            <td class="text-end">{{ s.base|eur }}<div class="at-sub">{{ s.base_month_pln|pln }}/mies.</div></td>
+                            <td class="text-end">
+                                <strong>{{ s.budget|eur }}</strong>
+                                {% if s.budget_pct is not null %}<div class="at-sub {{ s.target is not null and s.budget_pct > s.target ? 'text-danger' : '' }}">{{ s.budget_pct|pct }} sprzedaży{% if s.target is not null %} · cel ≤ {{ s.target|pct(0) }}{% endif %}</div>{% endif %}
+                                <div class="at-sub">dziś {{ s.actual|eur }}{{ s.actual_pct is not null ? ' · ' ~ s.actual_pct|pct : '' }}</div>
+                            </td>
+                            <td class="text-end">
+                                {% if s.shared %}
+                                    <span class="at-sub">—</span>
+                                {% elseif not s.reachable %}
+                                    <span class="text-danger">premie ≥ cel {{ s.target|pct(0) }}</span>
+                                {% elseif s.needed is not null %}
+                                    <strong>{{ s.needed|eur }}</strong>
+                                    <div class="at-sub">{{ s.missing > 0 ? 'brakuje ' ~ s.missing|eur : 'osiągnięte' }}</div>
+                                    {% if s.per_person_at_target_pln %}<div class="at-sub">przy celu premia {{ s.per_person_at_target_pln|pln }}/os.</div>{% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="at-profit-total">
+                            <td><strong>Razem</strong></td>
+                            <td class="text-end"><strong>{{ t.revenue|eur }}</strong></td>
+                            <td></td>
+                            <td class="text-end"><strong>{{ t.pool|eur }}</strong></td>
+                            <td></td>
+                            <td class="text-end"><strong>{{ t.base|eur }}</strong></td>
+                            <td class="text-end"><strong>{{ t.budget|eur }}</strong><div class="at-sub">{{ t.budget_pct|pct }} sprzedaży</div></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="at-profit-note">
+                <strong>Sprzedaż do celu</strong> przy premiach z % sprzedaży = minimum ÷ (cel kosztu personelu − % premii): każde euro sprzedaży powyżej podnosi premię, a koszt personelu / sprzedaż maleje.
+                {% if current %}Okres bieżący: pula z dotychczasowej sprzedaży, „na koniec okresu” = w obecnym tempie.{% endif %}
+                Pusty % = wartość ogólna ({{ default_pct|pct(1) }}, do potwierdzenia); dział wspólny bez % = średnia premia na osobę działów produkcyjnych, z % = % sprzedaży całej firmy.
+            </p>
+        </div>
+    </div>
+
+    {% for s in sections %}
+    <div class="card" id="staff-{{ s.id }}">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">{{ s.name }}</h4>
+            <span class="at-sub">pula {{ s.pool|eur }} ÷ {{ s.eligible|plural_pl('osoba', 'osoby', 'osób') }} = {{ s.per_person_pln|pln }} · {{ current ? 'w obecnym tempie ' : 'średnio ' }}{{ s.per_person_month_pln|pln }}/mies. na osobę</span>
+        </div>
+        <div class="card-body pt-0">
+            {% if s.employees %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 at-staff-people">
+                    <thead>
+                        <tr>
+                            <th>Pracownik</th>
+                            <th class="text-end">Koszt dziś / mies.</th>
+                            <th>Minimum / mies.</th>
+                            <th class="text-end">Ponad minimum dziś</th>
+                            <th class="text-end">Premia / mies.</th>
+                            <th class="text-end">Razem / mies.</th>
+                            <th class="text-center">Aktywny</th>
+                            <th class="text-center">Premia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for e in s.employees %}
+                        <tr data-employee="{{ e.id }}" class="{{ e.active ? '' : 'at-staff-inactive' }}">
+                            <td>{{ e.name }}{% if e.notes %}<div class="at-sub">{{ e.notes }}</div>{% endif %}</td>
+                            <td class="text-end">{{ e.cost|pln }}</td>
+                            <td>
+                                <span class="input-group input-group-sm at-staff-base">
+                                    <input class="form-control" data-field="base_monthly" inputmode="decimal" value="{{ e.base is not null ? e.base : '' }}" placeholder="nie podano" aria-label="Minimum {{ e.name }}">
+                                    <span class="input-group-text">zł</span>
+                                </span>
+                            </td>
+                            <td class="text-end {{ e.above_min is not null and e.above_min < 0 ? 'text-danger' : '' }}">{{ e.above_min|pln }}</td>
+                            <td class="text-end">{{ e.bonus_pln|pln }}</td>
+                            <td class="text-end"><strong>{{ e.model_pln|pln }}</strong></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input" data-field="active" {{ e.active ? 'checked' : '' }} aria-label="Aktywny {{ e.name }}"></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input" data-field="bonus_eligible" {{ e.bonus_eligible ? 'checked' : '' }} aria-label="Premia {{ e.name }}"></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="at-profit-note">Koszt dziś: kartoteka <a href="{{ root }}/production-employees">pracowników produkcji</a>. Minimum = stała część (koszt pracodawcy). Premia / mies. = pula ÷ osoby z premią{{ current ? ', w obecnym tempie sprzedaży' : ', średnio na miesiąc' }}. Nieaktywny (dłuższa nieobecność) nie liczy się do podziału premii.</p>
+            {% else %}
+                <p class="at-empty">Brak pracowników w tym dziale.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <p class="at-profit-note">
+        Sprzedaż: WDT (EUR), jak na stronie <a href="{{ root }}/dashboard">Rentowność</a>. Wynagrodzenia w zł, kurs {{ rate|number_format(2, ',', ' ') }} z ustawień firmy.
+        Kto co potrafi: <a href="{{ root }}/staff/competencies">matryca kompetencji</a>.
+    </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const reload = (res) => {
+        at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+        if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+    };
+    at.bindForm(document.getElementById('bonusDefault'), '/ajax/staff/bonus-pct', 'PUT');
+
+    document.querySelectorAll('tr[data-section]').forEach(row => row.addEventListener('change', (e) => {
+        if (e.target.dataset.field !== 'bonus_pct') return;
+        at.send(`/ajax/staff/sections/${row.dataset.section}/bonus-pct`, 'PATCH', {bonus_pct: e.target.value.replace(',', '.')}).then(reload);
+    }));
+
+    document.querySelectorAll('tr[data-employee]').forEach(row => row.addEventListener('change', (e) => {
+        const field = e.target.dataset.field;
+        if (!field) return;
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value.replace(/\s/g, '').replace(',', '.');
+        at.send(`/ajax/staff/employees/${row.dataset.employee}/pay`, 'PATCH', {[field]: value}).then(reload);
+    }));
+})();
+</script>
+{% endblock %}

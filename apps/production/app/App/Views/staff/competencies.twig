@@ -1,0 +1,171 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kto co potrafi{% endblock %}
+
+{% set statusLabels = {
+    ok: 'co najmniej 2 osoby samodzielne',
+    risk: 'tylko 1 osoba samodzielna',
+    training: 'nikt samodzielny, ktoś w szkoleniu',
+    missing: 'nikt — a receptury działu tego wymagają',
+    none: 'nikt (dział tego nie potrzebuje)'
+} %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Kto co potrafi</h3>
+            <p class="text-subtitle text-muted">Kompetencje działów i pracowników produkcji — z receptur, które ich wymagają</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-skills">
+
+    {# --- Działy: co potrafią -------------------------------------------------- #}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Działy: co potrafią</h4>
+            <ul class="at-skill-legend" aria-label="Legenda">
+                <li><span class="at-skill-dot is-ok"></span> 2+ osoby</li>
+                <li><span class="at-skill-dot is-risk"></span> 1 osoba</li>
+                <li><span class="at-skill-dot is-training"></span> w szkoleniu</li>
+                <li><span class="at-skill-dot is-missing"></span> brak, a potrzebne</li>
+            </ul>
+        </div>
+        <div class="card-body pt-0">
+            {% if competencies and sections %}
+            <div class="table-responsive">
+                <table class="table mb-0 at-skill-summary">
+                    <thead><tr><th>Dział</th><th class="text-end">Receptury w zasięgu</th><th>Kompetencje</th></tr></thead>
+                    <tbody>
+                    {% for s in sections %}
+                        <tr>
+                            <td><a href="#skills-{{ s.id }}" class="at-growth-link">{{ s.name }}</a>
+                                <div class="at-sub">{{ s.employees|length|plural_pl('osoba', 'osoby', 'osób') }}{% if s.risks %} · <span class="text-warning">{{ s.risks }} ryzyk</span>{% endif %}{% if s.missing %} · <span class="text-danger">{{ s.missing }} braków</span>{% endif %}</div>
+                            </td>
+                            <td class="text-end">
+                                {% if s.recipes %}
+                                    <strong class="{{ s.recipes_covered < s.recipes ? 'text-danger' : 'text-success' }}">{{ s.recipes_covered }} / {{ s.recipes }}</strong>
+                                {% else %}<span class="at-sub">brak receptur</span>{% endif %}
+                            </td>
+                            <td>
+                                <ul class="at-skill-chips">
+                                {% for c in competencies %}
+                                    {% set cell = s.cells[c.id] %}
+                                    {% if cell.status != 'none' %}
+                                        <li class="at-skill-chip is-{{ cell.status }}" title="{{ statusLabels[cell.status] }}{{ cell.recipes ? ' · ' ~ cell.recipes ~ ' receptur działu' : '' }}">
+                                            {{ c.name }} <span>{{ cell.autonomous }}{{ cell.training ? '+' ~ cell.training : '' }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                </ul>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="at-profit-note">Receptury w zasięgu = receptury aktywnych produktów działu, których wszystkie wymagane kompetencje ma co najmniej jedna samodzielna osoba działu. Liczba przy kompetencji: osoby samodzielne (+ w szkoleniu). Kompetencje receptur: <a href="{{ root }}/hr/recipe-competencies">kompetencje recepturowe</a> i karta receptury.</p>
+            {% else %}
+                <p class="at-empty">{{ competencies ? 'Brak pracowników produkcji.' : 'Brak kompetencji — dodaj pierwszą poniżej.' }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# --- Matryca: kto co potrafi ----------------------------------------------- #}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Pracownicy</h4>
+            <ul class="at-skill-legend" aria-label="Poziomy">
+                <li><span class="at-skill-level" data-level="0">–</span> nie</li>
+                {% for value, label in levels %}<li><span class="at-skill-level" data-level="{{ value }}">{{ value }}</span> {{ label }}</li>{% endfor %}
+            </ul>
+        </div>
+        <div class="card-body pt-0">
+            <form id="addCompetency" class="at-skill-add">
+                <input class="form-control form-control-sm" name="name" placeholder="Nowa kompetencja, np. laminowanie ciasta" maxlength="255" required aria-label="Nazwa kompetencji">
+                <input class="form-control form-control-sm" name="description" placeholder="Opis (opcjonalnie)" aria-label="Opis">
+                <button class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Dodaj kompetencję</button>
+            </form>
+            {% if competencies and sections %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 at-skill-matrix">
+                    <thead>
+                        <tr>
+                            <th class="at-skill-name">Pracownik</th>
+                            {% for c in competencies %}
+                                <th class="at-skill-col" title="{{ c.description }}{{ c.recipes ? ' · ' ~ c.recipes ~ ' receptur' : '' }}">{{ c.name }}<span class="at-sub">{{ c.recipes|plural_pl('receptura', 'receptury', 'receptur') }}</span></th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    {% for s in sections %}
+                    <tbody id="skills-{{ s.id }}">
+                        <tr class="at-skill-section">
+                            <th class="at-skill-name">{{ s.name }}</th>
+                            {% for c in competencies %}
+                                {% set cell = s.cells[c.id] %}
+                                <td class="text-center"><span class="at-skill-dot is-{{ cell.status }}" data-dot="{{ c.id }}" data-recipes="{{ cell.recipes }}" title="{{ statusLabels[cell.status] }}"></span></td>
+                            {% endfor %}
+                        </tr>
+                        {% for e in s.employees %}
+                        <tr data-employee="{{ e.id }}" class="{{ e.active ? '' : 'at-staff-inactive' }}">
+                            <td class="at-skill-name">{{ e.name }}{% if not e.active %} <span class="at-sub">nieaktywny</span>{% endif %}</td>
+                            {% for c in competencies %}
+                                {% set level = e.levels[c.id] ?? 0 %}
+                                <td class="text-center">
+                                    <button type="button" class="at-skill-level" data-competency="{{ c.id }}" data-level="{{ level }}"
+                                            aria-label="{{ e.name }} — {{ c.name }}: {{ level ? levels[level] : 'nie' }}" title="Kliknij, aby zmienić poziom">{{ level ?: '–' }}</button>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% endfor %}
+                </table>
+            </div>
+            <p class="at-profit-note">Kliknięcie zmienia poziom: – → 1 → 2 → 3 → –. Dział potrafi kompetencję, gdy ma co najmniej jedną osobę na poziomie 2 lub 3; jedna osoba = ryzyko przy nieobecności. Osoby nieaktywne nie są liczone.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const labels = {{ levels|json_encode|raw }};
+    at.bindForm(document.getElementById('addCompetency'), '/ajax/staff/competencies');
+
+    document.querySelectorAll('tr[data-employee]').forEach(row => row.addEventListener('click', (e) => {
+        const button = e.target.closest('[data-competency]');
+        if (!button || button.disabled) return;
+        const next = (Number(button.dataset.level) + 1) % 4;
+        button.disabled = true;
+        at.send(`/ajax/staff/employees/${row.dataset.employee}/competencies/${button.dataset.competency}`, 'PUT', {level: next}).then(res => {
+            button.disabled = false;
+            if (!res.ok) return at.notify(false, res.message || 'Błąd');
+            button.dataset.level = next;
+            button.textContent = next || '–';
+            button.setAttribute('aria-label', button.getAttribute('aria-label').replace(/: .*$/, ': ' + (labels[next] || 'nie')));
+            refreshDot(row.closest('tbody'), button.dataset.competency);
+        });
+    }));
+
+    // Stan działu na kompetencję, jak na serwerze (CompetencyMatrixService) ; tabela „co potrafią” po odświeżeniu.
+    const statusLabels = {{ statusLabels|json_encode|raw }};
+    function refreshDot(tbody, competencyId) {
+        let autonomous = 0, training = 0;
+        tbody.querySelectorAll('tr[data-employee]:not(.at-staff-inactive) [data-competency="' + competencyId + '"]').forEach(b => {
+            const level = Number(b.dataset.level);
+            if (level >= 2) autonomous++; else if (level === 1) training++;
+        });
+        const dot = tbody.querySelector('[data-dot="' + competencyId + '"]');
+        const status = autonomous >= 2 ? 'ok' : autonomous === 1 ? 'risk' : training ? 'training' : Number(dot.dataset.recipes) > 0 ? 'missing' : 'none';
+        dot.className = 'at-skill-dot is-' + status;
+        dot.title = statusLabels[status];
+    }
+})();
+</script>
+{% endblock %}

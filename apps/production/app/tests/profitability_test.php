@@ -20,6 +20,9 @@ use App\Repositories\Dashboard\ProfitabilityRepository;
 use App\Services\Dashboard\GrowthActionService;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Dashboard\ProfitabilityService;
+use App\Repositories\Staff\StaffRepository;
+use App\Services\Staff\CompetencyMatrixService;
+use App\Services\Staff\StaffBudgetService;
 
 function expectProfit(bool $condition, string $message): void
 {
@@ -48,7 +51,8 @@ $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_gene
 try {
     foreach (['production_sections', 'tfb_section_target', 'tfb_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'erp_company_other_settings', 'document_wdt',
-                 'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product'] as $table) {
+                 'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
+                 'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -196,6 +200,84 @@ try {
     expectProfit($g['products'][0]['name'] === 'Bagietka' && abs($g['products'][0]['price_piece_eur'] - 0.8) < 1e-9 && abs($g['products'][0]['material_piece_eur'] - 0.2) < 1e-9, 'group products with price and material cost per piece');
     $summary = $growth->summaryBySection();
     expectProfit($summary[1]['count'] === 2 && abs($summary[1]['revenue_month'] - 2600) < 0.01, 'summary per group for the table');
+
+
+    // --- Budżet personelu : minimum + pula premii (% sprzedaży działu) ÷ aktywne osoby z premią
+    $pdo->exec("INSERT INTO tfb_prod_param (code, value, default_value, value_type) VALUES ('pay.bonus_pool_pct', '4', '5', 'decimal')");
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES
+        (1, 'Ala', 'A', 5000, 1), (2, 'Bartek', 'B', 3000, 1), (3, 'Cezary', 'C', 4000, 2), (4, 'Dorota', 'D', 2000, 1)");
+    $staffRepo = new StaffRepository($pdo);
+    // Une requête = un service : ProfitabilityService garde les sections lues pendant la requête.
+    $newBudget = fn() => new StaffBudgetService(new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)), $staffRepo, new ParamRepository($pdo));
+    $budgetService = $newBudget();
+    $budgetService->savePay(1, ['base_monthly' => '3 600,00'], 1);
+    $budgetService->savePay(3, ['base_monthly' => '3000'], 1);
+    $budgetService->savePay(4, ['active' => false], 1);
+    expectProfit($refused(fn() => $budgetService->savePay(1, ['base_monthly' => '-1'], 1)), 'ujemne minimum odrzucone');
+    expectProfit($refused(fn() => $budgetService->savePay(99, ['base_monthly' => '1'], 1)), 'nieznany pracownik odrzucony');
+    expectProfit($budgetService->savePay(2, ['base_monthly' => '3500'], 1)['warning'] !== null, 'minimum wyższe niż koszt sygnalizowane');
+    $budgetService->savePay(2, ['base_monthly' => ''], 1);
+    expectProfit($pdo->query('SELECT base_monthly FROM tfb_staff_pay WHERE id_production_employee = 2')->fetchColumn() === null, 'puste minimum = nie podano');
+
+    $b = $budgetService->overview('2026-09');
+    $p = $b['sections'][1];
+    expectProfit($p['active'] === 2 && $p['eligible'] === 2 && $p['no_base'] === 1, 'Piekarnia : 2 aktywne osoby z premią (nieobecna pominięta), 1 bez minimum');
+    near($p['base_month_pln'], 6600, 'minimum 3 600 + cały koszt osoby bez minimum 3 000');
+    near($p['base'], 1650, 'minimum w EUR (kurs 4)');
+    near($p['pool'], 200, 'pula premii 4 % × 5 000 €');
+    near($p['per_person_pln'], 400, 'premia na osobę 100 € = 400 zł');
+    near($p['per_person_month_pln'], 400, 'premia miesięczna na osobę');
+    near($p['budget'], 1850, 'budżet personelu = minimum + pula');
+    near($p['budget_pct'], 37, 'budżet / sprzedaż');
+    near($p['needed'], 1650 / 0.26, 'sprzedaż do celu 30 % = minimum ÷ (30 % − 4 %)');
+    near($p['per_person_at_target_pln'], 1650 / 0.26 * 0.04 / 2 * 4, 'premia na osobę przy celu');
+    near($p['above_min_pln'], 1400, 'obecnie ponad minimum (osoby z podanym minimum)');
+    $rows = array_column($p['employees'], null, 'id');
+    near($rows[1]['model_pln'], 4000, 'osoba : minimum 3 600 + premia 400');
+    expectProfit($rows[4]['bonus_pln'] === null && $rows[4]['active'] === false, 'nieobecna osoba bez premii');
+    $shared = $b['sections'][2];
+    expectProfit($shared['shared'] && $shared['average'], 'dział wspólny bez własnego % : średnia premia');
+    near($shared['pool'], 100, 'średnia premia działów produkcyjnych na osobę (200 € ÷ 2) × 1 osoba');
+    expectProfit(!isset($b['sections'][3]), 'dział bez ludzi i sprzedaży pominięty');
+    near($b['totals']['budget'], 1850 + 750 + 100, 'budżet personelu firmy');
+    expectProfit(count(array_filter($b['notices'], fn($n) => str_contains($n, 'nie jest podane dla 1 os.'))) === 1, 'brak minimum sygnalizowany');
+
+    $service->saveTarget(2, ['bonus_pct' => '1'], 1);
+    $service->saveTarget(1, ['bonus_pct' => '30'], 1);
+    $b = $newBudget()->overview('2026-09');
+    near($b['sections'][2]['pool'], 50, 'dział wspólny z własnym % : % sprzedaży całej firmy');
+    expectProfit($b['sections'][1]['reachable'] === false && $b['sections'][1]['needed'] === null, 'premie ≥ cel kosztu personelu : cel nieosiągalny');
+    expectProfit($refused(fn() => $service->saveTarget(1, ['bonus_pct' => '100'], 1)), 'premia 100 % odrzucona');
+    $service->saveTarget(1, ['bonus_pct' => ''], 1);
+    expectProfit($refused(fn() => $budgetService->saveDefaultPct('abc', 1)), '% ogólny nieliczbowy odrzucony');
+    $budgetService->saveDefaultPct('6', 1);
+    near($newBudget()->overview('2026-09')['sections'][1]['pool'], 300, 'nowy % ogólny');
+
+    // --- Kto co potrafi : poziomy osób, stan działu, receptury w zasięgu
+    $pdo->exec("UPDATE final_product SET id_recipe = 10 WHERE id = 1");
+    $pdo->exec("INSERT INTO recipe_competency (id, name, description) VALUES (1, 'Laminowanie', ''), (2, 'Wypiek', ''), (3, 'Dekoracja', '')");
+    $pdo->exec("INSERT INTO recipe_competency_connection (recipe_id, competency_id) VALUES (10, 1), (10, 2)");
+    $matrix = new CompetencyMatrixService($staffRepo);
+    $matrix->setLevel(1, 1, 2, 1);
+    $matrix->setLevel(2, 1, 3, 1);
+    $matrix->setLevel(1, 2, '1', 1);
+    $matrix->setLevel(4, 2, 3, 1);
+    expectProfit($refused(fn() => $matrix->setLevel(1, 1, 4, 1)), 'poziom 4 odrzucony');
+    expectProfit($refused(fn() => $matrix->setLevel(1, 99, 1, 1)), 'nieznana kompetencja odrzucona');
+    expectProfit($refused(fn() => $matrix->addCompetency(['name' => ' laminowanie '])), 'kompetencja o tej samej nazwie odrzucona');
+    $m = $matrix->matrix();
+    $bakery = array_column($m['sections'], null, 'id')[1];
+    expectProfit($bakery['cells'][1]['status'] === 'ok' && $bakery['cells'][1]['autonomous'] === 2, 'laminowanie : 2 osoby samodzielne');
+    expectProfit($bakery['cells'][2]['status'] === 'training' && $bakery['cells'][2]['recipes'] === 1, 'wypiek : tylko w szkoleniu (ekspertka nieobecna), receptura działu go wymaga');
+    expectProfit($bakery['cells'][3]['status'] === 'none', 'dekoracja : nikt, niepotrzebna');
+    expectProfit($bakery['recipes'] === 1 && $bakery['recipes_covered'] === 0 && $bakery['missing'] === 1, 'receptura chleba poza zasięgiem (brak samodzielnego wypieku)');
+    $matrix->setLevel(1, 2, 2, 1);
+    $matrix->setLevel(2, 1, 0, 1);
+    $bakery = array_column($matrix->matrix()['sections'], null, 'id')[1];
+    expectProfit($bakery['recipes_covered'] === 1 && $bakery['cells'][1]['status'] === 'risk' && $bakery['risks'] === 2, 'chleb w zasięgu ; każda kompetencja tylko u 1 osoby = ryzyko');
+    expectProfit(array_column($matrix->matrix()['competencies'], null, 'id')[1]['sections'] === ['Piekarnia'], 'kompetencja : działy, które ją mają');
+    $added = $matrix->addCompetency(['name' => 'Krojenie', 'description' => 'Krajalnica']);
+    expectProfit($added['id'] > 3, 'nowa kompetencja w tabeli ERP');
 
     echo "profitability_test: OK\n";
 } finally {

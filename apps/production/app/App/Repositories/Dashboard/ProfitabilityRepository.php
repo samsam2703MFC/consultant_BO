@@ -11,13 +11,13 @@ use App\Repositories\Workshop\WorkshopRepository;
 final class ProfitabilityRepository extends WorkshopRepository
 {
     protected string $table = 'tfb_section_target';
-    protected array $writable = ['staff_pct_target', 'margin_pct_target', 'is_shared', 'updated_by'];
+    protected array $writable = ['staff_pct_target', 'margin_pct_target', 'bonus_pct', 'is_shared', 'updated_by'];
 
     public function sections(): array
     {
         return $this->all(
             'SELECT ps.id, ps.name, ps.depreciation, ps.water_cost, ps.power_supply_cost, ps.fuel_cost, ps.other_cost,
-                    t.staff_pct_target, t.margin_pct_target, COALESCE(t.is_shared, 0) AS is_shared
+                    t.staff_pct_target, t.margin_pct_target, t.bonus_pct, COALESCE(t.is_shared, 0) AS is_shared
              FROM production_sections ps LEFT JOIN tfb_section_target t ON t.id_section = ps.id
              ORDER BY ps.id'
         );

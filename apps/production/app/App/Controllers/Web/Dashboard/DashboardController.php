@@ -6,13 +6,19 @@ use App\Core\Web\JsonErrors;
 use App\Services\Dashboard\GrowthActionService;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Services\Dashboard\TodayService;
+use App\Services\Staff\StaffBudgetService;
 use Symfony\Component\HttpFoundation\Request;
 
 class DashboardController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private TodayService $today, private ProfitabilityService $profitability, private GrowthActionService $growth) {}
+    public function __construct(
+        private TodayService $today,
+        private ProfitabilityService $profitability,
+        private GrowthActionService $growth,
+        private StaffBudgetService $staffBudget,
+    ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
     public function index()
@@ -22,7 +28,11 @@ class DashboardController extends BaseController
         // view() nadpisuje „warnings” (komunikaty kontrolera) : ostrzeżenia o danych idą jako „notices”.
         $data['notices'] = $data['warnings'];
         unset($data['warnings']);
-        $this->view('dashboard/profitability', $data + ['selected' => $data['period']['key'], 'growth' => $this->growth->summaryBySection()]);
+        $this->view('dashboard/profitability', $data + [
+            'selected' => $data['period']['key'],
+            'growth' => $this->growth->summaryBySection(),
+            'staff_budget' => $this->staffBudget->fromOverview($data)['sections'],
+        ]);
     }
 
     /** „Dzisiaj”: wysyłki, braki produkcji, reklamacje, proformy. */

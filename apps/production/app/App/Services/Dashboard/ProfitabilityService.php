@@ -87,12 +87,17 @@ final class ProfitabilityService
             throw new CustomException('Nie znaleziono działu.', 'errors', 404);
         }
         $data = ['updated_by' => $userId];
-        foreach (['staff_pct_target' => [0, 100], 'margin_pct_target' => [-100, 100]] as $field => [$min, $max]) {
+        $messages = [
+            'staff_pct_target' => 'Cel kosztu personelu: od 0 do 100 %.',
+            'margin_pct_target' => 'Cel marży: od -100 do 100 %.',
+            'bonus_pct' => 'Pula premii: od 0 do 100 % sprzedaży.',
+        ];
+        foreach (['staff_pct_target' => [0, 100], 'margin_pct_target' => [-100, 100], 'bonus_pct' => [-0.001, 100]] as $field => [$min, $max]) {
             if (!array_key_exists($field, $input)) continue;
             $raw = trim(str_replace(',', '.', (string) $input[$field]));
             if ($raw === '') { $data[$field] = null; continue; }
             if (!is_numeric($raw) || (float) $raw <= $min || (float) $raw >= $max) {
-                throw new CustomException($field === 'staff_pct_target' ? 'Cel kosztu personelu: od 0 do 100 %.' : 'Cel marży: od -100 do 100 %.', 'errors', 422);
+                throw new CustomException($messages[$field], 'errors', 422);
             }
             $data[$field] = round((float) $raw, 2);
         }
@@ -278,6 +283,7 @@ final class ProfitabilityService
             'targets' => $targets,
             'warnings' => array_values(array_unique($warnings)),
             'estimated_months' => $estimated,
+            'sections' => $sections,
         ];
     }
 
