@@ -122,6 +122,8 @@
                     <td>${editable ? `<input class="form-control form-control-sm" data-field="adjust_reason" value="${esc(l.adjust_reason || '')}" maxlength="255">` : esc(l.adjust_reason || '')}</td>
                     <td class="text-end">${fmt(l.standard_hours, 2)}</td></tr>`).join('')}</tbody></table></div>
                 ${editable ? `<div class="tfb-nav"><span></span><button type="button" class="btn btn-primary" data-validate>${esc(t('validate'))}</button></div>` : ''}
+                ${canWrite && ['validated', 'frozen'].includes(plan.status) ? `<div class="tfb-nav"><a class="btn btn-outline-primary" href="${esc(api.root)}/workshop/gantt#from=${plan.period_start}&view=three">${esc(t('open_gantt'))}</a>
+                    <button type="button" class="btn btn-primary" data-schedule>${esc(t('schedule'))}</button></div><div data-schedule-result></div>` : ''}
             </div></div></div>
             <div class="col-12 col-lg-6 col-xl-4"><div class="card"><div class="card-header"><h4 class="card-title">${esc(t('hours_by_group'))}</h4></div><div class="card-body pt-0">
                 ${hoursTable(plan.hours_by_group.map(h => ({group_id: h.group_id, hours: h.standard_hours})))}</div></div></div></div>
@@ -129,6 +131,18 @@
                 <table class="table table-sm"><thead><tr><th>${esc(t('col.code'))}</th><th>${esc(t('col.item'))}</th><th>${esc(t('col.origin'))}</th><th class="text-end">${esc(t('col.qty'))}</th><th>${esc(t('col.due'))}</th><th class="text-end">${esc(t('col.customers'))}</th></tr></thead>
                 <tbody>${plan.orders.map(o => `<tr><td><strong>${esc(o.code)}</strong></td><td>${esc(o.name)}${o.parent_order_id ? ` <span class="small text-muted">← ${esc((plan.orders.find(p => p.id === o.parent_order_id) || {}).code || '')}</span>` : ''}</td>
                     <td>${esc(t('origin.' + o.origin))}</td><td class="text-end">${fmt(o.quantity, o.unit === 'kg' ? 1 : 0)} ${esc(o.unit)}</td><td class="text-nowrap">${esc(o.due_at.slice(0, 16))}</td><td class="text-end">${o.customer_orders || ''}</td></tr>`).join('')}</tbody></table></div></div></div>` : ''}`;
+        const schedule = el.querySelector('[data-schedule]');
+        if (schedule) schedule.addEventListener('click', async () => {
+            schedule.disabled = true;
+            try {
+                const r = await api.post(`/planning/plans/${id}/schedule`);
+                ui.notify(true, t('schedule_done', {n: r.operations}));
+                el.querySelector('[data-schedule-result]').innerHTML = `<div class="alert ${r.conflicts.length ? 'alert-warning' : 'alert-success'} mt-3 mb-0">
+                    <strong>${esc(t('schedule_done', {n: r.operations}))}</strong>
+                    ${r.conflicts.length ? `<div class="mt-1">${esc(t('conflicts'))}:</div><ul class="mb-0">${r.conflicts.map(c => `<li>${esc(c.message)}</li>`).join('')}</ul>` : ''}</div>`;
+            } catch (err) { fail(null, err); }
+            schedule.disabled = false;
+        });
         if (!editable) return;
         el.querySelectorAll('[data-line]').forEach(row => row.addEventListener('change', async () => {
             const qty = ui.num(row.querySelector('[data-field="qty_final"]').value);

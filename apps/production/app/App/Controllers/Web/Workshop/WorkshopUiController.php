@@ -28,6 +28,11 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/planning', ['api_base' => $this->apiBase()]);
     }
 
+    public function gantt()
+    {
+        $this->view('workshop/gantt', ['api_base' => $this->apiBase()]);
+    }
+
     /** Jeton d'accès pour la session ERP en cours (POST, même origine). */
     public function token()
     {

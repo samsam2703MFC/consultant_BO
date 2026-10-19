@@ -58,5 +58,9 @@
   "origin.SEMI": "semi-fini",
   "mode.MTO": "MTO",
   "mode.MTS": "MTS",
-  "read_only": "Lecture seule — modifier le plan demande le droit de validation."
+  "read_only": "Lecture seule — modifier le plan demande le droit de validation.",
+  "schedule": "Ordonnancer les OF (Gantt)",
+  "schedule_done": "{n} opérations ordonnancées.",
+  "conflicts": "Non placés",
+  "open_gantt": "Ouvrir le Gantt"
 }

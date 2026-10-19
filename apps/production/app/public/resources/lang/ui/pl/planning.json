@@ -58,5 +58,9 @@
   "origin.SEMI": "półprodukt",
   "mode.MTO": "MTO",
   "mode.MTS": "MTS",
-  "read_only": "Podgląd — zmiany planu wymagają uprawnienia do zatwierdzania."
+  "read_only": "Podgląd — zmiany planu wymagają uprawnienia do zatwierdzania.",
+  "schedule": "Uszereguj zlecenia (Gantt)",
+  "schedule_done": "Uszeregowano {n} operacji.",
+  "conflicts": "Nie zaplanowano",
+  "open_gantt": "Otwórz Gantt"
 }
