@@ -848,3 +848,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T12:58:31Z ERP sous /production : import MySQL 8 (conversion du dump MariaDB, mode SQL MariaDB)
 2026-10-19T13:26:27Z ERP sous /production : mot de passe navigateur + bouton Entrer
 2026-10-19T13:50:43Z ERP : style L'Atelier et menu Produkcja / Produkt / Zamówienia
+2026-10-19T13:59:37Z ERP : liens en https quand la page est en https
