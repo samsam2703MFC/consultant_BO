@@ -95,9 +95,9 @@
                                     </td>
                                     <td class="text-end">
                                         {% if d.ready %}
-                                            <a class="btn btn-sm btn-primary" href="{{ root }}/shipping-documents/create">Wyślij</a>
+                                            <a class="btn btn-sm btn-primary" href="{{ root }}/shipping/wizard?date={{ d.day|url_encode }}">Wyślij</a>
                                         {% else %}
-                                            <a class="btn btn-sm btn-outline-dark" href="{{ root }}/production/planning">Planuj</a>
+                                            <a class="btn btn-sm btn-outline-dark" href="{{ root }}/production/plan-wizard?date={{ d.day|url_encode }}">Planuj</a>
                                         {% endif %}
                                     </td>
                                 </tr>

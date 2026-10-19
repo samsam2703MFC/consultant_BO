@@ -21,6 +21,7 @@
     <link rel="stylesheet" type="text/css" href="<?=ROOT?>/assets/css/tree_graph/ECOTree.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css">
     <script src="<?=ROOT?>/assets/js/atelier.js" defer></script>
+    <script src="<?=ROOT?>/assets/js/atelier-table.js" defer></script>
 
     <script src="<?=ROOT?>/assets/js/functions.js" type="text/javascript"></script>
     <script src="<?=ROOT?>/assets/js/tree_graph/ECOTree.js" type="text/javascript" ></script>

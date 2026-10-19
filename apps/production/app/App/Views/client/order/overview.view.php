@@ -92,13 +92,13 @@
                                     <th style="width:3%" class="ps-3">
                                         <input type="checkbox" class="form-check-input" onClick="togglePending(this)" checked>
                                     </th>
-                                    <th style="width:20%">Firma</th>
-                                    <th style="width:18%">Opis</th>
+                                    <th style="width:25%">Firma</th>
+                                    <th style="width:23%">Opis</th>
                                     <th style="width:10%">Data zamówienia</th>
                                     <th style="width:10%">Wysyłka</th>
                                     <th style="width:7%" class="text-end">Waga</th>
                                     <th style="width:10%" class="text-center">Proforma</th>
-                                    <th style="width:22%" class="text-center pe-3">Akcje</th>
+                                    <th style="width:12%" class="text-end pe-3">Akcje</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -196,94 +196,75 @@
                                             </span>
                                         </td>
 
-                                        <!-- Proforma -->
+                                        <?php
+                                            $idProforma    = $pending[$i]['id_proforma'];
+                                            $proformaPaid  = !is_null($idProforma) && strtolower(trim((string) ($pending[$i]['proforma_status'] ?? ''))) === 'paid';
+                                            $proformaStale = !is_null($idProforma) && !$proformaPaid && !empty($pending[$i]['proforma_stale']);
+                                            $isSupplement  = ($pending[$i]['order_type'] ?? 'STANDARD') === 'SUPPLEMENT';
+                                        ?>
+                                        <!-- Proforma: stan; działania w menu „⋯” -->
                                         <td class="text-center">
-                                            <?php if (!is_null($pending[$i]['id_proforma'])): ?>
-                                                <div class="d-inline-flex flex-column gap-1">
-                                                    <button class="btn btn-info btn-sm" type="button"
-                                                            onclick="generateProforma(<?= (int) $pending[$i]['id_proforma'] ?>)">
-                                                        <i class="bi bi-file-earmark-text me-1"></i>Proforma
-                                                    </button>
-                                                    <a class="btn btn-outline-primary btn-sm"
-                                                       href="<?= ROOT ?>/communication/compose/proforma/<?= (int) $pending[$i]['id_proforma'] ?>">
-                                                        <i class="bi bi-envelope-paper me-1"></i>Przygotuj e-mail
-                                                    </a>
-                                                    <?php if (strtolower(trim((string) ($pending[$i]['proforma_status'] ?? ''))) !== 'paid'): ?>
-                                                        <button class="btn btn-success btn-sm" type="button"
-                                                                onclick="markProformaPaid(<?= (int) $pending[$i]['id_proforma'] ?>)">
-                                                            <i class="bi bi-check-circle me-1"></i>Oznacz jako opłaconą
-                                                        </button>
-                                                        <?php if (!empty($pending[$i]['proforma_stale'])): ?>
-                                                            <button class="btn btn-warning btn-sm" type="button"
-                                                                    onclick="regenerateProforma(<?= (int) $pending[$i]['id'] ?>)">
-                                                                <i class="bi bi-arrow-repeat me-1"></i>Wygeneruj nową proformę
-                                                            </button>
-                                                            <small class="text-warning-emphasis">Zamówienie zostało zmienione po wystawieniu proformy.</small>
-                                                        <?php endif; ?>
-                                                    <?php else: ?>
-                                                        <span class="badge bg-success">Opłacona</span>
-                                                    <?php endif; ?>
-                                                </div>
+                                            <?php if (is_null($idProforma)): ?>
+                                                <span class="at-pill at-pill-muted">Brak</span>
+                                            <?php elseif ($proformaPaid): ?>
+                                                <span class="at-pill at-pill-ok">Opłacona</span>
+                                            <?php elseif ($proformaStale): ?>
+                                                <span class="at-pill at-pill-danger" title="Zamówienie zostało zmienione po wystawieniu proformy">Nieaktualna</span>
                                             <?php else: ?>
-                                                <button class="btn btn-outline-secondary btn-sm" type="button"
-                                                        onclick="insertAndGenerateProforma(<?= $pending[$i]['id'] ?>, this)">
-                                                    <i class="bi bi-file-earmark-plus me-1"></i>Wystaw
-                                                </button>
+                                                <span class="at-pill at-pill-warn">Nieopłacona</span>
                                             <?php endif; ?>
                                         </td>
 
-                                        <!-- Akcje -->
-                                        <td class="text-center pe-3">
-                                            <div class="d-flex justify-content-center align-items-center gap-1">
-                                                <!-- Kolumna 1: Edycja (stała szerokość) -->
-                                                <div style="width:34px; flex-shrink:0;">
-                                                    <?php if (is_null($pending[$i]['id_wdt'])): ?>
-                                                        <a href="<?= ROOT ?>/client-orders/<?= $pending[$i]['id'] ?>/edit"
-                                                           class="btn btn-warning btn-sm w-100" role="button" title="Edytuj zamówienie">
-                                                            <i class="bi bi-pencil-square"></i>
-                                                        </a>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <!-- Domówienie: Wyślij ponownie -->
-                                <?php if(($pending[$i]['order_type'] ?? 'STANDARD') === 'SUPPLEMENT'): ?>
-                                <div style="flex-shrink:0;">
-                                    <button class="btn btn-outline-info btn-sm" type="button"
-                                            onclick="pushSupplement(<?= $pending[$i]['id'] ?>, this)"
-                                            title="Wyślij domówienie ponownie do panelu klienta">
-                                        <i class="bi bi-send me-1"></i>
-                                        <?php if(($pending[$i]['supplement_push_status'] ?? '') === 'sent'): ?>
-                                            <span class="badge bg-success ms-1">&#10003;</span>
-                                        <?php elseif(($pending[$i]['supplement_push_status'] ?? '') === 'failed'): ?>
-                                            <span class="badge bg-danger ms-1">!</span>
-                                        <?php endif; ?>
-                                    </button>
-                                </div>
-                                <?php endif; ?>
-                                                <div style="flex-shrink:0;">
-                                                    <button class="btn btn-outline-secondary btn-sm" type="button"
-                                                            onclick="archiveOrder(<?= $pending[$i]['id'] ?>, this)"
-                                                            title="Archiwizuj zamówienie">
-                                                        <i class="bi bi-archive"></i>
-                                                    </button>
-                                                </div>
-                                <!-- Kolumna 2: Wysłane -->
-                                                <div style="flex-shrink:0;">
-                                                    <?php if ($pending[$i]['integrated_customer'] == 1): ?>
-                                                        <button class="btn btn-success btn-sm" type="button"
-                                                                onclick="updateStatusAndNotify(<?= $pending[$i]['id'] ?>, this)"
-                                                                title="Oznacz jako wysłane i powiadom klienta">
-                                                            <i class="bi bi-send-check me-1"></i>Wysłane
-                                                            <span class="badge bg-white text-success ms-1" style="font-size:.65rem;">
-                                                                <i class="bi bi-bell-fill"></i>
-                                                            </span>
-                                                        </button>
-                                                    <?php else: ?>
-                                                        <button class="btn btn-success btn-sm" type="button"
-                                                                onclick="updateStatus(<?= $pending[$i]['id'] ?>, this)"
-                                                                title="Oznacz jako wysłane">
-                                                            <i class="bi bi-check2-circle me-1"></i>Wysłane
-                                                        </button>
-                                                    <?php endif; ?>
+                                        <!-- Akcje: jedna główna + menu „⋯” -->
+                                        <td class="text-end pe-3">
+                                            <div class="at-actions">
+                                                <?php if (is_null($pending[$i]['id_wdt'])): ?>
+                                                    <a href="<?= ROOT ?>/client-orders/<?= $pending[$i]['id'] ?>/edit" class="btn btn-sm btn-primary">Edytuj</a>
+                                                <?php elseif (!is_null($idProforma)): ?>
+                                                    <button class="btn btn-sm btn-primary" type="button" onclick="generateProforma(<?= (int) $idProforma ?>)">Proforma</button>
+                                                <?php endif; ?>
+                                                <div class="at-more">
+                                                    <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
+                                                    <div class="at-more-menu" role="menu" hidden>
+                                                        <div class="at-more-head">Proforma</div>
+                                                        <?php if (is_null($idProforma)): ?>
+                                                            <button type="button" role="menuitem" onclick="insertAndGenerateProforma(<?= $pending[$i]['id'] ?>, this)"><i class="bi bi-file-earmark-plus"></i>Wystaw proformę</button>
+                                                        <?php else: ?>
+                                                            <button type="button" role="menuitem" onclick="generateProforma(<?= (int) $idProforma ?>)"><i class="bi bi-file-earmark-text"></i>Pobierz proformę (PDF)</button>
+                                                            <a role="menuitem" href="<?= ROOT ?>/communication/compose/proforma/<?= (int) $idProforma ?>"><i class="bi bi-envelope"></i>Przygotuj e-mail</a>
+                                                            <?php if (!$proformaPaid): ?>
+                                                                <button type="button" role="menuitem" onclick="markProformaPaid(<?= (int) $idProforma ?>)"><i class="bi bi-check-circle"></i>Oznacz jako opłaconą</button>
+                                                            <?php endif; ?>
+                                                            <?php if ($proformaStale): ?>
+                                                                <button type="button" role="menuitem" onclick="regenerateProforma(<?= (int) $pending[$i]['id'] ?>)"><i class="bi bi-arrow-repeat"></i>Wygeneruj nową proformę</button>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                        <hr>
+                                                        <div class="at-more-head">Zamówienie</div>
+                                                        <?php if ($isSupplement): ?>
+                                                            <button type="button" role="menuitem" onclick="pushSupplement(<?= $pending[$i]['id'] ?>, this)"
+                                                                    data-at-confirm="Wysłać domówienie ponownie do panelu klienta?" data-at-confirm-ok="Wyślij">
+                                                                <i class="bi bi-box-arrow-up-right"></i>Wyślij domówienie ponownie
+                                                                <?php if (($pending[$i]['supplement_push_status'] ?? '') === 'sent'): ?>
+                                                                    <span class="at-pill at-pill-ok ms-auto">wysłane</span>
+                                                                <?php elseif (($pending[$i]['supplement_push_status'] ?? '') === 'failed'): ?>
+                                                                    <span class="at-pill at-pill-danger ms-auto">błąd</span>
+                                                                <?php endif; ?>
+                                                            </button>
+                                                        <?php endif; ?>
+                                                        <?php if ($pending[$i]['integrated_customer'] == 1): ?>
+                                                            <button type="button" role="menuitem" onclick="updateStatusAndNotify(<?= $pending[$i]['id'] ?>, this)"
+                                                                    data-at-confirm="Oznaczyć zamówienie jako wysłane i powiadomić klienta?" data-at-confirm-ok="Oznacz i powiadom">
+                                                                <i class="bi bi-check2-all"></i>Oznacz jako wysłane i powiadom
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <button type="button" role="menuitem" onclick="updateStatus(<?= $pending[$i]['id'] ?>, this)"
+                                                                    data-at-confirm="Oznaczyć zamówienie jako wysłane?" data-at-confirm-ok="Oznacz">
+                                                                <i class="bi bi-check2-circle"></i>Oznacz jako wysłane
+                                                            </button>
+                                                        <?php endif; ?>
+                                                        <button type="button" role="menuitem" onclick="archiveOrder(<?= $pending[$i]['id'] ?>, this)"><i class="bi bi-archive"></i>Archiwizuj…</button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -593,7 +574,7 @@
             .then(data => {
                 showSnack(data.ok)
                 if (data.ok) {
-                    btn.parentNode.parentNode.remove();
+                    btn.closest('tr')?.remove();
                 }
             })
             .catch(error => console.error('Error:', error));
@@ -664,7 +645,7 @@
 
                 if (data.ok) {
                     showSnack(data.ok)
-                    btn.parentNode.parentNode.remove();
+                    btn.closest('tr')?.remove();
                 } else {
                     showSnack(data.ok, data.error)
                 }

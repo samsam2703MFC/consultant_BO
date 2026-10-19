@@ -267,6 +267,47 @@ class OrderRepository extends BaseRepository
         return $queryWithParamArr;
     }
 
+    /**
+     * Fakty do osi statusu zamówienia (strona edycji). Tylko podzapytania skalarne,
+     * bez GROUP BY: zgodne z MariaDB i z MySQL 8 (ONLY_FULL_GROUP_BY). Identyfikator
+     * zamówienia w JSON-ie listy kompletacyjnej: CAST(… AS CHAR) — MariaDB odrzuca AS JSON.
+     */
+    public function getStatusTimelineFacts(int $id): ?array
+    {
+        $sql = "SELECT co.id, co.status, co.create_order_date, co.expected_shipping_date,
+                       co.id_customer, co.id_proforma, co.id_wdt,
+                       dp.doc_num   AS proforma_num,
+                       dp.status    AS proforma_status,
+                       dp.create_timestamp AS proforma_at,
+                       (SELECT MIN(plg.generated_at)
+                          FROM picking_list_generation plg
+                         WHERE CASE WHEN JSON_VALID(plg.selected_order_ids_json)
+                                    THEN JSON_CONTAINS(plg.selected_order_ids_json, CAST(co.id AS CHAR))
+                                    ELSE 0 END) AS in_production_at,
+                       (SELECT MAX(pd.last_update_date)
+                          FROM palets_delivery pd
+                         WHERE pd.id_customer = co.id_customer
+                           AND pd.delivery_date = co.expected_shipping_date
+                           AND pd.status >= 2) AS prepared_at,
+                       (SELECT COUNT(*)
+                          FROM palets_delivery pd2
+                         WHERE pd2.id_customer = co.id_customer
+                           AND pd2.delivery_date = co.expected_shipping_date
+                           AND pd2.status = 1) AS pallets_scanning,
+                       (SELECT MIN(sl.shipment_date) FROM shipment_log sl WHERE sl.id_wdt = co.id_wdt) AS shipped_at,
+                       (SELECT MIN(sl2.id) FROM shipment_log sl2 WHERE sl2.id_wdt = co.id_wdt) AS id_shipment,
+                       w.doc_num       AS wdt_num,
+                       w.invoiced_date AS wdt_at,
+                       (SELECT ks.status FROM ksef_submission ks WHERE ks.id_document_wdt = co.id_wdt ORDER BY ks.id DESC LIMIT 1) AS ksef_status,
+                       (SELECT ks2.ksef_number FROM ksef_submission ks2 WHERE ks2.id_document_wdt = co.id_wdt ORDER BY ks2.id DESC LIMIT 1) AS ksef_number
+                FROM customer_order co
+                LEFT JOIN document_proforma dp ON dp.id = co.id_proforma
+                LEFT JOIN document_wdt w ON w.id = co.id_wdt
+                WHERE co.id = :id";
+        $rows = $this->query($sql, ['id' => $id]);
+        return !empty($rows[0]) ? $rows[0] : null;
+    }
+
     public function getDatesOfSelectedOrders($data)
     {
         if (!isset($data['order_id']) || empty($data['order_id'])) {

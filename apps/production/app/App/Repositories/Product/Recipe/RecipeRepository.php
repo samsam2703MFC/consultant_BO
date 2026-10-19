@@ -119,6 +119,38 @@ class RecipeRepository extends BaseRepository
 
 
     //get created semi-final products
+    /**
+     * Surowce dla kosztu szkicu receptury: cena za jednostkę bazową (g / ml / szt.).
+     * @param list<int> $ids
+     */
+    public function getMaterialsForDraft(array $ids): array
+    {
+        if (empty($ids)) return [];
+        $params = [];
+        foreach (array_values($ids) as $i => $id) $params['m' . $i] = (int) $id;
+        $sql = "SELECT rm.id, rm.name, rm.price_per_unit, unit.name AS unit_name
+                FROM raw_material rm
+                INNER JOIN unit ON rm.id_unit = unit.id
+                WHERE rm.id IN (:" . implode(', :', array_keys($params)) . ")";
+        return $this->query($sql, $params) ?: [];
+    }
+
+    /**
+     * Półprodukty (id_type = 2) dla kosztu szkicu receptury.
+     * @param list<int> $ids
+     */
+    public function getSemiProductsForDraft(array $ids): array
+    {
+        if (empty($ids)) return [];
+        $params = [];
+        foreach (array_values($ids) as $i => $id) $params['s' . $i] = (int) $id;
+        $sql = "SELECT pr.id, pr.name, pr.yield_quantity, unit.name AS unit_name
+                FROM product_recipe pr
+                INNER JOIN unit ON pr.id_unit = unit.id
+                WHERE pr.id_type = 2 AND pr.id IN (:" . implode(', :', array_keys($params)) . ")";
+        return $this->query($sql, $params) ?: [];
+    }
+
     public function getSFP()
     {
         $sql = "SELECT 

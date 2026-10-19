@@ -22,7 +22,7 @@ $this->view("page_components/header"); ?>
         <div class="card">
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h4 class="card-title mb-0">Generowanie dokumentu WZ, CRM, WDT</h4>
-                <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/wz">Archiwum WZ</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/cmr">Archiwum CMR</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/wdt">Archiwum WDT</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/difference">Archiwum różnic</a></div>
+                <div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary btn-sm" href="<?= ROOT ?>/shipping/wizard"><i class="bi bi-calendar-check me-1"></i>Wyślij cały dzień (kreator)</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/wz">Archiwum WZ</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/cmr">Archiwum CMR</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/wdt">Archiwum WDT</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/shipping/difference">Archiwum różnic</a></div>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -578,7 +578,8 @@ $this->view("page_components/header"); ?>
             data
         });
 
-        if (res) {
+        // Sukces tylko przy odpowiedzi 2xx z identyfikatorem wysyłki (wcześniej `if (res)` było zawsze prawdziwe).
+        if (res.ok && res.id) {
             Swal.fire({
                 icon: "success",
                 title: "Sukces",
@@ -645,7 +646,7 @@ $this->view("page_components/header"); ?>
             data
         });
 
-        if (res) {
+        if (res.ok && res.id) {
             Swal.fire({
                 icon: "success",
                 title: "Sukces",

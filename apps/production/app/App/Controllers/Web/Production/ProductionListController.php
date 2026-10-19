@@ -70,7 +70,7 @@ class ProductionListController extends BaseController
             return $this->productionListService->getProductionListPDF($data);
         }, default: false);
 
-        if (!$resp || !is_array($resp)) {
+        if (!is_array($resp) || !isset($resp['file_string'])) {
             return $this->json(['message' => 'Wystąpił błąd przy generowaniu listy produkcyjnej'], 500);
         }
 
@@ -99,7 +99,7 @@ class ProductionListController extends BaseController
             return $this->productionListService->getComplaintProductionListPDF();
         }, default: false);
 
-        if (!$resp || !is_array($resp)) {
+        if (!is_array($resp) || !isset($resp['file_string'])) {
             return $this->json(['message' => 'Wystąpił błąd przy generowaniu listy produkcyjnej'], 500);
         }
 
@@ -129,7 +129,7 @@ class ProductionListController extends BaseController
 
         $resp = $this->requirementListService->getRequirementListPDF($data);
 
-        if (!$resp || !is_array($resp)) {
+        if (!is_array($resp) || !isset($resp['file_string'])) {
             return $this->json(['message' => 'Wystąpił błąd przy generowaniu listy zapotrzebowania materiałowego'], 500);
         }
 

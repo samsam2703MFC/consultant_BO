@@ -11,6 +11,7 @@ use App\Services\Client\ClientService;
 use App\Services\Client\Order\OrderCollectorService;
 use App\Services\Client\Order\OrderSupplementPusherService;
 use App\Services\Client\Order\OrderService;
+use App\Services\Client\Order\OrderTimelineService;
 use App\Services\Client\PriceList\ExternalPriceListService;
 use App\Services\Finances\ClientProductPriceService;
 use App\Services\Product\ProductService;
@@ -28,7 +29,8 @@ class OrderController extends BaseController
         private OrderCollectorService $orderCollectorService,
         private ClientProductPriceService $clientProductPriceService,
         private ExternalPriceListService $externalPriceListService,
-        private OrderSupplementPusherService $supplementPusherService
+        private OrderSupplementPusherService $supplementPusherService,
+        private OrderTimelineService $orderTimelineService
     )
     {
     }
@@ -212,6 +214,7 @@ class OrderController extends BaseController
 
         $data['row_products'] = $this->orderService->getProducts($id);
         $data['proforma_context'] = $this->orderService->getProformaContext($data['row'], $data['row_products']);
+        $data['timeline'] = $this->orderTimelineService->forOrder((int) $id);
         $data['client_type'] = "standard";
         if(!is_null($data['client']['franchisee_uid'])){
             $data['client_type'] = "franchisee";

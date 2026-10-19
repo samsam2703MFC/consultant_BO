@@ -64,8 +64,8 @@
                 </div>
             </div>
 
-            <div class="card-body px-0 py-0">
-                <table class="table table-sm table-hover mb-0" id="clients-table">
+            <div class="card-body px-0 py-0 at-table-pad">
+                <table class="table table-sm table-hover mb-0" id="clients-table" data-at-table>
                     <thead>
                         <tr>
                             <th>Firma</th>
@@ -127,40 +127,21 @@
                                 </td>
 
                                 <td class="col-fixed text-end pe-3">
-                                    <div class="d-flex gap-1 justify-content-end flex-nowrap">
-                                        <a href="<?= ROOT ?>/clients/<?= $row['id'] ?>/edit"
-                                           class="btn btn-outline-warning btn-sm py-0 px-2"
-                                           title="Edytuj">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <button type="button"
-                                                class="btn btn-outline-secondary btn-sm py-0 px-2"
-                                                onclick="getPriceListByClient(<?= $row['id'] ?>)"
-                                                title="Cennik PDF">
-                                            <i class="bi bi-file-earmark-text"></i>
-                                        </button>
-                                        <a href="<?= ROOT ?>/clients/<?= $row['id'] ?>/profitability"
-                                           class="btn btn-outline-primary btn-sm py-0 px-2"
-                                           title="Rentowność">
-                                            <i class="bi bi-graph-up"></i>
-                                        </a>
-                                        <a href="<?= ROOT ?>/clients/<?= $row['id'] ?>/sales-summary"
-                                           class="btn btn-outline-success btn-sm py-0 px-2"
-                                           title="Sprzedaż WDT">
-                                            <i class="bi bi-box-seam"></i>
-                                        </a>
-                                        <?php if (!empty($row['franchisee_uid'])): ?>
-                                            <a href="<?= ROOT ?>/clients/<?= $row['id'] ?>/franchise-product-snapshot"
-                                               class="btn btn-outline-info btn-sm py-0 px-2"
-                                               title="Diagnostyka produktów franczyzowych">
-                                                <i class="bi bi-clipboard2-pulse"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                        <a href="<?= ROOT ?>/clients/<?= $row['id'] ?>/delete"
-                                           class="btn btn-outline-danger btn-sm py-0 px-2"
-                                           title="Usuń">
-                                            <i class="bi bi-trash2"></i>
-                                        </a>
+                                    <div class="at-actions">
+                                        <a href="<?= ROOT ?>/clients/<?= $row['id'] ?>/edit" class="btn btn-sm btn-primary">Edytuj</a>
+                                        <div class="at-more">
+                                            <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
+                                            <div class="at-more-menu" role="menu" hidden>
+                                                <button type="button" role="menuitem" onclick="getPriceListByClient(<?= $row['id'] ?>)"><i class="bi bi-file-earmark-text"></i>Cennik (PDF)</button>
+                                                <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/profitability"><i class="bi bi-graph-up"></i>Rentowność</a>
+                                                <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/sales-summary"><i class="bi bi-box-seam"></i>Sprzedaż WDT</a>
+                                                <?php if (!empty($row['franchisee_uid'])): ?>
+                                                    <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/franchise-product-snapshot"><i class="bi bi-clipboard-data"></i>Diagnostyka produktów franczyzowych</a>
+                                                <?php endif; ?>
+                                                <hr>
+                                                <a role="menuitem" class="at-more-danger" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/delete"><i class="bi bi-trash"></i>Usuń…</a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
 

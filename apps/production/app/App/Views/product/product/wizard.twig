@@ -1,0 +1,527 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Nowy produkt z recepturą{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-end justify-content-between gap-2">
+            <div>
+                <h3>Nowy produkt z recepturą</h3>
+                <p class="text-subtitle text-muted mb-0">Produkt, opakowanie i receptura w jednym przebiegu — z kosztem surowców na bieżąco.</p>
+            </div>
+            <a class="at-link" href="{{ root }}/products/new">Tylko produkt, bez receptury <i class="bi bi-arrow-right"></i></a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-wizard" id="prodWizard"
+         data-materials="{{ materials|json_encode }}"
+         data-semi="{{ semiProducts|json_encode }}"
+         data-preparations="{{ preparations|json_encode }}">
+
+    <ol class="at-steps" aria-label="Kroki kreatora">
+        <li data-step-tab="1"><span>Produkt</span></li>
+        <li data-step-tab="2"><span>Opakowanie i waga</span></li>
+        <li data-step-tab="3"><span>Receptura</span></li>
+        <li data-step-tab="4"><span>Przygotowanie</span></li>
+        <li data-step-tab="5"><span>Podsumowanie</span></li>
+    </ol>
+
+    <div class="card">
+        <div class="card-body">
+
+            {# --- 1. Produkt --------------------------------------------------------- #}
+            <div class="at-step" data-step="1">
+                <h4 class="at-step-title">Jaki produkt tworzysz?</h4>
+                <p class="at-step-lead">Nazwa, kategoria, dział produkcyjny i typ etykiety.</p>
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label" for="pw_name">Nazwa produktu</label>
+                        <input class="form-control" id="pw_name" data-field="name" maxlength="255" required placeholder="np. Baguette Tradition 500 g.">
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label" for="pw_category">Kategoria</label>
+                        <select class="form-select" id="pw_category" data-field="id_category" required>
+                            <option value="">Wybierz…</option>
+                            {% for c in categories %}
+                                <option value="{{ c.id }}" {{ c.id == preset_category ? 'selected' : '' }}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label" for="pw_section">Dział produkcyjny</label>
+                        <select class="form-select" id="pw_section" data-field="id_section" required>
+                            <option value="">Wybierz…</option>
+                            {% for s in sections %}
+                                <option value="{{ s.id }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="col-12">
+                        <span class="form-label d-block">Typ etykiety</span>
+                        <div class="at-choices" role="radiogroup" aria-label="Typ etykiety" style="max-width: 520px;">
+                            <label class="at-choice is-checked">
+                                <input type="radio" name="pw_label" value="0" data-field="label_type" checked>
+                                <i class="bi bi-check-circle-fill at-choice-tick" aria-hidden="true"></i>
+                                <strong>Mała etykieta</strong>
+                            </label>
+                            <label class="at-choice">
+                                <input type="radio" name="pw_label" value="1" data-field="label_type">
+                                <i class="bi bi-check-circle-fill at-choice-tick" aria-hidden="true"></i>
+                                <strong>Duża etykieta</strong>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# --- 2. Opakowanie i waga ------------------------------------------------- #}
+            <div class="at-step" data-step="2" hidden>
+                <h4 class="at-step-title">Opakowanie, paleta i waga</h4>
+                <p class="at-step-lead">Wszystkie pola są wymagane i muszą być liczbami całkowitymi większymi od zera.</p>
+                <div class="row g-3">
+                    {% set fields = [
+                        ['weight', 'Waga produktu (g)', 'Waga jednej sztuki'],
+                        ['shelf_life', 'Przydatność do spożycia (dni)', ''],
+                        ['stock_minimum', 'Minimalny stan magazynowy (kartony)', 'Używany na liście produkcyjnej'],
+                        ['ppb', 'Sztuk w opakowaniu', ''],
+                        ['bpc', 'Opakowań w kartonie', ''],
+                        ['ppc', 'Sztuk w kartonie', ''],
+                        ['cpl', 'Kartonów na warstwie palety', ''],
+                        ['lpp', 'Warstw na palecie', ''],
+                        ['cpp', 'Kartonów na palecie', '']
+                    ] %}
+                    {% for f in fields %}
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <label class="form-label" for="pw_{{ f[0] }}">{{ f[1] }}</label>
+                            <input class="form-control" type="number" min="1" step="1" inputmode="numeric" id="pw_{{ f[0] }}" data-field="{{ f[0] }}" required>
+                            <div class="invalid-feedback"></div>
+                            <small class="at-run-msg" data-hint="{{ f[0] }}">{{ f[2] }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {# --- 3. Receptura ------------------------------------------------------------- #}
+            <div class="at-step" data-step="3" hidden>
+                <h4 class="at-step-title">Receptura na 1 sztukę</h4>
+                <p class="at-step-lead">Surowce w jednostce bazowej (g, ml, szt.), półprodukty w ich jednostce. Koszt liczony jak na stronie kalkulacji receptury.</p>
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-6">
+                        <div class="d-flex gap-2 align-items-end">
+                            <div class="flex-grow-1">
+                                <label class="form-label" for="pwMaterial">Surowiec</label>
+                                <select id="pwMaterial"></select>
+                            </div>
+                            <div style="width: 120px;">
+                                <label class="form-label" for="pwMaterialQty">Ilość <span data-unit="material"></span></label>
+                                <input class="form-control" type="number" min="1" step="1" id="pwMaterialQty">
+                            </div>
+                            <button type="button" class="btn btn-outline-primary" id="pwAddMaterial"><i class="bi bi-plus"></i> Dodaj</button>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <div class="d-flex gap-2 align-items-end">
+                            <div class="flex-grow-1">
+                                <label class="form-label" for="pwSemi">Półprodukt</label>
+                                <select id="pwSemi"></select>
+                            </div>
+                            <div style="width: 120px;">
+                                <label class="form-label" for="pwSemiQty">Ilość <span data-unit="semi"></span></label>
+                                <input class="form-control" type="number" min="1" step="1" id="pwSemiQty">
+                            </div>
+                            <button type="button" class="btn btn-outline-primary" id="pwAddSemi"><i class="bi bi-plus"></i> Dodaj</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="pwLines" class="mt-3"></div>
+            </div>
+
+            {# --- 4. Przygotowanie ---------------------------------------------------------- #}
+            <div class="at-step" data-step="4" hidden>
+                <h4 class="at-step-title">Czynności i czas przygotowania</h4>
+                <p class="at-step-lead">Rodzaj czynności i czas na partię receptury. Możesz pominąć ten krok i uzupełnić czynności później w edycji receptury.</p>
+                <div class="d-flex flex-wrap gap-2 align-items-end" style="max-width: 720px;">
+                    <div class="flex-grow-1">
+                        <label class="form-label" for="pwPrep">Czynność</label>
+                        <select class="form-select" id="pwPrep"></select>
+                    </div>
+                    <div style="width: 140px;">
+                        <label class="form-label" for="pwPrepMin">Czas (min)</label>
+                        <input class="form-control" type="number" min="0" step="0.5" id="pwPrepMin">
+                    </div>
+                    <button type="button" class="btn btn-outline-primary" id="pwAddPrep"><i class="bi bi-plus"></i> Dodaj</button>
+                </div>
+                <div id="pwPreps" class="mt-3"></div>
+            </div>
+
+            {# --- 5. Podsumowanie --------------------------------------------------------- #}
+            <div class="at-step" data-step="5" hidden>
+                <h4 class="at-step-title">Podsumowanie</h4>
+                <p class="at-step-lead">Sprawdź dane przed zapisem.</p>
+                <div id="pwSummary"></div>
+                <div class="at-note at-note-safe">
+                    <i class="bi bi-shield-check"></i><strong>Produkt i receptura powstaną razem, w jednej transakcji.</strong>
+                    Jeśli zapis receptury (lub jej spłaszczenie, etykieta czy przeliczenie kosztu) się nie uda, produkt też nie zostanie utworzony — nic nie zostanie zapisane.
+                    Po zapisie przejdziesz do kalkulacji receptury.
+                </div>
+            </div>
+
+            <div class="at-wizard-nav">
+                <button type="button" class="btn btn-outline-dark" data-wizard-back hidden><i class="bi bi-arrow-left"></i> Wstecz</button>
+                <span class="at-wizard-hint" id="prodHint" aria-live="polite"></span>
+                <button type="button" class="btn btn-primary at-next" data-wizard-next>Dalej <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+
+    const box = document.getElementById('prodWizard');
+    const MATERIALS = JSON.parse(box.dataset.materials || '[]');
+    const SEMI = JSON.parse(box.dataset.semi || '[]');
+    const PREPS = JSON.parse(box.dataset.preparations || '[]');
+    const backBtn = box.querySelector('[data-wizard-back]');
+    const nextBtn = box.querySelector('[data-wizard-next]');
+    const hint = document.getElementById('prodHint');
+    const LAST = 5;
+    const NUMERIC = ['weight', 'shelf_life', 'stock_minimum', 'ppb', 'bpc', 'ppc', 'cpl', 'lpp', 'cpp'];
+    const STEP_OF = { name: 1, id_category: 1, id_section: 1, label_type: 1 };
+    NUMERIC.forEach((f) => { STEP_OF[f] = 2; });
+
+    const state = { step: 1, lines: [], preps: [], cost: null, saving: false };
+    let costTimer = null, costSeq = 0;
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const zl = (n) => Number(n || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+    const setHint = (t, err) => { hint.textContent = t || ''; hint.classList.toggle('is-error', !!err); };
+    const field = (name) => box.querySelector('[data-field="' + name + '"]:not([type=radio])');
+    const val = (name) => name === 'label_type'
+        ? (box.querySelector('[data-field="label_type"]:checked') || {}).value || '0'
+        : (field(name).value || '').trim();
+
+    /* --- Listy wyboru z wyszukiwaniem (Choices) ----------------------------------- */
+    function choices(el, groups, placeholder) {
+        el.innerHTML = '<option value="">' + placeholder + '</option>' + groups;
+        el.dataset.choicesInited = '1';   // inicjujemy sami, globalny inicjator pomija
+        return typeof Choices === 'function'
+            ? new Choices(el, { searchEnabled: true, shouldSort: false, itemSelectText: '', searchResultLimit: 30, searchPlaceholderValue: 'Szukaj…' })
+            : null;
+    }
+    const byCategory = {};
+    MATERIALS.forEach((m) => { (byCategory[m.category_name || 'Inne'] = byCategory[m.category_name || 'Inne'] || []).push(m); });
+    const materialHtml = Object.keys(byCategory).sort().map((cat) => '<optgroup label="' + esc(cat) + '">' +
+        byCategory[cat].map((m) => '<option value="' + m.id + '">' + esc(m.name) + ' (' + esc(m.unit_name) + ')</option>').join('') + '</optgroup>').join('');
+    const semiHtml = SEMI.map((s) => '<option value="' + s.id + '">' + esc(s.name) + ' (' + esc(s.unit_name) + ')</option>').join('');
+    const matSel = document.getElementById('pwMaterial');
+    const semiSel = document.getElementById('pwSemi');
+    const matChoices = choices(matSel, materialHtml, 'Wybierz surowiec…');
+    const semiChoices = choices(semiSel, semiHtml, 'Wybierz półprodukt…');
+    document.getElementById('pwPrep').innerHTML = '<option value="">Wybierz…</option>' + PREPS.map((p) => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+
+    matSel.addEventListener('change', () => {
+        const m = MATERIALS.find((x) => +x.id === +matSel.value);
+        box.querySelector('[data-unit="material"]').textContent = m ? '(' + m.unit_name + ')' : '';
+    });
+    semiSel.addEventListener('change', () => {
+        const s = SEMI.find((x) => +x.id === +semiSel.value);
+        box.querySelector('[data-unit="semi"]').textContent = s ? '(' + s.unit_name + ')' : '';
+    });
+
+    /* --- Kroki ------------------------------------------------------------------------ */
+    function show(step) {
+        state.step = step;
+        box.querySelectorAll('[data-step]').forEach((p) => { p.hidden = +p.dataset.step !== step; });
+        box.querySelectorAll('[data-step-tab]').forEach((t) => {
+            const n = +t.dataset.stepTab;
+            t.classList.toggle('is-active', n === step);
+            t.classList.toggle('is-done', n < step);
+            if (n === step) t.setAttribute('aria-current', 'step'); else t.removeAttribute('aria-current');
+        });
+        backBtn.hidden = step === 1;
+        nextBtn.innerHTML = step === LAST ? '<i class="bi bi-check2-circle"></i> Utwórz produkt i recepturę' : 'Dalej <i class="bi bi-arrow-right"></i>';
+        nextBtn.classList.toggle('btn-success', step === LAST);
+        nextBtn.classList.toggle('btn-primary', step !== LAST);
+        setHint('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function markError(name, message) {
+        const el = name === 'label_type' ? null : field(name);
+        if (!el) return;
+        el.classList.toggle('is-invalid', !!message);
+        const fb = el.parentElement.querySelector('.invalid-feedback');
+        if (fb) fb.textContent = message || '';
+    }
+
+    // Te same reguły co ProductService::validate (+ liczby całkowite > 0, kolumny INT).
+    function checkStep(step) {
+        const errors = {};
+        if (step === 1) {
+            if (!val('name')) errors.name = 'Wprowadź nazwę';
+            if (!val('id_category')) errors.id_category = 'Wybierz kategorię';
+            if (!val('id_section')) errors.id_section = 'Wybierz dział produkcyjny';
+            ['name', 'id_category', 'id_section'].forEach((f) => markError(f, errors[f]));
+        }
+        if (step === 2) {
+            NUMERIC.forEach((f) => {
+                const v = val(f);
+                if (!v || v === '0') errors[f] = 'Pole wymagane';
+                else if (!/^[1-9]\d{0,8}$/.test(v)) errors[f] = 'Podaj liczbę całkowitą większą od zera';
+                markError(f, errors[f]);
+            });
+        }
+        if (step === 3 && !state.lines.length) errors.lines = 'Dodaj co najmniej jeden surowiec lub półprodukt.';
+        if (step === 3 && state.lines.some((l) => !/^[1-9]\d*$/.test(String(l.quantity)))) errors.lines = 'Ilości muszą być liczbami całkowitymi większymi od zera.';
+        if (step === 4 && state.preps.some((p) => !(p.minutes >= 0))) errors.preps = 'Podaj czas czynności.';
+        const first = Object.values(errors)[0];
+        setHint(first ? (Object.keys(errors).length > 1 ? 'Popraw zaznaczone pola.' : first) : '', !!first);
+        return !first;
+    }
+
+    backBtn.addEventListener('click', () => { if (!state.saving) show(state.step - 1); });
+    nextBtn.addEventListener('click', async () => {
+        if (state.step < LAST) {
+            if (!checkStep(state.step)) return;
+            if (state.step === 4) renderSummary();
+            show(state.step + 1);
+            return;
+        }
+        await save();
+    });
+
+    box.querySelectorAll('input[name="pw_label"]').forEach((r) => r.addEventListener('change', () => {
+        box.querySelectorAll('input[name="pw_label"]').forEach((x) => x.closest('.at-choice').classList.toggle('is-checked', x.checked));
+    }));
+    box.addEventListener('input', (e) => {
+        const f = e.target.dataset && e.target.dataset.field;
+        if (f && e.target.classList.contains('is-invalid')) markError(f, '');
+        if (['ppb', 'bpc', 'ppc', 'cpl', 'lpp', 'cpp'].includes(f)) packagingHints();
+        if (f === 'ppc') renderLines();
+    });
+
+    // Podpowiedzi spójności (nie blokują): ppc = ppb × bpc, cpp = cpl × lpp.
+    function packagingHints() {
+        const n = (f) => parseInt(val(f), 10) || 0;
+        const pair = (target, a, b, label) => {
+            const el = box.querySelector('[data-hint="' + target + '"]');
+            if (!n(a) || !n(b)) { el.textContent = ''; el.className = 'at-run-msg'; return; }
+            const product = n(a) * n(b);
+            const ok = !n(target) || n(target) === product;
+            el.textContent = label + ': ' + n(a) + ' × ' + n(b) + ' = ' + product + (ok ? '' : ' — różni się od wpisanej wartości');
+            el.className = 'at-run-msg' + (ok ? '' : ' text-warning');
+        };
+        pair('ppc', 'ppb', 'bpc', 'Wg opakowań');
+        pair('cpp', 'cpl', 'lpp', 'Wg warstw');
+    }
+
+    /* --- 3. Linie receptury i koszt szkicu --------------------------------------------- */
+    function addLine(type, id, qty) {
+        const list = type === 'material' ? MATERIALS : SEMI;
+        const item = list.find((x) => +x.id === +id);
+        if (!item) { setHint(type === 'material' ? 'Wybierz surowiec.' : 'Wybierz półprodukt.', true); return false; }
+        if (!/^[1-9]\d*$/.test(String(qty))) { setHint('Podaj ilość — liczbę całkowitą większą od zera.', true); return false; }
+        const existing = state.lines.find((l) => l.type === type && +l.id === +id);
+        if (existing) { setHint('„' + item.name + '” jest już w recepturze — zmień ilość w tabeli.', true); return false; }
+        state.lines.push({ type, id: +id, name: item.name, unit: item.unit_name, quantity: +qty, price: null });
+        setHint('');
+        renderLines();
+        scheduleCost();
+        return true;
+    }
+
+    document.getElementById('pwAddMaterial').addEventListener('click', () => {
+        const q = document.getElementById('pwMaterialQty');
+        if (addLine('material', matSel.value, q.value)) {
+            q.value = '';
+            if (matChoices) matChoices.setChoiceByValue(''); else matSel.value = '';
+            box.querySelector('[data-unit="material"]').textContent = '';
+        }
+    });
+    document.getElementById('pwAddSemi').addEventListener('click', () => {
+        const q = document.getElementById('pwSemiQty');
+        if (addLine('semi_product', semiSel.value, q.value)) {
+            q.value = '';
+            if (semiChoices) semiChoices.setChoiceByValue(''); else semiSel.value = '';
+            box.querySelector('[data-unit="semi"]').textContent = '';
+        }
+    });
+
+    function renderLines() {
+        const el = document.getElementById('pwLines');
+        if (!state.lines.length) {
+            el.innerHTML = '<p class="at-empty">Receptura jest pusta. Dodaj surowce lub półprodukty powyżej.</p>';
+            return;
+        }
+        const ppc = parseInt(val('ppc'), 10) || 0;
+        const total = state.cost ? state.cost.total : null;
+        el.innerHTML = '<div class="table-responsive"><table class="table"><thead><tr><th>Składnik</th><th>Rodzaj</th><th style="width:150px">Ilość</th><th class="text-end">Koszt</th><th></th></tr></thead><tbody>' +
+            state.lines.map((l, i) => '<tr>' +
+                '<td>' + esc(l.name) + '</td>' +
+                '<td><span class="at-pill ' + (l.type === 'material' ? '' : 'at-pill-warn') + '">' + (l.type === 'material' ? 'surowiec' : 'półprodukt') + '</span></td>' +
+                '<td><div class="input-group input-group-sm"><input class="form-control" type="number" min="1" step="1" value="' + esc(l.quantity) + '" data-line="' + i + '" aria-label="Ilość: ' + esc(l.name) + '"><span class="input-group-text">' + esc(l.unit) + '</span></div></td>' +
+                '<td class="text-end">' + (l.price === null ? '<span class="text-muted">…</span>' : zl(l.price)) + '</td>' +
+                '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-dark" data-remove="' + i + '" aria-label="Usuń: ' + esc(l.name) + '"><i class="bi bi-x"></i></button></td>' +
+                '</tr>').join('') +
+            '</tbody><tfoot><tr><td colspan="3"><strong>Koszt surowców (szkic)</strong>' + (ppc ? '<span class="at-run-msg">na karton (' + ppc + ' szt.): ' + (total === null ? '…' : zl(total * ppc)) + '</span>' : '') + '</td>' +
+            '<td class="text-end"><strong>' + (total === null ? '…' : zl(total)) + '</strong><span class="at-run-msg">na 1 szt.</span></td><td></td></tr></tfoot></table></div>';
+    }
+
+    document.getElementById('pwLines').addEventListener('input', (e) => {
+        const i = e.target.dataset.line;
+        if (i === undefined) return;
+        state.lines[+i].quantity = e.target.value.trim();
+        scheduleCost(true);
+    });
+    document.getElementById('pwLines').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-remove]');
+        if (!b) return;
+        state.lines.splice(+b.dataset.remove, 1);
+        renderLines();
+        scheduleCost();
+    });
+
+    function scheduleCost(keepInputs) {
+        clearTimeout(costTimer);
+        costTimer = setTimeout(() => loadCost(keepInputs), 300);
+    }
+
+    async function loadCost(keepInputs) {
+        const seq = ++costSeq;
+        const payload = {
+            materials: state.lines.filter((l) => l.type === 'material').map((l) => ({ id: l.id, quantity: l.quantity })),
+            semi_products: state.lines.filter((l) => l.type === 'semi_product').map((l) => ({ id: l.id, quantity: l.quantity }))
+        };
+        const res = await api('/ajax/recipes/draft-cost', { method: 'POST', data: payload });
+        if (seq !== costSeq) return;   // starsza odpowiedź
+        if (!res.ok) { setHint('Nie udało się policzyć kosztu.', true); return; }
+        state.cost = res.data;
+        state.lines.forEach((l) => {
+            const c = res.data.lines.find((x) => x.type === l.type && +x.id === +l.id);
+            l.price = c ? c.price : 0;
+        });
+        if (keepInputs) {
+            // Nie przebudowujemy tabeli podczas pisania: tylko kwoty.
+            const rows = document.querySelectorAll('#pwLines tbody tr');
+            state.lines.forEach((l, i) => { if (rows[i]) rows[i].cells[3].textContent = zl(l.price); });
+            const foot = document.querySelector('#pwLines tfoot');
+            if (foot) {
+                const ppc = parseInt(val('ppc'), 10) || 0;
+                foot.querySelector('td.text-end strong').textContent = zl(state.cost.total);
+                const perCarton = foot.querySelector('td .at-run-msg');
+                if (perCarton && ppc) perCarton.textContent = 'na karton (' + ppc + ' szt.): ' + zl(state.cost.total * ppc);
+            }
+        } else {
+            renderLines();
+        }
+    }
+
+    /* --- 4. Czynności --------------------------------------------------------------- */
+    const fmtTime = (sec) => { const m = Math.floor(sec / 60), s = sec % 60; return (m ? m + ' min' : '') + (s ? (m ? ' ' : '') + s + ' s' : (m ? '' : '0 s')); };
+    document.getElementById('pwAddPrep').addEventListener('click', () => {
+        const sel = document.getElementById('pwPrep');
+        const min = parseFloat(String(document.getElementById('pwPrepMin').value).replace(',', '.'));
+        const p = PREPS.find((x) => +x.id === +sel.value);
+        if (!p) { setHint('Wybierz czynność.', true); return; }
+        if (!(min >= 0)) { setHint('Podaj czas w minutach.', true); return; }
+        if (state.preps.some((x) => x.id === +p.id)) { setHint('Ta czynność jest już na liście.', true); return; }
+        state.preps.push({ id: +p.id, name: p.name, minutes: min });
+        sel.value = '';
+        document.getElementById('pwPrepMin').value = '';
+        setHint('');
+        renderPreps();
+    });
+    function renderPreps() {
+        const el = document.getElementById('pwPreps');
+        el.innerHTML = state.preps.length
+            ? '<div class="table-responsive" style="max-width:720px"><table class="table"><thead><tr><th>Czynność</th><th style="width:160px">Czas (min)</th><th></th></tr></thead><tbody>' +
+              state.preps.map((p, i) => '<tr><td>' + esc(p.name) + '</td><td><input class="form-control form-control-sm" type="number" min="0" step="0.5" value="' + p.minutes + '" data-prep="' + i + '" aria-label="Czas: ' + esc(p.name) + '"></td>' +
+                  '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-dark" data-remove-prep="' + i + '" aria-label="Usuń: ' + esc(p.name) + '"><i class="bi bi-x"></i></button></td></tr>').join('') +
+              '</tbody></table></div>'
+            : '<p class="at-empty">Brak czynności — możesz je dodać teraz albo później.</p>';
+    }
+    document.getElementById('pwPreps').addEventListener('input', (e) => {
+        const i = e.target.dataset.prep;
+        if (i !== undefined) state.preps[+i].minutes = parseFloat(String(e.target.value).replace(',', '.'));
+    });
+    document.getElementById('pwPreps').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-remove-prep]');
+        if (!b) return;
+        state.preps.splice(+b.dataset.removePrep, 1);
+        renderPreps();
+    });
+
+    /* --- 5. Podsumowanie i zapis --------------------------------------------------- */
+    function optionText(name) { const s = field(name); return s.selectedOptions[0] ? s.selectedOptions[0].textContent.trim() : ''; }
+
+    function renderSummary() {
+        const ppc = parseInt(val('ppc'), 10) || 0;
+        const total = state.cost ? state.cost.total : 0;
+        const row = (label, value) => '<tr><th style="width:45%">' + esc(label) + '</th><td>' + value + '</td></tr>';
+        document.getElementById('pwSummary').innerHTML = '<div class="row g-3">' +
+            '<div class="col-12 col-lg-6"><table class="table table-sm"><tbody>' +
+                row('Nazwa', '<strong>' + esc(val('name')) + '</strong>') +
+                row('Kategoria', esc(optionText('id_category'))) +
+                row('Dział produkcyjny', esc(optionText('id_section'))) +
+                row('Etykieta', val('label_type') === '1' ? 'Duża' : 'Mała') +
+                row('Waga', esc(val('weight')) + ' g') +
+                row('Przydatność', esc(val('shelf_life')) + ' dni') +
+                row('Minimalny stan', esc(val('stock_minimum')) + ' kart.') +
+                row('Opakowanie', esc(val('ppb')) + ' szt. × ' + esc(val('bpc')) + ' opak. · ' + esc(val('ppc')) + ' szt./karton') +
+                row('Paleta', esc(val('cpl')) + ' kart./warstwa × ' + esc(val('lpp')) + ' warstw · ' + esc(val('cpp')) + ' kart./paleta') +
+            '</tbody></table></div>' +
+            '<div class="col-12 col-lg-6"><table class="table table-sm"><thead><tr><th>Składnik</th><th class="text-end">Ilość</th><th class="text-end">Koszt</th></tr></thead><tbody>' +
+                state.lines.map((l) => '<tr><td>' + esc(l.name) + '</td><td class="text-end">' + esc(l.quantity) + ' ' + esc(l.unit) + '</td><td class="text-end">' + zl(l.price) + '</td></tr>').join('') +
+            '</tbody><tfoot><tr><td><strong>Koszt surowców</strong></td><td></td><td class="text-end"><strong>' + zl(total) + '</strong><span class="at-run-msg">' + (ppc ? zl(total * ppc) + ' / karton' : '') + '</span></td></tr></tfoot></table>' +
+            '<p class="mb-1"><strong>Czynności:</strong> ' + (state.preps.length ? state.preps.map((p) => esc(p.name) + ' (' + fmtTime(Math.round(p.minutes * 60)) + ')').join(', ') : '<span class="text-muted">brak</span>') + '</p>' +
+            '</div></div>';
+    }
+
+    async function save() {
+        if (state.saving) return;
+        state.saving = true;
+        nextBtn.disabled = true;
+        backBtn.disabled = true;
+        setHint('Zapisywanie…');
+        const product = { label_type: val('label_type') };
+        ['name', 'id_category', 'id_section'].concat(NUMERIC).forEach((f) => { product[f] = val(f); });
+        const res = await api('/ajax/products/with-recipe', {
+            method: 'POST',
+            data: {
+                product: product,
+                materials: state.lines.filter((l) => l.type === 'material').map((l) => ({ id: l.id, quantity: l.quantity })),
+                semi_products: state.lines.filter((l) => l.type === 'semi_product').map((l) => ({ id: l.id, quantity: l.quantity })),
+                preparations: state.preps.map((p) => ({ id: p.id, duration_second: Math.round(p.minutes * 60) }))
+            }
+        });
+        if (res.ok && res.redirect) {
+            setHint('Zapisano. Przechodzę do kalkulacji receptury…');
+            window.location.href = res.redirect;
+            return;
+        }
+        state.saving = false;
+        nextBtn.disabled = false;
+        backBtn.disabled = false;
+        if (res.errors) {
+            Object.entries(res.errors).forEach(([f, m]) => markError(f, m));
+            const steps = Object.keys(res.errors).map((f) => STEP_OF[f] || 1);
+            show(Math.min.apply(null, steps));
+        }
+        setHint(res.message || 'Nie udało się zapisać (kod ' + res.status + '). Nic nie zostało zapisane.', true);
+    }
+
+    renderLines();
+    renderPreps();
+    show(1);
+});
+</script>
+{% endblock %}

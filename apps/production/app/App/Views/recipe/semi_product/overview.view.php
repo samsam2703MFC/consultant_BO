@@ -24,37 +24,37 @@
                 <h4 class="card-title">Lista utworzonych receptur półproduktu <a href="<?=ROOT?>/semi-products/new" class="btn btn-primary" role="button">Dodaj nową</a></h4>
             </div>
             <div class="card-body">
-                <div class="row mt-4">
-                    <div class="col-4">
-                        <input class="form-control" type="text" placeholder="Wyszukaj po nazwie..." onkeyup="searchInTable(this.value)">
-                    </div>
-                </div>
-                <div class="row mt-4">
+                <div class="row mt-2">
                     <div class="col-12">
-                        <table class="table table-hover">
+                        <table class="table table-hover" data-at-table>
                             <thead>
-                            <th style="width: 50%">Nazwa</th>
-                            <th style="width: 20%"></th>
-                            <th style="width: 10%"></th>
-                            <th style="width: 10%"></th>
-                            <th style="width: 10%"></th>
+                            <th style="width: 55%">Nazwa</th>
+                            <th style="width: 25%">Koszt surowców</th>
+                            <th style="width: 20%" class="text-end">Akcje</th>
                             </thead>
                             <tbody id="id_recipe_table">
                             <?php if(!empty($semi_final_recipes)): ?>
                                 <?php foreach($semi_final_recipes as $semi_final_recipe): ?>
                                     <tr>
-                                        <td><?= $semi_final_recipe['name'] ?></td>
-                                        <td><?= $semi_final_recipe['precalculated_material_cost'] ?> zł / <?= $semi_final_recipe['yield_quantity'] ?> <?=$semi_final_recipe['unit_name']?></td>
-                                        <td class="text-center">
-                                            <button class="btn btn-secondary"
-                                                    onclick="openCompetencyModal(<?=$semi_final_recipe['id']?>, <?=htmlspecialchars(json_encode($semi_final_recipe['name']))?>)"
-                                                    title="Kompetencje">
-                                                <i class="bi bi-award"></i>
-                                            </button>
+                                        <td><?= esc($semi_final_recipe['name'] ?? '') ?></td>
+                                        <td><?= $semi_final_recipe['precalculated_material_cost'] ?> zł / <?= $semi_final_recipe['yield_quantity'] ?> <?= esc($semi_final_recipe['unit_name'] ?? '') ?></td>
+                                        <td class="text-end">
+                                            <div class="at-actions">
+                                                <a href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/calculation" class="btn btn-sm btn-primary">Kalkulacja</a>
+                                                <div class="at-more">
+                                                    <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
+                                                    <div class="at-more-menu" role="menu" hidden>
+                                                        <a role="menuitem" href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/edit"><i class="bi bi-pencil"></i>Edytuj</a>
+                                                        <button type="button" role="menuitem"
+                                                                onclick="openCompetencyModal(<?=$semi_final_recipe['id']?>, <?=htmlspecialchars(json_encode($semi_final_recipe['name']))?>)">
+                                                            <i class="bi bi-award"></i>Kompetencje
+                                                        </button>
+                                                        <hr>
+                                                        <a role="menuitem" class="at-more-danger" href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/delete"><i class="bi bi-trash"></i>Usuń…</a>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td class="text-center"><a href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/calculation" class="btn btn-info">Kalkulacja</a></td>
-                                        <td class="text-center"><a href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/edit" class="btn btn-warning">Edytuj</a></td>
-                                        <td class="text-center"><a href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/delete" class="btn btn-danger">Usuń</a></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -185,24 +185,6 @@
 
     function escHtmlJS(str) {
         return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function searchInTable(input_value) {
-        var filter, table, tr, td, i, txtValue;
-        filter = input_value.toUpperCase();
-        table = document.getElementById("id_recipe_table");
-        tr = table.getElementsByTagName("tr");
-        for (i = 0; i < tr.length; i++) {
-            td = tr[i].getElementsByTagName("td")[0];
-            if (td) {
-                txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
-            }
-        }
     }
 </script>
 

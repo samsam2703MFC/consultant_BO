@@ -13,6 +13,17 @@ return function(RouteCollector $r) {
         'method'     => 'newProduct'
     ]);
 
+    // Kreator „Nowy produkt z recepturą” (koszt szkicu: POST /ajax/recipes/draft-cost w RecipeRoutes)
+    $r->addRoute('GET', '/products/new-with-recipe', [
+        'controller' => App\Controllers\Web\Product\ProductRecipeWizardController::class,
+        'method'     => 'index'
+    ]);
+
+    $r->addRoute('POST', '/ajax/products/with-recipe', [
+        'controller' => App\Controllers\Web\Product\ProductRecipeWizardController::class,
+        'method'     => 'ajaxCreate'
+    ]);
+
     $r->addRoute('POST', '/products/new', [
         'controller' => App\Controllers\Web\Product\ProductController::class,
         'method'     => 'newProduct'

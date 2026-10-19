@@ -1,0 +1,356 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Planuj produkcję{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-end justify-content-between gap-2">
+            <div>
+                <h3>Planuj produkcję</h3>
+                <p class="text-subtitle text-muted mb-0">Od dni wysyłki do listy produkcyjnej i zapotrzebowania materiałowego.</p>
+            </div>
+            <a class="at-link" href="{{ root }}/production/planning">Tryb klasyczny: lista zamówień <i class="bi bi-arrow-right"></i></a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-wizard" id="planWizard" data-days="{{ days|json_encode }}" data-max="{{ max_dates }}">
+
+    <ol class="at-steps" aria-label="Kroki kreatora">
+        <li data-step-tab="1"><span>Dni wysyłki</span></li>
+        <li data-step-tab="2"><span>Ilości na sekcje</span></li>
+        <li data-step-tab="3"><span>Dokumenty PDF</span></li>
+    </ol>
+
+    <div class="card">
+        <div class="card-body">
+
+            {# --- 1. Dni ------------------------------------------------------------- #}
+            <div class="at-step" data-step="1">
+                <h4 class="at-step-title">Na które dni wysyłki planujesz produkcję?</h4>
+                <p class="at-step-lead">Oczekujące zamówienia, pogrupowane po dniu wysyłki. Wybierz maksymalnie {{ max_dates }} dni — pierwszy wybrany dzień jest dniem produkcji, kolejne są pokazane do wglądu.</p>
+                {% if days %}
+                    <div class="at-choices" role="group" aria-label="Dni wysyłki">
+                        {% for d in days %}
+                            <label class="at-choice">
+                                <input type="checkbox" name="plan_day" value="{{ d.date }}">
+                                <i class="bi bi-check-circle-fill at-choice-tick" aria-hidden="true"></i>
+                                <strong>{{ d.date|day_pl }}</strong>
+                                <small>{{ d.orders|length|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ d.kg|number_format(0, ',', ' ') }} kg</small>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <div id="pwOrders" class="mt-3"></div>
+                {% else %}
+                    <p class="at-empty"><i class="bi bi-check2-circle"></i> Brak oczekujących zamówień — nie ma czego planować.</p>
+                {% endif %}
+            </div>
+
+            {# --- 2. Podgląd ----------------------------------------------------------- #}
+            <div class="at-step" data-step="2" hidden>
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                        <h4 class="at-step-title">Ilości do produkcji na sekcje</h4>
+                        <p class="at-step-lead mb-2" id="pwDatesLead"></p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="pwStockMin">
+                        <label class="form-check-label" for="pwStockMin">Uwzględnij minimalne stany magazynowe</label>
+                    </div>
+                </div>
+                <div id="pwPreview"></div>
+            </div>
+
+            {# --- 3. PDF --------------------------------------------------------------- #}
+            <div class="at-step" data-step="3" hidden>
+                <h4 class="at-step-title">Dokumenty dla produkcji</h4>
+                <p class="at-step-lead" id="pwPdfLead"></p>
+                <div class="at-note at-note-safe"><i class="bi bi-shield-check"></i>Nic nie jest zapisywane w bazie: listy są tylko liczone i pobierane jako PDF. Możesz je generować dowolnie wiele razy.</div>
+                <div class="at-pdfs">
+                    <div class="at-pdf" data-pdf="production">
+                        <i class="bi bi-list-check"></i>
+                        <div>
+                            <strong>Lista produkcyjna</strong>
+                            <small>Ilości na sekcje dla wybranych dni.</small>
+                            <span class="at-pdf-state"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary">Pobierz PDF</button>
+                    </div>
+                    <div class="at-pdf" data-pdf="requirement">
+                        <i class="bi bi-basket"></i>
+                        <div>
+                            <strong>Zapotrzebowanie materiałowe</strong>
+                            <small>Surowce potrzebne do wybranych zamówień.</small>
+                            <span class="at-pdf-state"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary">Pobierz PDF</button>
+                    </div>
+                    <div class="at-pdf" data-pdf="complaint">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                        <div>
+                            <strong>Lista produkcyjna dla zwrotów</strong>
+                            <small id="pwComplaintInfo">Wszystkie zwroty czekające na wysyłkę (niezależnie od dni).</small>
+                            <span class="at-pdf-state"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary">Pobierz PDF</button>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-dark" id="pwAll"><i class="bi bi-file-earmark-arrow-down"></i> Pobierz wszystkie trzy</button>
+                </div>
+            </div>
+
+            <div class="at-wizard-nav">
+                <button type="button" class="btn btn-outline-dark" data-wizard-back hidden><i class="bi bi-arrow-left"></i> Wstecz</button>
+                <span class="at-wizard-hint" id="pwHint" aria-live="polite"></span>
+                <button type="button" class="btn btn-primary at-next" data-wizard-next>Dalej <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+
+    const box = document.getElementById('planWizard');
+    const DAYS = JSON.parse(box.dataset.days || '[]');
+    const MAX = +box.dataset.max || 4;
+    const backBtn = box.querySelector('[data-wizard-back]');
+    const nextBtn = box.querySelector('[data-wizard-next]');
+    const hint = document.getElementById('pwHint');
+    const state = { step: 1, days: [], excluded: new Set(), preview: null, section: 'all' };
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const num = (n) => Number(n || 0).toLocaleString('pl-PL');
+    const dayPl = (iso) => {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+        if (!m) return iso || '';
+        const names = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+        return names[new Date(+m[1], m[2] - 1, +m[3]).getDay()] + ', ' + m[3] + '.' + m[2];
+    };
+    const setHint = (t, err) => { hint.textContent = t || ''; hint.classList.toggle('is-error', !!err); };
+    const orderIds = () => DAYS.filter((d) => state.days.includes(d.date))
+        .flatMap((d) => d.orders.map((o) => o.id)).filter((id) => !state.excluded.has(id));
+
+    function show(step) {
+        state.step = step;
+        box.querySelectorAll('[data-step]').forEach((p) => { p.hidden = +p.dataset.step !== step; });
+        box.querySelectorAll('[data-step-tab]').forEach((t) => {
+            const n = +t.dataset.stepTab;
+            t.classList.toggle('is-active', n === step);
+            t.classList.toggle('is-done', n < step);
+            if (n === step) t.setAttribute('aria-current', 'step'); else t.removeAttribute('aria-current');
+        });
+        backBtn.hidden = step === 1;
+        nextBtn.hidden = step === 3;
+        setHint('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    backBtn.addEventListener('click', () => show(state.step - 1));
+    nextBtn.addEventListener('click', async () => {
+        nextBtn.disabled = true;
+        try {
+            if (state.step === 1) await toPreview();
+            else if (state.step === 2) toPdfs();
+        } finally { nextBtn.disabled = false; }
+    });
+
+    /* --- 1. Dni i zamówienia ----------------------------------------------------- */
+    const dayInputs = box.querySelectorAll('input[name="plan_day"]');
+    function syncDays() {
+        state.days = DAYS.map((d) => d.date).filter((date) => box.querySelector('input[name="plan_day"][value="' + date + '"]').checked);
+        dayInputs.forEach((i) => {
+            i.disabled = !i.checked && state.days.length >= MAX;
+            const card = i.closest('.at-choice');
+            card.classList.toggle('is-checked', i.checked);
+            card.style.opacity = i.disabled ? '.5' : '';
+            card.title = i.disabled ? 'Maksymalnie ' + MAX + ' dni' : '';
+        });
+        renderOrders();
+        state.preview = null;
+    }
+    dayInputs.forEach((i) => i.addEventListener('change', syncDays));
+
+    function renderOrders() {
+        const days = DAYS.filter((d) => state.days.includes(d.date));
+        const el = document.getElementById('pwOrders');
+        if (!el) return;
+        if (!days.length) { el.innerHTML = ''; return; }
+        el.innerHTML = '<div class="table-responsive"><table class="table"><thead><tr><th style="width:36px"></th><th>Klient</th><th>Opis</th><th class="text-end">Waga</th></tr></thead><tbody>' +
+            days.map((d) => '<tr data-at-group><td colspan="4" class="at-group-cell"><strong>' + esc(dayPl(d.date)) + '</strong> · ' + d.orders.length + ' zam.</td></tr>' +
+                d.orders.map((o) => '<tr><td><input type="checkbox" class="form-check-input" data-order="' + o.id + '"' + (state.excluded.has(o.id) ? '' : ' checked') + ' aria-label="Uwzględnij zamówienie #' + o.id + '"></td>' +
+                    '<td>' + esc(o.company) + (o.supplement ? ' <span class="at-pill at-pill-warn">domówienie</span>' : '') + ' <span class="at-run-msg">#' + o.id + '</span></td>' +
+                    '<td class="text-muted">' + esc(o.description) + '</td><td class="text-end">' + num(Math.round(o.kg)) + ' kg</td></tr>').join('')).join('') +
+            '</tbody></table></div>';
+    }
+    const ordersBox = document.getElementById('pwOrders');
+    if (ordersBox) ordersBox.addEventListener('change', (e) => {
+        const id = +e.target.dataset.order;
+        if (!id) return;
+        if (e.target.checked) state.excluded.delete(id); else state.excluded.add(id);
+        state.preview = null;
+    });
+
+    /* --- 2. Podgląd ------------------------------------------------------------------ */
+    async function loadPreview() {
+        const res = await api('/ajax/production-plan/preview', {
+            method: 'POST',
+            data: { order_ids: orderIds(), stock_minimum: document.getElementById('pwStockMin').checked }
+        });
+        if (!res.ok) { setHint(res.message || 'Nie udało się przygotować podglądu.', true); return false; }
+        state.preview = res.data;
+        renderPreview();
+        return true;
+    }
+
+    async function toPreview() {
+        if (!state.days.length) { setHint('Wybierz co najmniej jeden dzień wysyłki.', true); return; }
+        if (!orderIds().length) { setHint('Zaznacz co najmniej jedno zamówienie.', true); return; }
+        setHint('Liczenie…');
+        if (await loadPreview()) show(2);
+    }
+
+    document.getElementById('pwStockMin').addEventListener('change', async () => {
+        setHint('Przeliczanie…');
+        if (await loadPreview()) setHint('');
+    });
+
+    function renderPreview() {
+        const p = state.preview;
+        const dates = p.dates;
+        document.getElementById('pwDatesLead').textContent = 'Dzień produkcji: ' + dayPl(dates[0]) +
+            (dates.length > 1 ? ' · kolejne dni: ' + dates.slice(1).map(dayPl).join(', ') : '') + ' · ' + orderIds().length + ' zam.';
+        const all = p.sections.flatMap((s) => s.products);
+        const toMake = all.filter((x) => x.to_produce_pcs > 0);
+        if (state.section !== 'all' && !p.sections.some((s) => s.name === state.section)) state.section = 'all';
+        const tabs = '<div class="at-tabs mb-3" role="tablist">' +
+            '<button type="button" role="tab" data-section="all" class="' + (state.section === 'all' ? 'active' : '') + '">Wszystkie <span class="at-tab-count' + (toMake.length ? ' at-tab-count-hot' : '') + '" title="Produkty do wyprodukowania">' + toMake.length + '</span></button>' +
+            p.sections.map((s) => {
+                const n = s.products.filter((x) => x.to_produce_pcs > 0).length;
+                return '<button type="button" role="tab" data-section="' + esc(s.name) + '" class="' + (state.section === s.name ? 'active' : '') + '">' + esc(s.name) +
+                    ' <span class="at-tab-count' + (n ? ' at-tab-count-hot' : '') + '" title="Produkty do wyprodukowania">' + n + '</span></button>';
+            }).join('') + '</div>';
+        const tiles = '<div class="at-tiles">' +
+            '<div class="at-tile ' + (toMake.length ? 'at-tile-warn' : 'at-tile-ok') + '"><span class="at-tile-label"><i class="bi bi-gear"></i> Do produkcji</span><strong class="at-tile-value">' + num(toMake.length) + ' z ' + num(all.length) + '</strong><span class="at-tile-meta">produktów na ' + esc(dayPl(dates[0])) + '</span></div>' +
+            '<div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam"></i> Sztuk do zrobienia</span><strong class="at-tile-value">' + num(toMake.reduce((s, x) => s + x.to_produce_pcs, 0)) + '</strong><span class="at-tile-meta">' + (p.stock_minimum ? 'z minimalnymi stanami' : 'bez minimalnych stanów') + '</span></div>' +
+            '<div class="at-tile"><span class="at-tile-label"><i class="bi bi-diagram-3"></i> Sekcje</span><strong class="at-tile-value">' + p.sections.length + '</strong><span class="at-tile-meta">z produktami w wybranych dniach</span></div>' +
+            '<div class="at-tile"><span class="at-tile-label"><i class="bi bi-calendar-event"></i> Dni</span><strong class="at-tile-value">' + dates.length + '</strong><span class="at-tile-meta">' + esc(dates.map(dayPl).join(' · ')) + '</span></div>' +
+            '</div>';
+        const sections = p.sections.filter((s) => state.section === 'all' || s.name === state.section);
+        const head = '<tr><th>Produkt</th><th class="text-end">Magazyn</th><th class="text-end">' + esc(dayPl(dates[0])) + '</th>' +
+            (p.stock_minimum ? '<th class="text-end">Minimum</th>' : '') +
+            '<th class="text-end at-col-hot">Do produkcji</th>' +
+            dates.slice(1).map((d) => '<th class="text-end">' + esc(dayPl(d)) + '</th>').join('') +
+            '<th class="text-end">Zwroty</th></tr>';
+        const cell = (pcs, ctn) => pcs ? num(pcs) + ' <span class="at-run-msg d-inline">szt. · ' + num(ctn) + ' kart.</span>' : '<span class="text-muted">—</span>';
+        const body = sections.map((s) => '<tr data-at-group><td colspan="' + (5 + dates.length - 1 + (p.stock_minimum ? 1 : 0)) + '" class="at-group-cell"><strong>' + esc(s.name) + '</strong> · ' + s.products.length + ' prod.</td></tr>' +
+            s.products.map((x) => '<tr>' +
+                '<td>' + esc(x.name) + '</td>' +
+                '<td class="text-end">' + cell(x.in_stock_pcs, x.in_stock_carton) + '</td>' +
+                '<td class="text-end">' + cell(x.day_pcs[0], x.day_carton[0]) + '</td>' +
+                (p.stock_minimum ? '<td class="text-end">' + (x.stock_minimum_pcs ? num(x.stock_minimum_pcs) + ' szt.' : '—') + '</td>' : '') +
+                '<td class="text-end at-col-hot">' + (x.to_produce_pcs ? '<strong>' + num(x.to_produce_pcs) + ' szt.</strong>' : '<span class="at-pill at-pill-ok">na stanie</span>') + '</td>' +
+                dates.slice(1).map((d, i) => '<td class="text-end">' + cell(x.day_pcs[i + 1], x.day_carton[i + 1]) + '</td>').join('') +
+                '<td class="text-end">' + (x.complaint_pcs ? num(x.complaint_pcs) + ' szt.' : '<span class="text-muted">—</span>') + '</td>' +
+                '</tr>').join('')).join('');
+        document.getElementById('pwPreview').innerHTML = tiles + tabs +
+            (sections.length ? '<div class="table-responsive"><table class="table at-plan-table" data-at-table data-at-table-size="100"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>'
+                : '<p class="at-empty">Brak produktów do pokazania.</p>') +
+            '<p class="at-run-msg mt-2">„Do produkcji” = zamówienia na pierwszy dzień' + (p.stock_minimum ? ' + minimalny stan' : '') + ' − stan magazynu (kartony na magazynie), tak jak na liście produkcyjnej PDF. Kolejne dni są pokazane bez odejmowania stanu.</p>';
+        if (window.atTable) window.atTable.init(document.getElementById('pwPreview'));
+    }
+
+    document.getElementById('pwPreview').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-section]');
+        if (!b) return;
+        state.section = b.dataset.section;
+        renderPreview();
+    });
+
+    /* --- 3. PDF ----------------------------------------------------------------------- */
+    const PDFS = {
+        production: () => ['/ajax/production-list/standard', { order_id: orderIds(), stock_minimum: state.preview.stock_minimum ? 1 : 0, production_list: 1 }],
+        requirement: () => ['/ajax/production-list/requirement/pdf', { order_id: orderIds(), stock_minimum: state.preview.stock_minimum ? 1 : 0 }],
+        complaint: () => ['/ajax/production-list/complaint', {}]
+    };
+
+    function toPdfs() {
+        document.getElementById('pwPdfLead').textContent = 'Dla: ' + state.preview.dates.map(dayPl).join(', ') + ' · ' + orderIds().length + ' zam. · ' +
+            (state.preview.stock_minimum ? 'z minimalnymi stanami magazynowymi' : 'bez minimalnych stanów magazynowych') + '.';
+        box.querySelectorAll('.at-pdf-state').forEach((s) => { s.textContent = ''; s.className = 'at-pdf-state'; });
+        show(3);
+        api('/ajax/production-plan/complaints').then((r) => {
+            const info = document.getElementById('pwComplaintInfo');
+            if (!r.ok) return;
+            info.textContent = r.data.products
+                ? 'Zwroty czekające na wysyłkę: ' + r.data.products + ' ' + (r.data.products === 1 ? 'produkt' : 'produktów') + ' (niezależnie od dni).'
+                : 'Brak zwrotów czekających na wysyłkę — lista będzie pusta.';
+        });
+    }
+
+    async function downloadPdf(kind) {
+        const card = box.querySelector('[data-pdf="' + kind + '"]');
+        const st = card.querySelector('.at-pdf-state');
+        const btn = card.querySelector('button');
+        const [url, payload] = PDFS[kind]();
+        btn.disabled = true;
+        st.className = 'at-pdf-state at-run-state';
+        st.innerHTML = '<span class="spinner-border" role="status"></span> Generowanie…';
+        try {
+            const res = await fetch(window.API_BASE_URL + url, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/pdf' },
+                body: JSON.stringify(payload)
+            });
+            const type = res.headers.get('Content-Type') || '';
+            if (!res.ok || !type.includes('pdf')) {
+                let msg = '';
+                try { msg = (await res.json()).message || ''; } catch (e) { /* treść nie-JSON */ }
+                throw new Error(msg || 'serwer odpowiedział kodem ' + res.status);
+            }
+            const blob = await res.blob();
+            const m = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') || '');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = m ? m[1] : kind + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            st.className = 'at-pdf-state at-run-state at-run-ok';
+            st.innerHTML = '<i class="bi bi-check-circle-fill"></i> Pobrano ' + esc(a.download);
+            return true;
+        } catch (err) {
+            st.className = 'at-pdf-state at-run-state at-run-fail';
+            st.innerHTML = '<i class="bi bi-x-circle-fill"></i> Błąd: ' + esc(err.message);
+            return false;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    box.querySelectorAll('.at-pdf button').forEach((b) => b.addEventListener('click', () => downloadPdf(b.closest('[data-pdf]').dataset.pdf)));
+    document.getElementById('pwAll').addEventListener('click', async (e) => {
+        const b = e.currentTarget;
+        b.disabled = true;
+        for (const kind of ['production', 'requirement', 'complaint']) await downloadPdf(kind);   // kolejno
+        b.disabled = false;
+    });
+
+    // Dni z adresu (?date=…) albo najbliższy dzień.
+    const wanted = new URLSearchParams(location.search).getAll('date');
+    const preset = wanted.length ? wanted : (DAYS[0] ? [DAYS[0].date] : []);
+    preset.slice(0, MAX).forEach((date) => {
+        const i = box.querySelector('input[name="plan_day"][value="' + CSS.escape(date) + '"]');
+        if (i) i.checked = true;
+    });
+    if (dayInputs.length) syncDays();
+    show(1);
+});
+</script>
+{% endblock %}

@@ -164,6 +164,68 @@ class RecipeService
         return $recipes;
     }
 
+    /**
+     * Koszt surowców szkicu receptury (jeszcze niezapisanej), na 1 szt. produktu.
+     * Te same zasady co strona kalkulacji (getRecipeCalculation, wydajność 1):
+     * surowiec = ilość × price_per_unit, półprodukt = koszt jego własnej receptury
+     * dla potrzebnej ilości (buildRecipeStructure + addTotalCalculatedPrice).
+     * Tylko odczyt.
+     *
+     * @param array<int,int|float> $materials    id surowca => ilość (jednostka bazowa)
+     * @param array<int,int|float> $semiProducts id półproduktu => ilość (jednostka półproduktu)
+     * @return array{lines: list<array>, total: float, missing: list<string>}
+     */
+    public function getDraftCost(array $materials, array $semiProducts): array
+    {
+        $lines = [];
+        $missing = [];
+
+        $found = [];
+        foreach ($this->recipeRepository->getMaterialsForDraft(array_keys($materials)) as $row) {
+            $found[(int) $row['id']] = $row;
+        }
+        foreach ($materials as $id => $qty) {
+            if (!isset($found[$id])) { $missing[] = 'material:' . $id; continue; }
+            $ppu = max(0.0, (float) $found[$id]['price_per_unit']);
+            $lines[] = [
+                'type'     => 'material',
+                'id'       => (int) $id,
+                'name'     => $found[$id]['name'],
+                'quantity' => $qty,
+                'unit'     => $found[$id]['unit_name'],
+                'price'    => round((float) $qty * $ppu, 2),
+            ];
+        }
+
+        $found = [];
+        foreach ($this->recipeRepository->getSemiProductsForDraft(array_keys($semiProducts)) as $row) {
+            $found[(int) $row['id']] = $row;
+        }
+        foreach ($semiProducts as $id => $qty) {
+            if (!isset($found[$id])) { $missing[] = 'semi_product:' . $id; continue; }
+            $yield = (float) $found[$id]['yield_quantity'];
+            $node = [[
+                'type'     => 'sub-recipe',
+                'elements' => $this->recipeRepository->buildRecipeStructure($id, $yield > 0 ? $yield : 1.0, (float) $qty, [(int) $id => true]),
+            ]];
+            $this->recipeRepository->addTotalCalculatedPrice($node);
+            $lines[] = [
+                'type'     => 'semi_product',
+                'id'       => (int) $id,
+                'name'     => $found[$id]['name'],
+                'quantity' => $qty,
+                'unit'     => $found[$id]['unit_name'],
+                'price'    => (float) ($node[0]['price_for_required_quantity'] ?? 0),
+            ];
+        }
+
+        return [
+            'lines'   => $lines,
+            'total'   => round(array_sum(array_column($lines, 'price')), 2),
+            'missing' => $missing,
+        ];
+    }
+
     public function validate($data)
     {
         $errors = [];
