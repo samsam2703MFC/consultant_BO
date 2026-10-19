@@ -21,7 +21,13 @@ class CommunicationController extends BaseController
     }
     public function testEmailSettings()
     {
-        try { return $this->json(['message' => 'Wiadomość testowa została przekazana do SMTP.', 'provider_message_id' => $this->emailAccounts->test((string)($_POST['recipient'] ?? ''))]); }
+        try {
+            $providerId = $this->emailAccounts->test((string)($_POST['recipient'] ?? ''));
+            $message = \App\Services\Communication\MailDeliveryPolicy::isLogOnly($providerId)
+                ? 'Tryb testowy (MAIL_DELIVERY_MODE=log_only): wiadomość nie została wysłana.'
+                : 'Wiadomość testowa została przekazana do SMTP.';
+            return $this->json(['message' => $message, 'provider_message_id' => $providerId]);
+        }
         catch (\Throwable $e) { return $this->json(['message' => $e->getMessage()], 422); }
     }
     public function composeProforma(int $id)

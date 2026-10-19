@@ -13,7 +13,8 @@ final class CommunicationEmailDeliveryWorker
         private CommunicationMessageRepository $messages,
         private CommunicationMessageAttachmentRepository $attachments,
         private EmailAccountRepository $accounts,
-        private SmtpTransport $transport
+        private SmtpTransport $transport,
+        private MailDeliveryPolicy $policy
     ) {}
 
     /** Processes up to $limit queued messages and returns counters. */
@@ -49,8 +50,8 @@ final class CommunicationEmailDeliveryWorker
     {
         $started = date('Y-m-d H:i:s');
         try {
-            $account = $this->accounts->find((int)$message['id_email_account']);
-            if ($account === [] || empty($account['is_active'])) throw new \RuntimeException('Konto nadawcze wiadomości nie jest aktywne.');
+            $account = $message['id_email_account'] ? $this->accounts->find((int)$message['id_email_account']) : [];
+            if (($account === [] || empty($account['is_active'])) && $this->policy->requiresAccount()) throw new \RuntimeException('Konto nadawcze wiadomości nie jest aktywne.');
             $providerId = $this->transport->send(
                 $account,
                 $message['recipient_email'],

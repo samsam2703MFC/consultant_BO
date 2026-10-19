@@ -15,7 +15,9 @@ $builder = new ContainerBuilder();
 $builder->addDefinitions([
     App\Core\Database::class => factory(fn() => new App\Core\Database()),
     PDO::class => factory(fn(ContainerInterface $c) => $c->get(App\Core\Database::class)->getConnection()),
-    App\Services\Communication\SmtpTransport::class => autowire(App\Services\Communication\GmailSmtpTransport::class),
+    App\Services\Communication\SmtpTransport::class => get(App\Services\Communication\GuardedSmtpTransport::class),
+    App\Services\Communication\GuardedSmtpTransport::class => autowire()
+        ->constructorParameter('smtp', get(App\Services\Communication\GmailSmtpTransport::class)),
 
 ]);
 

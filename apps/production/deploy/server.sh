@@ -311,6 +311,19 @@ if [[ -f "$IMPORT_OK" ]]; then
   [[ -n "$(envget API_BASE_URL)" ]] || set_env API_BASE_URL "$ERP_URL"
   ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php apply ) \
     || fail "Migrations du module atelier (migrations/tfb) en échec : voir le message ci-dessus."
+  # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
+  # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
+  mail_mode="${ERP_MAIL_MODE:-log_only}"
+  [[ "$mail_mode" == "redirect" || "$mail_mode" == "log_only" ]] || mail_mode="log_only"
+  [[ "$(envget MAIL_DELIVERY_MODE)" == "$mail_mode" ]] || set_env MAIL_DELIVERY_MODE "$mail_mode"
+  [[ "$mail_mode" != "redirect" ]] || set_env MAIL_REDIRECT_TO "${ERP_MAIL_REDIRECT_TO:-}"
+  # Toutes les 5 minutes : événements → messages, puis file d'envoi (selon le mode ci-dessus).
+  cat > /etc/cron.d/production-erp-mail <<CRON
+# ERP /production — e-mails automatiques (écrit par apps/production/deploy/server.sh)
+*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
+CRON
+  chmod 644 /etc/cron.d/production-erp-mail
+  touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log
   if [[ "${ERP_TFB_DEMO:-}" == "1" ]]; then
     ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_seed_demo.php ${ERP_ENTREE_LIBRE:+--grant-admin="$ERP_ENTREE_LIBRE"} ) \
       || fail "Données de démonstration du module atelier en échec."

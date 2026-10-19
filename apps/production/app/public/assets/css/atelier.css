@@ -489,3 +489,8 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-chip { padding: 5px 11px; border: 1px solid var(--at-line-2); border-radius: 999px; background: var(--at-surface); color: var(--at-text); font-size: 12px; }
 .at-chip:hover { border-color: var(--at-primary); color: var(--at-primary); }
 .at-chip.is-used { background: var(--at-primary-soft); border-color: var(--at-primary); color: var(--at-primary); }
+
+/* --- E-maile automatyczne ------------------------------------------------------------ */
+.at-mail .at-days-input { width: 64px; padding: 2px 6px; }
+.at-mail select[data-field="language"] { min-width: 104px; }
+.at-mail-body { white-space: pre-wrap; font-family: var(--at-font-ui); font-size: 12.5px; background: var(--at-bg-2); border-radius: var(--at-radius); padding: 10px 12px; max-height: 320px; overflow: auto; }

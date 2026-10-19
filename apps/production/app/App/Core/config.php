@@ -22,7 +22,7 @@ if (($_ENV['APIPREFIXE'] ?? '') !== '') define('APIPREFIXE', $_ENV['APIPREFIXE']
 if (($_ENV['ATELIER_RESOURCES_PREFIXE'] ?? '') !== '') define('ATELIER_RESOURCES_PREFIXE', $_ENV['ATELIER_RESOURCES_PREFIXE']);
 
 /** Baza danych: DB_HOST / DB_NAME / DB_USER / DB_PASS w pliku .env (App/Core/Database.php) **/
-if($_SERVER['SERVER_NAME'] == 'slfood.local')
+if(($_SERVER['SERVER_NAME'] ?? '') == 'slfood.local')
 {
     //define('APIPREFIXE', 'https://franchiseatelier.com/api/public/Production/');
     defined('APIPREFIXE') || define('APIPREFIXE', 'http://localhost/Intranet/api/public/Production/');

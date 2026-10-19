@@ -56,6 +56,9 @@ if [ ! -f "$APP/.env" ]; then
         -e 's/^AWS_REGION=.*/AWS_REGION="eu-north-1"/' \
         "$APP/.env.example" > "$APP/.env"
 fi
+# E-mails : rien ne part de la copie locale (voir App/Services/Communication/MailDeliveryPolicy.php)
+grep -q '^MAIL_DELIVERY_MODE=' "$APP/.env" && sed -i 's/^MAIL_DELIVERY_MODE=.*/MAIL_DELIVERY_MODE=log_only/' "$APP/.env" \
+    || echo 'MAIL_DELIVERY_MODE=log_only' >> "$APP/.env"
 
 # 4. Serveur (ROOT vaut http://slfood.local quand SERVER_NAME = slfood.local, d'où le port 80)
 grep -q slfood.local /etc/hosts || echo "127.0.0.1 slfood.local" >> /etc/hosts

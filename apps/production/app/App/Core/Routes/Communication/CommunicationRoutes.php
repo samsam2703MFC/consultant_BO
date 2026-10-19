@@ -2,6 +2,13 @@
 use FastRoute\RouteCollector;
 return function (RouteCollector $r) {
     $controller = App\Controllers\Web\Communication\CommunicationController::class;
+    $automation = App\Controllers\Web\Communication\MailAutomationController::class;
+    $r->addRoute('GET', '/communication/automations', ['controller' => $automation, 'method' => 'index']);
+    $r->addRoute('PATCH', '/ajax/communication/automations/{id:\\d+}', ['controller' => $automation, 'method' => 'updateRule']);
+    $r->addRoute('GET', '/ajax/communication/automations/{id:\\d+}/preview', ['controller' => $automation, 'method' => 'preview']);
+    $r->addRoute('POST', '/ajax/communication/automations/settings', ['controller' => $automation, 'method' => 'saveSettings']);
+    $r->addRoute('POST', '/ajax/communication/automations/run', ['controller' => $automation, 'method' => 'runNow']);
+    $r->addRoute('POST', '/ajax/communication/automations/dispatches/{id:\\d+}/retry', ['controller' => $automation, 'method' => 'retry']);
     $r->addRoute('GET', '/communication/templates', ['controller' => $controller, 'method' => 'templates']);
     $r->addRoute('GET', '/communication/email-settings', ['controller' => $controller, 'method' => 'emailSettings']);
     $r->addRoute('POST', '/communication/email-settings', ['controller' => $controller, 'method' => 'saveEmailSettings']);

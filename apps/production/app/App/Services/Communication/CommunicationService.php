@@ -17,6 +17,7 @@ class CommunicationService
     private const LANGUAGES = [
         'fr' => 'Francuski',
         'nl' => 'Niderlandzki',
+        'pl' => 'Polski',
     ];
 
     private const TEMPLATE_TYPES = [
@@ -28,6 +29,10 @@ class CommunicationService
         'payment_reminder_final' => 'Stanowcze przypomnienie',
         'proforma_payment_reminder' => 'Przypomnienie o płatności — proforma',
         'proforma_payment_reminder_final' => 'Stanowcze przypomnienie o płatności — proforma',
+        'order_confirmation' => 'Potwierdzenie zamówienia (automatyczne)',
+        'delivery_planned' => 'Planowana dostawa (automatyczne)',
+        'shipment_sent' => 'Wysyłka w drodze (automatyczne)',
+        'accounting_document' => 'Kopia dokumentu dla księgowości (automatyczne)',
     ];
 
     public function __construct(
