@@ -340,11 +340,16 @@ fi
 if [[ -f "$HTPASSWD_SRC" ]]; then
   install -m 640 -o root -g www-data "$HTPASSWD_SRC" "$HTPASSWD"
   a2enmod auth_basic authn_file authz_user >/dev/null 2>&1 || true
+  # REDIRECT_ERP_AUTHED : renvoi interne vers index.php / api.php posé par nos RewriteRule (E=ERP_AUTHED),
+  # qui ne s'exécutent qu'APRÈS le contrôle du mot de passe de ce répertoire. Sans lui, Apache revérifiait
+  # le mot de passe (bcrypt) sur le renvoi : deux contrôles par page et par appel (mesuré : +0,4 s chacun).
+  # Le client ne peut pas poser cette variable (en-têtes → HTTP_*) ; sans mot de passe, tout reste 401.
   ACCESS="    AuthType Basic
     AuthName \"ERP test\"
     AuthUserFile ${HTPASSWD}
     <RequireAny>
         Require ip 127.0.0.1 ::1
+        Require env REDIRECT_ERP_AUTHED
         Require valid-user
     </RequireAny>"
 else
@@ -372,10 +377,10 @@ ${ACCESS}
 ${CACHE}
     RewriteEngine On
     RewriteBase ${ERP_ALIAS}/
-    RewriteRule ^api/(.*)$ api.php [QSA,L]
+    RewriteRule ^api/(.*)$ api.php [QSA,L,E=ERP_AUTHED:1]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.php?url=\$1 [L,QSA]
+    RewriteRule ^(.*)$ index.php?url=\$1 [L,QSA,E=ERP_AUTHED:1]
 </Directory>
 APACHE
 if ! cmp -s "$newconf" "$APACHE_CONF"; then
