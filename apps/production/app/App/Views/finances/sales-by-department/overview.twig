@@ -1,0 +1,234 @@
+{% extends "layouts/base.twig" %}
+{% block title %}Sprzedaż produktów wg działów{% endblock %}
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>Sprzedaż produktów wg działów produkcyjnych</h3>
+                    <p class="text-subtitle text-muted">Przegląd ilości i wartości sprzedaży z podziałem na działy produkcyjne (dane WDT)</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ root }}/finances/sales-analytics">Analiza sprzedaży</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Wg działów</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+<section class="section">
+    {# ── Filtry ─────────────────────────────────────────────────── #}
+    <div class="card">
+        <div class="card-body">
+            <form method="get" action="{{ root }}/finances/sales-by-department" class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="input_date_from">Miesiąc od</label>
+                    <input type="month" class="form-control" id="input_date_from" name="date_from" value="{{ date_from }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="input_date_to">Miesiąc do</label>
+                    <input type="month" class="form-control" id="input_date_to" name="date_to" value="{{ date_to }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="input_section">Dział produkcyjny</label>
+                    <select class="form-select" id="input_section" name="section_id">
+                        <option value="">— Wszystkie działy —</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}" {% if section_id == dept.id %}selected{% endif %}>
+                                {{ dept.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Filtruj
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {# ── KPI działów ────────────────────────────────────────────── #}
+    {% if section_summaries %}
+    <div class="row g-3 mt-1">
+        {% for s in section_summaries %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card h-100 border-start border-3 border-primary">
+                <div class="card-body py-3">
+                    <div class="fw-semibold text-truncate mb-1">
+                        <i class="bi bi-building text-primary me-1"></i>{{ s.section_name }}
+                    </div>
+                    <div class="row text-center mt-2">
+                        <div class="col-6 border-end">
+                            <div class="text-muted small">Kartony</div>
+                            <div class="fs-5 fw-bold">{{ s.total_quantity|number_format(0, '.', ' ') }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small">Wartość</div>
+                            <div class="fs-5 fw-bold text-success">{{ s.total_value|number_format(2, '.', ' ') }} €</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {# ── Wykres trendów miesięcznych ────────────────────────────── #}
+    {% if monthly_chart.labels|length > 0 %}
+    <div class="card mt-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-graph-up"></i> Trend miesięczny sprzedaży (kartony) – per dział
+            </h5>
+        </div>
+        <div class="card-body">
+            <canvas id="sectionTrendChart" style="max-height:340px;"></canvas>
+        </div>
+    </div>
+    {% endif %}
+    {# ── Tabele per dział ───────────────────────────────────────── #}
+    {% if sections %}
+        {# Globalna wyszukiwarka #}
+        <div class="card mt-3">
+            <div class="card-body py-2">
+                <div class="input-group input-group-sm" style="max-width:400px;">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="globalSearch" class="form-control"
+                           placeholder="Szukaj produktu we wszystkich działach…" autocomplete="off">
+                    <button type="button" class="btn btn-outline-secondary" id="globalSearchClear" title="Wyczyść">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% for section in sections %}
+        <div class="card mt-3 section-card" data-section-name="{{ section.section_name|lower }}">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building text-primary me-1"></i>
+                    <strong>{{ section.section_name }}</strong>
+                </h5>
+                <div class="d-flex gap-3">
+                    <span class="badge bg-secondary fs-6">
+                        <i class="bi bi-boxes"></i> {{ section.total_quantity|number_format(0, '.', ' ') }} kartonów
+                    </span>
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-currency-euro"></i> {{ section.total_value|number_format(2, '.', ' ') }} €
+                    </span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0 dept-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:2.5rem;">#</th>
+                                <th>Produkt</th>
+                                <th>Kategoria</th>
+                                <th class="text-end">Łącznie kartony</th>
+                                <th class="text-end">Łącznie wartość</th>
+                                <th class="text-end">Śr. kartony/mies.</th>
+                                <th class="text-end">Śr. wartość/mies.</th>
+                                <th class="text-end">Miesięcy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i, product in section.products %}
+                            <tr class="product-row"
+                                data-product-name="{{ product.product_name|lower }}">
+                                <td>{{ i + 1 }}</td>
+                                <td><strong>{{ product.product_name }}</strong></td>
+                                <td><span class="badge bg-light text-dark">{{ product.category_name }}</span></td>
+                                <td class="text-end fw-semibold">{{ product.total_quantity|number_format(1, '.', ' ') }}</td>
+                                <td class="text-end fw-bold text-success">{{ product.total_value|number_format(2, '.', ' ') }} €</td>
+                                <td class="text-end text-muted">{{ product.avg_quantity|number_format(1, '.', ' ') }}</td>
+                                <td class="text-end text-muted">{{ product.avg_value|number_format(2, '.', ' ') }} €</td>
+                                <td class="text-end text-muted">{{ product.months_count }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-3">Brak sprzedaży w wybranym zakresie.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if section.products|length > 0 %}
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="3" class="text-end text-muted">Razem:</td>
+                                <td class="text-end">{{ section.total_quantity|number_format(1, '.', ' ') }}</td>
+                                <td class="text-end text-success">{{ section.total_value|number_format(2, '.', ' ') }} €</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="alert alert-info mt-3">
+        <i class="bi bi-info-circle me-2"></i>
+        Brak danych sprzedażowych dla wybranego zakresu dat i filtrów.
+    </div>
+    {% endif %}
+</section>
+{# ── Chart.js ───────────────────────────────────────────────────── #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+{% if monthly_chart.labels|length > 0 %}
+(function () {
+    const ctx = document.getElementById('sectionTrendChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ monthly_chart.labels|json_encode|raw }},
+            datasets: {{ monthly_chart.datasets|json_encode|raw }}
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: { title: { display: true, text: 'Kartony' } }
+            }
+        }
+    });
+})();
+{% endif %}
+// ── Globalna wyszukiwarka produktów ──────────────────────────────
+(function () {
+    const searchInput = document.getElementById('globalSearch');
+    const clearBtn    = document.getElementById('globalSearchClear');
+    if (!searchInput) return;
+    function filterAll() {
+        const phrase = searchInput.value.trim().toLowerCase();
+        clearBtn.style.display = phrase ? '' : 'none';
+        document.querySelectorAll('.section-card').forEach(function (card) {
+            let cardVisible = false;
+            card.querySelectorAll('.product-row').forEach(function (row) {
+                const name = row.dataset.productName || '';
+                const visible = !phrase || name.includes(phrase);
+                row.style.display = visible ? '' : 'none';
+                if (visible) cardVisible = true;
+            });
+            card.style.display = (!phrase || cardVisible) ? '' : 'none';
+        });
+    }
+    searchInput.addEventListener('input', filterAll);
+    clearBtn.addEventListener('click', function () {
+        searchInput.value = '';
+        filterAll();
+        searchInput.focus();
+    });
+    clearBtn.style.display = 'none';
+})();
+</script>
+{% endblock %}

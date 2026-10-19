@@ -1,0 +1,145 @@
+<?php $this->view("page_components/header"); ?>
+
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>Produkt gotowy</h3>
+                <p class="text-subtitle text-muted">Navbar will appear in top of the page.</p>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="index.html">Dashboard</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Layout Vertical Navbar
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <section class="section">
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Lista kategorii istniejących produktów <a
+                        href="<?= ROOT ?>/products/new"
+                        class="btn btn-primary" role="button">Dodaj
+                        nowy produkt</a></h4>
+            </div>
+            <div class="card-body">
+                <div class="row mt-5 mb-5">
+                    <div class="col-2">
+                        <input class="form-control" type="text" placeholder="Wyszukaj po nazwie..."
+                               onkeyup="searchInTable(this.value, 'id_final_product_category')">
+                    </div>
+                    <div class="col-3">
+                        <select class="form-select" onchange="filterByAvailable(this.value)">
+                            <option value="-1">Wyszukaj po dostępności...</option>
+                            <option value="2">Wszystkie</option>
+                            <option value="1">Aktyw</option>
+                            <option value="0">Nieaktywne</option>
+                        </select>
+                    </div>
+                    <div class="col-7">
+                        <a href="<?= ROOT ?>/products/all" role="button"
+                           class="btn btn-primary float-end">Pokaż
+                            listę produktów</a>
+                    </div>
+                </div>
+                <table class="table table-striped">
+                    <thead>
+                    <th style="width: 30%">Kategoria</th>
+                    <th class="text-center" style="width: 7%">aktywny</th>
+                    <th class="text-center" style="width: 1%">/</th>
+                    <th class="text-center" style="width: 7%">nieaktywny</th>
+                    <th style="width: 30%"></th>
+                    <th style="width: 25%"></th>
+                    </thead>
+                    <tbody id="id_final_product_category">
+                    <?php if (!empty($rows)): ?>
+                        <?php foreach ($rows as $row): ?>
+                            <tr>
+                                <td><?= $row['name'] ?></td>
+                                <td class="text-center font-bold"><span
+                                        class="text-success "><?= $row['qty_active'] ?></span>
+                                </td>
+                                <td class="text-center font-bold">/</td>
+                                <td class="text-center font-bold"><span
+                                        class="text-danger"><?= $row['qty_no_active'] ?></span>
+                                </td>
+                                <td></td>
+                                <td class="text-center"><a
+                                        href="<?= ROOT ?>/product-categories/<?= $row['id_category'] ?>/products"
+                                        class="btn btn-info float-end">Produkty</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </section>
+</div>
+<?php $this->view("page_components/footer"); ?>
+
+<script>
+
+    function filterByAvailable(value) {
+        const table = document.getElementById("id_final_product_category");
+        const tr = table.getElementsByTagName("tr");
+
+        switch (value) {
+            case "-1":
+            case "2":
+                for (let i = 0; i < tr.length; i++) {
+                    tr[i].style.display = "";
+                }
+                break;
+            case "1":
+                for (let i = 0; i < tr.length; i++) {
+                    let td = tr[i].getElementsByTagName("td")[1];
+                    if (td.innerText > 0) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+                break;
+            case "0":
+                for (let i = 0; i < tr.length; i++) {
+                    let td = tr[i].getElementsByTagName("td")[1];
+                    if (td.innerText == 0) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+                break;
+        }
+    }
+
+    function searchInTable(input_value, table_id) {
+        // Declare variables
+        var filter, table, tr, td, i, txtValue;
+        filter = input_value.toUpperCase();
+        table = document.getElementById(table_id);
+        tr = table.getElementsByTagName("tr");
+
+        // Loop through all table rows, and hide those who don't match the search query
+        for (i = 0; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td")[0];
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+
+
+</script>

@@ -1,0 +1,72 @@
+<script>
+(() => {
+    const container = document.getElementById('appNotificationBanner');
+    if (!container) return;
+
+    const escapeHtml = (value) => {
+        const el = document.createElement('div');
+        el.textContent = value || '';
+        return el.innerHTML;
+    };
+    const alertClass = (severity) => severity === 'danger' ? 'alert-danger' : severity === 'warning' ? 'alert-warning' : 'alert-info';
+    const resolveLink = (link) => link && link.startsWith('/')
+        ? `${(window.API_BASE_URL || '').replace(/\/$/, '')}${link}`
+        : link;
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', ...(options.body ? {'Content-Type': 'application/json'} : {}) },
+            ...options,
+        });
+        let body = {};
+        try { body = await response.json(); } catch (_) {}
+        return { ok: response.ok, ...body };
+    }
+
+    async function acknowledge(id, via) {
+        const response = await request(`<?= ROOT ?>/ajax/app-notifications/${id}/acknowledge`, {
+            method: 'POST', body: JSON.stringify({via}),
+        });
+        if (response.ok) await refresh();
+    }
+
+    async function acknowledgeAll() {
+        const response = await request(`<?= ROOT ?>/ajax/app-notifications/acknowledge-all`, {method: 'POST'});
+        if (response.ok) await refresh();
+    }
+
+    function render(notifications) {
+        container.innerHTML = notifications.length ? `
+            <div class="d-flex justify-content-end mb-2">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-notifications-read-all>Oznacz wszystkie jako odczytane</button>
+            </div>` + notifications.map(notification => `
+            <div class="alert ${alertClass(notification.severity)} alert-dismissible d-flex flex-wrap align-items-center gap-2 mb-2 shadow-sm" role="alert">
+                <i class="bi ${notification.severity === 'danger' ? 'bi-exclamation-octagon-fill' : notification.severity === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} fs-5"></i>
+                <div class="me-auto"><strong>${escapeHtml(notification.title)}</strong>${notification.body ? `<div>${escapeHtml(notification.body)}</div>` : ''}</div>
+                ${notification.link_url ? `<a class="btn btn-sm btn-outline-dark" href="${escapeHtml(resolveLink(notification.link_url))}">Przejdź</a>` : ''}
+                <button class="btn btn-sm btn-dark" type="button" data-notification-read="${notification.id}">Odczytane</button>
+                <button type="button" class="btn-close" aria-label="Zamknij" data-notification-dismiss="${notification.id}"></button>
+            </div>`).join('') : '';
+    }
+
+    async function refresh() {
+        try {
+            const response = await request('<?= ROOT ?>/ajax/app-notifications');
+            if (response.ok) render(response.data || []);
+        } catch (_) { /* A temporary polling error must not affect the current page. */ }
+    }
+
+    container.addEventListener('click', event => {
+        const read = event.target.closest('[data-notification-read]');
+        const dismiss = event.target.closest('[data-notification-dismiss]');
+        const readAll = event.target.closest('[data-notifications-read-all]');
+        if (read) acknowledge(read.dataset.notificationRead, 'read');
+        if (dismiss) acknowledge(dismiss.dataset.notificationDismiss, 'dismiss');
+        if (readAll) acknowledgeAll();
+    });
+
+    refresh();
+    window.setInterval(refresh, 20000);
+})();
+</script>

@@ -1,0 +1,331 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Rentowność: {{ profitability.product_name }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-8 order-md-1 order-last">
+                <h3>Rentowność: {{ profitability.product_name }}</h3>
+                <p class="text-subtitle text-muted">{{ profitability.category_name }} • {{ profitability.section_name }}</p>
+            </div>
+            <div class="col-12 col-md-4 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}/products/profitability">Lista produktów</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Szczegóły</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <!-- Cost Month Selector -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body py-2">
+                    <form method="GET" action="" class="d-flex align-items-center gap-3">
+                        <label class="mb-0 text-muted small">Miesiąc rozliczeniowy:</label>
+                        <select class="form-select form-select-sm" name="cost_month_id" onchange="this.form.submit()" style="max-width: 200px;">
+                            {% if selected_cost_month %}
+                                <option value="{{ selected_cost_month.id }}" selected>
+                                    {{ selected_cost_month.period_year }}-{{ '%02d'|format(selected_cost_month.period_month) }}
+                                    {% if selected_cost_month.status == 'LOCKED' %}🔒{% endif %}
+                                </option>
+                            {% else %}
+                                <option value="">Najnowszy miesiąc</option>
+                            {% endif %}
+                            {% for month in cost_months %}
+                                {% if not selected_cost_month or month.id != selected_cost_month.id %}
+                                <option value="{{ month.id }}">
+                                    {{ month.period_year }}-{{ '%02d'|format(month.period_month) }}
+                                    {% if month.status == 'LOCKED' %}🔒{% endif %}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            Koszty zmienne (media) z wybranego miesiąca
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top KPIs -->
+    <div class="row mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">KOSZT/SZT</h6>
+                    <h2 class="text-primary mb-0">{{ profitability.kpis.cost_per_unit|currency }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-{% if profitability.kpis.profit_per_unit < 0 %}danger{% else %}success{% endif %}">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">ZYSK/SZT</h6>
+                    <h2 class="text-{% if profitability.kpis.profit_per_unit < 0 %}danger{% else %}success{% endif %} mb-0">
+                        {{ profitability.kpis.profit_per_unit|currency }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-{{ profitability.status.level }}">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">MARŻA</h6>
+                    <h2 class="text-{{ profitability.status.level }} mb-0">
+                        {{ profitability.kpis.margin_percentage|number_format(2, ',', ' ') }}%
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Message -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-{{ profitability.status.level }} d-flex align-items-center">
+                <i class="{{ profitability.status.icon }} me-3" style="font-size: 2rem;"></i>
+                <div>
+                    <h5 class="mb-0">{{ profitability.status.message }}</h5>
+                    <small>Docelowa marża: {{ profitability.kpis.target_margin_percentage }}% | 
+                           Sugerowana cena: {{ profitability.suggested_price|currency }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Breakdown Cards -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Rozbicie kosztów</h4>
+        </div>
+        
+        <!-- Raw Materials -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-light-primary">
+                    <h5 class="card-title mb-0"><i class="bi bi-box-seam"></i> Surowce</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ profitability.costs.raw_materials|currency }}</h3>
+                    <small class="text-muted">Koszt receptury</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Labor -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-light-info">
+                    <h5 class="card-title mb-0"><i class="bi bi-people-fill"></i> Praca</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ profitability.costs.labor|currency }}</h3>
+                    <small class="text-muted">
+                        {{ profitability.labor_details.minutes_per_unit }} min × 
+                        {{ profitability.labor_details.hourly_rate|currency(0) }}/h
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fixed Costs -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-light-warning">
+                    <h5 class="card-title mb-0"><i class="bi bi-building"></i> Koszty stałe</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ profitability.costs.fixed_costs|currency }}</h3>
+                    <small class="text-muted">Amortyzacja (rozliczone)</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variable Costs -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-light-secondary">
+                    <h5 class="card-title mb-0"><i class="bi bi-lightning-charge"></i> Koszty zmienne</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 class="text-secondary">{{ profitability.costs.variable_costs|currency }}</h3>
+                    <small class="text-muted">Prąd, woda, paliwo (rozliczone)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planning & What-If Calculator -->
+    <div class="row">
+        <!-- Monthly Planning -->
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="bi bi-calendar-month"></i> Planowanie miesięczne</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Planowana ilość</td>
+                                <td class="text-end"><strong>{{ profitability.planning.monthly_planned_quantity }} szt</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Całkowity koszt</td>
+                                <td class="text-end">{{ profitability.planning.monthly_total_cost|currency }}</td>
+                            </tr>
+                            <tr>
+                                <td>Przewidywany przychód</td>
+                                <td class="text-end">{{ profitability.planning.monthly_total_revenue|currency }}</td>
+                            </tr>
+                            <tr class="table-{% if profitability.planning.monthly_total_profit < 0 %}danger{% else %}success{% endif %}">
+                                <td><strong>Przewidywany zysk</strong></td>
+                                <td class="text-end"><strong>{{ profitability.planning.monthly_total_profit|currency }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- What-If Calculator -->
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-calculator"></i> Kalkulator "Co jeśli"</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Cena sprzedaży (zł)</label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="what-if-price" 
+                               value="{{ profitability.kpis.sales_price }}"
+                               step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ilość miesięczna (szt)</label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="what-if-quantity" 
+                               value="{{ profitability.planning.monthly_planned_quantity }}"
+                               step="1">
+                    </div>
+                    <button class="btn btn-info w-100" onclick="calculateWhatIf()">
+                        <i class="bi bi-arrow-repeat"></i> Przelicz
+                    </button>
+
+                    <!-- Results -->
+                    <div id="what-if-results" class="mt-3" style="display: none;">
+                        <hr>
+                        <h6 class="text-muted">Wyniki:</h6>
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td>Zysk/szt</td>
+                                    <td class="text-end" id="wif-profit-per-unit">-</td>
+                                </tr>
+                                <tr>
+                                    <td>Marża %</td>
+                                    <td class="text-end" id="wif-margin">-</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td><strong>Zysk miesięczny</strong></td>
+                                    <td class="text-end"><strong id="wif-monthly-profit">-</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const productId = {{ profitability.product_id }};
+    const apiBaseUrl = window.API_BASE_URL || '';
+
+    function calculateWhatIf() {
+        const price = parseFloat(document.getElementById('what-if-price').value);
+        const quantity = parseInt(document.getElementById('what-if-quantity').value);
+
+        if (isNaN(price) || price <= 0) {
+            alert('Cena sprzedaży musi być liczbą dodatnią');
+            return;
+        }
+        
+        if (isNaN(quantity) || quantity <= 0) {
+            alert('Ilość miesięczna musi być liczbą całkowitą większą od 0');
+            return;
+        }
+
+        // Show loading state
+        document.getElementById('what-if-results').style.display = 'none';
+
+        // Make AJAX request
+        fetch(apiBaseUrl + '/ajax/products/' + productId + '/profitability/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sales_price: price,
+                monthly_quantity: quantity
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const prof = data.data;
+                
+                // Update results
+                document.getElementById('wif-profit-per-unit').textContent = 
+                    prof.kpis.profit_per_unit.toFixed(2) + ' zł';
+                document.getElementById('wif-margin').textContent = 
+                    prof.kpis.margin_percentage.toFixed(2) + '%';
+                document.getElementById('wif-monthly-profit').textContent = 
+                    prof.planning.monthly_total_profit.toFixed(2) + ' zł';
+
+                // Show results
+                document.getElementById('what-if-results').style.display = 'block';
+                
+                // Color code profit
+                const profitCell = document.getElementById('wif-profit-per-unit');
+                if (prof.kpis.profit_per_unit < 0) {
+                    profitCell.classList.add('text-danger');
+                } else {
+                    profitCell.classList.remove('text-danger');
+                    profitCell.classList.add('text-success');
+                }
+            } else {
+                alert('Błąd obliczeń: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Wystąpił błąd podczas obliczeń: ' + (error.message || 'Nieznany błąd'));
+        });
+    }
+
+    // Calculate on page load to show initial results
+    window.addEventListener('DOMContentLoaded', () => {
+        calculateWhatIf();
+    });
+</script>
+{% endblock %}

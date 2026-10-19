@@ -1,0 +1,221 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.cost_analysis_title|default('Analiza kosztów produktu') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.cost_analysis_title }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.cost_analysis_subtitle }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">{{ translations.dashboard }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.cost_analysis_title }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" action="{{ root }}/finances/cost-analysis">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label">{{ translations.cost_analysis_product }}</label>
+                            <select class="form-select" name="product_id" required>
+                                <option value="">{{ translations.cost_analysis_product_placeholder }}</option>
+                                {% for product in products %}
+                                    <option value="{{ product.id }}" {% if product.id == selected_product_id %}selected{% endif %}>
+                                        {{ product.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label">{{ translations.cost_analysis_month }}</label>
+                            <select class="form-select" name="month_id">
+                                <option value="">{{ translations.cost_analysis_month_placeholder }}</option>
+                                {% for month in months %}
+                                    <option value="{{ month.id }}" {% if month.id == selected_month_id %}selected{% endif %}>
+                                        {{ month.year }}-{{ "%02d"|format(month.month) }} ({{ month.status }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                {{ translations.cost_analysis_calculate }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if analysis %}
+            {% set kpi = analysis.kpi %}
+            <div class="row g-3 mt-1">
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_sale_price }}</div>
+                            <div class="fs-4 fw-bold">
+                                {{ kpi.sale_price_unit|number_format(2, '.', ' ') }} {{ kpi.sale_currency|default('EUR') }}
+                            </div>
+                            <div class="text-muted small">
+                                {{ translations.cost_analysis_sale_price_pln }}: {{ kpi.sale_price_unit_pln|number_format(2, '.', ' ') }} PLN
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_raw_cost }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.raw_cost_unit|number_format(2, '.', ' ') }} PLN</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_section_cost }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.section_cost_unit|number_format(2, '.', ' ') }} PLN</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_shared_cost }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.shared_cost_unit|number_format(2, '.', ' ') }} PLN</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_full_cost }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.unit_full_cost|number_format(2, '.', ' ') }} PLN</div>
+                            <div class="text-muted small mt-2">
+                                {{ translations.cost_analysis_raw_cost }}: {{ analysis.breakdown_amounts.raw|number_format(2, '.', ' ') }} PLN<br>
+                                {{ translations.cost_analysis_section_cost }}: {{ analysis.breakdown_amounts.section|number_format(2, '.', ' ') }} PLN<br>
+                                {{ translations.cost_analysis_shared_cost }}: {{ analysis.breakdown_amounts.shared|number_format(2, '.', ' ') }} PLN
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_margin_amount }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.margin_amount|number_format(2, '.', ' ') }} PLN</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_margin_percent }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</div>
+                            {% if analysis.product.target_margin_percentage is defined %}
+                                <div class="text-muted small">
+                                    {{ translations.cost_analysis_target_margin }}: {{ analysis.product.target_margin_percentage|number_format(1, '.', ' ') }}%
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted">{{ translations.cost_analysis_contribution }}</div>
+                            <div class="fs-4 fw-bold">{{ kpi.contribution_amount|number_format(2, '.', ' ') }} PLN</div>
+                            <div class="text-muted small">{{ kpi.contribution_percent|number_format(1, '.', ' ') }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if analysis.warnings is not empty %}
+                <div class="alert alert-warning mt-3">
+                    <strong>{{ translations.cost_analysis_warnings }}</strong>
+                    <ul class="mb-0">
+                        {% for warning in analysis.warnings %}
+                            <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="mb-3">{{ translations.cost_analysis_structure }}</h5>
+                    <div class="progress" style="height: 28px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ analysis.breakdown.raw|number_format(2, '.', '') }}%" aria-valuenow="{{ analysis.breakdown.raw }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ translations.cost_analysis_raw_cost }} {{ analysis.breakdown.raw|number_format(1, '.', ' ') }}%
+                        </div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ analysis.breakdown.section|number_format(2, '.', '') }}%" aria-valuenow="{{ analysis.breakdown.section }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ translations.cost_analysis_section_cost }} {{ analysis.breakdown.section|number_format(1, '.', ' ') }}%
+                        </div>
+                        <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ analysis.breakdown.shared|number_format(2, '.', '') }}%" aria-valuenow="{{ analysis.breakdown.shared }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ translations.cost_analysis_shared_cost }} {{ analysis.breakdown.shared|number_format(1, '.', ' ') }}%
+                        </div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ analysis.breakdown.margin|number_format(2, '.', '') }}%" aria-valuenow="{{ analysis.breakdown.margin }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ translations.cost_analysis_margin }} {{ analysis.breakdown.margin|number_format(1, '.', ' ') }}%
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3 mt-3">
+                        <div><span class="badge bg-info">&nbsp;</span> {{ translations.cost_analysis_raw_cost }}</div>
+                        <div><span class="badge bg-warning">&nbsp;</span> {{ translations.cost_analysis_section_cost }}</div>
+                        <div><span class="badge bg-secondary">&nbsp;</span> {{ translations.cost_analysis_shared_cost }}</div>
+                        <div><span class="badge bg-success">&nbsp;</span> {{ translations.cost_analysis_margin }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="mb-3">{{ translations.cost_analysis_explanation }}</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li><strong>{{ translations.cost_analysis_section }}:</strong> {{ analysis.explanation.section_name }}</li>
+                                <li><strong>{{ translations.cost_analysis_period }}:</strong> {{ analysis.date_range.start }} – {{ analysis.date_range.end }}</li>
+                                <li><strong>{{ translations.cost_analysis_workload_points }}:</strong> {{ analysis.explanation.workload_points }}</li>
+                                <li><strong>{{ translations.cost_analysis_sold_units }}:</strong> {{ analysis.explanation.sold_units }}</li>
+                                <li><strong>{{ translations.cost_analysis_sold_cartons }}:</strong> {{ analysis.explanation.sold_cartons }}</li>
+                                <li><strong>{{ translations.cost_analysis_exchange_rate }}:</strong> {{ analysis.explanation.exchange_rate_euro|number_format(4, '.', ' ') }} PLN/EUR</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li><strong>{{ translations.cost_analysis_section_pool }}:</strong> {{ analysis.explanation.section_cost_pool|number_format(2, '.', ' ') }} PLN</li>
+                                <li><strong>{{ translations.cost_analysis_employee_cost }}:</strong> {{ analysis.explanation.employee_cost|number_format(2, '.', ' ') }} PLN</li>
+                                <li><strong>{{ translations.cost_analysis_section_fixed_cost }}:</strong> {{ analysis.explanation.section_fixed_cost|number_format(2, '.', ' ') }} PLN</li>
+                                <li><strong>{{ translations.cost_analysis_weighted_units }}:</strong> {{ analysis.explanation.total_weighted_units|number_format(2, '.', ' ') }}</li>
+                                <li><strong>{{ translations.cost_analysis_cost_per_point }}:</strong> {{ analysis.explanation.section_cost_per_point|number_format(4, '.', ' ') }} PLN</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info mt-3">
+                {{ translations.cost_analysis_select_prompt }}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

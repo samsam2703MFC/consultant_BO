@@ -1,0 +1,341 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.product_categories|default('Kategorie produktów') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.finished_product }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.navbar_info }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">{{ translations.dashboard }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.product_categories }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">
+                    {{ translations.category_list_title }}
+                    <div class="float-end">
+                        <a href="{{ root }}/products/new" class="btn btn-primary" role="button">
+                            <i class="bi bi-plus-circle"></i> {{ translations.add_new_product }}
+                        </a>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                            <i class="bi bi-folder-plus"></i> {{ translations.add_new_category }}
+                        </button>
+                        <a href="{{ root }}/products/export" class="btn btn-info" role="button">
+                            <i class="bi bi-download"></i> {{ translations.export_products|default('Eksportuj produkty') }}
+                        </a>
+                    </div>
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info" role="alert">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>{{ translations.information }}:</strong> {{ translations.info_filtered_categories }}
+                </div>
+                <div class="row mt-5 mb-5">
+                    <div class="col-2">
+                        <input class="form-control" type="text"
+                               placeholder="{{ translations.search_by_name }}"
+                               onkeyup="searchInTable(this.value, 'id_final_product_category')">
+                    </div>
+                    <div class="col-3">
+                        <select class="form-select" onchange="filterByAvailable(this.value)">
+                            <option value="-1">{{ translations.search_by_availability }}</option>
+                            <option value="2">{{ translations.all }}</option>
+                            <option value="1">{{ translations.active }}</option>
+                            <option value="0">{{ translations.inactive }}</option>
+                        </select>
+                    </div>
+                    <div class="col-7">
+                        <a href="{{ root }}/products/all" role="button" class="btn btn-primary float-end">
+                            {{ translations.show_product_list }}
+                        </a>
+                    </div>
+                </div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%">{{ translations.category }}</th>
+                            <th class="text-center" style="width: 7%">{{ translations.active_products }}</th>
+                            <th class="text-center" style="width: 1%">/</th>
+                            <th class="text-center" style="width: 7%">{{ translations.inactive_products }}</th>
+                            <th class="text-center" style="width: 10%">{{ translations.target_margin }}</th>
+                            <th style="width: 10%"></th>
+                            <th style="width: 10%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="id_final_product_category">
+                        {% if rows is not empty %}
+                            {% for row in rows %}
+                                <tr data-category-id="{{ row.id_category }}">
+                                    <td>{{ row.name }}</td>
+                                    <td class="text-center font-bold">
+                                        <span class="text-success">{{ row.qty_active }}</span>
+                                    </td>
+                                    <td class="text-center font-bold">/</td>
+                                    <td class="text-center font-bold">
+                                        <span class="text-danger">{{ row.qty_no_active }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">
+                                            {{ row.target_margin_percentage|default(0)|number_format(1) }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-warning btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#categoryModal"
+                                                data-category-id="{{ row.id_category }}"
+                                                data-category-name="{{ row.name }}"
+                                                data-category-margin="{{ row.target_margin_percentage|default(0) }}">
+                                            {{ translations.edit }}
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ root }}/product-categories/{{ row.id_category }}/products"
+                                           class="btn btn-info btn-sm">
+                                            {{ translations.products }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center">Brak kategorii</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal zarządzania kategorią -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalLabel">{{ translations.manage_category }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId" value="">
+
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">{{ translations.category_name }}</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                            <div class="invalid-feedback">{{ translations.required_field }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="targetMargin" class="form-label">{{ translations.target_margin }}</label>
+                            <input type="number" class="form-control" id="targetMargin"
+                                   min="0" max="100" step="0.1" value="0">
+                            <div class="invalid-feedback">{{ translations.invalid_margin }}</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ translations.close }}
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveCategory()">
+                        {{ translations.save }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.translations = {
+            save_successful: "{{ translations.save_successful }}",
+            save_error: "{{ translations.save_error }}",
+            required_field: "{{ translations.required_field }}",
+            invalid_margin: "{{ translations.invalid_margin }}"
+        };
+
+        // Event listener dla otwarcia modala
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoryModal = document.getElementById('categoryModal');
+
+            categoryModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Przycisk który wywołał modal
+                const form = document.getElementById('categoryForm');
+                const modalTitle = document.getElementById('categoryModalLabel');
+
+                // Reset walidacji
+                form.classList.remove('was-validated');
+
+                if (button) {
+                    // Pobierz dane z przycisku
+                    const categoryId = button.getAttribute('data-category-id');
+                    const categoryName = button.getAttribute('data-category-name');
+                    const categoryMargin = button.getAttribute('data-category-margin');
+
+                    // Wypełnij formularz
+                    document.getElementById('categoryId').value = categoryId || '';
+                    document.getElementById('categoryName').value = categoryName || '';
+                    document.getElementById('targetMargin').value = categoryMargin || '0';
+
+                    // Ustaw tytuł
+                    if (categoryId) {
+                        modalTitle.textContent = "{{ translations.edit }} - " + (categoryName || '');
+                    } else {
+                        modalTitle.textContent = "{{ translations.add_new_category }}";
+                    }
+                } else {
+                    // Nowa kategoria (czysty formularz)
+                    document.getElementById('categoryId').value = '';
+                    document.getElementById('categoryName').value = '';
+                    document.getElementById('targetMargin').value = '0';
+                    modalTitle.textContent = "{{ translations.add_new_category }}";
+                }
+            });
+        });
+
+        function filterByAvailable(value) {
+            const table = document.getElementById("id_final_product_category");
+            const tr = table.getElementsByTagName("tr");
+
+            switch (value) {
+                case "-1":
+                case "2":
+                    for (let i = 0; i < tr.length; i++) {
+                        tr[i].style.display = "";
+                    }
+                    break;
+                case "1":
+                    for (let i = 0; i < tr.length; i++) {
+                        let td = tr[i].getElementsByTagName("td")[1];
+                        if (td && td.innerText.trim() > 0) {
+                            tr[i].style.display = "";
+                        } else {
+                            tr[i].style.display = "none";
+                        }
+                    }
+                    break;
+                case "0":
+                    for (let i = 0; i < tr.length; i++) {
+                        let td = tr[i].getElementsByTagName("td")[1];
+                        if (td && td.innerText.trim() == 0) {
+                            tr[i].style.display = "";
+                        } else {
+                            tr[i].style.display = "none";
+                        }
+                    }
+                    break;
+            }
+        }
+
+        function searchInTable(input_value, table_id) {
+            var filter, table, tr, td, i, txtValue;
+            filter = input_value.toUpperCase();
+            table = document.getElementById(table_id);
+            tr = table.getElementsByTagName("tr");
+
+            for (i = 0; i < tr.length; i++) {
+                td = tr[i].getElementsByTagName("td")[0];
+                if (td) {
+                    txtValue = td.textContent || td.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+
+        function saveCategory() {
+            const form = document.getElementById('categoryForm');
+            const categoryId = document.getElementById('categoryId').value;
+            const categoryName = document.getElementById('categoryName').value.trim();
+            const targetMargin = parseFloat(document.getElementById('targetMargin').value);
+
+            // Validate
+            if (!categoryName) {
+                form.classList.add('was-validated');
+                document.getElementById('categoryName').setCustomValidity('Invalid');
+                return;
+            }
+
+            if (isNaN(targetMargin) || targetMargin < 0 || targetMargin > 100) {
+                form.classList.add('was-validated');
+                document.getElementById('targetMargin').setCustomValidity('Invalid');
+                return;
+            }
+
+            const data = {
+                name: categoryName,
+                target_margin_percentage: targetMargin
+            };
+
+            const method = categoryId ? 'PATCH' : 'POST';
+            const url = categoryId
+                ? `/ajax/product-categories/${categoryId}`
+                : '/ajax/product-categories';
+
+            api(url, {
+                method: method,
+                data: data
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Zamknij modal używając Bootstrap API
+                    const modalElement = document.getElementById('categoryModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                    modal.hide();
+
+                    // Pokaż SweetAlert z sukcesem
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sukces!',
+                        text: window.translations.save_successful,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    // Pokaż SweetAlert z błędem
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Błąd!',
+                        text: response.message || window.translations.save_error,
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Pokaż SweetAlert z błędem
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Błąd!',
+                    text: window.translations.save_error,
+                    confirmButtonText: 'OK'
+                });
+            });
+        }
+    </script>
+{% endblock %}
+

@@ -1,0 +1,232 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.price_structure|default('Struktura cenowa') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.price_structure }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.price_structure_subtitle }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">{{ translations.dashboard }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.price_structure }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">{{ translations.products_list }}</h4>
+            </div>
+            <div class="card-body">
+                <!-- Filtry -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="searchProduct" class="form-label">{{ translations.search_product }}</label>
+                        <input type="text"
+                               class="form-control"
+                               id="searchProduct"
+                               placeholder="{{ translations.search_product }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="categoryFilter" class="form-label">{{ translations.filter_by_category }}</label>
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">{{ translations.all_categories }}</option>
+                            {% if categories is not empty %}
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="w-100">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="badge bg-primary p-2 w-100 text-center">
+                                {{ translations.showing }}: <span id="visibleCount">0</span> / <span id="totalCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabela produktów pogrupowana według kategorii -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%">{{ translations.id }}</th>
+                                <th style="width: 30%">{{ translations.product_name }}</th>
+                                <th style="width: 20%">{{ translations.category }}</th>
+                                <th style="width: 10%" class="text-center">{{ translations.weight }}</th>
+                                <th style="width: 20%">{{ translations.section }}</th>
+                                <th style="width: 10%" class="text-center">{{ translations.recipe }}</th>
+                                <th style="width: 5%" class="text-center">{{ translations.actions }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            {% if products is not empty %}
+                                {% set current_category = null %}
+                                {% for product in products %}
+                                    {% if current_category != product.category_name %}
+                                        {% set current_category = product.category_name %}
+                                        <tr class="table-secondary category-header">
+                                            <td colspan="7">
+                                                <strong>
+                                                    <i class="bi bi-folder"></i>
+                                                    {{ product.category_name|default('Brak kategorii') }}
+                                                </strong>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                    <tr class="product-row"
+                                        data-product-id="{{ product.id }}"
+                                        data-product-name="{{ product.name|lower }}"
+                                        data-category-id="{{ product.id_category }}"
+                                        data-category-name="{{ product.category_name|default('') }}">
+                                        <td>{{ product.id }}</td>
+                                        <td>
+                                            <strong>{{ product.name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">
+                                                {{ product.category_name|default('Brak kategorii') }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            {{ product.weight ? (product.weight ~ ' g') : '-' }}
+                                        </td>
+                                        <td>
+                                            {{ product.section_name|default('-') }}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if product.id_recipe %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> {{ translations.has }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="bi bi-x-circle"></i> {{ translations.no }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ root }}/products/{{ product.id }}/edit"
+                                               class="btn btn-sm btn-primary"
+                                               title="{{ translations.edit }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">{{ translations.no_products_available }}</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Zaktualizuj liczniki przy ładowaniu
+    updateCounters();
+});
+
+// DOM Elements
+const searchInput = document.getElementById('searchProduct');
+const categoryFilter = document.getElementById('categoryFilter');
+const productsTableBody = document.getElementById('productsTableBody');
+const visibleCount = document.getElementById('visibleCount');
+const totalCount = document.getElementById('totalCount');
+
+// Funkcja aktualizująca liczniki
+function updateCounters() {
+    const allRows = document.querySelectorAll('.product-row');
+    const visibleRows = Array.from(allRows).filter(row => row.style.display !== 'none');
+
+    visibleCount.textContent = visibleRows.length;
+    totalCount.textContent = allRows.length;
+
+    // Ukryj/pokaż nagłówki kategorii
+    updateCategoryHeaders();
+}
+
+// Funkcja ukrywająca puste nagłówki kategorii
+function updateCategoryHeaders() {
+    const categoryHeaders = document.querySelectorAll('.category-header');
+
+    categoryHeaders.forEach(header => {
+        let nextElement = header.nextElementSibling;
+        let hasVisibleProducts = false;
+
+        // Sprawdź czy jakakolwiek następna produktowa linia jest widoczna
+        while (nextElement && !nextElement.classList.contains('category-header')) {
+            if (nextElement.classList.contains('product-row') && nextElement.style.display !== 'none') {
+                hasVisibleProducts = true;
+                break;
+            }
+            nextElement = nextElement.nextElementSibling;
+        }
+
+        // Pokaż nagłówek tylko jeśli ma widoczne produkty
+        header.style.display = hasVisibleProducts ? '' : 'none';
+    });
+}
+
+// Funkcja filtrowania
+function applyFilters() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const categoryValue = categoryFilter.value;
+
+    document.querySelectorAll('.product-row').forEach(row => {
+        const productName = row.dataset.productName || '';
+        const categoryId = row.dataset.categoryId || '';
+
+        const matchesSearch = !searchTerm || productName.includes(searchTerm);
+        const matchesCategory = !categoryValue || categoryId === categoryValue;
+
+        const isVisible = matchesSearch && matchesCategory;
+        row.style.display = isVisible ? '' : 'none';
+    });
+
+    updateCounters();
+}
+
+// Event listeners
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', applyFilters);
+
+// Keyboard shortcut for search
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+    }
+});
+</script>
+{% endblock %}
+

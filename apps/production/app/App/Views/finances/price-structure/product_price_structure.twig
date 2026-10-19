@@ -1,0 +1,33 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.product_profitability|default('Prezentacja rentowności produktyu') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.product_profitability }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.product_profitability_subtitle }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ root }}/materials">{{ translations.materials }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.export }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}

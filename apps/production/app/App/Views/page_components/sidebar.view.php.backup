@@ -1,0 +1,316 @@
+<div id="sidebar" class="active">
+    <div class="sidebar-wrapper active">
+        <div class="sidebar-header">
+            <div class="d-flex justify-content-between">
+                <div class="logo">
+                    <a href="<?=ROOT?>/dashboard">
+                        <img src="assets/images/logo/logo.png" alt="Logo" srcset="">
+                    </a>
+                </div>
+                <div class="toggler">
+                    <a href="#" class="sidebar-hide d-xl-none d-block"><i class="bi bi-x bi-middle"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-menu">
+            <ul class="menu">
+
+                <li class="sidebar-title">Menu</li>
+
+                <!-- DASHBOARD -->
+                <li class="sidebar-item">
+                    <a href="<?=ROOT?>/dashboard" class="sidebar-link">
+                        <i class="bi bi-grid-1x2-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- PRODUKTY -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Produkty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/product-categories">
+                                <i class="bi bi-tags"></i> Kategorie i produkty
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/recipes">
+                                <i class="bi bi-journal-text"></i> Receptury produktów
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/semi-products">
+                                <i class="bi bi-box"></i> Półprodukty
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/compositions">
+                                <i class="bi bi-diagram-3"></i> Kompozycje
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/test-products">
+                                <i class="bi bi-"></i> Produkty testowe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- SUROWCE (wariant A: wszystko o surowcu w jednym miejscu) -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-stack"></i>
+                        <span>Surowce</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/material-categories">
+                                <i class="bi bi-diagram-3"></i> Kategorie i surowce
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/materials/prices">
+                                <i class="bi bi-currency-exchange"></i> Ceny surowców
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/material-suppliers">
+                                <i class="bi bi-truck-front"></i> Dostawcy surowców
+                            </a>
+                        </li>
+<!--                        <li class="submenu-item">-->
+<!--                            <a href="--><?php //=ROOT?><!--/purchases">-->
+<!--                                <i class="bi bi-cart-check"></i> Zakupy (dostawy)-->
+<!--                            </a>-->
+<!--                        </li>-->
+                    </ul>
+                </li>
+
+                <!-- MAGAZYN (wariant A: tylko stany) -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-building"></i>
+                        <span>Magazyn</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/products/stock">
+                                <i class="bi bi-archive"></i> Stany produktów
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- PRODUKCJA -->
+                <li class="sidebar-item">
+                    <a href="<?=ROOT?>/production/planning" class="sidebar-link">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Produkcja</span>
+                    </a>
+                </li>
+
+                <!-- ZAMÓWIENIA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-bag-check"></i>
+                        <span>Zamówienia</span>
+                    </a>
+                    <ul class="submenu">
+
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/client-orders">
+                                <i class="bi bi-list-check"></i> Lista zamówień
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item has-sub">
+                            <a href="#" class="sidebar-link">
+                                <i class="bi bi-arrow-return-left"></i>
+                                <span>Zwroty (logistyka)</span>
+                            </a>
+                            <ul class="submenu">
+                                <li class="submenu-item">
+                                    <a href="<?=ROOT?>/client-complaints/pending-products">
+                                        <i class="bi bi-box-seam"></i> Oczekujące produkty
+                                    </a>
+                                </li>
+                                <li class="submenu-item">
+                                    <a href="<?=ROOT?>/client-complaints/pending-shipment">
+                                        <i class="bi bi-truck"></i> Oczekujące zwroty (wysyłka)
+                                    </a>
+                                </li>
+                                <li class="submenu-item">
+                                    <a href="<?=ROOT?>/client-complaints/picking-list">
+                                        <i class="bi bi-card-checklist"></i> Listy kompletacyjne
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                    </ul>
+                </li>
+
+                <!-- DOKUMENTY -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Dokumenty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/shipping-documents/create">
+                                <i class="bi bi-truck"></i> WZ + CMR
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/shipments">
+                                <i class="bi bi-files"></i> Wysyłki (wygenerowane)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/proforma-documents">
+                                <i class="bi bi-receipt"></i> Proforma
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/invoice-documents">
+                                <i class="bi bi-receipt-cutoff"></i> Faktury inne
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/client-complaints/shipping-documents">
+                                <i class="bi bi-arrow-return-left"></i> Dokumenty zwrotów
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- FINANSE -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Finanse</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/production-sections/profitability">
+                                <i class="bi bi-graph-up"></i> Rentowność działów
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/company-costs">
+                                <i class="bi bi-bank"></i> Koszty
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/cost-calculator">
+                                <i class="bi bi-calculator"></i> Kalkulator kosztów
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/price-lists/general">
+                                <i class="bi bi-card-list"></i> Cennik ogólny
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/price-lists/clients">
+                                <i class="bi bi-person-lines-fill"></i> Cenniki indywidualne
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- LOGISTYKA (wariant A: tylko transport) -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Transport</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/product-carriers">
+                                <i class="bi bi-truck-front"></i> Przewoźnicy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- HR -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-person-badge"></i>
+                        <span>HR</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/production-employees">
+                                <i class="bi bi-people-fill"></i> Pracownicy produkcji
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- KLIENCI -->
+                <li class="sidebar-item">
+                    <a href="<?=ROOT?>/clients?type=active" class="sidebar-link">
+                        <i class="bi bi-person-vcard"></i>
+                        <span>Klienci</span>
+                    </a>
+                </li>
+
+                <!-- FRANCZYZA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-diagram-2"></i>
+                        <span>Franczyza</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/franchise-complaints">
+                                <i class="bi bi-exclamation-triangle"></i> Reklamacje
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/client-franchise-networks">
+                                <i class="bi bi-diagram-3-fill"></i> Sieci franczyzowe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- USTAWIENIA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-diagram-2"></i>
+                        <span>Ustawienia</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/users">
+                                <i class="bi bi-gear">Użytkownicy systemu</i>
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/aliases">
+                                <i class="bi bi-book">Aliasy</i>
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="<?=ROOT?>/other-settings">
+                                Pozostałe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+            </ul>
+        </div>
+
+        <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>
+    </div>
+</div>

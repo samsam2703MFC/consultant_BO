@@ -1,0 +1,460 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.export_products|default('Eksport produktów') }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>{{ translations.export_products }}</h3>
+                <p class="text-subtitle text-muted">{{ translations.export_subtitle }}</p>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}/dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ root }}/products/all">{{ translations.products }}</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ translations.export }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .product-selection-table {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+
+    .product-row {
+        cursor: pointer;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .product-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .product-row.selected {
+        background-color: #cfe2ff;
+    }
+
+    .product-checkbox {
+        cursor: pointer;
+    }
+
+    .export-info-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+    }
+
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        background-color: white;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .badge-recipe {
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="row">
+            <div class="col-12 col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">{{ translations.select_products }}</h4>
+                        <small class="text-info">
+                            <i class="bi bi-info-circle"></i>
+                            {{ translations.composition_included|default('Produkty z recepturą będą zawierały skład i alergeny') }}
+                        </small>
+                    </div>
+                    <div class="card-body">
+                        <!-- Search and filters -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <input type="text"
+                                       class="form-control"
+                                       id="searchProducts"
+                                       placeholder="{{ translations.search_products }}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <select class="form-select" id="categoryFilter">
+                                    <option value="">{{ translations.all_categories }}</option>
+                                    {% set processedCategories = [] %}
+                                    {% for product in products %}
+                                        {% if product.category_name and product.category_name not in processedCategories %}
+                                            <option value="{{ product.category_name }}">{{ product.category_name }}</option>
+                                            {% set processedCategories = processedCategories|merge([product.category_name]) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Bulk actions -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                                    <i class="bi bi-check-square"></i> {{ translations.select_all }}
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                                    <i class="bi bi-square"></i> {{ translations.deselect_all }}
+                                </button>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary" id="selectedCount">{{ translations.selected_count }}: 0</span>
+                            </div>
+                        </div>
+
+                        <!-- Products table -->
+                        <div class="product-selection-table">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="sticky-header">
+                                    <tr>
+                                        <th style="width: 50px">
+                                            <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
+                                        </th>
+                                        <th>{{ translations.product_name }}</th>
+                                        <th>{{ translations.category }}</th>
+                                        <th class="text-center" style="width: 100px">{{ translations.status }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody">
+                                    {% if products is empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-4">
+                                                {{ translations.no_products|default('Brak produktów') }}
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        {% for product in products %}
+                                            <tr class="product-row"
+                                                data-product-id="{{ product.id }}"
+                                                data-product-name="{{ product.name|lower }}"
+                                                data-category="{{ product.category_name|default('') }}"
+                                                data-has-recipe="{{ product.id_recipe ? '1' : '0' }}">
+                                                <td>
+                                                    <input type="checkbox"
+                                                           class="form-check-input product-checkbox"
+                                                           value="{{ product.id }}"
+                                                           data-name="{{ product.name }}">
+                                                </td>
+                                                <td>
+                                                    {{ product.name }}
+                                                    {% if not product.active %}
+                                                        <span class="badge bg-secondary badge-recipe ms-1">{{ translations.inactive }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if product.category_name %}
+                                                        <span class="badge bg-light text-dark">{{ product.category_name }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if product.id_recipe %}
+                                                        <span class="badge bg-success badge-recipe">{{ translations.has_recipe }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning badge-recipe">{{ translations.no_recipe }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                {{ translations.showing }}: <span id="visibleCountNumber">{{ products|length }}</span> / {{ products|length }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">{{ translations.export }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Language selection -->
+                        <div class="mb-3">
+                            <label for="exportLanguage" class="form-label">
+                                {{ translations.select_language }}
+                            </label>
+                            <select class="form-select" id="exportLanguage">
+                                {% if languages is empty %}
+                                    <option value="pl">Polski (domyślny)</option>
+                                {% else %}
+                                    {% for language in languages %}
+                                        <option value="{{ language.code }}" {% if language.code == 'pl' %}selected{% endif %}>
+                                            {{ language.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <!-- Export info -->
+                        <div class="export-info-card p-3 rounded mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-info-circle text-primary me-2"></i>
+                                <strong>Informacje</strong>
+                            </div>
+                            <ul class="small mb-0 ps-3">
+                                <li>Format: JSON</li>
+                                <li>SKU = ID produktu</li>
+                                <li>ID kategorii i nazwa</li>
+                                <li>Waga i jednostka (gramy)</li>
+                                <li>Ilość sztuk w kartonie</li>
+                                <li>Skład (dla produktów z recepturą)</li>
+                                <li>Alergeny (dla produktów z recepturą)</li>
+                                <li>Tłumaczenia wg wybranego języka</li>
+                            </ul>
+                        </div>
+
+                        <!-- Export button -->
+                        <button class="btn btn-primary w-100" id="exportBtn" disabled>
+                            <i class="bi bi-download"></i> {{ translations.export_to_json }}
+                        </button>
+
+                        <div class="text-center mt-2">
+                            <small class="text-muted" id="exportStatusText">
+                                {{ translations.no_products_selected }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Translations for JS
+const translations = {
+    selected_count: "{{ translations.selected_count }}",
+    no_products_selected: "{{ translations.no_products_selected }}",
+    export_success: "{{ translations.export_success }}",
+    export_error: "{{ translations.export_error }}",
+    export_to_json: "{{ translations.export_to_json }}",
+    communication_error: "{{ translations.communication_error|default('Błąd komunikacji') }}",
+    showing: "{{ translations.showing }}"
+};
+
+// State
+let selectedProducts = new Set();
+const totalProducts = {{ products|length }};
+
+// DOM Elements
+const productsTableBody = document.getElementById('productsTableBody');
+const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const deselectAllBtn = document.getElementById('deselectAllBtn');
+const selectedCountBadge = document.getElementById('selectedCount');
+const exportBtn = document.getElementById('exportBtn');
+const exportStatusText = document.getElementById('exportStatusText');
+const searchInput = document.getElementById('searchProducts');
+const categoryFilter = document.getElementById('categoryFilter');
+const exportLanguage = document.getElementById('exportLanguage');
+
+// Update selected count
+function updateSelectedCount() {
+    const count = selectedProducts.size;
+    selectedCountBadge.textContent = `${translations.selected_count}: ${count}`;
+    exportBtn.disabled = count === 0;
+
+    if (count === 0) {
+        exportStatusText.textContent = translations.no_products_selected;
+    } else {
+        exportStatusText.textContent = `${count} ${count === 1 ? 'produkt' : count < 5 ? 'produkty' : 'produktów'}`;
+    }
+}
+
+// Handle checkbox change
+function handleCheckboxChange(checkbox) {
+    const productId = parseInt(checkbox.value);
+    const row = checkbox.closest('.product-row');
+
+    if (checkbox.checked) {
+        selectedProducts.add(productId);
+        row.classList.add('selected');
+    } else {
+        selectedProducts.delete(productId);
+        row.classList.remove('selected');
+    }
+
+    updateSelectedCount();
+    updateSelectAllCheckbox();
+}
+
+// Update select all checkbox state
+function updateSelectAllCheckbox() {
+    const visibleCheckboxes = getVisibleCheckboxes();
+    const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+
+    if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedCount === visibleCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+// Get visible checkboxes
+function getVisibleCheckboxes() {
+    return Array.from(document.querySelectorAll('.product-checkbox'))
+        .filter(cb => cb.closest('.product-row').style.display !== 'none');
+}
+
+// Select all visible
+selectAllCheckbox.addEventListener('change', function() {
+    const visibleCheckboxes = getVisibleCheckboxes();
+    visibleCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+        handleCheckboxChange(cb);
+    });
+});
+
+selectAllBtn.addEventListener('click', function() {
+    const visibleCheckboxes = getVisibleCheckboxes();
+    visibleCheckboxes.forEach(cb => {
+        cb.checked = true;
+        handleCheckboxChange(cb);
+    });
+});
+
+deselectAllBtn.addEventListener('click', function() {
+    document.querySelectorAll('.product-checkbox').forEach(cb => {
+        cb.checked = false;
+        handleCheckboxChange(cb);
+    });
+});
+
+// Row click handling
+productsTableBody.addEventListener('click', function(e) {
+    if (e.target.type === 'checkbox') return;
+
+    const row = e.target.closest('.product-row');
+    if (!row) return;
+
+    const checkbox = row.querySelector('.product-checkbox');
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        handleCheckboxChange(checkbox);
+    }
+});
+
+// Checkbox change handling
+productsTableBody.addEventListener('change', function(e) {
+    if (e.target.classList.contains('product-checkbox')) {
+        handleCheckboxChange(e.target);
+    }
+});
+
+// Search and filter
+function applyFilters() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const categoryValue = categoryFilter.value;
+    let visibleCount = 0;
+
+    document.querySelectorAll('.product-row').forEach(row => {
+        const productName = row.dataset.productName || '';
+        const category = row.dataset.category || '';
+
+        const matchesSearch = !searchTerm || productName.includes(searchTerm);
+        const matchesCategory = !categoryValue || category === categoryValue;
+
+        const isVisible = matchesSearch && matchesCategory;
+        row.style.display = isVisible ? '' : 'none';
+
+        if (isVisible) visibleCount++;
+    });
+
+    document.getElementById('visibleCountNumber').textContent = visibleCount;
+    updateSelectAllCheckbox();
+}
+
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', applyFilters);
+
+// Export functionality
+exportBtn.addEventListener('click', async function() {
+    if (selectedProducts.size === 0) {
+        Swal.fire('Ostrzeżenie', translations.no_products_selected, 'warning');
+        return;
+    }
+
+    const langCode = exportLanguage.value;
+    const productIds = Array.from(selectedProducts);
+
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eksportowanie...';
+
+    try {
+        const response = await api('/ajax/products/export', {
+            method: 'POST',
+            data: {
+                product_ids: productIds,
+                lang_code: langCode
+            }
+        });
+
+        if (response.ok && response.data) {
+            // Download JSON file
+            const jsonString = JSON.stringify(response.data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `products_export_${langCode}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            Swal.fire({
+                icon: 'success',
+                title: translations.export_success,
+                text: response.description || 'Plik JSON został pobrany',
+                timer: 3000
+            });
+        } else {
+            Swal.fire('Błąd', response.error || translations.export_error, 'error');
+        }
+    } catch (error) {
+        console.error('Export error:', error);
+        Swal.fire('Błąd', translations.communication_error, 'error');
+    } finally {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = '<i class="bi bi-download"></i> ' + translations.export_to_json;
+    }
+});
+
+// Initialize
+updateSelectedCount();
+</script>
+{% endblock %}
+

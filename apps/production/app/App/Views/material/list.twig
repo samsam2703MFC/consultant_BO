@@ -1,0 +1,356 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.all_materials|default('Wszystkie surowce') }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>{{ translations.all_materials }}</h3>
+                <p class="text-subtitle text-muted">{{ translations.all_materials_list }}</p>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ root }}/material-categories">{{ translations.material_categories }}</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ translations.all_materials }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .material-row {
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .material-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .badge-package {
+        font-size: 0.75rem;
+    }
+
+    .icon-package {
+        color: #0d6efd;
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-8">
+                        <h4 class="card-title mb-0">{{ translations.all_materials_list }}</h4>
+                    </div>
+                    <div class="col-12 col-md-4 text-end mt-2 mt-md-0">
+                        <a href="{{ root }}/materials/export" class="btn btn-info btn-sm">
+                            <i class="bi bi-download"></i> {{ translations.export_materials|default('Eksportuj') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-4">
+                        <input type="text"
+                               class="form-control"
+                               id="searchMaterials"
+                               placeholder="{{ translations.search_materials|default('Szukaj surowców...') }}">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">{{ translations.all_categories }}</option>
+                            {% set processedCategories = [] %}
+                            {% for material in rows %}
+                                {% if material.category_name and material.category_name not in processedCategories %}
+                                    <option value="{{ material.category_name }}">{{ material.category_name }}</option>
+                                    {% set processedCategories = processedCategories|merge([material.category_name]) %}
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <select class="form-select" id="typeFilter">
+                            <option value="">{{ translations.all_types }}</option>
+                            <option value="0">{{ translations.regular_materials }}</option>
+                            <option value="1">{{ translations.package_materials }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Counter -->
+                <div class="mb-3">
+                    <small class="text-muted">
+                        {{ translations.showing }}: <span id="visibleCount">{{ rows|length }}</span> / {{ rows|length }}
+                    </small>
+                </div>
+
+                <!-- Materials table -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px" class="text-center">{{ translations.filter_by_type }}</th>
+                                <th>{{ translations.material_name }}</th>
+                                <th>{{ translations.category }}</th>
+                                <th>{{ translations.supplier }}</th>
+                                <th>{{ translations.unit }}</th>
+                                <th class="text-end">{{ translations.price_per_1000 }}</th>
+                                <th style="width: 120px" class="text-center">{{ translations.is_package_part }}</th>
+                                <th class="text-center">{{ translations.actions }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialsTableBody">
+                            {% if rows is empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        {{ translations.no_materials }}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                {% for material in rows %}
+                                    <tr class="material-row"
+                                        data-material-name="{{ material.name|lower }}"
+                                        data-category="{{ material.category_name|default('') }}"
+                                        data-is-package="{{ material.is_part_of_package }}">
+                                        <td class="text-center">
+                                            {% if material.is_part_of_package == 1 %}
+                                                <i class="bi bi-box-seam icon-package"
+                                                   title="{{ translations.is_package_part }}"
+                                                   data-bs-toggle="tooltip"></i>
+                                            {% else %}
+                                                <i class="bi bi-circle text-muted"
+                                                   title="{{ translations.regular_material }}"
+                                                   data-bs-toggle="tooltip"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ material.name }}</strong>
+                                            {% if material.is_part_of_package == 1 %}
+                                                <span class="badge bg-info badge-package ms-1">
+                                                    {{ translations.is_package_part }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if material.category_name %}
+                                                <span class="badge bg-light text-dark">{{ material.category_name }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if material.supplier_name %}
+                                                {{ material.supplier_name }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ material.unit_name }}</td>
+                                        <td class="text-end">
+                                            {% if material.price_per_1000 %}
+                                                {{ material.price_per_1000|number_format(2, ',', ' ') }} zł
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check form-switch d-flex justify-content-center">
+                                                <input class="form-check-input package-toggle"
+                                                       type="checkbox"
+                                                       role="switch"
+                                                       id="packageToggle{{ material.id }}"
+                                                       data-material-id="{{ material.id }}"
+                                                       data-material-name="{{ material.name }}"
+                                                       {% if material.is_part_of_package == 1 %}checked{% endif %}
+                                                       title="{{ translations.toggle_package_status }}">
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ root }}/materials/{{ material.id }}/edit"
+                                               class="btn btn-sm btn-primary"
+                                               title="{{ translations.edit }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// DOM Elements
+const searchInput = document.getElementById('searchMaterials');
+const categoryFilter = document.getElementById('categoryFilter');
+const typeFilter = document.getElementById('typeFilter');
+const materialsTableBody = document.getElementById('materialsTableBody');
+const visibleCount = document.getElementById('visibleCount');
+const totalMaterials = {{ rows|length }};
+
+// Apply filters
+function applyFilters() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const categoryValue = categoryFilter.value;
+    const typeValue = typeFilter.value;
+    let visible = 0;
+
+    document.querySelectorAll('.material-row').forEach(row => {
+        const materialName = row.dataset.materialName || '';
+        const category = row.dataset.category || '';
+        const isPackage = row.dataset.isPackage || '0';
+
+        const matchesSearch = !searchTerm || materialName.includes(searchTerm);
+        const matchesCategory = !categoryValue || category === categoryValue;
+        const matchesType = !typeValue || isPackage === typeValue;
+
+        const isVisible = matchesSearch && matchesCategory && matchesType;
+        row.style.display = isVisible ? '' : 'none';
+
+        if (isVisible) visible++;
+    });
+
+    visibleCount.textContent = visible;
+}
+
+// Event listeners
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', applyFilters);
+typeFilter.addEventListener('change', applyFilters);
+
+// Keyboard shortcut for search
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+    }
+});
+
+// Package toggle handler
+document.addEventListener('change', async function(e) {
+    if (e.target.classList.contains('package-toggle')) {
+        const toggle = e.target;
+        const materialId = toggle.dataset.materialId;
+        const materialName = toggle.dataset.materialName;
+        const isPartOfPackage = toggle.checked ? 1 : 0;
+
+        // Disable toggle during update
+        toggle.disabled = true;
+
+        try {
+            const response = await api(`/ajax/materials/${materialId}/toggle-package`, {
+                method: 'PATCH',
+                data: {
+                    is_part_of_package: isPartOfPackage
+                }
+            });
+
+            if (response.ok) {
+                // Update UI
+                const row = toggle.closest('.material-row');
+                const iconCell = row.querySelector('td:first-child i');
+                const nameCell = row.querySelector('td:nth-child(2)');
+
+                // Update row data attribute
+                row.dataset.isPackage = isPartOfPackage;
+
+                // Update icon
+                if (isPartOfPackage === 1) {
+                    iconCell.className = 'bi bi-box-seam icon-package';
+                    iconCell.title = "{{ translations.is_package_part }}";
+
+                    // Add badge if not exists
+                    if (!nameCell.querySelector('.badge-package')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-info badge-package ms-1';
+                        badge.textContent = "{{ translations.is_package_part }}";
+                        nameCell.querySelector('strong').after(badge);
+                    }
+                } else {
+                    iconCell.className = 'bi bi-circle text-muted';
+                    iconCell.title = "{{ translations.regular_material }}";
+
+                    // Remove badge if exists
+                    const badge = nameCell.querySelector('.badge-package');
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+
+                // Reinitialize tooltip
+                const tooltip = bootstrap.Tooltip.getInstance(iconCell);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+                new bootstrap.Tooltip(iconCell);
+
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: "{{ translations.status_updated }}",
+                    text: `${materialName}: ${isPartOfPackage === 1 ? "{{ translations.is_package_part }}" : "{{ translations.regular_material }}"}`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                // Reapply filters if needed
+                applyFilters();
+            } else {
+                // Revert toggle on error
+                toggle.checked = !toggle.checked;
+
+                Swal.fire({
+                    icon: 'error',
+                    title: "{{ translations.status_update_error }}",
+                    text: response.error || 'Wystąpił błąd',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } catch (error) {
+            console.error('Toggle error:', error);
+
+            // Revert toggle on error
+            toggle.checked = !toggle.checked;
+
+            Swal.fire({
+                icon: 'error',
+                title: "{{ translations.status_update_error }}",
+                text: 'Błąd komunikacji z serwerem',
+                confirmButtonText: 'OK'
+            });
+        } finally {
+            // Re-enable toggle
+            toggle.disabled = false;
+        }
+    }
+});
+</script>
+{% endblock %}
+

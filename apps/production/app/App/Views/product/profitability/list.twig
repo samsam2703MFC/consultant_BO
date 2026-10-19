@@ -1,0 +1,200 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Rentowność Produktów{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>Rentowność Produktów</h3>
+                <p class="text-subtitle text-muted">Analiza kosztów i marży dla wszystkich produktów</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <!-- Search Bar & Cost Month Selector -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" action="{{ root }}/products/profitability" id="filterForm">
+                        <div class="row g-2">
+                            <!-- Miesiąc rozliczeniowy -->
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small text-muted">Miesiąc rozliczeniowy</label>
+                                <select class="form-select" name="cost_month_id" onchange="document.getElementById('filterForm').submit()">
+                                    {% if selected_cost_month %}
+                                        <option value="{{ selected_cost_month.id }}" selected>
+                                            {{ selected_cost_month.period_year }}-{{ '%02d'|format(selected_cost_month.period_month) }}
+                                            {% if selected_cost_month.status == 'LOCKED' %}🔒{% endif %}
+                                        </option>
+                                    {% else %}
+                                        <option value="">Najnowszy miesiąc</option>
+                                    {% endif %}
+                                    {% for month in cost_months %}
+                                        {% if not selected_cost_month or month.id != selected_cost_month.id %}
+                                        <option value="{{ month.id }}">
+                                            {{ month.period_year }}-{{ '%02d'|format(month.period_month) }}
+                                            {% if month.status == 'LOCKED' %}🔒{% endif %}
+                                        </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">
+                                    Aktualnie:
+                                    {% if selected_cost_month %}
+                                        {{ selected_cost_month.period_year }}-{{ '%02d'|format(selected_cost_month.period_month) }}
+                                    {% else %}
+                                        Najnowszy
+                                    {% endif %}
+                                </small>
+                            </div>
+
+                            <!-- Wyszukiwarka -->
+                            <div class="col-12 col-md-8">
+                                <label class="form-label small text-muted">Szukaj produktu</label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           name="search"
+                                           placeholder="Nazwa produktu..."
+                                           value="{{ search|default('') }}">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-search"></i> Szukaj
+                                    </button>
+                                    {% if search or cost_month_id %}
+                                    <a href="{{ root }}/products/profitability" class="btn btn-secondary">
+                                        <i class="bi bi-x-circle"></i> Reset
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Cards -->
+    {% if products is empty %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Brak produktów do wyświetlenia. 
+                {% if search %}Spróbuj zmienić kryteria wyszukiwania.{% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        {% for product in products %}
+        <div class="col-12 col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 
+                {% if product.status.level == 'danger' %}border-danger
+                {% elseif product.status.level == 'warning' %}border-warning
+                {% else %}border-success
+                {% endif %}">
+                <div class="card-header 
+                    {% if product.status.level == 'danger' %}bg-danger text-white
+                    {% elseif product.status.level == 'warning' %}bg-warning
+                    {% else %}bg-success text-white
+                    {% endif %}">
+                    <h5 class="card-title mb-0">
+                        <i class="{{ product.status.icon }}"></i>
+                        {{ product.name }}
+                    </h5>
+                    <small>{{ product.category_name }} • {{ product.section_name }}</small>
+                </div>
+                <div class="card-body">
+                    <!-- KPIs -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Koszt/szt</small>
+                                <strong class="h5">{{ product.cost_per_unit|currency }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Zysk/szt</small>
+                                <strong class="h5 
+                                    {% if product.profit_per_unit < 0 %}text-danger
+                                    {% else %}text-success
+                                    {% endif %}">
+                                    {{ product.profit_per_unit|currency }}
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Marża</small>
+                                <strong class="h5">{{ product.margin_percentage|number_format(2, ',', ' ') }}%</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar for Margin -->
+                    <div class="mb-3">
+                        <small class="text-muted">Marża (%)</small>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar 
+                                {% if product.status.level == 'danger' %}bg-danger
+                                {% elseif product.status.level == 'warning' %}bg-warning
+                                {% else %}bg-success
+                                {% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ product.margin_percentage > 100 ? 100 : product.margin_percentage }}%"
+                                aria-valuenow="{{ product.margin_percentage }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                                {{ product.margin_percentage|number_format(1, ',', ' ') }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div class="alert alert-{{ product.status.level }} mb-3 py-2">
+                        <small><i class="{{ product.status.icon }}"></i> {{ product.status.message }}</small>
+                    </div>
+
+                    <!-- Action Button -->
+                    <a href="{{ root }}/products/{{ product.id }}/profitability-details" 
+                       class="btn btn-primary btn-block w-100">
+                        <i class="bi bi-graph-up"></i> Zobacz szczegóły
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .border-success {
+        border-width: 2px !important;
+    }
+    .border-warning {
+        border-width: 2px !important;
+    }
+    .border-danger {
+        border-width: 2px !important;
+    }
+</style>
+{% endblock %}

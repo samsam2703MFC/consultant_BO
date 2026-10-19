@@ -1,0 +1,245 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.material }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.material }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.material_categories }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.material_categories }}
+                            </li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">
+                    {{ translations.category_list }}
+                    <div class="float-end">
+                        <a href="{{ root }}/materials/all" class="btn btn-secondary" role="button">
+                            <i class="bi bi-list-ul"></i> {{ translations.all_materials|default('Wszystkie surowce') }}
+                        </a>
+                        <a href="{{ root }}/materials/new" class="btn btn-primary" role="button">
+                            <i class="bi bi-plus-circle"></i> {{ translations.add_new }}
+                        </a>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                            <i class="bi bi-folder-plus"></i> {{ translations.add_category }}
+                        </button>
+                        <a href="{{ root }}/materials/export" class="btn btn-info" role="button">
+                            <i class="bi bi-download"></i> {{ translations.export_materials|default('Eksportuj surowce') }}
+                        </a>
+                    </div>
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th style="width: 60%">{{ translations.category }}</th>
+                                <th style="width: 20%"></th>
+                                <th style="width: 20%"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% if rows is not empty %}
+                                {% for row in rows %}
+                                    <tr data-category-id="{{ row.id_category }}">
+                                        <td>{{ row.name }}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-warning btn-sm"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#categoryModal"
+                                                    data-category-id="{{ row.id_category }}"
+                                                    data-category-name="{{ row.name }}">
+                                                {{ translations.edit }}
+                                            </button>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ root }}/material-categories/{{ row.id_category }}/materials"
+                                               class="btn btn-info btn-sm">{{ translations.materials }}</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center">{{ translations.no_categories }}</td>
+                                </tr>
+                            {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal for category management -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalLabel">{{ translations.add_category }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId" value="">
+
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">{{ translations.category_name }}</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                            <div class="invalid-feedback">{{ translations.field_required }}</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ translations.cancel }}</button>
+                    <button type="button" class="btn btn-primary" id="saveCategoryBtn">{{ translations.save }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.translations = {
+            save_successful: "{{ translations.save_successful }}",
+            error_saving: "{{ translations.error_saving }}",
+            field_required: "{{ translations.field_required }}",
+            add_category: "{{ translations.add_category }}",
+            edit_category: "{{ translations.edit }}"
+        };
+
+        // Event listener dla otwarcia modala
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoryModal = document.getElementById('categoryModal');
+
+            categoryModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const form = document.getElementById('categoryForm');
+                const modalTitle = document.getElementById('categoryModalLabel');
+
+                // Reset walidacji
+                form.classList.remove('was-validated');
+
+                if (button) {
+                    // Pobierz dane z przycisku
+                    const categoryId = button.getAttribute('data-category-id');
+                    const categoryName = button.getAttribute('data-category-name');
+
+                    // Wypełnij formularz
+                    document.getElementById('categoryId').value = categoryId || '';
+                    document.getElementById('categoryName').value = categoryName || '';
+
+                    // Ustaw tytuł
+                    if (categoryId) {
+                        modalTitle.textContent = window.translations.edit_category + " - " + (categoryName || '');
+                    } else {
+                        modalTitle.textContent = window.translations.add_category;
+                    }
+                } else {
+                    // Nowa kategoria (czysty formularz)
+                    document.getElementById('categoryId').value = '';
+                    document.getElementById('categoryName').value = '';
+                    modalTitle.textContent = window.translations.add_category;
+                }
+            });
+        });
+
+        // Funkcja zapisywania kategorii
+        document.getElementById('saveCategoryBtn').addEventListener('click', function() {
+            const form = document.getElementById('categoryForm');
+            const categoryId = document.getElementById('categoryId').value;
+            const categoryName = document.getElementById('categoryName').value.trim();
+            
+            // Walidacja
+            if (!categoryName) {
+                form.classList.add('was-validated');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Błąd!',
+                    text: window.translations.field_required,
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            const data = {
+                id_group: 0,
+                name: categoryName
+            };
+
+            const method = categoryId ? 'PATCH' : 'POST';
+            const url = categoryId
+                ? `/ajax/material-categories/${categoryId}`
+                : '/ajax/material-categories';
+
+            api(url, {
+                method: method,
+                data: data
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Zamknij modal
+                    const modalElement = document.getElementById('categoryModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                    modal.hide();
+
+                    // Pokaż SweetAlert z sukcesem
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sukces!',
+                        text: window.translations.save_successful,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    // Pokaż SweetAlert z błędem
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Błąd!',
+                        text: response.message || window.translations.error_saving,
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Błąd!',
+                    text: window.translations.error_saving,
+                    confirmButtonText: 'OK'
+                });
+            });
+        });
+
+        // Reset modal on close
+        document.getElementById('categoryModal').addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('categoryForm');
+            form.classList.remove('was-validated');
+            document.getElementById('categoryId').value = '';
+            document.getElementById('categoryName').value = '';
+        });
+    </script>
+{% endblock %}

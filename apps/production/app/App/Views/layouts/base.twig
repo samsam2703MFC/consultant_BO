@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ pageTitle|default('Default Title') }}{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ root }}/assets/css/bootstrap.css">
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/perfect-scrollbar/perfect-scrollbar.css">
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ root }}/assets/css/app.css">
+    <link rel="shortcut icon" href="{{ root }}/assets/images/favicon.svg" type="image/x-icon">
+    <link rel="stylesheet" href="{{ root }}/assets/css/snackbarStyle.css">
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/dripicons/webfont.css">
+    <link rel="stylesheet" href="{{ root }}/assets/css/pages/dripicons.css">
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/choices.js/choices.min.css" />
+    <link rel="stylesheet" href="{{ root }}/assets/css/custom.css">
+
+    <link rel="stylesheet" type="text/css" href="{{ root }}/assets/css/tree_graph/ECOTree.css">
+
+    <script src="{{ root }}/assets/js/functions.js" type="text/javascript"></script>
+    <script src="{{ root }}/assets/js/tree_graph/ECOTree.js" type="text/javascript" ></script>
+
+    {# Legacy (VML/old IE). Jeśli nie jest potrzebne, można usunąć. #}
+    {# <xml:namespace ns="urn:schemas-microsoft-com:vml" prefix="v"/> #}
+    <style>v\:*{ behavior:url(#default#VML);}</style>
+
+    <!-- DISABLE ENTER ON EVERY PAGE -->
+    <script>
+        window.API_BASE_URL = `{{ root }}`; // baza = /minierp/
+
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                if (e.target.closest('.choices')) return; // allow in choices
+                if (e.target.nodeName === 'INPUT' && e.target.type === 'text') {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        }, true);
+    </script>
+
+    {% if customPageHeader is defined %}
+        {{ customPageHeader|raw }}
+    {% endif %}
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+<div id="app">
+
+    {% include "page_components/sidebar.twig" ignore missing %}
+
+    <div id="main" class='layout-navbar'>
+        <header class='mb-3'>
+            {% include "page_components/navbar.twig" ignore missing %}
+            {% include "page_components/navbar.view.php" ignore missing %}
+        </header>
+
+        {% include "page_components/app_notifications.twig" %}
+
+        <div id="main-content">
+            {% block page_heading %}{% endblock %}
+            {% block content %}{% endblock %}
+        </div>
+
+        {% block scripts %}{% endblock %}
+    </div>
+
+</div>
+<div id="snackbar"></div>
+<footer>
+    <div class="footer clearfix mb-0 text-muted">
+        <div class="float-start">
+            <p>2021 &copy; Mazer</p>
+        </div>
+        <div class="float-end">
+            <p>Crafted with <span class="text-danger"><i class="bi bi-heart-fill icon-mid"></i></span>
+                by <a href="https://ahmadsaugi.com">Saugi</a></p>
+        </div>
+    </div>
+</footer>
+</div>
+</div>
+</div>
+
+<script src="{{ root }}/assets/vendors/perfect-scrollbar/perfect-scrollbar.min.js"></script>
+<script src="{{ root }}/assets/js/bootstrap.bundle.min.js"></script>
+<script src="{{ root }}/assets/vendors/choices.js/choices.min.js"></script>
+<script src="{{ root }}/assets/js/main.js"></script>
+<script src="{{ root }}/assets/js/mazer.js"></script>
+<script src="{{ root }}/assets/vendors/sweetalert2/sweetalert2.all.min.js"></script>
+<script type="module" src="{{ root }}/assets/js/modules.js"></script>
+
+<script>
+    function showSnack(resp, error_message = "Coś poszło nie tak") {
+
+        var x = document.getElementById("snackbar");
+
+        if(resp){
+            x.innerText = "Sukces";
+            x.style.backgroundColor = '#4cd038';
+        } else {
+            x.innerText = error_message;
+            x.style.backgroundColor = '#ff6666';
+        }
+        x.className = "show";
+
+        // After 3 seconds, remove the show class from DIV
+        setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+    }
+
+    (function initChoicesGlobalObserver() {
+        function init(root = document) {
+            if (typeof Choices !== 'function') return;
+
+            root.querySelectorAll('select.choices').forEach((el) => {
+                if (el.dataset.choicesInited) return;
+
+                new Choices(el, {
+                    searchEnabled: true,
+                    shouldSort: false,
+                    itemSelectText: '',
+                });
+
+                el.dataset.choicesInited = '1';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+
+            const obs = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    for (const node of m.addedNodes) {
+                        if (!(node instanceof Element)) continue;
+
+                        if (node.matches?.('select.choices')) init(node.parentNode || document);
+                        if (node.querySelector?.('select.choices')) init(node);
+                    }
+                }
+            });
+
+            obs.observe(document.body, { childList: true, subtree: true });
+        });
+
+        window.initChoices = init; // opcjonalnie, gdybyś chciał ręcznie wywołać po ajaxie
+    })();
+</script>
+</body>
+
+</html>

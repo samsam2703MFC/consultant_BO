@@ -1,0 +1,232 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.nutritional_values }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.nutritional_values }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.nutritional_values_subtitle }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ root }}/material-categories">{{ translations.material }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.nutritional_values }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-8">
+                        <h4 class="card-title mb-0">{{ translations.nutritional_values_per_100g }}</h4>
+                        <small class="text-muted">{{ translations.nutritional_values_edit_hint }}</small>
+                        <div class="mt-1">
+                            <small class="text-info">
+                                <i class="bi bi-info-circle"></i>
+                                {{ translations.package_materials_hidden|default('Surowce będące częścią pakietu są ukryte') }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 text-end mt-2 mt-md-0">
+                        <a href="{{ root }}/materials/export" class="btn btn-info btn-sm">
+                            <i class="bi bi-download"></i> {{ translations.export_materials|default('Eksportuj surowce') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Search bar -->
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6">
+                        <input type="text"
+                               class="form-control"
+                               id="searchMaterials"
+                               placeholder="{{ translations.search_materials|default('Szukaj surowców...') }}">
+                    </div>
+                    <div class="col-12 col-md-6 text-end">
+                        <span class="badge bg-primary" id="visibleCount">
+                            {{ translations.showing|default('Wyświetlono') }}: <span id="visibleCountNumber">{{ materials|length }}</span> / {{ materials|length }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0" id="nutritional-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="sticky-col">{{ translations.raw_material }}</th>
+                                <th class="text-center">{{ translations.energy_100g }}<br><small class="text-muted">kcal</small></th>
+                                <th class="text-center">{{ translations.fat_100g }}<br><small class="text-muted">g</small></th>
+                                <th class="text-center">{{ translations.saturated_fat_100g }}<br><small class="text-muted">g</small></th>
+                                <th class="text-center">{{ translations.carbohydrates_100g }}<br><small class="text-muted">g</small></th>
+                                <th class="text-center">{{ translations.sugars_100g }}<br><small class="text-muted">g</small></th>
+                                <th class="text-center">{{ translations.fiber_100g }}<br><small class="text-muted">g</small></th>
+                                <th class="text-center">{{ translations.proteins_100g }}<br><small class="text-muted">g</small></th>
+                                <th class="text-center">{{ translations.salt_100g }}<br><small class="text-muted">g</small></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if materials is not empty %}
+                                {% for mat in materials %}
+                                    <tr data-material-name="{{ mat.name|lower }}">
+                                        <td class="sticky-col fw-semibold">{{ mat.name }}</td>
+                                        {% for field in ['energy_100g', 'fat_100g', 'saturated_fat_100g', 'carbohydrates_100g', 'sugars_100g', 'fiber_100g', 'proteins_100g', 'salt_100g'] %}
+                                            <td class="p-1 text-center">
+                                                <input
+                                                    type="number"
+                                                    class="form-control form-control-sm nutritional-input text-center"
+                                                    value="{{ attribute(mat, field) }}"
+                                                    step="0.01"
+                                                    min="0"
+                                                    data-material-id="{{ mat.id }}"
+                                                    data-field="{{ field }}"
+                                                    style="min-width: 80px;"
+                                                >
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">{{ translations.no_materials }}</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+    <style>
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #fff;
+            z-index: 1;
+            min-width: 180px;
+            max-width: 260px;
+        }
+        thead .sticky-col {
+            background: #f8f9fa;
+            z-index: 2;
+        }
+        .nutritional-input.is-saving {
+            border-color: #ffc107;
+        }
+        .nutritional-input.is-saved {
+            border-color: #198754;
+        }
+        .nutritional-input.is-error {
+            border-color: #dc3545;
+        }
+    </style>
+
+    <script>
+        window.translations = {
+            save_successful: "{{ translations.save_successful }}",
+            error_saving:    "{{ translations.error_saving }}",
+        };
+
+        const totalMaterials = {{ materials|length }};
+
+        // Live search functionality
+        function applySearch() {
+            const searchInput = document.getElementById('searchMaterials');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('#nutritional-table tbody tr[data-material-name]');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const materialName = row.dataset.materialName || '';
+                const matches = !searchTerm || materialName.includes(searchTerm);
+
+                row.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            });
+
+            // Update counter
+            document.getElementById('visibleCountNumber').textContent = visibleCount;
+        }
+
+        function updateNutritionalValue(inputEl) {
+            const materialId = inputEl.dataset.materialId;
+            const field      = inputEl.dataset.field;
+            const raw        = inputEl.value.trim();
+
+            if (raw === '' || isNaN(parseFloat(raw))) {
+                inputEl.classList.add('is-error');
+                showSnack(false, "{{ translations.invalid_value }}");
+                return;
+            }
+
+            const value = parseFloat(raw);
+
+            inputEl.classList.remove('is-saved', 'is-error');
+            inputEl.classList.add('is-saving');
+            inputEl.disabled = true;
+
+            api(`/ajax/materials/${materialId}/nutritional-values`, {
+                method: 'PATCH',
+                data: { field, value },
+            })
+                .then(result => {
+                    inputEl.classList.remove('is-saving');
+                    if (result.ok) {
+                        inputEl.classList.add('is-saved');
+                        showSnack(true, result.message || window.translations.save_successful);
+                        setTimeout(() => inputEl.classList.remove('is-saved'), 1500);
+                    } else {
+                        inputEl.classList.add('is-error');
+                        showSnack(false, result.message || window.translations.error_saving);
+                    }
+                })
+                .catch(() => {
+                    inputEl.classList.remove('is-saving');
+                    inputEl.classList.add('is-error');
+                    showSnack(false, "{{ translations.communication_error }}");
+                })
+                .finally(() => {
+                    inputEl.disabled = false;
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Search input listener
+            const searchInput = document.getElementById('searchMaterials');
+            if (searchInput) {
+                searchInput.addEventListener('input', applySearch);
+
+                // Focus on search input with Ctrl+F or Cmd+F
+                document.addEventListener('keydown', function(e) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                        e.preventDefault();
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                });
+            }
+
+            // Nutritional input listeners
+            document.querySelectorAll('.nutritional-input').forEach(function (input) {
+                input.addEventListener('change', function () {
+                    updateNutritionalValue(this);
+                });
+            });
+        });
+    </script>
+{% endblock %}

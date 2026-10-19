@@ -1,0 +1,1065 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.category_margin_title|default('Przegląd marży kategorii') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.category_margin_title|default('Przegląd marży kategorii') }}</h3>
+                    <p class="text-subtitle text-muted">
+                        {{ translations.category_margin_subtitle|default('Średnia marża per kategoria na podstawie zamkniętych miesięcy') }}
+                    </p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">{{ translations.dashboard|default('Dashboard') }}</a></li>
+                            <li class="breadcrumb-item"><a href="{{ root }}/finances/product-margin">{{ translations.product_margin_title|default('Marża produktu') }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.category_margin_title|default('Kategorie') }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+
+    {# ── FORMULARZ WYBORU OKRESU ───────────────────────────────────────────── #}
+    <div class="card">
+        <div class="card-body">
+            <form method="get" action="{{ root }}/finances/category-margin" id="catMarginForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold" for="months_select">
+                            {{ translations.product_margin_months_label|default('Liczba miesięcy') }}
+                        </label>
+                        <select class="form-select" name="months" id="months_select">
+                            {% for m in [1, 3, 6, 12, 24] %}
+                                {% if m <= available_months_count or m == 12 %}
+                                <option value="{{ m }}" {% if m == selected_months %}selected{% endif %}>
+                                    {{ m }} {{ translations.product_margin_months_suffix|default('mies.') }}
+                                    {% if m == 12 and available_months_count >= 12 %} — pełny rok{% endif %}
+                                    {% if available_months_count < m %} (dostępne: {{ available_months_count }}){% endif %}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-lock-fill text-success"></i>
+                            {{ translations.product_margin_locked_basis|default('Podstawa: zamknięte miesiące') }}
+                            ({{ available_months_count }} {{ translations.product_margin_months_suffix|default('mies.') }})
+                        </div>
+                    </div>
+
+                    {# ── LIVE PRZELICZNIK KURSU ── #}
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold" for="liveRate">
+                            <i class="bi bi-currency-exchange me-1 text-warning"></i>
+                            Kurs EUR/PLN
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text small">1 EUR =</span>
+                            <input type="number" class="form-control" id="liveRate"
+                                   min="1" step="0.0001"
+                                   value="{{ result.exchange_rate is defined ? result.exchange_rate|number_format(4, '.', '') : '4.2000' }}"
+                                   oninput="recalcEur()">
+                            <span class="input-group-text small">PLN</span>
+                        </div>
+                        <div class="form-text text-warning">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            Kurs z ustawień: <strong id="baseRateLabel">{{ result.exchange_rate is defined ? result.exchange_rate|number_format(4, '.', '') : '—' }}</strong> — edytuj aby przeliczyć
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-bar-chart-line me-1"></i>
+                            {{ translations.category_margin_calculate|default('Oblicz') }}
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-4 text-end">
+                        <a href="{{ root }}/finances/product-margin" class="btn btn-outline-secondary">
+                            <i class="bi bi-search me-1"></i>
+                            {{ translations.category_margin_go_product|default('Szukaj marży produktu') }}
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if result is not empty %}
+        {% set db = result.data_basis %}
+
+        {# ── BANER PODSTAWY OBLICZENIA ─────────────────────────────────────── #}
+        <div class="alert {{ db.all_locked ? 'alert-success' : 'alert-warning' }} mt-3 mb-0 py-2 d-flex align-items-center gap-2">
+            {% if db.all_locked %}
+                <i class="bi bi-lock-fill fs-5"></i>
+                <div>
+                    <strong>{{ translations.product_margin_basis_locked|default('Podstawa: zamknięte miesiące') }}</strong>
+                    — {{ db.label }}
+                </div>
+            {% else %}
+                <i class="bi bi-unlock-fill fs-5 text-warning"></i>
+                <div>
+                    <strong>{{ translations.product_margin_basis_open|default('Uwaga: podstawa zawiera miesiące niezamknięte') }}</strong>
+                    — {{ db.label }}
+                    <br><small>{{ translations.product_margin_basis_open_hint|default('Zamknij miesiące w Kalkulatorze kosztów, aby uzyskać zatwierdzone dane.') }}</small>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ── LEGENDA KOLORÓW ──────────────────────────────────────────────── #}
+        <div class="d-flex flex-wrap gap-3 mt-3 mb-2 small align-items-center">
+            <span class="fw-semibold text-muted">{{ translations.category_margin_legend|default('Ocena marży') }}:</span>
+            <span><span class="badge bg-success me-1">&nbsp;</span>{{ translations.category_margin_ok|default('≥ cel') }}</span>
+            <span><span class="badge bg-warning text-dark me-1">&nbsp;</span>{{ translations.category_margin_warn|default('Cel − 5pp') }}</span>
+            <span><span class="badge bg-danger me-1">&nbsp;</span>{{ translations.category_margin_bad|default('> 5pp poniżej celu') }}</span>
+            <span><span class="badge bg-secondary me-1">&nbsp;</span>{{ translations.category_margin_nodata|default('Brak danych ceny') }}</span>
+        </div>
+
+        {# ── TABELA KATEGORII ──────────────────────────────────────────────── #}
+        <div class="card mt-1">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="categoriesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:36px;"></th>
+                                <th>{{ translations.category_margin_category|default('Kategoria') }}</th>
+                                <th class="text-center" style="width:140px;">
+                                    {{ translations.category_margin_target|default('Cel marży') }}
+                                </th>
+                                <th class="text-center" style="width:160px;">
+                                    {{ translations.category_margin_current|default('Bieżąca marża') }}
+                                </th>
+                                <th class="text-center" style="width:130px;">
+                                    {{ translations.category_margin_gap|default('Odchylenie') }}
+                                </th>
+                                <th class="text-center" style="width:110px;">
+                                    {{ translations.category_margin_products|default('Produkty') }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for cat in result.categories %}
+                            {% set hasMarg   = cat.avg_margin_percent is not null %}
+                            {% set gap       = hasMarg ? (cat.avg_margin_percent - cat.target_margin) : null %}
+                            {% set rowClass  = '' %}
+                            {% set badgeClass = 'bg-secondary' %}
+                            {% if hasMarg %}
+                                {% if gap >= 0 %}
+                                    {% set badgeClass = 'bg-success' %}
+                                {% elseif gap >= -5 %}
+                                    {% set badgeClass = 'bg-warning text-dark' %}
+                                    {% set rowClass   = 'table-warning' %}
+                                {% else %}
+                                    {% set badgeClass = 'bg-danger' %}
+                                    {% set rowClass   = 'table-danger' %}
+                                {% endif %}
+                            {% endif %}
+
+                            {# ── WIERSZ KATEGORII ── #}
+                            <tr class="{{ rowClass }} category-row"
+                                data-category="{{ cat.category_id }}"
+                                data-target-margin="{{ cat.target_margin }}"
+                                style="cursor:pointer;"
+                                onclick="toggleCategory({{ cat.category_id }})">
+                                <td class="text-center">
+                                    <i class="bi bi-chevron-right toggle-icon" id="icon_{{ cat.category_id }}"></i>
+                                </td>
+                                <td class="fw-semibold">
+                                    {{ cat.category_name }}
+                                </td>
+                                <td class="text-center">
+                                    {% if cat.target_margin > 0 %}
+                                        <span class="badge bg-light border text-dark">{{ cat.target_margin|number_format(1) }}%</span>
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if hasMarg %}
+                                        <span class="badge {{ badgeClass }} fs-6 px-3 cat-margin-badge" id="cat_margin_{{ cat.category_id }}">
+                                            {{ cat.avg_margin_percent|number_format(1) }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary cat-margin-badge" id="cat_margin_{{ cat.category_id }}">{{ translations.category_margin_nodata|default('brak danych') }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center fw-semibold">
+                                    {% if hasMarg and cat.target_margin > 0 %}
+                                        <span class="{{ gap >= 0 ? 'text-success' : (gap >= -5 ? 'text-warning' : 'text-danger') }}" id="cat_gap_{{ cat.category_id }}">
+                                            {{ gap >= 0 ? '+' : '' }}{{ gap|number_format(1) }} pp
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted" id="cat_gap_{{ cat.category_id }}">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light border text-dark">
+                                        {{ cat.products_with_data }}/{{ cat.products_count }}
+                                    </span>
+                                </td>
+                            </tr>
+
+                            {# ── ROZWIJANY PANEL PRODUKTÓW ── #}
+                            <tr id="products_{{ cat.category_id }}" class="d-none products-panel">
+                                <td colspan="7" class="p-0">
+                                    <div class="bg-light border-bottom">
+                                        {% if cat.products is not empty %}
+                                        <table class="table table-sm table-borderless mb-0 align-middle">
+                                            <thead>
+                                                <tr class="small text-muted border-bottom">
+                                                    <th class="ps-5">{{ translations.category_margin_product_name|default('Produkt') }}</th>
+                                                    <th>{{ translations.category_margin_section|default('Dział') }}</th>
+                                                    <th class="text-end">Foodcost <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
+                                                    <th class="text-end">Koszt wytworzenia <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
+                                                    <th class="text-end">Cena sprzedaży <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
+                                                    <th class="text-center" style="width:130px;">{{ translations.category_margin_current|default('Marża') }}</th>
+                                                    <th class="text-center" style="width:140px;">
+                                                        <i class="bi bi-box-seam me-1 text-primary"></i>Sprzedaż <span class="badge bg-primary" style="font-size:.65rem;">WDT</span>
+                                                    </th>
+                                                    <th style="width:120px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for p in cat.products %}
+                                                {% set pBadge = 'bg-secondary' %}
+                                                {% set pGap   = null %}
+                                                {% if p.margin_percent is not null %}
+                                                    {% set pGap = p.margin_percent - cat.target_margin %}
+                                                    {% if pGap >= 0 %}
+                                                        {% set pBadge = 'bg-success' %}
+                                                    {% elseif pGap >= -5 %}
+                                                        {% set pBadge = 'bg-warning text-dark' %}
+                                                    {% else %}
+                                                        {% set pBadge = 'bg-danger' %}
+                                                    {% endif %}
+                                                {% endif %}
+                                                <tr data-product-id="{{ p.product_id }}"
+                                                    data-product-row="1"
+                                                    data-cat-id="{{ cat.category_id }}"
+                                                    data-total-cost-pln="{{ p.total_cost }}"
+                                                    data-sale-eur="{{ p.has_data ? p.sale_price_eur : '' }}">
+                                                    <td class="ps-5">{{ p.name }}</td>
+                                                    <td class="text-muted small">{{ p.section_name|default('—') }}</td>
+                                                    <td class="text-end small">
+                                                        <a href="#" class="text-decoration-none text-reset fc-link"
+                                                           data-product-id="{{ p.product_id }}"
+                                                           data-product-name="{{ p.name|e }}"
+                                                           title="Kliknij aby zobaczyć strukturę foodcost">
+                                                            <span class="eur-val" data-pln="{{ p.foodcost }}">
+                                                                {{ p.foodcost_eur is not null ? p.foodcost_eur|number_format(2, '.', ' ') : '—' }}
+                                                            </span> €
+                                                            <i class="bi bi-info-circle text-info ms-1" style="font-size:.7rem;"></i>
+                                                        </a>
+                                                        <br><span class="text-muted" style="font-size:.7rem;">
+                                                            <span class="pln-val" data-pln="{{ p.foodcost }}">{{ p.foodcost|number_format(2, '.', ' ') }}</span> PLN
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end small">
+                                                        <span class="eur-val" data-pln="{{ p.total_cost }}">
+                                                            {{ p.total_cost_eur is not null ? p.total_cost_eur|number_format(2, '.', ' ') : '—' }}
+                                                        </span> €
+                                                        <br><span class="text-muted" style="font-size:.7rem;">
+                                                            <span class="pln-val" data-pln="{{ p.total_cost }}">{{ p.total_cost|number_format(2, '.', ' ') }}</span> PLN
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end small" data-price-product="{{ p.product_id }}">
+                                                        {% if p.has_data %}
+                                                            <span class="eur-sale" data-eur="{{ p.sale_price_eur }}" data-pln="{{ p.sale_price_pln }}">
+                                                                {{ p.sale_price_eur|number_format(2, '.', ' ') }}
+                                                            </span> €
+                                                            <br><span class="text-muted" style="font-size:.7rem;">
+                                                                <span class="pln-sale" data-pln="{{ p.sale_price_pln }}">{{ p.sale_price_pln|number_format(2, '.', ' ') }}</span> PLN
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted">—</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-center prod-margin-cell">
+                                                        {% if p.margin_percent is not null %}
+                                                            <span class="badge {{ pBadge }}">
+                                                                {{ p.margin_percent|number_format(1) }}%
+                                                            </span>
+                                                            {% if cat.target_margin > 0 %}
+                                                                <span class="small ms-1 prod-margin-gap {{ pGap >= 0 ? 'text-success' : 'text-danger' }}">
+                                                                    ({{ pGap >= 0 ? '+' : '' }}{{ pGap|number_format(1) }}pp)
+                                                                </span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">brak ceny</span>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    {# ── SPRZEDAŻ WDT ── #}
+                                                    <td class="text-center small">
+                                                        {% if p.sold_qty_total > 0 %}
+                                                            {# Budujemy JSON z danymi miesięcznymi do popovera #}
+                                                            {% set monthlyRows = [] %}
+                                                            {% for mid, label in result.month_labels %}
+                                                                {% set qty = p.sold_qty_per_month[mid] is defined ? p.sold_qty_per_month[mid] : 0 %}
+                                                                {% set monthlyRows = monthlyRows|merge([label ~ ': <strong>' ~ qty|number_format(0, '.', ' ') ~ '</strong>']) %}
+                                                            {% endfor %}
+                                                            <span class="fw-semibold text-primary wdt-qty-cell"
+                                                                  style="cursor:pointer;"
+                                                                  data-bs-toggle="popover"
+                                                                  data-bs-trigger="hover focus"
+                                                                  data-bs-placement="left"
+                                                                  data-bs-html="true"
+                                                                  data-bs-title="Sprzedaż wg miesięcy"
+                                                                  data-bs-content="{{ monthlyRows|join('<br>')|e('html_attr') }}">
+                                                                {{ p.sold_qty_total|number_format(0, '.', ' ') }}
+                                                                <i class="bi bi-box-seam ms-1" style="font-size:.7rem;"></i>
+                                                            </span>
+                                                            <br>
+                                                            <span class="text-muted" style="font-size:.7rem;">
+                                                                ⌀ {{ p.avg_sold_qty_per_month|number_format(1, '.', ' ') }}/mies.
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted">—</span>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    <td class="text-end pe-3">
+                                                        <div class="d-flex gap-1 justify-content-end">
+                                                            <a href="{{ root }}/finances/product-margin?product_id={{ p.product_id }}&months={{ selected_months }}" target="_blank"
+                                                               class="btn btn-xs btn-outline-primary py-0 px-2"
+                                                               title="{{ translations.category_margin_details|default('Szczegóły i kalkulacja') }}">
+                                                                <i class="bi bi-arrow-right-circle"></i>
+                                                            </a>
+                                                            <button type="button"
+                                                                    class="btn btn-xs btn-outline-secondary py-0 px-2 pa-btn"
+                                                                    title="Akcje produktu"
+                                                                    data-product-id="{{ p.product_id }}"
+                                                                    data-product-name="{{ p.name|e }}"
+                                                                    data-suggested-eur="{{ p.suggested_price_eur is not null ? p.suggested_price_eur : '' }}"
+                                                                    data-suggested-pln="{{ p.suggested_price_pln is not null ? p.suggested_price_pln : '' }}"
+                                                                    data-target-margin="{{ cat.target_margin is not null ? cat.target_margin : '' }}"
+                                                                    data-sale-eur="{{ p.sale_price_eur is defined and p.sale_price_eur is not null ? p.sale_price_eur : '' }}"
+                                                                    data-sale-pln="{{ p.sale_price_pln is defined and p.sale_price_pln is not null ? p.sale_price_pln : '' }}"
+                                                                    data-cost-eur="{{ p.total_cost_eur is not null ? p.total_cost_eur : '' }}"
+                                                                    data-cost-pln="{{ p.total_cost is defined and p.total_cost is not null ? p.total_cost : '' }}"
+                                                                    data-margin="{{ p.margin_percent is not null ? p.margin_percent : '' }}">
+                                                                <i class="bi bi-three-dots-vertical"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                        {% else %}
+                                            <div class="p-3 text-muted small">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                {{ translations.category_margin_no_products|default('Brak aktywnych produktów w tej kategorii.') }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                    {{ translations.category_margin_no_categories|default('Brak kategorii produktów.') }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    {% endif %}
+
+    {# ── MODAL: STRUKTURA FOODCOST ────────────────────────────────────── #}
+    <div class="modal fade" id="foodcostModal" tabindex="-1" aria-labelledby="foodcostModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="background:rgba(13,202,240,.08);">
+                    <h5 class="modal-title" id="foodcostModalLabel">
+                        <i class="bi bi-layers me-2 text-info"></i>
+                        Struktura foodcost &mdash; <span id="fcModalProductName"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0" id="foodcostModalBody">
+                    <div class="text-center py-5 text-muted" id="fcLoadingSpinner">
+                        <div class="spinner-border spinner-border-sm me-2"></div>
+                        Ładowanie struktury receptury…
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span class="text-muted small me-auto" id="fcModalTotal"></span>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── MODAL: AKCJE PRODUKTU ────────────────────────────────────────── #}
+    <div class="modal fade" id="productActionModal" tabindex="-1" aria-labelledby="productActionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background:rgba(108,117,125,.08);">
+                    <h5 class="modal-title" id="productActionModalLabel">
+                        <i class="bi bi-gear me-2 text-secondary"></i>
+                        Akcje produktu &mdash; <span id="paModalProductName" class="text-dark fw-semibold"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    {# --- Tabela porównawcza cen --- #}
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered align-middle mb-0">
+                            <thead class="table-light">
+                                <tr class="small text-center text-muted">
+                                    <th></th>
+                                    <th>Obecna cena sprzedaży</th>
+                                    <th>Cena przy marży 0%</th>
+                                    <th>Sugerowana (<span id="paTargetMarginLabel">—</span>% marży)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-center">
+                                <tr>
+                                    <td class="text-start text-muted small fw-semibold">EUR</td>
+                                    <td id="paCurrentEurCell" class="fw-semibold">—</td>
+                                    <td id="paBreakevenEurCell" class="text-secondary">—</td>
+                                    <td id="paSuggestedEurCell" class="text-success fw-semibold">—</td>
+                                </tr>
+                                <tr class="small text-muted">
+                                    <td class="text-start">PLN</td>
+                                    <td id="paCurrentPlnCell">—</td>
+                                    <td id="paBreakevenPlnCell">—</td>
+                                    <td id="paSuggestedPlnCell">—</td>
+                                </tr>
+                                <tr class="small">
+                                    <td class="text-start text-muted">Marża</td>
+                                    <td id="paCurrentMarginCell">—</td>
+                                    <td class="text-secondary">0,0%</td>
+                                    <td id="paTargetMarginCell" class="text-success">—</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {# --- Opcja 1: Zmiana ceny --- #}
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary bg-opacity-10 fw-semibold text-primary">
+                            <i class="bi bi-tag-fill me-2"></i>Zmiana ceny sprzedaży
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">
+                                Nowa cena zostanie ustawiona jako cena standardowa produktu
+                                oraz zaktualizowana u <strong>wszystkich klientów</strong> posiadających ten produkt w cenniku.
+                            </p>
+                            <div class="input-group">
+                                <span class="input-group-text">Nowa cena</span>
+                                <input type="number" class="form-control" id="paNewPrice"
+                                       min="0" step="0.01" placeholder="0,00">
+                                <span class="input-group-text">EUR</span>
+                                <button class="btn btn-primary" type="button" id="paBtnSetPrice"
+                                        onclick="confirmSetPrice()">
+                                    <i class="bi bi-check-lg me-1"></i>Ustaw cenę
+                                </button>
+                            </div>
+                            <div class="form-text text-warning mt-1">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Cena jest w EUR (waluta faktur WDT). Kurs z ustawień systemu.
+                            </div>
+                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-success btn-sm" id="paFillSuggested"
+                                        onclick="fillSuggestedPrice()">
+                                    <i class="bi bi-lightbulb me-1"></i>Wstaw sugerowaną
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="paFillBreakeven"
+                                        onclick="fillBreakevenPrice()">
+                                    <i class="bi bi-dash-circle me-1"></i>Wstaw cenę przy marży 0%
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# --- Opcja 2: Wyłączenie produktu --- #}
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger bg-opacity-10 fw-semibold text-danger">
+                            <i class="bi bi-eye-slash-fill me-2"></i>Wyłączenie ze sprzedaży
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">
+                                Produkt zostanie oznaczony jako nieaktywny (<code>active = 0</code>).
+                                Nie będzie widoczny w zamówieniach i cennikach.
+                                <strong class="text-danger">Tej operacji nie można łatwo cofnąć z tego widoku.</strong>
+                            </p>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="paBtnDeactivate"
+                                    onclick="confirmDeactivate()">
+                                <i class="bi bi-eye-slash me-1"></i>Wyłącz produkt ze sprzedaży
+                            </button>
+                        </div>
+                    </div>
+
+                    {# --- Wynik operacji — przeniesiony do toast (zawsze widoczny) --- #}
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Toast usunięty — powiadomienia przez SweetAlert2 (Swal), który jest już globalnie załadowany #}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleCategory(categoryId) {
+        const panel = document.getElementById('products_' + categoryId);
+        const icon  = document.getElementById('icon_' + categoryId);
+        if (!panel) return;
+
+        const isHidden = panel.classList.contains('d-none');
+        panel.classList.toggle('d-none', !isHidden);
+        icon.classList.toggle('bi-chevron-right', !isHidden);
+        icon.classList.toggle('bi-chevron-down',   isHidden);
+        icon.classList.toggle('text-primary',       isHidden);
+
+        // Inicjalizuj popovers sprzedaży WDT po rozwinięciu
+        if (isHidden) {
+            initWdtPopovers();
+        }
+    }
+
+    // ── LIVE PRZELICZNIK KURSU + MARŻE ───────────────────────────────────────
+
+    function recalcEur() {
+        const rate = parseFloat(document.getElementById('liveRate').value);
+        if (!isFinite(rate) || rate <= 0) return;
+
+        // Przelicz wartości EUR z PLN
+        document.querySelectorAll('.eur-val[data-pln]').forEach(function (el) {
+            const pln = parseFloat(el.dataset.pln);
+            el.textContent = isFinite(pln) ? (pln / rate).toFixed(2).replace('.', ',') : '—';
+        });
+        document.querySelectorAll('.eur-sale[data-pln]').forEach(function (el) {
+            const pln = parseFloat(el.dataset.pln);
+            el.textContent = isFinite(pln) ? (pln / rate).toFixed(2).replace('.', ',') : '—';
+        });
+
+        // Przelicz marże
+        recalcMargins(rate);
+    }
+
+    function recalcMargins(rate) {
+        if (rate === undefined) {
+            rate = parseFloat(document.getElementById('liveRate').value);
+        }
+        if (!isFinite(rate) || rate <= 0) return;
+
+        // ── Zbieramy dane o produktach (total_cost w PLN) i cenach sprzedaży
+        // Grupujemy wyniki per kategoria żeby przeliczyć średnią kategorii
+
+        const catMarginSums   = {};  // categoryId => { sum: float, count: int }
+        const catTargetMargin = {};  // categoryId => float
+
+        // Zbierz target margins z wierszy kategorii
+        document.querySelectorAll('tr.category-row[data-category]').forEach(function(row) {
+            const cid  = row.dataset.category;
+            const tgt  = parseFloat(row.dataset.targetMargin);
+            catTargetMargin[cid] = isFinite(tgt) ? tgt : 0;
+            catMarginSums[cid]   = { sum: 0, count: 0 };
+        });
+
+        // Przelicz marżę każdego produktu
+        document.querySelectorAll('[data-product-row]').forEach(function(row) {
+            const cid         = row.dataset.catId;
+            const totalCostPln = parseFloat(row.dataset.totalCostPln);
+            const saleEur      = parseFloat(row.dataset.saleEur);
+
+            const marginCell   = row.querySelector('.prod-margin-cell');
+            const marginGapEl  = row.querySelector('.prod-margin-gap');
+            if (!marginCell) return;
+
+            if (!isFinite(totalCostPln) || !isFinite(saleEur) || saleEur <= 0) {
+                // brak danych — zachowaj badge bg-secondary
+                return;
+            }
+
+            const salePln    = saleEur * rate;
+            const marginPct  = ((salePln - totalCostPln) / salePln) * 100;
+            const targetMarg = catTargetMargin[cid] || 0;
+            const gap        = marginPct - targetMarg;
+
+            // Klasa badge
+            let badgeClass = 'bg-secondary';
+            if (gap >= 0)        badgeClass = 'bg-success';
+            else if (gap >= -5)  badgeClass = 'bg-warning text-dark';
+            else                 badgeClass = 'bg-danger';
+
+            const badge = marginCell.querySelector('.badge');
+            if (badge) {
+                badge.className = 'badge ' + badgeClass;
+                badge.textContent = marginPct.toFixed(1).replace('.', ',') + '%';
+            }
+
+            // Odchylenie od celu
+            if (marginGapEl && targetMarg > 0) {
+                const sign = gap >= 0 ? '+' : '';
+                marginGapEl.textContent = '(' + sign + gap.toFixed(1).replace('.', ',') + 'pp)';
+                marginGapEl.className   = 'small ms-1 prod-margin-gap '
+                    + (gap >= 0 ? 'text-success' : 'text-danger');
+            }
+
+            // Dodaj do sumy kategorii
+            if (cid && catMarginSums[cid] !== undefined) {
+                catMarginSums[cid].sum   += marginPct;
+                catMarginSums[cid].count += 1;
+            }
+        });
+
+        // ── Zaktualizuj wiersz kategorii (badge + gap)
+        Object.keys(catMarginSums).forEach(function(cid) {
+            const data   = catMarginSums[cid];
+            if (data.count === 0) return;
+
+            const avg    = data.sum / data.count;
+            const target = catTargetMargin[cid] || 0;
+            const gap    = avg - target;
+
+            // Badge kategorii
+            let badgeClass = 'bg-secondary fs-6 px-3 cat-margin-badge';
+            if (gap >= 0)        badgeClass = 'bg-success fs-6 px-3 cat-margin-badge';
+            else if (gap >= -5)  badgeClass = 'bg-warning text-dark fs-6 px-3 cat-margin-badge';
+            else                 badgeClass = 'bg-danger fs-6 px-3 cat-margin-badge';
+
+            const catBadge = document.getElementById('cat_margin_' + cid);
+            if (catBadge) {
+                catBadge.className   = 'badge ' + badgeClass;
+                catBadge.textContent = avg.toFixed(1).replace('.', ',') + '%';
+            }
+
+            // Kolor wiersza kategorii
+            const catRow = document.querySelector('tr.category-row[data-category="' + cid + '"]');
+            if (catRow) {
+                catRow.classList.remove('table-warning', 'table-danger');
+                if (gap < -5)       catRow.classList.add('table-danger');
+                else if (gap < 0)   catRow.classList.add('table-warning');
+            }
+
+            // Gap kategorii
+            const gapEl = document.getElementById('cat_gap_' + cid);
+            if (gapEl && target > 0) {
+                const sign = gap >= 0 ? '+' : '';
+                gapEl.textContent  = sign + gap.toFixed(1).replace('.', ',') + ' pp';
+                gapEl.className    = gap >= 0 ? 'text-success'
+                    : (gap >= -5 ? 'text-warning' : 'text-danger');
+            }
+        });
+    }
+
+    // ── MODAL FOODCOST ────────────────────────────────────────────────────────
+
+    window.openFoodcostModal = function(productId, productName) {
+        const modal     = document.getElementById('foodcostModal');
+        const body      = document.getElementById('foodcostModalBody');
+        const totalEl   = document.getElementById('fcModalTotal');
+        const nameEl    = document.getElementById('fcModalProductName');
+
+        // Reset
+        nameEl.textContent = productName || '';
+        totalEl.textContent = '';
+        body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Ładowanie struktury receptury…</div>';
+
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        fetch('{{ root }}/ajax/product-margin/foodcost-breakdown?product_id=' + productId)
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.error && !res.data) {
+                    body.innerHTML = '<div class="alert alert-warning m-3"><i class="bi bi-exclamation-triangle me-2"></i>' + res.error + '</div>';
+                    return;
+                }
+                const data = res.data;
+                if (!data || !data.elements || data.elements.length === 0) {
+                    body.innerHTML = '<div class="alert alert-info m-3"><i class="bi bi-info-circle me-2"></i>Brak składników receptury dla tego produktu.</div>';
+                    return;
+                }
+
+                const grandTotal = data.elements.reduce(function(s, el) {
+                    return s + (parseFloat(el.price_for_required_quantity) || 0);
+                }, 0);
+
+                totalEl.innerHTML = '<strong>Łączny foodcost: '
+                    + grandTotal.toFixed(2).replace('.', ',') + ' PLN</strong>'
+                    + '<span class="text-muted ms-2">| yield: ' + (data.yield_quantity || 1) + ' ' + (data.unit_name || '') + '</span>';
+
+                body.innerHTML = buildRecipeTable(data.elements, grandTotal);
+            })
+            .catch(function(err) {
+                body.innerHTML = '<div class="alert alert-danger m-3"><i class="bi bi-x-circle me-2"></i>Błąd ładowania danych: ' + err.message + '</div>';
+            });
+    };
+
+    function buildRecipeTable(elements, grandTotal) {
+        var html = '<table class="table table-sm align-middle mb-0">';
+        html += '<thead class="table-light sticky-top"><tr>'
+            + '<th class="ps-3">Składnik</th>'
+            + '<th class="text-end">Ilość</th>'
+            + '<th class="text-end">Cena / jed.</th>'
+            + '<th class="text-end">Koszt</th>'
+            + '<th class="text-end pe-3">Udział</th>'
+            + '</tr></thead><tbody>';
+        html += buildRows(elements, grandTotal, 0);
+        html += '</tbody>';
+        html += '<tfoot class="table-danger fw-semibold">'
+            + '<tr><td class="ps-3" colspan="3">Łączny foodcost</td>'
+            + '<td class="text-end">' + grandTotal.toFixed(2).replace('.', ',') + ' PLN</td>'
+            + '<td class="text-end pe-3">100%</td></tr>'
+            + '</tfoot></table>';
+        return html;
+    }
+
+    function buildRows(elements, grandTotal, depth) {
+        var html = '';
+
+        // Zaokrąglenie ilości wg jednostki
+        function fmtQty(qty, unit) {
+            var u = (unit || '').toLowerCase().trim();
+            if (u === 'szt' || u === 'szt.' || u === 'pcs' || u === 'pc' || u === 'sztuka') {
+                return Math.round(qty).toString();
+            }
+            if (u === 'g' || u === 'ml') {
+                return Math.round(qty).toString();
+            }
+            return qty.toFixed(3).replace('.', ',');
+        }
+
+        elements.forEach(function(el) {
+            var cost  = parseFloat(el.price_for_required_quantity) || 0;
+            var pct   = grandTotal > 0 ? (cost / grandTotal * 100) : 0;
+            var qty   = parseFloat(el.required_quantity) || 0;
+            var ppu   = parseFloat(el.suggested_base_unit_price) || 0;
+            var unit  = el.unit_name || '';
+            var isSubRecipe = el.type === 'sub-recipe';
+
+            var indent   = depth * 20;
+            var icon     = isSubRecipe
+                ? '<i class="bi bi-box text-warning me-1"></i>'
+                : '<i class="bi bi-circle-fill text-info me-1" style="font-size:.55rem;vertical-align:middle;"></i>';
+            var bgClass  = depth === 0 ? '' : (depth === 1 ? 'table-light' : 'bg-white');
+            var rowClass = isSubRecipe ? 'fw-semibold' : '';
+            var barWidth = Math.min(100, pct).toFixed(1);
+            var barColor = depth === 0 ? '#0dcaf0' : '#6c757d';
+
+            html += '<tr class="' + bgClass + ' ' + rowClass + '">';
+            html += '<td style="padding-left:' + (12 + indent) + 'px !important;">'
+                + icon + el.name;
+            if (isSubRecipe && el.cycle_detected) {
+                html += ' <span class="badge bg-danger ms-1" title="Wykryto cykl">cykl</span>';
+            }
+            html += '</td>';
+
+            if (isSubRecipe) {
+                html += '<td class="text-end text-muted">' + fmtQty(qty, unit) + ' ' + unit + '</td>';
+                html += '<td class="text-end text-muted">—</td>';
+            } else {
+                html += '<td class="text-end text-muted">' + fmtQty(qty, unit) + ' ' + unit + '</td>';
+                html += '<td class="text-end text-muted">' + ppu.toFixed(4).replace('.', ',') + '</td>';
+            }
+
+            html += '<td class="text-end">'
+                + '<span class="fw-semibold">' + cost.toFixed(2).replace('.', ',') + '</span>'
+                + ' <small class="text-muted">PLN</small></td>';
+            html += '<td class="text-end pe-3">'
+                + '<div class="d-flex align-items-center justify-content-end gap-1">'
+                + '<div class="progress flex-grow-1" style="height:6px;min-width:40px;">'
+                + '<div class="progress-bar" style="width:' + barWidth + '%;background:' + barColor + ';"></div>'
+                + '</div>'
+                + '<small class="text-muted text-nowrap">' + pct.toFixed(1).replace('.', ',') + '%</small>'
+                + '</div></td>';
+            html += '</tr>';
+
+            if (isSubRecipe && el.elements && el.elements.length > 0) {
+                html += buildRows(el.elements, grandTotal, depth + 1);
+            }
+        });
+        return html;
+    }
+
+    // ── MODAL AKCJI PRODUKTU ──────────────────────────────────────────────────
+
+    var _paProductId     = null;
+    var _paSuggestedEur  = null;
+    var _paSuggestedPln  = null;
+    var _paBreakevenEur  = null;  // total_cost_eur  = cena przy marży 0%
+    var _paBreakevenPln  = null;  // total_cost PLN
+    var _paBsModal       = null;
+
+    function fmt(val) {
+        return (val !== null && isFinite(val)) ? parseFloat(val).toFixed(2).replace('.', ',') : '—';
+    }
+
+    window.openProductActionModal = function(
+        productId, productName,
+        suggestedEur, suggestedPln,
+        targetMargin,
+        currentSaleEur, currentSalePln,
+        totalCostEur, totalCostPln,
+        marginPercent
+    ) {
+        _paProductId    = productId;
+        _paSuggestedEur = suggestedEur;
+        _paSuggestedPln = suggestedPln;
+        _paBreakevenEur = totalCostEur;
+        _paBreakevenPln = totalCostPln;
+
+        document.getElementById('paModalProductName').textContent = productName || '';
+
+        // ── Tabela porównawcza ──
+        document.getElementById('paTargetMarginLabel').textContent =
+            targetMargin !== null ? parseFloat(targetMargin).toFixed(1).replace('.', ',') : '—';
+
+        // Obecna cena
+        document.getElementById('paCurrentEurCell').textContent =
+            currentSaleEur !== null ? fmt(currentSaleEur) + ' €' : '—';
+        document.getElementById('paCurrentPlnCell').textContent =
+            currentSalePln !== null ? fmt(currentSalePln) + ' PLN' : '—';
+        var marginBadge = marginPercent !== null
+            ? '<span class="badge ' + (marginPercent >= 0 ? 'bg-success' : 'bg-danger') + '">'
+              + parseFloat(marginPercent).toFixed(1).replace('.', ',') + '%</span>'
+            : '<span class="badge bg-secondary">brak</span>';
+        document.getElementById('paCurrentMarginCell').innerHTML = marginBadge;
+
+        // Cena przy marży 0% = total_cost_eur (koszt = cena)
+        document.getElementById('paBreakevenEurCell').textContent =
+            totalCostEur !== null ? fmt(totalCostEur) + ' €' : '—';
+        document.getElementById('paBreakevenPlnCell').textContent =
+            totalCostPln !== null ? fmt(totalCostPln) + ' PLN' : '—';
+
+        // Sugerowana cena
+        document.getElementById('paSuggestedEurCell').textContent =
+            suggestedEur !== null ? fmt(suggestedEur) + ' €' : '—';
+        document.getElementById('paSuggestedPlnCell').textContent =
+            suggestedPln !== null ? fmt(suggestedPln) + ' PLN' : '—';
+        document.getElementById('paTargetMarginCell').textContent =
+            targetMargin !== null ? parseFloat(targetMargin).toFixed(1).replace('.', ',') + '%' : '—';
+
+        // ── Pole z ceną – wstaw sugerowaną jako default ──
+        var priceInput = document.getElementById('paNewPrice');
+        priceInput.value = suggestedEur !== null && suggestedEur > 0
+            ? parseFloat(suggestedEur).toFixed(2)
+            : (currentSaleEur !== null ? parseFloat(currentSaleEur).toFixed(2) : '');
+
+        // Przyciski skrótów — ukryj jeśli brak danych
+        document.getElementById('paFillSuggested').style.display =
+            suggestedEur !== null && suggestedEur > 0 ? '' : 'none';
+        document.getElementById('paFillBreakeven').style.display =
+            totalCostEur !== null && totalCostEur > 0 ? '' : 'none';
+
+        // Odblokuj przyciski
+        document.getElementById('paBtnSetPrice').disabled   = false;
+        document.getElementById('paBtnDeactivate').disabled = false;
+
+        var modal = document.getElementById('productActionModal');
+        _paBsModal = new bootstrap.Modal(modal);
+        _paBsModal.show();
+    };
+
+    function fillSuggestedPrice() {
+        if (_paSuggestedEur !== null) {
+            document.getElementById('paNewPrice').value = parseFloat(_paSuggestedEur).toFixed(2);
+        }
+    }
+
+    function fillBreakevenPrice() {
+        if (_paBreakevenEur !== null) {
+            document.getElementById('paNewPrice').value = parseFloat(_paBreakevenEur).toFixed(2);
+        }
+    }
+
+    function showToast(type, message) {
+        var iconMap  = { success: 'success', danger: 'error', warning: 'warning' };
+        Swal.fire({
+            toast:             true,
+            position:          'bottom-end',
+            icon:              iconMap[type] || 'info',
+            title:             message,
+            showConfirmButton: false,
+            timer:             4000,
+            timerProgressBar:  true,
+            didOpen: function(toast) {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
+    }
+
+    function paRequest(action, extraData, btn) {
+        btn.disabled = true;
+        var payload  = Object.assign({ action: action, product_id: _paProductId }, extraData);
+
+        fetch('{{ root }}/ajax/category-margin/product-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.ok) {
+                showToast('success', res.message || 'Operacja zakończona pomyślnie.');
+
+                if (action === 'deactivate') {
+                    setTimeout(function() {
+                        var rows = document.querySelectorAll('[data-product-id="' + _paProductId + '"]');
+                        rows.forEach(function(r) { r.remove(); });
+                        if (_paBsModal) _paBsModal.hide();
+                    }, 1500);
+                }
+                if (action === 'set_price') {
+                    // Zamknij modal od razu — toast jest widoczny
+                    if (_paBsModal) _paBsModal.hide();
+
+                    var newEur  = parseFloat(payload.price);
+                    var curRate = parseFloat(document.getElementById('liveRate').value);
+                    var newPln  = isFinite(curRate) && curRate > 0 ? newEur * curRate : 0;
+
+                    // 1. Zaktualizuj komórkę ceny (wyświetlana wartość + data-atrybuty do recalcEur)
+                    var priceCell = document.querySelector('[data-price-product="' + _paProductId + '"]');
+                    if (priceCell) {
+                        priceCell.innerHTML =
+                            '<span class="eur-sale" data-eur="' + newEur + '" data-pln="' + newPln.toFixed(4) + '">'
+                            + newEur.toFixed(2).replace('.', ',') + '</span> €'
+                            + '<br><span class="text-muted" style="font-size:.7rem;">'
+                            + '<span class="pln-sale" data-pln="' + newPln.toFixed(4) + '">'
+                            + newPln.toFixed(2).replace('.', ',') + '</span> PLN'
+                            + '</span>';
+                    }
+
+                    // 2. Zaktualizuj data-sale-eur na wierszu produktu — to jest źródło dla recalcMargins()
+                    var productRow = document.querySelector('[data-product-row][data-product-id="' + _paProductId + '"]');
+                    if (productRow) {
+                        productRow.dataset.saleEur = newEur.toFixed(4);
+                    }
+
+                    // 3. Przelicz marże produktów i kategorii z nową ceną
+                    recalcMargins(isFinite(curRate) && curRate > 0 ? curRate : undefined);
+                }
+            } else {
+                showToast('danger', res.error || 'Wystąpił błąd.');
+                btn.disabled = false;
+            }
+        })
+        .catch(function(err) {
+            showToast('danger', 'Błąd połączenia: ' + err.message);
+            btn.disabled = false;
+        });
+    }
+
+    function confirmSetPrice() {
+        var price = parseFloat(document.getElementById('paNewPrice').value);
+        if (!isFinite(price) || price <= 0) {
+            showToast('warning', 'Podaj prawidłową cenę (> 0).');
+            return;
+        }
+        var name = document.getElementById('paModalProductName').textContent;
+        Swal.fire({
+            title:              'Zmienić cenę?',
+            html:               'Nowa cena <strong>' + price.toFixed(2) + ' EUR</strong> zostanie ustawiona dla produktu <strong>' + name + '</strong>'
+                                + '<br><span class="text-muted small">Zmiana obejmie cennik standardowy oraz WSZYSTKICH klientów.</span>',
+            icon:               'question',
+            showCancelButton:   true,
+            confirmButtonText:  'Tak, zmień cenę',
+            cancelButtonText:   'Anuluj',
+            confirmButtonColor: '#0d6efd',
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                paRequest('set_price', { price: price }, document.getElementById('paBtnSetPrice'));
+            }
+        });
+    }
+
+    function confirmDeactivate() {
+        var name = document.getElementById('paModalProductName').textContent;
+        Swal.fire({
+            title:              'Wyłączyć produkt?',
+            html:               'Produkt <strong>' + name + '</strong> zostanie oznaczony jako nieaktywny.'
+                                + '<br><span class="text-danger small">Tej operacji nie można łatwo cofnąć z tego widoku.</span>',
+            icon:               'warning',
+            showCancelButton:   true,
+            confirmButtonText:  'Tak, wyłącz',
+            cancelButtonText:   'Anuluj',
+            confirmButtonColor: '#dc3545',
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                paRequest('deactivate', {}, document.getElementById('paBtnDeactivate'));
+            }
+        });
+    }
+
+    // ── OBSŁUGA LINKÓW FOODCOST — DELEGACJA NA RODZICA ───────────────────────
+
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('.fc-link');
+        if (!link) return;
+        e.preventDefault();
+        openFoodcostModal(link.dataset.productId, link.dataset.productName);
+    });
+
+    // ── OBSŁUGA PRZYCISKÓW AKCJI PRODUKTU — DELEGACJA NA RODZICA ─────────────────────
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.pa-btn')) return;
+
+        var btn = e.target.closest('.pa-btn');
+        var productId = btn.dataset.productId;
+        var productName = btn.dataset.productName;
+        var suggestedEur = btn.dataset.suggestedEur;
+        var suggestedPln = btn.dataset.suggestedPln;
+        var targetMargin = btn.dataset.targetMargin;
+        var saleEur = btn.dataset.saleEur;
+        var salePln = btn.dataset.salePln;
+        var costEur = btn.dataset.costEur;
+        var costPln = btn.dataset.costPln;
+        var margin = btn.dataset.margin;
+
+        openProductActionModal(
+            productId, productName,
+            suggestedEur, suggestedPln,
+            targetMargin,
+            saleEur, salePln,
+            costEur, costPln,
+            margin
+        );
+    });
+
+    // ── POPOVERS SPRZEDAŻY WDT ────────────────────────────────────────────────
+    // Inicjalizujemy wszystkie popovers na elementach .wdt-qty-cell
+    // (wywoływane po rozwinięciu kategorii)
+    function initWdtPopovers() {
+        document.querySelectorAll('.wdt-qty-cell').forEach(function(el) {
+            if (el._bsPopover) return; // już zainicjowany
+            el._bsPopover = new bootstrap.Popover(el);
+        });
+    }
+
+    // Wywołaj też przy starcie (np. gdy brak JS toggle na categoryRow)
+    document.addEventListener('DOMContentLoaded', function() {
+        initWdtPopovers();
+    });
+
+</script>
+{% endblock %}
+

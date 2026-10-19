@@ -1,0 +1,512 @@
+<div id="sidebar" class="active">
+    <div class="sidebar-wrapper active">
+        <div class="sidebar-header">
+            <div class="d-flex justify-content-between">
+                <div class="logo">
+                    <a href="{{ root }}/dashboard">
+                        <img src="assets/images/logo/logo.png" alt="Logo" srcset="">
+                    </a>
+                </div>
+                <div class="toggler">
+                    <a href="#" class="sidebar-hide d-xl-none d-block"><i class="bi bi-x bi-middle"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-menu">
+            <ul class="menu">
+
+                <li class="sidebar-title">Menu</li>
+
+                <!-- DASHBOARD -->
+                <li class="sidebar-item">
+                    <a href="{{ root }}/dashboard" class="sidebar-link">
+                        <i class="bi bi-grid-1x2-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- PRODUKTY -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Produkty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/product-categories">
+                                <i class="bi bi-tags"></i> Kategorie i produkty
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/recipes">
+                                <i class="bi bi-journal-text"></i> Receptury produktów
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/semi-products">
+                                <i class="bi bi-box"></i> Półprodukty
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/compositions">
+                                <i class="bi bi-diagram-3"></i> Kompozycje
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/test-products">
+                                <i class="bi bi-clipboard2-pulse"></i> Produkty testowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/hr/recipe-competencies">
+                                <i class="bi bi-person-check"></i> Kompetencje recepturowe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- SUROWCE (wariant A: wszystko o surowcu w jednym miejscu) -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-stack"></i>
+                        <span>Surowce</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/material-categories">
+                                <i class="bi bi-diagram-3"></i> Kategorie i surowce
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/materials/nutritional-values">
+                                <i class="bi bi-clipboard-data"></i> Wartości odżywcze
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/materials/prices">
+                                <i class="bi bi-currency-exchange"></i> Ceny surowców
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/material-suppliers">
+                                <i class="bi bi-truck-front"></i> Dostawcy surowców
+                            </a>
+                        </li>
+                        <!--                        <li class="submenu-item">-->
+                        <!--                            <a href="--><?php //=root?><!--/purchases">-->
+                        <!--                                <i class="bi bi-cart-check"></i> Zakupy (dostawy)-->
+                        <!--                            </a>-->
+                        <!--                        </li>-->
+                    </ul>
+                </li>
+
+                <!-- MAGAZYN (wariant A: tylko stany) -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-building"></i>
+                        <span>Magazyn</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/stock">
+                                <i class="bi bi-speedometer2"></i> Przegląd
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- AUDYTY -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-clipboard-data"></i>
+                        <span>Audyty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/audits/product-weights">
+                                <i class="bi bi-speedometer"></i> Wagi produktów
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/audits/packaging-data">
+                                <i class="bi bi-box-seam"></i> Dane opakowań BDO
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/audits/packaging-reports">
+                                <i class="bi bi-bar-chart"></i> Raporty BDO
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/ppwr/register">
+                                <i class="bi bi-recycle"></i> Rejestr PPWR
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/ppwr/sales-packaging">
+                                <i class="bi bi-boxes"></i> Kartony sprzedażowe PPWR
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/ppwr/reports">
+                                <i class="bi bi-file-earmark-bar-graph"></i> Raporty PPWR
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- PRODUKCJA -->
+                <li class="sidebar-item">
+                    <a href="{{ root }}/production/planning" class="sidebar-link">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Produkcja</span>
+                    </a>
+                </li>
+
+                <!-- ZAMÓWIENIA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-bag-check"></i>
+                        <span>Zamówienia</span>
+                    </a>
+                    <ul class="submenu">
+
+                        <li class="submenu-item">
+                            <a href="{{ root }}/client-orders">
+                                <i class="bi bi-list-check"></i> Lista zamówień
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/client-orders/archive">
+                                <i class="bi bi-archive"></i> Archiwum zamówień
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item has-sub">
+                            <a href="#" class="sidebar-link">
+                                <i class="bi bi-box-arrow-in-left"></i>
+                                <span>Zwroty (logistyka)</span>
+                            </a>
+                            <ul class="submenu">
+                                <li class="submenu-item">
+                                    <a href="{{ root }}/client-complaints/pending-products">
+                                        <i class="bi bi-box-seam"></i> Oczekujące produkty
+                                    </a>
+                                </li>
+                                <li class="submenu-item">
+                                    <a href="{{ root }}/client-complaints/pending-shipment">
+                                        <i class="bi bi-truck"></i> Oczekujące zwroty (wysyłka)
+                                    </a>
+                                </li>
+                                <li class="submenu-item">
+                                    <a href="{{ root }}/client-complaints/picking-list">
+                                        <i class="bi bi-card-checklist"></i> Listy kompletacyjne
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                    </ul>
+                </li>
+
+                <!-- DOKUMENTY -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Dokumenty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipping-documents/create">
+                                <i class="bi bi-file-earmark-plus"></i> WZ + CMR
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipments">
+                                <i class="bi bi-send-check"></i> Wysyłki (wygenerowane)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipping-transport-documents">
+                                <i class="bi bi-truck"></i> Dokumenty transportowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/proforma-documents">
+                                <i class="bi bi-receipt"></i> Proforma
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/invoice-documents">
+                                <i class="bi bi-receipt-cutoff"></i> Faktury inne
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/ksef/purchase-invoices">
+                                <i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/client-complaints/shipping-documents">
+                                <i class="bi bi-box-arrow-in-left"></i> Dokumenty zwrotów
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- KOMUNIKACJA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-envelope"></i>
+                        <span>Komunikacja</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/payment-reminders">
+                                <i class="bi bi-bell"></i> Przypomnienia płatności
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/templates">
+                                <i class="bi bi-journal-text"></i> Szablony e-mail
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/messages">
+                                <i class="bi bi-envelope-paper"></i> Historia wiadomości
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/email-settings">
+                                <i class="bi bi-envelope-gear"></i> Ustawienia poczty
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- ARCHIWUM -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-archive-fill"></i>
+                        <span>Archiwum</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/client-orders/archive"><i class="bi bi-bag-check"></i> Zamówienia</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/proformas"><i class="bi bi-receipt"></i> Proformy</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/invoices"><i class="bi bi-receipt-cutoff"></i> Faktury</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/shipping/wz"><i class="bi bi-file-earmark"></i> WZ</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/shipping/cmr"><i class="bi bi-file-earmark-text"></i> CMR</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/shipping/wdt"><i class="bi bi-file-earmark-spreadsheet"></i> WDT</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/shipping/difference"><i class="bi bi-file-earmark-diff"></i> Dokumenty różnic</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/returns"><i class="bi bi-box-arrow-in-left"></i> Dokumenty zwrotów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/picking-lists"><i class="bi bi-card-checklist"></i> Listy kompletacyjne</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/future/production-lists"><i class="bi bi-clipboard-check"></i> Listy produkcyjne</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/future/requirement-lists"><i class="bi bi-list-ul"></i> Listy zapotrzebowania</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/future/complaint-production-lists"><i class="bi bi-arrow-counterclockwise"></i> Listy produkcyjne zwrotów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/archive/documents/future/complaint-picking-lists"><i class="bi bi-card-checklist"></i> Listy kompletacyjne zwrotów</a></li>
+                    </ul>
+                </li>
+
+                <!-- FINANSE -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Finanse</span>
+                    </a>
+                    <ul class="submenu">
+{#                        <li class="submenu-item">#}
+{#                            <a href="{{ root }}/production-sections/profitability">#}
+{#                                <i class="bi bi-graph-up"></i> Rentowność działów#}
+{#                            </a>#}
+{#                        </li>#}
+{#                        <li class="submenu-item">#}
+{#                            <a href="{{ root }}/company-costs">#}
+{#                                <i class="bi bi-bank"></i> Koszty#}
+{#                            </a>#}
+{#                        </li>#}
+
+                        <li class="sidebar-item has-sub">
+                            <a href="#" class="sidebar-link">
+                                <i class="bi bi-tags-fill"></i>
+                                <span>Cenniki</span>
+                            </a>
+                            <ul class="submenu">
+                                <li class="submenu-item">
+                                    <a href="{{ root }}/price-lists/general">
+                                        <i class="bi bi-card-list"></i> Cennik ogólny
+                                    </a>
+                                </li>
+                                {# Cenniki indywidualne są wyłączone – obowiązuje wyłącznie cennik ogólny #}
+                            </ul>
+                        </li>
+
+                        <li class="sidebar-item has-sub">
+                            <a href="#" class="sidebar-link">
+                                <i class="bi bi-graph-up-arrow"></i>
+                                <span>Marża</span>
+                            </a>
+                            <ul class="submenu">
+                                <li class="submenu-item">
+                                    <a href="{{ root }}/finances/product-margin">
+                                        <i class="bi bi-percent"></i> Marża obowiązująca
+                                    </a>
+                                </li>
+                                <li class="submenu-item">
+                                    <a href="{{ root }}/finances/category-margin">
+                                        <i class="bi bi-bar-chart-line"></i> Przegląd marży kategorii
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <li class="submenu-item">
+                            <a href="{{ root }}/finances/section-dashboard">
+                                <i class="bi bi-building-check"></i> Dashboard finansowy działów
+                            </a>
+                        </li>
+
+                        <li class="submenu-item">
+                            <a href="{{ root }}/cost-calculator">
+                                <i class="bi bi-calculator"></i> Kalkulator kosztów
+                            </a>
+                        </li>
+
+                        <li class="submenu-item">
+                            <a href="{{ root }}/finances/sales-analytics">
+                                <i class="bi bi-bar-chart-steps"></i> Analiza sprzedaży WDT
+                            </a>
+                        </li>
+
+
+                        <li class="submenu-item">
+                            <a href="{{ root }}/finances/cost-analysis/section">
+                                <i class="bi bi-cash"></i> {{ translations.product_price_structure }}
+                            </a>
+                        </li>
+
+                    </ul>
+                </li>
+
+                <!-- LOGISTYKA (wariant A: tylko transport) -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Transport</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/product-carriers">
+                                <i class="bi bi-truck-front"></i> Przewoźnicy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- HR -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-person-badge"></i>
+                        <span>HR</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/production-employees">
+                                <i class="bi bi-people-fill"></i> Pracownicy produkcji
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- KLIENCI -->
+                <li class="sidebar-item">
+                    <a href="{{ root }}/clients?type=active" class="sidebar-link">
+                        <i class="bi bi-person-vcard"></i>
+                        <span>Klienci</span>
+                    </a>
+                </li>
+
+                <!-- FRANCZYZA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-buildings"></i>
+                        <span>Franczyza</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/franchise-complaints">
+                                <i class="bi bi-exclamation-triangle"></i> Reklamacje
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/client-franchise-networks">
+                                <i class="bi bi-diagram-3-fill"></i> Sieci franczyzowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/franchise-products">
+                                <i class="bi bi-box-seam"></i> Produkty franczyzowe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- URZĄDZENIA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-pc-display"></i>
+                        <span>Urządzenia</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/devices"><i class="bi bi-list-ul"></i> Przegląd urządzeń</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/devices/new"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/devices/logs"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
+                    </ul>
+                </li>
+
+                <!-- USTAWIENIA -->
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>Ustawienia</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/users">
+                                <i class="bi bi-people"></i> Użytkownicy systemu
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/picking-list-generations">
+                                <i class="bi bi-printer"></i> Historia list kompletacyjnych
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/aliases">
+                                <i class="bi bi-book"></i> Aliasy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/languages">
+                                <i class="bi bi-translate"></i> Języki etykiet
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/ksef">
+                                <i class="bi bi-file-earmark-check"></i> KSeF
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/other-settings">
+                                <i class="bi bi-sliders"></i> Pozostałe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+            </ul>
+        </div>
+
+        <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>
+    </div>
+</div>

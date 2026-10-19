@@ -1,0 +1,179 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Rentowność Kategorii{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>Rentowność Kategorii</h3>
+                <p class="text-subtitle text-muted">Analiza kosztów i marży na podstawie danych historycznych (poprzedni miesiąc)</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <!-- Search Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" action="{{ root }}/categories/profitability">
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search" 
+                                   placeholder="Szukaj kategorii..." 
+                                   value="{{ search|default('') }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search"></i> Szukaj
+                            </button>
+                            {% if search %}
+                            <a href="{{ root }}/categories/profitability" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Wyczyść
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    {% if error is defined %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> {{ error }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Category Cards -->
+    {% if categories is empty %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Brak kategorii do wyświetlenia lub brak danych sprzedażowych z poprzedniego miesiąca.
+                {% if search %} Spróbuj zmienić kryteria wyszukiwania.{% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        {% for category in categories %}
+        <div class="col-12 col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 
+                {% if category.status.level == 'danger' %}border-danger
+                {% elseif category.status.level == 'warning' %}border-warning
+                {% else %}border-success
+                {% endif %}" style="border-width: 2px;">
+                <div class="card-header 
+                    {% if category.status.level == 'danger' %}bg-danger text-white
+                    {% elseif category.status.level == 'warning' %}bg-warning
+                    {% else %}bg-success text-white
+                    {% endif %}">
+                    <h5 class="card-title mb-0">
+                        {{ category.status.icon }} {{ category.name }}
+                    </h5>
+                    <small>Marża docelowa: {{ category.target_margin|number_format(2, ',', ' ') }}%</small>
+                </div>
+                <div class="card-body">
+                    <!-- Sales Info -->
+                    <div class="mb-3 pb-3 border-bottom">
+                        <p class="text-muted mb-1 small">Sprzedaż poprzedniego miesiąca:</p>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ category.sales.total_quantity|number_format(0, ',', ' ') }} szt</strong>
+                            </div>
+                            <div>
+                                <strong>{{ category.sales.total_value|number_format(2, ',', ' ') }} zł</strong>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0 small mt-1">
+                            Średnia cena: {{ category.sales.avg_price_per_unit|number_format(2, ',', ' ') }} zł/szt
+                        </p>
+                    </div>
+
+                    <!-- KPIs -->
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <small class="text-muted">Koszt/szt</small>
+                                <h6 class="mb-0">{{ category.kpis.cost_per_unit|number_format(2, ',', ' ') }} zł</h6>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <small class="text-muted">Zysk/szt</small>
+                                <h6 class="mb-0 
+                                    {% if category.kpis.profit_per_unit < 0 %}text-danger
+                                    {% else %}text-success
+                                    {% endif %}">
+                                    {{ category.kpis.profit_per_unit|number_format(2, ',', ' ') }} zł
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Margin Progress Bar -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Marża</small>
+                            <strong class="
+                                {% if category.status.level == 'danger' %}text-danger
+                                {% elseif category.status.level == 'warning' %}text-warning
+                                {% else %}text-success
+                                {% endif %}">
+                                {{ category.kpis.margin_percentage|number_format(2, ',', ' ') }}%
+                            </strong>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar 
+                                {% if category.status.level == 'danger' %}bg-danger
+                                {% elseif category.status.level == 'warning' %}bg-warning
+                                {% else %}bg-success
+                                {% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ [category.kpis.margin_percentage, 100]|min }}%"
+                                aria-valuenow="{{ category.kpis.margin_percentage }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                                {{ category.kpis.margin_percentage|number_format(1) }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div class="alert alert-{{ category.status.level }} py-2 mb-3">
+                        <small><strong>{{ category.status.message }}</strong></small>
+                    </div>
+
+                    <!-- Suggested Price -->
+                    {% if category.kpis.suggested_price > 0 %}
+                    <p class="text-muted mb-2 small">
+                        Sugerowana cena (marża {{ category.target_margin|number_format(0) }}%): 
+                        <strong>{{ category.kpis.suggested_price|number_format(2, ',', ' ') }} zł/szt</strong>
+                    </p>
+                    {% endif %}
+
+                    <!-- View Details Button -->
+                    <a href="{{ root }}/categories/{{ category.id }}/profitability-details" 
+                       class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-eye"></i> Zobacz szczegóły
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

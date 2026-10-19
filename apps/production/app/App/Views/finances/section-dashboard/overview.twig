@@ -1,0 +1,594 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Dashboard finansowy działów{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>Dashboard finansowy działów</h3>
+                <p class="text-subtitle text-muted">Przychód, wynagrodzenia i udziały per dział produkcyjny</p>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}/dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ root }}/finances/section-dashboard">Finanse</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Dashboard działów</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+
+    {# ── Filtry daty ─────────────────────────────────────────────── #}
+    <div class="card mb-3">
+        <div class="card-body py-3">
+            <form id="dateRangeForm" autocomplete="off"
+                  class="row g-3 align-items-end"
+                  onsubmit="submitDateRange(event)">
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold" for="input_date_from">
+                        <i class="bi bi-calendar-range me-1"></i>Miesiąc od
+                    </label>
+                    <input type="month" class="form-control" id="input_date_from"
+                           name="date_from" value="{{ date_from }}" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold" for="input_date_to">
+                        <i class="bi bi-calendar-range me-1"></i>Miesiąc do
+                    </label>
+                    <input type="month" class="form-control" id="input_date_to"
+                           name="date_to" value="{{ date_to }}" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Analizuj
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    function submitDateRange(e) {
+        e.preventDefault();
+        const from = document.getElementById('input_date_from').value;
+        const to   = document.getElementById('input_date_to').value;
+        if (!from || !to) return;
+        // Wymuszamy świeże żądanie z timestamp cache-buster
+        const url = '{{ root }}/finances/section-dashboard'
+            + '?date_from=' + encodeURIComponent(from)
+            + '&date_to='   + encodeURIComponent(to)
+            + '&_=' + Date.now();
+        window.location.href = url;
+    }
+    </script>
+
+    {# ── KPI globalne ─────────────────────────────────────────────── #}
+    {% if totals %}
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-xl-3">
+            <div class="card h-100 border-start border-success border-4">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small mb-1">Przychód brutto (firma)</div>
+                    <div class="fs-4 fw-bold text-success">
+                        {{ totals.total_revenue|number_format(2, ',', ' ') }} €
+                    </div>
+                    {% if totals.total_revenue_pln is not null %}
+                    <div class="text-muted mt-1" style="font-size:0.78rem;">
+                        ≈ {{ totals.total_revenue_pln|number_format(2, ',', ' ') }} zł
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card h-100 border-start border-danger border-4">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small mb-1">Suma wynagrodzeń (wszystkie działy)</div>
+                    <div class="fs-4 fw-bold text-danger">
+                        {{ totals.total_labor|number_format(2, ',', ' ') }} zł
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card h-100 border-start border-warning border-4">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small mb-1">Wynagrodzenia / przychód brutto</div>
+                    <div class="fs-4 fw-bold text-warning">
+                        {{ totals.labor_to_revenue_pct|number_format(1, ',', ' ') }} %
+                    </div>
+                    <div class="text-muted" style="font-size:0.75rem;">udział wynagr. w obrocie firmy</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card h-100 border-start border-info border-4">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small mb-1">Działów w zestawieniu</div>
+                    <div class="fs-4 fw-bold">{{ sections|length }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Wykres trendu miesięcznego ─────────────────────────────── #}
+    {% if trend.labels|length > 0 %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-graph-up me-1"></i>Trend miesięczny — przychód vs wynagrodzenia
+            </h5>
+            <small class="text-muted">€ / zł</small>
+        </div>
+        <div class="card-body">
+            <canvas id="trendChart" style="max-height:300px;"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Tabela działów ──────────────────────────────────────────── #}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-table me-1"></i>Zestawienie per dział
+                <span class="badge bg-light text-secondary fw-normal ms-2" style="font-size:0.78rem;">
+                    <i class="bi bi-calendar3 me-1"></i>{{ date_from }} – {{ date_to }}
+                </span>
+            </h5>
+            <small class="text-muted">Sortowanie kliknięciem nagłówka kolumny</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="sectionsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sort-col ps-3" data-col="section_name" style="cursor:pointer;min-width:160px;">
+                                Dział <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th class="sort-col text-end" data-col="revenue_gross" style="cursor:pointer;">
+                                Przychód brutto <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th class="sort-col text-end" data-col="total_cartons" style="cursor:pointer;">
+                                Kartony <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th class="sort-col text-end" data-col="labor_total" style="cursor:pointer;">
+                                Wynagrodzenia <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th class="sort-col text-end" data-col="revenue_share_pct" style="cursor:pointer;">
+                                Udział przychodu <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th class="sort-col text-end" data-col="labor_share_total_pct" style="cursor:pointer;">
+                                Udział wynagrodzeń <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th class="sort-col text-end" data-col="labor_to_revenue_pct" style="cursor:pointer;">
+                                Wynagr. / przychód <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="sectionsBody">
+                    {% for s in sections %}
+                    <tr
+                        data-section-name="{{ s.section_name|lower }}"
+                        data-revenue="{{ s.revenue_gross }}"
+                        data-cartons="{{ s.total_cartons }}"
+                        data-labor="{{ s.labor_total }}"
+                        data-revenue-share="{{ s.revenue_share_pct }}"
+                        data-labor-share="{{ s.labor_share_total_pct }}"
+                        data-labor-revenue="{{ s.labor_to_revenue_pct }}"
+                        style="cursor:pointer;"
+                        onclick="openSectionDetail({{ s.section_id }}, '{{ s.section_name|escape('js') }}')"
+                        title="Kliknij, aby zobaczyć szczegóły działu">
+                        <td class="ps-3 fw-semibold">
+                            <i class="bi bi-building me-1 text-secondary"></i>{{ s.section_name }}
+                        </td>
+                        <td class="text-end fw-bold text-success">
+                            {{ s.revenue_gross|number_format(2, ',', ' ') }} €
+                            {% if s.revenue_gross_pln is not null %}
+                            <div class="text-muted fw-normal" style="font-size:0.75rem;">
+                                ≈ {{ s.revenue_gross_pln|number_format(2, ',', ' ') }} zł
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-muted">
+                            {{ s.total_cartons|number_format(0, ',', ' ') }}
+                        </td>
+                        <td class="text-end text-danger fw-semibold">
+                            {{ s.labor_total|number_format(2, ',', ' ') }} zł
+                        </td>
+                        <td class="text-end">
+                            {% set rsPct = s.revenue_share_pct %}
+                            <span class="badge {% if rsPct >= 30 %}bg-success{% elseif rsPct >= 10 %}bg-light-info text-dark{% else %}bg-light text-dark{% endif %}">
+                                {{ rsPct|number_format(1, ',', ' ') }} %
+                            </span>
+                            <div class="progress mt-1" style="height:4px;min-width:80px;">
+                                <div class="progress-bar bg-success" style="width:{{ rsPct > 100 ? 100 : rsPct }}%;"></div>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            {% set lsPct = s.labor_share_total_pct %}
+                            <span class="badge {% if lsPct >= 30 %}bg-danger{% elseif lsPct >= 10 %}bg-light-warning text-dark{% else %}bg-light text-dark{% endif %}">
+                                {{ lsPct|number_format(1, ',', ' ') }} %
+                            </span>
+                            <div class="progress mt-1" style="height:4px;min-width:80px;">
+                                <div class="progress-bar bg-danger" style="width:{{ lsPct > 100 ? 100 : lsPct }}%;"></div>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            {% set lrPct = s.labor_to_revenue_pct %}
+                            {% if lrPct == 0 %}
+                                <span class="text-muted">—</span>
+                            {% else %}
+                                <span class="fw-bold {% if lrPct > 50 %}text-danger{% elseif lrPct > 25 %}text-warning{% else %}text-success{% endif %}">
+                                    {{ lrPct|number_format(1, ',', ' ') }} %
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-info-circle me-2"></i>Brak danych dla wybranego zakresu dat.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                    {% if sections|length > 0 %}
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td class="ps-3">Łącznie</td>
+                            <td class="text-end text-success">
+                                {{ totals.total_revenue|number_format(2, ',', ' ') }} €
+                                {% if totals.total_revenue_pln is not null %}
+                                <div class="text-muted fw-normal" style="font-size:0.75rem;">
+                                    ≈ {{ totals.total_revenue_pln|number_format(2, ',', ' ') }} zł
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-muted">—</td>
+                            <td class="text-end text-danger">
+                                {{ totals.total_labor|number_format(2, ',', ' ') }} zł
+                            </td>
+                            <td class="text-end">100 %</td>
+                            <td class="text-end">100 %</td>
+                            <td class="text-end">
+                                {{ totals.labor_to_revenue_pct|number_format(1, ',', ' ') }} %
+                            </td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ── Wykresy kołowe (udziały) ───────────────────────────────── #}
+    {% if sections|length > 0 %}
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-pie-chart-fill me-1 text-success"></i>
+                        Udział działu w przychodzie brutto firmy
+                    </h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="revenueDonut" width="260" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-pie-chart-fill me-1 text-danger"></i>
+                        Udział działu w łącznych wynagrodzeniach
+                    </h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="laborDonut" width="260" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</section>
+
+{# ── Modal szczegółów działu ─────────────────────────────────────── #}
+<div class="modal fade" id="sectionDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectionDetailTitle">Szczegóły działu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body" id="sectionDetailBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Ładowanie…</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+// ── Dane PHP → JS ─────────────────────────────────────────────────
+const ROOT      = "{{ root }}";
+const DATE_FROM = "{{ date_from }}";
+const DATE_TO   = "{{ date_to }}";
+
+const SECTIONS_DATA = [
+    {% for s in sections %}
+    {
+        id:               {{ s.section_id }},
+        name:             "{{ s.section_name|escape('js') }}",
+        revenue:          {{ s.revenue_gross }},
+        revenuePln:       {{ s.revenue_gross_pln is not null ? s.revenue_gross_pln : 'null' }},
+        cartons:          {{ s.total_cartons }},
+        labor:            {{ s.labor_total }},
+        revenueShare:     {{ s.revenue_share_pct }},
+        laborShare:       {{ s.labor_share_total_pct }},
+        laborToRevenue:   {{ s.labor_to_revenue_pct }},
+    },
+    {% endfor %}
+];
+
+const TREND_LABELS   = {{ trend.labels|json_encode|raw }};
+const TREND_REVENUES = {{ trend.revenues|json_encode|raw }};
+const TREND_LABORS   = {{ trend.labors|json_encode|raw }};
+
+const PALETTE = [
+    '#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b',
+    '#858796','#fd7e14','#6f42c1','#20c9a6','#17a2b8',
+    '#e83e8c','#28a745','#ffc107','#dc3545','#5a5c69',
+];
+
+const EUR_RATE = {{ exchange_rate > 0 ? exchange_rate : 0 }};
+
+// ── Wykres trendu ─────────────────────────────────────────────────
+(function () {
+    const canvas = document.getElementById('trendChart');
+    if (!canvas || !TREND_LABELS.length) return;
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: TREND_LABELS,
+            datasets: [
+                {
+                    label: 'Przychód brutto (€)',
+                    data:  TREND_REVENUES,
+                    backgroundColor: 'rgba(28,200,138,0.25)',
+                    borderColor: '#1cc88a',
+                    borderWidth: 2,
+                    type: 'bar',
+                    yAxisID: 'yRevenue',
+                    order: 2,
+                },
+                {
+                    label: 'Wynagrodzenia (zł)',
+                    data:  TREND_LABORS,
+                    backgroundColor: 'rgba(231,74,59,0.15)',
+                    borderColor: '#e74a3b',
+                    borderWidth: 2,
+                    type: 'line',
+                    tension: 0.3,
+                    pointRadius: 4,
+                    yAxisID: 'yLabor',
+                    order: 1,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const v = ctx.parsed.y;
+                            const unit = ctx.dataset.label.includes('zł') ? ' zł' : ' €';
+                            return ` ${ctx.dataset.label}: ${v.toLocaleString('pl-PL', {minimumFractionDigits:2})}${unit}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                yRevenue: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Przychód (€)' },
+                    ticks: {
+                        callback: v => v.toLocaleString('pl-PL', {minimumFractionDigits:0}) + ' €'
+                    }
+                },
+                yLabor: {
+                    type: 'linear',
+                    position: 'right',
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'Wynagrodzenia (zł)' },
+                    ticks: {
+                        callback: v => v.toLocaleString('pl-PL', {minimumFractionDigits:0}) + ' zł'
+                    }
+                },
+            },
+        },
+    });
+}());
+
+// ── Wykresy kołowe ────────────────────────────────────────────────
+(function () {
+    const labels    = SECTIONS_DATA.map(s => s.name);
+    const revenues  = SECTIONS_DATA.map(s => s.revenue);
+    const labors    = SECTIONS_DATA.map(s => s.labor);
+    const colors    = labels.map((_, i) => PALETTE[i % PALETTE.length]);
+
+    function buildDonut(canvasId, data, labelSuffix) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                responsive: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct   = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : '0.0';
+                                return ` ${ctx.parsed.toLocaleString('pl-PL', {minimumFractionDigits:2})} ${labelSuffix} (${pct}%)`;
+                            }
+                        }
+                    }
+                },
+            },
+        });
+    }
+
+    buildDonut('revenueDonut', revenues, '€');
+    buildDonut('laborDonut',   labors,   'zł');
+}());
+
+// ── Sortowanie tabeli ─────────────────────────────────────────────
+(function () {
+    let sortCol = 'revenue';
+    let sortAsc = false;
+
+    const colMap = {
+        section_name:          'section-name',
+        revenue_gross:         'revenue',
+        total_cartons:         'cartons',
+        labor_total:           'labor',
+        revenue_share_pct:     'revenue-share',
+        labor_share_total_pct: 'labor-share',
+        labor_to_revenue_pct:  'labor-revenue',
+    };
+
+    document.querySelectorAll('#sectionsTable .sort-col').forEach(th => {
+        th.addEventListener('click', function () {
+            const col = colMap[this.getAttribute('data-col')] || 'revenue';
+            if (sortCol === col) {
+                sortAsc = !sortAsc;
+            } else {
+                sortCol = col;
+                sortAsc = false;
+            }
+            sortTable(col, sortAsc);
+        });
+    });
+
+    function sortTable(col, asc) {
+        const body = document.getElementById('sectionsBody');
+        if (!body) return;
+        const rows = Array.from(body.querySelectorAll('tr[data-revenue]'));
+        rows.sort((a, b) => {
+            const av = a.getAttribute('data-' + col);
+            const bv = b.getAttribute('data-' + col);
+            const an = parseFloat(av);
+            const bn = parseFloat(bv);
+            if (!isNaN(an) && !isNaN(bn)) {
+                return asc ? an - bn : bn - an;
+            }
+            return asc ? (av || '').localeCompare(bv || '') : (bv || '').localeCompare(av || '');
+        });
+        rows.forEach(r => body.appendChild(r));
+    }
+}());
+
+// ── Modal szczegółów działu ───────────────────────────────────────
+function openSectionDetail(sectionId, sectionName) {
+    const s = SECTIONS_DATA.find(x => x.id === sectionId);
+    if (!s) return;
+
+    document.getElementById('sectionDetailTitle').textContent = '📊 ' + sectionName;
+
+    const laborToRevStr = s.labor > 0 && s.revenue > 0
+        ? s.laborToRevenue.toLocaleString('pl-PL', {minimumFractionDigits:1}) + ' %'
+        : '— (brak przychodu w tym zakresie)';
+
+    const laborColor  = s.laborToRevenue > 50 ? 'danger' : (s.laborToRevenue > 25 ? 'warning' : 'success');
+
+    const revPlnHtml = s.revenuePln !== null
+        ? `<div class="text-muted small mt-1">≈ ${s.revenuePln.toLocaleString('pl-PL', {minimumFractionDigits:2})} zł</div>`
+        : '';
+
+    document.getElementById('sectionDetailBody').innerHTML = `
+        <div class="row g-3">
+            <div class="col-6 col-md-4">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="text-muted small mb-1">Przychód brutto</div>
+                    <div class="fs-5 fw-bold text-success">${s.revenue.toLocaleString('pl-PL', {minimumFractionDigits:2})} €</div>
+                    ${revPlnHtml}
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="text-muted small mb-1">Wynagrodzenia</div>
+                    <div class="fs-5 fw-bold text-danger">${s.labor.toLocaleString('pl-PL', {minimumFractionDigits:2})} zł</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="text-muted small mb-1">Wynagr. / przychód</div>
+                    <div class="fs-5 fw-bold text-${laborColor}">${laborToRevStr}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="text-muted small mb-1">Udział w przychodzie firmy</div>
+                    <div class="fs-5 fw-bold">${s.revenueShare.toLocaleString('pl-PL', {minimumFractionDigits:1})} %</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="text-muted small mb-1">Udział w wynagr. działów</div>
+                    <div class="fs-5 fw-bold">${s.laborShare.toLocaleString('pl-PL', {minimumFractionDigits:1})} %</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="border rounded p-3 text-center h-100">
+                    <div class="text-muted small mb-1">Łącznie kartonów</div>
+                    <div class="fs-5 fw-bold">${s.cartons.toLocaleString('pl-PL')}</div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 alert alert-light border small">
+            <i class="bi bi-info-circle me-1"></i>
+            Zakres: <strong>${DATE_FROM}</strong> – <strong>${DATE_TO}</strong>.
+            Przychód pochodzi z dokumentów WDT. Wynagrodzenia z miesięcznych snapshotów kalkulatora kosztów.
+        </div>
+    `;
+
+    new bootstrap.Modal(document.getElementById('sectionDetailModal')).show();
+}
+</script>
+{% endblock %}
+

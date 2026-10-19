@@ -1,0 +1,373 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Rentowność: {{ category.category.name }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-8 order-md-1 order-last">
+                <h3>Rentowność: {{ category.category.name }}</h3>
+                <p class="text-subtitle text-muted">
+                    Analiza na podstawie sprzedaży: {{ category.sales.period_start }} - {{ category.sales.period_end }}
+                </p>
+            </div>
+            <div class="col-12 col-md-4 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}/categories/profitability">Lista kategorii</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Szczegóły</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <!-- Top KPIs -->
+    <div class="row mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">KOSZT/SZT</h6>
+                    <h2 class="text-primary mb-0">{{ category.kpis.cost_per_unit|number_format(2, ',', ' ') }} zł</h2>
+                    <small class="text-muted">Średni koszt produkcji</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-{% if category.kpis.profit_per_unit < 0 %}danger{% else %}success{% endif %}">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">ZYSK/SZT</h6>
+                    <h2 class="text-{% if category.kpis.profit_per_unit < 0 %}danger{% else %}success{% endif %} mb-0">
+                        {{ category.kpis.profit_per_unit|number_format(2, ',', ' ') }} zł
+                    </h2>
+                    <small class="text-muted">Średni zysk na sztukę</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-{% if category.kpis.margin_percentage >= category.category.target_margin_percentage %}success{% elseif category.kpis.margin_percentage >= 15 %}warning{% else %}danger{% endif %}">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">MARŻA</h6>
+                    <h2 class="text-{% if category.kpis.margin_percentage >= category.category.target_margin_percentage %}success{% elseif category.kpis.margin_percentage >= 15 %}warning{% else %}danger{% endif %} mb-0">
+                        {{ category.kpis.margin_percentage|number_format(2, ',', ' ') }}%
+                    </h2>
+                    <small class="text-muted">Cel: {{ category.category.target_margin_percentage|number_format(0) }}%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Message -->
+    <div class="row mb-4">
+        <div class="col-12">
+            {% set status_level = 'success' %}
+            {% set status_message = 'OK: Kategoria rentowna' %}
+            {% set status_icon = '✅' %}
+            
+            {% if category.kpis.margin_percentage < 15 %}
+                {% set status_level = 'danger' %}
+                {% set status_message = 'OSTRZEŻENIE: Marża poniżej progu bezpieczeństwa!' %}
+                {% set status_icon = '🚨' %}
+            {% elseif category.kpis.margin_percentage < category.category.target_margin_percentage %}
+                {% set status_level = 'warning' %}
+                {% set status_message = 'Uwaga: Marża poniżej docelowej' %}
+                {% set status_icon = '⚠️' %}
+            {% endif %}
+            
+            <div class="alert alert-{{ status_level }} d-flex align-items-center">
+                <div style="font-size: 2rem; margin-right: 1rem;">{{ status_icon }}</div>
+                <div>
+                    <h5 class="mb-0">{{ status_message }}</h5>
+                    <small>
+                        Sugerowana cena dla marży {{ category.category.target_margin_percentage|number_format(0) }}%: 
+                        <strong>{{ category.kpis.suggested_price|number_format(2, ',', ' ') }} zł/szt</strong>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-graph-up"></i> Podsumowanie sprzedaży</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 col-md-3">
+                            <p class="text-muted mb-1">Sprzedana ilość</p>
+                            <h4>{{ category.sales.total_quantity|number_format(0, ',', ' ') }} szt</h4>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <p class="text-muted mb-1">Wartość sprzedaży</p>
+                            <h4>{{ category.sales.total_value|number_format(2, ',', ' ') }} zł</h4>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <p class="text-muted mb-1">Liczba faktur</p>
+                            <h4>{{ category.sales.invoice_count }}</h4>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <p class="text-muted mb-1">Liczba produktów</p>
+                            <h4>{{ category.sales.product_count }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Breakdown Cards -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Rozbicie kosztów</h4>
+        </div>
+        
+        <!-- Raw Materials -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-center text-white">
+                    <div style="font-size: 2.5rem;">📦</div>
+                    <h5 class="mt-2">Surowce</h5>
+                    <h3 class="mb-0">{{ category.costs.raw_materials|number_format(2, ',', ' ') }} zł</h3>
+                    <small>Koszt receptury</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Labor -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #00d4ff 0%, #090979 100%);">
+                <div class="card-body text-center text-white">
+                    <div style="font-size: 2.5rem;">👷</div>
+                    <h5 class="mt-2">Praca</h5>
+                    <h3 class="mb-0">{{ category.costs.labor|number_format(2, ',', ' ') }} zł</h3>
+                    <small>Koszt pracowników</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fixed Costs -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <div class="card-body text-center text-white">
+                    <div style="font-size: 2.5rem;">🏢</div>
+                    <h5 class="mt-2">Koszty stałe</h5>
+                    <h3 class="mb-0">{{ category.costs.fixed|number_format(2, ',', ' ') }} zł</h3>
+                    <small>Amortyzacja</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variable Costs -->
+        <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                <div class="card-body text-center text-white">
+                    <div style="font-size: 2.5rem;">⚡</div>
+                    <h5 class="mt-2">Koszty zmienne</h5>
+                    <h3 class="mb-0">{{ category.costs.variable|number_format(2, ',', ' ') }} zł</h3>
+                    <small>Prąd, woda, paliwo</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Breakdown -->
+    {% if category.products is not empty %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-list-ul"></i> Produkty w kategorii</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Produkt</th>
+                                    <th class="text-end">Ilość sprzedana</th>
+                                    <th class="text-end">Wartość sprzedaży</th>
+                                    <th class="text-end">Średnia cena</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in category.products %}
+                                <tr>
+                                    <td>{{ product.product_name }}</td>
+                                    <td class="text-end">{{ product.quantity_sold|number_format(0, ',', ' ') }} szt</td>
+                                    <td class="text-end">{{ product.total_value|number_format(2, ',', ' ') }} zł</td>
+                                    <td class="text-end">
+                                        {% if product.quantity_sold > 0 %}
+                                            {{ (product.total_value / product.quantity_sold)|number_format(2, ',', ' ') }} zł/szt
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Bottom Row: Monthly Planning & What-If Calculator -->
+    <div class="row">
+        <!-- Monthly Planning -->
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light-info">
+                    <h5 class="card-title mb-0"><i class="bi bi-calendar3"></i> Podsumowanie miesięczne</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Sprzedana ilość:</strong></td>
+                            <td class="text-end">{{ category.sales.total_quantity|number_format(0, ',', ' ') }} szt</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Całkowity koszt:</strong></td>
+                            <td class="text-end text-danger">{{ category.kpis.monthly_total_cost|number_format(2, ',', ' ') }} zł</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Przychód:</strong></td>
+                            <td class="text-end text-primary">{{ category.kpis.monthly_total_revenue|number_format(2, ',', ' ') }} zł</td>
+                        </tr>
+                        <tr class="border-top">
+                            <td><strong>Zysk:</strong></td>
+                            <td class="text-end {% if category.kpis.monthly_total_profit < 0 %}text-danger{% else %}text-success{% endif %}">
+                                <h5 class="mb-0">{{ category.kpis.monthly_total_profit|number_format(2, ',', ' ') }} zł</h5>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- What-If Calculator -->
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light-warning">
+                    <h5 class="card-title mb-0"><i class="bi bi-calculator"></i> Kalkulator "Co jeśli"</h5>
+                </div>
+                <div class="card-body">
+                    <form id="whatIfForm">
+                        <div class="mb-3">
+                            <label class="form-label">Średnia cena sprzedaży (zł/szt)</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="salesPrice" 
+                                   step="0.01" 
+                                   min="0.01"
+                                   value="{{ category.sales.avg_price_per_unit|number_format(2, '.', '') }}" 
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ilość miesięczna (szt)</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="monthlyQuantity" 
+                                   min="1"
+                                   value="{{ category.sales.total_quantity }}" 
+                                   required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-calculator"></i> Przelicz
+                        </button>
+                    </form>
+
+                    <div id="whatIfResults" class="mt-4" style="display: none;">
+                        <hr>
+                        <h6 class="text-muted">Wyniki:</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td>Zysk/szt:</td>
+                                <td class="text-end" id="resultProfitPerUnit">-</td>
+                            </tr>
+                            <tr>
+                                <td>Marża:</td>
+                                <td class="text-end" id="resultMargin">-</td>
+                            </tr>
+                            <tr class="border-top">
+                                <td><strong>Zysk miesięczny:</strong></td>
+                                <td class="text-end" id="resultMonthlyProfit"><strong>-</strong></td>
+                            </tr>
+                        </table>
+                        <div id="resultStatus" class="alert py-2 mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('whatIfForm');
+    const resultsDiv = document.getElementById('whatIfResults');
+    const categoryId = {{ category.category.id }};
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const salesPrice = parseFloat(document.getElementById('salesPrice').value);
+        const monthlyQuantity = parseInt(document.getElementById('monthlyQuantity').value);
+
+        if (salesPrice <= 0 || monthlyQuantity <= 0) {
+            alert('Wprowadź poprawne wartości');
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ root }}/ajax/categories/${categoryId}/profitability/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sales_price: salesPrice,
+                    monthly_quantity: monthlyQuantity
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const kpis = data.data.kpis;
+                const status = data.data.status;
+                
+                document.getElementById('resultProfitPerUnit').textContent = 
+                    kpis.profit_per_unit.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+                
+                document.getElementById('resultMargin').textContent = 
+                    kpis.margin_percentage.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+                
+                document.getElementById('resultMonthlyProfit').innerHTML = 
+                    '<strong>' + kpis.monthly_total_profit.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł</strong>';
+                
+                const statusDiv = document.getElementById('resultStatus');
+                statusDiv.className = 'alert py-2 mt-2 alert-' + status.level;
+                statusDiv.innerHTML = '<small><strong>' + status.message + '</strong></small>';
+                
+                resultsDiv.style.display = 'block';
+            } else {
+                alert('Błąd: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Wystąpił błąd podczas obliczania');
+        }
+    });
+});
+</script>
+{% endblock %}

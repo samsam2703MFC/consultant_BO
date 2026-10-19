@@ -1,0 +1,1511 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.product_margin_title|default('Marża obowiązująca produktu') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>{{ translations.product_margin_title|default('Marża obowiązująca produktu') }}</h3>
+                    <p class="text-subtitle text-muted">{{ translations.product_margin_subtitle|default('Kalkulacja marży na podstawie uśrednionych kosztów działu') }}</p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">{{ translations.dashboard|default('Dashboard') }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ translations.product_margin_title|default('Marża produktu') }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+
+    {# ── FORMULARZ WYBORU ──────────────────────────────────────────────────── #}
+    <div class="card">
+        <div class="card-body">
+            <form method="get" action="{{ root }}/finances/product-margin" id="marginForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" for="product_id_select">{{ translations.product_margin_product|default('Produkt') }}</label>
+                        <select class="form-select choices" name="product_id" id="product_id_select" required>
+                            <option value="">{{ translations.product_margin_select_prompt|default('Wybierz produkt...') }}</option>
+                            {% for product in products %}
+                                <option value="{{ product.id }}"
+                                    {% if product.id == selected_product_id %}selected{% endif %}>
+                                    {{ product.name }}{% if product.section_name %} [{{ product.section_name }}]{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold" for="months_select">{{ translations.product_margin_months_label|default('Liczba miesięcy') }}</label>
+                        <select class="form-select" name="months" id="months_select">
+                            {% for m in [1, 3, 6, 12, 24] %}
+                                {% if m <= available_months_count or m == 12 %}
+                                <option value="{{ m }}" {% if m == selected_months %}selected{% endif %}>
+                                    {{ m }} {{ translations.product_margin_months_suffix|default('mies.') }}
+                                    {% if m == 12 and available_months_count >= 12 %} — pełny rok{% endif %}
+                                    {% if available_months_count < m %} (dostępne: {{ available_months_count }}){% endif %}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-lock-fill text-success"></i>
+                            {{ translations.product_margin_locked_basis|default('Podstawa: zamknięte miesiące') }}
+                            ({{ available_months_count }} {{ translations.product_margin_months_suffix|default('mies.') }})
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-calculator"></i>
+                            {{ translations.product_margin_calculate|default('Oblicz marżę') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if analysis %}
+        {% set kpi = analysis.kpi %}
+        {% set sim = analysis.simulation_base %}
+
+        {# ── BANER PODSTAWY OBLICZENIA ─────────────────────────────────────── #}
+        {% if analysis.data_basis is defined %}
+            {% set db = analysis.data_basis %}
+            <div class="alert {{ db.all_locked ? 'alert-success' : 'alert-warning' }} mt-3 mb-0 py-2 d-flex align-items-center gap-2">
+                {% if db.all_locked %}
+                    <i class="bi bi-lock-fill fs-5"></i>
+                    <div>
+                        <strong>{{ translations.product_margin_basis_locked|default('Podstawa: zamknięte miesiące') }}</strong>
+                        — {{ db.label }}
+                    </div>
+                {% else %}
+                    <i class="bi bi-unlock-fill fs-5 text-warning"></i>
+                    <div>
+                        <strong>{{ translations.product_margin_basis_open|default('Uwaga: podstawa zawiera miesiące niezamknięte') }}</strong>
+                        — {{ db.label }}
+                        <br><small>{{ translations.product_margin_basis_open_hint|default('Zamknij miesiące w Kalkulatorze kosztów, aby uzyskać zatwierdzone dane.') }}</small>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {# ── OSTRZEŻENIA ───────────────────────────────────────────────────── #}
+        {% if analysis.warnings is not empty %}
+            <div class="alert alert-warning mt-2">
+                <strong><i class="bi bi-exclamation-triangle"></i> {{ translations.product_margin_warnings|default('Uwagi') }}:</strong>
+                <ul class="mb-0 mt-1">
+                    {% for w in analysis.warnings %}
+                        <li>{{ w }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# ── INFORMACJA O PRODUKCIE ────────────────────────────────────────── #}
+        <div class="alert alert-info mt-2 mb-0 py-2">
+            <strong>{{ analysis.product.name }}</strong>
+            &nbsp;|&nbsp; {{ translations.product_margin_section|default('Dział') }}: <strong>{{ analysis.product.section_name|default('–') }}</strong>
+            &nbsp;|&nbsp; {{ translations.product_margin_months_used|default('Podstawa') }}: <strong>{{ analysis.months_used }} {{ translations.product_margin_months_suffix|default('mies.') }}</strong>
+            {% if analysis.data_basis is defined and analysis.data_basis.from %}
+                &nbsp;|&nbsp; <strong>{{ analysis.data_basis.from }} – {{ analysis.data_basis.to }}</strong>
+            {% endif %}
+            &nbsp;|&nbsp; {{ translations.product_margin_exchange_rate|default('Kurs EUR') }}: <strong>{{ kpi.exchange_rate|number_format(4, '.', ' ') }} PLN</strong>
+        </div>
+
+        {# ── MODAL: STRUKTURA FOODCOST ────────────────────────────────────── #}
+        <div class="modal fade" id="foodcostModal" tabindex="-1" aria-labelledby="foodcostModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header" style="background:rgba(13,202,240,.08);">
+                        <h5 class="modal-title" id="foodcostModalLabel">
+                            <i class="bi bi-layers me-2 text-info"></i>
+                            Struktura foodcost &mdash; <span id="fcModalProductName">{{ analysis.product.name }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0" id="foodcostModalBody">
+                        <div class="text-center py-5 text-muted" id="fcLoadingSpinner">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            Ładowanie struktury receptury…
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <span class="text-muted small me-auto" id="fcModalTotal"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Zamknij</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+        {# ── SYMULACJA – SUWAKI ─────────────────────────────────────────────── #}
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders"></i> {{ translations.product_margin_simulation|default('Symulacja zmian') }}
+                    <span class="badge bg-light text-muted border ms-2 small fw-normal" id="simActiveLabel" style="display:none;">
+                        <i class="bi bi-pencil-fill text-warning me-1"></i>{{ translations.product_margin_sim_active|default('aktywna') }}
+                    </span>
+                </h5>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    {# ── LIVE PRZELICZNIK KURSU ── #}
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-semibold text-nowrap" for="overviewLiveRate">
+                            <i class="bi bi-currency-exchange text-warning me-1"></i>1 EUR =
+                        </label>
+                        <input type="number" class="form-control form-control-sm" id="overviewLiveRate"
+                               style="width:90px;" min="1" step="0.0001"
+                               value="{{ kpi.exchange_rate|number_format(4, '.', '') }}"
+                               oninput="recalcOverviewEur()"
+                               title="Zmień kurs aby zobaczyć koszty w EUR">
+                        <span class="small text-muted">PLN</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" id="toggleSliders"
+                            onclick="toggleSlidersPanel()"
+                            title="{{ translations.product_margin_show_sliders|default('Pokaż/ukryj suwaki') }}">
+                        <i class="bi bi-chevron-down me-1" id="toggleSlidersIcon"></i>
+                        <span id="toggleSlidersLabel">{{ translations.product_margin_show_sliders|default('Dostosuj symulację') }}</span>
+                    </button>
+                </div>
+            </div>
+
+            {# Panel suwaków – domyślnie ukryty #}
+            <div id="slidersPanel" style="display:none;">
+                <div class="card-body pb-0">
+                    <div class="row g-4">
+
+                    {# Suwak: wolumen sprzedaży #}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" for="sl_volume">
+                            <i class="bi bi-boxes text-success"></i>
+                            {{ translations.product_margin_volume_slider|default('Zmiana wolumenu sprzedaży') }}:
+                            <span class="badge bg-success ms-1" id="lbl_volume">+0%</span>
+                        </label>
+                        <input type="range" class="form-range sim-slider" id="sl_volume"
+                               min="-50" max="100" step="5" value="0" data-target="volume">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>-50%</span><span>0%</span><span>+100%</span>
+                        </div>
+                        <div class="text-muted small mt-1">{{ translations.product_margin_volume_hint|default('Wzrost wolumenu obniża koszt jednostkowy (rozkład stałych kosztów)') }}</div>
+                    </div>
+
+                    {# Suwak: koszty mediów #}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" for="sl_media">
+                            <i class="bi bi-lightning text-warning"></i>
+                            {{ translations.product_margin_media_slider|default('Zmiana cen mediów') }}:
+                            <span class="badge bg-warning text-dark ms-1" id="lbl_media">+0%</span>
+                        </label>
+                        <input type="range" class="form-range sim-slider" id="sl_media"
+                               min="-30" max="100" step="5" value="0" data-target="media">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>-30%</span><span>0%</span><span>+100%</span>
+                        </div>
+                    </div>
+
+                    {# Suwak: wynagrodzenia #}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" for="sl_labor">
+                            <i class="bi bi-people text-primary"></i>
+                            {{ translations.product_margin_labor_slider|default('Zmiana kosztów wynagrodzeń') }}:
+                            <span class="badge bg-primary ms-1" id="lbl_labor">+0%</span>
+                        </label>
+                        <input type="range" class="form-range sim-slider" id="sl_labor"
+                               min="-20" max="80" step="5" value="0" data-target="labor">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>-20%</span><span>0%</span><span>+80%</span>
+                        </div>
+                    </div>
+
+                    {# Suwak: amortyzacja / inne koszty #}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" for="sl_other">
+                            <i class="bi bi-tools text-secondary"></i>
+                            {{ translations.product_margin_other_slider|default('Zmiana amortyzacji / kosztów stałych') }}:
+                            <span class="badge bg-secondary ms-1" id="lbl_other">+0%</span>
+                        </label>
+                        <input type="range" class="form-range sim-slider" id="sl_other"
+                               min="-20" max="80" step="5" value="0" data-target="other">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>-20%</span><span>0%</span><span>+80%</span>
+                        </div>
+                    </div>
+
+                    {# Suwak: koszty logistyki #}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" for="sl_logistics">
+                            <i class="bi bi-truck text-dark"></i>
+                            {{ translations.product_margin_logistics_slider|default('Zmiana kosztów logistycznych') }}:
+                            <span class="badge bg-dark ms-1" id="lbl_logistics">+0%</span>
+                        </label>
+                        <input type="range" class="form-range sim-slider" id="sl_logistics"
+                               min="-50" max="100" step="5" value="0" data-target="logistics">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>-50%</span><span>0%</span><span>+100%</span>
+                        </div>
+                        <div class="text-muted small mt-1">{{ translations.product_margin_logistics_hint_slider|default('Koszt zakładowy – zmiana cen paliwa, frachtu, usług kurierskich itp.') }}</div>
+                    </div>
+                </div>{# /row g-4 #}
+
+                <div class="d-flex justify-content-end mt-3">
+                    <button class="btn btn-sm btn-outline-secondary" id="resetSimulation">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>{{ translations.product_margin_reset|default('Resetuj suwaki') }}
+                    </button>
+                </div>
+            </div>{# /card-body #}
+            </div>{# /slidersPanel #}
+
+            {# Tabela porównawcza baza vs symulacja – zawsze widoczna #}
+            <div class="card-body pt-0">
+                <div class="table-responsive mt-3">
+                    <table class="table table-bordered table-sm align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>{{ translations.product_margin_cost_item|default('Składnik') }}</th>
+                            <th class="text-end">{{ translations.product_margin_base|default('Baza / karton') }}</th>
+                            <th class="text-end">{{ translations.product_margin_simulated|default('Symulacja / karton') }}</th>
+                            <th class="text-end">{{ translations.product_margin_diff|default('Różnica') }}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>
+                                <span class="badge bg-info me-1">&nbsp;</span>
+                                <a href="#" class="text-decoration-none text-reset"
+                                   onclick="openFoodcostModal({{ analysis.product.id }}); return false;"
+                                   title="Kliknij aby zobaczyć strukturę foodcost">
+                                    {{ translations.product_margin_foodcost|default('Foodcost') }}
+                                    <i class="bi bi-info-circle text-info ms-1" style="font-size:.8rem;"></i>
+                                </a>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_base_foodcost" class="fw-semibold">—</span> €
+                                <br><small class="text-muted">{{ kpi.foodcost|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_sim_foodcost" class="fw-semibold">—</span> €
+                                <br><small class="text-muted" id="sim_foodcost">{{ kpi.foodcost|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                            </td>
+                            <td class="text-end" id="sim_diff_foodcost">0,00</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-warning me-1">&nbsp;</span>{{ translations.product_margin_media_cost|default('Media') }}</td>
+                            <td class="text-end">
+                                <span id="eur_base_media" class="fw-semibold">—</span> €
+                                <br><small class="text-muted">{{ kpi.avg_media_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_sim_media" class="fw-semibold">—</span> €
+                                <br><small class="text-muted" id="sim_media">{{ kpi.avg_media_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                            </td>
+                            <td class="text-end" id="sim_diff_media">0,00</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-primary me-1">&nbsp;</span>{{ translations.product_margin_labor_cost|default('Wynagrodzenia') }}</td>
+                            <td class="text-end">
+                                <span id="eur_base_labor" class="fw-semibold">—</span> €
+                                <br><small class="text-muted">{{ kpi.avg_labor_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_sim_labor" class="fw-semibold">—</span> €
+                                <br><small class="text-muted" id="sim_labor">{{ kpi.avg_labor_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                            </td>
+                            <td class="text-end" id="sim_diff_labor">0,00</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-secondary me-1">&nbsp;</span>{{ translations.product_margin_other_cost|default('Koszty stałe') }}</td>
+                            <td class="text-end">
+                                <span id="eur_base_other" class="fw-semibold">—</span> €
+                                <br><small class="text-muted">{{ kpi.avg_other_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_sim_other" class="fw-semibold">—</span> €
+                                <br><small class="text-muted" id="sim_other">{{ kpi.avg_other_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                            </td>
+                            <td class="text-end" id="sim_diff_other">0,00</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-dark me-1">&nbsp;</span>{{ translations.product_margin_logistics_cost|default('Logistyka') }}</td>
+                            <td class="text-end">
+                                <span id="eur_base_logistics" class="fw-semibold">—</span> €
+                                <br><small class="text-muted">{{ kpi.avg_logistics_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_sim_logistics" class="fw-semibold">—</span> €
+                                <br><small class="text-muted" id="sim_logistics">{{ kpi.avg_logistics_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                            </td>
+                            <td class="text-end" id="sim_diff_logistics">0,00</td>
+                        </tr>
+                        <tr class="table-danger fw-semibold">
+                            <td>{{ translations.product_margin_total_cost|default('Łączny koszt wytworzenia') }}</td>
+                            <td class="text-end">
+                                <span id="eur_base_total" class="fw-semibold">—</span> €
+                                <br><small class="text-muted fw-normal">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span id="eur_sim_total" class="fw-semibold">—</span> €
+                                <br><small class="text-muted fw-normal" id="sim_total_cost">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted fw-normal">PLN</small>
+                            </td>
+                            <td class="text-end" id="sim_diff_total">0,00</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td>{{ translations.product_margin_sale_price|default('Cena sprzedaży') }}</td>
+                            <td class="text-end">
+                                <span class="fw-semibold">{{ kpi.sale_price_foreign|number_format(2, '.', ' ') }}</span> {{ kpi.sale_currency|default('EUR') }}
+                                <br><small class="text-muted">{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-semibold">{{ kpi.sale_price_foreign|number_format(2, '.', ' ') }}</span> {{ kpi.sale_currency|default('EUR') }}
+                                <br><small class="text-muted">{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</small>
+                            </td>
+                            <td class="text-end">–</td>
+                        </tr>
+                        <tr class="table-success fw-bold">
+                            <td>{{ translations.product_margin_margin_pct|default('Marża %') }}</td>
+                            <td class="text-end">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</td>
+                            <td class="text-end" id="sim_margin_pct">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</td>
+                            <td class="text-end" id="sim_diff_margin_pct">0,0 pp</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>{# /table-responsive #}
+            </div>{# /card-body tabela #}
+        </div>{# /card symulacja #}
+
+        {# ── PASEK STRUKTURY KOSZTÓW ────────────────────────────────────────── #}
+        <div class="card mt-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <h5 class="mb-0">{{ translations.product_margin_structure|default('Struktura ceny (baza)') }}</h5>
+                    <span id="progressBarNote"
+                          class="badge bg-warning text-dark small fw-normal"
+                          {% if kpi.sale_price_pln > 0 %}style="display:none"{% endif %}
+                          title="{{ translations.product_margin_no_price_hint|default('Brak ceny sprzedaży – pasek pokazuje udziały w koszcie wytworzenia') }}">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {{ translations.product_margin_no_price_bar|default('% kosztu wytworzenia') }}
+                    </span>
+                </div>
+                <div class="progress mb-2" style="height: 30px;" id="costProgressBar">
+                    {% set bd = analysis.breakdown %}
+                    <div class="progress-bar bg-info" style="width:{{ bd.foodcost|number_format(2,'.','')|replace({',':''}) }}%"
+                         title="{{ translations.product_margin_foodcost|default('Foodcost') }}: {{ bd.foodcost|number_format(1) }}%">
+                        {% if bd.foodcost > 5 %}{{ bd.foodcost|number_format(1) }}%{% endif %}
+                    </div>
+                    <div class="progress-bar bg-warning" style="width:{{ bd.media|number_format(2,'.','')|replace({',':''}) }}%"
+                         title="{{ translations.product_margin_media_cost|default('Media') }}: {{ bd.media|number_format(1) }}%">
+                        {% if bd.media > 5 %}{{ bd.media|number_format(1) }}%{% endif %}
+                    </div>
+                    <div class="progress-bar bg-primary" style="width:{{ bd.labor|number_format(2,'.','')|replace({',':''}) }}%"
+                         title="{{ translations.product_margin_labor_cost|default('Wynagrodzenia') }}: {{ bd.labor|number_format(1) }}%">
+                        {% if bd.labor > 5 %}{{ bd.labor|number_format(1) }}%{% endif %}
+                    </div>
+                    <div class="progress-bar bg-secondary" style="width:{{ bd.other|number_format(2,'.','')|replace({',':''}) }}%"
+                         title="{{ translations.product_margin_other_cost|default('Amortyzacja') }}: {{ bd.other|number_format(1) }}%">
+                        {% if bd.other > 3 %}{{ bd.other|number_format(1) }}%{% endif %}
+                    </div>
+                    <div class="progress-bar bg-dark" style="width:{{ bd.logistics|number_format(2,'.','')|replace({',':''}) }}%"
+                         title="{{ translations.product_margin_logistics_cost|default('Logistyka') }}: {{ bd.logistics|number_format(1) }}%">
+                        {% if bd.logistics > 3 %}{{ bd.logistics|number_format(1) }}%{% endif %}
+                    </div>
+                    <div class="progress-bar bg-success" style="width:{{ bd.margin|number_format(2,'.','')|replace({',':''}) }}%"
+                         title="{{ translations.product_margin_margin_pct|default('Marża') }}: {{ bd.margin|number_format(1) }}%">
+                        {% if bd.margin > 3 %}{{ bd.margin|number_format(1) }}%{% endif %}
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-3 mt-2 small">
+                    <div><span class="badge bg-info">&nbsp;&nbsp;</span> {{ translations.product_margin_foodcost|default('Foodcost') }} ({{ bd.foodcost|number_format(1) }}%)</div>
+                    <div><span class="badge bg-warning">&nbsp;&nbsp;</span> {{ translations.product_margin_media_cost|default('Media') }} ({{ bd.media|number_format(1) }}%)</div>
+                    <div><span class="badge bg-primary">&nbsp;&nbsp;</span> {{ translations.product_margin_labor_cost|default('Wynagrodzenia') }} ({{ bd.labor|number_format(1) }}%)</div>
+                    <div><span class="badge bg-secondary">&nbsp;&nbsp;</span> {{ translations.product_margin_other_cost|default('Amortyzacja') }} ({{ bd.other|number_format(1) }}%)</div>
+                    <div><span class="badge bg-dark">&nbsp;&nbsp;</span> {{ translations.product_margin_logistics_cost|default('Logistyka') }} ({{ bd.logistics|number_format(1) }}%)</div>
+                    <div><span class="badge bg-success">&nbsp;&nbsp;</span> {{ translations.product_margin_margin_pct|default('Marża') }} ({{ bd.margin|number_format(1) }}%)</div>
+                </div>
+            </div>
+        </div>
+
+        {# ── KALKULATOR CENY SPRZEDAŻY ────────────────────────────────────── #}
+        <div class="card mt-3 border-2 border-success" id="priceCalcCard">
+            <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-success">
+                    <i class="bi bi-calculator-fill me-2"></i>
+                    {{ translations.product_margin_price_calc_title|default('Kalkulator ceny sprzedaży') }}
+                </h5>
+                <span class="badge bg-success bg-opacity-75 small">
+                    {{ translations.product_margin_price_calc_hint|default('Dane nie są zapisywane') }}
+                </span>
+            </div>
+            <div class="card-body">
+
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ translations.product_margin_price_calc_desc|default('Kalkulator bazuje na kosztach z aktualnej symulacji (uwzględnia ustawione suwaki). Wpisz cenę lub docelową marżę — wyniki aktualizują się na bieżąco.') }}
+                </p>
+
+                <div class="row g-4">
+
+                    {# ── TRYB 1: podaj cenę → oblicz marżę ── #}
+                    <div class="col-12 col-lg-6">
+                        <div class="card h-100 border-success border-opacity-25">
+                            <div class="card-body">
+                                <h6 class="fw-semibold mb-3">
+                                    <i class="bi bi-tag-fill text-success me-1"></i>
+                                    {{ translations.product_margin_price_to_margin|default('Podaj cenę → sprawdź marżę') }}
+                                </h6>
+
+                                <div class="row g-2 align-items-end mb-3">
+                                    <div class="col-8">
+                                        <label class="form-label small fw-semibold" for="pc_price_eur">
+                                            {{ translations.product_margin_new_price_eur|default('Cena sprzedaży (EUR / karton)') }}
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control form-control-lg fw-bold"
+                                                   id="pc_price_eur"
+                                                   min="0" step="0.01"
+                                                   placeholder="{{ kpi.sale_price_foreign|number_format(2, '.', '') }}"
+                                                   oninput="recalcPriceCalc()">
+                                            <span class="input-group-text">EUR</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small text-muted">
+                                            {{ translations.product_margin_exchange_rate|default('Kurs EUR') }}
+                                        </label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control form-control-sm"
+                                                   id="pc_exchange_rate"
+                                                   min="0.01" step="0.0001"
+                                                   value="{{ kpi.exchange_rate|number_format(4, '.', '') }}"
+                                                   oninput="recalcPriceCalc()">
+                                            <span class="input-group-text small">PLN</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {# Wynik trybu 1 #}
+                                <div class="p-3 rounded-3 text-center" id="pc_result_box" style="background:#f8f9fa;">
+                                    <div class="text-muted small mb-1" id="pc_price_pln_label">= — PLN</div>
+                                    <div class="display-6 fw-bold" id="pc_margin_result" style="font-size:2.8rem;">—</div>
+                                    <div class="small mt-1" id="pc_margin_amount_label">marża kwotowa: —</div>
+                                    {% if analysis.product.ppc is defined and analysis.product.ppc > 1 %}
+                                    <div class="border-top mt-2 pt-2">
+                                        <div class="text-muted small">{{ analysis.product.ppc }} szt. w kartonie</div>
+                                        <div class="small fw-semibold mt-1">
+                                            cena / szt: <span id="pc_price_per_unit">—</span>
+                                        </div>
+                                        <div class="small text-muted">
+                                            marża kwotowa / szt: <span id="pc_margin_per_unit">—</span>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div class="small text-muted mt-1" id="pc_cost_reminder"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── TRYB 2: podaj marżę → oblicz wymaganą cenę ── #}
+                    <div class="col-12 col-lg-6">
+                        <div class="card h-100 border-primary border-opacity-25">
+                            <div class="card-body">
+                                <h6 class="fw-semibold mb-3">
+                                    <i class="bi bi-percent text-primary me-1"></i>
+                                    {{ translations.product_margin_margin_to_price|default('Podaj marżę → wymagana cena') }}
+                                </h6>
+
+                                <div class="row g-2 align-items-end mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold" for="pc_target_margin">
+                                            {{ translations.product_margin_target_margin_input|default('Docelowa marża (%)') }}
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control form-control-lg fw-bold"
+                                                   id="pc_target_margin"
+                                                   min="0" max="99" step="0.5"
+                                                   placeholder="20"
+                                                   oninput="recalcPriceCalc()">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted">
+                                            {{ translations.product_margin_exchange_rate|default('Kurs EUR') }}
+                                        </label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control form-control-sm"
+                                                   id="pc_exchange_rate2"
+                                                   min="0.01" step="0.0001"
+                                                   value="{{ kpi.exchange_rate|number_format(4, '.', '') }}"
+                                                   oninput="recalcPriceCalc()">
+                                            <span class="input-group-text small">PLN</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {# Wynik trybu 2 #}
+                                <div class="p-3 rounded-3 text-center" id="pc_rev_result_box" style="background:#f8f9fa;">
+                                    <div class="text-muted small mb-1">{{ translations.product_margin_required_price|default('Wymagana cena sprzedaży') }}</div>
+                                    <div class="display-6 fw-bold text-primary" id="pc_rev_price_eur" style="font-size:2.8rem;">—</div>
+                                    <div class="small text-muted mt-1" id="pc_rev_price_pln">= — PLN</div>
+                                    <div class="small mt-1" id="pc_rev_margin_amount">marża kwotowa: —</div>
+                                    {% if analysis.product.ppc is defined and analysis.product.ppc > 1 %}
+                                    <div class="border-top mt-2 pt-2">
+                                        <div class="text-muted small">{{ analysis.product.ppc }} szt. w kartonie</div>
+                                        <div class="small fw-semibold mt-1">
+                                            cena / szt: <span id="pc_rev_price_per_unit">—</span>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {# ── Tabela porównawcza: aktualna vs nowa cena ── #}
+                <div class="mt-4" id="pc_compare_section" style="display:none;">
+                    <h6 class="fw-semibold mb-2">
+                        <i class="bi bi-arrow-left-right me-1"></i>
+                        {{ translations.product_margin_price_comparison|default('Porównanie: aktualna vs nowa cena') }}
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th></th>
+                                <th class="text-end">{{ translations.product_margin_current_price|default('Aktualna cena') }}</th>
+                                <th class="text-end text-success">{{ translations.product_margin_new_price|default('Nowa cena') }}</th>
+                                <th class="text-end">{{ translations.product_margin_diff|default('Różnica') }}</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td class="text-muted small">{{ translations.product_margin_sale_price|default('Cena (EUR)') }}</td>
+                                <td class="text-end">{{ kpi.sale_price_foreign|number_format(2, '.', ' ') }} EUR</td>
+                                <td class="text-end fw-semibold text-success" id="pc_cmp_new_eur">—</td>
+                                <td class="text-end" id="pc_cmp_diff_eur">—</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted small">{{ translations.product_margin_sale_price|default('Cena (PLN)') }}</td>
+                                <td class="text-end">{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</td>
+                                <td class="text-end fw-semibold text-success" id="pc_cmp_new_pln">—</td>
+                                <td class="text-end" id="pc_cmp_diff_pln">—</td>
+                            </tr>
+                            {% if analysis.product.ppc is defined and analysis.product.ppc > 1 %}
+                            <tr class="table-light">
+                                <td class="text-muted small">
+                                    <i class="bi bi-box2 me-1"></i>Cena / szt (EUR)
+                                    <span class="text-muted" style="font-size:.7rem;">(÷ {{ analysis.product.ppc }} szt.)</span>
+                                </td>
+                                <td class="text-end">
+                                    {% if kpi.sale_price_foreign > 0 %}
+                                        {{ (kpi.sale_price_foreign / analysis.product.ppc)|number_format(3, '.', ' ') }} EUR
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td class="text-end fw-semibold text-success" id="pc_cmp_new_eur_unit">—</td>
+                                <td class="text-end" id="pc_cmp_diff_eur_unit">—</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td class="text-muted small">
+                                    <i class="bi bi-box2 me-1"></i>Cena / szt (PLN)
+                                    <span class="text-muted" style="font-size:.7rem;">(÷ {{ analysis.product.ppc }} szt.)</span>
+                                </td>
+                                <td class="text-end">
+                                    {% if kpi.sale_price_pln > 0 %}
+                                        {{ (kpi.sale_price_pln / analysis.product.ppc)|number_format(3, '.', ' ') }} PLN
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td class="text-end fw-semibold text-success" id="pc_cmp_new_pln_unit">—</td>
+                                <td class="text-end" id="pc_cmp_diff_pln_unit">—</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="text-muted small">{{ translations.product_margin_total_cost|default('Koszt wytworzenia') }}</td>
+                                <td class="text-end" id="pc_cmp_cost_base">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</td>
+                                <td class="text-end" id="pc_cmp_cost_sim">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</td>
+                                <td class="text-end" id="pc_cmp_diff_cost">—</td>
+                            </tr>
+                            <tr class="fw-semibold">
+                                <td class="text-muted small">{{ translations.product_margin_margin_pct|default('Marża %') }}</td>
+                                <td class="text-end">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</td>
+                                <td class="text-end text-success" id="pc_cmp_new_margin">—</td>
+                                <td class="text-end" id="pc_cmp_diff_margin">—</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+{#        #}{# ── KPI – KOSZTY ──────────────────────────────────────────────────── #}
+{#        <div class="row g-3 mt-1">#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-info">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_foodcost|default('Foodcost / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold text-info" id="kpi_foodcost">{{ kpi.foodcost|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="text-muted small">{{ translations.product_margin_foodcost_hint|default('Surowce wg receptury') }}</div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-warning">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_media_cost|default('Koszt mediów / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold text-warning" id="kpi_media">{{ kpi.avg_media_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="text-muted small">{{ translations.product_margin_media_hint|default('Śr. alokacja mediów dla działu') }}</div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-primary">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_labor_cost|default('Wynagrodzenia / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold text-primary" id="kpi_labor">{{ kpi.avg_labor_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="text-muted small">{{ translations.product_margin_labor_hint|default('Śr. koszty pracowników działu') }}</div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-secondary">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_other_cost|default('Amortyzacja / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold text-secondary" id="kpi_other">{{ kpi.avg_other_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="text-muted small">{{ translations.product_margin_other_hint|default('Amortyzacja działu') }}</div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-dark">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_logistics_cost|default('Logistyka / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold text-dark" id="kpi_logistics">{{ kpi.avg_logistics_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="text-muted small">{{ translations.product_margin_logistics_hint|default('Śr. koszt logistyczny / karton (zakład)') }}</div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+
+{#        <div class="row g-3 mt-0">#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-danger">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_total_cost|default('Łączny koszt wytworzenia / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold text-danger" id="kpi_total_cost">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-success">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_sale_price|default('Śr. cena sprzedaży / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold">#}
+{#                            {{ kpi.sale_price_foreign|number_format(2, '.', ' ') }} {{ kpi.sale_currency|default('EUR') }}#}
+{#                        </div>#}
+{#                        <div class="text-muted small">= <strong>{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</strong></div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 border-success">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_margin_amount|default('Marża kwotowa / karton') }}</div>#}
+{#                        <div class="fs-4 fw-bold {% if kpi.margin_amount >= 0 %}text-success{% else %}text-danger{% endif %}" id="kpi_margin_amount">#}
+{#                            {{ kpi.margin_amount|number_format(2, '.', ' ') }} PLN#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-6 col-xl-3">#}
+{#                <div class="card h-100 border-start border-4 {% if kpi.margin_percent >= 20 %}border-success{% elseif kpi.margin_percent >= 0 %}border-warning{% else %}border-danger{% endif %}">#}
+{#                    <div class="card-body">#}
+{#                        <div class="text-muted small">{{ translations.product_margin_margin_pct|default('Marża %') }}</div>#}
+{#                        <div class="fs-2 fw-bold {% if kpi.margin_percent >= 20 %}text-success{% elseif kpi.margin_percent >= 0 %}text-warning{% else %}text-danger{% endif %}" id="kpi_margin_pct">#}
+{#                            {{ kpi.margin_percent|number_format(1, '.', ' ') }}%#}
+{#                        </div>#}
+{#                        {% if analysis.product.target_margin_percentage is defined and analysis.product.target_margin_percentage > 0 %}#}
+{#                            <div class="text-muted small">#}
+{#                                {{ translations.product_margin_target|default('Cel') }}: {{ analysis.product.target_margin_percentage }}%#}
+{#                                {% if kpi.margin_percent >= analysis.product.target_margin_percentage %}#}
+{#                                    <span class="badge bg-success ms-1">✓</span>#}
+{#                                {% else %}#}
+{#                                    <span class="badge bg-danger ms-1">✗</span>#}
+{#                                {% endif %}#}
+{#                            </div>#}
+{#                        {% endif %}#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+
+
+
+
+        {# ── UDZIAŁ DZIAŁÓW W KOSZTACH MEDIÓW ─────────────────────────────── #}
+{#        {% if analysis.section_allocations is not empty %}#}
+{#        <div class="card mt-3">#}
+{#            <div class="card-header">#}
+{#                <h5 class="mb-0"><i class="bi bi-pie-chart"></i> {{ translations.product_margin_section_alloc|default('Procentowy udział działów w kosztach mediów') }}</h5>#}
+{#            </div>#}
+{#            <div class="card-body">#}
+{#                <div class="row g-3">#}
+{#                    {% for sec in analysis.section_allocations %}#}
+{#                    <div class="col-12 col-md-6 col-xl-4">#}
+{#                        <div class="card border {% if sec.section_id == analysis.product.id_section %}border-primary{% else %}border-light{% endif %} h-100">#}
+{#                            <div class="card-body p-2">#}
+{#                                <div class="d-flex justify-content-between align-items-center mb-1">#}
+{#                                    <span class="fw-semibold small">#}
+{#                                        {{ sec.section_name }}#}
+{#                                        {% if sec.section_id == analysis.product.id_section %}#}
+{#                                            <span class="badge bg-primary ms-1">{{ translations.product_margin_this_section|default('ten dział') }}</span>#}
+{#                                        {% endif %}#}
+{#                                    </span>#}
+{#                                    <span class="badge bg-light text-dark border">{{ sec.pct_of_total|number_format(1) }}%</span>#}
+{#                                </div>#}
+{#                                <div class="progress mb-2" style="height:10px;">#}
+{#                                    <div class="progress-bar {% if sec.section_id == analysis.product.id_section %}bg-primary{% else %}bg-info{% endif %}"#}
+{#                                         style="width:{{ (sec.pct_of_total > 100 ? 100 : sec.pct_of_total)|number_format(1,'.','')|replace({',':''}) }}%"></div>#}
+{#                                </div>#}
+{#                                <div class="text-muted small">#}
+{#                                    {{ translations.product_margin_total_media|default('Łącznie mediów') }}: {{ sec.total|number_format(2, '.', ' ') }} PLN#}
+{#                                </div>#}
+{#                                <ul class="list-unstyled mb-0 mt-1">#}
+{#                                    {% for m in sec.media %}#}
+{#                                    <li class="small text-muted d-flex justify-content-between">#}
+{#                                        <span>{{ m.media_name }}</span>#}
+{#                                        <span>{{ m.avg_alloc_pct|number_format(1) }}% śr.</span>#}
+{#                                    </li>#}
+{#                                    {% endfor %}#}
+{#                                </ul>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                    {% endfor %}#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#        {% endif %}#}
+
+{#        #}{# ── ROZBICIE MEDIÓW ────────────────────────────────────────────────── #}
+{#        {% if analysis.media_breakdown is not empty %}#}
+{#        <div class="card mt-3">#}
+{#            <div class="card-header">#}
+{#                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> {{ translations.product_margin_media_breakdown|default('Struktura kosztów mediów działu') }}</h5>#}
+{#            </div>#}
+{#            <div class="card-body">#}
+{#                <div class="table-responsive">#}
+{#                    <table class="table table-sm table-hover">#}
+{#                        <thead class="table-light">#}
+{#                            <tr>#}
+{#                                <th>{{ translations.product_margin_media_type|default('Rodzaj medium') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_media_total|default('Łączny koszt (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_media_avg_month|default('Śr./miesiąc (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_media_share|default('Udział w mediach działu') }}</th>#}
+{#                            </tr>#}
+{#                        </thead>#}
+{#                        <tbody>#}
+{#                            {% for item in analysis.media_breakdown %}#}
+{#                            <tr>#}
+{#                                <td>{{ item.name }} <small class="text-muted">({{ item.code }})</small></td>#}
+{#                                <td class="text-end">{{ item.total_allocated|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ item.avg_per_month|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">#}
+{#                                    <div class="d-flex align-items-center justify-content-end gap-2">#}
+{#                                        <div class="progress flex-grow-1" style="height:8px;min-width:60px;">#}
+{#                                            <div class="progress-bar bg-warning"#}
+{#                                                 style="width:{{ (item.pct_of_total_media > 100 ? 100 : item.pct_of_total_media)|number_format(1,'.','')|replace({',':''}) }}%"></div>#}
+{#                                        </div>#}
+{#                                        <span>{{ item.pct_of_total_media|number_format(1) }}%</span>#}
+{#                                    </div>#}
+{#                                </td>#}
+{#                            </tr>#}
+{#                            {% endfor %}#}
+{#                        </tbody>#}
+{#                    </table>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#        {% endif %}#}
+
+{#        #}{# ── ROZBICIE KOSZTÓW LOGISTYCZNYCH ────────────────────────────────── #}
+{#        {% if analysis.logistics_breakdown is defined and analysis.logistics_breakdown is not empty %}#}
+{#        <div class="card mt-3">#}
+{#            <div class="card-header">#}
+{#                <h5 class="mb-0"><i class="bi bi-truck"></i> {{ translations.product_margin_logistics_breakdown|default('Struktura kosztów logistycznych (zakład)') }}</h5>#}
+{#            </div>#}
+{#            <div class="card-body">#}
+{#                <p class="text-muted small mb-3">#}
+{#                    <i class="bi bi-info-circle me-1"></i>#}
+{#                    {{ translations.product_margin_logistics_note|default('Koszty logistyczne są kosztami zakładowymi – dzielone przez łączny wolumen sprzedaży firmy.') }}#}
+{#                </p>#}
+{#                <div class="table-responsive">#}
+{#                    <table class="table table-sm table-hover">#}
+{#                        <thead class="table-light">#}
+{#                            <tr>#}
+{#                                <th>{{ translations.product_margin_logistics_type|default('Typ kosztu') }}</th>#}
+{#                                <th class="text-center">{{ translations.product_margin_code|default('Kod') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_logistics_total_amount|default('Łączny koszt (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_media_avg_month|default('Śr. / miesiąc (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_media_share|default('Udział') }}</th>#}
+{#                            </tr>#}
+{#                        </thead>#}
+{#                        <tbody>#}
+{#                            {% for item in analysis.logistics_breakdown %}#}
+{#                            <tr>#}
+{#                                <td>{{ item.name }}</td>#}
+{#                                <td class="text-center"><span class="badge bg-light text-dark border">{{ item.code }}</span></td>#}
+{#                                <td class="text-end">{{ item.total|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ item.avg_per_month|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">#}
+{#                                    <div class="d-flex align-items-center justify-content-end gap-2">#}
+{#                                        <div class="progress flex-grow-1" style="height:8px;min-width:60px;">#}
+{#                                            <div class="progress-bar bg-dark"#}
+{#                                                 style="width:{{ (item.pct_of_total > 100 ? 100 : item.pct_of_total)|number_format(1,'.','')|replace({',':''}) }}%"></div>#}
+{#                                        </div>#}
+{#                                        <span>{{ item.pct_of_total|number_format(1) }}%</span>#}
+{#                                    </div>#}
+{#                                </td>#}
+{#                            </tr>#}
+{#                            {% endfor %}#}
+{#                        </tbody>#}
+{#                    </table>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#        {% endif %}#}
+
+{#        #}{# ── TABELA MIESIĘCZNA ─────────────────────────────────────────────── #}
+{#        {% if analysis.monthly_details is not empty %}#}
+{#        <div class="card mt-3">#}
+{#            <div class="card-header">#}
+{#                <h5 class="mb-0"><i class="bi bi-table"></i> {{ translations.product_margin_monthly_details|default('Szczegóły miesięczne') }}</h5>#}
+{#            </div>#}
+{#            <div class="card-body p-0">#}
+{#                <div class="table-responsive">#}
+{#                    <table class="table table-sm table-hover table-striped mb-0">#}
+{#                        <thead class="table-dark">#}
+{#                            <tr>#}
+{#                                <th>{{ translations.product_margin_period|default('Okres') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_media_cost|default('Media (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_labor_cost|default('Wynagrodzenia (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_other_cost|default('Koszty stałe (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_logistics_cost|default('Logistyka (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_monthly_total|default('Suma (PLN)') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_cartons|default('Kartony') }}</th>#}
+{#                                <th class="text-end">{{ translations.product_margin_cost_per_carton|default('Koszt/karton') }}</th>#}
+{#                            </tr>#}
+{#                        </thead>#}
+{#                        <tbody>#}
+{#                            {% for row in analysis.monthly_details %}#}
+{#                            <tr>#}
+{#                                <td>{{ row.year }}-{{ row.month }}</td>#}
+{#                                <td class="text-end">{{ row.media_cost|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.labor_cost|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.fixed_cost|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.logistics_cost|default(0)|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end fw-semibold">{{ row.total_cost|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.cartons_qty|number_format(0, '.', ' ') }}</td>#}
+{#                                <td class="text-end {% if row.cost_per_carton > 0 %}text-info{% endif %}">#}
+{#                                    {% if row.cost_per_carton > 0 %}#}
+{#                                        {{ row.cost_per_carton|number_format(2, '.', ' ') }}#}
+{#                                    {% else %}#}
+{#                                        <span class="text-muted">–</span>#}
+{#                                    {% endif %}#}
+{#                                </td>#}
+{#                            </tr>#}
+{#                            {% endfor %}#}
+{#                        </tbody>#}
+{#                    </table>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#        {% endif %}#}
+
+    {% else %}
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i>
+            {{ translations.product_margin_empty_prompt|default('Wybierz produkt, aby obliczyć obowiązującą marżę.') }}
+        </div>
+    {% endif %}
+
+</section>
+
+{# ── JavaScript symulacji ─────────────────────────────────────────────────── #}
+{% if analysis and analysis.simulation_base is not empty %}
+<script>
+(function () {
+    'use strict';
+
+    // Dane bazowe z PHP
+    const BASE = {{ analysis.simulation_base|json_encode|raw }};
+    const SALE_PRICE = BASE.sale_price_pln;
+
+    // Pomocnicze formatowanie liczb PL
+    function fmt(n, dec) {
+        dec = dec ?? 2;
+        return n.toFixed(dec).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    function pctLabel(val) {
+        return (val >= 0 ? '+' : '') + val + '%';
+    }
+
+    // Aktualny stan suwaków
+    let state = { volume: 0, media: 0, labor: 0, other: 0, logistics: 0 };
+
+    function recalculate() {
+        const vf = state.volume / 100; // zmiana wolumenu (+/-)
+
+        // Wzrost wolumenu zmniejsza koszty stałe na karton
+        // Wzrost cen mediów/pracy/amortyzacji/logistyki zwiększa je
+        const volumeFactor = 1 / (1 + vf);   // przy +100% wolumenu koszt/karton * 0.5
+
+        const simMedia     = BASE.media_per_carton     * (1 + state.media     / 100) * volumeFactor;
+        const simLabor     = BASE.labor_per_carton     * (1 + state.labor     / 100) * volumeFactor;
+        const simOther     = BASE.other_per_carton     * (1 + state.other     / 100) * volumeFactor;
+        const simLogistics = BASE.logistics_per_carton * (1 + state.logistics / 100) * volumeFactor;
+        const simFood      = BASE.foodcost; // foodcost nie zmienia się z wolumenem
+
+        const simTotal  = simFood + simMedia + simLabor + simOther + simLogistics;
+        const baseCostTotal = BASE.foodcost + BASE.media_per_carton + BASE.labor_per_carton + BASE.other_per_carton + BASE.logistics_per_carton;
+        const simMargin  = SALE_PRICE > 0 ? ((SALE_PRICE - simTotal)     / SALE_PRICE) * 100 : 0;
+        const baseMargin = SALE_PRICE > 0 ? ((SALE_PRICE - baseCostTotal) / SALE_PRICE) * 100 : 0;
+
+        // Aktualizuj tabelę
+        document.getElementById('sim_foodcost').textContent   = fmt(simFood);
+        document.getElementById('sim_media').textContent      = fmt(simMedia);
+        document.getElementById('sim_labor').textContent      = fmt(simLabor);
+        document.getElementById('sim_other').textContent      = fmt(simOther);
+        document.getElementById('sim_logistics').textContent  = fmt(simLogistics);
+        document.getElementById('sim_total_cost').textContent = fmt(simTotal);
+        document.getElementById('sim_margin_pct').textContent = fmt(simMargin, 1) + '%';
+
+        // Różnice
+        document.getElementById('sim_diff_foodcost').textContent  = fmt(simFood      - BASE.foodcost);
+        document.getElementById('sim_diff_media').textContent     = fmt(simMedia     - BASE.media_per_carton);
+        document.getElementById('sim_diff_labor').textContent     = fmt(simLabor     - BASE.labor_per_carton);
+        document.getElementById('sim_diff_other').textContent     = fmt(simOther     - BASE.other_per_carton);
+        document.getElementById('sim_diff_logistics').textContent = fmt(simLogistics - BASE.logistics_per_carton);
+        document.getElementById('sim_diff_total').textContent     = fmt(simTotal     - baseCostTotal);
+        document.getElementById('sim_diff_margin_pct').textContent= fmt(simMargin - baseMargin, 1) + ' pp';
+
+        // Kolory różnic
+        ['sim_diff_foodcost', 'sim_diff_media', 'sim_diff_labor', 'sim_diff_other', 'sim_diff_logistics', 'sim_diff_total'].forEach(id => {
+            const el = document.getElementById(id);
+            const val = parseFloat(el.textContent.replace(',', '.').replace(/\s/g, ''));
+            el.className = 'text-end ' + (val > 0.005 ? 'text-danger' : val < -0.005 ? 'text-success' : '');
+        });
+
+        const diffMpct = document.getElementById('sim_diff_margin_pct');
+        const mVal = parseFloat(diffMpct.textContent.replace(',', '.').replace(/\s/g, '').replace('pp', ''));
+        diffMpct.className = 'text-end fw-bold ' + (mVal > 0.05 ? 'text-success' : mVal < -0.05 ? 'text-danger' : '');
+
+        // Aktualizuj pasek KPI
+        if (document.getElementById('kpi_margin_pct')) {
+            document.getElementById('kpi_margin_pct').textContent      = fmt(simMargin, 1) + '%';
+            document.getElementById('kpi_total_cost').textContent      = fmt(simTotal) + ' PLN';
+            document.getElementById('kpi_margin_amount').textContent   = fmt(SALE_PRICE - simTotal) + ' PLN';
+            document.getElementById('kpi_media').textContent           = fmt(simMedia) + ' PLN';
+            document.getElementById('kpi_labor').textContent           = fmt(simLabor) + ' PLN';
+            document.getElementById('kpi_other').textContent           = fmt(simOther) + ' PLN';
+            document.getElementById('kpi_logistics').textContent       = fmt(simLogistics) + ' PLN';
+        }
+
+        // Aktualizuj pasek progress (6 segmentów: food, media, labor, other, logistics, margin)
+        const bars = document.querySelectorAll('#costProgressBar .progress-bar');
+        if (bars.length) {
+            let pcts;
+            if (SALE_PRICE > 0) {
+                pcts = [
+                    simFood      / SALE_PRICE * 100,
+                    simMedia     / SALE_PRICE * 100,
+                    simLabor     / SALE_PRICE * 100,
+                    simOther     / SALE_PRICE * 100,
+                    simLogistics / SALE_PRICE * 100,
+                    Math.max(0, simMargin),
+                ];
+            } else {
+                // Brak ceny sprzedaży – pokaż strukturę kosztów (% sumy kosztów, marża = 0)
+                const totalCost = simFood + simMedia + simLabor + simOther + simLogistics;
+                pcts = totalCost > 0 ? [
+                    simFood      / totalCost * 100,
+                    simMedia     / totalCost * 100,
+                    simLabor     / totalCost * 100,
+                    simOther     / totalCost * 100,
+                    simLogistics / totalCost * 100,
+                    0,
+                ] : [0, 0, 0, 0, 0, 0];
+            }
+            bars.forEach((bar, i) => {
+                bar.style.width = Math.max(0, pcts[i]).toFixed(2) + '%';
+            });
+
+            // Adnotacja o trybie wyświetlania
+            const note = document.getElementById('progressBarNote');
+            if (note) {
+                note.style.display = SALE_PRICE > 0 ? 'none' : 'inline';
+            }
+        }
+
+        // Eksponuj aktualny koszt dla kalkulatora ceny sprzedaży
+        window._simTotalCost = simTotal;
+        // Wywołaj przeliczenie kalkulatora ceny jeśli aktywny
+        if (typeof recalcPriceCalc === 'function') recalcPriceCalc();
+        // Przelicz kolumny EUR
+        recalcOverviewEur();
+    }
+
+    // ── LIVE PRZELICZNIK EUR ─────────────────────────────────────────────────
+
+    // Bazowe wartości PLN zapamiętane przy wczytaniu strony
+    const BASE_PLN = {
+        foodcost:   BASE.foodcost,
+        media:      BASE.media_per_carton,
+        labor:      BASE.labor_per_carton,
+        other:      BASE.other_per_carton,
+        logistics:  BASE.logistics_per_carton,
+        total:      BASE.total_cost_per_carton,
+    };
+
+    function recalcOverviewEur() {
+        const rateInput = document.getElementById('overviewLiveRate');
+        if (!rateInput) return;
+        const rate = parseFloat(rateInput.value);
+        if (!isFinite(rate) || rate <= 0) return;
+
+        const toEur = (pln) => isFinite(pln) ? (pln / rate).toFixed(2).replace('.', ',') : '—';
+
+        // Bazowe EUR — stałe wartości PLN z BASE
+        const setBase = (id, pln) => { const el = document.getElementById(id); if (el) el.textContent = toEur(pln); };
+        setBase('eur_base_foodcost',  BASE_PLN.foodcost);
+        setBase('eur_base_media',     BASE_PLN.media);
+        setBase('eur_base_labor',     BASE_PLN.labor);
+        setBase('eur_base_other',     BASE_PLN.other);
+        setBase('eur_base_logistics', BASE_PLN.logistics);
+        setBase('eur_base_total',     BASE_PLN.total);
+
+        // Symulacja EUR — czytamy aktualną wartość PLN z <small id="sim_*">
+        const pairs = [
+            ['sim_foodcost',  'eur_sim_foodcost'],
+            ['sim_media',     'eur_sim_media'],
+            ['sim_labor',     'eur_sim_labor'],
+            ['sim_other',     'eur_sim_other'],
+            ['sim_logistics', 'eur_sim_logistics'],
+            ['sim_total_cost','eur_sim_total'],
+        ];
+        pairs.forEach(([simId, eurId]) => {
+            const simEl = document.getElementById(simId);
+            const eurEl = document.getElementById(eurId);
+            if (!simEl || !eurEl) return;
+            const pln = parseFloat(simEl.textContent.replace(',', '.').replace(/\s/g, ''));
+            eurEl.textContent = toEur(pln);
+        });
+    }
+
+    // Bind sliders
+    document.querySelectorAll('.sim-slider').forEach(function (slider) {
+        slider.addEventListener('input', function () {
+            const target = this.dataset.target;
+            const val = parseInt(this.value, 10);
+            state[target] = val;
+            document.getElementById('lbl_' + target).textContent = pctLabel(val);
+            recalculate();
+            updateSimActiveLabel();
+        });
+    });
+
+    // Reset button
+    document.getElementById('resetSimulation').addEventListener('click', function () {
+        state = { volume: 0, media: 0, labor: 0, other: 0, logistics: 0 };
+        document.querySelectorAll('.sim-slider').forEach(s => { s.value = 0; });
+        ['volume', 'media', 'labor', 'other', 'logistics'].forEach(t => {
+            document.getElementById('lbl_' + t).textContent = '+0%';
+        });
+        recalculate();
+        updateSimActiveLabel();
+    });
+
+    // ── TOGGLE PANELU SUWAKÓW ────────────────────────────────────────────────
+
+    window.toggleSlidersPanel = function () {
+        const panel   = document.getElementById('slidersPanel');
+        const icon    = document.getElementById('toggleSlidersIcon');
+        const label   = document.getElementById('toggleSlidersLabel');
+        const visible = panel.style.display !== 'none';
+
+        panel.style.display = visible ? 'none' : 'block';
+        icon.className  = visible ? 'bi bi-chevron-down me-1' : 'bi bi-chevron-up me-1';
+        label.textContent = visible ? 'Dostosuj symulację' : 'Ukryj suwaki';
+    };
+
+    function updateSimActiveLabel() {
+        const active = Object.values(state).some(v => v !== 0);
+        const badge  = document.getElementById('simActiveLabel');
+        if (badge) badge.style.display = active ? 'inline-flex' : 'none';
+    }
+
+    // ── KALKULATOR CENY SPRZEDAŻY ────────────────────────────────────────────
+
+    const BASE_SALE_EUR = BASE.sale_price_foreign ?? 0;
+    const BASE_SALE_PLN = BASE.sale_price_pln     ?? 0;
+    const BASE_MARGIN   = BASE.margin_percent      ?? 0;
+    const PPC           = {{ analysis.product.ppc is defined and analysis.product.ppc > 1 ? analysis.product.ppc|e('js') : 0 }}; // szt. w kartonie (0 = nie wyświetlaj)
+
+    function fmtEur(n) {
+        return n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' EUR';
+    }
+    function fmtPln(n) {
+        return n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' PLN';
+    }
+    function fmtPct(n) {
+        return n.toFixed(1).replace('.', ',') + '%';
+    }
+
+    function marginColor(pct) {
+        if (pct >= 20) return '#198754';   // success
+        if (pct >= 10) return '#fd7e14';   // warning
+        if (pct >= 0)  return '#ffc107';   // caution
+        return '#dc3545';                   // danger
+    }
+    function marginBg(pct) {
+        if (pct >= 20) return '#d1e7dd';
+        if (pct >= 10) return '#fff3cd';
+        if (pct >= 0)  return '#fff3cd';
+        return '#f8d7da';
+    }
+
+    function getCurrentCost() {
+        // Pobiera aktualny koszt symulowany (aktualizowany przez recalculate())
+        return (typeof window._simTotalCost !== 'undefined') ? window._simTotalCost : BASE.total_cost_per_carton;
+    }
+
+    function syncExchangeRates() {
+        // Synchronizuj oba pola kursów walut (zmiana w jednym → zmiana w drugim)
+        const r1 = document.getElementById('pc_exchange_rate');
+        const r2 = document.getElementById('pc_exchange_rate2');
+        if (!r1 || !r2) return;
+        if (document.activeElement === r1) r2.value = r1.value;
+        if (document.activeElement === r2) r1.value = r2.value;
+    }
+
+    function recalcPriceCalc() {
+        syncExchangeRates();
+
+        const cost = getCurrentCost();
+        const r1   = parseFloat((document.getElementById('pc_exchange_rate')?.value  || '{{ kpi.exchange_rate|number_format(4,".","")|e("js") }}').replace(',', '.'));
+        const r2   = parseFloat((document.getElementById('pc_exchange_rate2')?.value || '{{ kpi.exchange_rate|number_format(4,".","")|e("js") }}').replace(',', '.'));
+
+        // ── Tryb 1: cena → marża ──────────────────────────────────────────
+        const priceEurRaw = document.getElementById('pc_price_eur')?.value;
+        const priceEur1   = priceEurRaw !== '' && priceEurRaw !== null ? parseFloat(priceEurRaw) : NaN;
+        const exRate1     = isFinite(r1) && r1 > 0 ? r1 : 1;
+        const resultBox   = document.getElementById('pc_result_box');
+        const margEl      = document.getElementById('pc_margin_result');
+        const margAmt     = document.getElementById('pc_margin_amount_label');
+        const pricePlnLbl = document.getElementById('pc_price_pln_label');
+        const costRemLbl  = document.getElementById('pc_cost_reminder');
+
+        let mode1Active = false;
+
+        if (isFinite(priceEur1) && priceEur1 > 0 && isFinite(exRate1)) {
+            const pricePln1  = priceEur1 * exRate1;
+            const marginPct1 = ((pricePln1 - cost) / pricePln1) * 100;
+            const marginAmt1 = pricePln1 - cost;
+
+            pricePlnLbl.textContent = '= ' + fmtPln(pricePln1);
+            margEl.textContent      = fmtPct(marginPct1);
+            margEl.style.color      = marginColor(marginPct1);
+            margAmt.textContent     = 'marża kwotowa: ' + fmtPln(marginAmt1);
+            margAmt.style.color     = marginColor(marginPct1);
+            costRemLbl.textContent  = 'koszt wytworzenia: ' + fmtPln(cost);
+            resultBox.style.background = marginBg(marginPct1);
+
+            // Cena / szt
+            if (PPC > 0) {
+                const ppuEur = priceEur1 / PPC;
+                const ppuAmt = marginAmt1 / PPC;
+                const puEl   = document.getElementById('pc_price_per_unit');
+                const muEl   = document.getElementById('pc_margin_per_unit');
+                if (puEl) puEl.textContent = ppuEur.toFixed(3).replace('.', ',') + ' EUR';
+                if (muEl) muEl.textContent = ppuAmt.toFixed(3).replace('.', ',') + ' PLN';
+            }
+
+            updateCompareTable(priceEur1, pricePln1, cost, marginPct1);
+            mode1Active = true;
+        } else {
+            margEl.textContent      = '—';
+            margEl.style.color      = '';
+            pricePlnLbl.textContent = '= — PLN';
+            margAmt.textContent     = 'marża kwotowa: —';
+            costRemLbl.textContent  = 'koszt wytworzenia: ' + fmtPln(cost);
+            resultBox.style.background = '#f8f9fa';
+            const puEl = document.getElementById('pc_price_per_unit');
+            const muEl = document.getElementById('pc_margin_per_unit');
+            if (puEl) puEl.textContent = '—';
+            if (muEl) muEl.textContent = '—';
+        }
+
+        // ── Tryb 2: marża → cena ──────────────────────────────────────────
+        const targetMarginRaw = document.getElementById('pc_target_margin')?.value;
+        const targetMargin    = targetMarginRaw !== '' && targetMarginRaw !== null ? parseFloat(targetMarginRaw) : NaN;
+        const exRate2         = isFinite(r2) && r2 > 0 ? r2 : 1;
+        const revBox          = document.getElementById('pc_rev_result_box');
+        const revEurEl        = document.getElementById('pc_rev_price_eur');
+        const revPlnEl        = document.getElementById('pc_rev_price_pln');
+        const revAmtEl        = document.getElementById('pc_rev_margin_amount');
+
+        if (isFinite(targetMargin) && targetMargin < 100 && isFinite(exRate2)) {
+            // cena_PLN = koszt / (1 - marża/100)
+            const reqPricePln  = cost / (1 - targetMargin / 100);
+            const reqPriceEur  = reqPricePln / exRate2;
+            const reqMarginAmt = reqPricePln - cost;
+
+            revEurEl.textContent = fmtEur(reqPriceEur);
+            revPlnEl.textContent = '= ' + fmtPln(reqPricePln);
+            revAmtEl.textContent = 'marża kwotowa: ' + fmtPln(reqMarginAmt);
+            revBox.style.background = marginBg(targetMargin);
+
+            // Cena / szt (tryb 2)
+            if (PPC > 0) {
+                const ppuEl = document.getElementById('pc_rev_price_per_unit');
+                if (ppuEl) ppuEl.textContent = (reqPriceEur / PPC).toFixed(3).replace('.', ',') + ' EUR';
+            }
+
+            // Aktualizuj tabelę porównawczą tylko jeśli tryb 1 nie jest aktywny
+            // (tryb 1 ma pierwszeństwo — gdy oba są wypełnione, tabela pokazuje tryb 1)
+            if (!mode1Active) {
+                updateCompareTable(reqPriceEur, reqPricePln, cost, targetMargin);
+            }
+        } else {
+            revEurEl.textContent = '—';
+            revPlnEl.textContent = '= — PLN';
+            revAmtEl.textContent = 'marża kwotowa: —';
+            revBox.style.background = '#f8f9fa';
+
+            // Jeśli tryb 2 wyczyszczony i tryb 1 też pusty — ukryj tabelę
+            if (!mode1Active) {
+                const section = document.getElementById('pc_compare_section');
+                if (section) section.style.display = 'none';
+            }
+        }
+    }
+
+    function updateCompareTable(newEur, newPln, newCost, newMarginPct) {
+        const section = document.getElementById('pc_compare_section');
+        if (!section) return;
+        section.style.display = 'block';
+
+        const diffEur    = newEur    - BASE_SALE_EUR;
+        const diffPln    = newPln    - BASE_SALE_PLN;
+        const diffMargin = newMarginPct - BASE_MARGIN;
+
+        const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+        const setEl  = (id, txt, cls) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = txt;
+            el.className   = 'text-end ' + cls;
+        };
+
+        setTxt('pc_cmp_new_eur',    fmtEur(newEur));
+        setTxt('pc_cmp_new_pln',    fmtPln(newPln));
+        setTxt('pc_cmp_cost_sim',   fmtPln(newCost));
+        setTxt('pc_cmp_new_margin', fmtPct(newMarginPct));
+
+        const diffEurFmt  = (diffEur  >= 0 ? '+' : '') + fmtEur(diffEur);
+        const diffPlnFmt  = (diffPln  >= 0 ? '+' : '') + fmtPln(diffPln);
+        const diffMrgFmt  = (diffMargin >= 0 ? '+' : '') + fmtPct(diffMargin);
+
+        setEl('pc_cmp_diff_eur',    diffEurFmt,  diffEur    > 0.005 ? 'text-success' : diffEur    < -0.005 ? 'text-danger' : '');
+        setEl('pc_cmp_diff_pln',    diffPlnFmt,  diffPln    > 0.005 ? 'text-success' : diffPln    < -0.005 ? 'text-danger' : '');
+        setEl('pc_cmp_diff_cost',   '—',         '');
+        setEl('pc_cmp_diff_margin', diffMrgFmt,  diffMargin > 0.05  ? 'text-success' : diffMargin < -0.05  ? 'text-danger' : '');
+
+        // Wiersze cena / szt
+        if (PPC > 0) {
+            const newEurUnit  = newEur / PPC;
+            const newPlnUnit  = newPln / PPC;
+            const baseEurUnit = BASE_SALE_EUR > 0 ? BASE_SALE_EUR / PPC : 0;
+            const basePlnUnit = BASE_SALE_PLN > 0 ? BASE_SALE_PLN / PPC : 0;
+            const diffEurUnit = newEurUnit - baseEurUnit;
+            const diffPlnUnit = newPlnUnit - basePlnUnit;
+
+            const fmtUnit = (n, suffix) => n.toFixed(3).replace('.', ',') + ' ' + suffix;
+            const fmtUnitDiff = (n, suffix) => (n >= 0 ? '+' : '') + fmtUnit(n, suffix);
+
+            setTxt('pc_cmp_new_eur_unit', fmtUnit(newEurUnit, 'EUR'));
+            setTxt('pc_cmp_new_pln_unit', fmtUnit(newPlnUnit, 'PLN'));
+            setEl('pc_cmp_diff_eur_unit', fmtUnitDiff(diffEurUnit, 'EUR'), diffEurUnit > 0.0005 ? 'text-success' : diffEurUnit < -0.0005 ? 'text-danger' : '');
+            setEl('pc_cmp_diff_pln_unit', fmtUnitDiff(diffPlnUnit, 'PLN'), diffPlnUnit > 0.0005 ? 'text-success' : diffPlnUnit < -0.0005 ? 'text-danger' : '');
+        }
+    }
+
+    // Inicjalizacja – wstaw wartości bazowe do przypomnienia kosztu
+    window.addEventListener('DOMContentLoaded', function() {
+        const cr = document.getElementById('pc_cost_reminder');
+        if (cr) cr.textContent = 'koszt wytworzenia: ' + fmtPln(BASE.total_cost_per_carton ?? 0);
+        // Inicjalizacja kolumn EUR przy załadowaniu
+        recalcOverviewEur();
+    });
+
+    // Eksponuj na window – wymagane dla atrybutów oninput w HTML (poza IIFE)
+    window.recalcPriceCalc = recalcPriceCalc;
+
+})();
+</script>
+
+<script>
+// ── MODAL FOODCOST ────────────────────────────────────────────────────────────
+
+window.openFoodcostModal = function(productId) {
+    const modal = document.getElementById('foodcostModal');
+    const body  = document.getElementById('foodcostModalBody');
+    const total = document.getElementById('fcModalTotal');
+
+    // Reset
+    body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Ładowanie struktury receptury…</div>';
+    total.textContent = '';
+
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+
+    fetch('{{ root }}/ajax/product-margin/foodcost-breakdown?product_id=' + productId)
+        .then(r => r.json())
+        .then(function(res) {
+            if (res.error && !res.data) {
+                body.innerHTML = '<div class="alert alert-warning m-3"><i class="bi bi-exclamation-triangle me-2"></i>' + res.error + '</div>';
+                return;
+            }
+            const data = res.data;
+            if (!data || !data.elements || data.elements.length === 0) {
+                body.innerHTML = '<div class="alert alert-info m-3"><i class="bi bi-info-circle me-2"></i>Brak składników receptury dla tego produktu.</div>';
+                return;
+            }
+
+            // Suma foodcost
+            const grandTotal = data.elements.reduce((s, el) => s + (parseFloat(el.price_for_required_quantity) || 0), 0);
+            total.innerHTML = '<strong>Łączny foodcost: ' + grandTotal.toFixed(2).replace('.', ',') + ' PLN</strong>'
+                + '<span class="text-muted ms-2">| yield: ' + (data.yield_quantity || 1) + ' ' + (data.unit_name || '') + '</span>';
+
+            body.innerHTML = buildRecipeTable(data.elements, grandTotal);
+        })
+        .catch(function(err) {
+            body.innerHTML = '<div class="alert alert-danger m-3"><i class="bi bi-x-circle me-2"></i>Błąd ładowania danych: ' + err.message + '</div>';
+        });
+};
+
+function buildRecipeTable(elements, grandTotal) {
+    let html = '<table class="table table-sm align-middle mb-0">';
+    html += '<thead class="table-light sticky-top"><tr>'
+        + '<th class="ps-3">Składnik</th>'
+        + '<th class="text-end">Ilość</th>'
+        + '<th class="text-end">Cena / jed.</th>'
+        + '<th class="text-end">Koszt</th>'
+        + '<th class="text-end pe-3">Udział</th>'
+        + '</tr></thead><tbody>';
+    html += buildRows(elements, grandTotal, 0);
+    html += '</tbody>';
+    // Wiersz sumy
+    html += '<tfoot class="table-danger fw-semibold">'
+        + '<tr><td class="ps-3" colspan="3">Łączny foodcost</td>'
+        + '<td class="text-end">' + grandTotal.toFixed(2).replace('.', ',') + ' PLN</td>'
+        + '<td class="text-end pe-3">100%</td></tr>'
+        + '</tfoot></table>';
+    return html;
+}
+
+function buildRows(elements, grandTotal, depth) {
+    let html = '';
+
+    // Zaokrąglenie ilości wg jednostki
+    const fmtQty = (qty, unit) => {
+        const u = (unit || '').toLowerCase().trim();
+        if (u === 'szt' || u === 'szt.' || u === 'pcs' || u === 'pc' || u === 'sztuka') {
+            return Math.round(qty).toString();
+        }
+        if (u === 'g' || u === 'ml') {
+            return Math.round(qty).toString();
+        }
+        return qty.toFixed(3).replace('.', ',');
+    };
+
+    elements.forEach(function(el) {
+        const cost  = parseFloat(el.price_for_required_quantity) || 0;
+        const pct   = grandTotal > 0 ? (cost / grandTotal * 100) : 0;
+        const qty   = parseFloat(el.required_quantity) || 0;
+        const ppu   = parseFloat(el.suggested_base_unit_price) || 0;
+        const unit  = el.unit_name || '';
+        const isSubRecipe = el.type === 'sub-recipe';
+
+        const indent = depth * 20;
+        const icon = isSubRecipe
+            ? '<i class="bi bi-box text-warning me-1"></i>'
+            : '<i class="bi bi-circle-fill text-info me-1" style="font-size:.55rem;vertical-align:middle;"></i>';
+
+        const bgClass = depth === 0 ? '' : (depth === 1 ? 'table-light' : 'bg-white');
+        const rowClass = isSubRecipe ? 'fw-semibold' : '';
+
+        html += '<tr class="' + bgClass + ' ' + rowClass + '">';
+        html += '<td class="ps-3" style="padding-left:' + (12 + indent) + 'px !important;">'
+            + icon + el.name;
+        if (isSubRecipe && el.cycle_detected) {
+            html += ' <span class="badge bg-danger ms-1" title="Wykryto cykl w recepturze">cykl</span>';
+        }
+        html += '</td>';
+
+        if (isSubRecipe) {
+            // Podreceptura — ilość i koszt, bez ceny/jed.
+            html += '<td class="text-end text-muted">' + fmtQty(qty, unit) + ' ' + unit + '</td>';
+            html += '<td class="text-end text-muted">—</td>';
+        } else {
+            html += '<td class="text-end text-muted">' + fmtQty(qty, unit) + ' ' + unit + '</td>';
+            html += '<td class="text-end text-muted">' + ppu.toFixed(4).replace('.', ',') + '</td>';
+        }
+
+        // Pasek postępu w kolumnie kosztu
+        const barWidth = Math.min(100, pct).toFixed(1);
+        const barColor = depth === 0 ? '#0dcaf0' : '#6c757d';
+        html += '<td class="text-end">'
+            + '<span class="fw-semibold">' + cost.toFixed(2).replace('.', ',') + '</span>'
+            + ' <small class="text-muted">PLN</small>'
+            + '</td>';
+        html += '<td class="text-end pe-3">'
+            + '<div class="d-flex align-items-center justify-content-end gap-1">'
+            + '<div class="progress flex-grow-1" style="height:6px;min-width:40px;">'
+            + '<div class="progress-bar" style="width:' + barWidth + '%;background:' + barColor + ';"></div>'
+            + '</div>'
+            + '<small class="text-muted text-nowrap">' + pct.toFixed(1).replace('.', ',') + '%</small>'
+            + '</div></td>';
+        html += '</tr>';
+
+        // Rekurencyjnie elementy podreceptury
+        if (isSubRecipe && el.elements && el.elements.length > 0) {
+            html += buildRows(el.elements, grandTotal, depth + 1);
+        }
+    });
+    return html;
+}
+</script>
+{% endif %}
+{% endblock %}
+
+
+
+
+
+
