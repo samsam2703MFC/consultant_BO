@@ -105,14 +105,15 @@ class FlattenedRecipeIngredientRepository extends BaseRepository
             'lang_code' => $langCode
         ]);
 
-        if(count($res) == 0)
-        {
+        // Jeden wiersz (GROUP BY recipe_id). Wcześniej zwracana była lista wierszy, a wywołujący
+        // czytał ją jak pojedynczy wiersz — etykiety zapisywały się z pustymi alergenami i składnikami.
+        if (empty($res[0])) {
             return [
                 'allergens' => "",
                 'ingredients' => "",
                 'nutriscore' => ""
             ];
         }
-        return $res;
+        return $res[0];
     }
 }
