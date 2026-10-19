@@ -854,3 +854,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T16:10:43Z ERP : e-mails automatiques (log_only sur la copie), étiquettes avec allergènes
 2026-10-19T16:33:53Z ERP : page d'accueil Rentowność (ventes vs coût du personnel par groupe, CA manquant au target), base achats
 2026-10-19T16:36:01Z Résultat : Trafic clients, 12 semaines et carte des écarts
+2026-10-19T16:48:53Z Dashboard magasin : douze semaines face au N-1
