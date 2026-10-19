@@ -303,6 +303,20 @@ SQL
   fi
 fi
 
+# --- 5b. Module « Gestion de production atelier » (tables tfb_*) ----------
+# Migrations versionnées (jamais de schéma modifié à la main), secret des jetons JWT généré
+# une fois sur le serveur, données de démonstration seulement si ERP_TFB_DEMO=1.
+if [[ -f "$IMPORT_OK" ]]; then
+  [[ -n "$(envget PRODUCTION_JWT_SECRET)" ]] || set_env PRODUCTION_JWT_SECRET "$(openssl rand -hex 32)"
+  [[ -n "$(envget API_BASE_URL)" ]] || set_env API_BASE_URL "$ERP_URL"
+  ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php apply ) \
+    || fail "Migrations du module atelier (migrations/tfb) en échec : voir le message ci-dessus."
+  if [[ "${ERP_TFB_DEMO:-}" == "1" ]]; then
+    ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_seed_demo.php ${ERP_ENTREE_LIBRE:+--grant-admin="$ERP_ENTREE_LIBRE"} ) \
+      || fail "Données de démonstration du module atelier en échec."
+  fi
+fi
+
 # --- 6. Apache : Alias /production --------------------------------------
 if grep -rlsE "^\s*Alias\s+${ERP_ALIAS}(\s|/)" /etc/apache2/sites-enabled /etc/apache2/conf-enabled \
      | grep -v "production-erp.conf" | grep -q .; then
@@ -374,6 +388,23 @@ elif [[ "$code" == "200" ]] && grep -qE 'name="password"|>Entrer<' "$body"; then
     [[ "$code3" == "302" && "$code4" == "200" ]] \
       || fail "Bouton « Entrer » : POST ${code3} puis /client-orders ${code4} (302 puis 200 attendus)."
     log "Recette OK : le bouton « Entrer » ouvre l'ERP."
+  fi
+  # API du module atelier : description publique, refus sans jeton, connexion puis lecture.
+  api="http://127.0.0.1${ERP_ALIAS}/api/v1/production"
+  c1="$(curl -s -o /dev/null -w '%{http_code}' "$api/openapi.json" || true)"
+  c2="$(curl -s -o /dev/null -w '%{http_code}' "$api/referentiels/groups" || true)"
+  [[ "$c1" == "200" && "$c2" == "401" ]] || fail "API atelier : openapi.json ${c1} (200 attendu), groupes sans jeton ${c2} (401 attendu)."
+  pwfile="$ERP_IMPORT_DIR/MOTS_DE_PASSE_ERP.txt"
+  if [[ -n "$ERP_ENTREE_LIBRE" && "${ERP_TFB_DEMO:-}" == "1" && -f "$pwfile" ]]; then
+    upass="$(awk -F '\t' -v l="$ERP_ENTREE_LIBRE" '$1 == l {print $2; exit}' "$pwfile")"
+    login_json="$("$PHPBIN" -r 'echo json_encode(["login" => $argv[1], "password" => $argv[2]]);' "$ERP_ENTREE_LIBRE" "$upass")"
+    token="$(curl -s -X POST -H 'Content-Type: application/json' --data-binary @- "$api/auth/login" <<<"$login_json" \
+      | "$PHPBIN" -r 'echo json_decode(stream_get_contents(STDIN), true)["data"]["access_token"] ?? "";')"
+    [[ -n "$token" ]] || fail "API atelier : connexion du compte ${ERP_ENTREE_LIBRE} refusée."
+    groups="$(curl -s -H "X-Access-Token: $token" "$api/referentiels/groups" \
+      | "$PHPBIN" -r 'echo count(json_decode(stream_get_contents(STDIN), true)["data"] ?? []);')"
+    [[ "$groups" -ge 6 ]] || fail "API atelier : ${groups} groupe(s) lu(s), 6 attendus."
+    log "Recette OK : API atelier (connexion JWT, ${groups} groupes de production)."
   fi
   log "Recette OK : page de connexion servie, pages protégées. ERP disponible sur ${ERP_URL}/"
 else

@@ -37,6 +37,8 @@ env:
   # Serveur de test : après le mot de passe navigateur (apps/production/deploy/acces_test.htpasswd),
   # un bouton « Entrer » ouvre l'ERP sur ce compte. Vide : login et mot de passe de l'ERP.
   ERP_ENTREE_LIBRE: "admin"
+  # Données de démonstration du module « Gestion de production atelier » (serveur de test seulement).
+  ERP_TFB_DEMO: "1"
 
 jobs:
   deploy:
@@ -156,7 +158,7 @@ jobs:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "ERP_URL='${ERP_URL}' ERP_ENTREE_LIBRE='${ERP_ENTREE_LIBRE}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
+            "ERP_URL='${ERP_URL}' ERP_ENTREE_LIBRE='${ERP_ENTREE_LIBRE}' ERP_TFB_DEMO='${ERP_TFB_DEMO}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
           # Avec le mot de passe navigateur, l'extérieur sans identifiants doit recevoir 401.
           expected=200
           [ -f apps/production/deploy/acces_test.htpasswd ] && expected=401
