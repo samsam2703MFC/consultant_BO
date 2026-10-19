@@ -861,3 +861,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T17:24:34Z ERP : actions de développement du CA par groupe (ROI), atelier P2 écran (fiches de production)
 2026-10-19T17:59:07Z atelier P3 (besoin + plan) et P4 (ordonnancement + charge)
 2026-10-19T18:11:22Z ERP : budżet personelu (minimum + premie), kto co potrafi
+2026-10-19T18:31:32Z atelier P5 (Gantt), logistyka (pojazdy, palety, załadunek)
