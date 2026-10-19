@@ -84,7 +84,7 @@ class ShippingController extends BaseController
         $idShippingLog = $this->safeFetch([$this->shippingService, 'insertNewShipping'], $this->errors, [$data]);
 
         if (!$idShippingLog) {
-            return $this->json(['message' => explode(", ", $this->errors)], 500);
+            return $this->json(['message' => implode(", ", $this->errors) ?: 'Nie udało się utworzyć dokumentów wysyłki'], 500);
         }
 
         return $this->json(['id' => $idShippingLog]);
@@ -102,7 +102,7 @@ class ShippingController extends BaseController
         $idShippingLog = $this->shippingService->insertNewComplaint($data);
 
         if (!$idShippingLog) {
-            return $this->json(['message' => explode(", ", $this->errors)], 500);
+            return $this->json(['message' => implode(", ", $this->errors) ?: 'Nie udało się utworzyć dokumentów wysyłki'], 500);
         }
 
         return $this->json(['id' => $idShippingLog]);

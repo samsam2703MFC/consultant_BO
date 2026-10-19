@@ -22,6 +22,22 @@ class PaletDeliveryRepository extends BaseRepository
         return $this->query($sql);
     }
 
+    /**
+     * Daty z paletami gotowymi do dokumentów (status 2) — to samo źródło co
+     * getDistinctDateWithoutDocument(), z liczbą klientów i palet na dzień.
+     */
+    public function getReadyDatesSummary()
+    {
+        $sql = "SELECT delivery_date,
+                       COUNT(DISTINCT id_customer) AS clients,
+                       COUNT(*)                    AS pallets
+                FROM palets_delivery
+                WHERE status = 2
+                GROUP BY delivery_date
+                ORDER BY delivery_date DESC";
+        return $this->query($sql);
+    }
+
     public function getDistinctDateWithoutDocumentForComplaint()
     {
         $sql = "SELECT DISTINCT shipping_date 

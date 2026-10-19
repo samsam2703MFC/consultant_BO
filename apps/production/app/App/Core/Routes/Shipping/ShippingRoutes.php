@@ -8,6 +8,17 @@ return function(RouteCollector $r) {
         'method' => 'showShippingForm'
     ]);
 
+    // Kreator „Wyślij dzień” (dokumenty tworzy POST /ajax/shipments poniżej)
+    $r->addRoute('GET', '/shipping/wizard', [
+        'controller' => App\Controllers\Web\Shipping\ShippingWizardController::class,
+        'method' => 'index'
+    ]);
+
+    $r->addRoute('GET', '/ajax/shipments/last-carrier', [
+        'controller' => App\Controllers\Web\Shipping\ShippingWizardController::class,
+        'method' => 'ajaxLastCarrier'
+    ]);
+
     $r->addRoute('POST', '/ajax/shipments', [
         'controller' => App\Controllers\Web\Shipping\ShippingController::class,
         'method' => 'ajaxNewShipping'
