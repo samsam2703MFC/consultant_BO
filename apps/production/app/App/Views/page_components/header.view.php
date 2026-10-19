@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/perfect-scrollbar/perfect-scrollbar.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/bootstrap-icons/bootstrap-icons.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/app.css">
-    <link rel="shortcut icon" href="<?=ROOT?>/assets/images/favicon.svg" type="image/x-icon">
+    <link rel="icon" href="<?=ROOT?>/assets/images/atelier-logo.png" type="image/png">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/snackbarStyle.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/dripicons/webfont.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/pages/dripicons.css">

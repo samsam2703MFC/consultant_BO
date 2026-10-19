@@ -46,7 +46,11 @@ $root = rtrim(ROOT, '/');
     </section>
 </div>
 <?php $this->view('page_components/footer'); ?>
+<?php // Oficjalny generator PDF Ministerstwa Finansów : plik spoza repozytorium (katalogi vendor/ są pomijane
+      // przez .gitignore) — bez niego przycisk PDF wyjaśnia brak zamiast błędu skryptu. ?>
+<?php if (is_file(__DIR__ . '/../../../public/assets/vendor/ksef-pdf-generator/ksef-fe-invoice-converter.min.js')): ?>
 <script src="<?= $root ?>/assets/vendor/ksef-pdf-generator/ksef-fe-invoice-converter.min.js"></script>
+<?php endif; ?>
 <script>
 (() => {
     const root = <?= json_encode($root) ?>;
@@ -73,7 +77,7 @@ $root = rtrim(ROOT, '/');
 
     async function downloadOfficialPdf(button) {
         const converter = window['ksef-fe-invoice-converter'];
-        if (!converter || typeof converter.generateInvoice !== 'function') throw new Error('Nie udało się załadować oficjalnego generatora PDF KSeF.');
+        if (!converter || typeof converter.generateInvoice !== 'function') throw new Error('Brak oficjalnego generatora PDF KSeF na tym serwerze (plik assets/vendor/ksef-pdf-generator) — pobierz XML.');
         const ksefNumber = button.dataset.ksefNumber;
         const response = await fetch(root + '/settings/ksef/purchase-invoices/' + encodeURIComponent(ksefNumber), {credentials:'same-origin'});
         if (!response.ok) throw new Error((await response.text()) || 'Nie udało się pobrać XML z KSeF.');
