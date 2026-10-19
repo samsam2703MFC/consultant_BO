@@ -23,6 +23,11 @@ ERP_URL="${ERP_URL:-http://185.180.206.46${ERP_ALIAS}}"
 ERP_DB_NAME="${ERP_DB_NAME:-erp_production}"
 ERP_DB_USER="${ERP_DB_USER:-erp_production}"
 ERP_IMPORT_DIR="${ERP_IMPORT_DIR:-/root/erp_import}"
+# Serveur de test : compte ouvert par un bouton « Entrer », sans mot de passe ERP.
+# Accepté seulement derrière le mot de passe navigateur (deploy/acces_test.htpasswd).
+ERP_ENTREE_LIBRE="${ERP_ENTREE_LIBRE:-}"
+HTPASSWD_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/acces_test.htpasswd"
+HTPASSWD="/etc/apache2/production-erp.htpasswd"
 APACHE_CONF="/etc/apache2/conf-available/production-erp.conf"
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -158,6 +163,17 @@ set_env() {
     file_put_contents($f, $s);' "$ENV_FILE" "$1" "$2"
 }
 
+if [[ -n "$ERP_ENTREE_LIBRE" && ! -f "$HTPASSWD_SRC" ]]; then
+  warn "ERP_ENTREE_LIBRE ignoré : pas de mot de passe navigateur (deploy/acces_test.htpasswd), l'ERP garde ses mots de passe."
+  ERP_ENTREE_LIBRE=""
+fi
+[[ "$(envget ENTREE_LIBRE)" == "$ERP_ENTREE_LIBRE" ]] || set_env ENTREE_LIBRE "$ERP_ENTREE_LIBRE"
+if [[ -n "$ERP_ENTREE_LIBRE" ]]; then
+  log "Entrée : mot de passe navigateur, puis bouton « Entrer » (compte ${ERP_ENTREE_LIBRE})."
+else
+  log "Entrée : login et mot de passe de l'ERP."
+fi
+
 "${ADMIN[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" \
   || fail "Le compte MySQL ${ADMIN_KIND} ne peut pas créer la base ${ERP_DB_NAME} : créez-la à la main puis relancez."
 grant_err="$(mktemp)"
@@ -292,6 +308,22 @@ if grep -rlsE "^\s*Alias\s+${ERP_ALIAS}(\s|/)" /etc/apache2/sites-enabled /etc/a
      | grep -v "production-erp.conf" | grep -q .; then
   fail "Un autre site Apache utilise déjà ${ERP_ALIAS} : rien n'a été modifié."
 fi
+# Mot de passe navigateur (Basic Auth) : seule son empreinte bcrypt est dans le dépôt.
+# Le serveur lui-même (127.0.0.1) passe sans, pour la recette ci-dessous.
+if [[ -f "$HTPASSWD_SRC" ]]; then
+  install -m 640 -o root -g www-data "$HTPASSWD_SRC" "$HTPASSWD"
+  a2enmod auth_basic authn_file authz_user >/dev/null 2>&1 || true
+  ACCESS="    AuthType Basic
+    AuthName \"ERP test\"
+    AuthUserFile ${HTPASSWD}
+    <RequireAny>
+        Require ip 127.0.0.1 ::1
+        Require valid-user
+    </RequireAny>"
+else
+  rm -f "$HTPASSWD"
+  ACCESS="    Require all granted"
+fi
 newconf="$(mktemp)"
 cat > "$newconf" <<APACHE
 # ERP (apps/production de consultant_BO) — écrit par apps/production/deploy/server.sh
@@ -299,7 +331,7 @@ Alias ${ERP_ALIAS} ${ERP_TARGET}/app/public
 <Directory ${ERP_TARGET}/app/public>
     Options -Indexes +FollowSymLinks
     AllowOverride None
-    Require all granted
+${ACCESS}
     RewriteEngine On
     RewriteBase ${ERP_ALIAS}/
     RewriteRule ^api/(.*)$ api.php [QSA,L]
@@ -331,9 +363,18 @@ body="$(mktemp)"
 code="$(curl -s -o "$body" -w '%{http_code}' "http://127.0.0.1${ERP_ALIAS}/" || true)"
 if [[ ! -f "$IMPORT_OK" ]]; then
   log "Recette sautée : la base n'est pas encore importée."
-elif [[ "$code" == "200" ]] && grep -q 'name="password"' "$body"; then
+elif [[ "$code" == "200" ]] && grep -qE 'name="password"|>Entrer<' "$body"; then
   code2="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${ERP_ALIAS}/client-orders" || true)"
   [[ "$code2" == "302" ]] || fail "${ERP_ALIAS}/client-orders sans session répond HTTP ${code2} (302 attendu)."
+  if [[ -n "$ERP_ENTREE_LIBRE" ]]; then
+    jar="$(mktemp)"
+    code3="$(curl -s -c "$jar" -b "$jar" -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1${ERP_ALIAS}/" || true)"
+    code4="$(curl -s -b "$jar" -o /dev/null -w '%{http_code}' "http://127.0.0.1${ERP_ALIAS}/client-orders" || true)"
+    rm -f "$jar"
+    [[ "$code3" == "302" && "$code4" == "200" ]] \
+      || fail "Bouton « Entrer » : POST ${code3} puis /client-orders ${code4} (302 puis 200 attendus)."
+    log "Recette OK : le bouton « Entrer » ouvre l'ERP."
+  fi
   log "Recette OK : page de connexion servie, pages protégées. ERP disponible sur ${ERP_URL}/"
 else
   head -c 600 "$body"; echo

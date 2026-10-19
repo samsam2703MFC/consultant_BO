@@ -30,6 +30,12 @@
                     </div>
                 </div>
 
+                <?php if (!empty($entreeLibre)): ?>
+                <form method="POST">
+                    <p class="text-muted">Serveur de test : accès sans mot de passe.</p>
+                    <button type="submit" class="btn btn-primary btn-block btn-lg shadow-lg mt-5">Entrer</button>
+                </form>
+                <?php else: ?>
                 <form method="POST">
                     <div class="form-group position-relative has-icon-left mb-4">
                         <input value="<?=old_value('login')?>" type="text" class="form-control form-control-xl" placeholder="Login" name="login">
@@ -45,6 +51,7 @@
                     </div>
                     <button type="submit" class="btn btn-primary btn-block btn-lg shadow-lg mt-5">Zaloguj</button>
                 </form>
+                <?php endif; ?>
 
             </div>
         </div>

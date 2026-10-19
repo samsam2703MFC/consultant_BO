@@ -34,6 +34,9 @@ env:
   PWA_BASE: "http://185.180.206.46/pwa_consultant"
   APP_BASE: "http://185.180.206.46/consulant_bo"
   ERP_URL: "http://185.180.206.46/production"
+  # Serveur de test : après le mot de passe navigateur (apps/production/deploy/acces_test.htpasswd),
+  # un bouton « Entrer » ouvre l'ERP sur ce compte. Vide : login et mot de passe de l'ERP.
+  ERP_ENTREE_LIBRE: "admin"
 
 jobs:
   deploy:
@@ -153,12 +156,15 @@ jobs:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "ERP_URL='${ERP_URL}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
+            "ERP_URL='${ERP_URL}' ERP_ENTREE_LIBRE='${ERP_ENTREE_LIBRE}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
+          # Avec le mot de passe navigateur, l'extérieur sans identifiants doit recevoir 401.
+          expected=200
+          [ -f apps/production/deploy/acces_test.htpasswd ] && expected=401
           code=$(curl -s -o /dev/null -w '%{http_code}' "${ERP_URL}/")
-          if [ "$code" != "200" ]; then
-            echo "::error title=ERP::${ERP_URL}/ répond HTTP ${code} depuis l'extérieur (200 attendu)"; exit 1
+          if [ "$code" != "$expected" ]; then
+            echo "::error title=ERP::${ERP_URL}/ répond HTTP ${code} depuis l'extérieur (${expected} attendu)"; exit 1
           fi
-          echo "OK  ${ERP_URL}/ répond depuis l'extérieur"
+          echo "OK  ${ERP_URL}/ répond ${code} depuis l'extérieur"
 
       - name: Recette publique (endpoints depuis le runner)
         run: |

@@ -16,13 +16,30 @@ class LoginController extends BaseController
         $this->loginService = $loginService;
     }
 
+    /** Konto otwierane bez hasła (ENTREE_LIBRE w .env — tylko serwer testowy); pusty = zwykłe logowanie */
+    private function entreeLibre(): string
+    {
+        return trim((string) ($_ENV['ENTREE_LIBRE'] ?? getenv('ENTREE_LIBRE') ?: ''));
+    }
+
     public function index()
     {
-        $this->view('auth/login', []);
+        $this->view('auth/login', ['entreeLibre' => $this->entreeLibre() !== '']);
     }
 
     public function login()
     {
+        $libre = $this->entreeLibre();
+        if ($libre !== '') {
+            if ($this->loginService->loginWithoutPassword($libre)) {
+                header('Location: ' . ROOT . '/dashboard');
+                return;
+            }
+            $this->errors[] = "Konto " . htmlspecialchars($libre) . " nie istnieje.";
+            $this->view('auth/login', ['entreeLibre' => true]);
+            return;
+        }
+
         $login = trim((string) ($_POST['login'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
 

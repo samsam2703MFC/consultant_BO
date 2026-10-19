@@ -30,6 +30,19 @@ class LoginService
         return false;
     }
 
+    /** Logowanie bez hasła — tylko gdy ENTREE_LIBRE jest ustawione (serwer testowy). */
+    public function loginWithoutPassword(string $login): bool
+    {
+        $row = $this->userRepository->first(['login' => $login]);
+
+        if ($row) {
+            $this->userRepository->authenticate($row);
+            return true;
+        }
+
+        return false;
+    }
+
     public function logout()
     {
         return $this->userRepository->logout();
