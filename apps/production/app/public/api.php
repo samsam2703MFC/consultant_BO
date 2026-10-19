@@ -37,6 +37,15 @@ if ($basePath !== '' && str_starts_with($uri, $basePath . '/')) {
 // 4) kosmetyka
 $uri = '/' . ltrim($uri, '/');
 
+// 5) moduł produkcji pracowni: własne JWT, uprawnienia i format błędów
+if ($uri === \App\Core\Routes\Api\WorkshopApiRoutes::PREFIX || str_starts_with($uri, \App\Core\Routes\Api\WorkshopApiRoutes::PREFIX . '/')) {
+    ini_set('display_errors', '0');
+    $container->get(\App\Core\Api\Workshop\WorkshopApiKernel::class)
+        ->handle(\Symfony\Component\HttpFoundation\Request::createFromGlobals(), $uri)
+        ->send();
+    exit;
+}
+
 $routeInfo = $dispatcher->dispatch($httpMethod, $uri);
 
 switch ($routeInfo[0]) {

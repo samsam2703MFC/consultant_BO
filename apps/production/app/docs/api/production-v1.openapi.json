@@ -1,0 +1,3251 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "TFB — API produkcji / API production atelier",
+        "version": "1.0.0",
+        "description": "Moduł zarządzania produkcją w pracowni centralnej (Wrocław).\nModule de gestion de production de l'atelier central (Wrocław).\n\nAuthentification : POST /auth/login renvoie un jeton d'accès (JWT, court) et un jeton de renouvellement (usage unique, rotation). Envoyez le jeton d'accès dans « Authorization: Bearer … », ou dans « X-Access-Token » si Authorization est déjà utilisé par un mot de passe navigateur.\nLangue des messages : en-tête Accept-Language ou ?lang=pl|fr (polonais par défaut)."
+    },
+    "servers": [
+        {
+            "url": "{apiBaseUrl}/api/v1/production",
+            "variables": {
+                "apiBaseUrl": {
+                    "default": "https://erp.example",
+                    "description": "API_BASE_URL (.env)"
+                }
+            }
+        }
+    ],
+    "tags": [
+        {
+            "name": "auth",
+            "description": "Logowanie / Connexion"
+        },
+        {
+            "name": "referentiels",
+            "description": "Grupy, stanowiska, zmiany, zespoły, pracownicy, parametry / Groupes, postes, shifts, équipes, employés, paramètres"
+        },
+        {
+            "name": "docs",
+            "description": "OpenAPI"
+        }
+    ],
+    "paths": {
+        "/openapi.json": {
+            "get": {
+                "tags": [
+                    "docs"
+                ],
+                "summary": "Opis OpenAPI / Description OpenAPI",
+                "operationId": "openapi",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OpenApiDocument"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": []
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logowanie kontem ERP / Connexion avec un compte de l'ERP",
+                "operationId": "login",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Tokens"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/Error429"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/Error503"
+                    }
+                },
+                "description": "Le compte doit avoir au moins un rôle du module (tfb_prod_user_role). Après auth.max_failed_logins échecs en auth.lockout_window_min minutes : 429.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginInput"
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Odśwież tokeny / Renouveler les jetons",
+                "operationId": "refresh",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Tokens"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/Error503"
+                    }
+                },
+                "description": "Usage unique : le jeton présenté est remplacé. Un jeton déjà utilisé qui revient révoque toute sa famille.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RefreshInput"
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Wyloguj / Déconnexion (révoque le jeton de renouvellement)",
+                "operationId": "logout",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LogoutResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RefreshInput"
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Bieżący użytkownik, role i uprawnienia / Utilisateur courant, rôles et permissions",
+                "operationId": "me",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Me"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ]
+            }
+        },
+        "/referentiels/groups": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Lista / Liste — grupy produkcyjne / groupes de production",
+                "operationId": "listGroups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Group"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "post": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Utwórz / Créer — grupy produkcyjne / groupes de production",
+                "operationId": "createGroup",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Group"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/groups/{id}": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Szczegóły / Détail — grupy produkcyjne / groupes de production",
+                "operationId": "getGroup",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Group"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "patch": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zmień / Modifier — grupy produkcyjne / groupes de production (częściowo / partiel)",
+                "operationId": "updateGroup",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Group"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/workstations": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Lista / Liste — stanowiska / postes de travail",
+                "operationId": "listWorkstations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Workstation"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "machine",
+                                "four",
+                                "robot",
+                                "manuel",
+                                "fermentation",
+                                "froid",
+                                "surgelation"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "post": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Utwórz / Créer — stanowiska / postes de travail",
+                "operationId": "createWorkstation",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Workstation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkstationInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/workstations/{id}": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Szczegóły / Détail — stanowiska / postes de travail",
+                "operationId": "getWorkstation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Workstation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "patch": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zmień / Modifier — stanowiska / postes de travail (częściowo / partiel)",
+                "operationId": "updateWorkstation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Workstation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkstationInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/shift-templates": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Lista / Liste — zmiany / modèles de shift",
+                "operationId": "listShiftTemplates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ShiftTemplate"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "post": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Utwórz / Créer — zmiany / modèles de shift",
+                "operationId": "createShiftTemplate",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ShiftTemplate"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShiftTemplateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/shift-templates/{id}": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Szczegóły / Détail — zmiany / modèles de shift",
+                "operationId": "getShiftTemplate",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ShiftTemplate"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "patch": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zmień / Modifier — zmiany / modèles de shift (częściowo / partiel)",
+                "operationId": "updateShiftTemplate",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ShiftTemplate"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShiftTemplateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/teams": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Lista / Liste — zespoły / équipes",
+                "operationId": "listTeams",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Team"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "shift_template_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "post": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Utwórz / Créer — zespoły / équipes",
+                "operationId": "createTeam",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Team"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TeamInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/teams/{id}": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Szczegóły / Détail — zespoły / équipes",
+                "operationId": "getTeam",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Team"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "patch": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zmień / Modifier — zespoły / équipes (częściowo / partiel)",
+                "operationId": "updateTeam",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Team"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TeamInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/teams/{id}/members": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Członkowie zespołu / Membres de l'équipe",
+                "operationId": "listTeamMembers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TeamMember"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "put": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zastąp członków / Remplacer les membres",
+                "operationId": "replaceTeamMembers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TeamMember"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TeamMembersInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/employees": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Pracownicy pracowni / Employés de l'atelier",
+                "operationId": "listEmployees",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Employee"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            }
+        },
+        "/referentiels/employees/{id}": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Pracownik (id ERP) / Employé (id ERP)",
+                "operationId": "getEmployee",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Employee"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "patch": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Profil produkcyjny pracownika / Profil de production d'un employé",
+                "operationId": "updateEmployee",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Employee"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmployeeInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/referentiels/params": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Parametry [PARAM] / Paramètres [PARAM]",
+                "operationId": "listParams",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Param"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            }
+        },
+        "/referentiels/params/{code}": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Parametr / Paramètre",
+                "operationId": "getParam",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Param"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "load.target_pct"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            },
+            "patch": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zmień wartość parametru / Modifier un paramètre",
+                "operationId": "updateParam",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Param"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "load.target_pct"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParamInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.params.write"
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            },
+            "accessTokenHeader": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Access-Token"
+            }
+        },
+        "parameters": {
+            "Lang": {
+                "name": "lang",
+                "in": "query",
+                "required": false,
+                "description": "Język komunikatów / Langue des messages (sinon Accept-Language)",
+                "schema": {
+                    "type": "string",
+                    "enum": [
+                        "pl",
+                        "fr"
+                    ]
+                }
+            }
+        },
+        "responses": {
+            "Error400": {
+                "description": "INVALID_JSON",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error401": {
+                "description": "UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error403": {
+                "description": "FORBIDDEN / NO_PRODUCTION_ROLE",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error404": {
+                "description": "NOT_FOUND / ROUTE_NOT_FOUND",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error409": {
+                "description": "DUPLICATE_CODE",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error422": {
+                "description": "VALIDATION_FAILED",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error429": {
+                "description": "TOO_MANY_ATTEMPTS",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error500": {
+                "description": "INTERNAL_ERROR",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error503": {
+                "description": "AUTH_NOT_CONFIGURED",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            }
+        },
+        "schemas": {
+            "Error": {
+                "type": "object",
+                "required": [
+                    "status",
+                    "description",
+                    "message",
+                    "request_id"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "error"
+                        ]
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "VALIDATION_FAILED"
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Nieprawidłowe dane — popraw zaznaczone pola."
+                    },
+                    "request_id": {
+                        "type": "string"
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FieldError"
+                        }
+                    }
+                }
+            },
+            "FieldError": {
+                "type": "object",
+                "required": [
+                    "field",
+                    "code",
+                    "message"
+                ],
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "example": "robot_mode"
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "ROBOT_MODE_REQUIRED"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                }
+            },
+            "OpenApiDocument": {
+                "type": "object",
+                "additionalProperties": true
+            },
+            "LoginInput": {
+                "type": "object",
+                "required": [
+                    "login",
+                    "password"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "login": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password"
+                    }
+                }
+            },
+            "RefreshInput": {
+                "type": "object",
+                "required": [
+                    "refresh_token"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "refresh_token": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                }
+            },
+            "Tokens": {
+                "type": "object",
+                "properties": {
+                    "access_token": {
+                        "type": "string"
+                    },
+                    "token_type": {
+                        "type": "string",
+                        "enum": [
+                            "Bearer"
+                        ]
+                    },
+                    "expires_in": {
+                        "type": "integer",
+                        "example": 900
+                    },
+                    "refresh_token": {
+                        "type": "string"
+                    },
+                    "refresh_expires_in": {
+                        "type": "integer",
+                        "example": 2592000
+                    }
+                }
+            },
+            "LogoutResult": {
+                "type": "object",
+                "properties": {
+                    "logged_out": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Me": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "login": {
+                        "type": "string"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "Group": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "name_pl ou name_fr selon la langue"
+                    },
+                    "name_pl": {
+                        "type": "string"
+                    },
+                    "name_fr": {
+                        "type": "string"
+                    },
+                    "color": {
+                        "type": "string",
+                        "example": "#8D1D2C"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    },
+                    "section_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "production_sections.id (koszty / coûts)"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    }
+                }
+            },
+            "GroupInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "code",
+                    "name_pl",
+                    "name_fr"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "name_pl": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "name_fr": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "color": {
+                        "type": "string",
+                        "pattern": "^#[0-9A-Fa-f]{6}$"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "section_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Workstation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "group_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "name_pl": {
+                        "type": "string"
+                    },
+                    "name_fr": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "machine",
+                            "four",
+                            "robot",
+                            "manuel",
+                            "fermentation",
+                            "froid",
+                            "surgelation"
+                        ]
+                    },
+                    "robot_mode": {
+                        "type": "string",
+                        "enum": [
+                            "autonome",
+                            "avec_operateur"
+                        ],
+                        "nullable": true
+                    },
+                    "night_compatible": {
+                        "type": "boolean",
+                        "description": "robot autonome uniquement"
+                    },
+                    "capacity_per_pass": {
+                        "type": "number"
+                    },
+                    "capacity_unit": {
+                        "type": "string",
+                        "example": "plaque"
+                    },
+                    "hourly_cost": {
+                        "type": "number"
+                    },
+                    "photo_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "lien direct Cloudflare R2"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "shift_availability": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "shift_template_id": {
+                                    "type": "integer"
+                                },
+                                "code": {
+                                    "type": "string"
+                                },
+                                "available": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    }
+                }
+            },
+            "WorkstationInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "code",
+                    "group_id",
+                    "name_pl",
+                    "name_fr",
+                    "type"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "group_id": {
+                        "type": "integer"
+                    },
+                    "name_pl": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "name_fr": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "machine",
+                            "four",
+                            "robot",
+                            "manuel",
+                            "fermentation",
+                            "froid",
+                            "surgelation"
+                        ]
+                    },
+                    "robot_mode": {
+                        "type": "string",
+                        "enum": [
+                            "autonome",
+                            "avec_operateur"
+                        ],
+                        "nullable": true,
+                        "description": "obligatoire si type = robot, interdit sinon"
+                    },
+                    "capacity_per_pass": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                    },
+                    "capacity_unit": {
+                        "type": "string",
+                        "description": "une des valeurs du paramètre workstation.capacity_units"
+                    },
+                    "hourly_cost": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "photo_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "shift_availability": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "shift_template_id",
+                                "available"
+                            ],
+                            "properties": {
+                                "shift_template_id": {
+                                    "type": "integer"
+                                },
+                                "available": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ShiftTemplate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "name_pl": {
+                        "type": "string"
+                    },
+                    "name_fr": {
+                        "type": "string"
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "example": "22:00"
+                    },
+                    "end_time": {
+                        "type": "string",
+                        "example": "06:00"
+                    },
+                    "crosses_midnight": {
+                        "type": "boolean"
+                    },
+                    "duration_minutes": {
+                        "type": "integer",
+                        "example": 480
+                    },
+                    "active_days": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    "premium_pct": {
+                        "type": "number",
+                        "example": 20
+                    },
+                    "is_night": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    }
+                }
+            },
+            "ShiftTemplateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "code",
+                    "name_pl",
+                    "name_fr",
+                    "start_time",
+                    "end_time"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "name_pl": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "name_fr": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "pattern": "^\\d{2}:\\d{2}$"
+                    },
+                    "end_time": {
+                        "type": "string",
+                        "pattern": "^\\d{2}:\\d{2}$"
+                    },
+                    "active_days": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    "premium_pct": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 200
+                    },
+                    "is_night": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Team": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "group_id": {
+                        "type": "integer"
+                    },
+                    "shift_template_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "planned_headcount": {
+                        "type": "integer"
+                    },
+                    "member_count": {
+                        "type": "integer"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    }
+                }
+            },
+            "TeamInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "code",
+                    "group_id",
+                    "shift_template_id",
+                    "name"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,32}$",
+                        "example": "VIENNOISERIE"
+                    },
+                    "group_id": {
+                        "type": "integer"
+                    },
+                    "shift_template_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "planned_headcount": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 500
+                    },
+                    "active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "TeamMember": {
+                "type": "object",
+                "properties": {
+                    "production_employee_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "surname": {
+                        "type": "string"
+                    },
+                    "is_lead": {
+                        "type": "boolean"
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_to": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "level_order": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "level_name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "TeamMembersInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "members"
+                ],
+                "properties": {
+                    "members": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "production_employee_id"
+                            ],
+                            "properties": {
+                                "production_employee_id": {
+                                    "type": "integer"
+                                },
+                                "is_lead": {
+                                    "type": "boolean"
+                                },
+                                "valid_from": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "valid_to": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "Employee": {
+                "type": "object",
+                "properties": {
+                    "production_employee_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "surname": {
+                        "type": "string"
+                    },
+                    "section_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "has_profile": {
+                        "type": "boolean"
+                    },
+                    "panel_employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "primary_group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "level_order": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "level_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "level_synced_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "night_supervisor": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "EmployeeInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "panel_employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "primary_group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "level_order": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "level_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    },
+                    "night_supervisor": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Param": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "load.target_pct"
+                    },
+                    "value": {
+                        "description": "typé selon value_type"
+                    },
+                    "default_value": {
+                        "description": "typé selon value_type"
+                    },
+                    "is_default": {
+                        "type": "boolean"
+                    },
+                    "value_type": {
+                        "type": "string",
+                        "enum": [
+                            "int",
+                            "decimal",
+                            "string",
+                            "bool",
+                            "time",
+                            "json"
+                        ]
+                    },
+                    "unit": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "description_pl": {
+                        "type": "string"
+                    },
+                    "description_fr": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "example": "2026-10-19 14:58:04"
+                    }
+                }
+            },
+            "ParamInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "value"
+                ],
+                "properties": {
+                    "value": {
+                        "description": "nombre, texte, booléen, heure HH:MM ou JSON selon value_type"
+                    }
+                }
+            }
+        }
+    }
+}
