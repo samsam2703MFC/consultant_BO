@@ -51,10 +51,10 @@
                                 <td><?= $total_material_cost ?> zł</td>
                                 <td><?= $total_employee_cost ?> zł</td>
                                 <td><?= $total_cost_without_employee_and_material ?> zł</td>
-                                <td style="background-color: #FDEDEC"><?= number_format($total_cost, 2, '.', ' ') ?>
+                                <td style="background-color: #FDEDEC"><?= number_format($total_cost, 2, ',', ' ') ?>
                                     zł
                                 </td>
-                                <td style="background-color: #EAFAF1"><?= number_format($total_earning, 2, '.', ' ') ?>
+                                <td style="background-color: #EAFAF1"><?= number_format($total_earning, 2, ',', ' ') ?>
                                     zł
                                 </td>
                                 <td style="background-color: #FEF9E7"><?= $quota_margin ?> zł</td>

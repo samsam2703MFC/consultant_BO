@@ -64,7 +64,7 @@
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">Łączna wartość sprzedaży</div>
                     <div class="fs-4 fw-bold text-success">
-                        {{ summary.total_value|number_format(2, '.', ' ') }} €
+                        {{ summary.total_value|number_format(2, ',', ' ') }} €
                     </div>
                 </div>
             </div>
@@ -157,10 +157,10 @@
                                 <strong>{{ product.product_name }}</strong>
                             </td>
                             <td><span class="badge bg-light text-dark">{{ product.category_name }}</span></td>
-                            <td class="text-end">{{ product.avg_quantity|number_format(1, '.', ' ') }}</td>
-                            <td class="text-end fw-bold">{{ product.avg_value|number_format(2, '.', ' ') }} €</td>
+                            <td class="text-end">{{ product.avg_quantity|number_format(1, ',', ' ') }}</td>
+                            <td class="text-end fw-bold">{{ product.avg_value|number_format(2, ',', ' ') }} €</td>
                             <td class="text-end text-muted">{{ product.total_quantity }}</td>
-                            <td class="text-end text-muted">{{ product.total_value|number_format(2, '.', ' ') }} €</td>
+                            <td class="text-end text-muted">{{ product.total_value|number_format(2, ',', ' ') }} €</td>
                             <td class="text-end text-muted">{{ product.months_count }}</td>
                         </tr>
                         {% else %}

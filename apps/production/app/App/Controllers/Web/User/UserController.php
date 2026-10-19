@@ -43,7 +43,7 @@ class UserController extends BaseController
         $data['row'] = $this->userService->getById($id);
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            $this->errors = $this->userService->validate($_POST);
+            $this->errors = $this->userService->validate($_POST, false);
 
             if (empty($this->errors)) {
                 $this->handleAction(function () use ($id) {

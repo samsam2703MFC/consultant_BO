@@ -41,13 +41,13 @@
                                         Nazwa
                                     </label>
                                     <input value="<?= old_value('name') ?>" type="text" class="form-control" id="name"
-                                           name="name" placeholder="Nazwa">
+                                           name="name" placeholder="Nazwa" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="id_category">
                                         Kategoria
                                     </label>
-                                    <select class="form-select choices" name="id_category" id="id_category">
+                                    <select class="form-select choices" name="id_category" id="id_category" required>
                                         <?php if (!empty($category_product)): ?>
                                             <?php foreach ($category_product as $category): ?>
                                                 <option value="<?= $category['id'] ?>" <?= old_select('id_category', $category['id']) ?> ><?= $category['name'] ?></option>
@@ -59,7 +59,7 @@
                                     <label class="form-label" for="id_section">
                                         Dział produkcyjny
                                     </label>
-                                    <select class="form-select choices" name="id_section" id="id_section">
+                                    <select class="form-select choices" name="id_section" id="id_section" required>
                                         <?php if (!empty($production_sections)): ?>
                                             <?php foreach ($production_sections as $section): ?>
                                                 <option value="<?= $section['id'] ?>" <?= old_select('id_section', $section['id']) ?>><?= $section['name'] ?></option>
@@ -72,7 +72,7 @@
                                         Waga produktu
                                     </label>
                                     <input value="<?= old_value('weight') ?>" type="number" class="form-control"
-                                           id="weight" name="weight" placeholder="Waga">
+                                           id="weight" name="weight" placeholder="Waga" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="label_type">
@@ -93,7 +93,7 @@
                                     </label>
                                     <input value="<?= old_value('shelf_life') ?>" type="number" class="form-control"
                                            id="shelf_life" name="shelf_life"
-                                           placeholder="Czas przydatności do spożycia">
+                                           placeholder="Czas przydatności do spożycia" required>
                                 </div>
                             </div>
                             <div class="col-1"></div>
@@ -103,49 +103,49 @@
                                         Ilość sztuk w kartonie
                                     </label>
                                     <input value="<?= old_value('ppc') ?>" type="number" class="form-control" id="ppc"
-                                           name="ppc" placeholder="0">
+                                           name="ppc" placeholder="0" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="ppb">
                                         Ilość sztuk w opakowaniu
                                     </label>
                                     <input value="<?= old_value('ppb') ?>" type="number" class="form-control" id="ppb"
-                                           name="ppb" placeholder="0">
+                                           name="ppb" placeholder="0" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="bpc">
                                         Ilość opakowań w kartonie
                                     </label>
                                     <input value="<?= old_value('bpc') ?>" type="number" class="form-control" id="bpc"
-                                           name="bpc" placeholder="0">
+                                           name="bpc" placeholder="0" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="cpl">
                                         Ilość kartonów/warstwa
                                     </label>
                                     <input value="<?= old_value('cpl') ?>" type="number" class="form-control" id="cpl"
-                                           name="cpl" placeholder="0">
+                                           name="cpl" placeholder="0" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="lpp">
                                         Ilość warstw na palecie
                                     </label>
                                     <input value="<?= old_value('lpp') ?>" type="number" class="form-control" id="lpp"
-                                           name="lpp" placeholder="0">
+                                           name="lpp" placeholder="0" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="cpp">
                                         Ilość kartonów na palecie
                                     </label>
                                     <input value="<?= old_value('cpp') ?>" type="number" class="form-control" id="cpp"
-                                           name="cpp" placeholder="0">
+                                           name="cpp" placeholder="0" required>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="stock_minimum">
                                         Minimalny stan magazynowy
                                     </label>
                                     <input value="<?= old_value('stock_minimum') ?>" type="number" class="form-control"
-                                           id="stock_minimum" name="stock_minimum" placeholder="0">
+                                           id="stock_minimum" name="stock_minimum" placeholder="0" required>
                                 </div>
                             </div>
 

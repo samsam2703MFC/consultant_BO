@@ -43,17 +43,17 @@
                                         <tr>
                                             <td><button class="btn btn-outline-success" type="button" onclick="showHideRow('row_<?=$item['id_section']?>')">+</button></td>
                                             <td colspan="2"><?= $item['section_name'] ?></td>
-                                            <td style="background-color: #f8d7da"><?= number_format($item['employee_cost'], 2, '.', ' ') ?> zł</td>
-                                            <td style="background-color: #f8d7da"><?= number_format($item['cost_without_employee'], 2, '.', ' ') ?> zł</td>
-                                            <td style="background-color: #d4edda"><?= number_format($item['earning'], 2, '.', ' ') ?> zł</td>
-                                            <td><?= number_format($item['earning']-$item['cost_without_employee']-$item['employee_cost'],2,'.', ' ') ?> zł</td>
+                                            <td style="background-color: #f8d7da"><?= number_format($item['employee_cost'], 2, ',', ' ') ?> zł</td>
+                                            <td style="background-color: #f8d7da"><?= number_format($item['cost_without_employee'], 2, ',', ' ') ?> zł</td>
+                                            <td style="background-color: #d4edda"><?= number_format($item['earning'], 2, ',', ' ') ?> zł</td>
+                                            <td><?= number_format($item['earning']-$item['cost_without_employee']-$item['employee_cost'],2,',', ' ') ?> zł</td>
                                             <td>
                                                 <?php $earn_per_carton = $quantity_of_sold_carton > 0 ? ($item['earning'] / $quantity_of_sold_carton) : 0 ?>
-                                                <?= number_format($earn_per_carton, 2, '.', ' ') ?> zł
+                                                <?= number_format($earn_per_carton, 2, ',', ' ') ?> zł
                                             </td>
                                             <td>
                                                 <?php $cost_per_carton = $quantity_of_sold_carton > 0 ? (($item['cost_without_employee'] + $item['employee_cost']) / $quantity_of_sold_carton) : 0 ?>
-                                                <?= number_format($cost_per_carton,2, '.', ' ') ?> zł
+                                                <?= number_format($cost_per_carton,2, ',', ' ') ?> zł
                                             </td>
                                             <td>
                                                 <?php $ratio = $earn_per_carton > 0 ? (($earn_per_carton - $cost_per_carton) / $earn_per_carton)*100 : 0 ?>
@@ -84,17 +84,17 @@
                                     <td></td>
                                     <td></td>
                                     <td>Suma:</td>
-                                    <td><?=number_format($total_employee_cost, 2, '.', ' ')?> zł</td>
-                                    <td><?=number_format($total_cost_without_employee, 2, '.', ' ')?> zł</td>
-                                    <td><?=number_format($total_earning, 2, '.', ' ')?> zł</td>
-                                    <td><?= number_format($total_earning - $total_employee_cost - $total_cost_without_employee, 2, '.', ' ') ?> zł</td>
+                                    <td><?=number_format($total_employee_cost, 2, ',', ' ')?> zł</td>
+                                    <td><?=number_format($total_cost_without_employee, 2, ',', ' ')?> zł</td>
+                                    <td><?=number_format($total_earning, 2, ',', ' ')?> zł</td>
+                                    <td><?= number_format($total_earning - $total_employee_cost - $total_cost_without_employee, 2, ',', ' ') ?> zł</td>
                                     <td>
                                         <?php $total_earn_per_carton = $quantity_of_sold_carton > 0 ? ($total_earning / $quantity_of_sold_carton) : 0 ?>
-                                        <?= number_format($total_earn_per_carton, 2, '.', ' ') ?> zł
+                                        <?= number_format($total_earn_per_carton, 2, ',', ' ') ?> zł
                                     </td>
                                     <td>
                                         <?php $total_cost_per_carton = $quantity_of_sold_carton > 0 ? (($total_cost_without_employee + $total_employee_cost) / $quantity_of_sold_carton) : 0 ?>
-                                        <?= number_format($total_cost_per_carton, 2, '.', ' ') ?> zł
+                                        <?= number_format($total_cost_per_carton, 2, ',', ' ') ?> zł
                                     </td>
                                     <td>
                                         <?= $total_earn_per_carton > 0 ?

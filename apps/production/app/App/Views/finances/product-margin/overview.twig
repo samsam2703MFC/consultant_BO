@@ -118,7 +118,7 @@
             {% if analysis.data_basis is defined and analysis.data_basis.from %}
                 &nbsp;|&nbsp; <strong>{{ analysis.data_basis.from }} – {{ analysis.data_basis.to }}</strong>
             {% endif %}
-            &nbsp;|&nbsp; {{ translations.product_margin_exchange_rate|default('Kurs EUR') }}: <strong>{{ kpi.exchange_rate|number_format(4, '.', ' ') }} PLN</strong>
+            &nbsp;|&nbsp; {{ translations.product_margin_exchange_rate|default('Kurs EUR') }}: <strong>{{ kpi.exchange_rate|number_format(4, ',', ' ') }} PLN</strong>
         </div>
 
         {# ── MODAL: STRUKTURA FOODCOST ────────────────────────────────────── #}
@@ -292,11 +292,11 @@
                             </td>
                             <td class="text-end">
                                 <span id="eur_base_foodcost" class="fw-semibold">—</span> €
-                                <br><small class="text-muted">{{ kpi.foodcost|number_format(2, '.', ' ') }} PLN</small>
+                                <br><small class="text-muted">{{ kpi.foodcost|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
                                 <span id="eur_sim_foodcost" class="fw-semibold">—</span> €
-                                <br><small class="text-muted" id="sim_foodcost">{{ kpi.foodcost|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                                <br><small class="text-muted" id="sim_foodcost">{{ kpi.foodcost|number_format(2, ',', ' ') }}</small> <small class="text-muted">PLN</small>
                             </td>
                             <td class="text-end" id="sim_diff_foodcost">0,00</td>
                         </tr>
@@ -304,11 +304,11 @@
                             <td><span class="badge bg-warning me-1">&nbsp;</span>{{ translations.product_margin_media_cost|default('Media') }}</td>
                             <td class="text-end">
                                 <span id="eur_base_media" class="fw-semibold">—</span> €
-                                <br><small class="text-muted">{{ kpi.avg_media_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                                <br><small class="text-muted">{{ kpi.avg_media_per_carton|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
                                 <span id="eur_sim_media" class="fw-semibold">—</span> €
-                                <br><small class="text-muted" id="sim_media">{{ kpi.avg_media_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                                <br><small class="text-muted" id="sim_media">{{ kpi.avg_media_per_carton|number_format(2, ',', ' ') }}</small> <small class="text-muted">PLN</small>
                             </td>
                             <td class="text-end" id="sim_diff_media">0,00</td>
                         </tr>
@@ -316,11 +316,11 @@
                             <td><span class="badge bg-primary me-1">&nbsp;</span>{{ translations.product_margin_labor_cost|default('Wynagrodzenia') }}</td>
                             <td class="text-end">
                                 <span id="eur_base_labor" class="fw-semibold">—</span> €
-                                <br><small class="text-muted">{{ kpi.avg_labor_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                                <br><small class="text-muted">{{ kpi.avg_labor_per_carton|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
                                 <span id="eur_sim_labor" class="fw-semibold">—</span> €
-                                <br><small class="text-muted" id="sim_labor">{{ kpi.avg_labor_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                                <br><small class="text-muted" id="sim_labor">{{ kpi.avg_labor_per_carton|number_format(2, ',', ' ') }}</small> <small class="text-muted">PLN</small>
                             </td>
                             <td class="text-end" id="sim_diff_labor">0,00</td>
                         </tr>
@@ -328,11 +328,11 @@
                             <td><span class="badge bg-secondary me-1">&nbsp;</span>{{ translations.product_margin_other_cost|default('Koszty stałe') }}</td>
                             <td class="text-end">
                                 <span id="eur_base_other" class="fw-semibold">—</span> €
-                                <br><small class="text-muted">{{ kpi.avg_other_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                                <br><small class="text-muted">{{ kpi.avg_other_per_carton|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
                                 <span id="eur_sim_other" class="fw-semibold">—</span> €
-                                <br><small class="text-muted" id="sim_other">{{ kpi.avg_other_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                                <br><small class="text-muted" id="sim_other">{{ kpi.avg_other_per_carton|number_format(2, ',', ' ') }}</small> <small class="text-muted">PLN</small>
                             </td>
                             <td class="text-end" id="sim_diff_other">0,00</td>
                         </tr>
@@ -340,11 +340,11 @@
                             <td><span class="badge bg-dark me-1">&nbsp;</span>{{ translations.product_margin_logistics_cost|default('Logistyka') }}</td>
                             <td class="text-end">
                                 <span id="eur_base_logistics" class="fw-semibold">—</span> €
-                                <br><small class="text-muted">{{ kpi.avg_logistics_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                                <br><small class="text-muted">{{ kpi.avg_logistics_per_carton|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
                                 <span id="eur_sim_logistics" class="fw-semibold">—</span> €
-                                <br><small class="text-muted" id="sim_logistics">{{ kpi.avg_logistics_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted">PLN</small>
+                                <br><small class="text-muted" id="sim_logistics">{{ kpi.avg_logistics_per_carton|number_format(2, ',', ' ') }}</small> <small class="text-muted">PLN</small>
                             </td>
                             <td class="text-end" id="sim_diff_logistics">0,00</td>
                         </tr>
@@ -352,30 +352,30 @@
                             <td>{{ translations.product_margin_total_cost|default('Łączny koszt wytworzenia') }}</td>
                             <td class="text-end">
                                 <span id="eur_base_total" class="fw-semibold">—</span> €
-                                <br><small class="text-muted fw-normal">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</small>
+                                <br><small class="text-muted fw-normal">{{ kpi.total_cost_per_carton|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
                                 <span id="eur_sim_total" class="fw-semibold">—</span> €
-                                <br><small class="text-muted fw-normal" id="sim_total_cost">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }}</small> <small class="text-muted fw-normal">PLN</small>
+                                <br><small class="text-muted fw-normal" id="sim_total_cost">{{ kpi.total_cost_per_carton|number_format(2, ',', ' ') }}</small> <small class="text-muted fw-normal">PLN</small>
                             </td>
                             <td class="text-end" id="sim_diff_total">0,00</td>
                         </tr>
                         <tr class="table-light">
                             <td>{{ translations.product_margin_sale_price|default('Cena sprzedaży') }}</td>
                             <td class="text-end">
-                                <span class="fw-semibold">{{ kpi.sale_price_foreign|number_format(2, '.', ' ') }}</span> {{ kpi.sale_currency|default('EUR') }}
-                                <br><small class="text-muted">{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</small>
+                                <span class="fw-semibold">{{ kpi.sale_price_foreign|number_format(2, ',', ' ') }}</span> {{ kpi.sale_currency|default('EUR') }}
+                                <br><small class="text-muted">{{ kpi.sale_price_pln|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">
-                                <span class="fw-semibold">{{ kpi.sale_price_foreign|number_format(2, '.', ' ') }}</span> {{ kpi.sale_currency|default('EUR') }}
-                                <br><small class="text-muted">{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</small>
+                                <span class="fw-semibold">{{ kpi.sale_price_foreign|number_format(2, ',', ' ') }}</span> {{ kpi.sale_currency|default('EUR') }}
+                                <br><small class="text-muted">{{ kpi.sale_price_pln|number_format(2, ',', ' ') }} PLN</small>
                             </td>
                             <td class="text-end">–</td>
                         </tr>
                         <tr class="table-success fw-bold">
                             <td>{{ translations.product_margin_margin_pct|default('Marża %') }}</td>
-                            <td class="text-end">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</td>
-                            <td class="text-end" id="sim_margin_pct">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</td>
+                            <td class="text-end">{{ kpi.margin_percent|number_format(1, ',', ' ') }}%</td>
+                            <td class="text-end" id="sim_margin_pct">{{ kpi.margin_percent|number_format(1, ',', ' ') }}%</td>
                             <td class="text-end" id="sim_diff_margin_pct">0,0 pp</td>
                         </tr>
                         </tbody>
@@ -593,13 +593,13 @@
                             <tbody>
                             <tr>
                                 <td class="text-muted small">{{ translations.product_margin_sale_price|default('Cena (EUR)') }}</td>
-                                <td class="text-end">{{ kpi.sale_price_foreign|number_format(2, '.', ' ') }} EUR</td>
+                                <td class="text-end">{{ kpi.sale_price_foreign|number_format(2, ',', ' ') }} EUR</td>
                                 <td class="text-end fw-semibold text-success" id="pc_cmp_new_eur">—</td>
                                 <td class="text-end" id="pc_cmp_diff_eur">—</td>
                             </tr>
                             <tr>
                                 <td class="text-muted small">{{ translations.product_margin_sale_price|default('Cena (PLN)') }}</td>
-                                <td class="text-end">{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</td>
+                                <td class="text-end">{{ kpi.sale_price_pln|number_format(2, ',', ' ') }} PLN</td>
                                 <td class="text-end fw-semibold text-success" id="pc_cmp_new_pln">—</td>
                                 <td class="text-end" id="pc_cmp_diff_pln">—</td>
                             </tr>
@@ -611,7 +611,7 @@
                                 </td>
                                 <td class="text-end">
                                     {% if kpi.sale_price_foreign > 0 %}
-                                        {{ (kpi.sale_price_foreign / analysis.product.ppc)|number_format(3, '.', ' ') }} EUR
+                                        {{ (kpi.sale_price_foreign / analysis.product.ppc)|number_format(3, ',', ' ') }} EUR
                                     {% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
                                 <td class="text-end fw-semibold text-success" id="pc_cmp_new_eur_unit">—</td>
@@ -624,7 +624,7 @@
                                 </td>
                                 <td class="text-end">
                                     {% if kpi.sale_price_pln > 0 %}
-                                        {{ (kpi.sale_price_pln / analysis.product.ppc)|number_format(3, '.', ' ') }} PLN
+                                        {{ (kpi.sale_price_pln / analysis.product.ppc)|number_format(3, ',', ' ') }} PLN
                                     {% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
                                 <td class="text-end fw-semibold text-success" id="pc_cmp_new_pln_unit">—</td>
@@ -633,13 +633,13 @@
                             {% endif %}
                             <tr>
                                 <td class="text-muted small">{{ translations.product_margin_total_cost|default('Koszt wytworzenia') }}</td>
-                                <td class="text-end" id="pc_cmp_cost_base">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</td>
-                                <td class="text-end" id="pc_cmp_cost_sim">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</td>
+                                <td class="text-end" id="pc_cmp_cost_base">{{ kpi.total_cost_per_carton|number_format(2, ',', ' ') }} PLN</td>
+                                <td class="text-end" id="pc_cmp_cost_sim">{{ kpi.total_cost_per_carton|number_format(2, ',', ' ') }} PLN</td>
                                 <td class="text-end" id="pc_cmp_diff_cost">—</td>
                             </tr>
                             <tr class="fw-semibold">
                                 <td class="text-muted small">{{ translations.product_margin_margin_pct|default('Marża %') }}</td>
-                                <td class="text-end">{{ kpi.margin_percent|number_format(1, '.', ' ') }}%</td>
+                                <td class="text-end">{{ kpi.margin_percent|number_format(1, ',', ' ') }}%</td>
                                 <td class="text-end text-success" id="pc_cmp_new_margin">—</td>
                                 <td class="text-end" id="pc_cmp_diff_margin">—</td>
                             </tr>
@@ -658,7 +658,7 @@
 {#                <div class="card h-100 border-start border-4 border-info">#}
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_foodcost|default('Foodcost / karton') }}</div>#}
-{#                        <div class="fs-4 fw-bold text-info" id="kpi_foodcost">{{ kpi.foodcost|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="fs-4 fw-bold text-info" id="kpi_foodcost">{{ kpi.foodcost|number_format(2, ',', ' ') }} PLN</div>#}
 {#                        <div class="text-muted small">{{ translations.product_margin_foodcost_hint|default('Surowce wg receptury') }}</div>#}
 {#                    </div>#}
 {#                </div>#}
@@ -667,7 +667,7 @@
 {#                <div class="card h-100 border-start border-4 border-warning">#}
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_media_cost|default('Koszt mediów / karton') }}</div>#}
-{#                        <div class="fs-4 fw-bold text-warning" id="kpi_media">{{ kpi.avg_media_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="fs-4 fw-bold text-warning" id="kpi_media">{{ kpi.avg_media_per_carton|number_format(2, ',', ' ') }} PLN</div>#}
 {#                        <div class="text-muted small">{{ translations.product_margin_media_hint|default('Śr. alokacja mediów dla działu') }}</div>#}
 {#                    </div>#}
 {#                </div>#}
@@ -676,7 +676,7 @@
 {#                <div class="card h-100 border-start border-4 border-primary">#}
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_labor_cost|default('Wynagrodzenia / karton') }}</div>#}
-{#                        <div class="fs-4 fw-bold text-primary" id="kpi_labor">{{ kpi.avg_labor_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="fs-4 fw-bold text-primary" id="kpi_labor">{{ kpi.avg_labor_per_carton|number_format(2, ',', ' ') }} PLN</div>#}
 {#                        <div class="text-muted small">{{ translations.product_margin_labor_hint|default('Śr. koszty pracowników działu') }}</div>#}
 {#                    </div>#}
 {#                </div>#}
@@ -685,7 +685,7 @@
 {#                <div class="card h-100 border-start border-4 border-secondary">#}
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_other_cost|default('Amortyzacja / karton') }}</div>#}
-{#                        <div class="fs-4 fw-bold text-secondary" id="kpi_other">{{ kpi.avg_other_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="fs-4 fw-bold text-secondary" id="kpi_other">{{ kpi.avg_other_per_carton|number_format(2, ',', ' ') }} PLN</div>#}
 {#                        <div class="text-muted small">{{ translations.product_margin_other_hint|default('Amortyzacja działu') }}</div>#}
 {#                    </div>#}
 {#                </div>#}
@@ -694,7 +694,7 @@
 {#                <div class="card h-100 border-start border-4 border-dark">#}
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_logistics_cost|default('Logistyka / karton') }}</div>#}
-{#                        <div class="fs-4 fw-bold text-dark" id="kpi_logistics">{{ kpi.avg_logistics_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="fs-4 fw-bold text-dark" id="kpi_logistics">{{ kpi.avg_logistics_per_carton|number_format(2, ',', ' ') }} PLN</div>#}
 {#                        <div class="text-muted small">{{ translations.product_margin_logistics_hint|default('Śr. koszt logistyczny / karton (zakład)') }}</div>#}
 {#                    </div>#}
 {#                </div>#}
@@ -706,7 +706,7 @@
 {#                <div class="card h-100 border-start border-4 border-danger">#}
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_total_cost|default('Łączny koszt wytworzenia / karton') }}</div>#}
-{#                        <div class="fs-4 fw-bold text-danger" id="kpi_total_cost">{{ kpi.total_cost_per_carton|number_format(2, '.', ' ') }} PLN</div>#}
+{#                        <div class="fs-4 fw-bold text-danger" id="kpi_total_cost">{{ kpi.total_cost_per_carton|number_format(2, ',', ' ') }} PLN</div>#}
 {#                    </div>#}
 {#                </div>#}
 {#            </div>#}
@@ -715,9 +715,9 @@
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_sale_price|default('Śr. cena sprzedaży / karton') }}</div>#}
 {#                        <div class="fs-4 fw-bold">#}
-{#                            {{ kpi.sale_price_foreign|number_format(2, '.', ' ') }} {{ kpi.sale_currency|default('EUR') }}#}
+{#                            {{ kpi.sale_price_foreign|number_format(2, ',', ' ') }} {{ kpi.sale_currency|default('EUR') }}#}
 {#                        </div>#}
-{#                        <div class="text-muted small">= <strong>{{ kpi.sale_price_pln|number_format(2, '.', ' ') }} PLN</strong></div>#}
+{#                        <div class="text-muted small">= <strong>{{ kpi.sale_price_pln|number_format(2, ',', ' ') }} PLN</strong></div>#}
 {#                    </div>#}
 {#                </div>#}
 {#            </div>#}
@@ -726,7 +726,7 @@
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_margin_amount|default('Marża kwotowa / karton') }}</div>#}
 {#                        <div class="fs-4 fw-bold {% if kpi.margin_amount >= 0 %}text-success{% else %}text-danger{% endif %}" id="kpi_margin_amount">#}
-{#                            {{ kpi.margin_amount|number_format(2, '.', ' ') }} PLN#}
+{#                            {{ kpi.margin_amount|number_format(2, ',', ' ') }} PLN#}
 {#                        </div>#}
 {#                    </div>#}
 {#                </div>#}
@@ -736,7 +736,7 @@
 {#                    <div class="card-body">#}
 {#                        <div class="text-muted small">{{ translations.product_margin_margin_pct|default('Marża %') }}</div>#}
 {#                        <div class="fs-2 fw-bold {% if kpi.margin_percent >= 20 %}text-success{% elseif kpi.margin_percent >= 0 %}text-warning{% else %}text-danger{% endif %}" id="kpi_margin_pct">#}
-{#                            {{ kpi.margin_percent|number_format(1, '.', ' ') }}%#}
+{#                            {{ kpi.margin_percent|number_format(1, ',', ' ') }}%#}
 {#                        </div>#}
 {#                        {% if analysis.product.target_margin_percentage is defined and analysis.product.target_margin_percentage > 0 %}#}
 {#                            <div class="text-muted small">#}
@@ -782,7 +782,7 @@
 {#                                         style="width:{{ (sec.pct_of_total > 100 ? 100 : sec.pct_of_total)|number_format(1,'.','')|replace({',':''}) }}%"></div>#}
 {#                                </div>#}
 {#                                <div class="text-muted small">#}
-{#                                    {{ translations.product_margin_total_media|default('Łącznie mediów') }}: {{ sec.total|number_format(2, '.', ' ') }} PLN#}
+{#                                    {{ translations.product_margin_total_media|default('Łącznie mediów') }}: {{ sec.total|number_format(2, ',', ' ') }} PLN#}
 {#                                </div>#}
 {#                                <ul class="list-unstyled mb-0 mt-1">#}
 {#                                    {% for m in sec.media %}#}
@@ -822,8 +822,8 @@
 {#                            {% for item in analysis.media_breakdown %}#}
 {#                            <tr>#}
 {#                                <td>{{ item.name }} <small class="text-muted">({{ item.code }})</small></td>#}
-{#                                <td class="text-end">{{ item.total_allocated|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end">{{ item.avg_per_month|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ item.total_allocated|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end">{{ item.avg_per_month|number_format(2, ',', ' ') }}</td>#}
 {#                                <td class="text-end">#}
 {#                                    <div class="d-flex align-items-center justify-content-end gap-2">#}
 {#                                        <div class="progress flex-grow-1" style="height:8px;min-width:60px;">#}
@@ -869,8 +869,8 @@
 {#                            <tr>#}
 {#                                <td>{{ item.name }}</td>#}
 {#                                <td class="text-center"><span class="badge bg-light text-dark border">{{ item.code }}</span></td>#}
-{#                                <td class="text-end">{{ item.total|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end">{{ item.avg_per_month|number_format(2, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ item.total|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end">{{ item.avg_per_month|number_format(2, ',', ' ') }}</td>#}
 {#                                <td class="text-end">#}
 {#                                    <div class="d-flex align-items-center justify-content-end gap-2">#}
 {#                                        <div class="progress flex-grow-1" style="height:8px;min-width:60px;">#}
@@ -914,15 +914,15 @@
 {#                            {% for row in analysis.monthly_details %}#}
 {#                            <tr>#}
 {#                                <td>{{ row.year }}-{{ row.month }}</td>#}
-{#                                <td class="text-end">{{ row.media_cost|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end">{{ row.labor_cost|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end">{{ row.fixed_cost|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end">{{ row.logistics_cost|default(0)|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end fw-semibold">{{ row.total_cost|number_format(2, '.', ' ') }}</td>#}
-{#                                <td class="text-end">{{ row.cartons_qty|number_format(0, '.', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.media_cost|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.labor_cost|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.fixed_cost|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.logistics_cost|default(0)|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end fw-semibold">{{ row.total_cost|number_format(2, ',', ' ') }}</td>#}
+{#                                <td class="text-end">{{ row.cartons_qty|number_format(0, ',', ' ') }}</td>#}
 {#                                <td class="text-end {% if row.cost_per_carton > 0 %}text-info{% endif %}">#}
 {#                                    {% if row.cost_per_carton > 0 %}#}
-{#                                        {{ row.cost_per_carton|number_format(2, '.', ' ') }}#}
+{#                                        {{ row.cost_per_carton|number_format(2, ',', ' ') }}#}
 {#                                    {% else %}#}
 {#                                        <span class="text-muted">–</span>#}
 {#                                    {% endif %}#}

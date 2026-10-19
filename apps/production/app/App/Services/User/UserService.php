@@ -14,7 +14,8 @@ class UserService
         $this->userRepository = $userRepository;
     }
 
-    public function validate($data)
+    /** $passwordRequired = false przy edycji: puste hasło = bez zmiany. */
+    public function validate($data, bool $passwordRequired = true)
     {
         $errors = [];
 
@@ -46,7 +47,7 @@ class UserService
         {
             $errors['login'] = "Login jest wymagany";
         }
-        if(empty($data['password']))
+        if($passwordRequired && empty($data['password']))
         {
             $errors['password'] = "Hasło jest wymagane";
         }
@@ -75,6 +76,10 @@ class UserService
 
     public function update($id, $data)
     {
+        // Puste pole hasła w edycji: obecne hasło zostaje.
+        if (empty($data['password'])) {
+            unset($data['password']);
+        }
         return $this->userRepository->update($id, $data);
     }
 

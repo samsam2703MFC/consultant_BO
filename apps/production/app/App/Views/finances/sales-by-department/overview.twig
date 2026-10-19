@@ -67,11 +67,11 @@
                     <div class="row text-center mt-2">
                         <div class="col-6 border-end">
                             <div class="text-muted small">Kartony</div>
-                            <div class="fs-5 fw-bold">{{ s.total_quantity|number_format(0, '.', ' ') }}</div>
+                            <div class="fs-5 fw-bold">{{ s.total_quantity|number_format(0, ',', ' ') }}</div>
                         </div>
                         <div class="col-6">
                             <div class="text-muted small">Wartość</div>
-                            <div class="fs-5 fw-bold text-success">{{ s.total_value|number_format(2, '.', ' ') }} €</div>
+                            <div class="fs-5 fw-bold text-success">{{ s.total_value|number_format(2, ',', ' ') }} €</div>
                         </div>
                     </div>
                 </div>
@@ -117,10 +117,10 @@
                 </h5>
                 <div class="d-flex gap-3">
                     <span class="badge bg-secondary fs-6">
-                        <i class="bi bi-boxes"></i> {{ section.total_quantity|number_format(0, '.', ' ') }} kartonów
+                        <i class="bi bi-boxes"></i> {{ section.total_quantity|number_format(0, ',', ' ') }} kartonów
                     </span>
                     <span class="badge bg-success fs-6">
-                        <i class="bi bi-currency-euro"></i> {{ section.total_value|number_format(2, '.', ' ') }} €
+                        <i class="bi bi-currency-euro"></i> {{ section.total_value|number_format(2, ',', ' ') }} €
                     </span>
                 </div>
             </div>
@@ -146,10 +146,10 @@
                                 <td>{{ i + 1 }}</td>
                                 <td><strong>{{ product.product_name }}</strong></td>
                                 <td><span class="badge bg-light text-dark">{{ product.category_name }}</span></td>
-                                <td class="text-end fw-semibold">{{ product.total_quantity|number_format(1, '.', ' ') }}</td>
-                                <td class="text-end fw-bold text-success">{{ product.total_value|number_format(2, '.', ' ') }} €</td>
-                                <td class="text-end text-muted">{{ product.avg_quantity|number_format(1, '.', ' ') }}</td>
-                                <td class="text-end text-muted">{{ product.avg_value|number_format(2, '.', ' ') }} €</td>
+                                <td class="text-end fw-semibold">{{ product.total_quantity|number_format(1, ',', ' ') }}</td>
+                                <td class="text-end fw-bold text-success">{{ product.total_value|number_format(2, ',', ' ') }} €</td>
+                                <td class="text-end text-muted">{{ product.avg_quantity|number_format(1, ',', ' ') }}</td>
+                                <td class="text-end text-muted">{{ product.avg_value|number_format(2, ',', ' ') }} €</td>
                                 <td class="text-end text-muted">{{ product.months_count }}</td>
                             </tr>
                             {% else %}
@@ -162,8 +162,8 @@
                         <tfoot class="table-light fw-bold">
                             <tr>
                                 <td colspan="3" class="text-end text-muted">Razem:</td>
-                                <td class="text-end">{{ section.total_quantity|number_format(1, '.', ' ') }}</td>
-                                <td class="text-end text-success">{{ section.total_value|number_format(2, '.', ' ') }} €</td>
+                                <td class="text-end">{{ section.total_quantity|number_format(1, ',', ' ') }}</td>
+                                <td class="text-end text-success">{{ section.total_value|number_format(2, ',', ' ') }} €</td>
                                 <td colspan="3"></td>
                             </tr>
                         </tfoot>

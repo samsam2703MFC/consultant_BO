@@ -42,13 +42,13 @@
                                 <label class="form-label" for="name">
                                     Nazwa
                                 </label>
-                                <input value="<?=old_value('name', $row['name'])?>" type="text" class="form-control" id="name" name="name" placeholder="Nazwa">
+                                <input value="<?=old_value('name', $row['name'])?>" type="text" class="form-control" id="name" name="name" placeholder="Nazwa" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="id_category">
                                     Kategoria
                                 </label>
-                                <select class="form-select choices" name="id_category" id="id_category">
+                                <select class="form-select choices" name="id_category" id="id_category" required>
                                     <?php if(!empty($category_product)): ?>
                                         <?php foreach($category_product as $category): ?>
                                             <option value="<?=$category['id']?>" <?=old_select('id_category', $category['id'], $row['id_category'])?> ><?=$category['name']?></option>
@@ -60,7 +60,7 @@
                                 <label class="form-label" for="id_section">
                                     Dział produkcyjny
                                 </label>
-                                <select class="form-select choices" name="id_section" id="id_section">
+                                <select class="form-select choices" name="id_section" id="id_section" required>
                                     <?php if(!empty($production_sections)): ?>
                                         <?php foreach($production_sections as $section): ?>
                                             <option value="<?=$section['id']?>" <?=old_select('id_section', $section['id'], $row['id_section'])?>><?=$section['name']?></option>
@@ -72,7 +72,7 @@
                                 <label class="form-label" for="weight">
                                     Waga produktu
                                 </label>
-                                <input value="<?=old_value('weight', $row['weight'])?>" type="number" class="form-control" id="weight" name="weight" placeholder="Waga">
+                                <input value="<?=old_value('weight', $row['weight'])?>" type="number" class="form-control" id="weight" name="weight" placeholder="Waga" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="label_type">
@@ -87,7 +87,7 @@
                                 <label class="form-label" for="shelf_life">
                                     Czas przydatności do spożycia (dni)
                                 </label>
-                                <input value="<?=old_value('shelf_life', $row['shelf_life'])?>" type="number" class="form-control" id="shelf_life" name="shelf_life" placeholder="Czas przydatności do spożycia">
+                                <input value="<?=old_value('shelf_life', $row['shelf_life'])?>" type="number" class="form-control" id="shelf_life" name="shelf_life" placeholder="Czas przydatności do spożycia" required>
                             </div>
                         </div>
                         <div class="col-1"></div>
@@ -96,43 +96,43 @@
                                 <label class="form-label" for="ppc">
                                     Ilość sztuk w kartonie
                                 </label>
-                                <input value="<?=old_value('ppc', $row['ppc'])?>" type="number" class="form-control" id="ppc" name="ppc" placeholder="0">
+                                <input value="<?=old_value('ppc', $row['ppc'])?>" type="number" class="form-control" id="ppc" name="ppc" placeholder="0" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="ppb">
                                     Ilość sztuk w opakowaniu
                                 </label>
-                                <input value="<?=old_value('ppb', $row['ppb'])?>" type="number" class="form-control" id="ppb" name="ppb" placeholder="0">
+                                <input value="<?=old_value('ppb', $row['ppb'])?>" type="number" class="form-control" id="ppb" name="ppb" placeholder="0" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="bpc">
                                     Ilość opakowań w kartonie
                                 </label>
-                                <input value="<?=old_value('bpc', $row['bpc'])?>" type="number" class="form-control" id="bpc" name="bpc" placeholder="0">
+                                <input value="<?=old_value('bpc', $row['bpc'])?>" type="number" class="form-control" id="bpc" name="bpc" placeholder="0" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="cpl">
                                     Ilość kartonów/warstwa
                                 </label>
-                                <input value="<?=old_value('cpl', $row['cpl'])?>" type="number" class="form-control" id="cpl" name="cpl" placeholder="0">
+                                <input value="<?=old_value('cpl', $row['cpl'])?>" type="number" class="form-control" id="cpl" name="cpl" placeholder="0" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="lpp">
                                     Ilość warstw na palecie
                                 </label>
-                                <input value="<?=old_value('lpp', $row['lpp'])?>" type="number" class="form-control" id="lpp" name="lpp" placeholder="0">
+                                <input value="<?=old_value('lpp', $row['lpp'])?>" type="number" class="form-control" id="lpp" name="lpp" placeholder="0" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="cpp">
                                     Ilość kartonów na palecie
                                 </label>
-                                <input value="<?=old_value('cpp', $row['cpp'])?>" type="number" class="form-control" id="cpp" name="cpp" placeholder="0">
+                                <input value="<?=old_value('cpp', $row['cpp'])?>" type="number" class="form-control" id="cpp" name="cpp" placeholder="0" required>
                             </div>
                             <div class="row mt-3">
                                 <label class="form-label" for="stock_minimum">
                                     Minimalny stan magazynowy
                                 </label>
-                                <input value="<?=old_value('stock_minimum', $row['stock_minimum'])?>" type="number" class="form-control" id="stock_minimum" name="stock_minimum" placeholder="0">
+                                <input value="<?=old_value('stock_minimum', $row['stock_minimum'])?>" type="number" class="form-control" id="stock_minimum" name="stock_minimum" placeholder="0" required>
                             </div>
                         </div>
                     </div>

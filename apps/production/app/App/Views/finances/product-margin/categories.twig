@@ -255,29 +255,29 @@
                                                            data-product-name="{{ p.name|e }}"
                                                            title="Kliknij aby zobaczyć strukturę foodcost">
                                                             <span class="eur-val" data-pln="{{ p.foodcost }}">
-                                                                {{ p.foodcost_eur is not null ? p.foodcost_eur|number_format(2, '.', ' ') : '—' }}
+                                                                {{ p.foodcost_eur is not null ? p.foodcost_eur|number_format(2, ',', ' ') : '—' }}
                                                             </span> €
                                                             <i class="bi bi-info-circle text-info ms-1" style="font-size:.7rem;"></i>
                                                         </a>
                                                         <br><span class="text-muted" style="font-size:.7rem;">
-                                                            <span class="pln-val" data-pln="{{ p.foodcost }}">{{ p.foodcost|number_format(2, '.', ' ') }}</span> PLN
+                                                            <span class="pln-val" data-pln="{{ p.foodcost }}">{{ p.foodcost|number_format(2, ',', ' ') }}</span> PLN
                                                         </span>
                                                     </td>
                                                     <td class="text-end small">
                                                         <span class="eur-val" data-pln="{{ p.total_cost }}">
-                                                            {{ p.total_cost_eur is not null ? p.total_cost_eur|number_format(2, '.', ' ') : '—' }}
+                                                            {{ p.total_cost_eur is not null ? p.total_cost_eur|number_format(2, ',', ' ') : '—' }}
                                                         </span> €
                                                         <br><span class="text-muted" style="font-size:.7rem;">
-                                                            <span class="pln-val" data-pln="{{ p.total_cost }}">{{ p.total_cost|number_format(2, '.', ' ') }}</span> PLN
+                                                            <span class="pln-val" data-pln="{{ p.total_cost }}">{{ p.total_cost|number_format(2, ',', ' ') }}</span> PLN
                                                         </span>
                                                     </td>
                                                     <td class="text-end small" data-price-product="{{ p.product_id }}">
                                                         {% if p.has_data %}
                                                             <span class="eur-sale" data-eur="{{ p.sale_price_eur }}" data-pln="{{ p.sale_price_pln }}">
-                                                                {{ p.sale_price_eur|number_format(2, '.', ' ') }}
+                                                                {{ p.sale_price_eur|number_format(2, ',', ' ') }}
                                                             </span> €
                                                             <br><span class="text-muted" style="font-size:.7rem;">
-                                                                <span class="pln-sale" data-pln="{{ p.sale_price_pln }}">{{ p.sale_price_pln|number_format(2, '.', ' ') }}</span> PLN
+                                                                <span class="pln-sale" data-pln="{{ p.sale_price_pln }}">{{ p.sale_price_pln|number_format(2, ',', ' ') }}</span> PLN
                                                             </span>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
@@ -305,7 +305,7 @@
                                                             {% set monthlyRows = [] %}
                                                             {% for mid, label in result.month_labels %}
                                                                 {% set qty = p.sold_qty_per_month[mid] is defined ? p.sold_qty_per_month[mid] : 0 %}
-                                                                {% set monthlyRows = monthlyRows|merge([label ~ ': <strong>' ~ qty|number_format(0, '.', ' ') ~ '</strong>']) %}
+                                                                {% set monthlyRows = monthlyRows|merge([label ~ ': <strong>' ~ qty|number_format(0, ',', ' ') ~ '</strong>']) %}
                                                             {% endfor %}
                                                             <span class="fw-semibold text-primary wdt-qty-cell"
                                                                   style="cursor:pointer;"
@@ -315,12 +315,12 @@
                                                                   data-bs-html="true"
                                                                   data-bs-title="Sprzedaż wg miesięcy"
                                                                   data-bs-content="{{ monthlyRows|join('<br>')|e('html_attr') }}">
-                                                                {{ p.sold_qty_total|number_format(0, '.', ' ') }}
+                                                                {{ p.sold_qty_total|number_format(0, ',', ' ') }}
                                                                 <i class="bi bi-box-seam ms-1" style="font-size:.7rem;"></i>
                                                             </span>
                                                             <br>
                                                             <span class="text-muted" style="font-size:.7rem;">
-                                                                ⌀ {{ p.avg_sold_qty_per_month|number_format(1, '.', ' ') }}/mies.
+                                                                ⌀ {{ p.avg_sold_qty_per_month|number_format(1, ',', ' ') }}/mies.
                                                             </span>
                                                         {% else %}
                                                             <span class="text-muted">—</span>

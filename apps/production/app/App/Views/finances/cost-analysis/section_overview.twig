@@ -67,7 +67,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="text-muted">{{ translations.cost_analysis_section_revenue }}</div>
-                            <div class="fs-4 fw-bold">{{ analysis.summary.revenue_pln|number_format(2, '.', ' ') }} PLN</div>
+                            <div class="fs-4 fw-bold">{{ analysis.summary.revenue_pln|number_format(2, ',', ' ') }} PLN</div>
                         </div>
                     </div>
                 </div>
@@ -75,7 +75,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="text-muted">{{ translations.cost_analysis_section_cost }}</div>
-                            <div class="fs-4 fw-bold">{{ analysis.summary.cost_pln|number_format(2, '.', ' ') }} PLN</div>
+                            <div class="fs-4 fw-bold">{{ analysis.summary.cost_pln|number_format(2, ',', ' ') }} PLN</div>
                         </div>
                     </div>
                 </div>
@@ -83,7 +83,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="text-muted">{{ translations.cost_analysis_margin_amount }}</div>
-                            <div class="fs-4 fw-bold">{{ analysis.summary.margin_pln|number_format(2, '.', ' ') }} PLN</div>
+                            <div class="fs-4 fw-bold">{{ analysis.summary.margin_pln|number_format(2, ',', ' ') }} PLN</div>
                         </div>
                     </div>
                 </div>
@@ -91,7 +91,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="text-muted">{{ translations.cost_analysis_margin_percent }}</div>
-                            <div class="fs-4 fw-bold">{{ analysis.summary.margin_percent|number_format(1, '.', ' ') }}%</div>
+                            <div class="fs-4 fw-bold">{{ analysis.summary.margin_percent|number_format(1, ',', ' ') }}%</div>
                         </div>
                     </div>
                 </div>
@@ -133,13 +133,13 @@
                                         <td>{{ row.product_name }}</td>
                                         <td>{{ row.category_name }}</td>
                                         <td class="text-end">{{ row.cartons_qty }}</td>
-                                        <td class="text-end">{{ row.sale_price_unit|number_format(2, '.', ' ') }} {{ row.sale_currency|default('EUR') }}</td>
-                                        <td class="text-end">{{ row.sale_price_unit_pln|number_format(2, '.', ' ') }} PLN</td>
-                                        <td class="text-end">{{ row.raw_cost_unit|number_format(2, '.', ' ') }} PLN</td>
-                                        <td class="text-end">{{ row.section_cost_unit|number_format(2, '.', ' ') }} PLN</td>
-                                        <td class="text-end">{{ row.shared_cost_unit|number_format(2, '.', ' ') }} PLN</td>
-                                        <td class="text-end">{{ row.unit_full_cost|number_format(2, '.', ' ') }} PLN</td>
-                                        <td class="text-end {% if row.margin_percent < 0 %}text-danger fw-bold{% endif %}">{{ row.margin_percent|number_format(1, '.', ' ') }}%</td>
+                                        <td class="text-end">{{ row.sale_price_unit|number_format(2, ',', ' ') }} {{ row.sale_currency|default('EUR') }}</td>
+                                        <td class="text-end">{{ row.sale_price_unit_pln|number_format(2, ',', ' ') }} PLN</td>
+                                        <td class="text-end">{{ row.raw_cost_unit|number_format(2, ',', ' ') }} PLN</td>
+                                        <td class="text-end">{{ row.section_cost_unit|number_format(2, ',', ' ') }} PLN</td>
+                                        <td class="text-end">{{ row.shared_cost_unit|number_format(2, ',', ' ') }} PLN</td>
+                                        <td class="text-end">{{ row.unit_full_cost|number_format(2, ',', ' ') }} PLN</td>
+                                        <td class="text-end {% if row.margin_percent < 0 %}text-danger fw-bold{% endif %}">{{ row.margin_percent|number_format(1, ',', ' ') }}%</td>
                                     </tr>
                                 {% else %}
                                     <tr>
@@ -159,18 +159,18 @@
                         <div class="col-md-6">
                             <ul class="list-unstyled mb-0">
                                 <li><strong>{{ translations.cost_analysis_period }}:</strong> {{ analysis.date_range.start }} – {{ analysis.date_range.end }}</li>
-                                <li><strong>{{ translations.cost_analysis_section_pool }}:</strong> {{ analysis.explanation.section_cost_pool|number_format(2, '.', ' ') }} PLN</li>
-                                <li><strong>{{ translations.cost_analysis_employee_cost }}:</strong> {{ analysis.explanation.employee_cost|number_format(2, '.', ' ') }} PLN</li>
-                                <li><strong>Koszty stałe (amortyzacja):</strong> {{ analysis.explanation.fixed_costs|number_format(2, '.', ' ') }} PLN</li>
-                                <li><strong>Koszty zmienne (media):</strong> {{ analysis.explanation.media_costs|number_format(2, '.', ' ') }} PLN</li>
+                                <li><strong>{{ translations.cost_analysis_section_pool }}:</strong> {{ analysis.explanation.section_cost_pool|number_format(2, ',', ' ') }} PLN</li>
+                                <li><strong>{{ translations.cost_analysis_employee_cost }}:</strong> {{ analysis.explanation.employee_cost|number_format(2, ',', ' ') }} PLN</li>
+                                <li><strong>Koszty stałe (amortyzacja):</strong> {{ analysis.explanation.fixed_costs|number_format(2, ',', ' ') }} PLN</li>
+                                <li><strong>Koszty zmienne (media):</strong> {{ analysis.explanation.media_costs|number_format(2, ',', ' ') }} PLN</li>
                             </ul>
                         </div>
                         <div class="col-md-6">
                             <ul class="list-unstyled mb-0">
-                                <li><strong>{{ translations.cost_analysis_weighted_units }}:</strong> {{ analysis.explanation.total_weighted_units|number_format(2, '.', ' ') }}</li>
-                                <li><strong>{{ translations.cost_analysis_cost_per_point }}:</strong> {{ analysis.explanation.section_cost_per_point|number_format(4, '.', ' ') }} PLN</li>
-                                <li><strong>{{ translations.cost_analysis_shared_cost }}:</strong> {{ analysis.explanation.shared_cost_unit|number_format(4, '.', ' ') }} PLN / szt.</li>
-                                <li><strong>{{ translations.cost_analysis_exchange_rate }}:</strong> {{ analysis.explanation.exchange_rate_euro|number_format(4, '.', ' ') }} PLN/EUR</li>
+                                <li><strong>{{ translations.cost_analysis_weighted_units }}:</strong> {{ analysis.explanation.total_weighted_units|number_format(2, ',', ' ') }}</li>
+                                <li><strong>{{ translations.cost_analysis_cost_per_point }}:</strong> {{ analysis.explanation.section_cost_per_point|number_format(4, ',', ' ') }} PLN</li>
+                                <li><strong>{{ translations.cost_analysis_shared_cost }}:</strong> {{ analysis.explanation.shared_cost_unit|number_format(4, ',', ' ') }} PLN / szt.</li>
+                                <li><strong>{{ translations.cost_analysis_exchange_rate }}:</strong> {{ analysis.explanation.exchange_rate_euro|number_format(4, ',', ' ') }} PLN/EUR</li>
                             </ul>
                         </div>
                     </div>
