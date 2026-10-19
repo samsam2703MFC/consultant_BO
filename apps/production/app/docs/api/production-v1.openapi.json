@@ -4573,6 +4573,1463 @@
                 ],
                 "x-permission": "prod.plan.validate"
             }
+        },
+        "/kiosk/devices": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Tablety / Tablettes",
+                "operationId": "listDevices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Device"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            },
+            "post": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Nowy tablet (kod parowania) / Nouvelle tablette (code d'appairage)",
+                "operationId": "createDevice",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PairingCode"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Le code d'appairage (8 caractères, kiosk.pairing_ttl_min) n'est rendu qu'une fois ; seul son condensé est stocké.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeviceInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/devices/{id}": {
+            "patch": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Zmień / zablokuj tablet / Modifier, bloquer une tablette",
+                "operationId": "updateDevice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Device"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "new_pairing_code: true révoque le jeton de la tablette et rend un nouveau code.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeviceUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/employees/{id}/credentials": {
+            "put": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Identyfikator, PIN, zgoda biometryczna / Badge, PIN, consentement biométrique",
+                "operationId": "setCredentials",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Credentials"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Badge : condensé HMAC, jamais en clair. PIN : 4 à 6 chiffres (bcrypt). Biométrie : consentement écrit enregistré, jamais seule.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CredentialsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/employees": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Godziny miesiąca na osobę / Heures du mois par personne",
+                "operationId": "listTimesheets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TimesheetSummary"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10"
+                        }
+                    },
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/employees/{id}/timesheet": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Karta czasu pracy / Feuille d'heures du mois",
+                "operationId": "getTimesheet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Timesheet"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/clocks/{id}": {
+            "patch": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Korekta wejścia / wyjścia / Corriger un pointage",
+                "operationId": "correctClock",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Clock"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Motif obligatoire, journalisé.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClockCorrectionInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/clocks": {
+            "post": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Dopisz godziny / Ajouter un pointage manuel",
+                "operationId": "addClock",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Clock"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClockManualInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/execution/kpis": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Wskaźniki produkcji / KPIs de production",
+                "operationId": "getKpis",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Kpis"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "OTD (MTO finis avant l'échéance), ponctualité (démarrage à ± kpi.start_tolerance_min), efficience (heures standard ÷ heures passées), utilisation (heures sur opérations ÷ présence), présence (pointage ÷ heures planifiées), rebut.",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.kpis.read"
+            }
+        },
+        "/execution/cockpit": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Kokpit dnia / Cockpit du jour",
+                "operationId": "getCockpit",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Cockpit"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Présents par groupe, opérations du jour par statut et en retard, MTO à risque (échéance < 3 h), KPIs de la semaine, alertes.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.kpis.read"
+            }
+        },
+        "/kiosk/pair": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Sparuj tablet / Appairer la tablette",
+                "operationId": "pairDevice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DeviceToken"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Échange le code d'appairage contre le jeton de l'appareil (à envoyer ensuite dans X-Device-Token).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PairInput"
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/kiosk/people": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Osoby przy tablecie / Personnes de la tablette",
+                "operationId": "kioskPeople",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/KioskPerson"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/identify": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Identyfikacja: identyfikator lub osoba + PIN / Identification : badge ou personne + PIN",
+                "operationId": "identify",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/EmployeeToken"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IdentifyInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/me": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Ja: pointowanie i operacje / Moi : pointage et opérations",
+                "operationId": "kioskMe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskMe"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/clock": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Wejście / wyjście jednym dotknięciem / Entrée / sortie en un geste",
+                "operationId": "clock",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Sens déduit s'il est absent. client_uuid : rejouable sans doublon (tablette hors ligne). Une sortie ferme les temps d'opération ouverts.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClockInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/operations/{id}/start": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Rozpocznij operację / Démarrer une opération",
+                "operationId": "startOperation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskOperation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Personne pointée, opération de ses groupes ou du groupe de la tablette.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/operations/{id}/pause": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Pauza / Pause",
+                "operationId": "pauseOperation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskOperation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/operations/{id}/finish": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zakończ z ilościami / Terminer avec les quantités",
+                "operationId": "finishOperation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskOperation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Le temps réel d'une opération de travail devient une mesure de chronométrage de l'étape (P2).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FinishInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/signatures": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Podpis odręczny / Signature manuscrite",
+                "operationId": "sign",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Signature"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "PNG en data URL (300 Ko max) ; condensé SHA-256 conservé pour l'intégrité ; stockage en base ou bucket privé.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignatureInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -4586,6 +6043,18 @@
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Access-Token"
+            },
+            "deviceToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Device-Token",
+                "description": "Jeton de la tablette (POST /kiosk/pair)"
+            },
+            "employeeToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Employee-Token",
+                "description": "Jeton court de la personne identifiée (POST /kiosk/identify)"
             }
         },
         "parameters": {
@@ -4615,7 +6084,7 @@
                 }
             },
             "Error401": {
-                "description": "UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID",
+                "description": "UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID / DEVICE_UNAUTHENTICATED / EMPLOYEE_UNAUTHENTICATED / EMPLOYEE_SESSION_EXPIRED / BADGE_UNKNOWN / PIN_INVALID",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -4625,7 +6094,7 @@
                 }
             },
             "Error403": {
-                "description": "FORBIDDEN / NO_PRODUCTION_ROLE",
+                "description": "FORBIDDEN / NO_PRODUCTION_ROLE / DEVICE_DISABLED / OPERATION_NOT_IN_YOUR_GROUPS",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -4645,7 +6114,7 @@
                 }
             },
             "Error409": {
-                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED",
+                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED / OPERATION_NOT_MOVABLE / PIN_NOT_SET / CLOCK_ALREADY_IN / CLOCK_NOT_IN / NOT_CLOCKED_IN / OPERATION_NOT_STARTABLE / OPERATION_NOT_IN_PROGRESS",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -4656,6 +6125,16 @@
             },
             "Error422": {
                 "description": "VALIDATION_FAILED",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "Error423": {
+                "description": "EMPLOYEE_LOCKED",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -6556,6 +8035,832 @@
                         "type": "string",
                         "maxLength": 255,
                         "nullable": true
+                    }
+                }
+            },
+            "Device": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "paired": {
+                        "type": "boolean"
+                    },
+                    "last_seen_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "pairing_pending": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "DeviceInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "DeviceUpdateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "new_pairing_code": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PairingCode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "pairing_code": {
+                        "type": "string",
+                        "example": "K7M2Q9XA"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    }
+                }
+            },
+            "CredentialsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "badge": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true,
+                        "description": "Numéro NFC / QR ; null = retirer"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$",
+                        "nullable": true
+                    },
+                    "biometric_consent": {
+                        "type": "boolean"
+                    },
+                    "unlock": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Credentials": {
+                "type": "object",
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "has_badge": {
+                        "type": "boolean"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "biometric_consent": {
+                        "type": "boolean"
+                    },
+                    "locked": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PairInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "code"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    }
+                }
+            },
+            "DeviceToken": {
+                "type": "object",
+                "properties": {
+                    "device_token": {
+                        "type": "string"
+                    },
+                    "device": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "group_id": {
+                                "type": "integer",
+                                "nullable": true
+                            }
+                        }
+                    }
+                }
+            },
+            "KioskPerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "IdentifyInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "pin"
+                ],
+                "properties": {
+                    "badge": {
+                        "type": "string"
+                    },
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                    }
+                }
+            },
+            "EmployeeToken": {
+                "type": "object",
+                "properties": {
+                    "employee_token": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "Clock": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "clock_in": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "clock_out": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "hours": {
+                        "type": "number"
+                    }
+                }
+            },
+            "ClockInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "direction": {
+                        "type": "string",
+                        "enum": [
+                            "in",
+                            "out"
+                        ]
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "ClockResult": {
+                "type": "object",
+                "properties": {
+                    "replayed": {
+                        "type": "boolean"
+                    },
+                    "clock": {
+                        "$ref": "#/components/schemas/Clock"
+                    },
+                    "signature_required": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ClockCorrectionInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "note"
+                ],
+                "properties": {
+                    "clock_in": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "clock_out": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                }
+            },
+            "ClockManualInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "employee_id",
+                    "clock_in",
+                    "clock_out",
+                    "note"
+                ],
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "clock_in": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "clock_out": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                }
+            },
+            "KioskOperation": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Operation"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "actual_start": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "actual_end": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "qty_good": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "qty_scrap": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "working": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "late": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                ]
+            },
+            "KioskMe": {
+                "type": "object",
+                "properties": {
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    },
+                    "clock": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Clock"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "signature_on_clock_out": {
+                        "type": "boolean"
+                    },
+                    "idle_logout_s": {
+                        "type": "integer"
+                    },
+                    "operations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KioskOperation"
+                        }
+                    },
+                    "working_on": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            },
+            "StartInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "FinishInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "qty_good"
+                ],
+                "properties": {
+                    "qty_good": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "qty_scrap": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "scrap_reason": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "description": "obligatoire si rebut"
+                    }
+                }
+            },
+            "SignatureInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "purpose",
+                    "ref",
+                    "image"
+                ],
+                "properties": {
+                    "purpose": {
+                        "type": "string",
+                        "enum": [
+                            "clock_out",
+                            "timesheet_month",
+                            "operation"
+                        ]
+                    },
+                    "ref": {
+                        "type": "string",
+                        "description": "id du pointage, AAAA-MM ou id de l'opération"
+                    },
+                    "image": {
+                        "type": "string",
+                        "description": "data:image/png;base64,…"
+                    }
+                }
+            },
+            "Signature": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "purpose": {
+                        "type": "string"
+                    },
+                    "ref": {
+                        "type": "string"
+                    },
+                    "sha256": {
+                        "type": "string"
+                    }
+                }
+            },
+            "TimesheetSummary": {
+                "type": "object",
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "hours": {
+                        "type": "number"
+                    },
+                    "night_hours": {
+                        "type": "number"
+                    },
+                    "days": {
+                        "type": "integer"
+                    },
+                    "open": {
+                        "type": "integer"
+                    },
+                    "signed": {
+                        "type": "integer"
+                    },
+                    "month_signed": {
+                        "type": "boolean"
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    },
+                    "has_badge": {
+                        "type": "boolean"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "biometric_consent": {
+                        "type": "boolean"
+                    },
+                    "locked": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Timesheet": {
+                "type": "object",
+                "properties": {
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "month": {
+                        "type": "string"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "date": {
+                                    "type": "string"
+                                },
+                                "clock_in": {
+                                    "type": "string",
+                                    "example": "2026-10-20 06:02:00"
+                                },
+                                "clock_out": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "night_hours": {
+                                    "type": "number"
+                                },
+                                "open": {
+                                    "type": "boolean"
+                                },
+                                "source": {
+                                    "type": "string"
+                                },
+                                "note": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "corrected": {
+                                    "type": "boolean"
+                                },
+                                "signature_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "hours": {
+                                "type": "number"
+                            },
+                            "night_hours": {
+                                "type": "number"
+                            },
+                            "days": {
+                                "type": "integer"
+                            },
+                            "open": {
+                                "type": "integer"
+                            },
+                            "signed": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "month_signature": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "signed_at": {
+                                "type": "string"
+                            },
+                            "sha256": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "KpiValues": {
+                "type": "object",
+                "properties": {
+                    "operations": {
+                        "type": "integer"
+                    },
+                    "operations_done": {
+                        "type": "integer"
+                    },
+                    "started": {
+                        "type": "integer"
+                    },
+                    "started_on_time": {
+                        "type": "integer"
+                    },
+                    "punctuality_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "standard_h": {
+                        "type": "number"
+                    },
+                    "worked_on_done_h": {
+                        "type": "number"
+                    },
+                    "efficiency_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "labour_h": {
+                        "type": "number"
+                    },
+                    "present_h": {
+                        "type": "number"
+                    },
+                    "utilisation_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "planned_h": {
+                        "type": "number"
+                    },
+                    "attendance_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "qty_good": {
+                        "type": "number"
+                    },
+                    "qty_scrap": {
+                        "type": "number"
+                    },
+                    "scrap_pct": {
+                        "type": "number",
+                        "nullable": true
+                    }
+                }
+            },
+            "Kpis": {
+                "type": "object",
+                "properties": {
+                    "from": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    },
+                    "totals": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/KpiValues"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "mto_orders": {
+                                        "type": "integer"
+                                    },
+                                    "mto_on_time": {
+                                        "type": "integer"
+                                    },
+                                    "mto_late": {
+                                        "type": "integer"
+                                    },
+                                    "otd_pct": {
+                                        "type": "number",
+                                        "nullable": true
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/components/schemas/KpiValues"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "group_id": {
+                                            "type": "integer"
+                                        },
+                                        "group": {
+                                            "type": "string"
+                                        },
+                                        "color": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "Cockpit": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "people_present": {
+                        "type": "integer"
+                    },
+                    "people_by_group": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "group": {
+                                    "type": "string"
+                                },
+                                "count": {
+                                    "type": "integer"
+                                },
+                                "names": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "operations": {
+                        "type": "object",
+                        "properties": {
+                            "total": {
+                                "type": "integer"
+                            },
+                            "planned": {
+                                "type": "integer"
+                            },
+                            "in_progress": {
+                                "type": "integer"
+                            },
+                            "paused": {
+                                "type": "integer"
+                            },
+                            "done": {
+                                "type": "integer"
+                            },
+                            "late": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "mto_due_today": {
+                        "type": "integer"
+                    },
+                    "mto_at_risk": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "due_at": {
+                                    "type": "string"
+                                },
+                                "open_operations": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "week": {
+                        "$ref": "#/components/schemas/KpiValues"
+                    },
+                    "alerts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },

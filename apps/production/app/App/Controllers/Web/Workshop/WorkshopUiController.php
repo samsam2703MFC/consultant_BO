@@ -7,6 +7,7 @@ use App\Core\Api\Workshop\WorkshopConfig;
 use App\Core\Routes\Api\WorkshopApiRoutes;
 use App\Core\Web\BaseController;
 use App\Services\Workshop\Auth\AuthService;
+use App\Services\Workshop\Execution\TimesheetService;
 
 /**
  * Pages web du module atelier. Elles ne lisent rien en base : le navigateur appelle l'API
@@ -14,7 +15,7 @@ use App\Services\Workshop\Auth\AuthService;
  */
 class WorkshopUiController extends BaseController
 {
-    public function __construct(private AuthService $auth, private WorkshopConfig $config)
+    public function __construct(private AuthService $auth, private WorkshopConfig $config, private TimesheetService $timesheets)
     {
     }
 
@@ -36,6 +37,38 @@ class WorkshopUiController extends BaseController
     public function optimizer()
     {
         $this->view('workshop/optimizer', ['api_base' => $this->apiBase()]);
+    }
+
+    /** Hala : tablety, identyfikatory, godziny pracy, wskaźniki (kierownik). */
+    public function execution()
+    {
+        $this->view('workshop/execution', ['api_base' => $this->apiBase()]);
+    }
+
+    /** Ekran tabletu (bez logowania do ERP : tablet ma własny token, osoba identyfikator + PIN). */
+    public function kiosk()
+    {
+        $this->view('workshop/kiosk', ['api_base' => $this->apiBase()]);
+    }
+
+    /** Karta czasu pracy do druku, z podpisami z tabletu. */
+    public function timesheet()
+    {
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) ($_GET['month'] ?? '')) ? $_GET['month'] : date('Y-m');
+        try {
+            $sheet = $this->timesheets->month((int) ($_GET['employee'] ?? 0), $month);
+        } catch (ApiException $e) {
+            http_response_code(404);
+            echo 'Nie znaleziono pracownika.';
+            return;
+        }
+        $images = [];
+        $ids = array_filter([...array_column($sheet['days'], 'signature_id'), $sheet['month_signature']['id'] ?? null]);
+        foreach ($ids as $id) {
+            $png = $this->timesheets->signatureImage((int) $id);
+            if ($png !== null) $images[$id] = 'data:image/png;base64,' . base64_encode($png);
+        }
+        $this->view('workshop/timesheet', ['sheet' => $sheet, 'images' => $images]);
     }
 
     /** Jeton d'accès pour la session ERP en cours (POST, même origine). */

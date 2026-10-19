@@ -5,6 +5,7 @@ namespace App\Core\Routes\Api;
 
 use App\Controllers\Api\Workshop\AuthController;
 use App\Controllers\Api\Workshop\EmployeeController;
+use App\Controllers\Api\Workshop\ExecutionController;
 use App\Controllers\Api\Workshop\GroupController;
 use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\OpenApiController;
@@ -95,6 +96,26 @@ final class WorkshopApiRoutes
             ['POST', '/planning/optimizer/apply', SchedulingController::class, 'applyOptimizer', 'prod.plan.validate'],
             ['POST', '/planning/simulate', SchedulingController::class, 'simulate', 'prod.plan.read'],
             ['PUT', '/planning/staffing', SchedulingController::class, 'saveStaffing', 'prod.plan.validate'],
+
+            ['GET', '/kiosk/devices', ExecutionController::class, 'devices', 'prod.employees.write'],
+            ['POST', '/kiosk/devices', ExecutionController::class, 'createDevice', 'prod.employees.write'],
+            ['PATCH', '/kiosk/devices/{id:\d+}', ExecutionController::class, 'updateDevice', 'prod.employees.write'],
+            ['PUT', '/kiosk/employees/{id:\d+}/credentials', ExecutionController::class, 'credentials', 'prod.employees.write'],
+            ['GET', '/kiosk/employees', ExecutionController::class, 'employees', 'prod.employees.write'],
+            ['GET', '/kiosk/employees/{id:\d+}/timesheet', ExecutionController::class, 'timesheet', 'prod.employees.write'],
+            ['PATCH', '/kiosk/clocks/{id:\d+}', ExecutionController::class, 'correctClock', 'prod.employees.write'],
+            ['POST', '/kiosk/clocks', ExecutionController::class, 'addClock', 'prod.employees.write'],
+            ['GET', '/execution/kpis', ExecutionController::class, 'kpis', 'prod.kpis.read'],
+            ['GET', '/execution/cockpit', ExecutionController::class, 'cockpit', 'prod.kpis.read'],
+            ['POST', '/kiosk/pair', ExecutionController::class, 'pair', null],
+            ['GET', '/kiosk/people', ExecutionController::class, 'people', 'kiosk'],
+            ['POST', '/kiosk/identify', ExecutionController::class, 'identify', 'kiosk'],
+            ['GET', '/kiosk/me', ExecutionController::class, 'me', 'kiosk_employee'],
+            ['POST', '/kiosk/clock', ExecutionController::class, 'clock', 'kiosk_employee'],
+            ['POST', '/kiosk/operations/{id:\d+}/start', ExecutionController::class, 'start', 'kiosk_employee'],
+            ['POST', '/kiosk/operations/{id:\d+}/pause', ExecutionController::class, 'pause', 'kiosk_employee'],
+            ['POST', '/kiosk/operations/{id:\d+}/finish', ExecutionController::class, 'finish', 'kiosk_employee'],
+            ['POST', '/kiosk/signatures', ExecutionController::class, 'sign', 'kiosk_employee'],
         ];
     }
 

@@ -17,7 +17,7 @@ final class OpenApiSpec
     {
         $paths = [];
         foreach (WorkshopApiRoutes::routes() as [$method, $path, , , $permission]) {
-            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations())[$method . ' ' . $path] ?? null;
+            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations())[$method . ' ' . $path] ?? null;
             if ($doc === null) {
                 throw new \LogicException("Undocumented route {$method} {$path}");
             }
@@ -44,8 +44,13 @@ final class OpenApiSpec
             if (isset($doc['body'])) {
                 $operation['requestBody'] = ['required' => true, 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/' . $doc['body']]]]];
             }
-            $operation['security'] = $permission === null ? [] : [['bearerAuth' => []], ['accessTokenHeader' => []]];
-            if ($permission !== null && $permission !== 'auth') {
+            $operation['security'] = match ($permission) {
+                null => [],
+                'kiosk' => [['deviceToken' => []]],
+                'kiosk_employee' => [['deviceToken' => [], 'employeeToken' => []]],
+                default => [['bearerAuth' => []], ['accessTokenHeader' => []]],
+            };
+            if ($permission !== null && $permission !== 'auth' && !str_starts_with($permission, 'kiosk')) {
                 $operation['x-permission'] = $permission;
             }
             $paths[$openPath][strtolower($method)] = $operation;
@@ -155,8 +160,10 @@ final class OpenApiSpec
         $ts = ['type' => 'string', 'example' => '2026-10-19 14:58:04'];
         $nullableInt = ['type' => 'integer', 'nullable' => true];
         $errorResponses = [];
-        foreach ([400 => 'INVALID_JSON', 401 => 'UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID', 403 => 'FORBIDDEN / NO_PRODUCTION_ROLE',
-                  404 => 'NOT_FOUND / ROUTE_NOT_FOUND', 409 => 'DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED', 422 => 'VALIDATION_FAILED', 429 => 'TOO_MANY_ATTEMPTS',
+        foreach ([400 => 'INVALID_JSON', 401 => 'UNAUTHENTICATED / TOKEN_EXPIRED / TOKEN_INVALID / INVALID_CREDENTIALS / REFRESH_INVALID / DEVICE_UNAUTHENTICATED / EMPLOYEE_UNAUTHENTICATED / EMPLOYEE_SESSION_EXPIRED / BADGE_UNKNOWN / PIN_INVALID',
+                  403 => 'FORBIDDEN / NO_PRODUCTION_ROLE / DEVICE_DISABLED / OPERATION_NOT_IN_YOUR_GROUPS',
+                  404 => 'NOT_FOUND / ROUTE_NOT_FOUND', 409 => 'DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED / OPERATION_NOT_MOVABLE / PIN_NOT_SET / CLOCK_ALREADY_IN / CLOCK_NOT_IN / NOT_CLOCKED_IN / OPERATION_NOT_STARTABLE / OPERATION_NOT_IN_PROGRESS',
+                  422 => 'VALIDATION_FAILED', 423 => 'EMPLOYEE_LOCKED', 429 => 'TOO_MANY_ATTEMPTS',
                   500 => 'INTERNAL_ERROR', 503 => 'AUTH_NOT_CONFIGURED'] as $status => $codes) {
             $errorResponses['Error' . $status] = ['description' => $codes, 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Error']]]];
         }
@@ -165,12 +172,14 @@ final class OpenApiSpec
             'securitySchemes' => [
                 'bearerAuth' => ['type' => 'http', 'scheme' => 'bearer', 'bearerFormat' => 'JWT'],
                 'accessTokenHeader' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Access-Token'],
+                'deviceToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Device-Token', 'description' => 'Jeton de la tablette (POST /kiosk/pair)'],
+                'employeeToken' => ['type' => 'apiKey', 'in' => 'header', 'name' => 'X-Employee-Token', 'description' => 'Jeton court de la personne identifiée (POST /kiosk/identify)'],
             ],
             'parameters' => [
                 'Lang' => ['name' => 'lang', 'in' => 'query', 'required' => false, 'description' => 'Język komunikatów / Langue des messages (sinon Accept-Language)', 'schema' => ['type' => 'string', 'enum' => ['pl', 'fr']]],
             ],
             'responses' => $errorResponses,
-            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + [
+            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + [
                 'Error' => ['type' => 'object', 'required' => ['status', 'description', 'message', 'request_id'], 'properties' => [
                     'status' => ['type' => 'string', 'enum' => ['error']],
                     'description' => ['type' => 'string', 'example' => 'VALIDATION_FAILED'],

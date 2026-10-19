@@ -1,0 +1,53 @@
+/* Tablette de l'atelier : grands boutons tactiles, lisible à distance, sans menu de l'ERP. */
+:root {
+  --k-primary: #8D1D2C; --k-primary-dark: #6d1622; --k-bg: #EAE4DC; --k-surface: #FFFFFF; --k-text: #222222; --k-muted: #666666;
+  --k-line: rgba(34, 34, 34, 0.12); --k-ok: #2E7D4F; --k-warn: #C17A2A; --k-danger: #C41E3A; --k-radius: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--k-bg); color: var(--k-text); font-family: 'Gotham', 'Helvetica Neue', Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+.kiosk { min-height: 100%; padding: 16px; display: flex; flex-direction: column; gap: 14px; max-width: 1100px; margin: 0 auto; }
+.kiosk-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.kiosk-head h1 { font-size: 22px; margin: 0; }
+.kiosk-clock { font-size: 34px; font-weight: 700; letter-spacing: 1px; }
+.kiosk-muted { color: var(--k-muted); margin: 0; }
+.kiosk-card { background: var(--k-surface); border-radius: var(--k-radius); padding: 18px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.kiosk-btn { border: 0; border-radius: var(--k-radius); padding: 18px 22px; font-size: 20px; font-weight: 600; background: var(--k-surface); color: var(--k-text); box-shadow: inset 0 0 0 2px var(--k-line); min-height: 64px; }
+.kiosk-btn:focus-visible { outline: 3px solid var(--k-primary); outline-offset: 2px; }
+.kiosk-btn.is-primary { background: var(--k-primary); color: #fff; box-shadow: none; }
+.kiosk-btn.is-ok { background: var(--k-ok); color: #fff; box-shadow: none; }
+.kiosk-btn.is-danger { background: var(--k-danger); color: #fff; box-shadow: none; }
+.kiosk-btn.is-small { padding: 10px 14px; font-size: 16px; min-height: 48px; }
+.kiosk-btn:disabled { opacity: .5; }
+.kiosk-big { width: 100%; font-size: 30px; padding: 28px; min-height: 110px; }
+.kiosk-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.kiosk-person { text-align: left; display: flex; flex-direction: column; gap: 4px; }
+.kiosk-person small { font-size: 13px; font-weight: 400; color: var(--k-muted); }
+.kiosk-person.is-in { box-shadow: inset 0 0 0 2px var(--k-ok); }
+.kiosk-badge-hint { display: flex; align-items: center; gap: 12px; font-size: 18px; }
+.kiosk-badge-input { position: absolute; left: -9999px; opacity: 0; }
+.kiosk-pin { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.kiosk-dots { display: flex; gap: 14px; min-height: 28px; }
+.kiosk-dots span { width: 20px; height: 20px; border-radius: 50%; background: var(--k-line); }
+.kiosk-dots span.is-on { background: var(--k-primary); }
+.kiosk-pad { display: grid; grid-template-columns: repeat(3, 96px); gap: 12px; }
+.kiosk-pad .kiosk-btn { font-size: 30px; min-height: 84px; padding: 0; }
+.kiosk-error { color: var(--k-danger); font-weight: 600; font-size: 18px; min-height: 24px; text-align: center; }
+.kiosk-ops { display: flex; flex-direction: column; gap: 10px; }
+.kiosk-op { display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center; border-left: 6px solid var(--k-line); }
+.kiosk-op.is-in_progress { border-left-color: var(--k-ok); }
+.kiosk-op.is-paused { border-left-color: var(--k-warn); }
+.kiosk-op.is-done { opacity: .6; }
+.kiosk-op.is-late .kiosk-op-time { color: var(--k-danger); font-weight: 700; }
+.kiosk-op h3 { margin: 0 0 4px; font-size: 19px; }
+.kiosk-op-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.kiosk-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.kiosk-form label { display: flex; flex-direction: column; gap: 6px; font-size: 16px; }
+.kiosk-form input { font-size: 26px; padding: 12px; border-radius: 10px; border: 2px solid var(--k-line); width: 100%; }
+.kiosk-sign { width: 100%; max-width: 900px; height: 260px; background: #fff; border: 2px dashed var(--k-line); border-radius: var(--k-radius); touch-action: none; display: block; }
+.kiosk-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.kiosk-row.is-end { justify-content: flex-end; }
+.kiosk-status { font-size: 18px; }
+.kiosk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--k-text); color: #fff; padding: 14px 22px; border-radius: 999px; font-size: 18px; z-index: 10; max-width: 90vw; text-align: center; }
+.kiosk-toast.is-error { background: var(--k-danger); }
+@media (max-width: 600px) { .kiosk-pad { grid-template-columns: repeat(3, 78px); } .kiosk-op { grid-template-columns: 1fr; } .kiosk-op-actions { justify-content: flex-start; } .kiosk-big { font-size: 24px; } }

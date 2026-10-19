@@ -24,8 +24,9 @@ class App
 
         $method = $_SERVER['REQUEST_METHOD'];
 
-        // Bez zalogowania dostępne są tylko logowanie (GET/POST /) i wylogowanie
-        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout'], true)) {
+        // Bez zalogowania dostępne są tylko logowanie (GET/POST /), wylogowanie i ekran tabletu
+        // produkcji (/kiosk : sama powłoka, dane wyłącznie przez API z tokenem tabletu).
+        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk'], true)) {
             if (str_starts_with($uri, '/ajax/')) {
                 http_response_code(401);
                 header('Content-Type: application/json');

@@ -32,7 +32,21 @@
     "SCHEDULE_NO_ROUTING": "{code} ({name}): brak marszruty.",
     "SCHEDULE_DUE_IN_PAST": "{code} ({name}): termin {due_at} już minął.",
     "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}): zlecenie nadrzędne nie zostało uszeregowane.",
-    "OPERATION_NOT_MOVABLE": "Operacja ma status „{status}” — przesunąć można tylko operację zaplanowaną."
+    "OPERATION_NOT_MOVABLE": "Operacja ma status „{status}” — przesunąć można tylko operację zaplanowaną.",
+    "DEVICE_UNAUTHENTICATED": "Tablet nie jest sparowany — wpisz kod parowania od kierownika.",
+    "DEVICE_DISABLED": "Ten tablet jest zablokowany.",
+    "EMPLOYEE_UNAUTHENTICATED": "Zidentyfikuj się identyfikatorem lub nazwiskiem i PIN-em.",
+    "EMPLOYEE_SESSION_EXPIRED": "Sesja wygasła — zidentyfikuj się ponownie.",
+    "BADGE_UNKNOWN": "Nieznany identyfikator.",
+    "PIN_NOT_SET": "Nie masz jeszcze PIN-u — poproś kierownika o jego ustawienie.",
+    "PIN_INVALID": "Błędny PIN (pozostało prób: {left}).",
+    "EMPLOYEE_LOCKED": "Zbyt wiele błędnych PIN-ów — blokada do {until}.",
+    "CLOCK_ALREADY_IN": "Wejście jest już zarejestrowane (od {since}).",
+    "CLOCK_NOT_IN": "Nie ma zarejestrowanego wejścia.",
+    "NOT_CLOCKED_IN": "Najpierw zarejestruj wejście.",
+    "OPERATION_NOT_STARTABLE": "Operacji o statusie „{status}” nie można rozpocząć.",
+    "OPERATION_NOT_IN_PROGRESS": "Operacja nie jest w toku (status „{status}”).",
+    "OPERATION_NOT_IN_YOUR_GROUPS": "Ta operacja nie należy do Twojej grupy."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -91,7 +105,15 @@
     "CHILD_NOT_READY": "Półprodukt {code} będzie gotowy dopiero {end}.",
     "OUTSIDE_STAFFED_SHIFT": "W tym czasie stanowisko nie ma zmiany z wystarczającą obsadą ({operators} os.).",
     "WORKSTATION_BUSY": "Stanowisko jest w tym czasie zajęte (zlecenie {code}).",
-    "CAPACITY_EXCEEDED": "Pojemność komory przekroczona ({peak} z {capacity})."
+    "CAPACITY_EXCEEDED": "Pojemność komory przekroczona ({peak} z {capacity}).",
+    "INVALID_PIN": "PIN to 4 do 6 cyfr.",
+    "BADGE_TAKEN": "Ten identyfikator ma już inna osoba.",
+    "PAIRING_CODE_INVALID": "Nieprawidłowy lub wygasły kod parowania.",
+    "INVALID_IMAGE": "Podpis musi być obrazem PNG.",
+    "IMAGE_TOO_LARGE": "Obraz podpisu jest za duży (maks. {max_kb} KB).",
+    "SIGNATURE_REF_INVALID": "Podpis nie odnosi się do Twojego wpisu.",
+    "INVALID_UUID": "Nieprawidłowy identyfikator UUID.",
+    "INVALID_MONTH": "Miesiąc w formacie RRRR-MM."
   },
   "fields": {
     "code": "kod",
@@ -215,7 +237,23 @@
     "qty_final": "Ilość do produkcji",
     "adjust_reason": "Powód zmiany",
     "start": "Początek",
-    "locked": "Zablokowana"
+    "locked": "Zablokowana",
+    "badge": "Identyfikator",
+    "pin": "PIN",
+    "biometric_consent": "Zgoda biometryczna",
+    "direction": "Kierunek",
+    "client_uuid": "UUID",
+    "qty_good": "Ilość dobra",
+    "qty_scrap": "Ilość odrzucona",
+    "scrap_reason": "Powód braków",
+    "purpose": "Cel podpisu",
+    "ref": "Odniesienie",
+    "image": "Podpis",
+    "clock_in": "Wejście",
+    "clock_out": "Wyjście",
+    "employee_id": "Pracownik",
+    "month": "Miesiąc",
+    "unlock": "Odblokuj"
   },
   "entities": {
     "group": "grupa",
@@ -229,6 +267,9 @@
     "time_study": "pomiar czasu",
     "plan": "plan",
     "plan_line": "pozycja planu",
-    "operation": "operacja"
+    "operation": "operacja",
+    "device": "tablet",
+    "clock": "wpis czasu pracy",
+    "signature": "podpis"
   }
 }

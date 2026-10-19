@@ -32,7 +32,21 @@
     "SCHEDULE_NO_ROUTING": "{code} ({name}) : pas de gamme.",
     "SCHEDULE_DUE_IN_PAST": "{code} ({name}) : l'échéance {due_at} est déjà passée.",
     "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}) : l'OF parent n'a pas pu être ordonnancé.",
-    "OPERATION_NOT_MOVABLE": "L'opération est « {status} » : seule une opération planifiée se déplace."
+    "OPERATION_NOT_MOVABLE": "L'opération est « {status} » : seule une opération planifiée se déplace.",
+    "DEVICE_UNAUTHENTICATED": "Tablette non appairée — saisissez le code d'appairage du responsable.",
+    "DEVICE_DISABLED": "Cette tablette est bloquée.",
+    "EMPLOYEE_UNAUTHENTICATED": "Identifiez-vous avec votre badge ou votre nom et votre PIN.",
+    "EMPLOYEE_SESSION_EXPIRED": "Session expirée — identifiez-vous à nouveau.",
+    "BADGE_UNKNOWN": "Badge inconnu.",
+    "PIN_NOT_SET": "Vous n'avez pas encore de PIN — demandez-le à votre responsable.",
+    "PIN_INVALID": "PIN erroné (essais restants : {left}).",
+    "EMPLOYEE_LOCKED": "Trop de PIN erronés — bloqué jusqu'à {until}.",
+    "CLOCK_ALREADY_IN": "L'entrée est déjà enregistrée (depuis {since}).",
+    "CLOCK_NOT_IN": "Aucune entrée enregistrée.",
+    "NOT_CLOCKED_IN": "Enregistrez d'abord votre entrée.",
+    "OPERATION_NOT_STARTABLE": "Une opération « {status} » ne peut pas démarrer.",
+    "OPERATION_NOT_IN_PROGRESS": "L'opération n'est pas en cours (« {status} »).",
+    "OPERATION_NOT_IN_YOUR_GROUPS": "Cette opération n'est pas de votre groupe."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -91,7 +105,15 @@
     "CHILD_NOT_READY": "Le semi-fini {code} ne sera prêt qu'à {end}.",
     "OUTSIDE_STAFFED_SHIFT": "Pas de shift avec assez de monde sur ce poste à ce moment ({operators} pers.).",
     "WORKSTATION_BUSY": "Le poste est occupé à ce moment (OF {code}).",
-    "CAPACITY_EXCEEDED": "Capacité de la chambre dépassée ({peak} sur {capacity})."
+    "CAPACITY_EXCEEDED": "Capacité de la chambre dépassée ({peak} sur {capacity}).",
+    "INVALID_PIN": "Le PIN fait 4 à 6 chiffres.",
+    "BADGE_TAKEN": "Ce badge est déjà attribué à une autre personne.",
+    "PAIRING_CODE_INVALID": "Code d'appairage invalide ou expiré.",
+    "INVALID_IMAGE": "La signature doit être une image PNG.",
+    "IMAGE_TOO_LARGE": "Image de signature trop grande ({max_kb} Ko max.).",
+    "SIGNATURE_REF_INVALID": "La signature ne porte pas sur une de vos entrées.",
+    "INVALID_UUID": "Identifiant UUID invalide.",
+    "INVALID_MONTH": "Mois au format AAAA-MM."
   },
   "fields": {
     "code": "code",
@@ -215,7 +237,23 @@
     "qty_final": "Quantité à produire",
     "adjust_reason": "Motif de la modification",
     "start": "Début",
-    "locked": "Verrouillée"
+    "locked": "Verrouillée",
+    "badge": "Badge",
+    "pin": "PIN",
+    "biometric_consent": "Consentement biométrique",
+    "direction": "Sens",
+    "client_uuid": "UUID",
+    "qty_good": "Quantité bonne",
+    "qty_scrap": "Quantité rebutée",
+    "scrap_reason": "Motif du rebut",
+    "purpose": "Objet de la signature",
+    "ref": "Référence",
+    "image": "Signature",
+    "clock_in": "Entrée",
+    "clock_out": "Sortie",
+    "employee_id": "Salarié",
+    "month": "Mois",
+    "unlock": "Débloquer"
   },
   "entities": {
     "group": "groupe",
@@ -229,6 +267,9 @@
     "time_study": "chronométrage",
     "plan": "plan",
     "plan_line": "ligne de plan",
-    "operation": "opération"
+    "operation": "opération",
+    "device": "tablette",
+    "clock": "pointage",
+    "signature": "signature"
   }
 }

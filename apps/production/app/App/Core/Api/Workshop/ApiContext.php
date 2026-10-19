@@ -14,6 +14,7 @@ final class ApiContext
      * @param list<array{code:string,group_id:?int}> $roles
      * @param array<string,true> $global permissions valables partout
      * @param array<string,array<int,true>> $byGroup permission => groupes autorisés
+     * $deviceId / $employeeId : appel d'une tablette (P7), personne identifiée par badge + PIN.
      */
     public function __construct(
         public readonly string $requestId,
@@ -22,6 +23,9 @@ final class ApiContext
         public readonly array $roles = [],
         private array $global = [],
         private array $byGroup = [],
+        public readonly ?int $deviceId = null,
+        public readonly ?int $employeeId = null,
+        public readonly ?int $deviceGroupId = null,
     ) {
     }
 

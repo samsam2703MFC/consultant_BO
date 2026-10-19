@@ -6,6 +6,7 @@ namespace App\Core\Api\Workshop;
 use App\Core\Routes\Api\WorkshopApiRoutes;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Workshop\Auth\AuthService;
+use App\Services\Workshop\Execution\KioskAuthService;
 use FastRoute\Dispatcher;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +26,7 @@ final class WorkshopApiKernel
         private AuthService $auth,
         private ParamRepository $params,
         private WorkshopConfig $config,
+        private KioskAuthService $kiosk,
     ) {
     }
 
@@ -72,7 +74,14 @@ final class WorkshopApiKernel
         [, $handler, $vars] = $info;
 
         $permission = $handler['permission'];
-        if ($permission !== null) {
+        if ($permission === 'kiosk' || $permission === 'kiosk_employee') {
+            // Tablette (P7) : jeton de l'appareil, et pour les actions d'une personne son jeton court (badge + PIN).
+            $context = $this->kiosk->context(
+                trim((string) $request->headers->get('X-Device-Token', '')),
+                $permission === 'kiosk_employee' ? trim((string) $request->headers->get('X-Employee-Token', '')) : null,
+                $context->requestId, $context->translator
+            );
+        } elseif ($permission !== null) {
             $context = $this->auth->authenticate($this->accessToken($request), $context->requestId, $context->translator);
             if ($permission !== 'auth' && !$context->canSomewhere($permission)) {
                 throw new ApiException('FORBIDDEN', 403, [], ['permission' => $permission]);
@@ -145,7 +154,7 @@ final class WorkshopApiKernel
         $response->headers->set('Access-Control-Allow-Origin', $origin);
         $response->headers->set('Vary', 'Origin');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, X-Access-Token, Content-Type, Accept-Language');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, X-Access-Token, X-Device-Token, X-Employee-Token, Content-Type, Accept-Language');
         $response->headers->set('Access-Control-Expose-Headers', 'X-Request-Id, Content-Language');
         $response->headers->set('Access-Control-Max-Age', '600');
     }

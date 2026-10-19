@@ -21,6 +21,7 @@ use App\Services\Workshop\Planning\PlanningService;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Scheduling\ShiftOptimizer;
+use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
 function check(bool $condition, string $message): void
@@ -249,5 +250,12 @@ $out = ShiftOptimizer::optimize([$row('a', 1, 2, 10.0, 1, '2026-10-21'), $row('b
 check($out[0]['actions'][0]['quantity'] + ($out[1]['actions'][0]['quantity'] ?? 0) <= 300, 'MTS room (stock max) used once over the week');
 $sum = ShiftOptimizer::summary($out);
 check($sum['before']['load_pct'] == 62.5 && $sum['after']['shifts'] === 2, 'summary before / after');
+
+
+// --- P7 : heures de nuit (22:00–06:00) des pointages
+$night = fn(string $a, string $b) => TimesheetService::nightSeconds(strtotime($a), strtotime($b)) / 3600;
+check($night('2026-10-20 21:00', '2026-10-21 07:00') == 8.0, 'night hours: 21:00 → 07:00 = 8 h');
+check($night('2026-10-20 23:00', '2026-10-21 01:00') == 2.0 && $night('2026-10-21 05:00', '2026-10-21 07:00') == 1.0, 'night hours across midnight and at dawn');
+check($night('2026-10-20 06:00', '2026-10-20 14:00') == 0.0 && $night('2026-10-20 14:00', '2026-10-20 22:30') == 0.5, 'day shift: no night hours; late shift: 30 min');
 
 echo "tfb_unit_test: OK\n";
