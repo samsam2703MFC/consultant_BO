@@ -1016,6 +1016,53 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-logi-add label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin: 0; }
 .at-logi-add-actions { display: flex; align-items: flex-end; }
 
+/* Trasy : lista tras (pojazdy, klienci) i grupy tras w załadunku dnia */
+.at-tour-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 1199px) { .at-tour-grid { grid-template-columns: 1fr; } }
+.at-tour { border-left: 5px solid var(--tour-color); margin-bottom: 0; }
+.at-tour.is-inactive { opacity: .7; }
+.at-tour-head, .at-logi-tour-head { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.at-tour-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--tour-color, var(--at-muted)); flex: 0 0 auto; }
+.at-tour-title, .at-logi-tour-name { display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.at-tour-title strong, .at-logi-tour-name strong { font-size: 17px; }
+.at-tour-figures { display: flex; gap: 14px; font-size: 13px; color: var(--at-muted); }
+.at-tour-figures strong { color: var(--at-text); font-size: 16px; }
+.at-tour-edit { margin: 10px 0 4px; }
+.at-tour-edit > summary { cursor: pointer; color: var(--at-primary); font-size: 13px; }
+.at-tour .at-logi-add { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 575px) { .at-tour .at-logi-add { grid-template-columns: 1fr; } }
+.at-tour-edit[open] > summary { margin-bottom: 10px; }
+.at-tour-form-days { grid-column: 1 / -1; }
+.at-tour-days { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
+.at-tour-day { position: relative; margin: 0; }
+.at-tour-day input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.at-tour-day span { display: inline-block; min-width: 54px; text-align: center; padding: 6px 10px; border: 1px solid var(--at-line-2); border-radius: 999px; font-size: 13px; background: var(--at-surface); }
+.at-tour-day input:checked + span { background: var(--at-primary); border-color: var(--at-primary); color: #fff; }
+.at-tour-day input:focus-visible + span { outline: 2px solid var(--at-primary); outline-offset: 2px; }
+.at-tour-active { justify-content: flex-end; }
+.at-tour-part { border-top: 1px dashed var(--at-line-2); margin-top: 12px; padding-top: 10px; }
+.at-tour-part h5 { font-size: 14px; margin: 0 0 8px; }
+.at-tour-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.at-tour-list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--at-line); }
+.at-tour-list li.is-off { opacity: .6; }
+.at-tour-pos { width: 26px; height: 26px; border-radius: 50%; background: var(--at-bg-2); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: 0 0 auto; }
+.at-tour-item { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.at-tour-item .at-sub { color: var(--at-muted); font-size: 12px; }
+.at-tour-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+.at-tour-add { display: flex; gap: 8px; }
+.at-tour-add .form-select { flex: 1 1 auto; min-width: 0; }
+.at-tour .at-sub { color: var(--at-muted); font-size: 12px; }
+.at-logi-tour { border-left: 5px solid var(--tour-color); padding: 12px 0 2px 14px; margin-bottom: 18px; }
+.at-logi-tour.is-none { --tour-color: var(--at-line-2); }
+.at-logi-tour-head { margin-bottom: 12px; }
+.at-logi-tour-trucks { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.at-logi-tour-trucks li { background: var(--at-bg-2); border-radius: 999px; padding: 4px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.at-logi-tour-trucks li.is-over { background: rgba(196, 30, 58, .1); color: var(--at-danger); }
+.at-logi-fill-mini { width: 56px; height: 6px; margin: 0; display: inline-block; background: var(--at-surface); }
+.at-logi-tour-total { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; }
+.at-logi-tour-total strong { font-size: 22px; color: var(--at-primary); line-height: 1.1; }
+@media (max-width: 575px) { .at-logi-tour { padding-left: 10px; } .at-tour-figures { width: 100%; } .at-logi-tour-total { margin-left: 0; align-items: flex-start; } }
+
 /* --- Atelier P6 : optymalizacja zmian ----------------------------------------------------- */
 .tfb-opt-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 @media (max-width: 575px) { .tfb-opt-tiles { grid-template-columns: 1fr; } }

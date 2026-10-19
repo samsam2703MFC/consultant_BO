@@ -38,7 +38,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier_vehicle'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -348,6 +348,16 @@ check($byItem[1]['mode'] === 'MTO' && $byItem[1]['qty_mto'] == 270.0 && $byItem[
     'MTO: 15 cartons × 18 pieces from 2 open orders (archived order ignored); never-frozen product never MTS');
 check($byItem[1]['late_orders'] === 1, 'order placed after the cut-off is flagged');
 check($byItem[1]['due_at'] === $d1 . ' 19:00:00', 'due before the truck leaves (20:00 − 60 min loading)');
+// Klient 2 na trasie z wyjazdem 16:00 : linia MTO (klienci 1 i 2) na 15:00 ; trasa nie w ten dzień tygodnia : bez zmian
+$pdo->exec("INSERT IGNORE INTO customer (id, company) VALUES (1, 'Klient A'), (2, 'Klient B')");
+$pdo->exec("INSERT INTO tfb_tour (id, name, weekdays, departure_time) VALUES (1, 'Rano', 127, '16:00:00')");
+$pdo->exec("INSERT INTO tfb_tour_customer (id_tour, id_customer, stop_order) VALUES (1, 2, 1)");
+[, $b] = $call('GET', '/planning/demand' . $period, null, $lead);
+$toured = array_column($b['data']['lines'], 'due_at', 'item_id');
+$pdo->exec("UPDATE tfb_tour SET weekdays = 127 & ~(1 << (" . date('N', strtotime($d1)) . " - 1)) WHERE id = 1");
+[, $b] = $call('GET', '/planning/demand' . $period, null, $lead);
+check($toured[1] === $d1 . ' 15:00:00' && array_column($b['data']['lines'], 'due_at', 'item_id')[1] === $d1 . ' 19:00:00', 'MTO due before the earliest tour departure of its customers');
+$pdo->exec('DELETE FROM tfb_tour');
 $m = $byItem[$itemId]['mts'];
 check($m['free_stock'] == 180.0 && $m['projected'] == 0.0 && $m['target'] == 300.0 && $byItem[$itemId]['qty_mts'] == 160.0 && $m['capped'],
     'MTS: free stock 3 cartons − 3 ordered = 0; target capped at max 300; batch 160 fits, 320 would not');

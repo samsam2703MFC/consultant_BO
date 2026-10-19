@@ -8,7 +8,10 @@
             <h3>Pojazdy i pojemność</h3>
             <p class="text-subtitle text-muted">Miejsca paletowe, ładowność i godzina wyjazdu pojazdów przewoźników</p>
         </div>
-        <a class="btn btn-outline-primary" href="{{ root }}/logistics"><i class="bi bi-stack"></i> Załadunek dnia</a>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics"><i class="bi bi-stack"></i> Załadunek dnia</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/tours"><i class="bi bi-signpost-split"></i> Trasy</a>
+        </div>
     </div>
 {% endblock %}
 
@@ -46,7 +49,8 @@
                     <tbody>
                     {% for v in vehicles %}
                         <tr data-vehicle="{{ v.id }}" class="{{ v.carrier_active ? '' : 'at-staff-inactive' }}">
-                            <td><strong>{{ v.regis_num ?: '—' }}</strong><div class="at-sub">{{ v.carrier }}{{ v.driver ? ' · ' ~ v.driver : '' }}{{ v.carrier_active ? '' : ' · przewoźnik nieaktywny' }}</div></td>
+                            <td><strong>{{ v.regis_num ?: '—' }}</strong><div class="at-sub">{{ v.carrier }}{{ v.driver ? ' · ' ~ v.driver : '' }}{{ v.carrier_active ? '' : ' · przewoźnik nieaktywny' }}</div>
+                                <div class="at-sub">{% if v.tours %}<i class="bi bi-signpost-split"></i> {{ v.tours|join(', ') }}{% else %}<a href="{{ root }}/logistics/tours">bez trasy</a>{% endif %}</div></td>
                             <td><input class="form-control form-control-sm at-logi-num" name="pallet_places" inputmode="numeric" value="{{ v.pallet_places }}" placeholder="{{ default_places }}" aria-label="Miejsca paletowe {{ v.regis_num }}"></td>
                             <td><input class="form-control form-control-sm at-logi-kg" name="max_load_kg" inputmode="numeric" value="{{ v.max_load_kg }}" placeholder="bez kontroli" aria-label="Ładowność {{ v.regis_num }}"></td>
                             <td><input class="form-control form-control-sm at-logi-time" type="time" name="departure_time" value="{{ v.departure_time }}" aria-label="Wyjazd {{ v.regis_num }}"><div class="at-sub">puste = {{ default_departure }}</div></td>

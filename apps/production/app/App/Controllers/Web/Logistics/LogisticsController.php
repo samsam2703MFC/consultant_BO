@@ -6,7 +6,7 @@ use App\Core\Web\JsonErrors;
 use App\Services\Logistics\LogisticsService;
 use Symfony\Component\HttpFoundation\Request;
 
-/** Logistyka : klienci dnia na pojazdach, palety i waga, pojazdy z pojemnością, lista załadunku. */
+/** Logistyka : klienci dnia na trasach i pojazdach, palety i waga, trasy, pojazdy z pojemnością, lista załadunku. */
 class LogisticsController extends BaseController
 {
     use JsonErrors;
@@ -39,6 +39,39 @@ class LogisticsController extends BaseController
     public function vehicles()
     {
         $this->view('logistics/vehicles', $this->logistics->vehicles());
+    }
+
+    public function tours()
+    {
+        $data = $this->logistics->tours();
+        $data['notices'] = $data['warnings'];
+        unset($data['warnings']);
+        $this->view('logistics/tours', $data);
+    }
+
+    public function createTour()
+    {
+        return $this->respond(fn() => ['message' => 'Dodano trasę.', 'data' => ['id' => $this->logistics->createTour($this->input(), $this->userId())]], 201);
+    }
+
+    public function updateTour($id)
+    {
+        return $this->respond(fn() => ['message' => 'Zapisano trasę.', 'data' => $this->logistics->updateTour((int) $id, $this->input(), $this->userId())]);
+    }
+
+    public function deleteTour($id)
+    {
+        return $this->respond(fn() => ['message' => 'Usunięto trasę.', 'data' => $this->logistics->deleteTour((int) $id)]);
+    }
+
+    public function setTourVehicles($id)
+    {
+        return $this->respond(fn() => ['message' => 'Zapisano pojazdy trasy.', 'data' => $this->logistics->setTourVehicles((int) $id, $this->input())]);
+    }
+
+    public function setTourCustomers($id)
+    {
+        return $this->respond(fn() => ['message' => 'Zapisano klientów trasy.', 'data' => $this->logistics->setTourCustomers((int) $id, $this->input())]);
     }
 
     public function assign()
@@ -79,6 +112,20 @@ class LogisticsController extends BaseController
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
+    }
+
+    private function respond(callable $fn, int $status = 200)
+    {
+        try {
+            return $this->json($fn(), $status);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    private function input(): array
+    {
+        return $this->getJson(Request::createFromGlobals());
     }
 
     private function userId(): ?int

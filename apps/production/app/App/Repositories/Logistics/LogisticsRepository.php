@@ -4,9 +4,9 @@ namespace App\Repositories\Logistics;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
- * Logistyka : pojazdy przewoźników ERP (carrier_vehicle) z pojemnością (tfb_vehicle), zamówienia
- * dnia wysyłki z danymi paletowymi produktów (rodzaj kartonu z karty opakowań, kategoria), palety
- * już zeskanowane (palets_delivery), stała trasa klienta i przydział na dzień.
+ * Logistyka : pojazdy przewoźników ERP (carrier_vehicle) z pojemnością (tfb_vehicle), trasy z ich
+ * pojazdami i klientami (tfb_tour*), zamówienia dnia wysyłki z danymi paletowymi produktów (rodzaj
+ * kartonu z karty opakowań, kategoria), palety już zeskanowane (palets_delivery) i przydział na dzień.
  */
 final class LogisticsRepository extends WorkshopRepository
 {
@@ -106,24 +106,125 @@ final class LogisticsRepository extends WorkshopRepository
         ), 'n', 'id_customer'));
     }
 
-    /** @return array<int,array{vehicle:?int, stop:?int}> */
+    /** @return array<int,array{tour_set:bool, tour:?int, vehicle_set:bool, vehicle:?int, stop:?int}> */
     public function assignments(string $date): array
     {
         $out = [];
-        foreach ($this->all('SELECT id_customer, id_carrier_vehicle, stop_order FROM tfb_shipping_assignment WHERE ship_date = ?', [$date]) as $r) {
-            $out[(int) $r['id_customer']] = ['vehicle' => $r['id_carrier_vehicle'] !== null ? (int) $r['id_carrier_vehicle'] : null, 'stop' => $r['stop_order'] !== null ? (int) $r['stop_order'] : null];
+        foreach ($this->all('SELECT id_customer, id_tour, tour_set, id_carrier_vehicle, vehicle_set, stop_order FROM tfb_shipping_assignment WHERE ship_date = ?', [$date]) as $r) {
+            $out[(int) $r['id_customer']] = [
+                'tour_set' => (bool) (int) $r['tour_set'], 'tour' => $r['id_tour'] !== null ? (int) $r['id_tour'] : null,
+                'vehicle_set' => (bool) (int) $r['vehicle_set'], 'vehicle' => $r['id_carrier_vehicle'] !== null ? (int) $r['id_carrier_vehicle'] : null,
+                'stop' => $r['stop_order'] !== null ? (int) $r['stop_order'] : null,
+            ];
         }
         return $out;
     }
 
-    /** @return array<int,array{vehicle:?int, stop:?int}> */
-    public function routes(): array
+    // --- Trasy -------------------------------------------------------------------------------------
+
+    public function tours(): array
     {
-        $out = [];
-        foreach ($this->all('SELECT id_customer, id_carrier_vehicle, stop_order FROM tfb_customer_route') as $r) {
-            $out[(int) $r['id_customer']] = ['vehicle' => $r['id_carrier_vehicle'] !== null ? (int) $r['id_carrier_vehicle'] : null, 'stop' => $r['stop_order'] !== null ? (int) $r['stop_order'] : null];
-        }
-        return $out;
+        return $this->all('SELECT id, name, weekdays, TIME_FORMAT(departure_time, "%H:%i") AS departure_time, color, active, notes FROM tfb_tour ORDER BY active DESC, name');
+    }
+
+    public function tour(int $id): ?array
+    {
+        return $this->all('SELECT id, name, weekdays, TIME_FORMAT(departure_time, "%H:%i") AS departure_time, color, active, notes FROM tfb_tour WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    /** Pojazdy tras w kolejności wypełniania. */
+    public function tourVehicles(): array
+    {
+        return $this->all('SELECT id_tour, id_carrier_vehicle, position FROM tfb_tour_vehicle ORDER BY id_tour, position, id_carrier_vehicle');
+    }
+
+    /** Klienci tras w kolejności rozładunku ; trasy po nazwie (pierwsza wygrywa, gdy klient jest w kilku). */
+    public function tourCustomers(): array
+    {
+        return $this->all(
+            "SELECT tc.id_tour, tc.id_customer, tc.stop_order,
+                    COALESCE(NULLIF(TRIM(cu.company), ''), TRIM(CONCAT(cu.name, ' ', cu.surname))) AS customer, cu.fac_town AS town, cu.fac_country AS country, cu.active
+             FROM tfb_tour_customer tc JOIN tfb_tour t ON t.id = tc.id_tour JOIN customer cu ON cu.id = tc.id_customer
+             ORDER BY t.name, tc.id_tour, tc.stop_order IS NULL, tc.stop_order, customer"
+        );
+    }
+
+    public function tourNameTaken(string $name, ?int $exceptId = null): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM tfb_tour WHERE name = ? AND id <> ?', [$name, $exceptId ?? 0]);
+    }
+
+    public function insertTour(array $data): int
+    {
+        $columns = array_keys($data);
+        $this->db->prepare(sprintf('INSERT INTO tfb_tour (%s) VALUES (%s)', implode(', ', $columns), implode(', ', array_fill(0, count($columns), '?'))))->execute(array_values($data));
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function updateTour(int $id, array $data): void
+    {
+        $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
+        $this->db->prepare("UPDATE tfb_tour SET {$set} WHERE id = ?")->execute([...array_values($data), $id]);
+    }
+
+    public function deleteTour(int $id): void
+    {
+        $this->db->prepare('DELETE FROM tfb_tour WHERE id = ?')->execute([$id]);
+    }
+
+    /** @param list<int> $vehicleIds w kolejności wypełniania */
+    public function setTourVehicles(int $tourId, array $vehicleIds): void
+    {
+        $this->transaction(function () use ($tourId, $vehicleIds) {
+            $this->db->prepare('DELETE FROM tfb_tour_vehicle WHERE id_tour = ?')->execute([$tourId]);
+            $insert = $this->db->prepare('INSERT INTO tfb_tour_vehicle (id_tour, id_carrier_vehicle, position) VALUES (?, ?, ?)');
+            foreach (array_values($vehicleIds) as $i => $vehicleId) $insert->execute([$tourId, $vehicleId, $i + 1]);
+        });
+    }
+
+    /** @param list<array{id:int, stop:?int}> $customers */
+    public function setTourCustomers(int $tourId, array $customers): void
+    {
+        $this->transaction(function () use ($tourId, $customers) {
+            $this->db->prepare('DELETE FROM tfb_tour_customer WHERE id_tour = ?')->execute([$tourId]);
+            $insert = $this->db->prepare('INSERT INTO tfb_tour_customer (id_tour, id_customer, stop_order) VALUES (?, ?, ?)');
+            foreach ($customers as $c) $insert->execute([$tourId, $c['id'], $c['stop']]);
+        });
+    }
+
+    public function tourStop(int $tourId, int $customerId): ?array
+    {
+        return $this->all('SELECT stop_order FROM tfb_tour_customer WHERE id_tour = ? AND id_customer = ?', [$tourId, $customerId])[0] ?? null;
+    }
+
+    public function nextTourStop(int $tourId): int
+    {
+        return (int) $this->all('SELECT COALESCE(MAX(stop_order), 0) + 1 AS n FROM tfb_tour_customer WHERE id_tour = ?', [$tourId])[0]['n'];
+    }
+
+    /** Klient na stałe w trasie ; usunięty z innych tras jeżdżących w te same dni tygodnia. */
+    public function putCustomerOnTour(int $tourId, int $customerId, int $stop, int $weekdays): void
+    {
+        $this->transaction(function () use ($tourId, $customerId, $stop, $weekdays) {
+            $this->db->prepare('DELETE tc FROM tfb_tour_customer tc JOIN tfb_tour t ON t.id = tc.id_tour WHERE tc.id_customer = ? AND tc.id_tour <> ? AND (t.weekdays & ?) <> 0')
+                ->execute([$customerId, $tourId, $weekdays]);
+            $this->db->prepare('INSERT INTO tfb_tour_customer (id_tour, id_customer, stop_order) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stop_order = VALUES(stop_order)')
+                ->execute([$tourId, $customerId, $stop]);
+        });
+    }
+
+    public function removeCustomerFromTour(int $tourId, int $customerId): void
+    {
+        $this->db->prepare('DELETE FROM tfb_tour_customer WHERE id_tour = ? AND id_customer = ?')->execute([$tourId, $customerId]);
+    }
+
+    /** Klienci do dodania do trasy : aktywni najpierw. */
+    public function customers(): array
+    {
+        return $this->all(
+            "SELECT id, COALESCE(NULLIF(TRIM(company), ''), TRIM(CONCAT(name, ' ', surname))) AS name, fac_town AS town, fac_country AS country, active
+             FROM customer ORDER BY active DESC, name"
+        );
     }
 
     /** @return array<int,int> klient => pojazd z ostatniego CMR */
@@ -144,20 +245,13 @@ final class LogisticsRepository extends WorkshopRepository
         return (bool) $this->all('SELECT 1 FROM customer WHERE id = ?', [$id]);
     }
 
-    public function saveAssignment(string $date, int $customerId, ?int $vehicleId, ?int $stop, ?int $userId): void
+    public function saveAssignment(string $date, int $customerId, bool $tourSet, ?int $tourId, bool $vehicleSet, ?int $vehicleId, ?int $stop, ?int $userId): void
     {
         $this->db->prepare(
-            'INSERT INTO tfb_shipping_assignment (ship_date, id_customer, id_carrier_vehicle, stop_order, updated_by) VALUES (?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE id_carrier_vehicle = VALUES(id_carrier_vehicle), stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)'
-        )->execute([$date, $customerId, $vehicleId, $stop, $userId]);
-    }
-
-    public function saveRoute(int $customerId, ?int $vehicleId, ?int $stop, ?int $userId): void
-    {
-        $this->db->prepare(
-            'INSERT INTO tfb_customer_route (id_customer, id_carrier_vehicle, stop_order, updated_by) VALUES (?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE id_carrier_vehicle = VALUES(id_carrier_vehicle), stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)'
-        )->execute([$customerId, $vehicleId, $stop, $userId]);
+            'INSERT INTO tfb_shipping_assignment (ship_date, id_customer, id_tour, tour_set, id_carrier_vehicle, vehicle_set, stop_order, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE id_tour = VALUES(id_tour), tour_set = VALUES(tour_set), id_carrier_vehicle = VALUES(id_carrier_vehicle),
+                                     vehicle_set = VALUES(vehicle_set), stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)'
+        )->execute([$date, $customerId, $tourSet ? $tourId : null, $tourSet ? 1 : 0, $vehicleSet ? $vehicleId : null, $vehicleSet ? 1 : 0, $stop, $userId]);
     }
 
     public function product(int $id): ?array
@@ -168,5 +262,18 @@ final class LogisticsRepository extends WorkshopRepository
     public function savePalletData(int $productId, int $cpl, int $lpp, int $cpp): void
     {
         $this->db->prepare('UPDATE final_product SET cpl = ?, lpp = ?, cpp = ? WHERE id = ?')->execute([$cpl, $lpp, $cpp, $productId]);
+    }
+
+    private function transaction(callable $fn): void
+    {
+        $own = !$this->db->inTransaction();
+        if ($own) $this->db->beginTransaction();
+        try {
+            $fn();
+            if ($own) $this->db->commit();
+        } catch (\Throwable $e) {
+            if ($own) $this->db->rollBack();
+            throw $e;
+        }
     }
 }

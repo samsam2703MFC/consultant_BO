@@ -9,6 +9,7 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\PlanningRepository;
+use App\Services\Logistics\LogisticsService;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
@@ -16,8 +17,8 @@ use App\Services\Workshop\Referentiel\AuditTrail;
  * P3 — besoins et plan de production.
  *
  * MTO : commandes clients pas encore expédiées, en pièces (cartons × colisage), dues avant le
- * départ du camion (jour d'expédition à planning.default_departure_time, moins
- * planning.loading_time_min). Commandes passées après la clôture (J − planning.default_cutoff_days_before
+ * départ du camion (jour d'expédition à l'heure de la tournée du client — la plus tôt des clients de
+ * la ligne —, sinon planning.default_departure_time, moins planning.loading_time_min). Commandes passées après la clôture (J − planning.default_cutoff_days_before
  * à planning.default_cutoff_time) signalées.
  * MTS : stock projeté (stock libre ERP + OF MTS en cours − commandes servies sur stock) remis à la
  * cible de couverture (consommation des planning.consumption_weeks dernières semaines × jours),
@@ -35,6 +36,7 @@ final class PlanningService
         private ParamRepository $params,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private LogisticsService $logistics,
     ) {
     }
 
@@ -89,6 +91,7 @@ final class PlanningService
             $key = $line($item, $o['expected_shipping_date']);
             $lines[$key]['qty_mto'] += $pieces;
             $lines[$key]['orders'][] = ['customer_order_id' => (int) $o['customer_order_id'], 'final_product_id' => (int) $o['id_product'], 'quantity' => $pieces];
+            $lines[$key]['customers'][(int) $o['id_customer']] = true;
             $cutoff = date('Y-m-d', strtotime($o['expected_shipping_date'] . " -{$cutoffDays} days")) . ' ' . $cutoffTime . ':00';
             if ($o['create_order_date'] !== null && $o['create_order_date'] > $cutoff) $lines[$key]['late_orders']++;
         }
@@ -147,6 +150,7 @@ final class PlanningService
 
         // --- Heures standard et jalons (les lignes ramenées à zéro, ex. par le surgélateur, disparaissent)
         $lines = array_filter($lines, fn($l) => $l['qty_proposed'] > 0);
+        $leavesAt = $this->logistics->departures();
         foreach ($lines as &$l) {
             $steps = $routings[(int) $l['item']['id']] ?? [];
             $calc = StandardTime::routing($steps, $l['qty_proposed']);
@@ -154,7 +158,8 @@ final class PlanningService
             $l['elapsed_s'] = $calc['totals']['elapsed_s'];
             $multiple = $this->num($l['item']['batch_multiple']);
             $l['batches'] = $l['qty_proposed'] <= 0 ? 0 : ($multiple ? (int) ceil(round($l['qty_proposed'] / $multiple, 6)) : 1);
-            $l['due_at'] = date('Y-m-d H:i:s', strtotime($l['due_date'] . ' ' . $departure) - $loadingMin * 60);
+            $leaves = $leavesAt($l['due_date'], array_keys($l['customers'] ?? []), $departure);
+            $l['due_at'] = date('Y-m-d H:i:s', strtotime($l['due_date'] . ' ' . $leaves) - $loadingMin * 60);
             if (!$steps) $warnings[] = ['code' => 'NO_ROUTING', 'item_id' => (int) $l['item']['id']];
             if ($l['item']['status'] !== 'validated') $warnings[] = ['code' => 'SHEET_NOT_VALIDATED', 'item_id' => (int) $l['item']['id']];
         }
@@ -275,8 +280,17 @@ final class PlanningService
         $semiByRecipe = [];
         foreach ($items as $it) if ($it['item_type'] === 'semi' && $it['id_recipe'] !== null) $semiByRecipe[(int) $it['id_recipe']] = $it;
         $customerLines = $this->planning->openOrderLines($plan['period_start'], $plan['period_end']);
+        $customersByKey = [];
+        foreach ($customerLines as $o) $customersByKey[$o['id_product'] . '|' . substr($o['expected_shipping_date'], 0, 10)][(int) $o['id_customer']] = true;
+        $leaves = [];
+        $leavesAt = $this->logistics->departures();
+        foreach ($lines as $l) {
+            $item = $items[(int) $l['id_item']] ?? null;
+            $customers = $item && $item['id_final_product'] !== null && (float) $l['qty_mto'] > 0 ? array_keys($customersByKey[$item['id_final_product'] . '|' . $l['due_date']] ?? []) : [];
+            $leaves[(int) $l['id']] = $leavesAt($l['due_date'], $customers, $departure);
+        }
 
-        $this->tx->execute(function () use ($id, $plan, $lines, $routings, $graph, $semiByRecipe, $items, $customerLines, $departure, $loadingMin, $context) {
+        $this->tx->execute(function () use ($id, $plan, $lines, $routings, $graph, $semiByRecipe, $items, $customerLines, $leaves, $loadingMin, $context) {
             $orderByKey = [];
             // Produits d'abord (MTO, MTS), puis semi-finis : leur échéance = début au plus tard du parent.
             usort($lines, fn($a, $b) => ($a['item_type'] === 'semi') <=> ($b['item_type'] === 'semi'));
@@ -284,7 +298,7 @@ final class PlanningService
             foreach ($lines as $l) {
                 if ((float) $l['qty_final'] <= 0) continue;
                 $item = $items[(int) $l['id_item']] ?? null;
-                $dueAt = strtotime($l['due_date'] . ' ' . $departure) - $loadingMin * 60;
+                $dueAt = strtotime($l['due_date'] . ' ' . $leaves[(int) $l['id']]) - $loadingMin * 60;
                 $origin = $l['item_type'] === 'semi' ? 'SEMI' : ((float) $l['qty_mts'] > 0 && (float) $l['qty_mto'] == 0.0 ? 'MTS' : 'MTO');
                 $parentId = null;
                 if ($origin === 'SEMI') {

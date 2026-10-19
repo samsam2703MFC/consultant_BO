@@ -3,7 +3,8 @@
 {% block title %}Załadunek {{ date|date('d.m.Y') }}{% endblock %}
 
 {% set t = totals %}
-{% set sourceLabels = {day: 'przydział na ten dzień', route: 'stała trasa klienta', last_cmr: 'podpowiedź: ostatni CMR'} %}
+{% set sourceLabels = {day: 'pojazd na ten dzień', tour: 'pojazd z trasy', last_cmr: 'podpowiedź: ostatni CMR'} %}
+{% set tourLabels = {day: 'trasa na ten dzień', tour: 'stała trasa klienta'} %}
 
 {% block page_heading %}
     <div class="page-heading at-profit-head">
@@ -21,6 +22,7 @@
                 {% endfor %}
                 {% if not found %}<option value="{{ date }}" selected>{{ date|date('d.m') }} · brak zamówień</option>{% endif %}
             </select>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/tours"><i class="bi bi-signpost-split"></i> Trasy</a>
             <a class="btn btn-outline-primary" href="{{ root }}/logistics/vehicles"><i class="bi bi-truck"></i> Pojazdy</a>
         </form>
     </div>
@@ -108,7 +110,7 @@
     {# --- Klienci : palety (wizualnie) i pojazd --------------------------------------- #}
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h4 class="card-title mb-0">Klienci: palety i pojazd</h4>
+            <h4 class="card-title mb-0">Trasy i klienci: palety i pojazd</h4>
             <ul class="at-logi-legend" aria-label="Legenda">
                 <li><span class="at-pallet-mini is-full"></span> pełna paleta jednego produktu</li>
                 <li><span class="at-pallet-mini is-mixed"></span> {{ settings.mixed ? 'paleta mieszana (jeden format kartonu)' : 'paleta niepełna' }}</li>
@@ -116,75 +118,55 @@
             </ul>
         </div>
         <div class="card-body pt-0">
-            {% for c in customers %}
-            <article class="at-logi-customer" data-customer="{{ c.id }}">
-                <header class="at-logi-customer-head">
-                    <div class="at-logi-customer-name">
-                        <strong>{{ c.name }}</strong>
-                        <span class="at-sub">{{ c.town }}{{ c.country ? ', ' ~ c.country : '' }} · {{ c.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }}{{ c.palletised ? ' · spaletyzowane' : '' }}</span>
+            {% for tour in tours %}
+            <section class="at-logi-tour" style="--tour-color: {{ tour.color ?: '#8d1d2c' }}" aria-label="Trasa {{ tour.name }}">
+                <header class="at-logi-tour-head">
+                    <span class="at-tour-dot" aria-hidden="true"></span>
+                    <div class="at-logi-tour-name">
+                        <strong>{{ tour.name }}</strong>
+                        <span class="at-sub">{{ tour.days }} · wyjazd {{ tour.departure }} · {{ tour.customers|length|plural_pl('klient', 'klientów', 'klientów') }}</span>
                     </div>
-                    <div class="at-logi-customer-total">
-                        <strong>{{ c.pallets }}</strong><span>{{ c.pallets|plural_pl('paleta', 'palety', 'palet')|split(' ')|last }}</span>
-                        <span class="at-sub">{{ c.cartons|number_format(0, ',', ' ') }} kart. · {{ c.weight_kg|number_format(0, ',', ' ') }} kg{% if c.scanned %} · <span class="{{ c.scanned != c.pallets ? 'text-warning' : 'text-success' }}">zeskanowane {{ c.scanned }}</span>{% endif %}</span>
-                    </div>
-                    <div class="at-logi-customer-truck">
-                        <select class="form-select form-select-sm" data-field="vehicle_id" aria-label="Pojazd {{ c.name }}">
-                            <option value="">{{ vehicles ? '— bez pojazdu —' : '— brak pojazdów w użyciu —' }}</option>
-                            {% for v in vehicles %}
-                                <option value="{{ v.id }}" {{ v.id == c.vehicle_id ? 'selected' : '' }}>{{ v.regis_num ?: v.carrier }}{{ v.pallet_places ? ' (' ~ v.pallet_places ~ ' pal.)' : '' }} · {{ v.carrier|slice(0, 22) }}</option>
-                            {% endfor %}
-                            {% if c.vehicle_id and vehicles|filter(v => v.id == c.vehicle_id) is empty and all_vehicles[c.vehicle_id] is defined %}
-                                {% set iv = all_vehicles[c.vehicle_id] %}
-                                <option value="{{ iv.id }}" selected>{{ iv.regis_num ?: iv.carrier }} · {{ iv.carrier|slice(0, 22) }} (nieaktywny)</option>
-                            {% endif %}
-                        </select>
-                        <span class="d-flex gap-2 align-items-center">
-                            <input class="form-control form-control-sm at-logi-stop" data-field="stop" inputmode="numeric" value="{{ c.stop }}" placeholder="kol." aria-label="Kolejność rozładunku {{ c.name }}">
-                            <label class="at-sub mb-0"><input type="checkbox" class="form-check-input" data-field="remember" {{ c.vehicle_source == 'route' ? 'checked' : '' }}> stała trasa</label>
-                        </span>
-                        {% if c.vehicle_source %}<span class="at-sub">{{ sourceLabels[c.vehicle_source] }}</span>{% endif %}
+                    <ul class="at-logi-tour-trucks" aria-label="Pojazdy trasy">
+                        {% for v in tour.vehicles %}
+                            <li class="{{ v.over ? 'is-over' : '' }}"><strong>{{ v.label }}</strong> {{ v.pallets }}{{ v.places ? ' / ' ~ v.places : '' }} pal.
+                                {% if v.places %}<span class="at-logi-fill at-logi-fill-mini"><span style="width: {{ min(100, v.fill_pct ?? 0)|round(1) }}%"></span></span>{% endif %}</li>
+                        {% else %}
+                            <li class="is-over">brak pojazdu — <a href="{{ root }}/logistics/tours">dodaj</a></li>
+                        {% endfor %}
+                    </ul>
+                    <div class="at-logi-tour-total">
+                        <strong>{{ tour.pallets }}{{ tour.places ? ' / ' ~ tour.places : '' }}</strong>
+                        <span class="at-sub">palet{{ tour.fill_pct is not null ? ' · ' ~ tour.fill_pct|round ~ ' %' : '' }} · {{ tour.weight_kg|number_format(0, ',', ' ') }} kg</span>
                     </div>
                 </header>
-                {% if c.missing_cpp %}<p class="at-sub text-danger mb-2">{{ c.missing_cpp }} prod. bez kartonów na paletę — nie są na paletach poniżej.</p>{% endif %}
-                {% for ct in c.carton_types %}
-                <section class="at-logi-ctype">
-                    <h5 class="at-logi-ctype-title">
-                        <i class="bi {{ ct.id == 'formats' ? 'bi-stack' : 'bi-box-seam' }}" aria-hidden="true"></i> {{ ct.name ?: 'Karton nieokreślony (brak w karcie opakowań)' }}
-                        <span class="at-sub">{{ ct.pallets|length|plural_pl('paleta', 'palety', 'palet') }} · {{ ct.cartons|number_format(0, ',', ' ') }} kart.</span>
-                    </h5>
-                    <ol class="at-pallets" aria-label="Palety: {{ ct.name }}">
-                        {% for p in ct.pallets %}
-                            {% set label = p.items|length > 1 ? 'Mix ' ~ p.items|length : p.items[0].product %}
-                            <li class="at-pallet is-{{ p.kind }}" title="{{ p.items|map(i => i.product ~ (i.format is defined ? ' [' ~ i.format ~ ']' : '') ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}{{ p.kind != 'full' ? '\nzapełnienie ' ~ (p.fill * 100)|round ~ ' %' : '' }}">
-                                <span class="at-pallet-fill" style="height: {{ (p.fill * 100)|round(1) }}%"></span>
-                                <span class="at-pallet-label">{{ label|length > 22 ? label|slice(0, 21) ~ '…' : label }}</span>
-                                <span class="at-pallet-qty">{{ p.items|reduce((s, i) => s + i.cartons, 0)|number_format(0, ',', ' ') }} kart.{{ p.kind != 'full' ? ' · ' ~ (p.fill * 100)|round ~ ' %' : '' }}</span>
-                            </li>
-                        {% endfor %}
-                    </ol>
-                    <div class="at-logi-cats">
-                        {% for cat in ct.categories %}
-                            <details class="at-logi-cat">
-                                <summary><strong>{{ cat.name == '—' ? 'Bez kategorii' : cat.name }}</strong> <span class="at-sub">{{ cat.cartons|number_format(0, ',', ' ') }} kart. · {{ cat.pallets_exact|number_format(2, ',', ' ') }} pal.</span></summary>
-                                <ul>
-                                    {% for pr in cat.products %}
-                                        <li>{{ pr.name }} — {{ pr.cartons|number_format(0, ',', ' ') }} kart.{% if pr.cpp %} · {{ pr.pallets_exact|number_format(2, ',', ' ') }} pal. ({{ pr.cpp }}/pal.){% else %} · <span class="text-danger">brak kartonów na paletę</span>{% endif %}</li>
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}
-                    </div>
-                </section>
+                {% for cid in tour.customers %}
+                    {% include 'logistics/_customer_card.twig' with {c: by_id[cid]} %}
+                {% else %}
+                    <p class="at-sub mb-0">Brak zamówień klientów tej trasy na ten dzień.</p>
                 {% endfor %}
-            </article>
-            {% else %}
-                <p class="at-empty">Brak zamówień na ten dzień.</p>
+            </section>
             {% endfor %}
+            {% if no_tour %}
+            <section class="at-logi-tour is-none" aria-label="Bez trasy">
+                <header class="at-logi-tour-head">
+                    <span class="at-tour-dot" aria-hidden="true"></span>
+                    <div class="at-logi-tour-name"><strong>Bez trasy</strong><span class="at-sub">{{ no_tour|length|plural_pl('klient', 'klientów', 'klientów') }} · <a href="{{ root }}/logistics/tours">dodaj klientów do tras</a></span></div>
+                    <div class="at-logi-tour-total"><strong>{{ no_tour|reduce((s, cid) => s + by_id[cid].pallets, 0) }}</strong><span class="at-sub">palet</span></div>
+                </header>
+                {% for cid in no_tour %}
+                    {% include 'logistics/_customer_card.twig' with {c: by_id[cid]} %}
+                {% endfor %}
+            </section>
+            {% endif %}
+            {% if not customers %}
+                <p class="at-empty">Brak zamówień na ten dzień.</p>
+            {% endif %}
             {% if customers %}
             <p class="at-profit-note">
                 Palety = kartony ÷ kartony na paletę z karty produktu; pełne palety każdego produktu{{ settings.mixed ? ', reszty razem na paletach mieszanych — tylko w jednym formacie kartonu (karta opakowań)' : ', osobna paleta na każdą resztę' }}.
                 Waga = kartony × sztuki w kartonie × gramatura + {{ settings.tare_kg|number_format(0) }} kg na paletę.
-                Pojazd: przydział na ten dzień; „stała trasa” zapamiętuje pojazd i kolejność dla kolejnych dni. Wyjazd domyślnie {{ settings.default_departure }}, załadunek {{ settings.loading_min }} min wcześniej.
+                Trasa: trasa klienta w ten dzień tygodnia (zakładka Trasy) albo wybrana na ten dzień; „na stałe w trasie” dopisuje klienta do trasy z tą kolejnością.
+                Pojazd „auto z trasy”: klienci trasy po kolejności rozładunku do pierwszego pojazdu trasy, w którym się mieszczą. Wyjazd: godzina trasy, pojazdu albo {{ settings.default_departure }}; załadunek {{ settings.loading_min }} min wcześniej.
             </p>
             {% endif %}
         </div>
@@ -242,13 +224,19 @@
         if (res.ok) window.setTimeout(() => window.location.reload(), 500);
     };
     document.querySelectorAll('[data-customer]').forEach(row => row.addEventListener('change', (e) => {
-        if (!e.target.dataset.field) return;
-        at.send('/ajax/logistics/assignments', 'PUT', {
+        const field = e.target.dataset.field;
+        if (!field) return;
+        const value = (name) => row.querySelector(`[data-field=${name}]`).value;
+        const tour = value('tour_id');
+        const data = {
             date, customer_id: Number(row.dataset.customer),
-            vehicle_id: row.querySelector('[data-field=vehicle_id]').value || null,
-            stop: row.querySelector('[data-field=stop]').value.trim() || null,
-            remember: row.querySelector('[data-field=remember]').checked,
-        }).then(reload);
+            tour_id: tour === 'none' ? null : tour,
+            // Nowa trasa : pojazd z jej pojazdów ; „na stałe” zmienia się tylko polem wyboru.
+            vehicle_id: field === 'tour_id' ? 'auto' : (value('vehicle_id') || null),
+            stop: value('stop').trim() || null,
+        };
+        if (field !== 'tour_id' && tour !== 'none') data.remember = row.querySelector('[data-field=remember]').checked;
+        at.send('/ajax/logistics/assignments', 'PUT', data).then(reload);
     }));
     document.querySelectorAll('tr[data-product]').forEach(row => row.querySelector('[data-save-product]').addEventListener('click', () => {
         const data = {};

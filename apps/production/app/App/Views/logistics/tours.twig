@@ -1,0 +1,201 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Trasy{% endblock %}
+
+{% macro dayChips(weekdays, selected, prefix) %}
+    <fieldset class="at-tour-days">
+        <legend class="visually-hidden">Dni tygodnia</legend>
+        {% for d, label in weekdays %}
+            <label class="at-tour-day"><input type="checkbox" name="days[]" value="{{ d }}" {{ d in selected ? 'checked' : '' }} id="{{ prefix }}-d{{ d }}"><span>{{ label }}</span></label>
+        {% endfor %}
+    </fieldset>
+{% endmacro %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Trasy</h3>
+            <p class="text-subtitle text-muted">Trasy z pojazdami i klientami: dni tygodnia, wyjazd, kolejność rozładunku</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics"><i class="bi bi-stack"></i> Załadunek dnia</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/vehicles"><i class="bi bi-truck"></i> Pojazdy</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-logi">
+    {% for w in notices %}
+        <div class="alert alert-warning at-profit-warn"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>
+    {% endfor %}
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Nowa trasa</h4></div>
+        <div class="card-body pt-0">
+            <form id="addTour" class="at-logi-add at-tour-form">
+                <label>Nazwa<input class="form-control" name="name" maxlength="80" required placeholder="np. Wrocław – Berlin"></label>
+                <label>Wyjazd<input class="form-control" type="time" name="departure_time" data-nullable><span class="at-sub">puste = godzina pojazdu ({{ default_departure }})</span></label>
+                <label>Kolor<input class="form-control form-control-color" type="color" name="color" value="#8d1d2c"></label>
+                <label>Uwagi<input class="form-control" name="notes" maxlength="255"></label>
+                <div class="at-tour-form-days">{{ _self.dayChips(weekdays, [1, 2, 3, 4, 5], 'new') }}</div>
+                <div class="at-logi-add-actions"><button class="btn btn-primary"><i class="bi bi-plus"></i> Dodaj trasę</button></div>
+            </form>
+            <p class="at-profit-note">Potem dodaj do trasy pojazdy (kolejność wypełniania) i klientów (kolejność rozładunku). W dniu wysyłki klient jedzie trasą tego dnia tygodnia, a pojazd jest dobierany z pojazdów trasy.</p>
+        </div>
+    </div>
+
+    <div class="at-tour-grid">
+    {% for t in tours %}
+        {% set vehicleIds = t.vehicles|map(v => v.id) %}
+        {% set customerIds = t.customers|map(c => c.id) %}
+        <article class="card at-tour {{ t.active ? '' : 'is-inactive' }}" data-tour="{{ t.id }}" style="--tour-color: {{ t.color ?: '#8d1d2c' }}"
+                 data-vehicles="{{ vehicleIds|json_encode }}" data-customers="{{ t.customers|map(c => {id: c.id, stop: c.stop})|json_encode }}">
+            <div class="card-body">
+                <header class="at-tour-head">
+                    <span class="at-tour-dot" aria-hidden="true"></span>
+                    <div class="at-tour-title">
+                        <strong>{{ t.name }}</strong>
+                        <span class="at-sub">{{ t.days }} · wyjazd {{ t.departure_time ?: (t.vehicles ? 'wg pojazdu' : default_departure) }}{{ t.active ? '' : ' · nieaktywna' }}{{ t.notes ? ' · ' ~ t.notes : '' }}</span>
+                    </div>
+                    <div class="at-tour-figures">
+                        <span><strong>{{ t.vehicles|length }}</strong> {{ t.vehicles|length|plural_pl('pojazd', 'pojazdy', 'pojazdów')|split(' ')|last }}</span>
+                        <span><strong>{{ t.places }}</strong> miejsc</span>
+                        <span><strong>{{ t.customers|length }}</strong> {{ t.customers|length|plural_pl('klient', 'klientów', 'klientów')|split(' ')|last }}</span>
+                    </div>
+                </header>
+
+                <details class="at-tour-edit">
+                    <summary>Edytuj trasę</summary>
+                    <form class="at-logi-add at-tour-form" data-edit>
+                        <label>Nazwa<input class="form-control" name="name" maxlength="80" required value="{{ t.name }}"></label>
+                        <label>Wyjazd<input class="form-control" type="time" name="departure_time" value="{{ t.departure_time }}" data-nullable></label>
+                        <label>Kolor<input class="form-control form-control-color" type="color" name="color" value="{{ t.color ?: '#8d1d2c' }}"></label>
+                        <label>Uwagi<input class="form-control" name="notes" maxlength="255" value="{{ t.notes }}" data-nullable></label>
+                        <div class="at-tour-form-days">{{ _self.dayChips(weekdays, t.day_list, 't' ~ t.id) }}</div>
+                        <label class="at-tour-active"><span><input type="checkbox" class="form-check-input" name="active" {{ t.active ? 'checked' : '' }}> trasa w użyciu</span></label>
+                        <div class="at-logi-add-actions gap-2">
+                            <button class="btn btn-primary">Zapisz</button>
+                            <button type="button" class="btn btn-outline-danger" data-delete>Usuń trasę</button>
+                        </div>
+                    </form>
+                </details>
+
+                <section class="at-tour-part">
+                    <h5>Pojazdy <span class="at-sub">kolejność wypełniania</span></h5>
+                    {% if t.vehicles %}
+                        <ol class="at-tour-list">
+                            {% for v in t.vehicles %}
+                                <li class="{{ v.active ? '' : 'is-off' }}">
+                                    <span class="at-tour-pos">{{ loop.index }}</span>
+                                    <span class="at-tour-item"><strong>{{ v.label }}</strong>
+                                        <span class="at-sub">{{ v.carrier }} · {{ v.places ? v.places ~ ' miejsc' : 'bez pojemności' }}{{ v.departure ? ' · wyjazd ' ~ v.departure : '' }}{{ v.active ? '' : ' · nieaktywny' }}</span></span>
+                                    <span class="at-tour-actions">
+                                        <button type="button" class="btn btn-sm btn-light" data-vehicle-move="-1" data-id="{{ v.id }}" {{ loop.first ? 'disabled' : '' }} aria-label="Wyżej {{ v.label }}"><i class="bi bi-arrow-up"></i></button>
+                                        <button type="button" class="btn btn-sm btn-light" data-vehicle-move="1" data-id="{{ v.id }}" {{ loop.last ? 'disabled' : '' }} aria-label="Niżej {{ v.label }}"><i class="bi bi-arrow-down"></i></button>
+                                        <button type="button" class="btn btn-sm btn-light" data-vehicle-remove data-id="{{ v.id }}" aria-label="Usuń {{ v.label }} z trasy"><i class="bi bi-x"></i></button>
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    {% else %}
+                        <p class="at-sub">Brak pojazdów — klienci trasy nie dostaną pojazdu automatycznie.</p>
+                    {% endif %}
+                    {% set freeVehicles = vehicles|filter(v => v.id not in vehicleIds) %}
+                    {% if freeVehicles %}
+                        <div class="at-tour-add">
+                            <select class="form-select form-select-sm" data-vehicle-pick aria-label="Pojazd do dodania do trasy {{ t.name }}">
+                                {% for v in freeVehicles %}<option value="{{ v.id }}">{{ v.regis_num ?: v.carrier }}{{ v.pallet_places ? ' (' ~ v.pallet_places ~ ' pal.)' : '' }} · {{ v.carrier|slice(0, 24) }}</option>{% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-vehicle-add><i class="bi bi-plus"></i> Dodaj pojazd</button>
+                        </div>
+                    {% endif %}
+                </section>
+
+                <section class="at-tour-part">
+                    <h5>Klienci <span class="at-sub">kolejność rozładunku</span></h5>
+                    {% if t.customers %}
+                        <ol class="at-tour-list">
+                            {% for c in t.customers %}
+                                <li class="{{ c.active ? '' : 'is-off' }}">
+                                    <input class="form-control form-control-sm at-logi-stop" inputmode="numeric" value="{{ c.stop }}" placeholder="—" data-stop data-id="{{ c.id }}" aria-label="Kolejność rozładunku {{ c.name }}">
+                                    <span class="at-tour-item"><strong>{{ c.name }}</strong><span class="at-sub">{{ c.town }}{{ c.country ? ', ' ~ c.country : '' }}{{ c.active ? '' : ' · klient nieaktywny' }}</span></span>
+                                    <span class="at-tour-actions">
+                                        <button type="button" class="btn btn-sm btn-light" data-customer-remove data-id="{{ c.id }}" aria-label="Usuń {{ c.name }} z trasy"><i class="bi bi-x"></i></button>
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    {% else %}
+                        <p class="at-sub">Brak klientów.</p>
+                    {% endif %}
+                    {% set freeCustomers = customers|filter(c => c.id not in customerIds) %}
+                    {% if freeCustomers %}
+                        <div class="at-tour-add">
+                            <select class="form-select form-select-sm" data-customer-pick aria-label="Klient do dodania do trasy {{ t.name }}">
+                                <optgroup label="Aktywni">
+                                    {% for c in freeCustomers|filter(c => c.active) %}<option value="{{ c.id }}">{{ c.name }}{{ c.town ? ' · ' ~ c.town : '' }}</option>{% endfor %}
+                                </optgroup>
+                                {% set inactive = freeCustomers|filter(c => not c.active) %}
+                                {% if inactive %}
+                                <optgroup label="Nieaktywni">
+                                    {% for c in inactive %}<option value="{{ c.id }}">{{ c.name }}{{ c.town ? ' · ' ~ c.town : '' }}</option>{% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-customer-add><i class="bi bi-plus"></i> Dodaj klienta</button>
+                        </div>
+                    {% endif %}
+                </section>
+            </div>
+        </article>
+    {% else %}
+        <p class="at-empty">Brak tras — dodaj pierwszą trasę powyżej.</p>
+    {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const done = (res) => {
+        at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+        if (res.ok) window.setTimeout(() => window.location.reload(), 400);
+    };
+    at.bindForm(document.getElementById('addTour'), '/ajax/logistics/tours');
+    document.querySelectorAll('[data-tour]').forEach(card => {
+        const id = card.dataset.tour;
+        const vehicles = JSON.parse(card.dataset.vehicles);
+        const customers = JSON.parse(card.dataset.customers);
+        const saveVehicles = (list) => at.send(`/ajax/logistics/tours/${id}/vehicles`, 'PUT', {vehicle_ids: list}).then(done);
+        const saveCustomers = (list) => at.send(`/ajax/logistics/tours/${id}/customers`, 'PUT', {customers: list}).then(done);
+
+        at.bindForm(card.querySelector('[data-edit]'), `/ajax/logistics/tours/${id}`, 'PUT');
+        card.querySelector('[data-delete]').addEventListener('click', () => {
+            if (!window.confirm('Usunąć trasę? Klienci i pojazdy zostają w ERP, znika tylko trasa.')) return;
+            at.send(`/ajax/logistics/tours/${id}`, 'DELETE').then(done);
+        });
+        card.querySelectorAll('[data-vehicle-move]').forEach(b => b.addEventListener('click', () => {
+            const list = [...vehicles];
+            const i = list.indexOf(Number(b.dataset.id));
+            const j = i + Number(b.dataset.vehicleMove);
+            [list[i], list[j]] = [list[j], list[i]];
+            saveVehicles(list);
+        }));
+        card.querySelectorAll('[data-vehicle-remove]').forEach(b => b.addEventListener('click', () => saveVehicles(vehicles.filter(v => v !== Number(b.dataset.id)))));
+        card.querySelector('[data-vehicle-add]')?.addEventListener('click', () => saveVehicles([...vehicles, Number(card.querySelector('[data-vehicle-pick]').value)]));
+
+        card.querySelectorAll('[data-stop]').forEach(input => input.addEventListener('change', () => {
+            saveCustomers(customers.map(c => c.id === Number(input.dataset.id) ? {id: c.id, stop: input.value.trim() || null} : c));
+        }));
+        card.querySelectorAll('[data-customer-remove]').forEach(b => b.addEventListener('click', () => saveCustomers(customers.filter(c => c.id !== Number(b.dataset.id)))));
+        card.querySelector('[data-customer-add]')?.addEventListener('click', () => {
+            const next = customers.reduce((m, c) => Math.max(m, c.stop || 0), 0) + 1;
+            saveCustomers([...customers, {id: Number(card.querySelector('[data-customer-pick]').value), stop: Math.min(99, next)}]);
+        });
+    });
+})();
+</script>
+{% endblock %}

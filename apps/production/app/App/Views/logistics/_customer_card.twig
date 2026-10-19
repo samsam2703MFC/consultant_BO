@@ -1,0 +1,69 @@
+{# Karta klienta dnia : palety według rodzaju kartonu i kategorii, trasa, pojazd, kolejność. #}
+<article class="at-logi-customer" data-customer="{{ c.id }}">
+    <header class="at-logi-customer-head">
+        <div class="at-logi-customer-name">
+            <strong>{{ c.name }}</strong>
+            <span class="at-sub">{{ c.town }}{{ c.country ? ', ' ~ c.country : '' }} · {{ c.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }}{{ c.palletised ? ' · spaletyzowane' : '' }}</span>
+        </div>
+        <div class="at-logi-customer-total">
+            <strong>{{ c.pallets }}</strong><span>{{ c.pallets|plural_pl('paleta', 'palety', 'palet')|split(' ')|last }}</span>
+            <span class="at-sub">{{ c.cartons|number_format(0, ',', ' ') }} kart. · {{ c.weight_kg|number_format(0, ',', ' ') }} kg{% if c.scanned %} · <span class="{{ c.scanned != c.pallets ? 'text-warning' : 'text-success' }}">zeskanowane {{ c.scanned }}</span>{% endif %}</span>
+        </div>
+        <div class="at-logi-customer-truck">
+            <select class="form-select form-select-sm" data-field="tour_id" aria-label="Trasa {{ c.name }}">
+                <option value="none">— bez trasy —</option>
+                {% for o in tour_options|filter(o => o.active or o.id == c.tour_id) %}
+                    <option value="{{ o.id }}" {{ o.id == c.tour_id ? 'selected' : '' }}>Trasa: {{ o.name }}{{ o.active ? '' : ' (nieaktywna)' }}</option>
+                {% endfor %}
+            </select>
+            {% set auto = c.vehicle_source == 'tour' %}
+            <select class="form-select form-select-sm" data-field="vehicle_id" aria-label="Pojazd {{ c.name }}">
+                {% if c.tour_vehicles %}<option value="auto" {{ auto ? 'selected' : '' }}>Auto z trasy{{ auto and c.vehicle_id ? ': ' ~ (all_vehicles[c.vehicle_id].regis_num ?: all_vehicles[c.vehicle_id].carrier) : '' }}</option>{% endif %}
+                <option value="" {{ not auto and c.vehicle_id is null ? 'selected' : '' }}>{{ vehicles ? '— bez pojazdu —' : '— brak pojazdów w użyciu —' }}</option>
+                {% for v in vehicles %}
+                    <option value="{{ v.id }}" {{ not auto and v.id == c.vehicle_id ? 'selected' : '' }}>{{ v.regis_num ?: v.carrier }}{{ v.pallet_places ? ' (' ~ v.pallet_places ~ ' pal.)' : '' }} · {{ v.carrier|slice(0, 22) }}</option>
+                {% endfor %}
+                {% if not auto and c.vehicle_id and vehicles|filter(v => v.id == c.vehicle_id) is empty and all_vehicles[c.vehicle_id] is defined %}
+                    {% set iv = all_vehicles[c.vehicle_id] %}
+                    <option value="{{ iv.id }}" selected>{{ iv.regis_num ?: iv.carrier }} · {{ iv.carrier|slice(0, 22) }} (nieaktywny)</option>
+                {% endif %}
+            </select>
+            <span class="d-flex gap-2 align-items-center">
+                <input class="form-control form-control-sm at-logi-stop" data-field="stop" inputmode="numeric" value="{{ c.stop }}" placeholder="kol." aria-label="Kolejność rozładunku {{ c.name }}">
+                <label class="at-sub mb-0" title="Klient na stałe w tej trasie (kolejne dni tygodnia trasy)"><input type="checkbox" class="form-check-input" data-field="remember" {{ c.tour_member ? 'checked' : '' }} {{ c.tour_id ? '' : 'disabled' }}> na stałe w trasie</label>
+            </span>
+            {% if c.vehicle_source or c.tour_source %}<span class="at-sub">{{ [c.tour_source ? tourLabels[c.tour_source] : null, c.vehicle_source ? sourceLabels[c.vehicle_source] : null]|filter(x => x)|join(' · ') }}</span>{% endif %}
+        </div>
+    </header>
+    {% if c.missing_cpp %}<p class="at-sub text-danger mb-2">{{ c.missing_cpp }} prod. bez kartonów na paletę — nie są na paletach poniżej.</p>{% endif %}
+    {% for ct in c.carton_types %}
+    <section class="at-logi-ctype">
+        <h5 class="at-logi-ctype-title">
+            <i class="bi {{ ct.id == 'formats' ? 'bi-stack' : 'bi-box-seam' }}" aria-hidden="true"></i> {{ ct.name ?: 'Karton nieokreślony (brak w karcie opakowań)' }}
+            <span class="at-sub">{{ ct.pallets|length|plural_pl('paleta', 'palety', 'palet') }} · {{ ct.cartons|number_format(0, ',', ' ') }} kart.</span>
+        </h5>
+        <ol class="at-pallets" aria-label="Palety: {{ ct.name }}">
+            {% for p in ct.pallets %}
+                {% set label = p.items|length > 1 ? 'Mix ' ~ p.items|length : p.items[0].product %}
+                <li class="at-pallet is-{{ p.kind }}" title="{{ p.items|map(i => i.product ~ (i.format is defined ? ' [' ~ i.format ~ ']' : '') ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}{{ p.kind != 'full' ? '\nzapełnienie ' ~ (p.fill * 100)|round ~ ' %' : '' }}">
+                    <span class="at-pallet-fill" style="height: {{ (p.fill * 100)|round(1) }}%"></span>
+                    <span class="at-pallet-label">{{ label|length > 22 ? label|slice(0, 21) ~ '…' : label }}</span>
+                    <span class="at-pallet-qty">{{ p.items|reduce((s, i) => s + i.cartons, 0)|number_format(0, ',', ' ') }} kart.{{ p.kind != 'full' ? ' · ' ~ (p.fill * 100)|round ~ ' %' : '' }}</span>
+                </li>
+            {% endfor %}
+        </ol>
+        <div class="at-logi-cats">
+            {% for cat in ct.categories %}
+                <details class="at-logi-cat">
+                    <summary><strong>{{ cat.name == '—' ? 'Bez kategorii' : cat.name }}</strong> <span class="at-sub">{{ cat.cartons|number_format(0, ',', ' ') }} kart. · {{ cat.pallets_exact|number_format(2, ',', ' ') }} pal.</span></summary>
+                    <ul>
+                        {% for pr in cat.products %}
+                            <li>{{ pr.name }} — {{ pr.cartons|number_format(0, ',', ' ') }} kart.{% if pr.cpp %} · {{ pr.pallets_exact|number_format(2, ',', ' ') }} pal. ({{ pr.cpp }}/pal.){% else %} · <span class="text-danger">brak kartonów na paletę</span>{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+</article>
