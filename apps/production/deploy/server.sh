@@ -12,6 +12,9 @@
 #   de l'extérieur (SMTP, KSeF, boutiques des franchisés) et ses comptes
 #   reçoivent des mots de passe aléatoires, écrits dans un fichier root-only
 #   du serveur — jamais dans les logs (le dépôt est public).
+# - transfert : faute d'accès direct au serveur, le dump peut arriver par le
+#   dépôt, CHIFFRÉ pour la clé publique de ce serveur (deploy/incoming/). La
+#   clé privée reste dans $ERP_IMPORT_DIR et est détruite après l'import.
 set -euo pipefail
 
 ERP_TARGET="${ERP_TARGET:-/var/www/production}"
@@ -29,15 +32,34 @@ log()  { printf '\033[1;34m[erp]\033[0m %s\n' "$*"; }
 warn() { printf '::warning title=ERP::%s\n' "$*"; }
 fail() { printf '::error title=ERP::%s\n' "$*"; exit 1; }
 aptget() { DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600 "$@"; }
+installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'; }
 
-# --- 1. PHP et extensions ------------------------------------------------
-php -r 'exit(PHP_VERSION_ID >= 80100 ? 0 : 1);' \
-  || fail "PHP $(php -r 'echo PHP_VERSION;') sur le serveur : l'ERP demande PHP 8.1 ou plus."
+# --- 1. PHP d'Apache et extensions -------------------------------------
+# Le PHP en ligne de commande n'est pas forcément celui d'Apache (constaté ici :
+# CLI 8.4, et php-mysql / php-gd signalés absents à chaque livraison du
+# cockpit) : on vise la version qu'Apache charge réellement.
+APV="$(ls /etc/apache2/mods-enabled 2>/dev/null | sed -n 's/^php\([0-9]\.[0-9]*\)\.load$/\1/p' | head -1)"
+FPM=""
+if [[ -z "$APV" ]]; then
+  APV="$(ls /etc/apache2/conf-enabled 2>/dev/null | sed -n 's/^php\([0-9]\.[0-9]*\)-fpm\.conf$/\1/p' | head -1)"
+  [[ -z "$APV" ]] || FPM="php${APV}-fpm"
+fi
 need=()
-for pair in pdo_mysql:php-mysql mbstring:php-mbstring curl:php-curl gd:php-gd zip:php-zip \
-            dom:php-xml simplexml:php-xml xmlreader:php-xml xmlwriter:php-xml; do
-  php -m | grep -qix "${pair%%:*}" || need+=("${pair##*:}")
-done
+if [[ -n "$APV" ]]; then
+  log "PHP d'Apache : ${APV}${FPM:+ (FPM)} ; PHP en ligne de commande : $(php -r 'echo PHP_VERSION;' 2>/dev/null || echo absent)"
+  [[ "${APV//./}" -ge 81 ]] || fail "Apache utilise PHP ${APV} : l'ERP demande PHP 8.1 ou plus."
+  for p in cli mysql mbstring curl gd zip xml; do
+    installed "php${APV}-${p}" || need+=("php${APV}-${p}")
+  done
+else
+  warn "Version de PHP d'Apache introuvable : contrôle sur le PHP en ligne de commande."
+  php -r 'exit(PHP_VERSION_ID >= 80100 ? 0 : 1);' \
+    || fail "PHP $(php -r 'echo PHP_VERSION;') sur le serveur : l'ERP demande PHP 8.1 ou plus."
+  for pair in pdo_mysql:php-mysql mbstring:php-mbstring curl:php-curl gd:php-gd zip:php-zip \
+              dom:php-xml simplexml:php-xml xmlreader:php-xml xmlwriter:php-xml; do
+    php -m | grep -qix "${pair%%:*}" || need+=("${pair##*:}")
+  done
+fi
 command -v unzip >/dev/null || need+=(unzip)
 if [[ ${#need[@]} -gt 0 ]]; then
   mapfile -t need < <(printf '%s\n' "${need[@]}" | sort -u)
@@ -45,13 +67,15 @@ if [[ ${#need[@]} -gt 0 ]]; then
   aptget update -qq || true
   aptget install -y -qq "${need[@]}" >/dev/null
   RESTART_APACHE=1
-  NEW_PHP_EXT=1   # mod_php ne charge une extension qu'au redémarrage complet
+  NEW_PHP_EXT=1   # une extension n'est chargée qu'au redémarrage complet
 fi
+PHPBIN="php"
+if [[ -n "$APV" ]] && command -v "php${APV}" >/dev/null; then PHPBIN="php${APV}"; fi
 
 # --- 2. Refuser de livrer du code qui ne se charge pas -------------------
-log "Contrôle de syntaxe avec le PHP du serveur ($(php -r 'echo PHP_VERSION;'))…"
+log "Contrôle de syntaxe avec le PHP d'Apache ($("$PHPBIN" -r 'echo PHP_VERSION;'))…"
 bad="$(find "$SRC/app" -name '*.php' -not -path '*/vendor/*' -print0 \
-        | xargs -0 -n 1 -P 4 php -l 2>&1 | grep -v '^No syntax errors' || true)"
+        | xargs -0 -n 1 -P 4 "$PHPBIN" -l 2>&1 | grep -v '^No syntax errors' || true)"
 [[ -z "$bad" ]] || { echo "$bad" | head -20; fail "Syntaxe PHP invalide : rien n'a été livré."; }
 [[ -f "$SRC/app/public/vendor/autoload.php" ]] || fail "vendor/ absent de la livraison (composer install sur le runner)."
 
@@ -93,16 +117,53 @@ ENV
 fi
 chown root:www-data "$ENV_FILE"
 chmod 640 "$ENV_FILE"
-dbpass="$(sed -n 's/^DB_PASS="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$ENV_FILE" | head -1)"
+# Lu par phpdotenv, comme le fait l'ERP (valeurs échappées comprises).
+envget() {
+  "$PHPBIN" -r 'require $argv[1]; echo Dotenv\Dotenv::parse(file_get_contents($argv[2]))[$argv[3]] ?? "";' \
+    "$ERP_TARGET/app/public/vendor/autoload.php" "$ENV_FILE" "$1"
+}
+dbpass="$(envget DB_PASS)"
 [[ -n "$dbpass" ]] || fail "DB_PASS introuvable dans $ENV_FILE."
 
 # --- 5. Base de données ---------------------------------------------------
 MYSQL="$(command -v mysql || command -v mariadb || true)"
 [[ -n "$MYSQL" ]] || fail "Client mysql introuvable sur le serveur."
-"$MYSQL" -e 'SELECT 1' >/dev/null 2>&1 \
-  || fail "Connexion MySQL en root par socket impossible : créez la base ${ERP_DB_NAME} et l'utilisateur ${ERP_DB_USER} à la main."
-"$MYSQL" <<SQL
-CREATE DATABASE IF NOT EXISTS \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+# Compte d'administration : root par socket, sinon le compte de maintenance
+# d'Ubuntu, sinon le compte MySQL du cockpit (config.php écrit par bin/deploy.sh).
+COCKPIT_CFG="${COCKPIT_CFG:-/var/www/consulant_bo/config/config.php}"
+C_USER=""; C_PASS=""
+if "$MYSQL" -e 'SELECT 1' >/dev/null 2>&1; then
+  ADMIN=("$MYSQL"); ADMIN_KIND="root (socket)"
+elif [[ -r /etc/mysql/debian.cnf ]] && "$MYSQL" --defaults-file=/etc/mysql/debian.cnf -e 'SELECT 1' >/dev/null 2>&1; then
+  ADMIN=("$MYSQL" --defaults-file=/etc/mysql/debian.cnf); ADMIN_KIND="debian-sys-maint"
+elif [[ -r "$COCKPIT_CFG" ]]; then
+  cdb() { "$PHPBIN" -r '$c = require $argv[1]; echo $c["db"][$argv[2]] ?? "";' "$COCKPIT_CFG" "$1"; }
+  C_USER="$(cdb user)"; C_PASS="$(cdb password)"
+  ADMIN=(env MYSQL_PWD="$C_PASS" "$MYSQL" -h "$(cdb host)" -P "$(cdb port)" -u "$C_USER")
+  ADMIN_KIND="compte du cockpit (${C_USER})"
+  "${ADMIN[@]}" -e 'SELECT 1' >/dev/null 2>&1 || fail "Le compte MySQL du cockpit (${C_USER}) ne se connecte pas."
+else
+  fail "Aucun accès administrateur à MySQL (root par socket, debian.cnf, config du cockpit) : créez la base ${ERP_DB_NAME} à la main."
+fi
+log "Accès MySQL : ${ADMIN_KIND}"
+
+# Remplace (ou ajoute) une ligne CLE="valeur" du .env, valeur échappée pour phpdotenv.
+set_env() {
+  "$PHPBIN" -r '
+    [$f, $k, $v] = [$argv[1], $argv[2], $argv[3]];
+    $line = $k . "=\"" . addcslashes($v, "\"\\") . "\"";
+    $s = file_get_contents($f);
+    $s = preg_replace_callback("/^" . preg_quote($k, "/") . "=.*$/m", fn () => $line, $s, -1, $n);
+    if (!$n) { $s = rtrim($s, "\n") . "\n" . $line . "\n"; }
+    file_put_contents($f, $s);' "$ENV_FILE" "$1" "$2"
+}
+
+"${ADMIN[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" \
+  || fail "Le compte MySQL ${ADMIN_KIND} ne peut pas créer la base ${ERP_DB_NAME} : créez-la à la main puis relancez."
+grant_err="$(mktemp)"
+if [[ "$(envget DB_USER)" != "$ERP_DB_USER" ]]; then
+  log "L'ERP utilise le compte MySQL $(envget DB_USER) (choisi à un passage précédent)."
+elif "${ADMIN[@]}" 2>"$grant_err" <<SQL
 CREATE USER IF NOT EXISTS '${ERP_DB_USER}'@'localhost' IDENTIFIED BY '${dbpass}';
 CREATE USER IF NOT EXISTS '${ERP_DB_USER}'@'127.0.0.1' IDENTIFIED BY '${dbpass}';
 ALTER USER '${ERP_DB_USER}'@'localhost' IDENTIFIED BY '${dbpass}';
@@ -111,32 +172,66 @@ GRANT ALL PRIVILEGES ON \`${ERP_DB_NAME}\`.* TO '${ERP_DB_USER}'@'localhost';
 GRANT ALL PRIVILEGES ON \`${ERP_DB_NAME}\`.* TO '${ERP_DB_USER}'@'127.0.0.1';
 FLUSH PRIVILEGES;
 SQL
+then
+  log "Utilisateur MySQL dédié : ${ERP_DB_USER}"
+elif [[ -n "$C_USER" ]]; then
+  warn "Le compte MySQL du cockpit ne peut pas créer d'utilisateur : l'ERP s'en sert directement (base ${ERP_DB_NAME} séparée)."
+  set_env DB_USER "$C_USER"
+  set_env DB_PASS "$C_PASS"
+else
+  cat "$grant_err"; rm -f "$grant_err"
+  fail "Création de l'utilisateur MySQL ${ERP_DB_USER} refusée."
+fi
+rm -f "$grant_err"
+
+# Transfert chiffré : clé privée générée ici, clé publique publiée dans le log.
+mkdir -p "$ERP_IMPORT_DIR"
+chmod 700 "$ERP_IMPORT_DIR"
+TKEY="$ERP_IMPORT_DIR/cle_transfert.pem"
+INCOMING="$SRC/deploy/incoming"
 
 dumps=()
-tables="$("$MYSQL" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${ERP_DB_NAME}'")"
+tables="$("${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${ERP_DB_NAME}'")"
 if [[ "$tables" -eq 0 ]]; then
-  mkdir -p "$ERP_IMPORT_DIR"
-  chmod 700 "$ERP_IMPORT_DIR"
+  if [[ -f "$INCOMING/erp.zip.enc" && ! -f "$TKEY" ]]; then
+    warn "Dump chiffré présent dans le dépôt, mais pour une clé que ce serveur n'a plus (déjà importé ?) : ignoré."
+  elif [[ -f "$INCOMING/erp.zip.enc" && -f "$INCOMING/erp.key.enc" && -f "$INCOMING/erp.zip.sha256" ]]; then
+    log "Déchiffrement du dump reçu par le dépôt…"
+    ( umask 077
+      openssl pkeyutl -decrypt -inkey "$TKEY" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+        -in "$INCOMING/erp.key.enc" -out "$ERP_IMPORT_DIR/.k"
+      openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass "file:$ERP_IMPORT_DIR/.k" \
+        -in "$INCOMING/erp.zip.enc" -out "$ERP_IMPORT_DIR/erp_transfert.zip"
+      shred -u "$ERP_IMPORT_DIR/.k" )
+    echo "$(tr -d '[:space:]' < "$INCOMING/erp.zip.sha256")  $ERP_IMPORT_DIR/erp_transfert.zip" | sha256sum -c --quiet - \
+      || { rm -f "$ERP_IMPORT_DIR/erp_transfert.zip"; fail "Dump déchiffré corrompu (empreinte SHA-256 différente)."; }
+  fi
   shopt -s nullglob
   dumps=("$ERP_IMPORT_DIR"/*.zip "$ERP_IMPORT_DIR"/*.sql "$ERP_IMPORT_DIR"/*.sql.gz)
   shopt -u nullglob
   if [[ ${#dumps[@]} -eq 0 ]]; then
-    warn "Base ${ERP_DB_NAME} vide et aucun dump dans ${ERP_IMPORT_DIR} sur le serveur : déposez-y le .zip de la base puis relancez le déploiement."
+    if [[ ! -f "$TKEY" ]]; then
+      ( umask 077; openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "$TKEY" 2>/dev/null )
+    fi
+    warn "Base ${ERP_DB_NAME} vide : déposez le dump dans ${ERP_IMPORT_DIR} sur le serveur, ou envoyez-le chiffré pour la clé publique ci-dessous."
+    echo "=== CLE PUBLIQUE DE TRANSFERT ERP ==="
+    openssl pkey -in "$TKEY" -pubout
+    echo "=== FIN CLE PUBLIQUE ==="
   else
     dump="$(ls -t "${dumps[@]}" | head -1)"
     log "Import de $(basename "$dump") dans ${ERP_DB_NAME}…"
     case "$dump" in
-      *.zip) unzip -p "$dump" '*.sql' | "$MYSQL" "$ERP_DB_NAME" ;;
-      *.gz)  zcat "$dump" | "$MYSQL" "$ERP_DB_NAME" ;;
-      *)     "$MYSQL" "$ERP_DB_NAME" < "$dump" ;;
+      *.zip) unzip -p "$dump" '*.sql' | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
+      *.gz)  zcat "$dump" | "${ADMIN[@]}" "$ERP_DB_NAME" ;;
+      *)     "${ADMIN[@]}" "$ERP_DB_NAME" < "$dump" ;;
     esac
-    log "Import terminé : $("$MYSQL" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${ERP_DB_NAME}'") tables."
+    log "Import terminé : $("${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${ERP_DB_NAME}'") tables."
 
     # La copie ne doit rien envoyer à l'extérieur : ni e-mails aux clients, ni
     # factures à KSeF, ni accusés de réception aux boutiques des franchisés
     # (qui retireraient ces commandes à l'ERP en service).
     log "Coupure des intégrations externes de la copie…"
-    "$MYSQL" "$ERP_DB_NAME" <<'SQL'
+    "${ADMIN[@]}" "$ERP_DB_NAME" <<'SQL'
 UPDATE communication_email_account
    SET is_active = 0, smtp_secret = NULL, imap_secret = NULL,
        smtp_secret_encrypted = NULL, imap_secret_encrypted = NULL;
@@ -150,13 +245,19 @@ SQL
     chmod 600 "$pwfile"
     while IFS=$'\t' read -r uid ulogin; do
       upass="$(openssl rand -hex 8)"
-      "$MYSQL" "$ERP_DB_NAME" -e "UPDATE user SET password = '${upass}' WHERE id = ${uid};" < /dev/null
+      "${ADMIN[@]}" "$ERP_DB_NAME" -e "UPDATE user SET password = '${upass}' WHERE id = ${uid};" < /dev/null
       printf '%s\t%s\n' "$ulogin" "$upass" >> "$pwfile"
-    done < <("$MYSQL" -N "$ERP_DB_NAME" -e "SELECT id, login FROM user")
+    done < <("${ADMIN[@]}" -N "$ERP_DB_NAME" -e "SELECT id, login FROM user")
     log "Comptes de la copie : nouveaux mots de passe dans ${pwfile} (sur le serveur)."
 
     mkdir -p "$ERP_IMPORT_DIR/importe"
+    chmod 600 "$dump"
     mv "$dump" "$ERP_IMPORT_DIR/importe/"
+    # Sans clé privée, le fichier chiffré resté dans l'historique Git est illisible.
+    if [[ -f "$TKEY" ]]; then
+      shred -u "$TKEY"
+      log "Clé de transfert détruite."
+    fi
   fi
 else
   log "Base ${ERP_DB_NAME} déjà remplie (${tables} tables) : aucun import."
