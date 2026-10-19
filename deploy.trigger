@@ -842,3 +842,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-18T15:13:05Z boutons et listes en rectangles aux coins arrondis
 2026-10-18T15:32:30Z PDF 20/80 : assortiment en fiches lisibles
 2026-10-19T12:23:22Z ERP sous /production (apps/production, base erp_production)
+2026-10-19T12:24:06Z ERP sous /production : relance (le push précédent dépassait 300 fichiers, filtre paths non évalué)
