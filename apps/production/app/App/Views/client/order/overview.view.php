@@ -110,7 +110,7 @@
                                             <td colspan="8" class="ps-3 py-2">
                                                 <i class="bi bi-calendar-event me-2 text-secondary"></i>
                                                 <strong class="text-secondary">
-                                                    <?= date('l, d.m.Y', strtotime($pending[$i]['expected_shipping_date'])) ?>
+                                                    <?= day_label_pl($pending[$i]['expected_shipping_date']) ?>
                                                 </strong>
                                             </td>
                                         </tr>

@@ -19,6 +19,15 @@ function redirect($path)
 	die;
 }
 
+/** Data z dniem tygodnia po polsku, np. „Wtorek, 20.10.2026” (date('l') daje angielski). */
+function day_label_pl($date)
+{
+    $t = strtotime((string) $date);
+    if ($t === false) return (string) $date;
+    $days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+    return $days[(int) date('w', $t)] . ', ' . date('d.m.Y', $t);
+}
+
 function old_value($key, $default = '')
 {
     if(!empty($_POST[$key]))

@@ -4,7 +4,7 @@
     <div class="page-title">
         <div class="row">
             <div class="col-12 col-md-6 order-md-1 order-last">
-                <h3>Kalkulator kosztów (MVP)</h3>
+                <h3>Kalkulator kosztów</h3>
                 <p class="text-subtitle text-muted">Wybierz miesiąc i edytuj snapshot kosztów.</p>
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first">
@@ -45,7 +45,7 @@
                 <hr>
 
                 <p class="text-muted mb-0">
-                    MVP: wejście przez miesiąc → system tworzy snapshot jeśli nie istnieje.
+                    Wybierz miesiąc — jeśli nie ma jeszcze zestawienia kosztów, system je utworzy.
                 </p>
             </div>
         </div>
