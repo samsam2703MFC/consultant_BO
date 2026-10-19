@@ -5,15 +5,21 @@ namespace App\Controllers\Api\Workshop;
 
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
+use App\Services\Workshop\Scheduling\GanttService;
 use App\Services\Workshop\Scheduling\SchedulingService;
 
-/** Ordonnancement d'un plan, opérations planifiées (Gantt) et charge des équipes (P4). */
+/** Ordonnancement d'un plan, opérations planifiées (Gantt, déplacement P5) et charge des équipes (P4). */
 final class SchedulingController
 {
     use QueryFilters;
 
-    public function __construct(private SchedulingService $scheduling)
+    public function __construct(private SchedulingService $scheduling, private GanttService $gantt)
     {
+    }
+
+    public function updateOperation(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->gantt->update($request->id(), $request->body(), $request->context));
     }
 
     public function schedule(ApiRequest $request): ApiResult

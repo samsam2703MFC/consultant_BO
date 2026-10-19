@@ -89,6 +89,7 @@ final class WorkshopApiRoutes
             ['POST', '/planning/plans/{id:\d+}/validate', PlanningController::class, 'validate', 'prod.plan.validate'],
             ['POST', '/planning/plans/{id:\d+}/schedule', SchedulingController::class, 'schedule', 'prod.plan.validate'],
             ['GET', '/planning/operations', SchedulingController::class, 'operations', 'prod.plan.read'],
+            ['PATCH', '/planning/operations/{id:\d+}', SchedulingController::class, 'updateOperation', 'prod.gantt.move'],
             ['GET', '/planning/load', SchedulingController::class, 'load', 'prod.plan.read'],
         ];
     }

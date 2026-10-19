@@ -31,7 +31,8 @@
     "SCHEDULE_NO_CAPACITY_BEFORE_DUE": "{code} ({name}) : pas de capacité avant l'échéance {due_at} — rien n'est placé après.",
     "SCHEDULE_NO_ROUTING": "{code} ({name}) : pas de gamme.",
     "SCHEDULE_DUE_IN_PAST": "{code} ({name}) : l'échéance {due_at} est déjà passée.",
-    "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}) : l'OF parent n'a pas pu être ordonnancé."
+    "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}) : l'OF parent n'a pas pu être ordonnancé.",
+    "OPERATION_NOT_MOVABLE": "L'opération est « {status} » : seule une opération planifiée se déplace."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -80,7 +81,17 @@
     "PRODUCT_NOT_IN_GROUP": "Ce produit appartient à un autre groupe.",
     "BELOW_ORDERS": "La quantité ne peut pas être inférieure aux commandes et semi-finis ({min}).",
     "MTS_ABOVE_STOCK_MAX": "Stock maximum dépassé : {max} au plus.",
-    "PERIOD_TOO_LONG": "La période d'un plan est limitée à {max} jours."
+    "PERIOD_TOO_LONG": "La période d'un plan est limitée à {max} jours.",
+    "INVALID_DATETIME": "Le champ « {field} » doit être une date et heure AAAA-MM-JJ HH:MM.",
+    "IN_PAST": "Impossible de déplacer une opération dans le passé.",
+    "AFTER_DUE": "L'opération finirait à {end}, après l'échéance de l'OF {due_at}.",
+    "BEFORE_PREVIOUS_STEP": "L'étape précédente finit à {end} : l'opération ne peut pas commencer avant.",
+    "AFTER_NEXT_STEP": "L'étape suivante commence à {start} : l'opération doit finir avant.",
+    "AFTER_PARENT_START": "Le semi-fini serait prêt après le début de l'OF parent ({start}).",
+    "CHILD_NOT_READY": "Le semi-fini {code} ne sera prêt qu'à {end}.",
+    "OUTSIDE_STAFFED_SHIFT": "Pas de shift avec assez de monde sur ce poste à ce moment ({operators} pers.).",
+    "WORKSTATION_BUSY": "Le poste est occupé à ce moment (OF {code}).",
+    "CAPACITY_EXCEEDED": "Capacité de la chambre dépassée ({peak} sur {capacity})."
   },
   "fields": {
     "code": "code",
@@ -202,7 +213,9 @@
     "from": "Du",
     "to": "Au",
     "qty_final": "Quantité à produire",
-    "adjust_reason": "Motif de la modification"
+    "adjust_reason": "Motif de la modification",
+    "start": "Début",
+    "locked": "Verrouillée"
   },
   "entities": {
     "group": "groupe",
@@ -215,6 +228,7 @@
     "routing_step": "étape de gamme",
     "time_study": "chronométrage",
     "plan": "plan",
-    "plan_line": "ligne de plan"
+    "plan_line": "ligne de plan",
+    "operation": "opération"
   }
 }

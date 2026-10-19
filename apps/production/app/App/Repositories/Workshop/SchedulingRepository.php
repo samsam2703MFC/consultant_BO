@@ -100,6 +100,20 @@ final class SchedulingRepository extends WorkshopRepository
         $this->db->prepare("DELETE FROM tfb_prod_operation WHERE locked = 0 AND status = 'planned' AND id_order IN ({$in})")->execute(array_values($orderIds));
     }
 
+    private const OPERATION_SELECT = "SELECT op.*, o.code AS order_code, o.origin, o.quantity AS order_qty, o.due_at, o.id_item, o.id_parent_order,
+                    COALESCE(fp.name, pr.name) AS item_name, i.base_unit,
+                    w.code AS ws_code, w.name_pl AS ws_name_pl, w.name_fr AS ws_name_fr, w.type AS ws_type, w.id_group,
+                    w.robot_mode AS ws_robot_mode, w.capacity_per_pass AS ws_capacity,
+                    rs.step_no, rs.name_pl AS step_name_pl, rs.name_fr AS step_name_fr, rs.operators_required, rs.id_workstation AS step_workstation,
+                    t.code AS team_code
+             FROM tfb_prod_operation op
+             JOIN tfb_prod_order o ON o.id = op.id_order
+             JOIN tfb_prod_item i ON i.id = o.id_item
+             LEFT JOIN final_product fp ON fp.id = i.id_final_product LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
+             JOIN tfb_prod_workstation w ON w.id = op.id_workstation
+             LEFT JOIN tfb_prod_routing_step rs ON rs.id = op.id_routing_step
+             LEFT JOIN tfb_prod_team t ON t.id = op.id_team";
+
     /** Opérations d'une période pour le Gantt, avec OF, article, poste, groupe et équipe. */
     public function operations(string $from, string $to, ?int $groupId): array
     {
@@ -107,18 +121,7 @@ final class SchedulingRepository extends WorkshopRepository
         $where = '';
         if ($groupId !== null) { $where = ' AND w.id_group = ?'; $params[] = $groupId; }
         return $this->all(
-            "SELECT op.*, o.code AS order_code, o.origin, o.quantity AS order_qty, o.due_at, o.id_item, o.id_parent_order,
-                    COALESCE(fp.name, pr.name) AS item_name, i.base_unit,
-                    w.code AS ws_code, w.name_pl AS ws_name_pl, w.name_fr AS ws_name_fr, w.type AS ws_type, w.id_group,
-                    rs.step_no, rs.name_pl AS step_name_pl, rs.name_fr AS step_name_fr, rs.operators_required, t.code AS team_code
-             FROM tfb_prod_operation op
-             JOIN tfb_prod_order o ON o.id = op.id_order
-             JOIN tfb_prod_item i ON i.id = o.id_item
-             LEFT JOIN final_product fp ON fp.id = i.id_final_product LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
-             JOIN tfb_prod_workstation w ON w.id = op.id_workstation
-             LEFT JOIN tfb_prod_routing_step rs ON rs.id = op.id_routing_step
-             LEFT JOIN tfb_prod_team t ON t.id = op.id_team
-             WHERE op.status <> 'cancelled' AND op.planned_start < ? AND op.planned_end > ?{$where}
+            self::OPERATION_SELECT . " WHERE op.status <> 'cancelled' AND op.planned_start < ? AND op.planned_end > ?{$where}
              ORDER BY w.id_group, w.id, op.planned_start",
             $params
         );
@@ -126,6 +129,52 @@ final class SchedulingRepository extends WorkshopRepository
 
     public function operation(int $id): ?array
     {
-        return $this->all('SELECT op.*, w.id_group FROM tfb_prod_operation op JOIN tfb_prod_workstation w ON w.id = op.id_workstation WHERE op.id = ?', [$id])[0] ?? null;
+        return $this->all(self::OPERATION_SELECT . ' WHERE op.id = ?', [$id])[0] ?? null;
+    }
+
+    /** Opérations d'un OF, dans l'ordre où elles ont été placées. */
+    public function orderOperations(int $orderId): array
+    {
+        return $this->all("SELECT id, kind, planned_start, planned_end FROM tfb_prod_operation WHERE id_order = ? AND status <> 'cancelled' ORDER BY planned_start, id", [$orderId]);
+    }
+
+    /** Début de l'OF parent (première opération) et fin des semi-finis enfants. */
+    public function parentStart(int $parentOrderId): ?string
+    {
+        return $this->all("SELECT MIN(planned_start) AS s FROM tfb_prod_operation WHERE id_order = ? AND status <> 'cancelled'", [$parentOrderId])[0]['s'] ?? null;
+    }
+
+    /** @return list<array{code:string, end:string}> */
+    public function childrenEnds(int $orderId): array
+    {
+        return $this->all(
+            "SELECT o.code, MAX(op.planned_end) AS end FROM tfb_prod_order o JOIN tfb_prod_operation op ON op.id_order = o.id AND op.status <> 'cancelled'
+             WHERE o.id_parent_order = ? GROUP BY o.id, o.code",
+            [$orderId]
+        );
+    }
+
+    /** Autres opérations d'un poste qui chevauchent [from, to[. */
+    public function workstationOperations(int $workstationId, string $from, string $to, int $exceptId): array
+    {
+        return $this->all(
+            "SELECT op.id, op.kind, op.planned_start, op.planned_end, o.code AS order_code FROM tfb_prod_operation op JOIN tfb_prod_order o ON o.id = op.id_order
+             WHERE op.id_workstation = ? AND op.id <> ? AND op.status IN ('planned', 'in_progress', 'paused') AND op.planned_start < ? AND op.planned_end > ?",
+            [$workstationId, $exceptId, $to, $from]
+        );
+    }
+
+    /** Postes possibles d'une étape : poste principal et alternatives. */
+    public function stepWorkstations(int $stepId): array
+    {
+        return array_map('intval', array_column($this->all(
+            'SELECT id_workstation FROM tfb_prod_routing_step WHERE id = ? UNION SELECT id_workstation FROM tfb_prod_routing_alternative WHERE id_step = ?',
+            [$stepId, $stepId]
+        ), 'id_workstation'));
+    }
+
+    public function workstation(int $id): ?array
+    {
+        return $this->all('SELECT * FROM tfb_prod_workstation WHERE id = ? AND active = 1', [$id])[0] ?? null;
     }
 }

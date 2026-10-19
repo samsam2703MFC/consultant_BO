@@ -31,7 +31,8 @@
     "SCHEDULE_NO_CAPACITY_BEFORE_DUE": "{code} ({name}): brak wolnej zdolności przed terminem {due_at} — nie zaplanowano po terminie.",
     "SCHEDULE_NO_ROUTING": "{code} ({name}): brak marszruty.",
     "SCHEDULE_DUE_IN_PAST": "{code} ({name}): termin {due_at} już minął.",
-    "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}): zlecenie nadrzędne nie zostało uszeregowane."
+    "SCHEDULE_PARENT_NOT_SCHEDULED": "{code} ({name}): zlecenie nadrzędne nie zostało uszeregowane.",
+    "OPERATION_NOT_MOVABLE": "Operacja ma status „{status}” — przesunąć można tylko operację zaplanowaną."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -80,7 +81,17 @@
     "PRODUCT_NOT_IN_GROUP": "Ten produkt należy do innej grupy.",
     "BELOW_ORDERS": "Ilość nie może być mniejsza niż zamówienia i półprodukty ({min}).",
     "MTS_ABOVE_STOCK_MAX": "Przekroczony stan maksymalny: najwyżej {max}.",
-    "PERIOD_TOO_LONG": "Okres planu może mieć najwyżej {max} dni."
+    "PERIOD_TOO_LONG": "Okres planu może mieć najwyżej {max} dni.",
+    "INVALID_DATETIME": "Pole „{field}” musi być datą i godziną RRRR-MM-DD GG:MM.",
+    "IN_PAST": "Nie można przesunąć operacji w przeszłość.",
+    "AFTER_DUE": "Operacja kończyłaby się {end}, po terminie zlecenia {due_at}.",
+    "BEFORE_PREVIOUS_STEP": "Poprzedni etap kończy się {end} — operacja nie może zacząć się wcześniej.",
+    "AFTER_NEXT_STEP": "Następny etap zaczyna się {start} — operacja musi się wcześniej skończyć.",
+    "AFTER_PARENT_START": "Półprodukt byłby gotowy po rozpoczęciu zlecenia nadrzędnego ({start}).",
+    "CHILD_NOT_READY": "Półprodukt {code} będzie gotowy dopiero {end}.",
+    "OUTSIDE_STAFFED_SHIFT": "W tym czasie stanowisko nie ma zmiany z wystarczającą obsadą ({operators} os.).",
+    "WORKSTATION_BUSY": "Stanowisko jest w tym czasie zajęte (zlecenie {code}).",
+    "CAPACITY_EXCEEDED": "Pojemność komory przekroczona ({peak} z {capacity})."
   },
   "fields": {
     "code": "kod",
@@ -202,7 +213,9 @@
     "from": "Od",
     "to": "Do",
     "qty_final": "Ilość do produkcji",
-    "adjust_reason": "Powód zmiany"
+    "adjust_reason": "Powód zmiany",
+    "start": "Początek",
+    "locked": "Zablokowana"
   },
   "entities": {
     "group": "grupa",
@@ -215,6 +228,7 @@
     "routing_step": "etap marszruty",
     "time_study": "pomiar czasu",
     "plan": "plan",
-    "plan_line": "pozycja planu"
+    "plan_line": "pozycja planu",
+    "operation": "operacja"
   }
 }

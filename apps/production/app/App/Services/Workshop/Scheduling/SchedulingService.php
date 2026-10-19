@@ -149,15 +149,61 @@ final class SchedulingService
     {
         [$from, $to] = $this->period($from, $to);
         $lang = $context->translator->lang();
-        return array_map(fn($o) => [
+        return array_map(fn($o) => $this->format($o, $lang), $this->repo->operations($from . ' 00:00:00', date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00', $groupId));
+    }
+
+    /** Opération telle que l'API la rend (Gantt). */
+    public function format(array $o, string $lang): array
+    {
+        return [
             'id' => (int) $o['id'], 'order_id' => (int) $o['id_order'], 'order_code' => $o['order_code'], 'origin' => $o['origin'],
             'parent_order_id' => $o['id_parent_order'] !== null ? (int) $o['id_parent_order'] : null,
             'item_id' => (int) $o['id_item'], 'item' => $o['item_name'], 'quantity' => (float) $o['order_qty'], 'unit' => $o['base_unit'],
             'kind' => $o['kind'], 'step_no' => $o['step_no'] !== null ? (int) $o['step_no'] : null, 'step' => $o['step_name_' . $lang] ?? null,
             'workstation_id' => (int) $o['id_workstation'], 'workstation' => $o['ws_code'], 'workstation_name' => $o['ws_name_' . $lang], 'workstation_type' => $o['ws_type'],
-            'group_id' => (int) $o['id_group'], 'team' => $o['team_code'], 'operators' => $o['kind'] === 'work' ? (float) ($o['operators_required'] ?? 1) : ($o['kind'] === 'cleaning' ? 1.0 : 0.0),
+            'group_id' => (int) $o['id_group'], 'team' => $o['team_code'], 'operators' => $this->operators($o),
             'start' => $o['planned_start'], 'end' => $o['planned_end'], 'due_at' => $o['due_at'], 'status' => $o['status'], 'locked' => (bool) $o['locked'],
-        ], $this->repo->operations($from . ' 00:00:00', date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00', $groupId));
+        ];
+    }
+
+    /** Opérateurs mobilisés : étape pour le travail, 1 pour le nettoyage, 0 pour une attente passive. */
+    public function operators(array $o): float
+    {
+        return $o['kind'] === 'work' ? (float) ($o['operators_required'] ?? 1) : ($o['kind'] === 'cleaning' ? 1.0 : 0.0);
+    }
+
+    /**
+     * Fenêtres où une opération peut tourner sur un poste entre deux instants : shifts où le poste est
+     * disponible et où le groupe a au moins $operators personnes ; robot autonome ou attente passive
+     * ($operators = 0) : toutes les fenêtres disponibles. Même règle que l'ordonnancement.
+     * @return list<array{0:int,1:int}>
+     */
+    public function windows(array $workstation, float $operators, int $from, int $to): array
+    {
+        $availability = $this->repo->availability()[(int) $workstation['id']] ?? [];
+        $headcount = [];
+        foreach ($this->repo->teams() as $t) {
+            if ((int) $t['id_group'] === (int) $workstation['id_group']) $headcount[(int) $t['id_shift_template']] = ($headcount[(int) $t['id_shift_template']] ?? 0) + (int) $t['planned_headcount'];
+        }
+        $passive = $operators <= 0 || ($workstation['type'] === 'robot' && $workstation['robot_mode'] === 'autonome');
+        $out = [];
+        foreach ($this->segments($this->repo->shifts(), $from - 86400, $to + 86400) as $seg) {
+            if (!($availability[$seg['shift_id']] ?? true)) continue;
+            if (!$passive && ($headcount[$seg['shift_id']] ?? 0) < (int) ceil($operators)) continue;
+            $out[] = [$seg['start'], $seg['end']];
+        }
+        return Scheduler::merge($out);
+    }
+
+    /** Équipe du groupe du poste sur le shift qui contient l'instant. */
+    public function teamAt(array $workstation, int $at): ?int
+    {
+        $teams = $this->repo->teams();
+        foreach ($this->segments($this->repo->shifts(), $at - 86400, $at + 86400) as $seg) {
+            if ($at < $seg['start'] || $at >= $seg['end']) continue;
+            foreach ($teams as $t) if ((int) $t['id_group'] === (int) $workstation['id_group'] && (int) $t['id_shift_template'] === $seg['shift_id']) return (int) $t['id'];
+        }
+        return null;
     }
 
     /** Charge par groupe, jour et shift : heures planifiées ÷ heures des équipes. */

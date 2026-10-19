@@ -4082,6 +4082,97 @@
                 "x-permission": "prod.plan.read"
             }
         },
+        "/planning/operations/{id}": {
+            "patch": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Przesuń / zablokuj operację / Déplacer ou verrouiller une opération",
+                "operationId": "updateOperation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Operation"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Durée conservée. Refusé si l'opération finirait après l'échéance de l'OF (AFTER_DUE), avant la fin de l'étape précédente ou après le début de la suivante, si un semi-fini finirait après le début de l'OF parent, hors d'un shift où le groupe a assez de monde (OUTSIDE_STAFFED_SHIFT), sur un poste occupé ou une chambre pleine, ou dans le passé. Poste : celui de l'étape ou une alternative. Une opération déplacée est verrouillée. Chef d'équipe : seulement dans ses groupes (prod.gantt.move).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OperationInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.gantt.move"
+            }
+        },
         "/planning/load": {
             "get": {
                 "tags": [
@@ -5649,6 +5740,23 @@
                     },
                     "status": {
                         "type": "string"
+                    },
+                    "locked": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "OperationInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "start": {
+                        "type": "string",
+                        "example": "2026-10-21 08:30",
+                        "description": "AAAA-MM-JJ HH:MM[:SS]"
+                    },
+                    "workstation_id": {
+                        "type": "integer"
                     },
                     "locked": {
                         "type": "boolean"

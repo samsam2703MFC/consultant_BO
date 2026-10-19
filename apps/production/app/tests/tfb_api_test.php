@@ -431,6 +431,44 @@ $lockedBefore = $pdo->query("SELECT planned_start FROM tfb_prod_operation WHERE 
 [$s, $b2] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
 check($s === 200 && $pdo->query("SELECT planned_start FROM tfb_prod_operation WHERE locked = 1")->fetchColumn() === $lockedBefore, 'a locked operation stays where it is when rescheduling');
 
+// --- P5 : déplacer / verrouiller une opération sur le Gantt
+$pdo->exec("UPDATE tfb_prod_operation SET locked = 0");
+$semiOp = $pdo->query("SELECT * FROM tfb_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start DESC LIMIT 1")->fetch();
+$mtsFirst = $pdo->query("SELECT * FROM tfb_prod_operation WHERE id_order = {$orders['MTS']['id']} ORDER BY planned_start LIMIT 1")->fetch();
+$at = fn(string $dt, int $minutes) => date('Y-m-d H:i', strtotime($dt) + $minutes * 60);
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => $at($semiOp['planned_start'], -60)], $dir);
+check($s === 403, 'direction reads the Gantt but does not move operations');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => 'demain'], $lead);
+check($s === 422 && $codes($b) === ['start:INVALID_DATETIME'], 'start must be a date and time');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => date('Y-m-d', strtotime($semiOp['planned_start'])) . ' 02:00'], $lead);
+check($s === 422 && in_array('start:OUTSIDE_STAFFED_SHIFT', $codes($b), true), 'no move to the night: the group has no night team');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => $at($mtsFirst['planned_start'], 0)], $lead);
+check($s === 422 && in_array('start:AFTER_PARENT_START', $codes($b), true), 'a semi-finished product must be ready before its parent order starts');
+[$s, $b] = $call('PATCH', "/planning/operations/{$mtsFirst['id']}", ['start' => $at($semiOp['planned_start'], -15)], $lead);
+check($s === 422 && in_array('start:CHILD_NOT_READY', $codes($b), true), 'a parent order cannot start before its semi-finished products are ready');
+$mtsLast = $pdo->query("SELECT o.*, ord.due_at FROM tfb_prod_operation o JOIN tfb_prod_order ord ON ord.id = o.id_order WHERE o.id_order = {$orders['MTS']['id']} ORDER BY o.planned_start DESC LIMIT 1")->fetch();
+[$s, $b] = $call('PATCH', "/planning/operations/{$mtsLast['id']}", ['start' => $at($mtsLast['due_at'], 0)], $lead);
+check($s === 422 && in_array('start:AFTER_DUE', $codes($b), true), 'acceptance: never moved after the order is due (truck departure)');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => date('Y-m-d H:i', strtotime('-2 days'))], $lead);
+check($s === 422 && in_array('start:IN_PAST', $codes($b), true), 'no move into the past');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['workstation_id' => 9999], $lead);
+check($s === 422 && $codes($b) === ['workstation_id:REFERENCE_NOT_FOUND'], 'unknown workstation');
+$semiFirst = $pdo->query("SELECT * FROM tfb_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start LIMIT 1")->fetch();
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['start' => $at($semiFirst['planned_start'], -60)], $lead);
+check($s === 200 && $b['data']['start'] === $at($semiFirst['planned_start'], -60) . ':00' && $b['data']['locked'] === true
+    && strtotime($b['data']['end']) - strtotime($b['data']['start']) === strtotime($semiFirst['planned_end']) - strtotime($semiFirst['planned_start']), 'moved one hour earlier, duration kept, locked');
+check($pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'operation' AND action = 'move'")->fetchColumn() == 1, 'move recorded in the audit log');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['locked' => false], $lead);
+check($s === 200 && $b['data']['locked'] === false && $b['data']['start'] === $at($semiFirst['planned_start'], -60) . ':00', 'unlock without moving');
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", [], $lead);
+check($s === 422, 'nothing to change');
+[$s, $b] = $call('PATCH', '/planning/operations/999999', ['locked' => true], $lead);
+check($s === 404, 'unknown operation');
+$pdo->exec("UPDATE tfb_prod_operation SET status = 'done' WHERE id = {$semiFirst['id']}");
+[$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['start' => $at($semiFirst['planned_start'], -30)], $lead);
+check($s === 409 && $b['description'] === 'OPERATION_NOT_MOVABLE', 'a finished operation does not move');
+$pdo->exec("UPDATE tfb_prod_operation SET status = 'planned' WHERE id = {$semiFirst['id']}");
+
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');
 [$s, $b] = $call('POST', '/referentiels/groups', null, $access);

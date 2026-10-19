@@ -28,6 +28,10 @@ final class OpenApiPlanning
                     . "Gros OF découpés en lots (scheduling.max_operation_min). Un OF qui ne tient pas avant son échéance n'est jamais placé après : il est rendu en conflit. Les opérations verrouillées sont conservées."],
             'GET /planning/operations' => ['tag' => $t, 'id' => 'listOperations', 'summary' => 'Operacje (Gantt) / Opérations planifiées (Gantt)', 'response' => 'Operation', 'list' => true, 'errors' => [422],
                 'query' => $period + ['group_id' => ['type' => 'integer']]],
+            'PATCH /planning/operations/{id:\d+}' => ['tag' => $t, 'id' => 'updateOperation', 'summary' => 'Przesuń / zablokuj operację / Déplacer ou verrouiller une opération', 'body' => 'OperationInput', 'response' => 'Operation', 'errors' => [400, 403, 404, 409, 422],
+                'description' => "Durée conservée. Refusé si l'opération finirait après l'échéance de l'OF (AFTER_DUE), avant la fin de l'étape précédente ou après le début de la suivante, si un semi-fini finirait après le début de l'OF parent, "
+                    . "hors d'un shift où le groupe a assez de monde (OUTSIDE_STAFFED_SHIFT), sur un poste occupé ou une chambre pleine, ou dans le passé. Poste : celui de l'étape ou une alternative. Une opération déplacée est verrouillée. "
+                    . 'Chef d\'équipe : seulement dans ses groupes (prod.gantt.move).'],
             'GET /planning/load' => ['tag' => $t, 'id' => 'getLoad', 'summary' => 'Obciążenie zespołów / Charge des équipes par groupe, jour et shift', 'response' => 'Load', 'list' => true, 'errors' => [422], 'query' => $period,
                 'description' => 'Heures planifiées (opérateurs × durée, nettoyage compris) ÷ effectif prévu des équipes × durée du shift. Vert entre load.green_min_pct et load.green_max_pct.'],
             'POST /planning/plans/{id:\d+}/validate' => ['tag' => $t, 'id' => 'validatePlan', 'summary' => 'Zatwierdź plan i utwórz zlecenia / Valider et créer les OF', 'response' => 'Plan', 'errors' => [404, 409],
@@ -93,6 +97,10 @@ final class OpenApiPlanning
                 'workstation_id' => $int, 'workstation' => ['type' => 'string'], 'workstation_name' => ['type' => 'string'], 'workstation_type' => ['type' => 'string'],
                 'group_id' => $int, 'team' => ['type' => 'string', 'nullable' => true], 'operators' => $num,
                 'start' => ['type' => 'string'], 'end' => ['type' => 'string'], 'due_at' => ['type' => 'string'], 'status' => ['type' => 'string'], 'locked' => ['type' => 'boolean'],
+            ]],
+            'OperationInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
+                'start' => ['type' => 'string', 'example' => '2026-10-21 08:30', 'description' => 'AAAA-MM-JJ HH:MM[:SS]'],
+                'workstation_id' => $int, 'locked' => ['type' => 'boolean'],
             ]],
             'Load' => ['type' => 'object', 'properties' => [
                 'group_id' => $int, 'group' => ['type' => 'string'], 'color' => ['type' => 'string'], 'date' => ['type' => 'string', 'format' => 'date'],

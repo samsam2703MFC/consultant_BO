@@ -125,6 +125,19 @@ final class Validator
         return $this;
     }
 
+    /** Date et heure « AAAA-MM-JJ HH:MM[:SS] » (ou avec T) ; valeur propre « AAAA-MM-JJ HH:MM:SS ». */
+    public function datetime(string $field, bool $required = false): self
+    {
+        if (!$this->present($field, $required, false)) return $this;
+        $value = $this->input[$field];
+        $normalized = is_string($value) ? str_replace('T', ' ', trim($value)) : '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $normalized)) $normalized .= ':00';
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $normalized);
+        if (!$date || $date->format('Y-m-d H:i:s') !== $normalized) return $this->add($field, 'INVALID_DATETIME');
+        $this->clean[$field] = $normalized;
+        return $this;
+    }
+
     public function color(string $field, bool $required = true): self
     {
         return $this->string($field, 7, $required, false, '/^#[0-9A-Fa-f]{6}$/', 'INVALID_COLOR');
