@@ -93,9 +93,12 @@ function user($key = '')
         if(empty($key))
             return $_SESSION['USER'];
 
-        if(!empty($_SESSION['USER']->$key))
+        // Po zalogowaniu sesja trzyma wiersz z tabeli user (tablica); starszy kod zakładał obiekt.
+        $sessionUser = $_SESSION['USER'];
+        $value = is_array($sessionUser) ? ($sessionUser[$key] ?? null) : ($sessionUser->$key ?? null);
+        if(!empty($value))
         {
-            return $_SESSION['USER']->$key;
+            return $value;
         }
     }
     return '';

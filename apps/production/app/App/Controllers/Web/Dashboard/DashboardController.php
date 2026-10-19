@@ -15,6 +15,9 @@ class DashboardController extends BaseController
     {
         $period = (string) ($_GET['period'] ?? 'month');
         $data = $this->profitability->overview($period);
+        // view() nadpisuje „warnings” (komunikaty kontrolera) : ostrzeżenia o danych idą jako „notices”.
+        $data['notices'] = $data['warnings'];
+        unset($data['warnings']);
         $this->view('dashboard/profitability', $data + ['selected' => $data['period']['key']]);
     }
 
