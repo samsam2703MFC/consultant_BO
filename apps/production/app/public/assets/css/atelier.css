@@ -550,6 +550,65 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-more-menu > .at-more-danger, .at-more-menu > .at-more-danger .bi { color: var(--at-danger); }
 .at-more-menu > .at-more-danger:hover, .at-more-menu > .at-more-danger:focus { background: rgba(196, 30, 58, 0.08); color: var(--at-danger); }
 
+/* --- Recherche globale de la barre du haut (assets/js/atelier-search.js) ----------- */
+.at-search { position: relative; flex: 0 1 340px; min-width: 200px; margin-right: 16px; }
+.at-search > .bi-search { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--at-muted); font-size: 13px; pointer-events: none; }
+.at-search-input {
+  width: 100%; height: 36px; padding: 0 34px 0 34px;
+  border: 1px solid var(--at-line-2); border-radius: var(--at-radius);
+  background: var(--at-bg-2); color: var(--at-text); font-family: var(--at-font-ui); font-size: 13px;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+.at-search-input::placeholder { color: #9a948c; }
+.at-search-input:focus { outline: 0; background: var(--at-surface); border-color: var(--at-primary); box-shadow: 0 0 0 3px rgba(141, 29, 44, 0.12); }
+.at-search-input::-webkit-search-cancel-button { display: none; }
+.at-search-key {
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  padding: 1px 6px; border: 1px solid var(--at-line-2); border-radius: 4px;
+  background: var(--at-surface); color: var(--at-muted); font-family: var(--at-font-ui); font-size: 11px; box-shadow: none;
+}
+.at-search-input:focus ~ .at-search-key { display: none; }
+.at-search.is-loading > .bi-search { animation: at-pulse 1s ease-in-out infinite; }
+@keyframes at-pulse { 50% { opacity: .35; } }
+.at-search-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1055;
+  width: 480px; max-width: calc(100vw - 24px); max-height: min(70vh, 560px); overflow-y: auto;
+  background: var(--at-surface); border: 1px solid var(--at-line); border-radius: var(--at-radius-lg);
+  box-shadow: 0 14px 34px rgba(34, 34, 34, 0.14);
+}
+.at-search-panel[hidden] { display: none; }
+.at-search-group + .at-search-group { border-top: 1px solid var(--at-line); }
+.at-search-head { display: flex; align-items: center; gap: 6px; padding: 10px 14px 4px; font-size: 10px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--at-muted); }
+.at-search-item { display: block; margin: 0 6px 2px; padding: 7px 10px; border-radius: var(--at-radius-sm); color: var(--at-text); text-decoration: none; }
+.at-search-item:hover, .at-search-item.is-active { background: var(--at-primary-soft); color: var(--at-text); }
+.at-search-item.is-active { box-shadow: inset 2px 0 0 var(--at-primary); }
+.at-search-title { display: block; font-size: 13px; font-weight: 500; }
+.at-search-sub { display: block; color: var(--at-muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.at-search-item mark { padding: 0; background: rgba(242, 201, 160, 0.6); color: inherit; border-radius: 2px; }
+.at-search-msg { margin: 0; padding: 16px 14px; color: var(--at-muted); font-size: 12.5px; text-align: center; }
+.at-search-foot { display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--at-line); color: var(--at-muted); font-size: 11px; }
+.at-search-foot kbd { margin-right: 2px; padding: 0 5px; border: 1px solid var(--at-line-2); border-radius: 4px; background: var(--at-bg-2); color: var(--at-text); font-family: var(--at-font-ui); font-size: 10.5px; box-shadow: none; }
+@media (max-width: 991px) { .at-search { flex: 1 1 auto; } }
+@media (max-width: 575px) { .at-search-panel { position: fixed; top: 62px; left: 12px; right: 12px; width: auto; max-width: none; } }
+
+/* --- Zamówienie : oś statusu (client/order/edit) --------------------------------- */
+.at-timeline { display: flex; margin: 0 0 20px; padding: 16px 12px 14px; list-style: none; overflow-x: auto; background: var(--at-surface); border: 1px solid var(--at-line); border-radius: var(--at-radius-lg); }
+.at-timeline li { position: relative; flex: 1 0 110px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 6px; text-align: center; }
+.at-timeline li::before { content: ''; position: absolute; top: 13px; left: calc(-50% + 16px); right: calc(50% + 16px); height: 2px; background: var(--at-line-2); }
+.at-timeline li:first-child::before { display: none; }
+.at-timeline li.is-done::before, .at-timeline li.is-current::before { background: var(--at-success); }
+.at-timeline .at-tl-dot {
+  position: relative; z-index: 1; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid var(--at-line-2); border-radius: 50%; background: var(--at-surface); color: var(--at-muted); font-size: 13px;
+}
+.at-timeline li.is-done .at-tl-dot { border-color: var(--at-success); background: var(--at-success); color: #fff; }
+.at-timeline li.is-current .at-tl-dot { border-color: var(--at-primary); background: var(--at-primary-soft); color: var(--at-primary); }
+.at-timeline li.is-warn .at-tl-dot { border-color: var(--at-warning); background: #fdf6ea; color: var(--at-warning); }
+.at-timeline li.is-error .at-tl-dot { border-color: var(--at-danger); background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
+.at-timeline .at-tl-label { font-size: 12px; font-weight: 500; color: var(--at-text); line-height: 1.25; }
+.at-timeline li.is-todo .at-tl-label { color: var(--at-muted); font-weight: 400; }
+.at-timeline .at-tl-meta { font-size: 11px; color: var(--at-muted); line-height: 1.3; }
+
 /* --- Kreatory : étapes, choix, navigation (Wyślij dzień, Planuj produkcję…) ------- */
 .at-wizard { max-width: 1240px; }
 .at-steps {

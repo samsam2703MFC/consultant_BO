@@ -19,6 +19,27 @@
             </div>
         </div>
         <section class="section">
+            <?php if (!empty($timeline)): ?>
+                <!-- Oś statusu zamówienia (OrderTimelineService) -->
+                <ol class="at-timeline" aria-label="Status zamówienia #<?= (int) ($row['id'] ?? 0) ?>">
+                    <?php foreach ($timeline as $stage): ?>
+                        <?php $stateLabel = ['done' => 'zakończone', 'current' => 'następny krok', 'todo' => 'jeszcze nie', 'warn' => 'uwaga', 'error' => 'błąd'][$stage['state']] ?? ''; ?>
+                        <li class="is-<?= esc($stage['state']) ?>"<?= $stage['state'] === 'current' ? ' aria-current="step"' : '' ?>>
+                            <span class="at-tl-dot" title="<?= esc($stateLabel) ?>">
+                                <i class="bi <?= $stage['state'] === 'done' ? 'bi-check2' : ($stage['state'] === 'error' ? 'bi-x' : esc($stage['icon'])) ?>" aria-hidden="true"></i>
+                            </span>
+                            <span class="at-tl-label"><?= esc($stage['label']) ?><span class="visually-hidden"> — <?= esc($stateLabel) ?></span></span>
+                            <span class="at-tl-meta">
+                                <?php if (!empty($stage['url'])): ?>
+                                    <a href="<?= ROOT . esc($stage['url']) ?>"><?= esc($stage['meta']) ?></a>
+                                <?php else: ?>
+                                    <?= esc($stage['meta']) ?>
+                                <?php endif; ?>
+                            </span>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
             <div class="card">
                 <div class="card-header">
                     <h4 class="card-title">Szczegóły zamówienia</h4>

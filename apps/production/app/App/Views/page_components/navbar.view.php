@@ -11,6 +11,16 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
 
+            <div class="at-search" id="atSearch" data-root="<?=esc(ROOT)?>" role="search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" class="at-search-input" placeholder="Szukaj: zamówienie, klient, produkt…"
+                       aria-label="Szukaj w ERP (skrót: /)" autocomplete="off" spellcheck="false"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="atSearchList">
+                <kbd class="at-search-key" aria-hidden="true">/</kbd>
+                <div class="at-search-panel" id="atSearchList" role="listbox" aria-label="Wyniki wyszukiwania" hidden></div>
+            </div>
+            <script src="<?=ROOT?>/assets/js/atelier-search.js" defer></script>
+
             <div class="navbar-center flex-grow-1 d-flex justify-content-center">
 
                 <div class="quick-tags d-flex align-items-center">
