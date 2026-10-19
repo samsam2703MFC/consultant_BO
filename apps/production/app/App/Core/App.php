@@ -17,7 +17,9 @@ class App
 
     public function loadController()
     {
+        $tContainer = microtime(true);
         $container = require __DIR__ . '/bootstrap.php';
+        erp_timing('container', $tContainer);
 
         // Pobieranie URI z `$_GET['url']` lub domyślnie "/"
         $uri = isset($_GET['url']) ? '/' . trim($_GET['url'], '/') : '/';
@@ -69,6 +71,7 @@ class App
                     $result = call_user_func_array([$controller, $action], $vars);
 
                     if ($result instanceof \Symfony\Component\HttpFoundation\Response) {
+                        $result->headers->set('Server-Timing', erp_server_timing());
                         $result->send();
                     } else {
                         echo $result;

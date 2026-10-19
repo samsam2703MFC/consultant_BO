@@ -26,7 +26,9 @@ class Database
             $options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET SESSION sql_mode = " . var_export((string) $sqlMode, true);
         }
 
+        $t = microtime(true);
         $this->pdo = new PDO($dsn, $user, $pass, $options);
+        if (function_exists('erp_timing')) erp_timing('db_connect', $t);
     }
 
     public function getConnection(): PDO {

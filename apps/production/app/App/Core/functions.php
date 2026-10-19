@@ -302,3 +302,21 @@ function uuidv4(): string {
     $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // wariant
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
+
+
+/**
+ * Pomiar czasu żądania do nagłówka Server-Timing (widoczny w narzędziach przeglądarki, bez danych) :
+ * erp_timing('etap', $start) zapisuje czas etapu w ms ; erp_server_timing() składa nagłówek.
+ */
+function erp_timing(string $name, float $start): void
+{
+    $GLOBALS['ERP_TIMING'][$name] = ($GLOBALS['ERP_TIMING'][$name] ?? 0) + (microtime(true) - $start) * 1000;
+}
+
+function erp_server_timing(): string
+{
+    $parts = [];
+    foreach ($GLOBALS['ERP_TIMING'] ?? [] as $name => $ms) $parts[] = $name . ';dur=' . round($ms, 1);
+    if (isset($GLOBALS['ERP_T0'])) $parts[] = 'total;dur=' . round((microtime(true) - $GLOBALS['ERP_T0']) * 1000, 1);
+    return implode(', ', $parts);
+}

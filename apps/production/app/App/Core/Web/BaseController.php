@@ -71,13 +71,21 @@ class BaseController
         if (file_exists($baseViewPath . $twigTemplate)) {
             $loader = new FilesystemLoader($baseViewPath);
             $twig = new Environment($loader, [
-                'cache' => false, // Możesz zmienić na ścieżkę do cache w produkcji
+                // Szablony skompilowane raz i trzymane w katalogu cache (auto_reload : po zmianie pliku
+                // kompilowane ponownie). Bez cache każda strona kompilowała układ, menu i szablon od nowa
+                // — na serwerze 1,5–2,5 s na stronę.
+                'cache' => self::twigCacheDir(),
+                'auto_reload' => true,
                 'autoescape' => 'html',
                 'debug' => true, // Włącz debugowanie, jeśli potrzebujesz
             ]);
             $twig->addExtension(new DebugExtension());
             $twig->addExtension(new AppExtension($_POST));
-            echo $twig->render($twigTemplate, $data);
+            $t = microtime(true);
+            $html = $twig->render($twigTemplate, $data);
+            erp_timing('render', $t);
+            if (!headers_sent()) header('Server-Timing: ' . erp_server_timing());
+            echo $html;
             return;
         }
 
@@ -91,6 +99,15 @@ class BaseController
         } else {
             require $baseViewPath . "404.view.php";
         }
+    }
+
+    /** Katalog cache Twig : TWIG_CACHE_DIR z .env, inaczej katalog tymczasowy ; brak zapisu = bez cache. */
+    private static function twigCacheDir(): string|false
+    {
+        $dir = ($_ENV['TWIG_CACHE_DIR'] ?? '') !== '' ? rtrim($_ENV['TWIG_CACHE_DIR'], '/')
+            : sys_get_temp_dir() . '/erp-twig-' . substr(md5(dirname(__DIR__, 2)), 0, 8);
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) return false;
+        return is_writable($dir) ? $dir : false;
     }
 
     public function getInternalData()

@@ -1,12 +1,16 @@
 <?php
 
+$GLOBALS['ERP_T0'] = microtime(true);
 require_once __DIR__ . '/vendor/autoload.php';
 require __DIR__ . "/../App/Core/init.php";
+erp_timing('init', $GLOBALS['ERP_T0']);
 
 DEBUG ? ini_set('display_errors', 1) : ini_set('display_errors', 0);
 
 // bootstrap DI container
+$tContainer = microtime(true);
 $container = require __DIR__ . '/../App/Core/bootstrap.php';
+erp_timing('container', $tContainer);
 
 use App\Core\Routes\ApiRoutes;
 use FastRoute\Dispatcher;
@@ -40,9 +44,10 @@ $uri = '/' . ltrim($uri, '/');
 // 5) moduł produkcji pracowni: własne JWT, uprawnienia i format błędów
 if ($uri === \App\Core\Routes\Api\WorkshopApiRoutes::PREFIX || str_starts_with($uri, \App\Core\Routes\Api\WorkshopApiRoutes::PREFIX . '/')) {
     ini_set('display_errors', '0');
-    $container->get(\App\Core\Api\Workshop\WorkshopApiKernel::class)
-        ->handle(\Symfony\Component\HttpFoundation\Request::createFromGlobals(), $uri)
-        ->send();
+    $response = $container->get(\App\Core\Api\Workshop\WorkshopApiKernel::class)
+        ->handle(\Symfony\Component\HttpFoundation\Request::createFromGlobals(), $uri);
+    $response->headers->set('Server-Timing', erp_server_timing());
+    $response->send();
     exit;
 }
 
