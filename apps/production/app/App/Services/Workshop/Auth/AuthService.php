@@ -119,6 +119,31 @@ final class AuthService
         return new ApiContext($requestId, $translator, $userId, array_values($roles), $global, $byGroup);
     }
 
+    /**
+     * Jeton d'accès pour l'utilisateur déjà connecté à l'ERP (pages web du module) : pas de mot
+     * de passe ni de jeton de renouvellement ; la page en redemande un quand il expire.
+     * @return array{access_token:string, token_type:string, expires_in:int}
+     */
+    public function sessionToken(int $userId): array
+    {
+        $jwt = $this->jwt();
+        $user = $this->auth->userById($userId);
+        if ($user === null || !$this->auth->rolePermissions($userId)) {
+            throw new ApiException('NO_PRODUCTION_ROLE', 403);
+        }
+        $now = time();
+        $ttl = max(60, (int) $this->params->get('auth.access_ttl_s', '900'));
+        $roles = array_values(array_unique(array_column($this->auth->rolePermissions($userId), 'code')));
+        return [
+            'access_token' => $jwt->encode([
+                'iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $user['id'], 'login' => $user['login'],
+                'roles' => $roles, 'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(12)),
+            ]),
+            'token_type' => 'Bearer',
+            'expires_in' => $ttl,
+        ];
+    }
+
     public function me(ApiContext $context): array
     {
         $user = $this->auth->userById((int) $context->userId);
