@@ -980,3 +980,38 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-gantt-move { margin-top: 12px; }
 .tfb-check { display: flex; align-items: center; gap: 8px; align-self: end; }
 @media (max-width: 575px) { .tfb-gantt { --label-w: 120px; } .tfb-gantt-label .text-muted { display: none; } }
+
+/* --- Logistyka : załadunek dnia, pojazdy ------------------------------------------------ */
+.at-logi-date { display: flex; gap: 8px; align-items: center; }
+.at-logi-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+@media (max-width: 1199px) { .at-logi-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) { .at-logi-tiles { grid-template-columns: 1fr; } }
+.at-logi-trucks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 18px; }
+.at-logi-truck { margin-bottom: 0; border-left: 4px solid var(--at-success); }
+.at-logi-truck.is-over { border-left-color: var(--at-danger); }
+.at-logi-truck.is-empty { border-left-color: var(--at-line-2); opacity: 0.8; }
+.at-logi-truck.is-unassigned { border-left-color: var(--at-warning); }
+.at-logi-truck-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.at-logi-fill { height: 10px; border-radius: 999px; background: var(--at-bg-2); overflow: hidden; }
+.at-logi-fill span { display: block; height: 100%; background: var(--at-success); }
+.at-logi-truck.is-over .at-logi-fill span { background: var(--at-danger); }
+.at-logi-fill-text { font-size: 12.5px; margin: 6px 0 10px; }
+.at-logi-truck.is-over .at-logi-fill-text strong { color: var(--at-danger); }
+.at-logi-stops { margin: 0 0 12px; padding-left: 20px; font-size: 13px; }
+.at-logi-stops li { padding: 2px 0; }
+.at-logi-stops li { display: list-item; }
+.at-logi-stops li > span { display: inline-block; max-width: calc(100% - 60px); }
+.at-logi-stops li > strong { float: right; }
+.at-logi-table td, .at-logi-table th { vertical-align: top; }
+.at-logi-table details summary { cursor: pointer; }
+.at-logi-table select { min-width: 200px; }
+.at-logi-products { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--at-muted); }
+.at-logi-stop { width: 64px; }
+.at-logi-num { width: 90px; }
+.at-logi-kg { width: 120px; }
+.at-logi-time { width: 110px; }
+.at-logi-add { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
+@media (max-width: 991px) { .at-logi-add { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) { .at-logi-add { grid-template-columns: 1fr; } }
+.at-logi-add label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin: 0; }
+.at-logi-add-actions { display: flex; align-items: flex-end; }

@@ -9,7 +9,10 @@
                 <h3>Wyślij dzień</h3>
                 <p class="text-subtitle text-muted mb-0">Dokumenty wysyłki dla wszystkich klientów jednego dnia: WZ, CMR, WDT i różnice.</p>
             </div>
-            <a class="at-link" href="{{ root }}/shipping-documents/create">Tryb klasyczny: jeden klient <i class="bi bi-arrow-right"></i></a>
+            <span class="d-flex flex-wrap gap-3">
+                <a class="at-link" href="{{ root }}/logistics{{ selected_date ? '?date=' ~ selected_date : '' }}"><i class="bi bi-truck"></i> Załadunek: pojazdy i palety</a>
+                <a class="at-link" href="{{ root }}/shipping-documents/create">Tryb klasyczny: jeden klient <i class="bi bi-arrow-right"></i></a>
+            </span>
         </div>
     </div>
 {% endblock %}
