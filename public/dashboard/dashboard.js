@@ -165,8 +165,9 @@
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
     lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
-    // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
-    if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
+    // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
+    // closes et, si la semaine choisie est en cours, celle-ci à part.
+    if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
       if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
@@ -5101,31 +5102,43 @@
   }
 
   /**
-   * Les six dernières semaines, face au N-1 — la même section que le drop du
-   * cockpit : la courbe des clients sur celle d'un an plus tôt en pointillé,
-   * trois tuiles, l'écart semaine par semaine. Sans N-1 (magasin trop jeune),
-   * la courbe reste seule et le motif se lit à la place de la tuile.
+   * Les douze dernières semaines, face au N-1 (19/10/2026, la courbe de Résultat › Trafic clients, demande de Sam) : les
+   * clients de chaque semaine close sur ceux de la même semaine un an plus tôt en pointillé, la bande entre les deux —
+   * bleue au-dessus du N-1, orange en dessous —, l'écart semaine par semaine et trois tuiles. La semaine en cours, servie
+   * un jour ou deux, reste hors de la courbe (elle la ferait plonger) : sa tuile la compare au N-1 aux mêmes jours. Sans
+   * N-1 (magasin trop jeune), la courbe reste seule et le motif se lit à la place de la tuile.
    */
   function rendSemaines() {
-    const cle = 's6|' + S.shop + '|' + bornes()[0];
+    const cle = 's12|' + S.shop + '|' + bornes()[0];
     const D = S.aux[cle];
-    const carte = (corps, sous) => `<div class="db-card"><div class="ct"><span class="db-lab">Les six dernières semaines — clients, face au N-1</span>${sous ? `<span class="db-mini">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
-    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des six semaines…'}</div>`); }
+    const carte = (corps, sous) => `<div class="db-card"><div class="ct"><span class="db-lab">Les douze dernières semaines — clients, face au N-1</span>${sous ? `<span class="db-mini">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
+    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des douze semaines…'}</div>`); }
     const pc = (a, b) => b ? 100 * a / b : 0;
     const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
-    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
-    const W = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
-    if (!W.length) { return carte(`<div class="db-note">Aucune semaine lue pour ce magasin.</div>`); }
+    // Bleu au-dessus du N-1, orange en dessous (des couleurs que les daltoniens distinguent), gris autour de zéro.
+    const HAUT = '#2E6DB4', BAS = '#C0632B';
+    const col = v => v >= 3 ? HAUT : (v <= -3 ? BAS : '#8b8177');
+    const lues = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
+    const enCours = lues.length && lues[lues.length - 1].enCours ? lues[lues.length - 1] : null;
+    const W = lues.filter(w => !w.enCours).slice(-12);
+    if (!W.length) { return carte(`<div class="db-note">Aucune semaine close lue pour ce magasin.</div>`); }
     const avecN1 = W.some(w => w.n1);
     const vals = [];
     W.forEach(w => { if (w.source) { vals.push(w.tickets); } if (w.n1) { vals.push(w.n1.tickets); } });
     const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
-    const Wd = 1000, Hh = 190, ml = 30, mr = 64, mt = 26, mb = 30;
+    const Wd = 1000, Hh = 190, ml = 30, mr = 30, mt = 26, mb = 30;
     const X = i => (ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1)).toFixed(1);
     const Y = v => (mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
     const ft = 'font-family:var(--font-ui)';
     let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
     [1, 2].forEach(k => { const y = Y(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
+    // La bande entre les deux courbes, semaine par semaine.
+    for (let i = 0; i < W.length - 1; i++) {
+      const a = W[i], b = W[i + 1];
+      if (!a.source || !b.source || !a.n1 || !b.n1) { continue; }
+      const up = a.tickets + b.tickets >= a.n1.tickets + b.n1.tickets;
+      svg += `<polygon points="${X(i)},${Y(a.tickets)} ${X(i + 1)},${Y(b.tickets)} ${X(i + 1)},${Y(b.n1.tickets)} ${X(i)},${Y(a.n1.tickets)}" fill="${up ? HAUT : BAS}" fill-opacity="0.14"/>`;
+    }
     const P = W.map((w, i) => w.source ? X(i) + ',' + Y(w.tickets) : null).filter(Boolean);
     const P1 = W.map((w, i) => w.n1 ? X(i) + ',' + Y(w.n1.tickets) : null).filter(Boolean);
     if (P1.length > 1) { svg += `<polyline points="${P1.join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>`; }
@@ -5134,32 +5147,44 @@
       const up = !w.n1 || !w.source || w.tickets >= w.n1.tickets;
       if (w.n1) { svg += `<circle cx="${X(i)}" cy="${Y(w.n1.tickets)}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${X(i)}" y="${(+Y(w.n1.tickets) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${fN(w.n1.tickets)}</text>`; }
       if (w.source) { svg += `<circle cx="${X(i)}" cy="${Y(w.tickets)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(w.tickets) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${fN(w.tickets)}</text>`; }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : '#222'}" style="${ft}">S${w.iso}${w.enCours ? ' · en cours' : ''}</text>`;
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#222" style="${ft}">S${w.iso}</text>`;
     });
     svg += '</svg>';
     const chips = W.map(w => {
       const e = w.n1 && w.source ? pc(w.tickets - w.n1.tickets, w.n1.tickets) : null;
       const dates = (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
-      const titre = (w.source ? fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fN(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1') + (w.enCours ? ' · ' + w.joursServis + ' jours servis' : '');
+      const titre = (w.source ? fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fN(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1');
       return `<div class="ch" title="${esc(titre)}"><span><b>S${w.iso}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#c9c2b8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${w.source ? fN(w.tickets) : '—'}</em>`}</div>`;
     }).join('');
-    const cur = W[W.length - 1], prev = W.length > 1 ? W[W.length - 2] : null;
-    const eT = D.totalN1 && D.totalN1.tickets ? pc(D.total.tickets - D.totalN1.tickets, D.totalN1.tickets) : null;
+    // Les totaux des douze semaines closes : l'écart ne compte que les semaines qui ont un N-1.
+    const tot = W.reduce((a, w) => a + (w.source ? w.tickets : 0), 0);
+    const comp = W.filter(w => w.source && w.n1);
+    const tC = comp.reduce((a, w) => a + w.tickets, 0), t1 = comp.reduce((a, w) => a + w.n1.tickets, 0);
+    const eT = t1 ? pc(tC - t1, t1) : null;
+    const der = W[W.length - 1], prev = W.length > 1 ? W[W.length - 2] : null;
     const meilleure = W.filter(w => w.source).reduce((a, b) => !a || b.tickets > a.tickets ? b : a, null);
-    const eP = prev && prev.source && cur.source ? pc(cur.tickets - prev.tickets, prev.tickets) : null;
+    let tCur;
+    if (enCours) {
+      const eC = enCours.source && enCours.n1 ? pc(enCours.tickets - enCours.n1.tickets, enCours.n1.tickets) : null;
+      const j = enCours.joursServis || 0;
+      tCur = tuile('Semaine en cours', enCours.source ? fN(enCours.tickets) : '—',
+        (eC != null ? sg(eC) + ' % vs N-1 aux mêmes jours · ' : '') + j + ' jour' + (j > 1 ? 's' : '') + ' servi' + (j > 1 ? 's' : ''), eC == null ? '' : (eC >= 0 ? 'bon' : 'vif'));
+    } else {
+      const eD = der.source && der.n1 ? pc(der.tickets - der.n1.tickets, der.n1.tickets) : null;
+      tCur = tuile('Semaine S' + der.iso, der.source ? fN(der.tickets) : '—', eD != null ? sg(eD) + ' % vs N-1' : (prev && prev.source && der.source ? sg(pc(der.tickets - prev.tickets, prev.tickets)) + ' % vs S' + prev.iso : ''),
+        eD == null ? '' : (eD >= 0 ? 'bon' : 'vif'));
+    }
     const tuiles = [
-      eT != null ? tuile('Six semaines vs N-1', sg(eT) + ' %', fN(D.total.tickets) + ' clients contre ' + fN(D.totalN1.tickets), eT >= 0 ? 'bon' : 'vif')
-        : tuile('Six semaines', fN(D.total.tickets), esc(D.n1Motif || 'pas de N-1')),
-      tuile(cur.enCours ? 'Semaine en cours' : 'Dernière semaine', cur.source ? fN(cur.tickets) : '—',
-        (eP != null ? sg(eP) + ' % vs S' + prev.iso : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jour' + (cur.joursServis > 1 ? 's' : '') + ' servi' + (cur.joursServis > 1 ? 's' : '') : ''),
-        eP == null ? '' : (eP >= 0 ? 'bon' : 'vif')),
+      eT != null ? tuile('Douze semaines vs N-1', sg(eT) + ' %', fN(tC) + ' clients contre ' + fN(t1), eT >= 0 ? 'bon' : 'vif')
+        : tuile('Douze semaines', fN(tot), esc(D.n1Motif || 'pas de N-1')),
+      tCur,
       tuile('Meilleure semaine', meilleure ? fN(meilleure.tickets) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(D.n1Motif || '')}</span>`}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(D.n1Motif || '')}</span>`}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
-    return carte(corps, 'S' + W[0].iso + ' → S' + cur.iso + ' · ' + (D.source || ''));
+    return carte(corps, 'S' + W[0].iso + ' → S' + der.iso + ' · ' + (D.source || ''));
   }
 
   /* Le résultat net jour par jour du mois en cours — les cases de l'analyse rentabilité. */
