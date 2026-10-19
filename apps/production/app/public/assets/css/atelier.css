@@ -549,3 +549,53 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-profit-card-gap { font-size: 14px; }
 .at-profit-card-gap strong { color: var(--at-danger); }
 .at-profit-card-gap.ok { color: var(--at-success); }
+
+/* --- Zakupy (koszty surowców, oferty, zapytania, NC) i zadania stanowisk ------------- */
+.at-purch-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; align-items: start; }
+@media (max-width: 1199px) { .at-purch-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575px) { .at-purch-form { grid-template-columns: 1fr; } }
+.at-purch-label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--at-muted); margin: 0; }
+.at-purch-label .form-control, .at-purch-label .form-select, .at-purch-label .input-group { color: var(--at-text); }
+.at-purch-wide { grid-column: span 2; }
+@media (max-width: 575px) { .at-purch-wide { grid-column: auto; } }
+.at-purch-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.at-purch-pick { grid-column: span 2; border: 1px solid var(--at-line); border-radius: var(--at-radius); padding: 10px 12px; margin: 0; }
+@media (max-width: 575px) { .at-purch-pick { grid-column: auto; } }
+.at-purch-pick legend { float: none; width: auto; font-size: 12.5px; color: var(--at-muted); margin: 0 0 6px; padding: 0; }
+.at-purch-pick.is-invalid { border-color: var(--at-danger); }
+.at-purch-list { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.at-purch-list label { display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
+.at-purch-list label:hover { background: var(--at-bg-2); }
+.at-purch-list label .at-sub { margin-left: auto; white-space: nowrap; }
+.at-disabled { opacity: .55; cursor: not-allowed !important; }
+.at-purch .at-sub, .at-org .at-sub { color: var(--at-muted); font-size: 11.5px; }
+.at-purch-table td, .at-purch-table th { vertical-align: middle; }
+.at-scroll-400 { max-height: 400px; overflow: auto; }
+.at-tender-matrix td.at-best { background: rgba(46, 125, 79, 0.08); }
+.at-tender-cell { display: inline-flex; gap: 6px; align-items: baseline; cursor: pointer; margin: 0; }
+.at-tender-supplier { border-bottom: 1px solid var(--at-line); padding: 10px 0; }
+.at-tender-supplier summary { cursor: pointer; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.at-tender-supplier form { margin-top: 10px; }
+.at-tender-supplier td { min-width: 110px; }
+.at-nc { border: 1px solid var(--at-line); border-left: 3px solid var(--at-line-2); border-radius: var(--at-radius); padding: 10px 12px; margin-bottom: 8px; }
+.at-nc-major { border-left-color: var(--at-warning); }
+.at-nc-critical { border-left-color: var(--at-danger); }
+.at-nc.is-closed { opacity: .75; border-left-color: var(--at-success); }
+.at-nc summary { cursor: pointer; }
+.at-nc form { margin-top: 12px; }
+.at-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.at-chip { display: inline-flex; gap: 4px; align-items: center; padding: 2px 10px; border-radius: 12px; background: var(--at-bg-2); font-size: 12.5px; color: var(--at-text); }
+.at-inactive { opacity: .6; }
+.at-tasks { list-style: none; padding: 0; margin: 0; }
+.at-task { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--at-line); flex-wrap: wrap; }
+.at-task:last-child { border-bottom: 0; }
+.at-task.is-done .at-task-main strong { text-decoration: line-through; color: var(--at-muted); }
+.at-task.is-skipped .at-task-main strong { color: var(--at-muted); }
+.at-task.is-overdue { box-shadow: inset 3px 0 0 var(--at-danger); padding-left: 10px; }
+.at-task-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.at-task-counts { display: flex; gap: 6px; flex-wrap: wrap; }
+.at-dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 13.5px; }
+.at-dl dt { color: var(--at-muted); font-weight: 400; }
+.at-dl dd { margin: 0; }
+.at-history { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.at-purch td.text-end, .at-purch th.text-end { white-space: nowrap; }

@@ -1,0 +1,66 @@
+{# Petits outils des formulaires ajax : envoi JSON, message, erreurs par champ (data-field ou name). #}
+<script>
+window.at = window.at || {};
+at.root = {{ root|json_encode|raw }};
+at.send = (url, method, data) => fetch(at.root + url, {
+    method, credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+    body: data === undefined ? undefined : JSON.stringify(data),
+}).then(r => r.json().catch(() => ({message: 'Błąd serwera.'})).then(body => ({ok: r.ok, ...body})));
+at.esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+at.notify = (ok, message) => (typeof showSnack === 'function' ? showSnack(ok, message) : window.alert(message));
+/* Champs du formulaire → objet. Vide : omis (ou null si data-nullable) ; inputmode=decimal : virgule → point ;
+   case à cocher sans [] : booléen ; name[] : liste des valeurs cochées. */
+at.formData = (form) => {
+    const data = {};
+    [...form.elements].forEach(el => {
+        if (!el.name || el.disabled || ['submit', 'button'].includes(el.type)) return;
+        if (el.name.endsWith('[]')) {
+            const key = el.name.slice(0, -2);
+            data[key] ??= [];
+            if (el.type === 'checkbox' ? el.checked : el.value !== '') {
+                if (el.multiple) [...el.selectedOptions].forEach(o => data[key].push(o.value)); else data[key].push(el.value);
+            }
+            return;
+        }
+        if (el.type === 'checkbox') { data[el.name] = el.checked; return; }
+        if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; return; }
+        let value = el.value.trim();
+        if (value === '') { if ('nullable' in el.dataset) data[el.name] = null; return; }
+        if (el.inputMode === 'decimal') value = value.replace(/\s/g, '').replace(',', '.');
+        data[el.name] = value;
+    });
+    return data;
+};
+at.clearErrors = (form) => {
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.at-field-error').forEach(el => el.remove());
+};
+at.showErrors = (form, res) => {
+    at.clearErrors(form);
+    (res.errors || []).forEach(err => {
+        const name = String(err.field).replace(/^.*\./, '');
+        const input = form.querySelector(`[name="${name}"], [name="${name}[]"], [data-field="${name}"]`);
+        if (!input) return;
+        input.classList.add('is-invalid');
+        const msg = document.createElement('div');
+        msg.className = 'invalid-feedback at-field-error d-block';
+        msg.textContent = err.message;
+        (input.closest('.input-group') || input).insertAdjacentElement('afterend', msg);
+    });
+    at.notify(false, res.message || 'Błąd');
+};
+/* Formulaire → url ; en cas de succès : rechargement (ou callback). */
+at.bindForm = (form, url, method = 'POST', onDone = null) => form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const button = form.querySelector('[type=submit]');
+    if (button) button.disabled = true;
+    at.send(typeof url === 'function' ? url(form) : url, method, at.formData(form)).then(res => {
+        if (button) button.disabled = false;
+        if (!res.ok) return at.showErrors(form, res);
+        at.clearErrors(form);
+        at.notify(true, res.message || 'Zapisano');
+        onDone ? onDone(res) : window.setTimeout(() => window.location.reload(), 500);
+    });
+});
+</script>

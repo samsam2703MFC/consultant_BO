@@ -1,0 +1,55 @@
+{# Tablica zadań stanowiska : zaległe, potem okres bieżący według częstotliwości. #}
+{% macro item(task, o, root, overdue = false) %}
+    <li class="at-task {{ o ? 'is-' ~ o.status : '' }} {{ overdue ? 'is-overdue' : '' }}" {% if o %}data-occurrence="{{ o.id }}"{% endif %}>
+        <div class="at-task-main">
+            <strong>{{ task.title_pl }}</strong>
+            <div class="at-sub">
+                {% if overdue %}zaległe · termin {{ o.due_date|date('d.m.Y') }} ({{ o.period_key }}){% elseif o %}termin {{ o.due_date|date('d.m') }}{% else %}dziś dzień wolny{% endif %}
+                {% if o and o.status != 'open' %} · {{ o.status == 'done' ? 'zrobione' : 'pominięte' }}{{ o.done_by_name ? ' przez ' ~ o.done_by_name : '' }}{{ o.done_at ? ', ' ~ o.done_at|date('d.m H:i') : '' }}{% endif %}
+                {% if o and o.note %} · „{{ o.note }}”{% endif %}
+            </div>
+        </div>
+        <div class="at-task-actions">
+            {% if task.link_path %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}{{ task.link_path }}">Otwórz</a>{% endif %}
+            {% if o %}
+                {% if o.status == 'open' %}
+                    <button class="btn btn-sm btn-primary" data-status="done"><i class="bi bi-check"></i> Zrobione</button>
+                    <button class="btn btn-sm btn-outline-secondary" data-status="skipped">Pomiń</button>
+                {% else %}
+                    <button class="btn btn-sm btn-outline-secondary" data-status="open">Cofnij</button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </li>
+{% endmacro %}
+
+{% if overdue %}
+    <div class="card at-task-card">
+        <div class="card-header"><h4 class="card-title text-danger">Zaległe ({{ overdue|length }})</h4></div>
+        <div class="card-body pt-0"><ul class="at-tasks">{% for o in overdue %}{{ _self.item(o.task, o, root, true) }}{% endfor %}</ul></div>
+    </div>
+{% endif %}
+{% for frequency, g in groups %}
+    <div class="card at-task-card">
+        <div class="card-header"><h4 class="card-title">{{ g.label }}</h4></div>
+        <div class="card-body pt-0"><ul class="at-tasks">{% for it in g.items %}{{ _self.item(it.task, it.occurrence, root) }}{% endfor %}</ul></div>
+    </div>
+{% endfor %}
+
+<script>
+(() => {
+    document.querySelectorAll('[data-occurrence] [data-status]').forEach(button => button.addEventListener('click', () => {
+        const li = button.closest('[data-occurrence]');
+        const status = button.dataset.status;
+        let note = null;
+        if (status === 'skipped') {
+            note = window.prompt('Dlaczego pomijasz to zadanie?');
+            if (!note) return;
+        }
+        at.send(`/ajax/my-tasks/${li.dataset.occurrence}`, 'PATCH', {status, note}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 400);
+        });
+    }));
+})();
+</script>

@@ -40,4 +40,14 @@ final class NcRepository extends WorkshopRepository
     {
         return array_map('intval', array_column($this->all('SELECT status, COUNT(*) AS n FROM tfb_nc GROUP BY status'), 'n', 'status'));
     }
+
+    public function products(): array
+    {
+        return $this->all('SELECT id, name FROM final_product WHERE active = 1 ORDER BY name');
+    }
+
+    public function users(): array
+    {
+        return $this->all('SELECT id, displayed_name FROM user ORDER BY displayed_name');
+    }
 }

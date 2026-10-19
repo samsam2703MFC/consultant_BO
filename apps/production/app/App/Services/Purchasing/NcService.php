@@ -28,6 +28,16 @@ final class NcService
         return $this->nc->counts();
     }
 
+    public function products(): array
+    {
+        return $this->nc->products();
+    }
+
+    public function users(): array
+    {
+        return $this->nc->users();
+    }
+
     public function save(array $input, ?int $id, ?int $userId): int
     {
         $current = $id === null ? null : ($this->nc->find($id) ?? throw new CustomException('Nie znaleziono niezgodności.', 'errors', 404));

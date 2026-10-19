@@ -1,0 +1,128 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Stanowiska i zadania{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Stanowiska i zadania</h3>
+            <p class="text-subtitle text-muted">Kto za co odpowiada: stanowisko każdego użytkownika ERP i jego zadania codzienne, tygodniowe, miesięczne i kwartalne</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/my-tasks"><i class="bi bi-check2-square"></i> Moje zadania</a>
+            <a href="#positionNew" class="btn btn-primary" data-bs-toggle="collapse" role="button" aria-expanded="false"><i class="bi bi-plus"></i> Stanowisko</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-org">
+    <div class="collapse" id="positionNew">
+        <div class="card">
+            <div class="card-header"><h4 class="card-title">Nowe stanowisko</h4></div>
+            <div class="card-body pt-0">
+                <form id="positionForm" class="at-purch-form">
+                    <label class="at-purch-label">Kod <span class="text-danger">*</span><input class="form-control" name="code" required maxlength="32" placeholder="np. MAGAZYN"></label>
+                    <label class="at-purch-label">Nazwa (PL) <span class="text-danger">*</span><input class="form-control" name="name_pl" required maxlength="100"></label>
+                    <label class="at-purch-label">Nazwa (FR) <span class="text-danger">*</span><input class="form-control" name="name_fr" required maxlength="100"></label>
+                    <label class="at-purch-label at-purch-wide">Opis<input class="form-control" name="description" maxlength="500"></label>
+                    <div class="at-purch-actions"><span></span><button class="btn btn-primary" type="submit">Utwórz</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Użytkownicy ERP</h4></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead><tr><th>Użytkownik</th><th>Stanowisko</th><th>Od</th><th></th></tr></thead>
+                    <tbody>
+                    {% for u in users %}
+                        <tr data-user="{{ u.id }}">
+                            <td><a href="{{ root }}/organization/users/{{ u.id }}"><strong>{{ u.displayed_name ?: u.login }}</strong></a><div class="at-sub">{{ u.login }}{{ u.email ? ' · ' ~ u.email : '' }}</div></td>
+                            <td>
+                                <select class="form-select form-select-sm" data-assign aria-label="Stanowisko {{ u.displayed_name }}">
+                                    <option value="">— brak —</option>
+                                    {% for p in positions %}<option value="{{ p.id }}" {{ u.id_position == p.id ? 'selected' : '' }}>{{ p.name_pl }}</option>{% endfor %}
+                                </select>
+                            </td>
+                            <td class="at-sub">{{ u.since ? u.since|date('d.m.Y') : '' }}</td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/users/{{ u.id }}">Karta</a></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% for p in positions %}
+    <div class="card {{ p.active ? '' : 'at-inactive' }}">
+        <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h4 class="card-title mb-1">{{ p.name_pl }} <span class="at-sub">{{ p.name_fr }} · {{ p.code }}{{ p.active ? '' : ' · nieaktywne' }}</span></h4>
+                <div class="at-chips">
+                    {% for u in p.users %}<a class="at-chip" href="{{ root }}/organization/users/{{ u.id }}"><i class="bi bi-person"></i> {{ u.displayed_name ?: u.login }}</a>{% else %}<span class="at-sub">Nikt nie ma tego stanowiska.</span>{% endfor %}
+                </div>
+            </div>
+            <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-position-active="{{ p.id }}" {{ p.active ? 'checked' : '' }}> aktywne</label>
+        </div>
+        <div class="card-body pt-0">
+            {% if p.tasks %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-2 at-task-table">
+                    <thead><tr><th>Zadanie (PL)</th><th>FR</th><th>Częstotliwość</th><th>Strona w ERP</th><th>Aktywne</th></tr></thead>
+                    <tbody>
+                    {% for t in p.tasks %}
+                        <tr data-task="{{ t.id }}" class="{{ t.active ? '' : 'at-inactive' }}">
+                            <td><input class="form-control form-control-sm" data-field="title_pl" value="{{ t.title_pl }}" maxlength="200"></td>
+                            <td><input class="form-control form-control-sm" data-field="title_fr" value="{{ t.title_fr }}" maxlength="200"></td>
+                            <td><select class="form-select form-select-sm" data-field="frequency">{% for k, l in frequencies %}<option value="{{ k }}" {{ t.frequency == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}</select></td>
+                            <td><input class="form-control form-control-sm" data-field="link_path" value="{{ t.link_path }}" placeholder="/purchasing" maxlength="255"></td>
+                            <td><input class="form-check-input" type="checkbox" data-field="active" {{ t.active ? 'checked' : '' }}></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            <form class="at-task-new d-flex gap-2 flex-wrap align-items-end" data-position="{{ p.id }}">
+                <input class="form-control form-control-sm" name="title_pl" placeholder="Nowe zadanie (PL)" required maxlength="200" style="flex: 2 1 220px">
+                <input class="form-control form-control-sm" name="title_fr" placeholder="FR (opcjonalnie)" maxlength="200" style="flex: 2 1 180px">
+                <select class="form-select form-select-sm" name="frequency" style="flex: 1 1 140px">{% for k, l in frequencies %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+                <input class="form-control form-control-sm" name="link_path" placeholder="/strona-w-erp" maxlength="255" style="flex: 1 1 140px">
+                <button class="btn btn-sm btn-primary" type="submit">Dodaj</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    at.bindForm(document.getElementById('positionForm'), '/ajax/organization/positions');
+    document.querySelectorAll('.at-task-new').forEach(form => at.bindForm(form, `/ajax/organization/positions/${form.dataset.position}/tasks`));
+    document.querySelectorAll('[data-assign]').forEach(select => select.addEventListener('change', () => {
+        const row = select.closest('[data-user]');
+        at.send(`/ajax/organization/users/${row.dataset.user}/position`, 'PUT', {position_id: select.value || null}).then(res => at.notify(res.ok, res.message));
+    }));
+    document.querySelectorAll('[data-position-active]').forEach(box => box.addEventListener('change', () => {
+        at.send(`/ajax/organization/positions/${box.dataset.positionActive}`, 'PATCH', {active: box.checked}).then(res => at.notify(res.ok, res.message));
+    }));
+    document.querySelectorAll('[data-task]').forEach(row => row.addEventListener('change', (e) => {
+        const field = e.target.dataset.field;
+        if (!field) return;
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value.trim();
+        at.send(`/ajax/organization/tasks/${row.dataset.task}`, 'PATCH', {[field]: value === '' && field === 'link_path' ? null : value}).then(res => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (field === 'active' && res.ok) row.classList.toggle('at-inactive', !value);
+        });
+    }));
+})();
+</script>
+{% endblock %}
