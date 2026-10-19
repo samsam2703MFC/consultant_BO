@@ -3,6 +3,7 @@
 namespace App\Controllers\Web\Client\Order;
 
 use App\Domain\Client\Order\CustomerOrderStatus;
+use App\Exceptions\CustomException;
 
 use App\Core\Route;
 use App\Core\Web\BaseController;
@@ -164,7 +165,14 @@ class OrderController extends BaseController
         $data['client_type'] = "standard";
         if(!is_null($data['client']['franchisee_uid'])){
             $data['client_type'] = "franchisee";
-            $data['price_list'] = $this->externalPriceListService->getActiveByClient($data['client']['id']);
+            try {
+                $data['price_list'] = $this->externalPriceListService->getActiveByClient($data['client']['id']);
+            } catch (CustomException $e) {
+                // Bez połączenia z systemem franczyzy (np. kopia testowa bez danych dostępowych) zamówienie
+                // ma się otworzyć: cennik zostaje pusty, a użytkownik widzi dlaczego.
+                $data['price_list'] = [];
+                $this->errors[] = 'Cennik franczyzobiorcy jest niedostępny (' . $e->getMessage() . '): nie można teraz dodać produktów do zamówienia.';
+            }
         } else {
             $data['price_list'] = $this->clientProductPriceService->getActiveByClient($data['client']['id']);
         }
@@ -207,7 +215,14 @@ class OrderController extends BaseController
         $data['client_type'] = "standard";
         if(!is_null($data['client']['franchisee_uid'])){
             $data['client_type'] = "franchisee";
-            $data['price_list'] = $this->externalPriceListService->getActiveByClient($data['client']['id']);
+            try {
+                $data['price_list'] = $this->externalPriceListService->getActiveByClient($data['client']['id']);
+            } catch (CustomException $e) {
+                // Bez połączenia z systemem franczyzy (np. kopia testowa bez danych dostępowych) zamówienie
+                // ma się otworzyć: cennik zostaje pusty, a użytkownik widzi dlaczego.
+                $data['price_list'] = [];
+                $this->errors[] = 'Cennik franczyzobiorcy jest niedostępny (' . $e->getMessage() . '): nie można teraz dodać produktów do zamówienia.';
+            }
         } else {
             $data['price_list'] = $this->clientProductPriceService->getActiveByClient($data['client']['id']);
         }

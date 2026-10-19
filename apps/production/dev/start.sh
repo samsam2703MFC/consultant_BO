@@ -38,6 +38,16 @@ elif [ -n "$DUMP" ]; then
     echo "Base importée : $(mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='erp'") tables"
 fi
 
+# 2b. Copie isolée, à chaque démarrage, comme sur le serveur de test (deploy/server.sh) :
+#     sans identifiants, ni l'ERP local ni un test n'appellent le système franchise, la boîte mail ou KSeF.
+mysql erp <<'SQL'
+UPDATE communication_email_account
+   SET is_active = 0, smtp_secret = NULL, imap_secret = NULL,
+       smtp_secret_encrypted = NULL, imap_secret_encrypted = NULL;
+UPDATE ksef_integration_settings SET environment = 'test', token_encrypted = NULL;
+UPDATE customer SET credentials = NULL, franchisee_connection_password = NULL;
+SQL
+
 # 3. Dépendances et .env local (S3, Discord et VIESAPI vides : rien ne part vers l'extérieur)
 [ -d "$APP/public/vendor" ] || (cd "$APP/public" && composer install --no-interaction --no-progress)
 if [ ! -f "$APP/.env" ]; then
