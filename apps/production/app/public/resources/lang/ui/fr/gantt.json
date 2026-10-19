@@ -54,5 +54,6 @@
   "not_movable": "Cette opération est déjà en cours ou terminée.",
   "read_only": "Lecture seule — déplacer demande la permission prod.gantt.move.",
   "due_title": "Échéance",
-  "team_title": "Équipe"
+  "team_title": "Équipe",
+  "optimizer": "Optimiseur de shifts"
 }

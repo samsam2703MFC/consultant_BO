@@ -4,8 +4,9 @@ declare(strict_types=1);
 namespace App\Core\Api\Workshop;
 
 use App\Services\Workshop\Planning\PlanningService;
+use App\Services\Workshop\Scheduling\ShiftOptimizer;
 
-/** Documentation OpenAPI du domaine « planning » (P3 : besoins MTO/MTS/semi-finis, plans, OF). */
+/** Documentation OpenAPI du domaine « planning » (P3 : besoins, plans, OF ; P4–P6 : ordonnancement, Gantt, charge, optimiseur). */
 final class OpenApiPlanning
 {
     public static function operations(): array
@@ -34,6 +35,16 @@ final class OpenApiPlanning
                     . 'Chef d\'équipe : seulement dans ses groupes (prod.gantt.move).'],
             'GET /planning/load' => ['tag' => $t, 'id' => 'getLoad', 'summary' => 'Obciążenie zespołów / Charge des équipes par groupe, jour et shift', 'response' => 'Load', 'list' => true, 'errors' => [422], 'query' => $period,
                 'description' => 'Heures planifiées (opérateurs × durée, nettoyage compris) ÷ effectif prévu des équipes × durée du shift. Vert entre load.green_min_pct et load.green_max_pct.'],
+            'GET /planning/optimizer' => ['tag' => $t, 'id' => 'proposeShifts', 'summary' => 'Optymalizator zmian 95 % / Optimiseur de shifts', 'response' => 'OptimizerProposal', 'errors' => [422], 'query' => $period,
+                'description' => "Par groupe, jour et shift, leviers dans l'ordre optimizer.levers_order : avancer du MTS (stock max, surgélateur), réaffecter les polyvalents, fermer / réduire / ouvrir, heures sup. (optimizer.max_overtime_h par personne). "
+                    . 'Cible load.target_pct dans [load.green_min_pct, load.green_max_pct]. Les opérations existantes ne bougent pas : le MTO n\'est jamais retardé.'],
+            'POST /planning/optimizer/apply' => ['tag' => $t, 'id' => 'applyShifts', 'summary' => 'Zastosuj propozycję / Appliquer la proposition', 'body' => 'PeriodInput', 'response' => 'OptimizerApplyResult', 'errors' => [400, 422],
+                'description' => "OF MTS des avances ajoutés au plan validé de la date (échéance = fin du shift) et ordonnancés dans les places libres ; ceux qui ne tiennent pas (poste ou chambre pleins) sont retirés (mts_not_placed, conflicts). "
+                    . "Puis l'obsada est recalculée sur la charge réellement ordonnancée et écrite (source optimizer)."],
+            'POST /planning/simulate' => ['tag' => $t, 'id' => 'simulateStaffing', 'summary' => 'Symulacja obsady / Simuler une obsada', 'body' => 'SimulationInput', 'response' => 'SimulationResult', 'errors' => [400, 422],
+                'description' => 'Charge recalculée avec une autre obsada (personnes, heures sup.) ; rien n\'est enregistré.'],
+            'PUT /planning/staffing' => ['tag' => $t, 'id' => 'saveStaffing', 'summary' => 'Obsada dnia / Effectif du jour', 'body' => 'StaffingInput', 'response' => 'Load', 'errors' => [400, 422],
+                'description' => 'Effectif d\'un groupe sur un shift un jour donné (remplace les équipes) ; headcount null = retour aux équipes.'],
             'POST /planning/plans/{id:\d+}/validate' => ['tag' => $t, 'id' => 'validatePlan', 'summary' => 'Zatwierdź plan i utwórz zlecenia / Valider et créer les OF', 'response' => 'Plan', 'errors' => [404, 409],
                 'description' => 'Un seul plan validé par période (409 PLAN_OVERLAP). OF MTO reliés aux commandes clients, OF SEMI reliés à leur OF parent et dus à son démarrage au plus tard.'],
         ];
@@ -98,6 +109,55 @@ final class OpenApiPlanning
                 'group_id' => $int, 'team' => ['type' => 'string', 'nullable' => true], 'operators' => $num,
                 'start' => ['type' => 'string'], 'end' => ['type' => 'string'], 'due_at' => ['type' => 'string'], 'status' => ['type' => 'string'], 'locked' => ['type' => 'boolean'],
             ]],
+            'OptimizerRow' => ['type' => 'object', 'properties' => [
+                'key' => ['type' => 'string'], 'date' => ['type' => 'string', 'format' => 'date'], 'shift_id' => $int, 'shift' => ['type' => 'string'],
+                'group_id' => $int, 'group' => ['type' => 'string'], 'color' => ['type' => 'string'], 'start' => ['type' => 'string'], 'end' => ['type' => 'string'],
+                'shift_h' => $num, 'headcount' => $int, 'base_headcount' => $int, 'overtime_h' => $num, 'required_h' => $num, 'max_operators' => $int,
+                'staffing' => ['type' => 'string', 'nullable' => true, 'enum' => ['optimizer', 'manual', 'simulation', null]],
+                'before' => ['$ref' => '#/components/schemas/ShiftState'], 'after' => ['$ref' => '#/components/schemas/ShiftState'],
+                'actions' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'lever' => ['type' => 'string', 'enum' => ShiftOptimizer::LEVERS], 'action' => ['type' => 'string', 'enum' => ['close', 'reduce', 'add', 'open']],
+                    'people' => $int, 'hours' => $num, 'item_id' => $int, 'item' => ['type' => 'string'], 'quantity' => $num, 'plan_id' => $nInt,
+                    'from_group_id' => $int, 'to_group_id' => $int,
+                ]]],
+            ]],
+            'ShiftState' => ['type' => 'object', 'properties' => [
+                'headcount' => $int, 'overtime_h' => $num, 'required_h' => $num, 'available_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true],
+                'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team', 'closed']],
+            ]],
+            'ShiftSummary' => ['type' => 'object', 'properties' => [
+                'required_h' => $num, 'available_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'green' => $int, 'shifts' => $int,
+            ]],
+            'OptimizerProposal' => ['type' => 'object', 'properties' => [
+                'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],
+                'levers' => ['type' => 'array', 'items' => ['type' => 'string']], 'config' => ['type' => 'object'],
+                'rows' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/OptimizerRow']],
+                'summary' => ['type' => 'object', 'properties' => ['before' => ['$ref' => '#/components/schemas/ShiftSummary'], 'after' => ['$ref' => '#/components/schemas/ShiftSummary']]],
+                'notes' => ['type' => 'array', 'items' => ['type' => 'string']],
+            ]],
+            'OptimizerApplyResult' => ['type' => 'object', 'properties' => [
+                'staffing_rows' => $int, 'mts_orders' => $int, 'mts_not_placed' => $int, 'mts_skipped_no_plan' => $int, 'operations' => $int,
+                'conflicts' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'summary_before' => ['$ref' => '#/components/schemas/ShiftSummary'], 'summary_after' => ['$ref' => '#/components/schemas/ShiftSummary'],
+            ]],
+            'PeriodInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [
+                'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],
+            ]],
+            'SimulationInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [
+                'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],
+                'staffing' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['date', 'group_id', 'shift_id', 'headcount'], 'properties' => [
+                    'date' => ['type' => 'string', 'format' => 'date'], 'group_id' => $int, 'shift_id' => $int, 'headcount' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 50],
+                    'overtime_h' => ['type' => 'number', 'minimum' => 0, 'maximum' => 200],
+                ]]],
+            ]],
+            'SimulationResult' => ['type' => 'object', 'properties' => [
+                'rows' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/OptimizerRow']], 'summary' => ['$ref' => '#/components/schemas/ShiftSummary'],
+            ]],
+            'StaffingInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'group_id', 'shift_id', 'headcount'], 'properties' => [
+                'date' => ['type' => 'string', 'format' => 'date'], 'group_id' => $int, 'shift_id' => $int,
+                'headcount' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 50, 'nullable' => true, 'description' => 'null = retour aux équipes'],
+                'overtime_h' => ['type' => 'number', 'minimum' => 0, 'maximum' => 200], 'note' => ['type' => 'string', 'maxLength' => 255, 'nullable' => true],
+            ]],
             'OperationInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'start' => ['type' => 'string', 'example' => '2026-10-21 08:30', 'description' => 'AAAA-MM-JJ HH:MM[:SS]'],
                 'workstation_id' => $int, 'locked' => ['type' => 'boolean'],
@@ -105,7 +165,8 @@ final class OpenApiPlanning
             'Load' => ['type' => 'object', 'properties' => [
                 'group_id' => $int, 'group' => ['type' => 'string'], 'color' => ['type' => 'string'], 'date' => ['type' => 'string', 'format' => 'date'],
                 'shift' => ['type' => 'string'], 'shift_id' => $int, 'night' => ['type' => 'boolean'], 'start' => ['type' => 'string'], 'end' => ['type' => 'string'],
-                'headcount' => $int, 'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'target_pct' => $num,
+                'headcount' => $int, 'base_headcount' => $int, 'overtime_h' => $num, 'staffing' => ['type' => 'string', 'nullable' => true], 'shift_h' => $num, 'max_operators' => $int,
+                'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'target_pct' => $num,
                 'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team']],
             ]],
             'PlanInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [

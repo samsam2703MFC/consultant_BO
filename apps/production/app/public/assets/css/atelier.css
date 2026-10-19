@@ -1015,3 +1015,23 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 @media (max-width: 575px) { .at-logi-add { grid-template-columns: 1fr; } }
 .at-logi-add label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin: 0; }
 .at-logi-add-actions { display: flex; align-items: flex-end; }
+
+/* --- Atelier P6 : optymalizacja zmian ----------------------------------------------------- */
+.tfb-opt-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 575px) { .tfb-opt-tiles { grid-template-columns: 1fr; } }
+.tfb-opt-table td, .tfb-opt-table th { vertical-align: middle; }
+.tfb-opt-day th { background: var(--at-bg-2) !important; text-transform: capitalize; }
+.tfb-opt-group { box-shadow: inset 4px 0 0 var(--group-color); padding-left: 12px !important; min-width: 170px; }
+.tfb-opt-num { width: 84px; }
+.tfb-opt-bar { position: relative; display: inline-block; vertical-align: middle; width: 110px; height: 10px; border-radius: 999px; background: var(--at-bg-2); overflow: hidden; margin-right: 6px; }
+.tfb-opt-bar span { display: block; height: 100%; background: var(--at-warning); }
+.tfb-opt-bar.is-ok span { background: var(--at-success); }
+.tfb-opt-bar.is-over span { background: var(--at-danger); }
+.tfb-opt-bar i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--at-text); opacity: 0.35; }
+.tfb-opt-pct { font-size: 13px; }
+.tfb-opt-pct.is-under { color: var(--at-warning); }
+.tfb-opt-pct.is-ok { color: var(--at-success); }
+.tfb-opt-pct.is-over { color: var(--at-danger); }
+.tfb-opt-actions { margin: 0; padding-left: 16px; font-size: 12.5px; min-width: 220px; }
+.tfb-opt-actions li.is-advance_mts { color: var(--at-success); }
+.tfb-opt-actions li.is-overtime, .tfb-opt-actions li.is-open_close_shift { color: var(--at-on-abricot); }

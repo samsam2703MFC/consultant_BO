@@ -35,6 +35,28 @@ final class SchedulingRepository extends WorkshopRepository
         return $this->all('SELECT t.*, s.is_night FROM tfb_prod_team t JOIN tfb_prod_shift_template s ON s.id = t.id_shift_template WHERE t.active = 1');
     }
 
+    /** @return array<string,array<int,array<int,array{headcount:int, overtime_h:float, source:string}>>> jour => groupe => shift */
+    public function staffing(string $from, string $to): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT * FROM tfb_prod_staffing WHERE work_date BETWEEN ? AND ?', [$from, $to]) as $r) {
+            $out[$r['work_date']][(int) $r['id_group']][(int) $r['id_shift_template']] = ['headcount' => (int) $r['headcount'], 'overtime_h' => (float) $r['overtime_h'], 'source' => $r['source']];
+        }
+        return $out;
+    }
+
+    public function saveStaffing(string $date, int $groupId, int $shiftId, ?int $headcount, float $overtime, string $source, ?string $note, ?int $userId): void
+    {
+        if ($headcount === null) {
+            $this->db->prepare('DELETE FROM tfb_prod_staffing WHERE work_date = ? AND id_group = ? AND id_shift_template = ?')->execute([$date, $groupId, $shiftId]);
+            return;
+        }
+        $this->db->prepare(
+            'INSERT INTO tfb_prod_staffing (work_date, id_group, id_shift_template, headcount, overtime_h, source, note, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE headcount = VALUES(headcount), overtime_h = VALUES(overtime_h), source = VALUES(source), note = VALUES(note), updated_by = VALUES(updated_by)'
+        )->execute([$date, $groupId, $shiftId, $headcount, $overtime, $source, $note, $userId]);
+    }
+
     public function groups(): array
     {
         return $this->all('SELECT id, code, name_pl, name_fr, color, sort_order FROM tfb_prod_group WHERE active = 1 ORDER BY sort_order');
@@ -91,6 +113,15 @@ final class SchedulingRepository extends WorkshopRepository
         }
         return $this->all("SELECT o.*, rs.capacity_per_pass FROM tfb_prod_operation o LEFT JOIN tfb_prod_routing_step rs ON rs.id = o.id_routing_step
                            WHERE o.status IN ('planned', 'in_progress', 'paused') AND o.planned_start < ? AND o.planned_end > ?" . $except, $params);
+    }
+
+    /** OF ajoutés puis non placés (optimiseur) : supprimés avec leurs opérations. */
+    public function deleteOrders(array $orderIds): void
+    {
+        if (!$orderIds) return;
+        $in = implode(', ', array_fill(0, count($orderIds), '?'));
+        $this->db->prepare("DELETE FROM tfb_prod_operation WHERE id_order IN ({$in})")->execute(array_values($orderIds));
+        $this->db->prepare("DELETE FROM tfb_prod_order WHERE id IN ({$in}) AND status = 'planned'")->execute(array_values($orderIds));
     }
 
     public function deleteUnlocked(array $orderIds): void

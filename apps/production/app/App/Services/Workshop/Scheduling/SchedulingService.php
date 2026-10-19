@@ -38,9 +38,28 @@ final class SchedulingService
 
     public function schedulePlan(int $planId, ApiContext $context, ?int $now = null): array
     {
+        $plan = $this->validatedPlan($planId);
+        return $this->place($plan, $this->repo->orders($planId), $context, $now);
+    }
+
+    /** Uszeregowanie wybranych OF planu (MTS dodane przez optymalizator) w wolnych miejscach, bez ruszania innych operacji. */
+    public function scheduleOrders(int $planId, array $orderIds, ApiContext $context, ?int $now = null): array
+    {
+        $plan = $this->validatedPlan($planId);
+        $orders = array_values(array_filter($this->repo->orders($planId), fn($o) => in_array((int) $o['id'], $orderIds, true)));
+        return $this->place($plan, $orders, $context, $now);
+    }
+
+    private function validatedPlan(int $planId): array
+    {
         $plan = $this->repo->plan($planId) ?? throw ApiException::notFound('plan', $planId);
         if (!in_array($plan['status'], ['validated', 'frozen'], true)) throw new ApiException('PLAN_NOT_VALIDATED', 409, [], ['status' => $plan['status']]);
-        $orders = $this->repo->orders($planId);
+        return $plan;
+    }
+
+    private function place(array $plan, array $orders, ApiContext $context, ?int $now): array
+    {
+        $planId = (int) $plan['id'];
         if (!$orders) return ['plan_id' => $planId, 'operations' => 0, 'conflicts' => [], 'load' => []];
 
         $now ??= time();
@@ -56,11 +75,11 @@ final class SchedulingService
         $teams = $this->repo->teams();
         $segments = $this->segments($shifts, $earliest - 86400, $horizonEnd + 86400);
 
-        // Effectif prévu par groupe et par shift : une opération qui demande n opérateurs ne tourne que
-        // sur les shifts où le groupe du poste a au moins n personnes (la nuit comprise) ; un robot
-        // autonome tourne sur toutes ses fenêtres ; une attente en chambre est passive.
-        $headcount = [];
-        foreach ($teams as $t) $headcount[(int) $t['id_group']][(int) $t['id_shift_template']] = ($headcount[(int) $t['id_group']][(int) $t['id_shift_template']] ?? 0) + (int) $t['planned_headcount'];
+        // Effectif par groupe, shift et jour (obsada du jour, sinon équipes) : une opération qui demande n
+        // opérateurs ne tourne que sur les shifts où le groupe du poste a au moins n personnes (la nuit
+        // comprise), prolongés des heures sup. ; un robot autonome tourne sur toutes ses fenêtres ; une
+        // attente en chambre est passive.
+        $crew = $this->crew($teams, $this->repo->staffing(date('Y-m-d', $earliest - 86400), date('Y-m-d', $horizonEnd + 86400)));
         $engine = new Scheduler($earliest, max(900, (int) $this->params->get('scheduling.max_operation_min', '240') * 60));
         foreach ($workstations as $id => $w) {
             $day = [];
@@ -70,8 +89,9 @@ final class SchedulingService
                 if (!($availability[$id][$seg['shift_id']] ?? true)) continue;
                 $all[] = [$seg['start'], $seg['end']];
                 if (!$seg['night']) $day[] = [$seg['start'], $seg['end']];
-                $people = $headcount[(int) $w['id_group']][$seg['shift_id']] ?? 0;
-                for ($n = 1; $n <= min($people, 10); $n++) $staffed['staff:' . $n][] = [$seg['start'], $seg['end']];
+                [$people, $overtime] = $crew((int) $w['id_group'], $seg['shift_id'], date('Y-m-d', $seg['start']));
+                $end = $seg['end'] + ($people > 0 ? (int) round($overtime / $people * 3600) : 0);
+                for ($n = 1; $n <= min($people, 10); $n++) $staffed['staff:' . $n][] = [$seg['start'], $end];
             }
             $cumulative = in_array($w['type'], self::CUMULATIVE_TYPES, true);
             $engine->addResource($id, $day, $all, $cumulative, $cumulative ? (float) $w['capacity_per_pass'] : 1.0, $staffed + ['auto' => $all]);
@@ -181,16 +201,15 @@ final class SchedulingService
     public function windows(array $workstation, float $operators, int $from, int $to): array
     {
         $availability = $this->repo->availability()[(int) $workstation['id']] ?? [];
-        $headcount = [];
-        foreach ($this->repo->teams() as $t) {
-            if ((int) $t['id_group'] === (int) $workstation['id_group']) $headcount[(int) $t['id_shift_template']] = ($headcount[(int) $t['id_shift_template']] ?? 0) + (int) $t['planned_headcount'];
-        }
+        $crew = $this->crew($this->repo->teams(), $this->repo->staffing(date('Y-m-d', $from - 2 * 86400), date('Y-m-d', $to + 86400)));
         $passive = $operators <= 0 || ($workstation['type'] === 'robot' && $workstation['robot_mode'] === 'autonome');
         $out = [];
         foreach ($this->segments($this->repo->shifts(), $from - 86400, $to + 86400) as $seg) {
             if (!($availability[$seg['shift_id']] ?? true)) continue;
-            if (!$passive && ($headcount[$seg['shift_id']] ?? 0) < (int) ceil($operators)) continue;
-            $out[] = [$seg['start'], $seg['end']];
+            if ($passive) { $out[] = [$seg['start'], $seg['end']]; continue; }
+            [$people, $overtime] = $crew((int) $workstation['id_group'], $seg['shift_id'], date('Y-m-d', $seg['start']));
+            if ($people < (int) ceil($operators)) continue;
+            $out[] = [$seg['start'], $seg['end'] + (int) round($overtime / $people * 3600)];
         }
         return Scheduler::merge($out);
     }
@@ -206,8 +225,11 @@ final class SchedulingService
         return null;
     }
 
-    /** Charge par groupe, jour et shift : heures planifiées ÷ heures des équipes. */
-    public function load(string $from, string $to, ApiContext $context): array
+    /**
+     * Charge par groupe, jour et shift : heures planifiées ÷ heures disponibles (obsada du jour ou
+     * équipes, + heures sup.). $overrides : obsada simulée [jour][groupe][shift] => [headcount, overtime_h].
+     */
+    public function load(string $from, string $to, ApiContext $context, array $overrides = []): array
     {
         [$from, $to] = $this->period($from, $to);
         $start = strtotime($from);
@@ -215,6 +237,9 @@ final class SchedulingService
         $shifts = $this->repo->shifts();
         $segments = $this->segments($shifts, $start, $end);
         $teams = $this->repo->teams();
+        $staffing = array_replace_recursive($this->repo->staffing($from, $to), $overrides);
+        $crew = $this->crew($teams, $staffing);
+        $base = $this->crew($teams, []);
         $ops = $this->repo->operations(date('Y-m-d H:i:s', $start - 86400), date('Y-m-d H:i:s', $end + 86400), null);
         $greenMin = (float) $this->params->get('load.green_min_pct', '90');
         $greenMax = (float) $this->params->get('load.green_max_pct', '100');
@@ -226,29 +251,51 @@ final class SchedulingService
         foreach ($this->repo->groups() as $g) {
             foreach ($segments as $seg) {
                 if ($seg['start'] < $start || $seg['start'] >= $end) continue;
-                $headcount = 0;
-                foreach ($teams as $t) if ((int) $t['id_group'] === (int) $g['id'] && (int) $t['id_shift_template'] === $seg['shift_id']) $headcount += (int) $t['planned_headcount'];
+                $date = date('Y-m-d', $seg['start']);
+                [$headcount, $overtime, $source] = $crew((int) $g['id'], $seg['shift_id'], $date);
+                $shiftH = ($seg['end'] - $seg['start']) / 3600;
+                $segEnd = $seg['end'] + ($headcount > 0 ? (int) round($overtime / $headcount * 3600) : 0);
                 $required = 0.0;
+                $maxOperators = 0;
                 foreach ($ops as $op) {
                     if ((int) $op['id_group'] !== (int) $g['id'] || $op['kind'] === 'delay') continue;
-                    $overlap = min(strtotime($op['planned_end']), $seg['end']) - max(strtotime($op['planned_start']), $seg['start']);
+                    $overlap = min(strtotime($op['planned_end']), $segEnd) - max(strtotime($op['planned_start']), $seg['start']);
                     if ($overlap <= 0) continue;
-                    $required += $overlap / 3600 * ($op['kind'] === 'work' ? (float) ($op['operators_required'] ?? 1) : 1.0);
+                    $operators = $this->operators($op);
+                    $required += $overlap / 3600 * $operators;
+                    $maxOperators = max($maxOperators, (int) ceil($operators));
                 }
-                $available = $headcount * ($seg['end'] - $seg['start']) / 3600;
+                $available = $headcount * $shiftH + $overtime;
                 if ($available == 0.0 && $required == 0.0) continue;
                 $pct = $available > 0 ? $required / $available * 100 : null;
                 $out[] = [
                     'group_id' => (int) $g['id'], 'group' => $g['name_' . $lang], 'color' => $g['color'],
                     'date' => date('Y-m-d', $seg['start']), 'shift' => $shiftCodes[$seg['shift_id']] ?? '', 'shift_id' => $seg['shift_id'], 'night' => $seg['night'],
                     'start' => date('Y-m-d H:i:s', $seg['start']), 'end' => date('Y-m-d H:i:s', $seg['end']),
-                    'headcount' => $headcount, 'available_h' => round($available, 2), 'required_h' => round($required, 2),
+                    'headcount' => $headcount, 'base_headcount' => $base((int) $g['id'], $seg['shift_id'], $date)[0], 'overtime_h' => round($overtime, 2),
+                    'staffing' => $source, 'shift_h' => round($shiftH, 2), 'max_operators' => $maxOperators,
+                    'available_h' => round($available, 2), 'required_h' => round($required, 2),
                     'load_pct' => $pct === null ? null : round($pct, 1), 'target_pct' => $target,
                     'status' => $pct === null ? 'no_team' : ($pct < $greenMin ? 'under' : ($pct > $greenMax ? 'over' : 'ok')),
                 ];
             }
         }
         return $out;
+    }
+
+    /**
+     * Effectif d'un groupe sur un shift un jour donné : obsada du jour (tfb_prod_staffing ou simulation),
+     * sinon somme des équipes. @return callable(int $group, int $shift, string $date): array{0:int, 1:float, 2:?string}
+     */
+    private function crew(array $teams, array $staffing): callable
+    {
+        $planned = [];
+        foreach ($teams as $t) $planned[(int) $t['id_group']][(int) $t['id_shift_template']] = ($planned[(int) $t['id_group']][(int) $t['id_shift_template']] ?? 0) + (int) $t['planned_headcount'];
+        return function (int $group, int $shift, string $date) use ($planned, $staffing): array {
+            $row = $staffing[$date][$group][$shift] ?? null;
+            if ($row !== null) return [(int) $row['headcount'], (float) ($row['overtime_h'] ?? 0), $row['source'] ?? 'simulation'];
+            return [$planned[$group][$shift] ?? 0, 0.0, null];
+        };
     }
 
     /**

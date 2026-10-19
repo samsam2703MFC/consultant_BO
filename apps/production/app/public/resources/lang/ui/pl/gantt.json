@@ -54,5 +54,6 @@
   "not_movable": "Ta operacja jest już w toku lub zakończona.",
   "read_only": "Tylko podgląd — przesuwanie wymaga uprawnienia prod.gantt.move.",
   "due_title": "Termin",
-  "team_title": "Zespół"
+  "team_title": "Zespół",
+  "optimizer": "Optymalizacja zmian"
 }

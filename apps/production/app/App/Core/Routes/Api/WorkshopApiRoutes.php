@@ -91,6 +91,10 @@ final class WorkshopApiRoutes
             ['GET', '/planning/operations', SchedulingController::class, 'operations', 'prod.plan.read'],
             ['PATCH', '/planning/operations/{id:\d+}', SchedulingController::class, 'updateOperation', 'prod.gantt.move'],
             ['GET', '/planning/load', SchedulingController::class, 'load', 'prod.plan.read'],
+            ['GET', '/planning/optimizer', SchedulingController::class, 'optimizer', 'prod.plan.read'],
+            ['POST', '/planning/optimizer/apply', SchedulingController::class, 'applyOptimizer', 'prod.plan.validate'],
+            ['POST', '/planning/simulate', SchedulingController::class, 'simulate', 'prod.plan.read'],
+            ['PUT', '/planning/staffing', SchedulingController::class, 'saveStaffing', 'prod.plan.validate'],
         ];
     }
 

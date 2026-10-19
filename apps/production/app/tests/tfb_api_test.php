@@ -469,6 +469,60 @@ $pdo->exec("UPDATE tfb_prod_operation SET status = 'done' WHERE id = {$semiFirst
 check($s === 409 && $b['description'] === 'OPERATION_NOT_MOVABLE', 'a finished operation does not move');
 $pdo->exec("UPDATE tfb_prod_operation SET status = 'planned' WHERE id = {$semiFirst['id']}");
 
+// --- P6 : optimiseur de shifts (95 %), application, simulation
+// Deuxième produit MTS (pain façonné à 2, 30 s/pièce sur sa table) : de quoi remplir les shifts.
+$pdo->exec("UPDATE tfb_prod_product_settings SET stock_max = 5000 WHERE id_item = {$itemId}");
+$pdo->exec("INSERT INTO tfb_prod_workstation (id, code, id_group, name_pl, name_fr, type, capacity_per_pass) VALUES (94, 'STOL_P6', 1, 'Stół 2', 'Table 2', 'manuel', 1000)");
+$pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, bpc, cpl, lpp, cpp, id_section, active) VALUES (502, 'Pain test', 1, 300, 10, 1, 10, 8, 6, 48, 1, 1)");
+$pdo->exec("INSERT INTO tfb_prod_item (id, item_type, id_final_product) VALUES (50, 'product', 502)");
+$pdo->exec("INSERT INTO tfb_prod_product_settings (id_item, mode, stock_max, batch_multiple, id_primary_group, status) VALUES (50, 'MTS', 100000, 10, 1, 'validated')");
+$pdo->exec("INSERT INTO tfb_prod_routing_step (id_item, step_no, name_pl, name_fr, id_workstation, variable_time_s, capacity_per_pass, operators_required) VALUES (50, 1, 'Formowanie', 'Façonnage', 94, 30, 1000, 2)");
+$wFrom = date('Y-m-d', strtotime('+1 day'));
+$wTo = date('Y-m-d', strtotime('+6 days'));
+$before = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM tfb_prod_operation ORDER BY id")->fetchAll();
+[$s, $opt] = $call('GET', "/planning/optimizer?from={$wFrom}&to={$wTo}", null, $lead);
+check($s === 200 && $opt['data']['summary']['before']['green'] < $opt['data']['summary']['after']['green'], 'optimizer proposes more shifts in the green band');
+$worked = array_values(array_filter($opt['data']['rows'], fn($r) => $r['after']['required_h'] > 0));
+check($worked && !array_filter($worked, fn($r) => $r['after']['status'] !== 'ok'), 'acceptance: every worked shift of the week proposed at 90–100 %');
+check(count(array_filter($opt['data']['rows'], fn($r) => $r['actions'] && $r['actions'][0]['lever'] === 'advance_mts')) >= 1, 'underloaded shifts filled by advancing MTS');
+[$s, $b] = $call('POST', '/planning/optimizer/apply', ['from' => $wFrom, 'to' => $wTo], $lead);
+check($s === 403, 'a team lead does not apply the optimizer');
+$staffingRows = (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_staffing')->fetchColumn();
+[$s, $sim] = $call('POST', '/planning/simulate', ['from' => $wFrom, 'to' => $wFrom, 'staffing' => [['date' => $wFrom, 'group_id' => 1, 'shift_id' => $jourId = (int) $pdo->query("SELECT id FROM tfb_prod_shift_template WHERE code = 'JOUR'")->fetchColumn(), 'headcount' => 4, 'overtime_h' => 1]]], $lead);
+$simRow = array_values(array_filter($sim['data']['rows'], fn($r) => $r['group_id'] === 1 && $r['shift_id'] === $jourId))[0] ?? null;
+check($s === 200 && $simRow && $simRow['headcount'] === 4 && $simRow['before']['available_h'] == 33.0 && $simRow['staffing'] === 'simulation', 'simulation: 4 people × 8 h + 1 h overtime');
+check((int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_staffing')->fetchColumn() === $staffingRows, 'simulation saves nothing');
+[$s, $b] = $call('POST', '/planning/simulate', ['from' => $wFrom, 'to' => $wFrom, 'staffing' => [['date' => $wFrom, 'group_id' => 1, 'shift_id' => $jourId, 'headcount' => 99]]], $lead);
+check($s === 422 && $codes($b) === ['staffing.0.headcount:OUT_OF_RANGE'], 'simulated headcount checked');
+[$s, $res] = $call('POST', '/planning/optimizer/apply', ['from' => $wFrom, 'to' => $wTo], $access);
+check($s === 200 && $res['data']['mts_orders'] === 5 && $res['data']['operations'] >= 5 && $res['data']['conflicts'] === [] && $res['data']['staffing_rows'] === 0,
+    'proposal applied: 5 MTS orders scheduled without conflict, no staffing change needed');
+$after = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM tfb_prod_operation WHERE id <= " . (int) max(array_column($before, 'id')) . " ORDER BY id")->fetchAll();
+check($after == $before, 'acceptance: existing operations (MTO) untouched — never delayed');
+$newOps = $pdo->query("SELECT op.planned_end, o.due_at FROM tfb_prod_operation op JOIN tfb_prod_order o ON o.id = op.id_order WHERE o.origin = 'MTS' AND op.id > " . (int) max(array_column($before, 'id')))->fetchAll();
+check($newOps && !array_filter($newOps, fn($o) => $o['planned_end'] > $o['due_at']), 'advanced MTS placed before the end of its shift');
+check($res['data']['summary_after']['green'] === 5 && $res['data']['summary_after']['load_pct'] >= 90 && $res['data']['summary_after']['load_pct'] <= 100, 'acceptance: the week brought to 90–100 % (5 shifts of 5)');
+[$s, $load] = $call('GET', "/planning/load?from={$wFrom}&to={$wTo}", null, $dir);
+$worked = array_filter($load['data'], fn($l) => $l['required_h'] > 0);
+check(count($worked) === 5 && !array_filter($worked, fn($l) => $l['status'] !== 'ok'), 'stored load of every shift in the green band');
+// Réduction d'effectif écrite comme obsada du jour quand il n'y a rien à avancer
+$pdo->exec("UPDATE tfb_prod_product_settings SET status = 'draft' WHERE id_item IN ({$itemId}, 50)");
+$pdo->exec("UPDATE tfb_prod_team SET planned_headcount = 3 WHERE code = 'T1'");
+[$s, $res2] = $call('POST', '/planning/optimizer/apply', ['from' => $wFrom, 'to' => $wTo], $access);
+$row = $pdo->query("SELECT headcount, source FROM tfb_prod_staffing WHERE work_date = '{$wFrom}'")->fetch();
+check($s === 200 && $res2['data']['mts_orders'] === 0 && $res2['data']['staffing_rows'] === 5 && (int) $row['headcount'] === 2 && $row['source'] === 'optimizer',
+    'surplus person removed from each shift (3 → 2), written as staffing of the day');
+[$s, $load] = $call('GET', "/planning/load?from={$wFrom}&to={$wFrom}", null, $dir);
+check($load['data'][0]['headcount'] === 2 && $load['data'][0]['base_headcount'] === 3 && $load['data'][0]['staffing'] === 'optimizer', 'load uses the staffing of the day');
+$pdo->exec("UPDATE tfb_prod_team SET planned_headcount = 2 WHERE code = 'T1'");
+$day = array_values($worked)[1]['date'];
+[$s, $b] = $call('PUT', '/planning/staffing', ['date' => $day, 'group_id' => 1, 'shift_id' => $jourId, 'headcount' => 3, 'overtime_h' => 2, 'note' => 'urlop'], $access);
+check($s === 200 && $b['data']['headcount'] === 3 && $b['data']['available_h'] == 26.0 && $b['data']['staffing'] === 'manual', 'manual staffing for a day');
+[$s, $b] = $call('PUT', '/planning/staffing', ['date' => $day, 'group_id' => 1, 'shift_id' => $jourId, 'headcount' => null], $access);
+check($s === 200 && $pdo->query("SELECT COUNT(*) FROM tfb_prod_staffing WHERE work_date = '{$day}'")->fetchColumn() == 0 && $b['data']['headcount'] === 2, 'back to the teams');
+[$s, $b] = $call('PUT', '/planning/staffing', ['date' => $day, 'group_id' => 999, 'shift_id' => $jourId, 'headcount' => 1], $access);
+check($s === 422 && $codes($b) === ['group_id:REFERENCE_NOT_FOUND'], 'unknown group');
+
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');
 [$s, $b] = $call('POST', '/referentiels/groups', null, $access);

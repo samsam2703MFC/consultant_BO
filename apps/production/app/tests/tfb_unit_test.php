@@ -20,6 +20,7 @@ use App\Services\Workshop\Planning\DemandCalculator;
 use App\Services\Workshop\Planning\PlanningService;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Scheduling\Scheduler;
+use App\Services\Workshop\Scheduling\ShiftOptimizer;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
 function check(bool $condition, string $message): void
@@ -197,5 +198,56 @@ $committed = __DIR__ . '/../docs/api/production-v1.openapi.json';
 check(is_file($committed), 'docs/api/production-v1.openapi.json is committed');
 $copy = json_decode((string) file_get_contents($committed), true);
 check(array_keys($copy['paths']) === array_keys($spec['paths']), 'committed OpenAPI file is up to date (php Bin/tfb_openapi.php)');
+
+
+// --- P6 : optymalizator zmian (95 %, zielony 90–100 %)
+$cfg = ['target' => 95, 'green_min' => 90, 'green_max' => 100, 'max_overtime_h' => 2];
+$levers = ['advance_mts', 'alternative_workstation', 'reassign_polyvalent', 'open_close_shift', 'overtime'];
+$row = fn(string $key, int $group, int $people, float $required, int $maxOps = 1, string $date = '2026-10-21') => ['key' => $key, 'date' => $date, 'shift_id' => 1, 'group_id' => $group, 'shift_h' => 8.0, 'headcount' => $people, 'required_h' => $required, 'max_operators' => $maxOps];
+// 2 os. × 8 h = 16 h, 10 h pracy (62,5 %) ; MTS z miejscem 400 szt., 0,02 h/szt., partia 50
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 10.0)], [['item_id' => 7, 'group_id' => 1, 'name' => 'Croissant', 'unit_h' => 0.02, 'room' => 400, 'batch_multiple' => 50, 'ppc' => 1]], $levers, $cfg);
+check($out[0]['before']['status'] === 'under' && $out[0]['actions'][0]['lever'] === 'advance_mts' && $out[0]['actions'][0]['quantity'] == 250.0,
+    'advance MTS: (95 % × 16 − 10) ÷ 0,02 = 260 → 250 (multiple of 50)');
+check($out[0]['after']['status'] === 'ok' && abs($out[0]['after']['load_pct'] - 93.8) < 0.01, 'acceptance: the shift reaches the 90–100 % band');
+// Pas de MTS : 2 os., 5 h → réduire à 1 (62,5 %) ; jamais sous les opérateurs d'une opération
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 7.5), $row('b', 2, 3, 5.0, 2)], [], $levers, $cfg);
+check($out[0]['after']['headcount'] === 1 && $out[0]['after']['status'] === 'ok' && $out[0]['actions'][0]['action'] === 'reduce', 'reduce staffing to 1 person: 7.5 h of 8 h');
+check($out[1]['after']['headcount'] === 2, 'never fewer people than one operation needs at once');
+// Réaffectation : groupe 1 en surcharge (20 h pour 2 os.), groupe 2 a une personne de trop
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 20.0), $row('b', 2, 3, 15.0)], [], $levers, $cfg);
+check($out[0]['after']['headcount'] === 3 && $out[1]['after']['headcount'] === 2 && $out[0]['actions'][0]['lever'] === 'reassign_polyvalent'
+    && $out[0]['actions'][0]['from_group_id'] === 2, 'a spare person moves from group 2 to the overloaded group 1');
+check($out[0]['after']['load_pct'] <= 100 && $out[1]['after']['load_pct'] <= 100, 'no group left over 100 %');
+// Heures sup. : 17 h pour 2 os. → 1 h sup. (≤ 2 h / personne), pas une personne de plus
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 17.0)], [], $levers, $cfg);
+check($out[0]['after']['headcount'] === 2 && $out[0]['after']['overtime_h'] == 1.0 && end($out[0]['actions'])['lever'] === 'overtime', 'small overload covered by 1 h overtime');
+// Trop pour des heures sup. : 30 h pour 2 os. → 2 personnes de plus
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 30.0)], [], $levers, $cfg);
+check($out[0]['after']['headcount'] === 4 && $out[0]['after']['status'] === 'ok', 'large overload: open 2 more places on the shift');
+// 1 personne, mais une opération à 2 opérateurs : une personne de plus (les heures sup. ne suffisent pas)
+$out = ShiftOptimizer::optimize([$row('a', 1, 1, 6.0, 2)], [['item_id' => 7, 'group_id' => 1, 'name' => 'C', 'unit_h' => 0.02, 'room' => 400, 'operators' => 2, 'ppc' => 1]], $levers, $cfg);
+check($out[0]['after']['headcount'] === 2 && !array_filter($out[0]['actions'], fn($a) => $a['lever'] === 'advance_mts'), 'two people for a 2-operator operation; no MTS needing 2 people on a 1-person shift');
+// Shift sans travail fermé ; sans le levier, rien ne bouge
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 0.0)], [], $levers, $cfg);
+check($out[0]['after']['headcount'] === 0 && $out[0]['actions'][0]['action'] === 'close', 'shift without work is closed');
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 0.0)], [], ['overtime'], $cfg);
+check($out[0]['after']['headcount'] === 2 && $out[0]['actions'] === [], 'disabled lever: nothing changes');
+// Temps fixe par lancement (passages, nettoyage) compté une fois : 1 h fixe + 0,02 h/pièce
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 10.0)], [['item_id' => 7, 'group_id' => 1, 'name' => 'C', 'unit_h' => 0.02, 'fixed_h' => 1.0, 'room' => 400, 'batch_multiple' => 50, 'ppc' => 1]], ['advance_mts'], $cfg);
+check($out[0]['actions'][0]['quantity'] == 200.0 && abs($out[0]['actions'][0]['hours'] - 5.0) < 1e-9, 'fixed time counted once: (15.2 − 10 − 1) ÷ 0.02 = 210 → 200, 1 + 4 h');
+// Produit passant aussi par l'emballage (groupe 6) : heures ajoutées à l'emballage ; sans personne à l'emballage, pas d'avance
+$croissant = [['item_id' => 7, 'group_id' => 1, 'name' => 'C', 'unit_h' => 0.02, 'room' => 400, 'batch_multiple' => 50, 'ppc' => 1],
+    ['item_id' => 7, 'group_id' => 6, 'name' => 'C', 'unit_h' => 0.01, 'room' => 400, 'batch_multiple' => 50, 'ppc' => 1]];
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 10.0), $row('p', 6, 1, 2.0)], $croissant, ['advance_mts'], $cfg);
+check($out[0]['actions'][0]['quantity'] == 250.0 && $out[1]['actions'][0]['follows_group_id'] === 1 && abs($out[1]['actions'][0]['hours'] - 2.5) < 1e-9,
+    'packaging hours of the advanced MTS added to the packaging group (250 × 0.01)');
+check($out[0]['after']['load_pct'] <= 100 && $out[1]['after']['required_h'] >= 4.5, 'the packaging group may advance more, never pushing production over 100 %');
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 10.0), $row('p', 6, 0, 0.0)], $croissant, ['advance_mts'], $cfg);
+check($out[0]['actions'] === [], 'no MTS advanced when packaging has nobody on the shift');
+// Le stock max est partagé entre les jours : la place MTS n'est pas comptée deux fois
+$out = ShiftOptimizer::optimize([$row('a', 1, 2, 10.0, 1, '2026-10-21'), $row('b', 1, 2, 10.0, 1, '2026-10-22')], [['item_id' => 7, 'group_id' => 1, 'name' => 'C', 'unit_h' => 0.02, 'room' => 300, 'batch_multiple' => 50, 'ppc' => 1]], ['advance_mts'], $cfg);
+check($out[0]['actions'][0]['quantity'] + ($out[1]['actions'][0]['quantity'] ?? 0) <= 300, 'MTS room (stock max) used once over the week');
+$sum = ShiftOptimizer::summary($out);
+check($sum['before']['load_pct'] == 62.5 && $sum['after']['shifts'] === 2, 'summary before / after');
 
 echo "tfb_unit_test: OK\n";
