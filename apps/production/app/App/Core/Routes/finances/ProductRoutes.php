@@ -34,6 +34,11 @@ return function (RouteCollector $r) {
         'method' => 'overview'
     ]);
 
+    $r->addRoute('POST', '/ajax/category-margin/recalculate', [
+        'controller' => App\Controllers\Web\Finances\Product\CategoryMarginController::class,
+        'method' => 'recalculate'
+    ]);
+
     $r->addRoute('POST', '/ajax/category-margin/product-action', [
         'controller' => App\Controllers\Web\Finances\Product\CategoryMarginController::class,
         'method' => 'productAction'

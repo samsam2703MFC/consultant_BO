@@ -82,7 +82,11 @@
                             {{ translations.category_margin_calculate|default('Oblicz') }}
                         </button>
                     </div>
-                    <div class="col-12 col-md-4 text-end">
+                    <div class="col-12 col-md-4 text-end d-flex flex-wrap gap-2 justify-content-end">
+                        <button type="button" class="btn btn-warning" id="recalcAllBtn"
+                                title="Przelicza koszt surowców wszystkich receptur po bieżących cenach surowców; ceny sprzedaży się nie zmieniają">
+                            <i class="bi bi-arrow-repeat me-1"></i> Przelicz wszystkie marże
+                        </button>
                         <a href="{{ root }}/finances/product-margin" class="btn btn-outline-secondary">
                             <i class="bi bi-search me-1"></i>
                             {{ translations.category_margin_go_product|default('Szukaj marży produktu') }}
@@ -90,6 +94,14 @@
                     </div>
                 </div>
             </form>
+            <div class="form-text mt-2" id="recalcInfo">
+                {% if recalc.at %}
+                    <i class="bi bi-clock-history me-1"></i> Ostatnie przeliczenie kosztów: <strong>{{ recalc.at|date('d.m.Y H:i') }}</strong>{{ recalc.by ? ' · ' ~ recalc.by : '' }}
+                    — kolumna „Efekt na sztukę” pokazuje zmianę kosztu surowców jednej sztuki i marży przy obecnej cenie.
+                {% else %}
+                    <i class="bi bi-info-circle me-1"></i> „Przelicz wszystkie marże” przelicza koszt surowców receptur po bieżących cenach surowców (ceny sprzedaży bez zmian) i pokazuje efekt na sztukę.
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -222,6 +234,7 @@
                                                     <th class="text-end">Koszt wytworzenia <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-end">Cena sprzedaży <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-center" style="width:130px;">{{ translations.category_margin_current|default('Marża') }}</th>
+                                                    <th class="text-end" style="width:150px;" title="Zmiana kosztu surowców jednej sztuki po ostatnim przeliczeniu; w nawiasie zmiana marży przy obecnej cenie">Efekt na sztukę <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-center" style="width:140px;">
                                                         <i class="bi bi-box-seam me-1 text-primary"></i>Sprzedaż <span class="badge bg-primary" style="font-size:.65rem;">WDT</span>
                                                     </th>
@@ -295,6 +308,25 @@
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="badge bg-secondary">brak ceny</span>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    {# ── EFEKT PRZELICZENIA NA SZTUKĘ ── #}
+                                                    {% set fx = recalc.products[p.product_id] ?? null %}
+                                                    <td class="text-end small">
+                                                        {% if fx and fx.delta_eur_unit is not null %}
+                                                            {% set up = fx.delta_eur_unit > 0.00005 %}
+                                                            {% set down = fx.delta_eur_unit < -0.00005 %}
+                                                            <span class="fw-semibold {{ up ? 'text-danger' : (down ? 'text-success' : 'text-muted') }}"
+                                                                  title="Koszt surowców sztuki: {{ fx.old_unit_eur|number_format(4, ',', ' ') }} € → {{ fx.new_unit_eur|number_format(4, ',', ' ') }} €">
+                                                                {{ up ? '+' : '' }}{{ fx.delta_eur_unit|number_format(fx.delta_eur_unit|abs < 0.01 ? 4 : 3, ',', ' ') }} €
+                                                                {% if fx.delta_pct is not null %}({{ fx.delta_pct > 0 ? '+' : '' }}{{ fx.delta_pct|number_format(1, ',', ' ') }} %){% endif %}
+                                                            </span>
+                                                            {% if fx.margin_pp is not null and (up or down) %}
+                                                                <br><span class="text-muted" style="font-size:.7rem;">marża {{ fx.margin_pp > 0 ? '+' : '' }}{{ fx.margin_pp|number_format(1, ',', ' ') }} pp</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="text-muted">—</span>
                                                         {% endif %}
                                                     </td>
 
@@ -1060,6 +1092,31 @@
         initWdtPopovers();
     });
 
+
+// « Przelicz wszystkie marże » : koszt surowców wszystkich receptur po bieżących cenach (ceny sprzedaży bez zmian).
+(function () {
+    var btn = document.getElementById('recalcAllBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        if (!window.confirm('Przeliczyć koszt surowców wszystkich receptur po bieżących cenach surowców? Ceny sprzedaży się nie zmieniają.')) return;
+        btn.disabled = true;
+        var label = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Przeliczanie…';
+        fetch('{{ root }}/ajax/category-margin/recalculate', {method: 'POST', credentials: 'same-origin', headers: {'Accept': 'application/json', 'Content-Type': 'application/json'}, body: '{}'})
+            .then(function (r) { return r.json().then(function (b) { return {ok: r.ok && b.ok, body: b}; }); })
+            .then(function (res) {
+                var msg = res.body.message || res.body.error || (res.ok ? 'Przeliczono.' : 'Błąd przeliczenia.');
+                if (window.Swal) {
+                    Swal.fire({icon: res.ok ? 'success' : 'error', text: msg}).then(function () { if (res.ok) window.location.reload(); });
+                } else {
+                    window.alert(msg);
+                    if (res.ok) window.location.reload();
+                }
+                if (!res.ok) { btn.disabled = false; btn.innerHTML = label; }
+            })
+            .catch(function () { btn.disabled = false; btn.innerHTML = label; window.alert('Błąd połączenia.'); });
+    });
+})();
 </script>
 {% endblock %}
 

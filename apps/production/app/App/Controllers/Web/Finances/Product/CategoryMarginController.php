@@ -2,9 +2,11 @@
 namespace App\Controllers\Web\Finances\Product;
 
 use App\Core\Web\BaseController;
+use App\Repositories\Analysis\MarginRecalcRepository;
 use App\Repositories\Product\FinalProductRepository;
 use App\Repositories\Product\Price\FinalProductCustomerPriceRepository;
 use App\Services\Finances\ProductMarginService;
+use App\Services\Recipe\RecipeCostRecalculationService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -14,6 +16,8 @@ class CategoryMarginController extends BaseController
         private ProductMarginService                 $productMarginService,
         private FinalProductRepository               $finalProductRepository,
         private FinalProductCustomerPriceRepository  $customerPriceRepository,
+        private RecipeCostRecalculationService       $recipeCosts,
+        private MarginRecalcRepository               $recalc,
     ) {
     }
 
@@ -30,7 +34,61 @@ class CategoryMarginController extends BaseController
             'selected_months'        => $months,
             'available_months_count' => $available,
             'result'                 => $result,
+            'recalc'                 => $this->recalcEffects($result),
         ]);
+    }
+
+    /**
+     * POST /ajax/category-margin/recalculate : « Przelicz wszystkie marże » — koszt surowców wszystkich
+     * receptur po bieżących cenach surowców ; ceny sprzedaży bez zmian. Zapisuje koszt przed i po,
+     * aby strona pokazała efekt na sztukę.
+     */
+    public function recalculate(): JsonResponse
+    {
+        try {
+            $before = $this->recalc->currentCosts();
+            $run = $this->recipeCosts->recalcForAll();
+            $after = $this->recalc->currentCosts();
+            $id = user('id');
+            $saved = $this->recalc->save($before, $after, $id ? (int) $id : null);
+            $changed = count(array_filter($after, fn($a, $pid) => isset($before[$pid]) && abs($a['cost'] - $before[$pid]['cost']) >= 0.005, ARRAY_FILTER_USE_BOTH));
+            return $this->json(['ok' => true, 'recipes' => (int) ($run['recipes'] ?? 0), 'products' => $saved, 'changed' => $changed,
+                'message' => "Przeliczono koszty {$run['recipes']} receptur — zmiana kosztu u {$changed} z {$saved} produktów."]);
+        } catch (\Throwable $e) {
+            error_log('[category-margin] recalculate failed: ' . $e->getMessage());
+            return $this->json(['ok' => false, 'error' => 'Nie udało się przeliczyć kosztów receptur.'], 500);
+        }
+    }
+
+    /**
+     * Efekt ostatniego przeliczenia na sztukę : zmiana kosztu surowców sztuki (€ i %) i zmiana marży
+     * (pp) przy obecnej cenie sprzedaży. @return array{at: ?string, by: ?string, products: array<int, array>}
+     */
+    private function recalcEffects(array $result): array
+    {
+        $rows = $this->recalc->last();
+        if (!$rows) return ['at' => null, 'by' => null, 'products' => []];
+        $rate = (float) ($result['exchange_rate'] ?? 0);
+        $products = [];
+        foreach ($result['categories'] ?? [] as $cat) {
+            foreach ($cat['products'] as $p) {
+                $r = $rows[$p['product_id']] ?? null;
+                if ($r === null) continue;
+                $ppc = max(1, (int) ($r['ppc'] ?? 1));
+                $delta = (float) $r['new_cost_carton'] - (float) $r['old_cost_carton'];
+                $sale = (float) ($p['sale_price_pln'] ?? 0);
+                $products[$p['product_id']] = [
+                    'delta_pln_unit' => $delta / $ppc,
+                    'delta_eur_unit' => $rate > 0 ? $delta / $ppc / $rate : null,
+                    'delta_pct' => (float) $r['old_cost_carton'] > 0 ? $delta / (float) $r['old_cost_carton'] * 100 : null,
+                    'margin_pp' => $sale > 0 ? -$delta / $sale * 100 : null,
+                    'old_unit_eur' => $rate > 0 ? (float) $r['old_cost_carton'] / $ppc / $rate : null,
+                    'new_unit_eur' => $rate > 0 ? (float) $r['new_cost_carton'] / $ppc / $rate : null,
+                ];
+            }
+        }
+        $first = reset($rows);
+        return ['at' => $first['recalculated_at'], 'by' => $first['by_name'] ?? null, 'products' => $products];
     }
 
     /**
