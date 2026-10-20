@@ -1090,14 +1090,11 @@
       s: !I ? 'lecture de la poubelle…' : (!I.lu ? 'panel muet' : (I.declare ? 'déclarée' + (top ? ' · surtout ' + esc(String(top.nom).toLowerCase()) + ', ' + fN(top.pieces) : '') : (auj ? 'se déclare à la fermeture' : 'pas déclarée ce jour'))) });
     return { T: T, L: L };
   }
+  // Contrôle au téléphone (20/10/2026, demande de Sam) : les contrôles en photo et le bouton de réclamation, rien d'autre.
+  // Le verdict, les tuiles (commandes, stock, poubelle…) et la note du jour en sortent ; la note reste dans Exploitation.
   function maPageCtrl() {
-    const { T } = maTuilesCtrl();
-    let h = maVerdict(T, true);
-    h += `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
-    h += maGrille(T);
+    let h = `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
     h += `<button type="button" class="ma-rc" data-vue="reclamation">✎ Réclamer un produit au fournisseur</button>`;
-    h += `<div class="mb-mur ma-ext">${murR([murNote()], true)}</div>`;
-    if (S.noteOuvert) { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
     return h;
   }
 
@@ -1120,7 +1117,7 @@
     const T = [];
     T.push({ k: 'Chiffre de la semaine' + (passes.length ? ' · au ' + esc(fD(passes[passes.length - 1].date)) : ''), court: 'le chiffre', w: true, pt: MA.ca(att),
       v: fE(realise) + (m.attendu ? ` <small class="mu">/ ${fE(m.attendu)}</small>` : ''),
-      s: (att != null ? fP(att) + ' de l’attendu' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
+      s: (att != null ? fP(att) + ' de l’objectif à ce jour' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
       apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
     T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
       v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
@@ -1156,7 +1153,7 @@
     const [ca, ...reste] = R.T;
     const ecart = m.ecart;
     const em = [R.dessous.length ? 'en dessous : ' + R.dessous.join(', ') : '', R.dessus.length ? 'au-dessus : ' + R.dessus.join(', ') : ''].filter(Boolean).join(' · ') || 'la semaine commence';
-    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’attendu' : 'sur l’attendu à ce jour')}<em>${em}</em></span>`
+    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’objectif' : 'sur l’objectif à ce jour')}<em>${em}</em></span>`
       + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
     h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
@@ -6504,7 +6501,7 @@
       ${tuile('Objectif ' + t.label, fK(t.objectif), 'plan de développement · ' + t.mois.map(m => MO[m - 1]).join(' · '))}
       ${tuile('Réalisé', fK(t.realise), (att != null ? fP(att) + ' de l’objectif · ' : '') + (t.moisRealises || 0) + ' mois lu(s)')}
       ${tuile('Attendu à ce jour', fK(t.attendu), 'au rythme des budgets mensuels')}
-      ${tuile('Écart', t.ecart == null ? '—' : fSK(t.ecart), t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : fP(t.ecartPct) + ' · ' + (t.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu', t.ecart == null ? '' : (t.ecart >= 0 ? 'bon' : 'vif'))}
+      ${tuile('Écart', t.ecart == null ? '—' : fSK(t.ecart), t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : fP(t.ecartPct) + ' · ' + (t.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’objectif', t.ecart == null ? '' : (t.ecart >= 0 ? 'bon' : 'vif'))}
       ${tuile('Clients manquants', t.clients == null ? '—' : fN(t.clients), t.panier ? 'au panier moyen ' + fU(t.panier) : '')}
       ${tuile('Marge nette', fP(t.netPct), (t.food != null ? 'food ' + fP(t.food) : '') + (t.labour != null ? ' · labour ' + fP(t.labour) : ''), t.netPct == null ? '' : (t.netPct >= 10 ? 'bon' : 'vif'))}
     </div>`;
@@ -6558,7 +6555,7 @@
         ${tuile('Objectif ' + Y, fK(A.objectif), src)}
         ${tuile('Réalisé', fK(A.realise), A.partEcoulee != null ? fP(A.partEcoulee) + ' de l’année écoulée' : '')}
         ${tuile('Attendu à ce jour', fK(A.attendu), 'au rythme des budgets mensuels')}
-        ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
+        ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’objectif', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
         ${tuile('Projection fin d’année', fK(A.projection), A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel', A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '')}
         ${tuile('Rampe à 5 ans', plan.rampe && plan.rampe.potentiel ? fK(plan.rampe.potentiel) : '—', plan.rampe && plan.rampe.potentiel ? 'potentiel à maturité · ' + (function () { const n = (plan.rampe.annees || []).find(a => a.an === Y + 1); return n ? 'l’an prochain ' + fK(n.ca) : ''; })() : 'sans étude de marché')}
       </div>
