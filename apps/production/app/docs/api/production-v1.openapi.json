@@ -10494,7 +10494,8 @@
                 "properties": {
                     "week_start": {
                         "type": "string",
-                        "format": "date"
+                        "format": "date",
+                        "description": "premier jour de la semaine de production (week.start_day)"
                     },
                     "week_end": {
                         "type": "string",
@@ -10502,6 +10503,12 @@
                     },
                     "iso_week": {
                         "type": "integer"
+                    },
+                    "week_start_day": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7,
+                        "description": "1 = lundi … 7 = dimanche (atelier : 3 = mercredi)"
                     },
                     "today": {
                         "type": "string",

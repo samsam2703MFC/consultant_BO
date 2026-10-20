@@ -179,7 +179,9 @@ final class SchedulingService
      */
     private function dueByWeekDay(array $orders): array
     {
-        $monday = fn(int $t) => date('Y-m-d', strtotime('-' . ((int) date('N', $t) - 1) . ' days', strtotime(date('Y-m-d', $t))));
+        // Tydzień produkcji od week.start_day (klucz przydziałów Gantta).
+        $startDay = \App\Services\Workshop\Planning\WeekStart::day($this->params);
+        $monday = fn(int $t) => \App\Services\Workshop\Planning\WeekStart::of($t, $startDay);
         $times = array_map(fn($o) => strtotime($o['due_at']), $orders);
         $lastDays = $this->week->lastDays(array_values(array_unique(array_map(fn($o) => (int) $o['id_item'], $orders))), $monday(min($times)), $monday(max($times)));
         $out = [];

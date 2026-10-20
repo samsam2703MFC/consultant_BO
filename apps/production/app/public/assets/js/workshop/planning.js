@@ -43,8 +43,11 @@
     // --- Accueil : période, besoins, plans ------------------------------------------------
     async function renderHome() {
         const params = new URLSearchParams(location.hash.split('?')[1] || '');
-        const from = params.get('from') || iso(today);
-        const to = params.get('to') || iso(new Date(today.getTime() + 6 * 86400000));
+        // Domyślnie tydzień produkcji (week.start_day, w pracowni środa → wtorek) zawierający dzisiaj.
+        const startDay = Number(el.dataset.weekStartDay) || 1;
+        const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (((today.getDay() || 7) - startDay + 7) % 7));
+        const from = params.get('from') || iso(weekStart);
+        const to = params.get('to') || iso(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6));
         el.innerHTML = header() + `
             <form class="tfb-filters" data-period>
                 <label class="tfb-inline">${esc(t('from'))} <input type="date" class="form-control form-control-sm" name="from" data-field="from" value="${from}"></label>

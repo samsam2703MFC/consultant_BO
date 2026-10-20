@@ -18,7 +18,7 @@ final class ProductionSummaryService
 {
     public const NEXT_DAY_S = 8 * 3600;
 
-    public function __construct(private ProductionSummaryRepository $repo)
+    public function __construct(private ProductionSummaryRepository $repo, private \App\Repositories\Workshop\ParamRepository $params)
     {
     }
 
@@ -98,7 +98,8 @@ final class ProductionSummaryService
 
     private function week(int $itemId, int $now): array
     {
-        $monday = date('Y-m-d', strtotime('-' . ((int) date('N', $now) - 1) . ' days', strtotime(date('Y-m-d', $now))));
+        // Tydzień produkcji od week.start_day (jak Gantt tygodnia).
+        $monday = \App\Services\Workshop\Planning\WeekStart::of($now, \App\Services\Workshop\Planning\WeekStart::day($this->params));
         $sunday = date('Y-m-d', strtotime($monday . ' +6 days'));
         $lines = $this->repo->planLines($itemId, $monday, $sunday);
         $ops = $this->repo->operations($itemId, $monday . ' 00:00:00', date('Y-m-d', strtotime($sunday . ' +1 day')) . ' 00:00:00');

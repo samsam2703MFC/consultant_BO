@@ -82,7 +82,7 @@
   "week.legend_product": "produkt (długość = godziny ÷ dostępne)",
   "week.legend_done": "wykonane",
   "week.legend_late": "po terminie / zaległe",
-  "week.help_move": "Przeciągnij produkt na inny dzień albo do „Do rozplanowania” (w swojej grupie); kliknięcie otwiera kartę z przeniesieniem części ilości. Kreska = dostępne godziny dnia, czerwone = brakuje godzin.",
+  "week.help_move": "Przeciągnij produkt z « Do zrobienia » na dzień (w swojej grupie) : gdy dzień nie ma tylu wolnych godzin, wybierz « tyle, ile się mieści » albo całość. Blok można przesunąć na inny dzień albo z powrotem do « Do zrobienia » ; kliknięcie otwiera kartę z przeniesieniem części ilości. Kreska = dostępne godziny dnia, czerwone = brakuje godzin.",
   "week.help_read": "Tylko podgląd — przesuwanie produktów wymaga uprawnienia prod.gantt.move.",
   "week.empty": "Brak grup z ludźmi lub produktami w tym tygodniu.",
   "week.group_hours": "Grupa · godziny",
@@ -90,8 +90,6 @@
   "week.no_team": "brak zespołu",
   "week.no_shift": "bez zmiany",
   "week.free": "wolne {hours} h",
-  "week.tray": "Do rozplanowania: {count} · {hours} h",
-  "week.tray_drop": "Do rozplanowania (upuść tutaj)",
   "week.tray_short": "Do rozplanowania",
   "week.due": "termin",
   "week.mode.MTO": "na zamówienie",
@@ -134,5 +132,12 @@
   "week.col_stock": "Na magazyn",
   "week.truck": "wyjazd {day}",
   "week.page_title": "Tydzień produkcji",
-  "week.page_subtitle": "Ile produkować na wysyłkę (najpierw, przed ciężarówką) i ile na magazyn (środa–piątek), dzień po dniu i grupa po grupie"
+  "week.page_subtitle": "Ile produkować na wysyłkę (najpierw, przed ciężarówką) i ile na magazyn (środa–piątek), dzień po dniu i grupa po grupie",
+  "week.todo": "Do zrobienia",
+  "week.todo_sub": "🚚 zamówienia · 📦 magazyn",
+  "week.todo_total": "{cartons} kart. · {hours} h",
+  "week.todo_empty": "Wszystko na dniach ✓",
+  "week.drop_full": "{day} : wolne {free} h, produkt potrzebuje {hours} h.",
+  "week.drop_fit": "Tyle, ile się mieści : {qty}",
+  "week.drop_all": "Całość : {qty} (przeciążenie dnia)"
 }

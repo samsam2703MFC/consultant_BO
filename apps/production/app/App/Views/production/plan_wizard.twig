@@ -15,7 +15,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="section at-wizard" id="planWizard" data-days="{{ days|json_encode }}" data-max="{{ max_dates }}">
+<section class="section at-wizard" id="planWizard" data-days="{{ days|json_encode }}" data-max="{{ max_dates }}" data-week-start-day="{{ week_start_day }}">
 
     <ol class="at-steps" aria-label="Kroki kreatora">
         <li data-step-tab="1"><span>Dni wysyłki</span></li>
@@ -284,10 +284,12 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('pwPdfLead').textContent = 'Dla: ' + state.preview.dates.map(dayPl).join(', ') + ' · ' + orderIds().length + ' zam. · ' +
             (state.preview.stock_minimum ? 'z minimalnymi stanami magazynowymi' : 'bez minimalnych stanów magazynowych') + '.';
         box.querySelectorAll('.at-pdf-state').forEach((s) => { s.textContent = ''; s.className = 'at-pdf-state'; });
-        // Plan tygodnia (zlecenia, godziny grup, surowce) : od poniedziałku pierwszego do niedzieli ostatniego dnia wysyłki
+        // Plan tygodnia (zlecenia, godziny grup, surowce) : tygodnie produkcji (week.start_day, środa → wtorek)
+        // od pierwszego do ostatniego dnia wysyłki.
+        const startDay = Number(box.dataset.weekStartDay) || 1;
         const week = (iso, end) => {
             const d = new Date(iso + 'T12:00:00');
-            d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + (end ? 6 : 0));
+            d.setDate(d.getDate() - (((d.getDay() || 7) - startDay + 7) % 7) + (end ? 6 : 0));
             return d.toISOString().slice(0, 10);
         };
         const sorted = [...state.preview.dates].sort();

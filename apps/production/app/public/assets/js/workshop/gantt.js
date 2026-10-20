@@ -181,8 +181,10 @@
             drag = {bar: b, x0: e.clientX, y0: e.clientY, left0: parseFloat(b.style.left), moved: false, row: b.closest('.tfb-gantt-row')};
             b.setPointerCapture(e.pointerId);
         });
+        let lastPoint = {x: 0, y: 0};
         gantt.addEventListener('pointermove', (e) => {
             if (!drag) return;
+            lastPoint = {x: e.clientX, y: e.clientY};
             const dx = e.clientX - drag.x0;
             if (!drag.moved && Math.abs(dx) < 4 && Math.abs(e.clientY - drag.y0) < 4) return;
             drag.moved = true;
@@ -274,14 +276,11 @@
 
     // --- Vue « Tydzień » : produits de la semaine sur les jours, par groupe -------------------------
     let week = null;
-    const monday = (s) => { const d = parse(s + ' 00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return iso(d); };
     const dayLabel = (s, long) => parse(s + ' 00:00:00').toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', long ? {weekday: 'long', day: '2-digit', month: '2-digit'} : {weekday: 'short', day: '2-digit', month: '2-digit'});
     const hrs = (n) => `${fmt(n, 1)} h`;
     const qtyText = (p, q) => p.ppc ? `${fmt(q, 0)} ${p.unit} · ${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cartons')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`;
 
     async function renderWeek() {
-        state.from = monday(state.from);
-        writeHash();
         el.innerHTML = header() + filters() + `<div data-week-root><p class="text-muted">${esc(t('loading'))}</p></div><div data-detail></div>`;
         bindFilters();
         try {
@@ -290,8 +289,24 @@
             el.querySelector('[data-week-root]').innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
             return;
         }
+        // Tydzień produkcji od dnia z parametru week.start_day (w pracowni środa) : serwer zwraca jego początek.
+        if (state.from !== week.week_start) {
+            state.from = week.week_start;
+            writeHash();
+            const input = el.querySelector('input[name=from]');
+            if (input) input.value = state.from;
+        }
         drawWeek();
     }
+
+    // « Do zrobienia » produktu : to, co jeszcze nie jest na dniach — najpierw wysyłka (przydziały pokrywają
+    // najpierw zamówienia), reszta to uzupełnienie magazynu.
+    function waitingParts(p) {
+        const assigned = p.slots.reduce((a, s) => a + s.quantity, 0);
+        const direct = Math.max(0, p.direct - assigned);
+        return {direct: Math.min(direct, p.unassigned_qty), stock: Math.max(0, p.unassigned_qty - direct)};
+    }
+    const cartonsText = (p, q) => p.ppc ? `${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cart')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`;
 
     function drawWeek() {
         const root = el.querySelector('[data-week-root]');
@@ -354,6 +369,7 @@
         const shown = w.groups.filter(g => !state.group || g.id === state.group);
         if (!shown.length) return `<p class="text-muted mb-0">${esc(t('week.empty'))}</p>`;
         const head = `<div class="tfb-week-row is-head" style="--days:${w.days.length}"><div class="tfb-week-label">${esc(t('week.group_hours'))}</div>
+            <div class="tfb-week-dayhead tfb-week-todohead">${esc(t('week.todo'))}<div class="tfb-week-daykind">${esc(t('week.todo_sub'))}</div></div>
             ${w.days.map(d => `<div class="tfb-week-dayhead ${d.today ? 'is-today' : ''} ${d.past ? 'is-past' : ''} ${d.stock_day ? 'is-stock-day' : ''}">
                 <a href="#from=${d.date}&view=day" data-day-view="${d.date}">${esc(dayLabel(d.date))}</a>${d.today ? ` <span>${esc(t('week.today'))}</span>` : ''}
                 <div class="tfb-week-daykind">${d.stock_day ? '🚚📦 ' + esc(t('week.day_stock')) : '🚚 ' + esc(t('week.day_direct'))}</div></div>`).join('')}</div>`;
@@ -376,17 +392,23 @@
                     <div class="tfb-week-track">${blocks.map(({p, s}) => block(p, s, scale, color)).join('')}</div>
                 </div>`;
             }).join('');
-            const tray = `<div class="tfb-week-tray ${waiting.length ? '' : 'is-empty'}" data-drop-day="" data-group="${g.id ?? 0}">
-                <span class="tfb-week-tray-label">${esc(waiting.length ? t('week.tray', {count: waiting.length, hours: fmt(g.unassigned_h, 1)}) : t('week.tray_drop'))}</span>
-                ${waiting.map(p => `<button type="button" class="tfb-week-chip ${p.movable ? 'is-movable' : ''}" style="--group-color:${esc(color)}" data-item="${p.item_id}" data-from=""
-                    title="${esc(p.name + ' · ' + qtyText(p, p.unassigned_qty) + ' · ' + hrs(p.unassigned_h) + (p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(p.due_date) : ''))}">${esc(p.name)} <small>${hrs(p.unassigned_h)}</small></button>`).join('')}
+            // Do zrobienia : najpierw wysyłka (najbliższy termin), potem magazyn ; ilości w kartonach.
+            const todo = waiting.map(p => ({p, ...waitingParts(p)}))
+                .sort((a, b) => (b.direct > 0) - (a.direct > 0) || String(a.p.due_date || '9').localeCompare(String(b.p.due_date || '9')) || a.p.name.localeCompare(b.p.name));
+            const todoCartons = todo.reduce((a, x) => a + (x.p.ppc ? x.p.unassigned_qty / x.p.ppc : 0), 0);
+            const tray = `<div class="tfb-week-cell tfb-week-todo ${todo.length ? '' : 'is-empty'}" data-drop-day="" data-group="${g.id ?? 0}">
+                <div class="tfb-week-cap"><span>${todo.length ? esc(t('week.todo_total', {cartons: fmt(todoCartons, 0), hours: fmt(g.unassigned_h, 1)})) : esc(t('week.todo_empty'))}</span></div>
+                <div class="tfb-week-track">${todo.map(({p, direct, stock}) => `<button type="button" class="tfb-week-chip ${p.movable ? 'is-movable' : ''} ${direct > 0 ? 'is-direct' : 'is-stock'}" style="--group-color:${esc(color)}" data-item="${p.item_id}" data-from=""
+                    title="${esc([p.name, direct > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(p, direct)}) + (p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(p.due_date) : '') : null, stock > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(p, stock)}) : null, hrs(p.unassigned_h)].filter(Boolean).join(' · '))}">
+                    <span class="tfb-week-chip-name">${esc(p.name)}</span>
+                    <span class="tfb-week-chip-qty">${direct > 0 ? '🚚 ' + esc(cartonsText(p, direct)) : ''}${direct > 0 && stock > 0 ? ' · ' : ''}${stock > 0 ? '📦 ' + esc(cartonsText(p, stock)) : ''} <small>${hrs(p.unassigned_h)}</small></span></button>`).join('')}</div>
             </div>`;
             return `<div class="tfb-week-group" style="--group-color:${esc(color)}">
                 <div class="tfb-week-row" style="--days:${w.days.length}">
                     <div class="tfb-week-label" title="${esc(t('week.group_hours_title', {people: g.people, hours: fmt(g.available_h, 0)}))}"><strong>${esc(g.name || t('week.no_group'))}</strong>
                         <span>${fmt(g.available_h, 0)} h</span>
-                    </div>${cells}
-                </div>${tray}</div>`;
+                    </div>${tray}${cells}
+                </div></div>`;
         }).join('');
     }
 
@@ -488,8 +510,10 @@
             drag = {el: b, item: Number(b.dataset.item), from: b.dataset.from || '', group: b.closest('[data-group]').dataset.group, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
             b.setPointerCapture(e.pointerId);
         });
+        let lastPoint = {x: 0, y: 0};
         gantt.addEventListener('pointermove', (e) => {
             if (!drag) return;
+            lastPoint = {x: e.clientX, y: e.clientY};
             if (!drag.moved && Math.abs(e.clientX - drag.x0) < 5 && Math.abs(e.clientY - drag.y0) < 5) return;
             if (!drag.moved) {
                 drag.moved = true;
@@ -516,10 +540,44 @@
             d.ghost?.remove();
             if (!d.moved) { drag = null; return; }
             window.setTimeout(() => { drag = null; }, 0);
-            if (target) await moveProduct(d.item, d.from, target.dataset.dropDay);
+            if (target) await dropOn(d, target, lastPoint);
         };
         gantt.addEventListener('pointerup', finish);
         gantt.addEventListener('pointercancel', finish);
+    }
+
+    // Upuszczenie na dzień : gdy produkt nie mieści się w wolnych godzinach grupy, wybór « całość » albo
+    // « tyle, ile się mieści » (pełne kartony) ; z powrotem do « Do zrobienia » — zawsze całość.
+    async function dropOn(d, target, point) {
+        const day = target.dataset.dropDay;
+        const p = week.products.find(x => x.item_id === d.item);
+        if (!day || !p) return moveProduct(d.item, d.from, day);
+        const qty = d.from ? (p.slots.find(s => s.day === d.from)?.quantity ?? 0) : p.unassigned_qty;
+        const hours = d.from ? (p.slots.find(s => s.day === d.from)?.hours ?? 0) : p.unassigned_h;
+        const g = week.groups.find(x => String(x.id ?? 0) === target.dataset.group);
+        const dayRow = g ? g.days.find(x => x.date === day) : null;
+        const free = dayRow ? dayRow.available_h - dayRow.required_h : 0;
+        const unit = p.ppc || (p.unit === 'kg' ? 0.1 : 1);
+        const fits = hours > 0 && free > 0 ? Math.floor(qty * Math.min(1, free / hours) / unit) * unit : 0;
+        if (hours <= free + 0.05 || fits <= 0 || fits >= qty) return moveProduct(d.item, d.from, day);
+        document.querySelector('.tfb-week-dropmenu')?.remove();
+        const menu = document.createElement('div');
+        menu.className = 'tfb-week-dropmenu';
+        menu.style.left = `${Math.min(point.x, window.innerWidth - 280)}px`;
+        menu.style.top = `${point.y + 6}px`;
+        menu.innerHTML = `<div class="small text-muted mb-1">${esc(t('week.drop_full', {day: dayLabel(day), free: fmt(Math.max(0, free), 1), hours: fmt(hours, 1)}))}</div>
+            <button type="button" class="btn btn-sm btn-primary" data-qty="${fits}">${esc(t('week.drop_fit', {qty: cartonsText(p, fits)}))}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-qty="all">${esc(t('week.drop_all', {qty: cartonsText(p, qty)}))}</button>`;
+        document.body.appendChild(menu);
+        const close = () => { menu.remove(); document.removeEventListener('pointerdown', outside, true); };
+        const outside = (e) => { if (!menu.contains(e.target)) close(); };
+        setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
+        menu.addEventListener('click', async (e) => {
+            const b = e.target.closest('[data-qty]');
+            if (!b) return;
+            close();
+            await moveProduct(d.item, d.from, day, b.dataset.qty === 'all' ? null : Number(b.dataset.qty));
+        });
     }
 
     async function distribute(reset) {

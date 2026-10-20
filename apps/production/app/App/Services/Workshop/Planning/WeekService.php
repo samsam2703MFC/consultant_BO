@@ -21,7 +21,8 @@ use App\Services\Workshop\Scheduling\SchedulingService;
  * Ilości tygodnia : linie zatwierdzonych (zamrożonych, zamkniętych) planów z terminem w tygodniu,
  * a bez planu — propozycja (zamówienia MTO + uzupełnienie stanu MTS + półprodukty). Godziny = norma
  * czasu z karty (StandardTime) × ilość. Dostępne godziny = obsada grupy × zmiana (8 h) w dni
- * produkcji (week.production_days, domyślnie pn–pt), z obsadą dnia i nadgodzinami.
+ * produkcji (week.production_days, domyślnie pn–pt), z obsadą dnia i nadgodzinami. Tydzień zaczyna się
+ * w week.start_day (w pracowni środa : śr → wt).
  * Ilość produktu dzieli się na « na wysyłkę » (zamówienia klientów MTO i półprodukty do nich — termin =
  * dzień wyjazdu ciężarówki) i « na magazyn » (uzupełnienie stanu MTS). Podział na dni zapisuje się w
  * tfb_prod_week_slot (przeciągnij i upuść albo « Ułóż tydzień ») ; nieprzydzielona reszta czeka w
@@ -50,7 +51,7 @@ final class WeekService
     public function week(string $date, ApiContext $context, ?int $now = null): array
     {
         $now ??= time();
-        return $this->present($this->data($this->monday($date), $context, $now), $context, $now);
+        return $this->present($this->data($this->weekStart($date), $context, $now), $context, $now);
     }
 
     /** Przenosi produkt (cały blok albo część) na inny dzień albo z powrotem do « Do rozplanowania ». */
@@ -61,7 +62,7 @@ final class WeekService
             ->date('date', true, false)->integer('item_id', true, 1)->date('from')->date('to')
             ->decimal('quantity', false, 0, 1000000000, true, true);
         $v->throwIfInvalid();
-        $data = $this->data($this->monday($v->value('date')), $context, $now);
+        $data = $this->data($this->weekStart($v->value('date')), $context, $now);
         $itemId = (int) $v->value('item_id');
         $p = $data['products'][$itemId] ?? throw ApiException::validation([['field' => 'item_id', 'code' => 'NOT_IN_WEEK', 'params' => []]]);
         if (!$context->canInGroup('prod.gantt.move', $p['group_id'])) {
@@ -86,12 +87,12 @@ final class WeekService
         $qty = min($qty, $available);
 
         $this->tx->execute(function () use ($data, $p, $from, $to, $qty, $context, $itemId) {
-            if ($from !== null) $this->repo->setSlot($data['monday'], $itemId, $from, ($p['slots'][$from] ?? 0.0) - $qty, $context->userId);
-            if ($to !== null) $this->repo->setSlot($data['monday'], $itemId, $to, ($p['slots'][$to] ?? 0.0) + $qty, $context->userId);
-            $this->audit->record($context, 'move', 'week_slot', $itemId, ['week' => $data['monday'], 'day' => $from, 'quantity' => round($qty, 3)],
-                ['week' => $data['monday'], 'day' => $to, 'quantity' => round($qty, 3)]);
+            if ($from !== null) $this->repo->setSlot($data['start'], $itemId, $from, ($p['slots'][$from] ?? 0.0) - $qty, $context->userId);
+            if ($to !== null) $this->repo->setSlot($data['start'], $itemId, $to, ($p['slots'][$to] ?? 0.0) + $qty, $context->userId);
+            $this->audit->record($context, 'move', 'week_slot', $itemId, ['week' => $data['start'], 'day' => $from, 'quantity' => round($qty, 3)],
+                ['week' => $data['start'], 'day' => $to, 'quantity' => round($qty, 3)]);
         });
-        return $this->present($this->data($data['monday'], $context, $now), $context, $now);
+        return $this->present($this->data($data['start'], $context, $now), $context, $now);
     }
 
     /**
@@ -104,10 +105,10 @@ final class WeekService
         $now ??= time();
         $v = (new Validator($body))->only(['date', 'reset'])->date('date', true, false)->boolean('reset');
         $v->throwIfInvalid();
-        $data = $this->data($this->monday($v->value('date')), $context, $now);
+        $data = $this->data($this->weekStart($v->value('date')), $context, $now);
         $reset = (bool) $v->value('reset', false);
         $days = array_values(array_filter($data['days'], fn($d) => $d >= $data['today']));
-        if (!$days) throw new ApiException('WEEK_IN_PAST', 409, [], ['week' => $data['monday']]);
+        if (!$days) throw new ApiException('WEEK_IN_PAST', 409, [], ['week' => $data['start']]);
 
         $movable = array_filter($data['products'], fn($p) => $context->canInGroup('prod.gantt.move', $p['group_id']));
         if (!$movable) throw new ApiException('FORBIDDEN', 403, [], ['permission' => 'prod.gantt.move']);
@@ -177,10 +178,10 @@ final class WeekService
         }
 
         $this->tx->execute(function () use ($writes, $data, $context, $reset, $placed) {
-            foreach ($writes as $id => $byDay) foreach ($byDay as $day => $qty) $this->repo->setSlot($data['monday'], (int) $id, $day, $qty, $context->userId);
-            $this->audit->record($context, 'distribute', 'week', $data['monday'], null, ['reset' => $reset, 'slots' => $placed]);
+            foreach ($writes as $id => $byDay) foreach ($byDay as $day => $qty) $this->repo->setSlot($data['start'], (int) $id, $day, $qty, $context->userId);
+            $this->audit->record($context, 'distribute', 'week', $data['start'], null, ['reset' => $reset, 'slots' => $placed]);
         });
-        return $this->present($this->data($data['monday'], $context, $now), $context, $now);
+        return $this->present($this->data($data['start'], $context, $now), $context, $now);
     }
 
     /**
@@ -210,12 +211,16 @@ final class WeekService
     }
 
     /** Dane tygodnia : dni, źródło, produkty z przydziałami, zdolność grup, wykonanie. */
-    private function data(string $monday, ApiContext $context, int $now): array
+    private function data(string $start, ApiContext $context, int $now): array
     {
-        $sunday = date('Y-m-d', strtotime($monday . ' +6 days'));
+        $end = date('Y-m-d', strtotime($start . ' +6 days'));
         $weekdays = array_values(array_filter(array_map('intval', explode(',', $this->params->get('week.production_days', '1,2,3,4,5'))), fn($d) => $d >= 1 && $d <= 7)) ?: [1, 2, 3, 4, 5];
-        sort($weekdays);
-        $days = array_map(fn($d) => date('Y-m-d', strtotime($monday . ' +' . ($d - 1) . ' days')), array_unique($weekdays));
+        // Dni produkcji w kolejności tygodnia (od week.start_day, np. śr, czw, pt, pn, wt).
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $d = date('Y-m-d', strtotime($start . " +{$i} days"));
+            if (in_array((int) date('N', strtotime($d)), $weekdays, true)) $days[] = $d;
+        }
         $lastDay = end($days);
         $stockWeekdays = array_map('intval', explode(',', $this->params->get('week.stock_days', '3,4,5')));
         $stockDays = array_values(array_filter($days, fn($d) => in_array((int) date('N', strtotime($d)), $stockWeekdays, true)));
@@ -225,7 +230,7 @@ final class WeekService
         $routings = $this->planning->routings();
 
         // Źródło : plany aktywne (zatwierdzone, zamrożone), inaczej zamknięte, inaczej propozycja.
-        $plans = $this->repo->plans($monday, $sunday);
+        $plans = $this->repo->plans($start, $end);
         $active = array_values(array_filter($plans, fn($p) => $p['status'] !== 'closed'));
         $plans = $active ?: $plans;
         $lines = [];
@@ -233,13 +238,13 @@ final class WeekService
         if ($plans) {
             foreach ($plans as $plan) {
                 foreach ($this->planning->lines((int) $plan['id']) as $l) {
-                    if ($l['due_date'] < $monday || $l['due_date'] > $sunday) continue;
+                    if ($l['due_date'] < $start || $l['due_date'] > $end) continue;
                     $lines[] = ['item_id' => (int) $l['id_item'], 'qty' => (float) $l['qty_final'], 'due_date' => $l['due_date'],
                         'direct' => min((float) $l['qty_final'], (float) $l['qty_mto'] + (float) $l['qty_semi'])];
                 }
             }
         } else {
-            $demand = $this->plans->compute($monday, $sunday);
+            $demand = $this->plans->compute($start, $end);
             foreach ($demand['lines'] as $l) {
                 $lines[] = ['item_id' => (int) $l['item']['id'], 'qty' => (float) $l['qty_proposed'], 'due_date' => $l['due_date'],
                     'direct' => min((float) $l['qty_proposed'], (float) $l['qty_mto'] + (float) $l['qty_semi'])];
@@ -279,7 +284,7 @@ final class WeekService
             }
         }
         unset($p);
-        foreach ($this->repo->slots($monday) as $s) {
+        foreach ($this->repo->slots($start) as $s) {
             $id = (int) $s['id_item'];
             if (isset($products[$id])) $products[$id]['slots'][$s['work_date']] = (float) $s['quantity'];
         }
@@ -310,7 +315,7 @@ final class WeekService
 
         // Zdolność : obsada × zmiana w dni produkcji.
         $capacity = [];
-        foreach ($this->scheduling->load($monday, $sunday, $context) as $row) {
+        foreach ($this->scheduling->load($start, $end, $context) as $row) {
             if (!in_array($row['date'], $days, true)) continue;
             $c = &$capacity[$row['group_id']][$row['date']];
             $c ??= ['available_h' => 0.0, 'people' => 0, 'start' => $row['start'], 'end' => $row['end']];
@@ -323,7 +328,7 @@ final class WeekService
             unset($c);
         }
 
-        return ['monday' => $monday, 'sunday' => $sunday, 'days' => array_values($days), 'stock_days' => $stockDays, 'today' => date('Y-m-d', $now),
+        return ['start' => $start, 'end' => $end, 'days' => array_values($days), 'stock_days' => $stockDays, 'today' => date('Y-m-d', $now),
             'plans' => $plans, 'products' => $products, 'capacity' => $capacity, 'routings' => $routings, 'warnings' => $warnings];
     }
 
@@ -439,7 +444,7 @@ final class WeekService
         if ($noRouting) $warnings[] = ['code' => 'NO_HOURS', 'count' => $noRouting];
 
         return [
-            'week_start' => $data['monday'], 'week_end' => $data['sunday'], 'iso_week' => (int) date('W', strtotime($data['monday'])),
+            'week_start' => $data['start'], 'week_end' => $data['end'], 'week_start_day' => WeekStart::day($this->params), 'iso_week' => (int) date('W', strtotime($data['start'])),
             'today' => $today, 'now' => date('Y-m-d H:i:s', $now),
             'days' => array_map(fn($d) => ['date' => $d, 'weekday' => (int) date('N', strtotime($d)), 'past' => $d < $today, 'today' => $d === $today,
                 'stock_day' => in_array($d, $data['stock_days'], true)], $data['days']),
@@ -495,10 +500,10 @@ final class WeekService
         return StandardTime::routing($routings[$itemId] ?? [], $qty)['totals']['labour_s'] / 3600;
     }
 
-    private function monday(?string $date): string
+    /** Pierwszy dzień tygodnia produkcji (week.start_day) zawierającego datę. */
+    private function weekStart(?string $date): string
     {
         (new Validator(['date' => $date]))->date('date', true, false)->throwIfInvalid();
-        $t = strtotime((string) $date);
-        return date('Y-m-d', strtotime('-' . ((int) date('N', $t) - 1) . ' days', $t));
+        return WeekStart::of((string) $date, WeekStart::day($this->params));
     }
 }

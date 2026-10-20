@@ -1292,7 +1292,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-warnings li.is-NO_PLAN, .tfb-week-warnings li.is-UNPLANNED_PRODUCTS { background: var(--at-bg-2); }
 .tfb-week-scroll { overflow-x: auto; }
 .tfb-week-group { box-shadow: inset 4px 0 0 var(--group-color); border-bottom: 1px solid var(--at-line); }
-.tfb-week-row { display: grid; grid-template-columns: 210px repeat(var(--days), minmax(150px, 1fr)); min-width: calc(210px + var(--days) * 150px); }
+.tfb-week-row { display: grid; grid-template-columns: 210px 230px repeat(var(--days), minmax(150px, 1fr)); min-width: calc(440px + var(--days) * 150px); }
 .tfb-week-row.is-head { position: sticky; top: 0; z-index: 3; background: var(--at-surface); border-bottom: 1px solid var(--at-line-2); }
 .tfb-week-label { position: sticky; left: 0; z-index: 2; background: var(--at-surface); padding: 8px 10px 8px 14px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; border-right: 1px solid var(--at-line); }
 .tfb-week-row.is-head .tfb-week-label { color: var(--at-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; justify-content: flex-end; }
@@ -1310,7 +1310,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-cell.is-past { background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0, 0, 0, .025) 6px, rgba(0, 0, 0, .025) 12px); }
 .tfb-week-cell.is-today { background-color: rgba(141, 29, 44, .035); }
 .tfb-week-cell.is-over { background-color: rgba(196, 30, 58, .06); }
-.tfb-week-cell.is-target, .tfb-week-tray.is-target { outline: 2px dashed var(--at-primary); outline-offset: -3px; background-color: var(--at-primary-soft); }
+.tfb-week-cell.is-target { outline: 2px dashed var(--at-primary); outline-offset: -3px; background-color: var(--at-primary-soft); }
 .tfb-week-cap { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--at-muted); margin-bottom: 4px; white-space: nowrap; }
 .tfb-week-cap b { color: var(--at-danger); }
 .tfb-week-cap em { font-style: normal; }
@@ -1331,9 +1331,6 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-block-text { flex: 1; min-width: 0; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tfb-week-block-h { flex: none; color: var(--at-muted); font-variant-numeric: tabular-nums; }
 .tfb-week-block-done { position: absolute; left: 0; bottom: 0; height: 3px; background: #1f5c39; }
-.tfb-week-tray { display: none; align-items: center; flex-wrap: wrap; gap: 4px; padding: 6px 10px 8px 224px; min-height: 36px; background: rgba(242, 201, 160, .18); border-top: 1px dashed var(--at-line-2); }
-.tfb-week-tray:not(.is-empty), .tfb-week-scroll.is-dragging .tfb-week-tray { display: flex; }
-.tfb-week-tray-label { font-size: 12px; font-weight: 600; color: var(--at-on-abricot, #6b4420); margin-right: 6px; }
 .tfb-week-chip { border: 1px solid color-mix(in srgb, var(--group-color) 45%, white); background: var(--at-surface); border-radius: 999px; padding: 3px 10px; font-size: 12px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tfb-week-chip.is-movable { cursor: grab; touch-action: none; }
 .tfb-week-chip small { color: var(--at-muted); }
@@ -1349,7 +1346,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-progress-bar > span { display: block; height: 100%; background: #1f5c39; }
 .tfb-week-move { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .tfb-week-move .tfb-nav { grid-column: 1 / -1; }
-@media (max-width: 768px) { .tfb-week-move { grid-template-columns: 1fr; } .tfb-week-tray { padding-left: 14px; } }
+@media (max-width: 768px) { .tfb-week-move { grid-template-columns: 1fr; } }
 
 /* Produkcja i Gantt na stronie edycji produktu. */
 .at-prodsum { margin-top: 16px; }
@@ -1411,3 +1408,14 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-stock-sum .card-header h5 { font-size: 16px; }
 .tfb-stock-sumtable td, .tfb-stock-sumtable th { white-space: nowrap; }
 .tfb-stock-sumtable tfoot th { border-top: 2px solid var(--at-line); }
+
+/* Tydzień produkcji : kolumna « Do zrobienia » (zamówienia 🚚 + uzupełnienie magazynu 📦), przeciągana na dni */
+.tfb-week-todohead, .tfb-week-todo { position: sticky; left: 210px; z-index: 2; border-right: 1px solid var(--at-line-2, var(--at-line)); }
+.tfb-week-todohead { background: var(--at-surface); }
+.tfb-week-todo { background: #fbf4ec; }
+.tfb-week-todo.is-empty .tfb-week-cap { color: var(--at-muted); }
+.tfb-week-todo .tfb-week-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; margin: 0 0 4px; border-radius: 8px; white-space: normal; text-align: left; max-width: none; padding: 4px 8px; border-left: 4px solid var(--group-color); }
+.tfb-week-todo .tfb-week-chip.is-stock { border-left-style: dashed; }
+.tfb-week-chip-name { font-weight: 600; line-height: 1.2; }
+.tfb-week-chip-qty { font-size: 11.5px; color: var(--at-text); }
+.tfb-week-dropmenu { position: fixed; z-index: 1080; display: flex; flex-direction: column; gap: 6px; width: 270px; padding: 10px; background: var(--at-surface); border: 1px solid var(--at-line); border-radius: var(--at-radius); box-shadow: 0 8px 24px rgba(0, 0, 0, .15); }

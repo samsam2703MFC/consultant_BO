@@ -54,7 +54,7 @@
     "NOT_ALLOWED_FOR_TYPE": "Niedostępne dla tego typu artykułu.",
     "WEEK_IN_PAST": "Tydzień {week} już minął — nie ma dni, na które można rozdzielić produkcję.",
     "WEEK_WARNING_NO_PLAN": "Brak zatwierdzonego planu na ten tydzień — ilości z propozycji (zamówienia + uzupełnienie stanów). Zatwierdź plan w „Plany”, aby śledzić wykonanie.",
-    "WEEK_WARNING_UNASSIGNED": "{count} produktów ({hours} h) czeka w „Do rozplanowania” — przeciągnij je na dzień albo użyj „Rozdziel na dni”.",
+    "WEEK_WARNING_UNASSIGNED": "{count} produktów ({hours} h) czeka w „Do zrobienia” — przeciągnij je na dzień albo użyj „Ułóż tydzień”.",
     "WEEK_WARNING_GROUP_OVERLOAD": "{group}: brakuje {hours} h w dniach przeciążonych — przesuń produkty albo dodaj ludzi do działu (lista pracowników).",
     "WEEK_WARNING_AFTER_DUE": "{count} bloków jest po terminie zamówienia.",
     "WEEK_WARNING_NO_HOURS": "{count} produktów nie ma normy czasu (marszruty) — 0 h w Gantcie.",

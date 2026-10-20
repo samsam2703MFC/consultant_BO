@@ -183,7 +183,8 @@ final class OpenApiPlanning
                 'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team']],
             ]],
             'Week' => ['type' => 'object', 'properties' => [
-                'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int,
+                'week_start' => ['type' => 'string', 'format' => 'date', 'description' => 'premier jour de la semaine de production (week.start_day)'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int,
+                'week_start_day' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7, 'description' => '1 = lundi … 7 = dimanche (atelier : 3 = mercredi)'],
                 'today' => ['type' => 'string', 'format' => 'date'], 'now' => ['type' => 'string'],
                 'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => ['type' => 'string', 'format' => 'date'], 'weekday' => $int, 'past' => ['type' => 'boolean'], 'today' => ['type' => 'boolean'],
                     'stock_day' => ['type' => 'boolean', 'description' => 'jour de production pour le stock (week.stock_days)']]]],

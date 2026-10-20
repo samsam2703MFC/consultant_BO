@@ -20,6 +20,7 @@ class ProductionPlanWizardController extends BaseController
     public function __construct(
         private ProductionListService $productionListService,
         private OrderService $orderService,
+        private \App\Repositories\Workshop\ParamRepository $params,
     )
     {
     }
@@ -45,6 +46,7 @@ class ProductionPlanWizardController extends BaseController
         $this->view('production/plan_wizard', [
             'days'      => array_values($days),
             'max_dates' => self::MAX_DATES,
+            'week_start_day' => \App\Services\Workshop\Planning\WeekStart::day($this->params),
         ]);
     }
 

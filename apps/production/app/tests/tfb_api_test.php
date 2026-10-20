@@ -891,7 +891,9 @@ check($devices['data'][0]['pairing_pending'] && !$devices['data'][0]['paired'], 
 [$s] = $call('PATCH', '/referentiels/params/week.production_days', ['value' => '1,2,3,4,5,6,7'], $access);
 check($s === 200, 'production days are a parameter');
 $today = date('Y-m-d');
-$monday = date('Y-m-d', strtotime('-' . ((int) date('N') - 1) . ' days', strtotime($today)));
+// Tydzień produkcji od week.start_day (w pracowni środa) : $monday = pierwszy dzień tygodnia, $sunday = ostatni.
+$weekStartDay = (int) ($pdo->query("SELECT value FROM tfb_prod_param WHERE code = 'week.start_day'")->fetchColumn() ?: 1);
+$monday = App\Services\Workshop\Planning\WeekStart::of($today, $weekStartDay);
 [$s, $w] = $call('GET', "/planning/week?date={$today}", null, $dir);
 $wp = array_column($w['data']['products'] ?? [], null, 'item_id');
 check($s === 200 && $w['data']['week_start'] === $monday && count($w['data']['days']) === 7 && $w['data']['source']['type'] === 'plan'
@@ -899,7 +901,8 @@ check($s === 200 && $w['data']['week_start'] === $monday && count($w['data']['da
 check(isset($wp[$itemId]) && $wp[$itemId]['hours'] > 0 && $wp[$itemId]['unassigned_qty'] == $wp[$itemId]['quantity'] && $wp[$itemId]['slots'] === []
     && in_array('UNASSIGNED', array_column($w['data']['warnings'], 'code'), true), 'week: products wait in « to assign » with their standard hours');
 $g1 = array_column($w['data']['groups'], null, 'id')[1] ?? null;
-check($g1 !== null && $g1['days'][0]['available_h'] == 16 && $g1['days'][6]['available_h'] == 0 && $g1['available_h'] == 16 * 6 && $w['data']['totals']['done_h'] > 0,
+$sundayRow = $g1 ? array_values(array_filter($g1['days'], fn($d) => (int) date('N', strtotime($d['date'])) === 7))[0] ?? null : null;
+check($g1 !== null && $g1['days'][0]['available_h'] == 16 && $sundayRow && $sundayRow['available_h'] == 0 && $g1['available_h'] == 16 * 6 && $w['data']['totals']['done_h'] > 0,
     'week: hours available = 2 people × 8 h on the days of the shift (no Sunday shift); done hours from finished operations');
 [$s, $b] = $call('GET', '/planning/week?date=jutro', null, $dir);
 check($s === 422 && $codes($b) === ['date:INVALID_DATE'], 'week: date checked');
@@ -943,14 +946,16 @@ if ($slotDay < $sunday) {
 [$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
 $rp = array_column($r['data']['products'], null, 'item_id');
 check($s === 200 && $rp[$itemId]['unassigned_qty'] == 0 && $rp[$itemId]['slots'][0]['day'] === $slotDay, 'distribute again from scratch');
-// Najpierw wysyłka (zamówienia, przed wyjazdem), magazyn tylko w dni magazynowe : tu tylko niedziela tego tygodnia.
-$call('PATCH', '/referentiels/params/week.stock_days', ['value' => '7'], $access);
+// Najpierw wysyłka (zamówienia, przed wyjazdem), magazyn tylko w dni magazynowe : tu tylko ostatni dzień tygodnia.
+// Dzień magazynowy = ostatni dzień tygodnia produkcji (nigdy przed dzisiaj, niezależnie od dnia testu).
+$weekSunday = date('Y-m-d', strtotime($monday . ' +6 days'));
+$call('PATCH', '/referentiels/params/week.stock_days', ['value' => (string) date('N', strtotime($weekSunday))], $access);
 [$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
 $stockP = array_values(array_filter($r['data']['products'] ?? [], fn($p) => $p['stock'] > 0 && $p['direct'] == 0));
 $directP = array_values(array_filter($r['data']['products'] ?? [], fn($p) => $p['direct'] > 0));
 $stockDay = array_values(array_filter($r['data']['days'], fn($d) => $d['stock_day']));
-check($s === 200 && count($stockDay) === 1 && $stockDay[0]['date'] === $sunday && $stockP && $directP
-    && array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($sl) => $sl['day'] !== $sunday)), $stockP)) === 0
+check($s === 200 && count($stockDay) === 1 && $stockDay[0]['date'] === $weekSunday && $stockP && $directP
+    && array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($sl) => $sl['day'] !== $weekSunday)), $stockP)) === 0
     && array_sum(array_map(fn($p) => $p['stock_qty'] ?? array_sum(array_column($p['slots'], 'stock_qty')), $stockP)) == array_sum(array_column($stockP, 'stock')),
     'stock products only on stock days');
 check(array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($sl) => $sl['direct_qty'] > 0 && $sl['day'] > $p['latest_day'])), $directP)) === 0

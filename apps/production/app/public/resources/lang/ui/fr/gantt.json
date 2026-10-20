@@ -82,7 +82,7 @@
   "week.legend_product": "produit (longueur = heures ÷ disponibles)",
   "week.legend_done": "réalisé",
   "week.legend_late": "après échéance / en retard",
-  "week.help_move": "Glissez un produit sur un autre jour ou dans « À répartir » (dans son groupe) ; un clic ouvre la fiche pour déplacer une partie de la quantité. Trait = heures disponibles du jour, rouge = heures manquantes.",
+  "week.help_move": "Glissez un produit de « À produire » vers un jour (dans son groupe) : si le jour n’a pas assez d’heures libres, choisissez « ce qui tient » ou tout. Un bloc se déplace vers un autre jour ou revient dans « À produire » ; un clic ouvre la fiche pour déplacer une partie. Trait = heures disponibles du jour, rouge = heures manquantes.",
   "week.help_read": "Lecture seule : déplacer les produits demande la permission prod.gantt.move.",
   "week.empty": "Aucun groupe avec du monde ou des produits cette semaine.",
   "week.group_hours": "Groupe · heures",
@@ -90,8 +90,6 @@
   "week.no_team": "pas d'équipe",
   "week.no_shift": "sans shift",
   "week.free": "libre {hours} h",
-  "week.tray": "À répartir : {count} · {hours} h",
-  "week.tray_drop": "À répartir (déposez ici)",
   "week.tray_short": "À répartir",
   "week.due": "échéance",
   "week.mode.MTO": "sur commande",
@@ -134,5 +132,12 @@
   "week.col_stock": "Pour le stock",
   "week.truck": "départ {day}",
   "week.page_title": "Production de la semaine",
-  "week.page_subtitle": "Combien produire à expédier (d’abord, avant le camion) et pour le stock (mercredi–vendredi), jour par jour et groupe par groupe"
+  "week.page_subtitle": "Combien produire à expédier (d’abord, avant le camion) et pour le stock (mercredi–vendredi), jour par jour et groupe par groupe",
+  "week.todo": "À produire",
+  "week.todo_sub": "🚚 commandes · 📦 stock",
+  "week.todo_total": "{cartons} cart. · {hours} h",
+  "week.todo_empty": "Tout est placé ✓",
+  "week.drop_full": "{day} : {free} h libres, le produit demande {hours} h.",
+  "week.drop_fit": "Ce qui tient : {qty}",
+  "week.drop_all": "Tout : {qty} (jour surchargé)"
 }
