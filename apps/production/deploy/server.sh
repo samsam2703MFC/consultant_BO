@@ -89,6 +89,9 @@ log "Copie vers $ERP_TARGET/app…"
 mkdir -p "$ERP_TARGET/app"
 rsync -a --delete --exclude '/.env' --exclude '*.log' --exclude 'cron_log.txt' \
   "$SRC/app/" "$ERP_TARGET/app/"
+# Szablony Twig z datą teraz : rsync zachowuje datę checkoutu na runnerze, starszą niż szablon
+# skompilowany przez zapytanie w trakcie wdrożenia — auto_reload uznałby wtedy stary cache za aktualny.
+find "$ERP_TARGET/app/App/Views" -type f -name '*.twig' -exec touch {} +
 chown -R root:root "$ERP_TARGET/app"
 mkdir -p "$ERP_TARGET/app/App/Log"
 chown www-data:www-data "$ERP_TARGET/app/App/Log"
