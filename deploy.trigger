@@ -898,3 +898,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T14:27:52Z marże 2 miejsca + okresy sprzedaży
 2026-10-20T14:33:06Z stan magazynu : poza zamówieniami
 2026-10-20T14:41:46Z marże : efekt nie zeruje się
+2026-10-20T14:48:11Z audyt : przekierowania i porządki
