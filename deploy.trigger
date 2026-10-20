@@ -887,3 +887,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T13:08:58Z stany min/maks ze sprzedaży 6 tygodni (migracja 026)
 2026-10-20T13:14:19Z marge: przelicz wszystkie marże
 2026-10-20T13:20:34Z licznik stron + wyszukiwarka menu
+2026-10-20T13:25:59Z stany w kartonach i sztukach
