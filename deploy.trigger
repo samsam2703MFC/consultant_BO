@@ -871,3 +871,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-19T21:12:28Z audit serwera : jedno sprawdzenie hasła na żądanie
 2026-10-19T21:27:14Z audit serwera : brakujące pliki (ikona, generator PDF KSeF)
 2026-10-20T07:09:30Z rentowność : zakupy miesiąca według kategorii i dostawcy, surowce z receptur
+2026-10-20T07:15:48Z migracja 019 : indeks daty WDT dla kolumny tekstowej
