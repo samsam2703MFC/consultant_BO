@@ -310,5 +310,6 @@
   "total": "Total",
   "st.no_price_n": "{n} sans prix",
   "st.no_card": "sans fiche",
-  "st.no_card_help": "Le produit n’a pas encore de fiche de production : elle sera créée à la première modification (MTS, stocks)."
+  "st.no_card_help": "Le produit n’a pas encore de fiche de production : elle sera créée à la première modification (MTS, stocks).",
+  "st.stock_all": "Stock aujourd’hui (tous les produits, cartons libres) : {cartons} cart. · {value}."
 }

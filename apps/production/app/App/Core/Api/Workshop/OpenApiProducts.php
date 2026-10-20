@@ -170,7 +170,9 @@ final class OpenApiProducts
                 'target_cartons' => $int, 'target_pallets' => $num, 'target_value_eur' => $num, 'target_cost_eur' => $num,
                 'current_cartons' => $num, 'current_value_eur' => $num,
                 'no_price' => ['type' => 'integer', 'description' => 'produits MTS sans vente sur la période (valeur non comptée)'],
-                'no_cpp' => ['type' => 'integer', 'description' => 'produits MTS sans cartons par palette']]],
+                'no_cpp' => ['type' => 'integer', 'description' => 'produits MTS sans cartons par palette'],
+                'stock_all_cartons' => ['type' => 'number', 'description' => 'cartons libres de tous les produits (MTS et MTO)'],
+                'stock_all_value_eur' => ['type' => 'number', 'description' => 'leur valeur au prix moyen de vente']]],
             'StockSuggestion' => ['type' => 'object', 'properties' => [
                 'weeks' => ['type' => 'integer'], 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],
                 'unit' => ['type' => 'string'], 'ppc' => ['type' => 'integer'], 'shipped_cartons' => ['type' => 'number'], 'shipped_quantity' => ['type' => 'number'],

@@ -310,5 +310,6 @@
   "total": "Razem",
   "st.no_price_n": "{n} bez ceny",
   "st.no_card": "bez karty",
-  "st.no_card_help": "Produkt nie ma jeszcze karty produkcyjnej : powstanie przy pierwszej zmianie (MTS, stany)."
+  "st.no_card_help": "Produkt nie ma jeszcze karty produkcyjnej : powstanie przy pierwszej zmianie (MTS, stany).",
+  "st.stock_all": "Magazyn dziś (wszystkie produkty, kartony wolne) : {cartons} kart. · {value}."
 }

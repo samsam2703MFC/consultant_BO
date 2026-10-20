@@ -8721,6 +8721,14 @@
                     "no_cpp": {
                         "type": "integer",
                         "description": "produits MTS sans cartons par palette"
+                    },
+                    "stock_all_cartons": {
+                        "type": "number",
+                        "description": "cartons libres de tous les produits (MTS et MTO)"
+                    },
+                    "stock_all_value_eur": {
+                        "type": "number",
+                        "description": "leur valeur au prix moyen de vente"
                     }
                 }
             },

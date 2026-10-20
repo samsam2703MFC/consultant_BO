@@ -146,7 +146,8 @@
                     <select class="form-select form-select-sm" data-group style="width:auto"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
                         ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
                     <button type="button" class="btn btn-sm btn-primary" data-recalc-all><i class="bi bi-arrow-repeat"></i> ${esc(t('st.recalc_all'))}</button></div>
-                <div class="w-100 small text-muted">${esc(t('st.summary', {products: all.length, mts: tot.mts, cartons: n(tot.target_cartons, 0), pallets: n(tot.target_pallets, 1), value: eur(tot.target_value_eur)}))}</div>
+                <div class="w-100 small text-muted">${esc(t('st.summary', {products: all.length, mts: tot.mts, cartons: n(tot.target_cartons, 0), pallets: n(tot.target_pallets, 1), value: eur(tot.target_value_eur)}))}
+                    ${esc(t('st.stock_all', {cartons: n(tot.stock_all_cartons, 0), value: eur(tot.stock_all_value_eur)}))}</div>
             </div></div>
             <div class="card tfb-stock-sum"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h5 class="mb-0">${esc(t('st.sum_title'))}</h5>

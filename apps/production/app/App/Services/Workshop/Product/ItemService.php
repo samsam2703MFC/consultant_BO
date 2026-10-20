@@ -79,13 +79,17 @@ final class ItemService
         // po średniej cenie sprzedaży kartonu (WDT okresu) i po koszcie surowców ; stan wolny dziś obok.
         $emptyTotals = ['products' => 0, 'mts' => 0, 'weekly_cartons' => 0.0, 'optimal_cartons' => 0, 'optimal_pallets' => 0.0,
             'target_cartons' => 0, 'target_pallets' => 0.0, 'target_value_eur' => 0.0, 'target_cost_eur' => 0.0,
-            'current_cartons' => 0.0, 'current_value_eur' => 0.0, 'no_price' => 0, 'no_cpp' => 0];
+            'current_cartons' => 0.0, 'current_value_eur' => 0.0, 'no_price' => 0, 'no_cpp' => 0,
+            'stock_all_cartons' => 0.0, 'stock_all_value_eur' => 0.0];
         $all = $emptyTotals;
         $add = function (array &$t, array $item, float $weekly, int $optimal) {
             $t['products']++;
             $t['weekly_cartons'] = round($t['weekly_cartons'] + $weekly, 2);
             $t['optimal_cartons'] += $optimal;
             $t['optimal_pallets'] = round($t['optimal_pallets'] + ($item['optimal_pallets'] ?? 0), 2);
+            // Stan wolny wszystkich produktów (MTS i MTO) : wartość magazynu dziś.
+            $t['stock_all_cartons'] += $item['free_cartons'];
+            $t['stock_all_value_eur'] = round($t['stock_all_value_eur'] + ($item['current_value_eur'] ?? 0), 2);
             if ($item['mode'] !== 'MTS') return;
             $t['mts']++;
             $t['target_cartons'] += $item['target_cartons'];
