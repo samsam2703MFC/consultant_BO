@@ -98,7 +98,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -2921,6 +2921,76 @@
       ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
       </div></div>`;
   }
+  /**
+   * L'équipe du jour (20/10/2026, maquette D choisie par Sam) : au clic sur une barre de la frise, une ligne par personne —
+   * son planning, les heures faites à l'heure qu'il est, ce qu'elle a vendu (le vendeur sur chaque ticket, au panel), ses
+   * ventes à l'heure de vente, son panier, ce qu'elle a produit, ce qu'elle coûte et ce coût rapporté à ses ventes. La
+   * personne cliquée est surlignée.
+   *  - Heures de vente : les heures de son poste où le magasin a vendu (une boulangère qui cuit avant l'ouverture n'est
+   *    pas comptée en vente sur ces heures-là).
+   *  - Produit : les cuissons dont l'heure de four tombe dans son poste, si l'un de ses postes de travail est un poste de
+   *    production (boulangerie, four, production, cuisine, pâtisserie, labo). Sans cela, rien n'est attribué.
+   *  - Coût : son taux horaire au panel × ses heures faites ; un franchisé ne pèse pas au P&L, sa ligne le dit.
+   */
+  function opEquipe(D) {
+    const { now, m, planning, cuissons } = D;
+    const fin = now == null ? 24 * 60 : now;
+    const heureT = now == null ? 'la journée' : String(Math.floor(now / 60)).padStart(2, '0') + ':' + String(now % 60).padStart(2, '0');
+    const ov = (a, b, c, d) => Math.max(0, Math.min(b, d) - Math.max(a, c));
+    const hVend = new Set(((m && m.heures) || []).filter(x => (+x.ca || 0) > 0).map(x => +x.h));
+    const PROD = /boulang|four|fournil|prod|cuis|p[aâ]tiss|labo/i;
+    const V = m && Array.isArray(m.vendeurs) ? m.vendeurs : null;
+    const cleNom = n => String(n || '').trim().toLowerCase();
+    const venteDe = {}; (V || []).forEach(v => { const k = cleNom(v.nom); const o = venteDe[k] || (venteDe[k] = { ca: 0, tickets: 0, articles: 0, artLu: true, nom: v.nom });
+      o.ca += +v.ca || 0; o.tickets += +v.tickets || 0; if (v.articles == null) { o.artLu = false; } else { o.articles += +v.articles; } });
+    // Une ligne par personne : ses services du jour réunis.
+    const P = {}, ordre = [];
+    planning.forEach(p => { const k = cleNom(p.nom); if (!P[k]) { P[k] = { nom: p.nom || 'Sans nom', srv: [], postes: [], taux: p.tauxH, franchise: !!p.franchise }; ordre.push(k); }
+      P[k].srv.push([opMin(p.debut), opMin(p.fin), p.debut, p.fin]); (p.postes || []).forEach(x => { if (!P[k].postes.includes(x)) { P[k].postes.push(x); } }); });
+    const L = ordre.map(k => {
+      const o = P[k], v = venteDe[k] || null;
+      const prevu = o.srv.reduce((a, s2) => a + (s2[1] - s2[0]), 0) / 60;
+      const fait = o.srv.reduce((a, s2) => a + ov(s2[0], s2[1], 0, fin), 0) / 60;
+      let hV = 0; o.srv.forEach(s2 => { hVend.forEach(H => { hV += ov(s2[0], Math.min(s2[1], fin), H * 60, H * 60 + 60); }); });
+      hV /= 60;
+      const prodPoste = o.postes.some(x => PROD.test(x));
+      const cs = prodPoste ? (cuissons || []).filter(c => o.srv.some(s2 => opMin(c.four) >= s2[0] && opMin(c.four) < s2[1]) && (now == null || opMin(c.four) <= now)) : [];
+      const debut = Math.min(...o.srv.map(s2 => s2[0])), finS = Math.max(...o.srv.map(s2 => s2[1]));
+      const etat = now == null ? 'journée close' : (now < debut ? 'arrive à ' + o.srv[0][2] : (o.srv.some(s2 => now >= s2[0] && now < s2[1]) ? 'en poste' : (now >= finS ? 'fini' : 'en pause')));
+      const cout = o.franchise || o.taux == null ? null : o.taux * fait;
+      return { k, nom: o.nom, horaires: o.srv.map(s2 => s2[2] + '–' + s2[3]).join(' · '), postes: o.postes, prevu, fait, hV, etat,
+        ca: v ? v.ca : (V ? 0 : null), tickets: v ? v.tickets : null, articles: v && v.artLu && v.tickets ? v.articles / v.tickets : null,
+        parH: v && hV >= 0.25 ? v.ca / hV : null, pieces: cs.reduce((a, c) => a + (+c.pieces || 0), 0), cuissons: cs.map(c => c.nom + ' ' + c.four),
+        taux: o.taux, franchise: o.franchise, cout };
+    });
+    // Celles et ceux qui ont vendu sans être au planning du jour.
+    const horsPl = V ? Object.keys(venteDe).filter(k => !P[k]).map(k => ({ k, nom: venteDe[k].nom || 'Sans vendeur', hors: true, ca: venteDe[k].ca, tickets: venteDe[k].tickets,
+      articles: venteDe[k].artLu && venteDe[k].tickets ? venteDe[k].articles / venteDe[k].tickets : null })) : [];
+    L.sort((a, b) => (b.parH == null ? -1 : b.parH) - (a.parH == null ? -1 : a.parH) || (b.ca || 0) - (a.ca || 0));
+    const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
+    const pct = (a, b) => b ? Math.round(100 * a / b) + ' %' : '—';
+    const sel = S.eqSel ? cleNom(S.eqSel) : null;
+    const ligne = l => `<tr data-eqsel="${esc(l.nom)}" class="${sel === l.k ? 'on' : ''}"><td class="l"><b>${esc(l.nom)}</b><small>${l.hors ? 'vend sans être au planning' : esc(l.postes.join(' · ') || '—')}</small></td>
+      <td>${l.hors ? '—' : esc(l.horaires)}<small>${l.hors ? '' : nf(l.prevu, 1) + ' h'}</small></td>
+      <td>${l.hors ? '—' : hh(l.fait)}<small>${l.hors ? '' : esc(l.etat)}</small></td>
+      <td>${l.ca == null ? '<span class="mu">—</span>' : '<b>' + fE(l.ca) + '</b>'}<small>${l.tickets != null ? fN(l.tickets) + ' ticket' + (l.tickets > 1 ? 's' : '') : ''}</small></td>
+      <td>${l.parH == null ? '<span class="mu">—</span>' : '<b>' + fE(l.parH) + '/h</b>'}<small>${l.hors || l.parH == null ? '' : 'sur ' + nf(l.hV, 1) + ' h de vente'}</small></td>
+      <td>${l.tickets ? fU(l.ca / l.tickets) : '<span class="mu">—</span>'}<small>${l.articles != null ? nf(l.articles, 1) + ' art./client' : ''}</small></td>
+      <td>${l.pieces ? fN(l.pieces) + ' p.' : '<span class="mu">—</span>'}<small>${l.pieces ? esc(l.cuissons.join(' · ')) : ''}</small></td>
+      <td>${l.hors ? '—' : (l.franchise ? '<span class="mu">franchisé</span>' : (l.cout == null ? '<span class="mu">—</span>' : fE(l.cout)))}<small>${l.hors ? '' : (l.franchise ? 'hors P&amp;L' : (l.taux != null ? fU(l.taux) + '/h' : 'taux absent au panel'))}</small></td>
+      <td>${l.cout != null && l.ca ? '<b>' + pct(l.cout, l.ca) + '</b>' : '<span class="mu">—</span>'}<small>${l.cout && l.ca ? nf(l.ca / l.cout, 1) + ' ×' : ''}</small></td></tr>`;
+    const T = L.concat(horsPl);
+    const tCa = T.reduce((a, l) => a + (l.ca || 0), 0), tTk = T.reduce((a, l) => a + (l.tickets || 0), 0);
+    const tHV = L.reduce((a, l) => a + l.hV, 0), tCout = L.reduce((a, l) => a + (l.cout || 0), 0), tPcs = L.reduce((a, l) => a + l.pieces, 0);
+    const pied = `<tr class="tot"><td class="l"><b>Magasin</b></td><td>${nf(L.reduce((a, l) => a + l.prevu, 0), 1)} h</td><td>${hh(L.reduce((a, l) => a + l.fait, 0))}</td>
+      <td><b>${V ? fE(tCa) : '—'}</b><small>${V ? fN(tTk) + ' tickets' : ''}</small></td><td><b>${V && tHV ? fE(tCa / tHV) + '/h' : '—'}</b></td><td>${tTk ? fU(tCa / tTk) : '—'}</td>
+      <td>${tPcs ? fN(tPcs) + ' p.' : '—'}</td><td>${tCout ? fE(tCout) : '—'}</td><td><b>${tCout && tCa ? pct(tCout, tCa) : '—'}</b></td></tr>`;
+    const avert = V === null ? `<div class="db-note" style="padding:10px 16px 0">Les ventes par vendeuse ne sont pas encore lues pour cette journée (panel) : les heures et les coûts se lisent, pas les ventes.</div>` : '';
+    return `<div class="db-card eq-carte"><div class="ct"><span class="op-h2">L’équipe du jour, ${now == null ? 'la journée' : 'à ' + heureT}</span><span class="db-mini">rangée par ventes à l’heure de vente · un clic sur une barre de la frise ou sur une ligne</span><button type="button" class="eq-ferme" data-eqferme aria-label="Fermer l’équipe du jour">×</button></div>${avert}
+      <div class="eq-defil"><table class="eq-tab"><thead><tr><th class="l">Personne</th><th>Planning</th><th>Faites</th><th>Vendu</th><th>Par heure</th><th>Panier</th><th>Produit</th><th>Coût</th><th>Coût / ventes</th></tr></thead>
+      <tbody>${T.map(ligne).join('')}${pied}</tbody></table></div>
+      <div class="db-note" style="padding:8px 16px 12px">Vendu : le vendeur sur chaque ticket. Par heure : ses ventes ÷ les heures de son poste où le magasin a vendu. Produit : les cuissons de son poste, si elle tient un poste de production. Coût : son taux horaire au panel × ses heures faites (un franchisé ne pèse pas au P&amp;L).</div></div>`;
+  }
   function rendOps() {
     const D = opDonnees();
     const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
@@ -2947,13 +3017,14 @@
     const trait = now == null ? '' : `<span class="op-now" style="left:${x(now)}"></span>`;
     const ligneF = (lb, haut, contenu) => `<div class="op-fl" style="height:${haut + 8}px"><span class="lb">${lb}</span><div class="pis" style="height:${haut}px">${contenu}${trait}</div></div>`;
     let frise = '';
-    frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
+    frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
     frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
     frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
     frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:#777">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
-    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span></div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
+    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
+    if (S.eqOuvert && planning.length) { h += opEquipe(D); }
 
     /* 3. La vitrine, selon la durée de vie */
     if (U) {
@@ -6823,6 +6894,11 @@
     $.querySelectorAll('[data-calval]').forEach(b => b.addEventListener('click', () => { S.calVal = ['ca', 'att', 'cli'].includes(b.dataset.calval) ? b.dataset.calval : 'ca'; try { localStorage.setItem('db.calVal', S.calVal); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
+    // L'équipe du jour : une barre ou une ligne choisit la personne (un second clic sur la même referme), × ferme.
+    $.querySelectorAll('[data-eqsel]').forEach(b => b.addEventListener('click', () => { const n = b.dataset.eqsel;
+      if (S.eqOuvert && S.eqSel === n && b.tagName === 'B') { S.eqOuvert = false; S.eqSel = null; } else { S.eqOuvert = true; S.eqSel = n; } rendre(); }));
+    $.querySelectorAll('[data-eqouvre]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = !S.eqOuvert; if (!S.eqOuvert) { S.eqSel = null; } rendre(); }));
+    $.querySelectorAll('[data-eqferme]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = false; S.eqSel = null; rendre(); }));
     // Les douze semaines : clients, panier moyen ou articles par client (gardé pour la prochaine visite).
     $.querySelectorAll('[data-s12m]').forEach(b => b.addEventListener('click', () => { S.s12m = b.dataset.s12m; try { localStorage.setItem('db.s12m', S.s12m); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
