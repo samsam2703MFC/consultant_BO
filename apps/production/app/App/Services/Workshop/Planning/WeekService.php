@@ -349,7 +349,7 @@ final class WeekService
                 $over += max(0.0, $required - $available);
                 $dayRows[] = ['date' => $day, 'people' => $cap[$day]['people'] ?? 0, 'available_h' => round($available, 2), 'required_h' => round($required, 2),
                     'free_h' => round($available - $required, 2), 'load_pct' => $available > 0 ? round($required / $available * 100, 1) : null,
-                    'status' => $this->status($required, $available)];
+                    'status' => $this->status($required, $available), 'elapsed' => round($this->elapsed($cap[$day] ?? null, $day, $today, $now), 3)];
             }
             $available = array_sum(array_column($dayRows, 'available_h'));
             $required = array_sum(array_column($dayRows, 'required_h'));

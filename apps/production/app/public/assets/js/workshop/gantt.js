@@ -4,6 +4,9 @@
  * Lecture : GET /planning/operations et /planning/load ; écriture : PATCH /planning/operations/{id}
  * (prod.gantt.move — le serveur refuse tout ce qui casse une règle : échéance camion, ordre des
  * étapes, shift sans monde, poste occupé, chambre pleine).
+ * Vue « Tydzień » : production à la semaine, une ligne par groupe, un bloc = un produit sur un jour
+ * (GET /planning/week) ; glisser un produit sur un autre jour ou dans « Do rozplanowania »
+ * (POST /planning/week/move), « Rozdziel na dni » (POST /planning/week/distribute).
  */
 (async function () {
     'use strict';
@@ -55,14 +58,8 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>`;
     }
 
-    async function render() {
-        state.from ??= iso(new Date());
-        writeHash();
-        const view = VIEWS[state.view];
-        const start = parse(state.from + ' 00:00:00');
-        const to = iso(new Date(start.getTime() + (view.days - 1) * 86400000));
-        el.innerHTML = header() + `
-            <form class="tfb-filters tfb-gantt-filters" data-filters>
+    function filters() {
+        return `<form class="tfb-filters tfb-gantt-filters" data-filters>
                 <div class="btn-group btn-group-sm" role="group" aria-label="${esc(t('period'))}">
                     <button type="button" class="btn btn-outline-primary" data-shift="-1" aria-label="${esc(t('previous'))}">‹</button>
                     <button type="button" class="btn btn-outline-primary" data-today>${esc(t('today'))}</button>
@@ -71,7 +68,17 @@
                 <label class="tfb-inline">${esc(t('from'))} <input type="date" class="form-control form-control-sm" name="from" value="${state.from}"></label>
                 <select class="form-select form-select-sm" name="view" aria-label="${esc(t('view'))}">${Object.keys(VIEWS).map(v => `<option value="${v}" ${v === state.view ? 'selected' : ''}>${esc(t('view.' + v))}</option>`).join('')}</select>
                 <select class="form-select form-select-sm" name="group" aria-label="${esc(t('group'))}"><option value="0">${esc(t('all_groups'))}</option>${groups.map(g => `<option value="${g.id}" ${g.id === state.group ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
-            </form>
+            </form>`;
+    }
+
+    async function render() {
+        state.from ??= iso(new Date());
+        if (state.view === 'week') return renderWeek();
+        writeHash();
+        const view = VIEWS[state.view];
+        const start = parse(state.from + ' 00:00:00');
+        const to = iso(new Date(start.getTime() + (view.days - 1) * 86400000));
+        el.innerHTML = header() + filters() + `
             <ul class="tfb-gantt-legend">
                 <li><span class="tfb-bar-sample is-MTO"></span>${esc(t('origin.MTO'))}</li><li><span class="tfb-bar-sample is-MTS"></span>${esc(t('origin.MTS'))}</li>
                 <li><span class="tfb-bar-sample is-SEMI"></span>${esc(t('origin.SEMI'))}</li><li><span class="tfb-bar-sample is-cleaning"></span>${esc(t('kind.cleaning'))}</li>
@@ -262,6 +269,299 @@
             const ok = await save(o, body, null, form);
             if (ok && body.start && !form.locked.checked) await api.patch(`/planning/operations/${o.id}`, {locked: false}).then(render).catch(() => {});
         });
+        box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+
+    // --- Vue « Tydzień » : produits de la semaine sur les jours, par groupe -------------------------
+    let week = null;
+    const monday = (s) => { const d = parse(s + ' 00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return iso(d); };
+    const dayLabel = (s, long) => parse(s + ' 00:00:00').toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', long ? {weekday: 'long', day: '2-digit', month: '2-digit'} : {weekday: 'short', day: '2-digit', month: '2-digit'});
+    const hrs = (n) => `${fmt(n, 1)} h`;
+    const qtyText = (p, q) => p.ppc ? `${fmt(q, 0)} ${p.unit} · ${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cartons')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`;
+
+    async function renderWeek() {
+        state.from = monday(state.from);
+        writeHash();
+        el.innerHTML = header() + filters() + `<div data-week-root><p class="text-muted">${esc(t('loading'))}</p></div><div data-detail></div>`;
+        bindFilters();
+        try {
+            week = await api.get(`/planning/week?date=${state.from}`);
+        } catch (err) {
+            el.querySelector('[data-week-root]').innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+            return;
+        }
+        drawWeek();
+    }
+
+    function drawWeek() {
+        const root = el.querySelector('[data-week-root]');
+        if (!root || !week) return;
+        const w = week;
+        const tot = w.totals;
+        const worst = w.groups.filter(g => g.load_pct !== null).sort((a, b) => b.load_pct - a.load_pct)[0];
+        const plan = w.source.plans[0];
+        const source = w.source.type === 'plan'
+            ? t('week.source_plan', {version: plan.version, from: plan.period_start.slice(8, 10) + '.' + plan.period_start.slice(5, 7), to: plan.period_end.slice(8, 10) + '.' + plan.period_end.slice(5, 7), status: t('week.plan_status.' + plan.status)})
+            : t('week.source_demand');
+        const behind = tot.expected_h - tot.done_h;
+        root.innerHTML = `
+            <div class="tfb-week-head">
+                <div><h4 class="mb-0">${esc(t('week.title', {week: w.iso_week, from: dayLabel(w.days[0].date).replace(/^\S+\s/, ''), to: dayLabel(w.days[w.days.length - 1].date).replace(/^\S+\s/, '')}))}</h4>
+                    <p class="text-muted mb-0 small">${esc(source)}</p></div>
+                <div class="tfb-head-actions">
+                    ${w.can_move ? `<button type="button" class="btn btn-primary btn-sm" data-distribute ${tot.unassigned ? '' : 'disabled'}><i class="bi bi-magic"></i> ${esc(t('week.distribute'))}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-redistribute>${esc(t('week.redistribute'))}</button>` : ''}
+                    ${w.can_schedule && w.source.type === 'plan' ? `<button type="button" class="btn btn-outline-primary btn-sm" data-schedule title="${esc(t('week.schedule_hint'))}"><i class="bi bi-diagram-3"></i> ${esc(t('week.schedule'))}</button>` : ''}
+                </div>
+            </div>
+            <div class="tfb-week-kpis">
+                <div class="tfb-week-kpi"><span>${esc(t('week.kpi_hours'))}</span><strong>${hrs(tot.hours)}</strong><small>${esc(t('week.kpi_hours_sub', {count: tot.products}))}</small></div>
+                <div class="tfb-week-kpi"><span>${esc(t('week.kpi_available'))}</span><strong>${hrs(tot.available_h)}</strong><small>${esc(t('week.kpi_available_sub', {days: w.days.length}))}</small></div>
+                <div class="tfb-week-kpi ${tot.load_pct > 100 ? 'is-bad' : ''}"><span>${esc(t('week.kpi_load'))}</span><strong>${tot.load_pct === null ? '—' : fmt(tot.load_pct, 0) + ' %'}</strong>
+                    <small>${worst ? esc(t('week.kpi_load_sub', {group: worst.name || t('week.no_group'), pct: fmt(worst.load_pct, 0)})) : ''}</small></div>
+                <div class="tfb-week-kpi ${behind > 0.5 ? 'is-bad' : (tot.done_h > 0 ? 'is-ok' : '')}"><span>${esc(t('week.kpi_done'))}</span>
+                    <strong>${hrs(tot.done_h)}${tot.done_pct === null ? '' : ' · ' + fmt(tot.done_pct, 0) + ' %'}</strong>
+                    <small>${w.source.type === 'plan' ? esc(t('week.kpi_done_sub', {expected: fmt(tot.expected_h, 1), delta: (behind > 0 ? '−' : '+') + fmt(Math.abs(behind), 1)})) : esc(t('week.kpi_done_none'))}</small></div>
+            </div>
+            ${w.warnings.length ? `<ul class="tfb-week-warnings">${w.warnings.map(x => `<li class="is-${esc(x.code)}">${esc(x.message)}</li>`).join('')}</ul>` : ''}
+            <div class="card"><div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                    <h5 class="mb-0">${esc(t('week.gantt'))}</h5>
+                    <ul class="tfb-gantt-legend mb-0">
+                        <li><span class="tfb-week-sample"></span>${esc(t('week.legend_product'))}</li>
+                        <li><span class="tfb-week-sample is-done"></span>${esc(t('week.legend_done'))}</li>
+                        <li><span class="tfb-week-sample is-late"></span>${esc(t('week.legend_late'))}</li>
+                        <li><span class="tfb-week-sample is-now"></span>${esc(t('now'))}</li>
+                    </ul>
+                </div>
+                <div class="tfb-week-scroll">${board(w)}</div>
+                <p class="text-muted small mb-0 mt-2">${esc(t(w.can_move ? 'week.help_move' : 'week.help_read'))}</p>
+            </div></div>
+            ${productTable(w)}`;
+        bindWeek(root);
+    }
+
+    function board(w) {
+        const shown = w.groups.filter(g => !state.group || g.id === state.group);
+        if (!shown.length) return `<p class="text-muted mb-0">${esc(t('week.empty'))}</p>`;
+        const head = `<div class="tfb-week-row is-head" style="--days:${w.days.length}"><div class="tfb-week-label">${esc(t('week.group_hours'))}</div>
+            ${w.days.map(d => `<div class="tfb-week-dayhead ${d.today ? 'is-today' : ''} ${d.past ? 'is-past' : ''}">
+                <a href="#from=${d.date}&view=day" data-day-view="${d.date}">${esc(dayLabel(d.date))}</a>${d.today ? ` <span>${esc(t('week.today'))}</span>` : ''}</div>`).join('')}</div>`;
+        return head + shown.map(g => {
+            const products = w.products.filter(p => (p.group_id ?? null) === (g.id ?? null));
+            const waiting = products.filter(p => p.unassigned_qty > 0);
+            const color = g.color || '#8D1D2C';
+            const cells = g.days.map((d, i) => {
+                const day = w.days[i];
+                const blocks = [];
+                for (const p of products) for (const s of p.slots) if (s.day === d.date) blocks.push({p, s});
+                const scale = Math.max(d.available_h, d.required_h, 0.01);
+                const over = d.required_h - d.available_h;
+                const now = day.today && d.elapsed > 0 && d.elapsed < 1 ? `<span class="tfb-week-now" style="left:${(d.elapsed * Math.min(1, d.available_h / scale) * 100).toFixed(2)}%" title="${esc(t('now'))}"></span>` : '';
+                const cap = d.available_h > 0 ? `${fmt(d.required_h, 1)} / ${fmt(d.available_h, 1)} h` : (d.required_h > 0 ? t('week.no_team') : t('week.no_shift'));
+                return `<div class="tfb-week-cell is-${esc(d.status)} ${day.past ? 'is-past' : ''} ${day.today ? 'is-today' : ''}" data-drop-day="${d.date}" data-group="${g.id ?? 0}">
+                    <div class="tfb-week-cap"><span>${esc(cap)}</span>${over > 0.05 && d.available_h > 0 ? `<b>+${fmt(over, 1)} h</b>` : (d.available_h - d.required_h > 0.05 && d.required_h > 0 ? `<em>${esc(t('week.free', {hours: fmt(d.available_h - d.required_h, 1)}))}</em>` : '')}</div>
+                    <div class="tfb-week-load">${blocks.map(({p, s}) => `<span class="${s.late || s.behind ? 'is-late' : ''}" style="width:${(s.hours / scale * 100).toFixed(2)}%" title="${esc(p.name)} · ${hrs(s.hours)}"></span>`).join('')}
+                        ${d.available_h > 0 && d.required_h > d.available_h ? `<span class="tfb-week-capline" style="left:${(d.available_h / scale * 100).toFixed(2)}%"></span>` : ''}${now}</div>
+                    <div class="tfb-week-track">${blocks.map(({p, s}) => block(p, s, scale, color)).join('')}</div>
+                </div>`;
+            }).join('');
+            const tray = `<div class="tfb-week-tray ${waiting.length ? '' : 'is-empty'}" data-drop-day="" data-group="${g.id ?? 0}">
+                <span class="tfb-week-tray-label">${esc(waiting.length ? t('week.tray', {count: waiting.length, hours: fmt(g.unassigned_h, 1)}) : t('week.tray_drop'))}</span>
+                ${waiting.map(p => `<button type="button" class="tfb-week-chip ${p.movable ? 'is-movable' : ''}" style="--group-color:${esc(color)}" data-item="${p.item_id}" data-from=""
+                    title="${esc(p.name + ' · ' + qtyText(p, p.unassigned_qty) + ' · ' + hrs(p.unassigned_h) + (p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(p.due_date) : ''))}">${esc(p.name)} <small>${hrs(p.unassigned_h)}</small></button>`).join('')}
+            </div>`;
+            return `<div class="tfb-week-group" style="--group-color:${esc(color)}">
+                <div class="tfb-week-row" style="--days:${w.days.length}">
+                    <div class="tfb-week-label"><strong>${esc(g.name || t('week.no_group'))}</strong>
+                        <span>${esc(t('week.group_line', {people: g.people, hours: fmt(g.hours, 1), available: fmt(g.available_h, 1), pct: g.load_pct === null ? '—' : fmt(g.load_pct, 0)}))}</span>
+                        ${w.source.type === 'plan' ? `<span class="${g.expected_h - g.done_h > 0.5 ? 'is-bad' : 'is-ok'}">${esc(t('week.group_done', {hours: fmt(g.done_h, 1)}))}${g.expected_h - g.done_h > 0.5 ? ' · −' + fmt(g.expected_h - g.done_h, 1) + ' h' : ''}</span>` : ''}
+                    </div>${cells}
+                </div>${tray}</div>`;
+        }).join('');
+    }
+
+    function block(p, s, scale, color) {
+        const width = Math.min(100, Math.max(0, s.hours / scale * 100));
+        const done = s.hours > 0 ? Math.min(100, s.done_h / s.hours * 100) : (p.state === 'done' ? 100 : 0);
+        const finished = done >= 99.9;
+        const title = [p.name, qtyText(p, s.quantity), hrs(s.hours), t('week.mode.' + (p.item_type === 'semi' ? 'semi' : p.mode)),
+            p.due_date ? t('week.due') + ' ' + dayLabel(p.due_date) : null, s.late ? t('week.late') : null, s.behind ? t('week.behind') : null,
+            done > 0 ? t('week.done_part', {pct: fmt(done, 0)}) : null].filter(Boolean).join(' · ');
+        return `<button type="button" class="tfb-week-block ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''}"
+            style="--group-color:${esc(color)};--share:${width.toFixed(2)}%" data-item="${p.item_id}" data-from="${s.day}" title="${esc(title)}" aria-label="${esc(title)}">
+            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}${esc(p.name)}</span><span class="tfb-week-block-h">${fmt(s.hours, 1)} h</span>
+            ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>`;
+    }
+
+    function productTable(w) {
+        const rows = w.products.filter(p => !state.group || p.group_id === state.group);
+        if (!rows.length) return '';
+        const groupName = (id) => (w.groups.find(g => g.id === id) || {}).name || t('week.no_group');
+        let last;
+        const body = rows.map(p => {
+            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="6">${esc(groupName(p.group_id))}</th></tr>` : '';
+            last = p.group_id;
+            const days = p.slots.map(s => `<span class="${s.late ? 'text-danger' : ''}">${esc(dayLabel(s.day).split(',')[0].replace('.', ''))}</span>`).join(', ');
+            return sep + `<tr data-item-row="${p.item_id}">
+                <td><button type="button" class="btn btn-link p-0 text-start" data-open-item="${p.item_id}">${esc(p.name)}</button></td>
+                <td>${esc(t('week.mode.' + (p.item_type === 'semi' ? 'semi' : p.mode)))}${p.due_date ? `<div class="text-muted small">${esc(t('week.due'))} ${esc(dayLabel(p.due_date))}</div>` : ''}</td>
+                <td class="text-end">${esc(qtyText(p, p.quantity))}</td>
+                <td class="text-end">${hrs(p.hours)}</td>
+                <td>${days || ''}${p.unassigned_qty > 0 ? `<div class="text-warning small">${esc(t('week.waiting', {qty: qtyText(p, p.unassigned_qty)}))}</div>` : ''}</td>
+                <td class="tfb-week-progress"><span class="tfb-week-progress-bar"><span style="width:${p.done_pct ?? 0}%"></span></span>
+                    ${w.source.type === 'plan' ? `${hrs(p.done_h)} · ${p.done_pct === null ? '—' : fmt(p.done_pct, 0) + ' %'}` : '—'}</td></tr>`;
+        }).join('');
+        return `<div class="card"><div class="card-body">
+            <h5>${esc(t('week.table_title'))}</h5>
+            <div class="table-responsive"><table class="table table-sm mb-0 tfb-week-table">
+                <thead><tr><th>${esc(t('week.col_product'))}</th><th>${esc(t('week.col_mode'))}</th><th class="text-end">${esc(t('week.col_qty'))}</th><th class="text-end">${esc(t('week.col_hours'))}</th><th>${esc(t('week.col_days'))}</th><th>${esc(t('week.col_done'))}</th></tr></thead>
+                <tbody>${body}</tbody></table></div>
+            <p class="text-muted small mb-0 mt-2">${esc(t('week.table_note'))}</p></div></div>`;
+    }
+
+    async function moveProduct(itemId, from, to, quantity) {
+        try {
+            week = await api.post('/planning/week/move', {date: week.week_start, item_id: itemId, from: from || null, to: to || null, ...(quantity ? {quantity} : {})});
+            const p = week.products.find(x => x.item_id === itemId);
+            const late = p && to && p.slots.some(s => s.day === to && s.late);
+            ui.notify(true, late ? t('week.moved_late') : t('saved'));
+            drawWeek();
+            return true;
+        } catch (err) {
+            ui.notify(false, ((err.body && err.body.errors) || []).map(x => x.message).join(' ') || err.message);
+            drawWeek();
+            return false;
+        }
+    }
+
+    function bindWeek(root) {
+        root.querySelector('[data-distribute]')?.addEventListener('click', () => distribute(false));
+        root.querySelector('[data-redistribute]')?.addEventListener('click', () => { if (window.confirm(t('week.redistribute_confirm'))) distribute(true); });
+        root.querySelector('[data-schedule]')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            try {
+                let ops = 0, conflicts = 0;
+                for (const plan of week.source.plans.filter(p => p.status === 'validated' || p.status === 'frozen')) {
+                    const r = await api.post(`/planning/plans/${plan.id}/schedule`);
+                    ops += r.operations;
+                    conflicts += r.conflicts.length;
+                }
+                ui.notify(conflicts === 0, t('week.scheduled', {operations: ops, conflicts}));
+            } catch (err) {
+                ui.notify(false, err.message);
+            }
+            e.target.disabled = false;
+        });
+        root.querySelectorAll('[data-day-view]').forEach(a => a.addEventListener('click', (e) => {
+            e.preventDefault();
+            state = {from: a.dataset.dayView, view: 'day', group: state.group};
+            render();
+        }));
+        root.querySelectorAll('[data-open-item]').forEach(b => b.addEventListener('click', () => openProduct(Number(b.dataset.openItem))));
+
+        // Glisser-déposer (souris, doigt, stylet) ; un appui simple ou Entrée ouvre la fiche du produit.
+        const gantt = root.querySelector('.tfb-week-scroll');
+        let drag = null;
+        gantt.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-item]');
+            if (!b) return;
+            if (drag && drag.moved) return;
+            openProduct(Number(b.dataset.item), b.dataset.from || null);
+        });
+        gantt.addEventListener('pointerdown', (e) => {
+            const b = e.target.closest('[data-item].is-movable');
+            if (!b || e.button !== 0) return;
+            drag = {el: b, item: Number(b.dataset.item), from: b.dataset.from || '', group: b.closest('[data-group]').dataset.group, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
+            b.setPointerCapture(e.pointerId);
+        });
+        gantt.addEventListener('pointermove', (e) => {
+            if (!drag) return;
+            if (!drag.moved && Math.abs(e.clientX - drag.x0) < 5 && Math.abs(e.clientY - drag.y0) < 5) return;
+            if (!drag.moved) {
+                drag.moved = true;
+                drag.ghost = drag.el.cloneNode(true);
+                drag.ghost.classList.add('tfb-week-ghost');
+                drag.ghost.style.width = `${Math.min(220, Math.max(90, drag.el.offsetWidth))}px`;
+                document.body.appendChild(drag.ghost);
+                drag.el.classList.add('is-dragging');
+                gantt.classList.add('is-dragging');
+            }
+            drag.ghost.style.left = `${e.clientX + 8}px`;
+            drag.ghost.style.top = `${e.clientY + 8}px`;
+            gantt.querySelectorAll('.is-target').forEach(c => c.classList.remove('is-target'));
+            const over = document.elementsFromPoint(e.clientX, e.clientY).map(n => n.closest && n.closest('[data-drop-day]')).find(Boolean);
+            if (over && over.dataset.group === drag.group && over.dataset.dropDay !== drag.from && !over.classList.contains('is-past')) over.classList.add('is-target');
+        });
+        const finish = async () => {
+            if (!drag) return;
+            const d = drag;
+            const target = gantt.querySelector('.is-target');
+            gantt.querySelectorAll('.is-target').forEach(c => c.classList.remove('is-target'));
+            gantt.classList.remove('is-dragging');
+            d.el.classList.remove('is-dragging');
+            d.ghost?.remove();
+            if (!d.moved) { drag = null; return; }
+            window.setTimeout(() => { drag = null; }, 0);
+            if (target) await moveProduct(d.item, d.from, target.dataset.dropDay);
+        };
+        gantt.addEventListener('pointerup', finish);
+        gantt.addEventListener('pointercancel', finish);
+    }
+
+    async function distribute(reset) {
+        const buttons = el.querySelectorAll('[data-distribute], [data-redistribute]');
+        buttons.forEach(b => { b.disabled = true; });
+        try {
+            week = await api.post('/planning/week/distribute', {date: week.week_start, reset});
+            ui.notify(true, t('week.distributed'));
+        } catch (err) {
+            ui.notify(false, err.message);
+        }
+        drawWeek();
+    }
+
+    function openProduct(itemId, fromDay) {
+        const p = week.products.find(x => x.item_id === itemId);
+        const box = el.querySelector('[data-detail]');
+        if (!p || !box) return;
+        const days = week.days.filter(d => !d.past);
+        const from = fromDay ?? (p.slots[0]?.day || '');
+        const available = from ? (p.slots.find(s => s.day === from)?.quantity ?? 0) : p.unassigned_qty;
+        const sources = [...p.slots.map(s => ({value: s.day, label: `${dayLabel(s.day)} · ${qtyText(p, s.quantity)}`})),
+            ...(p.unassigned_qty > 0 ? [{value: '', label: `${t('week.tray_short')} · ${qtyText(p, p.unassigned_qty)}`}] : [])];
+        box.innerHTML = `<div class="card tfb-gantt-detail"><div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h4 class="card-title mb-0">${esc(p.name)}</h4>
+                <button type="button" class="btn-close" data-close aria-label="${esc(t('close'))}"></button></div>
+            <div class="card-body pt-0">
+                <dl class="tfb-dl">
+                    <dt>${esc(t('week.col_mode'))}</dt><dd>${esc(t('week.mode.' + (p.item_type === 'semi' ? 'semi' : p.mode)))}${p.due_date ? ' · ' + esc(t('week.due')) + ' ' + esc(dayLabel(p.due_date, true)) : ''}</dd>
+                    <dt>${esc(t('week.col_qty'))}</dt><dd>${esc(qtyText(p, p.quantity))} · ${hrs(p.hours)}</dd>
+                    <dt>${esc(t('week.col_days'))}</dt><dd>${p.slots.map(s => `${esc(dayLabel(s.day, true))}: ${esc(qtyText(p, s.quantity))} · ${hrs(s.hours)}${s.late ? ' · <span class="text-danger">' + esc(t('week.late')) + '</span>' : ''}`).join('<br>') || '—'}
+                        ${p.unassigned_qty > 0 ? `<div class="text-warning">${esc(t('week.waiting', {qty: qtyText(p, p.unassigned_qty)}))}</div>` : ''}</dd>
+                    <dt>${esc(t('week.col_done'))}</dt><dd>${week.source.type === 'plan' ? `${hrs(p.done_h)} · ${p.done_pct === null ? '—' : fmt(p.done_pct, 0) + ' %'} · ${esc(t('week.state.' + p.state))}` : '—'}</dd>
+                </dl>
+                ${p.movable && sources.length && days.length ? `<form class="tfb-form tfb-week-move" data-move>
+                    <label>${esc(t('week.move_from'))}<select class="form-select" name="from">${sources.map(o => `<option value="${o.value}" ${o.value === from ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>
+                    <label>${esc(t('week.move_to'))}<select class="form-select" name="to">${days.map(d => `<option value="${d.date}" ${d.date === (days.find(x => x.date !== from) || {}).date ? 'selected' : ''}>${esc(dayLabel(d.date, true))}</option>`).join('')}<option value="">${esc(t('week.tray_short'))}</option></select></label>
+                    <label>${esc(t('week.move_qty', {unit: p.unit}))}<input type="number" class="form-control" name="quantity" min="0" step="${p.ppc || (p.unit === 'kg' ? 0.1 : 1)}" value="${available}"></label>
+                    <div class="tfb-nav"><span class="text-muted small">${esc(t('week.move_hint'))}</span><button class="btn btn-primary">${esc(t('week.move'))}</button></div>
+                </form>` : ''}
+                <a class="btn btn-sm btn-outline-secondary mt-2" href="${esc(api.root)}/workshop/products#/item/${p.item_id}/1">${esc(t('week.open_card'))}</a>
+            </div></div>`;
+        box.querySelector('[data-close]').addEventListener('click', () => { box.innerHTML = ''; });
+        const form = box.querySelector('[data-move]');
+        if (form) {
+            form.from.addEventListener('change', () => {
+                form.quantity.value = form.from.value ? (p.slots.find(s => s.day === form.from.value)?.quantity ?? 0) : p.unassigned_qty;
+            });
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const q = Number(form.quantity.value);
+                const max = form.from.value ? (p.slots.find(s => s.day === form.from.value)?.quantity ?? 0) : p.unassigned_qty;
+                if (await moveProduct(p.item_id, form.from.value, form.to.value, q && q < max ? q : null)) openProduct(p.item_id, form.to.value || null);
+            });
+        }
         box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
     }
 

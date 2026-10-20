@@ -9227,6 +9227,10 @@
                                                     "no_team",
                                                     "free"
                                                 ]
+                                            },
+                                            "elapsed": {
+                                                "type": "number",
+                                                "description": "part du shift déjà passée (1 = jour passé)"
                                             }
                                         }
                                     }

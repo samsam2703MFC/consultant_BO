@@ -192,6 +192,7 @@ final class OpenApiPlanning
                     'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'date' => ['type' => 'string', 'format' => 'date'], 'people' => $int, 'available_h' => $num, 'required_h' => $num, 'free_h' => $num,
                         'load_pct' => ['type' => 'number', 'nullable' => true], 'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team', 'free']],
+                        'elapsed' => ['type' => 'number', 'description' => 'part du shift déjà passée (1 = jour passé)'],
                     ]]],
                 ]]],
                 'products' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
