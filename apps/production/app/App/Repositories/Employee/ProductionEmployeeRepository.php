@@ -55,4 +55,20 @@ class ProductionEmployeeRepository extends BaseRepository
         return $res[0]['total_cost'];
     }
 
+    /**
+     * Obsada zmiany dziennej grupy pracowni = liczba pracowników działu (Gantt tygodnia : osoby × 8 h
+     * × dni produkcji). Bez modułu pracowni nic się nie dzieje.
+     */
+    public function syncWorkshopHeadcount(): void
+    {
+        try {
+            $this->db->exec("UPDATE tfb_prod_team t
+                JOIN tfb_prod_group g ON g.id = t.id_group AND g.active = 1 AND g.id_section IS NOT NULL
+                JOIN tfb_prod_shift_template sh ON sh.id = t.id_shift_template AND sh.code = 'JOUR'
+                SET t.planned_headcount = (SELECT COUNT(*) FROM production_employee e WHERE e.id_section = g.id_section)
+                WHERE t.active = 1");
+        } catch (\PDOException $e) {
+            // Tabele pracowni (tfb_) nie istnieją w tej bazie.
+        }
+    }
 }

@@ -45,18 +45,24 @@ class ProductionEmployeeService
 
     public function insert($data)
     {
-        return $this->productionEmployeeRepository->insert($data);
+        $result = $this->productionEmployeeRepository->insert($data);
+        $this->productionEmployeeRepository->syncWorkshopHeadcount();
+        return $result;
     }
 
 
     public function update($id, $data)
     {
-        return $this->productionEmployeeRepository->update($id, $data);
+        $result = $this->productionEmployeeRepository->update($id, $data);
+        $this->productionEmployeeRepository->syncWorkshopHeadcount();
+        return $result;
     }
 
     public function delete($id)
     {
-        return $this->productionEmployeeRepository->delete($id);
+        $result = $this->productionEmployeeRepository->delete($id);
+        $this->productionEmployeeRepository->syncWorkshopHeadcount();
+        return $result;
     }
 
     public function getById($id)

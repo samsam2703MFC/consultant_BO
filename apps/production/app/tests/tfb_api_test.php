@@ -68,6 +68,13 @@ rmdir($tmp);
 check($drift, 'an applied migration edited afterwards blocks the run');
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_group")->fetchColumn() === 6, '6 default groups');
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_shift_template")->fetchColumn() === 3, '3 default shift templates');
+// Grupy = działy produkcji ERP : dwie grupy piekarni (zakwas, formowanie) w jednej grupie « Piekarnia »,
+// zespół dzienny = pracownicy działu. Dalej test buduje własne zespoły.
+$bakery = $pdo->query("SELECT code, name_pl, active, id_section FROM tfb_prod_group WHERE id = 1")->fetch();
+check($bakery['code'] === 'PIEKARNIA' && $bakery['name_pl'] === 'Piekarnia' && (int) $bakery['active'] === 1 && (int) $bakery['id_section'] === 1
+    && (int) $pdo->query("SELECT active FROM tfb_prod_group WHERE code = 'FACONNAGE'")->fetchColumn() === 0, 'groups = ERP production sections (bakery groups merged into « Piekarnia »)');
+check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'PIEKARNIA_DZIEN' AND active = 1")->fetchColumn() === 2, 'day team of the section = its 2 employees');
+$pdo->exec("DELETE FROM tfb_prod_team");
 
 // --- Contrôles en base (tests d'acceptation 1 : jamais congelé ⇒ jamais MTS)
 $pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, bpc, cpl, lpp, cpp, id_section, active) VALUES (500, 'Baguette test', 1, 350, 18, 1, 18, 8, 6, 48, 1, 1)");
@@ -814,6 +821,11 @@ if ($slotDay < $sunday) {
 [$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
 $rp = array_column($r['data']['products'], null, 'item_id');
 check($s === 200 && $rp[$itemId]['unassigned_qty'] == 0 && $rp[$itemId]['slots'][0]['day'] === $slotDay, 'distribute again from scratch');
+
+// Pracownik dodany w ERP : obsada zmiany dziennej grupy działu nadąża (osoby × 40 h w Gantcie tygodnia).
+$pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");
+(new App\Repositories\Employee\ProductionEmployeeRepository($pdo))->syncWorkshopHeadcount();
+check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'T1'")->fetchColumn() === 3, 'day team headcount follows the employees of the section');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

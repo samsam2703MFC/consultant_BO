@@ -543,7 +543,7 @@
                 ${p.movable && sources.length && days.length ? `<form class="tfb-form tfb-week-move" data-move>
                     <label>${esc(t('week.move_from'))}<select class="form-select" name="from">${sources.map(o => `<option value="${o.value}" ${o.value === from ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>
                     <label>${esc(t('week.move_to'))}<select class="form-select" name="to">${days.map(d => `<option value="${d.date}" ${d.date === (days.find(x => x.date !== from) || {}).date ? 'selected' : ''}>${esc(dayLabel(d.date, true))}</option>`).join('')}<option value="">${esc(t('week.tray_short'))}</option></select></label>
-                    <label>${esc(t('week.move_qty', {unit: p.unit}))}<input type="number" class="form-control" name="quantity" min="0" step="${p.ppc || (p.unit === 'kg' ? 0.1 : 1)}" value="${available}"></label>
+                    <label>${esc(t('week.move_qty', {unit: p.unit}))}<input type="number" class="form-control" name="quantity" min="0" step="${p.unit === 'kg' ? 0.1 : 1}" value="${available}"></label>
                     <div class="tfb-nav"><span class="text-muted small">${esc(t('week.move_hint'))}</span><button class="btn btn-primary">${esc(t('week.move'))}</button></div>
                 </form>` : ''}
                 <a class="btn btn-sm btn-outline-secondary mt-2" href="${esc(api.root)}/workshop/products#/item/${p.item_id}/1">${esc(t('week.open_card'))}</a>
