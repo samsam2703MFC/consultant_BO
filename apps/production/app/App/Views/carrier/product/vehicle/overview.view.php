@@ -20,7 +20,7 @@
         <section class="section">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title">Lista pojazdów przewoźnika <a href="<?=ROOT?>/product-carriers/<?=$id_carrier?>/vehicles/new" class="btn btn-primary" role="button">Dodaj nowy</a></h4>
+                    <h4 class="card-title">Lista pojazdów przewoźnika <a href="<?=ROOT?>/logistics/vehicles?carrier=<?=(int)$id_carrier?>" class="btn btn-primary" role="button">Dodaj nowy</a></h4>
                 </div>
                 <div class="card-body">
                     <table class="table table-striped">

@@ -26,25 +26,6 @@ class ProductCarrierVehicleController extends BaseController
         $this->view("carrier/product/vehicle/overview", $data);
     }
 
-    public function newVehicle($idCarrier)
-    {
-        if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            $postData = $_POST;
-            $postData['id_carrier'] = $idCarrier;
-
-            $this->errors = $this->productCarrierVehicleService->validate($_POST);
-
-
-            if (empty($this->errors)) {
-                $this->handleAction(function () use ($idCarrier, $postData){
-                    $this->productCarrierVehicleService->insert($postData);
-                    header('Location: ' . ROOT . "/product-carriers/$idCarrier/vehicles");
-                    exit;
-                }, default: false);
-            }
-        }
-        $this->view("carrier/product/vehicle/new");
-    }
 
     public function editVehicle($id)
     {

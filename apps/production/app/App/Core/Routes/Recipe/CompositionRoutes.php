@@ -43,35 +43,6 @@ return function(RouteCollector $r) {
         'method'     => 'calculation'
     ]);
 
-    // ─── Kroki przygotowania kompozycji ──────────────────────────────────────
-
-    $r->addRoute('GET', '/compositions/{id:\d+}/preparation-steps', [
-        'controller' => App\Controllers\Web\Recipe\CompositionController::class,
-        'method'     => 'preparationSteps'
-    ]);
-
-    $r->addRoute('POST', '/ajax/compositions/{id:\d+}/preparation-steps', [
-        'controller' => App\Controllers\Web\Recipe\PreparationStepController::class,
-        'method'     => 'ajaxAdd'
-    ]);
-
-    $r->addRoute('PUT', '/ajax/compositions/{recipeId:\d+}/preparation-steps/{stepId:\d+}', [
-        'controller' => App\Controllers\Web\Recipe\PreparationStepController::class,
-        'method'     => 'ajaxUpdate'
-    ]);
-
-    $r->addRoute('DELETE', '/ajax/compositions/{recipeId:\d+}/preparation-steps/{stepId:\d+}', [
-        'controller' => App\Controllers\Web\Recipe\PreparationStepController::class,
-        'method'     => 'ajaxDelete'
-    ]);
-
-    $r->addRoute('POST', '/ajax/compositions/{recipeId:\d+}/preparation-steps/{stepId:\d+}/move', [
-        'controller' => App\Controllers\Web\Recipe\PreparationStepController::class,
-        'method'     => 'ajaxMove'
-    ]);
-
-    $r->addRoute('POST', '/ajax/compositions/{recipeId:\d+}/preparation-steps/reorder', [
-        'controller' => App\Controllers\Web\Recipe\PreparationStepController::class,
-        'method'     => 'ajaxReorder'
-    ]);
+    // Kroki przygotowania : jedna strona dla wszystkich typów receptur (/recipes/{id}/preparation-steps)
+    $r->addRoute('GET', '/compositions/{id:\d+}/preparation-steps', ['redirect' => '/recipes/{id}/preparation-steps']);
 };

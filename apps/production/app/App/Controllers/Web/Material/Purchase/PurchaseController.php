@@ -96,15 +96,6 @@ class PurchaseController extends BaseController
         $this->view("material/purchase/index", $data);
     }
 
-    public function insert()
-    {
-        $data['suppliers'] = $this->supplierService->getActive();
-        $data['raw_materials'] = $this->materialService->getAll();
-
-
-
-        $this->view("material/purchase/insert", $data);
-    }
 
     public function show($id)
     {
@@ -114,13 +105,4 @@ class PurchaseController extends BaseController
         $this->view("material/purchase/show", $data);
     }
 
-    public function ajaxInsert()
-    {
-        $request = Request::createFromGlobals();
-        $data = $this->getJson($request);
-
-        $result = $this->purchaseService->insert($data);
-
-        return $this->json($result, $result ? 200 : 500);
-    }
 }

@@ -99,7 +99,7 @@ class ShippingController extends BaseController
             return $this->json(['message' => 'Brak danych wejściowych'], 400);
         }
 
-        $idShippingLog = $this->shippingService->insertNewComplaint($data);
+        $idShippingLog = $this->safeFetch([$this->shippingService, 'insertNewComplaint'], $this->errors, [$data]);
 
         if (!$idShippingLog) {
             return $this->json(['message' => implode(", ", $this->errors) ?: 'Nie udało się utworzyć dokumentów wysyłki'], 500);

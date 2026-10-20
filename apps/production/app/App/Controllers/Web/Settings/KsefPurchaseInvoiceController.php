@@ -9,13 +9,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class KsefPurchaseInvoiceController extends BaseController
 {
-    public function __construct(private KsefPurchaseInvoiceService $invoices)
+    public function __construct(private KsefPurchaseInvoiceService $invoices, private \App\Repositories\Material\Purchase\DocumentRepository $manualPurchases)
     {
     }
 
     public function index(): void
     {
-        $this->view('settings/ksef_purchase_invoices');
+        $this->view('settings/ksef_purchase_invoices', ['manual_purchases' => $this->manualPurchases->countAll()]);
     }
 
     public function ajaxList(): Response

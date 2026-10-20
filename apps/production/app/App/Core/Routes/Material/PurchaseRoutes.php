@@ -4,20 +4,15 @@ use FastRoute\RouteCollector;
 return function(RouteCollector $r) {
 
 
+    // Faktury zakupowe : KSeF (Finanse → Faktury zakupowe KSeF). Dawne dostawy wpisane ręcznie zostają do podglądu.
+    $r->addRoute('GET', '/purchases/new', ['redirect' => '/settings/ksef/purchase-invoices']);
+
     $r->addRoute('GET', '/purchases', [
         'controller' => App\Controllers\Web\Material\Purchase\PurchaseController::class,
         'method' => 'index'
     ]);
 
-    $r->addRoute('GET', '/purchases/new', [
-        'controller' => App\Controllers\Web\Material\Purchase\PurchaseController::class,
-        'method' => 'insert'
-    ]);
 
-    $r->addRoute('POST', '/ajax/purchases', [
-        'controller' => App\Controllers\Web\Material\Purchase\PurchaseController::class,
-        'method' => 'ajaxInsert'
-    ]);
 
     $r->addRoute('GET', '/purchases/{id:\d+}/show', [
         'controller' => App\Controllers\Web\Material\Purchase\PurchaseController::class,

@@ -6,7 +6,6 @@ use App\Repositories\Product\FinalProductRepository;
 use App\Services\Material\MaterialService;
 use App\Services\Recipe\CompositionService;
 use App\Services\Recipe\PreparationService;
-use App\Services\Recipe\PreparationStepService;
 use App\Services\Recipe\RecipeCostRecalculationService;
 use App\Services\Recipe\RecipeService;
 use App\Services\Utils\UnitService;
@@ -29,8 +28,7 @@ class CompositionController extends BaseController
         UnitService        $unitService,
         PreparationService $preparationService,
         RecipeService      $recipeService,
-        private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private PreparationStepService $preparationStepService
+        private RecipeCostRecalculationService $recipeCostRecalculationService
     )
     {
         $this->compositionService = $compositionService;
@@ -132,16 +130,5 @@ class CompositionController extends BaseController
         $this->view("recipe/composition/calculation", $data);
     }
 
-    public function preparationSteps(int $id): void
-    {
-        $data['recipe']    = $this->safeFetch(
-            fn() => $this->preparationStepService->getRecipeBasicData($id),
-            $this->errors, null, []
-        );
-        $data['steps']     = $this->preparationStepService->getSteps($id);
-        $data['recipe_id'] = $id;
-
-        $this->view('recipe/composition/preparation-steps', $data);
-    }
 
 }

@@ -66,10 +66,13 @@ class RecipeRepository extends BaseRepository
                 pr.is_subrecipe,
                 pr.id_unit,
                 prt.name as type_name,
-                pr.yield_quantity       
+                pr.yield_quantity,
+                u.name as unit_name
                 FROM product_recipe pr
                 INNER JOIN product_recipe_type prt
                     ON pr.id_type = prt.id
+                LEFT JOIN unit u
+                    ON u.id = pr.id_unit
                 LEFT JOIN (SELECT id_recipe, name FROM final_product WHERE id_recipe IS NOT NULL) fp
                         ON pr.id = fp.id_recipe
                 WHERE pr.id = :id_recipe";

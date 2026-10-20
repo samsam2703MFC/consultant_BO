@@ -11,72 +11,9 @@ class RecipeCompetencyController extends BaseController
         private RecipeCompetencyService $competencyService
     ) {}
 
-    /**
-     * GET /hr/recipe-competencies
-     * Główny panel zarządzania kompetencjami recepturowymi
-     */
-    public function overview(): void
-    {
-        $data['competencies'] = $this->competencyService->getAll();
-        $this->view('recipe/recipe_competency/overview', $data);
-    }
 
-    /**
-     * POST /ajax/recipe-competencies
-     * Tworzenie nowej kompetencji (AJAX)
-     */
-    public function ajaxCreate(): JsonResponse
-    {
-        $payload = $this->getJson(\Symfony\Component\HttpFoundation\Request::createFromGlobals());
 
-        $errors = $this->competencyService->validate($payload);
-        if (!empty($errors)) {
-            return $this->json(['ok' => false, 'errors' => $errors], 422);
-        }
 
-        $id = $this->competencyService->create($payload);
-        if (!$id) {
-            return $this->json(['ok' => false, 'message' => 'Błąd zapisu.'], 500);
-        }
-
-        $competency = $this->competencyService->getById((int) $id);
-        return $this->json(['ok' => true, 'competency' => $competency], 201);
-    }
-
-    /**
-     * PUT /ajax/recipe-competencies/{id}
-     * Aktualizacja kompetencji (AJAX)
-     */
-    public function ajaxUpdate(int $id): JsonResponse
-    {
-        $payload = $this->getJson(\Symfony\Component\HttpFoundation\Request::createFromGlobals());
-
-        $errors = $this->competencyService->validate($payload);
-        if (!empty($errors)) {
-            return $this->json(['ok' => false, 'errors' => $errors], 422);
-        }
-
-        $result = $this->competencyService->update($id, $payload);
-        if ($result === false) {
-            return $this->json(['ok' => false, 'message' => 'Błąd aktualizacji.'], 500);
-        }
-
-        $competency = $this->competencyService->getById($id);
-        return $this->json(['ok' => true, 'competency' => $competency]);
-    }
-
-    /**
-     * DELETE /ajax/recipe-competencies/{id}
-     * Usunięcie kompetencji (AJAX)
-     */
-    public function ajaxDelete(int $id): JsonResponse
-    {
-        $result = $this->competencyService->delete($id);
-        if (!$result) {
-            return $this->json(['ok' => false, 'message' => 'Błąd usunięcia.'], 500);
-        }
-        return $this->json(['ok' => true]);
-    }
 
     /**
      * GET /ajax/recipe-competencies

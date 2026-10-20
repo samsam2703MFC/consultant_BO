@@ -44,7 +44,7 @@ class RecipeCostRecalculationService
                 }
             }
 
-            foreach ($uniqueRecipes as $recipeId) {
+            foreach (array_keys($uniqueRecipes) as $recipeId) {   // identyfikatory są kluczami
                 // Najpierw odśwież spłaszczoną strukturę składników
                 $resFlat = $this->flattenedRecipeService->flatForSingle($recipeId, false);
                 if (!$resFlat) {
@@ -108,7 +108,7 @@ class RecipeCostRecalculationService
                 }
             }
 
-            foreach ($uniqueRecipes as $recipeId) {
+            foreach (array_keys($uniqueRecipes) as $recipeId) {   // identyfikatory są kluczami
                 $rawCost = $this->flattenedRecipeIngredientRepository->getIngredientsCostSumByRecipeId($recipeId);
                 $this->recipeRepository->update(
                     $recipeId, [

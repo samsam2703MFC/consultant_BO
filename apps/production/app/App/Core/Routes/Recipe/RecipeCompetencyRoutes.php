@@ -6,10 +6,8 @@ return function (RouteCollector $r) {
     // -------------------------------------------------------
     // Panel HR – przegląd kompetencji recepturowych
     // -------------------------------------------------------
-    $r->addRoute('GET', '/hr/recipe-competencies', [
-        'controller' => App\Controllers\Web\Recipe\RecipeCompetencyController::class,
-        'method'     => 'overview',
-    ]);
+    // Kompetencje : jedna strona « Kto co potrafi » (dodawanie bez duplikatów, nazwa, opis, usuwanie, poziomy)
+    $r->addRoute('GET', '/hr/recipe-competencies', ['redirect' => '/staff/competencies']);
 
     // -------------------------------------------------------
     // AJAX – CRUD kompetencji
@@ -19,20 +17,8 @@ return function (RouteCollector $r) {
         'method'     => 'ajaxGetAll',
     ]);
 
-    $r->addRoute('POST',   '/ajax/recipe-competencies', [
-        'controller' => App\Controllers\Web\Recipe\RecipeCompetencyController::class,
-        'method'     => 'ajaxCreate',
-    ]);
 
-    $r->addRoute('PUT',    '/ajax/recipe-competencies/{id:\d+}', [
-        'controller' => App\Controllers\Web\Recipe\RecipeCompetencyController::class,
-        'method'     => 'ajaxUpdate',
-    ]);
 
-    $r->addRoute('DELETE', '/ajax/recipe-competencies/{id:\d+}', [
-        'controller' => App\Controllers\Web\Recipe\RecipeCompetencyController::class,
-        'method'     => 'ajaxDelete',
-    ]);
 
     // -------------------------------------------------------
     // AJAX – powiązania receptura <-> kompetencja

@@ -62,15 +62,26 @@ final class StaffRepository extends WorkshopRepository
         return (bool) $this->all('SELECT 1 FROM recipe_competency WHERE id = ?', [$id]);
     }
 
-    public function competencyNameTaken(string $name): bool
+    public function competencyNameTaken(string $name, int $exceptId = 0): bool
     {
-        return (bool) $this->all('SELECT 1 FROM recipe_competency WHERE LOWER(TRIM(name)) = LOWER(?)', [trim($name)]);
+        return (bool) $this->all('SELECT 1 FROM recipe_competency WHERE LOWER(TRIM(name)) = LOWER(?) AND id <> ?', [trim($name), $exceptId]);
     }
 
     public function addCompetency(string $name, string $description): int
     {
         $this->db->prepare('INSERT INTO recipe_competency (name, description) VALUES (?, ?)')->execute([$name, $description]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function renameCompetency(int $id, string $name, string $description): void
+    {
+        $this->db->prepare('UPDATE recipe_competency SET name = ?, description = ? WHERE id = ?')->execute([$name, $description, $id]);
+    }
+
+    /** Usunięcie kompetencji : poziomy pracowników i przypisania do receptur znikają razem z nią (FK CASCADE). */
+    public function deleteCompetency(int $id): void
+    {
+        $this->db->prepare('DELETE FROM recipe_competency WHERE id = ?')->execute([$id]);
     }
 
     /** @return array<int,array<int,int>> pracownik => kompetencja => poziom */

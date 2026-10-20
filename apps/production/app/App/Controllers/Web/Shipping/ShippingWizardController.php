@@ -23,6 +23,7 @@ class ShippingWizardController extends BaseController
         $this->view('shipping/wizard', [
             'dates'         => $dates,
             'carriers'      => $this->wizard->activeCarriers(),
+            'complaint_dates' => $this->wizard->complaintDates(),
             'selected_date' => $selected,
             'requested_date' => $requested,
         ]);
@@ -37,5 +38,16 @@ class ShippingWizardController extends BaseController
         }
 
         return $this->json(['data' => $this->wizard->lastCarrierForCustomer($clientId)]);
+    }
+
+    /** GET /ajax/shipments/planned-vehicles?date=RRRR-MM-DD — pojazdy z « Załadunek dnia » (tylko odczyt). */
+    public function ajaxPlannedVehicles()
+    {
+        $date = (string) ($_GET['date'] ?? '');
+        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        if (!$d || $d->format('Y-m-d') !== $date) {
+            return $this->json(['message' => 'Nieprawidłowa data.'], 400);
+        }
+        return $this->json(['data' => (object) $this->wizard->plannedVehicles($date)]);
     }
 }

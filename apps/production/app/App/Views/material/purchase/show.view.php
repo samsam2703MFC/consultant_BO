@@ -60,11 +60,7 @@
                 <div class="d-flex gap-2">
                     <a href="<?= ROOT ?>/purchases" class="btn btn-outline-secondary btn-sm">← Wróć</a>
 
-                    <?php if (($doc['status'] ?? '') !== 'POSTED'): ?>
-                        <a href="<?= ROOT ?>/purchases/<?= (int)$doc['id'] ?>/edit" class="btn btn-warning btn-sm">
-                            <i class="icon dripicons-document-edit"></i> Edytuj
-                        </a>
-                    <?php endif; ?>
+
                 </div>
             </div>
 

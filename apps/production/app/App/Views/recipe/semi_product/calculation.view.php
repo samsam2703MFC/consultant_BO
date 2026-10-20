@@ -220,22 +220,6 @@
 
 
 
-    function addPreparationStepToTable(btn, input_name){
-        const row = btn.parentNode.parentNode;
-        const textarea = row.querySelectorAll("textarea")[0];
-        const target_body = row.parentNode.parentNode.querySelectorAll("tbody")[0];
-
-        let insertedRow = target_body.insertRow(target_body.rows.length);
-        const cell0 = insertedRow.insertCell(0);
-        const cell1 = insertedRow.insertCell(1);
-        const cell2 = insertedRow.insertCell(2);
-
-        cell0.innerHTML = target_body.rows.length;
-        cell1.innerHTML = `<textarea class="form-control" name="${input_name}[${target_body.rows.length}]">${textarea.value}</textarea>`
-        cell2.innerHTML = `<button class="btn btn-danger" type="button" onclick="removeRow(this)">X</button>`;
-
-        textarea.value = "";
-    }
 
     function removeRow(btn){
         const row = btn.parentNode.parentNode;

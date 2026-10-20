@@ -1,3 +1,8 @@
+<?php
+// Jedna strona kroków dla trzech typów : powrót do listy typu receptury.
+$typeList = [1 => ['/compositions', 'Kompozycje'], 2 => ['/semi-products', 'Półprodukty'], 3 => ['/recipes', 'Receptury produktów']][(int) ($recipe['id_type'] ?? 3)] ?? ['/recipes', 'Receptury'];
+$editBase = [1 => '/compositions', 2 => '/semi-products'][(int) ($recipe['id_type'] ?? 3)] ?? '/recipes';
+?>
 <?php $this->view("page_components/header"); ?>
 
 <div class="page-heading">
@@ -15,7 +20,7 @@
                 <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="<?= ROOT ?>/dashboard">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="<?= ROOT ?>/recipes">Receptury</a></li>
+                        <li class="breadcrumb-item"><a href="<?= ROOT . $typeList[0] ?>"><?= $typeList[1] ?></a></li>
                         <li class="breadcrumb-item active" aria-current="page">
                             <?= $translations['preparation_steps'] ?? 'Kroki przygotowania' ?>
                         </li>
@@ -46,15 +51,15 @@
                     </small>
                 </div>
                 <div class="ms-auto">
-                    <a href="<?= ROOT ?>/recipes/<?= $recipe_id ?>/calculation"
+                    <a href="<?= ROOT . $editBase ?>/<?= $recipe_id ?>/calculation"
                        class="btn btn-sm btn-outline-info me-1">
                         <i class="bi bi-calculator"></i> Kalkulacja
                     </a>
-                    <a href="<?= ROOT ?>/recipes/<?= $recipe_id ?>/edit"
+                    <a href="<?= ROOT . $editBase ?>/<?= $recipe_id ?>/edit"
                        class="btn btn-sm btn-outline-warning me-1">
                         <i class="bi bi-pencil"></i> Edytuj
                     </a>
-                    <a href="<?= ROOT ?>/recipes" class="btn btn-sm btn-outline-secondary">
+                    <a href="<?= ROOT . $typeList[0] ?>" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Lista receptur
                     </a>
                 </div>

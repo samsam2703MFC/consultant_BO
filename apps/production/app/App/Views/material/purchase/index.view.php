@@ -24,10 +24,9 @@
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h4 class="card-title mb-0">Dostawy</h4>
 
-                <div class="d-flex gap-2">
-                    <a href="<?= ROOT ?>/purchases/new" class="btn btn-primary" role="button">
-                        + Nowa dostawa
-                    </a>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="text-muted small">Archiwum (tylko podgląd) — faktury zakupowe są w KSeF.</span>
+                    <a href="<?= ROOT ?>/settings/ksef/purchase-invoices" class="btn btn-primary" role="button">Faktury zakupowe KSeF</a>
                 </div>
             </div>
 
@@ -134,17 +133,7 @@
                                             Podgląd
                                         </a>
 
-                                        <?php if (($r['status'] ?? '') !== 'POSTED'): ?>
-                                            <a href="<?= ROOT ?>/purchases/<?= (int)$r['id'] ?>/edit"
-                                               class="btn btn-warning btn-sm" role="button">
-                                                <i class="icon dripicons-document-edit"></i>
-                                            </a>
 
-                                            <button class="btn btn-danger btn-sm" type="button"
-                                                    onclick="deletePurchase(<?= (int)$r['id'] ?>, this)">
-                                                <i class="icon dripicons-trash"></i>
-                                            </button>
-                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -205,36 +194,4 @@
 <?php $this->view("page_components/footer"); ?>
 
 <script>
-    async function deletePurchase(id, btn) {
-        const confirmResult = await Swal.fire({
-            title: 'Potwierdzenie',
-            text: 'Czy na pewno chcesz usunąć ten dokument? (tylko szkice / niezatwierdzone)',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Tak, usuń',
-            cancelButtonText: 'Anuluj'
-        });
-
-        if (!confirmResult.isConfirmed) return;
-
-        btn.disabled = true;
-
-        try {
-            const res = await api(`/ajax/purchases/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (res && res.ok) {
-                Swal.fire({ icon: 'success', title: 'Usunięto', text: res.message || 'Dokument został usunięty.' })
-                    .then(() => location.reload());
-            } else {
-                btn.disabled = false;
-                Swal.fire({ icon: 'error', title: 'Błąd', text: res?.message || 'Nie udało się usunąć.' });
-            }
-        } catch (e) {
-            btn.disabled = false;
-            console.error(e);
-            Swal.fire({ icon: 'error', title: 'Błąd', text: 'Wystąpił błąd podczas usuwania.' });
-        }
-    }
 </script>

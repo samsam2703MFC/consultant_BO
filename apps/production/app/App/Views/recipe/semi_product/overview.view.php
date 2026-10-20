@@ -18,6 +18,7 @@
         </div>
     </div>
     <section class="section">
+        <?php $recipeTab = 'semi'; require dirname(__DIR__) . '/_tabs.view.php'; ?>
 
         <div class="card">
             <div class="card-header">
@@ -45,6 +46,7 @@
                                                     <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
                                                     <div class="at-more-menu" role="menu" hidden>
                                                         <a role="menuitem" href="<?=ROOT?>/semi-products/<?=$semi_final_recipe['id']?>/edit"><i class="bi bi-pencil"></i>Edytuj</a>
+                                                        <a role="menuitem" href="<?=ROOT?>/recipes/<?=$semi_final_recipe['id']?>/preparation-steps"><i class="bi bi-list-ol"></i>Instrukcja</a>
                                                         <button type="button" role="menuitem"
                                                                 onclick="openCompetencyModal(<?=$semi_final_recipe['id']?>, <?=htmlspecialchars(json_encode($semi_final_recipe['name']))?>)">
                                                             <i class="bi bi-award"></i>Kompetencje
@@ -88,7 +90,7 @@
                 </div>
                 <div id="competencyModalList" class="row g-2 d-none"></div>
                 <div id="competencyModalEmpty" class="text-center text-muted py-3 d-none">
-                    Brak zdefiniowanych kompetencji. <a href="<?=ROOT?>/hr/recipe-competencies">Dodaj kompetencje →</a>
+                    Brak zdefiniowanych kompetencji. <a href="<?=ROOT?>/staff/competencies">Dodaj kompetencje →</a>
                 </div>
             </div>
             <div class="modal-footer">

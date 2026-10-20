@@ -21,6 +21,7 @@
         </div>
     </div>
     <section class="section">
+        <?php $recipeTab = 'product'; require dirname(__DIR__) . '/_tabs.view.php'; ?>
 
         <div class="card">
             <div class="card-header">
@@ -103,7 +104,7 @@
                 </div>
                 <div id="competencyModalList" class="row g-2 d-none"></div>
                 <div id="competencyModalEmpty" class="text-center text-muted py-3 d-none">
-                    Brak zdefiniowanych kompetencji. <a href="<?=ROOT?>/hr/recipe-competencies">Dodaj kompetencje →</a>
+                    Brak zdefiniowanych kompetencji. <a href="<?=ROOT?>/staff/competencies">Dodaj kompetencje →</a>
                 </div>
             </div>
             <div class="modal-footer">
@@ -385,22 +386,6 @@
 
 
 
-    function addPreparationStepToTable(btn, input_name){
-        const row = btn.parentNode.parentNode;
-        const textarea = row.querySelectorAll("textarea")[0];
-        const target_body = row.parentNode.parentNode.querySelectorAll("tbody")[0];
-
-        let insertedRow = target_body.insertRow(target_body.rows.length);
-        const cell0 = insertedRow.insertCell(0);
-        const cell1 = insertedRow.insertCell(1);
-        const cell2 = insertedRow.insertCell(2);
-
-        cell0.innerHTML = target_body.rows.length;
-        cell1.innerHTML = `<textarea class="form-control" name="${input_name}[${target_body.rows.length}]">${textarea.value}</textarea>`
-        cell2.innerHTML = `<button class="btn btn-danger" type="button" onclick="removeRow(this)">X</button>`;
-
-        textarea.value = "";
-    }
 
     function removeRow(btn){
         const row = btn.parentNode.parentNode;

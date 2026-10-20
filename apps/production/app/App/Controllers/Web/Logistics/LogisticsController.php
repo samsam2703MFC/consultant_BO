@@ -49,7 +49,10 @@ class LogisticsController extends BaseController
 
     public function vehicles()
     {
-        $this->view('logistics/vehicles', $this->logistics->vehicles());
+        $data = $this->logistics->vehicles();
+        // « Dodaj pojazd » z listy przewoźnika : przewoźnik wybrany od razu.
+        $data['preselect_carrier'] = (int) ($_GET['carrier'] ?? 0);
+        $this->view('logistics/vehicles', $data);
     }
 
     public function tours()

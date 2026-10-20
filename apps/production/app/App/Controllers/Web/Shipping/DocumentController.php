@@ -34,14 +34,6 @@ class DocumentController extends BaseController
     }
 
 
-    public function showShippingForm()
-    {
-        $data['dates'] = $this->palletDeliveryService->getDistinctDateWithoutDocument();
-        $data['complaint_dates'] = $this->palletDeliveryService->getDistinctDateWithoutDocumentForComplaint();
-        $data['carriers'] = $this->productCarrierRepository->getActive();
-
-        $this->view('shipping/document/shipping_form', $data);
-    }
 
 
 

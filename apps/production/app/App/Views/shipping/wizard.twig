@@ -11,7 +11,7 @@
             </div>
             <span class="d-flex flex-wrap gap-3">
                 <a class="at-link" href="{{ root }}/logistics{{ selected_date ? '?date=' ~ selected_date : '' }}"><i class="bi bi-truck"></i> Załadunek: pojazdy i palety</a>
-                <a class="at-link" href="{{ root }}/shipping-documents/create">Tryb klasyczny: jeden klient <i class="bi bi-arrow-right"></i></a>
+                
             </span>
         </div>
     </div>
@@ -117,6 +117,37 @@
             </div>
         </div>
     </div>
+
+    {# --- Zwroty : WZ + CMR dla zwrotów (dawniej tylko w formularzu klasycznym) ------------ #}
+    <div class="card mt-3" id="swReturns">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h4 class="card-title mb-0"><i class="bi bi-arrow-counterclockwise"></i> Zwroty: WZ + CMR</h4>
+            <a class="at-link" href="{{ root }}/client-complaints/shipping-documents">Dokumenty zwrotów <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="card-body">
+            {% if complaint_dates %}
+                <div class="row g-2 align-items-end">
+                    <div class="col-6 col-lg-2"><label class="form-label small" for="rtDate">Data wysyłki zwrotu</label>
+                        <select class="form-select form-select-sm" id="rtDate"><option value="">Wybierz…</option>
+                            {% for d in complaint_dates %}<option value="{{ d }}">{{ d|day_pl }}</option>{% endfor %}</select></div>
+                    <div class="col-6 col-lg-3"><label class="form-label small" for="rtClient">Klient</label>
+                        <select class="form-select form-select-sm" id="rtClient" disabled><option value="">—</option></select></div>
+                    <div class="col-6 col-lg-2"><label class="form-label small" for="rtCarrier">Przewoźnik</label>
+                        <select class="form-select form-select-sm" id="rtCarrier" data-vehicles="rtVehicle"></select></div>
+                    <div class="col-6 col-lg-1"><label class="form-label small" for="rtVehicle">Pojazd</label>
+                        <select class="form-select form-select-sm" id="rtVehicle" disabled><option value="">—</option></select></div>
+                    <div class="col-6 col-lg-2"><label class="form-label small" for="rtCarrierSec">Przewoźnik dodatkowy</label>
+                        <select class="form-select form-select-sm" id="rtCarrierSec" data-vehicles="rtVehicleSec"></select></div>
+                    <div class="col-6 col-lg-1"><label class="form-label small" for="rtVehicleSec">Pojazd</label>
+                        <select class="form-select form-select-sm" id="rtVehicleSec" disabled><option value="">—</option></select></div>
+                    <div class="col-12 col-lg-1 d-grid"><button type="button" class="btn btn-sm btn-primary" id="rtCreate">Utwórz</button></div>
+                </div>
+                <p class="at-run-msg mt-2 mb-0" id="rtMsg" aria-live="polite">Zwroty czekające na wysyłkę : WZ i CMR bez WDT (bez faktury), PDF pobiera się od razu.</p>
+            {% else %}
+                <p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Brak zwrotów czekających na wysyłkę.</p>
+            {% endif %}
+        </div>
+    </div>
 </section>
 {% endblock %}
 
@@ -131,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const nextBtn = box.querySelector('[data-wizard-next]');
     const hint = document.getElementById('swHint');
 
-    const state = { step: 1, date: box.dataset.selectedDate || '', clients: [], loadedFor: '', running: false };
+    const state = { step: 1, date: box.dataset.selectedDate || '', clients: [], loadedFor: '', running: false, planned: {}, plannedFor: '' };
     const vehicles = {};   // id przewoźnika -> Promise<[{id, regis_num}]>
 
     const ERRORS = {
@@ -300,16 +331,24 @@ document.addEventListener('DOMContentLoaded', function () {
         const list = included();
         if (!list.length) { setHint('Zaznacz co najmniej jednego klienta.', true); return; }
         setHint('Wczytywanie przewoźników…');
+        // Pojazd z « Załadunek dnia » (przydział dnia lub trasa) ma pierwszeństwo przed ostatnim CMR klienta.
+        if (state.plannedFor !== state.date) {
+            const p = await api('/ajax/shipments/planned-vehicles', { data: { date: state.date } });
+            state.planned = p.ok ? (p.data || {}) : {};
+            state.plannedFor = state.date;
+        }
         await Promise.all(list.map(async (c) => {
             if (c.last === undefined) {
                 const r = await api('/ajax/shipments/last-carrier', { data: { client_id: c.id } });
                 c.last = r.ok ? (r.data || null) : null;   // api() rozpakowuje {data: …}
             }
+            c.planned = state.planned[c.id] && carrierName(state.planned[c.id].id_carrier) ? state.planned[c.id] : null;
             if (!c.carrier) {
                 const l = c.last;
+                const p = c.planned;
                 c.carrier = {
-                    id_carrier: l && carrierName(l.id_carrier) ? l.id_carrier : '',
-                    id_vehicle: l ? (l.id_carrier_vehicle || '') : '',
+                    id_carrier: p ? p.id_carrier : (l && carrierName(l.id_carrier) ? l.id_carrier : ''),
+                    id_vehicle: p ? p.id_vehicle : (l ? (l.id_carrier_vehicle || '') : ''),
                     id_carrier_sec: l && l.id_carrier_sec && carrierName(l.id_carrier_sec) ? l.id_carrier_sec : '',
                     id_sec_vehicle: l ? (l.id_carrier_sec_vehicle || '') : ''
                 };
@@ -338,7 +377,9 @@ document.addEventListener('DOMContentLoaded', function () {
             c.carrier.id_vehicle = v1.value;
             c.carrier.id_sec_vehicle = v2.value;
             const l = c.last;
-            const lastTxt = l ? 'Ostatnio: ' + esc(l.carrier_name) + (l.regis_num ? ' · ' + esc(l.regis_num) : '') + ' (' + esc(dayPl(l.established_date)) + ')' : 'Brak wcześniejszego CMR — wybierz przewoźnika.';
+            const p = c.planned;
+            const lastTxt = (p ? 'Załadunek dnia: ' + esc(p.carrier_name) + ' · ' + esc(p.regis_num) + (p.source === 'tour' ? ' (trasa)' : p.source === 'day' ? ' (przydział dnia)' : '') + '<br>' : '') +
+                (l ? 'Ostatnio: ' + esc(l.carrier_name) + (l.regis_num ? ' · ' + esc(l.regis_num) : '') + ' (' + esc(dayPl(l.established_date)) + ')' : (p ? '' : 'Brak wcześniejszego CMR — wybierz przewoźnika.'));
             return '<tr data-carrier-row="' + c.id + '">' +
                 '<td><strong>' + esc(c.company) + '</strong><span class="at-run-msg">' + lastTxt + '</span></td>' +
                 '<td><select class="form-select form-select-sm" data-field="id_carrier" aria-label="Przewoźnik: ' + esc(c.company) + '">' + carrierOptions(c.carrier.id_carrier, 'Wybierz…') + '</select></td>' +
@@ -512,6 +553,51 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('beforeunload', (e) => { if (state.running) { e.preventDefault(); e.returnValue = ''; } });
 
     show(1);
+
+    /* --- Zwroty : WZ + CMR (POST /ajax/complaints, jak w formularzu klasycznym) ------------- */
+    const rt = document.getElementById('rtDate');
+    if (rt) {
+        const $ = (id) => document.getElementById(id);
+        const msg = (t, err) => { $('rtMsg').textContent = t; $('rtMsg').classList.toggle('text-danger', !!err); };
+        $('rtCarrier').innerHTML = carrierOptions('', 'Wybierz…');
+        $('rtCarrierSec').innerHTML = carrierOptions('', '— brak —');
+        rt.addEventListener('change', async () => {
+            const sel = $('rtClient');
+            sel.disabled = true;
+            sel.innerHTML = '<option value="">—</option>';
+            if (!rt.value) return;
+            const r = await api('/ajax/complaints/clients', { data: { date: rt.value } });
+            const list = r.ok && Array.isArray(r.data) ? r.data : [];
+            sel.innerHTML = list.map((c) => '<option value="' + c.id_customer + '">' + esc(c.company) + '</option>').join('') || '<option value="">Brak klientów</option>';
+            sel.disabled = !list.length;
+        });
+        ['rtCarrier', 'rtCarrierSec'].forEach((id) => $(id).addEventListener('change', async (e) => {
+            const target = $(e.target.dataset.vehicles);
+            const v = await vehicleOptions(e.target.value ? +e.target.value : '', '');
+            target.innerHTML = v.html;
+            target.disabled = !e.target.value;
+        }));
+        $('rtCreate').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            if (!rt.value || !$('rtClient').value) { msg('Wybierz datę i klienta zwrotu.', true); return; }
+            if (!$('rtCarrier').value || !$('rtVehicle').value) { msg('Wybierz przewoźnika i pojazd.', true); return; }
+            btn.disabled = true;
+            msg('Tworzenie WZ i CMR zwrotu…');
+            const r = await api('/ajax/complaints', { method: 'POST', data: {
+                shipping_date: rt.value, id_customer: $('rtClient').value,
+                id_carrier: $('rtCarrier').value, id_carrier_vehicle: $('rtVehicle').value,
+                id_carrier_sec: $('rtCarrierSec').value || '-1', id_carrier_sec_vehicle: $('rtCarrierSec').value ? $('rtVehicleSec').value : ''
+            } });
+            if (r.ok && r.id) {
+                msg('Dokumenty zwrotu utworzone (#' + r.id + '), pobieranie PDF…');
+                await downloadPDF('/ajax/complaints/' + r.id + '/documents/grouped');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                msg('Nie udało się: ' + explain(r), true);
+                btn.disabled = false;
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

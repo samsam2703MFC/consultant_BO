@@ -110,7 +110,7 @@ class TodayService
         if ($readyPallets) {
             $items[] = ['tone' => 'warning', 'icon' => 'bi-truck', 'count' => $readyPallets,
                 'one' => 'wysyłka gotowa do wystawienia dokumentów', 'few' => 'wysyłki gotowe do wystawienia dokumentów', 'many' => 'wysyłek gotowych do wystawienia dokumentów',
-                'url' => '/shipping-documents/create', 'positions' => ['LOGISTYKA']];
+                'url' => '/shipping/wizard', 'positions' => ['LOGISTYKA']];
         }
         if ((int) ($proformas['missing'] ?? 0)) {
             $items[] = ['tone' => 'warning', 'icon' => 'bi-file-earmark-plus', 'count' => (int) $proformas['missing'],

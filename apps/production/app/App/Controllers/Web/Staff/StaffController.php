@@ -82,6 +82,26 @@ class StaffController extends BaseController
         }
     }
 
+    public function renameCompetency($id)
+    {
+        try {
+            $competency = $this->competencies->renameCompetency((int) $id, $this->getJson(Request::createFromGlobals()));
+            return $this->json(['message' => 'Zapisano kompetencję.', 'data' => $competency]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function deleteCompetency($id)
+    {
+        try {
+            $this->competencies->deleteCompetency((int) $id);
+            return $this->json(['message' => 'Usunięto kompetencję.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     private function userId(): ?int
     {
         $id = user('id');

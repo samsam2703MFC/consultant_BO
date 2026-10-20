@@ -66,7 +66,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="at-profit-note">Receptury w zasięgu = receptury aktywnych produktów działu, których wszystkie wymagane kompetencje ma co najmniej jedna samodzielna osoba działu. Liczba przy kompetencji: osoby samodzielne (+ w szkoleniu). Kompetencje receptur: <a href="{{ root }}/hr/recipe-competencies">kompetencje recepturowe</a> i karta receptury.</p>
+            <p class="at-profit-note">Receptury w zasięgu = receptury aktywnych produktów działu, których wszystkie wymagane kompetencje ma co najmniej jedna samodzielna osoba działu. Liczba przy kompetencji: osoby samodzielne (+ w szkoleniu). Kompetencje receptur: lista <a href="{{ root }}/recipes">receptur</a> → « Kompetencje ».</p>
             {% else %}
                 <p class="at-empty">{{ competencies ? 'Brak pracowników produkcji.' : 'Brak kompetencji — dodaj pierwszą poniżej.' }}</p>
             {% endif %}
@@ -88,6 +88,29 @@
                 <input class="form-control form-control-sm" name="description" placeholder="Opis (opcjonalnie)" aria-label="Opis">
                 <button class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Dodaj kompetencję</button>
             </form>
+            {% if competencies %}
+            {# Dawna strona « Kompetencje recepturowe » : zmiana nazwy, opis, usunięcie — tutaj, bez duplikatów nazw. #}
+            <details class="at-skill-manage mb-3">
+                <summary>Zmień nazwę, opis albo usuń kompetencję ({{ competencies|length }})</summary>
+                <table class="table table-sm align-middle mb-0 mt-2" id="manageCompetencies">
+                    <thead><tr><th>Nazwa</th><th>Opis</th><th class="text-end">Receptury</th><th></th></tr></thead>
+                    <tbody>
+                    {% for c in competencies %}
+                        <tr data-competency-row="{{ c.id }}" data-recipes="{{ c.recipes }}">
+                            <td><input class="form-control form-control-sm" name="name" value="{{ c.name }}" maxlength="255" aria-label="Nazwa kompetencji"></td>
+                            <td><input class="form-control form-control-sm" name="description" value="{{ c.description }}" aria-label="Opis kompetencji"></td>
+                            <td class="text-end">{{ c.recipes }}</td>
+                            <td class="text-end text-nowrap">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-save>Zapisz</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-delete aria-label="Usuń kompetencję {{ c.name }}"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <p class="at-profit-note mb-0">Przypisanie kompetencji do receptur : lista receptur → « Kompetencje ». Usunięcie kompetencji usuwa też poziomy pracowników i przypisania do receptur.</p>
+            </details>
+            {% endif %}
             {% if competencies and sections %}
             <div class="table-responsive">
                 <table class="table table-sm mb-0 at-skill-matrix">
@@ -137,6 +160,23 @@
 (() => {
     const labels = {{ levels|json_encode|raw }};
     at.bindForm(document.getElementById('addCompetency'), '/ajax/staff/competencies');
+
+    const manage = document.getElementById('manageCompetencies');
+    if (manage) manage.addEventListener('click', (e) => {
+        const row = e.target.closest('[data-competency-row]');
+        if (!row) return;
+        const id = row.dataset.competencyRow;
+        if (e.target.closest('[data-save]')) {
+            at.send(`/ajax/staff/competencies/${id}`, 'PATCH', {
+                name: row.querySelector('[name=name]').value, description: row.querySelector('[name=description]').value
+            }).then(res => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano.' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 600); });
+        } else if (e.target.closest('[data-delete]')) {
+            const name = row.querySelector('[name=name]').value;
+            const recipes = Number(row.dataset.recipes || 0);
+            if (!confirm(`Usunąć kompetencję « ${name} »?` + (recipes ? ` Jest przypisana do ${recipes} receptur.` : '') + ' Poziomy pracowników też znikną.')) return;
+            at.send(`/ajax/staff/competencies/${id}`, 'DELETE').then(res => { at.notify(res.ok, res.message || (res.ok ? 'Usunięto.' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 600); });
+        }
+    });
 
     document.querySelectorAll('tr[data-employee]').forEach(row => row.addEventListener('click', (e) => {
         const button = e.target.closest('[data-competency]');

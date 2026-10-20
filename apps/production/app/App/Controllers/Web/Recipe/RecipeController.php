@@ -132,7 +132,7 @@ class RecipeController extends BaseController
             }, default: false);
 
             if ($success) {
-                header('Location: ' . ROOT . '/compositions');
+                header('Location: ' . ROOT . '/recipes');
                 exit;
             }
         }

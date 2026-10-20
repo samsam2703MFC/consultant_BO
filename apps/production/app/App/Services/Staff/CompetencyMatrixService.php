@@ -111,4 +111,22 @@ final class CompetencyMatrixService
         if ($this->staff->competencyNameTaken($name)) throw new CustomException('Taka kompetencja już istnieje.', 'errors', 422);
         return ['id' => $this->staff->addCompetency($name, $description), 'name' => $name];
     }
+
+    /** Zmiana nazwy / opisu (dawniej strona « Kompetencje recepturowe ») : bez duplikatów nazw. */
+    public function renameCompetency(int $id, array $input): array
+    {
+        if (!$this->staff->competencyExists($id)) throw new CustomException('Nie znaleziono kompetencji.', 'errors', 404);
+        $name = trim((string) ($input['name'] ?? ''));
+        $description = trim((string) ($input['description'] ?? ''));
+        if ($name === '' || mb_strlen($name) > 255) throw new CustomException('Nazwa kompetencji jest wymagana (do 255 znaków).', 'errors', 422);
+        if ($this->staff->competencyNameTaken($name, $id)) throw new CustomException('Taka kompetencja już istnieje.', 'errors', 422);
+        $this->staff->renameCompetency($id, $name, $description);
+        return ['id' => $id, 'name' => $name];
+    }
+
+    public function deleteCompetency(int $id): void
+    {
+        if (!$this->staff->competencyExists($id)) throw new CustomException('Nie znaleziono kompetencji.', 'errors', 404);
+        $this->staff->deleteCompetency($id);
+    }
 }

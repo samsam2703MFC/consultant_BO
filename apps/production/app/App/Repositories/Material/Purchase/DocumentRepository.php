@@ -143,4 +143,11 @@ class DocumentRepository extends BaseRepository
         $res = $this->query($sql, ['id' => $id]);
         return count($res) > 0 ? $res[0] : null;
     }
+
+    /** Liczba dawnych dostaw wpisanych ręcznie (archiwum obok faktur KSeF). */
+    public function countAll(): int
+    {
+        $rows = $this->query('SELECT COUNT(*) AS n FROM purchase_document');
+        return (int) ($rows[0]['n'] ?? 0);
+    }
 }

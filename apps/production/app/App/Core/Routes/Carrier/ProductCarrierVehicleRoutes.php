@@ -8,15 +8,8 @@ return function(RouteCollector $r) {
         'method'     => 'overview'
     ]);
 
-    $r->addRoute('GET', '/product-carriers/{idCarrier:\d+}/vehicles/new', [
-        'controller' => App\Controllers\Web\Carrier\ProductCarrierVehicleController::class,
-        'method'     => 'newVehicle'
-    ]);
-
-    $r->addRoute('POST', '/product-carriers/{idCarrier:\d+}/vehicles/new', [
-        'controller' => App\Controllers\Web\Carrier\ProductCarrierVehicleController::class,
-        'method'     => 'newVehicle'
-    ]);
+    // Nowy pojazd : jeden formularz (Logistyka → Pojazdy i pojemność), przewoźnik wybrany z adresu
+    $r->addRoute('GET', '/product-carriers/{idCarrier:\d+}/vehicles/new', ['redirect' => '/logistics/vehicles?carrier={idCarrier}']);
 
     $r->addRoute('GET', '/product-carrier-vehicles/{id:\d+}/edit', [
         'controller' => App\Controllers\Web\Carrier\ProductCarrierVehicleController::class,

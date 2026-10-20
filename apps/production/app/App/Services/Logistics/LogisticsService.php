@@ -559,8 +559,11 @@ final class LogisticsService
         if (!$this->repo->carrierExists($carrierId)) throw new CustomException('Wybierz przewoźnika.', 'errors', 422);
         $regis = trim((string) ($input['regis_num'] ?? ''));
         if ($regis === '' || mb_strlen($regis) > 60) throw new CustomException('Podaj numer rejestracyjny.', 'errors', 422);
+        $email = trim((string) ($input['driver_email'] ?? ''));
+        if ($email !== '' && (mb_strlen($email) > 120 || !filter_var($email, FILTER_VALIDATE_EMAIL))) throw new CustomException('Nieprawidłowy e-mail kierowcy.', 'errors', 422);
         $data = $this->vehicleData($input + ['active' => true], $userId, true);
-        $id = $this->repo->addVehicle($carrierId, $regis, trim((string) ($input['driver_name'] ?? '')), trim((string) ($input['driver_surname'] ?? '')), trim((string) ($input['driver_phone'] ?? '')));
+        // Jeden formularz nowego pojazdu (dawniej też Przewoźnicy → Pojazdy) : tożsamość w carrier_vehicle, pojemność w tfb_vehicle.
+        $id = $this->repo->addVehicle($carrierId, $regis, trim((string) ($input['driver_name'] ?? '')), trim((string) ($input['driver_surname'] ?? '')), trim((string) ($input['driver_phone'] ?? '')), $email);
         $this->repo->saveVehicle($id, $data);
         return $id;
     }

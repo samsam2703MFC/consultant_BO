@@ -18,6 +18,7 @@
         </div>
     </div>
     <section class="section">
+        <?php $recipeTab = 'composition'; require dirname(__DIR__) . '/_tabs.view.php'; ?>
 
         <div class="card">
             <div class="card-header">
@@ -47,7 +48,7 @@
                                                     <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
                                                     <div class="at-more-menu" role="menu" hidden>
                                                         <a role="menuitem" href="<?= ROOT ?>/compositions/<?= $composition['id'] ?>/edit"><i class="bi bi-pencil"></i>Edytuj</a>
-                                                        <a role="menuitem" href="<?= ROOT ?>/compositions/<?= $composition['id'] ?>/preparation-steps"><i class="bi bi-list-ol"></i><?= esc($translations['instruction'] ?? 'Instrukcja') ?></a>
+                                                        <a role="menuitem" href="<?= ROOT ?>/recipes/<?= $composition['id'] ?>/preparation-steps"><i class="bi bi-list-ol"></i><?= esc($translations['instruction'] ?? 'Instrukcja') ?></a>
                                                         <?php if (!empty($composition['has_elements'])): ?>
                                                             <button type="button" role="menuitem" class="composition-card-btn" data-id-recipe="<?= $composition['id'] ?>"><i class="bi bi-file-earmark-arrow-down"></i>Karta (PDF)</button>
                                                         <?php else: ?>

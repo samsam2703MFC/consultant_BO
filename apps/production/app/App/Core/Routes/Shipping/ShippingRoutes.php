@@ -3,15 +3,18 @@ use FastRoute\RouteCollector;
 
 return function(RouteCollector $r) {
 
-    $r->addRoute('GET', '/shipping-documents/create', [
-        'controller' => App\Controllers\Web\Shipping\DocumentController::class,
-        'method' => 'showShippingForm'
-    ]);
+    // Dawny formularz « WZ + CMR » (jeden klient, zwroty) : kreator robi to samo, zwroty w osobnej karcie
+    $r->addRoute('GET', '/shipping-documents/create', ['redirect' => '/shipping/wizard']);
 
     // Kreator „Wyślij dzień” (dokumenty tworzy POST /ajax/shipments poniżej)
     $r->addRoute('GET', '/shipping/wizard', [
         'controller' => App\Controllers\Web\Shipping\ShippingWizardController::class,
         'method' => 'index'
+    ]);
+
+    $r->addRoute('GET', '/ajax/shipments/planned-vehicles', [
+        'controller' => App\Controllers\Web\Shipping\ShippingWizardController::class,
+        'method'     => 'ajaxPlannedVehicles'
     ]);
 
     $r->addRoute('GET', '/ajax/shipments/last-carrier', [

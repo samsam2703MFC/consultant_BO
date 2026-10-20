@@ -24,7 +24,7 @@
                 <label>Przewoźnik
                     <select class="form-select" name="carrier_id" required>
                         <option value="">— wybierz —</option>
-                        {% for c in carriers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+                        {% for c in carriers %}<option value="{{ c.id }}" {{ preselect_carrier == c.id ? 'selected' : '' }}>{{ c.name }}</option>{% endfor %}
                     </select>
                 </label>
                 <label>Nr rejestracyjny<input class="form-control" name="regis_num" maxlength="60" required placeholder="DX 02760"></label>
@@ -34,6 +34,7 @@
                 <label>Kierowca<input class="form-control" name="driver_name" placeholder="Imię"></label>
                 <label>&nbsp;<input class="form-control" name="driver_surname" placeholder="Nazwisko" aria-label="Nazwisko kierowcy"></label>
                 <label>Telefon<input class="form-control" name="driver_phone" inputmode="tel"></label>
+                <label>E-mail<input class="form-control" type="email" name="driver_email" maxlength="120" data-nullable></label>
                 <div class="at-logi-add-actions"><button class="btn btn-primary"><i class="bi bi-plus"></i> Dodaj pojazd</button></div>
             </form>
             <p class="at-profit-note">Pojazd trafia do przewoźnika w ERP (Wysyłka → Przewoźnicy), z kierowcą jak w CMR.</p>

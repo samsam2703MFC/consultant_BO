@@ -8,7 +8,7 @@ $root = rtrim(ROOT, '/');
 <div class="page-heading">
     <div class="page-title">
         <h3>Faktury zakupowe KSeF</h3>
-        <p class="text-subtitle text-muted">Dokumenty są pobierane na żywo z KSeF i nie są zapisywane w aplikacji.</p>
+        <p class="text-subtitle text-muted">Dokumenty są pobierane na żywo z KSeF i nie są zapisywane w aplikacji.<?php if (!empty($manual_purchases)): ?> Dawne dostawy wpisane ręcznie : <a href="<?= ROOT ?>/purchases">archiwum (<?= (int) $manual_purchases ?>)</a>.<?php endif; ?></p>
     </div>
 
     <section class="section">

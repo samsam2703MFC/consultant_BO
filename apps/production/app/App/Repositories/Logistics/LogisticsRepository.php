@@ -41,10 +41,10 @@ final class LogisticsRepository extends WorkshopRepository
         return (bool) $this->all('SELECT 1 FROM carrier WHERE id = ? AND active = 1', [$id]);
     }
 
-    public function addVehicle(int $carrierId, string $regis, string $driverName, string $driverSurname, string $driverPhone): int
+    public function addVehicle(int $carrierId, string $regis, string $driverName, string $driverSurname, string $driverPhone, string $driverEmail = ''): int
     {
-        $this->db->prepare('INSERT INTO carrier_vehicle (id_carrier, regis_num, driver_name, driver_surname, driver_phone, driver_email) VALUES (?, ?, ?, ?, ?, "")')
-            ->execute([$carrierId, $regis, $driverName, $driverSurname, $driverPhone]);
+        $this->db->prepare('INSERT INTO carrier_vehicle (id_carrier, regis_num, driver_name, driver_surname, driver_phone, driver_email) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$carrierId, $regis, $driverName, $driverSurname, $driverPhone, $driverEmail]);
         return (int) $this->db->lastInsertId();
     }
 

@@ -61,7 +61,8 @@ class MaterialPriceService
             if ($data['package_size_in_base_unit'] == 0) {
                 $data['price_per_unit'] = 0;
             } else {
-                $data['price_per_unit'] = number_format($data['pack_price'] / $data['package_size_in_base_unit'], 5);
+                // round, nie number_format : od 1000 number_format wstawia przecinek tysięcy do wartości liczbowej
+                $data['price_per_unit'] = round((float) $data['pack_price'] / (float) $data['package_size_in_base_unit'], 5);
             }
 
             $log_data['id_supplier'] = $data['id_current_supplier'];
