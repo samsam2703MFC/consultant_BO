@@ -52,7 +52,8 @@
     }
 
     function header() {
-        return `<div class="tfb-head"><div><h3>${esc(t('title'))}</h3><p class="text-muted mb-0">${esc(t('subtitle'))}</p></div>
+        const isWeek = state.view === 'week';
+        return `<div class="tfb-head"><div><h3>${esc(t(isWeek ? 'week.page_title' : 'title'))}</h3><p class="text-muted mb-0">${esc(t(isWeek ? 'week.page_subtitle' : 'subtitle'))}</p></div>
             <div class="tfb-head-actions"><a class="btn btn-outline-primary btn-sm" href="${esc(api.root)}/workshop/planning">${esc(t('plans'))}</a>
             <button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>`;
     }
@@ -308,13 +309,16 @@
                 <div><h4 class="mb-0">${esc(t('week.title', {week: w.iso_week, from: dayLabel(w.days[0].date).replace(/^\S+\s/, ''), to: dayLabel(w.days[w.days.length - 1].date).replace(/^\S+\s/, '')}))}</h4>
                     <p class="text-muted mb-0 small">${esc(source)}</p></div>
                 <div class="tfb-head-actions">
-                    ${w.can_move ? `<button type="button" class="btn btn-primary btn-sm" data-distribute ${tot.unassigned ? '' : 'disabled'}><i class="bi bi-magic"></i> ${esc(t('week.distribute'))}</button>
+                    ${w.can_move ? `<button type="button" class="btn btn-primary btn-sm" data-distribute ${tot.unassigned ? '' : 'disabled'} title="${esc(t('week.arrange_help', {days: stockDays(w)}))}"><i class="bi bi-magic"></i> ${esc(t('week.distribute'))}</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-redistribute>${esc(t('week.redistribute'))}</button>` : ''}
                     ${w.can_schedule && w.source.type === 'plan' ? `<button type="button" class="btn btn-outline-primary btn-sm" data-schedule title="${esc(t('week.schedule_hint'))}"><i class="bi bi-diagram-3"></i> ${esc(t('week.schedule'))}</button>` : ''}
                 </div>
             </div>
             <div class="tfb-week-kpis">
-                <div class="tfb-week-kpi"><span>${esc(t('week.kpi_hours'))}</span><strong>${hrs(tot.hours)}</strong><small>${esc(t('week.kpi_hours_sub', {count: tot.products}))}</small></div>
+                <div class="tfb-week-kpi is-direct"><span>🚚 ${esc(t('week.kpi_direct'))}</span><strong>${fmt(tot.direct_cartons, 0)} ${esc(t('week.cart'))}</strong>
+                    <small>${esc(t('week.kpi_split_sub', {hours: fmt(tot.direct_h, 1), count: tot.direct_products}))}</small></div>
+                <div class="tfb-week-kpi is-stock"><span>📦 ${esc(t('week.kpi_stock', {days: stockDays(w)}))}</span><strong>${fmt(tot.stock_cartons, 0)} ${esc(t('week.cart'))}</strong>
+                    <small>${esc(t('week.kpi_split_sub', {hours: fmt(tot.stock_h, 1), count: tot.stock_products}))}</small></div>
                 <div class="tfb-week-kpi"><span>${esc(t('week.kpi_available'))}</span><strong>${hrs(tot.available_h)}</strong><small>${esc(t('week.kpi_available_sub', {days: w.days.length}))}</small></div>
                 <div class="tfb-week-kpi ${tot.load_pct > 100 ? 'is-bad' : ''}"><span>${esc(t('week.kpi_load'))}</span><strong>${tot.load_pct === null ? '—' : fmt(tot.load_pct, 0) + ' %'}</strong>
                     <small>${worst ? esc(t('week.kpi_load_sub', {group: worst.name || t('week.no_group'), pct: fmt(worst.load_pct, 0)})) : ''}</small></div>
@@ -334,18 +338,25 @@
                     </ul>
                 </div>
                 <div class="tfb-week-scroll">${board(w)}</div>
-                <p class="text-muted small mb-0 mt-2">${esc(t(w.can_move ? 'week.help_move' : 'week.help_read'))}</p>
+                <p class="small mb-1 mt-2"><strong>${esc(t('week.rule', {days: stockDays(w)}))}</strong></p>
+                <p class="text-muted small mb-0">${esc(t(w.can_move ? 'week.help_move' : 'week.help_read'))}</p>
             </div></div>
             ${productTable(w)}`;
         bindWeek(root);
+    }
+
+    // Dni magazynowe tygodnia (np. « śr, czw, pt ») do opisów.
+    function stockDays(w) {
+        return w.days.filter(d => d.stock_day).map(d => dayLabel(d.date).split(',')[0].split(' ')[0]).join(', ') || '—';
     }
 
     function board(w) {
         const shown = w.groups.filter(g => !state.group || g.id === state.group);
         if (!shown.length) return `<p class="text-muted mb-0">${esc(t('week.empty'))}</p>`;
         const head = `<div class="tfb-week-row is-head" style="--days:${w.days.length}"><div class="tfb-week-label">${esc(t('week.group_hours'))}</div>
-            ${w.days.map(d => `<div class="tfb-week-dayhead ${d.today ? 'is-today' : ''} ${d.past ? 'is-past' : ''}">
-                <a href="#from=${d.date}&view=day" data-day-view="${d.date}">${esc(dayLabel(d.date))}</a>${d.today ? ` <span>${esc(t('week.today'))}</span>` : ''}</div>`).join('')}</div>`;
+            ${w.days.map(d => `<div class="tfb-week-dayhead ${d.today ? 'is-today' : ''} ${d.past ? 'is-past' : ''} ${d.stock_day ? 'is-stock-day' : ''}">
+                <a href="#from=${d.date}&view=day" data-day-view="${d.date}">${esc(dayLabel(d.date))}</a>${d.today ? ` <span>${esc(t('week.today'))}</span>` : ''}
+                <div class="tfb-week-daykind">${d.stock_day ? '🚚📦 ' + esc(t('week.day_stock')) : '🚚 ' + esc(t('week.day_direct'))}</div></div>`).join('')}</div>`;
         return head + shown.map(g => {
             const products = w.products.filter(p => (p.group_id ?? null) === (g.id ?? null));
             const waiting = products.filter(p => p.unassigned_qty > 0);
@@ -383,12 +394,15 @@
         const width = Math.min(100, Math.max(0, s.hours / scale * 100));
         const done = s.hours > 0 ? Math.min(100, s.done_h / s.hours * 100) : (p.state === 'done' ? 100 : 0);
         const finished = done >= 99.9;
-        const title = [p.name, qtyText(p, s.quantity), hrs(s.hours), t('week.mode.' + (p.item_type === 'semi' ? 'semi' : p.mode)),
+        const kind = s.direct_qty > 0 && s.stock_qty > 0 ? 'is-mixed' : (s.stock_qty > 0 ? 'is-stock' : 'is-direct');
+        const icon = kind === 'is-mixed' ? '🚚📦' : (kind === 'is-stock' ? '📦' : '🚚');
+        const title = [p.name, qtyText(p, s.quantity), hrs(s.hours),
+            s.direct_qty > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(p, s.direct_qty)}) : null, s.stock_qty > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(p, s.stock_qty)}) : null,
             p.due_date ? t('week.due') + ' ' + dayLabel(p.due_date) : null, s.late ? t('week.late') : null, s.behind ? t('week.behind') : null,
             done > 0 ? t('week.done_part', {pct: fmt(done, 0)}) : null].filter(Boolean).join(' · ');
-        return `<button type="button" class="tfb-week-block ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''}"
+        return `<button type="button" class="tfb-week-block ${kind} ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''}"
             style="--group-color:${esc(color)};--share:${width.toFixed(2)}%" data-item="${p.item_id}" data-from="${s.day}" title="${esc(title)}" aria-label="${esc(title)}">
-            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}${esc(p.name)}</span><span class="tfb-week-block-h">${fmt(s.hours, 1)} h</span>
+            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : ''}${fmt(s.hours, 1)} h</span>
             ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>`;
     }
 
@@ -398,13 +412,14 @@
         const groupName = (id) => (w.groups.find(g => g.id === id) || {}).name || t('week.no_group');
         let last;
         const body = rows.map(p => {
-            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="6">${esc(groupName(p.group_id))}</th></tr>` : '';
+            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="7">${esc(groupName(p.group_id))}</th></tr>` : '';
             last = p.group_id;
             const days = p.slots.map(s => `<span class="${s.late ? 'text-danger' : ''}">${esc(dayLabel(s.day).split(',')[0].replace('.', ''))}</span>`).join(', ');
             return sep + `<tr data-item-row="${p.item_id}">
                 <td><button type="button" class="btn btn-link p-0 text-start" data-open-item="${p.item_id}">${esc(p.name)}</button></td>
-                <td>${esc(t('week.mode.' + (p.item_type === 'semi' ? 'semi' : p.mode)))}${p.due_date ? `<div class="text-muted small">${esc(t('week.due'))} ${esc(dayLabel(p.due_date))}</div>` : ''}</td>
-                <td class="text-end">${esc(qtyText(p, p.quantity))}</td>
+                <td class="text-end">${p.direct > 0 ? `<strong>🚚 ${esc(qtyText(p, p.direct))}</strong>${p.direct_parts.map(d => `<div class="text-muted small">${esc(t('week.truck', {day: dayLabel(d.due_date)}))}${p.direct_parts.length > 1 ? ' · ' + esc(qtyText(p, d.quantity)) : ''}</div>`).join('')}` : '—'}</td>
+                <td class="text-end">${p.stock > 0 ? `<strong>📦 ${esc(qtyText(p, p.stock))}</strong>` : '—'}</td>
+                <td class="text-end">${esc(qtyText(p, p.quantity))}${p.item_type === 'semi' ? `<div class="text-muted small">${esc(t('week.mode.semi'))}</div>` : ''}</td>
                 <td class="text-end">${hrs(p.hours)}</td>
                 <td>${days || ''}${p.unassigned_qty > 0 ? `<div class="text-warning small">${esc(t('week.waiting', {qty: qtyText(p, p.unassigned_qty)}))}</div>` : ''}</td>
                 <td class="tfb-week-progress"><span class="tfb-week-progress-bar"><span style="width:${p.done_pct ?? 0}%"></span></span>
@@ -413,7 +428,7 @@
         return `<div class="card"><div class="card-body">
             <h5>${esc(t('week.table_title'))}</h5>
             <div class="table-responsive"><table class="table table-sm mb-0 tfb-week-table">
-                <thead><tr><th>${esc(t('week.col_product'))}</th><th>${esc(t('week.col_mode'))}</th><th class="text-end">${esc(t('week.col_qty'))}</th><th class="text-end">${esc(t('week.col_hours'))}</th><th>${esc(t('week.col_days'))}</th><th>${esc(t('week.col_done'))}</th></tr></thead>
+                <thead><tr><th>${esc(t('week.col_product'))}</th><th class="text-end">${esc(t('week.col_direct'))}</th><th class="text-end">${esc(t('week.col_stock'))}</th><th class="text-end">${esc(t('week.col_qty'))}</th><th class="text-end">${esc(t('week.col_hours'))}</th><th>${esc(t('week.col_days'))}</th><th>${esc(t('week.col_done'))}</th></tr></thead>
                 <tbody>${body}</tbody></table></div>
             <p class="text-muted small mb-0 mt-2">${esc(t('week.table_note'))}</p></div></div>`;
     }

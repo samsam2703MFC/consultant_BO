@@ -1380,3 +1380,15 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-stock-cat .card-header h5 { font-size: 16px; }
 .tfb-stock-table tr.tfb-stock-mts td:first-child { box-shadow: inset 3px 0 0 var(--bs-success, #2E7D4F); }
 .tfb-stock-table input[data-stock] { min-width: 80px; }
+
+/* Tydzień produkcji : wysyłka (najpierw) / magazyn (dni magazynowe) */
+.tfb-week-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.tfb-week-kpi.is-direct { border-left: 4px solid var(--at-primary, #8D1D2C); }
+.tfb-week-kpi.is-stock { border-left: 4px dashed #2E7D4F; }
+.tfb-week-daykind { font-weight: 400; font-size: 11px; color: var(--at-muted); }
+.tfb-week-dayhead.is-stock-day { background: color-mix(in srgb, #2E7D4F 8%, transparent); border-radius: 6px 6px 0 0; }
+.tfb-week-block.is-direct { box-shadow: inset 3px 0 0 var(--group-color); }
+.tfb-week-block.is-stock { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--group-color) 14%, white) 0 6px, color-mix(in srgb, var(--group-color) 24%, white) 6px 12px); box-shadow: inset 3px 0 0 #2E7D4F; }
+.tfb-week-block.is-mixed { box-shadow: inset 3px 0 0 var(--group-color), inset -3px 0 0 #2E7D4F; }
+.tfb-week-block.is-late, .tfb-week-block.is-behind { box-shadow: inset 0 0 0 2px var(--at-danger); }
+.tfb-week-block-icon { font-size: 10px; }

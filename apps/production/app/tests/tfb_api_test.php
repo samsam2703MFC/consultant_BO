@@ -924,6 +924,20 @@ if ($slotDay < $sunday) {
 [$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
 $rp = array_column($r['data']['products'], null, 'item_id');
 check($s === 200 && $rp[$itemId]['unassigned_qty'] == 0 && $rp[$itemId]['slots'][0]['day'] === $slotDay, 'distribute again from scratch');
+// Najpierw wysyłka (zamówienia, przed wyjazdem), magazyn tylko w dni magazynowe : tu tylko niedziela tego tygodnia.
+$call('PATCH', '/referentiels/params/week.stock_days', ['value' => '7'], $access);
+[$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
+$stockP = array_values(array_filter($r['data']['products'] ?? [], fn($p) => $p['stock'] > 0 && $p['direct'] == 0));
+$directP = array_values(array_filter($r['data']['products'] ?? [], fn($p) => $p['direct'] > 0));
+$stockDay = array_values(array_filter($r['data']['days'], fn($d) => $d['stock_day']));
+check($s === 200 && count($stockDay) === 1 && $stockDay[0]['date'] === $sunday && $stockP && $directP
+    && array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($sl) => $sl['day'] !== $sunday)), $stockP)) === 0
+    && array_sum(array_map(fn($p) => $p['stock_qty'] ?? array_sum(array_column($p['slots'], 'stock_qty')), $stockP)) == array_sum(array_column($stockP, 'stock')),
+    'stock products only on stock days');
+check(array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($sl) => $sl['direct_qty'] > 0 && $sl['day'] > $p['latest_day'])), $directP)) === 0
+    && $r['data']['totals']['direct_h'] > 0 && abs($r['data']['totals']['direct_h'] + $r['data']['totals']['stock_h'] - $r['data']['totals']['hours']) < 0.05,
+    'shipping first: orders never after the truck day; hours split shipping / stock');
+$call('PATCH', '/referentiels/params/week.stock_days', ['value' => '3,4,5'], $access);
 
 // Pracownik dodany w ERP : obsada zmiany dziennej grupy działu nadąża (osoby × 40 h w Gantcie tygodnia).
 $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");

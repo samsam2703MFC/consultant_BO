@@ -185,15 +185,16 @@ final class OpenApiPlanning
             'Week' => ['type' => 'object', 'properties' => [
                 'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int,
                 'today' => ['type' => 'string', 'format' => 'date'], 'now' => ['type' => 'string'],
-                'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => ['type' => 'string', 'format' => 'date'], 'weekday' => $int, 'past' => ['type' => 'boolean'], 'today' => ['type' => 'boolean']]]],
+                'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => ['type' => 'string', 'format' => 'date'], 'weekday' => $int, 'past' => ['type' => 'boolean'], 'today' => ['type' => 'boolean'],
+                    'stock_day' => ['type' => 'boolean', 'description' => 'jour de production pour le stock (week.stock_days)']]]],
                 'source' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['plan', 'demand']], 'plans' => ['type' => 'array', 'items' => ['type' => 'object']]]],
                 'can_move' => ['type' => 'boolean'], 'can_schedule' => ['type' => 'boolean'],
                 'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true], 'color' => ['type' => 'string', 'nullable' => true], 'people' => $int,
                     'hours' => $num, 'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'unassigned_h' => $num, 'over_h' => $num,
-                    'done_h' => $num, 'expected_h' => $num, 'movable' => ['type' => 'boolean'],
+                    'done_h' => $num, 'expected_h' => $num, 'movable' => ['type' => 'boolean'], 'direct_h' => $num, 'stock_h' => $num,
                     'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
-                        'date' => ['type' => 'string', 'format' => 'date'], 'people' => $int, 'available_h' => $num, 'required_h' => $num, 'free_h' => $num,
+                        'date' => ['type' => 'string', 'format' => 'date'], 'people' => $int, 'available_h' => $num, 'required_h' => $num, 'free_h' => $num, 'direct_h' => $num, 'stock_h' => $num,
                         'load_pct' => ['type' => 'number', 'nullable' => true], 'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team', 'free']],
                         'elapsed' => ['type' => 'number', 'description' => 'part du shift déjà passée (1 = jour passé)'],
                     ]]],
@@ -201,11 +202,16 @@ final class OpenApiPlanning
                 'products' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'item_id' => $int, 'name' => ['type' => 'string'], 'item_type' => ['type' => 'string'], 'mode' => ['type' => 'string'], 'group_id' => ['type' => 'integer', 'nullable' => true],
                     'unit' => ['type' => 'string'], 'ppc' => ['type' => 'integer', 'nullable' => true], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'hours' => $num,
+                    'direct' => ['type' => 'number', 'description' => 'à expédier : commandes MTO et semi-finis, avant le départ du camion'], 'stock' => ['type' => 'number', 'description' => 'pour le stock (MTS), jours week.stock_days'],
+                    'direct_cartons' => ['type' => 'number', 'nullable' => true], 'stock_cartons' => ['type' => 'number', 'nullable' => true], 'direct_h' => $num, 'stock_h' => $num,
+                    'direct_parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['due_date' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true]]]],
                     'due_date' => ['type' => 'string', 'format' => 'date', 'nullable' => true], 'latest_day' => ['type' => 'string', 'format' => 'date'],
                     'done_h' => $num, 'done_pct' => ['type' => 'number', 'nullable' => true], 'state' => ['type' => 'string', 'enum' => ['planned', 'in_progress', 'done']],
                     'unassigned_qty' => $num, 'unassigned_h' => $num, 'over_qty' => $num, 'movable' => ['type' => 'boolean'],
                     'slots' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'day' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'hours' => $num, 'done_h' => $num,
+                        'direct_qty' => $num, 'stock_qty' => $num, 'direct_cartons' => ['type' => 'number', 'nullable' => true], 'stock_cartons' => ['type' => 'number', 'nullable' => true], 'direct_h' => $num,
+                        'stock_off_day' => ['type' => 'boolean', 'description' => 'stock placé hors des jours de stock'],
                         'late' => ['type' => 'boolean', 'description' => 'après l\'échéance de la commande'], 'behind' => ['type' => 'boolean', 'description' => 'jour passé, pas terminé'],
                     ]]],
                 ]]],
