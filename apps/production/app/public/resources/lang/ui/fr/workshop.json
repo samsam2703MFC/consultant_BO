@@ -220,5 +220,8 @@
   "m.suggest": "Calculer sur les ventes des 6 dernières semaines",
   "m.suggest_help": "Min = 1 semaine de ventes, max = 3 semaines (cartons entiers). Puis enregistrez.",
   "m.suggest_none": "Aucune vente (WDT) sur les {weeks} dernières semaines : saisissez les stocks à la main.",
-  "m.suggest_done": "Ventes {weeks} sem. : {cartons} cart. (moyenne {weekly} cart./sem.) → min {min} {unit} ({min_c} cart., {min_w} sem.), max {max} {unit} ({max_c} cart., {max_w} sem.). Enregistrez pour garder."
+  "m.suggest_done": "Ventes {weeks} sem. : {cartons} cart. (moyenne {weekly} cart./sem.) → min {min} {unit} ({min_c} cart., {min_w} sem.), max {max} {unit} ({max_c} cart., {max_w} sem.). Enregistrez pour garder.",
+  "m.cartons": "cart.",
+  "m.pieces": "pcs",
+  "m.per_carton": "1 carton = {ppc} pièces — saisissez en cartons ou en pièces, l’autre champ se calcule (enregistré en pièces)."
 }

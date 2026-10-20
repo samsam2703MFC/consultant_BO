@@ -313,6 +313,17 @@
 
     function stepMode(body, item) {
         const s = item.settings;
+        // Produkt z kartonem : stany i partie wpisywane w kartonach lub sztukach (zapis w sztukach).
+        const ppc = item.item_type === 'product' && item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
+        const PAIRED = ['stock_min', 'stock_max', 'batch_min', 'batch_multiple'];
+        const cartons = (v) => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Math.round(Number(v) / ppc * 100) / 100).replace('.', ',');
+        const qtyField = (f) => ppc && PAIRED.includes(f)
+            ? `<label>${esc(t('f.' + f))}<div class="input-group tfb-qty-pair">
+                <input class="form-control" name="${f}_cartons" inputmode="decimal" value="${cartons(s[f])}" aria-label="${esc(t('f.' + f))} — ${esc(t('m.cartons'))}">
+                <span class="input-group-text">${esc(t('m.cartons'))}</span>
+                <input class="form-control" name="${f}" data-field="${f}" inputmode="numeric" value="${s[f] ?? ''}" aria-label="${esc(t('f.' + f))} — ${esc(t('m.pieces'))}">
+                <span class="input-group-text">${esc(t('m.pieces'))}</span></div></label>`
+            : `<label>${esc(t('f.' + f))}<input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`;
         body.innerHTML = `<form class="tfb-form" data-form>
             <div class="tfb-full tfb-mode" data-field="mode">
                 <span class="tfb-mode-label" data-mode-label="MTO">${esc(t('mode.MTO'))}</span>
@@ -322,14 +333,20 @@
             </div>
             <label class="form-check tfb-full"><input class="form-check-input" type="checkbox" name="never_frozen" data-field="never_frozen" ${s.never_frozen ? 'checked' : ''}> ${esc(t('f.never_frozen'))}
                 <span class="form-text d-block">${esc(t('help.never_frozen'))}</span></label>
-            ${['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple'].map(f => `<label>${esc(t('f.' + f))}
-                <input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`).join('')}
+            ${['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple'].map(qtyField).join('')}
+            ${ppc ? `<p class="form-text tfb-full mt-0">${esc(t('m.per_carton', {ppc}))}</p>` : ''}
             ${item.item_type === 'product' ? `<div class="tfb-full tfb-suggest" data-suggest-box>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-suggest data-write><i class="bi bi-calculator"></i> ${esc(t('m.suggest'))}</button>
                 <span class="form-text" data-suggest-info>${esc(t('m.suggest_help'))}</span></div>` : ''}
             <p class="form-text tfb-full">${esc(t('help.mts'))}</p>
             ${nav(4)}</form>`;
         const form = body.querySelector('[data-form]');
+        // Kartony ↔ sztuki : zmiana jednego pola przelicza drugie.
+        const fillCartons = (f) => { if (ppc && form[f + '_cartons']) form[f + '_cartons'].value = cartons(ui.num(form[f].value)); };
+        if (ppc) PAIRED.forEach(f => {
+            form[f + '_cartons'].addEventListener('input', () => { const c = ui.num(form[f + '_cartons'].value); if (c === null || typeof c === 'number') form[f].value = c === null ? '' : Math.round(c * ppc); });
+            form[f].addEventListener('input', () => fillCartons(f));
+        });
         const sync = () => {
             const never = form.never_frozen.checked;
             form.mts.disabled = never;
@@ -350,6 +367,8 @@
                 if (r.shipped_cartons <= 0) { info.textContent = t('m.suggest_none', {weeks: r.weeks}); return; }
                 form.stock_min.value = r.stock_min;
                 form.stock_max.value = r.stock_max;
+                fillCartons('stock_min');
+                fillCartons('stock_max');
                 info.textContent = t('m.suggest_done', {weeks: r.weeks, cartons: q(r.shipped_cartons), weekly: ui.fmt(r.weekly_cartons, 1, api.lang),
                     min: q(r.stock_min), min_c: q(r.stock_min_cartons), min_w: ui.fmt(r.min_weeks, 0, api.lang),
                     max: q(r.stock_max), max_c: q(r.stock_max_cartons), max_w: ui.fmt(r.max_weeks, 0, api.lang), unit: r.unit});

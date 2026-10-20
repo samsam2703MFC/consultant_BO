@@ -220,5 +220,8 @@
   "m.suggest": "Oblicz ze sprzedaży ostatnich 6 tygodni",
   "m.suggest_help": "Min = 1 tydzień sprzedaży, maks = 3 tygodnie (pełne kartony). Potem zapisz.",
   "m.suggest_none": "Brak sprzedaży (WDT) w ostatnich {weeks} tygodniach — wpisz stany ręcznie.",
-  "m.suggest_done": "Sprzedaż {weeks} tyg.: {cartons} kart. (średnio {weekly} kart./tydz.) → min {min} {unit} ({min_c} kart., {min_w} tydz.), maks {max} {unit} ({max_c} kart., {max_w} tydz.). Zapisz, aby zachować."
+  "m.suggest_done": "Sprzedaż {weeks} tyg.: {cartons} kart. (średnio {weekly} kart./tydz.) → min {min} {unit} ({min_c} kart., {min_w} tydz.), maks {max} {unit} ({max_c} kart., {max_w} tydz.). Zapisz, aby zachować.",
+  "m.cartons": "kart.",
+  "m.pieces": "szt.",
+  "m.per_carton": "1 karton = {ppc} szt. — wpisz w kartonach albo w sztukach, drugie pole przelicza się samo (zapis w sztukach)."
 }
