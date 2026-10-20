@@ -117,6 +117,7 @@ function ensureRapports(): void
     rapAfficheSemer();
     if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
     if (function_exists('cqMailSemer')) { cqMailSemer(); }
+    if (function_exists('psSemer')) { psSemer(); }
         return;
     }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
@@ -141,6 +142,7 @@ function ensureRapports(): void
     rapAfficheSemer();
     if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
     if (function_exists('cqMailSemer')) { cqMailSemer(); }
+    if (function_exists('psSemer')) { psSemer(); }
 }
 
 /**
@@ -2217,6 +2219,7 @@ function wr_rapport_generer(int $id): array
     if ((string) $rep['code'] === 'target-vente-cloture') { return ['ok' => true] + venteClotureRun($rep, ''); }
     // Le contrôle qualité : l'aperçu de l'e-mail d'un magasin sans photo à cette heure, rien ne part.
     if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) { return ['ok' => true] + cqMailDistribuer($rep, true); }
+    if ((string) $rep['code'] === 'pointages-suspects' && function_exists('psDistribuer')) { return ['ok' => true] + psDistribuer($rep, true); }
     if ((string) $rep['code'] === 'affiche-vente-mois') {
         // L'affiche n'a pas de « génération » à blanc : générer, c'est servir
         // les magasins dont le mail est actif — comme au 1er du mois.
@@ -2238,6 +2241,9 @@ function wr_rapport_envoyer(int $id): array
     }
     if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) {
         return ['ok' => true, 'mode' => 'par-magasin'] + cqMailDistribuer($rep);
+    }
+    if ((string) $rep['code'] === 'pointages-suspects' && function_exists('psDistribuer')) {
+        return ['ok' => true, 'mode' => 'par-magasin'] + psDistribuer($rep);
     }
     if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
         return ['ok' => true, 'mode' => 'par-magasin'] + rapportDistribuer($rep);
@@ -2303,6 +2309,12 @@ function ep_rapports_cron(): array
         // un envoi à la main dans l'après-midi ne doit pas éteindre celui du soir.
         if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) {
             $bilan = cqMailDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue', 'envoi' => $bilan['resume'] ?? ''];
+            continue;
+        }
+        // Les pointages suspects de fin de journée : même registre propre (pointages_mail.php).
+        if ((string) $rep['code'] === 'pointages-suspects' && function_exists('psDistribuer')) {
+            $bilan = psDistribuer($rep);
             $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue', 'envoi' => $bilan['resume'] ?? ''];
             continue;
         }
