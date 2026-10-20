@@ -5,7 +5,6 @@ namespace App\Controllers\Web\Production;
 
 use App\Core\Route;
 use App\Core\Web\BaseController;
-use App\Services\Client\Order\OrderService;
 use App\Services\Production\ProductionListService;
 use App\Services\Production\RequirementListService;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,19 +15,11 @@ class ProductionListController extends BaseController
 
     public function __construct(
         private ProductionListService $productionListService,
-        private OrderService $orderService,
         private RequirementListService $requirementListService,
     )
     {
     }
 
-
-    public function planning()
-    {
-        $data['rows'] = $this->orderService->getPending();
-
-        $this->view("production/production_list/planning", $data);
-    }
 
     public function ajaxGetProductionList()
     {

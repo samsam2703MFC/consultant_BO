@@ -96,7 +96,7 @@ class FinalProductStockRepository extends BaseRepository
                     ON co.id_customer = c.id
                 LEFT JOIN customer_order_product cop
                     ON cop.id_order = co.id
-                WHERE co.status = 1
+                WHERE co.status IN (1, 2) AND co.id_wdt IS NULL
                 GROUP BY co.id
                 ORDER BY co.expected_shipping_date, customer_name, co.id";
 
@@ -124,8 +124,10 @@ class FinalProductStockRepository extends BaseRepository
                     IFNULL(stock.in_stock, 0) as in_stock,
                     IFNULL(stock.palletised, 0) as palletised,
                     IFNULL(stock.in_stock, 0) + IFNULL(stock.palletised, 0) as total_available,
-                    GREATEST(IFNULL(ord.ordered_quantity, 0) - IFNULL(stock.in_stock, 0) - IFNULL(stock.palletised, 0), 0) as remaining_to_produce,
-                    (IFNULL(stock.in_stock, 0) + IFNULL(stock.palletised, 0) - IFNULL(ord.ordered_quantity, 0)) as available_after_orders,
+                    CASE WHEN ts.mode = 'MTO' THEN NULL
+                         WHEN ts.mode = 'MTS' AND ts.stock_min IS NOT NULL AND fp.ppc > 0 THEN ts.stock_min / fp.ppc
+                         ELSE NULLIF(fp.stock_minimum, 0) END as stock_min_cartons,
+                    IF(fp.ppc > 0, IFNULL(mo.pieces, 0) / fp.ppc, 0) as in_production,
                     ROUND(IFNULL(wdt4.sold_quantity, 0) / 4, 2) as avg_sold_last_4_weeks,
                     IFNULL(yoy.ordered_quantity_yoy, 0) as ordered_quantity_yoy
                 FROM final_product fp
@@ -133,6 +135,13 @@ class FinalProductStockRepository extends BaseRepository
                     ON fp.id_category = cp.id
                 LEFT JOIN production_sections sec
                     ON fp.id_section = sec.id
+                LEFT JOIN tfb_prod_item ti
+                    ON ti.id_final_product = fp.id
+                LEFT JOIN tfb_prod_product_settings ts
+                    ON ts.id_item = ti.id
+                LEFT JOIN (SELECT id_item, SUM(quantity) as pieces FROM tfb_prod_order
+                           WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item) mo
+                    ON mo.id_item = ti.id
                 LEFT JOIN (
                     SELECT
                         cop.id_product,
@@ -140,7 +149,7 @@ class FinalProductStockRepository extends BaseRepository
                     FROM customer_order_product cop
                     INNER JOIN customer_order co
                         ON cop.id_order = co.id
-                    WHERE co.status = 1 {$orderFilter}
+                    WHERE co.status IN (1, 2) AND co.id_wdt IS NULL {$orderFilter}
                     GROUP BY cop.id_product
                 ) ord
                     ON fp.id = ord.id_product
@@ -178,7 +187,7 @@ class FinalProductStockRepository extends BaseRepository
                             DATE_SUB(MIN(DATE(co.expected_shipping_date)), INTERVAL 1 YEAR) as date_from,
                             DATE_SUB(MAX(DATE(co.expected_shipping_date)), INTERVAL 1 YEAR) as date_to
                         FROM customer_order co
-                        WHERE co.status = 1 {$orderFilter}
+                        WHERE co.status IN (1, 2) AND co.id_wdt IS NULL {$orderFilter}
                     ) period
                     WHERE DATE(co_prev.expected_shipping_date) BETWEEN period.date_from AND period.date_to
                     GROUP BY cop_prev.id_product
@@ -187,7 +196,7 @@ class FinalProductStockRepository extends BaseRepository
                 WHERE IFNULL(ord.ordered_quantity, 0) > 0
                    OR IFNULL(stock.in_stock, 0) > 0
                    OR IFNULL(stock.palletised, 0) > 0
-                ORDER BY sec.name, cp.name, remaining_to_produce DESC, ordered_quantity DESC, fp.name";
+                ORDER BY sec.name, cp.name, ordered_quantity DESC, fp.name";
 
         return $this->query($sql) ?: [];
     }

@@ -31,7 +31,7 @@
 
     function header(extra) {
         return `<div class="tfb-head"><div><h3>${esc(t('title'))}</h3><p class="text-muted mb-0">${esc(t('subtitle'))}</p></div>
-            <div class="tfb-head-actions">${extra || ''}<button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>`;
+            <div class="tfb-head-actions">${extra || ''}<a class="btn btn-outline-primary btn-sm" href="${esc(api.root)}/production/plan-wizard">${esc(t('pdf_lists'))}</a><button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>`;
     }
 
     function hoursTable(rows) {

@@ -132,7 +132,12 @@
                                 <label class="form-label" for="stock_minimum">
                                     Minimalny stan magazynowy
                                 </label>
-                                <input value="<?=old_value('stock_minimum', $row['stock_minimum'])?>" type="number" class="form-control" id="stock_minimum" name="stock_minimum" placeholder="0" required>
+                                <?php if (!empty($card_min)): ?>
+                                    <input value="<?= (int) $row['stock_minimum'] ?>" type="number" class="form-control" id="stock_minimum" name="stock_minimum" readonly>
+                                    <small class="text-muted">Liczone z karty produktu (stan min. <?= number_format((float) $card_min['stock_min'], 0, ',', ' ') ?> szt., zaokrąglone w górę do kartonów) — zmień w <a href="<?= ROOT ?>/workshop/products#/product/<?= (int) $card_min['id_item'] ?>">karcie produktu</a>.</small>
+                                <?php else: ?>
+                                    <input value="<?=old_value('stock_minimum', $row['stock_minimum'])?>" type="number" class="form-control" id="stock_minimum" name="stock_minimum" placeholder="0" required>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

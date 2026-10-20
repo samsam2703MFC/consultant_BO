@@ -81,7 +81,7 @@ function stock_fmt($value, int $decimals = 0): string
                             <th class="text-end"><button type="button" class="stock-sort" data-sort-key="ordered_quantity" data-sort-type="number">Zamówione</button></th>
                             <th class="text-end"><button type="button" class="stock-sort" data-sort-key="in_stock" data-sort-type="number">W magazynie</button></th>
                             <th class="text-end"><button type="button" class="stock-sort" data-sort-key="palletised" data-sort-type="number">Na palecie</button></th>
-                            <th class="text-end"><button type="button" class="stock-sort" data-sort-key="remaining_to_produce" data-sort-type="number">Do produkcji</button></th>
+                            <th class="text-end" title="Na zamówienia (zamówione − wolne − na paletach) + do minimum stanu (karta produktu), jak w « Stan magazynu »"><button type="button" class="stock-sort" data-sort-key="remaining_to_produce" data-sort-type="number">Do produkcji</button></th>
                             <th class="text-end"><button type="button" class="stock-sort" data-sort-key="avg_sold_last_4_weeks" data-sort-type="number">Śr. sprzedaż WDT (4 tyg.)</button></th>
                             <th class="text-end"><button type="button" class="stock-sort" data-sort-key="coverage_weeks" data-sort-type="number">Pokrycie</button></th>
                             <th class="text-end"><button type="button" class="stock-sort" data-sort-key="ordered_quantity_yoy" data-sort-type="number">Zamów. rok temu</button></th>
@@ -106,7 +106,8 @@ function stock_fmt($value, int $decimals = 0): string
                                 <td class="text-end"><?= stock_fmt($row['ordered_quantity']) ?></td>
                                 <td class="text-end"><?= stock_fmt($row['in_stock']) ?></td>
                                 <td class="text-end"><?= stock_fmt($row['palletised']) ?></td>
-                                <td class="text-end fw-bold <?= ((float)$row['remaining_to_produce'] > 0) ? 'text-danger' : 'text-success' ?>"><?= stock_fmt($row['remaining_to_produce']) ?></td>
+                                <td class="text-end fw-bold <?= ((float)$row['remaining_to_produce'] > 0) ? 'text-danger' : 'text-success' ?>"><?= stock_fmt($row['remaining_to_produce']) ?>
+                                    <?php if ($row['stock_min_cartons'] !== null): ?><div class="small fw-normal text-muted text-nowrap">zam. <?= stock_fmt($row['remaining_orders']) ?> · do min. <?= stock_fmt($row['to_min']) ?> (min. <?= stock_fmt($row['stock_min_cartons']) ?>)</div><?php endif; ?></td>
                                 <td class="text-end"><?= stock_fmt($row['avg_sold_last_4_weeks'], 2) ?></td>
                                 <td class="text-end"><?= $row['coverage_weeks'] !== null ? stock_fmt($row['coverage_weeks'], 1) . ' tyg.' : '-' ?></td>
                                 <td class="text-end"><?= stock_fmt($row['ordered_quantity_yoy']) ?></td>
@@ -354,7 +355,7 @@ function stock_fmt($value, int $decimals = 0): string
                 <td class="text-end">${fmt(row.ordered_quantity)}</td>
                 <td class="text-end">${fmt(row.in_stock)}</td>
                 <td class="text-end">${fmt(row.palletised)}</td>
-                <td class="text-end fw-bold ${remainingClass}">${fmt(row.remaining_to_produce)}</td>
+                <td class="text-end fw-bold ${remainingClass}">${fmt(row.remaining_to_produce)}${row.stock_min_cartons !== null ? `<div class="small fw-normal text-muted text-nowrap">zam. ${fmt(row.remaining_orders)} · do min. ${fmt(row.to_min)} (min. ${fmt(row.stock_min_cartons)})</div>` : ''}</td>
                 <td class="text-end">${fmt(row.avg_sold_last_4_weeks, 2)}</td>
                 <td class="text-end">${row.coverage_weeks !== null ? fmt(row.coverage_weeks, 1) + ' tyg.' : '-'}</td>
                 <td class="text-end">${fmt(row.ordered_quantity_yoy)}</td>

@@ -4,10 +4,8 @@ use FastRoute\RouteCollector;
 return function(RouteCollector $r) {
 
 
-    $r->addRoute('GET', '/production/planning', [
-        'controller' => App\Controllers\Web\Production\ProductionListController::class,
-        'method'     => 'planning'
-    ]);
+    // Dawna « lista zamówień » : ten sam wybór zamówień i te same PDF-y są w kreatorze
+    $r->addRoute('GET', '/production/planning', ['redirect' => '/production/plan-wizard']);
 
     // Kreator „Planuj produkcję” (tylko odczyt; PDF-y z tras /ajax/production-list/* poniżej)
     $r->addRoute('GET', '/production/plan-wizard', [

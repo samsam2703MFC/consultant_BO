@@ -59,6 +59,7 @@ class ProductController extends BaseController
     public function editProduct($id)
     {
         $data['row'] = $this->productService->first($id);
+        $data['card_min'] = $data['row'] ? $this->productService->cardStockMinimum((int) $id) : null;
         $data['production_sections'] = $this->productionSectionService->getAll();
         $data['category_product'] = $this->productCategoryService->findAll();
         // Jeden kreator produktu : edycja otwiera kartę produktu (produkt, logistyka, receptura, tryb,
@@ -69,6 +70,8 @@ class ProductController extends BaseController
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Minimum ERP liczone z karty produktu : wartość z formularza nie nadpisuje synchronizacji.
+            if ($data['card_min'] && $data['row']) $_POST['stock_minimum'] = $data['row']['stock_minimum'];
             if ($this->productService->validate($_POST)) {
                 $success = $this->handleAction(function () use ($id) {
                     $this->productService->update($id, $_POST);

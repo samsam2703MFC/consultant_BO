@@ -72,5 +72,6 @@
   "mat.products": "Produkty",
   "mat.raw": "Surowce ({n})",
   "mat.packaging": "Opakowania ({n})",
-  "mat.empty": "Brak receptur dla produktów planu — uzupełnij receptury w ERP."
+  "mat.empty": "Brak receptur dla produktów planu — uzupełnij receptury w ERP.",
+  "pdf_lists": "Listy produkcyjne PDF"
 }

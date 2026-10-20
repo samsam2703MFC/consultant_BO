@@ -318,4 +318,13 @@ class FinalProductRepository extends BaseRepository
         };
     }
 
+
+    /** Stan min. z karty produktu (MTS, sztuki) : gdy jest, minimum ERP jest z niego liczone i nie edytuje się go tutaj. */
+    public function cardStockMinimum(int $id): ?array
+    {
+        $rows = $this->query("SELECT i.id AS id_item, s.stock_min FROM tfb_prod_item i
+                              JOIN tfb_prod_product_settings s ON s.id_item = i.id
+                              WHERE i.id_final_product = :id AND s.mode = 'MTS' AND s.stock_min IS NOT NULL LIMIT 1", ['id' => $id]);
+        return $rows ? $rows[0] : null;
+    }
 }

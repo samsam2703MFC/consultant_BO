@@ -262,6 +262,14 @@ check($s === 422 && $codes($b) === ['mode:NEVER_FROZEN_MTS', 'stock_max:REQUIRED
 check($s === 422 && $codes($b) === ['stock_max:STOCK_MAX_BELOW_MIN'], 'max stock below min refused');
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['mode' => 'MTS', 'stock_min' => 60, 'stock_max' => 600, 'shelf_life_shop_days' => 2, 'wizard_step' => 4], $access);
 check($s === 200 && $b['data']['settings']['mode'] === 'MTS' && $b['data']['settings']['stock_max'] === 600.0, 'MTS with stocks saved');
+$erpMin = fn() => (int) $pdo->query('SELECT stock_minimum FROM final_product WHERE id = 501')->fetchColumn();
+check($erpMin() === 1, 'card min 60 pcs (60 / carton) copied to the ERP minimum: 1 carton');
+$call('PATCH', "/produits/items/{$itemId}/settings", ['stock_min' => 130], $access);
+check($erpMin() === 3, 'ERP minimum rounded up to whole cartons (130 pcs → 3)');
+$call('PATCH', "/produits/items/{$itemId}/settings", ['mode' => 'MTO'], $access);
+check($erpMin() === 0, 'switching to MTO clears the ERP minimum');
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['mode' => 'MTS', 'stock_min' => 60, 'stock_max' => 600], $access);
+check($s === 200 && $erpMin() === 1, 'back to MTS: ERP minimum from the card again');
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['never_frozen' => true], $access);
 check($s === 422 && $codes($b) === ['mode:NEVER_FROZEN_MTS'], 'an MTS item cannot become never frozen');
 

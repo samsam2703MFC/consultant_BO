@@ -72,5 +72,6 @@
   "mat.products": "Produits",
   "mat.raw": "Matières ({n})",
   "mat.packaging": "Emballages ({n})",
-  "mat.empty": "Aucune recette pour les produits du plan — complétez les recettes dans l’ERP."
+  "mat.empty": "Aucune recette pour les produits du plan — complétez les recettes dans l’ERP.",
+  "pdf_lists": "Listes de production PDF"
 }

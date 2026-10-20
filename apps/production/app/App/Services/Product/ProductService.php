@@ -76,6 +76,11 @@ class ProductService {
         return $this->finalProductRepository->first(['id' => $id]);
     }
 
+    public function cardStockMinimum(int $id): ?array
+    {
+        return $this->finalProductRepository->cardStockMinimum($id);
+    }
+
     public function getById($id)
     {
         return $this->finalProductRepository->getById($id);

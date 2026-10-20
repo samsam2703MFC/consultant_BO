@@ -167,7 +167,7 @@ final class ItemRepository extends WorkshopRepository
                                       GROUP BY p.id_product) w ON w.id_product = i.id_final_product
                            LEFT JOIN (SELECT id_product, COUNT(*) AS cartons FROM carton_stock WHERE status = 1 GROUP BY id_product) cs ON cs.id_product = i.id_final_product
                            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
-                                      WHERE co.id_wdt IS NULL AND co.status IN (1, 2) AND COALESCE(co.is_freebie, 0) = 0 GROUP BY cop.id_product) oo ON oo.id_product = i.id_final_product
+                                      WHERE co.id_wdt IS NULL AND co.status IN (1, 2) GROUP BY cop.id_product) oo ON oo.id_product = i.id_final_product
                            LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item) mo ON mo.id_item = i.id
                            WHERE {$where}
                            ORDER BY cp.name IS NULL, cp.name, fp.name, i.id", $params);

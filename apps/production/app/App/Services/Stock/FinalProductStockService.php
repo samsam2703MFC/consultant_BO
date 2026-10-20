@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Stock;
 
+use App\Domain\Stock\ToProduce;
 use App\Repositories\Stock\FinalProduct\FinalProductStockRepository;
 
 class FinalProductStockService
@@ -59,7 +60,16 @@ class FinalProductStockService
         foreach ($rows as &$row) {
             $cartonsPerPallet = (float)($row['cartons_per_pallet'] ?? 0);
             $ordered = (float)($row['ordered_quantity'] ?? 0);
-            $remaining = (float)($row['remaining_to_produce'] ?? 0);
+            // Ta sama formuła co « Stan magazynu » w kartach produktów.
+            $min = $row['stock_min_cartons'] !== null ? (float)$row['stock_min_cartons'] : null;
+            $split = ToProduce::split($ordered, (float)$row['in_stock'], $min, (float)$row['in_production']);
+            $row['stock_min_cartons'] = $min !== null ? round($min, 1) : null;
+            $row['remaining_orders'] = $split['orders'];
+            $row['to_min'] = $split['to_min'];
+            $row['available_after_orders'] = $split['available'];
+            $row['remaining_to_produce'] = $split['total'];
+            $row['in_production'] = round((float)$row['in_production'], 1);
+            $remaining = $split['total'];
             $avgSold = (float)($row['avg_sold_last_4_weeks'] ?? 0);
             $yoy = (float)($row['ordered_quantity_yoy'] ?? 0);
             $totalAvailable = (float)($row['total_available'] ?? 0);
@@ -70,9 +80,12 @@ class FinalProductStockService
             $row['yoy_delta'] = $ordered - $yoy;
             $row['yoy_delta_percent'] = $yoy > 0 ? round((($ordered - $yoy) / $yoy) * 100, 1) : null;
 
-            if ($remaining > 0) {
+            if ($split['orders'] > 0) {
                 $row['state'] = 'danger';
                 $row['state_label'] = 'Do produkcji';
+            } elseif ($remaining > 0) {
+                $row['state'] = 'warning';
+                $row['state_label'] = 'Poniżej minimum';
             } elseif ($ordered > 0 && (float)$row['available_after_orders'] < 0) {
                 $row['state'] = 'warning';
                 $row['state_label'] = 'Ryzyko braku';

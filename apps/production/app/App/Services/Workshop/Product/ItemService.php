@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Workshop\Product;
 
+use App\Domain\Stock\ToProduce;
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
@@ -120,15 +121,18 @@ final class ItemService
         $free = (float) $r['free_cartons'];
         $ordered = (float) $r['ordered_cartons'];
         $inProduction = $ppc ? round((float) $r['in_production'] / $ppc, 1) : 0.0;
-        $available = round($free - $ordered + $inProduction, 1);
         $min = $r['stock_min'] !== null && $ppc ? (float) $r['stock_min'] / $ppc : null;
         $max = $r['stock_max'] !== null && $ppc ? (float) $r['stock_max'] / $ppc : null;
+        // Ta sama formuła co /stock (App\Domain\Stock\ToProduce).
+        $split = ToProduce::split($ordered, $free, $min, $inProduction);
+        $available = $split['available'];
         return [
             'free_cartons' => $free, 'ordered_cartons' => $ordered, 'in_production_cartons' => $inProduction, 'available_cartons' => $available,
             // Poza zamówieniami : brak na zamówienia (dostępne < 0) produkuje się jako zamówienia, osobno.
-            'to_min_cartons' => $min !== null ? $whole(max(0.0, $min - max(0.0, $available))) : null,
+            'to_min_cartons' => $split['to_min'] !== null ? $whole($split['to_min']) : null,
             'to_max_cartons' => $max !== null ? $whole(max(0.0, $max - max(0.0, $available))) : null,
-            'orders_over_stock_cartons' => $whole(max(0.0, $ordered - $free)),
+            'orders_over_stock_cartons' => $whole($split['orders']),
+            'to_produce_cartons' => $whole($split['orders']) + ($split['to_min'] !== null ? $whole($split['to_min']) : 0),
             'below_min' => $min !== null && $available < $min,
         ];
     }
@@ -337,11 +341,29 @@ final class ItemService
             }
         }
         $data['updated_by'] = $context->userId;
-        $this->tx->execute(function () use ($id, $data, $row, $context) {
+        $erpMin = $this->erpStockMinimum($row, $mode, $min, $v->provided('mode'));
+        $this->tx->execute(function () use ($id, $data, $row, $context, $erpMin) {
             $this->items->saveSettings($id, $data);
+            if ($erpMin !== null && $erpMin !== (int) $row['stock_minimum']) {
+                $this->items->updateErpProduct((int) $row['id_final_product'], ['stock_minimum' => $erpMin]);
+                $this->audit->record($context, 'update', 'item_erp', $id, ['stock_minimum' => (int) $row['stock_minimum']], ['stock_minimum' => $erpMin]);
+            }
             $this->audit->record($context, 'update', 'item_settings', $id, $row, $data);
         });
         return $this->get($id, $context);
+    }
+
+    /**
+     * Minimalny stan ERP (final_product.stock_minimum, kartony) = stan min. karty (sztuki), zaokrąglony w górę :
+     * lista produkcyjna PDF i « Do produkcji » liczą wtedy z tej samej wartości. Przejście na MTO zeruje minimum ;
+     * karta bez stanu min. nie zmienia wartości ERP.
+     */
+    private function erpStockMinimum(array $row, ?string $mode, mixed $min, bool $modeChanged): ?int
+    {
+        if ($row['item_type'] !== 'product' || !$row['id_final_product']) return null;
+        if ($mode === 'MTS' && $min !== null && (int) $row['ppc'] > 0) return (int) ceil((float) $min / (int) $row['ppc'] - 1e-9);
+        if ($mode === 'MTO' && $modeChanged && $row['mode'] !== 'MTO') return 0;
+        return null;
     }
 
     /**
