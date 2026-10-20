@@ -53,7 +53,6 @@
     "PHONE_REVOKED": "Enregistrement du téléphone expiré ou révoqué — enregistrez à nouveau le téléphone.",
     "NOT_ALLOWED_FOR_TYPE": "Non disponible pour ce type d'article.",
     "WEEK_IN_PAST": "La semaine {week} est passée : plus aucun jour sur lequel répartir la production.",
-    "WEEK_WARNING_NO_PLAN": "Pas de plan validé pour cette semaine : quantités de la proposition (commandes + réassort du stock). Validez le plan dans « Plans » pour suivre la réalisation.",
     "WEEK_WARNING_UNASSIGNED": "{count} produits ({hours} h) attendent dans « À produire » : glissez-les sur un jour ou utilisez « Organiser la semaine ».",
     "WEEK_WARNING_GROUP_OVERLOAD": "{group} : il manque {hours} h sur les jours surchargés — déplacez des produits ou ajoutez du monde au département (liste des employés).",
     "WEEK_WARNING_AFTER_DUE": "{count} blocs sont après l’échéance de la commande.",
@@ -61,7 +60,8 @@
     "DEVICE_WITHOUT_GROUP": "La tablette n’est rattachée à aucun groupe — rattachez-la dans Atelier : tablettes et temps de travail.",
     "OUTPUT_NOT_IN_YOUR_GROUPS": "Ce lot n’appartient pas à votre groupe.",
     "OUTPUT_LOCKED": "Les lots de ce jour ne sont plus modifiables sur la tablette (modification pendant {days} jours).",
-    "OUTPUT_CANCELLED": "Ce lot est annulé."
+    "OUTPUT_CANCELLED": "Ce lot est annulé.",
+    "WEEK_WARNING_FIXED_NO_SHIFT": "Lot fixe 📌 « {product} » ({day}) : le groupe n'a pas d'équipe ce jour-là — le lot attend dans « À produire »."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -140,7 +140,9 @@
     "NOTHING_TO_MOVE": "Aucune quantité de ce produit à déplacer depuis cet endroit.",
     "INVALID_PHOTO": "La photo doit être une image JPEG, PNG ou WebP.",
     "PHOTO_TOO_LARGE": "La photo est trop lourde (max. {max_kb} Ko).",
-    "MATERIAL_NOT_IN_RECIPE": "Cette matière n’est pas dans la recette du produit."
+    "MATERIAL_NOT_IN_RECIPE": "Cette matière n’est pas dans la recette du produit.",
+    "NOTHING_ON_DAY": "Ce produit n'a pas de quantité ce jour-là — épinglez un bloc posé sur un jour.",
+    "NOT_PINNED": "Ce produit n'a pas de lot fixe ce jour de la semaine."
   },
   "fields": {
     "code": "code",
@@ -310,7 +312,9 @@
     "best_before": "date limite",
     "photo": "photo",
     "ocr_text": "texte OCR",
-    "cancelled": "annulé"
+    "cancelled": "annulé",
+    "day": "jour",
+    "pinned": "chaque semaine"
   },
   "entities": {
     "group": "groupe",

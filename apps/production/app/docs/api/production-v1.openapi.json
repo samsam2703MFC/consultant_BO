@@ -5098,7 +5098,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Production à la semaine : un bloc = un produit sur un jour. Quantités des plans validés (figés, clos) dont l'échéance tombe dans la semaine, sinon proposition (commandes + réassort). Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. Réalisé = part des opérations terminées des OF du plan.",
+                "description": "Production à la semaine : un bloc = un produit sur un jour. Quantités du plan validé (figé, clos) qui commence dans la semaine, sinon proposition en direct (commandes + réassort + lots fixes). Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. Réalisé = part des opérations terminées des OF du plan, sans plan : part de la quantité produite (lots saisis sur les tablettes). Lots fixes 📌 : à la première ouverture de la semaine, chaque lot fixe est posé sur son jour (à partir d'aujourd'hui, jours avec équipe), une seule fois par semaine.",
                 "parameters": [
                     {
                         "name": "date",
@@ -5265,6 +5265,82 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/WeekDistributeInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.gantt.move"
+            }
+        },
+        "/planning/week/pin": {
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "📌 Co tydzień / Chaque semaine",
+                "operationId": "pinWeekProduct",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Week"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "pinned = true : la quantité du produit sur ce jour devient un lot fixe (ce jour de la semaine, chaque semaine suivante) ; false : plus de lot fixe ce jour-là. La semaine courante reste telle quelle ; les semaines suivantes où le lot était déjà posé sont annulées (reposées avec la nouvelle quantité, ou plus du tout). 422 NOTHING_ON_DAY (rien sur ce jour), NOT_PINNED (pas de lot fixe à retirer).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WeekPinInput"
                             }
                         }
                     }
@@ -8172,6 +8248,48 @@
                                         }
                                     }
                                 }
+                            },
+                            "stock": {
+                                "type": "object",
+                                "nullable": true,
+                                "description": "produit avec carton : stock en cartons (comme « Stan magazynu ») pour calculer les lots jusqu'aux stocks min./max.",
+                                "properties": {
+                                    "free_cartons": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "ordered_cartons": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "in_production_cartons": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "available_cartons": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "to_min_cartons": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "to_max_cartons": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "orders_over_stock_cartons": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "to_produce_cartons": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "below_min": {
+                                        "type": "boolean"
+                                    }
+                                }
                             }
                         }
                     }
@@ -8526,6 +8644,11 @@
                                             "stock_max": {
                                                 "type": "number",
                                                 "nullable": true
+                                            },
+                                            "batch": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "lot de production (fiche, étape « Etapy i czasy »)"
                                             },
                                             "stock_min_cartons": {
                                                 "type": "number",
@@ -9581,6 +9704,10 @@
                                 "qty_semi": {
                                     "type": "number"
                                 },
+                                "qty_fixed": {
+                                    "type": "number",
+                                    "description": "lots fixes 📌 au-delà des commandes et du réassort"
+                                },
                                 "qty_proposed": {
                                     "type": "number"
                                 },
@@ -9772,6 +9899,10 @@
                                 },
                                 "qty_semi": {
                                     "type": "number"
+                                },
+                                "qty_fixed": {
+                                    "type": "number",
+                                    "description": "lots fixes 📌 au-delà des commandes et du réassort"
                                 },
                                 "qty_proposed": {
                                     "type": "number"
@@ -10581,6 +10712,13 @@
                     "can_schedule": {
                         "type": "boolean"
                     },
+                    "pins": {
+                        "type": "array",
+                        "description": "tous les lots fixes 📌",
+                        "items": {
+                            "$ref": "#/components/schemas/WeekPin"
+                        }
+                    },
                     "groups": {
                         "type": "array",
                         "items": {
@@ -10810,6 +10948,16 @@
                                 "movable": {
                                     "type": "boolean"
                                 },
+                                "fixed_qty": {
+                                    "type": "number",
+                                    "description": "lots fixes 📌 posés dans la semaine (quantité minimale de la semaine)"
+                                },
+                                "pins": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/WeekPin"
+                                    }
+                                },
                                 "slots": {
                                     "type": "array",
                                     "items": {
@@ -10938,6 +11086,71 @@
                     },
                     "reset": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "WeekPinInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "item_id",
+                    "day",
+                    "pinned"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "day": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "pinned": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "WeekPin": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "ppc": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "batch": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "weekday": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                    },
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "day": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "ce jour dans la semaine affichée"
                     }
                 }
             },

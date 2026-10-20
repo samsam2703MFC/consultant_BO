@@ -105,6 +105,10 @@ final class OpenApiProducts
                 'checklist' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'field' => ['type' => 'string'], 'code' => ['type' => 'string'], 'ok' => ['type' => 'boolean'],
                 ]]],
+                'stock' => ['type' => 'object', 'nullable' => true, 'description' => 'produit avec carton : stock en cartons (comme « Stan magazynu ») pour calculer les lots jusqu\'aux stocks min./max.',
+                    'properties' => ['free_cartons' => $num, 'ordered_cartons' => $num, 'in_production_cartons' => $num, 'available_cartons' => $num,
+                        'to_min_cartons' => ['type' => 'integer', 'nullable' => true], 'to_max_cartons' => ['type' => 'integer', 'nullable' => true],
+                        'orders_over_stock_cartons' => $int, 'to_produce_cartons' => $int, 'below_min' => ['type' => 'boolean']]],
             ]]]],
             'RoutingStep' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'integer'], 'step_no' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'name_pl' => ['type' => 'string'], 'name_fr' => ['type' => 'string'],
@@ -147,6 +151,7 @@ final class OpenApiProducts
                         'status' => ['type' => 'string'], 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
                         'ppc' => ['type' => 'integer', 'nullable' => true], 'cpp' => ['type' => 'integer', 'nullable' => true],
                         'stock_min' => ['type' => 'number', 'nullable' => true], 'stock_max' => ['type' => 'number', 'nullable' => true],
+                        'batch' => ['type' => 'number', 'nullable' => true, 'description' => 'lot de production (fiche, étape « Etapy i czasy »)'],
                         'stock_min_cartons' => ['type' => 'number', 'nullable' => true], 'stock_max_cartons' => ['type' => 'number', 'nullable' => true], 'stock_calc_at' => ['type' => 'string', 'nullable' => true],
                         'shipped_cartons' => $num, 'weekly_cartons' => $num, 'shops' => $int,
                         'per_shop_weekly_cartons' => ['type' => 'number', 'nullable' => true], 'per_shop_weekly_quantity' => ['type' => 'number', 'nullable' => true],

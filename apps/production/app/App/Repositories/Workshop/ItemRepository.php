@@ -147,7 +147,7 @@ final class ItemRepository extends WorkshopRepository
      * Zapasy wg kategorii (lista kart) : produkty z trybem, stanami, kartonami na paletę i sprzedażą WDT
      * z ostatnich $days dni (bez dokumentów zastąpionych) — kartony i liczba sklepów (klientów), które kupiły.
      */
-    public function stockOverview(int $days, ?int $groupId): array
+    public function stockOverview(int $days, ?int $groupId, ?int $itemId = null): array
     {
         // Kurs EUR (WDT w PLN przeliczane jak w Rentowności) : średnia cena kartonu i koszt surowców w €.
         $rate = (float) ($this->all('SELECT exchange_rate_euro FROM erp_company_other_settings ORDER BY id LIMIT 1')[0]['exchange_rate_euro'] ?? 0) ?: 1.0;
@@ -155,8 +155,9 @@ final class ItemRepository extends WorkshopRepository
         // Wszystkie aktywne produkty ERP (bez karty : MTO, grupa z działu ERP) oraz karty produktów nieaktywnych.
         $where = '(i.id IS NOT NULL OR fp.active = 1)';
         if ($groupId !== null) { $where .= ' AND COALESCE(s.id_primary_group, dg.id) = ?'; $params[] = $groupId; }
+        if ($itemId !== null) { $where .= ' AND i.id = ?'; $params[] = $itemId; }
         return $this->all("SELECT i.id, fp.id AS id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
-                                  s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, COALESCE(s.id_primary_group, dg.id) AS id_primary_group, s.status,
+                                  s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.batch_multiple, COALESCE(s.id_primary_group, dg.id) AS id_primary_group, s.status,
                                   COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops, COALESCE(w.value_eur, 0) AS shipped_value_eur,
                                   pr.precalculated_material_cost / ? AS material_cost_eur,
                                   COALESCE(cs.cartons, 0) AS free_cartons, COALESCE(oo.cartons, 0) AS ordered_cartons, COALESCE(mo.pieces, 0) AS in_production
@@ -175,7 +176,7 @@ final class ItemRepository extends WorkshopRepository
                            LEFT JOIN (SELECT id_product, COUNT(*) AS cartons FROM carton_stock WHERE status = 1 GROUP BY id_product) cs ON cs.id_product = fp.id
                            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
                                       WHERE co.id_wdt IS NULL AND co.status IN (1, 2) GROUP BY cop.id_product) oo ON oo.id_product = fp.id
-                           LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item) mo ON mo.id_item = i.id
+                           LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE origin = 'MTS' AND (status = 'in_progress' OR (status IN ('planned', 'released') AND due_at >= CURDATE())) GROUP BY id_item) mo ON mo.id_item = i.id
                            WHERE {$where}
                            ORDER BY cp.name IS NULL, cp.name, fp.name, fp.id", $params);
     }

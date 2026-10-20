@@ -34,12 +34,78 @@ final class WeekRepository extends WorkshopRepository
         $this->db->prepare("DELETE FROM tfb_prod_week_slot WHERE week_start = ? AND id_item IN ({$in})")->execute([$weekStart, ...$itemIds]);
     }
 
-    /** Plany zatwierdzone, zamrożone lub zamknięte, które obejmują tydzień (ostatnia wersja pierwsza). */
+    /** Stałe partie, które już weszły do tygodnia. @return array<int, array<string, array{quantity:float, placed:float}>> */
+    public function fixedWeek(string $weekStart): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT id_item, work_date, quantity, placed FROM tfb_prod_fixed_batch_week WHERE week_start = ?', [$weekStart]) as $r) {
+            $out[(int) $r['id_item']][$r['work_date']] = ['quantity' => (float) $r['quantity'], 'placed' => (float) $r['placed']];
+        }
+        return $out;
+    }
+
+    /** Stała partia w tygodniu (pierwsze wejście zostaje ; $replace — przypięcie z bloku tego tygodnia). */
+    public function markFixedWeek(string $weekStart, int $itemId, string $day, float $quantity, float $placed, bool $replace = false): void
+    {
+        $sql = 'INSERT ' . ($replace ? '' : 'IGNORE ') . 'INTO tfb_prod_fixed_batch_week (week_start, id_item, work_date, quantity, placed) VALUES (?, ?, ?, ?, ?)'
+            . ($replace ? ' ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)' : '');
+        $this->db->prepare($sql)->execute([$weekStart, $itemId, $day, round($quantity, 3), round($placed, 3)]);
+    }
+
+    /** Wejścia stałej partii (produkt, dzień tygodnia ISO) w tygodniach po danym tygodniu. */
+    public function laterFixedWeeks(int $itemId, int $weekday, string $afterWeekStart): array
+    {
+        return $this->all('SELECT week_start, work_date, quantity, placed FROM tfb_prod_fixed_batch_week
+                           WHERE id_item = ? AND WEEKDAY(work_date) + 1 = ? AND week_start > ?', [$itemId, $weekday, $afterWeekStart]);
+    }
+
+    public function deleteFixedWeek(string $weekStart, int $itemId, string $day): void
+    {
+        $this->db->prepare('DELETE FROM tfb_prod_fixed_batch_week WHERE week_start = ? AND id_item = ? AND work_date = ?')->execute([$weekStart, $itemId, $day]);
+    }
+
+    public function fixedRule(int $itemId, int $weekday): ?array
+    {
+        return $this->all('SELECT id, id_item, weekday, quantity FROM tfb_prod_fixed_batch WHERE id_item = ? AND weekday = ?', [$itemId, $weekday])[0] ?? null;
+    }
+
+    public function saveFixedRule(int $itemId, int $weekday, float $quantity, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO tfb_prod_fixed_batch (id_item, weekday, quantity, created_by) VALUES (?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)')->execute([$itemId, $weekday, round($quantity, 3), $userId]);
+    }
+
+    public function deleteFixedRule(int $itemId, int $weekday): void
+    {
+        $this->db->prepare('DELETE FROM tfb_prod_fixed_batch WHERE id_item = ? AND weekday = ?')->execute([$itemId, $weekday]);
+    }
+
+    /** Ilość produktu w dniu (przydział Gantta tygodnia). */
+    public function slotQuantity(string $weekStart, int $itemId, string $day): float
+    {
+        return (float) ($this->all('SELECT quantity FROM tfb_prod_week_slot WHERE week_start = ? AND id_item = ? AND work_date = ?', [$weekStart, $itemId, $day])[0]['quantity'] ?? 0);
+    }
+
+    /**
+     * Plany zatwierdzone, zamrożone lub zamknięte, które zaczynają się w tym tygodniu produkcji (ostatnia wersja
+     * pierwsza) — plan należy do tygodnia, w którym się zaczyna (plan z tygodnia od poniedziałku nie zamraża
+     * kolejnego tygodnia od środy).
+     */
     public function plans(string $start, string $end): array
     {
         return $this->all("SELECT id, period_start, period_end, status, version FROM tfb_prod_plan
-                           WHERE status IN ('validated', 'frozen', 'closed') AND period_start <= ? AND period_end >= ?
-                           ORDER BY period_start, version DESC, id DESC", [$end, $start]);
+                           WHERE status IN ('validated', 'frozen', 'closed') AND period_start BETWEEN ? AND ?
+                           ORDER BY period_start, version DESC, id DESC", [$start, $end]);
+    }
+
+    /** Ilość wyprodukowana w dniach (partie zapisane na tabletach, bez anulowanych). @return array<int, float> */
+    public function produced(string $from, string $to): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT id_item, SUM(quantity) AS q FROM tfb_prod_output WHERE work_date BETWEEN ? AND ? AND cancelled_at IS NULL GROUP BY id_item', [$from, $to]) as $r) {
+            $out[(int) $r['id_item']] = (float) $r['q'];
+        }
+        return $out;
     }
 
     /**

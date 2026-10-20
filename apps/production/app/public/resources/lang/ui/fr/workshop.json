@@ -315,5 +315,17 @@
   "r.batch": "Lot de production",
   "r.batch_help": "Ce qu'on fait d'un coup (ex. pistolet : 1300 pcs d'une même pâte). Le plan propose des lots entiers — quantité arrondie au multiple du lot — et « Organiser la semaine » place des lots entiers sur les jours. Vide = sans lot.",
   "r.batch_cartons": "1 lot = {cartons} cart.",
-  "r.batch_over_max": "le stock max. ({max} {unit}) est inférieur au lot — le réassort ne peut pas contenir un lot entier"
+  "r.batch_over_max": "le stock max. ({max} {unit}) est inférieur au lot — le réassort ne peut pas contenir un lot entier",
+  "m.batch_title": "Lots de production",
+  "m.batch_size": "1 lot = {qty} {unit} = {cartons} cart.",
+  "m.batch_change": "modifier dans « Étapes et temps »",
+  "m.batch_none": "Pas de lot de production (ce qu'on fait d'un coup) — sans lui, pas de calcul des lots pour les stocks.",
+  "m.batch_set": "À définir à l'étape « Étapes et temps »",
+  "m.batch_available": "Disponible maintenant : {available} cart. (stock {free} − commandes {ordered} + en production {production})",
+  "m.batch_orders": "Commandes au-delà du stock : {cartons} cart. → {batches} × lot",
+  "m.batch_to_min": "Jusqu'au stock min. ({min} cart.) il manque {missing} cart. → {batches} × lot (arrondi au-dessus)",
+  "m.batch_min_ok": "Stock min. ({min} cart.) couvert — pas de lot nécessaire",
+  "m.batch_to_max": "Jusqu'au stock max. ({max} cart.) il manque {missing} cart. = {exact} lots → {whole} × lot tiennent",
+  "lv.batches": "lots : jusqu'au min. {min} · jusqu'au max. {max}",
+  "m.batch_with_orders": "(y compris les commandes au-delà du stock)"
 }

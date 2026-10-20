@@ -268,6 +268,15 @@
         if (!(await save(i, body, t(on ? 'st.now_mts' : 'st.now_mto', {name: i.name})))) input.checked = !on;
     }
 
+    // Partie produkcyjne do stanu min. (w górę) i pełne partie mieszczące się do stanu maks. — razem
+    // z zamówieniami ponad stan (jak krok « Tryb i zapasy » karty).
+    function batchesCell(i) {
+        const orders = i.orders_over_stock_cartons || 0;
+        if (!i.batch || !i.ppc || (!i.to_min_cartons && !i.to_max_cartons && !orders)) return '';
+        const bc = i.batch / i.ppc;
+        return `<div class="small tfb-plan-batch">${esc(t('lv.batches', {min: Math.ceil(((i.to_min_cartons || 0) + orders) / bc - 1e-6), max: Math.floor(((i.to_max_cartons || 0) + orders) / bc + 1e-6)}))}</div>`;
+    }
+
     // --- Stan magazynu : stan wolny, zamówienia, min. / maks., do produkcji poza zamówieniami --------
     async function renderLevels(message) {
         const params = new URLSearchParams(location.hash.split('?')[1] || '');
@@ -311,6 +320,7 @@
                             : `<strong class="${i.to_min_cartons > 0 ? 'text-danger' : 'text-success'}">${i.to_min_cartons > 0 ? n(i.to_min_cartons) + ' ' + esc(t('st.cart')) : '✓ 0'}</strong>
                                ${i.to_max_cartons ? `<div class="small text-muted">${esc(t('lv.to_max', {c: n(i.to_max_cartons)}))}</div>` : ''}`)
                           + (i.orders_over_stock_cartons > 0 ? `<div class="small text-danger">${esc(t('lv.orders_short', {c: n(i.orders_over_stock_cartons)}))}</div>` : '')
+                          + batchesCell(i)
                         : (i.orders_over_stock_cartons > 0 ? `<strong>${n(i.orders_over_stock_cartons)} ${esc(t('st.cart'))}</strong><div class="small text-muted">${esc(t('lv.for_orders'))}</div>` : '<span class="text-muted">—</span>')}</td>
                 </tr>`).join('') || `<tr><td colspan="9" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody></table></div>
                 <p class="text-muted small mb-0 mt-2">${esc(t('lv.note'))}</p></div></div>`;
@@ -572,6 +582,7 @@
                 <span class="form-text d-block">${esc(t('help.never_frozen'))}</span></label>
             ${PAIRED.map(qtyField).join('')}
             ${ppc ? `<p class="form-text tfb-full mt-0">${esc(t('m.per_carton', {ppc}))}</p>` : ''}
+            ${ppc ? '<div class="tfb-full tfb-batch-calc" data-batch-calc></div>' : ''}
             ${item.item_type === 'product' ? `<div class="tfb-full tfb-suggest" data-suggest-box>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-suggest data-write><i class="bi bi-calculator"></i> ${esc(t('m.suggest'))}</button>
                 <span class="form-text" data-suggest-info>${esc(t('m.suggest_help'))}</span>
@@ -585,6 +596,43 @@
             form[f + '_cartons'].addEventListener('input', () => { const c = ui.num(form[f + '_cartons'].value); if (c === null || typeof c === 'number') form[f].value = c === null ? '' : Math.round(c * ppc); });
             form[f].addEventListener('input', () => fillCartons(f));
         });
+        // Partie produkcyjne (krok « Etapy i czasy ») : ile partii brakuje do stanu min. (w górę) i ile pełnych
+        // partii mieści się do stanu maks. — od stanu dostępnego (stan − zamówienia + w produkcji), jak « Stan magazynu ».
+        const drawBatches = () => {
+            const box = form.querySelector('[data-batch-calc]');
+            if (!box) return;
+            const b = s.batch_multiple;
+            const f = (v, d) => ui.fmt(v, d ?? 0, api.lang);
+            const title = `<div class="tfb-batch-calc-title"><i class="bi bi-boxes"></i> ${esc(t('m.batch_title'))}</div>`;
+            if (!b) {
+                box.innerHTML = title + `<div>${esc(t('m.batch_none'))} <a href="#/item/${item.id}/6">${esc(t('m.batch_set'))}</a></div>`;
+                return;
+            }
+            const bc = b / ppc;
+            const st = item.stock;
+            const lines = [`<strong>${esc(t('m.batch_size', {qty: f(b), unit: item.base_unit, cartons: f(bc, 1)}))}</strong> · <a href="#/item/${item.id}/6">${esc(t('m.batch_change'))}</a>`];
+            const min = form.mts.checked ? ui.num(form.stock_min.value) : null;
+            const max = form.mts.checked ? ui.num(form.stock_max.value) : null;
+            const stocks = typeof min === 'number' || typeof max === 'number';
+            if (st) {
+                lines.push(esc(t('m.batch_available', {available: f(st.available_cartons, 1), free: f(st.free_cartons), ordered: f(st.ordered_cartons), production: f(st.in_production_cartons, 1)})));
+                // Zamówienia ponad stan osobno tylko bez stanów MTS (inaczej są w brakach do stanów poniżej).
+                if (st.orders_over_stock_cartons > 0 && !stocks) lines.push(esc(t('m.batch_orders', {cartons: f(st.orders_over_stock_cartons), batches: f(Math.ceil(st.orders_over_stock_cartons / bc - 1e-6))})));
+            }
+            // Od dostępnego (stan − zamówienia + w produkcji, może być ujemne) : brak do stanu obejmuje zamówienia ponad stan.
+            const avail = st ? st.available_cartons : 0;
+            const withOrders = avail < 0 ? ' ' + t('m.batch_with_orders') : '';
+            if (typeof min === 'number') {
+                const miss = Math.max(0, min / ppc - avail);
+                lines.push(esc((miss > 0.05 ? t('m.batch_to_min', {min: f(min / ppc, 1), missing: f(miss, 1), batches: f(Math.ceil(miss / bc - 1e-6))}) : t('m.batch_min_ok', {min: f(min / ppc, 1)})) + (miss > 0.05 ? withOrders : '')));
+            }
+            if (typeof max === 'number') {
+                const miss = Math.max(0, max / ppc - avail);
+                lines.push(esc(t('m.batch_to_max', {max: f(max / ppc, 1), missing: f(miss, 1), exact: f(miss / bc, 1), whole: f(Math.floor(miss / bc + 1e-6))}) + (miss > 0.05 ? withOrders : '')));
+                if (max < b) lines.push('⚠ ' + esc(t('r.batch_over_max', {max: f(max), unit: item.base_unit})));
+            }
+            box.innerHTML = title + lines.map(l => `<div>${l}</div>`).join('');
+        };
         const sync = () => {
             const never = form.never_frozen.checked;
             form.mts.disabled = never;
@@ -593,6 +641,7 @@
             form.querySelectorAll('[data-mode-label]').forEach(x => x.classList.toggle('is-on', (x.dataset.modeLabel === 'MTS') === mts));
             form.querySelector('[data-mode-help]').textContent = t(mts ? 'help.mode_mts' : 'help.mode_mto');
             PAIRED.forEach(f => { form[f].closest('label').hidden = !mts; });
+            drawBatches();
         };
         // Stany ze sprzedaży ostatnich tygodni : min = 1 tydzień, maks = 3 tygodnie (parametry), w pełnych kartonach.
         // Obliczenie przełącza na « Na magazyn » ; data obliczenia zapisuje się razem ze stanami.
@@ -608,6 +657,7 @@
                 fillCartons('stock_min');
                 fillCartons('stock_max');
                 calculated = true;
+                drawBatches();
                 if (!form.mts.checked && !form.never_frozen.checked) { form.mts.checked = true; sync(); }
                 form.querySelector('[data-suggest-last]').textContent = t('m.suggest_pending');
                 info.textContent = t('m.suggest_done', {weeks: r.weeks, cartons: q(r.shipped_cartons), weekly: ui.fmt(r.weekly_cartons, 1, api.lang),
@@ -616,6 +666,7 @@
             } catch (err) { fail(form, err); }
         });
         form.addEventListener('change', sync);
+        form.addEventListener('input', drawBatches);
         sync();
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -688,7 +739,10 @@
         const draw = () => {
             body.innerHTML = `<p class="form-text">${esc(t('r.help'))}</p><form data-form>
                 <div class="tfb-batch">
-                    <label>${esc(t('r.batch'))}<div class="input-group input-group-sm"><input class="form-control" name="batch" data-field="batch_multiple" inputmode="decimal" value="${batch ?? ''}" placeholder="—">
+                    <label>${esc(t('r.batch'))}<div class="input-group input-group-sm">
+                        ${ppc ? `<input class="form-control" name="batch_cartons" inputmode="decimal" value="${typeof batch === 'number' ? String(Math.round(batch / ppc * 100) / 100).replace('.', ',') : ''}" placeholder="—" aria-label="${esc(t('r.batch'))} — ${esc(t('m.cartons'))}">
+                        <span class="input-group-text">${esc(t('m.cartons'))}</span>` : ''}
+                        <input class="form-control" name="batch" data-field="batch_multiple" inputmode="decimal" value="${batch ?? ''}" placeholder="—" aria-label="${esc(t('r.batch'))} — ${esc(item.base_unit)}">
                         <span class="input-group-text">${esc(item.base_unit)}</span></div></label>
                     <div><strong class="form-text d-block" data-batch-info>${esc(batchInfo())}</strong><span class="form-text d-block">${esc(t('r.batch_help'))}</span></div>
                 </div>
@@ -718,6 +772,11 @@
                 <button type="button" class="btn btn-outline-primary btn-sm" data-add data-write><i class="bi bi-plus"></i> ${esc(t('r.add_step'))}</button>
                 ${nav(6)}</form>`;
             const form = body.querySelector('[data-form]');
+            // Partia : kartony ↔ sztuki (zapis w sztukach).
+            if (ppc) {
+                form.batch_cartons.addEventListener('input', () => { const c = ui.num(form.batch_cartons.value); if (c === null || typeof c === 'number') form.batch.value = c === null ? '' : Math.round(c * ppc); });
+                form.batch.addEventListener('input', () => { const q = ui.num(form.batch.value); form.batch_cartons.value = typeof q === 'number' ? String(Math.round(q / ppc * 100) / 100).replace('.', ',') : ''; });
+            }
             form.addEventListener('input', collect);
             form.addEventListener('change', (e) => { collect(); if (e.target.dataset.k === 'workstation_id') draw(); });
             form.querySelector('[data-add]').addEventListener('click', () => { collect(); steps.push({name_pl: '', name_fr: '', fixed_time_s: 0, variable_time_s: 0, operators_required: 1, alternatives: []}); draw(); });

@@ -53,7 +53,6 @@
     "PHONE_REVOKED": "Rejestracja telefonu wygasła lub została odwołana — zarejestruj telefon ponownie.",
     "NOT_ALLOWED_FOR_TYPE": "Niedostępne dla tego typu artykułu.",
     "WEEK_IN_PAST": "Tydzień {week} już minął — nie ma dni, na które można rozdzielić produkcję.",
-    "WEEK_WARNING_NO_PLAN": "Brak zatwierdzonego planu na ten tydzień — ilości z propozycji (zamówienia + uzupełnienie stanów). Zatwierdź plan w „Plany”, aby śledzić wykonanie.",
     "WEEK_WARNING_UNASSIGNED": "{count} produktów ({hours} h) czeka w „Do zrobienia” — przeciągnij je na dzień albo użyj „Ułóż tydzień”.",
     "WEEK_WARNING_GROUP_OVERLOAD": "{group}: brakuje {hours} h w dniach przeciążonych — przesuń produkty albo dodaj ludzi do działu (lista pracowników).",
     "WEEK_WARNING_AFTER_DUE": "{count} bloków jest po terminie zamówienia.",
@@ -61,7 +60,8 @@
     "DEVICE_WITHOUT_GROUP": "Tablet nie ma przypisanej grupy — przypisz go do grupy w Hala: tablety i czas pracy.",
     "OUTPUT_NOT_IN_YOUR_GROUPS": "Ta partia nie należy do Twojej grupy.",
     "OUTPUT_LOCKED": "Partii z tego dnia nie można już zmieniać na tablecie (edycja przez {days} dni).",
-    "OUTPUT_CANCELLED": "Ta partia jest anulowana."
+    "OUTPUT_CANCELLED": "Ta partia jest anulowana.",
+    "WEEK_WARNING_FIXED_NO_SHIFT": "Stała partia 📌 „{product}” ({day}) : grupa nie ma tego dnia zmiany — partia czeka w „Do zrobienia”."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -140,7 +140,9 @@
     "NOTHING_TO_MOVE": "W tym miejscu nie ma ilości tego produktu do przeniesienia.",
     "INVALID_PHOTO": "Zdjęcie musi być obrazem JPEG, PNG lub WebP.",
     "PHOTO_TOO_LARGE": "Zdjęcie jest za duże (maks. {max_kb} KB).",
-    "MATERIAL_NOT_IN_RECIPE": "Tego surowca nie ma w recepturze produktu."
+    "MATERIAL_NOT_IN_RECIPE": "Tego surowca nie ma w recepturze produktu.",
+    "NOTHING_ON_DAY": "Ten produkt nie ma ilości w tym dniu — przypnij blok, który jest na dniu.",
+    "NOT_PINNED": "Ten produkt nie ma stałej partii w ten dzień tygodnia."
   },
   "fields": {
     "code": "kod",
@@ -310,7 +312,9 @@
     "best_before": "data przydatności",
     "photo": "zdjęcie",
     "ocr_text": "tekst OCR",
-    "cancelled": "anulowana"
+    "cancelled": "anulowana",
+    "day": "dzień",
+    "pinned": "co tydzień"
   },
   "entities": {
     "group": "grupa",

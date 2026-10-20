@@ -116,7 +116,7 @@ final class ItemService
                 'final_product_id' => (int) $r['id_final_product'], 'name' => $r['name'], 'erp_active' => (bool) $r['erp_active'],
                 'group_id' => $r['id_primary_group'] !== null ? (int) $r['id_primary_group'] : null, 'status' => $r['status'] ?? 'draft',
                 'mode' => $r['mode'] ?? 'MTO', 'never_frozen' => (bool) ($r['never_frozen'] ?? false), 'ppc' => $ppc, 'cpp' => $cpp,
-                'stock_min' => $this->num($r['stock_min']), 'stock_max' => $this->num($r['stock_max']),
+                'stock_min' => $this->num($r['stock_min']), 'stock_max' => $this->num($r['stock_max']), 'batch' => $this->num($r['batch_multiple']),
                 'stock_min_cartons' => $cartons($r['stock_min']), 'stock_max_cartons' => $cartons($r['stock_max']), 'stock_calc_at' => $r['stock_calc_at'],
                 'shipped_cartons' => round((float) $r['shipped_cartons'], 1), 'weekly_cartons' => round($weekly, 2), 'shops' => $shops,
                 'per_shop_weekly_cartons' => $shops ? round($weekly / $shops, 2) : null,
@@ -283,7 +283,16 @@ final class ItemService
             ], $this->items->bom($recipeId)) : [],
             'durations' => array_map(fn($q) => $this->durationOf($steps, (float) $q), array_values(array_filter($samples, 'is_numeric'))),
             'checklist' => $this->checklist($row, $steps),
+            'stock' => $row['item_type'] === 'product' ? $this->cardStock($id) : null,
         ];
+    }
+
+    /** Stan magazynu karty (kartony, jak « Stan magazynu ») : krok « Tryb i zapasy » liczy z niego partie do stanów. */
+    private function cardStock(int $id): ?array
+    {
+        $r = $this->items->stockOverview(1, null, $id)[0] ?? null;
+        if ($r === null || (int) $r['ppc'] <= 0) return null;
+        return $this->stockLevel($r, (int) $r['ppc'], fn(float $c) => (int) ceil(round($c, 6)));
     }
 
     public function create(array $input, ApiContext $context): array

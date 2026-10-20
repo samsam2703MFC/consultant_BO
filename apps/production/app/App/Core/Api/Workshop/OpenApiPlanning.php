@@ -47,14 +47,20 @@ final class OpenApiPlanning
                 'description' => 'Effectif d\'un groupe sur un shift un jour donné (remplace les équipes) ; headcount null = retour aux équipes.'],
             'GET /planning/week' => ['tag' => $t, 'id' => 'getWeek', 'summary' => 'Gantt tygodnia / Gantt de la semaine', 'response' => 'Week', 'errors' => [422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)']],
-                'description' => "Production à la semaine : un bloc = un produit sur un jour. Quantités des plans validés (figés, clos) dont l'échéance tombe dans la semaine, sinon proposition (commandes + réassort). "
-                    . "Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. Réalisé = part des opérations terminées des OF du plan."],
+                'description' => "Production à la semaine : un bloc = un produit sur un jour. Quantités du plan validé (figé, clos) qui commence dans la semaine, sinon proposition en direct (commandes + réassort + lots fixes). "
+                    . "Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. "
+                    . "Réalisé = part des opérations terminées des OF du plan, sans plan : part de la quantité produite (lots saisis sur les tablettes). "
+                    . "Lots fixes 📌 : à la première ouverture de la semaine, chaque lot fixe est posé sur son jour (à partir d'aujourd'hui, jours avec équipe), une seule fois par semaine."],
             'POST /planning/week/move' => ['tag' => $t, 'id' => 'moveWeekProduct', 'summary' => 'Przenieś produkt na dzień / Déplacer un produit sur un jour', 'body' => 'WeekMoveInput', 'response' => 'Week', 'errors' => [400, 403, 422],
                 'description' => "from / to null = « À répartir ». quantity absente = tout le bloc. Jamais vers un jour passé (DAY_IN_PAST) ni hors semaine (DAY_NOT_IN_WEEK). Un bloc après l'échéance de la commande est signalé (late), pas refusé. "
                     . "À l'ordonnancement, un OF finit au plus tard le dernier jour où son produit est placé (MTS : ce jour devient l'échéance)."],
             'POST /planning/week/distribute' => ['tag' => $t, 'id' => 'distributeWeek', 'summary' => 'Rozdziel na dni / Répartir par jour', 'body' => 'WeekDistributeInput', 'response' => 'Week', 'errors' => [400, 403, 409, 422],
                 'description' => "Remplit les jours à partir d'aujourd'hui, au plus tôt, échéances les plus proches d'abord ; découpe en cartons entiers quand un jour est plein, jamais après l'échéance (sauf échéance passée). "
                     . "reset = retire d'abord les placements à partir d'aujourd'hui. Seulement les groupes où l'utilisateur a prod.gantt.move. 409 WEEK_IN_PAST si la semaine est finie."],
+            'POST /planning/week/pin' => ['tag' => $t, 'id' => 'pinWeekProduct', 'summary' => '📌 Co tydzień / Chaque semaine', 'body' => 'WeekPinInput', 'response' => 'Week', 'errors' => [400, 403, 422],
+                'description' => "pinned = true : la quantité du produit sur ce jour devient un lot fixe (ce jour de la semaine, chaque semaine suivante) ; false : plus de lot fixe ce jour-là. "
+                    . "La semaine courante reste telle quelle ; les semaines suivantes où le lot était déjà posé sont annulées (reposées avec la nouvelle quantité, ou plus du tout). "
+                    . "422 NOTHING_ON_DAY (rien sur ce jour), NOT_PINNED (pas de lot fixe à retirer)."],
             'POST /planning/plans/{id:\d+}/validate' => ['tag' => $t, 'id' => 'validatePlan', 'summary' => 'Zatwierdź plan i utwórz zlecenia / Valider et créer les OF', 'response' => 'Plan', 'errors' => [404, 409],
                 'description' => 'Un seul plan validé par période (409 PLAN_OVERLAP). OF MTO reliés aux commandes clients, OF SEMI reliés à leur OF parent et dus à son démarrage au plus tard.'],
         ];
@@ -65,7 +71,7 @@ final class OpenApiPlanning
         $num = ['type' => 'number'];
         $int = ['type' => 'integer'];
         $nInt = ['type' => 'integer', 'nullable' => true];
-        $qty = ['qty_mto' => $num, 'qty_mts' => $num, 'qty_semi' => $num, 'qty_proposed' => $num, 'batches' => $int, 'standard_hours' => $num,
+        $qty = ['qty_mto' => $num, 'qty_mts' => $num, 'qty_semi' => $num, 'qty_fixed' => ['type' => 'number', 'description' => 'lots fixes 📌 au-delà des commandes et du réassort'], 'qty_proposed' => $num, 'batches' => $int, 'standard_hours' => $num,
             'batch_size' => ['type' => 'number', 'nullable' => true, 'description' => 'partie de production (fiche, étape « Etapy i czasy ») ; quantités arrondies au multiple']];
         $planSummary = [
             'id' => $int, 'period_start' => ['type' => 'string', 'format' => 'date'], 'period_end' => ['type' => 'string', 'format' => 'date'],
@@ -191,6 +197,7 @@ final class OpenApiPlanning
                     'stock_day' => ['type' => 'boolean', 'description' => 'jour de production pour le stock (week.stock_days)']]]],
                 'source' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['plan', 'demand']], 'plans' => ['type' => 'array', 'items' => ['type' => 'object']]]],
                 'can_move' => ['type' => 'boolean'], 'can_schedule' => ['type' => 'boolean'],
+                'pins' => ['type' => 'array', 'description' => 'tous les lots fixes 📌', 'items' => ['$ref' => '#/components/schemas/WeekPin']],
                 'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true], 'color' => ['type' => 'string', 'nullable' => true], 'people' => $int,
                     'hours' => $num, 'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'unassigned_h' => $num, 'over_h' => $num,
@@ -212,6 +219,8 @@ final class OpenApiPlanning
                     'due_date' => ['type' => 'string', 'format' => 'date', 'nullable' => true], 'latest_day' => ['type' => 'string', 'format' => 'date'],
                     'done_h' => $num, 'done_pct' => ['type' => 'number', 'nullable' => true], 'state' => ['type' => 'string', 'enum' => ['planned', 'in_progress', 'done']],
                     'unassigned_qty' => $num, 'unassigned_h' => $num, 'over_qty' => $num, 'movable' => ['type' => 'boolean'],
+                    'fixed_qty' => ['type' => 'number', 'description' => 'lots fixes 📌 posés dans la semaine (quantité minimale de la semaine)'],
+                    'pins' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/WeekPin']],
                     'slots' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'day' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'batches' => ['type' => 'number', 'nullable' => true], 'hours' => $num, 'done_h' => $num,
                         'direct_qty' => $num, 'stock_qty' => $num, 'direct_cartons' => ['type' => 'number', 'nullable' => true], 'stock_cartons' => ['type' => 'number', 'nullable' => true], 'direct_h' => $num,
@@ -230,6 +239,14 @@ final class OpenApiPlanning
             ]],
             'WeekDistributeInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date'], 'properties' => [
                 'date' => ['type' => 'string', 'format' => 'date'], 'reset' => ['type' => 'boolean'],
+            ]],
+            'WeekPinInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id', 'day', 'pinned'], 'properties' => [
+                'date' => ['type' => 'string', 'format' => 'date'], 'item_id' => ['type' => 'integer'], 'day' => ['type' => 'string', 'format' => 'date'], 'pinned' => ['type' => 'boolean'],
+            ]],
+            'WeekPin' => ['type' => 'object', 'properties' => [
+                'item_id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'group_id' => $nInt, 'unit' => ['type' => 'string'], 'ppc' => $nInt,
+                'batch' => ['type' => 'number', 'nullable' => true], 'weekday' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
+                'quantity' => ['type' => 'number'], 'day' => ['type' => 'string', 'format' => 'date', 'description' => 'ce jour dans la semaine affichée'],
             ]],
             'PlanInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [
                 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date', 'description' => 'au plus planning.max_period_days jours'],

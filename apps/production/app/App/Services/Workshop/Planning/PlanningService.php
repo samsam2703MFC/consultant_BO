@@ -72,7 +72,7 @@ final class PlanningService
         $lines = [];
         $line = function (array $item, string $date) use (&$lines): string {
             $key = $item['id'] . '|' . $date;
-            $lines[$key] ??= ['item' => $item, 'due_date' => $date, 'qty_mto' => 0.0, 'qty_mts' => 0.0, 'qty_semi' => 0.0,
+            $lines[$key] ??= ['item' => $item, 'due_date' => $date, 'qty_mto' => 0.0, 'qty_mts' => 0.0, 'qty_semi' => 0.0, 'qty_fixed' => 0.0,
                 'orders' => [], 'late_orders' => 0, 'mts' => null, 'parents' => []];
             return $key;
         };
@@ -127,6 +127,27 @@ final class PlanningService
             $l['qty_proposed'] = $this->proposed($l, $roundMto);
         }
         unset($l);
+
+        // --- Stałe partie (📌 co tydzień, od dzisiaj) : minimum produkcji produktu w okresie ; nadwyżka ponad
+        // zamówienia i uzupełnienie stanu idzie na magazyn, w linii dnia pierwszej stałej partii.
+        $fixed = [];
+        $first = max($from, date('Y-m-d'));
+        foreach ($this->planning->fixedRules() as $r) {
+            for ($d = $first; $d <= $to; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+                if ((int) date('N', strtotime($d)) === (int) $r['weekday']) $fixed[(int) $r['id_item']][$d] = (float) $r['quantity'];
+            }
+        }
+        foreach ($fixed as $itemId => $byDay) {
+            $it = $byId[$itemId] ?? null;
+            if ($it === null || ($it['erp_active'] !== null && !(int) $it['erp_active'])) continue;
+            $planned = array_sum(array_map(fn($l) => (int) $l['item']['id'] === $itemId ? $l['qty_proposed'] : 0.0, $lines));
+            $extra = array_sum($byDay) - $planned;
+            if ($extra <= 0.0005) continue;
+            ksort($byDay);
+            $key = $line($it, (string) array_key_first($byDay));
+            $lines[$key]['qty_fixed'] += $extra;
+            $lines[$key]['qty_proposed'] = ($lines[$key]['qty_proposed'] ?? 0.0) + $extra;
+        }
         $graph = $this->planning->recipeGraph();
         $semiByRecipe = [];
         foreach ($items as $it) if ($it['item_type'] === 'semi' && $it['id_recipe'] !== null) $semiByRecipe[(int) $it['id_recipe']] = $it;
@@ -182,6 +203,7 @@ final class PlanningService
                 $this->planning->insertLine($id, [
                     'id_item' => (int) $l['item']['id'], 'due_date' => $l['due_date'],
                     'qty_mto' => round($l['qty_mto'], 3), 'qty_mts' => round($l['qty_mts'], 3), 'qty_semi' => round($l['qty_semi'], 3),
+                    'qty_fixed' => round($l['qty_fixed'], 3),
                     'qty_proposed' => round($l['qty_proposed'], 3), 'qty_final' => round($l['qty_proposed'], 3),
                     'batches' => $l['batches'], 'standard_hours' => $l['standard_hours'],
                 ]);
@@ -211,7 +233,7 @@ final class PlanningService
                 'id' => (int) $l['id'], 'item_id' => (int) $l['id_item'], 'name' => $l['name'], 'item_type' => $l['item_type'],
                 'mode' => $l['mode'], 'group_id' => $l['id_primary_group'] !== null ? (int) $l['id_primary_group'] : null,
                 'due_date' => $l['due_date'], 'unit' => $l['base_unit'], 'ppc' => $l['ppc'] !== null ? (int) $l['ppc'] : null,
-                'qty_mto' => (float) $l['qty_mto'], 'qty_mts' => (float) $l['qty_mts'], 'qty_semi' => (float) $l['qty_semi'],
+                'qty_mto' => (float) $l['qty_mto'], 'qty_mts' => (float) $l['qty_mts'], 'qty_semi' => (float) $l['qty_semi'], 'qty_fixed' => (float) $l['qty_fixed'],
                 'qty_proposed' => (float) $l['qty_proposed'], 'qty_final' => (float) $l['qty_final'], 'batches' => (int) $l['batches'],
                 'batch_size' => $this->num($l['batch_multiple']),
                 'standard_hours' => (float) $l['standard_hours'], 'adjusted' => $l['adjusted_at'] !== null, 'adjust_reason' => $l['adjust_reason'],
@@ -416,6 +438,7 @@ final class PlanningService
                 'ppc' => $l['item']['item_type'] === 'product' && (int) $l['item']['ppc'] > 0 ? (int) $l['item']['ppc'] : null,
                 'batch_size' => $this->num($l['item']['batch_multiple']),
                 'qty_mto' => round($l['qty_mto'], 3), 'qty_mts' => round($l['qty_mts'], 3), 'qty_semi' => round($l['qty_semi'], 3),
+                'qty_fixed' => round($l['qty_fixed'], 3),
                 'qty_proposed' => round($l['qty_proposed'], 3), 'batches' => $l['batches'], 'standard_hours' => $l['standard_hours'],
                 'customer_orders' => count($l['orders']), 'late_orders' => $l['late_orders'],
                 'mts' => $l['mts'] === null ? null : array_map(fn($x) => is_float($x) ? round($x, 3) : $x, $l['mts']),

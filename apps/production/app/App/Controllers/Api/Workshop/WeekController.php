@@ -28,4 +28,10 @@ final class WeekController
     {
         return new ApiResult($this->week->distribute($request->body(), $request->context));
     }
+
+    /** 📌 « Co tydzień » : stała partia produktu w tym dniu tygodnia (albo odpięcie). */
+    public function pin(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->week->pin($request->body(), $request->context));
+    }
 }

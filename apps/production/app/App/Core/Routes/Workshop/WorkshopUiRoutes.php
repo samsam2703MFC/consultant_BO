@@ -4,7 +4,8 @@ use FastRoute\RouteCollector;
 return function (RouteCollector $r) {
     $c = App\Controllers\Web\Workshop\WorkshopUiController::class;
     $r->addRoute('GET', '/workshop/products', ['controller' => $c, 'method' => 'products']);
-    $r->addRoute('GET', '/workshop/planning', ['controller' => $c, 'method' => 'planning']);
+    // « Plan tygodnia i surowce » usunięty : planuje się na tablicy « Tydzień produkcji ».
+    $r->addRoute('GET', '/workshop/planning', ['redirect' => '/workshop/gantt']);
     $r->addRoute('GET', '/workshop/gantt', ['controller' => $c, 'method' => 'gantt']);
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/workshop/timesheet', ['controller' => $c, 'method' => 'timesheet']);

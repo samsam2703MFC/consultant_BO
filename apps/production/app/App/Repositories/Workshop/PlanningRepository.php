@@ -29,6 +29,12 @@ final class PlanningRepository extends WorkshopRepository
         );
     }
 
+    /** Stałe partie co tydzień (📌) : produkt, dzień tygodnia ISO, ilość. */
+    public function fixedRules(): array
+    {
+        return $this->all('SELECT id, id_item, weekday, quantity FROM tfb_prod_fixed_batch ORDER BY id_item, weekday');
+    }
+
     /** Lignes de commandes clients pas encore expédiées, à expédier entre deux dates. */
     public function openOrderLines(string $from, string $to): array
     {
@@ -70,10 +76,10 @@ final class PlanningRepository extends WorkshopRepository
         return (int) $this->db->query('SELECT COUNT(*) FROM carton_stock WHERE status IN (1, 2)')->fetchColumn();
     }
 
-    /** @return array<int,float> article => quantité des OF MTS pas encore terminés */
+    /** @return array<int,float> article => quantité des OF MTS pas encore terminés (planifiés après échéance : plus comptés, sauf en cours) */
     public function openMtsOrders(): array
     {
-        $rows = $this->all("SELECT id_item, SUM(quantity) AS q FROM tfb_prod_order WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item");
+        $rows = $this->all("SELECT id_item, SUM(quantity) AS q FROM tfb_prod_order WHERE origin = 'MTS' AND (status = 'in_progress' OR (status IN ('planned', 'released') AND due_at >= CURDATE())) GROUP BY id_item");
         return array_map('floatval', array_column($rows, 'q', 'id_item'));
     }
 
@@ -171,9 +177,9 @@ final class PlanningRepository extends WorkshopRepository
 
     public function insertLine(int $planId, array $l): int
     {
-        $this->db->prepare('INSERT INTO tfb_prod_plan_line (id_plan, id_item, due_date, qty_mto, qty_mts, qty_semi, qty_proposed, qty_final, batches, standard_hours)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-            ->execute([$planId, $l['id_item'], $l['due_date'], $l['qty_mto'], $l['qty_mts'], $l['qty_semi'], $l['qty_proposed'], $l['qty_final'], $l['batches'], $l['standard_hours']]);
+        $this->db->prepare('INSERT INTO tfb_prod_plan_line (id_plan, id_item, due_date, qty_mto, qty_mts, qty_semi, qty_fixed, qty_proposed, qty_final, batches, standard_hours)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$planId, $l['id_item'], $l['due_date'], $l['qty_mto'], $l['qty_mts'], $l['qty_semi'], $l['qty_fixed'] ?? 0, $l['qty_proposed'], $l['qty_final'], $l['batches'], $l['standard_hours']]);
         return (int) $this->db->lastInsertId();
     }
 

@@ -193,8 +193,8 @@ function stock_fmt($value, int $decimals = 0): string
     .stock-filter-line:last-child { margin-bottom: 0; }
     .stock-filter-label { color: #607080; flex: 0 0 72px; font-size: .78rem; font-weight: 700; line-height: 1.9; text-transform: uppercase; }
     .stock-filter-badges { display: flex; flex-wrap: wrap; gap: .35rem; min-width: 0; }
-    .stock-filter-badge { border-radius: 999px; line-height: 1.2; }
-    .stock-filter-badge.is-active { box-shadow: 0 0 0 .12rem rgba(67, 94, 190, .18); }
+    .stock-filter-badge { border-radius: var(--at-radius-sm, 6px); font-size: .8rem; font-weight: 600; line-height: 1.2; padding: .45rem .75rem; }
+    .stock-filter-badge.is-active { box-shadow: none; }
     .stock-monitor-table-wrapper { overflow: visible; }
     .stock-monitor-table { border-collapse: separate; border-spacing: 0; }
     .stock-monitor-table .sticky-header th {

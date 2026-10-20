@@ -15,20 +15,13 @@ use App\Services\Workshop\Execution\TimesheetService;
  */
 class WorkshopUiController extends BaseController
 {
-    public function __construct(private AuthService $auth, private WorkshopConfig $config, private TimesheetService $timesheets,
-                                private \App\Repositories\Workshop\ParamRepository $params)
+    public function __construct(private AuthService $auth, private WorkshopConfig $config, private TimesheetService $timesheets)
     {
     }
 
     public function products()
     {
         $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
-    }
-
-    public function planning()
-    {
-        $this->view('workshop/planning', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'),
-            'week_start_day' => \App\Services\Workshop\Planning\WeekStart::day($this->params)]);
     }
 
     public function gantt()

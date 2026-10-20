@@ -140,7 +140,7 @@ class FinalProductStockRepository extends BaseRepository
                 LEFT JOIN tfb_prod_product_settings ts
                     ON ts.id_item = ti.id
                 LEFT JOIN (SELECT id_item, SUM(quantity) as pieces FROM tfb_prod_order
-                           WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item) mo
+                           WHERE origin = 'MTS' AND (status = 'in_progress' OR (status IN ('planned', 'released') AND due_at >= CURDATE())) GROUP BY id_item) mo
                     ON mo.id_item = ti.id
                 LEFT JOIN (
                     SELECT

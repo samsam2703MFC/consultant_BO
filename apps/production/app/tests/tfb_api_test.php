@@ -969,6 +969,49 @@ check($rp[$itemId]['batch'] == 160 && $rp[$itemId]['batches'] == $rp[$itemId]['q
     'week: production batch of the product card, quantities in whole batches');
 $call('PATCH', '/referentiels/params/week.stock_days', ['value' => '3,4,5'], $access);
 
+// --- 📌 Stałe partie co tydzień : blok w dniu przypięty → ten dzień tygodnia w każdym kolejnym tygodniu
+[$s, $w] = $call('GET', "/planning/week?date={$today}", null, $access);
+$wp = array_column($w['data']['products'], null, 'item_id')[$itemId];
+$pinDay = $wp['slots'][0]['day'];
+$pinQty = $wp['slots'][0]['quantity'];
+$emptyDay = array_values(array_filter(array_column($w['data']['days'], 'date'), fn($d) => !in_array($d, array_column($wp['slots'], 'day'), true)))[0];
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => true], $dir);
+check($s === 403, 'direction does not pin batches');
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $emptyDay, 'pinned' => true], $access);
+check($s === 422 && $codes($b) === ['day:NOTHING_ON_DAY'], 'only a block placed on a day can be pinned');
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => false], $access);
+check($s === 422 && $codes($b) === ['day:NOT_PINNED'], 'nothing to unpin');
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => true], $access);
+$bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($s === 200 && $bp && count($bp['pins']) === 1 && $bp['pins'][0]['weekday'] === (int) date('N', strtotime($pinDay)) && $bp['pins'][0]['quantity'] == $pinQty
+    && $bp['fixed_qty'] == $pinQty && array_column($b['data']['pins'], 'item_id') === [$itemId], 'pin: the block becomes a fixed batch, every week on this weekday');
+$nextDay = date('Y-m-d', strtotime($pinDay . ' +7 days'));
+[$s, $n] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+$np = array_column($n['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+$onDay = fn($p, $day) => $p ? array_sum(array_map(fn($x) => $x['day'] === $day ? $x['quantity'] : 0, $p['slots'])) : 0;
+$noShift = in_array('FIXED_NO_SHIFT', array_column($n['data']['warnings'] ?? [], 'code'), true);
+check($s === 200 && $n['data']['source']['type'] === 'demand' && $np && $np['quantity'] >= $pinQty
+    && ($onDay($np, $nextDay) == $pinQty || ($noShift && $np['unassigned_qty'] >= $pinQty)),
+    'next week: the fixed batch is on its day by itself (waits in « to do » when the group has no shift that day)');
+[$s, $dm] = $call('GET', '/planning/demand?from=' . $n['data']['week_start'] . '&to=' . $n['data']['week_end'], null, $access);
+check(array_sum(array_map(fn($l) => $l['item_id'] === $itemId ? $l['qty_proposed'] : 0, $dm['data']['lines'] ?? [])) >= $pinQty - 0.001,
+    'proposal: fixed batches are the minimum of the week (the rest above orders and refill goes to stock)');
+if ($onDay($np, $nextDay) > 0) {
+    $call('POST', '/planning/week/move', ['date' => $nextDay, 'item_id' => $itemId, 'from' => $nextDay, 'to' => null], $access);
+    [$s, $n2] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+    $np2 = array_column($n2['data']['products'], null, 'item_id')[$itemId];
+    check($onDay($np2, $nextDay) == 0 && $np2['unassigned_qty'] >= $pinQty, 'a fixed batch taken off its day in one week does not come back that week');
+    $call('POST', '/planning/week/move', ['date' => $nextDay, 'item_id' => $itemId, 'to' => $nextDay, 'quantity' => $pinQty], $access);
+}
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => false], $access);
+$bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($s === 200 && $bp && $bp['pins'] === [] && $b['data']['pins'] === [] && $onDay($bp, $pinDay) == $pinQty, 'unpin: this week stays as it is');
+[$s, $n3] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+$np3 = array_column($n3['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($s === 200 && $onDay($np3, $nextDay) == 0 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}'")->fetchColumn() === 0,
+    'unpin: the later week where the batch was already placed is undone');
+check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'fixed_batch'")->fetchColumn() === 2, 'pin and unpin are audited');
+
 // Pracownik dodany w ERP : obsada zmiany dziennej grupy działu nadąża (osoby × 40 h w Gantcie tygodnia).
 $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");
 (new App\Repositories\Employee\ProductionEmployeeRepository($pdo))->syncWorkshopHeadcount();
