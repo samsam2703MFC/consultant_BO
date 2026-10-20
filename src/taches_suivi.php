@@ -101,6 +101,13 @@ function tachesJourEnsureNote(): void
     if ((int) ($r6['n'] ?? 0) === 0) {
         Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN obligatoire TINYINT NULL');
     }
+    // Une tâche NOTÉE était relevée « facultative » (0) : /pwa/tasks ne lui donnait pas le drapeau du
+    // panel. Elle repasse à NULL (inconnu, donc comptée comme obligatoire), une seule fois (20/10/2026).
+    if (setting('tachesNoteeObligReset') === null) {
+        try { Db::exec("UPDATE ceo_tache_jour SET obligatoire = NULL WHERE statut = 'notee' AND obligatoire = 0"); } catch (PDOException $e7) { /* rien à reprendre */ }
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['tachesNoteeObligReset', json_encode(date('Y-m-d H:i:s'))]);
+    }
     // Les jours relevés AVANT ces colonnes sont marqués « faits » : sans
     // rouvrir ce drapeau, le rattrapage les sauterait et l'heure comme
     // l'opérateur resteraient vides pour toujours. Une seule fois, à la
@@ -137,7 +144,8 @@ function tachesJourReleve(string $date): ?int
                       ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire), fait_le = VALUES(fait_le), fait_par = VALUES(fait_par), obligatoire = VALUES(obligatoire)',
                 [$date, (int) $s['shopId'], (int) $t['taskId'], mb_substr((string) $t['tache'], 0, 200), $fait, mb_substr($st, 0, 12),
                  $note, isset($t['comment']) && $t['comment'] !== null ? mb_substr((string) $t['comment'], 0, 500) : null,
-                 $faitLe, $faitPar !== null ? mb_substr($faitPar, 0, 120) : null, !empty($t['obligatoire']) ? 1 : 0]);
+                 $faitLe, $faitPar !== null ? mb_substr($faitPar, 0, 120) : null,
+                 ($t['obligatoire'] ?? null) === null ? null : (!empty($t['obligatoire']) ? 1 : 0)]);
             $n++;
         }
     }

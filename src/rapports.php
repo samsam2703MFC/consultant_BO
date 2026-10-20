@@ -116,6 +116,7 @@ function ensureRapports(): void
         rapVentesSemer();
     rapAfficheSemer();
     if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
+    if (function_exists('cqMailSemer')) { cqMailSemer(); }
         return;
     }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
@@ -139,6 +140,7 @@ function ensureRapports(): void
     rapVentesSemer();
     rapAfficheSemer();
     if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
+    if (function_exists('cqMailSemer')) { cqMailSemer(); }
 }
 
 /**
@@ -2213,6 +2215,8 @@ function wr_rapport_generer(int $id): array
     $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ((string) $rep['code'] === 'target-vente-cloture') { return ['ok' => true] + venteClotureRun($rep, ''); }
+    // Le contrôle qualité : l'aperçu de l'e-mail d'un magasin sans photo à cette heure, rien ne part.
+    if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) { return ['ok' => true] + cqMailDistribuer($rep, true); }
     if ((string) $rep['code'] === 'affiche-vente-mois') {
         // L'affiche n'a pas de « génération » à blanc : générer, c'est servir
         // les magasins dont le mail est actif — comme au 1er du mois.
@@ -2231,6 +2235,9 @@ function wr_rapport_envoyer(int $id): array
     }
     if ((string) $rep['code'] === 'affiche-vente-mois') {
         return ['ok' => true, 'mode' => 'par-magasin'] + ventesAfficheDistribuer($rep);
+    }
+    if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) {
+        return ['ok' => true, 'mode' => 'par-magasin'] + cqMailDistribuer($rep);
     }
     if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
         return ['ok' => true, 'mode' => 'par-magasin'] + rapportDistribuer($rep);
@@ -2292,6 +2299,13 @@ function ep_rapports_cron(): array
                 || ((string) $rep['frequence'] === 'mensuel' && (int) $rep['jour'] === $dom && (int) $rep['heure'] === $h);
         }
         if (!$du) { continue; }
+        // Le contrôle qualité de 19:00 tient son propre registre (un magasin servi une fois par jour) :
+        // un envoi à la main dans l'après-midi ne doit pas éteindre celui du soir.
+        if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) {
+            $bilan = cqMailDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue', 'envoi' => $bilan['resume'] ?? ''];
+            continue;
+        }
         $deja = Db::row('SELECT id FROM ceo_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
             [(int) $rep['id'], date('Y-m-d 00:00:00'), 'erreur']);
         if ($deja !== null) { continue; }
