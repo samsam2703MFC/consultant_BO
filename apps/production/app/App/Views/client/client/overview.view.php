@@ -134,7 +134,7 @@
                                             <div class="at-more-menu" role="menu" hidden>
                                                 <button type="button" role="menuitem" onclick="getPriceListByClient(<?= $row['id'] ?>)"><i class="bi bi-file-earmark-text"></i>Cennik (PDF)</button>
                                                 <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/profitability"><i class="bi bi-graph-up"></i>Rentowność</a>
-                                                <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/sales-summary"><i class="bi bi-box-seam"></i>Sprzedaż WDT</a>
+                                                <a role="menuitem" href="<?= ROOT ?>/finances/sales-analytics?customer_id=<?= $row['id'] ?>"><i class="bi bi-box-seam"></i>Sprzedaż WDT</a>
                                                 <?php if (!empty($row['franchisee_uid'])): ?>
                                                     <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/franchise-product-snapshot"><i class="bi bi-clipboard-data"></i>Diagnostyka produktów franczyzowych</a>
                                                 <?php endif; ?>

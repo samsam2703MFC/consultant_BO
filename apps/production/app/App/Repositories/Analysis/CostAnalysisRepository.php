@@ -144,17 +144,6 @@ class CostAnalysisRepository extends BaseRepository
         return (int)($rows[0]['total_units'] ?? 0);
     }
 
-    public function getCompanyCosts(): array
-    {
-        $sql = "SELECT depreciation, water, power_supply, other FROM company_cost WHERE id = 1 LIMIT 1";
-        $rows = $this->query($sql);
-        return $rows[0] ?? [
-            'depreciation' => 0,
-            'water' => 0,
-            'power_supply' => 0,
-            'other' => 0
-        ];
-    }
 
     public function getSharedCostPool(int $monthId): float
     {

@@ -64,15 +64,8 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxActivateIntegration'
     ]);
 
-    $r->addRoute('GET', '/clients/{id:\d+}/sales-summary', [
-        'controller' => App\Controllers\Web\Client\ClientController::class,
-        'method'     => 'salesSummary'
-    ]);
-
-    $r->addRoute('GET', '/ajax/clients/{id:\d+}/sales-summary', [
-        'controller' => App\Controllers\Web\Client\ClientController::class,
-        'method'     => 'ajaxSalesSummary'
-    ]);
+    // Sprzedaż WDT klienta : Analiza sprzedaży z filtrem klienta (eksport PDF / CSV poniżej, przyciski w analizie)
+    $r->addRoute('GET', '/clients/{id:\d+}/sales-summary', ['redirect' => '/finances/sales-analytics?customer_id={id}']);
 
     $r->addRoute('GET', '/ajax/clients/{id:\d+}/sales-summary/export/pdf', [
         'controller' => App\Controllers\Web\Client\ClientController::class,

@@ -31,17 +31,34 @@ class SalesAnalyticsService
     /**
      * KPI podsumowania dla zakresu.
      */
-    public function getSummary(string $dateFrom, string $dateTo, ?int $customerId = null): array
+    public function getSummary(string $dateFrom, string $dateTo, ?int $customerId = null, ?int $sectionId = null): array
     {
-        return $this->repo->getSummary($dateFrom, $dateTo, $customerId);
+        return $this->repo->getSummary($dateFrom, $dateTo, $customerId, $sectionId);
+    }
+
+    /** Sprzedaż wg działów : kartony, wartość, udział w wartości zakresu. */
+    public function getSectionTotals(string $dateFrom, string $dateTo, ?int $customerId = null): array
+    {
+        $rows = $this->repo->getSectionTotals($dateFrom, $dateTo, $customerId);
+        $total = array_sum(array_map(fn($r) => (float) $r['total_value'], $rows));
+        return array_map(function ($r) use ($total) {
+            $r['total_value'] = round((float) $r['total_value'], 2);
+            $r['share'] = $total > 0 ? round((float) $r['total_value'] / $total * 100, 1) : null;
+            return $r;
+        }, $rows);
+    }
+
+    public function getSections(): array
+    {
+        return $this->repo->getSections();
     }
 
     /**
      * Dane wykresu miesięcznego przychodu (labels + quantity_values + value_values).
      */
-    public function getMonthlyChartData(string $dateFrom, string $dateTo, ?int $customerId = null): array
+    public function getMonthlyChartData(string $dateFrom, string $dateTo, ?int $customerId = null, ?int $sectionId = null): array
     {
-        $rows = $this->repo->getMonthlyRevenue($dateFrom, $dateTo, $customerId);
+        $rows = $this->repo->getMonthlyRevenue($dateFrom, $dateTo, $customerId, $sectionId);
 
         $labels  = [];
         $values  = [];
@@ -59,9 +76,9 @@ class SalesAnalyticsService
     /**
      * Średnia miesięczna sprzedaż produktów.
      */
-    public function getAverageProductSales(string $dateFrom, string $dateTo, ?int $customerId = null): array
+    public function getAverageProductSales(string $dateFrom, string $dateTo, ?int $customerId = null, ?int $sectionId = null): array
     {
-        $rows = $this->repo->getAverageProductSales($dateFrom, $dateTo, $customerId);
+        $rows = $this->repo->getAverageProductSales($dateFrom, $dateTo, $customerId, $sectionId);
 
         return array_map(function ($row) {
             $row['avg_quantity'] = round((float)$row['avg_quantity'], 2);

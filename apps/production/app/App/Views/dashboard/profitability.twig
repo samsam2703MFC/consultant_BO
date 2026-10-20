@@ -26,7 +26,7 @@
                     </thead>
                     <tbody>
                     {% for p in period_table %}
-                        <tr class="{{ p.key == selected ? 'is-selected' : '' }} {{ p.key in ['3m', 'ytd'] ? 'is-range' : '' }}" data-href="{{ root }}/dashboard?period={{ p.key }}">
+                        <tr class="{{ p.key == selected ? 'is-selected' : '' }} {{ p.key in ['3m', '12m', 'ytd'] ? 'is-range' : '' }}" data-href="{{ root }}/dashboard?period={{ p.key }}">
                             <td><a href="{{ root }}/dashboard?period={{ p.key }}">{{ p.label }}</a>{% if p.estimated %} <span class="at-sub" title="Koszty miesiąca nie są jeszcze wprowadzone">szac.</span>{% endif %}</td>
                             <td class="text-end">{{ p.revenue|eur }}</td>
                             <td>
@@ -58,6 +58,16 @@
             <a href="{{ root }}/cost-calculator">Uzupełnij koszty miesięczne</a>
         </div>
     {% endfor %}
+
+    {# Sekcje strony : jedna pozycja w railu, nawigacja po sekcjach tutaj (okres zostaje w adresie). #}
+    <nav class="at-profit-nav" aria-label="Sekcje strony" data-profit-nav>
+        <a href="#grupy"><i class="bi bi-people"></i> Grupy</a>
+        <a href="#produkcja"><i class="bi bi-box-seam"></i> Produkcja grup</a>
+        <a href="#wynik"><i class="bi bi-bar-chart-steps"></i> Wynik</a>
+        <a href="#zakupy"><i class="bi bi-basket"></i> Zakupy</a>
+        <a href="#trend"><i class="bi bi-clock-history"></i> 6 miesięcy</a>
+        <a href="#na-osobe"><i class="bi bi-person-lines-fill"></i> Na osobę</a>
+    </nav>
 
     {# --- Trzy liczby, które się liczą ---------------------------------------- #}
     <div class="at-profit-hero">
@@ -194,7 +204,8 @@
                                 <button type="button" class="at-growth-link" data-growth="{{ g.id }}" data-growth-name="{{ g.name }}" title="Rozwój sprzedaży grupy">{{ g.name }} <i class="bi bi-chevron-right"></i></button>
                                 <div class="at-sub">{{ g.cartons|plural_pl('karton', 'kartony', 'kartonów') }}{% if growth[g.id] is defined %} · {{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} +{{ growth[g.id].revenue_month|eur }}/mies.{% endif %}</div>
                             </td>
-                            <td class="text-end">{{ g.revenue|eur }}</td>
+                            <td class="text-end">{{ g.revenue|eur }}
+                                {% if t.revenue > 0 %}<div class="at-sub" title="Udział w sprzedaży firmy">{{ (g.revenue / t.revenue * 100)|pct(1) }} firmy</div>{% endif %}</td>
                             <td class="text-end">
                                 {{ g.revenue_per_person|eur }}
                                 <div class="at-sub">{{ g.people is null ? '—' : g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') ~ ' os.' }}{{ current and g.people ? ' · tempo' : '' }}</div>
@@ -205,6 +216,7 @@
                             </td>
                             <td class="text-end">
                                 {{ g.staff|eur }}
+                                {% if t.staff > 0 %}<div class="at-sub" title="Udział w koszcie personelu firmy (z działami wspólnymi)">{{ (g.staff / t.staff * 100)|pct(1) }} personelu</div>{% endif %}
                                 {% set sb = staff_budget[g.id] ?? null %}
                                 {% if sb %}<div class="at-sub" title="Model: minimum {{ sb.base|eur }} + pula premii {{ sb.pct|pct }} sprzedaży {{ sb.pool|eur }}">model {{ sb.budget|eur }}<br>premia {{ sb.per_person_month_pln|pln }}/os.</div>{% endif %}
                             </td>
@@ -581,7 +593,7 @@
 
     <p class="at-profit-note">
         Sprzedaż: dokumenty WDT według daty wystawienia (EUR). Personel, media, amortyzacja i koszty stałe: <a href="{{ root }}/cost-calculator">kalkulator kosztów</a> (miesięcznie, PLN, kurs {{ rate|number_format(2, ',', ' ') }} z ustawień firmy).
-        Surowce: koszt surowców kartonu z receptury. Szczegóły: <a href="{{ root }}/finances/section-dashboard">dashboard finansowy działów</a>, <a href="{{ root }}/finances/cost-analysis/section">koszt produktów</a>.
+        Surowce: koszt surowców kartonu z receptury. Szczegóły: <a href="{{ root }}/finances/sales-analytics">sprzedaż wg działów</a>, <a href="{{ root }}/finances/cost-analysis/section">koszty działów</a>.
     </p>
 </section>
 {% endblock %}
@@ -648,16 +660,11 @@
         document.querySelectorAll('[data-made-tab]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
         document.querySelectorAll('[data-made-panel]').forEach(panel => { panel.hidden = panel.dataset.madePanel !== tab.dataset.madeTab; });
     }));
-    // Rail « Analiza » : sur cette page, sous-menu ouvert et liens limités à l'ancre (période conservée).
-    const railMenu = document.querySelector('[data-rail-dashboard]');
-    if (railMenu) {
-        railMenu.classList.add('active');
-        railMenu.querySelectorAll('a').forEach(a => { a.href = location.pathname + location.search + a.hash; });
-    }
-    // Ancre courante : entrée du rail en surbrillance ; #zakupy ouvre le détail des achats.
+    // Sekcje strony : ancre courante en surbrillance ; #zakupy ouvre le détail des achats.
+    const sectionNav = document.querySelector('[data-profit-nav]');
     const openFromHash = () => {
         const hash = location.hash || '#grupy';
-        railMenu?.querySelectorAll('.submenu-item').forEach(li => li.classList.toggle('active', li.querySelector('a').hash === hash));
+        sectionNav?.querySelectorAll('a').forEach(a => a.classList.toggle('active', a.hash === hash));
         if (hash === '#zakupy' && buyToggle && buyToggle.getAttribute('aria-expanded') !== 'true') buyToggle.click();
     };
     openFromHash();

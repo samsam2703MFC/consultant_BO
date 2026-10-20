@@ -50,6 +50,40 @@
             </div>
         </div>
 
+        <?php
+        $costFields = ['depreciation' => 'Amortyzacja', 'power_supply_cost' => 'Prąd', 'water_cost' => 'Woda', 'fuel_cost' => 'Paliwo', 'other_cost' => 'Inne'];
+        $sum = fn(array $s) => array_sum(array_map(fn($f) => (float) ($s[$f] ?? 0), array_keys($costFields)));
+        ?>
+        <div class="card" id="dzialy">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h4 class="card-title mb-0">Koszty stałe działów (zł / miesiąc)</h4>
+                <span class="text-muted small">Amortyzacja zawsze w kosztach ogólnych ; media stałe, gdy miesiąc nie ma mediów rozdzielonych na działy.</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0" id="sectionCosts">
+                        <thead class="table-light"><tr><th>Dział</th>
+                            <?php foreach ($costFields as $label): ?><th class="text-end" style="width:14%"><?= $label ?></th><?php endforeach; ?>
+                            <th class="text-end">Razem</th></tr></thead>
+                        <tbody>
+                        <?php foreach (($sections ?? []) as $s): ?>
+                            <tr data-section="<?= (int) $s['id'] ?>">
+                                <td><?= htmlspecialchars($s['name']) ?></td>
+                                <?php foreach ($costFields as $field => $label): ?>
+                                    <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" data-field="<?= $field ?>" aria-label="<?= $label ?> — <?= htmlspecialchars($s['name']) ?>" value="<?= htmlspecialchars((string) (float) ($s[$field] ?? 0)) ?>"></td>
+                                <?php endforeach; ?>
+                                <td class="text-end fw-bold" data-row-total><?= number_format($sum($s), 2, ',', ' ') ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                        <tfoot class="table-light"><tr><th>Razem</th>
+                            <?php foreach (array_keys($costFields) as $field): ?><th class="text-end" data-col-total="<?= $field ?>"></th><?php endforeach; ?>
+                            <th class="text-end" data-col-total="all"></th></tr></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <?php if (!empty($months)): ?>
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -124,6 +158,50 @@
 </div>
 
 <script>
+    // Koszty stałe działów : zapis po zmianie pola, sumy wierszy i kolumn na bieżąco.
+    (function () {
+        const table = document.getElementById('sectionCosts');
+        if (!table) return;
+        const fmt = (n) => n.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const totals = () => {
+            const cols = {};
+            let all = 0;
+            table.querySelectorAll('tbody tr').forEach((tr) => {
+                let row = 0;
+                tr.querySelectorAll('input[data-field]').forEach((i) => {
+                    const v = parseFloat(i.value) || 0;
+                    row += v; cols[i.dataset.field] = (cols[i.dataset.field] || 0) + v;
+                });
+                tr.querySelector('[data-row-total]').textContent = fmt(row);
+                all += row;
+            });
+            table.querySelectorAll('[data-col-total]').forEach((th) => {
+                th.textContent = fmt(th.dataset.colTotal === 'all' ? all : (cols[th.dataset.colTotal] || 0));
+            });
+        };
+        totals();
+        table.addEventListener('change', async (e) => {
+            const input = e.target.closest('input[data-field]');
+            if (!input) return;
+            const id = input.closest('tr').dataset.section;
+            input.classList.remove('is-invalid', 'is-valid');
+            try {
+                const r = await fetch("<?= ROOT ?>/ajax/cost-calculator/sections/" + id, {
+                    method: 'PATCH', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    body: JSON.stringify({field: input.dataset.field, value: input.value === '' ? 0 : input.value})
+                });
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw data;
+                input.classList.add('is-valid');
+                setTimeout(() => input.classList.remove('is-valid'), 1500);
+            } catch (err) {
+                input.classList.add('is-invalid');
+                toast((err && err.message) || 'Nie udało się zapisać kosztu.');
+            }
+            totals();
+        });
+    })();
+
     function goToMonth(){
         const v = document.getElementById('pick_month').value; // YYYY-MM
         if(!v) return;

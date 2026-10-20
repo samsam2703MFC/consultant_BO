@@ -205,30 +205,7 @@ class ClientController extends BaseController
         return $this->json($resp, $resp['code']);
     }
 
-    public function salesSummary($id)
-    {
-        $data['customer'] = $this->clientService->getById($id);
 
-        $defaultDateTo   = date('Y-m-d');
-        $defaultDateFrom = date('Y-m-d', strtotime('-3 months'));
-
-        $data['date_from'] = $_GET['date_from'] ?? $defaultDateFrom;
-        $data['date_to']   = $_GET['date_to']   ?? $defaultDateTo;
-        $data['sort']      = $this->clientSalesSummaryService->normalizeSort($_GET['sort'] ?? null);
-
-        $this->view('client/client/sales_summary', $data);
-    }
-
-    public function ajaxSalesSummary($id)
-    {
-        $dateFrom = $_GET['date_from'] ?? date('Y-m-d', strtotime('-3 months'));
-        $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
-        $sort     = $this->clientSalesSummaryService->normalizeSort($_GET['sort'] ?? null);
-
-        $summary = $this->clientSalesSummaryService->getSummary((int)$id, $dateFrom, $dateTo, $sort);
-
-        return $this->json(['ok' => true, 'data' => $summary]);
-    }
 
     public function exportSalesSummaryPdf($id)
     {

@@ -9,6 +9,11 @@ return function(RouteCollector $r) {
         'method'     => 'index'
     ]);
 
+    $r->addRoute('PATCH', '/ajax/cost-calculator/sections/{id:\d+}', [
+        'controller' => App\Controllers\Web\Production\Cost\CostCalculatorController::class,
+        'method'     => 'ajaxUpdateSectionCost'
+    ]);
+
     $r->addRoute('GET', '/cost-calculator/{ym}', [
         'controller' => App\Controllers\Web\Production\Cost\CostCalculatorController::class,
         'method'     => 'show'

@@ -33,16 +33,16 @@
                 {% for p in presets %}
                     {% set active = date_from == p.from and date_to == p.to %}
                     <a class="btn btn-sm {{ active ? 'btn-primary' : 'btn-outline-primary' }}"
-                       href="{{ root }}/finances/sales-analytics?date_from={{ p.from }}&date_to={{ p.to }}{{ customer_id ? '&customer_id=' ~ customer_id : '' }}"
+                       href="{{ root }}/finances/sales-analytics?date_from={{ p.from }}&date_to={{ p.to }}{{ customer_id ? '&customer_id=' ~ customer_id : '' }}{{ section_id ? '&section_id=' ~ section_id : '' }}"
                        title="{{ p.from }} → {{ p.to }}">{{ p.label }}</a>
                 {% endfor %}
             </div>
             <form method="get" action="{{ root }}/finances/sales-analytics" class="row g-3 align-items-end">
-                <div class="col-12 col-md-3">
+                <div class="col-6 col-md-2">
                     <label class="form-label" for="input_date_from">Miesiąc od</label>
                     <input type="month" class="form-control" id="input_date_from" name="date_from" value="{{ date_from }}">
                 </div>
-                <div class="col-12 col-md-3">
+                <div class="col-6 col-md-2">
                     <label class="form-label" for="input_date_to">Miesiąc do</label>
                     <input type="month" class="form-control" id="input_date_to" name="date_to" value="{{ date_to }}">
                 </div>
@@ -56,6 +56,15 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3">
+                    <label class="form-label" for="input_section_id">Dział</label>
+                    <select class="form-select" id="input_section_id" name="section_id">
+                        <option value="">Wszystkie działy</option>
+                        {% for sec in sections %}
+                            <option value="{{ sec.id }}" {% if section_id == sec.id %}selected{% endif %}>{{ sec.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i> Analizuj
                     </button>
@@ -116,11 +125,47 @@
     </div>
     {% endif %}
 
+    {# ── Sprzedaż wg działów (dawna osobna strona) ──────────────── #}
+    {% if by_section %}
+    {% set q = 'date_from=' ~ date_from ~ '&date_to=' ~ date_to ~ (customer_id ? '&customer_id=' ~ customer_id : '') %}
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0"><i class="bi bi-diagram-3"></i> Sprzedaż wg działów</h5>
+            {% if section_id %}<a class="btn btn-sm btn-outline-secondary" href="{{ root }}/finances/sales-analytics?{{ q }}"><i class="bi bi-x-lg"></i> Wszystkie działy</a>{% endif %}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light"><tr><th>Dział</th><th class="text-end">Produkty</th><th class="text-end">Kartony</th><th class="text-end">Wartość</th><th style="width:30%">Udział w wartości</th></tr></thead>
+                    <tbody>
+                    {% for sec in by_section %}
+                        <tr class="{{ section_id and section_id == sec.section_id ? 'table-active' : '' }}">
+                            <td>{% if sec.section_id %}<a href="{{ root }}/finances/sales-analytics?{{ q }}&section_id={{ sec.section_id }}">{{ sec.section_name }}</a>{% else %}{{ sec.section_name }}{% endif %}</td>
+                            <td class="text-end">{{ sec.products }}</td>
+                            <td class="text-end">{{ sec.total_quantity|number_format(0, ',', ' ') }}</td>
+                            <td class="text-end fw-bold">{{ sec.total_value|number_format(2, ',', ' ') }} €</td>
+                            <td>{% if sec.share is not null %}<div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:6px"><div class="progress-bar" style="width: {{ sec.share }}%"></div></div><span class="small text-muted">{{ sec.share|number_format(1, ',', ' ') }} %</span></div>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {# ── Tabela produktów ───────────────────────────────────────── #}
     <div class="card mt-3">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="card-title mb-0"><i class="bi bi-table"></i> Średnia sprzedaż produktów (miesięcznie)</h5>
-            <small class="text-muted d-none d-md-block">Kliknij wiersz produktu, aby zobaczyć trend sprzedażowy</small>
+            <span class="d-flex align-items-center gap-2">
+                <small class="text-muted d-none d-md-block">Kliknij wiersz produktu, aby zobaczyć trend sprzedażowy</small>
+                {% if customer_id %}
+                    {% set ex = 'date_from=' ~ date_from ~ '-01&date_to=' ~ (date_to ~ '-01')|date('Y-m-t') %}
+                    <a class="btn btn-sm btn-outline-danger" href="{{ root }}/ajax/clients/{{ customer_id }}/sales-summary/export/pdf?{{ ex }}"><i class="bi bi-file-earmark-pdf"></i> PDF klienta</a>
+                    <a class="btn btn-sm btn-outline-success" href="{{ root }}/ajax/clients/{{ customer_id }}/sales-summary/export/xls?{{ ex }}"><i class="bi bi-filetype-csv"></i> CSV</a>
+                {% endif %}
+            </span>
         </div>
         <div class="card-body pb-2 pt-3">
             <div class="input-group input-group-sm" style="max-width:380px;">
@@ -140,6 +185,7 @@
                             <th>#</th>
                             <th data-sort="product_name" style="cursor:pointer;" class="sort-col">Produkt <i class="bi bi-arrow-down-up text-muted small"></i></th>
                             <th data-sort="category_name" style="cursor:pointer;" class="sort-col">Kategoria <i class="bi bi-arrow-down-up text-muted small"></i></th>
+                            <th data-sort="section_name" style="cursor:pointer;" class="sort-col">Dział <i class="bi bi-arrow-down-up text-muted small"></i></th>
                             <th data-sort="avg_quantity" style="cursor:pointer;" class="sort-col text-end">Śr. kartony/mies. <i class="bi bi-arrow-down-up text-muted small"></i></th>
                             <th data-sort="avg_value" style="cursor:pointer;" class="sort-col text-end">Śr. wartość/mies. <i class="bi bi-arrow-down-up text-muted small"></i></th>
                             <th data-sort="total_quantity" style="cursor:pointer;" class="sort-col text-end">Łącznie kartony <i class="bi bi-arrow-down-up text-muted small"></i></th>
@@ -154,6 +200,7 @@
                             data-product-name="{{ product.product_name }}"
                             data-sort-product_name="{{ product.product_name|lower }}"
                             data-sort-category_name="{{ product.category_name|lower }}"
+                            data-sort-section_name="{{ product.section_name|lower }}"
                             data-sort-avg_quantity="{{ product.avg_quantity }}"
                             data-sort-avg_value="{{ product.avg_value }}"
                             data-sort-total_quantity="{{ product.total_quantity }}"
@@ -165,6 +212,7 @@
                                 <strong>{{ product.product_name }}</strong>
                             </td>
                             <td><span class="badge bg-light text-dark">{{ product.category_name }}</span></td>
+                            <td class="small text-muted">{{ product.section_name }}</td>
                             <td class="text-end">{{ product.avg_quantity|number_format(1, ',', ' ') }}</td>
                             <td class="text-end fw-bold">{{ product.avg_value|number_format(2, ',', ' ') }} €</td>
                             <td class="text-end text-muted">{{ product.total_quantity }}</td>
@@ -173,12 +221,22 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 Brak danych dla wybranego zakresu dat.
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
+                    {% if products %}
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="6">Razem ({{ products|length }} prod.)</th>
+                            <th class="text-end">{{ products|reduce((c, x) => c + x.total_quantity, 0)|number_format(0, ',', ' ') }}</th>
+                            <th class="text-end">{{ products|reduce((c, x) => c + x.total_value, 0)|number_format(2, ',', ' ') }} €</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
                 </table>
             </div>
         </div>

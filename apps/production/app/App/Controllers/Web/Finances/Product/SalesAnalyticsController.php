@@ -25,15 +25,20 @@ class SalesAnalyticsController extends BaseController
         $dateFrom   = $request->query->get('date_from', $defaults['from']);
         $dateTo     = $request->query->get('date_to',   $defaults['to']);
 
-        $summary      = $this->salesAnalyticsService->getSummary($dateFrom, $dateTo, $customerId);
-        $monthlyChart = $this->salesAnalyticsService->getMonthlyChartData($dateFrom, $dateTo, $customerId);
-        $products     = $this->salesAnalyticsService->getAverageProductSales($dateFrom, $dateTo, $customerId);
+        $sectionId    = $this->positiveInt($request, 'section_id');
+
+        $summary      = $this->salesAnalyticsService->getSummary($dateFrom, $dateTo, $customerId, $sectionId);
+        $monthlyChart = $this->salesAnalyticsService->getMonthlyChartData($dateFrom, $dateTo, $customerId, $sectionId);
+        $products     = $this->salesAnalyticsService->getAverageProductSales($dateFrom, $dateTo, $customerId, $sectionId);
 
         $data = [
             'date_from'     => $dateFrom,
             'date_to'       => $dateTo,
             'customer_id'   => $customerId ?? 0,
             'customers'     => $this->salesAnalyticsService->getFilterableCustomers(),
+            'section_id'    => $sectionId ?? 0,
+            'sections'      => $this->salesAnalyticsService->getSections(),
+            'by_section'    => $this->salesAnalyticsService->getSectionTotals($dateFrom, $dateTo, $customerId),
             'summary'       => $summary,
             'monthly_chart' => $monthlyChart,
             'products'      => $products,
@@ -86,7 +91,12 @@ class SalesAnalyticsController extends BaseController
 
     private function customerId(Request $request): ?int
     {
-        $value = filter_var($request->query->get('customer_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        return $this->positiveInt($request, 'customer_id');
+    }
+
+    private function positiveInt(Request $request, string $key): ?int
+    {
+        $value = filter_var($request->query->get($key), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         return $value === false ? null : (int) $value;
     }
 }

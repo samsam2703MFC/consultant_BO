@@ -3,6 +3,7 @@ namespace App\Controllers\Web\Production\Cost;
 
 use App\Core\Web\BaseController;
 use App\Services\Employee\ProductionEmployeeService;
+use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Production\Cost\CostMonthService;
 use App\Services\Production\Cost\CostCalculatorService;
 use Symfony\Component\HttpFoundation\Request;
@@ -12,7 +13,8 @@ class CostCalculatorController extends BaseController
     public function __construct(
         private CostMonthService $monthService,
         private CostCalculatorService $calcService,
-        private ProductionEmployeeService $employeeService
+        private ProductionEmployeeService $employeeService,
+        private ProductionSectionService $sectionService
     ) {}
 
     public function index()
@@ -23,8 +25,33 @@ class CostCalculatorController extends BaseController
         $data = [];
         $data['current'] = ['year' => $nowY, 'month' => $nowM];
         $data['months']  = $this->monthService->listRecentMonths(24);
+        $data['sections'] = $this->sectionService->getAll();
 
         $this->view("production/cost_calculator/index", $data);
+    }
+
+    /**
+     * PATCH /ajax/cost-calculator/sections/{id}  {field, value}
+     * Koszty stałe działu (dawna strona /company-costs) : production_sections.depreciation, *_cost.
+     */
+    public function ajaxUpdateSectionCost($id)
+    {
+        $payload = $this->getJson(Request::createFromGlobals());
+        $field = (string) ($payload['field'] ?? '');
+        $value = filter_var($payload['value'] ?? null, FILTER_VALIDATE_FLOAT);
+        if (!in_array($field, ProductionSectionService::COST_FIELDS, true)) {
+            return $this->json(['message' => 'Nieznane pole kosztu.'], 422);
+        }
+        if ($value === false || $value < 0 || $value > 10000000) {
+            return $this->json(['message' => 'Podaj kwotę od 0 do 10 000 000 zł.'], 422);
+        }
+        if (!$this->sectionService->getById((int) $id)) {
+            return $this->json(['message' => 'Nie ma takiego działu.'], 404);
+        }
+        if (!$this->sectionService->updateCost((int) $id, $field, (float) $value)) {
+            return $this->json(['message' => 'Nie udało się zapisać kosztu.'], 500);
+        }
+        return $this->json(['message' => 'Zapisano.', 'value' => round((float) $value, 2)]);
     }
 
     public function show($ym)

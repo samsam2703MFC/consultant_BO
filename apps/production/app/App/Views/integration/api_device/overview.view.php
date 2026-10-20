@@ -6,7 +6,7 @@
     </div></div></div>
     <section class="section"><div class="card"><div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="card-title mb-0">Zarejestrowane urządzenia</h4>
-        <a class="btn btn-primary btn-sm" href="<?= ROOT ?>/settings/api-devices/new">Dodaj urządzenie</a>
+        <div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/devices/logs"><i class="bi bi-journal-text me-1"></i>Logi urządzeń</a><a class="btn btn-primary btn-sm" href="<?= ROOT ?>/devices/new">Dodaj urządzenie</a></div>
     </div><div class="card-body">
         <?php if (!empty($successes)): ?><div class="alert alert-success"><?= implode('<br>', array_map('htmlspecialchars', $successes)) ?></div><?php endif; ?>
         <?php if (!empty($errors)): ?><div class="alert alert-danger"><?= implode('<br>', array_map('htmlspecialchars', $errors)) ?></div><?php endif; ?>

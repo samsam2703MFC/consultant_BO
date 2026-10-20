@@ -51,14 +51,9 @@ return function (RouteCollector $r) {
         'method' => 'ajaxProductTrend'
     ]);
 
-    $r->addRoute('GET', '/finances/section-dashboard', [
-        'controller' => App\Controllers\Web\Finances\Product\SectionFinanceDashboardController::class,
-        'method' => 'overview'
-    ]);
-
-    $r->addRoute('GET', '/finances/sales-by-department', [
-        'controller' => App\Controllers\Web\Finances\Product\SalesByDepartmentController::class,
-        'method' => 'overview'
-    ]);
+    // Dawny « Dashboard finansowy działów » : udział sprzedaży i personelu działów, 12 mies. — w Rentowności
+    $r->addRoute('GET', '/finances/section-dashboard', ['redirect' => '/dashboard?period=12m']);
+    // Dawna « Sprzedaż wg działów » : filtr i tabela działów w Analizie sprzedaży (te same parametry)
+    $r->addRoute('GET', '/finances/sales-by-department', ['redirect' => '/finances/sales-analytics']);
 
 };

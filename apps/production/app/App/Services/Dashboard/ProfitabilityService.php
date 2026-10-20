@@ -39,7 +39,7 @@ final class ProfitabilityService
     {
     }
 
-    /** Choix de période proposés : mois en cours, 11 mois précédents, 3 derniers mois, année. */
+    /** Choix de période proposés : mois en cours, 11 mois précédents, 3 et 12 derniers mois complets, année. */
     public function periodOptions(?DateTimeImmutable $today = null): array
     {
         $today ??= new DateTimeImmutable('today');
@@ -49,6 +49,7 @@ final class ProfitabilityService
             $options[$ym] = self::monthLabel($ym);
         }
         $options['3m'] = 'Ostatnie 3 pełne miesiące';
+        $options['12m'] = 'Ostatnie 12 pełnych miesięcy';
         $options['ytd'] = 'Od początku roku ' . $today->format('Y');
         return $options;
     }
@@ -709,12 +710,13 @@ final class ProfitabilityService
             return ['key' => $period, 'months' => [$period => 1.0], 'from' => $first->format('Y-m-d'), 'to' => $first->format('Y-m-t'),
                 'end' => $first->format('Y-m-t'), 'current' => false, 'label' => self::monthLabel($period), 'elapsed' => 1.0];
         }
-        if ($period === '3m') {
-            $first = $today->modify('first day of this month')->modify('-3 months');
+        if ($period === '3m' || $period === '12m') {
+            $n = (int) $period;
+            $first = $today->modify('first day of this month')->modify("-{$n} months");
             $months = [];
-            for ($i = 0; $i < 3; $i++) $months[$first->modify("+{$i} months")->format('Y-m')] = 1.0;
+            for ($i = 0; $i < $n; $i++) $months[$first->modify("+{$i} months")->format('Y-m')] = 1.0;
             $last = $today->modify('first day of this month')->modify('-1 day');
-            return ['key' => '3m', 'months' => $months, 'from' => $first->format('Y-m-d'), 'to' => $last->format('Y-m-d'), 'end' => $last->format('Y-m-d'),
+            return ['key' => $period, 'months' => $months, 'from' => $first->format('Y-m-d'), 'to' => $last->format('Y-m-d'), 'end' => $last->format('Y-m-d'),
                 'current' => false, 'label' => self::monthLabel(array_key_first($months)) . ' – ' . self::monthLabel(array_key_last($months)), 'elapsed' => 1.0];
         }
         if ($period === 'ytd') {

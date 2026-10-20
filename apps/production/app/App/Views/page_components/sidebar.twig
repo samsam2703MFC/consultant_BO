@@ -25,43 +25,30 @@
 
                 <li class="sidebar-title">Analiza</li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
+                <li class="sidebar-item">
+                    <a href="{{ root }}/dashboard" class="sidebar-link">
                         <i class="bi bi-graph-up"></i>
-                        <span>Rentowność produkcji</span>
+                        <span>Rentowność</span>
                     </a>
-                    <ul class="submenu" data-rail-dashboard>
-                        <li class="submenu-item"><a href="{{ root }}/dashboard#grupy"><i class="bi bi-people"></i> Grupy: sprzedaż a personel</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/dashboard#produkcja"><i class="bi bi-box-seam"></i> Co wyprodukowały grupy</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/dashboard#wynik"><i class="bi bi-bar-chart-steps"></i> Od sprzedaży do wyniku</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/dashboard#zakupy"><i class="bi bi-basket"></i> Zakupy: kategorie i dostawcy</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/dashboard#trend"><i class="bi bi-clock-history"></i> Ostatnie 6 miesięcy</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/dashboard#na-osobe"><i class="bi bi-person-lines-fill"></i> Sprzedaż na osobę (18 mies.)</a></li>
-                    </ul>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/finances/sales-analytics" class="sidebar-link">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>Analiza sprzedaży</span>
+                    </a>
                 </li>
 
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-percent"></i>
-                        <span>Marża i ceny</span>
+                        <span>Marże i koszty</span>
                     </a>
                     <ul class="submenu">
-                        <li class="submenu-item"><a href="{{ root }}/finances/product-margin"><i class="bi bi-percent"></i> Marża obowiązująca</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/finances/category-margin"><i class="bi bi-bar-chart-line"></i> Przegląd marży kategorii</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis"><i class="bi bi-search"></i> Analiza kosztów produktu</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis/section"><i class="bi bi-cash"></i> Analiza kosztów działów</a></li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-bar-chart-line"></i>
-                        <span>Sprzedaż i koszty</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item"><a href="{{ root }}/finances/sales-analytics"><i class="bi bi-bar-chart-steps"></i> Analiza sprzedaży WDT</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/finances/sales-by-department"><i class="bi bi-diagram-3"></i> Sprzedaż wg działów</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/finances/section-dashboard"><i class="bi bi-building"></i> Dashboard finansowy działów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/product-margin"><i class="bi bi-percent"></i> Marża produktów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/category-margin"><i class="bi bi-bar-chart-line"></i> Marża kategorii</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis"><i class="bi bi-search"></i> Koszty produktu</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis/section"><i class="bi bi-cash"></i> Koszty działów</a></li>
                         <li class="submenu-item"><a href="{{ root }}/cost-calculator"><i class="bi bi-calculator"></i> Kalkulator kosztów</a></li>
                     </ul>
                 </li>
@@ -86,13 +73,6 @@
                     <a href="{{ root }}/production/plan-wizard" class="sidebar-link">
                         <i class="bi bi-list-check"></i>
                         <span>Listy produkcyjne PDF</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/workshop/gantt#view=day" class="sidebar-link">
-                        <i class="bi bi-bar-chart-steps"></i>
-                        <span>Dzień : godziny</span>
                     </a>
                 </li>
 
@@ -165,11 +145,6 @@
                         <li class="submenu-item">
                             <a href="{{ root }}/product-categories">
                                 <i class="bi bi-tags"></i> Kategorie i produkty
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/products/new-with-recipe">
-                                <i class="bi bi-plus-circle"></i> Nowy produkt z recepturą
                             </a>
                         </li>
                         <li class="submenu-item">
@@ -265,23 +240,11 @@
 
                 <li class="sidebar-title">Zamówienia</li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
+                <li class="sidebar-item">
+                    <a href="{{ root }}/client-orders" class="sidebar-link">
                         <i class="bi bi-bag-check"></i>
                         <span>Zamówienia klientów</span>
                     </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-orders">
-                                <i class="bi bi-list-check"></i> Lista zamówień
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-orders/archive">
-                                <i class="bi bi-archive"></i> Archiwum zamówień
-                            </a>
-                        </li>
-                    </ul>
                 </li>
 
                 <li class="sidebar-item">
@@ -389,11 +352,6 @@
                         <li class="submenu-item">
                             <a href="{{ root }}/communication/messages">
                                 <i class="bi bi-envelope-open"></i> Historia wiadomości
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/communication/email-settings">
-                                <i class="bi bi-gear"></i> Ustawienia poczty
                             </a>
                         </li>
                     </ul>
@@ -569,6 +527,11 @@
                             </a>
                         </li>
                         <li class="submenu-item">
+                            <a href="{{ root }}/communication/email-settings">
+                                <i class="bi bi-envelope-at"></i> Poczta e-mail
+                            </a>
+                        </li>
+                        <li class="submenu-item">
                             <a href="{{ root }}/settings/ksef">
                                 <i class="bi bi-file-earmark-check"></i> KSeF
                             </a>
@@ -586,28 +549,11 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
+                <li class="sidebar-item">
+                    <a href="{{ root }}/devices" class="sidebar-link">
                         <i class="bi bi-display"></i>
                         <span>Urządzenia</span>
                     </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/devices">
-                                <i class="bi bi-list-ul"></i> Przegląd urządzeń
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/devices/new">
-                                <i class="bi bi-plus-circle"></i> Dodaj urządzenie
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/devices/logs">
-                                <i class="bi bi-journal-text"></i> Logi urządzeń
-                            </a>
-                        </li>
-                    </ul>
                 </li>
 
             </ul>
