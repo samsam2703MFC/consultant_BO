@@ -114,6 +114,13 @@ try {
     near($t['margin_needed'], 3600 / 0.7, 'sprzedaż dla wyniku 10 % = koszty stałe ÷ (1 − 20 % surowców − 10 %)');
     near($t['margin_missing'], 3600 / 0.7 - 5000, 'brakująca sprzedaż do celu wyniku');
     expectProfit($t['margin_ok'] === false && $t['margin_reachable'] === true, 'cel wyniku osiągalny, jeszcze nieosiągnięty');
+    // Sprzedaż na osobę : osoby wliczone z kalkulatora kosztów (wyłączona pominięta).
+    near($g['people'], 2, 'Piekarnia : 2 osoby');
+    near($g['revenue_per_person'], 2500, 'sprzedaż grupy na osobę 5000 / 2');
+    near($sep['shared']['people'], 1, 'dział wspólny : 1 osoba');
+    near($t['people'], 3, 'cała firma : 3 osoby');
+    near($t['revenue_per_person'], 5000 / 3, 'sprzedaż na osobę w całej firmie');
+    near($t['revenue_per_person_production'], 2500, 'sprzedaż na osobę w produkcji');
 
     // --- Bieżący miesiąc : koszty października nie są wprowadzone → wrzesień, personel proporcjonalnie (19/31)
     $oct = $service->overview('month', $today);
@@ -128,6 +135,19 @@ try {
     near($g['missing_after_open'], 7500, 'do znalezienia po zamówieniach');
     near($oct['totals']['projection'], 1000 * 31 / 19, 'tempo sprzedaży na koniec miesiąca');
     expectProfit(count($oct['trend']) === 6 && $oct['trend'][5]['current'] === true, 'trend 6 miesięcy kończy się bieżącym');
+    near($g['people'], 2, 'bieżący miesiąc : 2 osoby (koszty września)');
+    near($g['revenue_per_person'], 1000 * 31 / 19 / 2, 'bieżący miesiąc : tempo sprzedaży na osobę');
+    near($oct['trend'][4]['groups'][1]['revenue_per_person'], 2500, 'trend : wrzesień, Piekarnia na osobę');
+    near($oct['trend'][4]['revenue_per_person'], 5000 / 3, 'trend : wrzesień, cała firma na osobę');
+    // Tableau 18 mois : du plus récent au plus ancien ; mois sans coûts estimés (osoby z września).
+    $pp = $oct['per_person'];
+    expectProfit($pp['count'] === 18 && $pp['months'][0]['ym'] === '2026-10' && $pp['months'][17]['ym'] === '2025-05', '18 mois, du plus récent');
+    expectProfit($pp['real'] === 1, 'un seul mois avec coûts saisis');
+    expectProfit($pp['months'][3]['estimated_from'] === 'wrzesień 2026' && $pp['months'][1]['estimated_from'] === null, 'mois estimés : source affichée');
+    expectProfit(count($pp['groups']) === 1 && $pp['groups'][0]['name'] === 'Piekarnia', 'groupes du tableau');
+    near($pp['groups'][0]['best'], 2500, 'meilleur mois de la Piekarnia (mois en cours exclu)');
+    near($pp['groups'][0]['average'], 6000 / (2 * 17 + 2 * 19 / 31), 'moyenne : ventes ÷ mois-personnes');
+    near($pp['average'], 6000 / (3 * 17 + 3 * 19 / 31), 'moyenne de la société');
 
     // --- Brak kosztów przed pierwszym miesiącem : przyjęty najwcześniejszy znany
     $q = $service->overview('3m', $today);

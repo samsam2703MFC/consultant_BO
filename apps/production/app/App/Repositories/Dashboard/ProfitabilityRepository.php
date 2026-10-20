@@ -124,6 +124,16 @@ final class ProfitabilityRepository extends WorkshopRepository
         return $out;
     }
 
+    /** @return array<int,array<int,int>> mois de coûts => groupe => personnes payées ce mois (lignes incluses) */
+    public function headcount(): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT month_id, section_id, COUNT(*) AS people FROM cost_month_employee WHERE is_included = 1 GROUP BY month_id, section_id') as $r) {
+            $out[(int) $r['month_id']][(int) $r['section_id']] = (int) $r['people'];
+        }
+        return $out;
+    }
+
     /** @return array<int,array<int,float>> mois de coûts => groupe => médias répartis (PLN) */
     public function media(): array
     {

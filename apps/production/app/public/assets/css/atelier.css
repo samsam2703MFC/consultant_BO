@@ -529,6 +529,16 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-profit-shared td { background: var(--at-bg-2); }
 .at-profit-total td { border-top: 2px solid var(--at-line-2); }
 .at-profit-note { font-size: 12px; color: var(--at-muted); margin: 12px 0 0; }
+/* Rentowność : sprzedaż na osobę, grupy × 18 miesięcy */
+.at-ppl-scroll { max-height: 760px; overflow: auto; }
+.at-ppl-table th, .at-ppl-table td { white-space: nowrap; vertical-align: top; }
+.at-ppl-table thead th { position: sticky; top: 0; z-index: 2; background: var(--at-surface); }
+.at-ppl-table td a { color: inherit; }
+.at-ppl-table .at-sub { color: var(--at-muted); font-size: 11.5px; font-weight: 400; }
+.at-ppl-table .at-ppl-sum { border-left: 1px solid var(--at-line); }
+.at-ppl-table tr.at-ppl-est td { color: var(--at-muted); }
+.at-ppl-table tr.at-ppl-current td { background: rgba(0, 0, 0, .02); }
+.at-ppl-table td.at-ppl-best { background: rgba(46, 125, 79, .1); color: inherit; font-weight: 600; }
 /* Rentowność : zakupy surowców i opakowań (rozwijane, kategorie / dostawcy) */
 .at-buy-toggle { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .at-buy-toggle .bi { transition: transform .15s; font-size: 12px; }

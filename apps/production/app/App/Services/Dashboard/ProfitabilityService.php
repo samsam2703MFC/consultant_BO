@@ -25,6 +25,9 @@ use DateTimeImmutable;
  */
 final class ProfitabilityService
 {
+    /** Mois de la série mensuelle (ventes par personne) ; la tendance en reprend les 6 derniers. */
+    public const MONTHLY_SERIES = 18;
+
     private ?array $targets = null;
     private ?array $costs = null;
     /** @var array{materials:array<int,array>, ingredients:array<int,list<array>>, history:array<int,list<array>>}|null */
@@ -55,15 +58,17 @@ final class ProfitabilityService
         $today ??= new DateTimeImmutable('today');
         $spec = $this->period($period, $today);
         $rate = $this->repo->eurRate();
-        // Une lecture des ventes pour la période, la tendance et le tableau des périodes (12 mois glissants).
-        $start = $this->windowStart($today);
-        $all = $this->sales(min($start, $spec['from']), $today->format('Y-m-d'), $rate);
+        // Une lecture des ventes pour la période, la série mensuelle (18 mois) et le tableau des périodes.
+        $start = $today->modify('first day of this month')->modify('-' . (self::MONTHLY_SERIES - 1) . ' months')->format('Y-m-d');
+        $all = $this->sales(min($start, $this->windowStart($today), $spec['from']), $today->format('Y-m-d'), $rate);
         $sales = array_values(array_filter($all, fn($r) => isset($spec['months'][$r['ym']])));
         $open = $spec['current'] ? $this->repo->openOrders($today->format('Y-m-d'), $spec['end']) : [];
 
         $data = $this->compute($spec, $sales, $open, $rate);
         $data['purchases'] = $this->purchases($spec['from'], $spec['to'], $rate);
-        $data['trend'] = $this->trend($today, $rate, $all);
+        $monthly = $this->monthly($today, $rate, self::MONTHLY_SERIES, $all);
+        $data['trend'] = array_slice($monthly, -6);
+        $data['per_person'] = $this->perPerson($monthly);
         $data['options'] = $this->periodOptions($today);
         $data['period_table'] = $this->periodTable($today, $rate, $all);
         $data['last_sale'] = $this->repo->lastSaleDate();
@@ -73,25 +78,79 @@ final class ProfitabilityService
     /** Ratio personnel / ventes et résultat des 6 derniers mois (mois en cours compris). */
     public function trend(DateTimeImmutable $today, float $rate, ?array $sales = null): array
     {
-        $first = $today->modify('first day of this month')->modify('-5 months');
+        return $this->monthly($today, $rate, 6, $sales);
+    }
+
+    /**
+     * Série des $count derniers mois (mois en cours compris, au prorata) : ventes, personnel / ventes,
+     * résultat et ventes par personne (entreprise, production, chaque groupe).
+     */
+    public function monthly(DateTimeImmutable $today, float $rate, int $count, ?array $sales = null): array
+    {
+        $first = $today->modify('first day of this month')->modify('-' . ($count - 1) . ' months');
         $sales ??= $this->sales($first->format('Y-m-d'), $today->format('Y-m-d'), $rate);
         $out = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < $count; $i++) {
             $ym = $first->modify("+{$i} months")->format('Y-m');
             $spec = $this->period($ym === $today->format('Y-m') ? 'month' : $ym, $today);
+            $fraction = array_sum($spec['months']);
             $rows = array_values(array_filter($sales, fn($r) => $r['ym'] === $ym));
             $m = $this->compute($spec, $rows, [], $rate);
+            $t = $m['totals'];
             $out[] = [
                 'ym' => $ym,
                 'label' => self::monthLabel($ym, true),
                 'current' => $spec['current'],
-                'revenue' => $m['totals']['revenue'],
-                'staff_pct' => $m['totals']['staff_pct'],
-                'margin_pct' => $m['totals']['margin_pct'],
+                'revenue' => $t['revenue'],
+                'staff_pct' => $t['staff_pct'],
+                'margin_pct' => $t['margin_pct'],
                 'estimated' => $m['estimated_months'] !== [],
+                'estimated_from' => isset($m['estimated_months'][$ym]) ? self::monthLabel($m['estimated_months'][$ym]) : null,
+                'people' => $t['people'],
+                'people_production' => $t['people_production'],
+                'person_months' => ($t['people'] ?? 0) * $fraction,
+                'person_months_production' => ($t['people_production'] ?? 0) * $fraction,
+                'revenue_production' => array_sum(array_column($m['groups'], 'revenue')),
+                'revenue_per_person' => $t['revenue_per_person'],
+                'revenue_per_person_production' => $t['revenue_per_person_production'],
+                'groups' => array_column(array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'revenue' => $g['revenue'],
+                    'people' => $g['people'], 'person_months' => ($g['people'] ?? 0) * $fraction,
+                    'revenue_per_person' => $g['revenue_per_person']], $m['groups']), null, 'id'),
             ];
         }
         return $out;
+    }
+
+    /**
+     * Ventes par personne et par mois sur la série mensuelle (du plus récent au plus ancien) : groupes
+     * classés par ventes, moyenne de la période (ventes ÷ mois-personnes) et meilleur mois de chaque
+     * groupe (mois en cours exclu : tempo).
+     */
+    public function perPerson(array $monthly): array
+    {
+        $groups = [];
+        foreach ($monthly as $m) {
+            foreach ($m['groups'] as $id => $g) {
+                $groups[$id] ??= ['id' => $id, 'name' => $g['name'], 'revenue' => 0.0, 'person_months' => 0.0, 'best' => null];
+                $groups[$id]['revenue'] += $g['revenue'];
+                $groups[$id]['person_months'] += $g['person_months'];
+                if (!$m['current'] && $g['revenue_per_person'] !== null && $g['revenue_per_person'] > ($groups[$id]['best'] ?? 0)) {
+                    $groups[$id]['best'] = $g['revenue_per_person'];
+                }
+            }
+        }
+        usort($groups, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
+        foreach ($groups as &$g) $g['average'] = $g['person_months'] > 0 ? $g['revenue'] / $g['person_months'] : null;
+        unset($g);
+        $sum = fn(string $key) => array_sum(array_column($monthly, $key));
+        return [
+            'months' => array_reverse($monthly),
+            'groups' => $groups,
+            'count' => count($monthly),
+            'real' => count(array_filter($monthly, fn($m) => !$m['estimated'])),
+            'average' => $sum('person_months') > 0 ? $sum('revenue') / $sum('person_months') : null,
+            'average_production' => $sum('person_months_production') > 0 ? $sum('revenue_production') / $sum('person_months_production') : null,
+        ];
     }
 
     /**
@@ -365,19 +424,20 @@ final class ProfitabilityService
             $warnings[] = 'Brak kursu EUR w ustawieniach firmy — koszty w PLN nie są przeliczone.';
             $rate = 1.0;
         }
-        $this->costs ??= [$this->repo->costMonths(), $this->repo->staff(), $this->repo->media(), $this->repo->fixedCosts(), $this->repo->sections()];
-        [$costMonths, $staff, $media, $fixed, $sectionRows] = $this->costs;
+        $this->costs ??= [$this->repo->costMonths(), $this->repo->staff(), $this->repo->media(), $this->repo->fixedCosts(), $this->repo->sections(), $this->repo->headcount()];
+        [$costMonths, $staff, $media, $fixed, $sectionRows, $headcount] = $this->costs;
         $targets = $this->generalTargets();
 
         // Coûts du personnel et du groupe, au prorata (pace) et sur les mois entiers (full).
         $sections = [];
         foreach ($sectionRows as $s) {
             $sections[(int) $s['id']] = $s + ['staff' => 0.0, 'staff_full' => 0.0, 'overhead' => 0.0, 'overhead_full' => 0.0,
-                'revenue' => 0.0, 'materials' => 0.0, 'cartons' => 0, 'open' => 0.0];
+                'revenue' => 0.0, 'materials' => 0.0, 'cartons' => 0, 'open' => 0.0, 'person_months' => 0.0];
         }
         $fixedPace = 0.0;
         $fixedFull = 0.0;
         $estimated = [];
+        $monthsCounted = array_sum($spec['months']);
         foreach ($spec['months'] as $ym => $fraction) {
             [$monthId, $source] = $this->costMonthFor($ym, $costMonths);
             if ($monthId === null) {
@@ -394,6 +454,8 @@ final class ProfitabilityService
                 $overhead = ((float) $s['depreciation'] + $mediaCost) / $rate;
                 $s['staff_full'] += $staffCost;
                 $s['staff'] += $staffCost * $fraction;
+                // Osobomiesiące : osoby opłacone w miesiącu × część miesiąca (bieżący : dni, które minęły).
+                $s['person_months'] += ($headcount[$monthId][$id] ?? 0) * $fraction;
                 $s['overhead_full'] += $overhead;
                 $s['overhead'] += $overhead * $fraction;
             }
@@ -430,15 +492,18 @@ final class ProfitabilityService
         }
 
         $groups = [];
-        $shared = ['names' => [], 'staff' => 0.0, 'staff_full' => 0.0, 'overhead' => 0.0, 'overhead_full' => 0.0, 'revenue' => 0.0, 'materials' => 0.0];
+        $shared = ['names' => [], 'staff' => 0.0, 'staff_full' => 0.0, 'overhead' => 0.0, 'overhead_full' => 0.0, 'revenue' => 0.0, 'materials' => 0.0, 'person_months' => 0.0];
         foreach ($sections as $id => $s) {
             if ($s['is_shared']) {
                 $shared['names'][] = $s['name'];
-                foreach (['staff', 'staff_full', 'overhead', 'overhead_full', 'revenue', 'materials'] as $k) $shared[$k] += $s[$k];
+                foreach (['staff', 'staff_full', 'overhead', 'overhead_full', 'revenue', 'materials', 'person_months'] as $k) $shared[$k] += $s[$k];
                 continue;
             }
             if ($s['revenue'] == 0.0 && $s['staff_full'] == 0.0) continue;
-            $groups[] = $this->group($id, $s, $targets);
+            $groups[] = $this->group($id, $s, $targets) + [
+                'people' => $monthsCounted > 0 ? $s['person_months'] / $monthsCounted : null,
+                'revenue_per_person' => $s['person_months'] > 0 ? $s['revenue'] / $s['person_months'] : null,
+            ];
         }
         usort($groups, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
 
@@ -449,6 +514,10 @@ final class ProfitabilityService
         $overheadPace = array_sum(array_column($sections, 'overhead'));
         $overheadFull = array_sum(array_column($sections, 'overhead_full'));
         $open = array_sum(array_column($sections, 'open'));
+
+        $personMonths = array_sum(array_column($sections, 'person_months'));
+        $productionPersonMonths = $personMonths - $shared['person_months'];
+        $shared['people'] = $monthsCounted > 0 ? $shared['person_months'] / $monthsCounted : null;
 
         $staffTarget = $targets['profit.total_staff_target_pct'];
         $staffNeeded = $staffFull / ($staffTarget / 100);
@@ -487,6 +556,11 @@ final class ProfitabilityService
             'open' => $open,
             'projection' => $spec['current'] && $spec['elapsed'] > 0 ? $revenue / $spec['elapsed'] : null,
             'cartons' => array_sum(array_column($sections, 'cartons')) + $unassigned['cartons'],
+            // Sprzedaż na osobę i miesiąc : cała firma (z działami wspólnymi) i sama produkcja.
+            'people' => $monthsCounted > 0 ? $personMonths / $monthsCounted : null,
+            'people_production' => $monthsCounted > 0 ? $productionPersonMonths / $monthsCounted : null,
+            'revenue_per_person' => $personMonths > 0 ? $revenue / $personMonths : null,
+            'revenue_per_person_production' => $productionPersonMonths > 0 ? $revenue / $productionPersonMonths : null,
         ];
 
         return [

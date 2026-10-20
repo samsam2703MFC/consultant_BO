@@ -144,6 +144,7 @@
                         {% if growth[g.id] is defined %}<div class="at-sub">{{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} · +{{ growth[g.id].revenue_month|eur }}/mies.</div>{% endif %}
                         <div class="at-ratio"><span class="at-ratio-bar" style="width: {{ width|round(1) }}%"></span><span class="at-ratio-target" style="left: 50%"></span></div>
                         <div class="at-sub">sprzedaż {{ g.revenue|eur }} · personel {{ g.staff|eur }} · cel ≤ {{ g.staff_target|pct(0) }}</div>
+                        {% if g.revenue_per_person is not null %}<div class="at-sub">na osobę <strong>{{ g.revenue_per_person|eur }}</strong>/mies. · {{ g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') }} os.{{ current ? ' · tempo' : '' }}</div>{% endif %}
                         {% if staff_budget[g.id] is defined %}<div class="at-sub">premia (model) {{ staff_budget[g.id].per_person_month_pln|pln }}/os./mies.</div>{% endif %}
                         {% if g.missing > 0 %}
                             <div class="at-profit-card-gap">Brakuje <strong>{{ g.missing|eur }}</strong>{% if g.missing_pct is not null %} <span class="at-profit-badge">+{{ g.missing_pct|pct(0) }}</span>{% endif %}
@@ -158,6 +159,7 @@
                 <li class="at-profit-card-total">
                     <div class="at-profit-card-head"><strong>Razem z działami wspólnymi</strong><span class="at-ratio-value">{{ t.staff_pct|pct }}</span></div>
                     <div class="at-sub">sprzedaż {{ t.revenue|eur }} · personel {{ t.staff|eur }} · cel ≤ {{ t.staff_target|pct(0) }}</div>
+                    {% if t.revenue_per_person is not null %}<div class="at-sub">na osobę <strong>{{ t.revenue_per_person|eur }}</strong>/mies. ({{ t.people|number_format(0, ',', ' ') }} os.) · produkcja {{ t.revenue_per_person_production|eur }}</div>{% endif %}
                     {% if t.staff_missing > 0 %}<div class="at-profit-card-gap">Brakuje <strong>{{ t.staff_missing|eur }}</strong> <span class="at-profit-badge">+{{ t.staff_missing_pct|pct(0) }}</span></div>{% endif %}
                 </li>
             </ul>
@@ -167,6 +169,7 @@
                         <tr>
                             <th>Grupa</th>
                             <th class="text-end">Sprzedaż</th>
+                            <th class="text-end" title="Sprzedaż grupy ÷ osoby opłacone w miesiącu (kalkulator kosztów){{ current ? ' — bieżący miesiąc: tempo na cały miesiąc' : '' }}">Sprzedaż / osobę<div class="at-sub">miesięcznie</div></th>
                             <th class="text-end">Personel</th>
                             <th>Personel / sprzedaż</th>
                             <th class="text-end">Brakuje</th>
@@ -184,9 +187,13 @@
                             </td>
                             <td class="text-end">{{ g.revenue|eur }}</td>
                             <td class="text-end">
+                                {{ g.revenue_per_person|eur }}
+                                <div class="at-sub">{{ g.people is null ? '—' : g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') ~ ' os.' }}{{ current and g.people ? ' · tempo' : '' }}</div>
+                            </td>
+                            <td class="text-end">
                                 {{ g.staff|eur }}
                                 {% set sb = staff_budget[g.id] ?? null %}
-                                {% if sb %}<div class="at-sub" title="Model: minimum {{ sb.base|eur }} + pula premii {{ sb.pct|pct }} sprzedaży {{ sb.pool|eur }}">model {{ sb.budget|eur }} · premia {{ sb.per_person_month_pln|pln }}/os./mies.</div>{% endif %}
+                                {% if sb %}<div class="at-sub" title="Model: minimum {{ sb.base|eur }} + pula premii {{ sb.pct|pct }} sprzedaży {{ sb.pool|eur }}">model {{ sb.budget|eur }}<br>premia {{ sb.per_person_month_pln|pln }}/os./mies.</div>{% endif %}
                             </td>
                             <td class="at-profit-ratio">
                                 <div class="at-ratio" title="Cel ≤ {{ g.staff_target|pct(0) }}">
@@ -225,6 +232,7 @@
                         <tr class="at-profit-shared">
                             <td><strong>Działy wspólne</strong><div class="at-sub">{{ shared.names|join(', ') }}</div></td>
                             <td class="text-end">{{ shared.revenue > 0 ? shared.revenue|eur : '' }}</td>
+                            <td class="text-end at-sub">{{ shared.people ? shared.people|number_format(shared.people == shared.people|round ? 0 : 1, ',', ' ') ~ ' os.' : '' }}</td>
                             <td class="text-end">{{ shared.staff|eur }}</td>
                             <td colspan="4" class="at-sub">Bez własnej sprzedaży: liczone w wskaźniku całej firmy.</td>
                         </tr>
@@ -232,6 +240,8 @@
                         <tr class="at-profit-total">
                             <td><strong>Razem</strong></td>
                             <td class="text-end"><strong>{{ t.revenue|eur }}</strong></td>
+                            <td class="text-end"><strong>{{ t.revenue_per_person|eur }}</strong>
+                                {% if t.people is not null %}<div class="at-sub">{{ t.people|number_format(0, ',', ' ') }} os.<br>produkcja {{ t.revenue_per_person_production|eur }}</div>{% endif %}</td>
                             <td class="text-end"><strong>{{ t.staff|eur }}</strong></td>
                             <td><strong>{{ t.staff_pct|pct }}</strong> <span class="at-sub">cel ≤ {{ t.staff_target|pct(0) }}</span></td>
                             <td class="text-end">{% if t.staff_missing > 0 %}<strong class="text-danger">+{{ t.staff_missing_pct|pct(0) }}</strong>{% else %}<span class="text-success">w normie</span>{% endif %}</td>
@@ -392,6 +402,61 @@
             </div>
         </div>
     </div>
+
+    {# --- Sprzedaż na osobę : grupy × ostatnie 18 miesięcy ----------------------- #}
+    {% set pp = per_person %}
+    {% if pp.groups %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Sprzedaż na osobę — ostatnie {{ pp.count }} miesięcy</h4>
+            <span class="at-sub">sprzedaż grupy ÷ osoby opłacone w miesiącu · {{ pp.real }} z {{ pp.count }} mies. z wprowadzonymi kosztami</span>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive at-ppl-scroll">
+                <table class="table mb-0 at-ppl-table">
+                    <thead>
+                        <tr>
+                            <th>Miesiąc</th>
+                            {% for g in pp.groups %}<th class="text-end">{{ g.name }}</th>{% endfor %}
+                            <th class="text-end at-ppl-sum">Produkcja</th>
+                            <th class="text-end at-ppl-sum">Cała firma</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for m in pp.months %}
+                        <tr class="{{ m.estimated ? 'at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}">
+                            <td>
+                                <a href="{{ root }}/dashboard?period={{ m.current ? 'month' : m.ym }}"><strong>{{ m.label }}</strong></a>
+                                {% if m.current %}<div class="at-sub">tempo do końca miesiąca</div>{% endif %}
+                                {% if m.estimated_from %}<div class="at-sub" title="Koszty i osoby tego miesiąca nie są wprowadzone w kalkulatorze kosztów — przyjęto {{ m.estimated_from }}">os. szac. ({{ m.estimated_from }})</div>{% endif %}
+                            </td>
+                            {% for g in pp.groups %}
+                                {% set c = m.groups[g.id] ?? null %}
+                                <td class="text-end{{ c and not m.current and c.revenue_per_person is not null and c.revenue_per_person == g.best ? ' at-ppl-best' : '' }}">
+                                    {% if c and c.revenue_per_person is not null %}{{ c.revenue_per_person|eur }}<div class="at-sub">{{ c.people|number_format(c.people == c.people|round ? 0 : 1, ',', ' ') }} os.</div>
+                                    {% elseif c and c.revenue > 0 %}<span class="at-sub" title="Sprzedaż {{ c.revenue|eur }} bez osób w kalkulatorze kosztów">bez osób</span>
+                                    {% else %}<span class="at-sub">—</span>{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end at-ppl-sum"><strong>{{ m.revenue_per_person_production|eur }}</strong><div class="at-sub">{{ m.people_production ? m.people_production|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>
+                            <td class="text-end at-ppl-sum"><strong>{{ m.revenue_per_person|eur }}</strong><div class="at-sub">{{ m.people ? m.people|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="at-profit-total">
+                            <td><strong>Średnio</strong><div class="at-sub">{{ pp.count }} mies.</div></td>
+                            {% for g in pp.groups %}<td class="text-end"><strong>{{ g.average|eur }}</strong><div class="at-sub">sprzedaż {{ g.revenue|eur }}</div></td>{% endfor %}
+                            <td class="text-end at-ppl-sum"><strong>{{ pp.average_production|eur }}</strong></td>
+                            <td class="text-end at-ppl-sum"><strong>{{ pp.average|eur }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="at-profit-note">Sprzedaż WDT grupy w miesiącu na jedną osobę opłaconą w tym miesiącu (osoby z <a href="{{ root }}/cost-calculator">kalkulatora kosztów</a>, pozycje wliczone). Miesiące bez wprowadzonych kosztów (os. szac., szare) przyjmują osoby z najbliższego znanego miesiąca — uzupełnij je w kalkulatorze, aby wynik był dokładny. Bieżący miesiąc: tempo (sprzedaż do dziś przeliczona na cały miesiąc). Średnio: sprzedaż okresu ÷ suma osobo-miesięcy. Wyróżnienie: najlepszy miesiąc grupy.</p>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="modal fade" id="growthModal" tabindex="-1" aria-labelledby="growthModalTitle" aria-hidden="true" data-period="{{ selected }}">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
