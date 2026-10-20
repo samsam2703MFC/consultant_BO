@@ -916,3 +916,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T16:50:51Z Tydzień produkcji środa → wtorek, Do zrobienia
 2026-10-20T17:08:07Z Partia produkcyjna w planowaniu
 2026-10-20T18:19:41Z Stałe partie co tydzień, partie do stanów, bez Plan tygodnia
+2026-10-20T19:31:07Z Tydzień typowy : przełącznik 📌, godzina, wyczyść tydzień
