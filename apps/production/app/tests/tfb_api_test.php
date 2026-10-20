@@ -409,7 +409,7 @@ check($s === 200 && $ov['data']['params']['max_weeks'] == 3 && $row && $row['wee
 // Stan magazynu : 3 kartony wolne (1 paletyzowany się nie liczy), zamówienie 903 « Nowe » na 3 kartony ;
 // do produkcji poza zamówieniami = stan min. − dostępne.
 check($row['free_cartons'] == 3 && $row['ordered_cartons'] == 3 && $row['available_cartons'] == round(3 - 3 + $row['in_production_cartons'], 1)
-    && ($row['stock_min_cartons'] === null ? $row['to_min_cartons'] === null : $row['to_min_cartons'] === (int) ceil(round(max(0, $row['stock_min_cartons'] - $row['available_cartons']), 6))),
+    && ($row['stock_min_cartons'] === null ? $row['to_min_cartons'] === null : $row['to_min_cartons'] === (int) ceil(round(max(0, $row['stock_min_cartons'] - max(0, $row['available_cartons'])), 6))),
     'stock level: free cartons, open orders, available and to produce back to the minimum');
 $period = '?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days'));
 

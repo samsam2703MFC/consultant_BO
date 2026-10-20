@@ -286,5 +286,6 @@
   "lv.to_max": "jusqu’au max. {c} cart.",
   "lv.no_min": "pas de stock min.",
   "lv.for_orders": "pour les commandes au-delà du stock",
-  "lv.note": "Disponible = stock libre − commandes (Nouvelles, En cours ; les palettisées sont déjà sorties du stock) + OF MTS en cours. À produire (pour le stock) = stock min. − disponible, en cartons entiers ; le plan de la semaine remplit jusqu’au stock max."
+  "lv.note": "Disponible = stock libre − commandes (Nouvelles, En cours ; les palettisées sont déjà sorties du stock) + OF MTS en cours. À produire hors commandes = stock min. − disponible (si le disponible est négatif, le manque pour les commandes est affiché à part), en cartons entiers ; le plan de la semaine remplit jusqu’au stock max.",
+  "lv.orders_short": "+ pour les commandes {c} cart."
 }

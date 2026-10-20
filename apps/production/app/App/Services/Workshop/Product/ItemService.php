@@ -112,8 +112,8 @@ final class ItemService
     /**
      * Stan magazynu produktu (kartony) : wolny stan (carton_stock status 1), zamówienia otwarte jeszcze
      * nie paletyzowane (Nowe, W realizacji — paletyzowane kartony już zeszły ze stanu wolnego), zlecenia MTS
-     * w toku ; dostępne = stan − zamówienia + w produkcji ; do produkcji poza zamówieniami = do stanu min.
-     * (i do maks.) ; na zamówienie (MTO) : zamówienia ponad stan.
+     * w toku ; dostępne = stan − zamówienia + w produkcji ; do produkcji poza zamówieniami = stan min.
+     * (i maks.) − dostępne nieujemne ; zamówienia ponad stan (dostępne < 0) osobno.
      */
     private function stockLevel(array $r, ?int $ppc, callable $whole): array
     {
@@ -125,8 +125,9 @@ final class ItemService
         $max = $r['stock_max'] !== null && $ppc ? (float) $r['stock_max'] / $ppc : null;
         return [
             'free_cartons' => $free, 'ordered_cartons' => $ordered, 'in_production_cartons' => $inProduction, 'available_cartons' => $available,
-            'to_min_cartons' => $min !== null ? $whole(max(0.0, $min - $available)) : null,
-            'to_max_cartons' => $max !== null ? $whole(max(0.0, $max - $available)) : null,
+            // Poza zamówieniami : brak na zamówienia (dostępne < 0) produkuje się jako zamówienia, osobno.
+            'to_min_cartons' => $min !== null ? $whole(max(0.0, $min - max(0.0, $available))) : null,
+            'to_max_cartons' => $max !== null ? $whole(max(0.0, $max - max(0.0, $available))) : null,
             'orders_over_stock_cartons' => $whole(max(0.0, $ordered - $free)),
             'below_min' => $min !== null && $available < $min,
         ];

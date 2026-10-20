@@ -286,5 +286,6 @@
   "lv.to_max": "do maks. {c} kart.",
   "lv.no_min": "brak stanu min.",
   "lv.for_orders": "na zamówienia ponad stan",
-  "lv.note": "Dostępne = stan wolny − zamówienia (Nowe, W realizacji ; paletyzowane już zeszły ze stanu) + zlecenia MTS w toku. Do produkcji (na magazyn) = stan min. − dostępne, w pełnych kartonach ; plan tygodnia uzupełnia do stanu maks."
+  "lv.note": "Dostępne = stan wolny − zamówienia (Nowe, W realizacji ; paletyzowane już zeszły ze stanu) + zlecenia MTS w toku. Do produkcji poza zamówieniami = stan min. − dostępne (gdy dostępne < 0, brak na zamówienia pokazany osobno), w pełnych kartonach ; plan tygodnia uzupełnia do stanu maks.",
+  "lv.orders_short": "+ na zamówienia {c} kart."
 }

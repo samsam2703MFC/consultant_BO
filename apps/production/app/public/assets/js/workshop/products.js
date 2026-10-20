@@ -239,6 +239,7 @@
                         ? (i.to_min_cartons === null ? `<span class="text-muted small">${esc(t('lv.no_min'))}</span>`
                             : `<strong class="${i.to_min_cartons > 0 ? 'text-danger' : 'text-success'}">${i.to_min_cartons > 0 ? n(i.to_min_cartons) + ' ' + esc(t('st.cart')) : '✓ 0'}</strong>
                                ${i.to_max_cartons ? `<div class="small text-muted">${esc(t('lv.to_max', {c: n(i.to_max_cartons)}))}</div>` : ''}`)
+                          + (i.orders_over_stock_cartons > 0 ? `<div class="small text-danger">${esc(t('lv.orders_short', {c: n(i.orders_over_stock_cartons)}))}</div>` : '')
                         : (i.orders_over_stock_cartons > 0 ? `<strong>${n(i.orders_over_stock_cartons)} ${esc(t('st.cart'))}</strong><div class="small text-muted">${esc(t('lv.for_orders'))}</div>` : '<span class="text-muted">—</span>')}</td>
                 </tr>`).join('') || `<tr><td colspan="9" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody></table></div>
                 <p class="text-muted small mb-0 mt-2">${esc(t('lv.note'))}</p></div></div>`;
