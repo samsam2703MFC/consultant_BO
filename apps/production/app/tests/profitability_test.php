@@ -121,6 +121,14 @@ try {
     near($t['people'], 3, 'cała firma : 3 osoby');
     near($t['revenue_per_person'], 5000 / 3, 'sprzedaż na osobę w całej firmie');
     near($t['revenue_per_person_production'], 2500, 'sprzedaż na osobę w produkcji');
+    // Marża brutto (po surowcach) i działy wspólne : jeden wiersz na dział.
+    near($g['gross'], 4000, 'marża brutto grupy = 5000 − 1000');
+    near($g['gross_pct'], 80, 'marża brutto grupy w %');
+    near($t['gross'], 4000, 'marża brutto firmy');
+    expectProfit(count($sep['shared']['sections']) === 1 && $sep['shared']['sections'][0]['name'] === 'Pakowanie', 'dział wspólny w osobnym wierszu');
+    near($sep['shared']['sections'][0]['staff'], 1000, 'personel działu wspólnego');
+    near($sep['shared']['sections'][0]['staff_share'], 20, 'personel działu wspólnego w % sprzedaży firmy');
+    near($sep['shared']['sections'][0]['people'], 1, 'osoby działu wspólnego');
 
     // --- Bieżący miesiąc : koszty października nie są wprowadzone → wrzesień, personel proporcjonalnie (19/31)
     $oct = $service->overview('month', $today);

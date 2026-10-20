@@ -144,6 +144,7 @@
                         {% if growth[g.id] is defined %}<div class="at-sub">{{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} · +{{ growth[g.id].revenue_month|eur }}/mies.</div>{% endif %}
                         <div class="at-ratio"><span class="at-ratio-bar" style="width: {{ width|round(1) }}%"></span><span class="at-ratio-target" style="left: 50%"></span></div>
                         <div class="at-sub">sprzedaż {{ g.revenue|eur }} · personel {{ g.staff|eur }} · cel ≤ {{ g.staff_target|pct(0) }}</div>
+                        <div class="at-sub">marża brutto <strong>{{ g.gross|eur }}</strong> ({{ g.gross_pct|pct(0) }}) · surowce {{ g.materials|eur }}</div>
                         {% if g.revenue_per_person is not null %}<div class="at-sub">na osobę <strong>{{ g.revenue_per_person|eur }}</strong>/mies. · {{ g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') }} os.{{ current ? ' · tempo' : '' }}</div>{% endif %}
                         {% if staff_budget[g.id] is defined %}<div class="at-sub">premia (model) {{ staff_budget[g.id].per_person_month_pln|pln }}/os./mies.</div>{% endif %}
                         {% if g.missing > 0 %}
@@ -156,9 +157,16 @@
                         <div class="at-sub">marża działu {{ g.margin_pct|pct }} (cel ≥ {{ g.margin_target|pct(0) }})</div>
                     </li>
                 {% endfor %}
+                {% for d in shared.sections %}
+                <li class="at-profit-card-shared">
+                    <div class="at-profit-card-head"><strong>{{ d.name }}</strong><span class="at-sub">dział wspólny</span></div>
+                    <div class="at-sub">personel {{ d.staff|eur }}{{ d.staff_share is null ? '' : ' · ' ~ d.staff_share|pct(1) ~ ' sprzedaży firmy' }}{{ d.people ? ' · ' ~ d.people|number_format(d.people == d.people|round ? 0 : 1, ',', ' ') ~ ' os.' : '' }}</div>
+                </li>
+                {% endfor %}
                 <li class="at-profit-card-total">
                     <div class="at-profit-card-head"><strong>Razem z działami wspólnymi</strong><span class="at-ratio-value">{{ t.staff_pct|pct }}</span></div>
                     <div class="at-sub">sprzedaż {{ t.revenue|eur }} · personel {{ t.staff|eur }} · cel ≤ {{ t.staff_target|pct(0) }}</div>
+                    <div class="at-sub">marża brutto <strong>{{ t.gross|eur }}</strong> ({{ t.gross_pct|pct(0) }}) · surowce {{ t.materials|eur }}</div>
                     {% if t.revenue_per_person is not null %}<div class="at-sub">na osobę <strong>{{ t.revenue_per_person|eur }}</strong>/mies. ({{ t.people|number_format(0, ',', ' ') }} os.) · produkcja {{ t.revenue_per_person_production|eur }}</div>{% endif %}
                     {% if t.staff_missing > 0 %}<div class="at-profit-card-gap">Brakuje <strong>{{ t.staff_missing|eur }}</strong> <span class="at-profit-badge">+{{ t.staff_missing_pct|pct(0) }}</span></div>{% endif %}
                 </li>
@@ -170,6 +178,7 @@
                             <th>Grupa</th>
                             <th class="text-end">Sprzedaż</th>
                             <th class="text-end" title="Sprzedaż grupy ÷ osoby opłacone w miesiącu (kalkulator kosztów){{ current ? ' — bieżący miesiąc: tempo na cały miesiąc' : '' }}">Sprzedaż / osobę<div class="at-sub">miesięcznie</div></th>
+                            <th class="text-end" title="Sprzedaż − surowce i opakowania (receptury × kartony, ceny z końca miesiąca)">Marża brutto<div class="at-sub">po surowcach</div></th>
                             <th class="text-end">Personel</th>
                             <th>Personel / sprzedaż</th>
                             <th class="text-end">Brakuje</th>
@@ -191,9 +200,13 @@
                                 <div class="at-sub">{{ g.people is null ? '—' : g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') ~ ' os.' }}{{ current and g.people ? ' · tempo' : '' }}</div>
                             </td>
                             <td class="text-end">
+                                {{ g.gross|eur }} <span class="at-sub">{{ g.gross_pct|pct(0) }}</span>
+                                <div class="at-sub">surowce {{ g.materials|eur }}</div>
+                            </td>
+                            <td class="text-end">
                                 {{ g.staff|eur }}
                                 {% set sb = staff_budget[g.id] ?? null %}
-                                {% if sb %}<div class="at-sub" title="Model: minimum {{ sb.base|eur }} + pula premii {{ sb.pct|pct }} sprzedaży {{ sb.pool|eur }}">model {{ sb.budget|eur }}<br>premia {{ sb.per_person_month_pln|pln }}/os./mies.</div>{% endif %}
+                                {% if sb %}<div class="at-sub" title="Model: minimum {{ sb.base|eur }} + pula premii {{ sb.pct|pct }} sprzedaży {{ sb.pool|eur }}">model {{ sb.budget|eur }}<br>premia {{ sb.per_person_month_pln|pln }}/os.</div>{% endif %}
                             </td>
                             <td class="at-profit-ratio">
                                 <div class="at-ratio" title="Cel ≤ {{ g.staff_target|pct(0) }}">
@@ -214,7 +227,7 @@
                                 {% if g.missing > 0 %}
                                     <strong>{{ g.missing|eur }}</strong>
                                     {% if current %}
-                                        <div class="at-sub">{{ g.open > 0 ? 'w zamówieniach ' ~ g.open|eur ~ ' · ' : '' }}{{ g.missing_after_open > 0 ? 'do znalezienia ' ~ g.missing_after_open|eur : 'pokryte zamówieniami' }}</div>
+                                        <div class="at-sub">{% if g.open > 0 %}w zamówieniach {{ g.open|eur }}<br>{% endif %}{{ g.missing_after_open > 0 ? 'do znalezienia ' ~ g.missing_after_open|eur : 'pokryte zamówieniami' }}</div>
                                     {% endif %}
                                 {% else %}
                                     <span class="at-sub">zapas {{ (g.revenue - g.needed)|eur }}</span>
@@ -222,26 +235,30 @@
                             </td>
                             <td class="text-end">
                                 <span class="{{ g.margin_pct is not null and g.margin_pct >= g.margin_target ? 'text-success' : 'text-danger' }}">{{ g.margin_pct|pct }}</span>
-                                <div class="at-sub">{{ g.contribution|eur }} · cel ≥ {{ g.margin_target|pct(0) }}</div>
+                                <div class="at-sub">{{ g.contribution|eur }}<br>cel ≥ {{ g.margin_target|pct(0) }}</div>
                             </td>
                         </tr>
                     {% endfor %}
                     </tbody>
                     <tfoot>
-                        {% if shared.names %}
+                        {% for d in shared.sections %}
                         <tr class="at-profit-shared">
-                            <td><strong>Działy wspólne</strong><div class="at-sub">{{ shared.names|join(', ') }}</div></td>
-                            <td class="text-end">{{ shared.revenue > 0 ? shared.revenue|eur : '' }}</td>
-                            <td class="text-end at-sub">{{ shared.people ? shared.people|number_format(shared.people == shared.people|round ? 0 : 1, ',', ' ') ~ ' os.' : '' }}</td>
-                            <td class="text-end">{{ shared.staff|eur }}</td>
-                            <td colspan="4" class="at-sub">Bez własnej sprzedaży: liczone w wskaźniku całej firmy.</td>
+                            <td><strong>{{ d.name }}</strong><div class="at-sub">dział wspólny</div></td>
+                            <td class="text-end">{{ d.revenue > 0 ? d.revenue|eur : '' }}</td>
+                            <td class="text-end at-sub">{{ d.people ? d.people|number_format(d.people == d.people|round ? 0 : 1, ',', ' ') ~ ' os.' : '' }}</td>
+                            <td class="text-end at-sub">{{ d.materials > 0 ? 'surowce ' ~ d.materials|eur : '' }}</td>
+                            <td class="text-end">{{ d.staff|eur }}</td>
+                            <td class="at-sub">{{ d.staff_share is null ? '' : d.staff_share|pct(1) ~ ' sprzedaży firmy' }}</td>
+                            <td colspan="3" class="at-sub">{{ d.overhead > 0 ? 'media i amortyzacja ' ~ d.overhead|eur ~ ' · ' : '' }}bez własnej sprzedaży — koszt w wyniku całej firmy</td>
                         </tr>
-                        {% endif %}
+                        {% endfor %}
                         <tr class="at-profit-total">
                             <td><strong>Razem</strong></td>
                             <td class="text-end"><strong>{{ t.revenue|eur }}</strong></td>
                             <td class="text-end"><strong>{{ t.revenue_per_person|eur }}</strong>
                                 {% if t.people is not null %}<div class="at-sub">{{ t.people|number_format(0, ',', ' ') }} os.<br>produkcja {{ t.revenue_per_person_production|eur }}</div>{% endif %}</td>
+                            <td class="text-end"><strong>{{ t.gross|eur }}</strong> <span class="at-sub">{{ t.gross_pct|pct(0) }}</span>
+                                <div class="at-sub">surowce {{ t.materials|eur }}</div></td>
                             <td class="text-end"><strong>{{ t.staff|eur }}</strong></td>
                             <td><strong>{{ t.staff_pct|pct }}</strong> <span class="at-sub">cel ≤ {{ t.staff_target|pct(0) }}</span></td>
                             <td class="text-end">{% if t.staff_missing > 0 %}<strong class="text-danger">+{{ t.staff_missing_pct|pct(0) }}</strong>{% else %}<span class="text-success">w normie</span>{% endif %}</td>

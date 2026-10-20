@@ -554,10 +554,14 @@ final class ProfitabilityService
         }
 
         $groups = [];
-        $shared = ['names' => [], 'staff' => 0.0, 'staff_full' => 0.0, 'overhead' => 0.0, 'overhead_full' => 0.0, 'revenue' => 0.0, 'materials' => 0.0, 'person_months' => 0.0];
+        $shared = ['names' => [], 'sections' => [], 'staff' => 0.0, 'staff_full' => 0.0, 'overhead' => 0.0, 'overhead_full' => 0.0, 'revenue' => 0.0, 'materials' => 0.0, 'person_months' => 0.0];
         foreach ($sections as $id => $s) {
             if ($s['is_shared']) {
                 $shared['names'][] = $s['name'];
+                // Une ligne par département commun (administration, emballage / logistique…).
+                $shared['sections'][] = ['id' => $id, 'name' => $s['name'], 'revenue' => $s['revenue'], 'materials' => $s['materials'],
+                    'staff' => $s['staff'], 'overhead' => $s['overhead'], 'person_months' => $s['person_months'],
+                    'people' => $monthsCounted > 0 ? $s['person_months'] / $monthsCounted : null];
                 foreach (['staff', 'staff_full', 'overhead', 'overhead_full', 'revenue', 'materials', 'person_months'] as $k) $shared[$k] += $s[$k];
                 continue;
             }
@@ -580,6 +584,9 @@ final class ProfitabilityService
         $personMonths = array_sum(array_column($sections, 'person_months'));
         $productionPersonMonths = $personMonths - $shared['person_months'];
         $shared['people'] = $monthsCounted > 0 ? $shared['person_months'] / $monthsCounted : null;
+        foreach ($shared['sections'] as &$row) $row['staff_share'] = $revenue > 0 ? $row['staff'] / $revenue * 100 : null;
+        unset($row);
+        usort($shared['sections'], fn($a, $b) => $b['staff'] <=> $a['staff']);
 
         $staffTarget = $targets['profit.total_staff_target_pct'];
         $staffNeeded = $staffFull / ($staffTarget / 100);
@@ -597,6 +604,8 @@ final class ProfitabilityService
             'revenue' => $revenue,
             'materials' => $materials,
             'materials_pct' => $revenue > 0 ? $materials / $revenue * 100 : null,
+            'gross' => $revenue - $materials,
+            'gross_pct' => $revenue > 0 ? ($revenue - $materials) / $revenue * 100 : null,
             'staff' => $staffPace,
             'staff_full' => $staffFull,
             'staff_pct' => $revenue > 0 ? $staffPace / $revenue * 100 : null,
@@ -653,6 +662,10 @@ final class ProfitabilityService
             'revenue' => $revenue,
             'cartons' => $s['cartons'],
             'materials' => $s['materials'],
+            'materials_pct' => $revenue > 0 ? $s['materials'] / $revenue * 100 : null,
+            // Marge brute : ventes − matières et emballages (recettes).
+            'gross' => $revenue - $s['materials'],
+            'gross_pct' => $revenue > 0 ? ($revenue - $s['materials']) / $revenue * 100 : null,
             'staff' => $s['staff'],
             'staff_full' => $s['staff_full'],
             'staff_pct' => $revenue > 0 ? $s['staff'] / $revenue * 100 : null,
