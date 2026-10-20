@@ -6669,6 +6669,400 @@
                 ]
             }
         },
+        "/kiosk/production": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Produkcja dnia grupy tabletu / Production du jour du groupe de la tablette",
+                "operationId": "productionDay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Produits planifiés ce jour (Gantt de la semaine) ou déjà saisis, avec leurs lots ; catalogue des fiches du groupe. 409 DEVICE_WITHOUT_GROUP si la tablette n'a pas de groupe.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "défaut : aujourd'hui"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Nowa partia wyrobu / Nouveau lot de fabrication",
+                "operationId": "recordOutput",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutputBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Quantité dans l'unité de la fiche (pièces / kg). Numéro de lot RRMMDD-GROUPE-NN. client_uuid : rejouable sans doublon. Jours modifiables : kiosk.output_edit_days.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OutputInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/production/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Partia z recepturą i partiami surowców / Lot avec recette et lots des matières",
+                "operationId": "outputBatch",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutputBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Popraw lub anuluj partię / Corriger ou annuler un lot",
+                "operationId": "updateOutput",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutputBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OutputUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/production/{id}/lots/{material}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Partia surowca: numer, data, zdjęcie, OCR / Lot matière : numéro, date, photo, OCR",
+                "operationId": "outputLot",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutputBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Matière de la recette du produit (sinon 422 MATERIAL_NOT_IN_RECIPE). Photo de l'étiquette en data URL JPEG / PNG / WebP (kiosk.lot_photo_max_kb), conservée en base ; ocr_text = texte lu sur la tablette.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "material",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OutputLotInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/qr": {
             "get": {
                 "tags": [
@@ -10461,6 +10855,284 @@
                         "description": "data:image/png;base64,…"
                     }
                 }
+            },
+            "OutputItem": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "product",
+                            "semi"
+                        ]
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "ppc": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "OutputRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "date": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "lot_code": {
+                        "type": "string",
+                        "example": "261020-PIEK-01"
+                    },
+                    "employee": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "cancelled": {
+                        "type": "boolean"
+                    },
+                    "lots_done": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "lots_total": {
+                        "type": "integer"
+                    },
+                    "editable": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ProductionDay": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "editable": {
+                        "type": "boolean"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/components/schemas/OutputItem"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "planned": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "produced": {
+                                            "type": "number"
+                                        },
+                                        "batches": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/OutputRow"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "catalog": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OutputItem"
+                        }
+                    }
+                }
+            },
+            "OutputInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "item_id",
+                    "quantity"
+                ],
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "OutputUpdateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "quantity": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "cancelled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "OutputLotInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "lot_number": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    },
+                    "best_before": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,…"
+                    },
+                    "ocr_text": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "nullable": true
+                    }
+                }
+            },
+            "OutputBatch": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/OutputRow"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "item": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/OutputItem"
+                                    }
+                                ],
+                                "nullable": true
+                            },
+                            "basis": {
+                                "type": "string",
+                                "enum": [
+                                    "batch",
+                                    "recipe"
+                                ]
+                            },
+                            "ingredients": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "material_id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "unit": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "packaging": {
+                                            "type": "boolean"
+                                        },
+                                        "per_unit": {
+                                            "type": "number"
+                                        },
+                                        "quantity": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "lot_number": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "best_before": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "photo": {
+                                            "type": "boolean"
+                                        },
+                                        "last": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "properties": {
+                                                "lot_number": {
+                                                    "type": "string"
+                                                },
+                                                "best_before": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
             },
             "ClockQr": {
                 "type": "object",

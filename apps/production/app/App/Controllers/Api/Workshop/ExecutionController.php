@@ -8,6 +8,7 @@ use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KpiService;
+use App\Services\Workshop\Execution\OutputService;
 use App\Services\Workshop\Execution\TimesheetService;
 
 /** P7 : tablettes (appairage, identification, pointage, opérations, signatures), pointage au téléphone par QR code, heures, KPIs, cockpit. */
@@ -20,6 +21,7 @@ final class ExecutionController
         private ExecutionService $execution,
         private TimesheetService $timesheets,
         private KpiService $kpis,
+        private OutputService $outputs,
     ) {
     }
 
@@ -72,4 +74,11 @@ final class ExecutionController
     public function pause(ApiRequest $request): ApiResult { return new ApiResult($this->execution->pause($request->id(), $request->context)); }
     public function finish(ApiRequest $request): ApiResult { return new ApiResult($this->execution->finish($request->id(), $request->body(), $request->context)); }
     public function sign(ApiRequest $request): ApiResult { return new ApiResult($this->execution->sign($request->body(), $request->context), 201); }
+
+    // Tablet grupy : produkcja dnia i partie (identyfikowalność).
+    public function production(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->day($request->context, $request->query('date'))); }
+    public function recordOutput(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->record($request->body(), $request->context), 201); }
+    public function output(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->batch($request->id(), $request->context)); }
+    public function updateOutput(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->update($request->id(), $request->body(), $request->context)); }
+    public function outputLot(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->setLot($request->id(), $request->id('material'), $request->body(), $request->context)); }
 }

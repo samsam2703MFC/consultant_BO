@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -699,6 +699,72 @@ check($s === 201 && $sig['data']['sha256'] === hash('sha256', $png), 'handwritte
 check($s === 422 && $codes($b) === ['ref:SIGNATURE_REF_INVALID'], 'signature only on my own entries');
 $month = date('Y-m');
 $kiosk('POST', '/kiosk/signatures', ['purpose' => 'timesheet_month', 'ref' => $month, 'image' => 'data:image/png;base64,' . base64_encode($png)], $device, $emp);
+
+// Tablet grupy : produkcja dnia, partie wyrobu, partie surowców (zdjęcie etykiety + OCR) — identyfikowalność.
+$pdo->exec("INSERT INTO category_material (id, id_group, name) VALUES (105, 0, 'Mąka'), (200, 1, 'Kartony')");
+$pdo->exec("INSERT INTO raw_material (id, name, id_unit, id_category, price_per_unit) VALUES (902, 'Karton 60', 1, 200, 3.7)");
+$pdo->exec("UPDATE raw_material SET id_category = 105 WHERE id IN (900, 901)");
+$pdo->exec("INSERT INTO flattened_recipe_ingredient (recipe_id, material_id, quantity) VALUES (700, 900, 1500), (700, 901, 300), (700, 902, 1)");
+$croissant = (int) $pdo->query('SELECT id FROM tfb_prod_item WHERE id_final_product = 501')->fetchColumn();
+$pdo->exec("UPDATE tfb_prod_product_settings SET id_primary_group = 1 WHERE id_item = {$croissant}");
+$pdo->exec("INSERT INTO tfb_prod_week_slot (week_start, id_item, work_date, quantity) VALUES ('" . date('Y-m-d', strtotime('monday this week')) . "', {$croissant}, CURDATE(), 120)");
+[$s, $b] = $kiosk('GET', '/kiosk/production', null, $device);
+check($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'production of the day needs the person');
+[$s, $pd] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
+$row = array_values(array_filter($pd['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
+check($s === 200 && $pd['data']['group']['id'] === 1 && $row && $row['planned'] == 120.0 && $row['produced'] == 0.0 && $row['ppc'] === 60
+    && in_array($croissant, array_column($pd['data']['catalog'], 'item_id'), true), 'production of the day: planned from the week Gantt, group catalog');
+[$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 0], $device, $emp);
+check($s === 422 && $codes($b) === ['quantity:OUT_OF_RANGE'], 'quantity above zero');
+$outUuid = '5b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d';
+[$s, $batch] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 120, 'client_uuid' => $outUuid], $device, $emp);
+$prefix = date('ymd') . '-' . strtoupper(substr(preg_replace('/[^A-Z0-9]/i', '', (string) $pdo->query('SELECT code FROM tfb_prod_group WHERE id = 1')->fetchColumn()), 0, 4)) . '-';
+$ing = array_column($batch['data']['ingredients'] ?? [], null, 'material_id');
+check($s === 201 && $batch['data']['lot_code'] === $prefix . '01' && $batch['data']['basis'] === 'batch' && count($ing) === 3
+    && $ing[900]['quantity'] == 3000.0 && $ing[902]['packaging'] && !$ing[900]['packaging'] && $ing[900]['lot_number'] === null, 'batch recorded: own lot number, recipe scaled to 2 cartons');
+[$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 120, 'client_uuid' => $outUuid], $device, $emp);
+check($s === 201 && $b['data']['replayed'] && $b['data']['id'] === $batch['data']['id'], 'replayed batch (offline tablet) recorded once');
+$batchId = $batch['data']['id'];
+$jpg = imagecreatetruecolor(200, 80);
+imagefill($jpg, 0, 0, imagecolorallocate($jpg, 255, 255, 255));
+imagestring($jpg, 5, 10, 30, 'LOT L2310-A', imagecolorallocate($jpg, 0, 0, 0));
+ob_start();
+imagejpeg($jpg, null, 80);
+$jpeg = ob_get_clean();
+[$s, $b] = $kiosk('PUT', "/kiosk/production/{$batchId}/lots/900", ['lot_number' => 'x', 'photo' => 'data:image/jpeg;base64,AAAA'], $device, $emp);
+check($s === 422 && $codes($b) === ['photo:INVALID_PHOTO'], 'label photo must be an image');
+[$s, $b] = $kiosk('PUT', "/kiosk/production/{$batchId}/lots/999", ['lot_number' => 'x'], $device, $emp);
+check($s === 422 && $codes($b) === ['material_id:MATERIAL_NOT_IN_RECIPE'], 'only materials of the recipe');
+[$s, $b] = $kiosk('PUT', "/kiosk/production/{$batchId}/lots/900", ['lot_number' => '  l2310-a ', 'best_before' => '2026-12-01',
+    'photo' => 'data:image/jpeg;base64,' . base64_encode($jpeg), 'ocr_text' => "MĄKA T65\nLOT L2310-A"], $device, $emp);
+$ing = array_column($b['data']['ingredients'] ?? [], null, 'material_id');
+$photo = $pdo->query("SELECT p.sha256, p.mime FROM tfb_prod_output_lot l JOIN tfb_prod_lot_photo p ON p.id = l.id_photo WHERE l.id_output = {$batchId} AND l.id_material = 900")->fetch();
+check($s === 200 && $ing[900]['lot_number'] === 'L2310-A' && $ing[900]['best_before'] === '2026-12-01' && $ing[900]['photo'] && $b['data']['lots_done'] === 1 && $b['data']['lots_total'] === 3
+    && $photo && $photo['sha256'] === hash('sha256', $jpeg) && $photo['mime'] === 'image/jpeg', 'material lot saved with best-before date and label photo');
+[$s, $b2] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 60], $device, $emp);
+$ing = array_column($b2['data']['ingredients'] ?? [], null, 'material_id');
+check($s === 201 && $b2['data']['lot_code'] === $prefix . '02' && $ing[900]['quantity'] == 1500.0 && ($ing[900]['last']['lot_number'] ?? null) === 'L2310-A', 'next batch: « same as last time » lot suggested');
+[$s, $pd] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
+$row = array_values(array_filter($pd['data']['items'], fn($i) => $i['item_id'] === $croissant))[0];
+check($row['produced'] == 180.0 && count($row['batches']) === 2 && $row['batches'][0]['lots_done'] === 1 && $row['batches'][0]['lots_total'] === 3, 'day: 180 pieces in 2 batches, lots entered counted');
+[$s, $b] = $kiosk('PATCH', "/kiosk/production/{$b2['data']['id']}", ['cancelled' => true], $device, $emp);
+check($s === 200 && $b['data']['cancelled'] && !$b['data']['editable'], 'batch cancelled');
+[$s, $b] = $kiosk('PATCH', "/kiosk/production/{$b2['data']['id']}", ['quantity' => 50], $device, $emp);
+check($s === 409 && $b['description'] === 'OUTPUT_CANCELLED', 'a cancelled batch is not edited');
+[$s, $pd] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
+$row = array_values(array_filter($pd['data']['items'], fn($i) => $i['item_id'] === $croissant))[0];
+check($row['produced'] == 120.0, 'cancelled batch not counted');
+[$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 10, 'date' => date('Y-m-d', strtotime('-5 days'))], $device, $emp);
+check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days locked on the tablet');
+$pdo->exec("INSERT INTO tfb_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES (CURDATE(), 2, {$croissant}, 5, 'X-OTHER-01')");
+$foreign = (int) $pdo->lastInsertId();
+[$s, $b] = $kiosk('GET', "/kiosk/production/{$foreign}", null, $device, $emp);
+check($s === 403 && $b['description'] === 'OUTPUT_NOT_IN_YOUR_GROUPS', 'batches of another group hidden');
+$pdo->exec("UPDATE tfb_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
+[$s, $b] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
+check($s === 409 && $b['description'] === 'DEVICE_WITHOUT_GROUP', 'tablet without group');
+$pdo->exec("UPDATE tfb_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
+$pdo->exec("DELETE FROM tfb_prod_week_slot WHERE id_item = {$croissant}");
 
 [$s, $b] = $call('PATCH', "/kiosk/clocks/{$out['data']['clock']['id']}", ['clock_in' => date('Y-m-d H:i', strtotime('-2 hours'))], $access);
 check($s === 422 && $codes($b) === ['note:REQUIRED'], 'a correction needs a reason');

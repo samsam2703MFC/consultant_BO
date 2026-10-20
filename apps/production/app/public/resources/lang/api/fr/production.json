@@ -57,7 +57,11 @@
     "WEEK_WARNING_UNASSIGNED": "{count} produits ({hours} h) attendent dans « À répartir » : glissez-les sur un jour ou utilisez « Répartir par jour ».",
     "WEEK_WARNING_GROUP_OVERLOAD": "{group} : il manque {hours} h sur les jours surchargés — déplacez des produits ou ajoutez du monde au département (liste des employés).",
     "WEEK_WARNING_AFTER_DUE": "{count} blocs sont après l’échéance de la commande.",
-    "WEEK_WARNING_NO_HOURS": "{count} produits sans norme de temps (gamme) : 0 h dans le Gantt."
+    "WEEK_WARNING_NO_HOURS": "{count} produits sans norme de temps (gamme) : 0 h dans le Gantt.",
+    "DEVICE_WITHOUT_GROUP": "La tablette n’est rattachée à aucun groupe — rattachez-la dans Atelier : tablettes et temps de travail.",
+    "OUTPUT_NOT_IN_YOUR_GROUPS": "Ce lot n’appartient pas à votre groupe.",
+    "OUTPUT_LOCKED": "Les lots de ce jour ne sont plus modifiables sur la tablette (modification pendant {days} jours).",
+    "OUTPUT_CANCELLED": "Ce lot est annulé."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -133,7 +137,10 @@
     "DAY_NOT_IN_WEEK": "Ce jour n’est pas un jour de production de la semaine.",
     "DAY_IN_PAST": "Impossible de planifier la production sur un jour passé.",
     "SAME_DAY": "Le produit est déjà sur ce jour.",
-    "NOTHING_TO_MOVE": "Aucune quantité de ce produit à déplacer depuis cet endroit."
+    "NOTHING_TO_MOVE": "Aucune quantité de ce produit à déplacer depuis cet endroit.",
+    "INVALID_PHOTO": "La photo doit être une image JPEG, PNG ou WebP.",
+    "PHOTO_TOO_LARGE": "La photo est trop lourde (max. {max_kb} Ko).",
+    "MATERIAL_NOT_IN_RECIPE": "Cette matière n’est pas dans la recette du produit."
   },
   "fields": {
     "code": "code",
@@ -298,7 +305,12 @@
     "category_id": "Catégorie",
     "label_type": "Type d'étiquette",
     "shelf_life": "Durée de conservation (jours)",
-    "stock_minimum": "Stock minimum"
+    "stock_minimum": "Stock minimum",
+    "lot_number": "numéro de lot",
+    "best_before": "date limite",
+    "photo": "photo",
+    "ocr_text": "texte OCR",
+    "cancelled": "annulé"
   },
   "entities": {
     "group": "groupe",
@@ -315,6 +327,7 @@
     "operation": "opération",
     "device": "tablette",
     "clock": "pointage",
-    "signature": "signature"
+    "signature": "signature",
+    "output": "lot"
   }
 }

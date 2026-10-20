@@ -57,7 +57,11 @@
     "WEEK_WARNING_UNASSIGNED": "{count} produktów ({hours} h) czeka w „Do rozplanowania” — przeciągnij je na dzień albo użyj „Rozdziel na dni”.",
     "WEEK_WARNING_GROUP_OVERLOAD": "{group}: brakuje {hours} h w dniach przeciążonych — przesuń produkty albo dodaj ludzi do działu (lista pracowników).",
     "WEEK_WARNING_AFTER_DUE": "{count} bloków jest po terminie zamówienia.",
-    "WEEK_WARNING_NO_HOURS": "{count} produktów nie ma normy czasu (marszruty) — 0 h w Gantcie."
+    "WEEK_WARNING_NO_HOURS": "{count} produktów nie ma normy czasu (marszruty) — 0 h w Gantcie.",
+    "DEVICE_WITHOUT_GROUP": "Tablet nie ma przypisanej grupy — przypisz go do grupy w Hala: tablety i czas pracy.",
+    "OUTPUT_NOT_IN_YOUR_GROUPS": "Ta partia nie należy do Twojej grupy.",
+    "OUTPUT_LOCKED": "Partii z tego dnia nie można już zmieniać na tablecie (edycja przez {days} dni).",
+    "OUTPUT_CANCELLED": "Ta partia jest anulowana."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -133,7 +137,10 @@
     "DAY_NOT_IN_WEEK": "Ten dzień nie jest dniem produkcji tego tygodnia.",
     "DAY_IN_PAST": "Nie można zaplanować produkcji na dzień, który już minął.",
     "SAME_DAY": "Produkt jest już na ten dzień.",
-    "NOTHING_TO_MOVE": "W tym miejscu nie ma ilości tego produktu do przeniesienia."
+    "NOTHING_TO_MOVE": "W tym miejscu nie ma ilości tego produktu do przeniesienia.",
+    "INVALID_PHOTO": "Zdjęcie musi być obrazem JPEG, PNG lub WebP.",
+    "PHOTO_TOO_LARGE": "Zdjęcie jest za duże (maks. {max_kb} KB).",
+    "MATERIAL_NOT_IN_RECIPE": "Tego surowca nie ma w recepturze produktu."
   },
   "fields": {
     "code": "kod",
@@ -298,7 +305,12 @@
     "category_id": "Kategoria",
     "label_type": "Typ etykiety",
     "shelf_life": "Przydatność do spożycia (dni)",
-    "stock_minimum": "Minimalny stan magazynowy"
+    "stock_minimum": "Minimalny stan magazynowy",
+    "lot_number": "numer partii",
+    "best_before": "data przydatności",
+    "photo": "zdjęcie",
+    "ocr_text": "tekst OCR",
+    "cancelled": "anulowana"
   },
   "entities": {
     "group": "grupa",
@@ -315,6 +327,7 @@
     "operation": "operacja",
     "device": "tablet",
     "clock": "wpis czasu pracy",
-    "signature": "podpis"
+    "signature": "podpis",
+    "output": "partia"
   }
 }
