@@ -1444,3 +1444,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-batchno { font-weight: 700; color: var(--at-text); font-variant-numeric: tabular-nums; }
 .tfb-week-batchno.is-partial { color: var(--at-warning, #b26a00); }
 .tfb-week-chip.is-batch { padding-top: 4px; padding-bottom: 4px; }
+/* Tabela tygodnia : godziny grupy i ETP */
+.tfb-week-fte { margin-left: 10px; font-weight: 500; font-size: 12.5px; color: var(--at-muted); text-transform: none; letter-spacing: 0; }
+.tfb-week-fte.is-short { color: var(--at-danger); font-weight: 600; }
+.tfb-week-table-total th { padding-top: 10px; border-top: 2px solid var(--at-line); }

@@ -11091,6 +11091,10 @@
                     "can_schedule": {
                         "type": "boolean"
                     },
+                    "fte_hours": {
+                        "type": "number",
+                        "description": "heures d'un temps plein par semaine (week.fte_hours) : ETP du groupe = heures ÷ cette valeur"
+                    },
                     "pins": {
                         "type": "array",
                         "description": "tous les lots fixes 📌",

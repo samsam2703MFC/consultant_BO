@@ -173,5 +173,8 @@
   "week.col_batches_help": "Ilość tygodnia ÷ sztuk w partii, w górę do pełnych partii",
   "week.batches_placed": "na dniach : {n}",
   "week.batch_set": "Brak partii — ustaw w karcie produktu (Etapy i czasy)",
-  "week.batch_partial_help": "Ilość tygodnia nie jest wielokrotnością partii — ostatnia partia niepełna"
+  "week.batch_partial_help": "Ilość tygodnia nie jest wielokrotnością partii — ostatnia partia niepełna",
+  "week.group_need": "{hours} h w tygodniu → {fte} ETP ({hours} h ÷ {base} h)",
+  "week.group_has": "dostępne {hours} h · {people} os. ({fte} ETP)",
+  "week.total_need": "Razem tydzień :"
 }

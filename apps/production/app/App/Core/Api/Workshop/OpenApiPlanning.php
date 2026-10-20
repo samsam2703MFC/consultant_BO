@@ -203,6 +203,7 @@ final class OpenApiPlanning
                     'stock_day' => ['type' => 'boolean', 'description' => 'jour de production pour le stock (week.stock_days)']]]],
                 'source' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['plan', 'demand']], 'plans' => ['type' => 'array', 'items' => ['type' => 'object']]]],
                 'can_move' => ['type' => 'boolean'], 'can_schedule' => ['type' => 'boolean'],
+                'fte_hours' => ['type' => 'number', 'description' => 'heures d\'un temps plein par semaine (week.fte_hours) : ETP du groupe = heures ÷ cette valeur'],
                 'pins' => ['type' => 'array', 'description' => 'tous les lots fixes 📌', 'items' => ['$ref' => '#/components/schemas/WeekPin']],
                 'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true], 'color' => ['type' => 'string', 'nullable' => true], 'people' => $int,

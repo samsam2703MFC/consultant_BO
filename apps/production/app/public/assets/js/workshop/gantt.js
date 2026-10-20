@@ -555,9 +555,21 @@
         const rows = w.products.filter(p => !state.group || p.group_id === state.group);
         if (!rows.length) return '';
         const groupName = (id) => (w.groups.find(g => g.id === id) || {}).name || t('week.no_group');
+        // Godziny tygodnia grupy (to, co trzeba wyprodukować : zamówienia + uzupełnienie stanu po odjęciu tego,
+        // co jest na magazynie) i ETP = godziny ÷ godziny etatu (week.fte_hours) ; obok dostępne godziny i osoby.
+        const fteH = w.fte_hours || 40;
+        const hoursOf = {};
+        for (const p of rows) hoursOf[p.group_id ?? 0] = (hoursOf[p.group_id ?? 0] || 0) + p.hours;
+        const need = (h) => esc(t('week.group_need', {hours: fmt(h, 1), fte: fmt(h / fteH, 1), base: fmt(fteH, 0)}));
+        const groupLine = (id) => {
+            const g = w.groups.find(x => (x.id ?? null) === (id ?? null));
+            const h = hoursOf[id ?? 0] || 0;
+            const short = g && g.available_h > 0 && h > g.available_h + 0.05;
+            return `<span class="tfb-week-fte ${short ? 'is-short' : ''}">${need(h)}${g ? ' · ' + esc(t('week.group_has', {hours: fmt(g.available_h, 0), people: g.people, fte: fmt(g.available_h / fteH, 1)})) : ''}</span>`;
+        };
         let last;
         const body = rows.map(p => {
-            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="9">${esc(groupName(p.group_id))}</th></tr>` : '';
+            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="9">${esc(groupName(p.group_id))} ${groupLine(p.group_id)}</th></tr>` : '';
             last = p.group_id;
             const days = p.slots.map(s => `<span class="${s.late ? 'text-danger' : ''}">${esc(dayLabel(s.day).split(',')[0].replace('.', ''))}</span>`).join(', ');
             return sep + `<tr data-item-row="${p.item_id}">
@@ -576,7 +588,9 @@
             <div class="table-responsive"><table class="table table-sm mb-0 tfb-week-table">
                 <thead><tr><th>${esc(t('week.col_product'))}</th><th class="text-end">${esc(t('week.col_direct'))}</th><th class="text-end">${esc(t('week.col_stock'))}</th><th class="text-end">${esc(t('week.col_qty'))}</th>
                     <th class="text-end">${esc(t('week.col_batch_size'))}</th><th class="text-end" title="${esc(t('week.col_batches_help'))}">${esc(t('week.col_batches'))}</th><th class="text-end">${esc(t('week.col_hours'))}</th><th>${esc(t('week.col_days'))}</th><th>${esc(t('week.col_done'))}</th></tr></thead>
-                <tbody>${body}</tbody></table></div>
+                <tbody>${body}</tbody>
+                <tfoot><tr class="tfb-week-table-total"><th colspan="9">${esc(t('week.total_need'))} ${(() => { const h = Object.values(hoursOf).reduce((a, b) => a + b, 0);
+                    return `<span class="tfb-week-fte">${need(h)}</span>`; })()}</th></tr></tfoot></table></div>
             <p class="text-muted small mb-0 mt-2">${esc(t('week.table_note'))}</p></div></div>`;
     }
 

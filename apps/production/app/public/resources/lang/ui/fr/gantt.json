@@ -173,5 +173,8 @@
   "week.col_batches_help": "Quantité de la semaine ÷ pièces par lot, arrondi au lot entier supérieur",
   "week.batches_placed": "sur les jours : {n}",
   "week.batch_set": "Pas de lot — à définir dans la fiche produit (Étapes et temps)",
-  "week.batch_partial_help": "La quantité de la semaine n'est pas un multiple du lot — dernier lot incomplet"
+  "week.batch_partial_help": "La quantité de la semaine n'est pas un multiple du lot — dernier lot incomplet",
+  "week.group_need": "{hours} h sur la semaine → {fte} ETP ({hours} h ÷ {base} h)",
+  "week.group_has": "disponible {hours} h · {people} pers. ({fte} ETP)",
+  "week.total_need": "Total de la semaine :"
 }

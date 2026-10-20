@@ -624,6 +624,7 @@ final class WeekService
 
         return [
             'week_start' => $data['start'], 'week_end' => $data['end'], 'week_start_day' => WeekStart::day($this->params), 'iso_week' => (int) date('W', strtotime($data['start'])),
+            'fte_hours' => max(1.0, (float) $this->params->get('week.fte_hours', '40')),
             'today' => $today, 'now' => date('Y-m-d H:i:s', $now),
             'days' => array_map(fn($d) => ['date' => $d, 'weekday' => (int) date('N', strtotime($d)), 'past' => $d < $today, 'today' => $d === $today,
                 'stock_day' => in_array($d, $data['stock_days'], true)], $data['days']),

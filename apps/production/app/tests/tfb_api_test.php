@@ -931,6 +931,7 @@ $g1 = array_column($w['data']['groups'], null, 'id')[1] ?? null;
 $sundayRow = $g1 ? array_values(array_filter($g1['days'], fn($d) => (int) date('N', strtotime($d['date'])) === 7))[0] ?? null : null;
 check($g1 !== null && $g1['days'][0]['available_h'] == 16 && $sundayRow && $sundayRow['available_h'] == 0 && $g1['available_h'] == 16 * 6 && $w['data']['totals']['done_h'] > 0,
     'week: hours available = 2 people × 8 h on the days of the shift (no Sunday shift); done hours from finished operations');
+check($w['data']['fte_hours'] == 40, 'week: full-time hours (FTE = group hours ÷ 40 h, parameter week.fte_hours)');
 [$s, $b] = $call('GET', '/planning/week?date=jutro', null, $dir);
 check($s === 422 && $codes($b) === ['date:INVALID_DATE'], 'week: date checked');
 [$s, $b] = $call('POST', '/planning/week/distribute', ['date' => $today], $dir);
