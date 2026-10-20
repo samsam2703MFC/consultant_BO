@@ -52,7 +52,8 @@ try {
     foreach (['production_sections', 'tfb_section_target', 'tfb_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'erp_company_other_settings', 'document_wdt',
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
-                 'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency'] as $table) {
+                 'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
+                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -278,6 +279,40 @@ try {
     expectProfit(array_column($matrix->matrix()['competencies'], null, 'id')[1]['sections'] === ['Piekarnia'], 'kompetencja : działy, które ją mają');
     $added = $matrix->addCompetency(['name' => 'Krojenie', 'description' => 'Krajalnica']);
     expectProfit($added['id'] > 3, 'nowa kompetencja w tabeli ERP');
+
+    // --- Zakupy miesiąca : receptura × kartony, ceny z końca miesiąca, kategorie i dostawcy
+    // Sierpień : 10 kartonów Rogala (receptura : 1000 g mąki + 200 g masła) i 5 kartonów Tarty bez receptury (8 zł / karton).
+    $pdo->exec("INSERT INTO unit (id, name) VALUES (3, 'g')");
+    $pdo->exec("INSERT INTO category_material (id, id_group, name) VALUES (105, 0, 'Mąka')");
+    $pdo->exec("INSERT INTO supplier (id, name, phone, email, is_active) VALUES (1, 'Młyn A', '', '', 1), (2, 'Mleczarnia B', '', '', 1), (3, 'Młyn C', '', '', 1)");
+    // Mąka : dziś 0,003 zł/g u C ; 1.08 cena 0,002 zł/g u A, 2.10 zmiana na 0,003 u C. Masło : kategoria 10 nie istnieje, bez historii cen.
+    $pdo->exec("INSERT INTO raw_material (id, name, id_unit, id_category, id_current_supplier, price_per_unit) VALUES (100, 'Mąka T55', 3, 105, 3, 0.003), (101, 'Masło', 3, 10, 2, 0.02)");
+    $pdo->exec("INSERT INTO raw_material_price_changelog (id_supplier, id_raw_material, pack_price, package_size_in_base_unit, timestamp) VALUES
+        (1, 100, 50, 25000, '2026-08-01 08:00:00'), (3, 100, 75, 25000, '2026-10-02 08:00:00')");
+    $pdo->exec("INSERT INTO flattened_recipe_ingredient (recipe_id, material_id, quantity) VALUES (910, 100, 1000), (910, 101, 200)");
+    $pdo->exec("INSERT INTO final_product (id, name, id_section, id_recipe, pre_calculated_raw_price_per_carton, active) VALUES (902, 'Rogal', 1, 910, 99, 1), (903, 'Tarta', 1, NULL, 8, 1)");
+    $pdo->exec("INSERT INTO document_wdt (id, doc_num, established_date, currency) VALUES (900, 'W/900', '2026-08-20', 'eur')");
+    $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (900, 902, 'Rogal', 10, 30), (900, 903, 'Tarta', 5, 20)");
+    $aug = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('2026-08', $today);
+    $buy = $aug['purchases'];
+    // Rogal : 10 × 1000 g × 0,002 (cena z sierpnia) = 20 zł + 10 × 200 g × 0,02 = 40 zł ; Tarta 5 × 8 zł = 40 zł ; razem 100 zł = 25 €.
+    near($aug['totals']['materials'], 25, 'surowce sierpnia = receptury po cenach z sierpnia + produkt bez receptury');
+    near($buy['total'], 25, 'zakupy = ta sama kwota co surowce w rachunku');
+    $cats = array_column($buy['categories'], null, 'name');
+    $sups = array_column($buy['suppliers'], null, 'name');
+    near($cats['Mąka']['amount'], 5, 'kategoria Mąka : 20 zł (cena z sierpnia, nie dzisiejsza)');
+    near($cats['Bez kategorii']['amount'], 10, 'masło z nieistniejącą kategorią : bez kategorii');
+    near($sups['Młyn A']['amount'], 5, 'dostawca mąki z sierpnia (historia), nie obecny');
+    expectProfit(!isset($sups['Młyn C']), 'dostawca od października nie liczy się w sierpniu');
+    near($sups['Mleczarnia B']['amount'], 10, 'masło u obecnego dostawcy (bez historii)');
+    $last = end($buy['categories']);
+    expectProfit(!empty($last['no_recipe']) && abs($last['amount'] - 10) < 0.01 && $buy['no_recipe_products'] === 1, 'produkty bez receptury na końcu listy, koszt z karty');
+    near($buy['uncategorised'], 10, 'kwota bez kategorii sygnalizowana');
+    near($buy['card_total'], (10 * 99 + 5 * 8) / 4, 'koszt według kart produktów (porównanie)');
+    expectProfit(abs($cats['Mąka']['items'][0]['qty'] - 10000) < 0.001 && $cats['Mąka']['items'][0]['unit'] === 'g', 'ilość surowca : 10 kartonów × 1000 g');
+    near(array_sum(array_column($buy['categories'], 'pct')), 100, 'udziały kategorii = 100 %');
+    $oct2 = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('month', $today);
+    near($oct2['totals']['materials'], 200, 'październik : Chleb bez receptury, koszt z karty (20 × 40 zł / 4)');
 
     echo "profitability_test: OK\n";
 } finally {

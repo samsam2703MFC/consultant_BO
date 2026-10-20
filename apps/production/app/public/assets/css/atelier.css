@@ -529,6 +529,32 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-profit-shared td { background: var(--at-bg-2); }
 .at-profit-total td { border-top: 2px solid var(--at-line-2); }
 .at-profit-note { font-size: 12px; color: var(--at-muted); margin: 12px 0 0; }
+/* Rentowność : zakupy surowców i opakowań (rozwijane, kategorie / dostawcy) */
+.at-buy-toggle { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.at-buy-toggle .bi { transition: transform .15s; font-size: 12px; }
+.at-buy-toggle[aria-expanded="true"] .bi { transform: rotate(90deg); }
+.at-buy-toggle:focus-visible { outline: 2px solid var(--at-primary); outline-offset: 2px; border-radius: 4px; }
+.at-buy-toggle .at-sub { font-size: 11.5px; color: var(--at-muted); }
+.at-buy-panel > td { background: var(--at-bg-2); padding: 12px 14px !important; }
+.at-buy-tabs { display: inline-flex; gap: 4px; background: var(--at-surface); border-radius: 999px; padding: 3px; margin-bottom: 10px; }
+.at-buy-tabs button { border: 0; background: none; border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--at-muted); }
+.at-buy-tabs button[aria-selected="true"] { background: var(--at-primary); color: #fff; }
+.at-buy-list { display: flex; flex-direction: column; gap: 2px; }
+.at-buy-item { background: var(--at-surface); border-radius: var(--at-radius-sm); }
+.at-buy-item > summary { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto 42px; gap: 10px; align-items: center; padding: 7px 10px; cursor: pointer; list-style: none; font-size: 13.5px; }
+.at-buy-item > summary::-webkit-details-marker { display: none; }
+.at-buy-item[open] > summary { border-bottom: 1px solid var(--at-line); }
+.at-buy-item.is-warn .at-buy-name { color: var(--at-warning); }
+.at-buy-item.is-card .at-buy-name { font-style: italic; }
+.at-buy-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-buy-bar { height: 6px; background: var(--at-bg-2); border-radius: 999px; overflow: hidden; }
+.at-buy-bar span { display: block; height: 100%; background: var(--at-primary); border-radius: 999px; }
+.at-buy-amount { text-align: right; font-weight: 600; white-space: nowrap; }
+.at-buy-pct { text-align: right; color: var(--at-muted); font-size: 12px; }
+.at-buy-detail { width: 100%; font-size: 12.5px; margin: 4px 0 6px; }
+.at-buy-detail td { padding: 3px 10px; border: 0; }
+.at-buy-detail .at-sub { color: var(--at-muted); font-size: 11.5px; }
+@media (max-width: 575px) { .at-buy-item > summary { grid-template-columns: minmax(0, 1fr) auto; } .at-buy-bar, .at-buy-pct { display: none; } }
 .at-profit-targets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 12px; align-items: end; }
 .at-profit-targets label { font-size: 12.5px; color: var(--at-muted); display: flex; flex-direction: column; gap: 4px; }
 @media (max-width: 991px) { .at-profit-targets { grid-template-columns: 1fr 1fr; } }

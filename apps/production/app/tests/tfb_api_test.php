@@ -588,6 +588,10 @@ $emp = $id['data']['employee_token'];
 [$s, $b] = $kiosk('GET', '/kiosk/me', null, $device);
 check($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'personal actions need the person token');
 
+// Opérations du jour : la tablette montre de maintenant − 6 h à + 24 h ; on place deux opérations du groupe de la
+// tablette dans cette fenêtre (le plan de test est daté, l'heure d'exécution du test ne doit pas compter).
+$pdo->exec("UPDATE tfb_prod_operation op JOIN tfb_prod_workstation w ON w.id = op.id_workstation SET op.planned_start = NOW() + INTERVAL 1 HOUR, op.planned_end = NOW() + INTERVAL 2 HOUR
+            WHERE w.id_group = 1 AND op.status = 'planned' ORDER BY op.id LIMIT 2");
 [$s, $me] = $kiosk('GET', '/kiosk/me', null, $device, $emp);
 check($s === 200 && !$me['data']['clocked_in'] && count($me['data']['operations']) > 0, 'my day: not clocked in, operations of my group');
 $opId = $me['data']['operations'][0]['id'];

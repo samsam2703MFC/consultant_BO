@@ -17,11 +17,20 @@ use DateTimeImmutable;
  * Mois en cours : le ratio compare les ventes au coût du personnel au prorata des jours écoulés ;
  * le CA nécessaire porte sur le mois entier, donc « brakuje » = ce qu'il reste à vendre d'ici la
  * fin du mois. Un mois sans coûts saisis reprend le dernier mois de coûts connu (signalé).
+ *
+ * Matières et emballages (« achats du mois ») : cartons vendus × recette aplatie (ingrédients et
+ * emballages d'un carton), chaque matière au prix et chez le fournisseur en vigueur à la fin du mois
+ * (historique des prix ; à défaut prix actuel). Produit sans recette : coût matières de sa fiche.
+ * Détail par catégorie de matière et par fournisseur.
  */
 final class ProfitabilityService
 {
     private ?array $targets = null;
     private ?array $costs = null;
+    /** @var array{materials:array<int,array>, ingredients:array<int,list<array>>, history:array<int,list<array>>}|null */
+    private ?array $bom = null;
+    /** @var array<string,array> valorisation matières par mois 'YYYY-MM' */
+    private array $materialRuns = [];
 
     public function __construct(private ProfitabilityRepository $repo, private ParamRepository $params)
     {
@@ -46,22 +55,26 @@ final class ProfitabilityService
         $today ??= new DateTimeImmutable('today');
         $spec = $this->period($period, $today);
         $rate = $this->repo->eurRate();
-        $sales = $this->repo->sales($spec['from'], $spec['to'], $rate);
+        // Une lecture des ventes pour la période, la tendance et le tableau des périodes (12 mois glissants).
+        $start = $this->windowStart($today);
+        $all = $this->sales(min($start, $spec['from']), $today->format('Y-m-d'), $rate);
+        $sales = array_values(array_filter($all, fn($r) => isset($spec['months'][$r['ym']])));
         $open = $spec['current'] ? $this->repo->openOrders($today->format('Y-m-d'), $spec['end']) : [];
 
         $data = $this->compute($spec, $sales, $open, $rate);
-        $data['trend'] = $this->trend($today, $rate);
+        $data['purchases'] = $this->purchases($spec['from'], $spec['to'], $rate);
+        $data['trend'] = $this->trend($today, $rate, $all);
         $data['options'] = $this->periodOptions($today);
-        $data['period_table'] = $this->periodTable($today, $rate);
+        $data['period_table'] = $this->periodTable($today, $rate, $all);
         $data['last_sale'] = $this->repo->lastSaleDate();
         return $data;
     }
 
     /** Ratio personnel / ventes et résultat des 6 derniers mois (mois en cours compris). */
-    public function trend(DateTimeImmutable $today, float $rate): array
+    public function trend(DateTimeImmutable $today, float $rate, ?array $sales = null): array
     {
         $first = $today->modify('first day of this month')->modify('-5 months');
-        $sales = $this->repo->sales($first->format('Y-m-d'), $today->format('Y-m-d'), $rate);
+        $sales ??= $this->sales($first->format('Y-m-d'), $today->format('Y-m-d'), $rate);
         $out = [];
         for ($i = 0; $i < 6; $i++) {
             $ym = $first->modify("+{$i} months")->format('Y-m');
@@ -85,11 +98,9 @@ final class ProfitabilityService
      * Liste des périodes du sélecteur, en tableau : ventes, personnel / ventes face à l'objectif et
      * résultat de chaque période (mois en cours au prorata des jours, comme la page).
      */
-    public function periodTable(DateTimeImmutable $today, float $rate): array
+    public function periodTable(DateTimeImmutable $today, float $rate, ?array $sales = null): array
     {
-        $first = $today->modify('first day of this month')->modify('-11 months');
-        $start = min($first->format('Y-m-d'), $today->format('Y-01-01'));
-        $sales = $this->repo->sales($start, $today->format('Y-m-d'), $rate);
+        $sales ??= $this->sales($this->windowStart($today), $today->format('Y-m-d'), $rate);
         $rows = [];
         foreach ($this->periodOptions($today) as $key => $label) {
             $spec = $this->period($key, $today);
@@ -102,6 +113,187 @@ final class ProfitabilityService
             ];
         }
         return $rows;
+    }
+
+    /** Ventes par mois et groupe, matières valorisées par les recettes aux prix du mois (voir materialRun). */
+    public function sales(string $from, string $to, float $rate): array
+    {
+        $rows = $this->repo->sales($from, $to, $rate);
+        $run = $this->materialRun($from, $to);
+        foreach ($rows as &$r) {
+            $key = $r['ym'] . '|' . (int) $r['id_section'];
+            if (isset($run['by_key'][$key])) $r['materials_pln'] = $run['by_key'][$key];
+        }
+        unset($r);
+        return $rows;
+    }
+
+    /**
+     * Achats du mois (ou de la période) : matières et emballages des cartons vendus, par catégorie et par
+     * fournisseur (EUR), avec le détail des matières. Même total que « Surowce i opakowania ».
+     */
+    public function purchases(string $from, string $to, float $rate): array
+    {
+        $rate = $rate > 0 ? $rate : 1.0;
+        $run = $this->materialRun($from, $to);
+        $byMaterial = [];
+        foreach ($run['materials'] as $lines) {
+            foreach ($lines as $id => $l) {
+                $byMaterial[$id] ??= ['qty' => 0.0, 'pln' => 0.0, 'supplier' => $l['supplier']];
+                $byMaterial[$id]['qty'] += $l['qty'];
+                $byMaterial[$id]['pln'] += $l['pln'];
+                $byMaterial[$id]['supplier'] = $l['supplier'];
+            }
+        }
+        $catalog = $this->bom['materials'];
+        $total = array_sum(array_column($byMaterial, 'pln')) + array_sum(array_column($run['no_recipe'], 'pln'));
+        $groups = ['categories' => [], 'suppliers' => []];
+        foreach ($byMaterial as $id => $l) {
+            $m = $catalog[$id];
+            $line = ['name' => $m['name'], 'qty' => $l['qty'], 'unit' => $m['unit'], 'amount' => $l['pln'] / $rate, 'supplier' => $l['supplier'], 'category' => $m['category']];
+            foreach (['categories' => $m['category'] ?? 'Bez kategorii', 'suppliers' => $l['supplier'] ?? 'Bez dostawcy'] as $view => $name) {
+                $groups[$view][$name] ??= ['name' => $name, 'amount' => 0.0, 'items' => []];
+                $groups[$view][$name]['amount'] += $line['amount'];
+                $groups[$view][$name]['items'][] = $line;
+            }
+        }
+        $noRecipe = array_sum(array_column($run['no_recipe'], 'pln')) / $rate;
+        if ($noRecipe > 0.005) {
+            $items = [];
+            foreach ($run['no_recipe'] as $p) $items[] = ['name' => $p['product'], 'qty' => $p['cartons'], 'unit' => 'kart.', 'amount' => $p['pln'] / $rate, 'supplier' => null, 'category' => null];
+            foreach (['categories', 'suppliers'] as $view) {
+                $groups[$view]['__none'] = ['name' => 'Produkty bez receptury (koszt z karty produktu)', 'amount' => $noRecipe, 'items' => $items, 'no_recipe' => true];
+            }
+        }
+        $totalEur = $total / $rate;
+        foreach ($groups as &$list) {
+            // Pozycje poniżej 0,50 € (np. ślad surowca w recepturze) nie zaśmiecają listy.
+            $list = array_filter($list, fn($g) => $g['amount'] >= 0.5);
+            foreach ($list as &$g) {
+                usort($g['items'], fn($a, $b) => $b['amount'] <=> $a['amount']);
+                $g['pct'] = $totalEur > 0 ? $g['amount'] / $totalEur * 100 : null;
+            }
+            unset($g);
+            usort($list, fn($a, $b) => [!empty($a['no_recipe']), -$a['amount']] <=> [!empty($b['no_recipe']), -$b['amount']]);
+        }
+        unset($list);
+        $uncategorised = 0.0;
+        foreach ($groups['categories'] as $g) if ($g['name'] === 'Bez kategorii') $uncategorised = $g['amount'];
+        return [
+            'total' => $totalEur,
+            'categories' => $groups['categories'],
+            'suppliers' => $groups['suppliers'],
+            'uncategorised' => $uncategorised,
+            'no_recipe' => $noRecipe,
+            'no_recipe_products' => count($run['no_recipe']),
+            'card_total' => $run['card_total'] / $rate,
+        ];
+    }
+
+    /**
+     * Valorisation des cartons vendus sur [from, to] (mois entiers) : par mois et groupe (PLN), par mois et
+     * matière (quantité, montant, fournisseur), produits sans recette (coût de la fiche produit). Chaque mois
+     * est calculé une fois par requête (période, tendance et tableau des périodes se recouvrent).
+     */
+    private function materialRun(string $from, string $to): array
+    {
+        $months = [];
+        for ($m = new DateTimeImmutable(substr($from, 0, 7) . '-01'); $m->format('Y-m') <= substr($to, 0, 7); $m = $m->modify('+1 month')) $months[] = $m->format('Y-m');
+        $missing = array_values(array_diff($months, array_keys($this->materialRuns)));
+        if ($missing) $this->computeMonths($missing);
+        $run = ['by_key' => [], 'materials' => [], 'no_recipe' => [], 'card_total' => 0.0];
+        foreach ($months as $ym) {
+            $m = $this->materialRuns[$ym];
+            $run['by_key'] += $m['by_key'];
+            $run['materials'][$ym] = $m['materials'];
+            foreach ($m['no_recipe'] as $id => $p) {
+                $run['no_recipe'][$id] ??= ['product' => $p['product'], 'cartons' => 0.0, 'pln' => 0.0];
+                $run['no_recipe'][$id]['cartons'] += $p['cartons'];
+                $run['no_recipe'][$id]['pln'] += $p['pln'];
+            }
+            $run['card_total'] += $m['card_total'];
+        }
+        return $run;
+    }
+
+    /** @param list<string> $months mois 'YYYY-MM' à valoriser (une seule lecture des ventes). */
+    private function computeMonths(array $months): void
+    {
+        sort($months);
+        $sold = $this->repo->soldProducts($months[0] . '-01', (new DateTimeImmutable(end($months) . '-01'))->format('Y-m-t'));
+        $this->loadBom(array_column($sold, 'id_recipe'));
+        foreach ($months as $ym) $this->materialRuns[$ym] = ['by_key' => [], 'materials' => [], 'no_recipe' => [], 'card_total' => 0.0];
+        $prices = [];
+        foreach ($sold as $p) {
+            if (!isset($this->materialRuns[$p['ym']])) continue;
+            $run = &$this->materialRuns[$p['ym']];
+            $cartons = (float) $p['cartons'];
+            $groupKey = $p['ym'] . '|' . (int) $p['id_section'];
+            $run['card_total'] += $cartons * (float) $p['card_cost'];
+            $ingredients = $p['id_recipe'] !== null ? ($this->bom['ingredients'][(int) $p['id_recipe']] ?? []) : [];
+            if (!$ingredients) {
+                $pln = $cartons * (float) $p['card_cost'];
+                $run['by_key'][$groupKey] = ($run['by_key'][$groupKey] ?? 0.0) + $pln;
+                $run['no_recipe'][(int) $p['product_id']] ??= ['product' => $p['product'], 'cartons' => 0.0, 'pln' => 0.0];
+                $run['no_recipe'][(int) $p['product_id']]['cartons'] += $cartons;
+                $run['no_recipe'][(int) $p['product_id']]['pln'] += $pln;
+                unset($run);
+                continue;
+            }
+            $end = (new DateTimeImmutable($p['ym'] . '-01'))->format('Y-m-t') . ' 23:59:59';
+            foreach ($ingredients as [$materialId, $qty]) {
+                if (!isset($this->bom['materials'][$materialId])) continue;
+                $prices[$p['ym']][$materialId] ??= $this->priceAt($materialId, $end);
+                [$price, $supplier] = $prices[$p['ym']][$materialId];
+                $used = $cartons * $qty;
+                $pln = $used * $price;
+                $run['by_key'][$groupKey] = ($run['by_key'][$groupKey] ?? 0.0) + $pln;
+                $run['materials'][$materialId] ??= ['qty' => 0.0, 'pln' => 0.0, 'supplier' => $supplier];
+                $run['materials'][$materialId]['qty'] += $used;
+                $run['materials'][$materialId]['pln'] += $pln;
+            }
+            unset($run);
+        }
+    }
+
+    /** Catalogue des matières, recettes aplaties des produits vendus et historique des prix (lus une fois). */
+    private function loadBom(array $recipeIds): void
+    {
+        if ($this->bom === null) {
+            $materials = [];
+            foreach ($this->repo->materialCatalog() as $m) $materials[(int) $m['id']] = $m;
+            $history = [];
+            foreach ($this->repo->priceHistory() as $h) $history[(int) $h['material_id']][] = [$h['changed_at'], (float) $h['unit_price'], $h['supplier']];
+            $this->bom = ['materials' => $materials, 'ingredients' => [], 'history' => $history];
+        }
+        $missing = array_diff(array_unique(array_map('intval', array_filter($recipeIds))), array_keys($this->bom['ingredients']));
+        if (!$missing) return;
+        foreach ($missing as $id) $this->bom['ingredients'][$id] = [];
+        foreach ($this->repo->recipeIngredients($missing) as $r) {
+            $this->bom['ingredients'][(int) $r['recipe_id']][] = [(int) $r['material_id'], (float) $r['quantity']];
+        }
+    }
+
+    /** Prix unitaire (PLN) et fournisseur d'une matière à une date : dernier changement de prix avant, sinon actuels. */
+    private function priceAt(int $materialId, string $at): array
+    {
+        $m = $this->bom['materials'][$materialId];
+        $price = (float) $m['price_per_unit'];
+        $supplier = $m['supplier'];
+        $found = false;
+        foreach ($this->bom['history'][$materialId] ?? [] as [$changedAt, $unitPrice, $historySupplier]) {
+            if ($changedAt > $at) break;
+            $price = $unitPrice;
+            $supplier = $historySupplier ?? $supplier;
+            $found = true;
+        }
+        return [$found ? $price : (float) $m['price_per_unit'], $supplier];
+    }
+
+    /** Début de la fenêtre des 12 mois glissants (ou du 1er janvier si plus tôt). */
+    private function windowStart(DateTimeImmutable $today): string
+    {
+        return min($today->modify('first day of this month')->modify('-11 months')->format('Y-m-d'), $today->format('Y-01-01'));
     }
 
     /** Objectifs d'un groupe ; une valeur vide revient au paramètre général. */

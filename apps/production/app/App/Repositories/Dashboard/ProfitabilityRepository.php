@@ -6,7 +6,8 @@ use App\Repositories\Workshop\WorkshopRepository;
 /**
  * Lectures de la page « Rentowność » : ventes WDT par groupe (dział produkcyjny), coût du
  * personnel, coûts du groupe et coûts communs, tels que l'ERP les enregistre déjà par mois
- * (cost_month_*). Rien n'est recopié : tout est relu à chaque affichage.
+ * (cost_month_*), recettes aplaties et historique des prix des matières (achats du mois).
+ * Rien n'est recopié : tout est relu à chaque affichage.
  */
 final class ProfitabilityRepository extends WorkshopRepository
 {
@@ -37,6 +38,54 @@ final class ProfitabilityRepository extends WorkshopRepository
              WHERE w.established_date BETWEEN :from AND :to
              GROUP BY ym, fp.id_section",
             ['rate1' => $eurRate > 0 ? $eurRate : 1, 'from' => $from, 'to' => $to]
+        );
+    }
+
+    /** Cartons vendus (WDT) par mois, groupe et produit, avec la recette et le coût matières de la fiche produit (PLN). */
+    public function soldProducts(string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT DATE_FORMAT(w.established_date, '%Y-%m') AS ym, fp.id_section, fp.id AS product_id, fp.name AS product, fp.id_recipe,
+                    SUM(p.quantity) AS cartons, COALESCE(fp.pre_calculated_raw_price_per_carton, 0) AS card_cost
+             FROM document_wdt w
+             JOIN document_wdt_product p ON p.id_document_wdt = w.id
+             JOIN final_product fp ON fp.id = p.id_product
+             WHERE w.established_date BETWEEN :from AND :to
+             GROUP BY ym, fp.id_section, fp.id, fp.name, fp.id_recipe, fp.pre_calculated_raw_price_per_carton",
+            ['from' => $from, 'to' => $to]
+        );
+    }
+
+    /** Recettes aplaties (ingrédients et emballages d'un carton, sous-recettes comprises). */
+    public function recipeIngredients(array $recipeIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $recipeIds))));
+        if (!$ids) return [];
+        $in = implode(', ', array_fill(0, count($ids), '?'));
+        return $this->all("SELECT recipe_id, material_id, quantity FROM flattened_recipe_ingredient WHERE recipe_id IN ({$in})", $ids);
+    }
+
+    /** Matières : nom, unité, catégorie (NULL si la catégorie n'existe plus), fournisseur actuel, prix unitaire actuel (PLN). */
+    public function materialCatalog(): array
+    {
+        return $this->all(
+            'SELECT m.id, m.name, u.name AS unit, m.id_category, c.name AS category, s.name AS supplier, m.price_per_unit
+             FROM raw_material m
+             LEFT JOIN unit u ON u.id = m.id_unit
+             LEFT JOIN category_material c ON c.id = m.id_category
+             LEFT JOIN supplier s ON s.id = m.id_current_supplier'
+        );
+    }
+
+    /** Historique des prix : prix unitaire et fournisseur à chaque changement, du plus ancien au plus récent. */
+    public function priceHistory(): array
+    {
+        return $this->all(
+            'SELECT h.id_raw_material AS material_id, h.pack_price / h.package_size_in_base_unit AS unit_price, h.timestamp AS changed_at, s.name AS supplier
+             FROM raw_material_price_changelog h
+             LEFT JOIN supplier s ON s.id = h.id_supplier
+             WHERE h.package_size_in_base_unit > 0
+             ORDER BY h.timestamp, h.id_raw_material'
         );
     }
 

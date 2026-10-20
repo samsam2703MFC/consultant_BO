@@ -304,7 +304,52 @@
                     <table class="table mb-0 at-profit-cascade">
                         <tbody>
                             <tr><td>Sprzedaż</td><td class="text-end"><strong>{{ t.revenue|eur }}</strong></td><td class="text-end at-sub">100 %</td></tr>
-                            <tr><td>− Surowce i opakowania</td><td class="text-end">{{ t.materials|eur }}</td><td class="text-end at-sub">{{ t.materials_pct|pct(0) }}</td></tr>
+                            {% set buy = purchases ?? null %}
+                            <tr class="at-buy-row">
+                                <td>{% if buy and (buy.categories or buy.suppliers) %}<button type="button" class="at-buy-toggle" data-buy-toggle aria-expanded="false" aria-controls="atBuyPanel"><i class="bi bi-chevron-right" aria-hidden="true"></i> − Surowce i opakowania <span class="at-sub">(zakupy: kategorie, dostawcy)</span></button>{% else %}− Surowce i opakowania{% endif %}</td>
+                                <td class="text-end">{{ t.materials|eur }}</td><td class="text-end at-sub">{{ t.materials_pct|pct(0) }}</td>
+                            </tr>
+                            {% if buy and (buy.categories or buy.suppliers) %}
+                            <tr class="at-buy-panel" id="atBuyPanel" hidden>
+                                <td colspan="3">
+                                    <div class="at-buy-tabs" role="tablist" aria-label="Zakupy surowców i opakowań">
+                                        <button type="button" role="tab" aria-selected="true" data-buy-view="categories">Według kategorii</button>
+                                        <button type="button" role="tab" aria-selected="false" data-buy-view="suppliers">Według dostawcy</button>
+                                    </div>
+                                    {% for view in ['categories', 'suppliers'] %}
+                                    <div class="at-buy-list" data-buy-list="{{ view }}" role="tabpanel" {{ loop.first ? '' : 'hidden' }}>
+                                        {% for g in buy[view] %}
+                                        <details class="at-buy-item {{ g.no_recipe is defined ? 'is-card' : '' }} {{ g.name == 'Bez kategorii' ? 'is-warn' : '' }}">
+                                            <summary>
+                                                <span class="at-buy-name" title="{{ g.name }}">{{ g.name }}</span>
+                                                <span class="at-buy-bar" aria-hidden="true"><span style="width: {{ min(100, g.pct ?? 0)|round(1) }}%"></span></span>
+                                                <span class="at-buy-amount">{{ g.amount|eur }}</span>
+                                                <span class="at-buy-pct">{{ g.pct|pct(0) }}</span>
+                                            </summary>
+                                            <table class="at-buy-detail">
+                                                {% for i in g.items|slice(0, 30) %}
+                                                    {% set q = i.qty %}
+                                                    <tr>
+                                                        <td>{{ i.name }}{% if view == 'categories' and i.supplier %} <span class="at-sub">· {{ i.supplier }}</span>{% elseif view == 'suppliers' and i.category %} <span class="at-sub">· {{ i.category }}</span>{% endif %}</td>
+                                                        <td class="text-end at-sub text-nowrap">{% if i.unit == 'g' and q >= 1000 %}{{ (q / 1000)|number_format(q >= 100000 ? 0 : 1, ',', ' ') }} kg{% elseif i.unit == 'ml' and q >= 1000 %}{{ (q / 1000)|number_format(1, ',', ' ') }} l{% else %}{{ q|number_format(q < 10 ? 1 : 0, ',', ' ') }} {{ i.unit }}{% endif %}</td>
+                                                        <td class="text-end text-nowrap">{{ i.amount|eur }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                                {% if g.items|length > 30 %}<tr><td colspan="3" class="at-sub">… i {{ g.items|length - 30 }} innych pozycji</td></tr>{% endif %}
+                                            </table>
+                                        </details>
+                                        {% endfor %}
+                                    </div>
+                                    {% endfor %}
+                                    <p class="at-profit-note">
+                                        Zakupy potrzebne na sprzedane kartony: receptura × kartony, ceny i dostawcy z końca miesiąca (historia cen surowców).
+                                        {% if buy.uncategorised > 0 %}<br><strong>{{ buy.uncategorised|eur }}</strong> w surowcach bez kategorii (kategoria nie istnieje) — popraw kategorię w karcie surowca.{% endif %}
+                                        {% if buy.no_recipe > 0 %}<br>{{ buy.no_recipe_products|plural_pl('produkt', 'produkty', 'produktów') }} bez receptury — koszt z karty produktu.{% endif %}
+                                        {% if (buy.card_total - buy.total)|abs > 1 %}<br>Według zapisanego kosztu kart produktów byłoby {{ buy.card_total|eur }} — część kart ma koszt 0 lub nieaktualny.{% endif %}
+                                    </p>
+                                </td>
+                            </tr>
+                            {% endif %}
                             <tr><td>− Personel</td><td class="text-end">{{ t.staff|eur }}</td><td class="text-end at-sub">{{ t.staff_pct|pct(0) }}</td></tr>
                             <tr><td>− Koszty działów (media, amortyzacja)</td><td class="text-end">{{ t.overhead|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? (t.overhead / t.revenue * 100)|pct(0) : '—' }}</td></tr>
                             <tr><td>− Koszty stałe firmy</td><td class="text-end">{{ t.fixed|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? (t.fixed / t.revenue * 100)|pct(0) : '—' }}</td></tr>
@@ -372,6 +417,20 @@
 <script src="{{ root }}/assets/js/growth.js" defer></script>
 <script>
 (() => {
+    // Surowce i opakowania : rozwijane zakupy według kategorii lub dostawcy.
+    const buyToggle = document.querySelector('[data-buy-toggle]');
+    const buyPanel = document.getElementById('atBuyPanel');
+    if (buyToggle && buyPanel) {
+        buyToggle.addEventListener('click', () => {
+            const open = buyToggle.getAttribute('aria-expanded') !== 'true';
+            buyToggle.setAttribute('aria-expanded', String(open));
+            buyPanel.hidden = !open;
+        });
+        buyPanel.querySelectorAll('[data-buy-view]').forEach(tab => tab.addEventListener('click', () => {
+            buyPanel.querySelectorAll('[data-buy-view]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+            buyPanel.querySelectorAll('[data-buy-list]').forEach(list => { list.hidden = list.dataset.buyList !== tab.dataset.buyView; });
+        }));
+    }
     // Wiersz tabeli okresów : całe pole klikalne (link w pierwszej kolumnie dla klawiatury).
     document.querySelectorAll('.at-period-table tr[data-href]').forEach(row => row.addEventListener('click', (e) => {
         if (!e.target.closest('a')) window.location.href = row.dataset.href;
