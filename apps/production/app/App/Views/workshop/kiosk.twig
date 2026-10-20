@@ -7,11 +7,25 @@
 <meta name="theme-color" content="#8D1D2C">
 <title>Tablet produkcji · Tablette atelier</title>
 <link rel="stylesheet" href="{{ root }}/assets/css/kiosk.css">
+<link rel="manifest" href="{{ root }}/assets/kiosk/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="{{ root }}/assets/kiosk/icon-192.png">
+<link rel="apple-touch-icon" href="{{ root }}/assets/kiosk/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tablet grupy">
 </head>
 <body>
 <main id="tfbKiosk" class="kiosk" data-root="{{ root }}" data-api-base="{{ api_base }}" aria-live="polite">
     <p class="kiosk-muted">Wczytywanie… / Chargement…</p>
 </main>
 <script src="{{ root }}/assets/js/workshop/kiosk.js"></script>
+<script>
+    // PWA : tablet grupy instalowany jako aplikacja (ikona na ekranie, pełny ekran) ; powłoka w pamięci podręcznej.
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('{{ root }}/kiosk-sw.js', {scope: '{{ root }}/kiosk'}).catch(function () { /* bez PWA tablet działa jak strona */ });
+        });
+    }
+</script>
 </body>
 </html>

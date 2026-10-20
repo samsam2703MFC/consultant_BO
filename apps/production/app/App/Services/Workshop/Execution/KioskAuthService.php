@@ -179,10 +179,26 @@ final class KioskAuthService
     public function identify(array $body, ApiContext $context): array
     {
         $employee = $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        return $this->employeeToken($employee, (int) $context->deviceId);
+    }
+
+    /**
+     * Nowy jeton osoby już zidentyfikowanej (jeton jeszcze ważny) : tablet przedłuża sesję, póki osoba
+     * pracuje (wpisywanie partii, zdjęcia) ; bezczynność nadal wylogowuje (kiosk.idle_logout_s).
+     */
+    public function refresh(ApiContext $context): array
+    {
+        $employee = $this->repo->employee((int) $context->employeeId);
+        if ($employee === null || !(int) $employee['active']) throw new ApiException('EMPLOYEE_UNAUTHENTICATED', 401);
+        return $this->employeeToken($employee, (int) $context->deviceId);
+    }
+
+    private function employeeToken(array $employee, int $deviceId): array
+    {
         $now = time();
         $ttl = max(30, (int) $this->params->get('kiosk.employee_token_ttl_s', '120'));
         return [
-            'employee_token' => $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $employee['id'], 'dev' => (int) $context->deviceId,
+            'employee_token' => $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $employee['id'], 'dev' => $deviceId,
                 'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))]),
             'expires_in' => $ttl,
             'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],

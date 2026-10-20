@@ -37,6 +37,8 @@ final class OpenApiExecution
             'GET /kiosk/people' => ['tag' => 'kiosk', 'id' => 'kioskPeople', 'summary' => 'Osoby przy tablecie / Personnes de la tablette', 'response' => 'KioskPerson', 'list' => true, 'errors' => [401, 403]],
             'POST /kiosk/identify' => ['tag' => 'kiosk', 'id' => 'identify', 'summary' => 'Identyfikacja: identyfikator lub osoba + PIN / Identification : badge ou personne + PIN', 'body' => 'IdentifyInput', 'response' => 'EmployeeToken', 'errors' => [400, 401, 403, 409, 422, 423],
                 'description' => "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423)."],
+            'POST /kiosk/refresh' => ['tag' => 'kiosk', 'id' => 'refreshEmployee', 'summary' => 'Przedłuż sesję osoby / Prolonger la session de la personne', 'response' => 'EmployeeToken', 'errors' => [401],
+                'description' => "Nouveau jeton (kiosk.employee_token_ttl_s) tant que l'ancien est valide : la tablette prolonge la session pendant la saisie des lots ; l'inactivité déconnecte toujours."],
             'GET /kiosk/me' => ['tag' => 'kiosk', 'id' => 'kioskMe', 'summary' => 'Ja: pointowanie i operacje / Moi : pointage et opérations', 'response' => 'KioskMe', 'errors' => [401]],
             'POST /kiosk/clock' => ['tag' => 'kiosk', 'id' => 'clock', 'summary' => 'Wejście / wyjście jednym dotknięciem / Entrée / sortie en un geste', 'body' => 'ClockInput', 'response' => 'ClockResult', 'errors' => [400, 401, 409, 422],
                 'description' => "Sens déduit s'il est absent. client_uuid : rejouable sans doublon (tablette hors ligne). Une sortie ferme les temps d'opération ouverts."],

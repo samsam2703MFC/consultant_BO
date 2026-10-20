@@ -6279,6 +6279,63 @@
                 ]
             }
         },
+        "/kiosk/refresh": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Przedłuż sesję osoby / Prolonger la session de la personne",
+                "operationId": "refreshEmployee",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/EmployeeToken"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Nouveau jeton (kiosk.employee_token_ttl_s) tant que l'ancien est valide : la tablette prolonge la session pendant la saisie des lots ; l'inactivité déconnecte toujours.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/clock": {
             "post": {
                 "tags": [

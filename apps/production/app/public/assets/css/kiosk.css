@@ -70,3 +70,33 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; }
 .kiosk-phone .kiosk-people { grid-template-columns: 1fr; }
 .kiosk-phone .kiosk-sign { height: 220px; }
 .kiosk-qr[hidden] { display: none; }
+
+/* Produkcja dnia i partie (identyfikowalność) */
+.kiosk-prod { display: grid; gap: 12px; margin-bottom: 16px; }
+.kiosk-prod-item.is-done { border-color: var(--k-ok); }
+.kiosk-prod-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.kiosk-prod-head h3, .kiosk-lot-head h3 { margin: 0 0 4px; font-size: 20px; }
+.kiosk-bar { height: 8px; background: var(--k-line); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+.kiosk-bar span { display: block; height: 100%; background: var(--k-ok); }
+.kiosk-batches { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.kiosk-batch { width: 100%; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; text-align: left; font-size: 17px; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--k-line); background: #fff; color: inherit; cursor: pointer; }
+.kiosk-batches li.is-cancelled .kiosk-batch { opacity: .55; text-decoration: line-through; }
+.kiosk-lots { margin-left: auto; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--k-line); }
+.kiosk-lots.is-ok { background: var(--k-ok); color: #fff; }
+.kiosk-lots.is-todo { background: #F3D9A4; }
+.kiosk-select { font-size: 20px; padding: 12px; border-radius: 10px; border: 2px solid var(--k-line); min-width: 280px; flex: 1; }
+.kiosk-section { margin: 18px 0 8px; font-size: 20px; }
+details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.kiosk-batch-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.kiosk-batch-head.is-cancelled { opacity: .6; }
+.kiosk-lot { margin-bottom: 10px; }
+.kiosk-lot.is-ok { border-color: var(--k-ok); }
+.kiosk-lot-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.kiosk-lot-state { font-weight: 600; font-size: 17px; }
+.kiosk-lot:not(.is-ok) .kiosk-lot-state { color: var(--k-danger); }
+.kiosk-lot-fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px; }
+.kiosk-lot-fields label:not(.kiosk-btn) { display: flex; flex-direction: column; gap: 4px; font-size: 15px; flex: 1 1 200px; }
+.kiosk-lot-fields input:not([type=file]) { font-size: 22px; padding: 10px; border-radius: 10px; border: 2px solid var(--k-line); width: 100%; }
+.kiosk-photo { cursor: pointer; }
+.kiosk-ocr { margin-top: 10px; display: grid; gap: 8px; }
+.kiosk-ocr-img { max-width: 260px; max-height: 160px; border-radius: 10px; border: 1px solid var(--k-line); object-fit: contain; background: #fff; }

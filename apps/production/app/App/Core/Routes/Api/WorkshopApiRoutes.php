@@ -120,6 +120,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/people', ExecutionController::class, 'people', 'kiosk'],
             ['POST', '/kiosk/identify', ExecutionController::class, 'identify', 'kiosk'],
             ['GET', '/kiosk/me', ExecutionController::class, 'me', 'kiosk_employee'],
+            ['POST', '/kiosk/refresh', ExecutionController::class, 'refresh', 'kiosk_employee'],
             ['POST', '/kiosk/clock', ExecutionController::class, 'clock', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/start', ExecutionController::class, 'start', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/pause', ExecutionController::class, 'pause', 'kiosk_employee'],

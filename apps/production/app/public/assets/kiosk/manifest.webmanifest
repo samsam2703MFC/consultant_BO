@@ -1,0 +1,17 @@
+{
+  "name": "L'Atelier — tablet grupy",
+  "short_name": "Tablet grupy",
+  "description": "Produkcja dnia, partie surowców (zdjęcie + OCR), wejście i wyjście — tablet grupy produkcyjnej.",
+  "lang": "pl",
+  "start_url": "../../kiosk?source=pwa",
+  "scope": "../../kiosk",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F1EA",
+  "theme_color": "#8D1D2C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -57,6 +57,7 @@ final class ExecutionController
     public function pair(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->pair($request->body())); }
     public function people(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->people($request->context)); }
     public function identify(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->identify($request->body(), $request->context)); }
+    public function refresh(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->refresh($request->context)); }
     public function me(ApiRequest $request): ApiResult { return new ApiResult($this->execution->me($request->context)); }
     public function qr(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->qr($request->context, (string) $request->query('base', ''))); }
 

@@ -710,6 +710,9 @@ $pdo->exec("UPDATE tfb_prod_product_settings SET id_primary_group = 1 WHERE id_i
 $pdo->exec("INSERT INTO tfb_prod_week_slot (week_start, id_item, work_date, quantity) VALUES ('" . date('Y-m-d', strtotime('monday this week')) . "', {$croissant}, CURDATE(), 120)");
 [$s, $b] = $kiosk('GET', '/kiosk/production', null, $device);
 check($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'production of the day needs the person');
+[$s, $b] = $kiosk('POST', '/kiosk/refresh', null, $device, $emp);
+check($s === 200 && $b['data']['employee']['id'] === $jan && $b['data']['employee_token'] !== $emp && $b['data']['expires_in'] === 120, 'person session prolonged while working');
+$emp = $b['data']['employee_token'];
 [$s, $pd] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
 $row = array_values(array_filter($pd['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
 check($s === 200 && $pd['data']['group']['id'] === 1 && $row && $row['planned'] == 120.0 && $row['produced'] == 0.0 && $row['ppc'] === 60

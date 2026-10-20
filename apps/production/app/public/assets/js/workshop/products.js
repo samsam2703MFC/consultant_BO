@@ -304,9 +304,10 @@
 
     function stepMode(body, item) {
         const s = item.settings;
-        // Produkt z kartonem : stany i partie wpisywane w kartonach lub sztukach (zapis w sztukach).
+        // Produkt z kartonem : stany min. / maks. w kartonach lub sztukach (zapis w sztukach) ; pokrycie i partie
+        // nie są już w kreatorze (wartości zapisane wcześniej zostają w planowaniu).
         const ppc = item.item_type === 'product' && item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
-        const PAIRED = ['stock_min', 'stock_max', 'batch_min', 'batch_multiple'];
+        const PAIRED = ['stock_min', 'stock_max'];
         const cartons = (v) => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Math.round(Number(v) / ppc * 100) / 100).replace('.', ',');
         const qtyField = (f) => ppc && PAIRED.includes(f)
             ? `<label>${esc(t('f.' + f))}<div class="input-group tfb-qty-pair">
@@ -324,7 +325,7 @@
             </div>
             <label class="form-check tfb-full"><input class="form-check-input" type="checkbox" name="never_frozen" data-field="never_frozen" ${s.never_frozen ? 'checked' : ''}> ${esc(t('f.never_frozen'))}
                 <span class="form-text d-block">${esc(t('help.never_frozen'))}</span></label>
-            ${['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple'].map(qtyField).join('')}
+            ${PAIRED.map(qtyField).join('')}
             ${ppc ? `<p class="form-text tfb-full mt-0">${esc(t('m.per_carton', {ppc}))}</p>` : ''}
             ${item.item_type === 'product' ? `<div class="tfb-full tfb-suggest" data-suggest-box>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-suggest data-write><i class="bi bi-calculator"></i> ${esc(t('m.suggest'))}</button>
@@ -346,7 +347,7 @@
             const mts = form.mts.checked;
             form.querySelectorAll('[data-mode-label]').forEach(x => x.classList.toggle('is-on', (x.dataset.modeLabel === 'MTS') === mts));
             form.querySelector('[data-mode-help]').textContent = t(mts ? 'help.mode_mts' : 'help.mode_mto');
-            ['stock_min', 'stock_max', 'coverage_days'].forEach(f => { form[f].closest('label').hidden = !mts; });
+            PAIRED.forEach(f => { form[f].closest('label').hidden = !mts; });
         };
         // Stany ze sprzedaży ostatnich tygodni : min = 1 tydzień, maks = 3 tygodnie (parametry), w pełnych kartonach.
         // Obliczenie przełącza na « Na magazyn » ; data obliczenia zapisuje się razem ze stanami.
@@ -374,7 +375,7 @@
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const data = {mode: form.mts.checked ? 'MTS' : 'MTO', never_frozen: form.never_frozen.checked};
-            for (const f of ['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple']) data[f] = ui.num(form[f].value);
+            for (const f of PAIRED) data[f] = ui.num(form[f].value);
             if (calculated) data.stock_calculated = true;
             saveSettings(form, data, 5);
         });
