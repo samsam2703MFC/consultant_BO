@@ -49,7 +49,8 @@ class SalesAnalyticsRepository extends BaseRepository
                 FROM document_wdt wdt
                 INNER JOIN document_wdt_product wdtp ON wdt.id = wdtp.id_document_wdt
                 WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
-                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to{$customerWhere}";
+                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded){$customerWhere}";
         $rows = $this->query($sql, $params);
         return $rows[0] ?? [];
     }
@@ -69,7 +70,8 @@ class SalesAnalyticsRepository extends BaseRepository
                 FROM document_wdt wdt
                 INNER JOIN document_wdt_product wdtp ON wdt.id = wdtp.id_document_wdt
                 WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
-                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to{$customerWhere}
+                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded){$customerWhere}
                 GROUP BY DATE_FORMAT(wdt.established_date, '%Y-%m')
                 ORDER BY period ASC";
         return $this->query($sql, $params) ?: [];
@@ -99,7 +101,8 @@ class SalesAnalyticsRepository extends BaseRepository
                 INNER JOIN final_product fp ON wdtp.id_product = fp.id
                 LEFT JOIN category_product cp ON fp.id_category = cp.id
                 WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
-                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to{$customerWhere}
+                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded){$customerWhere}
                 GROUP BY fp.id, fp.name, cp.name
                 ORDER BY avg_value DESC";
         return $this->query($sql, $params) ?: [];
@@ -120,7 +123,8 @@ class SalesAnalyticsRepository extends BaseRepository
                 INNER JOIN document_wdt_product wdtp ON wdt.id = wdtp.id_document_wdt
                 WHERE wdtp.id_product = :product_id
                   AND DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
-                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to{$customerWhere}
+                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded){$customerWhere}
                 GROUP BY DATE_FORMAT(wdt.established_date, '%Y-%m')
                 ORDER BY period ASC";
         return $this->query($sql, $params) ?: [];

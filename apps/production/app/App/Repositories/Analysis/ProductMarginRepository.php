@@ -370,6 +370,7 @@ class ProductMarginRepository extends BaseRepository
                           LPAD(cm.month, 2, '0'), '-',
                           LPAD(DAY(LAST_DAY(STR_TO_DATE(CONCAT(cm.year, '-', LPAD(cm.month,2,'0'), '-01'), '%Y-%m-%d'))), 2, '0')
                        )
+                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                 LEFT JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
                 LEFT JOIN final_product fp ON fp.id = wdp.id_product AND fp.id_section = ?
                 WHERE cm.id IN ({$placeholders})
@@ -472,6 +473,7 @@ class ProductMarginRepository extends BaseRepository
                        )
                 INNER JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
                 WHERE cm.id IN ({$phMonths})
+                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                     AND wdp.id_product IN ({$phProducts})
                 GROUP BY cm.id, cm.year, cm.month, wdp.id_product
                 ORDER BY cm.year DESC, cm.month DESC";
@@ -539,6 +541,7 @@ class ProductMarginRepository extends BaseRepository
                        )
                 INNER JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
                 WHERE cm.id IN ({$placeholders})
+                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                     AND wdp.id_product = ?
                     AND wdp.price_carton > 0
                 GROUP BY cm.id";
@@ -637,6 +640,7 @@ class ProductMarginRepository extends BaseRepository
                               LPAD(cm.month, 2, '0'), '-',
                               LPAD(DAY(LAST_DAY(STR_TO_DATE(CONCAT(cm.year, '-', LPAD(cm.month,2,'0'), '-01'), '%Y-%m-%d'))), 2, '0')
                            )
+                        AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                     LEFT JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
                     WHERE cm.id IN ({$ph2})
                     GROUP BY cm.id";

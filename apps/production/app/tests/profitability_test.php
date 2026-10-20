@@ -53,7 +53,7 @@ try {
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'erp_company_other_settings', 'document_wdt',
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
                  'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
-                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit'] as $table) {
+                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'tfb_wdt_superseded'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -362,6 +362,16 @@ try {
     near(array_sum(array_column($buy['categories'], 'pct')), 100, 'udziały kategorii = 100 %');
     $oct2 = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('month', $today);
     near($oct2['totals']['materials'], 200, 'październik : Chleb bez receptury, koszt z karty (20 × 40 zł / 4)');
+
+    // Duplikat WDT oznaczony w tfb_wdt_superseded : sprzedaż liczona raz.
+    $pdo->exec("INSERT INTO document_wdt (id, doc_num, established_date, currency) VALUES (950, 'W/1', '2026-09-10', 'eur')");
+    $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (950, 1, 'Chleb', 100, 50)");
+    $fresh = fn() => new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo));
+    near($fresh()->overview('2026-09', $today)['totals']['revenue'], 10000, 'duplikat bez oznaczenia : liczony dwa razy');
+    $pdo->exec("INSERT INTO tfb_wdt_superseded (id_document_wdt, superseded_by, reason) VALUES (950, 1, 'test')");
+    $dedup = $fresh()->overview('2026-09', $today);
+    near($dedup['totals']['revenue'], 5000, 'duplikat oznaczony : sprzedaż liczona raz');
+    near($dedup['production']['groups'][0]['cartons'], 100, 'duplikat oznaczony : produkcja liczona raz');
 
     echo "profitability_test: OK\n";
 } finally {

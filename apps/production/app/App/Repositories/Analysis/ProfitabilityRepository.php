@@ -73,6 +73,7 @@ class ProfitabilityRepository extends BaseRepository
                 INNER JOIN final_product fp
                     ON wdp.id_product = fp.id
                 WHERE fp.id_section = :id_section AND wdt.established_date BETWEEN :start_date AND :end_date
+                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                 GROUP BY wdp.id_product
                 ORDER BY wdp.name";
         return $this->query($sql, $data);

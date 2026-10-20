@@ -55,6 +55,7 @@ class SalesByDepartmentRepository extends BaseRepository
                 LEFT  JOIN category_product cp        ON fp.id_category = cp.id
                 WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
                   AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                   $sectionFilter
                 GROUP BY ps.id, ps.name, fp.id, fp.name, cp.name
                 ORDER BY ps.name ASC, total_value DESC";
@@ -104,6 +105,7 @@ class SalesByDepartmentRepository extends BaseRepository
                 INNER JOIN production_sections ps    ON fp.id_section = ps.id
                 WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
                   AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                   $sectionFilter
                 GROUP BY ps.id, ps.name, DATE_FORMAT(wdt.established_date, '%Y-%m')
                 ORDER BY ps.name ASC, period ASC";

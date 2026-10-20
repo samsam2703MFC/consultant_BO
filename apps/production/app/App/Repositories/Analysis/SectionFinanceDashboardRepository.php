@@ -29,6 +29,7 @@ class SectionFinanceDashboardRepository extends BaseRepository
                     INNER JOIN final_product fp2           ON fp2.id = wdtp.id_product
                     WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
                       AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                      AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                 ) filtered ON filtered.id_section = ps.id
                 GROUP BY ps.id, ps.name
                 ORDER BY revenue_gross DESC";
@@ -107,7 +108,8 @@ class SectionFinanceDashboardRepository extends BaseRepository
                 FROM document_wdt wdt
                 INNER JOIN document_wdt_product wdtp ON wdtp.id_document_wdt = wdt.id
                 WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :date_from
-                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to";
+                  AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :date_to
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)";
 
         $rows = $this->query($sql, [
             'date_from' => $dateFrom,
@@ -136,6 +138,7 @@ class SectionFinanceDashboardRepository extends BaseRepository
                     INNER JOIN document_wdt_product wdtp ON wdtp.id_document_wdt = wdt.id
                     WHERE DATE_FORMAT(wdt.established_date, '%Y-%m') >= :df1
                       AND DATE_FORMAT(wdt.established_date, '%Y-%m') <= :dt1
+                      AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                     GROUP BY DATE_FORMAT(wdt.established_date, '%Y-%m')
 
                     UNION ALL

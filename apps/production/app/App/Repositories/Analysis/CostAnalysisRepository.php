@@ -83,7 +83,8 @@ class CostAnalysisRepository extends BaseRepository
                 INNER JOIN document_wdt wdt ON wdp.id_document_wdt = wdt.id
                 INNER JOIN final_product fp ON wdp.id_product = fp.id
                 WHERE wdp.id_product = :product_id
-                  AND wdt.established_date BETWEEN :start_date AND :end_date";
+                  AND wdt.established_date BETWEEN :start_date AND :end_date
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)";
         $rows = $this->query($sql, [
             'product_id' => $productId,
             'start_date' => $startDate,
@@ -114,7 +115,8 @@ class CostAnalysisRepository extends BaseRepository
                 INNER JOIN document_wdt wdt ON wdp.id_document_wdt = wdt.id
                 INNER JOIN final_product fp ON wdp.id_product = fp.id
                 WHERE fp.id_section = :section_id
-                  AND wdt.established_date BETWEEN :start_date AND :end_date";
+                  AND wdt.established_date BETWEEN :start_date AND :end_date
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)";
         $rows = $this->query($sql, [
             'section_id' => $sectionId,
             'start_date' => $startDate,
@@ -133,7 +135,8 @@ class CostAnalysisRepository extends BaseRepository
                 FROM document_wdt_product wdp
                 INNER JOIN document_wdt wdt ON wdp.id_document_wdt = wdt.id
                 INNER JOIN final_product fp ON wdp.id_product = fp.id
-                WHERE wdt.established_date BETWEEN :start_date AND :end_date";
+                WHERE wdt.established_date BETWEEN :start_date AND :end_date
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)";
         $rows = $this->query($sql, [
             'start_date' => $startDate,
             'end_date' => $endDate
@@ -193,6 +196,7 @@ class CostAnalysisRepository extends BaseRepository
                     ON pr.id = fp.id_recipe AND pr.is_subrecipe = 0
                 WHERE fp.id_section = :section_id
                   AND wdt.established_date BETWEEN :start_date AND :end_date
+                  AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                 GROUP BY fp.id, fp.name, fp.id_category, cp.name, fp.ppc, fp.standard_price,
                          fp.pre_calculated_raw_price_per_carton, pr.precalculated_material_cost,
                          fp.workload_points, fp.id_recipe

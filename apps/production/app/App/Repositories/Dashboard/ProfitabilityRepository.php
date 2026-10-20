@@ -36,6 +36,7 @@ final class ProfitabilityRepository extends WorkshopRepository
              JOIN document_wdt_product p ON p.id_document_wdt = w.id
              JOIN final_product fp ON fp.id = p.id_product
              WHERE w.established_date BETWEEN :from AND :to
+               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
              GROUP BY ym, fp.id_section",
             ['rate1' => $eurRate > 0 ? $eurRate : 1, 'from' => $from, 'to' => $to]
         );
@@ -51,6 +52,7 @@ final class ProfitabilityRepository extends WorkshopRepository
              JOIN document_wdt_product p ON p.id_document_wdt = w.id
              JOIN final_product fp ON fp.id = p.id_product
              WHERE w.established_date BETWEEN :from AND :to
+               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
              GROUP BY ym, fp.id_section, fp.id, fp.name, fp.id_recipe, fp.pre_calculated_raw_price_per_carton",
             ['from' => $from, 'to' => $to]
         );
@@ -68,6 +70,7 @@ final class ProfitabilityRepository extends WorkshopRepository
              JOIN final_product fp ON fp.id = p.id_product
              LEFT JOIN category_product cp ON cp.id = fp.id_category
              WHERE w.established_date BETWEEN :from AND :to
+               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
              GROUP BY fp.id_section, fp.id, fp.name, fp.id_category, cp.name, fp.ppc, fp.weight",
             ['rate1' => $eurRate > 0 ? $eurRate : 1, 'from' => $from, 'to' => $to]
         );
