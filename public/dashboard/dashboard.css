@@ -1323,6 +1323,7 @@ body.pp-emb{background:var(--color-bg)}
 .eq-tab tr.eq-dep td{background:#fffaf2;padding:8px 10px 12px;text-align:left;white-space:normal;cursor:default}
 .eq-dt{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11.5px;margin:2px 0 8px}.eq-dt .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
 .eq-dt .pill{border-radius:8px;padding:2px 8px;font:600 11px var(--font-ui)}.eq-dt .pill.pr{background:#f2e6d6;color:#9a5f1f}.eq-dt .pill.ve{background:#ece8f3;color:#5f4f86}
+.eq-dt .pill.cpt{background:#e3ecf6;color:#2F5D8A}.eq-tab small.eq-cpt,.eq-c .cz small.eq-cpt{color:#2F5D8A}
 .eq-h{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
 .eq-c{flex:1 0 104px;max-width:150px;background:#fff;border:.5px solid #eadfce;border-radius:9px;padding:8px 8px 9px;text-align:center;display:flex;flex-direction:column;gap:3px;min-height:132px}
 .eq-c.vide{background:#f8f2e9}.eq-c.fut{background:none;border-style:dashed}.eq-c.cur{border-color:#8D1D2C;box-shadow:inset 0 0 0 1px #8D1D2C}
